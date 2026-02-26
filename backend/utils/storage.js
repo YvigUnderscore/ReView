@@ -171,19 +171,45 @@ async function recalculateAllStorage() {
     // 6. Apply Updates
     console.log(`Updating ${userStorage.size} users and ${teamStorage.size} teams...`);
 
-    for (const [userId, size] of userStorage) {
-        await prisma.user.update({
-            where: { id: userId },
-            data: { storageUsed: size }
-        });
-    }
+    const bulkUpdate = async (modelName, storageMap) => {
+        if (storageMap.size === 0) return;
 
-    for (const [teamId, size] of teamStorage) {
-        await prisma.team.update({
-            where: { id: teamId },
-            data: { storageUsed: size }
-        });
-    }
+        const entries = Array.from(storageMap.entries());
+        // SQLite usually has a limit around 999 or 32766 params.
+        // 500 items * 3 params (CASE WHEN ? THEN ? + WHERE IN (?)) = 1500 params, which is safe.
+        const CHUNK_SIZE = 500;
+
+        for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
+            const chunk = entries.slice(i, i + CHUNK_SIZE);
+
+            const ids = [];
+            const queryParams = [];
+            let caseStmt = 'CASE id';
+
+            for (const [id, size] of chunk) {
+                caseStmt += ` WHEN ? THEN ?`;
+                queryParams.push(id);
+                queryParams.push(size);
+                ids.push(id);
+            }
+            caseStmt += ' END';
+
+            // Add IDs for WHERE IN clause
+            queryParams.push(...ids);
+
+            const placeholders = ids.map(() => '?').join(',');
+
+            // modelName is trusted (internal string)
+            // Table names usually match model names in Prisma unless @map is used.
+            // In this schema: User -> User, Team -> Team.
+            const query = `UPDATE "${modelName}" SET "storageUsed" = ${caseStmt} WHERE "id" IN (${placeholders})`;
+
+            await prisma.$executeRawUnsafe(query, ...queryParams);
+        }
+    };
+
+    await bulkUpdate('User', userStorage);
+    await bulkUpdate('Team', teamStorage);
 
     console.log('Storage recalculation complete.');
 }
