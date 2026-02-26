@@ -25,7 +25,21 @@ const authenticateToken = (req, res, next) => {
     try {
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, email: true, role: true } // Fetch latest role as well
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          name: true,
+          avatarPath: true,
+          teamMemberships: {
+            select: {
+              teamId: true,
+              role: true,
+              team: { select: { id: true, slug: true } }
+            }
+          },
+          ownedTeams: { select: { id: true, slug: true } }
+        }
       });
 
       if (!dbUser) {

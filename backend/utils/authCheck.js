@@ -13,14 +13,16 @@ const checkProjectAccess = async (userOrId, projectId) => {
 
     if (!userId) return { authorized: false, error: 'User ID required', status: 401 };
 
-    // Fetch fresh user data including explicit team memberships
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-            teamMemberships: { select: { teamId: true, role: true } },
-            ownedTeams: { select: { id: true } }
-        }
-    });
+    // Check if user object already has the required data (avoid redundant fetch)
+    let user = typeof userOrId === 'object' && userOrId.teamMemberships && userOrId.ownedTeams
+        ? userOrId
+        : await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                teamMemberships: { select: { teamId: true, role: true } },
+                ownedTeams: { select: { id: true } }
+            }
+        });
 
     if (!user) return { authorized: false, error: 'User not found', status: 401 };
 
