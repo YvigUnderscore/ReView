@@ -827,13 +827,13 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
 
     if (isThreeD) {
         if (isZip) {
-            if (!isValidZipFile(videoFile.path)) {
+            if (!(await isValidZipFile(videoFile.path))) {
                 try { fs.unlinkSync(videoFile.path); } catch (e) { }
                 if (thumbnailFile) try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
                 return res.status(400).json({ error: 'Invalid ZIP file format' });
             }
         } else {
-            const ext3d = isValidThreeDFile(videoFile.path);
+            const ext3d = await isValidThreeDFile(videoFile.path);
             if (!ext3d) {
                 try { fs.unlinkSync(videoFile.path); } catch (e) { }
                 if (thumbnailFile) try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
@@ -849,7 +849,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
         }
     } else if (videoFile) {
         // Validate Video
-        const vidExt = isValidVideoFile(videoFile.path);
+        const vidExt = await isValidVideoFile(videoFile.path);
         if (!vidExt) {
             try { fs.unlinkSync(videoFile.path); } catch (e) { }
             if (thumbnailFile) try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
@@ -866,7 +866,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
 
     // Validate Images
     for (const img of imageFiles) {
-        const imgExt = isValidImageFile(img.path);
+        const imgExt = await isValidImageFile(img.path);
         if (!imgExt) {
             // Cleanup all uploaded files
             if (videoFile) try { fs.unlinkSync(videoFile.path); } catch (e) { }
@@ -884,7 +884,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
     }
 
     if (thumbnailFile) {
-        const thumbExt = isValidImageFile(thumbnailFile.path);
+        const thumbExt = await isValidImageFile(thumbnailFile.path);
         if (!thumbExt) {
             if (videoFile) try { fs.unlinkSync(videoFile.path); } catch (e) { }
             imageFiles.forEach(f => { try { fs.unlinkSync(f.path); } catch (e) { } });
@@ -1639,12 +1639,12 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
 
     if (isThreeD) {
         if (isZip) {
-            if (!isValidZipFile(videoFile.path)) {
+            if (!(await isValidZipFile(videoFile.path))) {
                 try { await fs.promises.unlink(videoFile.path); } catch (e) { }
                 return res.status(400).json({ error: 'Invalid ZIP file format' });
             }
         } else {
-            const ext3d = isValidThreeDFile(videoFile.path);
+            const ext3d = await isValidThreeDFile(videoFile.path);
             if (!ext3d) {
                 try { await fs.promises.unlink(videoFile.path); } catch (e) { }
                 return res.status(400).json({ error: 'Invalid 3D file format' });
@@ -1658,7 +1658,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
             }
         }
     } else if (videoFile) {
-        const vidExt = isValidVideoFile(videoFile.path);
+        const vidExt = await isValidVideoFile(videoFile.path);
         if (!vidExt) {
             try { await fs.promises.unlink(videoFile.path); } catch (e) { }
             return res.status(400).json({ error: 'Invalid video file format' });
@@ -1673,7 +1673,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
     }
 
     for (const img of imageFiles) {
-        const imgExt = isValidImageFile(img.path);
+        const imgExt = await isValidImageFile(img.path);
         if (!imgExt) {
             if (videoFile) try { await fs.promises.unlink(videoFile.path); } catch (e) { }
             await Promise.all(imageFiles.map(f => fs.promises.unlink(f.path).catch(e => { })));
@@ -2206,7 +2206,7 @@ router.post('/:id/comments', authenticateToken, commentRateLimiter, commentUploa
             await Promise.all(attachmentFiles.map(f => fs.promises.unlink(f.path).catch(e => { })));
             return res.status(400).json({ error: 'Each attachment must be under 5MB' });
         }
-        const attExt = isValidImageFile(attachmentFile.path);
+        const attExt = await isValidImageFile(attachmentFile.path);
         if (!attExt) {
             await Promise.all(attachmentFiles.map(f => fs.promises.unlink(f.path).catch(e => { })));
             return res.status(400).json({ error: 'Invalid attachment file format' });
@@ -2877,7 +2877,7 @@ router.patch('/:id', authenticateToken, upload.single('thumbnail'), async (req, 
     const projectId = parseInt(req.params.id);
     const thumbnailFile = req.file;
 
-    if (thumbnailFile && !isValidImageFile(thumbnailFile.path)) {
+    if (thumbnailFile && !(await isValidImageFile(thumbnailFile.path))) {
         try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
         return res.status(400).json({ error: 'Invalid thumbnail file format' });
     }
