@@ -19,11 +19,17 @@ const BIN_DIR = path.join(__dirname, '..', 'bin');
 const FBX2GLTF_BINARY = process.platform === 'win32' ? 'fbx2gltf.exe' : 'fbx2gltf';
 const LOCAL_BINARY_PATH = path.join(BIN_DIR, FBX2GLTF_BINARY);
 
+let cachedConverterMethod = null;
+
 /**
  * Check availability of conversion tools
  * @returns {Promise<{method: 'fbx2gltf-local' | 'fbx2gltf-global' | 'assimp' | null, version?: string}>}
  */
 async function getConverterMethod() {
+    if (cachedConverterMethod) {
+        return cachedConverterMethod;
+    }
+
     // 1. Check local fbx2gltf
     if (fs.existsSync(LOCAL_BINARY_PATH)) {
         // Ensure executable permissions on Linux/Mac
@@ -34,13 +40,15 @@ async function getConverterMethod() {
                 console.warn('[FBX Converter] Failed to set chmod +x on local binary:', e);
             }
         }
-        return { method: 'fbx2gltf-local' };
+        cachedConverterMethod = { method: 'fbx2gltf-local' };
+        return cachedConverterMethod;
     }
 
     // 2. Check global fbx2gltf
     try {
         await execAsync('fbx2gltf --version');
-        return { method: 'fbx2gltf-global' };
+        cachedConverterMethod = { method: 'fbx2gltf-global' };
+        return cachedConverterMethod;
     } catch (e) {
         // Not found globally
     }
@@ -48,9 +56,11 @@ async function getConverterMethod() {
     // 3. Fallback to assimp
     try {
         await execAsync('assimp help');
-        return { method: 'assimp' };
+        cachedConverterMethod = { method: 'assimp' };
+        return cachedConverterMethod;
     } catch (e) {
-        return { method: null };
+        cachedConverterMethod = { method: null };
+        return cachedConverterMethod;
     }
 }
 
