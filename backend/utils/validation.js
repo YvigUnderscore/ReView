@@ -1,41 +1,43 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 
 /**
  * Checks if a file is a valid video file based on its magic numbers.
  * Supports MP4, MOV, WEBM.
  * @param {string} filepath
- * @returns {boolean}
+ * @returns {Promise<string|null>}
  */
-const isValidVideoFile = (filepath) => {
+const isValidVideoFile = async (filepath) => {
+    let handle;
     try {
         const buffer = Buffer.alloc(12); // Read enough for signatures
-        const fd = fs.openSync(filepath, 'r');
-        fs.readSync(fd, buffer, 0, 12, 0);
-        fs.closeSync(fd);
+        handle = await fs.open(filepath, 'r');
+        await handle.read(buffer, 0, 12, 0);
 
         // Check for WEBM: 1A 45 DF A3
         if (buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3) {
             return '.webm';
         }
 
-            // Check for MP4/MOV: 'ftyp' at offset 4
-            // 'ftyp' in hex is 66 74 79 70
-            if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
-                
-                // Vérification de la "Major Brand" aux offsets 8-11
-                // 'qt  ' (hex: 71 74 20 20) indique QuickTime (.mov)
-                if (buffer[8] === 0x71 && buffer[9] === 0x74 && buffer[10] === 0x20 && buffer[11] === 0x20) {
-                    return '.mov';
-                }
+        // Check for MP4/MOV: 'ftyp' at offset 4
+        // 'ftyp' in hex is 66 74 79 70
+        if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
 
-                // Sinon, on assume que c'est un MP4 standard (isom, mp41, mp42, etc.)
-                return '.mp4'; 
+            // Vérification de la "Major Brand" aux offsets 8-11
+            // 'qt  ' (hex: 71 74 20 20) indique QuickTime (.mov)
+            if (buffer[8] === 0x71 && buffer[9] === 0x74 && buffer[10] === 0x20 && buffer[11] === 0x20) {
+                return '.mov';
             }
+
+            // Sinon, on assume que c'est un MP4 standard (isom, mp41, mp42, etc.)
+            return '.mp4';
+        }
 
         return null;
     } catch (err) {
         console.error('Error validating video file:', err);
         return null;
+    } finally {
+        if (handle) await handle.close();
     }
 };
 
@@ -43,14 +45,14 @@ const isValidVideoFile = (filepath) => {
  * Checks if a file is a valid image file based on its magic numbers.
  * Supports JPG, PNG, WEBP.
  * @param {string} filepath
- * @returns {boolean}
+ * @returns {Promise<string|null>}
  */
-const isValidImageFile = (filepath) => {
+const isValidImageFile = async (filepath) => {
+    let handle;
     try {
         const buffer = Buffer.alloc(12);
-        const fd = fs.openSync(filepath, 'r');
-        fs.readSync(fd, buffer, 0, 12, 0);
-        fs.closeSync(fd);
+        handle = await fs.open(filepath, 'r');
+        await handle.read(buffer, 0, 12, 0);
 
         // JPG: FF D8 FF
         if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
@@ -75,6 +77,8 @@ const isValidImageFile = (filepath) => {
     } catch (err) {
         console.error('Error validating image file:', err);
         return null;
+    } finally {
+        if (handle) await handle.close();
     }
 };
 
@@ -82,14 +86,14 @@ const isValidImageFile = (filepath) => {
  * Checks if a file is a valid 3D file based on its magic numbers.
  * Supports GLB, FBX, USD (Binary/Text/Zip).
  * @param {string} filepath
- * @returns {boolean}
+ * @returns {Promise<string|null>}
  */
-const isValidThreeDFile = (filepath) => {
+const isValidThreeDFile = async (filepath) => {
+    let handle;
     try {
         const buffer = Buffer.alloc(24); // Read enough for FBX (23 bytes)
-        const fd = fs.openSync(filepath, 'r');
-        fs.readSync(fd, buffer, 0, 24, 0);
-        fs.closeSync(fd);
+        handle = await fs.open(filepath, 'r');
+        await handle.read(buffer, 0, 24, 0);
 
         // GLB: glTF (67 6C 74 46) -> Should be 67 6C 54 46
         // 'g' (67) 'l' (6C) 'T' (54) 'F' (46)
@@ -122,20 +126,22 @@ const isValidThreeDFile = (filepath) => {
     } catch (err) {
         console.error('Error validating 3D file:', err);
         return null;
+    } finally {
+        if (handle) await handle.close();
     }
 };
 
 /**
  * Checks if a file is a valid ZIP file.
  * @param {string} filepath
- * @returns {boolean}
+ * @returns {Promise<boolean>}
  */
-const isValidZipFile = (filepath) => {
+const isValidZipFile = async (filepath) => {
+    let handle;
     try {
         const buffer = Buffer.alloc(4);
-        const fd = fs.openSync(filepath, 'r');
-        fs.readSync(fd, buffer, 0, 4, 0);
-        fs.closeSync(fd);
+        handle = await fs.open(filepath, 'r');
+        await handle.read(buffer, 0, 4, 0);
 
         // ZIP: PK (50 4B 03 04)
         if (buffer[0] === 0x50 && buffer[1] === 0x4B && buffer[2] === 0x03 && buffer[3] === 0x04) {
@@ -146,6 +152,8 @@ const isValidZipFile = (filepath) => {
     } catch (err) {
         console.error('Error validating ZIP file:', err);
         return false;
+    } finally {
+        if (handle) await handle.close();
     }
 };
 

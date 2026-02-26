@@ -203,7 +203,7 @@ router.post('/projects/:token/comments', commentLimiter, commentUpload.fields([
             cleanupFiles();
             return res.status(400).json({ error: 'Each attachment must be under 5MB' });
         }
-        const attExt = isValidImageFile(attachmentFile.path);
+        const attExt = await isValidImageFile(attachmentFile.path);
         if (!attExt) {
             cleanupFiles();
             return res.status(400).json({ error: 'Invalid attachment file format' });
