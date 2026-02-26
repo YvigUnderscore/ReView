@@ -306,15 +306,7 @@ async function restoreProjectAssetsFromTrash(projectId) {
 // GET /projects/trash: List deleted projects
 router.get('/trash', authenticateToken, async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) return res.status(401).json({ error: 'User not found' });
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
         const uniqueTeamIds = [...new Set(userTeamIds)];
@@ -348,17 +340,7 @@ router.get('/trash', authenticateToken, async (req, res) => {
 // GET /projects: List all projects
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
         const uniqueTeamIds = [...new Set(userTeamIds)];
@@ -412,15 +394,7 @@ router.get('/slug/:teamSlug/:projectSlug', authenticateToken, async (req, res) =
     try {
         const { teamSlug, projectSlug } = req.params;
 
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true, slug: true } } } },
-                ownedTeams: { select: { id: true, slug: true } }
-            }
-        });
-
-        if (!user) return res.status(401).json({ error: 'User not found' });
+        const user = req.user;
 
         const userTeams = [...user.teamMemberships.map(tm => tm.team), ...user.ownedTeams];
 
@@ -664,17 +638,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         const projectId = parseInt(req.params.id);
         if (isNaN(projectId)) return res.status(400).json({ error: 'Invalid project ID' });
 
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -741,16 +705,10 @@ router.patch('/:id/roles', authenticateToken, async (req, res) => {
         // Assuming team members can edit project settings if they have access to team
         // Or restrict to owner/admin?
         // Let's stick to standard check: User must be in the team.
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { where: { teamId: project.teamId } },
-                ownedTeams: { where: { id: project.teamId } }
-            }
-        });
+        const user = req.user;
 
-        const isOwner = user.ownedTeams.length > 0;
-        const isMember = user.teamMemberships.length > 0;
+        const isOwner = user.ownedTeams.some(t => t.id === project.teamId);
+        const isMember = user.teamMemberships.some(tm => tm.teamId === project.teamId);
         const isAdmin = user.role === 'admin';
 
         if (!isOwner && !isMember && !isAdmin) {
@@ -927,19 +885,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
             return res.status(403).json({ error: e.message });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            try { fs.unlinkSync(videoFile.path); } catch (e) { }
-            if (thumbnailFile) try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -2883,18 +2829,7 @@ router.patch('/:id', authenticateToken, upload.single('thumbnail'), async (req, 
     }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            if (thumbnailFile) try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -3001,17 +2936,7 @@ router.patch('/videos/:id', authenticateToken, async (req, res) => {
         });
         if (!video) return res.status(404).json({ error: 'Video not found' });
 
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -3042,17 +2967,7 @@ router.patch('/assets/:id', authenticateToken, async (req, res) => {
         });
         if (!asset) return res.status(404).json({ error: 'Asset not found' });
 
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -3086,17 +3001,7 @@ router.patch('/assets/:id', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
         const projectId = parseInt(req.params.id);
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -3162,17 +3067,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 router.post('/:id/restore', authenticateToken, async (req, res) => {
     try {
         const projectId = parseInt(req.params.id);
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -3227,17 +3122,7 @@ router.post('/:id/restore', authenticateToken, async (req, res) => {
 router.delete('/:id/permanent', authenticateToken, async (req, res) => {
     try {
         const projectId = parseInt(req.params.id);
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -3334,18 +3219,7 @@ router.post('/:id/thumbnail-notify', authenticateToken, upload.single('thumbnail
             return res.status(400).json({ error: 'Invalid project ID' });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true, slug: true } } } }, // Fetch slug for notification
-                ownedTeams: { select: { id: true, slug: true } }
-            }
-        });
-
-        if (!user) {
-            try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
-            return res.status(401).json({ error: 'User not found' });
-        }
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
@@ -3427,15 +3301,7 @@ router.post('/:id/thumbnail-notify', authenticateToken, upload.single('thumbnail
 router.delete('/:id/permanent', authenticateToken, async (req, res) => {
     try {
         const projectId = parseInt(req.params.id);
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            include: {
-                teamMemberships: { include: { team: { select: { id: true } } } },
-                ownedTeams: { select: { id: true } }
-            }
-        });
-
-        if (!user) return res.status(401).json({ error: 'User not found' });
+        const user = req.user;
 
         const userTeamIds = [...user.teamMemberships.map(tm => tm.team.id), ...user.ownedTeams.map(t => t.id)];
 
