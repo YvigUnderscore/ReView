@@ -423,14 +423,18 @@ router.get('/system/settings', authenticateToken, requireAdmin, async (req, res)
 router.patch('/system/settings', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const updates = req.body;
-        // Iterate and update
-        for (const [key, value] of Object.entries(updates)) {
-            await prisma.systemSetting.upsert({
+        // Create an array of operations for a single transaction
+        const operations = Object.entries(updates).map(([key, value]) => {
+            return prisma.systemSetting.upsert({
                 where: { key },
                 update: { value: String(value) },
                 create: { key, value: String(value) }
             });
-        }
+        });
+
+        // Execute all upserts in a transaction
+        await prisma.$transaction(operations);
+
         res.json({ message: 'Settings updated' });
     } catch (error) {
         console.error(error);
