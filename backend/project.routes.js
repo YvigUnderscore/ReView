@@ -3317,13 +3317,14 @@ router.delete('/:id/permanent', authenticateToken, async (req, res) => {
 
         // Release Storage Calculation
         let teamBytesToRelease = 0;
+        const filesToDelete = [];
 
         // 1. Videos
         const videos = await prisma.video.findMany({ where: { projectId } });
         for (const video of videos) {
             teamBytesToRelease += Number(video.size);
-            if (video.path && fs.existsSync(video.path)) {
-                try { fs.unlinkSync(video.path); } catch (e) { console.error('Error deleting file', e); }
+            if (video.path) {
+                filesToDelete.push(video.path);
             }
             // If uploaderId exists, we should release user quota?
             // Currently we only enforce USER quota on comments.
@@ -3338,8 +3339,8 @@ router.delete('/:id/permanent', authenticateToken, async (req, res) => {
         const assets = await prisma.threeDAsset.findMany({ where: { projectId } });
         for (const asset of assets) {
             teamBytesToRelease += Number(asset.size);
-            if (asset.path && fs.existsSync(asset.path)) {
-                try { fs.unlinkSync(asset.path); } catch (e) { }
+            if (asset.path) {
+                filesToDelete.push(asset.path);
             }
         }
 
@@ -3348,8 +3349,8 @@ router.delete('/:id/permanent', authenticateToken, async (req, res) => {
         for (const bundle of bundles) {
             for (const img of bundle.images) {
                 teamBytesToRelease += Number(img.size);
-                if (img.path && fs.existsSync(img.path)) {
-                    try { fs.unlinkSync(img.path); } catch (e) { }
+                if (img.path) {
+                    filesToDelete.push(img.path);
                 }
             }
         }
@@ -3390,15 +3391,29 @@ router.delete('/:id/permanent', authenticateToken, async (req, res) => {
                     const paths = JSON.parse(c.attachmentPaths);
                     for (const attachPath of paths) {
                         const p = path.join(DATA_PATH, 'media', attachPath);
-                        try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) { }
+                        filesToDelete.push(p);
                     }
                 } catch (e) { }
             }
             if (c.screenshotPath) {
                 const p = path.join(DATA_PATH, 'comments', c.screenshotPath);
-                try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) { }
+                filesToDelete.push(p);
             }
         }
+
+        // Asynchronously delete all collected file paths without blocking the event loop
+        await Promise.all(
+            filesToDelete.map(async (filePath) => {
+                try {
+                    await fs.promises.unlink(filePath);
+                } catch (e) {
+                    // Ignore ENOENT (file not found) errors
+                    if (e.code !== 'ENOENT') {
+                        console.error(`Error deleting file: ${filePath}`, e);
+                    }
+                }
+            })
+        );
 
         // Update Team Storage
         if (project.teamId && teamBytesToRelease > 0) {
