@@ -956,7 +956,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
             const thumbExt = path.extname(thumbnailFile.originalname);
             const thumbName = `thumb-${crypto.randomUUID()}${thumbExt}`;
             const thumbDest = path.join(projectTargetDir, thumbName);
-            fs.copyFileSync(thumbnailFile.path, thumbDest);
+            await fs.promises.copyFile(thumbnailFile.path, thumbDest);
             try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
             thumbnailPath = path.join(teamSlugToUse, slug, thumbName).replace(/\\/g, '/');
         } else if (videoFile && !isThreeD) {
@@ -972,7 +972,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
             const firstImg = imageFiles[0];
             const thumbName = `thumb-${firstImg.filename}`;
             const thumbDest = path.join(projectTargetDir, thumbName);
-            fs.copyFileSync(firstImg.path, thumbDest);
+            await fs.promises.copyFile(firstImg.path, thumbDest);
             thumbnailPath = path.join(teamSlugToUse, slug, thumbName).replace(/\\/g, '/');
         }
 
@@ -1075,7 +1075,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                         const targetPath = path.join(projectTargetDir, targetFilename);
 
                         // Move MAIN file
-                        fs.copyFileSync(mainFileFullPath, targetPath); // Copy to be safe
+                        await fs.promises.copyFile(mainFileFullPath, targetPath); // Copy to be safe
 
                         // Also need to move textures if it's FBX? 
                         // If FBX in ZIP, textures are flattened in extraction. 
@@ -1267,7 +1267,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
 
                 // If it was a GLB/FBX (single file or converted), just move/copy it.
                 // Note: finalPath might be in 'unpacked' or root 'media'.
-                fs.copyFileSync(finalPath, targetFullPath);
+                await fs.promises.copyFile(finalPath, targetFullPath);
 
                 // Cleanup temporary files after copying to final destination
                 if (isZip) {
@@ -1348,7 +1348,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                 const targetFilename = `V01_${sanName}`;
                 const targetFullPath = path.join(projectTargetDir, targetFilename);
 
-                fs.copyFileSync(videoFile.path, targetFullPath);
+                await fs.promises.copyFile(videoFile.path, targetFullPath);
                 try { fs.unlinkSync(videoFile.path); } catch (e) { } // delete temp
 
                 const finalRelPath = path.join(teamSlugToUse, slug, targetFilename).replace(/\\/g, '/');
@@ -1402,11 +1402,11 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                     versionName: 'V01',
                     uploaderId: req.user.id,
                     images: {
-                        create: imageFiles.map((file, index) => {
+                        create: await Promise.all(imageFiles.map(async (file, index) => {
                             const sanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
                             const targetFilename = `V01_${index}_${sanName}`;
                             const targetFullPath = path.join(projectTargetDir, targetFilename);
-                            fs.copyFileSync(file.path, targetFullPath);
+                            await fs.promises.copyFile(file.path, targetFullPath);
                             try { fs.unlinkSync(file.path); } catch (e) { }
                             const finalRelPath = path.join(teamSlugToUse, slug, targetFilename).replace(/\\/g, '/');
 
@@ -1422,7 +1422,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                                 order: index,
                                 size: BigInt(file.size)
                             };
-                        })
+                        }))
                     }
                 }
             };
@@ -2026,12 +2026,12 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                     versionName,
                     uploaderId: req.user.id,
                     images: {
-                        create: imageFiles.map((file, index) => {
+                        create: await Promise.all(imageFiles.map(async (file, index) => {
                             const sanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
                             const targetFilename = `${versionName}_${index}_${sanName}`;
                             const targetFullPath = path.join(projectTargetDir, targetFilename);
 
-                            fs.copyFileSync(file.path, targetFullPath);
+                            await fs.promises.copyFile(file.path, targetFullPath);
                             try { fs.unlinkSync(file.path); } catch (e) { }
 
                             const finalRelPath = path.join(teamSlugToUse, project.slug, targetFilename).replace(/\\/g, '/');
@@ -2043,7 +2043,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                                 order: index,
                                 size: BigInt(file.size)
                             };
-                        })
+                        }))
                     }
                 },
                 include: { images: true }
