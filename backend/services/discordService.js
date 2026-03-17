@@ -213,10 +213,10 @@ async function getChannelsToNotify(team, data, options) {
         }
 
         // If channel HAS role filter, check intersection with project roles OR Mentions
-        const channelRoleIds = channel.teamRoles.map(r => r.id);
+        const channelRoleIdSet = new Set(channel.teamRoles.map(r => r.id));
 
-        const hasProjectRoleMatch = projectRoleIds.length > 0 && projectRoleIds.some(id => channelRoleIds.includes(id));
-        const hasMentionMatch = mentionedRoleIds.length > 0 && mentionedRoleIds.some(id => channelRoleIds.includes(id));
+        const hasProjectRoleMatch = projectRoleIds.length > 0 && projectRoleIds.some(id => channelRoleIdSet.has(id));
+        const hasMentionMatch = mentionedRoleIds.length > 0 && mentionedRoleIds.some(id => channelRoleIdSet.has(id));
 
         if (hasProjectRoleMatch || hasMentionMatch) {
             channels.push({
