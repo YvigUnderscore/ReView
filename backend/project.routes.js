@@ -1402,12 +1402,12 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                     versionName: 'V01',
                     uploaderId: req.user.id,
                     images: {
-                        create: imageFiles.map((file, index) => {
+                        create: await Promise.all(imageFiles.map(async (file, index) => {
                             const sanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
                             const targetFilename = `V01_${index}_${sanName}`;
                             const targetFullPath = path.join(projectTargetDir, targetFilename);
-                            fs.copyFileSync(file.path, targetFullPath);
-                            try { fs.unlinkSync(file.path); } catch (e) { }
+                            await fs.promises.copyFile(file.path, targetFullPath);
+                            try { await fs.promises.unlink(file.path); } catch (e) { }
                             const finalRelPath = path.join(teamSlugToUse, slug, targetFilename).replace(/\\/g, '/');
 
                             if (index === 0) {
@@ -1422,7 +1422,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                                 order: index,
                                 size: BigInt(file.size)
                             };
-                        })
+                        }))
                     }
                 }
             };
@@ -2026,13 +2026,13 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                     versionName,
                     uploaderId: req.user.id,
                     images: {
-                        create: imageFiles.map((file, index) => {
+                        create: await Promise.all(imageFiles.map(async (file, index) => {
                             const sanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
                             const targetFilename = `${versionName}_${index}_${sanName}`;
                             const targetFullPath = path.join(projectTargetDir, targetFilename);
 
-                            fs.copyFileSync(file.path, targetFullPath);
-                            try { fs.unlinkSync(file.path); } catch (e) { }
+                            await fs.promises.copyFile(file.path, targetFullPath);
+                            try { await fs.promises.unlink(file.path); } catch (e) { }
 
                             const finalRelPath = path.join(teamSlugToUse, project.slug, targetFilename).replace(/\\/g, '/');
                             return {
@@ -2043,7 +2043,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                                 order: index,
                                 size: BigInt(file.size)
                             };
-                        })
+                        }))
                     }
                 },
                 include: { images: true }
