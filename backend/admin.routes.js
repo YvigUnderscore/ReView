@@ -384,19 +384,35 @@ router.post('/storage/recalculate', authenticateToken, requireAdmin, async (req,
         });
 
         // Update Users
-        for (const [userId, size] of Object.entries(userStorage)) {
-            await prisma.user.update({
-                where: { id: parseInt(userId) },
-                data: { storageUsed: size }
-            });
+        const BATCH_SIZE = 500;
+
+        if (Object.keys(userStorage).length > 0) {
+            const userEntries = Object.entries(userStorage);
+            for (let i = 0; i < userEntries.length; i += BATCH_SIZE) {
+                const batch = userEntries.slice(i, i + BATCH_SIZE);
+                const updates = batch.map(([userId, size]) =>
+                    prisma.user.update({
+                        where: { id: parseInt(userId) },
+                        data: { storageUsed: size }
+                    })
+                );
+                await prisma.$transaction(updates);
+            }
         }
 
         // Update Teams
-        for (const [teamId, size] of Object.entries(teamStorage)) {
-            await prisma.team.update({
-                where: { id: parseInt(teamId) },
-                data: { storageUsed: size }
-            });
+        if (Object.keys(teamStorage).length > 0) {
+            const teamEntries = Object.entries(teamStorage);
+            for (let i = 0; i < teamEntries.length; i += BATCH_SIZE) {
+                const batch = teamEntries.slice(i, i + BATCH_SIZE);
+                const updates = batch.map(([teamId, size]) =>
+                    prisma.team.update({
+                        where: { id: parseInt(teamId) },
+                        data: { storageUsed: size }
+                    })
+                );
+                await prisma.$transaction(updates);
+            }
         }
 
         res.json({ message: 'Storage recalculation completed' });
