@@ -383,21 +383,25 @@ router.post('/storage/recalculate', authenticateToken, requireAdmin, async (req,
             if (teamId) addToTeam(teamId, c.size);
         });
 
-        // Update Users
-        for (const [userId, size] of Object.entries(userStorage)) {
-            await prisma.user.update({
+        // Create an array of update promises for all users
+        const userUpdates = Object.entries(userStorage).map(([userId, size]) =>
+            prisma.user.update({
                 where: { id: parseInt(userId) },
                 data: { storageUsed: size }
-            });
-        }
+            })
+        );
 
-        // Update Teams
-        for (const [teamId, size] of Object.entries(teamStorage)) {
-            await prisma.team.update({
+        // Create an array of update promises for all teams
+        const teamUpdates = Object.entries(teamStorage).map(([teamId, size]) =>
+            prisma.team.update({
                 where: { id: parseInt(teamId) },
                 data: { storageUsed: size }
-            });
-        }
+            })
+        );
+
+        // Execute all updates efficiently in a single database transaction
+        // This solves the N+1 query performance issue while maintaining safety and ORM compatibility
+        await prisma.$transaction([...userUpdates, ...teamUpdates]);
 
         res.json({ message: 'Storage recalculation completed' });
     } catch (error) {
