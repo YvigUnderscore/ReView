@@ -15,59 +15,94 @@ function slugify(text) {
 async function backfill() {
   console.log('Starting backfill...');
 
-  // Backfill Teams
-  const teams = await prisma.team.findMany({ where: { slug: null } });
-  console.log(`Found ${teams.length} teams without slug.`);
+  // 1. Backfill Teams
+  const allTeams = await prisma.team.findMany({
+    select: { slug: true },
+    where: { NOT: { slug: null } }
+  });
+  const existingTeamSlugs = new Set(allTeams.map(t => t.slug));
 
-  for (const team of teams) {
+  const teamsToBackfill = await prisma.team.findMany({ where: { slug: null } });
+  console.log(`Found ${teamsToBackfill.length} teams without slug.`);
+
+  const teamUpdates = [];
+  for (const team of teamsToBackfill) {
     let baseSlug = slugify(team.name);
     if (!baseSlug) baseSlug = `team-${team.id}`;
     let slug = baseSlug;
     let counter = 1;
 
-    while (true) {
-      const existing = await prisma.team.findUnique({ where: { slug } });
-      if (!existing) break;
+    while (existingTeamSlugs.has(slug)) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
 
-    await prisma.team.update({
-      where: { id: team.id },
-      data: { slug }
-    });
-    console.log(`Updated team ${team.id} with slug: ${slug}`);
+    existingTeamSlugs.add(slug);
+    teamUpdates.push(
+      prisma.team.update({
+        where: { id: team.id },
+        data: { slug }
+      })
+    );
   }
 
-  // Backfill Projects
-  const projects = await prisma.project.findMany({ where: { slug: null } });
-  console.log(`Found ${projects.length} projects without slug.`);
+  if (teamUpdates.length > 0) {
+    console.log(`Executing ${teamUpdates.length} team updates...`);
+    const chunkSize = 100;
+    for (let i = 0; i < teamUpdates.length; i += chunkSize) {
+      await prisma.$transaction(teamUpdates.slice(i, i + chunkSize));
+    }
+  }
 
-  for (const project of projects) {
+  // 2. Backfill Projects
+  const allProjects = await prisma.project.findMany({
+    select: { slug: true, teamId: true },
+    where: { NOT: { slug: null } }
+  });
+
+  const existingProjectSlugs = new Map();
+  for (const project of allProjects) {
+    if (!existingProjectSlugs.has(project.teamId)) {
+      existingProjectSlugs.set(project.teamId, new Set());
+    }
+    existingProjectSlugs.get(project.teamId).add(project.slug);
+  }
+
+  const projectsToBackfill = await prisma.project.findMany({ where: { slug: null } });
+  console.log(`Found ${projectsToBackfill.length} projects without slug.`);
+
+  const projectUpdates = [];
+  for (const project of projectsToBackfill) {
     let baseSlug = slugify(project.name);
     if (!baseSlug) baseSlug = `project-${project.id}`;
     let slug = baseSlug;
     let counter = 1;
 
-    // Uniqueness within team (or global if teamId is null, though typically teamId+slug is unique)
-    // We'll check uniqueness based on teamId
-    while (true) {
-      const existing = await prisma.project.findFirst({
-        where: {
-            teamId: project.teamId,
-            slug: slug
-        }
-      });
-      if (!existing) break;
+    if (!existingProjectSlugs.has(project.teamId)) {
+      existingProjectSlugs.set(project.teamId, new Set());
+    }
+    const teamSlugs = existingProjectSlugs.get(project.teamId);
+
+    while (teamSlugs.has(slug)) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
 
-    await prisma.project.update({
-      where: { id: project.id },
-      data: { slug }
-    });
-    console.log(`Updated project ${project.id} with slug: ${slug}`);
+    teamSlugs.add(slug);
+    projectUpdates.push(
+      prisma.project.update({
+        where: { id: project.id },
+        data: { slug }
+      })
+    );
+  }
+
+  if (projectUpdates.length > 0) {
+    console.log(`Executing ${projectUpdates.length} project updates...`);
+    const chunkSize = 100;
+    for (let i = 0; i < projectUpdates.length; i += chunkSize) {
+      await prisma.$transaction(projectUpdates.slice(i, i + chunkSize));
+    }
   }
 
   console.log('Backfill complete.');
