@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@google/model-viewer": "^4.0.0",
-    "axios": "^1.13.5",
+    "axios": "^1.15.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.24.10",
     "jszip": "^3.10.1",
