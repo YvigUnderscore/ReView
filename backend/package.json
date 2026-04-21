@@ -25,7 +25,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
-    "nodemailer": "^7.0.12",
+    "nodemailer": "^8.0.5",
     "p-limit": "^2.3.0",
     "pdfkit": "^0.17.2",
     "puppeteer-core": "^22.0.0",
