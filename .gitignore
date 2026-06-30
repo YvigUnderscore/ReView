@@ -1,4 +1,15 @@
 node_modules/
 dev_data/
+storage/
 .env
 /.jules
+*.bat
+/tmp/
+
+# Build artifacts
+backend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Plans (artefacts de session Claude)
+plans/
+/assets_for_testing

@@ -9,7 +9,10 @@ const { JWT_SECRET } = require('./middleware');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const DATA_PATH = process.env.DATA_PATH || path.join(__dirname, 'storage');
+// Resolve to an ABSOLUTE path: res.sendFile() rejects relative paths
+// ("path must be absolute or specify root"), which would 500 every media
+// request when DATA_PATH is configured relatively (e.g. "./storage").
+const DATA_PATH = path.resolve(process.env.DATA_PATH || path.join(__dirname, 'storage'));
 
 // Helper to verify token from Header OR Query
 const verifyAuth = (req) => {

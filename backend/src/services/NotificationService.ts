@@ -1,0 +1,44 @@
+import { prisma } from '../lib/prisma';
+import { emitToUser } from './SocketService';
+import { isValidDiscordWebhook } from '../lib/sanitize';
+
+/**
+ * Crée une notification in-app et la pousse en temps réel à l'utilisateur ciblé.
+ */
+export async function notify(params: {
+  userId: number;
+  type: string;
+  content: string;
+  projectId?: number | null;
+  referenceId?: number | null;
+}): Promise<void> {
+  const notification = await prisma.notification.create({
+    data: {
+      userId: params.userId,
+      type: params.type,
+      content: params.content,
+      projectId: params.projectId ?? null,
+      referenceId: params.referenceId ?? null,
+    },
+  });
+  emitToUser(params.userId, 'notification:new', notification);
+}
+
+/**
+ * Envoie un message au webhook Discord du studio (si configuré et valide).
+ * Tolérant aux erreurs : un échec Discord ne doit jamais casser le flux applicatif.
+ */
+export async function sendDiscord(content: string): Promise<void> {
+  try {
+    const studio = await prisma.studio.findFirst({ select: { discordWebhookUrl: true } });
+    const url = studio?.discordWebhookUrl;
+    if (!url || !isValidDiscordWebhook(url)) return;
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+  } catch (err) {
+    console.warn('[Discord] envoi échoué :', err instanceof Error ? err.message : err);
+  }
+}

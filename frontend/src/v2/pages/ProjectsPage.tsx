@@ -1,0 +1,173 @@
+import { useEffect, useState } from 'react';
+import { Plus, Star } from 'lucide-react';
+import { api } from '../../lib/apiClient';
+import { useAuth } from '../stores/useAuth';
+import Shell from '../components/Shell';
+import ViewToggle, { useViewMode } from '../components/ViewToggle';
+import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../components/EntityCard';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useFavorites } from '../stores/useFavorites';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import { Label } from '../components/ui/label';
+import { Select } from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
+
+interface Project {
+  id: number;
+  name: string;
+  description: string | null;
+  status: string;
+  thumbnailUrl: string | null;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  ACTIVE: 'Actif',
+  ON_HOLD: 'En pause',
+  COMPLETED: 'Terminé',
+  ARCHIVED: 'Archivé',
+};
+const STATUS_OPTIONS = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
+
+function StatusBadge({ status }: { status: string }) {
+  const variant =
+    status === 'ACTIVE' ? 'success'
+    : status === 'ON_HOLD' ? 'warning'
+    : status === 'COMPLETED' ? 'info'
+    : 'muted' as const;
+  return <Badge variant={variant}>{STATUS_LABEL[status] ?? status}</Badge>;
+}
+
+export default function ProjectsPage() {
+  const role = useAuth((s) => s.user?.role);
+  const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
+  const view = useViewMode('projects');
+  const favs = useFavorites((s) => s.favorites);
+  const toggleFav = useFavorites((s) => s.toggle);
+  const isFav = (id: number) => favs.some((f) => f.type === 'PROJECT' && f.entityId === id);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Project | null>(null);
+  const [deleting, setDeleting] = useState<Project | null>(null);
+
+  const load = () =>
+    api.get<{ projects: Project[] }>('/api/projects').then((d) => setProjects(d.projects)).catch((e) => setError(e.message));
+  useEffect(() => { load(); }, []);
+
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    try { await api.post('/api/projects', { name }); setName(''); load(); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    try { await api.del(`/api/projects/${deleting.id}`); setDeleting(null); load(); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+  };
+
+  return (
+    <Shell title="Projets">
+      <div className="mb-5 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Projets</h1>
+        <ViewToggle contextKey="projects" />
+      </div>
+
+      {canManage && (
+        <form onSubmit={create} className="mb-6 flex gap-2">
+          <Input className="flex-1" placeholder="Nouveau projet…" value={name} onChange={(e) => setName(e.target.value)} />
+          <Button type="submit"><Plus size={16} /> Créer</Button>
+        </form>
+      )}
+      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+
+      {projects.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aucun projet.</p>
+      ) : (
+        <EntityContainer view={view}>
+          {projects.map((p) => (
+            <EntityCard
+              key={p.id}
+              to={`/projects/${p.id}`}
+              view={view}
+              title={p.name}
+              subtitle={p.description ?? undefined}
+              thumbnailUrl={p.thumbnailUrl}
+              badge={<StatusBadge status={p.status} />}
+              actions={[
+                { icon: <Star size={15} fill={isFav(p.id) ? 'currentColor' : 'none'} className={isFav(p.id) ? 'text-amber-400' : ''} />, label: 'Favori', onClick: () => toggleFav('PROJECT', p.id) },
+                ...(canManage ? [
+                  { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
+                  { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
+                ] : []),
+              ]}
+            />
+          ))}
+        </EntityContainer>
+      )}
+
+      {editing && (
+        <EditProjectModal
+          project={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        title="Supprimer le projet ?"
+        message={<>Le projet « {deleting?.name} » sera déplacé dans la corbeille. Vous pourrez le restaurer depuis l'administration.</>}
+        confirmLabel="Mettre à la corbeille"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
+    </Shell>
+  );
+}
+
+function EditProjectModal({ project, onClose, onSaved }: { project: Project; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description ?? '');
+  const [status, setStatus] = useState(project.status);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.patch(`/api/projects/${project.id}`, { name, description: description || null, status });
+      onSaved();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="w-full max-w-md space-y-3 rounded-lg border border-border bg-card p-5 shadow-xl">
+        <h3 className="text-base font-semibold">Éditer le projet</h3>
+        <div className="space-y-1">
+          <Label>Nom</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="space-y-1">
+          <Label>Description</Label>
+          <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label>Statut</Label>
+          <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          </Select>
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
+          <Button type="submit" size="sm">Enregistrer</Button>
+        </div>
+      </form>
+    </div>
+  );
+}

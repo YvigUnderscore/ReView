@@ -1,0 +1,71 @@
+import { useEffect, useState, lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { api } from '../lib/apiClient';
+import { useAuth } from './stores/useAuth';
+import LoginPage from './pages/LoginPage';
+import SetupPage from './pages/SetupPage';
+import ProjectsPage from './pages/ProjectsPage';
+import ProjectPage from './pages/ProjectPage';
+import TaskPage from './pages/TaskPage';
+import ReviewPage from './pages/ReviewPage';
+import EditorPage from './pages/EditorPage';
+import KanbanPage from './pages/KanbanPage';
+import AdminPage from './pages/AdminPage';
+import AssetPage from './pages/AssetPage';
+import ProfilePage from './pages/ProfilePage';
+import DocumentationPage from './pages/DocumentationPage';
+
+// Board (Excalidraw) chargé en lazy pour code-splitter sa lourde dépendance
+const BoardPage = lazy(() => import('./pages/BoardPage'));
+
+function Protected({ children }: { children: React.ReactNode }) {
+  const user = useAuth((s) => s.user);
+  const location = useLocation();
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  return <>{children}</>;
+}
+
+export default function App() {
+  const init = useAuth((s) => s.init);
+  const ready = useAuth((s) => s.ready);
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    api.get<{ needsSetup: boolean }>('/api/setup/status').then((d) => setNeedsSetup(d.needsSetup)).catch(() => setNeedsSetup(false));
+    init();
+  }, [init]);
+
+  if (!ready || needsSetup === null) {
+    return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">Chargement…</div>;
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {needsSetup ? (
+          <>
+            <Route path="/setup" element={<SetupPage />} />
+            <Route path="*" element={<Navigate to="/setup" replace />} />
+          </>
+        ) : (
+          <>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<Protected><ProjectsPage /></Protected>} />
+            <Route path="/projects/:id" element={<Protected><ProjectPage /></Protected>} />
+            <Route path="/projects/:id/kanban" element={<Protected><KanbanPage /></Protected>} />
+            <Route path="/tasks/:id" element={<Protected><TaskPage /></Protected>} />
+            <Route path="/assets/:id" element={<Protected><AssetPage /></Protected>} />
+            <Route path="/review/:mediaId" element={<Protected><ReviewPage /></Protected>} />
+            <Route path="/editor/:mediaId" element={<Protected><EditorPage /></Protected>} />
+            <Route path="/projects/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="project" /></Suspense></Protected>} />
+            <Route path="/assets/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="asset" /></Suspense></Protected>} />
+            <Route path="/admin" element={<Protected><AdminPage /></Protected>} />
+            <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
+            <Route path="/docs" element={<Protected><DocumentationPage /></Protected>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        )}
+      </Routes>
+    </BrowserRouter>
+  );
+}

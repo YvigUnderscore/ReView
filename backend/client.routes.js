@@ -47,6 +47,7 @@ router.get('/projects/:token', async (req, res) => {
             where: { clientToken: token },
             include: {
                 videos: {
+                    where: { published: true },
                     include: {
                         // Include comments, but we will filter them in code
                         comments: {
@@ -65,6 +66,7 @@ router.get('/projects/:token', async (req, res) => {
                     orderBy: { createdAt: 'desc' }
                 },
                 imageBundles: {
+                    where: { published: true },
                     include: {
                         images: {
                             orderBy: { order: 'asc' },
@@ -86,6 +88,7 @@ router.get('/projects/:token', async (req, res) => {
                     }
                 },
                 threeDAssets: {
+                    where: { published: true },
                     include: {
                         comments: {
                             where: { parentId: null },

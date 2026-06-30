@@ -84,12 +84,19 @@ const isValidImageFile = async (filepath) => {
 
 /**
  * Checks if a file is a valid 3D file based on its magic numbers.
- * Supports GLB, FBX, USD (Binary/Text/Zip).
+ * Supports GLB, FBX, USD (Binary/Text/Zip), PLY (Gaussian Splat), SPLAT, SOG.
  * @param {string} filepath
+<<<<<<< Updated upstream
  * @returns {Promise<string|null>}
  */
 const isValidThreeDFile = async (filepath) => {
     let handle;
+=======
+ * @param {string|null} hintExt - Original file extension (e.g. '.splat') for formats without magic bytes
+ * @returns {string|null} - Canonical extension or null if invalid
+ */
+const isValidThreeDFile = (filepath, hintExt = null) => {
+>>>>>>> Stashed changes
     try {
         const buffer = Buffer.alloc(24); // Read enough for FBX (23 bytes)
         handle = await fs.open(filepath, 'r');
@@ -120,6 +127,44 @@ const isValidThreeDFile = async (filepath) => {
         // USDA (ASCII): #usda (23 75 73 64 61)
         if (buffer.toString('utf8', 0, 5) === '#usda') {
             return '.usda';
+        }
+
+        // PLY (Gaussian Splat or mesh): "ply\n" (70 6C 79 0A)
+        if (buffer[0] === 0x70 && buffer[1] === 0x6C && buffer[2] === 0x79 && buffer[3] === 0x0A) {
+            return '.ply';
+        }
+
+        // glTF (text/JSON): a .gltf is a JSON document. It has no binary magic
+        // bytes, so we validate by extension hint + a JSON-looking start (first
+        // non-whitespace byte is '{', optionally preceded by a UTF-8 BOM).
+        if (hintExt === '.gltf') {
+            let i = 0;
+            // Skip UTF-8 BOM (EF BB BF) if present
+            if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) i = 3;
+            // Skip leading ASCII whitespace
+            while (i < buffer.length && (buffer[i] === 0x20 || buffer[i] === 0x09 || buffer[i] === 0x0A || buffer[i] === 0x0D)) i++;
+            if (buffer[i] === 0x7B) { // '{'
+                return '.gltf';
+            }
+        }
+
+        // SPLAT (Gaussian Splat binary): no magic bytes – validate by extension hint + size heuristic
+        // Each splat record is exactly 32 bytes (pos 12B + scale 12B + RGBA 4B + rot 4B)
+        if (hintExt === '.splat') {
+            const stats = fs.statSync(filepath);
+            if (stats.size > 0 && stats.size % 32 === 0) {
+                return '.splat';
+            }
+        }
+
+        // SOG (Spatially Ordered Gaussians, compressed splat container): no stable
+        // magic bytes across versions – accept by extension hint + non-empty size.
+        // (Note: `.compressed.ply` is a regular PLY and is already matched above.)
+        if (hintExt === '.sog') {
+            const stats = fs.statSync(filepath);
+            if (stats.size > 0) {
+                return '.sog';
+            }
         }
 
         return null;
@@ -230,4 +275,11 @@ const isValidEmail = (email) => {
     return emailRegex.test(email);
 };
 
-module.exports = { isValidVideoFile, isValidImageFile, isValidThreeDFile, isValidZipFile, isValidText, isValidPassword, isValidImageBuffer, isValidEmail };
+const GAUSSIAN_SPLAT_EXTENSIONS = ['.splat', '.ply', '.sog'];
+const isGaussianSplat = (filename) => {
+    if (!filename) return false;
+    const ext = filename.split('.').pop().toLowerCase();
+    return GAUSSIAN_SPLAT_EXTENSIONS.includes(`.${ext}`);
+};
+
+module.exports = { isValidVideoFile, isValidImageFile, isValidThreeDFile, isValidZipFile, isValidText, isValidPassword, isValidImageBuffer, isValidEmail, isGaussianSplat };

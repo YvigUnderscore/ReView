@@ -1,5 +1,6 @@
 # Stage 1: Build the React application
-FROM node:18-alpine as build
+# Node 22 requis par Vite 7 (Node 18 n'est plus supporté).
+FROM node:22-alpine AS build
 
 WORKDIR /app
 

@@ -1,0 +1,11 @@
+# Override de DÉVELOPPEMENT — auto-chargé par `docker compose up`.
+# Expose Postgres/Redis à l'hôte pour le dev local (Prisma, scripts, tests).
+# NE PAS utiliser en production : déployer avec uniquement le fichier de base
+#   docker compose -f docker-compose.yml up -d
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"

@@ -1,32 +1,26 @@
-# Using Debian-based image (slim) instead of Alpine to ensure glibc compatibility 
-# for binary tools like fbx2gltf (which don't support musl/Alpine)
-FROM node:18-slim
+# ReView 2.0 backend — Node 22 (glibc) pour compat. binaires (ffmpeg, prisma) + AWS SDK v3
+FROM node:22-slim
 
 WORKDIR /app
 
-# Copy package files
+# Dépendances système : openssl (Prisma), ffmpeg (transcode/miniatures),
+# assimp-utils (conversion 3D FBX/OBJ/USD → GLB, 9.A1), dos2unix (start.sh)
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl ffmpeg assimp-utils dos2unix ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copier package.json + le schéma Prisma avant npm install :
+# le hook postinstall (prisma generate) a besoin du schéma.
 COPY package*.json ./
-
-# Install system dependencies (Debian based)
-# ca-certificates for potential HTTPS issues, ffmpeg for video, openssl for Prisma, assimp-utils for 3D conversion
-# chromium and fonts for puppeteer
-RUN apt-get update -y && apt-get install -y openssl ffmpeg dos2unix ca-certificates assimp-utils chromium fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 --no-install-recommends && rm -rf /var/lib/apt/lists/*
-
-# Install dependencies dependencies
+COPY prisma ./prisma
 RUN npm install
 
-# Copy application code
 COPY . .
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Compile le TypeScript → dist/ (le client Prisma est déjà généré par postinstall)
+RUN npm run build
 
-# Make start script executable
-RUN dos2unix start.sh
-RUN chmod +x start.sh
+RUN dos2unix start.sh && chmod +x start.sh
 
-# Expose port
 EXPOSE 3000
-
-# Start command
 CMD ["./start.sh"]

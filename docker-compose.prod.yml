@@ -1,0 +1,54 @@
+# docker-compose.prod.yml — surcharge de production (TLS + sécurité)
+#
+# Usage :
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Prérequis :
+#   - Certificats TLS dans ./nginx/certs/ (fullchain.pem + privkey.pem)
+#     (ex. générés avec Certbot : /etc/letsencrypt/live/YOUR_DOMAIN/)
+#   - .env renseigné avec des secrets forts (voir .env.example)
+#
+# Ce fichier :
+#   - Ajoute nginx en reverse-proxy HTTPS devant backend + frontend
+#   - Retire les ports directement exposés pour backend et frontend
+#   - Supprime l'accès public à la console MinIO (port 9001)
+#   - Restreint CORS_ORIGIN à l'URL de production
+
+services:
+
+  # ── Nginx reverse-proxy TLS ─────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    restart: always
+
+  # ── Backend : ports retirés (accès via nginx uniquement) ────────────────────
+  backend:
+    ports: []
+    environment:
+      CORS_ORIGIN: ${CORS_ORIGIN}          # OBLIGATOIRE : ex. https://review.mystudio.com
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}  # URL publique MinIO ou CDN S3
+
+  # ── Worker (inchangé, hérite de backend) ────────────────────────────────────
+  worker: {}
+
+  # ── Frontend : ports retirés (accès via nginx uniquement) ───────────────────
+  frontend:
+    ports: []
+
+  # ── MinIO : console 9001 non exposée publiquement ───────────────────────────
+  minio:
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      # Port 9001 (console) volontairement non exposé en prod.
+      # Pour y accéder : ssh tunnel ou VPN uniquement.

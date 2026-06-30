@@ -1,5 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ReView 2.0 — Schéma PostgreSQL
+// Hiérarchie pipeline : Studio > Projet > Séquence(opt) > Shot > Task > Version > MediaObject
+//                                       > Asset(réutilisable) > Version > MediaObject
+// Décision 8.1 : une instance = un Studio (singleton). RBAC global sur User + ProjectMembership.
 
 generator client {
   provider      = "prisma-client-js"
@@ -7,42 +9,146 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  ARTIST
+  CLIENT
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum AssetType {
+  CHARACTER
+  PROP
+  ENVIRONMENT
+  VEHICLE
+  FX
+  OTHER
+}
+
+enum TaskType {
+  MODELING
+  RIGGING
+  ANIMATION
+  FX
+  LIGHTING
+  COMPOSITING
+  LOOKDEV
+  LAYOUT
+  OTHER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  RETAKE
+}
+
+enum VersionStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+}
+
+enum MediaKind {
+  VIDEO
+  IMAGE
+  MODEL_3D
+  SPLAT
+}
+
+enum MediaStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum SharePermission {
+  VIEW
+  COMMENT
+}
+
+enum UserStatus {
+  AVAILABLE
+  AWAY
+  DND
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Studio (singleton) & configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Studio {
+  id                Int      @id @default(autoincrement())
+  name              String
+  slug              String   @unique
+  discordWebhookUrl String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  projects Project[]
+}
+
+// Réglages clé/valeur configurables depuis l'admin (quotas, limites upload, etc.)
+model Setting {
+  key   String @id
+  value String
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilisateurs & accès
+// ─────────────────────────────────────────────────────────────────────────────
+
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  name      String?
-  role      String    @default("user") // "admin" or "user"
-  avatarPath String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  comments  Comment[]
-  assignedComments Comment[] @relation("AssignedComments")
-
-  teamMemberships TeamMembership[]
-
-  ownedTeams Team[]   @relation("TeamOwner")
-
-  teamRoles TeamRole[] @relation("UserRoles")
-  notifications Notification[]
-  notificationPreferences NotificationPreference[]
-  preferences String? @default("{}")
-  reactions Reaction[]
-  mutedProjects Project[] @relation("MutedProjects")
-
-  storageUsed BigInt @default(0)
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  password     String
+  name         String? // nom complet legacy (affichage de repli)
+  firstName    String?
+  lastName     String?
+  username     String?  @unique // pseudo affiché en priorité
+  avatarKey    String? // clé objet MinIO
+  role         Role     @default(ARTIST)
+  status       UserStatus @default(AVAILABLE) // statut manuel (dispo/absent/ne pas déranger)
+  lastSeenAt   DateTime? // dernière activité connue (présence)
+  storageUsed  BigInt   @default(0)
   storageLimit BigInt?
+  preferences  Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  // Reverse relations for uploader tracking
-  uploadedVideos Video[]
-  uploadedThreeDAssets ThreeDAsset[]
-  uploadedImageBundles ImageBundle[]
-  emailQueue EmailQueue[]
-  passwordResets PasswordReset[]
+  memberships      ProjectMembership[]
+  uploadedMedia    MediaObject[]       @relation("MediaUploader")
+  authoredVersions Version[]           @relation("VersionAuthor")
+  assignedTasks    Task[]              @relation("TaskAssignee")
+  comments         Comment[]           @relation("CommentAuthor")
+  assignedComments Comment[]           @relation("CommentAssignee")
+  reactions        Reaction[]
+  notifications    Notification[]
+  createdShares    ShareLink[]         @relation("ShareCreator")
+  auditLogs        AuditLog[]
+  boardChanges     BoardChange[]
+  passwordResets   PasswordReset[]
+  favorites        Favorite[]
+  documents        Document[]
 }
 
 model PasswordReset {
@@ -55,226 +161,232 @@ model PasswordReset {
   createdAt DateTime @default(now())
 }
 
-model NotificationPreference {
-  id        Int     @id @default(autoincrement())
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    Int
-  type      String  // MENTION, REPLY, PROJECT, VIDEO, STATUS, TEAM_ADD
-  email     Boolean @default(false)
-  inApp     Boolean @default(true)
-  discord   Boolean @default(true)
-
-  @@unique([userId, type])
-}
-
-model TeamRole {
-  id        Int      @id @default(autoincrement())
-  name      String
-  color     String   @default("#3b82f6") // Default blue
-  team      Team     @relation(fields: [teamId], references: [id])
-  teamId    Int
-  users     User[]   @relation("UserRoles")
-  channels  DiscordChannel[] @relation("ChannelRoles")
-  projects  Project[] @relation("ProjectRoles")
-}
-
-model Notification {
-  id          Int      @id @default(autoincrement())
-  content     String
-  type        String   @default("SYSTEM") // MENTION, SYSTEM, REPLY
-  referenceId Int?     // e.g., Comment ID or Video ID
-  projectId   Int?
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  videoId     Int?
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      Int
-}
-
-model Team {
-  id        Int       @id @default(autoincrement())
-  name      String
-  slug      String?   @unique
-
-  owner     User      @relation("TeamOwner", fields: [ownerId], references: [id])
-  ownerId   Int
-
-  members   TeamMembership[]
-  projects  Project[]
-  roles     TeamRole[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  storageUsed BigInt @default(0)
-  storageLimit BigInt?
-
-  startFrame Int @default(1001)
-
-  // Discord Integration
-  discordWebhookUrl String?
-  discordBotName    String?
-  discordBotAvatar  String?
-  discordTiming     String @default("REALTIME") // REALTIME, GROUPED, HYBRID, HOURLY, MAJOR
-  discordBurnAnnotations Boolean @default(true)
-  discordQueue      DiscordQueue[]
-
-  // Digest Video Settings (null = use global default)
-  digestFps        Int?      // Frames per second
-  digestTransition Float?    // Transition duration in seconds
-  digestPause      Float?    // Pause duration in seconds
-  digestVideoEnabled Boolean @default(true)
-  
-  discordChannels DiscordChannel[]
-}
-
-model TeamMembership {
+model ProjectMembership {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId    Int
-  role      String   @default("MEMBER") // 'OWNER', 'ADMIN', 'MEMBER', 'CLIENT'
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  role      Role? // override du rôle global au niveau projet (optionnel)
   joinedAt  DateTime @default(now())
 
-  @@unique([userId, teamId])
+  @@unique([userId, projectId])
 }
 
-model Invite {
-  id        Int       @id @default(autoincrement())
-  token     String    @unique
-  email     String?
-  role      String    @default("user")
-  used      Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  expiresAt DateTime?
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Hiérarchie pipeline
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Project {
-  id          Int      @id @default(autoincrement())
-  name        String
-  slug        String?
-  description String?
-  thumbnailPath String?
-  hasCustomThumbnail Boolean @default(false)
-  status      String   @default("INTERNAL_REVIEW") // INTERNAL_REVIEW, CLIENT_REVIEW, ALL_REVIEWS_DONE
-  clientToken String?  @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  videos      Video[]
-  imageBundles ImageBundle[]
-  threeDAssets ThreeDAsset[]
+  id           Int           @id @default(autoincrement())
+  studio       Studio        @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId     Int
+  name         String
+  slug         String
+  description  String?
+  thumbnailKey String?
+  status       ProjectStatus @default(ACTIVE)
+  startFrame   Int           @default(1001)
+  // Réglages projet : départements, nomenclature (override des défauts studio). JSON.
+  settings     Json          @default("{}")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
 
-  team        Team?    @relation(fields: [teamId], references: [id])
-  teamId      Int?
-
+  sequences   Sequence[]
+  shots       Shot[]
+  assets      Asset[]
+  memberships ProjectMembership[]
+  shareLinks  ShareLink[]
   notifications Notification[]
-  mutedBy     User[]   @relation("MutedProjects")
+  board       Board?
 
-  deletedAt   DateTime?
-  
-  discordChannels ProjectDiscordChannel[]
-  roles           TeamRole[] @relation("ProjectRoles")
-
-  @@unique([teamId, slug])
+  @@unique([studioId, slug])
 }
 
-model Video {
-  id           Int       @id @default(autoincrement())
-  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId    Int
-  filename     String    // System filename
-  originalName String    // User's filename
-  versionName  String    @default("V01")
-  mimeType     String
-  path         String
-  frameRate    Float     @default(24.0)
-  createdAt    DateTime  @default(now())
-  comments     Comment[]
-  size         BigInt    @default(0)
+model Sequence {
+  id        Int    @id @default(autoincrement())
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  name      String
+  code      String
+  order     Int    @default(0)
+  deletedAt DateTime?
 
-  uploaderId   Int?
-  uploader     User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  shots  Shot[]
+  assets Asset[] @relation("AssetSequences")
+
+  @@unique([projectId, code])
 }
 
-model ThreeDAsset {
-  id           Int       @id @default(autoincrement())
-  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId    Int
-  filename     String    // System filename
-  originalName String    // User's filename
-  versionName  String    @default("V01")
-  mimeType     String
-  path         String
-  createdAt    DateTime  @default(now())
-  comments     Comment[]
-  size         BigInt    @default(0)
+model Shot {
+  id         Int       @id @default(autoincrement())
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  Int
+  sequence   Sequence? @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
+  sequenceId Int?
+  name       String
+  code       String
+  startFrame Int?
+  endFrame   Int?
+  order      Int       @default(0)
+  thumbnailKey String?
+  deletedAt  DateTime?
 
-  uploaderId   Int?
-  uploader     User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  tasks  Task[]
+  assets Asset[] @relation("AssetShots")
+
+  // Un code de shot (ex: SH001) est unique par séquence : SH001 peut exister
+  // dans SQ001 ET SQ002. Les shots « sans séquence » (sequenceId = null) sont
+  // traités à part — l'unicité est vérifiée côté route (les NULL sont distincts en SQL).
+  @@unique([projectId, sequenceId, code])
 }
 
-model ImageBundle {
-  id          Int      @id @default(autoincrement())
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+model Asset {
+  id          Int       @id @default(autoincrement())
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId   Int
-  versionName String   @default("V01")
-  createdAt   DateTime @default(now())
-  images      Image[]
+  name        String
+  type        AssetType @default(OTHER)
+  description String?
+  thumbnailKey String?
+  deletedAt   DateTime?
 
-  uploaderId   Int?
-  uploader     User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  tasks     Task[]
+  versions  Version[]  @relation("AssetVersions")
+  board     Board?
+  shots     Shot[]     @relation("AssetShots")
+  sequences Sequence[] @relation("AssetSequences")
+
+  @@unique([projectId, name])
 }
 
-model Image {
+model Task {
+  id         Int        @id @default(autoincrement())
+  type       TaskType   @default(OTHER)
+  status     TaskStatus @default(TODO)
+  name       String
+  order      Int        @default(0)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Une Task est rattachée à un Shot OU un Asset (réutilisable)
+  shot    Shot? @relation(fields: [shotId], references: [id], onDelete: Cascade)
+  shotId  Int?
+  asset   Asset? @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId Int?
+
+  assignee   User? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeId Int?
+
+  versions Version[] @relation("TaskVersions")
+}
+
+// Version livrable (le cahier des charges parle d'« AssetVersion » ; généralisée :
+// une Version appartient à une Task OU directement à un Asset réutilisable).
+model Version {
+  id        Int           @id @default(autoincrement())
+  name      String        @default("V01")
+  status    VersionStatus @default(DRAFT)
+  published Boolean       @default(false)
+  transform Json? // transformation 3D appliquée avant publication (orientation, scale)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+
+  task    Task? @relation("TaskVersions", fields: [taskId], references: [id], onDelete: Cascade)
+  taskId  Int?
+  asset   Asset? @relation("AssetVersions", fields: [assetId], references: [id], onDelete: Cascade)
+  assetId Int?
+
+  author   User? @relation("VersionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId Int?
+
+  media MediaObject[]
+}
+
+model MediaObject {
   id           Int         @id @default(autoincrement())
-  bundle       ImageBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
-  bundleId     Int
-  filename     String
+  version      Version     @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId    Int
+  kind         MediaKind
   originalName String
-  path         String
+  storageKey   String // clé objet MinIO
   mimeType     String
-  order        Int
-  comments     Comment[]
   size         BigInt      @default(0)
+  status       MediaStatus @default(UPLOADING)
+  // Draft : un média non publié n'est visible que par son uploader (review/édition
+  // avant diffusion à l'équipe). Publié explicitement par l'uploader.
+  published    Boolean     @default(false)
+  metadata     Json        @default("{}") // frameRate, dimensions, durée, format splat, etc.
+  thumbnailKey String?
+  createdAt    DateTime    @default(now())
+  deletedAt    DateTime?
+
+  uploader   User? @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  uploaderId Int?
+
+  comments Comment[]
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Board 2D collaboratif (tldraw)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Board mood/reference (9.B) — rattaché à un Projet OU un Asset (XOR), plus à une version.
+model Board {
+  id        Int      @id @default(autoincrement())
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?     @unique
+  asset     Asset?   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId   Int?     @unique
+  document  Json     @default("{}") // scène Excalidraw
+  updatedAt DateTime @updatedAt
+
+  changes BoardChange[]
+}
+
+model BoardChange {
+  id        Int      @id @default(autoincrement())
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   Int
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId    Int?
+  summary   String
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Review : commentaires unifiés (un seul modèle pour tous les types de média)
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Comment {
-  id         Int      @id @default(autoincrement())
-  video      Video?   @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  videoId    Int?
-  image      Image?   @relation(fields: [imageId], references: [id], onDelete: Cascade)
-  imageId    Int?
-  threeDAsset ThreeDAsset? @relation(fields: [threeDAssetId], references: [id], onDelete: Cascade)
-  threeDAssetId Int?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId     Int?
-  guestName  String?
-  content    String
-  timestamp  Float    // Timestamp in seconds (video time)
-  duration   Float?   // Duration of the comment range (if any)
-  annotation String?  // JSON string for visual annotations
-  cameraState String?  // JSON string for 3D camera state (position, target, etc.)
-  hotspots    String?  // JSON string for 3D hotspots (point, surface, dimension)
-  screenshotPath String? // Path to the screenshot file
-  annotationScreenshotPath String? // Path to the burned-in annotation screenshot
-  attachmentPaths String? // JSON array of attachment paths (max 10 images, 5MB each)
-  isResolved Boolean  @default(false)
+  id            Int      @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+  author        User?    @relation("CommentAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  userId        Int?
+  guestName     String?
+  content       String
+  timestamp     Float? // temps vidéo (s)
+  duration      Float? // durée de la plage commentée (s)
+  annotation    Json? // dessin/annotation 2D
+  cameraState   Json? // viewpoint 3D/splat (position, target, fov…)
+  screenshotKey String? // capture annotée (MinIO)
+  attachments   Json? // pièces jointes (clés MinIO)
+  isResolved    Boolean  @default(false)
   isVisibleToClient Boolean @default(false)
-  isEdited   Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  isEdited      Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
-  parentId   Int?
-  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    Comment[] @relation("CommentReplies")
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId Int?
+  replies  Comment[] @relation("CommentReplies")
 
+  assignee   User? @relation("CommentAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   assigneeId Int?
-  assignee   User?     @relation("AssignedComments", fields: [assigneeId], references: [id], onDelete: SetNull)
 
-  reactions  Reaction[]
-  size       BigInt     @default(0)
+  reactions Reaction[]
 }
 
 model Reaction {
@@ -290,62 +402,105 @@ model Reaction {
   @@unique([commentId, userId, emoji])
 }
 
-model SystemSetting {
-  key   String @id
-  value String
+// ─────────────────────────────────────────────────────────────────────────────
+// Partage client sécurisé
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ShareLink {
+  id          Int             @id @default(autoincrement())
+  token       String          @unique
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   Int
+  permission  SharePermission @default(VIEW)
+  expiresAt   DateTime?
+  revoked     Boolean         @default(false)
+  createdBy   User?           @relation("ShareCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt   DateTime        @default(now())
 }
 
-model DiscordQueue {
-  id        Int      @id @default(autoincrement())
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId    Int
-  type      String   // COMMENT, STATUS, etc.
-  payload   String   // JSON payload
-  createdAt DateTime @default(now())
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications & audit
+// ─────────────────────────────────────────────────────────────────────────────
 
-model EmailQueue {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    Int
-  type      String   // Notification type
-  payload   String   // JSON payload (stores content, project info, etc.)
-  createdAt DateTime @default(now())
+model Notification {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  type        String   @default("SYSTEM") // MENTION, REPLY, STATUS, SYSTEM…
+  content     String
+  referenceId Int?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   Int?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   @@index([userId])
 }
 
-// Discord Channels - Custom webhooks per department/role
-model DiscordChannel {
-  id              Int       @id @default(autoincrement())
-  name            String
-  webhookUrl      String
-  team            Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId          Int
-  
-  // Notification settings (null = fallback to team settings)
-  botName         String?
-  botAvatar       String?
-  notificationMode String   @default("VIDEO") // "VIDEO" | "IMAGE"
-  timing          String?   // null = use team timing
-  burnAnnotations Boolean?  // null = use team setting
-  
-  // Department filtering - which roles trigger this channel
-  teamRoles       TeamRole[] @relation("ChannelRoles")
-  
-  // Projects explicitly assigned to this channel
-  projects        ProjectDiscordChannel[]
-  
-  createdAt       DateTime  @default(now())
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId     Int?
+  action     String
+  entityType String?
+  entityId   Int?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
 }
 
-// Link table for Project <-> DiscordChannel many-to-many
-model ProjectDiscordChannel {
-  id              Int            @id @default(autoincrement())
-  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId       Int
-  channel         DiscordChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  channelId       Int
-  
-  @@unique([projectId, channelId])
+// ─────────────────────────────────────────────────────────────────────────────
+// Favoris & documentation
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum EntityType {
+  PROJECT
+  SEQUENCE
+  SHOT
+  ASSET
+}
+
+model Favorite {
+  id        Int        @id @default(autoincrement())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  type      EntityType
+  entityId  Int
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, type, entityId])
+  @@index([userId])
+}
+
+enum DocScope {
+  GLOBAL
+  PROJECT
+  SEQUENCE
+  SHOT
+  ASSET
+}
+
+enum DocKind {
+  RICH
+  PDF
+}
+
+model Document {
+  id          Int      @id @default(autoincrement())
+  title       String
+  kind        DocKind  @default(RICH)
+  content     String? // HTML sanitisé (RICH)
+  fileKey     String? // clé MinIO (PDF)
+  scope       DocScope @default(GLOBAL)
+  projectId   Int? // contrôle d'accès (NULL = documentation globale studio)
+  scopeId     Int? // id de l'entité documentée (séquence/shot/asset/projet)
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([scope, scopeId])
 }

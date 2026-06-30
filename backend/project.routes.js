@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const { authenticateToken } = require('./middleware');
 const { generateThumbnail } = require('./utils/thumbnail');
-const { isValidVideoFile, isValidImageFile, isValidThreeDFile, isValidZipFile, isValidText, isValidImageBuffer } = require('./utils/validation');
+const { isValidVideoFile, isValidImageFile, isValidThreeDFile, isValidZipFile, isValidText, isValidImageBuffer, isGaussianSplat } = require('./utils/validation');
 const { sanitizeHtml } = require('./utils/security');
 const { generatePDF, generateCSV } = require('./utils/export');
 const { getVideoMetadata } = require('./utils/metadata');
@@ -359,19 +359,26 @@ router.get('/', authenticateToken, async (req, res) => {
         // Filter out deleted projects
         where.deletedAt = null;
 
+        // Only surface versions the viewer is allowed to see: published ones, or
+        // their own drafts. This keeps draft uploads private to their uploader.
+        const visibleVersionWhere = { OR: [{ published: true }, { uploaderId: req.user.id }] };
+
         const projects = await prisma.project.findMany({
             where: where,
             include: {
                 videos: {
+                    where: visibleVersionWhere,
                     take: 1,
                     orderBy: { createdAt: 'desc' }
                 },
                 imageBundles: {
+                    where: visibleVersionWhere,
                     take: 1,
                     orderBy: { createdAt: 'desc' },
                     include: { images: { take: 1, orderBy: { order: 'asc' } } }
                 },
                 threeDAssets: {
+                    where: visibleVersionWhere,
                     take: 1,
                     orderBy: { createdAt: 'desc' }
                 },
@@ -382,7 +389,18 @@ router.get('/', authenticateToken, async (req, res) => {
             },
             orderBy: { updatedAt: 'desc' }
         });
-        res.json(projects);
+
+        // Hide projects whose only content is someone else's draft (no version
+        // visible to this viewer). Admins keep seeing everything.
+        const visibleProjects = user.role === 'admin'
+            ? projects
+            : projects.filter(p =>
+                p.videos.length > 0 ||
+                p.imageBundles.length > 0 ||
+                p.threeDAssets.length > 0
+            );
+
+        res.json(visibleProjects);
     } catch (error) {
         console.error('Error fetching projects:', error);
         res.status(500).json({ error: 'Failed to fetch projects' });
@@ -471,7 +489,8 @@ async function fetchFullProject(projectId, userId, teamId, isClient = false) {
                                         }
                                     },
                                     reactions: true
-                                }
+                                },
+                                orderBy: { createdAt: 'asc' }
                             }
                         },
                         orderBy: { timestamp: 'asc' }
@@ -508,7 +527,8 @@ async function fetchFullProject(projectId, userId, teamId, isClient = false) {
                                                 }
                                             },
                                             reactions: true
-                                        }
+                                        },
+                                        orderBy: { createdAt: 'asc' }
                                     }
                                 },
                                 orderBy: { createdAt: 'desc' }
@@ -544,7 +564,8 @@ async function fetchFullProject(projectId, userId, teamId, isClient = false) {
                                         }
                                     },
                                     reactions: true
-                                }
+                                },
+                                orderBy: { createdAt: 'asc' }
                             }
                         },
                         orderBy: { createdAt: 'desc' }
@@ -627,6 +648,14 @@ async function fetchFullProject(projectId, userId, teamId, isClient = false) {
                 return null;
             }).filter(Boolean);
         }
+
+        // Draft filtering: an unpublished version is a private review copy,
+        // visible only to its uploader (never to clients). Strip it for
+        // everyone else so it doesn't appear in the version list.
+        const isVisible = (asset) => asset.published !== false || (!isClient && asset.uploaderId === userId);
+        if (project.videos) project.videos = project.videos.filter(isVisible);
+        if (project.threeDAssets) project.threeDAssets = project.threeDAssets.filter(isVisible);
+        if (project.imageBundles) project.imageBundles = project.imageBundles.filter(isVisible);
     }
 
     return project;
@@ -769,7 +798,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
     let isZip = false;
     if (videoFile) {
         const ext = path.extname(videoFile.originalname).toLowerCase();
-        const valid3DExtensions = ['.glb', '.fbx', '.usd', '.usdz', '.usda', '.usdc'];
+        const valid3DExtensions = ['.glb', '.gltf', '.fbx', '.usd', '.usdz', '.usda', '.usdc', '.splat', '.ply', '.sog'];
 
         if (valid3DExtensions.includes(ext)) {
             isThreeD = true;
@@ -791,7 +820,11 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                 return res.status(400).json({ error: 'Invalid ZIP file format' });
             }
         } else {
+<<<<<<< Updated upstream
             const ext3d = await isValidThreeDFile(videoFile.path);
+=======
+            const ext3d = isValidThreeDFile(videoFile.path, path.extname(videoFile.originalname).toLowerCase());
+>>>>>>> Stashed changes
             if (!ext3d) {
                 try { fs.unlinkSync(videoFile.path); } catch (e) { }
                 if (thumbnailFile) try { fs.unlinkSync(thumbnailFile.path); } catch (e) { }
@@ -1006,8 +1039,34 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
 
                 const ext = path.extname(videoFile.originalname).toLowerCase();
                 if (ext === '.fbx') mimeType = 'application/octet-stream';
+                else if (ext === '.gltf') mimeType = 'model/gltf+json';
                 else if (ext === '.usdz') mimeType = 'model/vnd.usdz+zip';
                 else if (['.usd', '.usda', '.usdc'].includes(ext)) mimeType = 'model/usd';
+                else if (ext === '.splat') mimeType = 'model/gaussian-splat';
+                else if (ext === '.ply') mimeType = 'model/ply';
+                else if (ext === '.sog') mimeType = 'model/sog';
+
+                const isSplatFile = ['.splat', '.ply', '.sog'].includes(ext);
+                if (isSplatFile && !isZip) {
+                    const sanName = videoFile.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+                    const targetFilename = `V01_${sanName}`;
+                    const targetFullPath = path.join(projectTargetDir, targetFilename);
+                    fs.copyFileSync(videoFile.path, targetFullPath);
+                    try { fs.unlinkSync(videoFile.path); } catch (e) { }
+                    const relPath = path.join(teamSlugToUse, slug, targetFilename).replace(/\\/g, '/');
+                    projectData.threeDAssets = {
+                        create: {
+                            filename: relPath,
+                            originalName: videoFile.originalname,
+                            mimeType,
+                            path: relPath,
+                            versionName: 'V01',
+                            size: BigInt(videoFile.size),
+                            published: false,
+                            uploaderId: req.user.id
+                        }
+                    };
+                }
 
                 if (isZip) {
                     // Extract ZIP
@@ -1040,7 +1099,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                                     if (found) return found;
                                 } else {
                                     const ext = file.toLowerCase().split('.').pop();
-                                    if (ext === 'glb' || ext === 'fbx') {
+                                    if (ext === 'glb' || ext === 'gltf' || ext === 'fbx') {
                                         return fullPath;
                                     }
                                 }
@@ -1196,7 +1255,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                 }
 
                 // FBX to GLB Conversion (for non-ZIP FBX files)
-                if (ext === '.fbx' && !isZip) {
+                if (!isSplatFile && ext === '.fbx' && !isZip) {
                     // Check if server conversion is enabled
                     const conversionEnabled = await isFbxConversionEnabled();
                     if (!conversionEnabled) {
@@ -1241,8 +1300,8 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                     }
                 }
 
-                // AFTER CONVERSION/PROCESSING, MOVE TO FINAL DESTINATION
-                // AFTER CONVERSION/PROCESSING, MOVE TO FINAL DESTINATION
+                // AFTER CONVERSION/PROCESSING, MOVE TO FINAL DESTINATION (skipped for Gaussian Splat)
+                if (!isSplatFile) {
                 // teamSlugToUse and projectTargetDir are already defined at top level
 
                 // If conversion happened, finalPath is the GLB.
@@ -1327,9 +1386,11 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                         path: finalFilename, // Store relative path
                         versionName: 'V01',
                         size: BigInt(videoFile.size),
+                        published: false,
                         uploaderId: req.user.id
                     }
                 };
+                } // end !isSplatFile
             } else {
                 // VIDEO PROCESSING
                 // Move video to structured folder
@@ -1378,6 +1439,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
                         versionName: 'V01',
                         frameRate,
                         size: BigInt(videoFile.size),
+                        published: false,
                         uploaderId: req.user.id
                     }
                 };
@@ -1400,6 +1462,7 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
             projectData.imageBundles = {
                 create: {
                     versionName: 'V01',
+                    published: false,
                     uploaderId: req.user.id,
                     images: {
                         create: await Promise.all(imageFiles.map(async (file, index) => {
@@ -1482,61 +1545,15 @@ router.post('/', authenticateToken, projectRateLimiter, upload.fields([{ name: '
 
         // Notification: PROJECT_CREATE
         if (parsedTeamId) {
-            const team = await prisma.team.findUnique({
-                where: { id: parsedTeamId },
-                include: { members: { select: { userId: true } }, owner: { select: { id: true } } }
-            });
-
-            const recipients = new Set();
-            if (team) {
-                if (team.ownerId !== req.user.id) recipients.add(team.ownerId);
-                team.members.forEach(m => {
-                    if (m.userId !== req.user.id) recipients.add(m.userId);
-                });
-            }
-
-            // Send Live Update to Team Members
-            // We iterate and emit to each user's room
+            // The first version is uploaded as a draft (private to the uploader)
+            // until it is published. We therefore hold the team-facing
+            // announcement (live push to teammates, bell notification, Discord)
+            // until the uploader publishes — see POST /versions/:type/:id/publish,
+            // which sends the PROJECT_CREATE announcement for the first version.
+            // The creator still gets a live update so their own dashboard refreshes.
             const io = getIo();
-            recipients.forEach(userId => {
-                io.to(`user_${userId}`).emit('PROJECT_CREATE', project);
-            });
-            // Also emit to myself (the creator) so my list updates if I'm on multiple devices or tabs
             io.to(`user_${req.user.id}`).emit('PROJECT_CREATE', project);
-
-            // Also emit to the project room (though newly created, no one is there yet, but for consistency)
             io.to(`project_${project.id}`).emit('PROJECT_CREATE', project);
-
-            const videoId = project.videos.length > 0 ? project.videos[0].id : null;
-
-            await createAndBroadcast(Array.from(recipients), {
-                type: 'PROJECT_CREATE',
-                content: `New project "${project.name}" created`,
-                referenceId: project.id,
-                projectId: project.id,
-                videoId: videoId,
-                data: { gifPath: generatedGifPath, thumbnailPath: project.thumbnailPath } // Pass GIF path to notification service
-            });
-
-            // Discord Notification
-            // Skip if 3D project and NO custom thumbnail AND NO generated GIF (client will generate and trigger later)
-            const shouldSkipDiscord = isThreeD && !hasCustomThumbnail && !generatedGifPath;
-
-            if (!shouldSkipDiscord) {
-                console.log('[Discord] Triggering notification for project:', project.id, 'with GIF:', generatedGifPath);
-                await notifyDiscord(parsedTeamId, 'PROJECT_CREATE', {
-                    id: project.id,
-                    projectId: project.id, // Explicitly pass ProjectID for role filtering
-                    name: project.name,
-                    description: project.description,
-                    thumbnailPath: project.thumbnailPath,
-                    gifPath: generatedGifPath, // Pass to Discord service
-                    projectSlug: project.slug,
-                    user: { name: user.name, avatarPath: user.avatarPath }
-                });
-            } else {
-                console.log('[Discord] Skipped notification (3D project expecting thumbnail later)');
-            }
 
         }
 
@@ -1569,7 +1586,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
     let isZip = false;
     if (videoFile) {
         const ext = path.extname(videoFile.originalname).toLowerCase();
-        const valid3DExtensions = ['.glb', '.fbx', '.usd', '.usdz', '.usda', '.usdc'];
+        const valid3DExtensions = ['.glb', '.gltf', '.fbx', '.usd', '.usdz', '.usda', '.usdc', '.splat', '.ply', '.sog'];
 
         if (valid3DExtensions.includes(ext)) {
             isThreeD = true;
@@ -1590,7 +1607,11 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                 return res.status(400).json({ error: 'Invalid ZIP file format' });
             }
         } else {
+<<<<<<< Updated upstream
             const ext3d = await isValidThreeDFile(videoFile.path);
+=======
+            const ext3d = isValidThreeDFile(videoFile.path, path.extname(videoFile.originalname).toLowerCase());
+>>>>>>> Stashed changes
             if (!ext3d) {
                 try { await fs.promises.unlink(videoFile.path); } catch (e) { }
                 return res.status(400).json({ error: 'Invalid 3D file format' });
@@ -1697,10 +1718,39 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
 
                 const ext = path.extname(videoFile.originalname).toLowerCase();
                 if (ext === '.fbx') mimeType = 'application/octet-stream';
+                else if (ext === '.gltf') mimeType = 'model/gltf+json';
                 else if (ext === '.usdz') mimeType = 'model/vnd.usdz+zip';
                 else if (['.usd', '.usda', '.usdc'].includes(ext)) mimeType = 'model/usd';
+                else if (ext === '.splat') mimeType = 'model/gaussian-splat';
+                else if (ext === '.ply') mimeType = 'model/ply';
+                else if (ext === '.sog') mimeType = 'model/sog';
 
-                if (isZip) {
+                // Gaussian Splat files: store directly, no conversion or GIF generation
+                const isSplatFile = ['.splat', '.ply', '.sog'].includes(ext);
+                if (isSplatFile && !isZip) {
+                    const teamSlugForSplat = project.team?.slug || 'personal';
+                    const splatProjectDir = path.join(UPLOAD_DIR, teamSlugForSplat, project.slug);
+                    if (!fs.existsSync(splatProjectDir)) fs.mkdirSync(splatProjectDir, { recursive: true });
+                    const sanName = videoFile.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+                    const targetFilename = `${versionName}_${sanName}`;
+                    const targetFullPath = path.join(splatProjectDir, targetFilename);
+                    fs.copyFileSync(finalPath, targetFullPath);
+                    try { fs.unlinkSync(finalPath); } catch (e) { }
+                    const relPath = path.join(teamSlugForSplat, project.slug, targetFilename).replace(/\\/g, '/');
+                    newVersion = await prisma.threeDAsset.create({
+                        data: {
+                            projectId,
+                            filename: relPath,
+                            originalName: videoFile.originalname,
+                            mimeType,
+                            path: relPath,
+                            versionName,
+                            size: BigInt(videoFile.size),
+                            published: false,
+                            uploaderId: req.user.id
+                        }
+                    });
+                } else if (isZip) {
                     try {
                         const zip = new AdmZip(videoFile.path);
                         const extractDir = path.join(UPLOAD_DIR, 'unpacked', path.parse(videoFile.filename).name);
@@ -1729,7 +1779,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                                     if (found) return found;
                                 } else {
                                     const lower = file.toLowerCase();
-                                    if (lower.endsWith('.glb') || lower.endsWith('.fbx')) {
+                                    if (lower.endsWith('.glb') || lower.endsWith('.gltf') || lower.endsWith('.fbx')) {
                                         return fullPath;
                                     }
                                 }
@@ -1797,7 +1847,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                 }
 
                 // FBX to GLB Conversion (for non-ZIP FBX files)
-                if (ext === '.fbx' && !isZip) {
+                if (!isSplatFile && ext === '.fbx' && !isZip) {
                     const conversionEnabled = await isFbxConversionEnabled();
                     if (!conversionEnabled) {
                         try { await fs.promises.unlink(videoFile.path); } catch (err) { }
@@ -1833,9 +1883,10 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                     }
                 }
 
-                // MOVE NEW VERSION TO STRUCTURED FOLDER
+                // MOVE NEW VERSION TO STRUCTURED FOLDER (skipped for Gaussian Splat - already handled above)
+                if (!isSplatFile) {
                 const project = await prisma.project.findUnique({ where: { id: projectId }, include: { team: true } });
-                const teamSlugToUse = project.team ? project.team.slug : 'admin'; // or 'personal' if null team and not admin? 
+                const teamSlugToUse = project.team ? project.team.slug : 'admin'; // or 'personal' if null team and not admin?
 
                 const sanName = videoFile.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
                 const projectTargetDir = path.join(UPLOAD_DIR, teamSlugToUse, project.slug);
@@ -1877,6 +1928,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                         path: finalFilename, // Store relative
                         versionName,
                         size: BigInt(videoFile.size),
+                        published: false,
                         uploaderId: req.user.id
                     }
                 });
@@ -1915,6 +1967,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                 // Cleanup temp files if they exist (unpacked zip etc) are already handled above by try-catch blocks in the zip/convert logic
                 // But let's be sure to clean up the original videoFile if it wasn't cleaned
                 try { if (fs.existsSync(videoFile.path)) await fs.promises.unlink(videoFile.path); } catch (e) { }
+                } // end !isSplatFile
 
             } else {
                 // VIDEO VERSION PROCESSING
@@ -1981,6 +2034,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                         versionName,
                         frameRate,
                         size: BigInt(videoFile.size),
+                        published: false,
                         uploaderId: req.user.id
                     }
                 });
@@ -1998,19 +2052,21 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                     });
                 }
 
-                await createAndBroadcast(Array.from(recipients), {
-                    type: 'VIDEO_VERSION',
-                    content: `New version ${newVersion.versionName} uploaded to ${project.name}`,
-                    referenceId: newVersion.id,
-                    projectId: project.id,
-                    videoId: newVersion.id, // For Video/3D
-                    data: {
-                        versionName: newVersion.versionName,
+                if (newVersion.published) {
+                    await createAndBroadcast(Array.from(recipients), {
+                        type: 'VIDEO_VERSION',
+                        content: `New version ${newVersion.versionName} uploaded to ${project.name}`,
+                        referenceId: newVersion.id,
                         projectId: project.id,
-                        gifPath: gifPath || (newVersion.threeDAssets ? newVersion.gifPath : null),
-                        thumbnailPath: project.thumbnailPath // fallback
-                    }
-                });
+                        videoId: newVersion.id, // For Video/3D
+                        data: {
+                            versionName: newVersion.versionName,
+                            projectId: project.id,
+                            gifPath: gifPath || (newVersion.threeDAssets ? newVersion.gifPath : null),
+                            thumbnailPath: project.thumbnailPath // fallback
+                        }
+                    });
+                }
 
             }
         } else {
@@ -2024,6 +2080,7 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
                 data: {
                     projectId,
                     versionName,
+                    published: false,
                     uploaderId: req.user.id,
                     images: {
                         create: await Promise.all(imageFiles.map(async (file, index) => {
@@ -2071,7 +2128,9 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
         }
 
         // Notification: VIDEO_VERSION (Generalized for version)
-        if (project.teamId) {
+        // Drafts are private to the uploader, so the team is only notified when
+        // the version is published (see POST /versions/:type/:id/publish).
+        if (project.teamId && newVersion.published) {
             const team = await prisma.team.findUnique({
                 where: { id: project.teamId },
                 include: { members: { select: { userId: true } }, owner: { select: { id: true } } }
@@ -2115,6 +2174,200 @@ router.post('/:id/versions', authenticateToken, versionRateLimiter, upload.field
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to upload version' });
+    }
+});
+
+// POST /projects/versions/:type/:id/publish
+// Publish a draft version, making it visible to the whole team and announcing
+// it. `type` is one of: video | threed | images.
+router.post('/versions/:type/:id/publish', authenticateToken, async (req, res) => {
+    const { type } = req.params;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid version ID' });
+
+    const modelByType = { video: 'video', threed: 'threeDAsset', images: 'imageBundle' };
+    const modelKey = modelByType[type];
+    if (!modelKey) return res.status(400).json({ error: 'Invalid version type' });
+
+    try {
+        const asset = await prisma[modelKey].findUnique({ where: { id } });
+        if (!asset) return res.status(404).json({ error: 'Version not found' });
+
+        const access = await checkProjectAccess(req.user, asset.projectId);
+        if (!access.authorized) return res.status(access.status).json({ error: access.error });
+
+        // Only the uploader (or an admin) may publish their own draft.
+        if (asset.uploaderId && asset.uploaderId !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Only the uploader can publish this version' });
+        }
+
+        if (asset.published) return res.json(asset); // already published — idempotent
+
+        const updated = await prisma[modelKey].update({ where: { id }, data: { published: true } });
+
+        const project = access.project;
+        const io = getIo();
+        io.to(`project_${project.id}`).emit('VERSION_ADDED', { projectId: project.id, version: updated });
+
+        // Announce to the team. If this is the project's first published version,
+        // announce it as a project creation; otherwise as a new version.
+        if (project.teamId) {
+            const publishedCount =
+                (await prisma.video.count({ where: { projectId: project.id, published: true } })) +
+                (await prisma.threeDAsset.count({ where: { projectId: project.id, published: true } })) +
+                (await prisma.imageBundle.count({ where: { projectId: project.id, published: true } }));
+            const isFirst = publishedCount <= 1;
+
+            const team = await prisma.team.findUnique({
+                where: { id: project.teamId },
+                include: { members: { select: { userId: true } }, owner: { select: { id: true } } }
+            });
+            const recipients = new Set();
+            if (team) {
+                if (team.ownerId !== req.user.id) recipients.add(team.ownerId);
+                team.members.forEach(m => { if (m.userId !== req.user.id) recipients.add(m.userId); });
+            }
+
+            // Live dashboard refresh for teammates (project now has visible content)
+            recipients.forEach(uid => io.to(`user_${uid}`).emit('PROJECT_CREATE', project));
+
+            const actor = { name: access.user.name, avatarPath: access.user.avatarPath };
+
+            if (isFirst) {
+                await createAndBroadcast(Array.from(recipients), {
+                    type: 'PROJECT_CREATE',
+                    content: `New project "${project.name}" created`,
+                    referenceId: project.id,
+                    projectId: project.id,
+                    videoId: type === 'video' ? updated.id : null,
+                    data: { thumbnailPath: project.thumbnailPath }
+                });
+                await notifyDiscord(project.teamId, 'PROJECT_CREATE', {
+                    id: project.id,
+                    projectId: project.id,
+                    name: project.name,
+                    description: project.description,
+                    thumbnailPath: project.thumbnailPath,
+                    projectSlug: project.slug,
+                    user: actor
+                });
+            } else {
+                await createAndBroadcast(Array.from(recipients), {
+                    type: 'VIDEO_VERSION',
+                    content: `New version ${updated.versionName} published in "${project.name}"`,
+                    referenceId: updated.id,
+                    projectId: project.id,
+                    videoId: type === 'video' ? updated.id : null,
+                    data: { versionName: updated.versionName, thumbnailPath: project.thumbnailPath }
+                });
+                await notifyDiscord(project.teamId, 'VIDEO_VERSION', {
+                    projectId: project.id,
+                    projectName: project.name,
+                    projectSlug: project.slug,
+                    versionName: updated.versionName,
+                    thumbnailPath: project.thumbnailPath,
+                    user: actor
+                });
+            }
+        }
+
+        res.json(updated);
+    } catch (error) {
+        console.error('Error publishing version:', error);
+        res.status(500).json({ error: 'Failed to publish version' });
+    }
+});
+
+// PUT /projects/threed/:id/file
+// Replace the file of an UNPUBLISHED 3D asset (draft). Lets the uploader
+// edit/replace/save a splat or model before publishing. Single-file models and
+// splats only — no ZIP extraction or FBX conversion here.
+router.put('/threed/:id/file', authenticateToken, upload.single('file'), async (req, res) => {
+    const id = parseInt(req.params.id);
+    const file = req.file;
+    const cleanup = () => { if (file) { try { fs.unlinkSync(file.path); } catch (e) { } } };
+
+    if (isNaN(id)) { cleanup(); return res.status(400).json({ error: 'Invalid asset ID' }); }
+    if (!file) return res.status(400).json({ error: 'File is required' });
+
+    try {
+        const asset = await prisma.threeDAsset.findUnique({
+            where: { id },
+            include: { project: { include: { team: true } } }
+        });
+        if (!asset) { cleanup(); return res.status(404).json({ error: 'Asset not found' }); }
+
+        const access = await checkProjectAccess(req.user, asset.projectId);
+        if (!access.authorized) { cleanup(); return res.status(access.status).json({ error: access.error }); }
+
+        if (asset.uploaderId && asset.uploaderId !== req.user.id && req.user.role !== 'admin') {
+            cleanup(); return res.status(403).json({ error: 'Only the uploader can replace this version' });
+        }
+        if (asset.published) { cleanup(); return res.status(400).json({ error: 'Cannot replace a published version' }); }
+
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext === '.fbx' || ext === '.zip') {
+            cleanup();
+            return res.status(400).json({ error: 'FBX/ZIP require a full re-upload as a new version' });
+        }
+        const ext3d = isValidThreeDFile(file.path, ext);
+        if (!ext3d) { cleanup(); return res.status(400).json({ error: 'Invalid 3D file format' }); }
+
+        // Quota: only charge for an increase in size
+        const delta = file.size - Number(asset.size);
+        if (delta > 0 && asset.project.teamId) {
+            try { await checkQuota({ userId: req.user.id, teamId: asset.project.teamId, fileSize: delta }); }
+            catch (e) { cleanup(); return res.status(403).json({ error: e.message }); }
+        }
+
+        const teamSlug = asset.project.team?.slug || (req.user.role === 'admin' ? 'admin' : 'personal');
+        const projectDir = path.join(UPLOAD_DIR, teamSlug, asset.project.slug);
+        if (!fs.existsSync(projectDir)) fs.mkdirSync(projectDir, { recursive: true });
+
+        const sanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const targetFilename = `${asset.versionName}_${sanName}`;
+        const targetFullPath = path.join(projectDir, targetFilename);
+        fs.copyFileSync(file.path, targetFullPath);
+        try { fs.unlinkSync(file.path); } catch (e) { }
+
+        // Remove the previous file if it lives at a different path
+        const oldFull = path.join(UPLOAD_DIR, asset.path);
+        if (path.resolve(oldFull) !== path.resolve(targetFullPath) && fs.existsSync(oldFull)) {
+            try { fs.unlinkSync(oldFull); } catch (e) { }
+        }
+
+        let mimeType = 'model/gltf-binary';
+        if (ext === '.gltf') mimeType = 'model/gltf+json';
+        else if (ext === '.usdz') mimeType = 'model/vnd.usdz+zip';
+        else if (['.usd', '.usda', '.usdc'].includes(ext)) mimeType = 'model/usd';
+        else if (ext === '.splat') mimeType = 'model/gaussian-splat';
+        else if (ext === '.ply') mimeType = 'model/ply';
+        else if (ext === '.sog') mimeType = 'model/sog';
+
+        const relPath = path.join(teamSlug, asset.project.slug, targetFilename).replace(/\\/g, '/');
+        const updated = await prisma.threeDAsset.update({
+            where: { id },
+            data: {
+                filename: relPath,
+                path: relPath,
+                originalName: file.originalname,
+                mimeType,
+                size: BigInt(file.size)
+            }
+        });
+
+        // Storage accounting (delta can be negative)
+        if (asset.project.teamId) await updateStorage({ teamId: asset.project.teamId, deltaBytes: delta });
+        await updateStorage({ userId: req.user.id, deltaBytes: delta });
+
+        const io = getIo();
+        io.to(`project_${asset.projectId}`).emit('VERSION_ADDED', { projectId: asset.projectId, version: updated });
+
+        res.json(updated);
+    } catch (error) {
+        console.error('Error replacing 3D asset:', error);
+        cleanup();
+        res.status(500).json({ error: 'Failed to replace 3D file' });
     }
 });
 
@@ -2583,6 +2836,63 @@ router.patch('/comments/:commentId', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error updating comment:', error);
         res.status(500).json({ error: 'Failed to update comment' });
+    }
+});
+
+// DELETE /projects/comments/:commentId: Delete comment
+router.delete('/comments/:commentId', authenticateToken, async (req, res) => {
+    const commentId = parseInt(req.params.commentId);
+
+    // Security: Check if user has access to the project containing the comment
+    const access = await checkCommentAccess(req.user, commentId);
+    if (!access.authorized) return res.status(access.status).json({ error: access.error });
+
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    // Authorization: Only Author, Team Owner, or Admin can delete
+    const project = await prisma.project.findFirst({
+        where: {
+            OR: [
+                { videos: { some: { comments: { some: { id: commentId } } } } },
+                { imageBundles: { some: { images: { some: { comments: { some: { id: commentId } } } } } } },
+                { threeDAssets: { some: { comments: { some: { id: commentId } } } } }
+            ]
+        },
+        include: { team: { select: { ownerId: true } } }
+    });
+
+    const isOwner = comment.userId === req.user.id;
+    const isTeamOwner = project?.team?.ownerId === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isTeamOwner && !isAdmin) {
+        return res.status(403).json({ error: 'You can only delete your own comments' });
+    }
+
+    try {
+        // Delete the comment
+        await prisma.comment.delete({ where: { id: commentId } });
+
+        // Broadcast deletion
+        if (project) {
+            const io = getIo();
+            io.to(`project_${project.id}`).emit('COMMENT_DELETED', { commentId, projectId: project.id });
+
+            // Also broadcast to team members
+            if (project.team) {
+                const recipients = new Set([project.team.ownerId]);
+                project.team.members.forEach(m => recipients.add(m.userId));
+                recipients.forEach(userId => {
+                    io.to(`user_${userId}`).emit('COMMENT_DELETED', { commentId, projectId: project.id });
+                });
+            }
+        }
+
+        res.json({ success: true, id: commentId });
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        res.status(500).json({ error: 'Failed to delete comment' });
     }
 });
 
@@ -3273,7 +3583,13 @@ router.post('/:id/thumbnail-notify', authenticateToken, upload.single('thumbnail
             // We use 'PROJECT_CREATE' because we skipped it earlier.
             // Only send if project didn't already have a thumbnail (server-side GIF generation already sent notification)
             const hadThumbnailBefore = !!project.thumbnailPath;
-            if (project.team && !hadThumbnailBefore) {
+            // Skip while the project's only version is still a draft — the team
+            // is announced when the uploader publishes (see /versions/:type/:id/publish).
+            const publishedCount =
+                (await prisma.video.count({ where: { projectId, published: true } })) +
+                (await prisma.threeDAsset.count({ where: { projectId, published: true } })) +
+                (await prisma.imageBundle.count({ where: { projectId, published: true } }));
+            if (project.team && !hadThumbnailBefore && publishedCount > 0) {
                 await notifyDiscord(project.teamId, 'PROJECT_CREATE', {
                     id: project.id,
                     name: project.name,
@@ -3539,6 +3855,13 @@ router.delete('/comments/:commentId', authenticateToken, async (req, res) => {
         }
 
         await prisma.comment.delete({ where: { id: commentId } });
+
+        // Notify clients
+        if (projectId) {
+            const io = getIo();
+            io.to(`project_${projectId}`).emit('COMMENT_DELETED', { id: commentId, projectId });
+        }
+
         res.json({ message: 'Comment deleted successfully' });
     } catch (error) {
         console.error('Error deleting comment:', error);
