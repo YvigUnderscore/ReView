@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Pencil, LayoutDashboard, Users as UsersIcon, Activity, Settings as SettingsIcon, History, RefreshCw, Server, FolderCog, Save } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth, type Role } from '../stores/useAuth';
 import Shell from '../components/Shell';
@@ -10,6 +11,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Select } from '../components/ui/select';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 
 interface Stats {
   users: { total: number; byRole: Record<string, number>; online: number };
@@ -383,18 +385,23 @@ function UserModal({ title, user, onClose, onSaved }: { title: string; user?: Us
       if (form.storageLimitGo) body.storageLimit = Math.round(Number(form.storageLimitGo) * 1e9);
       if (isEdit) {
         await api.patch(`/api/users/${user!.id}`, body);
+        toast.success('Utilisateur modifié');
       } else {
         if (!form.password) throw new Error('Mot de passe requis');
         await api.post('/api/users', body);
+        toast.success('Utilisateur créé');
       }
       onSaved();
     } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setBusy(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="w-full max-w-md space-y-3 rounded-lg border border-border bg-card p-5 shadow-xl">
-        <h3 className="text-base font-semibold">{title}</h3>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <form onSubmit={submit} className="space-y-3">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
         <div className="grid grid-cols-2 gap-2">
           <Input placeholder="Prénom" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
           <Input placeholder="Nom" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
@@ -409,12 +416,13 @@ function UserModal({ title, user, onClose, onSaved }: { title: string; user?: Us
           <Input type="number" placeholder="Quota (Go)" value={form.storageLimitGo} onChange={(e) => setForm((f) => ({ ...f, storageLimitGo: e.target.value }))} />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
+        <DialogFooter>
           <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
           <Button type="submit" size="sm" disabled={busy}>{isEdit ? 'Enregistrer' : 'Créer'}</Button>
-        </div>
-      </form>
-    </div>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

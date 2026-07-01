@@ -1,5 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { api } from '../lib/apiClient';
 import { useAuth } from './stores/useAuth';
 import LoginPage from './pages/LoginPage';
@@ -40,6 +41,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="bottom-right" richColors closeButton />
       <Routes>
         {needsSetup ? (
           <>

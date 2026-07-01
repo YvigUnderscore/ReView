@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { LayoutDashboard, Clapperboard, Film, Box, Users, Trash2, Plus, KanbanSquare, PenTool, Link2, Star, Settings } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth, type Role } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
@@ -15,6 +16,10 @@ import BatchGenerator from '../components/BatchGenerator';
 import AssetAssignDialog from '../components/AssetAssignDialog';
 import ProjectActivity from '../components/ProjectActivity';
 import ProjectSettingsTab from '../components/ProjectSettingsTab';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
 
 export interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number; }
 export interface Department { key: string; name: string; }
@@ -365,29 +370,32 @@ function ShotEditDialog({ shot, sequences, onClose, onSaved }: {
         name: vals.name,
         sequenceId: vals.sequenceId ? Number(vals.sequenceId) : null,
       });
+      toast.success('Shot modifié');
       onSaved();
     } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setBusy(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-3 text-sm font-semibold">Modifier le shot</h3>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Modifier le shot</DialogTitle>
+        </DialogHeader>
         {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
         <div className="space-y-2">
-          <input className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm" placeholder="Code" value={vals.code} onChange={(e) => setVals((v) => ({ ...v, code: e.target.value }))} />
-          <input className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm" placeholder="Nom" value={vals.name} onChange={(e) => setVals((v) => ({ ...v, name: e.target.value }))} />
-          <select className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm" value={vals.sequenceId} onChange={(e) => setVals((v) => ({ ...v, sequenceId: e.target.value }))}>
+          <Input placeholder="Code" value={vals.code} onChange={(e) => setVals((v) => ({ ...v, code: e.target.value }))} />
+          <Input placeholder="Nom" value={vals.name} onChange={(e) => setVals((v) => ({ ...v, name: e.target.value }))} />
+          <Select className="w-full" value={vals.sequenceId} onChange={(e) => setVals((v) => ({ ...v, sequenceId: e.target.value }))}>
             <option value="">Sans séquence</option>
             {sequences.map((sq) => <option key={sq.id} value={sq.id}>{sq.code} · {sq.name}</option>)}
-          </select>
+          </Select>
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60">Annuler</button>
-          <button onClick={save} disabled={busy} className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50">{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onClose}>Annuler</Button>
+          <Button size="sm" onClick={save} disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

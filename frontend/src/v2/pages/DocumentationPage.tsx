@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Plus, FileText, FileType2, Trash2, Save } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
 import RichTextEditor from '../components/RichTextEditor';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Button } from '../components/ui/button';
 
 type DocScope = 'GLOBAL' | 'PROJECT' | 'SEQUENCE' | 'SHOT' | 'ASSET';
 type DocKind = 'RICH' | 'PDF';
@@ -208,14 +211,18 @@ function CreateDocModal({ projects, defaultProjectId, onClose, onCreated }: {
         body.content = '';
       }
       const { document } = await api.post<{ document: Doc }>('/api/documents', body);
+      toast.success('Document créé');
       onCreated(document);
     } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setBusy(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="w-full max-w-md space-y-3 rounded-lg border border-border bg-card p-5 shadow-xl">
-        <h3 className="text-base font-semibold">Nouveau document</h3>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <form onSubmit={submit} className="space-y-3">
+        <DialogHeader>
+          <DialogTitle>Nouveau document</DialogTitle>
+        </DialogHeader>
         <input className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
         <div className="grid grid-cols-2 gap-2">
           <select className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={kind} onChange={(e) => setKind(e.target.value as DocKind)}>
@@ -242,11 +249,12 @@ function CreateDocModal({ projects, defaultProjectId, onClose, onCreated }: {
           <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm" />
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60">Annuler</button>
-          <button type="submit" disabled={busy} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? 'Création…' : 'Créer'}</button>
-        </div>
-      </form>
-    </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
+          <Button type="submit" size="sm" disabled={busy}>{busy ? 'Création…' : 'Créer'}</Button>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

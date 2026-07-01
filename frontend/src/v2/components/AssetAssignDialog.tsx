@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
+import { Button } from './ui/button';
 
 interface Shot { id: number; code: string; name: string; sequenceId: number | null }
 interface Sequence { id: number; code: string; name: string }
@@ -54,6 +56,7 @@ export default function AssetAssignDialog({
     setError(null);
     try {
       await api.patch(`/api/assets/${assetId}`, { shotIds: [...shotIds], sequenceIds: [...sequenceIds] });
+      toast.success('Assignations enregistrées');
       onSaved?.();
       onClose();
     } catch (err) {
@@ -79,11 +82,10 @@ export default function AssetAssignDialog({
   const seqById = useMemo(() => new Map(sequences.map((s) => [s.id, s])), [sequences]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-border bg-card shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h3 className="text-sm font-semibold">Assigner « {assetName} »</h3>
-          <button onClick={onClose} className="rounded p-1 text-muted-foreground hover:bg-secondary"><X size={16} /></button>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="flex max-h-[80vh] max-w-lg flex-col p-0">
+        <div className="border-b border-border px-4 py-3">
+          <DialogTitle className="text-sm">Assigner « {assetName} »</DialogTitle>
         </div>
         {error && <p className="px-4 pt-3 text-xs text-destructive">{error}</p>}
         <div className="flex-1 overflow-y-auto p-4">
@@ -134,12 +136,12 @@ export default function AssetAssignDialog({
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
-          <button onClick={onClose} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60">Annuler</button>
-          <button onClick={save} disabled={busy || loading} className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50">
+          <Button variant="outline" size="sm" onClick={onClose}>Annuler</Button>
+          <Button size="sm" onClick={save} disabled={busy || loading}>
             {busy ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
