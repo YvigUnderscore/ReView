@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Star } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
@@ -13,6 +14,7 @@ import { Badge } from '../components/ui/badge';
 import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 
 interface Project {
   id: number;
@@ -140,34 +142,39 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
     e.preventDefault();
     try {
       await api.patch(`/api/projects/${project.id}`, { name, description: description || null, status });
+      toast.success('Projet mis à jour');
       onSaved();
     } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="w-full max-w-md space-y-3 rounded-lg border border-border bg-card p-5 shadow-xl">
-        <h3 className="text-base font-semibold">Éditer le projet</h3>
-        <div className="space-y-1">
-          <Label>Nom</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div className="space-y-1">
-          <Label>Description</Label>
-          <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label>Statut</Label>
-          <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-          </Select>
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
-          <Button type="submit" size="sm">Enregistrer</Button>
-        </div>
-      </form>
-    </div>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <form onSubmit={save} className="space-y-3">
+          <DialogHeader>
+            <DialogTitle>Éditer le projet</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1">
+            <Label>Nom</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Description</Label>
+            <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>Statut</Label>
+            <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
+              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </Select>
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
+            <Button type="submit" size="sm">Enregistrer</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

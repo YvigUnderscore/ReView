@@ -1,5 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion';
 import type { ReactNode } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Button } from './ui/button';
 
 /**
  * Dialogue de confirmation modal réutilisable (suppression, purge…).
@@ -25,45 +26,17 @@ export default function ConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onCancel}
-        >
-          <motion.div
-            className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl"
-            initial={{ scale: 0.95, y: 8 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.95, y: 8 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-2 text-base font-semibold">{title}</h3>
-            <div className="mb-5 text-sm text-muted-foreground">{message}</div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={onCancel}
-                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60"
-              >
-                {cancelLabel}
-              </button>
-              <button
-                onClick={onConfirm}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  danger
-                    ? 'bg-destructive text-destructive-foreground hover:opacity-90'
-                    : 'bg-primary text-primary-foreground hover:opacity-90'
-                }`}
-              >
-                {confirmLabel}
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onCancel}>{cancelLabel}</Button>
+          <Button variant={danger ? 'destructive' : 'default'} size="sm" onClick={onConfirm}>{confirmLabel}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
