@@ -3,6 +3,7 @@ globalThis.process = globalThis.process || { env: { NODE_ENV: import.meta.env.MO
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import '@fontsource-variable/inter'
 import App from './v2/App.tsx'
 import './index.css'
 

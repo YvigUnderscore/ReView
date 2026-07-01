@@ -2,18 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../lib/apiClient';
 import Shell from '../components/Shell';
+import { TASK_STATUSES, TASK_STATUS_LABEL } from '../lib/taskStatus';
 
 interface Shot { id: number; code: string; }
 interface Task { id: number; name: string; type: string; status: string; shotCode?: string; assignee: { name: string | null } | null; }
 
-const COLUMNS: { key: string; label: string }[] = [
-  { key: 'TODO', label: 'À faire' },
-  { key: 'IN_PROGRESS', label: 'En cours' },
-  { key: 'PENDING_REVIEW', label: 'En review' },
-  { key: 'APPROVED', label: 'Approuvé' },
-  { key: 'REJECTED', label: 'Rejeté' },
-  { key: 'RETAKE', label: 'Retake' },
-];
+const COLUMNS = TASK_STATUSES.map((key) => ({ key, label: TASK_STATUS_LABEL[key] }));
 
 export default function KanbanPage() {
   const { id } = useParams();

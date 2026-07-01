@@ -8,6 +8,7 @@ import Shell from '../components/Shell';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../lib/taskStatus';
 
 interface Media { id: number; kind: string; originalName: string; status: string; published: boolean; }
 interface Version { id: number; name: string; status: string; published: boolean; createdAt?: string; author?: { id: number; name: string | null } | null; media?: Media[]; _count?: { media: number }; }
@@ -16,15 +17,6 @@ interface TaskCtx {
   shot?: { id: number; code: string; name: string; project: { id: number; name: string }; sequence?: { id: number; code: string; name: string } | null } | null;
   asset?: { id: number; name: string; type: string; project: { id: number; name: string } } | null;
 }
-
-const STATUS_COLOR: Record<string, string> = {
-  TODO: 'bg-muted text-muted-foreground',
-  IN_PROGRESS: 'bg-blue-500/20 text-blue-300',
-  PENDING_REVIEW: 'bg-amber-500/20 text-amber-300',
-  APPROVED: 'bg-green-500/20 text-green-300',
-  REJECTED: 'bg-red-500/20 text-red-300',
-  RETAKE: 'bg-orange-500/20 text-orange-300',
-};
 
 export default function TaskPage() {
   const { id } = useParams();
@@ -124,7 +116,7 @@ export default function TaskPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold">{task?.name ?? `Tâche #${taskId}`}</h1>
           {task && <Badge variant="secondary">{task.type}</Badge>}
-          {task && <span className={`rounded px-2 py-0.5 text-xs ${STATUS_COLOR[task.status] ?? ''}`}>{task.status}</span>}
+          {task && <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[task.status] ?? ''}`}>{TASK_STATUS_LABEL[task.status] ?? task.status}</span>}
         </div>
         <div className="flex items-center gap-2">
           {canCreate && (
