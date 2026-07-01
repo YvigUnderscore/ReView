@@ -155,6 +155,10 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const fin = await request(app).post(`/api/media/${up.body.mediaObjectId}/finalize`).set(auth);
     expect(fin.body.media.status).toBe('READY');
     await request(app).patch(`/api/versions/${versionId}`).set(auth).send({ status: 'PUBLISHED' });
+    // Le média est en brouillon par défaut (workflow draft 9.A2) : il faut le publier
+    // explicitement pour qu'il soit visible côté client (partage externe).
+    const mediaPub = await request(app).post(`/api/media/${up.body.mediaObjectId}/publish`).set(auth);
+    expect(mediaPub.status).toBe(200);
 
     const link = await request(app).post('/api/share').set(auth).send({ projectId, permission: 'COMMENT' });
     expect(link.status).toBe(201);

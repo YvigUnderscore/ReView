@@ -84,7 +84,7 @@ router.post(
   },
 );
 
-// POST /api/comments — commentaire de review (vidéo: timestamp ; 3D/splat: cameraState ; image: annotation)
+// POST /api/comments — commentaire de review (vidéo: timestamp ; 3D: cameraState ; image: annotation)
 router.post(
   '/',
   validate({

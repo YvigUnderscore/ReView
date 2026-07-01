@@ -1,5 +1,0 @@
-[dotenv@17.2.3] injecting env (1) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
-WARNING: JWT_SECRET environment variable is not defined. Using default insecure secret.
-Server running on port 3000
-Email Service: SMTP settings not found or incomplete
-[Cleanup] Found 0 expired projects (older than 7 days).

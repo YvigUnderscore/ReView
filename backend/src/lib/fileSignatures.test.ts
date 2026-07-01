@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MediaKind } from '@prisma/client';
-import { detectVideo, detectImage, detect3D, isZip, validateMediaHeader, getExtension } from './fileSignatures';
+import { detectVideo, detectImage, detect3D, validateMediaHeader, getExtension } from './fileSignatures';
 
 const buf = (...bytes: number[]) => Buffer.from(bytes);
 
@@ -35,16 +35,6 @@ describe('detect3D', () => {
   it('reconnaît un GLB', () => {
     expect(detect3D(buf(0x67, 0x6c, 0x54, 0x46), null, 100)).toBe('.glb');
   });
-  it('reconnaît un PLY', () => {
-    expect(detect3D(buf(0x70, 0x6c, 0x79, 0x0a), '.ply', 100)).toBe('.ply');
-  });
-  it('reconnaît un .splat par taille multiple de 32 + hint', () => {
-    expect(detect3D(buf(1, 2, 3, 4), '.splat', 64)).toBe('.splat');
-    expect(detect3D(buf(1, 2, 3, 4), '.splat', 65)).toBeNull();
-  });
-  it('reconnaît un .sog par hint + taille', () => {
-    expect(detect3D(buf(1, 2, 3, 4), '.sog', 10)).toBe('.sog');
-  });
   it('reconnaît une archive ZIP 3D (PK + hint .zip)', () => {
     expect(detect3D(buf(0x50, 0x4b, 0x03, 0x04), '.zip', 500)).toBe('.zip');
     expect(detect3D(buf(0, 0, 0, 0), '.zip', 500)).toBeNull();
@@ -55,13 +45,6 @@ describe('detect3D', () => {
   it('reconnaît un OBJ par hint + taille (converti en GLB ensuite)', () => {
     expect(detect3D(buf(0x76, 0x20, 0x30, 0x20), '.obj', 200)).toBe('.obj');
     expect(detect3D(buf(0x76, 0x20, 0x30, 0x20), '.obj', 0)).toBeNull();
-  });
-});
-
-describe('isZip', () => {
-  it('reconnaît un en-tête ZIP', () => {
-    expect(isZip(buf(0x50, 0x4b, 0x03, 0x04))).toBe(true);
-    expect(isZip(buf(0, 0, 0, 0))).toBe(false);
   });
 });
 

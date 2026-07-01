@@ -1,16 +1,14 @@
 import { api, getToken } from './apiClient';
 
 /** Types de média côté backend (enum MediaKind). */
-export type MediaKind = 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'SPLAT';
+export type MediaKind = 'VIDEO' | 'IMAGE' | 'MODEL_3D';
 
-const SPLAT_EXT = ['.ply', '.splat', '.sog'];
 const MODEL_EXT = ['.glb', '.gltf', '.fbx', '.usdz', '.usdc', '.usda', '.obj', '.zip'];
 
 /** Déduit le MediaKind d'un fichier à partir de son type MIME / extension. */
 export function inferMediaKind(file: File): MediaKind {
   const name = file.name.toLowerCase();
   const ext = name.slice(name.lastIndexOf('.'));
-  if (SPLAT_EXT.includes(ext)) return 'SPLAT';
   if (MODEL_EXT.includes(ext)) return 'MODEL_3D';
   if (file.type.startsWith('video/')) return 'VIDEO';
   if (file.type.startsWith('image/')) return 'IMAGE';

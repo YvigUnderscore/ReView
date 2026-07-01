@@ -71,7 +71,6 @@ enum MediaKind {
   VIDEO
   IMAGE
   MODEL_3D
-  SPLAT
 }
 
 enum MediaStatus {

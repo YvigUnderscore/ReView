@@ -56,6 +56,11 @@ export default function TaskPage() {
   useEffect(() => { loadContext(); load(); }, [taskId]);
   useEffect(() => { if (uploads.some((u) => u.status === 'done')) load(); }, [uploads]);
 
+  const openMedia = async (versionId: number) => {
+    const { version } = await api.get<{ version: Version }>(`/api/versions/${versionId}`);
+    setVersions((vs) => vs.map((v) => (v.id === versionId ? { ...v, media: version.media } : v)));
+  };
+
   // Charge les médias d'une version dès qu'elle est sélectionnée (et pas encore chargés)
   useEffect(() => {
     if (selectedId == null) return;
@@ -70,10 +75,6 @@ export default function TaskPage() {
   const publish = async (vid: number) => {
     try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); load(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
-  };
-  const openMedia = async (versionId: number) => {
-    const { version } = await api.get<{ version: Version }>(`/api/versions/${versionId}`);
-    setVersions((vs) => vs.map((v) => (v.id === versionId ? { ...v, media: version.media } : v)));
   };
   const publishMedia = async (versionId: number, mediaId: number) => {
     try { await api.post(`/api/media/${mediaId}/publish`); openMedia(versionId); }

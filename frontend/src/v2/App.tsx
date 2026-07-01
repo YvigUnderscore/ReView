@@ -8,7 +8,6 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectPage from './pages/ProjectPage';
 import TaskPage from './pages/TaskPage';
 import ReviewPage from './pages/ReviewPage';
-import EditorPage from './pages/EditorPage';
 import KanbanPage from './pages/KanbanPage';
 import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
@@ -56,7 +55,6 @@ export default function App() {
             <Route path="/tasks/:id" element={<Protected><TaskPage /></Protected>} />
             <Route path="/assets/:id" element={<Protected><AssetPage /></Protected>} />
             <Route path="/review/:mediaId" element={<Protected><ReviewPage /></Protected>} />
-            <Route path="/editor/:mediaId" element={<Protected><EditorPage /></Protected>} />
             <Route path="/projects/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="project" /></Suspense></Protected>} />
             <Route path="/assets/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="asset" /></Suspense></Protected>} />
             <Route path="/admin" element={<Protected><AdminPage /></Protected>} />

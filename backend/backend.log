@@ -1,6 +1,0 @@
-[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
-Cron service initialized
-System Stats service initialized
-Server running on port 3000
-Email Service: SMTP settings not found or incomplete
-[Cleanup] Found 0 expired projects (older than 7 days).

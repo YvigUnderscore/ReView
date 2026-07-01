@@ -24,5 +24,3 @@ export const validate =
       next(err);
     }
   };
-
-export type Infer<T extends z.ZodTypeAny> = z.infer<T>;

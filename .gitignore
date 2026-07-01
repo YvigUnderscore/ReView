@@ -8,8 +8,23 @@ storage/
 
 # Build artifacts
 backend/dist/
+frontend/dist/
 frontend/tsconfig.tsbuildinfo
+
+# Logs & couverture de tests
+*.log
+coverage/
 
 # Plans (artefacts de session Claude)
 plans/
 /assets_for_testing
+
+# Journaux d'avancées (logs Claude — locaux)
+logs/
+
+# Contexte Claude / agents (local uniquement)
+CLAUDE.md
+AGENTS.md
+
+# Docs internes (audit, rapports — non nécessaires à l'app)
+docs/

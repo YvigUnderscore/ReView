@@ -6,7 +6,7 @@ import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForSequence, resolveProjectIdForShot, resolveProjectIdForAsset } from '../lib/pipeline';
-import { badRequest, notFound } from '../lib/errors';
+import { notFound } from '../lib/errors';
 
 const router = Router();
 router.use(authenticate);

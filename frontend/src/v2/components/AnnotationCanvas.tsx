@@ -77,7 +77,7 @@ export function AnnotationCanvas({
   /** Marge (fraction) de zone dessinable AUTOUR du média (annotations hors-cadre). */
   margin?: number;
   /**
-   * Ratio largeur/hauteur du viewer au moment de l'annotation (3D/splat à focale fixe).
+   * Ratio largeur/hauteur du viewer au moment de l'annotation (3D à focale fixe).
    * En lecture seule, l'axe X est rescalé autour du centre (sx = captureAspect/aspectActuel)
    * pour que le dessin se superpose correctement quelle que soit la taille du viewer
    * (la focale verticale étant fixe, l'axe Y reste inchangé).

@@ -10,7 +10,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Select } from '../components/ui/select';
-import { Label } from '../components/ui/label';
 
 interface Stats {
   users: { total: number; byRole: Record<string, number>; online: number };

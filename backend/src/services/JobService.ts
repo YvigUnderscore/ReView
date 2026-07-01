@@ -2,8 +2,8 @@ import { Queue } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
 
 /**
- * Files de jobs BullMQ. Squelette 8.1 — les workers FFmpeg (transcodage, miniatures,
- * GIF turntable) seront implémentés en 8.3 dans src/workers/.
+ * Files de jobs BullMQ. Les workers FFmpeg (transcodage, miniatures) et la conversion 3D
+ * (assimp) sont implémentés dans src/workers/.
  */
 export const QUEUE_NAMES = {
   MEDIA: 'media-processing',
@@ -11,7 +11,7 @@ export const QUEUE_NAMES = {
 
 export interface MediaJobData {
   mediaObjectId: number;
-  kind: 'transcode' | 'thumbnail' | 'turntable' | 'convert3d';
+  kind: 'transcode' | 'thumbnail' | 'convert3d';
 }
 
 export const mediaQueue = new Queue<MediaJobData, void, string>(QUEUE_NAMES.MEDIA, {

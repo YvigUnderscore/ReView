@@ -281,7 +281,7 @@ router.post(
     }
 
     if (!jobKind) {
-      // Rien à reconvertir (ex: GLB/glTF natif, splat) → simplement remettre READY.
+      // Rien à reconvertir (ex: GLB/glTF natif) → simplement remettre READY.
       const updated = await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.READY } });
       return res.json({ media: { ...updated, size: Number(updated.size) }, requeued: false });
     }

@@ -7,8 +7,6 @@
 
 import { MediaKind } from '@prisma/client';
 
-export const GAUSSIAN_SPLAT_EXTENSIONS = ['.splat', '.ply', '.sog'] as const;
-
 const ascii = (buf: Buffer, start: number, end: number): string => buf.toString('utf8', start, end);
 
 /** Vidéo : MP4, MOV, WEBM. Retourne l'extension canonique ou null. */
@@ -41,7 +39,7 @@ export const detectImage = (buf: Buffer): string | null => {
 };
 
 /**
- * 3D / Splat : GLB, FBX, USD(z/c/a), PLY, glTF, SPLAT, SOG.
+ * 3D : GLB, FBX, USD(z/c/a), glTF.
  * `hintExt` (extension d'origine) et `size` sont nécessaires pour les formats sans magic bytes.
  */
 export const detect3D = (buf: Buffer, hintExt: string | null, size: number): string | null => {
@@ -59,8 +57,6 @@ export const detect3D = (buf: Buffer, hintExt: string | null, size: number): str
     if (buf.length >= 8 && ascii(buf, 0, 8) === 'PXR-USDC') return '.usdc';
     // USDA : '#usda'
     if (buf.length >= 5 && ascii(buf, 0, 5) === '#usda') return '.usda';
-    // PLY : 'ply\n'
-    if (buf[0] === 0x70 && buf[1] === 0x6c && buf[2] === 0x79 && buf[3] === 0x0a) return '.ply';
   }
 
   // glTF JSON : pas de magic bytes → hint + premier caractère non-blanc '{'
@@ -71,12 +67,6 @@ export const detect3D = (buf: Buffer, hintExt: string | null, size: number): str
     if (buf[i] === 0x7b) return '.gltf';
   }
 
-  // SPLAT binaire : enregistrements de 32 octets → taille multiple de 32
-  if (hintExt === '.splat' && size > 0 && size % 32 === 0) return '.splat';
-
-  // SOG : pas de magic bytes stable → hint + taille non nulle
-  if (hintExt === '.sog' && size > 0) return '.sog';
-
   // Formats 3D sans magic bytes fiable (texte/divers), validés par extension + taille.
   // Convertis ensuite en GLB côté worker (9.A1).
   const HINT_3D = ['.obj', '.dae', '.stl', '.usd'];
@@ -84,10 +74,6 @@ export const detect3D = (buf: Buffer, hintExt: string | null, size: number): str
 
   return null;
 };
-
-/** ZIP (archives de modèles 3D). */
-export const isZip = (buf: Buffer): boolean =>
-  buf.length >= 4 && buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
 
 /**
  * Valide un buffer d'en-tête selon le type de média attendu.
@@ -105,7 +91,6 @@ export const validateMediaHeader = (
     case MediaKind.IMAGE:
       return detectImage(buf);
     case MediaKind.MODEL_3D:
-    case MediaKind.SPLAT:
       return detect3D(buf, hintExt, size);
     default:
       return null;

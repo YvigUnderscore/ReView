@@ -17,11 +17,6 @@ export function getSocket(): Socket {
   return socket;
 }
 
-export function disconnectSocket(): void {
-  socket?.disconnect();
-  socket = null;
-}
-
 /** Signale une activité utilisateur au serveur (met à jour lastSeenAt). */
 export function emitActivity(): void {
   socket?.emit('activity');

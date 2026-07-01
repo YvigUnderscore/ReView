@@ -8,7 +8,6 @@ import Shell from '../components/Shell';
 import ImageReviewViewer from '../components/ImageReviewViewer';
 import ReviewComments, { type ReviewComment } from '../components/ReviewComments';
 import { AnnotationCanvas, AnnotationToolbar, type Shape, type Tool } from '../components/AnnotationCanvas';
-import SplatReviewViewer, { type SplatViewerHandle } from '../components/SplatReviewViewer';
 
 interface Transform { yaw: number; pitch: number; roll: number; scale: number }
 const DEFAULT_TRANSFORM: Transform = { yaw: 0, pitch: 0, roll: 0, scale: 1 };
@@ -186,10 +185,9 @@ export default function ReviewPage() {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const modelRef = useRef<HTMLElement | null>(null);
-  const splatRef = useRef<SplatViewerHandle>(null);
   const composerFileRef = useRef<HTMLInputElement>(null);
 
-  // Annotation 2D (image/vidéo/3D/splat)
+  // Annotation 2D (image/vidéo/3D)
   const [tool, setTool] = useState<Tool>('draw');
   const [color, setColor] = useState('#ef4444');
   const [alpha, setAlpha] = useState(1);
@@ -208,7 +206,7 @@ export default function ReviewPage() {
   const [viewed3d, setViewed3d] = useState<Hotspot3D | null>(null);
   // Commentaire actuellement affiché (carte mise en avant + annotation visible)
   const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
-  // Ratio largeur/hauteur du viewer au moment de l'annotation affichée (3D/splat)
+  // Ratio largeur/hauteur du viewer au moment de l'annotation affichée (3D)
   const [viewedAspect, setViewedAspect] = useState<number | null>(null);
 
   const mv = () => modelRef.current as ModelViewerEl | null;
@@ -327,7 +325,6 @@ export default function ReviewPage() {
     const timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
     let cameraState: unknown;
     if (kind === 'MODEL_3D') cameraState = captureModelCamera();
-    else if (kind === 'SPLAT') cameraState = splatRef.current?.getCameraState() ?? undefined;
 
     // Annotation : 3D = hotspot (au centre) + dessins 2D ; autres = dessins 2D.
     let annotation: unknown;
@@ -353,7 +350,6 @@ export default function ReviewPage() {
 
   // Restaure une vue caméra avec une transition fluide (~1 s).
   const restoreCamera = (cs: unknown) => {
-    if (data?.media.kind === 'SPLAT') { splatRef.current?.animateToCameraState(cs, 1000); return; }
     // Modèle 3D : model-viewer interpole vers le but (interpolation-decay ≈ 1 s).
     const m = mv();
     const snap = cs as ModelCamera | null;
@@ -412,9 +408,9 @@ export default function ReviewPage() {
       if (shapes.length > 0) { setAnnotating(false); setViewed(shapes as unknown as Shape[]); }
       else setViewed(null);
     } else { setViewed(null); setViewed3d(null); }
-    // Ratio capturé (3D: cameraState.aspect ; splat: cameraState.aspectRatio) pour caler l'overlay
-    const cam = c.cameraState as { aspect?: number; aspectRatio?: number } | null;
-    setViewedAspect(cam?.aspect ?? cam?.aspectRatio ?? null);
+    // Ratio capturé (3D: cameraState.aspect) pour caler l'overlay
+    const cam = c.cameraState as { aspect?: number } | null;
+    setViewedAspect(cam?.aspect ?? null);
     if (c.timestamp != null) seek(c.timestamp);
     if (c.cameraState != null) restoreCamera(c.cameraState);
   };
@@ -452,14 +448,14 @@ export default function ReviewPage() {
   // GLB exploitable : conversion réussie, ou original déjà au format glTF
   const glbSrc = data?.glbUrl ?? (/\.(glb|gltf)(\?|$)/i.test(data?.url ?? '') ? data?.url : null);
   const model3dReady = kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && glbSrc && !model3dError;
-  // Overlay d'annotation 2D ; `captureAspect` (3D/splat) cale le dessin malgré un viewer
+  // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer
   // de taille différente. Le wrapper est en pointer-events-none : en lecture on peut
-  // toujours orbiter (l'iframe/modèle reçoit les events) ; en édition la SVG les capte.
+  // toujours orbiter (le modèle reçoit les events) ; en édition la SVG les capte.
   const renderOverlay = (captureAspect?: number) => (annotating || viewed) ? (
     <AnnotationCanvas shapes={viewed ?? annot} onChange={setAnnotH} editable={annotating && !viewed} tool={tool} color={color} width={penWidth} alpha={alpha} captureAspect={captureAspect} />
   ) : null;
   const overlayPlain = renderOverlay();
-  const overlay3dSplat = renderOverlay(viewedAspect ?? undefined);
+  const overlay3d = renderOverlay(viewedAspect ?? undefined);
 
   return (
     <Shell title={data?.media.originalName ?? 'Review'}>
@@ -488,7 +484,7 @@ export default function ReviewPage() {
         <div className="flex min-h-0 flex-1 gap-4">
           {/* Colonne viewer */}
           <section className="flex min-w-0 flex-1 flex-col gap-2">
-            {(kind === 'IMAGE' || kind === 'VIDEO' || kind === 'SPLAT' || model3dReady) && (
+            {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady) && (
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <button
                   onClick={toggleAnnotating}
@@ -548,7 +544,7 @@ export default function ReviewPage() {
                       animationName={currentAnim ?? undefined}
                     />
                     {/* Overlay de dessin 2D superposé au modèle (s'aligne via la vue caméra) */}
-                    {overlay3dSplat && <div className="absolute inset-0 pointer-events-none">{overlay3dSplat}</div>}
+                    {overlay3d && <div className="absolute inset-0 pointer-events-none">{overlay3d}</div>}
                   </>
                 ) : (
                   <div className="max-w-sm space-y-3 p-6 text-center text-sm text-muted-foreground">
@@ -567,12 +563,6 @@ export default function ReviewPage() {
                     )}
                   </div>
                 )
-              )}
-
-              {kind === 'SPLAT' && data?.url && (
-                <SplatReviewViewer ref={splatRef} src={`/supersplat-viewer/index.html?content=${encodeURIComponent(data.url)}`}>
-                  {overlay3dSplat && <div className="absolute inset-0 pointer-events-none">{overlay3dSplat}</div>}
-                </SplatReviewViewer>
               )}
             </div>
 
@@ -668,11 +658,6 @@ export default function ReviewPage() {
                 )}
               </div>
             )}
-            {kind === 'SPLAT' && role !== 'CLIENT' && !published && (
-              <div className="shrink-0">
-                <Link to={`/editor/${id}`} className="inline-block rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60">✎ Éditer dans SuperSplat</Link>
-              </div>
-            )}
           </section>
 
           {/* Panneau commentaires */}
@@ -700,7 +685,7 @@ export default function ReviewPage() {
                 )}
                 {annot.length > 0 && <p className="mb-1.5 text-[11px] text-primary">✏️ Annotation jointe</p>}
                 {hotspot3d && <p className="mb-1.5 text-[11px] text-primary">📍 Hotspot joint (centre du viewer)</p>}
-                {(kind === 'SPLAT' || kind === 'MODEL_3D') && annotating && <p className="mb-1.5 text-[11px] text-primary">📷 La vue caméra actuelle sera enregistrée</p>}
+                {kind === 'MODEL_3D' && annotating && <p className="mb-1.5 text-[11px] text-primary">📷 La vue caméra actuelle sera enregistrée</p>}
                 <textarea
                   className="w-full resize-none rounded-md border border-input bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   rows={2} placeholder="Ajouter un commentaire…" value={content} onChange={(e) => setContent(e.target.value)}

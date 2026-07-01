@@ -12,7 +12,7 @@
 
 ---
 
-**ReView** est une plateforme de review collaborative conçue pour les studios VFX, équipes de post-production et créatifs. Review vidéo frame-par-frame, annotations, 3D, Gaussian Splat, board de référence — tout en un.
+**ReView** est une plateforme de review collaborative conçue pour les studios VFX, équipes de post-production et créatifs. Review vidéo frame-par-frame, annotations, 3D, board de référence — tout en un.
 
 ## ✨ Fonctionnalités
 
@@ -21,9 +21,6 @@ Annotations vectorielles (crayon, formes, flèches) liées à la frame exacte. C
 
 ### 🧊 Review 3D
 Modèles GLB/glTF natifs via `@google/model-viewer`. Conversion serveur automatique depuis FBX, OBJ, USD, DAE, STL → GLB.
-
-### 🌌 Gaussian Splat
-Viewer SuperSplat (PlayCanvas) vendoré. Formats `.ply`, `.compressed.ply`, `.sog`, `.splat`. Éditeur SuperSplat intégré pour éditer et re-publier.
 
 ### 📋 Board de référence
 Board Excalidraw (MIT) par Projet et par Asset — mood, références, médias insérables depuis la bibliothèque.
@@ -61,7 +58,6 @@ L'application sera disponible sur `http://localhost:5173` (frontend) et `http://
 | Temps réel | Socket.io |
 | Jobs | BullMQ + Redis (workers FFmpeg, conversion 3D) |
 | 3D viewer | `@google/model-viewer` |
-| Splat viewer | PlayCanvas SuperSplat (vendoré) |
 | Board | Excalidraw (MIT) |
 | Stockage | MinIO (S3-compatible) |
 
@@ -82,7 +78,7 @@ L'application sera disponible sur `http://localhost:5173` (frontend) et `http://
 - **[TailwindCSS](https://tailwindcss.com/)** (MIT) · **[shadcn/ui](https://ui.shadcn.com/)** (MIT)
 - **[Framer Motion](https://www.framer.com/motion/)** (MIT) · **[Lucide React](https://lucide.dev/)** (ISC)
 - **[FFmpeg](https://ffmpeg.org/)** (LGPL/GPL) · **[Google model-viewer](https://modelviewer.dev/)** (Apache-2.0)
-- **[PlayCanvas SuperSplat](https://github.com/playcanvas/supersplat)** (MIT) · **[Excalidraw](https://excalidraw.com/)** (MIT)
+- **[Excalidraw](https://excalidraw.com/)** (MIT)
 - **[Socket.IO](https://socket.io/)** (MIT) · **[BullMQ](https://bullmq.io/)** (MIT) · **[MinIO](https://min.io/)** (AGPL-3.0)
 - **[Bcrypt.js](https://github.com/dcodeIO/bcrypt.js)** (MIT) · **[JsonWebToken](https://github.com/auth0/node-jsonwebtoken)** (MIT)
 - **[Helmet](https://helmetjs.github.io/)** (MIT) · **[Zod](https://zod.dev/)** (MIT)

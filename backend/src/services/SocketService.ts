@@ -70,11 +70,6 @@ export const initSocket = (server: HttpServer): SocketServer => {
   return io;
 };
 
-export const getIo = (): SocketServer => {
-  if (!io) throw new Error('Socket.io non initialisé');
-  return io;
-};
-
 // Émissions tolérantes : no-op si Socket.io n'est pas initialisé (tests, scripts).
 export const emitToUser = (userId: number, event: string, data: unknown): void => {
   io?.to(`user_${userId}`).emit(event, data);

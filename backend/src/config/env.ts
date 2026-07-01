@@ -46,4 +46,3 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
-export type Env = typeof env;

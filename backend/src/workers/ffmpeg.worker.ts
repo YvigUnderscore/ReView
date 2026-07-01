@@ -23,7 +23,6 @@ import { MediaStatus } from '@prisma/client';
  *  - thumbnail : miniature JPEG (frame ~1s pour la vidéo, redimensionnement pour l'image)
  *  - transcode : sonde (ffprobe) + proxy MP4 (h264/aac, faststart) + miniature
  *  - convert3d : conversion FBX/OBJ/USD… → GLB (assimp) pour model-viewer (9.A1)
- *  - turntable : GIF de rotation 3D — TODO (nécessite un moteur de rendu headless)
  *
  * Lancer en process séparé : `node dist/workers/ffmpeg.worker.js` (service `worker` du compose).
  */
@@ -220,8 +219,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
         data: { status: MediaStatus.READY, thumbnailKey: thumbKey, metadata: metadata as object },
       });
     } else {
-      // turntable : non implémenté (pas de moteur de rendu 3D headless)
-      await prisma.mediaObject.update({ where: { id: mediaId }, data: { status: MediaStatus.READY } });
+      throw new Error(`Type de job inconnu: ${kind}`);
     }
   } finally {
     await rm(dir, { recursive: true, force: true });
