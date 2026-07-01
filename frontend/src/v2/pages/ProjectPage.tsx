@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
+import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../lib/taskStatus';
 
 export interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number; }
 export interface Department { key: string; name: string; }
@@ -39,14 +40,6 @@ interface Member { id: number; role: Role | null; user: { id: number; name: stri
 
 const ASSET_TYPES = ['CHARACTER', 'PROP', 'ENVIRONMENT', 'VEHICLE', 'FX', 'OTHER'];
 const TASK_TYPES = ['ANIMATION', 'FX', 'COMPOSITING', 'LIGHTING', 'MODELING', 'RIGGING', 'LOOKDEV', 'LAYOUT', 'OTHER'];
-const STATUS_COLOR: Record<string, string> = {
-  TODO: 'bg-muted text-muted-foreground',
-  IN_PROGRESS: 'bg-blue-500/20 text-blue-300',
-  PENDING_REVIEW: 'bg-amber-500/20 text-amber-300',
-  APPROVED: 'bg-green-500/20 text-green-300',
-  REJECTED: 'bg-red-500/20 text-red-300',
-  RETAKE: 'bg-orange-500/20 text-orange-300',
-};
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -420,7 +413,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
           <li key={t.id}>
             <Link to={`/tasks/${t.id}`} className="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-muted">
               <span>{t.name} <span className="text-xs text-muted-foreground">({t.type})</span></span>
-              <span className={`rounded px-2 py-0.5 text-xs ${STATUS_COLOR[t.status] ?? ''}`}>{t.status}</span>
+              <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[t.status] ?? ''}`}>{TASK_STATUS_LABEL[t.status] ?? t.status}</span>
             </Link>
           </li>
         )) : <li className="px-2 py-1 text-xs text-muted-foreground">{tasks === null ? 'Chargement…' : 'Aucune tâche'}</li>}

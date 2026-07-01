@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Toaster } from 'sonner';
 import { api } from '../lib/apiClient';
 import { useAuth } from './stores/useAuth';
+import { useTheme } from './stores/useTheme';
 import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -28,6 +29,7 @@ function Protected({ children }: { children: React.ReactNode }) {
 export default function App() {
   const init = useAuth((s) => s.init);
   const ready = useAuth((s) => s.ready);
+  const theme = useTheme((s) => s.theme);
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="bottom-right" richColors closeButton />
+      <Toaster position="bottom-right" richColors closeButton theme={theme} />
       <Routes>
         {needsSetup ? (
           <>

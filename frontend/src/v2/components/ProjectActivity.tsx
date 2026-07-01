@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileVideo, Layers, Clock } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import {
+  TASK_STATUSES as STATUS,
+  TASK_STATUS_LABEL as STATUS_LABEL,
+  TASK_STATUS_COLOR as STATUS_COLOR,
+  TASK_STATUS_PRIORITY as PRIORITY,
+} from '../lib/taskStatus';
 
 interface RecentItem {
   type: 'version' | 'media'; id: number; at: string; label: string;
@@ -13,22 +19,6 @@ interface ActTask {
   assignee: { id: number; name: string | null } | null; location: string;
 }
 interface Member { user: { id: number; name: string | null; email: string } }
-
-const STATUS = ['TODO', 'IN_PROGRESS', 'PENDING_REVIEW', 'RETAKE', 'REJECTED', 'APPROVED'];
-const STATUS_LABEL: Record<string, string> = {
-  TODO: 'À faire', IN_PROGRESS: 'En cours', PENDING_REVIEW: 'À review',
-  RETAKE: 'Retake', REJECTED: 'Rejeté', APPROVED: 'Approuvé',
-};
-const STATUS_COLOR: Record<string, string> = {
-  TODO: 'bg-muted text-muted-foreground',
-  IN_PROGRESS: 'bg-blue-500/20 text-blue-300',
-  PENDING_REVIEW: 'bg-amber-500/20 text-amber-300',
-  APPROVED: 'bg-green-500/20 text-green-300',
-  REJECTED: 'bg-red-500/20 text-red-300',
-  RETAKE: 'bg-orange-500/20 text-orange-300',
-};
-// Priorité décroissante : ce qui demande une action remonte en haut.
-const PRIORITY: Record<string, number> = { RETAKE: 0, REJECTED: 1, PENDING_REVIEW: 2, IN_PROGRESS: 3, TODO: 4, APPROVED: 5 };
 
 export default function ProjectActivity({ projectId, canManage }: { projectId: number; canManage: boolean }) {
   const [recent, setRecent] = useState<RecentItem[]>([]);

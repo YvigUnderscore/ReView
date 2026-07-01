@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, UserCog, ChevronDown, Users } from 'lucide-react';
+import { LogOut, UserCog, ChevronDown, Users, Sun, Moon } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { useAuth, type UserStatus } from '../stores/useAuth';
 import { usePresence, lastSeenLabel } from '../stores/usePresence';
+import { useTheme } from '../stores/useTheme';
 import Avatar, { STATUS_LABEL, STATUS_COLOR } from './Avatar';
 
 const STATUSES: UserStatus[] = ['AVAILABLE', 'AWAY', 'DND'];
@@ -13,6 +14,8 @@ export default function SidebarFooter() {
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const logout = useAuth((s) => s.logout);
+  const theme = useTheme((s) => s.theme);
+  const toggleTheme = useTheme((s) => s.toggle);
   const navigate = useNavigate();
   const { users } = usePresence();
   const [statusOpen, setStatusOpen] = useState(false);
@@ -89,6 +92,13 @@ export default function SidebarFooter() {
           <Link to="/profile" className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground">
             <UserCog size={14} /> Profil
           </Link>
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre'}
+            className="flex items-center justify-center rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
           <button
             onClick={() => { logout(); navigate('/login'); }}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
