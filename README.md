@@ -48,6 +48,29 @@ docker compose up -d
 
 L'application sera disponible sur `http://localhost:5173` (frontend) et `http://localhost:3000` (API).
 
+## 🔑 Comptes & mot de passe par défaut
+
+Deux modes d'initialisation :
+
+### Premier lancement réel (recommandé)
+
+Sans seed, l'instance démarre en **mode setup** : le premier écran te fait créer le
+studio et le compte **administrateur**. Tu choisis toi-même l'email et le mot de passe
+(≥ 8 caractères, au moins 1 lettre et 1 chiffre). **Aucun mot de passe par défaut n'existe
+en production.**
+
+### Seed de développement
+
+En exécutant `npm run seed` (dans `backend/`), des comptes de démonstration sont créés :
+
+| Compte | Email | Mot de passe |
+|--------|-------|--------------|
+| **Admin** | `admin@review.local` | `admin1234` |
+| **Artiste** | `artist@review.local` | `artist1234` |
+
+> ⚠️ **Ne jamais utiliser ces identifiants en production.** Ils sont réservés au
+> développement local — change-les ou n'exécute pas le seed sur une instance exposée.
+
 ## Stack
 
 | Couche | Technologie |
