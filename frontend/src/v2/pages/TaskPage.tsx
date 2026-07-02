@@ -6,6 +6,7 @@ import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
 import Shell from '../components/Shell';
+import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -98,7 +99,7 @@ export default function TaskPage() {
   const selected = versions.find((v) => v.id === selectedId) ?? null;
 
   return (
-    <Shell title={task?.name ?? 'Tâche'}>
+    <Shell title={task?.name ?? 'Tâche'} breadcrumb={<EntityBreadcrumb entity="task" id={taskId} />}>
       {/* En-tête : localisation claire au lieu de « Tâche #id » */}
       <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
         {project && <Link to={`/projects/${project.id}`} className="hover:text-foreground">{project.name}</Link>}

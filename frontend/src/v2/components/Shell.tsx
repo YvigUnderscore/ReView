@@ -13,7 +13,7 @@ interface ProjectLink { id: number; name: string; }
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
 
-export default function Shell({ children, title }: { children: ReactNode; title?: string }) {
+export default function Shell({ children, title, breadcrumb }: { children: ReactNode; title?: string; breadcrumb?: ReactNode }) {
   const user = useAuth((s) => s.user);
   const { pathname } = useLocation();
   const params = useParams();
@@ -147,7 +147,7 @@ export default function Shell({ children, title }: { children: ReactNode; title?
               <PanelLeftOpen size={18} />
             </button>
           )}
-          <h1 className="truncate text-sm font-medium text-muted-foreground">{title ?? ''}</h1>
+          {breadcrumb ?? <h1 className="truncate text-sm font-medium text-muted-foreground">{title ?? ''}</h1>}
         </header>
         <motion.main
           key={pathname}

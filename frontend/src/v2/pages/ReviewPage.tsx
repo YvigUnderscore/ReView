@@ -5,6 +5,7 @@ import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import { uploadCommentImages } from '../../lib/commentAttachments';
 import Shell from '../components/Shell';
+import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import ImageReviewViewer from '../components/ImageReviewViewer';
 import ReviewComments, { type ReviewComment } from '../components/ReviewComments';
 import { AnnotationCanvas, AnnotationToolbar, type Shape, type Tool } from '../components/AnnotationCanvas';
@@ -458,7 +459,7 @@ export default function ReviewPage() {
   const overlay3d = renderOverlay(viewedAspect ?? undefined);
 
   return (
-    <Shell title={data?.media.originalName ?? 'Review'}>
+    <Shell title={data?.media.originalName ?? 'Review'} breadcrumb={<EntityBreadcrumb entity="media" id={Number(mediaId)} />}>
       <div className="flex h-[calc(100vh-7rem)] flex-col">
         {/* En-tête compact */}
         <div className="mb-3 flex shrink-0 items-center justify-between gap-3">

@@ -7,6 +7,7 @@ import { useAuth, type Role } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
 import FavoriteButton from '../components/FavoriteButton';
 import Shell from '../components/Shell';
+import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import Tabs from '../components/Tabs';
 import ViewToggle, { useViewMode } from '../components/ViewToggle';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../components/EntityCard';
@@ -91,7 +92,7 @@ export default function ProjectPage() {
   ];
 
   return (
-    <Shell title={name || 'Projet'}>
+    <Shell title={name || 'Projet'} breadcrumb={<EntityBreadcrumb entity="project" id={projectId} />}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold">{name || 'Projet'}</h1>

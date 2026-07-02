@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../lib/apiClient';
 import Shell from '../components/Shell';
+import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { TASK_STATUSES, TASK_STATUS_LABEL } from '../lib/taskStatus';
 
 interface Shot { id: number; code: string; }
@@ -38,7 +39,7 @@ export default function KanbanPage() {
   };
 
   return (
-    <Shell>
+    <Shell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />}>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Kanban</h1>
         <Link to={`/projects/${projectId}`} className="text-sm text-muted-foreground hover:text-foreground">← Projet</Link>
