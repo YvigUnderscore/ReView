@@ -14,18 +14,22 @@ const router = Router();
 router.use(authenticate);
 
 // GET /api/sequences?projectId=X — liste les séquences d'un projet
+// + `unsequencedShots` : nombre de shots du projet hors séquence (arbre sidebar)
 router.get(
   '/',
   validate({ query: z.object({ projectId: z.coerce.number().int() }) }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
-    const sequences = await prisma.sequence.findMany({
-      where: { projectId, deletedAt: null },
-      orderBy: { order: 'asc' },
-      include: { _count: { select: { shots: true } } },
-    });
-    res.json({ sequences });
+    const [sequences, unsequencedShots] = await Promise.all([
+      prisma.sequence.findMany({
+        where: { projectId, deletedAt: null },
+        orderBy: { order: 'asc' },
+        include: { _count: { select: { shots: true } } },
+      }),
+      prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null } }),
+    ]);
+    res.json({ sequences, unsequencedShots });
   },
 );
 

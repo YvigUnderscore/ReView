@@ -49,9 +49,11 @@ export default function ProjectPage() {
   const projectId = Number(id);
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
-  const [searchParams] = useSearchParams();
-  // Deep-link favoris : ?tab=shots&shot=ID ou ?tab=sequences&seq=ID
-  const [tab, setTab] = useState(searchParams.get('tab') ?? 'overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Le tab vit dans l'URL (deep-links sidebar/favoris/breadcrumb : ?tab=shots&shot=ID,
+  // ?tab=sequences&seq=ID) — back/forward navigateur cohérents (10.A6).
+  const tab = searchParams.get('tab') ?? 'overview';
+  const setTab = (t: string) => setSearchParams(t === 'overview' ? {} : { tab: t });
   const focusShot = searchParams.get('shot') ? Number(searchParams.get('shot')) : null;
   const focusSeq = searchParams.get('seq') ? Number(searchParams.get('seq')) : null;
   const [name, setName] = useState('');
@@ -121,10 +123,10 @@ export default function ProjectPage() {
         />
       )}
       {tab === 'shots' && (
-        <ShotsTab projectId={projectId} sequences={sequences} shots={shots} canManage={canManage} reload={loadStructure} focusId={focusShot} nomenclature={nomenclature} />
+        <ShotsTab key={focusShot ?? 'shots'} projectId={projectId} sequences={sequences} shots={shots} canManage={canManage} reload={loadStructure} focusId={focusShot} nomenclature={nomenclature} />
       )}
       {tab === 'sequences' && (
-        <SequencesTab projectId={projectId} sequences={sequences} canManage={canManage} reload={loadStructure} focusId={focusSeq} nomenclature={nomenclature} />
+        <SequencesTab key={focusSeq ?? 'sequences'} projectId={projectId} sequences={sequences} canManage={canManage} reload={loadStructure} focusId={focusSeq} nomenclature={nomenclature} />
       )}
       {tab === 'assets' && (
         <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />

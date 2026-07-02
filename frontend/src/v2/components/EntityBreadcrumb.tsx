@@ -1,5 +1,8 @@
 import { Fragment, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../lib/apiClient';
+import { trackRecent } from '../stores/useRecents';
+import { useProjectContext } from '../stores/useProjectContext';
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from './ui/breadcrumb';
@@ -40,8 +43,22 @@ function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
   return segments;
 }
 
+/** Libellé de l'entité feuille (celle de la page visitée) pour les Récents. */
+function leafLabel(entity: BreadcrumbEntity, ctx: BreadcrumbContext): string | null {
+  switch (entity) {
+    case 'project': return ctx.project.name;
+    case 'sequence': return ctx.sequence?.code ?? null;
+    case 'shot': return ctx.shot?.code ?? null;
+    case 'asset': return ctx.asset?.name ?? null;
+    case 'task': return ctx.task?.name ?? null;
+    case 'version': return ctx.version?.name ?? null;
+    case 'media': return ctx.media?.originalName ?? null;
+  }
+}
+
 export default function EntityBreadcrumb({ entity, id, tail }: { entity: BreadcrumbEntity; id: number; tail?: string }) {
   const [ctx, setCtx] = useState<BreadcrumbContext | null>(null);
+  const { pathname, search } = useLocation();
 
   useEffect(() => {
     if (!Number.isFinite(id)) return;
@@ -51,6 +68,23 @@ export default function EntityBreadcrumb({ entity, id, tail }: { entity: Breadcr
       .catch(() => { if (!cancelled) setCtx(null); });
     return () => { cancelled = true; };
   }, [entity, id]);
+
+  // Effet volontaire : chaque contexte résolu alimente les « Récents » et le
+  // projet courant de la sidebar (10.A4) — l'URL exacte est mémorisée pour y
+  // revenir en 1 clic.
+  useEffect(() => {
+    if (!ctx) return;
+    useProjectContext.getState().setProjectId(ctx.project.id);
+    const leaf = leafLabel(entity, ctx);
+    if (!leaf) return;
+    trackRecent({
+      key: tail ? `${entity}:${id}:${tail}` : `${entity}:${id}`,
+      type: entity,
+      label: tail ? `${leaf} · ${tail}` : leaf,
+      sublabel: entity === 'project' ? undefined : ctx.project.name,
+      to: pathname + search,
+    });
+  }, [ctx, entity, id, tail, pathname, search]);
 
   if (!ctx) return null;
   const segments = toSegments(ctx, tail);

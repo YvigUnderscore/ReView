@@ -14,21 +14,22 @@ import { badRequest, notFound } from '../lib/errors';
 const router = Router();
 router.use(authenticate);
 
-// GET /api/shots?projectId=X[&sequenceId=Y]
+// GET /api/shots?projectId=X[&sequenceId=Y|none] — « none » = shots hors séquence
 router.get(
   '/',
   validate({
     query: z.object({
       projectId: z.coerce.number().int(),
-      sequenceId: z.coerce.number().int().optional(),
+      sequenceId: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
     }),
   }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
-    const sequenceId = req.query.sequenceId ? Number(req.query.sequenceId) : undefined;
+    const seq = req.query.sequenceId as unknown as number | 'none' | undefined;
+    const seqFilter = seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
     const shots = await prisma.shot.findMany({
-      where: { projectId, deletedAt: null, ...(sequenceId ? { sequenceId } : {}) },
+      where: { projectId, deletedAt: null, ...seqFilter },
       orderBy: { order: 'asc' },
       include: {
         _count: { select: { tasks: true } },

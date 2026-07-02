@@ -1,13 +1,16 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { FolderKanban, Shield, Clapperboard, KanbanSquare, PenTool, ChevronRight, Star, BookText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { FolderKanban, Shield, Clapperboard, ChevronRight, Star, BookText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
+import { useProjectContext } from '../stores/useProjectContext';
 import UploadWidget from './UploadWidget';
 import PendingDrafts from './PendingDrafts';
 import SidebarFooter from './SidebarFooter';
+import SidebarProjectTree from './SidebarProjectTree';
+import SidebarRecents from './SidebarRecents';
 
 interface ProjectLink { id: number; name: string; }
 
@@ -29,8 +32,13 @@ export default function Shell({ children, title, breadcrumb }: { children: React
 
   const toggleCollapse = () => setCollapsed((c) => { localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1'); return !c; });
 
-  // Projet courant (route /projects/:id…) pour la sidebar contextuelle.
-  const currentProjectId = pathname.startsWith('/projects/') ? Number(params.id) : null;
+  // Projet courant pour la sidebar contextuelle : depuis la route (/projects/:id…)
+  // ou, sur les pages d'entité (/tasks, /assets, /review), depuis le contexte
+  // résolu par le breadcrumb (useProjectContext).
+  const ctxProjectId = useProjectContext((s) => s.projectId);
+  const routeProjectId = pathname.startsWith('/projects/') ? Number(params.id) : null;
+  const isEntityPage = /^\/(tasks|assets|review)\//.test(pathname);
+  const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
   const isProjectsRoot = pathname === '/' || pathname.startsWith('/projects');
 
   return (
@@ -74,16 +82,7 @@ export default function Shell({ children, title, breadcrumb }: { children: React
                         <ChevronRight size={14} className={isCurrent ? 'text-primary' : ''} />
                         <span className="truncate">{p.name}</span>
                       </Link>
-                      {isCurrent && (
-                        <div className="ml-6 space-y-0.5 border-l border-border pl-2">
-                          <Link to={`/projects/${p.id}/kanban`} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
-                            <KanbanSquare size={13} /> Kanban
-                          </Link>
-                          <Link to={`/projects/${p.id}/board`} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
-                            <PenTool size={13} /> Board
-                          </Link>
-                        </div>
-                      )}
+                      {isCurrent && <SidebarProjectTree key={p.id} projectId={p.id} />}
                     </div>
                   );
                 })}
@@ -113,6 +112,8 @@ export default function Shell({ children, title, breadcrumb }: { children: React
                 </div>
               )}
             </div>
+
+            <SidebarRecents />
 
             <Link
               to="/docs"

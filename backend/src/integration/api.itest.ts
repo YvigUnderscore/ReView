@@ -174,6 +174,39 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
   });
 });
 
+describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
+  it('compte les shots hors séquence et les filtre via sequenceId=none', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+
+    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Tree ${suffix}` });
+    const projectId = proj.body.project.id;
+    const seq = await request(app).post('/api/sequences').set(auth).send({ projectId, name: 'Seq tree', code: `TR${suffix}` });
+    const inSeq = await request(app).post('/api/shots').set(auth)
+      .send({ projectId, name: 'Shot en séquence', code: `TA${suffix}`, sequenceId: seq.body.sequence.id });
+    const orphan = await request(app).post('/api/shots').set(auth)
+      .send({ projectId, name: 'Shot hors séquence', code: `TB${suffix}` });
+    expect(inSeq.status).toBe(201);
+    expect(orphan.status).toBe(201);
+
+    // GET /api/sequences → compteur de shots hors séquence
+    const seqs = await request(app).get(`/api/sequences?projectId=${projectId}`).set(auth);
+    expect(seqs.status).toBe(200);
+    expect(seqs.body.unsequencedShots).toBe(1);
+    expect(seqs.body.sequences.find((s: { id: number }) => s.id === seq.body.sequence.id)._count.shots).toBe(1);
+
+    // GET /api/shots?sequenceId=none → uniquement le shot orphelin
+    const orphans = await request(app).get(`/api/shots?projectId=${projectId}&sequenceId=none`).set(auth);
+    expect(orphans.status).toBe(200);
+    expect(orphans.body.shots.map((s: { id: number }) => s.id)).toEqual([orphan.body.shot.id]);
+
+    // GET /api/shots?sequenceId=<id> → uniquement le shot de la séquence
+    const bySeq = await request(app).get(`/api/shots?projectId=${projectId}&sequenceId=${seq.body.sequence.id}`).set(auth);
+    expect(bySeq.status).toBe(200);
+    expect(bySeq.body.shots.map((s: { id: number }) => s.id)).toEqual([inSeq.body.shot.id]);
+  });
+});
+
 describe('API — contexte breadcrumb (/api/context)', () => {
   it('résout la chaîne projet → séquence → shot → tâche → version, applique le RBAC et 404 sinon', async () => {
     const suffix = Date.now();
