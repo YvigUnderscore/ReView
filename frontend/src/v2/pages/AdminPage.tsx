@@ -12,6 +12,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Select } from '../components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { SkeletonRows } from '../components/ui/skeleton';
 
 interface Stats {
   users: { total: number; byRole: Record<string, number>; online: number };
@@ -98,16 +99,16 @@ export default function AdminPage() {
   };
   const confirmDeleteUser = async () => {
     if (!deletingUser) return;
-    try { await api.del(`/api/users/${deletingUser.id}`); setDeletingUser(null); loadUsers(); }
+    try { await api.del(`/api/users/${deletingUser.id}`); toast.success('Utilisateur supprimé'); setDeletingUser(null); loadUsers(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const restoreProject = async (id: number) => {
-    try { await api.post(`/api/projects/${id}/restore`); loadTrash(); }
+    try { await api.post(`/api/projects/${id}/restore`); toast.success('Projet restauré'); loadTrash(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmPurgeProject = async () => {
     if (!purgeProject) return;
-    try { await api.del(`/api/projects/${purgeProject.id}/purge`); setPurgeProject(null); loadTrash(); }
+    try { await api.del(`/api/projects/${purgeProject.id}/purge`); toast.success('Projet supprimé définitivement'); setPurgeProject(null); loadTrash(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const retryJobs = async () => {
@@ -179,7 +180,7 @@ export default function AdminPage() {
 // ── Tableau de bord ───────────────────────────────────────────────────────────
 
 function OverviewTab({ stats, system, onRetryJobs }: { stats: Stats | null; system: System | null; onRetryJobs: () => void }) {
-  if (!stats) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (!stats) return <SkeletonRows count={4} />;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
@@ -226,7 +227,7 @@ function OverviewTab({ stats, system, onRetryJobs }: { stats: Stats | null; syst
           </div>
         </Panel>
         <Panel title="Santé des services">
-          {system ? <ServiceHealth services={system.services} /> : <p className="text-xs text-muted-foreground">Chargement…</p>}
+          {system ? <ServiceHealth services={system.services} /> : <SkeletonRows count={2} />}
         </Panel>
       </div>
     </div>
@@ -253,7 +254,7 @@ function ServiceHealth({ services }: { services: System['services'] }) {
 // ── Activité ──────────────────────────────────────────────────────────────────
 
 function ActivityTab({ activity }: { activity: ActivityData | null }) {
-  if (!activity) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (!activity) return <SkeletonRows count={5} />;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title={`Uploads / jour (${activity.days} j)`}>
@@ -272,7 +273,7 @@ function ActivityTab({ activity }: { activity: ActivityData | null }) {
 // ── Système ───────────────────────────────────────────────────────────────────
 
 function SystemTab({ system, onRefresh }: { system: System | null; onRefresh: () => void }) {
-  if (!system) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (!system) return <SkeletonRows count={3} />;
   const memPct = Math.round((system.memory.used / system.memory.total) * 100);
   const diskPct = system.disk ? Math.round(((system.disk.total - system.disk.free) / system.disk.total) * 100) : null;
   return (
@@ -454,7 +455,7 @@ function ProjectDefaultsTab({ defaults, onChange }: { defaults: ProjectDefaults 
   const [err, setErr] = useState<string | null>(null);
 
   if (defaults && !draft) setDraft(defaults);
-  if (!draft) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (!draft) return <SkeletonRows count={3} />;
 
   const setNom = (k: keyof Nomenclature, v: string) =>
     setDraft((d) => d && { ...d, nomenclature: { ...d.nomenclature, [k]: k === 'padding' || k === 'step' ? Number(v) || 1 : v } });

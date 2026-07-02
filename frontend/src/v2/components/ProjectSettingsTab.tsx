@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import { SkeletonRows } from './ui/skeleton';
 
 export interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number; }
 export interface Department { key: string; name: string; }
@@ -80,7 +81,7 @@ export default function ProjectSettingsTab({
             <Field label="Pas"><input type="number" min={1} className="w-16 rounded border border-input bg-background px-2 py-1.5 text-xs" value={draft.nomenclature.step} onChange={(e) => setNom('step', e.target.value)} /></Field>
             <Field label="Chiffres"><input type="number" min={1} max={8} className="w-16 rounded border border-input bg-background px-2 py-1.5 text-xs" value={draft.nomenclature.padding} onChange={(e) => setNom('padding', e.target.value)} /></Field>
           </div>
-        ) : <p className="text-xs text-muted-foreground">Chargement…</p>}
+        ) : <SkeletonRows count={3} />}
       </section>
 
       {/* Départements */}
