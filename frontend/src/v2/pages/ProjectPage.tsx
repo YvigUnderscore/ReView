@@ -21,6 +21,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../lib/taskStatus';
+import { SkeletonRows } from '../components/ui/skeleton';
+import EmptyState from '../components/ui/empty-state';
 
 export interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number; }
 export interface Department { key: string; name: string; }
@@ -215,6 +217,7 @@ function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = nu
     e.preventDefault();
     try {
       await api.post('/api/shots', { projectId, name: newShot.name || newShot.code, code: newShot.code, sequenceId: newShot.sequenceId ? Number(newShot.sequenceId) : null });
+      toast.success(`Shot « ${newShot.code} » créé`);
       setNewShot({ name: '', code: '', sequenceId: '' }); reload();
     } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
@@ -227,11 +230,16 @@ function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = nu
         sequenceId: r.sequenceId ? Number(r.sequenceId) : null,
       })),
     });
+    toast.success(`${rows.length} shot(s) créé(s)`);
     await reload();
   };
   const confirmDelete = async () => {
     if (!deleting) return;
-    try { await api.del(`/api/shots/${deleting.id}`); setDeleting(null); reload(); }
+    try {
+      await api.del(`/api/shots/${deleting.id}`);
+      toast.success('Shot déplacé dans la corbeille');
+      setDeleting(null); reload();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
@@ -289,7 +297,14 @@ function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = nu
         </form>
       )}
 
-      {shots.length === 0 && <p className="text-sm text-muted-foreground">Aucun shot.{canManage ? ' Ajoutez-en un ci-dessus.' : ''}</p>}
+      {shots.length === 0 && (
+        <EmptyState
+          compact
+          icon={Clapperboard}
+          title="Aucun shot"
+          description={canManage ? 'Créez vos premiers shots avec le formulaire ci-dessus (mode Simple, Lot ou Auto).' : 'Les shots du projet apparaîtront ici.'}
+        />
+      )}
 
       {groups.map((g) => (
         <section key={g.seq?.id ?? 'none'} className="mb-6">
@@ -408,16 +423,20 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
 
   return (
     <div className="mt-2 rounded-md border border-border bg-card/50 p-3">
-      <ul className="space-y-1">
-        {tasks?.length ? tasks.map((t) => (
-          <li key={t.id}>
-            <Link to={`/tasks/${t.id}`} className="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-muted">
-              <span>{t.name} <span className="text-xs text-muted-foreground">({t.type})</span></span>
-              <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[t.status] ?? ''}`}>{TASK_STATUS_LABEL[t.status] ?? t.status}</span>
-            </Link>
-          </li>
-        )) : <li className="px-2 py-1 text-xs text-muted-foreground">{tasks === null ? 'Chargement…' : 'Aucune tâche'}</li>}
-      </ul>
+      {tasks === null ? (
+        <SkeletonRows count={2} />
+      ) : (
+        <ul className="space-y-1">
+          {tasks.length ? tasks.map((t) => (
+            <li key={t.id}>
+              <Link to={`/tasks/${t.id}`} className="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-muted">
+                <span>{t.name} <span className="text-xs text-muted-foreground">({t.type})</span></span>
+                <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[t.status] ?? ''}`}>{TASK_STATUS_LABEL[t.status] ?? t.status}</span>
+              </Link>
+            </li>
+          )) : <li className="px-2 py-1 text-xs text-muted-foreground">Aucune tâche</li>}
+        </ul>
+      )}
       {canManage && (
         <form onSubmit={submit} className="mt-2 flex gap-2">
           <input className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs" placeholder="Nouvelle tâche…" value={task.name} onChange={(e) => setTask((s) => ({ ...s, name: e.target.value }))} />
@@ -520,7 +539,11 @@ function SequencesTab({ projectId, sequences, canManage, reload, focusId = null,
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { await api.post('/api/sequences', { projectId, code: newSeq.code, name: newSeq.name || newSeq.code }); setNewSeq({ name: '', code: '' }); reload(); }
+    try {
+      await api.post('/api/sequences', { projectId, code: newSeq.code, name: newSeq.name || newSeq.code });
+      toast.success(`Séquence « ${newSeq.code} » créée`);
+      setNewSeq({ name: '', code: '' }); reload();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const createBulk = async (rows: Record<string, string>[]) => {
@@ -528,16 +551,21 @@ function SequencesTab({ projectId, sequences, canManage, reload, focusId = null,
       projectId,
       items: rows.map((r) => ({ code: r.code, name: r.name || r.code })),
     });
+    toast.success(`${rows.length} séquence(s) créée(s)`);
     await reload();
   };
   const startEdit = (s: Sequence) => { setEditing(s.id); setEditVals({ code: s.code, name: s.name }); };
   const saveEdit = async (id: number) => {
-    try { await api.patch(`/api/sequences/${id}`, editVals); setEditing(null); reload(); }
+    try { await api.patch(`/api/sequences/${id}`, editVals); toast.success('Séquence modifiée'); setEditing(null); reload(); }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const confirmDelete = async () => {
     if (!deleting) return;
-    try { await api.del(`/api/sequences/${deleting.id}`); setDeleting(null); reload(); }
+    try {
+      await api.del(`/api/sequences/${deleting.id}`);
+      toast.success('Séquence déplacée dans la corbeille');
+      setDeleting(null); reload();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
@@ -572,7 +600,12 @@ function SequencesTab({ projectId, sequences, canManage, reload, focusId = null,
         </form>
       )}
       {sequences.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucune séquence.</p>
+        <EmptyState
+          compact
+          icon={Film}
+          title="Aucune séquence"
+          description={canManage ? 'Créez vos séquences ci-dessus — elles regroupent les shots (SQ010, SQ020…).' : 'Les séquences du projet apparaîtront ici.'}
+        />
       ) : (
         <div className="space-y-1.5">
           {sorted.map((s) => (
@@ -626,7 +659,7 @@ function SequenceDetail({ sequenceId }: { sequenceId: number }) {
       .then((d) => setData(d.sequence)).catch(() => setData(null));
   }, [sequenceId]);
 
-  if (!data) return <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground">Chargement…</div>;
+  if (!data) return <div className="border-t border-border px-3 py-2"><SkeletonRows count={2} /></div>;
   return (
     <div className="space-y-3 border-t border-border px-3 py-3">
       <div>
@@ -678,12 +711,20 @@ function AssetsTab({ projectId, assets, canManage, reload }: {
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { await api.post('/api/assets', { projectId, ...newAsset }); setNewAsset({ name: '', type: 'CHARACTER' }); reload(); }
+    try {
+      await api.post('/api/assets', { projectId, ...newAsset });
+      toast.success(`Asset « ${newAsset.name} » créé`);
+      setNewAsset({ name: '', type: 'CHARACTER' }); reload();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const confirmDelete = async () => {
     if (!deleting) return;
-    try { await api.del(`/api/assets/${deleting.id}`); setDeleting(null); reload(); }
+    try {
+      await api.del(`/api/assets/${deleting.id}`);
+      toast.success('Asset déplacé dans la corbeille');
+      setDeleting(null); reload();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
@@ -704,7 +745,12 @@ function AssetsTab({ projectId, assets, canManage, reload }: {
         </form>
       )}
       {assets.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucun asset.</p>
+        <EmptyState
+          compact
+          icon={Box}
+          title="Aucun asset"
+          description={canManage ? 'Créez vos assets réutilisables ci-dessus (personnages, décors, props…).' : 'Les assets du projet apparaîtront ici.'}
+        />
       ) : (
         <EntityContainer view={view}>
           {assets.map((a) => (
@@ -768,11 +814,19 @@ function MembersTab({ projectId }: { projectId: number }) {
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addUserId) return;
-    try { await api.post(`/api/projects/${projectId}/members`, { userId: Number(addUserId) }); setAddUserId(''); load(); }
+    try {
+      await api.post(`/api/projects/${projectId}/members`, { userId: Number(addUserId) });
+      toast.success('Membre ajouté au projet');
+      setAddUserId(''); load();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const remove = async (userId: number) => {
-    try { await api.del(`/api/projects/${projectId}/members/${userId}`); load(); }
+    try {
+      await api.del(`/api/projects/${projectId}/members/${userId}`);
+      toast.success('Membre retiré du projet');
+      load();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
@@ -827,12 +881,12 @@ function TrashTab({ projectId, reload }: { projectId: number; reload: () => Prom
   useEffect(() => { load(); }, [projectId]);
 
   const restore = async (endpoint: string) => {
-    try { await api.post(`${endpoint}/restore`); load(); reload(); }
+    try { await api.post(`${endpoint}/restore`); toast.success('Élément restauré'); load(); reload(); }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const confirmPurge = async () => {
     if (!purge) return;
-    try { await api.del(`${purge.endpoint}/purge`); setPurge(null); load(); }
+    try { await api.del(`${purge.endpoint}/purge`); toast.success('Supprimé définitivement'); setPurge(null); load(); }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
@@ -856,14 +910,14 @@ function TrashTab({ projectId, reload }: { projectId: number; reload: () => Prom
   );
 
   if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (!data) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (!data) return <SkeletonRows count={4} />;
 
   const isEmpty = !data.sequences.length && !data.shots.length && !data.assets.length && !data.versions.length && !data.media.length;
 
   return (
     <div>
       <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Corbeille du projet</h2>
-      {isEmpty && <p className="text-sm text-muted-foreground">La corbeille est vide.</p>}
+      {isEmpty && <EmptyState compact icon={Trash2} title="La corbeille est vide" description="Les éléments supprimés du projet arrivent ici et restent restaurables." />}
       <Section title="Séquences" items={data.sequences.map((s) => ({ id: s.id, label: `${s.code} · ${s.name}`, endpoint: `/api/sequences/${s.id}` }))} />
       <Section title="Shots" items={data.shots.map((s) => ({ id: s.id, label: `${s.code} · ${s.name}`, endpoint: `/api/shots/${s.id}` }))} />
       <Section title="Assets" items={data.assets.map((a) => ({ id: a.id, label: `${a.name} (${a.type})`, endpoint: `/api/assets/${a.id}` }))} />

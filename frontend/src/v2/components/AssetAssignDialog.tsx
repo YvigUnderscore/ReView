@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
+import { SkeletonRows } from './ui/skeleton';
 
 interface Shot { id: number; code: string; name: string; sequenceId: number | null }
 interface Sequence { id: number; code: string; name: string }
@@ -90,7 +91,7 @@ export default function AssetAssignDialog({
         {error && <p className="px-4 pt-3 text-xs text-destructive">{error}</p>}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Chargement…</p>
+            <SkeletonRows count={4} />
           ) : (
             <div className="space-y-5">
               {/* Séquences entières */}

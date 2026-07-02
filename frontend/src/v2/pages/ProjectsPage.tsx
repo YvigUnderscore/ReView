@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Star } from 'lucide-react';
+import { Plus, Star, FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
@@ -15,6 +15,8 @@ import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { SkeletonCards } from '../components/ui/skeleton';
+import EmptyState from '../components/ui/empty-state';
 
 interface Project {
   id: number;
@@ -48,7 +50,8 @@ export default function ProjectsPage() {
   const favs = useFavorites((s) => s.favorites);
   const toggleFav = useFavorites((s) => s.toggle);
   const isFav = (id: number) => favs.some((f) => f.type === 'PROJECT' && f.entityId === id);
-  const [projects, setProjects] = useState<Project[]>([]);
+  // null = chargement en cours (squelettes) ; [] = réellement vide.
+  const [projects, setProjects] = useState<Project[] | null>(null);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Project | null>(null);
@@ -61,13 +64,21 @@ export default function ProjectsPage() {
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    try { await api.post('/api/projects', { name }); setName(''); load(); }
+    try {
+      await api.post('/api/projects', { name });
+      toast.success(`Projet « ${name} » créé`);
+      setName(''); load();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   const confirmDelete = async () => {
     if (!deleting) return;
-    try { await api.del(`/api/projects/${deleting.id}`); setDeleting(null); load(); }
+    try {
+      await api.del(`/api/projects/${deleting.id}`);
+      toast.success('Projet déplacé dans la corbeille');
+      setDeleting(null); load();
+    }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
@@ -86,8 +97,16 @@ export default function ProjectsPage() {
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
-      {projects.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucun projet.</p>
+      {projects === null ? (
+        <SkeletonCards />
+      ) : projects.length === 0 ? (
+        <EmptyState
+          icon={FolderKanban}
+          title="Aucun projet pour l'instant"
+          description={canManage
+            ? 'Créez votre premier projet ci-dessus pour organiser vos séquences, shots et assets.'
+            : 'Vous n’êtes membre d’aucun projet. Demandez à un superviseur de vous ajouter.'}
+        />
       ) : (
         <EntityContainer view={view}>
           {projects.map((p) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ChevronRight, LayoutGrid, List, Trash2, Upload, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
@@ -61,25 +62,29 @@ export default function TaskPage() {
   }, [selectedId, versions]);
 
   const createVersion = async () => {
-    try { const { version } = await api.post<{ version: Version }>('/api/versions', { taskId }); await load(); setSelectedId(version.id); }
+    try {
+      const { version } = await api.post<{ version: Version }>('/api/versions', { taskId });
+      toast.success(`Version « ${version.name} » créée`);
+      await load(); setSelectedId(version.id);
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const publish = async (vid: number) => {
-    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); load(); }
+    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); toast.success('Version publiée'); load(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const publishMedia = async (versionId: number, mediaId: number) => {
-    try { await api.post(`/api/media/${mediaId}/publish`); openMedia(versionId); }
+    try { await api.post(`/api/media/${mediaId}/publish`); toast.success('Média publié pour l’équipe'); openMedia(versionId); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmDeleteVersion = async () => {
     if (!deleteVersion) return;
-    try { await api.del(`/api/versions/${deleteVersion.id}`); setDeleteVersion(null); await load(); }
+    try { await api.del(`/api/versions/${deleteVersion.id}`); toast.success('Version déplacée dans la corbeille'); setDeleteVersion(null); await load(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmDeleteMedia = async () => {
     if (!deleteMedia) return;
-    try { await api.del(`/api/media/${deleteMedia.id}`); const vid = selectedId; setDeleteMedia(null); if (vid) openMedia(vid); }
+    try { await api.del(`/api/media/${deleteMedia.id}`); toast.success('Média déplacé dans la corbeille'); const vid = selectedId; setDeleteMedia(null); if (vid) openMedia(vid); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {

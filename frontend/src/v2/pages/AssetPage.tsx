@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
@@ -36,11 +37,11 @@ export default function AssetPage() {
   useEffect(() => { if (uploads.some((u) => u.status === 'done')) load(); }, [uploads]);
 
   const createVersion = async () => {
-    try { await api.post('/api/versions', { assetId }); load(); }
+    try { await api.post('/api/versions', { assetId }); toast.success('Version créée'); load(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const publish = async (vid: number) => {
-    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); load(); }
+    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); toast.success('Version publiée'); load(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const openMedia = async (versionId: number) => {
@@ -48,7 +49,7 @@ export default function AssetPage() {
     setVersions((vs) => vs.map((v) => (v.id === versionId ? { ...v, media: version.media } : v)));
   };
   const publishMedia = async (versionId: number, mediaId: number) => {
-    try { await api.post(`/api/media/${mediaId}/publish`); openMedia(versionId); }
+    try { await api.post(`/api/media/${mediaId}/publish`); toast.success('Média publié pour l’équipe'); openMedia(versionId); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
