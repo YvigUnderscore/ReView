@@ -1,0 +1,73 @@
+import { Fragment, useEffect, useState } from 'react';
+import { api } from '../../lib/apiClient';
+import {
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
+} from './ui/breadcrumb';
+
+/**
+ * Fil d'Ariane contextuel : résout la chaîne d'ancêtres d'une entité via
+ * GET /api/context/:entity/:id et rend des segments cliquables
+ * (Projets › Projet › Séquence › Shot|Asset › Tâche › Version › Média [› tail]).
+ */
+
+export type BreadcrumbEntity = 'media' | 'version' | 'task' | 'shot' | 'sequence' | 'asset' | 'project';
+
+interface BreadcrumbContext {
+  project: { id: number; name: string };
+  sequence?: { id: number; code: string; name: string } | null;
+  shot?: { id: number; code: string; name: string } | null;
+  asset?: { id: number; name: string; type: string } | null;
+  task?: { id: number; name: string; type: string } | null;
+  version?: { id: number; name: string } | null;
+  media?: { id: number; originalName: string; kind: string } | null;
+}
+
+interface Segment { label: string; to: string | null }
+
+function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
+  const pid = ctx.project.id;
+  const segments: Segment[] = [
+    { label: 'Projets', to: '/' },
+    { label: ctx.project.name, to: `/projects/${pid}` },
+  ];
+  if (ctx.sequence) segments.push({ label: ctx.sequence.code, to: `/projects/${pid}?tab=sequences&seq=${ctx.sequence.id}` });
+  if (ctx.shot) segments.push({ label: ctx.shot.code, to: `/projects/${pid}?tab=shots&shot=${ctx.shot.id}` });
+  if (ctx.asset) segments.push({ label: ctx.asset.name, to: `/assets/${ctx.asset.id}` });
+  if (ctx.task) segments.push({ label: ctx.task.name, to: `/tasks/${ctx.task.id}` });
+  if (ctx.version) segments.push({ label: ctx.version.name, to: ctx.task ? `/tasks/${ctx.task.id}` : null });
+  if (ctx.media) segments.push({ label: ctx.media.originalName, to: null });
+  if (tail) segments.push({ label: tail, to: null });
+  return segments;
+}
+
+export default function EntityBreadcrumb({ entity, id, tail }: { entity: BreadcrumbEntity; id: number; tail?: string }) {
+  const [ctx, setCtx] = useState<BreadcrumbContext | null>(null);
+
+  useEffect(() => {
+    if (!Number.isFinite(id)) return;
+    let cancelled = false;
+    api.get<{ context: BreadcrumbContext }>(`/api/context/${entity}/${id}`)
+      .then((d) => { if (!cancelled) setCtx(d.context); })
+      .catch(() => { if (!cancelled) setCtx(null); });
+    return () => { cancelled = true; };
+  }, [entity, id]);
+
+  if (!ctx) return null;
+  const segments = toSegments(ctx, tail);
+  const last = segments.length - 1;
+
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {segments.map((s, i) => (
+          <Fragment key={`${s.label}-${i}`}>
+            {i > 0 && <BreadcrumbSeparator />}
+            <BreadcrumbItem>
+              {i === last || !s.to ? <BreadcrumbPage>{s.label}</BreadcrumbPage> : <BreadcrumbLink to={s.to}>{s.label}</BreadcrumbLink>}
+            </BreadcrumbItem>
+          </Fragment>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}

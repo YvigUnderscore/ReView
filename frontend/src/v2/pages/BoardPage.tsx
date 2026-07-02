@@ -4,6 +4,8 @@ import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css';
 import { api } from '../../lib/apiClient';
 import Shell from '../components/Shell';
+import EntityBreadcrumb from '../components/EntityBreadcrumb';
+import { useTheme } from '../stores/useTheme';
 
 /**
  * Board mood/reference (Excalidraw, MIT) — un board par Projet et un par Asset (9.B).
@@ -23,6 +25,7 @@ const blobToDataURL = (b: Blob) => new Promise<string>((res, rej) => {
 
 export default function BoardPage({ scope }: { scope: Scope }) {
   const { id } = useParams();
+  const theme = useTheme((s) => s.theme);
   const targetId = Number(id);
   const base = `/api/boards/${scope}/${targetId}`;
   const [initial, setInitial] = useState<{ elements: unknown[]; files: unknown } | null>(null);
@@ -78,7 +81,10 @@ export default function BoardPage({ scope }: { scope: Scope }) {
   if (!initial) return <Shell title="Board"><p className="text-sm text-muted-foreground">Chargement du board…</p></Shell>;
 
   return (
-    <Shell title={`Board ${scope === 'project' ? 'projet' : 'asset'} — mood/reference`}>
+    <Shell
+      title={`Board ${scope === 'project' ? 'projet' : 'asset'} — mood/reference`}
+      breadcrumb={<EntityBreadcrumb entity={scope === 'project' ? 'project' : 'asset'} id={targetId} tail="Board" />}
+    >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={openLibrary} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">Bibliothèque média</button>
@@ -107,7 +113,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
             excalidrawAPI={(a: ExcalidrawApi) => { apiRef.current = a; }}
             initialData={{ elements: initial.elements as never, files: initial.files as never }}
             onChange={save}
-            theme="dark"
+            theme={theme}
           />
         </div>
       </div>

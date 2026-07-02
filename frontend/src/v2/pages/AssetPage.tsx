@@ -5,6 +5,7 @@ import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
 import Shell from '../components/Shell';
+import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import AssetAssignDialog from '../components/AssetAssignDialog';
 import FavoriteButton from '../components/FavoriteButton';
 import { Button } from '../components/ui/button';
@@ -59,7 +60,7 @@ export default function AssetPage() {
   };
 
   return (
-    <Shell>
+    <Shell breadcrumb={<EntityBreadcrumb entity="asset" id={assetId} />}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold">{asset ? asset.name : `Asset #${assetId}`}{asset && <span className="ml-2 text-sm font-normal text-muted-foreground">{asset.type}</span>}</h1>

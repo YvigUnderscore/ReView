@@ -173,3 +173,44 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(guest.status).toBe(201);
   });
 });
+
+describe('API — contexte breadcrumb (/api/context)', () => {
+  it('résout la chaîne projet → séquence → shot → tâche → version, applique le RBAC et 404 sinon', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+
+    // Pipeline minimal : projet (SANS membership artiste) + séquence + shot + tâche + version
+    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Context ${suffix}` });
+    const projectId = proj.body.project.id;
+    const seq = await request(app).post('/api/sequences').set(auth).send({ projectId, name: 'Seq ctx', code: `SQ${suffix}` });
+    const shot = await request(app).post('/api/shots').set(auth)
+      .send({ projectId, name: 'Shot ctx', code: `CX${suffix}`, sequenceId: seq.body.sequence.id });
+    const task = await request(app).post('/api/tasks').set(auth).send({ shotId: shot.body.shot.id, name: 'Task ctx', type: 'COMPOSITING' });
+    const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
+
+    // Chaîne complète depuis la version
+    const ctx = await request(app).get(`/api/context/version/${ver.body.version.id}`).set(auth);
+    expect(ctx.status).toBe(200);
+    expect(ctx.body.context.project.id).toBe(projectId);
+    expect(ctx.body.context.sequence.id).toBe(seq.body.sequence.id);
+    expect(ctx.body.context.shot.id).toBe(shot.body.shot.id);
+    expect(ctx.body.context.task.id).toBe(task.body.task.id);
+    expect(ctx.body.context.version.id).toBe(ver.body.version.id);
+
+    // Depuis le shot : pas de task/version dans la chaîne
+    const ctxShot = await request(app).get(`/api/context/shot/${shot.body.shot.id}`).set(auth);
+    expect(ctxShot.status).toBe(200);
+    expect(ctxShot.body.context.task).toBeUndefined();
+
+    // RBAC : l'artiste n'est pas membre du projet → 403
+    const forbidden = await request(app).get(`/api/context/task/${task.body.task.id}`)
+      .set('Authorization', `Bearer ${artistToken}`);
+    expect(forbidden.status).toBe(403);
+
+    // Entité inconnue → 404 ; entité invalide → 400 (Zod)
+    const missing = await request(app).get('/api/context/shot/999999').set(auth);
+    expect(missing.status).toBe(404);
+    const invalid = await request(app).get('/api/context/nimporte/1').set(auth);
+    expect(invalid.status).toBe(400);
+  });
+});
