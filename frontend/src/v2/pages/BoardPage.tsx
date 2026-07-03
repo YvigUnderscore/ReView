@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { useTheme } from '../stores/useTheme';
@@ -28,19 +30,24 @@ export default function BoardPage({ scope }: { scope: Scope }) {
   const theme = useTheme((s) => s.theme);
   const targetId = Number(id);
   const base = `/api/boards/${scope}/${targetId}`;
-  const [initial, setInitial] = useState<{ elements: unknown[]; files: unknown } | null>(null);
   const [saved, setSaved] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showLib, setShowLib] = useState(false);
-  const [library, setLibrary] = useState<MediaLite[]>([]);
   const apiRef = useRef<ExcalidrawApi>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    api.get<{ board: { document: { elements?: unknown[]; files?: unknown } } }>(base)
-      .then((d) => setInitial({ elements: d.board.document?.elements ?? [], files: d.board.document?.files ?? {} }))
-      .catch((e) => { setError(e.message); setInitial({ elements: [], files: {} }); });
-  }, [base]);
+  // Pas de cache (staleTime/gcTime 0) : Excalidraw ne lit `initialData` qu'au
+  // montage — servir un board périmé serait invisible pour l'utilisateur.
+  const boardQ = useQuery({
+    queryKey: qk.board(scope, targetId),
+    queryFn: () => api.get<{ board: { document: { elements?: unknown[]; files?: unknown } } }>(base),
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const initial = boardQ.data
+    ? { elements: boardQ.data.board.document?.elements ?? [], files: boardQ.data.board.document?.files ?? {} }
+    : boardQ.isError ? { elements: [], files: {} } : null;
+  const loadError = boardQ.error?.message ?? null;
 
   const save = (elements: readonly unknown[], _appState: unknown, files: unknown) => {
     setSaved(false);
@@ -51,17 +58,19 @@ export default function BoardPage({ scope }: { scope: Scope }) {
     }, 1200);
   };
 
-  const openLibrary = async () => {
-    setShowLib((s) => !s);
-    if (library.length) return;
-    try {
-      const projectId = scope === 'project'
-        ? targetId
-        : (await api.get<{ asset: { projectId: number } }>(`/api/assets/${targetId}`)).asset.projectId;
-      const { media } = await api.get<{ media: MediaLite[] }>(`/api/media?projectId=${projectId}&kind=IMAGE`);
-      setLibrary(media);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
-  };
+  // Bibliothèque d'images publiées : le projectId d'un board asset se résout via l'asset
+  const assetQ = useQuery({
+    queryKey: qk.asset(targetId),
+    queryFn: () => api.get<{ asset: { projectId: number } }>(`/api/assets/${targetId}`),
+    enabled: showLib && scope === 'asset',
+  });
+  const projectId = scope === 'project' ? targetId : assetQ.data?.asset.projectId;
+  const libraryQ = useQuery({
+    queryKey: qk.projectMedia(projectId ?? 0, 'IMAGE'),
+    queryFn: () => api.get<{ media: MediaLite[] }>(`/api/media?projectId=${projectId}&kind=IMAGE`).then((d) => d.media),
+    enabled: showLib && projectId != null,
+  });
+  const library = libraryQ.data ?? [];
 
   const insert = async (m: MediaLite) => {
     const ex = apiRef.current;
@@ -87,12 +96,12 @@ export default function BoardPage({ scope }: { scope: Scope }) {
     >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={openLibrary} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">Bibliothèque média</button>
+          <button onClick={() => setShowLib((s) => !s)} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">Bibliothèque média</button>
           <span className="text-xs text-muted-foreground">{saved ? '✓ enregistré' : '… enregistrement'}</span>
         </div>
         <Link to={scope === 'project' ? `/projects/${targetId}` : `/assets/${targetId}`} className="text-sm text-muted-foreground hover:text-foreground">← Retour</Link>
       </div>
-      {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
+      {(error ?? loadError) && <p className="mb-2 text-sm text-destructive">{error ?? loadError}</p>}
       <div className="flex gap-3">
         {showLib && (
           <div className="custom-scrollbar w-44 shrink-0 space-y-2 overflow-auto rounded-lg border border-border bg-card p-2" style={{ height: '78vh' }}>

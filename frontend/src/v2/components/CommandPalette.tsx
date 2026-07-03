@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FolderKanban, Layers, Film, Box, ListTodo, KanbanSquare, PenTool } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useProjectContext } from '../stores/useProjectContext';
 import {
   Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
@@ -29,7 +31,7 @@ export default function CommandPalette({ open, onOpenChange }: {
   const navigate = useNavigate();
   const ctxProjectId = useProjectContext((s) => s.projectId);
   const [q, setQ] = useState('');
-  const [results, setResults] = useState<SearchResults>(EMPTY);
+  const [debounced, setDebounced] = useState('');
 
   // Raccourci global Ctrl/Cmd+K (prime sur les champs de saisie, comme VS Code/Linear)
   useEffect(() => {
@@ -43,17 +45,18 @@ export default function CommandPalette({ open, onOpenChange }: {
     return () => document.removeEventListener('keydown', down);
   }, [open, onOpenChange]);
 
-  // Recherche debouncée (200 ms), filtrage côté serveur
+  // Debounce de la saisie (200 ms) ; la recherche elle-même est une query cachée
   useEffect(() => {
-    const query = q.trim();
-    if (!open || !query) { setResults(EMPTY); return; }
-    const t = setTimeout(() => {
-      api.get<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`)
-        .then(setResults)
-        .catch(() => setResults(EMPTY));
-    }, 200);
+    const t = setTimeout(() => setDebounced(q.trim()), 200);
     return () => clearTimeout(t);
-  }, [q, open]);
+  }, [q]);
+
+  const { data } = useQuery({
+    queryKey: qk.search(debounced),
+    queryFn: () => api.get<SearchResults>(`/api/search?q=${encodeURIComponent(debounced)}`),
+    enabled: open && debounced.length > 0,
+    placeholderData: keepPreviousData,
+  });
 
   const go = (to: string) => {
     onOpenChange(false);
@@ -62,6 +65,8 @@ export default function CommandPalette({ open, onOpenChange }: {
   };
 
   const hasQuery = q.trim().length > 0;
+  // Saisie vidée → on ré-affiche les actions rapides, jamais les vieux résultats
+  const results = hasQuery ? (data ?? EMPTY) : EMPTY;
   const hasResults = Object.values(results).some((list) => list.length > 0);
 
   return (

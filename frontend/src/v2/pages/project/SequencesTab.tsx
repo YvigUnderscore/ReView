@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Film, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 import FavoriteButton from '../../components/FavoriteButton';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import MultiRowCreate from '../../components/MultiRowCreate';
@@ -145,11 +147,11 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
 
 // Détail d'une séquence : shots + assets assignés (chargé à l'ouverture)
 function SequenceDetail({ sequenceId }: { sequenceId: number }) {
-  const [data, setData] = useState<SequenceDetailData | null>(null);
-  useEffect(() => {
-    api.get<{ sequence: SequenceDetailData }>(`/api/sequences/${sequenceId}`)
-      .then((d) => setData(d.sequence)).catch(() => setData(null));
-  }, [sequenceId]);
+  const { data: seqData } = useQuery({
+    queryKey: qk.sequence(sequenceId),
+    queryFn: () => api.get<{ sequence: SequenceDetailData }>(`/api/sequences/${sequenceId}`),
+  });
+  const data = seqData?.sequence ?? null;
 
   if (!data) return <div className="border-t border-border px-3 py-2"><SkeletonRows count={2} /></div>;
   return (

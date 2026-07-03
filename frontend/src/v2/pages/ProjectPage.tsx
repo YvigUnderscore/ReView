@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutDashboard, Clapperboard, Film, Box, Users, Trash2, KanbanSquare, PenTool, Settings } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
+import { useSequencesQuery, useShotsQuery, useAssetsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import FavoriteButton from '../components/FavoriteButton';
 import Shell from '../components/Shell';
@@ -14,7 +17,7 @@ import SequencesTab from './project/SequencesTab';
 import AssetsTab from './project/AssetsTab';
 import MembersTab from './project/MembersTab';
 import TrashTab from './project/TrashTab';
-import type { Asset, ProjectSettings, Sequence, Shot } from './project/projectTypes';
+import type { ProjectSettings } from './project/projectTypes';
 
 /** Page projet — orchestrateur des onglets (découpage 10.C1, sous-composants dans pages/project/). */
 export default function ProjectPage() {
@@ -32,31 +35,34 @@ export default function ProjectPage() {
   const focusSeq = searchParams.get('seq') ? Number(searchParams.get('seq')) : null;
   const setFocusShot = (id: number | null) => setSearchParams(id ? { tab: 'shots', shot: String(id) } : { tab: 'shots' });
   const setFocusSeq = (id: number | null) => setSearchParams(id ? { tab: 'sequences', seq: String(id) } : { tab: 'sequences' });
-  const [name, setName] = useState('');
-  const [startFrame, setStartFrame] = useState<number>(1001);
-  const [sequences, setSequences] = useState<Sequence[]>([]);
-  const [shots, setShots] = useState<Shot[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [settings, setSettings] = useState<ProjectSettings | null>(null);
-  const [error, setError] = useState<string | null>(null);
+
+  const qc = useQueryClient();
+  const { data: projData } = useQuery({
+    queryKey: qk.project(projectId),
+    queryFn: () => api.get<{ project: { name: string; startFrame: number } }>(`/api/projects/${projectId}`),
+  });
+  const name = projData?.project.name ?? '';
+  const { data: settingsData } = useQuery({
+    queryKey: qk.projectSettings(projectId),
+    queryFn: () => api.get<{ settings: ProjectSettings }>(`/api/projects/${projectId}/settings`),
+  });
+  const settings = settingsData?.settings ?? null;
+
+  const seqQ = useSequencesQuery(projectId);
+  const shotsQ = useShotsQuery(projectId);
+  const assetsQ = useAssetsQuery(projectId);
+  const sequences = seqQ.data?.sequences ?? [];
+  const shots = shotsQ.data ?? [];
+  const assets = assetsQ.data ?? [];
+  const error = (seqQ.error ?? shotsQ.error ?? assetsQ.error)?.message ?? null;
 
   const loadStructure = useCallback(async () => {
-    const [seq, sh, as] = await Promise.all([
-      api.get<{ sequences: Sequence[] }>(`/api/sequences?projectId=${projectId}`),
-      api.get<{ shots: Shot[] }>(`/api/shots?projectId=${projectId}`),
-      api.get<{ assets: Asset[] }>(`/api/assets?projectId=${projectId}`),
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: qk.sequences(projectId) }),
+      qc.invalidateQueries({ queryKey: qk.shots(projectId) }),
+      qc.invalidateQueries({ queryKey: qk.assets(projectId) }),
     ]);
-    setSequences(seq.sequences); setShots(sh.shots); setAssets(as.assets);
-  }, [projectId]);
-
-  useEffect(() => {
-    api.get<{ project: { name: string; startFrame: number } }>(`/api/projects/${projectId}`)
-      .then((p) => { setName(p.project.name); setStartFrame(p.project.startFrame); })
-      .catch(() => undefined);
-    api.get<{ settings: ProjectSettings }>(`/api/projects/${projectId}/settings`)
-      .then((d) => setSettings(d.settings)).catch(() => undefined);
-    loadStructure().catch((e) => setError(e instanceof Error ? e.message : 'Erreur'));
-  }, [projectId, loadStructure]);
+  }, [qc, projectId]);
 
   const nomenclature = settings?.nomenclature ?? { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 };
 
@@ -112,10 +118,10 @@ export default function ProjectPage() {
       {tab === 'settings' && canManage && (
         <ProjectSettingsTab
           projectId={projectId}
-          startFrame={startFrame}
-          onStartFrameChange={setStartFrame}
+          startFrame={projData?.project.startFrame ?? 1001}
+          onStartFrameChange={() => qc.invalidateQueries({ queryKey: qk.project(projectId) })}
           settings={settings}
-          onSettingsChange={setSettings}
+          onSettingsChange={() => qc.invalidateQueries({ queryKey: qk.projectSettings(projectId) })}
         />
       )}
       {tab === 'trash' && canManage && <TrashTab projectId={projectId} reload={loadStructure} />}

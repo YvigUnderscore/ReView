@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Star, FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
+import { useProjectsQuery, type ProjectSummary } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
-import ViewToggle, { useViewMode } from '../components/ViewToggle';
+import ViewToggle from '../components/ViewToggle';
+import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../components/EntityCard';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ResumeCard from '../components/ResumeCard';
@@ -19,13 +23,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
 
-interface Project {
-  id: number;
-  name: string;
-  description: string | null;
-  status: string;
-  thumbnailUrl: string | null;
-}
+type Project = ProjectSummary;
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'Actif',
@@ -51,16 +49,12 @@ export default function ProjectsPage() {
   const favs = useFavorites((s) => s.favorites);
   const toggleFav = useFavorites((s) => s.toggle);
   const isFav = (id: number) => favs.some((f) => f.type === 'PROJECT' && f.entityId === id);
-  // null = chargement en cours (squelettes) ; [] = réellement vide.
-  const [projects, setProjects] = useState<Project[] | null>(null);
+  const qc = useQueryClient();
+  const { data: projects, error } = useProjectsQuery();
   const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
-
-  const load = () =>
-    api.get<{ projects: Project[] }>('/api/projects').then((d) => setProjects(d.projects)).catch((e) => setError(e.message));
-  useEffect(() => { load(); }, []);
+  const invalidate = () => qc.invalidateQueries({ queryKey: qk.projects });
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,9 +62,9 @@ export default function ProjectsPage() {
     try {
       await api.post('/api/projects', { name });
       toast.success(`Projet « ${name} » créé`);
-      setName(''); load();
+      setName(''); invalidate();
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+    catch (err) { toast.error(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   const confirmDelete = async () => {
@@ -78,9 +72,9 @@ export default function ProjectsPage() {
     try {
       await api.del(`/api/projects/${deleting.id}`);
       toast.success('Projet déplacé dans la corbeille');
-      setDeleting(null); load();
+      setDeleting(null); invalidate();
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+    catch (err) { toast.error(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   return (
@@ -97,9 +91,9 @@ export default function ProjectsPage() {
           <Button type="submit"><Plus size={16} /> Créer</Button>
         </form>
       )}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
 
-      {projects === null ? (
+      {projects === undefined ? (
         <SkeletonCards />
       ) : projects.length === 0 ? (
         <EmptyState
@@ -136,7 +130,7 @@ export default function ProjectsPage() {
         <EditProjectModal
           project={editing}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); load(); }}
+          onSaved={() => { setEditing(null); invalidate(); }}
         />
       )}
 

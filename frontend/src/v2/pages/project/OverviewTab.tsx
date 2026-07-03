@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { FileVideo, Play } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 import ProjectActivity from '../../components/ProjectActivity';
 import { Skeleton } from '../../components/ui/skeleton';
 
@@ -25,12 +26,11 @@ export default function OverviewTab({ name, projectId, canManage, counts, onGo }
   name: string; projectId: number; canManage: boolean;
   counts: { sequences: number; shots: number; assets: number }; onGo: (k: string) => void;
 }) {
-  const [media, setMedia] = useState<RecentMedia[] | null>(null);
-  useEffect(() => {
-    api.get<{ media: RecentMedia[] }>(`/api/media?projectId=${projectId}`)
-      .then((d) => setMedia(d.media.slice(0, 8)))
-      .catch(() => setMedia([]));
-  }, [projectId]);
+  const { data, isError } = useQuery({
+    queryKey: qk.projectMedia(projectId),
+    queryFn: () => api.get<{ media: RecentMedia[] }>(`/api/media?projectId=${projectId}`).then((d) => d.media),
+  });
+  const media = isError ? [] : (data?.slice(0, 8) ?? null);
 
   return (
     <div>

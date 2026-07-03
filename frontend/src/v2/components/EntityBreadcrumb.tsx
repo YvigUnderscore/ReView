@@ -1,6 +1,8 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { trackRecent } from '../stores/useRecents';
 import { useProjectContext } from '../stores/useProjectContext';
 import {
@@ -57,17 +59,13 @@ function leafLabel(entity: BreadcrumbEntity, ctx: BreadcrumbContext): string | n
 }
 
 export default function EntityBreadcrumb({ entity, id, tail }: { entity: BreadcrumbEntity; id: number; tail?: string }) {
-  const [ctx, setCtx] = useState<BreadcrumbContext | null>(null);
   const { pathname, search } = useLocation();
-
-  useEffect(() => {
-    if (!Number.isFinite(id)) return;
-    let cancelled = false;
-    api.get<{ context: BreadcrumbContext }>(`/api/context/${entity}/${id}`)
-      .then((d) => { if (!cancelled) setCtx(d.context); })
-      .catch(() => { if (!cancelled) setCtx(null); });
-    return () => { cancelled = true; };
-  }, [entity, id]);
+  const { data } = useQuery({
+    queryKey: qk.context(entity, id),
+    queryFn: () => api.get<{ context: BreadcrumbContext }>(`/api/context/${entity}/${id}`),
+    enabled: Number.isFinite(id),
+  });
+  const ctx = data?.context ?? null;
 
   // Effet volontaire : chaque contexte résolu alimente les « Récents » et le
   // projet courant de la sidebar (10.A4) — l'URL exacte est mémorisée pour y

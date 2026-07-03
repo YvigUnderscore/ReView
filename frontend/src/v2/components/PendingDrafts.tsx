@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileClock, X, Trash2, Send, Eye } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useUploadStore } from '../../stores/useUploadStore';
 
 interface Draft {
@@ -14,23 +16,35 @@ interface Draft {
  * publiés de l'utilisateur courant ; permet de les publier ou supprimer rapidement.
  */
 export default function PendingDrafts() {
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   const uploads = useUploadStore((s) => s.uploads);
 
-  const load = () => api.get<{ drafts: Draft[] }>('/api/media/drafts').then((d) => setDrafts(d.drafts)).catch(() => undefined);
-  useEffect(() => { load(); }, []);
-  // Recharge dès qu'un upload se termine (un nouveau brouillon peut apparaître)
-  useEffect(() => { if (uploads.some((u) => u.status === 'done')) load(); }, [uploads]);
+  const { data } = useQuery({
+    queryKey: qk.drafts,
+    queryFn: () => api.get<{ drafts: Draft[] }>('/api/media/drafts').then((d) => d.drafts),
+  });
+  const drafts = data ?? [];
 
+  // Recharge dès qu'un upload se termine (un nouveau brouillon peut apparaître)
+  useEffect(() => {
+    if (uploads.some((u) => u.status === 'done')) qc.invalidateQueries({ queryKey: qk.drafts });
+  }, [uploads, qc]);
+
+  // Publier/supprimer un brouillon affecte aussi les listes de versions et de médias
+  const refresh = () => Promise.all([
+    qc.invalidateQueries({ queryKey: qk.drafts }),
+    qc.invalidateQueries({ queryKey: ['versions'] }),
+    qc.invalidateQueries({ queryKey: ['media'] }),
+  ]);
   const publish = async (id: number) => {
     setBusy(id);
-    try { await api.post(`/api/media/${id}/publish`); await load(); } finally { setBusy(null); }
+    try { await api.post(`/api/media/${id}/publish`); await refresh(); } finally { setBusy(null); }
   };
   const remove = async (id: number) => {
     setBusy(id);
-    try { await api.del(`/api/media/${id}`); await load(); } finally { setBusy(null); }
+    try { await api.del(`/api/media/${id}`); await refresh(); } finally { setBusy(null); }
   };
 
   if (drafts.length === 0) return null;

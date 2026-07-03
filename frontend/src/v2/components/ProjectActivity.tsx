@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileVideo, Layers, Clock } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import {
   TASK_STATUSES as STATUS,
   TASK_STATUS_LABEL as STATUS_LABEL,
@@ -21,33 +23,41 @@ interface ActTask {
 }
 interface Member { user: { id: number; name: string | null; email: string } }
 
-export default function ProjectActivity({ projectId, canManage }: { projectId: number; canManage: boolean }) {
-  const [recent, setRecent] = useState<RecentItem[]>([]);
-  const [tasks, setTasks] = useState<ActTask[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [error, setError] = useState<string | null>(null);
+interface Activity { recent: RecentItem[]; tasks: ActTask[] }
 
-  const load = () =>
-    api.get<{ recent: RecentItem[]; tasks: ActTask[] }>(`/api/projects/${projectId}/activity`)
-      .then((d) => { setRecent(d.recent); setTasks([...d.tasks].sort((a, b) => (PRIORITY[a.status] ?? 9) - (PRIORITY[b.status] ?? 9))); })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Erreur'));
-  useEffect(() => {
-    load();
-    if (canManage) {
-      api.get<{ project: { memberships: Member[] } }>(`/api/projects/${projectId}`)
-        .then((d) => setMembers(d.project.memberships)).catch(() => undefined);
-    }
-  }, [projectId, canManage]);
+export default function ProjectActivity({ projectId, canManage }: { projectId: number; canManage: boolean }) {
+  const qc = useQueryClient();
+  const { data, error } = useQuery({
+    queryKey: qk.projectActivity(projectId),
+    queryFn: () => api.get<Activity>(`/api/projects/${projectId}/activity`),
+  });
+  const recent = data?.recent ?? [];
+  const tasks = useMemo(
+    () => [...(data?.tasks ?? [])].sort((a, b) => (PRIORITY[a.status] ?? 9) - (PRIORITY[b.status] ?? 9)),
+    [data],
+  );
+  const { data: projData } = useQuery({
+    queryKey: qk.project(projectId),
+    queryFn: () => api.get<{ project: { memberships: Member[] } }>(`/api/projects/${projectId}`),
+    enabled: canManage,
+  });
+  const members = projData?.project.memberships ?? [];
+
+  // Mise à jour optimiste du cache ; rollback par invalidation si le PATCH échoue.
+  const patchTask = (taskId: number, patch: Partial<ActTask>) =>
+    qc.setQueryData<Activity>(qk.projectActivity(projectId), (old) =>
+      old ? { ...old, tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)) } : old);
+  const rollback = () => qc.invalidateQueries({ queryKey: qk.projectActivity(projectId) });
 
   const setStatus = async (taskId: number, status: string) => {
-    setTasks((ts) => ts.map((t) => (t.id === taskId ? { ...t, status } : t)));
-    try { await api.patch(`/api/tasks/${taskId}`, { status }); } catch { load(); }
+    patchTask(taskId, { status });
+    try { await api.patch(`/api/tasks/${taskId}`, { status }); } catch { rollback(); }
   };
   const assign = async (taskId: number, assigneeId: string) => {
     const id = assigneeId ? Number(assigneeId) : null;
     const member = members.find((m) => m.user.id === id);
-    setTasks((ts) => ts.map((t) => (t.id === taskId ? { ...t, assignee: id ? { id: id!, name: member?.user.name ?? null } : null } : t)));
-    try { await api.patch(`/api/tasks/${taskId}`, { assigneeId: id }); } catch { load(); }
+    patchTask(taskId, { assignee: id ? { id, name: member?.user.name ?? null } : null });
+    try { await api.patch(`/api/tasks/${taskId}`, { assigneeId: id }); } catch { rollback(); }
   };
 
   // Répartition des tâches par statut (jauge de progression — 10.C1) ;
@@ -85,7 +95,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
       {/* Dernières mises à jour */}
       <section className="rounded-lg border border-border bg-card p-4">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><Clock size={15} /> Dernières mises à jour</h3>
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error.message}</p>}
         {recent.length === 0 ? (
           <p className="text-xs text-muted-foreground">Aucune activité récente.</p>
         ) : (

@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Crosshair, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { uploadCommentImages } from '../../lib/commentAttachments';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
@@ -34,9 +36,7 @@ function ReviewContent({ id }: { id: number }) {
   const role = useAuth((s) => s.user?.role);
   const canEditTransform = role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST';
 
-  const [data, setData] = useState<MediaResp | null>(null);
-  const [comments, setComments] = useState<ReviewComment[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const qc = useQueryClient();
   const [commentsOpen, setCommentsOpen] = useState(true);
   // Commentaire actuellement affiché (carte mise en avant + annotation visible)
   const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
@@ -48,18 +48,30 @@ function ReviewContent({ id }: { id: number }) {
   // Drapeau : distingue un seek programmatique d'un déplacement manuel (qui désélectionne).
   const programmaticSeekRef = useRef(false);
 
+  // staleTime Infinity : le GET régénère des URLs présignées à chaque appel — un
+  // refetch en arrière-plan rechargerait le viewer en pleine lecture. Les mutations
+  // (publication, reprocess) invalident explicitement.
+  const mediaQ = useQuery({
+    queryKey: qk.media(id),
+    queryFn: () => api.get<MediaResp>(`/api/media/${id}`),
+    staleTime: Infinity,
+  });
+  const data = mediaQ.data ?? null;
+  const commentsQ = useQuery({
+    queryKey: qk.comments(id),
+    queryFn: () => api.get<{ comments: ReviewComment[] }>(`/api/comments?mediaObjectId=${id}`).then((d) => d.comments),
+  });
+  const comments = commentsQ.data ?? null;
+  const error = (mediaQ.error ?? commentsQ.error)?.message ?? null;
+
   const ann = useAnnotations();
   const glbSrc = resolveGlbSrc(data);
   const model3d = useModel3D(data, glbSrc);
 
   const loadComments = useCallback(
-    () => api.get<{ comments: ReviewComment[] }>(`/api/comments?mediaObjectId=${id}`).then((d) => setComments(d.comments)),
-    [id],
+    () => qc.invalidateQueries({ queryKey: qk.comments(id) }),
+    [qc, id],
   );
-  useEffect(() => {
-    api.get<MediaResp>(`/api/media/${id}`).then(setData).catch((e) => setError(e.message));
-    loadComments().catch((e: Error) => setError(e.message));
-  }, [id, loadComments]);
 
   const seek = (t: number) => {
     if (videoRef.current) { programmaticSeekRef.current = true; videoRef.current.currentTime = t; }
@@ -136,7 +148,11 @@ function ReviewContent({ id }: { id: number }) {
     if (!data) return;
     try {
       const { media } = await api.post<{ media: MediaResp['media'] }>(`/api/media/${id}/publish`);
-      setData({ ...data, media: { ...data.media, published: media.published } });
+      // Mise à jour ciblée du cache : pas de refetch (les URLs présignées changeraient
+      // et rechargeraient le viewer) — seuls le badge et les brouillons sont concernés.
+      qc.setQueryData<MediaResp>(qk.media(id), (old) => old ? { ...old, media: { ...old.media, published: media.published } } : old);
+      qc.invalidateQueries({ queryKey: qk.drafts });
+      qc.invalidateQueries({ queryKey: ['versions'] });
       toast.success('Média publié pour l’équipe');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Erreur à la publication'); }
   };
@@ -145,7 +161,7 @@ function ReviewContent({ id }: { id: number }) {
     setReprocessing(true);
     try {
       await api.post(`/api/media/${id}/reprocess`);
-      setData(await api.get<MediaResp>(`/api/media/${id}`));
+      await qc.invalidateQueries({ queryKey: qk.media(id) });
       model3d.clearLoadError();
       toast.success('Conversion relancée');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Erreur à la relance de la conversion'); }

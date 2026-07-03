@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 
 interface VersionMedia { id: number; kind: string; originalName: string; status: string }
 interface VersionDetail { id: number; name: string; taskId: number | null; assetId: number | null; media: VersionMedia[] }
@@ -15,29 +16,30 @@ interface VersionSummary { id: number; name: string; createdAt: string; author: 
  */
 export default function VersionNavigator({ versionId, mediaId }: { versionId: number; mediaId: number }) {
   const navigate = useNavigate();
-  const [version, setVersion] = useState<VersionDetail | null>(null);
-  const [versions, setVersions] = useState<VersionSummary[]>([]);
+  const qc = useQueryClient();
 
-  useEffect(() => {
-    let cancelled = false;
-    api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`)
-      .then(({ version: v }) => {
-        if (cancelled) return;
-        setVersion(v);
-        const parent = v.taskId ? `taskId=${v.taskId}` : v.assetId ? `assetId=${v.assetId}` : null;
-        if (!parent) return;
-        return api.get<{ versions: VersionSummary[] }>(`/api/versions?${parent}`)
-          .then((d) => { if (!cancelled) setVersions(d.versions); });
-      })
-      .catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [versionId]);
+  const versionQ = useQuery({
+    queryKey: qk.version(versionId),
+    queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`).then((d) => d.version),
+  });
+  const version = versionQ.data ?? null;
+  // Query dépendante : liste des versions de la tâche/asset parente
+  const parent = version ? (version.taskId ? `taskId=${version.taskId}` : version.assetId ? `assetId=${version.assetId}` : null) : null;
+  const versionsQ = useQuery({
+    queryKey: qk.versions(parent ?? ''),
+    queryFn: () => api.get<{ versions: VersionSummary[] }>(`/api/versions?${parent}`).then((d) => d.versions),
+    enabled: parent !== null,
+  });
+  const versions = versionsQ.data ?? [];
 
   // Bascule vers une autre version : on ouvre son premier média visible.
   const goToVersion = async (vid: number) => {
     if (vid === versionId) return;
     try {
-      const { version: v } = await api.get<{ version: VersionDetail }>(`/api/versions/${vid}`);
+      const v = await qc.fetchQuery({
+        queryKey: qk.version(vid),
+        queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${vid}`).then((d) => d.version),
+      });
       const first = v.media[0];
       if (!first) { toast.error(`Aucun média visible dans la version ${v.name}`); return; }
       navigate(`/review/${first.id}`);

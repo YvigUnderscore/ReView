@@ -1,8 +1,8 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { FolderKanban, Shield, Clapperboard, ChevronRight, Star, BookText, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
-import { api } from '../../lib/apiClient';
+import { useProjectsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
 import { useProjectContext } from '../stores/useProjectContext';
@@ -15,25 +15,22 @@ import CommandPalette from './CommandPalette';
 import ShortcutsHelp from './ShortcutsHelp';
 import { useGlobalShortcuts } from '../lib/shortcuts';
 
-interface ProjectLink { id: number; name: string; }
-
 const COLLAPSE_KEY = 'sidebar-collapsed';
+const ENTITY_PAGE_RE = /^\/(tasks|assets|review)\//;
 
 export default function Shell({ children, title, breadcrumb }: { children: ReactNode; title?: string; breadcrumb?: ReactNode }) {
   const user = useAuth((s) => s.user);
   const { pathname } = useLocation();
   const params = useParams();
-  const [projects, setProjects] = useState<ProjectLink[]>([]);
+  const { data } = useProjectsQuery();
+  const projects = useMemo(() => (data ?? []).slice(0, 8), [data]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const favorites = useFavorites((s) => s.favorites);
   const loadFavorites = useFavorites((s) => s.load);
 
-  useEffect(() => {
-    api.get<{ projects: ProjectLink[] }>('/api/projects').then((d) => setProjects(d.projects.slice(0, 8))).catch(() => undefined);
-    loadFavorites();
-  }, [loadFavorites]);
+  useEffect(() => { loadFavorites(); }, [loadFavorites]);
 
   const toggleCollapse = () => setCollapsed((c) => { localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1'); return !c; });
 
@@ -42,7 +39,7 @@ export default function Shell({ children, title, breadcrumb }: { children: React
   // résolu par le breadcrumb (useProjectContext).
   const ctxProjectId = useProjectContext((s) => s.projectId);
   const routeProjectId = pathname.startsWith('/projects/') ? Number(params.id) : null;
-  const isEntityPage = /^\/(tasks|assets|review)\//.test(pathname);
+  const isEntityPage = ENTITY_PAGE_RE.test(pathname);
   const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
   const isProjectsRoot = pathname === '/' || pathname.startsWith('/projects');
 

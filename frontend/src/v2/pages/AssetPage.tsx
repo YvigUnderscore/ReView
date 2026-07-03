@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
 import Shell from '../components/Shell';
@@ -25,32 +27,57 @@ export default function AssetPage() {
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const enqueue = useUploadStore((s) => s.enqueue);
   const uploads = useUploadStore((s) => s.uploads);
-  const [versions, setVersions] = useState<Version[]>([]);
-  const [asset, setAsset] = useState<AssetInfo | null>(null);
+  const qc = useQueryClient();
   const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [target, setTarget] = useState<number | null>(null);
+  // Versions dont la liste de médias est dépliée (une query par version dépliée)
+  const [openIds, setOpenIds] = useState<number[]>([]);
 
-  const load = () => api.get<{ versions: Version[] }>(`/api/versions?assetId=${assetId}`).then((d) => setVersions(d.versions)).catch((e) => setError(e.message));
-  const loadAsset = () => api.get<{ asset: AssetInfo }>(`/api/assets/${assetId}`).then((d) => setAsset(d.asset)).catch(() => undefined);
-  useEffect(() => { load(); loadAsset(); }, [assetId]);
-  useEffect(() => { if (uploads.some((u) => u.status === 'done')) load(); }, [uploads]);
+  const versionsQ = useQuery({
+    queryKey: qk.versions(`assetId=${assetId}`),
+    queryFn: () => api.get<{ versions: Version[] }>(`/api/versions?assetId=${assetId}`).then((d) => d.versions),
+  });
+  const versions = versionsQ.data ?? [];
+  const assetQ = useQuery({
+    queryKey: qk.asset(assetId),
+    queryFn: () => api.get<{ asset: AssetInfo }>(`/api/assets/${assetId}`),
+  });
+  const asset = assetQ.data?.asset ?? null;
+  const loadError = versionsQ.error?.message ?? null;
+
+  const mediaQueries = useQueries({
+    queries: openIds.map((vid) => ({
+      queryKey: qk.version(vid),
+      queryFn: () => api.get<{ version: Version }>(`/api/versions/${vid}`).then((d) => d.version),
+    })),
+  });
+  const mediaByVersion: Record<number, Media[] | undefined> = {};
+  openIds.forEach((vid, i) => { mediaByVersion[vid] = mediaQueries[i]?.data?.media; });
+
+  const invalidateVersions = () => qc.invalidateQueries({ queryKey: qk.versions(`assetId=${assetId}`) });
+  useEffect(() => {
+    if (uploads.some((u) => u.status === 'done')) {
+      qc.invalidateQueries({ queryKey: qk.versions(`assetId=${assetId}`) });
+      qc.invalidateQueries({ queryKey: ['version'] });
+    }
+  }, [uploads, qc, assetId]);
 
   const createVersion = async () => {
-    try { await api.post('/api/versions', { assetId }); toast.success('Version créée'); load(); }
+    try { await api.post('/api/versions', { assetId }); toast.success('Version créée'); invalidateVersions(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const publish = async (vid: number) => {
-    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); toast.success('Version publiée'); load(); }
+    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); toast.success('Version publiée'); invalidateVersions(); qc.invalidateQueries({ queryKey: qk.version(vid) }); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
-  const openMedia = async (versionId: number) => {
-    const { version } = await api.get<{ version: Version }>(`/api/versions/${versionId}`);
-    setVersions((vs) => vs.map((v) => (v.id === versionId ? { ...v, media: version.media } : v)));
+  const openMedia = (versionId: number) => {
+    if (openIds.includes(versionId)) qc.invalidateQueries({ queryKey: qk.version(versionId) });
+    else setOpenIds((ids) => [...ids, versionId]);
   };
   const publishMedia = async (versionId: number, mediaId: number) => {
-    try { await api.post(`/api/media/${mediaId}/publish`); toast.success('Média publié pour l’équipe'); openMedia(versionId); }
+    try { await api.post(`/api/media/${mediaId}/publish`); toast.success('Média publié pour l’équipe'); qc.invalidateQueries({ queryKey: qk.version(versionId) }); invalidateVersions(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +98,7 @@ export default function AssetPage() {
           <Link to="/" className="text-muted-foreground hover:text-foreground">← Projets</Link>
         </div>
       </div>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {(error ?? loadError) && <p className="mb-4 text-sm text-destructive">{error ?? loadError}</p>}
 
       {asset && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
@@ -96,7 +123,7 @@ export default function AssetPage() {
           projectId={asset.projectId}
           assetName={asset.name}
           onClose={() => setAssigning(false)}
-          onSaved={loadAsset}
+          onSaved={() => qc.invalidateQueries({ queryKey: qk.asset(assetId) })}
         />
       )}
       {canCreate && (
@@ -119,9 +146,9 @@ export default function AssetPage() {
                 <Button size="sm" variant="outline" onClick={() => openMedia(v.id)}>Voir médias ({v._count?.media ?? 0})</Button>
               </div>
             </div>
-            {v.media && (
+            {mediaByVersion[v.id] && (
               <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {v.media.map((m) => (
+                {mediaByVersion[v.id]!.map((m) => (
                   <li key={m.id} className="rounded border border-border p-2 text-xs">
                     <Link to={`/review/${m.id}`} className="block hover:text-primary">
                       <div className="truncate">{m.originalName}</div>
@@ -135,7 +162,7 @@ export default function AssetPage() {
                     )}
                   </li>
                 ))}
-                {v.media.length === 0 && <li className="text-xs text-muted-foreground">Aucun média</li>}
+                {mediaByVersion[v.id]!.length === 0 && <li className="text-xs text-muted-foreground">Aucun média</li>}
               </ul>
             )}
           </div>

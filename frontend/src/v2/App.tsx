@@ -1,7 +1,10 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'sonner';
 import { api } from '../lib/apiClient';
+import { queryClient, qk } from './lib/query';
 import { useAuth } from './stores/useAuth';
 import { useTheme } from './stores/useTheme';
 import LoginPage from './pages/LoginPage';
@@ -27,15 +30,26 @@ function Protected({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppRoutes />
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+  );
+}
+
+function AppRoutes() {
   const init = useAuth((s) => s.init);
   const ready = useAuth((s) => s.ready);
   const theme = useTheme((s) => s.theme);
-  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+  const { data: setup } = useQuery({
+    queryKey: qk.setupStatus,
+    queryFn: () => api.get<{ needsSetup: boolean }>('/api/setup/status').catch(() => ({ needsSetup: false })),
+    staleTime: Infinity,
+  });
+  const needsSetup = setup?.needsSetup ?? null;
 
-  useEffect(() => {
-    api.get<{ needsSetup: boolean }>('/api/setup/status').then((d) => setNeedsSetup(d.needsSetup)).catch(() => setNeedsSetup(false));
-    init();
-  }, [init]);
+  useEffect(() => { init(); }, [init]);
 
   if (!ready || needsSetup === null) {
     return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">Chargement…</div>;

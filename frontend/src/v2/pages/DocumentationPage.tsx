@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, FileText, FileType2, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
+import { useProjectsQuery, useSequencesQuery, useShotsQuery, useAssetsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
@@ -26,9 +29,8 @@ const SCOPE_LABEL: Record<DocScope, string> = {
 export default function DocumentationPage() {
   const role = useAuth((s) => s.user?.role);
   const canEdit = role !== 'CLIENT';
-  const [projects, setProjects] = useState<ProjectLite[]>([]);
+  const qc = useQueryClient();
   const [filterProject, setFilterProject] = useState<string>(''); // '' = global
-  const [docs, setDocs] = useState<Doc[]>([]);
   const [selected, setSelected] = useState<Doc | null>(null);
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
@@ -37,15 +39,15 @@ export default function DocumentationPage() {
   const [deleting, setDeleting] = useState<Doc | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.get<{ projects: ProjectLite[] }>('/api/projects').then((d) => setProjects(d.projects)).catch(() => undefined);
-  }, []);
-
-  const loadDocs = () => {
-    const q = filterProject ? `?projectId=${filterProject}` : '';
-    return api.get<{ documents: Doc[] }>(`/api/documents${q}`).then((d) => setDocs(d.documents)).catch((e) => setError(e instanceof Error ? e.message : 'Erreur'));
-  };
-  useEffect(() => { loadDocs(); setSelected(null); }, [filterProject]);
+  const projects: ProjectLite[] = useProjectsQuery().data ?? [];
+  const docsKey = qk.documents(filterProject ? Number(filterProject) : null);
+  const docsQ = useQuery({
+    queryKey: docsKey,
+    queryFn: () => api.get<{ documents: Doc[] }>(`/api/documents${filterProject ? `?projectId=${filterProject}` : ''}`).then((d) => d.documents),
+  });
+  const docs = docsQ.data ?? [];
+  const loadError = docsQ.error?.message ?? null;
+  const invalidateDocs = () => qc.invalidateQueries({ queryKey: ['documents'] });
 
   const openDoc = async (d: Doc) => {
     const { document } = await api.get<{ document: Doc }>(`/api/documents/${d.id}`);
@@ -55,12 +57,12 @@ export default function DocumentationPage() {
     if (!selected) return;
     try {
       const { document } = await api.patch<{ document: Doc }>(`/api/documents/${selected.id}`, { title: draftTitle, content: draftContent });
-      setSelected({ ...selected, ...document }); setEditing(false); loadDocs();
+      setSelected({ ...selected, ...document }); setEditing(false); invalidateDocs();
     } catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmDelete = async () => {
     if (!deleting) return;
-    try { await api.del(`/api/documents/${deleting.id}`); if (selected?.id === deleting.id) setSelected(null); setDeleting(null); loadDocs(); }
+    try { await api.del(`/api/documents/${deleting.id}`); if (selected?.id === deleting.id) setSelected(null); setDeleting(null); invalidateDocs(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
 
@@ -69,7 +71,7 @@ export default function DocumentationPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Documentation</h1>
         <div className="flex items-center gap-2">
-          <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1.5 text-sm">
+          <select value={filterProject} onChange={(e) => { setFilterProject(e.target.value); setSelected(null); }} className="rounded-md border border-input bg-background px-2 py-1.5 text-sm">
             <option value="">Documentation globale</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
@@ -80,7 +82,7 @@ export default function DocumentationPage() {
           )}
         </div>
       </div>
-      {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+      {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
 
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         {/* Liste */}
@@ -150,7 +152,7 @@ export default function DocumentationPage() {
           projects={projects}
           defaultProjectId={filterProject ? Number(filterProject) : null}
           onClose={() => setCreating(false)}
-          onCreated={(doc) => { setCreating(false); loadDocs(); openDoc(doc); }}
+          onCreated={(doc) => { setCreating(false); invalidateDocs(); openDoc(doc); }}
         />
       )}
       <ConfirmDialog
@@ -176,17 +178,20 @@ function CreateDocModal({ projects, defaultProjectId, onClose, onCreated }: {
   const [scope, setScope] = useState<DocScope>(defaultProjectId ? 'PROJECT' : 'GLOBAL');
   const [projectId, setProjectId] = useState<string>(defaultProjectId ? String(defaultProjectId) : '');
   const [scopeId, setScopeId] = useState<string>('');
-  const [entities, setEntities] = useState<EntityLite[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Charge les entités (séquences/shots/assets) du projet pour le rattachement fin
-  useEffect(() => {
-    if (!projectId || scope === 'GLOBAL' || scope === 'PROJECT') { setEntities([]); return; }
-    const ep = scope === 'SEQUENCE' ? 'sequences' : scope === 'SHOT' ? 'shots' : 'assets';
-    api.get<Record<string, EntityLite[]>>(`/api/${ep}?projectId=${projectId}`).then((d) => setEntities(d[ep] ?? [])).catch(() => setEntities([]));
-  }, [projectId, scope]);
+  // Entités (séquences/shots/assets) du projet pour le rattachement fin
+  const pid = projectId ? Number(projectId) : 0;
+  const seqQ = useSequencesQuery(pid, !!projectId && scope === 'SEQUENCE');
+  const shotsQ = useShotsQuery(pid, !!projectId && scope === 'SHOT');
+  const assetsQ = useAssetsQuery(pid, !!projectId && scope === 'ASSET');
+  const entities: EntityLite[] =
+    scope === 'SEQUENCE' ? (seqQ.data?.sequences ?? [])
+    : scope === 'SHOT' ? (shotsQ.data ?? [])
+    : scope === 'ASSET' ? (assetsQ.data ?? [])
+    : [];
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

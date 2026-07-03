@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, LayoutGrid, List, Trash2, Upload, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
 import Shell from '../components/Shell';
@@ -28,9 +30,8 @@ export default function TaskPage() {
   const canPublish = role === 'ADMIN' || role === 'SUPERVISOR';
   const enqueue = useUploadStore((s) => s.enqueue);
   const uploads = useUploadStore((s) => s.uploads);
-  const [task, setTask] = useState<TaskCtx | null>(null);
-  const [versions, setVersions] = useState<Version[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const qc = useQueryClient();
+  const [sel, setSel] = useState<number | null>(null);
   const [cardMode, setCardMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteVersion, setDeleteVersion] = useState<Version | null>(null);
@@ -38,54 +39,62 @@ export default function TaskPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [target, setTarget] = useState<number | null>(null);
 
-  const loadContext = () => api.get<{ task: TaskCtx }>(`/api/tasks/${taskId}`).then((d) => setTask(d.task)).catch((e) => setError(e.message));
-  const load = () =>
-    api.get<{ versions: Version[] }>(`/api/versions?taskId=${taskId}`)
-      .then((d) => {
-        setVersions(d.versions);
-        // Ouvre la dernière version par défaut (liste triée du plus récent au plus ancien)
-        setSelectedId((cur) => (cur && d.versions.some((v) => v.id === cur) ? cur : d.versions[0]?.id ?? null));
-      })
-      .catch((e) => setError(e.message));
-  useEffect(() => { loadContext(); load(); }, [taskId]);
-  useEffect(() => { if (uploads.some((u) => u.status === 'done')) load(); }, [uploads]);
+  const taskQ = useQuery({
+    queryKey: qk.task(taskId),
+    queryFn: () => api.get<{ task: TaskCtx }>(`/api/tasks/${taskId}`),
+  });
+  const task = taskQ.data?.task ?? null;
+  const versionsKey = qk.versions(`taskId=${taskId}`);
+  const versionsQ = useQuery({
+    queryKey: versionsKey,
+    queryFn: () => api.get<{ versions: Version[] }>(`/api/versions?taskId=${taskId}`).then((d) => d.versions),
+  });
+  const versions = versionsQ.data ?? [];
+  // Version ouverte : celle choisie si toujours présente, sinon la plus récente (liste triée)
+  const selectedId = sel != null && versions.some((v) => v.id === sel) ? sel : versions[0]?.id ?? null;
+  const loadError = (taskQ.error ?? versionsQ.error)?.message ?? null;
 
-  const openMedia = async (versionId: number) => {
-    const { version } = await api.get<{ version: Version }>(`/api/versions/${versionId}`);
-    setVersions((vs) => vs.map((v) => (v.id === versionId ? { ...v, media: version.media } : v)));
-  };
+  // Médias de la version sélectionnée (chargés à la demande, cachés par version)
+  const versionQ = useQuery({
+    queryKey: qk.version(selectedId ?? 0),
+    queryFn: () => api.get<{ version: Version }>(`/api/versions/${selectedId}`).then((d) => d.version),
+    enabled: selectedId != null,
+  });
+  const selectedMedia = versionQ.data?.media;
 
-  // Charge les médias d'une version dès qu'elle est sélectionnée (et pas encore chargés)
+  const invalidateVersions = () => qc.invalidateQueries({ queryKey: versionsKey });
+  const invalidateSelected = () => { if (selectedId != null) qc.invalidateQueries({ queryKey: qk.version(selectedId) }); };
   useEffect(() => {
-    if (selectedId == null) return;
-    const v = versions.find((x) => x.id === selectedId);
-    if (v && !v.media) openMedia(selectedId);
-  }, [selectedId, versions]);
+    if (uploads.some((u) => u.status === 'done')) {
+      qc.invalidateQueries({ queryKey: qk.versions(`taskId=${taskId}`) });
+      qc.invalidateQueries({ queryKey: ['version'] });
+    }
+  }, [uploads, qc, taskId]);
 
   const createVersion = async () => {
     try {
       const { version } = await api.post<{ version: Version }>('/api/versions', { taskId });
       toast.success(`Version « ${version.name} » créée`);
-      await load(); setSelectedId(version.id);
+      await invalidateVersions(); setSel(version.id);
     }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const publish = async (vid: number) => {
-    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); toast.success('Version publiée'); load(); }
+    try { await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' }); toast.success('Version publiée'); invalidateVersions(); qc.invalidateQueries({ queryKey: qk.version(vid) }); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const publishMedia = async (versionId: number, mediaId: number) => {
-    try { await api.post(`/api/media/${mediaId}/publish`); toast.success('Média publié pour l’équipe'); openMedia(versionId); }
+    try { await api.post(`/api/media/${mediaId}/publish`); toast.success('Média publié pour l’équipe'); qc.invalidateQueries({ queryKey: qk.version(versionId) }); invalidateVersions(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmDeleteVersion = async () => {
     if (!deleteVersion) return;
-    try { await api.del(`/api/versions/${deleteVersion.id}`); toast.success('Version déplacée dans la corbeille'); setDeleteVersion(null); await load(); }
+    try { await api.del(`/api/versions/${deleteVersion.id}`); toast.success('Version déplacée dans la corbeille'); setDeleteVersion(null); await invalidateVersions(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmDeleteMedia = async () => {
     if (!deleteMedia) return;
-    try { await api.del(`/api/media/${deleteMedia.id}`); toast.success('Média déplacé dans la corbeille'); const vid = selectedId; setDeleteMedia(null); if (vid) openMedia(vid); }
+    try { await api.del(`/api/media/${deleteMedia.id}`); toast.success('Média déplacé dans la corbeille'); setDeleteMedia(null); invalidateSelected(); invalidateVersions(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,7 +143,7 @@ export default function TaskPage() {
           </div>
         </div>
       </div>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {(error ?? loadError) && <p className="mb-4 text-sm text-destructive">{error ?? loadError}</p>}
       <input ref={fileRef} type="file" className="hidden" onChange={onFile} />
 
       {versions.length === 0 ? (
@@ -145,7 +154,7 @@ export default function TaskPage() {
           {versions.map((v) => (
             <button
               key={v.id}
-              onClick={() => { setSelectedId(v.id); setCardMode(false); }}
+              onClick={() => { setSel(v.id); setCardMode(false); }}
               className="rounded-lg border border-border bg-card p-4 text-left transition-colors hover:border-primary"
             >
               <div className="flex items-center justify-between">
@@ -164,7 +173,7 @@ export default function TaskPage() {
             {versions.map((v) => (
               <button
                 key={v.id}
-                onClick={() => setSelectedId(v.id)}
+                onClick={() => setSel(v.id)}
                 className={`flex shrink-0 items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
                   v.id === selectedId ? 'border-primary bg-primary/10' : 'border-border hover:bg-secondary/60'
                 }`}
@@ -200,9 +209,9 @@ export default function TaskPage() {
                 </div>
               </div>
 
-              {selected.media ? (
+              {selectedMedia ? (
                 <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {selected.media.map((m) => (
+                  {selectedMedia.map((m) => (
                     <li key={m.id} className="group relative rounded border border-border p-2 text-xs">
                       <Link to={`/review/${m.id}`} className="block hover:text-primary">
                         <div className="truncate pr-5">{m.originalName}</div>
@@ -223,7 +232,7 @@ export default function TaskPage() {
                       )}
                     </li>
                   ))}
-                  {selected.media.length === 0 && <li className="text-xs text-muted-foreground">Aucun média</li>}
+                  {selectedMedia.length === 0 && <li className="text-xs text-muted-foreground">Aucun média</li>}
                 </ul>
               ) : (
                 <p className="mt-3 text-xs text-muted-foreground">Chargement des médias…</p>

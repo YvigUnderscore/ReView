@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Pencil, LayoutDashboard, Users as UsersIcon, Activity, Settings as SettingsIcon, History, RefreshCw, Server, FolderCog, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useAuth, type Role } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import Tabs from '../components/Tabs';
@@ -60,15 +62,11 @@ const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { 
 
 export default function AdminPage() {
   const me = useAuth((s) => s.user);
+  const isAdmin = me?.role === 'ADMIN';
+  const qc = useQueryClient();
   const [tab, setTab] = useState('overview');
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [system, setSystem] = useState<System | null>(null);
-  const [activity, setActivity] = useState<ActivityData | null>(null);
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [audit, setAudit] = useState<AuditRow[]>([]);
-  const [settings, setSettings] = useState<Record<string, string>>({});
-  const [projectDefaults, setProjectDefaults] = useState<ProjectDefaults | null>(null);
-  const [trash, setTrash] = useState<TrashProject[]>([]);
+  // Réglages en cours d'édition (overlay sur les valeurs serveur)
+  const [settingsEdits, setSettingsEdits] = useState<Record<string, string>>({});
   const [savedKey, setSavedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -77,38 +75,49 @@ export default function AdminPage() {
   const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
   const [purgeProject, setPurgeProject] = useState<TrashProject | null>(null);
 
-  const loadUsers = () => api.get<{ users: UserRow[] }>('/api/users').then((d) => setUsers(d.users));
-  const loadTrash = () => api.get<{ projects: TrashProject[] }>('/api/admin/trash').then((d) => setTrash(d.projects));
-  const loadSystem = () => api.get<System>('/api/admin/system').then(setSystem).catch(() => undefined);
-  useEffect(() => {
-    Promise.all([
-      api.get<Stats>('/api/admin/stats').then(setStats),
-      loadSystem(),
-      api.get<ActivityData>('/api/admin/activity?days=30').then(setActivity).catch(() => undefined),
-      loadUsers(),
-      loadTrash(),
-      api.get<{ logs: AuditRow[] }>('/api/studio/audit').then((d) => setAudit(d.logs)),
-      api.get<{ settings: Record<string, string> }>('/api/studio/settings').then((d) => setSettings(d.settings)),
-      api.get<{ settings: ProjectDefaults }>('/api/admin/project-defaults').then((d) => setProjectDefaults(d.settings)).catch(() => undefined),
-    ]).catch((e) => setError(e instanceof Error ? e.message : 'Erreur'));
-  }, []);
+  const statsQ = useQuery({ queryKey: qk.admin('stats'), queryFn: () => api.get<Stats>('/api/admin/stats'), enabled: isAdmin });
+  const systemQ = useQuery({ queryKey: qk.admin('system'), queryFn: () => api.get<System>('/api/admin/system'), enabled: isAdmin });
+  const activityQ = useQuery({ queryKey: qk.admin('activity'), queryFn: () => api.get<ActivityData>('/api/admin/activity?days=30'), enabled: isAdmin });
+  const usersQ = useQuery({ queryKey: qk.users, queryFn: () => api.get<{ users: UserRow[] }>('/api/users').then((d) => d.users), enabled: isAdmin });
+  const trashQ = useQuery({ queryKey: qk.admin('trash'), queryFn: () => api.get<{ projects: TrashProject[] }>('/api/admin/trash').then((d) => d.projects), enabled: isAdmin });
+  const auditQ = useQuery({ queryKey: qk.admin('audit'), queryFn: () => api.get<{ logs: AuditRow[] }>('/api/studio/audit').then((d) => d.logs), enabled: isAdmin });
+  const settingsQ = useQuery({ queryKey: qk.admin('settings'), queryFn: () => api.get<{ settings: Record<string, string> }>('/api/studio/settings').then((d) => d.settings), enabled: isAdmin });
+  const defaultsQ = useQuery({ queryKey: qk.admin('project-defaults'), queryFn: () => api.get<{ settings: ProjectDefaults }>('/api/admin/project-defaults').then((d) => d.settings), enabled: isAdmin });
+
+  const stats = statsQ.data ?? null;
+  const system = systemQ.data ?? null;
+  const activity = activityQ.data ?? null;
+  const users = usersQ.data ?? [];
+  const trash = trashQ.data ?? [];
+  const audit = auditQ.data ?? [];
+  const settings = { ...(settingsQ.data ?? {}), ...settingsEdits };
+  const projectDefaults = defaultsQ.data ?? null;
+  const loadError = (statsQ.error ?? usersQ.error ?? trashQ.error ?? auditQ.error ?? settingsQ.error)?.message ?? null;
+
+  const invalidateUsers = () => qc.invalidateQueries({ queryKey: qk.users });
+  const invalidateTrash = () => qc.invalidateQueries({ queryKey: qk.admin('trash') });
+  const refreshSystem = () => { qc.invalidateQueries({ queryKey: qk.admin('system') }); };
 
   const saveSetting = async (key: string) => {
-    try { await api.put('/api/studio/settings', { key, value: settings[key] ?? '' }); setSavedKey(key); setTimeout(() => setSavedKey(null), 1500); }
+    try {
+      await api.put('/api/studio/settings', { key, value: settings[key] ?? '' });
+      qc.invalidateQueries({ queryKey: qk.admin('settings') });
+      setSavedKey(key); setTimeout(() => setSavedKey(null), 1500);
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmDeleteUser = async () => {
     if (!deletingUser) return;
-    try { await api.del(`/api/users/${deletingUser.id}`); toast.success('Utilisateur supprimé'); setDeletingUser(null); loadUsers(); }
+    try { await api.del(`/api/users/${deletingUser.id}`); toast.success('Utilisateur supprimé'); setDeletingUser(null); invalidateUsers(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const restoreProject = async (id: number) => {
-    try { await api.post(`/api/projects/${id}/restore`); toast.success('Projet restauré'); loadTrash(); }
+    try { await api.post(`/api/projects/${id}/restore`); toast.success('Projet restauré'); invalidateTrash(); qc.invalidateQueries({ queryKey: qk.projects }); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const confirmPurgeProject = async () => {
     if (!purgeProject) return;
-    try { await api.del(`/api/projects/${purgeProject.id}/purge`); toast.success('Projet supprimé définitivement'); setPurgeProject(null); loadTrash(); }
+    try { await api.del(`/api/projects/${purgeProject.id}/purge`); toast.success('Projet supprimé définitivement'); setPurgeProject(null); invalidateTrash(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
   };
   const retryJobs = async () => {
@@ -132,14 +141,14 @@ export default function AdminPage() {
   return (
     <Shell title="Administration">
       <h1 className="mb-4 text-xl font-semibold">Administration</h1>
-      {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+      {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
       {info && <p className="mb-3 text-sm text-green-400">{info}</p>}
 
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
 
       {tab === 'overview' && <OverviewTab stats={stats} system={system} onRetryJobs={retryJobs} />}
       {tab === 'activity' && <ActivityTab activity={activity} />}
-      {tab === 'system' && <SystemTab system={system} onRefresh={loadSystem} />}
+      {tab === 'system' && <SystemTab system={system} onRefresh={refreshSystem} />}
       {tab === 'users' && (
         <UsersTab
           users={users} meId={me.id}
@@ -149,16 +158,16 @@ export default function AdminPage() {
         />
       )}
       {tab === 'settings' && (
-        <SettingsTab settings={settings} savedKey={savedKey} onChange={(k, v) => setSettings((s) => ({ ...s, [k]: v }))} onSave={saveSetting} />
+        <SettingsTab settings={settings} savedKey={savedKey} onChange={(k, v) => setSettingsEdits((s) => ({ ...s, [k]: v }))} onSave={saveSetting} />
       )}
       {tab === 'defaults' && (
-        <ProjectDefaultsTab defaults={projectDefaults} onChange={setProjectDefaults} />
+        <ProjectDefaultsTab defaults={projectDefaults} onChange={() => qc.invalidateQueries({ queryKey: qk.admin('project-defaults') })} />
       )}
       {tab === 'trash' && <TrashTab trash={trash} onRestore={restoreProject} onPurge={setPurgeProject} />}
       {tab === 'audit' && <AuditTab audit={audit} />}
 
-      {creating && <UserModal title="Nouvel utilisateur" onClose={() => setCreating(false)} onSaved={() => { setCreating(false); loadUsers(); }} />}
-      {editingUser && <UserModal title="Modifier l'utilisateur" user={editingUser} onClose={() => setEditingUser(null)} onSaved={() => { setEditingUser(null); loadUsers(); }} />}
+      {creating && <UserModal title="Nouvel utilisateur" onClose={() => setCreating(false)} onSaved={() => { setCreating(false); invalidateUsers(); }} />}
+      {editingUser && <UserModal title="Modifier l'utilisateur" user={editingUser} onClose={() => setEditingUser(null)} onSaved={() => { setEditingUser(null); invalidateUsers(); }} />}
       <ConfirmDialog
         open={!!deletingUser}
         title="Supprimer l'utilisateur ?"

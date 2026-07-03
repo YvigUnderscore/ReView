@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 import {
   DEFAULT_TRANSFORM,
   type Hotspot3D, type MediaResp, type ModelCamera, type ModelViewerEl, type Transform,
@@ -15,7 +17,6 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
   const active = data?.media.kind === 'MODEL_3D';
   const versionId = data?.media.versionId;
   const modelRef = useRef<HTMLElement | null>(null);
-  const [transform, setTransform] = useState<Transform>(DEFAULT_TRANSFORM);
   const [savedTf, setSavedTf] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [freeCamera, setFreeCamera] = useState(false);
@@ -26,13 +27,24 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
 
   const mv = () => modelRef.current as ModelViewerEl | null;
 
+  // Transformation : valeur enregistrée sur la version (query), surchargée par
+  // l'édition locale en cours tant qu'elle n'est pas sauvegardée.
+  const versionQ = useQuery({
+    queryKey: qk.version(versionId ?? 0),
+    queryFn: () => api.get<{ version: { transform: Partial<Transform> | null } }>(`/api/versions/${versionId}`).then((d) => d.version),
+    enabled: active && !!versionId,
+  });
+  const [tfEdit, setTfEdit] = useState<Transform | null>(null);
+  const savedTransform = versionQ.data?.transform;
+  const transform = useMemo(
+    () => tfEdit ?? (savedTransform ? { ...DEFAULT_TRANSFORM, ...savedTransform } : DEFAULT_TRANSFORM),
+    [tfEdit, savedTransform],
+  );
+
   useEffect(() => {
-    if (!active || !versionId) return;
+    if (!active) return;
     setLoadError(false);
     import('@google/model-viewer').catch(() => toast.error('Visionneuse 3D indisponible'));
-    api.get<{ version: { transform: Partial<Transform> | null } }>(`/api/versions/${versionId}`)
-      .then(({ version }) => { if (version.transform) setTransform({ ...DEFAULT_TRANSFORM, ...version.transform }); })
-      .catch(() => undefined);
   }, [active, versionId]);
 
   // Applique orientation/échelle au modèle (live) + écoute l'erreur de chargement.
@@ -80,17 +92,15 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
   // model-viewer met en pause son rendu à l'arrêt : on le réveille en réécrivant
   // l'orbite courante (valeur identique → pas de mouvement, mais une frame est rendue).
   const updateTransform = (patch: Partial<Transform>) => {
-    setTransform((t) => {
-      const next = { ...t, ...patch };
-      const m = mv();
-      if (m) {
-        m.setAttribute('orientation', `${next.roll}deg ${next.pitch}deg ${next.yaw}deg`);
-        m.setAttribute('scale', `${next.scale} ${next.scale} ${next.scale}`);
-        const o = m.getCameraOrbit?.();
-        if (o) m.cameraOrbit = `${o.theta}rad ${o.phi}rad ${o.radius}m`;
-      }
-      return next;
-    });
+    const next = { ...transform, ...patch };
+    const m = mv();
+    if (m) {
+      m.setAttribute('orientation', `${next.roll}deg ${next.pitch}deg ${next.yaw}deg`);
+      m.setAttribute('scale', `${next.scale} ${next.scale} ${next.scale}`);
+      const o = m.getCameraOrbit?.();
+      if (o) m.cameraOrbit = `${o.theta}rad ${o.phi}rad ${o.radius}m`;
+    }
+    setTfEdit(next);
   };
 
   const saveTransform = async () => {

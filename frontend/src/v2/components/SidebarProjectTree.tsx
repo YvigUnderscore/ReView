@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueries } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, KanbanSquare, PenTool, Layers, Film, Box } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
+import { useSequencesQuery, useAssetsQuery } from '../lib/queries';
 import { Skeleton } from './ui/skeleton';
 
 /**
@@ -11,9 +14,7 @@ import { Skeleton } from './ui/skeleton';
  * `key={projectId}` pour réinitialiser l'état au changement de projet.
  */
 
-interface SeqNode { id: number; code: string; name: string; _count: { shots: number } }
 interface ShotNode { id: number; code: string; name: string }
-interface AssetNode { id: number; name: string; type: string }
 
 // Id virtuel de l'entrée « Hors séquence » dans la liste des séquences dépliées.
 const NO_SEQ = 0;
@@ -34,44 +35,34 @@ const rowClass = 'flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs te
 
 export default function SidebarProjectTree({ projectId }: { projectId: number }) {
   const [open, setOpen] = useState(() => readOpenState(projectId));
-  const [sequences, setSequences] = useState<SeqNode[] | null>(null);
-  const [unsequenced, setUnsequenced] = useState(0);
-  const [assets, setAssets] = useState<AssetNode[] | null>(null);
-  const [shotsBySeq, setShotsBySeq] = useState<Record<number, ShotNode[]>>({});
 
   // Persistance de l'état déplié/replié par projet.
   useEffect(() => {
     localStorage.setItem(stateKey(projectId), JSON.stringify(open));
   }, [open, projectId]);
 
-  useEffect(() => {
-    if (!open.sequences || sequences !== null) return;
-    api.get<{ sequences: SeqNode[]; unsequencedShots: number }>(`/api/sequences?projectId=${projectId}`)
-      .then((d) => { setSequences(d.sequences); setUnsequenced(d.unsequencedShots); })
-      .catch(() => setSequences([]));
-  }, [open.sequences, sequences, projectId]);
+  const seqQ = useSequencesQuery(projectId, open.sequences);
+  const sequences = seqQ.isError ? [] : (seqQ.data?.sequences ?? null);
+  const unsequenced = seqQ.data?.unsequencedShots ?? 0;
 
-  useEffect(() => {
-    if (!open.assets || assets !== null) return;
-    api.get<{ assets: AssetNode[] }>(`/api/assets?projectId=${projectId}`)
-      .then((d) => setAssets(d.assets))
-      .catch(() => setAssets([]));
-  }, [open.assets, assets, projectId]);
+  const assetsQ = useAssetsQuery(projectId, open.assets);
+  const assets = assetsQ.isError ? [] : (assetsQ.data ?? null);
 
-  // Charge les shots des séquences dépliées manquants — couvre le clic ET
-  // l'état restauré du localStorage au montage.
-  const pendingSeqs = useRef(new Set<number>());
-  useEffect(() => {
-    if (!open.sequences) return;
-    for (const seqId of open.seqs) {
-      if (seqId in shotsBySeq || pendingSeqs.current.has(seqId)) continue;
-      pendingSeqs.current.add(seqId);
-      api.get<{ shots: ShotNode[] }>(`/api/shots?projectId=${projectId}&sequenceId=${seqId === NO_SEQ ? 'none' : seqId}`)
-        .then((d) => setShotsBySeq((m) => ({ ...m, [seqId]: d.shots })))
-        .catch(() => setShotsBySeq((m) => ({ ...m, [seqId]: [] })))
-        .finally(() => pendingSeqs.current.delete(seqId));
-    }
-  }, [open.sequences, open.seqs, shotsBySeq, projectId]);
+  // Une query par séquence dépliée (lazy-load) — couvre le clic ET l'état
+  // restauré du localStorage au montage.
+  const shotQueries = useQueries({
+    queries: (open.sequences ? open.seqs : []).map((seqId) => ({
+      queryKey: qk.shotsOfSequence(projectId, seqId === NO_SEQ ? 'none' : seqId),
+      queryFn: () =>
+        api.get<{ shots: ShotNode[] }>(`/api/shots?projectId=${projectId}&sequenceId=${seqId === NO_SEQ ? 'none' : seqId}`)
+          .then((d) => d.shots),
+    })),
+  });
+  const shotsBySeq: Record<number, ShotNode[] | undefined> = {};
+  (open.sequences ? open.seqs : []).forEach((seqId, i) => {
+    const q = shotQueries[i];
+    shotsBySeq[seqId] = q?.isError ? [] : q?.data;
+  });
 
   const toggleSeq = (seqId: number) => {
     setOpen((o) => ({ ...o, seqs: o.seqs.includes(seqId) ? o.seqs.filter((s) => s !== seqId) : [...o.seqs, seqId] }));

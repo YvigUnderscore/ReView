@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
+import { useSequencesQuery, useShotsQuery } from '../lib/queries';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { SkeletonRows } from './ui/skeleton';
 
 interface Shot { id: number; code: string; name: string; sequenceId: number | null }
-interface Sequence { id: number; code: string; name: string }
 
 /**
  * Dialog d'assignation d'un asset à des shots et/ou séquences (N-N).
@@ -21,35 +23,31 @@ export default function AssetAssignDialog({
 }: {
   assetId: number; projectId: number; assetName: string; onClose: () => void; onSaved?: () => void;
 }) {
-  const [shots, setShots] = useState<Shot[]>([]);
-  const [sequences, setSequences] = useState<Sequence[]>([]);
-  const [shotIds, setShotIds] = useState<Set<number>>(new Set());
-  const [sequenceIds, setSequenceIds] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const shotsQ = useShotsQuery(projectId);
+  const seqsQ = useSequencesQuery(projectId);
+  const assetQ = useQuery({
+    queryKey: qk.asset(assetId),
+    queryFn: () => api.get<{ asset: { shots: { id: number }[]; sequences: { id: number }[] } }>(`/api/assets/${assetId}`),
+  });
+  const shots: Shot[] = useMemo(() => shotsQ.data ?? [], [shotsQ.data]);
+  const sequences = useMemo(() => seqsQ.data?.sequences ?? [], [seqsQ.data]);
+  const loading = shotsQ.isPending || seqsQ.isPending || assetQ.isPending;
+  const loadError = shotsQ.error ?? seqsQ.error ?? assetQ.error;
+
+  // Sélection : dérivée des assignations actuelles de l'asset tant que
+  // l'utilisateur n'a pas touché aux cases (pas d'effet d'initialisation).
+  const [edits, setEdits] = useState<{ shotIds: Set<number>; sequenceIds: Set<number> } | null>(null);
+  const shotIds = edits?.shotIds ?? new Set(assetQ.data?.asset.shots.map((s) => s.id) ?? []);
+  const sequenceIds = edits?.sequenceIds ?? new Set(assetQ.data?.asset.sequences.map((s) => s.id) ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      api.get<{ shots: Shot[] }>(`/api/shots?projectId=${projectId}`),
-      api.get<{ sequences: Sequence[] }>(`/api/sequences?projectId=${projectId}`),
-      api.get<{ asset: { shots: { id: number }[]; sequences: { id: number }[] } }>(`/api/assets/${assetId}`),
-    ])
-      .then(([sh, sq, a]) => {
-        setShots(sh.shots);
-        setSequences(sq.sequences);
-        setShotIds(new Set(a.asset.shots.map((s) => s.id)));
-        setSequenceIds(new Set(a.asset.sequences.map((s) => s.id)));
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Erreur'))
-      .finally(() => setLoading(false));
-  }, [assetId, projectId]);
-
-  const toggle = (set: Set<number>, setter: (s: Set<number>) => void, id: number) => {
-    const next = new Set(set);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setter(next);
+  const toggle = (kind: 'shotIds' | 'sequenceIds', id: number) => {
+    const next = { shotIds: new Set(shotIds), sequenceIds: new Set(sequenceIds) };
+    if (next[kind].has(id)) next[kind].delete(id);
+    else next[kind].add(id);
+    setEdits(next);
   };
 
   const save = async () => {
@@ -58,6 +56,8 @@ export default function AssetAssignDialog({
     try {
       await api.patch(`/api/assets/${assetId}`, { shotIds: [...shotIds], sequenceIds: [...sequenceIds] });
       toast.success('Assignations enregistrées');
+      qc.invalidateQueries({ queryKey: qk.asset(assetId) });
+      qc.invalidateQueries({ queryKey: ['shot'] });
       onSaved?.();
       onClose();
     } catch (err) {
@@ -71,7 +71,7 @@ export default function AssetAssignDialog({
   const groups = useMemo(() => {
     const sortedSeq = [...sequences].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     const byCode = (a: Shot, b: Shot) => a.code.localeCompare(b.code, undefined, { numeric: true });
-    const list = sortedSeq.map((seq) => ({
+    const list: { seq: { id: number; code: string; name: string }; shots: Shot[] }[] = sortedSeq.map((seq) => ({
       seq,
       shots: shots.filter((s) => s.sequenceId === seq.id).sort(byCode),
     }));
@@ -88,7 +88,7 @@ export default function AssetAssignDialog({
         <div className="border-b border-border px-4 py-3">
           <DialogTitle className="text-sm">Assigner « {assetName} »</DialogTitle>
         </div>
-        {error && <p className="px-4 pt-3 text-xs text-destructive">{error}</p>}
+        {(error ?? loadError?.message) && <p className="px-4 pt-3 text-xs text-destructive">{error ?? loadError?.message}</p>}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <SkeletonRows count={4} />
@@ -101,7 +101,7 @@ export default function AssetAssignDialog({
                   {sequences.length === 0 && <p className="text-xs text-muted-foreground">Aucune séquence.</p>}
                   {sequences.map((s) => (
                     <label key={s.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50">
-                      <input type="checkbox" checked={sequenceIds.has(s.id)} onChange={() => toggle(sequenceIds, setSequenceIds, s.id)} />
+                      <input type="checkbox" checked={sequenceIds.has(s.id)} onChange={() => toggle('sequenceIds', s.id)} />
                       <span className="font-medium">{s.code}</span>
                       {s.name && <span className="truncate text-muted-foreground">· {s.name}</span>}
                     </label>
@@ -122,7 +122,7 @@ export default function AssetAssignDialog({
                           const seqCode = sh.sequenceId != null ? seqById.get(sh.sequenceId)?.code : null;
                           return (
                             <label key={sh.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50">
-                              <input type="checkbox" checked={shotIds.has(sh.id)} onChange={() => toggle(shotIds, setShotIds, sh.id)} />
+                              <input type="checkbox" checked={shotIds.has(sh.id)} onChange={() => toggle('shotIds', sh.id)} />
                               <span className="font-medium">{seqCode ? `${seqCode} · ${sh.code}` : sh.code}</span>
                               {sh.name && sh.name !== sh.code && <span className="truncate text-muted-foreground">· {sh.name}</span>}
                             </label>

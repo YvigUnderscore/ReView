@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
+import { useAssetsQuery } from '../../lib/queries';
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '../../components/ui/sheet';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
@@ -41,12 +44,13 @@ export default function ShotDetailDrawer({ shot, projectId, canManage, onClose, 
 
 function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }) {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<Task[] | null>(null);
+  const qc = useQueryClient();
+  const { data, isError } = useQuery({
+    queryKey: qk.tasks(shotId),
+    queryFn: () => api.get<{ tasks: Task[] }>(`/api/tasks?shotId=${shotId}`).then((d) => d.tasks),
+  });
+  const tasks = isError ? [] : (data ?? null);
   const [task, setTask] = useState({ name: '', type: 'ANIMATION' });
-
-  useEffect(() => {
-    api.get<{ tasks: Task[] }>(`/api/tasks?shotId=${shotId}`).then((d) => setTasks(d.tasks)).catch(() => setTasks([]));
-  }, [shotId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +59,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
       await api.post('/api/tasks', { shotId, ...task });
       toast.success(`Tâche « ${task.name} » créée`);
       setTask({ name: '', type: 'ANIMATION' });
-      const d = await api.get<{ tasks: Task[] }>(`/api/tasks?shotId=${shotId}`);
-      setTasks(d.tasks);
+      qc.invalidateQueries({ queryKey: qk.tasks(shotId) });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Erreur à la création de la tâche'); }
   };
 
@@ -115,40 +118,40 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
 function ShotAssets({ shotId, projectId, canManage, reload }: {
   shotId: number; projectId: number; canManage: boolean; reload: () => Promise<void>;
 }) {
-  const [assets, setAssets] = useState<AssetRef[] | null>(null);
-  const [allAssets, setAllAssets] = useState<AssetRef[]>([]);
+  const qc = useQueryClient();
+  const shotQ = useQuery({
+    queryKey: qk.shot(shotId),
+    queryFn: () => api.get<{ shot: { assets: AssetRef[] } }>(`/api/shots/${shotId}`),
+  });
+  const assets = shotQ.isError ? [] : (shotQ.data?.shot.assets ?? null);
+  const allAssets: AssetRef[] = useAssetsQuery(projectId).data ?? [];
   const [pick, setPick] = useState('');
   const [creating, setCreating] = useState({ name: '', type: 'CHARACTER' });
   const [showCreate, setShowCreate] = useState(false);
 
-  const load = async () => {
-    const [{ shot }, { assets: all }] = await Promise.all([
-      api.get<{ shot: { assets: AssetRef[] } }>(`/api/shots/${shotId}`),
-      api.get<{ assets: AssetRef[] }>(`/api/assets?projectId=${projectId}`),
+  const refresh = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: qk.shot(shotId) }),
+      qc.invalidateQueries({ queryKey: qk.assets(projectId) }),
     ]);
-    setAssets(shot.assets); setAllAssets(all);
+    reload();
   };
-  useEffect(() => {
-    api.get<{ shot: { assets: AssetRef[] } }>(`/api/shots/${shotId}`).then((d) => setAssets(d.shot.assets)).catch(() => setAssets([]));
-    api.get<{ assets: AssetRef[] }>(`/api/assets?projectId=${projectId}`).then((d) => setAllAssets(d.assets)).catch(() => undefined);
-  }, [shotId, projectId]);
-
   const linkExisting = async () => {
     if (!pick) return;
     await api.post(`/api/shots/${shotId}/assets`, { assetId: Number(pick) });
     toast.success('Asset rattaché au shot');
-    setPick(''); await load(); reload();
+    setPick(''); await refresh();
   };
   const createAndLink = async () => {
     if (!creating.name.trim()) return;
     await api.post(`/api/shots/${shotId}/assets`, { name: creating.name, type: creating.type });
     toast.success(`Asset « ${creating.name} » créé et rattaché`);
-    setCreating({ name: '', type: 'CHARACTER' }); setShowCreate(false); await load(); reload();
+    setCreating({ name: '', type: 'CHARACTER' }); setShowCreate(false); await refresh();
   };
   const detach = async (assetId: number) => {
     await api.del(`/api/shots/${shotId}/assets/${assetId}`);
     toast.success('Asset détaché');
-    await load(); reload();
+    await refresh();
   };
 
   const linkedIds = new Set((assets ?? []).map((a) => a.id));

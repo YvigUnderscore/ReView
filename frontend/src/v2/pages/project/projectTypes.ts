@@ -4,15 +4,11 @@ import type { Role } from '../../stores/useAuth';
 
 // Types réglages projet : définition canonique dans ProjectSettingsTab (une entité = une définition).
 export type { Nomenclature, Department, ProjectSettings } from '../../components/ProjectSettingsTab';
+// Entités API : définition canonique dans lib/queries (10.E1).
+export type { SequenceSummary as Sequence, ShotSummary as Shot, AssetSummary as Asset } from '../../lib/queries';
 
 export interface AssetRef { id: number; name: string; type: string }
-export interface Sequence { id: number; name: string; code: string; order: number }
-export interface Shot {
-  id: number; name: string; code: string; sequenceId: number | null;
-  thumbnailUrl?: string | null; _count?: { tasks: number }; assets?: AssetRef[];
-}
 export interface Task { id: number; name: string; type: string; status: string }
-export interface Asset { id: number; name: string; type: string; thumbnailUrl?: string | null }
 export interface SequenceDetailData {
   id: number; code: string; name: string;
   shots: { id: number; code: string; name: string; assets: AssetRef[] }[];

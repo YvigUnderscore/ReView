@@ -1,25 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 import { DeleteIcon } from '../../components/EntityCard';
 import type { Member } from './projectTypes';
 
 /** Onglet Membres : ajout/retrait des utilisateurs du projet. */
 export default function MembersTab({ projectId }: { projectId: number }) {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [allUsers, setAllUsers] = useState<{ id: number; name: string | null; email: string }[]>([]);
+  const qc = useQueryClient();
+  const projQ = useQuery({
+    queryKey: qk.project(projectId),
+    queryFn: () => api.get<{ project: { memberships: Member[] } }>(`/api/projects/${projectId}`),
+  });
+  const usersQ = useQuery({
+    queryKey: qk.users,
+    queryFn: () => api.get<{ users: { id: number; name: string | null; email: string }[] }>('/api/users').then((d) => d.users),
+  });
+  const members = projQ.data?.project.memberships ?? [];
+  const allUsers = usersQ.data ?? [];
+  const loadError = (projQ.error ?? usersQ.error)?.message ?? null;
   const [addUserId, setAddUserId] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const [{ project }, { users }] = await Promise.all([
-      api.get<{ project: { memberships: Member[] } }>(`/api/projects/${projectId}`),
-      api.get<{ users: { id: number; name: string | null; email: string }[] }>('/api/users'),
-    ]);
-    setMembers(project.memberships); setAllUsers(users);
-  }, [projectId]);
-  useEffect(() => { load().catch((e) => setError(e instanceof Error ? e.message : 'Erreur')); }, [load]);
+  const invalidate = () => qc.invalidateQueries({ queryKey: qk.project(projectId) });
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +31,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     try {
       await api.post(`/api/projects/${projectId}/members`, { userId: Number(addUserId) });
       toast.success('Membre ajouté au projet');
-      setAddUserId(''); load();
+      setAddUserId(''); invalidate();
     }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
@@ -35,7 +39,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     try {
       await api.del(`/api/projects/${projectId}/members/${userId}`);
       toast.success('Membre retiré du projet');
-      load();
+      invalidate();
     }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
@@ -46,7 +50,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
   return (
     <div>
       <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Membres du projet</h2>
-      {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+      {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
       <form onSubmit={add} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
         <select className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-sm" value={addUserId} onChange={(e) => setAddUserId(e.target.value)}>
           <option value="">Ajouter un utilisateur…</option>

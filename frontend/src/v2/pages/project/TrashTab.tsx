@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -42,27 +44,26 @@ function TrashSection({ title, items, onRestore, onPurge }: {
 
 /** Onglet Corbeille du projet : restauration / purge par type d'entité. */
 export default function TrashTab({ projectId, reload }: { projectId: number; reload: () => Promise<void> }) {
-  const [data, setData] = useState<TrashData | null>(null);
+  const qc = useQueryClient();
+  const { data, error: loadError } = useQuery({
+    queryKey: qk.projectTrash(projectId),
+    queryFn: () => api.get<TrashData>(`/api/projects/${projectId}/trash`),
+  });
   const [error, setError] = useState<string | null>(null);
   const [purge, setPurge] = useState<TrashItem | null>(null);
-
-  const load = useCallback(
-    () => api.get<TrashData>(`/api/projects/${projectId}/trash`).then(setData).catch((e) => setError(e instanceof Error ? e.message : 'Erreur')),
-    [projectId],
-  );
-  useEffect(() => { load(); }, [load]);
+  const invalidate = () => qc.invalidateQueries({ queryKey: qk.projectTrash(projectId) });
 
   const restore = async (endpoint: string) => {
-    try { await api.post(`${endpoint}/restore`); toast.success('Élément restauré'); load(); reload(); }
+    try { await api.post(`${endpoint}/restore`); toast.success('Élément restauré'); invalidate(); reload(); }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const confirmPurge = async () => {
     if (!purge) return;
-    try { await api.del(`${purge.endpoint}/purge`); toast.success('Supprimé définitivement'); setPurge(null); load(); }
+    try { await api.del(`${purge.endpoint}/purge`); toast.success('Supprimé définitivement'); setPurge(null); invalidate(); }
     catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
-  if (error) return <p className="text-sm text-destructive">{error}</p>;
+  if (error ?? loadError) return <p className="text-sm text-destructive">{error ?? loadError?.message}</p>;
   if (!data) return <SkeletonRows count={4} />;
 
   const isEmpty = !data.sequences.length && !data.shots.length && !data.assets.length && !data.versions.length && !data.media.length;

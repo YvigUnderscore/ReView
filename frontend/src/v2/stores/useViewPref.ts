@@ -32,3 +32,8 @@ export const useViewPref = create<ViewPrefState>((set, store) => ({
     store().set(key, next);
   },
 }));
+
+/** Hook utilitaire : lit la préférence courante pour un contexte. */
+export function useViewMode(contextKey: string): ViewMode {
+  return useViewPref((s) => s.modes[contextKey] ?? read(contextKey));
+}
