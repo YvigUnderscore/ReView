@@ -15,6 +15,18 @@ const GROUPS: { title: string; shortcuts: { keys: string[]; label: string }[] }[
     ],
   },
   {
+    title: 'Review vidéo',
+    shortcuts: [
+      { keys: ['Espace'], label: 'Lecture / pause' },
+      { keys: ['←', '→'], label: '± 1 frame' },
+      { keys: ['Maj', '←/→'], label: '± 10 frames' },
+      { keys: ['J'], label: 'Lecture arrière (répéter : ×2, ×4, ×8)' },
+      { keys: ['K'], label: 'Pause' },
+      { keys: ['L'], label: 'Lecture avant (répéter : ×2, ×4, ×8)' },
+      { keys: ['M'], label: 'Commenter à la frame courante' },
+    ],
+  },
+  {
     title: 'Aide',
     shortcuts: [{ keys: ['?'], label: 'Afficher ce panneau' }],
   },

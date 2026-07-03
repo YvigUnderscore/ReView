@@ -1,0 +1,91 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '../../../lib/apiClient';
+
+interface VersionMedia { id: number; kind: string; originalName: string; status: string }
+interface VersionDetail { id: number; name: string; taskId: number | null; assetId: number | null; media: VersionMedia[] }
+interface VersionSummary { id: number; name: string; createdAt: string; author: { id: number; name: string } | null; _count: { media: number } }
+
+/**
+ * Navigation de l'en-tête review (10.C2) : dropdown des versions de la tâche/asset
+ * parente + précédent/suivant entre les médias de la version courante — sans
+ * quitter l'écran. Autonome : résout la version du média puis la liste des versions.
+ */
+export default function VersionNavigator({ versionId, mediaId }: { versionId: number; mediaId: number }) {
+  const navigate = useNavigate();
+  const [version, setVersion] = useState<VersionDetail | null>(null);
+  const [versions, setVersions] = useState<VersionSummary[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`)
+      .then(({ version: v }) => {
+        if (cancelled) return;
+        setVersion(v);
+        const parent = v.taskId ? `taskId=${v.taskId}` : v.assetId ? `assetId=${v.assetId}` : null;
+        if (!parent) return;
+        return api.get<{ versions: VersionSummary[] }>(`/api/versions?${parent}`)
+          .then((d) => { if (!cancelled) setVersions(d.versions); });
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [versionId]);
+
+  // Bascule vers une autre version : on ouvre son premier média visible.
+  const goToVersion = async (vid: number) => {
+    if (vid === versionId) return;
+    try {
+      const { version: v } = await api.get<{ version: VersionDetail }>(`/api/versions/${vid}`);
+      const first = v.media[0];
+      if (!first) { toast.error(`Aucun média visible dans la version ${v.name}`); return; }
+      navigate(`/review/${first.id}`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Version inaccessible'); }
+  };
+
+  if (!version) return null;
+  const idx = version.media.findIndex((m) => m.id === mediaId);
+  const prev = idx > 0 ? version.media[idx - 1] : null;
+  const next = idx >= 0 && idx < version.media.length - 1 ? version.media[idx + 1] : null;
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <label className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground" title="Changer de version">
+        <Layers size={13} />
+        <select
+          value={version.id}
+          onChange={(e) => goToVersion(Number(e.target.value))}
+          className="bg-transparent text-xs font-medium text-foreground focus:outline-none [&>option]:bg-background"
+        >
+          {(versions.length > 0 ? versions : [{ id: version.id, name: version.name, _count: { media: version.media.length } }]).map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name} · {v._count.media} média{v._count.media > 1 ? 's' : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+      {version.media.length > 1 && idx >= 0 && (
+        <div className="flex items-center gap-1 rounded-md border border-border px-1 py-0.5 text-xs text-muted-foreground">
+          <button
+            disabled={!prev}
+            onClick={() => prev && navigate(`/review/${prev.id}`)}
+            title={prev ? `Média précédent : ${prev.originalName}` : 'Premier média de la version'}
+            className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span className="font-mono">{idx + 1}/{version.media.length}</span>
+          <button
+            disabled={!next}
+            onClick={() => next && navigate(`/review/${next.id}`)}
+            title={next ? `Média suivant : ${next.originalName}` : 'Dernier média de la version'}
+            className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

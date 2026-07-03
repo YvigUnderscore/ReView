@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
  * (Ctrl+K vit dans CommandPalette, qui doit primer partout).
  */
 
-const isEditable = (el: EventTarget | null): boolean =>
+export const isEditable = (el: EventTarget | null): boolean =>
   el instanceof HTMLElement &&
   (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 

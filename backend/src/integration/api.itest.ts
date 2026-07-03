@@ -128,6 +128,14 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(fin.status).toBe(200);
     expect(fin.body.detectedExtension).toBe('.jpg');
 
+    // Liste des versions : _count.media reflète la visibilité réelle (10.C2) —
+    // le brouillon compte pour son uploader, pas pour un autre membre.
+    const versionsArtist = await request(app).get(`/api/versions?taskId=${task.body.task.id}`).set('Authorization', `Bearer ${artistToken}`);
+    expect(versionsArtist.status).toBe(200);
+    expect(versionsArtist.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(1);
+    const versionsAdmin = await request(app).get(`/api/versions?taskId=${task.body.task.id}`).set(auth);
+    expect(versionsAdmin.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(0);
+
     // Commentaire sur le média
     const cmt = await request(app).post('/api/comments').set('Authorization', `Bearer ${artistToken}`)
       .send({ mediaObjectId, content: 'Commentaire intégration', timestamp: 1 });

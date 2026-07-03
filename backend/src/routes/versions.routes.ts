@@ -34,7 +34,13 @@ router.get(
       orderBy: { createdAt: 'desc' },
       include: {
         author: { select: { id: true, name: true } },
-        _count: { select: { media: true } },
+        // Count aligné sur la visibilité réelle : corbeille exclue, brouillons
+        // visibles par leur uploader seul (ne pas révéler les brouillons d'autrui).
+        _count: {
+          select: {
+            media: { where: { deletedAt: null, OR: [{ published: true }, { uploaderId: req.user!.id }] } },
+          },
+        },
       },
     });
     res.json({ versions });
