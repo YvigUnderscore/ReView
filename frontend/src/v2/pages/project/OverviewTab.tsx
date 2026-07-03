@@ -1,0 +1,83 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { FileVideo, Play } from 'lucide-react';
+import { api } from '../../../lib/apiClient';
+import ProjectActivity from '../../components/ProjectActivity';
+import { Skeleton } from '../../components/ui/skeleton';
+
+interface RecentMedia { id: number; kind: string; originalName: string; thumbnailUrl: string | null }
+
+// Hissé hors du render (règle react-hooks/static-components)
+function StatCard({ label, value, onClick }: { label: string; value: number; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-primary">
+      <div className="text-3xl font-semibold">{value}</div>
+      <div className="mt-1 text-sm text-muted-foreground">{label}</div>
+    </button>
+  );
+}
+
+/**
+ * Vue d'ensemble du projet (10.C1) : compteurs, derniers médias publiés
+ * (vignettes cliquables → review), progression + activité (ProjectActivity).
+ */
+export default function OverviewTab({ name, projectId, canManage, counts, onGo }: {
+  name: string; projectId: number; canManage: boolean;
+  counts: { sequences: number; shots: number; assets: number }; onGo: (k: string) => void;
+}) {
+  const [media, setMedia] = useState<RecentMedia[] | null>(null);
+  useEffect(() => {
+    api.get<{ media: RecentMedia[] }>(`/api/media?projectId=${projectId}`)
+      .then((d) => setMedia(d.media.slice(0, 8)))
+      .catch(() => setMedia([]));
+  }, [projectId]);
+
+  return (
+    <div>
+      <p className="mb-4 text-sm text-muted-foreground">Tableau de bord du projet « {name} ».</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <StatCard label="Séquences" value={counts.sequences} onClick={() => onGo('sequences')} />
+        <StatCard label="Shots" value={counts.shots} onClick={() => onGo('shots')} />
+        <StatCard label="Assets" value={counts.assets} onClick={() => onGo('assets')} />
+      </div>
+
+      {/* Derniers médias publiés : vignettes cliquables vers la review */}
+      <section className="mt-6">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Derniers médias publiés</h3>
+        {media === null ? (
+          <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">
+            {Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="aspect-video w-full" />)}
+          </div>
+        ) : media.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Aucun média publié pour l’instant — ils apparaîtront ici dès la première publication.</p>
+        ) : (
+          <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">
+            {media.map((m) => (
+              <Link
+                key={m.id}
+                to={`/review/${m.id}`}
+                title={`Ouvrir la review : ${m.originalName}`}
+                className="group overflow-hidden rounded-md border border-border bg-card transition-colors hover:border-primary"
+              >
+                <div className="relative aspect-video bg-black/40">
+                  {m.thumbnailUrl ? (
+                    <img src={m.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground"><FileVideo size={20} /></div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Play size={18} className="text-primary" />
+                  </div>
+                </div>
+                <div className="truncate px-1.5 py-1 text-[10px] text-muted-foreground">{m.originalName}</div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Progression des tâches + dernières mises à jour + tâches prioritaires */}
+      <ProjectActivity projectId={projectId} canManage={canManage} />
+    </div>
+  );
+}

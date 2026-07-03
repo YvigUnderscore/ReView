@@ -22,6 +22,16 @@ export const TASK_STATUS_COLOR: Record<string, string> = {
   RETAKE: 'bg-orange-500/20 text-orange-300',
 };
 
+// Couleurs pleines pour les jauges/barres de progression (mêmes teintes que les badges).
+export const TASK_STATUS_BAR: Record<string, string> = {
+  TODO: 'bg-muted-foreground/40',
+  IN_PROGRESS: 'bg-blue-400',
+  PENDING_REVIEW: 'bg-amber-400',
+  APPROVED: 'bg-green-400',
+  REJECTED: 'bg-red-400',
+  RETAKE: 'bg-orange-400',
+};
+
 // Priorité décroissante : ce qui demande une action remonte en haut des listes.
 export const TASK_STATUS_PRIORITY: Record<string, number> = {
   RETAKE: 0, REJECTED: 1, PENDING_REVIEW: 2, IN_PROGRESS: 3, TODO: 4, APPROVED: 5,

@@ -6,6 +6,7 @@ import {
   TASK_STATUSES as STATUS,
   TASK_STATUS_LABEL as STATUS_LABEL,
   TASK_STATUS_COLOR as STATUS_COLOR,
+  TASK_STATUS_BAR as STATUS_BAR,
   TASK_STATUS_PRIORITY as PRIORITY,
 } from '../lib/taskStatus';
 
@@ -49,8 +50,38 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
     try { await api.patch(`/api/tasks/${taskId}`, { assigneeId: id }); } catch { load(); }
   };
 
+  // Répartition des tâches par statut (jauge de progression — 10.C1) ;
+  // suit les mises à jour optimistes de statut ci-dessous.
+  const byStatus = STATUS.map((s) => ({ status: s, count: tasks.filter((t) => t.status === s).length }));
+  const total = tasks.length;
+
   return (
-    <div className="mt-6 grid gap-4 lg:grid-cols-2">
+    <div className="mt-6 space-y-4">
+      {total > 0 && (
+        <section className="rounded-lg border border-border bg-card p-4">
+          <h3 className="mb-3 text-sm font-semibold">Progression des tâches</h3>
+          <div className="flex h-2.5 overflow-hidden rounded-full bg-secondary/40">
+            {byStatus.filter((b) => b.count > 0).map((b) => (
+              <div
+                key={b.status}
+                title={`${STATUS_LABEL[b.status]} : ${b.count}`}
+                className={`${STATUS_BAR[b.status] ?? 'bg-muted-foreground/40'} transition-all`}
+                style={{ width: `${(b.count / total) * 100}%` }}
+              />
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+            {byStatus.filter((b) => b.count > 0).map((b) => (
+              <span key={b.status} className="flex items-center gap-1.5">
+                <span className={`h-2 w-2 rounded-full ${STATUS_BAR[b.status] ?? 'bg-muted-foreground/40'}`} />
+                {STATUS_LABEL[b.status]} · {b.count}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
       {/* Dernières mises à jour */}
       <section className="rounded-lg border border-border bg-card p-4">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><Clock size={15} /> Dernières mises à jour</h3>
@@ -112,6 +143,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
           </ul>
         )}
       </section>
+      </div>
     </div>
   );
 }
