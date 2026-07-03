@@ -26,6 +26,7 @@ import notificationsRoutes from './routes/notifications.routes';
 import favoritesRoutes from './routes/favorites.routes';
 import documentsRoutes from './routes/documents.routes';
 import contextRoutes from './routes/context.routes';
+import searchRoutes from './routes/search.routes';
 
 export const createApp = (): Express => {
   const app = express();
@@ -71,6 +72,7 @@ export const createApp = (): Express => {
   app.use('/api/favorites', favoritesRoutes);
   app.use('/api/documents', documentsRoutes);
   app.use('/api/context', contextRoutes);
+  app.use('/api/search', searchRoutes);
 
   // Gestionnaire d'erreurs global (toujours en dernier)
   app.use(errorHandler);

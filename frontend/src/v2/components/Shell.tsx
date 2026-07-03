@@ -1,7 +1,7 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { FolderKanban, Shield, Clapperboard, ChevronRight, Star, BookText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { FolderKanban, Shield, Clapperboard, ChevronRight, Star, BookText, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
@@ -11,6 +11,7 @@ import PendingDrafts from './PendingDrafts';
 import SidebarFooter from './SidebarFooter';
 import SidebarProjectTree from './SidebarProjectTree';
 import SidebarRecents from './SidebarRecents';
+import CommandPalette from './CommandPalette';
 
 interface ProjectLink { id: number; name: string; }
 
@@ -22,6 +23,7 @@ export default function Shell({ children, title, breadcrumb }: { children: React
   const params = useParams();
   const [projects, setProjects] = useState<ProjectLink[]>([]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const favorites = useFavorites((s) => s.favorites);
   const loadFavorites = useFavorites((s) => s.load);
 
@@ -149,6 +151,14 @@ export default function Shell({ children, title, breadcrumb }: { children: React
             </button>
           )}
           {breadcrumb ?? <h1 className="truncate text-sm font-medium text-muted-foreground">{title ?? ''}</h1>}
+          <button
+            onClick={() => setPaletteOpen(true)}
+            title="Recherche globale (Ctrl+K)"
+            className="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+          >
+            <Search size={14} /> Rechercher…
+            <kbd className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
+          </button>
         </header>
         <motion.main
           key={pathname}
@@ -161,6 +171,7 @@ export default function Shell({ children, title, breadcrumb }: { children: React
         </motion.main>
       </div>
 
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <UploadWidget />
       <PendingDrafts />
     </div>

@@ -1,0 +1,150 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FolderKanban, Layers, Film, Box, ListTodo, KanbanSquare, PenTool } from 'lucide-react';
+import { api } from '../../lib/apiClient';
+import { useProjectContext } from '../stores/useProjectContext';
+import {
+  Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
+} from './ui/command';
+
+/**
+ * Palette de commandes globale (10.A2) : Ctrl/Cmd+K → recherche multi-entités
+ * via GET /api/search (RBAC serveur), navigation clavier complète (cmdk).
+ * Actions rapides (Kanban/Board du projet courant) quand la saisie est vide.
+ */
+
+interface SearchResults {
+  projects: { id: number; name: string }[];
+  sequences: { id: number; code: string; name: string; projectId: number }[];
+  shots: { id: number; code: string; name: string; projectId: number }[];
+  assets: { id: number; name: string; type: string; projectId: number }[];
+  tasks: { id: number; name: string; type: string; shotId: number | null; assetId: number | null }[];
+}
+
+const EMPTY: SearchResults = { projects: [], sequences: [], shots: [], assets: [], tasks: [] };
+
+export default function CommandPalette({ open, onOpenChange }: {
+  open: boolean; onOpenChange: (open: boolean) => void;
+}) {
+  const navigate = useNavigate();
+  const ctxProjectId = useProjectContext((s) => s.projectId);
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<SearchResults>(EMPTY);
+
+  // Raccourci global Ctrl/Cmd+K (prime sur les champs de saisie, comme VS Code/Linear)
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        onOpenChange(!open);
+      }
+    };
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, [open, onOpenChange]);
+
+  // Recherche debouncée (200 ms), filtrage côté serveur
+  useEffect(() => {
+    const query = q.trim();
+    if (!open || !query) { setResults(EMPTY); return; }
+    const t = setTimeout(() => {
+      api.get<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`)
+        .then(setResults)
+        .catch(() => setResults(EMPTY));
+    }, 200);
+    return () => clearTimeout(t);
+  }, [q, open]);
+
+  const go = (to: string) => {
+    onOpenChange(false);
+    setQ('');
+    navigate(to);
+  };
+
+  const hasQuery = q.trim().length > 0;
+  const hasResults = Object.values(results).some((list) => list.length > 0);
+
+  return (
+    <CommandDialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setQ(''); }} title="Recherche globale">
+      <Command shouldFilter={false}>
+        <CommandInput value={q} onValueChange={setQ} placeholder="Rechercher un projet, shot, asset, tâche…" />
+        <CommandList>
+          {hasQuery && !hasResults && <CommandEmpty>Aucun résultat.</CommandEmpty>}
+
+          {!hasQuery && (
+            <CommandGroup heading="Aller à">
+              <CommandItem value="nav-projects" onSelect={() => go('/')}>
+                <FolderKanban size={15} className="text-muted-foreground" /> Projets
+              </CommandItem>
+              {ctxProjectId !== null && (
+                <>
+                  <CommandItem value="nav-kanban" onSelect={() => go(`/projects/${ctxProjectId}/kanban`)}>
+                    <KanbanSquare size={15} className="text-muted-foreground" /> Kanban du projet courant
+                  </CommandItem>
+                  <CommandItem value="nav-board" onSelect={() => go(`/projects/${ctxProjectId}/board`)}>
+                    <PenTool size={15} className="text-muted-foreground" /> Board du projet courant
+                  </CommandItem>
+                </>
+              )}
+            </CommandGroup>
+          )}
+
+          {results.projects.length > 0 && (
+            <CommandGroup heading="Projets">
+              {results.projects.map((p) => (
+                <CommandItem key={p.id} value={`project-${p.id}`} onSelect={() => go(`/projects/${p.id}`)}>
+                  <FolderKanban size={15} className="text-muted-foreground" />
+                  <span className="truncate">{p.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {results.sequences.length > 0 && (
+            <CommandGroup heading="Séquences">
+              {results.sequences.map((s) => (
+                <CommandItem key={s.id} value={`sequence-${s.id}`} onSelect={() => go(`/projects/${s.projectId}?tab=sequences&seq=${s.id}`)}>
+                  <Layers size={15} className="text-muted-foreground" />
+                  <span className="truncate">{s.code}</span>
+                  <span className="truncate text-xs text-muted-foreground">{s.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {results.shots.length > 0 && (
+            <CommandGroup heading="Shots">
+              {results.shots.map((s) => (
+                <CommandItem key={s.id} value={`shot-${s.id}`} onSelect={() => go(`/projects/${s.projectId}?tab=shots&shot=${s.id}`)}>
+                  <Film size={15} className="text-muted-foreground" />
+                  <span className="truncate">{s.code}</span>
+                  <span className="truncate text-xs text-muted-foreground">{s.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {results.assets.length > 0 && (
+            <CommandGroup heading="Assets">
+              {results.assets.map((a) => (
+                <CommandItem key={a.id} value={`asset-${a.id}`} onSelect={() => go(`/assets/${a.id}`)}>
+                  <Box size={15} className="text-muted-foreground" />
+                  <span className="truncate">{a.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{a.type}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {results.tasks.length > 0 && (
+            <CommandGroup heading="Tâches">
+              {results.tasks.map((t) => (
+                <CommandItem key={t.id} value={`task-${t.id}`} onSelect={() => go(`/tasks/${t.id}`)}>
+                  <ListTodo size={15} className="text-muted-foreground" />
+                  <span className="truncate">{t.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{t.type}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
+      </Command>
+    </CommandDialog>
+  );
+}

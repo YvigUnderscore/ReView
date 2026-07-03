@@ -207,6 +207,42 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
   });
 });
 
+describe('API — recherche globale (/api/search)', () => {
+  it('trouve les entités par nom/code et applique le RBAC par membership', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+    const needle = `Zx${suffix}`; // motif improbable, unique au run
+
+    // Pipeline dans un projet SANS membership artiste
+    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Search ${needle}` });
+    const projectId = proj.body.project.id;
+    const seq = await request(app).post('/api/sequences').set(auth).send({ projectId, name: `Seq ${needle}`, code: `SQ${needle}` });
+    const shot = await request(app).post('/api/shots').set(auth)
+      .send({ projectId, name: `Shot ${needle}`, code: `SH${needle}`, sequenceId: seq.body.sequence.id });
+    await request(app).post('/api/tasks').set(auth).send({ shotId: shot.body.shot.id, name: `Task ${needle}`, type: 'COMPOSITING' });
+
+    // Admin : toutes les entités remontent (insensible à la casse)
+    const r = await request(app).get(`/api/search?q=${needle.toLowerCase()}`).set(auth);
+    expect(r.status).toBe(200);
+    expect(r.body.projects.map((p: { id: number }) => p.id)).toContain(projectId);
+    expect(r.body.sequences.length).toBe(1);
+    expect(r.body.shots.length).toBe(1);
+    expect(r.body.tasks.length).toBe(1);
+
+    // Artiste non membre : aucune entité de ce projet ne fuit
+    const rArtist = await request(app).get(`/api/search?q=${needle}`).set('Authorization', `Bearer ${artistToken}`);
+    expect(rArtist.status).toBe(200);
+    expect(rArtist.body.projects).toEqual([]);
+    expect(rArtist.body.sequences).toEqual([]);
+    expect(rArtist.body.shots).toEqual([]);
+    expect(rArtist.body.tasks).toEqual([]);
+
+    // q vide → 400 (Zod)
+    const empty = await request(app).get('/api/search?q=').set(auth);
+    expect(empty.status).toBe(400);
+  });
+});
+
 describe('API — contexte breadcrumb (/api/context)', () => {
   it('résout la chaîne projet → séquence → shot → tâche → version, applique le RBAC et 404 sinon', async () => {
     const suffix = Date.now();
