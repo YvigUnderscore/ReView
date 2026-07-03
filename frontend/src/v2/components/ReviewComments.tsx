@@ -1,17 +1,9 @@
 import { useRef, useState } from 'react';
 import { Reply, Smile, ImagePlus, X, Camera, PenLine, Film, Pencil, Trash2, Check } from 'lucide-react';
 import { api } from '../../lib/apiClient';
-import { uploadCommentImages, type CommentAttachment } from '../../lib/commentAttachments';
+import { uploadCommentImages } from '../../lib/commentAttachments';
 import Avatar from './Avatar';
-
-export interface ReviewReaction { id: number; emoji: string; userId: number | null }
-export interface ReviewCommentAuthor { id: number; displayName?: string; initials?: string; avatarUrl?: string | null; name: string | null }
-export interface ReviewComment {
-  id: number; content: string; timestamp: number | null; createdAt: string;
-  author: ReviewCommentAuthor | null; guestName: string | null;
-  cameraState: unknown; annotation: unknown; attachments?: CommentAttachment[];
-  reactions?: ReviewReaction[]; replies?: ReviewComment[];
-}
+import type { ReviewComment } from '../types/api';
 
 const EMOJIS = ['👍', '❤️', '😂', '🎉', '👀', '🔥', '✅', '❓'];
 

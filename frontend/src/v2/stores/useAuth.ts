@@ -1,21 +1,10 @@
 import { create } from 'zustand';
 import { api, getToken } from '../../lib/apiClient';
+import type { User } from '../types/api';
 
-export type Role = 'ADMIN' | 'SUPERVISOR' | 'ARTIST' | 'CLIENT';
-export type UserStatus = 'AVAILABLE' | 'AWAY' | 'DND';
-export interface AuthUser {
-  id: number;
-  email: string;
-  name: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  username?: string | null;
-  displayName?: string;
-  initials?: string;
-  avatarUrl?: string | null;
-  status?: UserStatus;
-  role: Role;
-}
+/** Utilisateur de session (réponse de /api/auth/*) — sous-ensemble de l'entité User. */
+export type AuthUser = Pick<User, 'id' | 'email' | 'name' | 'displayName' | 'initials' | 'avatarUrl' | 'status' | 'role'> &
+  Partial<Pick<User, 'firstName' | 'lastName' | 'username'>>;
 
 interface AuthState {
   user: AuthUser | null;

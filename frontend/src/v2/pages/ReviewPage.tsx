@@ -10,7 +10,7 @@ import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import ImageReviewViewer from '../components/ImageReviewViewer';
-import type { ReviewComment } from '../components/ReviewComments';
+import type { ReviewComment } from '../types/api';
 import { AnnotationCanvas, AnnotationToolbar, type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp } from './review/reviewTypes';

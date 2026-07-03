@@ -1,5 +1,5 @@
 import { useState, type ReactNode, type RefObject } from 'react';
-import type { ReviewComment } from '../../components/ReviewComments';
+import type { ReviewComment } from '../../types/api';
 import { stepVideoFrame, tcFromFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import VideoTimeline from './VideoTimeline';

@@ -5,8 +5,9 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import ProjectActivity from '../../components/ProjectActivity';
 import { Skeleton } from '../../components/ui/skeleton';
+import type { MediaRef } from '../../types/api';
 
-interface RecentMedia { id: number; kind: string; originalName: string; thumbnailUrl: string | null }
+type RecentMedia = MediaRef & { thumbnailUrl: string | null };
 
 // Hissé hors du render (règle react-hooks/static-components)
 function StatCard({ label, value, onClick }: { label: string; value: number; onClick: () => void }) {

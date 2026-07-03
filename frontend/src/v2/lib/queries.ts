@@ -1,31 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from './query';
+import type { Asset, Project, SequenceSummary, ShotSummary } from '../types/api';
 
 /**
  * Hooks Query partagés entre plusieurs composants (une clé = une shape).
  * Les queries propres à une seule page restent définies dans la page.
  */
 
-export interface ProjectSummary {
-  id: number;
-  name: string;
-  description: string | null;
-  status: string;
-  thumbnailUrl: string | null;
-}
-export interface SequenceSummary { id: number; name: string; code: string; order: number; _count: { shots: number } }
-export interface ShotSummary {
-  id: number; name: string; code: string; sequenceId: number | null;
-  thumbnailUrl?: string | null; _count?: { tasks: number }; assets?: { id: number; name: string; type: string }[];
-}
-export interface AssetSummary { id: number; name: string; type: string; thumbnailUrl?: string | null }
-
 /** Liste des projets accessibles — partagée Shell / ProjectsPage / DocumentationPage. */
 export function useProjectsQuery() {
   return useQuery({
     queryKey: qk.projects,
-    queryFn: () => api.get<{ projects: ProjectSummary[] }>('/api/projects').then((d) => d.projects),
+    queryFn: () => api.get<{ projects: Project[] }>('/api/projects').then((d) => d.projects),
   });
 }
 
@@ -51,7 +38,7 @@ export function useShotsQuery(projectId: number, enabled = true) {
 export function useAssetsQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.assets(projectId),
-    queryFn: () => api.get<{ assets: AssetSummary[] }>(`/api/assets?projectId=${projectId}`).then((d) => d.assets),
+    queryFn: () => api.get<{ assets: Asset[] }>(`/api/assets?projectId=${projectId}`).then((d) => d.assets),
     enabled,
   });
 }

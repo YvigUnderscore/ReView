@@ -4,7 +4,8 @@ import { Plus, Trash2, Pencil, LayoutDashboard, Users as UsersIcon, Activity, Se
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { useAuth, type Role } from '../stores/useAuth';
+import { useAuth } from '../stores/useAuth';
+import type { Department, Nomenclature, Project, ProjectSettings, Role, User } from '../types/api';
 import Shell from '../components/Shell';
 import Tabs from '../components/Tabs';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -35,15 +36,8 @@ interface ActivityData {
   uploads: { day: string; count: number; bytes: number }[];
   signups: { day: string; count: number }[];
 }
-interface UserRow {
-  id: number; email: string; name: string | null; firstName: string | null; lastName: string | null;
-  username: string | null; displayName?: string; role: Role; storageUsed: number; storageLimit: number | null; online?: boolean;
-}
 interface AuditRow { id: number; action: string; entityType: string | null; entityId: number | null; createdAt: string; }
-interface TrashProject { id: number; name: string; status: string; deletedAt: string; }
-interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number; }
-interface Department { key: string; name: string; }
-interface ProjectDefaults { departments: Department[]; nomenclature: Nomenclature; }
+type TrashProject = Pick<Project, 'id' | 'name' | 'status'> & { deletedAt: string };
 
 const SETTINGS_FIELDS: { key: string; label: string; hint: string }[] = [
   { key: 'default_start_frame', label: 'Frame de départ par défaut', hint: 'ex. 1001 — appliqué aux nouveaux projets' },
@@ -71,18 +65,18 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
-  const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [purgeProject, setPurgeProject] = useState<TrashProject | null>(null);
 
   const statsQ = useQuery({ queryKey: qk.admin('stats'), queryFn: () => api.get<Stats>('/api/admin/stats'), enabled: isAdmin });
   const systemQ = useQuery({ queryKey: qk.admin('system'), queryFn: () => api.get<System>('/api/admin/system'), enabled: isAdmin });
   const activityQ = useQuery({ queryKey: qk.admin('activity'), queryFn: () => api.get<ActivityData>('/api/admin/activity?days=30'), enabled: isAdmin });
-  const usersQ = useQuery({ queryKey: qk.users, queryFn: () => api.get<{ users: UserRow[] }>('/api/users').then((d) => d.users), enabled: isAdmin });
+  const usersQ = useQuery({ queryKey: qk.users, queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users), enabled: isAdmin });
   const trashQ = useQuery({ queryKey: qk.admin('trash'), queryFn: () => api.get<{ projects: TrashProject[] }>('/api/admin/trash').then((d) => d.projects), enabled: isAdmin });
   const auditQ = useQuery({ queryKey: qk.admin('audit'), queryFn: () => api.get<{ logs: AuditRow[] }>('/api/studio/audit').then((d) => d.logs), enabled: isAdmin });
   const settingsQ = useQuery({ queryKey: qk.admin('settings'), queryFn: () => api.get<{ settings: Record<string, string> }>('/api/studio/settings').then((d) => d.settings), enabled: isAdmin });
-  const defaultsQ = useQuery({ queryKey: qk.admin('project-defaults'), queryFn: () => api.get<{ settings: ProjectDefaults }>('/api/admin/project-defaults').then((d) => d.settings), enabled: isAdmin });
+  const defaultsQ = useQuery({ queryKey: qk.admin('project-defaults'), queryFn: () => api.get<{ settings: ProjectSettings }>('/api/admin/project-defaults').then((d) => d.settings), enabled: isAdmin });
 
   const stats = statsQ.data ?? null;
   const system = systemQ.data ?? null;
@@ -332,7 +326,7 @@ const Row = ({ k, v }: { k: string; v: string }) => (
 // ── Utilisateurs ──────────────────────────────────────────────────────────────
 
 function UsersTab({ users, meId, onCreate, onEdit, onDelete }: {
-  users: UserRow[]; meId: number; onCreate: () => void; onEdit: (u: UserRow) => void; onDelete: (u: UserRow) => void;
+  users: User[]; meId: number; onCreate: () => void; onEdit: (u: User) => void; onDelete: (u: User) => void;
 }) {
   return (
     <div>
@@ -370,7 +364,7 @@ function UsersTab({ users, meId, onCreate, onEdit, onDelete }: {
   );
 }
 
-function UserModal({ title, user, onClose, onSaved }: { title: string; user?: UserRow; onClose: () => void; onSaved: () => void }) {
+function UserModal({ title, user, onClose, onSaved }: { title: string; user?: User; onClose: () => void; onSaved: () => void }) {
   const isEdit = !!user;
   const [form, setForm] = useState({
     email: user?.email ?? '', password: '', firstName: user?.firstName ?? '', lastName: user?.lastName ?? '',
@@ -457,8 +451,8 @@ function SettingsTab({ settings, savedKey, onChange, onSave }: {
 }
 
 // Défauts de création de projet : nomenclature + départements (overridables par projet)
-function ProjectDefaultsTab({ defaults, onChange }: { defaults: ProjectDefaults | null; onChange: (d: ProjectDefaults) => void }) {
-  const [draft, setDraft] = useState<ProjectDefaults | null>(defaults);
+function ProjectDefaultsTab({ defaults, onChange }: { defaults: ProjectSettings | null; onChange: (d: ProjectSettings) => void }) {
+  const [draft, setDraft] = useState<ProjectSettings | null>(defaults);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -472,7 +466,7 @@ function ProjectDefaultsTab({ defaults, onChange }: { defaults: ProjectDefaults 
     setDraft((d) => d && { ...d, departments: d.departments.map((dep, idx) => (idx === i ? { ...dep, [k]: v } : dep)) });
   const save = async () => {
     setBusy(true); setErr(null); setMsg(null);
-    try { const { settings } = await api.put<{ settings: ProjectDefaults }>('/api/admin/project-defaults', draft); onChange(settings); setDraft(settings); setMsg('Défauts enregistrés.'); }
+    try { const { settings } = await api.put<{ settings: ProjectSettings }>('/api/admin/project-defaults', draft); onChange(settings); setDraft(settings); setMsg('Défauts enregistrés.'); }
     catch (e) { setErr(e instanceof Error ? e.message : 'Erreur'); }
     finally { setBusy(false); }
   };

@@ -6,6 +6,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useSequencesQuery, useAssetsQuery } from '../lib/queries';
 import { Skeleton } from './ui/skeleton';
+import type { ShotRef } from '../types/api';
 
 /**
  * Arbre de navigation du projet courant dans la sidebar (10.A4) :
@@ -14,7 +15,6 @@ import { Skeleton } from './ui/skeleton';
  * `key={projectId}` pour réinitialiser l'état au changement de projet.
  */
 
-interface ShotNode { id: number; code: string; name: string }
 
 // Id virtuel de l'entrée « Hors séquence » dans la liste des séquences dépliées.
 const NO_SEQ = 0;
@@ -54,11 +54,11 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
     queries: (open.sequences ? open.seqs : []).map((seqId) => ({
       queryKey: qk.shotsOfSequence(projectId, seqId === NO_SEQ ? 'none' : seqId),
       queryFn: () =>
-        api.get<{ shots: ShotNode[] }>(`/api/shots?projectId=${projectId}&sequenceId=${seqId === NO_SEQ ? 'none' : seqId}`)
+        api.get<{ shots: ShotRef[] }>(`/api/shots?projectId=${projectId}&sequenceId=${seqId === NO_SEQ ? 'none' : seqId}`)
           .then((d) => d.shots),
     })),
   });
-  const shotsBySeq: Record<number, ShotNode[] | undefined> = {};
+  const shotsBySeq: Record<number, ShotRef[] | undefined> = {};
   (open.sequences ? open.seqs : []).forEach((seqId, i) => {
     const q = shotQueries[i];
     shotsBySeq[seqId] = q?.isError ? [] : q?.data;

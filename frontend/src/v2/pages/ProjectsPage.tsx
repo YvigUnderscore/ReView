@@ -4,8 +4,9 @@ import { Plus, Star, FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { useProjectsQuery, type ProjectSummary } from '../lib/queries';
+import { useProjectsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
+import type { Project, ProjectStatus } from '../types/api';
 import Shell from '../components/Shell';
 import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../stores/useViewPref';
@@ -23,15 +24,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
 
-type Project = ProjectSummary;
-
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'Actif',
   ON_HOLD: 'En pause',
   COMPLETED: 'Terminé',
   ARCHIVED: 'Archivé',
 };
-const STATUS_OPTIONS = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
+const STATUS_OPTIONS: readonly ProjectStatus[] = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
 
 function StatusBadge({ status }: { status: string }) {
   const variant =
@@ -179,7 +178,7 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
           </div>
           <div className="space-y-1">
             <Label>Statut</Label>
-            <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
               {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </Select>
           </div>

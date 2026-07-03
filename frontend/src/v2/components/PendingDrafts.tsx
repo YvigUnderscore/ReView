@@ -5,11 +5,12 @@ import { FileClock, X, Trash2, Send, Eye } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useUploadStore } from '../../stores/useUploadStore';
+import type { Media } from '../types/api';
 
-interface Draft {
-  id: number; originalName: string; kind: string; status: string;
+/** GET /api/media/drafts — brouillon + localisation lisible. */
+type Draft = Pick<Media, 'id' | 'originalName' | 'kind' | 'status'> & {
   versionName: string; location: string; createdAt: string;
-}
+};
 
 /**
  * Pastille flottante « Brouillons en attente » (bas-gauche). Liste les médias non

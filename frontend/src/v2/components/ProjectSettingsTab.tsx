@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { SkeletonRows } from './ui/skeleton';
-
-export interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number; }
-export interface Department { key: string; name: string; }
-export interface ProjectSettings { departments: Department[]; nomenclature: Nomenclature; }
+import type { Department, Nomenclature, ProjectSettings } from '../types/api';
 
 /**
  * Onglet « Réglages » d'un projet (admin/superviseur) :

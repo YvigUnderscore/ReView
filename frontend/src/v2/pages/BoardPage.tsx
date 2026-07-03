@@ -8,6 +8,7 @@ import { qk } from '../lib/query';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { useTheme } from '../stores/useTheme';
+import type { MediaRef } from '../types/api';
 
 /**
  * Board mood/reference (Excalidraw, MIT) — un board par Projet et un par Asset (9.B).
@@ -15,7 +16,7 @@ import { useTheme } from '../stores/useTheme';
  * depuis la bibliothèque média (médias publiés du projet).
  */
 type Scope = 'project' | 'asset';
-interface MediaLite { id: number; originalName: string; kind: string; thumbnailUrl: string | null; url: string }
+type MediaLite = MediaRef & { thumbnailUrl: string | null; url: string };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawApi = any;

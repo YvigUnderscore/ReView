@@ -5,6 +5,7 @@ import { FolderKanban, Layers, Film, Box, ListTodo, KanbanSquare, PenTool } from
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectContext } from '../stores/useProjectContext';
+import type { AssetRef, ProjectRef, SequenceRef, ShotRef, Task } from '../types/api';
 import {
   Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from './ui/command';
@@ -16,11 +17,11 @@ import {
  */
 
 interface SearchResults {
-  projects: { id: number; name: string }[];
-  sequences: { id: number; code: string; name: string; projectId: number }[];
-  shots: { id: number; code: string; name: string; projectId: number }[];
-  assets: { id: number; name: string; type: string; projectId: number }[];
-  tasks: { id: number; name: string; type: string; shotId: number | null; assetId: number | null }[];
+  projects: ProjectRef[];
+  sequences: (SequenceRef & { projectId: number })[];
+  shots: (ShotRef & { projectId: number })[];
+  assets: (AssetRef & { projectId: number })[];
+  tasks: (Pick<Task, 'id' | 'name' | 'type'> & { shotId: number | null; assetId: number | null })[];
 }
 
 const EMPTY: SearchResults = { projects: [], sequences: [], shots: [], assets: [], tasks: [] };

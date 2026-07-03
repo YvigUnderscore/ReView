@@ -7,8 +7,7 @@ import { useSequencesQuery, useShotsQuery } from '../lib/queries';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { SkeletonRows } from './ui/skeleton';
-
-interface Shot { id: number; code: string; name: string; sequenceId: number | null }
+import type { ShotSummary } from '../types/api';
 
 /**
  * Dialog d'assignation d'un asset à des shots et/ou séquences (N-N).
@@ -30,7 +29,7 @@ export default function AssetAssignDialog({
     queryKey: qk.asset(assetId),
     queryFn: () => api.get<{ asset: { shots: { id: number }[]; sequences: { id: number }[] } }>(`/api/assets/${assetId}`),
   });
-  const shots: Shot[] = useMemo(() => shotsQ.data ?? [], [shotsQ.data]);
+  const shots = useMemo(() => shotsQ.data ?? [], [shotsQ.data]);
   const sequences = useMemo(() => seqsQ.data?.sequences ?? [], [seqsQ.data]);
   const loading = shotsQ.isPending || seqsQ.isPending || assetQ.isPending;
   const loadError = shotsQ.error ?? seqsQ.error ?? assetQ.error;
@@ -70,8 +69,8 @@ export default function AssetAssignDialog({
   // Regroupe les shots par séquence (codes triés numériquement), « Sans séquence » en dernier.
   const groups = useMemo(() => {
     const sortedSeq = [...sequences].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-    const byCode = (a: Shot, b: Shot) => a.code.localeCompare(b.code, undefined, { numeric: true });
-    const list: { seq: { id: number; code: string; name: string }; shots: Shot[] }[] = sortedSeq.map((seq) => ({
+    const byCode = (a: ShotSummary, b: ShotSummary) => a.code.localeCompare(b.code, undefined, { numeric: true });
+    const list: { seq: { id: number; code: string; name: string }; shots: ShotSummary[] }[] = sortedSeq.map((seq) => ({
       seq,
       shots: shots.filter((s) => s.sequenceId === seq.id).sort(byCode),
     }));

@@ -1,7 +1,5 @@
 import { api, getToken } from './apiClient';
-
-/** Types de média côté backend (enum MediaKind). */
-export type MediaKind = 'VIDEO' | 'IMAGE' | 'MODEL_3D';
+import type { MediaKind } from '../v2/types/api';
 
 const MODEL_EXT = ['.glb', '.gltf', '.fbx', '.usdz', '.usdc', '.usda', '.obj', '.zip'];
 

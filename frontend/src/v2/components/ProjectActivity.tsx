@@ -11,17 +11,14 @@ import {
   TASK_STATUS_BAR as STATUS_BAR,
   TASK_STATUS_PRIORITY as PRIORITY,
 } from '../lib/taskStatus';
+import type { Membership, TaskStatus, TaskWithAssignee } from '../types/api';
 
 interface RecentItem {
   type: 'version' | 'media'; id: number; at: string; label: string;
   location: string; author: string | null; kind?: string;
   taskId?: number | null; mediaId?: number; versionId?: number;
 }
-interface ActTask {
-  id: number; name: string; type: string; status: string;
-  assignee: { id: number; name: string | null } | null; location: string;
-}
-interface Member { user: { id: number; name: string | null; email: string } }
+type ActTask = TaskWithAssignee & { location: string };
 
 interface Activity { recent: RecentItem[]; tasks: ActTask[] }
 
@@ -38,7 +35,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
   );
   const { data: projData } = useQuery({
     queryKey: qk.project(projectId),
-    queryFn: () => api.get<{ project: { memberships: Member[] } }>(`/api/projects/${projectId}`),
+    queryFn: () => api.get<{ project: { memberships: Membership[] } }>(`/api/projects/${projectId}`),
     enabled: canManage,
   });
   const members = projData?.project.memberships ?? [];
@@ -49,7 +46,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
       old ? { ...old, tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)) } : old);
   const rollback = () => qc.invalidateQueries({ queryKey: qk.projectActivity(projectId) });
 
-  const setStatus = async (taskId: number, status: string) => {
+  const setStatus = async (taskId: number, status: TaskStatus) => {
     patchTask(taskId, { status });
     try { await api.patch(`/api/tasks/${taskId}`, { status }); } catch { rollback(); }
   };
@@ -134,7 +131,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                 </Link>
                 {canManage ? (
                   <>
-                    <select value={t.status} onChange={(e) => setStatus(t.id, e.target.value)} className={`rounded px-1 py-0.5 text-[11px] ${STATUS_COLOR[t.status] ?? ''}`}>
+                    <select value={t.status} onChange={(e) => setStatus(t.id, e.target.value as TaskStatus)} className={`rounded px-1 py-0.5 text-[11px] ${STATUS_COLOR[t.status] ?? ''}`}>
                       {STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                     </select>
                     <select value={t.assignee?.id ?? ''} onChange={(e) => assign(t.id, e.target.value)} className="rounded border border-input bg-background px-1 py-0.5 text-[11px]">

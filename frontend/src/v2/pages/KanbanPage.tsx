@@ -7,9 +7,9 @@ import { useShotsQuery } from '../lib/queries';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { TASK_STATUSES, TASK_STATUS_LABEL } from '../lib/taskStatus';
+import type { TaskStatus, TaskWithAssignee } from '../types/api';
 
-interface Task { id: number; name: string; type: string; status: string; assignee: { name: string | null } | null; }
-interface BoardTask extends Task { shotId: number; shotCode: string }
+type BoardTask = TaskWithAssignee & { shotId: number; shotCode: string };
 
 const COLUMNS = TASK_STATUSES.map((key) => ({ key, label: TASK_STATUS_LABEL[key] }));
 
@@ -25,7 +25,7 @@ export default function KanbanPage() {
   const taskQueries = useQueries({
     queries: shots.map((s) => ({
       queryKey: qk.tasks(s.id),
-      queryFn: () => api.get<{ tasks: Task[] }>(`/api/tasks?shotId=${s.id}`).then((d) => d.tasks),
+      queryFn: () => api.get<{ tasks: TaskWithAssignee[] }>(`/api/tasks?shotId=${s.id}`).then((d) => d.tasks),
     })),
   });
   const tasks: BoardTask[] = shots.flatMap((s, i) =>
@@ -33,11 +33,11 @@ export default function KanbanPage() {
   const loadError = (shotsQ.error ?? taskQueries.find((q) => q.error)?.error)?.message ?? null;
 
   // Déplacement optimiste dans le cache du shot concerné ; rollback par invalidation.
-  const move = async (taskId: number, status: string) => {
+  const move = async (taskId: number, status: TaskStatus) => {
     const t = tasks.find((x) => x.id === taskId);
     if (!t || t.status === status) return;
     const key = qk.tasks(t.shotId);
-    qc.setQueryData<Task[]>(key, (old) => old?.map((x) => (x.id === taskId ? { ...x, status } : x)));
+    qc.setQueryData<TaskWithAssignee[]>(key, (old) => old?.map((x) => (x.id === taskId ? { ...x, status } : x)));
     try { await api.patch(`/api/tasks/${taskId}`, { status }); }
     catch (e) { qc.invalidateQueries({ queryKey: key }); setError(e instanceof Error ? e.message : 'Erreur'); }
   };

@@ -13,14 +13,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../lib/taskStatus';
-
-interface Media { id: number; kind: string; originalName: string; status: string; published: boolean; }
-interface Version { id: number; name: string; status: string; published: boolean; createdAt?: string; author?: { id: number; name: string | null } | null; media?: Media[]; _count?: { media: number }; }
-interface TaskCtx {
-  id: number; name: string; type: string; status: string;
-  shot?: { id: number; code: string; name: string; project: { id: number; name: string }; sequence?: { id: number; code: string; name: string } | null } | null;
-  asset?: { id: number; name: string; type: string; project: { id: number; name: string } } | null;
-}
+import type { MediaSummary, TaskDetail, Version, VersionDetail, VersionListItem } from '../types/api';
 
 export default function TaskPage() {
   const { id } = useParams();
@@ -35,19 +28,19 @@ export default function TaskPage() {
   const [cardMode, setCardMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteVersion, setDeleteVersion] = useState<Version | null>(null);
-  const [deleteMedia, setDeleteMedia] = useState<Media | null>(null);
+  const [deleteMedia, setDeleteMedia] = useState<MediaSummary | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [target, setTarget] = useState<number | null>(null);
 
   const taskQ = useQuery({
     queryKey: qk.task(taskId),
-    queryFn: () => api.get<{ task: TaskCtx }>(`/api/tasks/${taskId}`),
+    queryFn: () => api.get<{ task: TaskDetail }>(`/api/tasks/${taskId}`),
   });
   const task = taskQ.data?.task ?? null;
   const versionsKey = qk.versions(`taskId=${taskId}`);
   const versionsQ = useQuery({
     queryKey: versionsKey,
-    queryFn: () => api.get<{ versions: Version[] }>(`/api/versions?taskId=${taskId}`).then((d) => d.versions),
+    queryFn: () => api.get<{ versions: VersionListItem[] }>(`/api/versions?taskId=${taskId}`).then((d) => d.versions),
   });
   const versions = versionsQ.data ?? [];
   // Version ouverte : celle choisie si toujours présente, sinon la plus récente (liste triée)
@@ -57,7 +50,7 @@ export default function TaskPage() {
   // Médias de la version sélectionnée (chargés à la demande, cachés par version)
   const versionQ = useQuery({
     queryKey: qk.version(selectedId ?? 0),
-    queryFn: () => api.get<{ version: Version }>(`/api/versions/${selectedId}`).then((d) => d.version),
+    queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${selectedId}`).then((d) => d.version),
     enabled: selectedId != null,
   });
   const selectedMedia = versionQ.data?.media;

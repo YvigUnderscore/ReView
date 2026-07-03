@@ -1,8 +1,10 @@
+import type { Media } from '../../types/api';
+
 /** Types et utilitaires partagés de la review (découpage 10.C2). */
 
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
-  media: { id: number; kind: string; originalName: string; status: string; versionId: number; published: boolean };
+  media: Media;
   url: string;
   thumbnailUrl: string | null;
   proxyUrl: string | null;

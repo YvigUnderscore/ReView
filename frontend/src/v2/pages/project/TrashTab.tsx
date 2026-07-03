@@ -7,13 +7,15 @@ import { qk } from '../../lib/query';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import type { AssetRef, MediaRef, SequenceRef, ShotRef, Version } from '../../types/api';
 
+/** GET /api/projects/:id/trash — éléments supprimés restaurables. */
 interface TrashData {
-  sequences: { id: number; name: string; code: string }[];
-  shots: { id: number; name: string; code: string }[];
-  assets: { id: number; name: string; type: string }[];
-  versions: { id: number; name: string }[];
-  media: { id: number; originalName: string; kind: string }[];
+  sequences: SequenceRef[];
+  shots: ShotRef[];
+  assets: AssetRef[];
+  versions: Pick<Version, 'id' | 'name'>[];
+  media: MediaRef[];
 }
 
 interface TrashItem { id: number; label: string; endpoint: string }

@@ -1,8 +1,10 @@
+import type { TaskStatus } from '../types/api';
+
 /**
  * Statuts de tâche — source unique des libellés FR et couleurs.
  * Ne jamais redéclarer ces mappings dans une page : importer d'ici.
  */
-export const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'PENDING_REVIEW', 'RETAKE', 'REJECTED', 'APPROVED'] as const;
+export const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'PENDING_REVIEW', 'RETAKE', 'REJECTED', 'APPROVED'] as const satisfies readonly TaskStatus[];
 
 export const TASK_STATUS_LABEL: Record<string, string> = {
   TODO: 'À faire',

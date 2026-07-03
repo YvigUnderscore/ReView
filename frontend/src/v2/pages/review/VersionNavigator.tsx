@@ -4,10 +4,7 @@ import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
-
-interface VersionMedia { id: number; kind: string; originalName: string; status: string }
-interface VersionDetail { id: number; name: string; taskId: number | null; assetId: number | null; media: VersionMedia[] }
-interface VersionSummary { id: number; name: string; createdAt: string; author: { id: number; name: string } | null; _count: { media: number } }
+import type { VersionDetail, VersionListItem } from '../../types/api';
 
 /**
  * Navigation de l'en-tête review (10.C2) : dropdown des versions de la tâche/asset
@@ -27,7 +24,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
   const parent = version ? (version.taskId ? `taskId=${version.taskId}` : version.assetId ? `assetId=${version.assetId}` : null) : null;
   const versionsQ = useQuery({
     queryKey: qk.versions(parent ?? ''),
-    queryFn: () => api.get<{ versions: VersionSummary[] }>(`/api/versions?${parent}`).then((d) => d.versions),
+    queryFn: () => api.get<{ versions: VersionListItem[] }>(`/api/versions?${parent}`).then((d) => d.versions),
     enabled: parent !== null,
   });
   const versions = versionsQ.data ?? [];

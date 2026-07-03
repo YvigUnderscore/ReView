@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { uploadMedia, inferMediaKind, type MediaKind } from '../lib/uploadClient';
+import { uploadMedia, inferMediaKind } from '../lib/uploadClient';
+import type { MediaKind } from '../v2/types/api';
 
 /**
  * Store global des uploads (Zustand).

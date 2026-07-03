@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/apiClient';
 import { getSocket, emitActivity } from '../../lib/socket';
-import type { UserStatus } from './useAuth';
+import type { UserStatus } from '../types/api';
 
 export interface PresenceUser {
   id: number;

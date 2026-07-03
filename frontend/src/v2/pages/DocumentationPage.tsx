@@ -6,6 +6,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectsQuery, useSequencesQuery, useShotsQuery, useAssetsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
+import type { AuthorRef, ProjectRef } from '../types/api';
 import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
 import RichTextEditor from '../components/RichTextEditor';
@@ -15,12 +16,10 @@ import { Button } from '../components/ui/button';
 
 type DocScope = 'GLOBAL' | 'PROJECT' | 'SEQUENCE' | 'SHOT' | 'ASSET';
 type DocKind = 'RICH' | 'PDF';
-interface Author { id: number; displayName?: string; initials?: string; avatarUrl?: string | null; name: string | null; }
 interface Doc {
   id: number; title: string; kind: DocKind; content: string | null; fileKey: string | null; fileUrl?: string | null;
-  scope: DocScope; projectId: number | null; scopeId: number | null; createdBy: Author; updatedAt: string;
+  scope: DocScope; projectId: number | null; scopeId: number | null; createdBy: AuthorRef; updatedAt: string;
 }
-interface ProjectLite { id: number; name: string; }
 
 const SCOPE_LABEL: Record<DocScope, string> = {
   GLOBAL: 'Global', PROJECT: 'Projet', SEQUENCE: 'Séquence', SHOT: 'Shot', ASSET: 'Asset',
@@ -39,7 +38,7 @@ export default function DocumentationPage() {
   const [deleting, setDeleting] = useState<Doc | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const projects: ProjectLite[] = useProjectsQuery().data ?? [];
+  const projects = useProjectsQuery().data ?? [];
   const docsKey = qk.documents(filterProject ? Number(filterProject) : null);
   const docsQ = useQuery({
     queryKey: docsKey,
@@ -171,7 +170,7 @@ export default function DocumentationPage() {
 interface EntityLite { id: number; code?: string; name: string; }
 
 function CreateDocModal({ projects, defaultProjectId, onClose, onCreated }: {
-  projects: ProjectLite[]; defaultProjectId: number | null; onClose: () => void; onCreated: (d: Doc) => void;
+  projects: ProjectRef[]; defaultProjectId: number | null; onClose: () => void; onCreated: (d: Doc) => void;
 }) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<DocKind>('RICH');

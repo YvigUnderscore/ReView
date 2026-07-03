@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type RefObject } from 'react';
 import { ImagePlus, X } from 'lucide-react';
-import ReviewComments, { type ReviewComment } from '../../components/ReviewComments';
+import ReviewComments from '../../components/ReviewComments';
+import type { ReviewComment } from '../../types/api';
 import { SkeletonRows } from '../../components/ui/skeleton';
 
 /**

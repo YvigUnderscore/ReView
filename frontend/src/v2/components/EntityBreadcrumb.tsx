@@ -5,6 +5,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { trackRecent } from '../stores/useRecents';
 import { useProjectContext } from '../stores/useProjectContext';
+import type { AssetRef, MediaRef, ProjectRef, SequenceRef, ShotRef, Task, Version } from '../types/api';
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from './ui/breadcrumb';
@@ -17,14 +18,15 @@ import {
 
 export type BreadcrumbEntity = 'media' | 'version' | 'task' | 'shot' | 'sequence' | 'asset' | 'project';
 
+/** Réponse de GET /api/context/:entity/:id (10.D3) — chaîne d'ancêtres. */
 interface BreadcrumbContext {
-  project: { id: number; name: string };
-  sequence?: { id: number; code: string; name: string } | null;
-  shot?: { id: number; code: string; name: string } | null;
-  asset?: { id: number; name: string; type: string } | null;
-  task?: { id: number; name: string; type: string } | null;
-  version?: { id: number; name: string } | null;
-  media?: { id: number; originalName: string; kind: string } | null;
+  project: ProjectRef;
+  sequence?: SequenceRef | null;
+  shot?: ShotRef | null;
+  asset?: AssetRef | null;
+  task?: Pick<Task, 'id' | 'name' | 'type'> | null;
+  version?: Pick<Version, 'id' | 'name'> | null;
+  media?: MediaRef | null;
 }
 
 interface Segment { label: string; to: string | null }

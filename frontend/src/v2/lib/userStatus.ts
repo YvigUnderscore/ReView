@@ -1,4 +1,4 @@
-import type { UserStatus } from '../stores/useAuth';
+import type { UserStatus } from '../types/api';
 
 /** Couleurs et libellés des statuts de présence utilisateur (Avatar, SidebarFooter). */
 

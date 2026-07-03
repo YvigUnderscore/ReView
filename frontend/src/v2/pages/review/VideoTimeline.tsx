@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import type { ReviewComment } from '../../components/ReviewComments';
+import type { ReviewComment } from '../../types/api';
 import { formatTime } from './reviewTypes';
 
 /** Timeline vidéo avec marqueurs de commentaires horodatés. */

@@ -12,11 +12,7 @@ import AssetAssignDialog from '../components/AssetAssignDialog';
 import FavoriteButton from '../components/FavoriteButton';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-
-interface Media { id: number; kind: string; originalName: string; status: string; published: boolean; }
-interface Version { id: number; name: string; status: string; published: boolean; media?: Media[]; _count?: { media: number }; }
-interface LinkRef { id: number; code?: string; name: string; }
-interface AssetInfo { id: number; name: string; type: string; projectId: number; shots: LinkRef[]; sequences: LinkRef[]; }
+import type { AssetDetail, MediaSummary, VersionDetail, VersionListItem } from '../types/api';
 
 export default function AssetPage() {
   const { id } = useParams();
@@ -37,12 +33,12 @@ export default function AssetPage() {
 
   const versionsQ = useQuery({
     queryKey: qk.versions(`assetId=${assetId}`),
-    queryFn: () => api.get<{ versions: Version[] }>(`/api/versions?assetId=${assetId}`).then((d) => d.versions),
+    queryFn: () => api.get<{ versions: VersionListItem[] }>(`/api/versions?assetId=${assetId}`).then((d) => d.versions),
   });
   const versions = versionsQ.data ?? [];
   const assetQ = useQuery({
     queryKey: qk.asset(assetId),
-    queryFn: () => api.get<{ asset: AssetInfo }>(`/api/assets/${assetId}`),
+    queryFn: () => api.get<{ asset: AssetDetail }>(`/api/assets/${assetId}`),
   });
   const asset = assetQ.data?.asset ?? null;
   const loadError = versionsQ.error?.message ?? null;
@@ -50,10 +46,10 @@ export default function AssetPage() {
   const mediaQueries = useQueries({
     queries: openIds.map((vid) => ({
       queryKey: qk.version(vid),
-      queryFn: () => api.get<{ version: Version }>(`/api/versions/${vid}`).then((d) => d.version),
+      queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${vid}`).then((d) => d.version),
     })),
   });
-  const mediaByVersion: Record<number, Media[] | undefined> = {};
+  const mediaByVersion: Record<number, MediaSummary[] | undefined> = {};
   openIds.forEach((vid, i) => { mediaByVersion[vid] = mediaQueries[i]?.data?.media; });
 
   const invalidateVersions = () => qc.invalidateQueries({ queryKey: qk.versions(`assetId=${assetId}`) });

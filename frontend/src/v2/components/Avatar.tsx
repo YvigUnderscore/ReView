@@ -1,4 +1,4 @@
-import type { UserStatus } from '../stores/useAuth';
+import type { UserStatus } from '../types/api';
 import { STATUS_COLOR } from '../lib/userStatus';
 
 // Palette stable de couleurs de repli (dérivée d'un identifiant).
