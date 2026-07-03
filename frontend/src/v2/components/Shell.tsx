@@ -1,5 +1,5 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { FolderKanban, Shield, Clapperboard, ChevronRight, Star, BookText, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { api } from '../../lib/apiClient';
@@ -12,6 +12,8 @@ import SidebarFooter from './SidebarFooter';
 import SidebarProjectTree from './SidebarProjectTree';
 import SidebarRecents from './SidebarRecents';
 import CommandPalette from './CommandPalette';
+import ShortcutsHelp from './ShortcutsHelp';
+import { useGlobalShortcuts } from '../lib/shortcuts';
 
 interface ProjectLink { id: number; name: string; }
 
@@ -24,6 +26,7 @@ export default function Shell({ children, title, breadcrumb }: { children: React
   const [projects, setProjects] = useState<ProjectLink[]>([]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const favorites = useFavorites((s) => s.favorites);
   const loadFavorites = useFavorites((s) => s.load);
 
@@ -42,6 +45,9 @@ export default function Shell({ children, title, breadcrumb }: { children: React
   const isEntityPage = /^\/(tasks|assets|review)\//.test(pathname);
   const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
   const isProjectsRoot = pathname === '/' || pathname.startsWith('/projects');
+
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp });
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -172,6 +178,7 @@ export default function Shell({ children, title, breadcrumb }: { children: React
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
       <UploadWidget />
       <PendingDrafts />
     </div>
