@@ -24,6 +24,9 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const blobToDataURL = (b: Blob) => new Promise<string>((res, rej) => {
   const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(b);
 });
+// Fichier Excalidraw construit hors du composant (règle react-hooks/purity : Date.now)
+const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) =>
+  ({ id: fileId, mimeType: mimeType || 'image/jpeg', dataURL, created: Date.now() });
 
 export default function BoardPage({ scope }: { scope: Scope }) {
   const { id } = useParams();
@@ -79,7 +82,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
       const blob = await (await fetch(m.url)).blob();
       const dataURL = await blobToDataURL(blob);
       const fileId = uid();
-      ex.addFiles([{ id: fileId, mimeType: blob.type || 'image/jpeg', dataURL, created: Date.now() }]);
+      ex.addFiles([makeBoardFile(fileId, blob.type, dataURL)]);
       const els = convertToExcalidrawElements([
         { type: 'image', fileId, x: 80, y: 80, width: 320, height: 220 } as never,
       ]);

@@ -1,22 +1,11 @@
 import type { UserStatus } from '../stores/useAuth';
+import { STATUS_COLOR } from '../lib/userStatus';
 
 // Palette stable de couleurs de repli (dérivée d'un identifiant).
 const COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6',
   '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#ec4899',
 ];
-
-export const STATUS_COLOR: Record<UserStatus, string> = {
-  AVAILABLE: '#22c55e',
-  AWAY: '#f59e0b',
-  DND: '#ef4444',
-};
-
-export const STATUS_LABEL: Record<UserStatus, string> = {
-  AVAILABLE: 'Disponible',
-  AWAY: 'Absent',
-  DND: 'Ne pas déranger',
-};
 
 function colorFor(seed: number | string): string {
   const n = typeof seed === 'number' ? seed : [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);

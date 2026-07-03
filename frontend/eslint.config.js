@@ -44,14 +44,13 @@ export default defineConfig([
       // tsc (noUnusedLocals/Parameters) couvre déjà les variables inutilisées ;
       // la variante TS d'ESLint complète pour les cas que tsc ne voit pas.
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' }],
-      // Règles d'analyse React (react-hooks v7) : en `warn` le temps du refactor
-      // Phase 10 (chantier 10.F), puis repassage en `error`. Ne pas supprimer.
-      'react-hooks/static-components': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/purity': 'warn',
-      // Les fichiers ui/* (shadcn) exportent composant + variantes cva : toléré.
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // Règles d'analyse React (react-hooks v7) : repassées en `error` après
+      // résorption des warnings (10.E1 + 10.F1). Aucune nouvelle dérogation.
+      'react-hooks/static-components': 'error',
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/purity': 'error',
+      'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
     },
   },
 ])

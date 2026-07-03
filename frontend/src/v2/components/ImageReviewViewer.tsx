@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
 
@@ -26,6 +26,15 @@ export default function ImageReviewViewer({
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const pan = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+
+  // Re-fit si la source change : ajustement d'état pendant le render
+  // (https://react.dev/learn/you-might-not-need-an-effect) — le onLoad de la
+  // nouvelle image refera le fit.
+  const [prevSrc, setPrevSrc] = useState(src);
+  if (src !== prevSrc) {
+    setPrevSrc(src);
+    setBase(null);
+  }
 
   // Taille de base : ajuste l'image dans le viewport (contain), centrée.
   const fit = (natW: number, natH: number) => {
@@ -82,9 +91,6 @@ export default function ImageReviewViewer({
     setScale(next);
   };
   const reset = () => { if (natural.current) fit(natural.current.w, natural.current.h); };
-
-  // Re-fit si la source change
-  useEffect(() => { setBase(null); }, [src]);
 
   return (
     <div className="relative h-full w-full">

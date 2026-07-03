@@ -5,7 +5,8 @@ import { api } from '../../lib/apiClient';
 import { useAuth, type UserStatus } from '../stores/useAuth';
 import { usePresence, lastSeenLabel } from '../stores/usePresence';
 import { useTheme } from '../stores/useTheme';
-import Avatar, { STATUS_LABEL, STATUS_COLOR } from './Avatar';
+import Avatar from './Avatar';
+import { STATUS_COLOR, STATUS_LABEL } from '../lib/userStatus';
 
 const STATUSES: UserStatus[] = ['AVAILABLE', 'AWAY', 'DND'];
 

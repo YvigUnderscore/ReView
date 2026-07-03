@@ -9,7 +9,7 @@ storage/
 # Build artifacts
 backend/dist/
 frontend/dist/
-frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
 
 # Logs & couverture de tests
 *.log
