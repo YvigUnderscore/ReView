@@ -54,8 +54,11 @@ export default function ProjectPage() {
   // ?tab=sequences&seq=ID) — back/forward navigateur cohérents (10.A6).
   const tab = searchParams.get('tab') ?? 'overview';
   const setTab = (t: string) => setSearchParams(t === 'overview' ? {} : { tab: t });
+  // L'entité ouverte (accordéon) vit aussi dans l'URL : copier le lien restitue la vue.
   const focusShot = searchParams.get('shot') ? Number(searchParams.get('shot')) : null;
   const focusSeq = searchParams.get('seq') ? Number(searchParams.get('seq')) : null;
+  const setFocusShot = (id: number | null) => setSearchParams(id ? { tab: 'shots', shot: String(id) } : { tab: 'shots' });
+  const setFocusSeq = (id: number | null) => setSearchParams(id ? { tab: 'sequences', seq: String(id) } : { tab: 'sequences' });
   const [name, setName] = useState('');
   const [startFrame, setStartFrame] = useState<number>(1001);
   const [sequences, setSequences] = useState<Sequence[]>([]);
@@ -123,10 +126,10 @@ export default function ProjectPage() {
         />
       )}
       {tab === 'shots' && (
-        <ShotsTab key={focusShot ?? 'shots'} projectId={projectId} sequences={sequences} shots={shots} canManage={canManage} reload={loadStructure} focusId={focusShot} nomenclature={nomenclature} />
+        <ShotsTab projectId={projectId} sequences={sequences} shots={shots} canManage={canManage} reload={loadStructure} focusId={focusShot} onFocus={setFocusShot} nomenclature={nomenclature} />
       )}
       {tab === 'sequences' && (
-        <SequencesTab key={focusSeq ?? 'sequences'} projectId={projectId} sequences={sequences} canManage={canManage} reload={loadStructure} focusId={focusSeq} nomenclature={nomenclature} />
+        <SequencesTab projectId={projectId} sequences={sequences} canManage={canManage} reload={loadStructure} focusId={focusSeq} onFocus={setFocusSeq} nomenclature={nomenclature} />
       )}
       {tab === 'assets' && (
         <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />
@@ -196,9 +199,9 @@ function ModeSwitch({ mode, setMode }: { mode: 'simple' | 'manual' | 'auto'; set
 
 // ── Onglet Shots ─────────────────────────────────────────────────────────────
 
-function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = null, nomenclature }: {
+function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = null, onFocus, nomenclature }: {
   projectId: number; sequences: Sequence[]; shots: Shot[]; canManage: boolean; reload: () => Promise<void>;
-  focusId?: number | null; nomenclature: Nomenclature;
+  focusId?: number | null; onFocus: (id: number | null) => void; nomenclature: Nomenclature;
 }) {
   const view = useViewMode(`shots:${projectId}`);
   const favs = useFavorites((s) => s.favorites);
@@ -206,7 +209,8 @@ function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = nu
   const isFav = (id: number) => favs.some((f) => f.type === 'SHOT' && f.entityId === id);
   const [newShot, setNewShot] = useState({ name: '', code: '', sequenceId: '' });
   const [mode, setMode] = useState<'simple' | 'manual' | 'auto'>('simple');
-  const [open, setOpen] = useState<number | null>(focusId);
+  // Accordéon piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
+  const open = focusId;
   const [editing, setEditing] = useState<Shot | null>(null);
   const [deleting, setDeleting] = useState<Shot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -319,7 +323,7 @@ function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = nu
               <EntityCard
                 key={shot.id}
                 view={view}
-                onClick={() => setOpen((o) => (o === shot.id ? null : shot.id))}
+                onClick={() => onFocus(open === shot.id ? null : shot.id)}
                 active={open === shot.id}
                 title={`${shot.code} · ${shot.name}`}
                 subtitle={`${shot._count?.tasks ?? 0} tâche(s)${shot.assets?.length ? ` · ${shot.assets.length} asset(s)` : ''}`}
@@ -524,15 +528,16 @@ function ShotAssets({ shotId, projectId, canManage, reload }: { shotId: number; 
 
 // ── Onglet Séquences ──────────────────────────────────────────────────────────
 
-function SequencesTab({ projectId, sequences, canManage, reload, focusId = null, nomenclature }: {
+function SequencesTab({ projectId, sequences, canManage, reload, focusId = null, onFocus, nomenclature }: {
   projectId: number; sequences: Sequence[]; canManage: boolean; reload: () => Promise<void>;
-  focusId?: number | null; nomenclature: Nomenclature;
+  focusId?: number | null; onFocus: (id: number | null) => void; nomenclature: Nomenclature;
 }) {
   const [newSeq, setNewSeq] = useState({ name: '', code: '' });
   const [mode, setMode] = useState<'simple' | 'manual' | 'auto'>('simple');
   const [editing, setEditing] = useState<number | null>(null);
   const [editVals, setEditVals] = useState({ code: '', name: '' });
-  const [open, setOpen] = useState<number | null>(focusId);
+  // Accordéon piloté par l'URL (?seq=ID) : back/forward et partage de lien cohérents (10.A6)
+  const open = focusId;
   const [deleting, setDeleting] = useState<Sequence | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -622,7 +627,7 @@ function SequencesTab({ projectId, sequences, canManage, reload, focusId = null,
                 </div>
               ) : (
                 <div className="group flex items-center justify-between px-3 py-2">
-                  <button onClick={() => setOpen((o) => (o === s.id ? null : s.id))} className="text-left text-sm">
+                  <button onClick={() => onFocus(open === s.id ? null : s.id)} className="text-left text-sm">
                     <span className="font-medium">{s.code}</span> · {s.name}
                   </button>
                   <div className="flex items-center gap-1">
