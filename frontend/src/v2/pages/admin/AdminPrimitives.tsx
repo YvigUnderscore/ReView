@@ -1,0 +1,71 @@
+import type { ReactNode } from 'react';
+import type { System } from './adminShared';
+
+/** Petites primitives d'affichage partagées par les sections d'administration. */
+
+export function Metric({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="text-2xl font-semibold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      {sub && <div className="mt-0.5 text-[10px] text-primary">{sub}</div>}
+    </div>
+  );
+}
+
+export function Panel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+export function DistList({ data }: { data: Record<string, number> }) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) return <p className="text-xs text-muted-foreground">Aucune donnée.</p>;
+  return (
+    <div className="space-y-1">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{k}</span>
+          <span className="font-medium">{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function Gauge({ label, pct }: { label: string; pct: number }) {
+  const color = pct > 90 ? '#ef4444' : pct > 75 ? '#f59e0b' : '#22c55e';
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-xs"><span className="text-muted-foreground">{label}</span><span>{pct}%</span></div>
+      <div className="h-2 overflow-hidden rounded-full bg-secondary">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </div>
+    </div>
+  );
+}
+
+export function Row({ k, v }: { k: string; v: string }) {
+  return <div className="flex justify-between"><dt className="text-muted-foreground">{k}</dt><dd>{v}</dd></div>;
+}
+
+export function ServiceHealth({ services }: { services: System['services'] }) {
+  const items: [string, boolean][] = [['PostgreSQL', services.database], ['Redis', services.redis], ['MinIO', services.minio]];
+  return (
+    <div className="space-y-1.5">
+      {items.map(([name, ok]) => (
+        <div key={name} className="flex items-center justify-between text-sm">
+          <span>{name}</span>
+          <span className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-400' : 'text-destructive'}`}>
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: ok ? '#22c55e' : '#ef4444' }} />
+            {ok ? 'OK' : 'Hors service'}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}

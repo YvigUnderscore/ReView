@@ -76,6 +76,7 @@ function AppRoutes() {
             <Route path="/projects/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="project" /></Suspense></Protected>} />
             <Route path="/assets/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="asset" /></Suspense></Protected>} />
             <Route path="/admin" element={<Protected><AdminPage /></Protected>} />
+            <Route path="/admin/:section" element={<Protected><AdminPage /></Protected>} />
             <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
             <Route path="/docs" element={<Protected><DocumentationPage /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
