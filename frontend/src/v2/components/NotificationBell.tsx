@@ -6,6 +6,7 @@ import { Bell, CheckCheck, ListTodo, MessageSquare, Reply } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { getSocket } from '../../lib/socket';
 import { qk } from '../lib/query';
+import { timeAgo } from '../lib/time';
 import { useNotificationsQuery, type NotificationsData } from '../lib/queries';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Skeleton } from './ui/skeleton';
@@ -25,18 +26,6 @@ function IconFor({ type }: { type: Notification['type'] }) {
   if (type === 'REPLY') return <Reply size={16} className={cls} />;
   if (type === 'COMMENT_ASSIGNED') return <MessageSquare size={16} className={cls} />;
   return <Bell size={16} className={cls} />;
-}
-
-function timeAgo(iso: string): string {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "à l'instant";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `il y a ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `il y a ${h} h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `il y a ${d} j`;
-  return new Date(iso).toLocaleDateString('fr-FR');
 }
 
 export default function NotificationBell() {
