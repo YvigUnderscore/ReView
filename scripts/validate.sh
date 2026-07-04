@@ -5,6 +5,7 @@
 # Usage :
 #   bash scripts/validate.sh                 # checks sans services (typecheck, build, lint, tests unit)
 #   bash scripts/validate.sh --with-integration   # ajoute les tests d'intégration (nécessite Postgres+Redis+MinIO)
+#   bash scripts/validate.sh --with-e2e            # intégration + smoke Playwright (navigateur requis ; E2E_CHANNEL=msedge en local)
 #
 # Sortie : échoue (exit 1) au premier check rouge. Tout vert = code validable.
 #
@@ -12,7 +13,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WITH_INTEGRATION=0
+WITH_E2E=0
 [[ "${1:-}" == "--with-integration" ]] && WITH_INTEGRATION=1
+[[ "${1:-}" == "--with-e2e" ]] && { WITH_INTEGRATION=1; WITH_E2E=1; }
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$1"; }
 
@@ -45,5 +48,10 @@ step "Frontend — tests unitaires (vitest)"
 
 step "Frontend — build (vite build)"
 ( cd "$ROOT/frontend" && npm run build )
+
+if [[ "$WITH_E2E" == "1" ]]; then
+  step "E2E — smoke Playwright (parcours critique, lance backend+frontend)"
+  ( cd "$ROOT/frontend" && npm run test:e2e )
+fi
 
 printf '\n\033[1;32m✅ Validation complète : tout est vert. Code validable.\033[0m\n'

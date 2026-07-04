@@ -28,3 +28,8 @@ AGENTS.md
 
 # Docs internes (audit, rapports — non nécessaires à l'app)
 docs/
+
+# Playwright (10.F3)
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
