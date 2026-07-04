@@ -14,6 +14,7 @@ import SidebarRecents from './SidebarRecents';
 import CommandPalette from './CommandPalette';
 import ShortcutsHelp from './ShortcutsHelp';
 import { useGlobalShortcuts } from '../lib/shortcuts';
+import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
 const ENTITY_PAGE_RE = /^\/(tasks|assets|review)\//;
@@ -45,6 +46,8 @@ export default function Shell({ children, title, breadcrumb }: { children: React
 
   const openHelp = useCallback(() => setHelpOpen(true), []);
   useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp });
+  // Temps réel : room du projet courant → invalidations de cache ciblées (10.E3)
+  useSocketInvalidation(currentProjectId);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">

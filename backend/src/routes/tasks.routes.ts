@@ -7,6 +7,7 @@ import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForTask, resolveProjectIdForShot, resolveProjectIdForAsset } from '../lib/pipeline';
 import { notify } from '../services/NotificationService';
+import { emitToProject } from '../services/SocketService';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 
 const router = Router();
@@ -77,6 +78,7 @@ router.post(
     if (body.assigneeId && body.assigneeId !== req.user!.id) {
       await notify({ userId: body.assigneeId, type: 'ASSIGN', content: `Tâche assignée : ${task.name}`, projectId, referenceId: task.id });
     }
+    emitToProject(projectId, 'task:update', { projectId, id: task.id, shotId: task.shotId, assetId: task.assetId });
     res.status(201).json({ task });
   },
 );
@@ -149,6 +151,7 @@ router.patch(
     if (newAssignee && newAssignee !== req.user!.id) {
       await notify({ userId: newAssignee, type: 'ASSIGN', content: `Tâche assignée : ${updated.name}`, projectId, referenceId: id });
     }
+    emitToProject(projectId, 'task:update', { projectId, id, shotId: updated.shotId, assetId: updated.assetId });
     res.json({ task: updated });
   },
 );
@@ -160,10 +163,13 @@ router.delete(
   async (req, res) => {
     if (!isGlobalManager(req.user!.role)) throw forbidden('Réservé aux superviseurs/admins');
     const id = Number(req.params.id);
+    const task = await prisma.task.findUnique({ where: { id }, select: { shotId: true, assetId: true } });
+    if (!task) throw notFound('Tâche introuvable');
     const projectId = await resolveProjectIdForTask(id);
     if (!projectId) throw notFound('Tâche introuvable');
     await assertProjectAccess(req, projectId);
     await prisma.task.delete({ where: { id } });
+    emitToProject(projectId, 'task:update', { projectId, id, shotId: task.shotId, assetId: task.assetId });
     res.status(204).end();
   },
 );

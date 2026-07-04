@@ -11,6 +11,7 @@ import { resolveProjectIdForVersion, resolveStorageContextForVersion } from '../
 import { slugifyFilename } from '../lib/slug';
 import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
 import { logAudit } from '../services/AuditService';
+import { emitToProject } from '../services/SocketService';
 import { enqueueMediaJob } from '../services/JobService';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { Role } from '@prisma/client';
@@ -205,6 +206,8 @@ router.post(
     // Brouillon strictement privé : seul l'uploader voit et publie son média (404 sinon)
     if (media.uploaderId !== req.user!.id) throw notFound('Média introuvable');
     const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
+    const projectId = await resolveProjectId(media.versionId);
+    if (projectId) emitToProject(projectId, 'media:update', { projectId, id, versionId: media.versionId });
     res.json({ media: { ...updated, size: Number(updated.size) } });
   },
 );
@@ -348,30 +351,32 @@ router.get(
 const assertMediaManage = async (
   mediaId: number,
   user: { id: number; role: Role },
-): Promise<{ projectId: number }> => {
+): Promise<{ projectId: number; versionId: number }> => {
   const media = await prisma.mediaObject.findUnique({ where: { id: mediaId }, select: { uploaderId: true, versionId: true } });
   if (!media) throw notFound('Média introuvable');
   const projectId = await resolveProjectId(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
   const manager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
   if (!manager && media.uploaderId !== user.id) throw forbidden('Suppression réservée à l\'uploader ou un superviseur');
-  return { projectId };
+  return { projectId, versionId: media.versionId };
 };
 
 // DELETE /api/media/:id — corbeille (soft-delete, uploader ou superviseur+)
 router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
   const id = Number(req.params.id);
-  await assertMediaManage(id, req.user!);
+  const { projectId, versionId } = await assertMediaManage(id, req.user!);
   await softDeleteMedia(id);
   logAudit({ userId: req.user!.id, action: 'MEDIA_DELETE', entityType: 'MediaObject', entityId: id });
+  emitToProject(projectId, 'media:update', { projectId, id, versionId });
   res.status(204).end();
 });
 
 // POST /api/media/:id/restore (uploader ou superviseur+)
 router.post('/:id/restore', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
   const id = Number(req.params.id);
-  await assertMediaManage(id, req.user!);
+  const { projectId, versionId } = await assertMediaManage(id, req.user!);
   await restoreMedia(id);
+  emitToProject(projectId, 'media:update', { projectId, id, versionId });
   res.status(204).end();
 });
 
@@ -379,9 +384,10 @@ router.post('/:id/restore', validate({ params: z.object({ id: z.coerce.number().
 router.delete('/:id/purge', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
   if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR) throw forbidden('Réservé aux superviseurs/admins');
   const id = Number(req.params.id);
-  await assertMediaManage(id, req.user!);
+  const { projectId, versionId } = await assertMediaManage(id, req.user!);
   await purgeMedia(id);
   logAudit({ userId: req.user!.id, action: 'MEDIA_PURGE', entityType: 'MediaObject', entityId: id });
+  emitToProject(projectId, 'media:update', { projectId, id, versionId });
   res.status(204).end();
 });
 
