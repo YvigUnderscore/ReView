@@ -27,39 +27,39 @@ const publishedMediaWhere = (projectId: number) => ({
   published: true,
   version: {
     published: true,
-    OR: [
-      { task: { shot: { projectId } } },
-      { task: { asset: { projectId } } },
-      { asset: { projectId } },
-    ],
+    OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
   },
 });
 
 // GET /api/client/:token — projet + médias publiés (lecture seule)
-router.get('/:token', validate({ params: z.object({ token: z.string().min(8).max(128) }) }), async (req, res) => {
-  const share = await getValidShare(String(req.params.token));
-  if (!share) throw notFound('Lien invalide ou expiré');
-  const project = await prisma.project.findFirst({
-    where: { id: share.projectId, deletedAt: null },
-    select: { id: true, name: true, description: true, status: true },
-  });
-  if (!project) throw notFound('Projet introuvable');
+router.get(
+  '/:token',
+  validate({ params: z.object({ token: z.string().min(8).max(128) }) }),
+  async (req, res) => {
+    const share = await getValidShare(String(req.params.token));
+    if (!share) throw notFound('Lien invalide ou expiré');
+    const project = await prisma.project.findFirst({
+      where: { id: share.projectId, deletedAt: null },
+      select: { id: true, name: true, description: true, status: true },
+    });
+    if (!project) throw notFound('Projet introuvable');
 
-  const media = await prisma.mediaObject.findMany({
-    where: publishedMediaWhere(share.projectId),
-    orderBy: { createdAt: 'desc' },
-  });
-  const withUrls = await Promise.all(
-    media.map(async (m) => ({
-      id: m.id,
-      kind: m.kind,
-      originalName: m.originalName,
-      thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
-    })),
-  );
+    const media = await prisma.mediaObject.findMany({
+      where: publishedMediaWhere(share.projectId),
+      orderBy: { createdAt: 'desc' },
+    });
+    const withUrls = await Promise.all(
+      media.map(async (m) => ({
+        id: m.id,
+        kind: m.kind,
+        originalName: m.originalName,
+        thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
+      })),
+    );
 
-  res.json({ project, permission: share.permission, media: withUrls });
-});
+    res.json({ project, permission: share.permission, media: withUrls });
+  },
+);
 
 // GET /api/client/:token/media/:id/url — URL présignée d'un média publié
 router.get(
@@ -69,7 +69,9 @@ router.get(
     const share = await getValidShare(String(req.params.token));
     if (!share) throw notFound('Lien invalide ou expiré');
     const id = Number(req.params.id);
-    const media = await prisma.mediaObject.findFirst({ where: { id, ...publishedMediaWhere(share.projectId) } });
+    const media = await prisma.mediaObject.findFirst({
+      where: { id, ...publishedMediaWhere(share.projectId) },
+    });
     if (!media) throw notFound('Média introuvable ou non publié');
     res.json({ url: await storage.getPresignedGetUrl(media.storageKey) });
   },
@@ -83,7 +85,9 @@ router.get(
     const share = await getValidShare(String(req.params.token));
     if (!share) throw notFound('Lien invalide ou expiré');
     const id = Number(req.params.id);
-    const media = await prisma.mediaObject.findFirst({ where: { id, ...publishedMediaWhere(share.projectId) } });
+    const media = await prisma.mediaObject.findFirst({
+      where: { id, ...publishedMediaWhere(share.projectId) },
+    });
     if (!media) throw notFound('Média introuvable ou non publié');
     const comments = await prisma.comment.findMany({
       where: { mediaObjectId: id, parentId: null, isVisibleToClient: true },
@@ -111,10 +115,17 @@ router.post(
     if (!share) throw notFound('Lien invalide ou expiré');
     if (share.permission !== SharePermission.COMMENT) throw forbidden('Ce lien est en lecture seule');
     const id = Number(req.params.id);
-    const media = await prisma.mediaObject.findFirst({ where: { id, ...publishedMediaWhere(share.projectId) } });
+    const media = await prisma.mediaObject.findFirst({
+      where: { id, ...publishedMediaWhere(share.projectId) },
+    });
     if (!media) throw notFound('Média introuvable ou non publié');
 
-    const body = req.body as { guestName: string; content: string; timestamp?: number; cameraState?: unknown };
+    const body = req.body as {
+      guestName: string;
+      content: string;
+      timestamp?: number;
+      cameraState?: unknown;
+    };
     const comment = await prisma.comment.create({
       data: {
         mediaObjectId: id,

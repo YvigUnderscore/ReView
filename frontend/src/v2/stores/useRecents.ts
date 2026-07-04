@@ -39,7 +39,10 @@ export const useRecents = create<RecentsState>((set) => ({
   recents: read(),
   push: (entry) =>
     set((s) => {
-      const next = [{ ...entry, at: Date.now() }, ...s.recents.filter((r) => r.key !== entry.key)].slice(0, MAX);
+      const next = [{ ...entry, at: Date.now() }, ...s.recents.filter((r) => r.key !== entry.key)].slice(
+        0,
+        MAX,
+      );
       localStorage.setItem(LS_KEY, JSON.stringify(next));
       return { recents: next };
     }),

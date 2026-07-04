@@ -27,7 +27,8 @@ router.get(
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     const seq = req.query.sequenceId as unknown as number | 'none' | undefined;
-    const seqFilter = seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
+    const seqFilter =
+      seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
     const shots = await prisma.shot.findMany({
       where: { projectId, deletedAt: null, ...seqFilter },
       orderBy: { order: 'asc' },
@@ -63,14 +64,23 @@ router.post(
   }),
   async (req, res) => {
     const body = req.body as {
-      projectId: number; sequenceId?: number | null; name: string; code: string;
-      startFrame?: number | null; endFrame?: number | null; order?: number;
+      projectId: number;
+      sequenceId?: number | null;
+      name: string;
+      code: string;
+      startFrame?: number | null;
+      endFrame?: number | null;
+      order?: number;
     };
     await assertProjectAccess(req, body.projectId);
     // La séquence (si fournie) doit appartenir au même projet
     if (body.sequenceId) {
-      const seq = await prisma.sequence.findUnique({ where: { id: body.sequenceId }, select: { projectId: true } });
-      if (!seq || seq.projectId !== body.projectId) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+      const seq = await prisma.sequence.findUnique({
+        where: { id: body.sequenceId },
+        select: { projectId: true },
+      });
+      if (!seq || seq.projectId !== body.projectId)
+        throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
     }
     // Unicité du code par séquence (les shots sans séquence sont un groupe à part)
     if (
@@ -126,7 +136,14 @@ router.post(
   async (req, res) => {
     const { projectId, items } = req.body as {
       projectId: number;
-      items: { sequenceId?: number | null; name: string; code: string; startFrame?: number | null; endFrame?: number | null; order?: number }[];
+      items: {
+        sequenceId?: number | null;
+        name: string;
+        code: string;
+        startFrame?: number | null;
+        endFrame?: number | null;
+        order?: number;
+      }[];
     };
     await assertProjectAccess(req, projectId);
     // Les séquences référencées doivent appartenir au projet
@@ -206,12 +223,19 @@ router.patch(
     await assertProjectAccess(req, projectId);
     const body = req.body as { sequenceId?: number | null; code?: string };
     if (body.sequenceId) {
-      const seq = await prisma.sequence.findUnique({ where: { id: body.sequenceId }, select: { projectId: true } });
-      if (!seq || seq.projectId !== projectId) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+      const seq = await prisma.sequence.findUnique({
+        where: { id: body.sequenceId },
+        select: { projectId: true },
+      });
+      if (!seq || seq.projectId !== projectId)
+        throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
     }
     // Si le code ou la séquence change, vérifier l'unicité (code unique par séquence)
     if (body.code !== undefined || body.sequenceId !== undefined) {
-      const current = await prisma.shot.findUnique({ where: { id }, select: { code: true, sequenceId: true } });
+      const current = await prisma.shot.findUnique({
+        where: { id },
+        select: { code: true, sequenceId: true },
+      });
       const nextCode = body.code ?? current!.code;
       const nextSequenceId = body.sequenceId !== undefined ? body.sequenceId : current!.sequenceId;
       const conflict = await prisma.shot.findFirst({
@@ -231,11 +255,16 @@ router.post(
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({
     params: z.object({ id: z.coerce.number().int() }),
-    body: z.object({
-      assetId: z.number().int().optional(),
-      name: z.string().min(1).max(160).optional(),
-      type: z.nativeEnum(AssetType).optional(),
-    }).refine((b) => b.assetId !== undefined || (b.name && b.name.trim().length > 0), 'assetId ou name requis'),
+    body: z
+      .object({
+        assetId: z.number().int().optional(),
+        name: z.string().min(1).max(160).optional(),
+        type: z.nativeEnum(AssetType).optional(),
+      })
+      .refine(
+        (b) => b.assetId !== undefined || (b.name && b.name.trim().length > 0),
+        'assetId ou name requis',
+      ),
   }),
   async (req, res) => {
     const shotId = Number(req.params.id);
@@ -250,14 +279,20 @@ router.post(
       if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name: body.name! } } })) {
         throw badRequest('Un asset avec ce nom existe déjà', 'NAME_TAKEN');
       }
-      const created = await prisma.asset.create({ data: { projectId, name: body.name!, type: body.type ?? AssetType.OTHER } });
+      const created = await prisma.asset.create({
+        data: { projectId, name: body.name!, type: body.type ?? AssetType.OTHER },
+      });
       assetId = created.id;
     } else {
       const asset = await prisma.asset.findUnique({ where: { id: assetId }, select: { projectId: true } });
-      if (!asset || asset.projectId !== projectId) throw badRequest('Asset invalide pour ce projet', 'BAD_ASSET');
+      if (!asset || asset.projectId !== projectId)
+        throw badRequest('Asset invalide pour ce projet', 'BAD_ASSET');
     }
     await prisma.shot.update({ where: { id: shotId }, data: { assets: { connect: { id: assetId } } } });
-    const asset = await prisma.asset.findUnique({ where: { id: assetId }, select: { id: true, name: true, type: true } });
+    const asset = await prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { id: true, name: true, type: true },
+    });
     res.status(201).json({ asset });
   },
 );
@@ -272,7 +307,10 @@ router.delete(
     const projectId = await resolveProjectIdForShot(shotId);
     if (!projectId) throw notFound('Shot introuvable');
     await assertProjectAccess(req, projectId);
-    await prisma.shot.update({ where: { id: shotId }, data: { assets: { disconnect: { id: Number(req.params.assetId) } } } });
+    await prisma.shot.update({
+      where: { id: shotId },
+      data: { assets: { disconnect: { id: Number(req.params.assetId) } } },
+    });
     res.status(204).end();
   },
 );

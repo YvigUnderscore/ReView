@@ -16,7 +16,10 @@ export default function MembersTab({ projectId }: { projectId: number }) {
   });
   const usersQ = useQuery({
     queryKey: qk.users,
-    queryFn: () => api.get<{ users: { id: number; name: string | null; email: string }[] }>('/api/users').then((d) => d.users),
+    queryFn: () =>
+      api
+        .get<{ users: { id: number; name: string | null; email: string }[] }>('/api/users')
+        .then((d) => d.users),
   });
   const members = projQ.data?.project.memberships ?? [];
   const allUsers = usersQ.data ?? [];
@@ -31,17 +34,20 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     try {
       await api.post(`/api/projects/${projectId}/members`, { userId: Number(addUserId) });
       toast.success('Membre ajouté au projet');
-      setAddUserId(''); invalidate();
+      setAddUserId('');
+      invalidate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const remove = async (userId: number) => {
     try {
       await api.del(`/api/projects/${projectId}/members/${userId}`);
       toast.success('Membre retiré du projet');
       invalidate();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   const memberIds = new Set(members.map((m) => m.user.id));
@@ -52,20 +58,39 @@ export default function MembersTab({ projectId }: { projectId: number }) {
       <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Membres du projet</h2>
       {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
       <form onSubmit={add} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
-        <select className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-sm" value={addUserId} onChange={(e) => setAddUserId(e.target.value)}>
+        <select
+          className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-sm"
+          value={addUserId}
+          onChange={(e) => setAddUserId(e.target.value)}
+        >
           <option value="">Ajouter un utilisateur…</option>
-          {available.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email} ({u.email})</option>)}
+          {available.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name ?? u.email} ({u.email})
+            </option>
+          ))}
         </select>
-        <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"><Plus size={14} /> Ajouter</button>
+        <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground">
+          <Plus size={14} /> Ajouter
+        </button>
       </form>
       <div className="space-y-1.5">
         {members.map((m) => (
-          <div key={m.user.id} className="group flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
+          <div
+            key={m.user.id}
+            className="group flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
+          >
             <div>
               <span className="text-sm font-medium">{m.user.name ?? m.user.email}</span>
-              <span className="ml-2 text-xs text-muted-foreground">{m.user.email} · {m.user.role}</span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                {m.user.email} · {m.user.role}
+              </span>
             </div>
-            <button onClick={() => remove(m.user.id)} title="Retirer" className="flex h-7 w-7 items-center justify-center rounded-md text-destructive opacity-0 transition-opacity hover:bg-secondary group-hover:opacity-100">
+            <button
+              onClick={() => remove(m.user.id)}
+              title="Retirer"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-destructive opacity-0 transition-opacity hover:bg-secondary group-hover:opacity-100"
+            >
               {DeleteIcon}
             </button>
           </div>

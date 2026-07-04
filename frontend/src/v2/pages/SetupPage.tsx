@@ -43,19 +43,44 @@ export default function SetupPage() {
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="studioName">Nom du studio</Label>
-              <Input id="studioName" placeholder="Mon Studio" value={form.studioName} onChange={set('studioName')} required />
+              <Input
+                id="studioName"
+                placeholder="Mon Studio"
+                value={form.studioName}
+                onChange={set('studioName')}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="adminName">Votre nom</Label>
-              <Input id="adminName" placeholder="Jean Dupont" value={form.adminName} onChange={set('adminName')} />
+              <Input
+                id="adminName"
+                placeholder="Jean Dupont"
+                value={form.adminName}
+                onChange={set('adminName')}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="adminEmail">Email admin</Label>
-              <Input id="adminEmail" type="email" placeholder="admin@studio.com" value={form.adminEmail} onChange={set('adminEmail')} required />
+              <Input
+                id="adminEmail"
+                type="email"
+                placeholder="admin@studio.com"
+                value={form.adminEmail}
+                onChange={set('adminEmail')}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="adminPassword">Mot de passe</Label>
-              <Input id="adminPassword" type="password" placeholder="8+ car., 1 lettre, 1 chiffre" value={form.adminPassword} onChange={set('adminPassword')} required />
+              <Input
+                id="adminPassword"
+                type="password"
+                placeholder="8+ car., 1 lettre, 1 chiffre"
+                value={form.adminPassword}
+                onChange={set('adminPassword')}
+                required
+              />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" disabled={busy} className="w-full">

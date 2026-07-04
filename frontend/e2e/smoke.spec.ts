@@ -36,7 +36,11 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
   // ── 2) Créer un projet et l'ouvrir ───────────────────────────────────────────
   await page.getByPlaceholder('Nouveau projet…').fill(PROJECT);
   await page.getByRole('button', { name: 'Créer', exact: true }).click();
-  await page.locator('main').getByRole('link', { name: new RegExp(PROJECT) }).first().click();
+  await page
+    .locator('main')
+    .getByRole('link', { name: new RegExp(PROJECT) })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/projects\/\d+/);
 
   // ── 3) Créer un shot (onglet Shots, formulaire simple) ──────────────────────

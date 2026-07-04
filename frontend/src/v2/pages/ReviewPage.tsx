@@ -59,7 +59,8 @@ function ReviewContent({ id }: { id: number }) {
   const data = mediaQ.data ?? null;
   const commentsQ = useQuery({
     queryKey: qk.comments(id),
-    queryFn: () => api.get<{ comments: ReviewComment[] }>(`/api/comments?mediaObjectId=${id}`).then((d) => d.comments),
+    queryFn: () =>
+      api.get<{ comments: ReviewComment[] }>(`/api/comments?mediaObjectId=${id}`).then((d) => d.comments),
   });
   const comments = commentsQ.data ?? null;
   const error = (mediaQ.error ?? commentsQ.error)?.message ?? null;
@@ -68,17 +69,20 @@ function ReviewContent({ id }: { id: number }) {
   const glbSrc = resolveGlbSrc(data);
   const model3d = useModel3D(data, glbSrc);
 
-  const loadComments = useCallback(
-    () => qc.invalidateQueries({ queryKey: qk.comments(id) }),
-    [qc, id],
-  );
+  const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
   const seek = (t: number) => {
-    if (videoRef.current) { programmaticSeekRef.current = true; videoRef.current.currentTime = t; }
+    if (videoRef.current) {
+      programmaticSeekRef.current = true;
+      videoRef.current.currentTime = t;
+    }
   };
 
   // Désélectionne le commentaire courant et masque toute annotation affichée.
-  const clearSelection = () => { setSelectedCommentId(null); ann.clearViewed(); };
+  const clearSelection = () => {
+    setSelectedCommentId(null);
+    ann.clearViewed();
+  };
 
   // Sélection d'un commentaire : restaure ensemble seek + annotation 2D/3D + caméra (animée).
   const selectComment = (c: ReviewComment) => {
@@ -88,9 +92,14 @@ function ReviewContent({ id }: { id: number }) {
       const hs = a.find((x) => x?.type === 'hotspot');
       const shapes = a.filter((x) => x && (x as { type?: string }).type !== 'hotspot');
       ann.setViewed3d(hs?.position && hs.normal ? { position: hs.position, normal: hs.normal } : null);
-      if (shapes.length > 0) { ann.setAnnotating(false); ann.setViewed(shapes as unknown as Shape[]); }
-      else ann.setViewed(null);
-    } else { ann.setViewed(null); ann.setViewed3d(null); }
+      if (shapes.length > 0) {
+        ann.setAnnotating(false);
+        ann.setViewed(shapes as unknown as Shape[]);
+      } else ann.setViewed(null);
+    } else {
+      ann.setViewed(null);
+      ann.setViewed3d(null);
+    }
     // Ratio capturé (3D: cameraState.aspect) pour caler l'overlay
     const cam = c.cameraState as { aspect?: number } | null;
     ann.setViewedAspect(cam?.aspect ?? null);
@@ -98,7 +107,10 @@ function ReviewContent({ id }: { id: number }) {
     if (c.cameraState != null) model3d.restoreCamera(c.cameraState);
   };
 
-  const placeHotspotCenter = () => { const h = model3d.hotspotAtCenter(); if (h) ann.setHotspot3d(h); };
+  const placeHotspotCenter = () => {
+    const h = model3d.hotspotAtCenter();
+    if (h) ann.setHotspot3d(h);
+  };
 
   // Démarre/arrête l'annotation. À l'ouverture sur un modèle 3D, place un hotspot au centre.
   const toggleAnnotating = () => {
@@ -126,7 +138,8 @@ function ReviewContent({ id }: { id: number }) {
     let annotation: unknown;
     if (kind === 'MODEL_3D') {
       const parts: unknown[] = [];
-      if (ann.hotspot3d) parts.push({ type: 'hotspot', position: ann.hotspot3d.position, normal: ann.hotspot3d.normal });
+      if (ann.hotspot3d)
+        parts.push({ type: 'hotspot', position: ann.hotspot3d.position, normal: ann.hotspot3d.normal });
       parts.push(...ann.annot);
       annotation = parts.length ? parts : undefined;
     } else {
@@ -134,12 +147,19 @@ function ReviewContent({ id }: { id: number }) {
     }
     try {
       const attachments = files.length > 0 ? await uploadCommentImages(files) : undefined;
-      await api.post('/api/comments', { mediaObjectId: id, content: text || '(image)', timestamp, cameraState, annotation, attachments });
+      await api.post('/api/comments', {
+        mediaObjectId: id,
+        content: text || '(image)',
+        timestamp,
+        cameraState,
+        annotation,
+        attachments,
+      });
       ann.resetComposer();
       await loadComments();
       return true;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur à l\'envoi du commentaire');
+      toast.error(err instanceof Error ? err.message : "Erreur à l'envoi du commentaire");
       return false;
     }
   };
@@ -150,11 +170,15 @@ function ReviewContent({ id }: { id: number }) {
       const { media } = await api.post<{ media: MediaResp['media'] }>(`/api/media/${id}/publish`);
       // Mise à jour ciblée du cache : pas de refetch (les URLs présignées changeraient
       // et rechargeraient le viewer) — seuls le badge et les brouillons sont concernés.
-      qc.setQueryData<MediaResp>(qk.media(id), (old) => old ? { ...old, media: { ...old.media, published: media.published } } : old);
+      qc.setQueryData<MediaResp>(qk.media(id), (old) =>
+        old ? { ...old, media: { ...old.media, published: media.published } } : old,
+      );
       qc.invalidateQueries({ queryKey: qk.drafts });
       qc.invalidateQueries({ queryKey: ['versions'] });
       toast.success('Média publié pour l’équipe');
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Erreur à la publication'); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur à la publication');
+    }
   };
 
   const reprocessMedia = async () => {
@@ -164,8 +188,11 @@ function ReviewContent({ id }: { id: number }) {
       await qc.invalidateQueries({ queryKey: qk.media(id) });
       model3d.clearLoadError();
       toast.success('Conversion relancée');
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Erreur à la relance de la conversion'); }
-    finally { setReprocessing(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur à la relance de la conversion');
+    } finally {
+      setReprocessing(false);
+    }
   };
 
   const kind = data?.media.kind;
@@ -175,22 +202,38 @@ function ReviewContent({ id }: { id: number }) {
   // Outils d'édition 3D masqués une fois publié : le dernier état enregistré (version.transform)
   // reste appliqué au modèle, mais on ne propose plus de le modifier.
   const showEditTools = canEditTransform && !(data?.media.published ?? false);
-  const model3dReady = kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
+  const model3dReady =
+    kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
   // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer
   // de taille différente. Le wrapper est en pointer-events-none : en lecture on peut
   // toujours orbiter (le modèle reçoit les events) ; en édition la SVG les capte.
-  const renderOverlay = (captureAspect?: number) => (ann.annotating || ann.viewed) ? (
-    <AnnotationCanvas
-      shapes={ann.viewed ?? ann.annot} onChange={ann.setShapes} editable={ann.annotating && !ann.viewed}
-      tool={ann.tool} color={ann.color} width={ann.penWidth} alpha={ann.alpha} captureAspect={captureAspect}
-    />
-  ) : null;
+  const renderOverlay = (captureAspect?: number) =>
+    ann.annotating || ann.viewed ? (
+      <AnnotationCanvas
+        shapes={ann.viewed ?? ann.annot}
+        onChange={ann.setShapes}
+        editable={ann.annotating && !ann.viewed}
+        tool={ann.tool}
+        color={ann.color}
+        width={ann.penWidth}
+        alpha={ann.alpha}
+        captureAspect={captureAspect}
+      />
+    ) : null;
 
   return (
-    <Shell title={data?.media.originalName ?? 'Review'} breadcrumb={<EntityBreadcrumb entity="media" id={id} />}>
+    <Shell
+      title={data?.media.originalName ?? 'Review'}
+      breadcrumb={<EntityBreadcrumb entity="media" id={id} />}
+    >
       <div className="flex h-[calc(100vh-7rem)] flex-col">
         {data ? (
-          <ReviewHeader data={data} onPublish={publishMedia} commentsOpen={commentsOpen} onToggleComments={() => setCommentsOpen((o) => !o)} />
+          <ReviewHeader
+            data={data}
+            onPublish={publishMedia}
+            commentsOpen={commentsOpen}
+            onToggleComments={() => setCommentsOpen((o) => !o)}
+          />
         ) : !error ? (
           <div className="mb-3 flex shrink-0 items-center gap-3">
             <Skeleton className="h-7 w-72" />
@@ -210,17 +253,38 @@ function ReviewContent({ id }: { id: number }) {
                 >
                   <Pencil size={14} /> {ann.annotating ? 'Terminer l’annotation' : 'Annoter'}
                 </button>
-                {ann.viewed && <button onClick={clearSelection} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60">Masquer l’annotation</button>}
+                {ann.viewed && (
+                  <button
+                    onClick={clearSelection}
+                    className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60"
+                  >
+                    Masquer l’annotation
+                  </button>
+                )}
                 {ann.annotating && kind === 'MODEL_3D' && (
-                  <button onClick={placeHotspotCenter} title="Replacer le hotspot au centre du viewer" className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60">
+                  <button
+                    onClick={placeHotspotCenter}
+                    title="Replacer le hotspot au centre du viewer"
+                    className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60"
+                  >
                     <Crosshair size={14} /> Recentrer le hotspot
                   </button>
                 )}
                 {ann.annotating && (
                   <AnnotationToolbar
-                    tool={ann.tool} setTool={ann.setTool} color={ann.color} setColor={ann.setColor}
-                    width={ann.penWidth} setWidth={ann.setPenWidth} alpha={ann.alpha} setAlpha={ann.setAlpha}
-                    onUndo={ann.undo} onRedo={ann.redo} onClear={ann.clear} canUndo={ann.canUndo} canRedo={ann.canRedo}
+                    tool={ann.tool}
+                    setTool={ann.setTool}
+                    color={ann.color}
+                    setColor={ann.setColor}
+                    width={ann.penWidth}
+                    setWidth={ann.setPenWidth}
+                    alpha={ann.alpha}
+                    setAlpha={ann.setAlpha}
+                    onUndo={ann.undo}
+                    onRedo={ann.redo}
+                    onClear={ann.clear}
+                    canUndo={ann.canUndo}
+                    canRedo={ann.canRedo}
                   />
                 )}
               </div>
@@ -231,11 +295,19 @@ function ReviewContent({ id }: { id: number }) {
 
             {kind === 'VIDEO' && src && (
               <VideoPane
-                src={src} videoRef={videoRef} programmaticSeekRef={programmaticSeekRef}
+                src={src}
+                videoRef={videoRef}
+                programmaticSeekRef={programmaticSeekRef}
                 overlay={renderOverlay()}
-                comments={comments ?? []} selectedId={selectedCommentId}
-                onSelectComment={selectComment} onManualSeek={clearSelection} onMarker={openComposer}
-                fps={fps} fpsDetected={data?.fps != null} setFpsOverride={setFpsOverride} startFrame={startFrame}
+                comments={comments ?? []}
+                selectedId={selectedCommentId}
+                onSelectComment={selectComment}
+                onManualSeek={clearSelection}
+                onMarker={openComposer}
+                fps={fps}
+                fpsDetected={data?.fps != null}
+                setFpsOverride={setFpsOverride}
+                startFrame={startFrame}
               />
             )}
 
@@ -243,9 +315,15 @@ function ReviewContent({ id }: { id: number }) {
               <div className={VIEWER_ZONE}>
                 <div className="absolute inset-0">
                   <ImageReviewViewer
-                    src={data.url} alt={data.media.originalName}
-                    shapes={ann.viewed ?? ann.annot} onChange={ann.setShapes} editable={ann.annotating && !ann.viewed}
-                    tool={ann.tool} color={ann.color} width={ann.penWidth} alpha={ann.alpha}
+                    src={data.url}
+                    alt={data.media.originalName}
+                    shapes={ann.viewed ?? ann.annot}
+                    onChange={ann.setShapes}
+                    editable={ann.annotating && !ann.viewed}
+                    tool={ann.tool}
+                    color={ann.color}
+                    width={ann.penWidth}
+                    alpha={ann.alpha}
                   />
                 </div>
               </div>
@@ -254,12 +332,18 @@ function ReviewContent({ id }: { id: number }) {
             {kind === 'MODEL_3D' && data && (
               <>
                 <Model3DPane
-                  status={data.media.status} ready={model3dReady} glbSrc={glbSrc}
-                  modelRef={model3d.modelRef} transform={model3d.transform} freeCamera={model3d.freeCamera}
+                  status={data.media.status}
+                  ready={model3dReady}
+                  glbSrc={glbSrc}
+                  modelRef={model3d.modelRef}
+                  transform={model3d.transform}
+                  freeCamera={model3d.freeCamera}
                   hotspots={ann.viewed3d ? [ann.viewed3d] : ann.hotspot3d ? [ann.hotspot3d] : []}
                   animationName={model3d.currentAnim ?? undefined}
                   overlay={renderOverlay(ann.viewedAspect ?? undefined)}
-                  canReprocess={role !== 'CLIENT'} reprocessing={reprocessing} onReprocess={reprocessMedia}
+                  canReprocess={role !== 'CLIENT'}
+                  reprocessing={reprocessing}
+                  onReprocess={reprocessMedia}
                 />
                 {model3dReady && <Model3DToolbar m={model3d} showEditTools={showEditTools} />}
               </>
@@ -268,11 +352,21 @@ function ReviewContent({ id }: { id: number }) {
 
           {commentsOpen && (
             <CommentsPanel
-              comments={comments} mediaObjectId={id} currentUserId={userId} currentUserRole={role}
-              reload={loadComments} fps={fps} startFrame={startFrame}
-              selectedId={selectedCommentId} onSelect={selectComment}
+              comments={comments}
+              mediaObjectId={id}
+              currentUserId={userId}
+              currentUserRole={role}
+              reload={loadComments}
+              fps={fps}
+              startFrame={startFrame}
+              selectedId={selectedCommentId}
+              onSelect={selectComment}
               composerRef={composerRef}
-              hints={{ annotation: ann.annot.length > 0, hotspot: !!ann.hotspot3d, camera: kind === 'MODEL_3D' && ann.annotating }}
+              hints={{
+                annotation: ann.annot.length > 0,
+                hotspot: !!ann.hotspot3d,
+                camera: kind === 'MODEL_3D' && ann.annotating,
+              }}
               onSubmit={submitComment}
             />
           )}

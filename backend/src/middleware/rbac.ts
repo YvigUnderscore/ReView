@@ -25,11 +25,7 @@ export const requireRole =
  * Vérifie qu'un utilisateur a accès à un projet.
  * Règles v2 : ADMIN et SUPERVISOR ont un accès global ; les autres via ProjectMembership.
  */
-export const checkProjectAccess = async (
-  userId: number,
-  role: Role,
-  projectId: number,
-): Promise<boolean> => {
+export const checkProjectAccess = async (userId: number, role: Role, projectId: number): Promise<boolean> => {
   if (role === Role.ADMIN || role === Role.SUPERVISOR) return true;
   const membership = await prisma.projectMembership.findUnique({
     where: { userId_projectId: { userId, projectId } },

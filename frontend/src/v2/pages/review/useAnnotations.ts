@@ -22,23 +22,73 @@ export function useAnnotations() {
   const [viewed3d, setViewed3d] = useState<Hotspot3D | null>(null);
   const [viewedAspect, setViewedAspect] = useState<number | null>(null);
 
-  const setShapes = (next: Shape[]) => { setPast((p) => [...p, annot]); setFuture([]); setAnnot(next); };
-  const undo = () => setPast((p) => { if (!p.length) return p; const prev = p[p.length - 1]!; setFuture((f) => [annot, ...f]); setAnnot(prev); return p.slice(0, -1); });
-  const redo = () => setFuture((f) => { if (!f.length) return f; const nx = f[0]!; setPast((p) => [...p, annot]); setAnnot(nx); return f.slice(1); });
+  const setShapes = (next: Shape[]) => {
+    setPast((p) => [...p, annot]);
+    setFuture([]);
+    setAnnot(next);
+  };
+  const undo = () =>
+    setPast((p) => {
+      if (!p.length) return p;
+      const prev = p[p.length - 1]!;
+      setFuture((f) => [annot, ...f]);
+      setAnnot(prev);
+      return p.slice(0, -1);
+    });
+  const redo = () =>
+    setFuture((f) => {
+      if (!f.length) return f;
+      const nx = f[0]!;
+      setPast((p) => [...p, annot]);
+      setAnnot(nx);
+      return f.slice(1);
+    });
   const clear = () => setShapes([]);
 
   /** Réinitialise le composer (après envoi du commentaire). */
-  const resetComposer = () => { setAnnot([]); setPast([]); setFuture([]); setHotspot3d(null); setAnnotating(false); };
+  const resetComposer = () => {
+    setAnnot([]);
+    setPast([]);
+    setFuture([]);
+    setHotspot3d(null);
+    setAnnotating(false);
+  };
 
   /** Masque l'annotation du commentaire sélectionné. */
-  const clearViewed = () => { setViewed(null); setViewed3d(null); setViewedAspect(null); };
+  const clearViewed = () => {
+    setViewed(null);
+    setViewed3d(null);
+    setViewedAspect(null);
+  };
 
   return {
-    tool, setTool, color, setColor, alpha, setAlpha, penWidth, setPenWidth,
-    annot, setShapes, undo, redo, clear, canUndo: past.length > 0, canRedo: future.length > 0,
-    annotating, setAnnotating, hotspot3d, setHotspot3d,
-    viewed, setViewed, viewed3d, setViewed3d, viewedAspect, setViewedAspect,
-    resetComposer, clearViewed,
+    tool,
+    setTool,
+    color,
+    setColor,
+    alpha,
+    setAlpha,
+    penWidth,
+    setPenWidth,
+    annot,
+    setShapes,
+    undo,
+    redo,
+    clear,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+    annotating,
+    setAnnotating,
+    hotspot3d,
+    setHotspot3d,
+    viewed,
+    setViewed,
+    viewed3d,
+    setViewed3d,
+    viewedAspect,
+    setViewedAspect,
+    resetComposer,
+    clearViewed,
   };
 }
 

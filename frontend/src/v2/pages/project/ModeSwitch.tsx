@@ -1,7 +1,13 @@
 export type CreateMode = 'simple' | 'manual' | 'auto';
 
 /** Sélecteur de mode de création (simple / lot manuel / génération auto). */
-export default function ModeSwitch({ mode, setMode }: { mode: CreateMode; setMode: (m: CreateMode) => void }) {
+export default function ModeSwitch({
+  mode,
+  setMode,
+}: {
+  mode: CreateMode;
+  setMode: (m: CreateMode) => void;
+}) {
   const opts: { key: CreateMode; label: string }[] = [
     { key: 'simple', label: 'Simple' },
     { key: 'manual', label: 'Lot' },

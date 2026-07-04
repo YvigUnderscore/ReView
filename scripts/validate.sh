@@ -20,6 +20,9 @@ WITH_E2E=0
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$1"; }
 
 # ---------- Backend ----------
+step "Backend — format (prettier --check)"
+( cd "$ROOT/backend" && npm run format:check )
+
 step "Backend — typecheck (tsc --noEmit)"
 ( cd "$ROOT/backend" && npm run typecheck )
 
@@ -37,6 +40,9 @@ else
 fi
 
 # ---------- Frontend ----------
+step "Frontend — format (prettier --check)"
+( cd "$ROOT/frontend" && npm run format:check )
+
 step "Frontend — lint (eslint)"
 ( cd "$ROOT/frontend" && npm run lint )
 

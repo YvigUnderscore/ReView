@@ -1,7 +1,17 @@
 import { useCallback } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LayoutDashboard, Clapperboard, Film, Box, Users, Trash2, KanbanSquare, PenTool, Settings } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Clapperboard,
+  Film,
+  Box,
+  Users,
+  Trash2,
+  KanbanSquare,
+  PenTool,
+  Settings,
+} from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useSequencesQuery, useShotsQuery, useAssetsQuery } from '../lib/queries';
@@ -33,8 +43,10 @@ export default function ProjectPage() {
   // L'entité ouverte (drawer shot / accordéon séquence) vit aussi dans l'URL.
   const focusShot = searchParams.get('shot') ? Number(searchParams.get('shot')) : null;
   const focusSeq = searchParams.get('seq') ? Number(searchParams.get('seq')) : null;
-  const setFocusShot = (id: number | null) => setSearchParams(id ? { tab: 'shots', shot: String(id) } : { tab: 'shots' });
-  const setFocusSeq = (id: number | null) => setSearchParams(id ? { tab: 'sequences', seq: String(id) } : { tab: 'sequences' });
+  const setFocusShot = (id: number | null) =>
+    setSearchParams(id ? { tab: 'shots', shot: String(id) } : { tab: 'shots' });
+  const setFocusSeq = (id: number | null) =>
+    setSearchParams(id ? { tab: 'sequences', seq: String(id) } : { tab: 'sequences' });
 
   const qc = useQueryClient();
   const { data: projData } = useQuery({
@@ -64,7 +76,12 @@ export default function ProjectPage() {
     ]);
   }, [qc, projectId]);
 
-  const nomenclature = settings?.nomenclature ?? { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 };
+  const nomenclature = settings?.nomenclature ?? {
+    sequencePrefix: 'SQ',
+    shotPrefix: 'SH',
+    padding: 3,
+    step: 10,
+  };
 
   const tabs = [
     { key: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard size={16} /> },
@@ -84,10 +101,16 @@ export default function ProjectPage() {
           <FavoriteButton type="PROJECT" entityId={projectId} size={18} />
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Link to={`/projects/${projectId}/kanban`} className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60">
+          <Link
+            to={`/projects/${projectId}/kanban`}
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+          >
             <KanbanSquare size={16} /> Kanban
           </Link>
-          <Link to={`/projects/${projectId}/board`} className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60">
+          <Link
+            to={`/projects/${projectId}/board`}
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+          >
             <PenTool size={16} /> Board
           </Link>
         </div>
@@ -106,10 +129,27 @@ export default function ProjectPage() {
         />
       )}
       {tab === 'shots' && (
-        <ShotsTab projectId={projectId} sequences={sequences} shots={shots} canManage={canManage} reload={loadStructure} focusId={focusShot} onFocus={setFocusShot} nomenclature={nomenclature} />
+        <ShotsTab
+          projectId={projectId}
+          sequences={sequences}
+          shots={shots}
+          canManage={canManage}
+          reload={loadStructure}
+          focusId={focusShot}
+          onFocus={setFocusShot}
+          nomenclature={nomenclature}
+        />
       )}
       {tab === 'sequences' && (
-        <SequencesTab projectId={projectId} sequences={sequences} canManage={canManage} reload={loadStructure} focusId={focusSeq} onFocus={setFocusSeq} nomenclature={nomenclature} />
+        <SequencesTab
+          projectId={projectId}
+          sequences={sequences}
+          canManage={canManage}
+          reload={loadStructure}
+          focusId={focusSeq}
+          onFocus={setFocusSeq}
+          nomenclature={nomenclature}
+        />
       )}
       {tab === 'assets' && (
         <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />

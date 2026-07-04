@@ -1,9 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  DndContext, DragOverlay, KeyboardSensor, PointerSensor,
-  pointerWithin, useSensor, useSensors,
-  type DragEndEvent, type DragStartEvent,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import { KanbanSquare } from 'lucide-react';
 import Shell from '../components/Shell';
@@ -33,20 +39,28 @@ export default function KanbanPage() {
   // Assignés distincts présents sur le board (pour le filtre).
   const assignees: UserRef[] = useMemo(() => {
     const m = new Map<number, string | null>();
-    tasks.forEach((t) => { if (t.assignee) m.set(t.assignee.id, t.assignee.name); });
+    tasks.forEach((t) => {
+      if (t.assignee) m.set(t.assignee.id, t.assignee.name);
+    });
     return [...m].map(([aid, name]) => ({ id: aid, name }));
   }, [tasks]);
 
-  const filtered = useMemo(() => tasks.filter((t) => {
-    if (filter.assignee === 'none' && t.assignee) return false;
-    if (filter.assignee && filter.assignee !== 'none' && String(t.assignee?.id) !== filter.assignee) return false;
-    if (filter.type && t.type !== filter.type) return false;
-    if (filter.sequence === 'none' && t.sequenceId != null) return false;
-    if (filter.sequence && filter.sequence !== 'none' && String(t.sequenceId) !== filter.sequence) return false;
-    return true;
-  }), [tasks, filter]);
+  const filtered = useMemo(
+    () =>
+      tasks.filter((t) => {
+        if (filter.assignee === 'none' && t.assignee) return false;
+        if (filter.assignee && filter.assignee !== 'none' && String(t.assignee?.id) !== filter.assignee)
+          return false;
+        if (filter.type && t.type !== filter.type) return false;
+        if (filter.sequence === 'none' && t.sequenceId != null) return false;
+        if (filter.sequence && filter.sequence !== 'none' && String(t.sequenceId) !== filter.sequence)
+          return false;
+        return true;
+      }),
+    [tasks, filter],
+  );
 
-  const activeTask = activeId != null ? tasks.find((t) => t.id === activeId) ?? null : null;
+  const activeTask = activeId != null ? (tasks.find((t) => t.id === activeId) ?? null) : null;
 
   const onDragStart = (e: DragStartEvent) => setActiveId(Number(e.active.id));
   const onDragEnd = (e: DragEndEvent) => {
@@ -77,7 +91,12 @@ export default function KanbanPage() {
         >
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {TASK_STATUSES.map((key) => (
-              <KanbanColumn key={key} id={key} label={TASK_STATUS_LABEL[key]!} tasks={filtered.filter((t) => t.status === key)} />
+              <KanbanColumn
+                key={key}
+                id={key}
+                label={TASK_STATUS_LABEL[key]!}
+                tasks={filtered.filter((t) => t.status === key)}
+              />
             ))}
           </div>
           <DragOverlay>{activeTask && <KanbanCardBody task={activeTask} dragging />}</DragOverlay>

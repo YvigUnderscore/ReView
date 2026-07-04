@@ -4,7 +4,16 @@ import { useAuth, type AuthUser } from './useAuth';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-const user: AuthUser = { id: 1, email: 'a@b.c', name: 'A', displayName: 'A', initials: 'A', avatarUrl: null, status: 'AVAILABLE', role: 'ADMIN' };
+const user: AuthUser = {
+  id: 1,
+  email: 'a@b.c',
+  name: 'A',
+  displayName: 'A',
+  initials: 'A',
+  avatarUrl: null,
+  status: 'AVAILABLE',
+  role: 'ADMIN',
+};
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 

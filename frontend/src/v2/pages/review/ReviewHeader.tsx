@@ -6,7 +6,12 @@ import VersionNavigator from './VersionNavigator';
  * En-tête de la review : nom du média + badge brouillon, sélecteur de version
  * et précédent/suivant entre médias (10.C2), publication, repli des commentaires.
  */
-export default function ReviewHeader({ data, onPublish, commentsOpen, onToggleComments }: {
+export default function ReviewHeader({
+  data,
+  onPublish,
+  commentsOpen,
+  onToggleComments,
+}: {
   data: MediaResp;
   onPublish: () => void;
   commentsOpen: boolean;
@@ -24,7 +29,12 @@ export default function ReviewHeader({ data, onPublish, commentsOpen, onToggleCo
       </div>
       <div className="flex shrink-0 items-center gap-2 text-sm">
         {!published && (
-          <button onClick={onPublish} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">Publier pour l’équipe</button>
+          <button
+            onClick={onPublish}
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+          >
+            Publier pour l’équipe
+          </button>
         )}
         <button
           onClick={onToggleComments}

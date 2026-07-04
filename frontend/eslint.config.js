@@ -3,6 +3,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import prettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -53,4 +54,7 @@ export default defineConfig([
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
     },
   },
+  // Désactive les règles ESLint stylistiques susceptibles d'entrer en conflit avec
+  // Prettier (formatage géré exclusivement par Prettier — cf. 10.F2). Toujours en dernier.
+  prettier,
 ])

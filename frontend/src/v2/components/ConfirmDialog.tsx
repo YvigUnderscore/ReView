@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import { Button } from './ui/button';
 
 /**
@@ -26,15 +33,24 @@ export default function ConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onCancel();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onCancel}>{cancelLabel}</Button>
-          <Button variant={danger ? 'destructive' : 'default'} size="sm" onClick={onConfirm}>{confirmLabel}</Button>
+          <Button variant="outline" size="sm" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button variant={danger ? 'destructive' : 'default'} size="sm" onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

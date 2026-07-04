@@ -10,13 +10,20 @@ import { fmtBytes, type Stats, type System } from './adminShared';
 
 export default function OverviewTab() {
   const statsQ = useQuery({ queryKey: qk.admin('stats'), queryFn: () => api.get<Stats>('/api/admin/stats') });
-  const systemQ = useQuery({ queryKey: qk.admin('system'), queryFn: () => api.get<System>('/api/admin/system') });
+  const systemQ = useQuery({
+    queryKey: qk.admin('system'),
+    queryFn: () => api.get<System>('/api/admin/system'),
+  });
   const stats = statsQ.data ?? null;
   const system = systemQ.data ?? null;
 
   const retryJobs = async () => {
-    try { const { retried } = await api.post<{ retried: number }>('/api/admin/jobs/retry'); toast.success(`${retried} job(s) relancé(s).`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'Relance impossible'); }
+    try {
+      const { retried } = await api.post<{ retried: number }>('/api/admin/jobs/retry');
+      toast.success(`${retried} job(s) relancé(s).`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Relance impossible');
+    }
   };
 
   if (!stats) return <SkeletonRows count={4} />;
@@ -35,17 +42,25 @@ export default function OverviewTab() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Médias par type"><DistList data={stats.media.byKind} /></Panel>
-        <Panel title="Médias par statut"><DistList data={stats.media.byStatus} /></Panel>
+        <Panel title="Médias par type">
+          <DistList data={stats.media.byKind} />
+        </Panel>
+        <Panel title="Médias par statut">
+          <DistList data={stats.media.byStatus} />
+        </Panel>
         <Panel title="Files de jobs (FFmpeg)">
           {stats.jobs ? (
             <>
               <DistList data={stats.jobs} />
               {(stats.jobs.failed ?? 0) > 0 && (
-                <Button variant="outline" size="sm" className="mt-2" onClick={retryJobs}><RefreshCw size={13} /> Relancer les jobs en échec</Button>
+                <Button variant="outline" size="sm" className="mt-2" onClick={retryJobs}>
+                  <RefreshCw size={13} /> Relancer les jobs en échec
+                </Button>
               )}
             </>
-          ) : <p className="text-xs text-muted-foreground">File indisponible.</p>}
+          ) : (
+            <p className="text-xs text-muted-foreground">File indisponible.</p>
+          )}
         </Panel>
       </div>
 
@@ -55,10 +70,15 @@ export default function OverviewTab() {
             {stats.topStorageUsers.map((u) => (
               <div key={u.id} className="flex items-center justify-between text-sm">
                 <span className="truncate">{u.name}</span>
-                <span className="text-muted-foreground">{fmtBytes(u.storageUsed)}{u.storageLimit ? ` / ${fmtBytes(u.storageLimit)}` : ''}</span>
+                <span className="text-muted-foreground">
+                  {fmtBytes(u.storageUsed)}
+                  {u.storageLimit ? ` / ${fmtBytes(u.storageLimit)}` : ''}
+                </span>
               </div>
             ))}
-            {stats.topStorageUsers.length === 0 && <p className="text-xs text-muted-foreground">Aucune donnée.</p>}
+            {stats.topStorageUsers.length === 0 && (
+              <p className="text-xs text-muted-foreground">Aucune donnée.</p>
+            )}
           </div>
         </Panel>
         <Panel title="Santé des services">

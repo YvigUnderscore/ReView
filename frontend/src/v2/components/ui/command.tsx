@@ -15,14 +15,25 @@ const Command = forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive
     ref={ref}
-    className={cn('flex h-full w-full flex-col overflow-hidden rounded-lg bg-card text-card-foreground', className)}
+    className={cn(
+      'flex h-full w-full flex-col overflow-hidden rounded-lg bg-card text-card-foreground',
+      className,
+    )}
     {...props}
   />
 ));
 Command.displayName = 'Command';
 
-function CommandDialog({ open, onOpenChange, title, children }: {
-  open: boolean; onOpenChange: (open: boolean) => void; title: string; children: ReactNode;
+function CommandDialog({
+  open,
+  onOpenChange,
+  title,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

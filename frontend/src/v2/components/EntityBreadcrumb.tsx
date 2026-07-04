@@ -7,7 +7,12 @@ import { trackRecent } from '../stores/useRecents';
 import { useProjectContext } from '../stores/useProjectContext';
 import type { AssetRef, MediaRef, ProjectRef, SequenceRef, ShotRef, Task, Version } from '../types/api';
 import {
-  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
 } from './ui/breadcrumb';
 
 /**
@@ -29,7 +34,10 @@ interface BreadcrumbContext {
   media?: MediaRef | null;
 }
 
-interface Segment { label: string; to: string | null }
+interface Segment {
+  label: string;
+  to: string | null;
+}
 
 function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
   const pid = ctx.project.id;
@@ -37,7 +45,8 @@ function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
     { label: 'Projets', to: '/' },
     { label: ctx.project.name, to: `/projects/${pid}` },
   ];
-  if (ctx.sequence) segments.push({ label: ctx.sequence.code, to: `/projects/${pid}?tab=sequences&seq=${ctx.sequence.id}` });
+  if (ctx.sequence)
+    segments.push({ label: ctx.sequence.code, to: `/projects/${pid}?tab=sequences&seq=${ctx.sequence.id}` });
   if (ctx.shot) segments.push({ label: ctx.shot.code, to: `/projects/${pid}?tab=shots&shot=${ctx.shot.id}` });
   if (ctx.asset) segments.push({ label: ctx.asset.name, to: `/assets/${ctx.asset.id}` });
   if (ctx.task) segments.push({ label: ctx.task.name, to: `/tasks/${ctx.task.id}` });
@@ -50,17 +59,32 @@ function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
 /** Libellé de l'entité feuille (celle de la page visitée) pour les Récents. */
 function leafLabel(entity: BreadcrumbEntity, ctx: BreadcrumbContext): string | null {
   switch (entity) {
-    case 'project': return ctx.project.name;
-    case 'sequence': return ctx.sequence?.code ?? null;
-    case 'shot': return ctx.shot?.code ?? null;
-    case 'asset': return ctx.asset?.name ?? null;
-    case 'task': return ctx.task?.name ?? null;
-    case 'version': return ctx.version?.name ?? null;
-    case 'media': return ctx.media?.originalName ?? null;
+    case 'project':
+      return ctx.project.name;
+    case 'sequence':
+      return ctx.sequence?.code ?? null;
+    case 'shot':
+      return ctx.shot?.code ?? null;
+    case 'asset':
+      return ctx.asset?.name ?? null;
+    case 'task':
+      return ctx.task?.name ?? null;
+    case 'version':
+      return ctx.version?.name ?? null;
+    case 'media':
+      return ctx.media?.originalName ?? null;
   }
 }
 
-export default function EntityBreadcrumb({ entity, id, tail }: { entity: BreadcrumbEntity; id: number; tail?: string }) {
+export default function EntityBreadcrumb({
+  entity,
+  id,
+  tail,
+}: {
+  entity: BreadcrumbEntity;
+  id: number;
+  tail?: string;
+}) {
   const { pathname, search } = useLocation();
   const { data } = useQuery({
     queryKey: qk.context(entity, id),
@@ -97,7 +121,11 @@ export default function EntityBreadcrumb({ entity, id, tail }: { entity: Breadcr
           <Fragment key={`${s.label}-${i}`}>
             {i > 0 && <BreadcrumbSeparator />}
             <BreadcrumbItem>
-              {i === last || !s.to ? <BreadcrumbPage>{s.label}</BreadcrumbPage> : <BreadcrumbLink to={s.to}>{s.label}</BreadcrumbLink>}
+              {i === last || !s.to ? (
+                <BreadcrumbPage>{s.label}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink to={s.to}>{s.label}</BreadcrumbLink>
+              )}
             </BreadcrumbItem>
           </Fragment>
         ))}

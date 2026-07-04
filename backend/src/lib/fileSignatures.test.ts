@@ -50,13 +50,17 @@ describe('detect3D', () => {
 
 describe('validateMediaHeader', () => {
   it('valide selon le kind attendu', () => {
-    expect(validateMediaHeader(MediaKind.IMAGE, buf(0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0), '.jpg', 100)).toBe('.jpg');
-    expect(validateMediaHeader(MediaKind.VIDEO, buf(0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0), '.jpg', 100)).toBeNull();
+    expect(
+      validateMediaHeader(MediaKind.IMAGE, buf(0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0), '.jpg', 100),
+    ).toBe('.jpg');
+    expect(
+      validateMediaHeader(MediaKind.VIDEO, buf(0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0), '.jpg', 100),
+    ).toBeNull();
   });
 });
 
 describe('getExtension', () => {
-  it('extrait l\'extension en minuscules', () => {
+  it("extrait l'extension en minuscules", () => {
     expect(getExtension('Scene.GLB')).toBe('.glb');
     expect(getExtension('noext')).toBe('');
   });

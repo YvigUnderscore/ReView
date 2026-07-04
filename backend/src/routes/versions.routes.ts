@@ -5,7 +5,11 @@ import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
-import { resolveProjectIdForVersion, resolveProjectIdForTask, resolveProjectIdForAsset } from '../lib/pipeline';
+import {
+  resolveProjectIdForVersion,
+  resolveProjectIdForTask,
+  resolveProjectIdForAsset,
+} from '../lib/pipeline';
 import { softDeleteVersion, restoreVersion, purgeVersion } from '../lib/trash';
 import { logAudit } from '../services/AuditService';
 import { emitToProject } from '../services/SocketService';
@@ -27,7 +31,9 @@ router.get(
   async (req, res) => {
     const taskId = req.query.taskId ? Number(req.query.taskId) : undefined;
     const assetId = req.query.assetId ? Number(req.query.assetId) : undefined;
-    const projectId = taskId ? await resolveProjectIdForTask(taskId) : await resolveProjectIdForAsset(assetId!);
+    const projectId = taskId
+      ? await resolveProjectIdForTask(taskId)
+      : await resolveProjectIdForAsset(assetId!);
     if (!projectId) throw notFound('Parent introuvable');
     await assertProjectAccess(req, projectId);
     const versions = await prisma.version.findMany({
@@ -58,7 +64,10 @@ router.post(
         assetId: z.number().int().optional(),
         name: z.string().min(1).max(60).optional(),
       })
-      .refine((b) => (b.taskId === undefined) !== (b.assetId === undefined), 'Fournir exactement taskId OU assetId'),
+      .refine(
+        (b) => (b.taskId === undefined) !== (b.assetId === undefined),
+        'Fournir exactement taskId OU assetId',
+      ),
   }),
   async (req, res) => {
     if (req.user!.role === Role.CLIENT) throw forbidden('Les clients ne peuvent pas créer de versions');
@@ -87,7 +96,12 @@ router.post(
         status: VersionStatus.DRAFT,
       },
     });
-    emitToProject(projectId, 'version:update', { projectId, id: version.id, taskId: version.taskId, assetId: version.assetId });
+    emitToProject(projectId, 'version:update', {
+      projectId,
+      id: version.id,
+      taskId: version.taskId,
+      assetId: version.assetId,
+    });
     res.status(201).json({ version });
   },
 );
@@ -135,7 +149,7 @@ router.patch(
     const body = req.body as { name?: string; status?: VersionStatus; transform?: unknown };
     const manager = isGlobalManager(req.user!.role);
     const isAuthor = version.authorId === req.user!.id;
-    if (!manager && !isAuthor) throw forbidden('Modification réservée à l\'auteur ou un superviseur');
+    if (!manager && !isAuthor) throw forbidden("Modification réservée à l'auteur ou un superviseur");
     if (body.status === VersionStatus.PUBLISHED && !manager) {
       throw forbidden('Seul un superviseur/admin peut publier une version');
     }
@@ -153,31 +167,40 @@ router.patch(
     if (body.status === VersionStatus.PUBLISHED) {
       logAudit({ userId: req.user!.id, action: 'VERSION_PUBLISH', entityType: 'Version', entityId: id });
     }
-    emitToProject(projectId, 'version:update', { projectId, id, taskId: updated.taskId, assetId: updated.assetId });
+    emitToProject(projectId, 'version:update', {
+      projectId,
+      id,
+      taskId: updated.taskId,
+      assetId: updated.assetId,
+    });
     res.json({ version: updated });
   },
 );
 
 // DELETE /api/versions/:id — corbeille (soft-delete, auteur ou superviseur+)
-router.delete(
-  '/:id',
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const version = await prisma.version.findUnique({ where: { id }, select: { authorId: true, taskId: true, assetId: true } });
-    if (!version) throw notFound('Version introuvable');
-    const projectId = await resolveProjectIdForVersion(id);
-    if (!projectId) throw notFound('Version orpheline');
-    await assertProjectAccess(req, projectId);
-    if (!isGlobalManager(req.user!.role) && version.authorId !== req.user!.id) {
-      throw forbidden('Suppression réservée à l\'auteur ou un superviseur');
-    }
-    await softDeleteVersion(id);
-    logAudit({ userId: req.user!.id, action: 'VERSION_DELETE', entityType: 'Version', entityId: id });
-    emitToProject(projectId, 'version:update', { projectId, id, taskId: version.taskId, assetId: version.assetId });
-    res.status(204).end();
-  },
-);
+router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
+  const id = Number(req.params.id);
+  const version = await prisma.version.findUnique({
+    where: { id },
+    select: { authorId: true, taskId: true, assetId: true },
+  });
+  if (!version) throw notFound('Version introuvable');
+  const projectId = await resolveProjectIdForVersion(id);
+  if (!projectId) throw notFound('Version orpheline');
+  await assertProjectAccess(req, projectId);
+  if (!isGlobalManager(req.user!.role) && version.authorId !== req.user!.id) {
+    throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+  }
+  await softDeleteVersion(id);
+  logAudit({ userId: req.user!.id, action: 'VERSION_DELETE', entityType: 'Version', entityId: id });
+  emitToProject(projectId, 'version:update', {
+    projectId,
+    id,
+    taskId: version.taskId,
+    assetId: version.assetId,
+  });
+  res.status(204).end();
+});
 
 // POST /api/versions/:id/restore — auteur ou superviseur+
 router.post(
@@ -185,16 +208,24 @@ router.post(
   validate({ params: z.object({ id: z.coerce.number().int() }) }),
   async (req, res) => {
     const id = Number(req.params.id);
-    const version = await prisma.version.findUnique({ where: { id }, select: { authorId: true, taskId: true, assetId: true } });
+    const version = await prisma.version.findUnique({
+      where: { id },
+      select: { authorId: true, taskId: true, assetId: true },
+    });
     if (!version) throw notFound('Version introuvable');
     const projectId = await resolveProjectIdForVersion(id);
     if (!projectId) throw notFound('Version orpheline');
     await assertProjectAccess(req, projectId);
     if (!isGlobalManager(req.user!.role) && version.authorId !== req.user!.id) {
-      throw forbidden('Restauration réservée à l\'auteur ou un superviseur');
+      throw forbidden("Restauration réservée à l'auteur ou un superviseur");
     }
     await restoreVersion(id);
-    emitToProject(projectId, 'version:update', { projectId, id, taskId: version.taskId, assetId: version.assetId });
+    emitToProject(projectId, 'version:update', {
+      projectId,
+      id,
+      taskId: version.taskId,
+      assetId: version.assetId,
+    });
     res.status(204).end();
   },
 );
@@ -206,14 +237,22 @@ router.delete(
   async (req, res) => {
     if (!isGlobalManager(req.user!.role)) throw forbidden('Réservé aux superviseurs/admins');
     const id = Number(req.params.id);
-    const version = await prisma.version.findUnique({ where: { id }, select: { taskId: true, assetId: true } });
+    const version = await prisma.version.findUnique({
+      where: { id },
+      select: { taskId: true, assetId: true },
+    });
     if (!version) throw notFound('Version introuvable');
     const projectId = await resolveProjectIdForVersion(id);
     if (!projectId) throw notFound('Version introuvable');
     await assertProjectAccess(req, projectId);
     await purgeVersion(id);
     logAudit({ userId: req.user!.id, action: 'VERSION_PURGE', entityType: 'Version', entityId: id });
-    emitToProject(projectId, 'version:update', { projectId, id, taskId: version.taskId, assetId: version.assetId });
+    emitToProject(projectId, 'version:update', {
+      projectId,
+      id,
+      taskId: version.taskId,
+      assetId: version.assetId,
+    });
     res.status(204).end();
   },
 );

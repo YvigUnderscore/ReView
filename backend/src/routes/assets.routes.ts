@@ -15,26 +15,22 @@ const router = Router();
 router.use(authenticate);
 
 // GET /api/assets?projectId=X
-router.get(
-  '/',
-  validate({ query: z.object({ projectId: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const projectId = Number(req.query.projectId);
-    await assertProjectAccess(req, projectId);
-    const assets = await prisma.asset.findMany({
-      where: { projectId, deletedAt: null },
-      orderBy: { name: 'asc' },
-      include: { _count: { select: { versions: true, tasks: true } } },
-    });
-    const withThumbs = await Promise.all(
-      assets.map(async (a) => ({
-        ...a,
-        thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, await firstMediaThumbKeyForAsset(a.id)),
-      })),
-    );
-    res.json({ assets: withThumbs });
-  },
-);
+router.get('/', validate({ query: z.object({ projectId: z.coerce.number().int() }) }), async (req, res) => {
+  const projectId = Number(req.query.projectId);
+  await assertProjectAccess(req, projectId);
+  const assets = await prisma.asset.findMany({
+    where: { projectId, deletedAt: null },
+    orderBy: { name: 'asc' },
+    include: { _count: { select: { versions: true, tasks: true } } },
+  });
+  const withThumbs = await Promise.all(
+    assets.map(async (a) => ({
+      ...a,
+      thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, await firstMediaThumbKeyForAsset(a.id)),
+    })),
+  );
+  res.json({ assets: withThumbs });
+});
 
 // POST /api/assets (admin/superviseur)
 router.post(
@@ -50,13 +46,18 @@ router.post(
   }),
   async (req, res) => {
     const { projectId, name, type, description } = req.body as {
-      projectId: number; name: string; type: AssetType; description?: string;
+      projectId: number;
+      name: string;
+      type: AssetType;
+      description?: string;
     };
     await assertProjectAccess(req, projectId);
     if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name } } })) {
       throw badRequest('Un asset avec ce nom existe déjà', 'NAME_TAKEN');
     }
-    const asset = await prisma.asset.create({ data: { projectId, name, type, description: description ?? null } });
+    const asset = await prisma.asset.create({
+      data: { projectId, name, type, description: description ?? null },
+    });
     res.status(201).json({ asset });
   },
 );
@@ -99,7 +100,9 @@ router.patch(
     if (!projectId) throw notFound('Asset introuvable');
     await assertProjectAccess(req, projectId);
     const { shotIds, sequenceIds, ...scalar } = req.body as {
-      shotIds?: number[]; sequenceIds?: number[]; [k: string]: unknown;
+      shotIds?: number[];
+      sequenceIds?: number[];
+      [k: string]: unknown;
     };
     // Les shots/séquences liés doivent appartenir au même projet
     if (shotIds && shotIds.length > 0) {

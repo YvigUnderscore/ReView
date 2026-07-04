@@ -7,7 +7,11 @@ import { UploadCloud } from 'lucide-react';
  * au niveau `window` (dépôt possible partout). Une drop-zone locale qui a déjà traité
  * le dépôt (`e.preventDefault()`) est respectée : on ne double pas l'upload.
  */
-export default function FullPageDropzone({ onDrop, label = 'Déposez vos fichiers ici', enabled = true }: {
+export default function FullPageDropzone({
+  onDrop,
+  label = 'Déposez vos fichiers ici',
+  enabled = true,
+}: {
   onDrop: (files: File[]) => void;
   label?: string;
   enabled?: boolean;
@@ -18,12 +22,27 @@ export default function FullPageDropzone({ onDrop, label = 'Déposez vos fichier
     if (!enabled) return;
     let depth = 0;
     const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
-    const onEnter = (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); depth += 1; setActive(true); };
-    const onOver = (e: DragEvent) => { if (hasFiles(e)) e.preventDefault(); };
-    const onLeave = (e: DragEvent) => { if (!hasFiles(e)) return; depth -= 1; if (depth <= 0) { depth = 0; setActive(false); } };
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth += 1;
+      setActive(true);
+    };
+    const onOver = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault();
+    };
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth -= 1;
+      if (depth <= 0) {
+        depth = 0;
+        setActive(false);
+      }
+    };
     const onDropEv = (e: DragEvent) => {
       if (!hasFiles(e)) return;
-      depth = 0; setActive(false);
+      depth = 0;
+      setActive(false);
       if (e.defaultPrevented) return; // déjà géré par une drop-zone locale
       e.preventDefault();
       const files = Array.from(e.dataTransfer?.files ?? []);

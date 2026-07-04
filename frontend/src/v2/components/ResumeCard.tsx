@@ -21,10 +21,15 @@ function ResumeLink({ entry, icon, kind }: { entry: RecentEntry; icon: React.Rea
         <span className="block text-xs text-muted-foreground">{kind}</span>
         <span className="block truncate text-sm font-medium">
           {entry.label}
-          {entry.sublabel && <span className="ml-2 font-normal text-muted-foreground">· {entry.sublabel}</span>}
+          {entry.sublabel && (
+            <span className="ml-2 font-normal text-muted-foreground">· {entry.sublabel}</span>
+          )}
         </span>
       </span>
-      <ArrowRight size={16} className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+      <ArrowRight
+        size={16}
+        className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+      />
     </Link>
   );
 }
@@ -38,7 +43,9 @@ export default function ResumeCard() {
 
   return (
     <div className="mb-6">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reprendre où j'en étais</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Reprendre où j'en étais
+      </p>
       <div className="flex flex-wrap gap-3">
         {lastMedia && <ResumeLink entry={lastMedia} icon={<Play size={16} />} kind="Dernière review" />}
         {lastTask && <ResumeLink entry={lastTask} icon={<ListTodo size={16} />} kind="Dernière tâche" />}

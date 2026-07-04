@@ -9,11 +9,25 @@ import { ROLES } from './adminShared';
 import type { Role, User } from '../../types/api';
 
 /** Création / édition d'un utilisateur (dialog). */
-export default function UserModal({ title, user, onClose, onSaved }: { title: string; user?: User; onClose: () => void; onSaved: () => void }) {
+export default function UserModal({
+  title,
+  user,
+  onClose,
+  onSaved,
+}: {
+  title: string;
+  user?: User;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const isEdit = !!user;
   const [form, setForm] = useState({
-    email: user?.email ?? '', password: '', firstName: user?.firstName ?? '', lastName: user?.lastName ?? '',
-    username: user?.username ?? '', role: (user?.role ?? 'ARTIST') as Role,
+    email: user?.email ?? '',
+    password: '',
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
+    username: user?.username ?? '',
+    role: (user?.role ?? 'ARTIST') as Role,
     storageLimitGo: user?.storageLimit ? String((user.storageLimit / 1e9).toFixed(0)) : '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +35,8 @@ export default function UserModal({ title, user, onClose, onSaved }: { title: st
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       const body: Record<string, unknown> = {
         email: form.email,
@@ -41,31 +56,84 @@ export default function UserModal({ title, user, onClose, onSaved }: { title: st
         toast.success('Utilisateur créé');
       }
       onSaved();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); setBusy(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+      setBusy(false);
+    }
   };
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent>
         <form onSubmit={submit} className="space-y-3">
-          <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="Prénom" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
-            <Input placeholder="Nom" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
+            <Input
+              placeholder="Prénom"
+              value={form.firstName}
+              onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+            />
+            <Input
+              placeholder="Nom"
+              value={form.lastName}
+              onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+            />
           </div>
-          <Input placeholder="Pseudo (affiché)" value={form.username} onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))} />
-          <Input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required />
-          <Input type="password" placeholder={isEdit ? 'Nouveau mot de passe (laisser vide)' : 'Mot de passe (8+ car., lettres + chiffres)'} value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} required={!isEdit} />
+          <Input
+            placeholder="Pseudo (affiché)"
+            value={form.username}
+            onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+          />
+          <Input
+            type="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            required
+          />
+          <Input
+            type="password"
+            placeholder={
+              isEdit ? 'Nouveau mot de passe (laisser vide)' : 'Mot de passe (8+ car., lettres + chiffres)'
+            }
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            required={!isEdit}
+          />
           <div className="grid grid-cols-2 gap-2">
-            <Select className="w-full" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Role }))}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+            <Select
+              className="w-full"
+              value={form.role}
+              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Role }))}
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </Select>
-            <Input type="number" placeholder="Quota (Go)" value={form.storageLimitGo} onChange={(e) => setForm((f) => ({ ...f, storageLimitGo: e.target.value }))} />
+            <Input
+              type="number"
+              placeholder="Quota (Go)"
+              value={form.storageLimitGo}
+              onChange={(e) => setForm((f) => ({ ...f, storageLimitGo: e.target.value }))}
+            />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
-            <Button type="submit" size="sm" disabled={busy}>{isEdit ? 'Enregistrer' : 'Créer'}</Button>
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button type="submit" size="sm" disabled={busy}>
+              {isEdit ? 'Enregistrer' : 'Créer'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

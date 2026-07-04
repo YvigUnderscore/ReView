@@ -14,7 +14,8 @@ export default function AuditTab() {
     <ul className="space-y-1 text-xs text-muted-foreground">
       {(audit ?? []).map((a) => (
         <li key={a.id}>
-          <span className="text-foreground">{a.action}</span> {a.entityType ?? ''} {a.entityId ?? ''} · {new Date(a.createdAt).toLocaleString()}
+          <span className="text-foreground">{a.action}</span> {a.entityType ?? ''} {a.entityId ?? ''} ·{' '}
+          {new Date(a.createdAt).toLocaleString()}
         </li>
       ))}
       {(!audit || audit.length === 0) && <li>Aucune entrée.</li>}

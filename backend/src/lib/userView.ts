@@ -46,7 +46,9 @@ export async function avatarUrl(avatarKey?: string | null): Promise<string | nul
 }
 
 /** Vue publique normalisée d'un utilisateur (avec displayName + avatarUrl résolu). */
-export async function toPublicUser<T extends RawUserIdentity>(u: T): Promise<T & { displayName: string; initials: string; avatarUrl: string | null }> {
+export async function toPublicUser<T extends RawUserIdentity>(
+  u: T,
+): Promise<T & { displayName: string; initials: string; avatarUrl: string | null }> {
   return {
     ...u,
     displayName: displayName(u),

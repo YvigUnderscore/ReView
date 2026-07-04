@@ -80,7 +80,12 @@ class StorageService {
    * Les origines autorisées suivent CORS_ORIGIN (frontend). Échec non bloquant.
    */
   private async ensureCors(): Promise<void> {
-    const origins = env.CORS_ORIGIN === '*' ? ['*'] : env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean);
+    const origins =
+      env.CORS_ORIGIN === '*'
+        ? ['*']
+        : env.CORS_ORIGIN.split(',')
+            .map((o) => o.trim())
+            .filter(Boolean);
     try {
       await this.client.send(
         new PutBucketCorsCommand({

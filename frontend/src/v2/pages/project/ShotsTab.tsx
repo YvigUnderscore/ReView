@@ -19,9 +19,24 @@ import { sortByCode, type Nomenclature, type Sequence, type Shot } from './proje
  * Onglet Shots : création (simple / lot / auto), cartes groupées par séquence,
  * détail d'un shot en drawer latéral (10.C1) piloté par l'URL (?shot=ID).
  */
-export default function ShotsTab({ projectId, sequences, shots, canManage, reload, focusId = null, onFocus, nomenclature }: {
-  projectId: number; sequences: Sequence[]; shots: Shot[]; canManage: boolean; reload: () => Promise<void>;
-  focusId?: number | null; onFocus: (id: number | null) => void; nomenclature: Nomenclature;
+export default function ShotsTab({
+  projectId,
+  sequences,
+  shots,
+  canManage,
+  reload,
+  focusId = null,
+  onFocus,
+  nomenclature,
+}: {
+  projectId: number;
+  sequences: Sequence[];
+  shots: Shot[];
+  canManage: boolean;
+  reload: () => Promise<void>;
+  focusId?: number | null;
+  onFocus: (id: number | null) => void;
+  nomenclature: Nomenclature;
 }) {
   const view = useViewMode(`shots:${projectId}`);
   const favs = useFavorites((s) => s.favorites);
@@ -34,17 +49,25 @@ export default function ShotsTab({ projectId, sequences, shots, canManage, reloa
   const [error, setError] = useState<string | null>(null);
 
   // Drawer piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
-  const openShot = focusId != null ? shots.find((s) => s.id === focusId) ?? null : null;
+  const openShot = focusId != null ? (shots.find((s) => s.id === focusId) ?? null) : null;
 
   const sortedSequences = sortByCode(sequences);
 
   const createShot = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/api/shots', { projectId, name: newShot.name || newShot.code, code: newShot.code, sequenceId: newShot.sequenceId ? Number(newShot.sequenceId) : null });
+      await api.post('/api/shots', {
+        projectId,
+        name: newShot.name || newShot.code,
+        code: newShot.code,
+        sequenceId: newShot.sequenceId ? Number(newShot.sequenceId) : null,
+      });
       toast.success(`Shot « ${newShot.code} » créé`);
-      setNewShot({ name: '', code: '', sequenceId: '' }); reload();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+      setNewShot({ name: '', code: '', sequenceId: '' });
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    }
   };
   const createBulk = async (rows: Record<string, string>[]) => {
     await api.post('/api/shots/bulk', {
@@ -63,13 +86,18 @@ export default function ShotsTab({ projectId, sequences, shots, canManage, reloa
     try {
       await api.del(`/api/shots/${deleting.id}`);
       toast.success('Shot déplacé dans la corbeille');
-      setDeleting(null); reload();
+      setDeleting(null);
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   const groups = [
-    ...sortedSequences.map((s) => ({ seq: s as Sequence | null, list: shots.filter((sh) => sh.sequenceId === s.id) })),
+    ...sortedSequences.map((s) => ({
+      seq: s as Sequence | null,
+      list: shots.filter((sh) => sh.sequenceId === s.id),
+    })),
     { seq: null as Sequence | null, list: shots.filter((sh) => sh.sequenceId === null) },
   ].filter((g) => g.list.length > 0 || g.seq);
 
@@ -86,16 +114,32 @@ export default function ShotsTab({ projectId, sequences, shots, canManage, reloa
 
       {canManage && mode === 'auto' && (
         <BatchGenerator
-          defaults={{ prefix: nomenclature.shotPrefix, step: nomenclature.step, padding: nomenclature.padding }}
+          defaults={{
+            prefix: nomenclature.shotPrefix,
+            step: nomenclature.step,
+            padding: nomenclature.padding,
+          }}
           sequences={sortedSequences}
-          onSubmit={(items) => createBulk(items.map((it) => ({ code: it.code, name: it.name, sequenceId: it.sequenceId != null ? String(it.sequenceId) : '' })))}
+          onSubmit={(items) =>
+            createBulk(
+              items.map((it) => ({
+                code: it.code,
+                name: it.name,
+                sequenceId: it.sequenceId != null ? String(it.sequenceId) : '',
+              })),
+            )
+          }
         />
       )}
       {canManage && mode === 'manual' && (
         <MultiRowCreate
           addLabel="Créer les shots"
           fields={[
-            { key: 'code', placeholder: `Code (${nomenclature.shotPrefix}${'0'.repeat(nomenclature.padding)})`, className: 'w-28' },
+            {
+              key: 'code',
+              placeholder: `Code (${nomenclature.shotPrefix}${'0'.repeat(nomenclature.padding)})`,
+              className: 'w-28',
+            },
             { key: 'name', placeholder: 'Nom (optionnel)', className: 'flex-1' },
             {
               key: 'sequenceId',
@@ -111,14 +155,38 @@ export default function ShotsTab({ projectId, sequences, shots, canManage, reloa
         />
       )}
       {canManage && mode === 'simple' && (
-        <form onSubmit={createShot} className="mb-5 flex flex-wrap gap-2 rounded-md border border-border bg-card p-2">
-          <input className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs" placeholder="Code" value={newShot.code} onChange={(e) => setNewShot((s) => ({ ...s, code: e.target.value }))} required />
-          <input className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs" placeholder="Nom (optionnel)" value={newShot.name} onChange={(e) => setNewShot((s) => ({ ...s, name: e.target.value }))} />
-          <select className="rounded border border-input bg-background px-2 py-1.5 text-xs" value={newShot.sequenceId} onChange={(e) => setNewShot((s) => ({ ...s, sequenceId: e.target.value }))}>
+        <form
+          onSubmit={createShot}
+          className="mb-5 flex flex-wrap gap-2 rounded-md border border-border bg-card p-2"
+        >
+          <input
+            className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
+            placeholder="Code"
+            value={newShot.code}
+            onChange={(e) => setNewShot((s) => ({ ...s, code: e.target.value }))}
+            required
+          />
+          <input
+            className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
+            placeholder="Nom (optionnel)"
+            value={newShot.name}
+            onChange={(e) => setNewShot((s) => ({ ...s, name: e.target.value }))}
+          />
+          <select
+            className="rounded border border-input bg-background px-2 py-1.5 text-xs"
+            value={newShot.sequenceId}
+            onChange={(e) => setNewShot((s) => ({ ...s, sequenceId: e.target.value }))}
+          >
             <option value="">Sans séquence</option>
-            {sortedSequences.map((sq) => <option key={sq.id} value={sq.id}>{sq.code} · {sq.name}</option>)}
+            {sortedSequences.map((sq) => (
+              <option key={sq.id} value={sq.id}>
+                {sq.code} · {sq.name}
+              </option>
+            ))}
           </select>
-          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground"><Plus size={14} /> Shot</button>
+          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground">
+            <Plus size={14} /> Shot
+          </button>
         </form>
       )}
 
@@ -127,7 +195,11 @@ export default function ShotsTab({ projectId, sequences, shots, canManage, reloa
           compact
           icon={Clapperboard}
           title="Aucun shot"
-          description={canManage ? 'Créez vos premiers shots avec le formulaire ci-dessus (mode Simple, Lot ou Auto).' : 'Les shots du projet apparaîtront ici.'}
+          description={
+            canManage
+              ? 'Créez vos premiers shots avec le formulaire ci-dessus (mode Simple, Lot ou Auto).'
+              : 'Les shots du projet apparaîtront ici.'
+          }
         />
       )}
 
@@ -147,11 +219,28 @@ export default function ShotsTab({ projectId, sequences, shots, canManage, reloa
                 subtitle={`${shot._count?.tasks ?? 0} tâche(s)${shot.assets?.length ? ` · ${shot.assets.length} asset(s)` : ''}`}
                 thumbnailUrl={shot.thumbnailUrl}
                 actions={[
-                  { icon: <Star size={15} fill={isFav(shot.id) ? 'currentColor' : 'none'} className={isFav(shot.id) ? 'text-amber-400' : ''} />, label: 'Favori', onClick: () => toggleFav('SHOT', shot.id) },
-                  ...(canManage ? [
-                    { icon: EditIcon, label: 'Modifier', onClick: () => setEditing(shot) },
-                    { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(shot) },
-                  ] : []),
+                  {
+                    icon: (
+                      <Star
+                        size={15}
+                        fill={isFav(shot.id) ? 'currentColor' : 'none'}
+                        className={isFav(shot.id) ? 'text-amber-400' : ''}
+                      />
+                    ),
+                    label: 'Favori',
+                    onClick: () => toggleFav('SHOT', shot.id),
+                  },
+                  ...(canManage
+                    ? [
+                        { icon: EditIcon, label: 'Modifier', onClick: () => setEditing(shot) },
+                        {
+                          icon: DeleteIcon,
+                          label: 'Supprimer',
+                          danger: true,
+                          onClick: () => setDeleting(shot),
+                        },
+                      ]
+                    : []),
                 ]}
               />
             ))}
@@ -173,7 +262,10 @@ export default function ShotsTab({ projectId, sequences, shots, canManage, reloa
           shot={editing}
           sequences={sortedSequences}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); reload(); }}
+          onSaved={() => {
+            setEditing(null);
+            reload();
+          }}
         />
       )}
 

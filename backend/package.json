@@ -16,6 +16,8 @@
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
     "storage:smoke": "tsx scripts/storage-smoke.ts",
+    "format": "prettier --write \"src/**/*.ts\" \"prisma/**/*.ts\" \"scripts/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\" \"scripts/**/*.ts\"",
     "test": "vitest run",
     "test:integration": "vitest run -c vitest.integration.config.ts"
   },
@@ -52,6 +54,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.2",
     "@types/supertest": "^6.0.2",
+    "prettier": "^3.9.4",
     "prisma": "^5.22.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",

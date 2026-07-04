@@ -22,12 +22,20 @@ type MediaLite = MediaRef & { thumbnailUrl: string | null; url: string };
 type ExcalidrawApi = any;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const blobToDataURL = (b: Blob) => new Promise<string>((res, rej) => {
-  const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(b);
-});
+const blobToDataURL = (b: Blob) =>
+  new Promise<string>((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result as string);
+    r.onerror = rej;
+    r.readAsDataURL(b);
+  });
 // Fichier Excalidraw construit hors du composant (règle react-hooks/purity : Date.now)
-const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) =>
-  ({ id: fileId, mimeType: mimeType || 'image/jpeg', dataURL, created: Date.now() });
+const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
+  id: fileId,
+  mimeType: mimeType || 'image/jpeg',
+  dataURL,
+  created: Date.now(),
+});
 
 export default function BoardPage({ scope }: { scope: Scope }) {
   const { id } = useParams();
@@ -50,15 +58,21 @@ export default function BoardPage({ scope }: { scope: Scope }) {
   });
   const initial = boardQ.data
     ? { elements: boardQ.data.board.document?.elements ?? [], files: boardQ.data.board.document?.files ?? {} }
-    : boardQ.isError ? { elements: [], files: {} } : null;
+    : boardQ.isError
+      ? { elements: [], files: {} }
+      : null;
   const loadError = boardQ.error?.message ?? null;
 
   const save = (elements: readonly unknown[], _appState: unknown, files: unknown) => {
     setSaved(false);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      try { await api.put(base, { document: { elements, files } }); setSaved(true); }
-      catch (e) { setError(e instanceof Error ? e.message : 'Erreur'); }
+      try {
+        await api.put(base, { document: { elements, files } });
+        setSaved(true);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Erreur');
+      }
     }, 1200);
   };
 
@@ -71,7 +85,8 @@ export default function BoardPage({ scope }: { scope: Scope }) {
   const projectId = scope === 'project' ? targetId : assetQ.data?.asset.projectId;
   const libraryQ = useQuery({
     queryKey: qk.projectMedia(projectId ?? 0, 'IMAGE'),
-    queryFn: () => api.get<{ media: MediaLite[] }>(`/api/media?projectId=${projectId}&kind=IMAGE`).then((d) => d.media),
+    queryFn: () =>
+      api.get<{ media: MediaLite[] }>(`/api/media?projectId=${projectId}&kind=IMAGE`).then((d) => d.media),
     enabled: showLib && projectId != null,
   });
   const library = libraryQ.data ?? [];
@@ -88,42 +103,78 @@ export default function BoardPage({ scope }: { scope: Scope }) {
         { type: 'image', fileId, x: 80, y: 80, width: 320, height: 220 } as never,
       ]);
       ex.updateScene({ elements: [...ex.getSceneElements(), ...els] });
-    } catch (e) { setError(e instanceof Error ? e.message : 'Insertion échouée'); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Insertion échouée');
+    }
   };
 
-  if (!initial) return <Shell title="Board"><p className="text-sm text-muted-foreground">Chargement du board…</p></Shell>;
+  if (!initial)
+    return (
+      <Shell title="Board">
+        <p className="text-sm text-muted-foreground">Chargement du board…</p>
+      </Shell>
+    );
 
   return (
     <Shell
       title={`Board ${scope === 'project' ? 'projet' : 'asset'} — mood/reference`}
-      breadcrumb={<EntityBreadcrumb entity={scope === 'project' ? 'project' : 'asset'} id={targetId} tail="Board" />}
+      breadcrumb={
+        <EntityBreadcrumb entity={scope === 'project' ? 'project' : 'asset'} id={targetId} tail="Board" />
+      }
     >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowLib((s) => !s)} className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted">Bibliothèque média</button>
+          <button
+            onClick={() => setShowLib((s) => !s)}
+            className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted"
+          >
+            Bibliothèque média
+          </button>
           <span className="text-xs text-muted-foreground">{saved ? '✓ enregistré' : '… enregistrement'}</span>
         </div>
-        <Link to={scope === 'project' ? `/projects/${targetId}` : `/assets/${targetId}`} className="text-sm text-muted-foreground hover:text-foreground">← Retour</Link>
+        <Link
+          to={scope === 'project' ? `/projects/${targetId}` : `/assets/${targetId}`}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Retour
+        </Link>
       </div>
       {(error ?? loadError) && <p className="mb-2 text-sm text-destructive">{error ?? loadError}</p>}
       <div className="flex gap-3">
         {showLib && (
-          <div className="custom-scrollbar w-44 shrink-0 space-y-2 overflow-auto rounded-lg border border-border bg-card p-2" style={{ height: '78vh' }}>
+          <div
+            className="custom-scrollbar w-44 shrink-0 space-y-2 overflow-auto rounded-lg border border-border bg-card p-2"
+            style={{ height: '78vh' }}
+          >
             <div className="text-xs font-medium text-muted-foreground">Images publiées</div>
             {library.map((m) => (
-              <button key={m.id} onClick={() => insert(m)} title={`Insérer ${m.originalName}`}
-                className="block w-full overflow-hidden rounded border border-border hover:border-primary">
-                {m.thumbnailUrl
-                  ? <img src={m.thumbnailUrl} alt={m.originalName} className="h-20 w-full object-cover" />
-                  : <div className="flex h-20 items-center justify-center text-[10px] text-muted-foreground">{m.originalName}</div>}
+              <button
+                key={m.id}
+                onClick={() => insert(m)}
+                title={`Insérer ${m.originalName}`}
+                className="block w-full overflow-hidden rounded border border-border hover:border-primary"
+              >
+                {m.thumbnailUrl ? (
+                  <img src={m.thumbnailUrl} alt={m.originalName} className="h-20 w-full object-cover" />
+                ) : (
+                  <div className="flex h-20 items-center justify-center text-[10px] text-muted-foreground">
+                    {m.originalName}
+                  </div>
+                )}
               </button>
             ))}
-            {library.length === 0 && <p className="text-[11px] text-muted-foreground">Aucune image publiée. Glissez-déposez directement vos fichiers sur le board.</p>}
+            {library.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Aucune image publiée. Glissez-déposez directement vos fichiers sur le board.
+              </p>
+            )}
           </div>
         )}
         <div style={{ height: '78vh' }} className="flex-1 overflow-hidden rounded-lg border border-border">
           <Excalidraw
-            excalidrawAPI={(a: ExcalidrawApi) => { apiRef.current = a; }}
+            excalidrawAPI={(a: ExcalidrawApi) => {
+              apiRef.current = a;
+            }}
             initialData={{ elements: initial.elements as never, files: initial.files as never }}
             onChange={save}
             theme={theme}

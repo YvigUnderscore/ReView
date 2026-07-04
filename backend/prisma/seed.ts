@@ -1,4 +1,12 @@
-import { PrismaClient, Role, AssetType, TaskType, MediaKind, VersionStatus, MediaStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  Role,
+  AssetType,
+  TaskType,
+  MediaKind,
+  VersionStatus,
+  MediaStatus,
+} from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -51,15 +59,29 @@ async function main(): Promise<void> {
       projectId_sequenceId_code: { projectId: project.id, sequenceId: sequence.id, code: 'SH010' },
     },
     update: {},
-    create: { projectId: project.id, sequenceId: sequence.id, name: 'Plan large', code: 'SH010', startFrame: 1001, endFrame: 1120 },
+    create: {
+      projectId: project.id,
+      sequenceId: sequence.id,
+      name: 'Plan large',
+      code: 'SH010',
+      startFrame: 1001,
+      endFrame: 1120,
+    },
   });
 
   // Task sur le shot + version + média (placeholder, sans fichier réel dans MinIO)
-  const existingTask = await prisma.task.findFirst({ where: { shotId: shot.id, name: 'Animation plan large' } });
+  const existingTask = await prisma.task.findFirst({
+    where: { shotId: shot.id, name: 'Animation plan large' },
+  });
   const task =
     existingTask ??
     (await prisma.task.create({
-      data: { shotId: shot.id, name: 'Animation plan large', type: TaskType.ANIMATION, assigneeId: artist.id },
+      data: {
+        shotId: shot.id,
+        name: 'Animation plan large',
+        type: TaskType.ANIMATION,
+        assigneeId: artist.id,
+      },
     }));
 
   const existingVersion = await prisma.version.findFirst({ where: { taskId: task.id, name: 'V01' } });
@@ -89,7 +111,12 @@ async function main(): Promise<void> {
   await prisma.asset.upsert({
     where: { projectId_name: { projectId: project.id, name: 'Héros' } },
     update: {},
-    create: { projectId: project.id, name: 'Héros', type: AssetType.CHARACTER, description: 'Personnage principal' },
+    create: {
+      projectId: project.id,
+      name: 'Héros',
+      type: AssetType.CHARACTER,
+      description: 'Personnage principal',
+    },
   });
 
   console.info('✅ Seed terminé.');

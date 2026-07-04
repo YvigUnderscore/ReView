@@ -33,7 +33,10 @@ router.patch(
 
 // POST /api/notifications/read-all — marque toutes comme lues
 router.post('/read-all', async (req, res) => {
-  await prisma.notification.updateMany({ where: { userId: req.user!.id, isRead: false }, data: { isRead: true } });
+  await prisma.notification.updateMany({
+    where: { userId: req.user!.id, isRead: false },
+    data: { isRead: true },
+  });
   res.json({ ok: true });
 });
 

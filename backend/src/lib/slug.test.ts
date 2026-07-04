@@ -17,7 +17,7 @@ describe('slugify', () => {
 });
 
 describe('slugifyFilename', () => {
-  it('préserve l\'extension en la mettant en minuscules', () => {
+  it("préserve l'extension en la mettant en minuscules", () => {
     expect(slugifyFilename('Mon Plan Final.MOV')).toBe('mon-plan-final.mov');
   });
   it('slugifie un nom sans extension', () => {

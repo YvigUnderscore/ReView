@@ -14,14 +14,20 @@ let artistId = 0;
 beforeAll(async () => {
   const status = await request(app).get('/api/setup/status');
   if (status.body.needsSetup) {
-    const r = await request(app)
-      .post('/api/setup')
-      .send({ studioName: 'CI Studio', adminEmail: 'ci-admin@review.local', adminPassword: 'admin1234', adminName: 'CI' });
+    const r = await request(app).post('/api/setup').send({
+      studioName: 'CI Studio',
+      adminEmail: 'ci-admin@review.local',
+      adminPassword: 'admin1234',
+      adminName: 'CI',
+    });
     token = r.body.token;
   } else {
     for (const email of ['admin@review.local', 'ci-admin@review.local']) {
       const r = await request(app).post('/api/auth/login').send({ email, password: 'admin1234' });
-      if (r.status === 200) { token = r.body.token; break; }
+      if (r.status === 200) {
+        token = r.body.token;
+        break;
+      }
     }
   }
 
@@ -88,7 +94,10 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const auth = { Authorization: `Bearer ${token}` };
 
     // Projet (admin) + membership de l'artiste pour qu'il y ait accès
-    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Project ${suffix}` });
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Project ${suffix}` });
     expect(proj.status).toBe(201);
     const projectId = proj.body.project.id;
     if (artistId) {
@@ -97,51 +106,75 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
 
     // RBAC : l'artiste ne peut pas créer de séquence
     const seqByArtist = await request(app)
-      .post('/api/sequences').set('Authorization', `Bearer ${artistToken}`)
+      .post('/api/sequences')
+      .set('Authorization', `Bearer ${artistToken}`)
       .send({ projectId, name: 'X', code: `X${suffix}` });
     expect(seqByArtist.status).toBe(403);
 
     // Shot + Task (admin)
-    const shot = await request(app).post('/api/shots').set(auth).send({ projectId, name: 'IT Shot', code: `SH${suffix}` });
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
+      .send({ projectId, name: 'IT Shot', code: `SH${suffix}` });
     expect(shot.status).toBe(201);
-    const task = await request(app).post('/api/tasks').set(auth).send({ shotId: shot.body.shot.id, name: 'IT Task', type: 'COMPOSITING' });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'IT Task', type: 'COMPOSITING' });
     expect(task.status).toBe(201);
 
     // Version par l'artiste
-    const ver = await request(app).post('/api/versions').set('Authorization', `Bearer ${artistToken}`).send({ taskId: task.body.task.id });
+    const ver = await request(app)
+      .post('/api/versions')
+      .set('Authorization', `Bearer ${artistToken}`)
+      .send({ taskId: task.body.task.id });
     expect(ver.status).toBe(201);
     const versionId = ver.body.version.id;
 
     // Upload présigné d'une image
     const jpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(60)]);
-    const up = await request(app).post('/api/media/upload-url').set('Authorization', `Bearer ${artistToken}`)
+    const up = await request(app)
+      .post('/api/media/upload-url')
+      .set('Authorization', `Bearer ${artistToken}`)
       .send({ versionId, filename: 'it.jpg', contentType: 'image/jpeg', kind: 'IMAGE', size: jpg.length });
     expect(up.status).toBe(201);
     const { mediaObjectId, uploadUrl } = up.body;
 
     // PUT direct vers MinIO via l'URL présignée
-    const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'content-type': 'image/jpeg' }, body: jpg });
+    const putRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'image/jpeg' },
+      body: jpg,
+    });
     expect(putRes.ok).toBe(true);
 
     // Finalize (validation magic bytes → PROCESSING/READY)
-    const fin = await request(app).post(`/api/media/${mediaObjectId}/finalize`).set('Authorization', `Bearer ${artistToken}`);
+    const fin = await request(app)
+      .post(`/api/media/${mediaObjectId}/finalize`)
+      .set('Authorization', `Bearer ${artistToken}`);
     expect(fin.status).toBe(200);
     expect(fin.body.detectedExtension).toBe('.jpg');
 
     // Liste des versions : _count.media reflète la visibilité réelle (10.C2) —
     // le brouillon compte pour son uploader, pas pour un autre membre.
-    const versionsArtist = await request(app).get(`/api/versions?taskId=${task.body.task.id}`).set('Authorization', `Bearer ${artistToken}`);
+    const versionsArtist = await request(app)
+      .get(`/api/versions?taskId=${task.body.task.id}`)
+      .set('Authorization', `Bearer ${artistToken}`);
     expect(versionsArtist.status).toBe(200);
     expect(versionsArtist.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(1);
     const versionsAdmin = await request(app).get(`/api/versions?taskId=${task.body.task.id}`).set(auth);
     expect(versionsAdmin.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(0);
 
     // Commentaire sur le média
-    const cmt = await request(app).post('/api/comments').set('Authorization', `Bearer ${artistToken}`)
+    const cmt = await request(app)
+      .post('/api/comments')
+      .set('Authorization', `Bearer ${artistToken}`)
       .send({ mediaObjectId, content: 'Commentaire intégration', timestamp: 1 });
     expect(cmt.status).toBe(201);
 
-    const list = await request(app).get(`/api/comments?mediaObjectId=${mediaObjectId}`).set('Authorization', `Bearer ${artistToken}`);
+    const list = await request(app)
+      .get(`/api/comments?mediaObjectId=${mediaObjectId}`)
+      .set('Authorization', `Bearer ${artistToken}`);
     expect(list.status).toBe(200);
     expect(list.body.comments.length).toBeGreaterThanOrEqual(1);
   });
@@ -149,17 +182,36 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
   it('partage client : lien COMMENT → accès public + commentaire invité', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
-    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Share ${suffix}` });
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Share ${suffix}` });
     const projectId = proj.body.project.id;
-    const shot = await request(app).post('/api/shots').set(auth).send({ projectId, name: 'S', code: `S${suffix}` });
-    const task = await request(app).post('/api/tasks').set(auth).send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
+      .send({ projectId, name: 'S', code: `S${suffix}` });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
     const versionId = ver.body.version.id;
 
     // Média 3D (glTF) : finalize → READY immédiat (pas de worker requis pour être visible côté client)
     const glb = Buffer.concat([Buffer.from('glTF', 'ascii'), Buffer.alloc(60)]);
-    const up = await request(app).post('/api/media/upload-url').set(auth).send({ versionId, filename: 's.glb', contentType: 'model/gltf-binary', kind: 'MODEL_3D', size: glb.length });
-    await fetch(up.body.uploadUrl, { method: 'PUT', headers: { 'content-type': 'model/gltf-binary' }, body: glb });
+    const up = await request(app).post('/api/media/upload-url').set(auth).send({
+      versionId,
+      filename: 's.glb',
+      contentType: 'model/gltf-binary',
+      kind: 'MODEL_3D',
+      size: glb.length,
+    });
+    await fetch(up.body.uploadUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'model/gltf-binary' },
+      body: glb,
+    });
     const fin = await request(app).post(`/api/media/${up.body.mediaObjectId}/finalize`).set(auth);
     expect(fin.body.media.status).toBe('READY');
     await request(app).patch(`/api/versions/${versionId}`).set(auth).send({ status: 'PUBLISHED' });
@@ -176,7 +228,8 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(pub.status).toBe(200);
     expect(pub.body.media.length).toBeGreaterThanOrEqual(1);
 
-    const guest = await request(app).post(`/api/client/${tk}/media/${up.body.mediaObjectId}/comments`)
+    const guest = await request(app)
+      .post(`/api/client/${tk}/media/${up.body.mediaObjectId}/comments`)
       .send({ guestName: 'Client IT', content: 'Commentaire invité' });
     expect(guest.status).toBe(201);
   });
@@ -187,12 +240,22 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
 
-    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Tree ${suffix}` });
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Tree ${suffix}` });
     const projectId = proj.body.project.id;
-    const seq = await request(app).post('/api/sequences').set(auth).send({ projectId, name: 'Seq tree', code: `TR${suffix}` });
-    const inSeq = await request(app).post('/api/shots').set(auth)
+    const seq = await request(app)
+      .post('/api/sequences')
+      .set(auth)
+      .send({ projectId, name: 'Seq tree', code: `TR${suffix}` });
+    const inSeq = await request(app)
+      .post('/api/shots')
+      .set(auth)
       .send({ projectId, name: 'Shot en séquence', code: `TA${suffix}`, sequenceId: seq.body.sequence.id });
-    const orphan = await request(app).post('/api/shots').set(auth)
+    const orphan = await request(app)
+      .post('/api/shots')
+      .set(auth)
       .send({ projectId, name: 'Shot hors séquence', code: `TB${suffix}` });
     expect(inSeq.status).toBe(201);
     expect(orphan.status).toBe(201);
@@ -201,7 +264,9 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
     const seqs = await request(app).get(`/api/sequences?projectId=${projectId}`).set(auth);
     expect(seqs.status).toBe(200);
     expect(seqs.body.unsequencedShots).toBe(1);
-    expect(seqs.body.sequences.find((s: { id: number }) => s.id === seq.body.sequence.id)._count.shots).toBe(1);
+    expect(seqs.body.sequences.find((s: { id: number }) => s.id === seq.body.sequence.id)._count.shots).toBe(
+      1,
+    );
 
     // GET /api/shots?sequenceId=none → uniquement le shot orphelin
     const orphans = await request(app).get(`/api/shots?projectId=${projectId}&sequenceId=none`).set(auth);
@@ -209,7 +274,9 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
     expect(orphans.body.shots.map((s: { id: number }) => s.id)).toEqual([orphan.body.shot.id]);
 
     // GET /api/shots?sequenceId=<id> → uniquement le shot de la séquence
-    const bySeq = await request(app).get(`/api/shots?projectId=${projectId}&sequenceId=${seq.body.sequence.id}`).set(auth);
+    const bySeq = await request(app)
+      .get(`/api/shots?projectId=${projectId}&sequenceId=${seq.body.sequence.id}`)
+      .set(auth);
     expect(bySeq.status).toBe(200);
     expect(bySeq.body.shots.map((s: { id: number }) => s.id)).toEqual([inSeq.body.shot.id]);
   });
@@ -222,12 +289,23 @@ describe('API — recherche globale (/api/search)', () => {
     const needle = `Zx${suffix}`; // motif improbable, unique au run
 
     // Pipeline dans un projet SANS membership artiste
-    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Search ${needle}` });
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Search ${needle}` });
     const projectId = proj.body.project.id;
-    const seq = await request(app).post('/api/sequences').set(auth).send({ projectId, name: `Seq ${needle}`, code: `SQ${needle}` });
-    const shot = await request(app).post('/api/shots').set(auth)
+    const seq = await request(app)
+      .post('/api/sequences')
+      .set(auth)
+      .send({ projectId, name: `Seq ${needle}`, code: `SQ${needle}` });
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
       .send({ projectId, name: `Shot ${needle}`, code: `SH${needle}`, sequenceId: seq.body.sequence.id });
-    await request(app).post('/api/tasks').set(auth).send({ shotId: shot.body.shot.id, name: `Task ${needle}`, type: 'COMPOSITING' });
+    await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: `Task ${needle}`, type: 'COMPOSITING' });
 
     // Admin : toutes les entités remontent (insensible à la casse)
     const r = await request(app).get(`/api/search?q=${needle.toLowerCase()}`).set(auth);
@@ -238,7 +316,9 @@ describe('API — recherche globale (/api/search)', () => {
     expect(r.body.tasks.length).toBe(1);
 
     // Artiste non membre : aucune entité de ce projet ne fuit
-    const rArtist = await request(app).get(`/api/search?q=${needle}`).set('Authorization', `Bearer ${artistToken}`);
+    const rArtist = await request(app)
+      .get(`/api/search?q=${needle}`)
+      .set('Authorization', `Bearer ${artistToken}`);
     expect(rArtist.status).toBe(200);
     expect(rArtist.body.projects).toEqual([]);
     expect(rArtist.body.sequences).toEqual([]);
@@ -257,12 +337,23 @@ describe('API — contexte breadcrumb (/api/context)', () => {
     const auth = { Authorization: `Bearer ${token}` };
 
     // Pipeline minimal : projet (SANS membership artiste) + séquence + shot + tâche + version
-    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Context ${suffix}` });
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Context ${suffix}` });
     const projectId = proj.body.project.id;
-    const seq = await request(app).post('/api/sequences').set(auth).send({ projectId, name: 'Seq ctx', code: `SQ${suffix}` });
-    const shot = await request(app).post('/api/shots').set(auth)
+    const seq = await request(app)
+      .post('/api/sequences')
+      .set(auth)
+      .send({ projectId, name: 'Seq ctx', code: `SQ${suffix}` });
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
       .send({ projectId, name: 'Shot ctx', code: `CX${suffix}`, sequenceId: seq.body.sequence.id });
-    const task = await request(app).post('/api/tasks').set(auth).send({ shotId: shot.body.shot.id, name: 'Task ctx', type: 'COMPOSITING' });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'Task ctx', type: 'COMPOSITING' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
     // Chaîne complète depuis la version
@@ -280,7 +371,8 @@ describe('API — contexte breadcrumb (/api/context)', () => {
     expect(ctxShot.body.context.task).toBeUndefined();
 
     // RBAC : l'artiste n'est pas membre du projet → 403
-    const forbidden = await request(app).get(`/api/context/task/${task.body.task.id}`)
+    const forbidden = await request(app)
+      .get(`/api/context/task/${task.body.task.id}`)
       .set('Authorization', `Bearer ${artistToken}`);
     expect(forbidden.status).toBe(403);
 
@@ -293,19 +385,27 @@ describe('API — contexte breadcrumb (/api/context)', () => {
 });
 
 describe('API — notifications (assignation de tâche)', () => {
-  it('notifie l\'assigné, expose le compteur non-lus, marque lu / tout lu, scope par utilisateur', async () => {
+  it("notifie l'assigné, expose le compteur non-lus, marque lu / tout lu, scope par utilisateur", async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const artistAuth = { Authorization: `Bearer ${artistToken}` };
 
     // Projet + membership de l'artiste
-    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Notif ${suffix}` });
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Notif ${suffix}` });
     const projectId = proj.body.project.id;
     await request(app).post(`/api/projects/${projectId}/members`).set(auth).send({ userId: artistId });
 
     // Tâche assignée à l'artiste (par l'admin) → notification pour l'artiste
-    const shot = await request(app).post('/api/shots').set(auth).send({ projectId, name: 'Notif shot', code: `NF${suffix}` });
-    const task = await request(app).post('/api/tasks').set(auth)
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
+      .send({ projectId, name: 'Notif shot', code: `NF${suffix}` });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
       .send({ shotId: shot.body.shot.id, name: 'Notif task', type: 'ANIMATION', assigneeId: artistId });
     expect(task.status).toBe(201);
     const taskId = task.body.task.id;
@@ -323,9 +423,11 @@ describe('API — notifications (assignation de tâche)', () => {
 
     // Scope par utilisateur : l'admin (auteur de l'assignation) n'est pas notifié
     const listAdmin = await request(app).get('/api/notifications').set(auth);
-    expect(listAdmin.body.notifications.some(
-      (n: { type: string; referenceId: number }) => n.type === 'TASK_ASSIGNED' && n.referenceId === taskId,
-    )).toBe(false);
+    expect(
+      listAdmin.body.notifications.some(
+        (n: { type: string; referenceId: number }) => n.type === 'TASK_ASSIGNED' && n.referenceId === taskId,
+      ),
+    ).toBe(false);
 
     // RBAC : l'admin ne peut pas marquer la notification de l'artiste (404) ; l'artiste oui
     const foreign = await request(app).patch(`/api/notifications/${notif.id}/read`).set(auth);

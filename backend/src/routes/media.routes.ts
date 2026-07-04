@@ -40,12 +40,17 @@ router.post(
   }),
   async (req, res) => {
     const { versionId, filename, contentType, kind, size } = req.body as {
-      versionId: number; filename: string; contentType: string; kind: MediaKind; size?: number;
+      versionId: number;
+      filename: string;
+      contentType: string;
+      kind: MediaKind;
+      size?: number;
     };
     const storageCtx = await resolveStorageContextForVersion(versionId);
     if (!storageCtx) throw notFound('Version introuvable ou non rattachée à un projet');
     const projectId = storageCtx.projectId;
-    if (!(await checkProjectAccess(req.user!.id, req.user!.role, projectId))) throw forbidden('Accès au projet refusé');
+    if (!(await checkProjectAccess(req.user!.id, req.user!.role, projectId)))
+      throw forbidden('Accès au projet refusé');
 
     // Quotas configurables (admin exempté du quota de stockage)
     const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);
@@ -55,12 +60,21 @@ router.post(
     const active = await prisma.mediaObject.count({
       where: { uploaderId: req.user!.id, status: MediaStatus.UPLOADING },
     });
-    if (active >= maxConcurrent) throw new AppError('Trop d\'uploads simultanés', 429, 'TOO_MANY_UPLOADS');
+    if (active >= maxConcurrent) throw new AppError("Trop d'uploads simultanés", 429, 'TOO_MANY_UPLOADS');
 
     if (req.user!.role !== Role.ADMIN) {
-      const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { storageLimit: true } });
-      const limit = user?.storageLimit != null ? Number(user.storageLimit) : await getNumericSetting(SETTING_KEYS.STORAGE_LIMIT_USER);
-      const agg = await prisma.mediaObject.aggregate({ _sum: { size: true }, where: { uploaderId: req.user!.id } });
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: { storageLimit: true },
+      });
+      const limit =
+        user?.storageLimit != null
+          ? Number(user.storageLimit)
+          : await getNumericSetting(SETTING_KEYS.STORAGE_LIMIT_USER);
+      const agg = await prisma.mediaObject.aggregate({
+        _sum: { size: true },
+        where: { uploaderId: req.user!.id },
+      });
       const used = Number(agg._sum.size ?? 0n);
       if (used + (size ?? 0) > limit) throw forbidden('Quota de stockage dépassé', 'STORAGE_LIMIT');
     }
@@ -157,10 +171,13 @@ router.post(
  */
 router.get(
   '/',
-  validate({ query: z.object({ projectId: z.coerce.number().int(), kind: z.nativeEnum(MediaKind).optional() }) }),
+  validate({
+    query: z.object({ projectId: z.coerce.number().int(), kind: z.nativeEnum(MediaKind).optional() }),
+  }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);
-    if (!(await checkProjectAccess(req.user!.id, req.user!.role, projectId))) throw forbidden('Accès au projet refusé');
+    if (!(await checkProjectAccess(req.user!.id, req.user!.role, projectId)))
+      throw forbidden('Accès au projet refusé');
     const kind = req.query.kind as MediaKind | undefined;
     const media = await prisma.mediaObject.findMany({
       where: {
@@ -224,10 +241,12 @@ router.get('/drafts', async (req, res) => {
     include: {
       version: {
         select: {
-          id: true, name: true,
+          id: true,
+          name: true,
           task: {
             select: {
-              id: true, name: true,
+              id: true,
+              name: true,
               shot: { select: { code: true, sequence: { select: { code: true } } } },
               asset: { select: { name: true } },
             },
@@ -242,7 +261,8 @@ router.get('/drafts', async (req, res) => {
     const t = v?.task;
     // Localisation lisible : « SEQ · SHOT › Tâche » ou « Asset »
     let location = '';
-    if (t?.shot) location = `${t.shot.sequence ? t.shot.sequence.code + ' · ' : ''}${t.shot.code} › ${t.name}`;
+    if (t?.shot)
+      location = `${t.shot.sequence ? t.shot.sequence.code + ' · ' : ''}${t.shot.code} › ${t.name}`;
     else if (t?.asset) location = `${t.asset.name} › ${t.name}`;
     else if (v?.asset) location = v.asset.name;
     return {
@@ -289,7 +309,10 @@ router.post(
       return res.json({ media: { ...updated, size: Number(updated.size) }, requeued: false });
     }
 
-    const updated = await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.PROCESSING } });
+    const updated = await prisma.mediaObject.update({
+      where: { id },
+      data: { status: MediaStatus.PROCESSING },
+    });
     await enqueueMediaJob({ mediaObjectId: id, kind: jobKind });
     logAudit({ userId: req.user!.id, action: 'MEDIA_REPROCESS', entityType: 'MediaObject', entityId: id });
     res.json({ media: { ...updated, size: Number(updated.size) }, requeued: true });
@@ -299,65 +322,71 @@ router.post(
 /**
  * GET /api/media/:id — objet média complet + URLs présignées (original, miniature, proxy).
  */
-router.get(
-  '/:id',
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const media = await prisma.mediaObject.findUnique({ where: { id: Number(req.params.id) } });
-    if (!media) throw notFound('Média introuvable');
-    // Brouillon : visible uniquement par l'uploader (404 sinon pour ne pas divulguer l'existence)
-    if (!media.published && media.uploaderId !== req.user!.id) throw notFound('Média introuvable');
-    const projectId = await resolveProjectId(media.versionId);
-    if (!projectId || !(await checkProjectAccess(req.user!.id, req.user!.role, projectId))) {
-      throw forbidden('Accès au projet refusé');
-    }
-    const meta = (media.metadata ?? {}) as { proxyKey?: string; glbKey?: string; fps?: number; width?: number; height?: number };
-    const [url, thumbnailUrl, proxyUrl, glbUrl, project] = await Promise.all([
-      storage.getPresignedGetUrl(media.storageKey),
-      media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
-      meta.proxyKey ? storage.getPresignedGetUrl(meta.proxyKey) : Promise.resolve(null),
-      meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
-      prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
-    ]);
-    res.json({
-      media: { ...media, size: Number(media.size) },
-      url, thumbnailUrl, proxyUrl, glbUrl,
-      startFrame: project?.startFrame ?? 1001,
-      fps: meta.fps ?? null,
-    });
-  },
-);
+router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
+  const media = await prisma.mediaObject.findUnique({ where: { id: Number(req.params.id) } });
+  if (!media) throw notFound('Média introuvable');
+  // Brouillon : visible uniquement par l'uploader (404 sinon pour ne pas divulguer l'existence)
+  if (!media.published && media.uploaderId !== req.user!.id) throw notFound('Média introuvable');
+  const projectId = await resolveProjectId(media.versionId);
+  if (!projectId || !(await checkProjectAccess(req.user!.id, req.user!.role, projectId))) {
+    throw forbidden('Accès au projet refusé');
+  }
+  const meta = (media.metadata ?? {}) as {
+    proxyKey?: string;
+    glbKey?: string;
+    fps?: number;
+    width?: number;
+    height?: number;
+  };
+  const [url, thumbnailUrl, proxyUrl, glbUrl, project] = await Promise.all([
+    storage.getPresignedGetUrl(media.storageKey),
+    media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
+    meta.proxyKey ? storage.getPresignedGetUrl(meta.proxyKey) : Promise.resolve(null),
+    meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
+    prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
+  ]);
+  res.json({
+    media: { ...media, size: Number(media.size) },
+    url,
+    thumbnailUrl,
+    proxyUrl,
+    glbUrl,
+    startFrame: project?.startFrame ?? 1001,
+    fps: meta.fps ?? null,
+  });
+});
 
 /**
  * GET /api/media/:id/url — URL présignée GET pour le serving direct depuis MinIO.
  */
-router.get(
-  '/:id/url',
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const media = await prisma.mediaObject.findUnique({ where: { id: Number(req.params.id) } });
-    if (!media) throw notFound('Média introuvable');
-    if (!media.published && media.uploaderId !== req.user!.id) throw notFound('Média introuvable');
-    const projectId = await resolveProjectId(media.versionId);
-    if (!projectId || !(await checkProjectAccess(req.user!.id, req.user!.role, projectId))) {
-      throw forbidden('Accès au projet refusé');
-    }
-    const url = await storage.getPresignedGetUrl(media.storageKey);
-    res.json({ url });
-  },
-);
+router.get('/:id/url', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
+  const media = await prisma.mediaObject.findUnique({ where: { id: Number(req.params.id) } });
+  if (!media) throw notFound('Média introuvable');
+  if (!media.published && media.uploaderId !== req.user!.id) throw notFound('Média introuvable');
+  const projectId = await resolveProjectId(media.versionId);
+  if (!projectId || !(await checkProjectAccess(req.user!.id, req.user!.role, projectId))) {
+    throw forbidden('Accès au projet refusé');
+  }
+  const url = await storage.getPresignedGetUrl(media.storageKey);
+  res.json({ url });
+});
 
 /** Vérifie que l'utilisateur peut gérer ce média (uploader ou superviseur+) et renvoie le projet. */
 const assertMediaManage = async (
   mediaId: number,
   user: { id: number; role: Role },
 ): Promise<{ projectId: number; versionId: number }> => {
-  const media = await prisma.mediaObject.findUnique({ where: { id: mediaId }, select: { uploaderId: true, versionId: true } });
+  const media = await prisma.mediaObject.findUnique({
+    where: { id: mediaId },
+    select: { uploaderId: true, versionId: true },
+  });
   if (!media) throw notFound('Média introuvable');
   const projectId = await resolveProjectId(media.versionId);
-  if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
+  if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('Accès au projet refusé');
   const manager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
-  if (!manager && media.uploaderId !== user.id) throw forbidden('Suppression réservée à l\'uploader ou un superviseur');
+  if (!manager && media.uploaderId !== user.id)
+    throw forbidden("Suppression réservée à l'uploader ou un superviseur");
   return { projectId, versionId: media.versionId };
 };
 
@@ -372,23 +401,32 @@ router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() 
 });
 
 // POST /api/media/:id/restore (uploader ou superviseur+)
-router.post('/:id/restore', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
-  const id = Number(req.params.id);
-  const { projectId, versionId } = await assertMediaManage(id, req.user!);
-  await restoreMedia(id);
-  emitToProject(projectId, 'media:update', { projectId, id, versionId });
-  res.status(204).end();
-});
+router.post(
+  '/:id/restore',
+  validate({ params: z.object({ id: z.coerce.number().int() }) }),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const { projectId, versionId } = await assertMediaManage(id, req.user!);
+    await restoreMedia(id);
+    emitToProject(projectId, 'media:update', { projectId, id, versionId });
+    res.status(204).end();
+  },
+);
 
 // DELETE /api/media/:id/purge — suppression définitive DB + MinIO (superviseur+)
-router.delete('/:id/purge', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
-  if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR) throw forbidden('Réservé aux superviseurs/admins');
-  const id = Number(req.params.id);
-  const { projectId, versionId } = await assertMediaManage(id, req.user!);
-  await purgeMedia(id);
-  logAudit({ userId: req.user!.id, action: 'MEDIA_PURGE', entityType: 'MediaObject', entityId: id });
-  emitToProject(projectId, 'media:update', { projectId, id, versionId });
-  res.status(204).end();
-});
+router.delete(
+  '/:id/purge',
+  validate({ params: z.object({ id: z.coerce.number().int() }) }),
+  async (req, res) => {
+    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
+      throw forbidden('Réservé aux superviseurs/admins');
+    const id = Number(req.params.id);
+    const { projectId, versionId } = await assertMediaManage(id, req.user!);
+    await purgeMedia(id);
+    logAudit({ userId: req.user!.id, action: 'MEDIA_PURGE', entityType: 'MediaObject', entityId: id });
+    emitToProject(projectId, 'media:update', { projectId, id, versionId });
+    res.status(204).end();
+  },
+);
 
 export default router;

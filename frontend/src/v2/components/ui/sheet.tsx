@@ -16,9 +16,7 @@ const SheetContent = forwardRef<
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay
-      className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
-    />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
     <DialogPrimitive.Content
       ref={ref}
       aria-describedby={undefined}
@@ -44,7 +42,12 @@ function SheetHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 }
 
 function SheetBody({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('custom-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4', className)} {...props} />;
+  return (
+    <div
+      className={cn('custom-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4', className)}
+      {...props}
+    />
+  );
 }
 
 const SheetTitle = forwardRef<

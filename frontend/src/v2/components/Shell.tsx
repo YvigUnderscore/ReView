@@ -1,7 +1,17 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { FolderKanban, Shield, Clapperboard, ChevronRight, Star, BookText, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import {
+  FolderKanban,
+  Shield,
+  Clapperboard,
+  ChevronRight,
+  Star,
+  BookText,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+} from 'lucide-react';
 import { useProjectsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
@@ -20,7 +30,15 @@ import { useSocketInvalidation } from '../lib/socketBridge';
 const COLLAPSE_KEY = 'sidebar-collapsed';
 const ENTITY_PAGE_RE = /^\/(tasks|assets|review)\//;
 
-export default function Shell({ children, title, breadcrumb }: { children: ReactNode; title?: string; breadcrumb?: ReactNode }) {
+export default function Shell({
+  children,
+  title,
+  breadcrumb,
+}: {
+  children: ReactNode;
+  title?: string;
+  breadcrumb?: ReactNode;
+}) {
   const user = useAuth((s) => s.user);
   const { pathname } = useLocation();
   const params = useParams();
@@ -32,9 +50,15 @@ export default function Shell({ children, title, breadcrumb }: { children: React
   const favorites = useFavorites((s) => s.favorites);
   const loadFavorites = useFavorites((s) => s.load);
 
-  useEffect(() => { loadFavorites(); }, [loadFavorites]);
+  useEffect(() => {
+    loadFavorites();
+  }, [loadFavorites]);
 
-  const toggleCollapse = () => setCollapsed((c) => { localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1'); return !c; });
+  const toggleCollapse = () =>
+    setCollapsed((c) => {
+      localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1');
+      return !c;
+    });
 
   // Projet courant pour la sidebar contextuelle : depuis la route (/projects/:id…)
   // ou, sur les pages d'entité (/tasks, /assets, /review), depuis le contexte
@@ -60,7 +84,11 @@ export default function Shell({ children, title, breadcrumb }: { children: React
               <Clapperboard size={20} className="text-primary" />
               ReView
             </Link>
-            <button onClick={toggleCollapse} title="Replier la barre" className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
+            <button
+              onClick={toggleCollapse}
+              title="Replier la barre"
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
               <PanelLeftClose size={18} />
             </button>
           </div>
@@ -69,7 +97,9 @@ export default function Shell({ children, title, breadcrumb }: { children: React
             <Link
               to="/"
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                isProjectsRoot ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                isProjectsRoot
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
               }`}
             >
               <FolderKanban size={18} /> Projets
@@ -127,7 +157,9 @@ export default function Shell({ children, title, breadcrumb }: { children: React
             <Link
               to="/docs"
               className={`mt-3 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                pathname.startsWith('/docs') ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                pathname.startsWith('/docs')
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
               }`}
             >
               <BookText size={18} /> Documentation
@@ -137,7 +169,9 @@ export default function Shell({ children, title, breadcrumb }: { children: React
               <Link
                 to="/admin"
                 className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                  pathname.startsWith('/admin') ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                  pathname.startsWith('/admin')
+                    ? 'bg-secondary text-foreground'
+                    : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
                 }`}
               >
                 <Shield size={18} /> Administration
@@ -153,18 +187,26 @@ export default function Shell({ children, title, breadcrumb }: { children: React
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
           {collapsed && (
-            <button onClick={toggleCollapse} title="Déplier la barre" className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground">
+            <button
+              onClick={toggleCollapse}
+              title="Déplier la barre"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
               <PanelLeftOpen size={18} />
             </button>
           )}
-          {breadcrumb ?? <h1 className="truncate text-sm font-medium text-muted-foreground">{title ?? ''}</h1>}
+          {breadcrumb ?? (
+            <h1 className="truncate text-sm font-medium text-muted-foreground">{title ?? ''}</h1>
+          )}
           <button
             onClick={() => setPaletteOpen(true)}
             title="Recherche globale (Ctrl+K)"
             className="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
             <Search size={14} /> Rechercher…
-            <kbd className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
+            <kbd className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">
+              Ctrl K
+            </kbd>
           </button>
           <NotificationBell />
         </header>

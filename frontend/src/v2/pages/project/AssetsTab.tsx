@@ -12,8 +12,16 @@ import EmptyState from '../../components/ui/empty-state';
 import { ASSET_TYPES, type Asset } from './projectTypes';
 
 /** Onglet Assets réutilisables : création, cartes, assignation shots/séquences. */
-export default function AssetsTab({ projectId, assets, canManage, reload }: {
-  projectId: number; assets: Asset[]; canManage: boolean; reload: () => Promise<void>;
+export default function AssetsTab({
+  projectId,
+  assets,
+  canManage,
+  reload,
+}: {
+  projectId: number;
+  assets: Asset[];
+  canManage: boolean;
+  reload: () => Promise<void>;
 }) {
   const view = useViewMode(`assets:${projectId}`);
   const favs = useFavorites((s) => s.favorites);
@@ -29,18 +37,22 @@ export default function AssetsTab({ projectId, assets, canManage, reload }: {
     try {
       await api.post('/api/assets', { projectId, ...newAsset });
       toast.success(`Asset « ${newAsset.name} » créé`);
-      setNewAsset({ name: '', type: 'CHARACTER' }); reload();
+      setNewAsset({ name: '', type: 'CHARACTER' });
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
       await api.del(`/api/assets/${deleting.id}`);
       toast.success('Asset déplacé dans la corbeille');
-      setDeleting(null); reload();
+      setDeleting(null);
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   return (
@@ -52,11 +64,27 @@ export default function AssetsTab({ projectId, assets, canManage, reload }: {
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
       {canManage && (
         <form onSubmit={create} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
-          <input className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs" placeholder="Nom de l'asset" value={newAsset.name} onChange={(e) => setNewAsset((s) => ({ ...s, name: e.target.value }))} required />
-          <select className="rounded border border-input bg-background px-2 py-1.5 text-xs" value={newAsset.type} onChange={(e) => setNewAsset((s) => ({ ...s, type: e.target.value }))}>
-            {ASSET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          <input
+            className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
+            placeholder="Nom de l'asset"
+            value={newAsset.name}
+            onChange={(e) => setNewAsset((s) => ({ ...s, name: e.target.value }))}
+            required
+          />
+          <select
+            className="rounded border border-input bg-background px-2 py-1.5 text-xs"
+            value={newAsset.type}
+            onChange={(e) => setNewAsset((s) => ({ ...s, type: e.target.value }))}
+          >
+            {ASSET_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
-          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground"><Plus size={14} /> Asset</button>
+          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground">
+            <Plus size={14} /> Asset
+          </button>
         </form>
       )}
       {assets.length === 0 ? (
@@ -64,7 +92,11 @@ export default function AssetsTab({ projectId, assets, canManage, reload }: {
           compact
           icon={Box}
           title="Aucun asset"
-          description={canManage ? 'Créez vos assets réutilisables ci-dessus (personnages, décors, props…).' : 'Les assets du projet apparaîtront ici.'}
+          description={
+            canManage
+              ? 'Créez vos assets réutilisables ci-dessus (personnages, décors, props…).'
+              : 'Les assets du projet apparaîtront ici.'
+          }
         />
       ) : (
         <EntityContainer view={view}>
@@ -77,11 +109,27 @@ export default function AssetsTab({ projectId, assets, canManage, reload }: {
               subtitle={a.type}
               thumbnailUrl={a.thumbnailUrl}
               actions={[
-                { icon: <Star size={15} fill={isFav(a.id) ? 'currentColor' : 'none'} className={isFav(a.id) ? 'text-amber-400' : ''} />, label: 'Favori', onClick: () => toggleFav('ASSET', a.id) },
-                ...(canManage ? [
-                  { icon: <Link2 size={15} />, label: 'Assigner à des shots/séquences', onClick: () => setAssigning(a) },
-                  { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(a) },
-                ] : []),
+                {
+                  icon: (
+                    <Star
+                      size={15}
+                      fill={isFav(a.id) ? 'currentColor' : 'none'}
+                      className={isFav(a.id) ? 'text-amber-400' : ''}
+                    />
+                  ),
+                  label: 'Favori',
+                  onClick: () => toggleFav('ASSET', a.id),
+                },
+                ...(canManage
+                  ? [
+                      {
+                        icon: <Link2 size={15} />,
+                        label: 'Assigner à des shots/séquences',
+                        onClick: () => setAssigning(a),
+                      },
+                      { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(a) },
+                    ]
+                  : []),
               ]}
             />
           ))}

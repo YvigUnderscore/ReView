@@ -3,7 +3,10 @@ import { api, getToken } from '../../lib/apiClient';
 import type { User } from '../types/api';
 
 /** Utilisateur de session (réponse de /api/auth/*) — sous-ensemble de l'entité User. */
-export type AuthUser = Pick<User, 'id' | 'email' | 'name' | 'displayName' | 'initials' | 'avatarUrl' | 'status' | 'role'> &
+export type AuthUser = Pick<
+  User,
+  'id' | 'email' | 'name' | 'displayName' | 'initials' | 'avatarUrl' | 'status' | 'role'
+> &
   Partial<Pick<User, 'firstName' | 'lastName' | 'username'>>;
 
 interface AuthState {
@@ -28,7 +31,10 @@ export const useAuth = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
 
   login: async (email, password) => {
-    const { token, user } = await api.post<{ token: string; user: AuthUser }>('/api/auth/login', { email, password });
+    const { token, user } = await api.post<{ token: string; user: AuthUser }>('/api/auth/login', {
+      email,
+      password,
+    });
     localStorage.setItem('token', token);
     set({ user });
   },

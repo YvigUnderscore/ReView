@@ -3,7 +3,15 @@ import KanbanCard from './KanbanCard';
 import type { BoardTask } from './kanbanTypes';
 
 /** Colonne de statut : zone de dépôt (surbrillance quand une carte la survole). */
-export default function KanbanColumn({ id, label, tasks }: { id: string; label: string; tasks: BoardTask[] }) {
+export default function KanbanColumn({
+  id,
+  label,
+  tasks,
+}: {
+  id: string;
+  label: string;
+  tasks: BoardTask[];
+}) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div
@@ -17,7 +25,9 @@ export default function KanbanColumn({ id, label, tasks }: { id: string; label: 
         <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px]">{tasks.length}</span>
       </div>
       <div className="space-y-2">
-        {tasks.map((t) => <KanbanCard key={t.id} task={t} />)}
+        {tasks.map((t) => (
+          <KanbanCard key={t.id} task={t} />
+        ))}
       </div>
     </div>
   );

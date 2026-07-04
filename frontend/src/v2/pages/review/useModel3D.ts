@@ -5,7 +5,11 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import {
   DEFAULT_TRANSFORM,
-  type Hotspot3D, type MediaResp, type ModelCamera, type ModelViewerEl, type Transform,
+  type Hotspot3D,
+  type MediaResp,
+  type ModelCamera,
+  type ModelViewerEl,
+  type Transform,
 } from './reviewTypes';
 
 /**
@@ -31,7 +35,10 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
   // l'édition locale en cours tant qu'elle n'est pas sauvegardée.
   const versionQ = useQuery({
     queryKey: qk.version(versionId ?? 0),
-    queryFn: () => api.get<{ version: { transform: Partial<Transform> | null } }>(`/api/versions/${versionId}`).then((d) => d.version),
+    queryFn: () =>
+      api
+        .get<{ version: { transform: Partial<Transform> | null } }>(`/api/versions/${versionId}`)
+        .then((d) => d.version),
     enabled: active && !!versionId,
   });
   const [tfEdit, setTfEdit] = useState<Transform | null>(null);
@@ -66,7 +73,7 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
     const readAnims = () => {
       const av = (m.availableAnimations ?? []) as string[];
       setAnimations(av);
-      setCurrentAnim((c) => (c && av.includes(c) ? c : av[0] ?? null));
+      setCurrentAnim((c) => (c && av.includes(c) ? c : (av[0] ?? null)));
       setPlaying(false);
     };
     if (m.loaded) readAnims();
@@ -81,11 +88,17 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
     m.play?.({ repetitions: Infinity });
     setPlaying(true);
   };
-  const pauseAnim = () => { mv()?.pause?.(); setPlaying(false); };
+  const pauseAnim = () => {
+    mv()?.pause?.();
+    setPlaying(false);
+  };
   const selectAnim = (name: string) => {
     setCurrentAnim(name);
     const m = mv();
-    if (m) { m.setAttribute('animation-name', name); if (playing) m.play?.({ repetitions: Infinity }); }
+    if (m) {
+      m.setAttribute('animation-name', name);
+      if (playing) m.play?.({ repetitions: Infinity });
+    }
   };
 
   // Mise à jour live de la transformation : état + application immédiate sur le modèle.
@@ -107,8 +120,11 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
     if (!versionId) return;
     try {
       await api.patch(`/api/versions/${versionId}`, { transform });
-      setSavedTf(true); setTimeout(() => setSavedTf(false), 1500);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Erreur à l\'enregistrement de la transformation'); }
+      setSavedTf(true);
+      setTimeout(() => setSavedTf(false), 1500);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la transformation");
+    }
   };
 
   /** Hotspot sur la surface au centre du viewer (raycast au point central), sinon null. */
@@ -126,7 +142,9 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
     if (!m?.getCameraOrbit) return undefined;
     const r = m.getBoundingClientRect();
     return {
-      orbit: m.getCameraOrbit(), target: m.getCameraTarget?.(), fov: m.getFieldOfView?.(),
+      orbit: m.getCameraOrbit(),
+      target: m.getCameraTarget?.(),
+      fov: m.getFieldOfView?.(),
       aspect: r.height > 0 ? r.width / r.height : undefined,
     };
   };
@@ -145,10 +163,24 @@ export function useModel3D(data: MediaResp | null, glbSrc: string | null) {
   const clearLoadError = useCallback(() => setLoadError(false), []);
 
   return {
-    modelRef, transform, updateTransform, saveTransform, savedTf,
-    loadError, clearLoadError, freeCamera, setFreeCamera,
-    animations, currentAnim, playing, playAnim, pauseAnim, selectAnim,
-    hotspotAtCenter, captureCamera, restoreCamera,
+    modelRef,
+    transform,
+    updateTransform,
+    saveTransform,
+    savedTf,
+    loadError,
+    clearLoadError,
+    freeCamera,
+    setFreeCamera,
+    animations,
+    currentAnim,
+    playing,
+    playAnim,
+    pauseAnim,
+    selectAnim,
+    hotspotAtCenter,
+    captureCamera,
+    restoreCamera,
   };
 }
 

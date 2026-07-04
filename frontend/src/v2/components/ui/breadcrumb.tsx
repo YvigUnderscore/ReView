@@ -9,7 +9,12 @@ function Breadcrumb({ className, ...props }: HTMLAttributes<HTMLElement>) {
 }
 
 function BreadcrumbList({ className, ...props }: HTMLAttributes<HTMLOListElement>) {
-  return <ol className={cn('flex min-w-0 items-center gap-1 text-sm text-muted-foreground', className)} {...props} />;
+  return (
+    <ol
+      className={cn('flex min-w-0 items-center gap-1 text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
 }
 
 function BreadcrumbItem({ className, ...props }: HTMLAttributes<HTMLLIElement>) {
@@ -18,7 +23,10 @@ function BreadcrumbItem({ className, ...props }: HTMLAttributes<HTMLLIElement>) 
 
 function BreadcrumbLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="max-w-48 truncate rounded px-1 py-0.5 transition-colors hover:bg-secondary/60 hover:text-foreground">
+    <Link
+      to={to}
+      className="max-w-48 truncate rounded px-1 py-0.5 transition-colors hover:bg-secondary/60 hover:text-foreground"
+    >
       {children}
     </Link>
   );
@@ -26,7 +34,11 @@ function BreadcrumbLink({ to, children }: { to: string; children: ReactNode }) {
 
 /** Segment courant (non cliquable). */
 function BreadcrumbPage({ children }: { children: ReactNode }) {
-  return <span aria-current="page" className="max-w-56 truncate px-1 py-0.5 font-medium text-foreground">{children}</span>;
+  return (
+    <span aria-current="page" className="max-w-56 truncate px-1 py-0.5 font-medium text-foreground">
+      {children}
+    </span>
+  );
 }
 
 function BreadcrumbSeparator() {

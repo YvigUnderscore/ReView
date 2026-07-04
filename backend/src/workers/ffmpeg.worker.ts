@@ -70,7 +70,7 @@ async function walk(dir: string): Promise<string[]> {
   const out: string[] = [];
   for (const e of entries) {
     const full = join(dir, e.name);
-    if (e.isDirectory()) out.push(...await walk(full));
+    if (e.isDirectory()) out.push(...(await walk(full)));
     else out.push(full);
   }
   return out;
@@ -92,12 +92,16 @@ async function convertArchiveToGlb(input: string, output: string): Promise<void>
   let bestRank = Infinity;
   for (const f of files) {
     const rank = MODEL_PRIORITY.indexOf(extname(f).toLowerCase());
-    if (rank !== -1 && rank < bestRank) { bestRank = rank; chosen = f; }
+    if (rank !== -1 && rank < bestRank) {
+      bestRank = rank;
+      chosen = f;
+    }
   }
-  if (!chosen) throw new Error('Aucun fichier 3D reconnu dans l\'archive (gltf/glb/fbx/obj/dae/stl/usd)');
+  if (!chosen) throw new Error("Aucun fichier 3D reconnu dans l'archive (gltf/glb/fbx/obj/dae/stl/usd)");
   const e = extname(chosen).toLowerCase();
   if (e === '.glb') await copyFile(chosen, output);
-  else if (e === '.gltf') await convertGltfToGlb(chosen, output); // résout scene.bin + textures relatifs
+  else if (e === '.gltf')
+    await convertGltfToGlb(chosen, output); // résout scene.bin + textures relatifs
   else await convertWithAssimp(chosen, output); // OBJ/FBX/DAE… avec ressources adjacentes
 }
 
@@ -241,8 +245,12 @@ export const ffmpegWorker = new Worker<MediaJobData>(
   { connection: redisConnectionOptions, autorun: false, concurrency: 2 },
 );
 
-ffmpegWorker.on('completed', (job) => console.info(`[ffmpeg.worker] ✓ ${job.name} media=${job.data.mediaObjectId}`));
-ffmpegWorker.on('failed', (job, err) => console.error(`[ffmpeg.worker] ✗ media=${job?.data.mediaObjectId}: ${err.message}`));
+ffmpegWorker.on('completed', (job) =>
+  console.info(`[ffmpeg.worker] ✓ ${job.name} media=${job.data.mediaObjectId}`),
+);
+ffmpegWorker.on('failed', (job, err) =>
+  console.error(`[ffmpeg.worker] ✗ media=${job?.data.mediaObjectId}: ${err.message}`),
+);
 
 if (require.main === module) {
   ffmpegWorker.run();

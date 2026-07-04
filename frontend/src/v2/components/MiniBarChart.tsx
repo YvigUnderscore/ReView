@@ -1,6 +1,9 @@
 /** Graphique en barres minimaliste (SVG), sans dépendance externe. */
 export default function MiniBarChart({
-  data, height = 120, color = 'var(--primary, #6366f1)', valueFormat,
+  data,
+  height = 120,
+  color = 'var(--primary, #6366f1)',
+  valueFormat,
 }: {
   data: { label: string; value: number }[];
   height?: number;

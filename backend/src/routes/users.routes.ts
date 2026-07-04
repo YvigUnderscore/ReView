@@ -33,8 +33,17 @@ const publicUser = {
 } as const;
 
 // Validation pseudo : lettres/chiffres/._- (sans espace)
-const usernameSchema = z.string().min(2).max(40).regex(/^[A-Za-z0-9._-]+$/, 'Pseudo invalide');
-const passwordSchema = z.string().min(8).max(128).regex(/[A-Za-z]/).regex(/[0-9]/);
+const usernameSchema = z
+  .string()
+  .min(2)
+  .max(40)
+  .regex(/^[A-Za-z0-9._-]+$/, 'Pseudo invalide');
+const passwordSchema = z
+  .string()
+  .min(8)
+  .max(128)
+  .regex(/[A-Za-z]/)
+  .regex(/[0-9]/);
 
 // GET /api/users — liste (admin/superviseur)
 router.get('/', requireRole(Role.ADMIN, Role.SUPERVISOR), async (_req, res) => {
@@ -49,7 +58,17 @@ router.get('/', requireRole(Role.ADMIN, Role.SUPERVISOR), async (_req, res) => {
 // GET /api/users/presence — présence de tous les utilisateurs (tout authentifié)
 router.get('/presence', async (_req, res) => {
   const users = await prisma.user.findMany({
-    select: { id: true, email: true, name: true, firstName: true, lastName: true, username: true, avatarKey: true, status: true, lastSeenAt: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      avatarKey: true,
+      status: true,
+      lastSeenAt: true,
+    },
     orderBy: { createdAt: 'asc' },
   });
   const online = new Set(getOnlineUserIds());
@@ -75,13 +94,25 @@ router.patch(
   }),
   async (req, res) => {
     const me = req.user!.id;
-    const body = req.body as { firstName?: string | null; lastName?: string | null; username?: string | null; email?: string; password?: string };
+    const body = req.body as {
+      firstName?: string | null;
+      lastName?: string | null;
+      username?: string | null;
+      email?: string;
+      password?: string;
+    };
     if (body.username) {
-      const taken = await prisma.user.findFirst({ where: { username: body.username, id: { not: me } }, select: { id: true } });
+      const taken = await prisma.user.findFirst({
+        where: { username: body.username, id: { not: me } },
+        select: { id: true },
+      });
       if (taken) throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
     }
     if (body.email) {
-      const taken = await prisma.user.findFirst({ where: { email: body.email, id: { not: me } }, select: { id: true } });
+      const taken = await prisma.user.findFirst({
+        where: { email: body.email, id: { not: me } },
+        select: { id: true },
+      });
       if (taken) throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
     }
     const data: Record<string, unknown> = {};
@@ -101,7 +132,11 @@ router.patch(
   validate({ body: z.object({ status: z.nativeEnum(UserStatus) }) }),
   async (req, res) => {
     const { status } = req.body as { status: UserStatus };
-    const user = await prisma.user.update({ where: { id: req.user!.id }, data: { status }, select: publicUser });
+    const user = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { status },
+      select: publicUser,
+    });
     res.json({ user: await toPublicUser(user) });
   },
 );
@@ -127,7 +162,11 @@ router.put(
     const { key } = req.body as { key: string | null };
     // Sécurité : la clé doit cibler le dossier avatar de l'utilisateur courant
     if (key && !key.startsWith(`avatars/${req.user!.id}`)) throw badRequest('Clé avatar invalide', 'BAD_KEY');
-    const user = await prisma.user.update({ where: { id: req.user!.id }, data: { avatarKey: key }, select: publicUser });
+    const user = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { avatarKey: key },
+      select: publicUser,
+    });
     res.json({ user: await toPublicUser(user) });
   },
 );
@@ -151,13 +190,29 @@ router.post(
   }),
   async (req, res) => {
     const { email, password, name, firstName, lastName, username, role } = req.body as {
-      email: string; password: string; name?: string; firstName?: string; lastName?: string; username?: string; role: Role;
+      email: string;
+      password: string;
+      name?: string;
+      firstName?: string;
+      lastName?: string;
+      username?: string;
+      role: Role;
     };
-    if (await prisma.user.findUnique({ where: { email } })) throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
-    if (username && (await prisma.user.findUnique({ where: { username } }))) throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
+    if (await prisma.user.findUnique({ where: { email } }))
+      throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
+    if (username && (await prisma.user.findUnique({ where: { username } })))
+      throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
     const hash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { email, password: hash, name: name ?? null, firstName: firstName ?? null, lastName: lastName ?? null, username: username ?? null, role },
+      data: {
+        email,
+        password: hash,
+        name: name ?? null,
+        firstName: firstName ?? null,
+        lastName: lastName ?? null,
+        username: username ?? null,
+        role,
+      },
       select: publicUser,
     });
     logAudit({ userId: req.user!.id, action: 'USER_CREATE', entityType: 'User', entityId: user.id });
@@ -169,14 +224,23 @@ router.post(
 router.patch(
   '/:id/role',
   requireRole(Role.ADMIN),
-  validate({ params: z.object({ id: z.coerce.number().int() }), body: z.object({ role: z.nativeEnum(Role) }) }),
+  validate({
+    params: z.object({ id: z.coerce.number().int() }),
+    body: z.object({ role: z.nativeEnum(Role) }),
+  }),
   async (req, res) => {
     const id = Number(req.params.id);
     const { role } = req.body as { role: Role };
     const exists = await prisma.user.findUnique({ where: { id } });
     if (!exists) throw notFound('Utilisateur introuvable');
     const user = await prisma.user.update({ where: { id }, data: { role }, select: publicUser });
-    logAudit({ userId: req.user!.id, action: 'USER_ROLE_CHANGE', entityType: 'User', entityId: id, metadata: { role } });
+    logAudit({
+      userId: req.user!.id,
+      action: 'USER_ROLE_CHANGE',
+      entityType: 'User',
+      entityId: id,
+      metadata: { role },
+    });
     res.json({ user: await toPublicUser(user) });
   },
 );
@@ -203,15 +267,27 @@ router.patch(
     const exists = await prisma.user.findUnique({ where: { id } });
     if (!exists) throw notFound('Utilisateur introuvable');
     const body = req.body as {
-      name?: string | null; firstName?: string | null; lastName?: string | null;
-      username?: string | null; email?: string; password?: string; role?: Role; storageLimit?: number | null;
+      name?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      username?: string | null;
+      email?: string;
+      password?: string;
+      role?: Role;
+      storageLimit?: number | null;
     };
     if (body.username) {
-      const taken = await prisma.user.findFirst({ where: { username: body.username, id: { not: id } }, select: { id: true } });
+      const taken = await prisma.user.findFirst({
+        where: { username: body.username, id: { not: id } },
+        select: { id: true },
+      });
       if (taken) throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
     }
     if (body.email) {
-      const taken = await prisma.user.findFirst({ where: { email: body.email, id: { not: id } }, select: { id: true } });
+      const taken = await prisma.user.findFirst({
+        where: { email: body.email, id: { not: id } },
+        select: { id: true },
+      });
       if (taken) throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
     }
     const data: Record<string, unknown> = {};
@@ -222,7 +298,8 @@ router.patch(
     if (body.email !== undefined) data.email = body.email;
     if (body.password !== undefined) data.password = await bcrypt.hash(body.password, 12);
     if (body.role !== undefined) data.role = body.role;
-    if (body.storageLimit !== undefined) data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
+    if (body.storageLimit !== undefined)
+      data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
     const user = await prisma.user.update({ where: { id }, data, select: publicUser });
     logAudit({ userId: req.user!.id, action: 'USER_UPDATE', entityType: 'User', entityId: id });
     res.json({ user: await toPublicUser(user) });

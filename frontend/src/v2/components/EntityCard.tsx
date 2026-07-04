@@ -32,7 +32,11 @@ function Actions({ actions }: { actions?: EntityItemAction[] }) {
           key={a.label}
           title={a.label}
           aria-label={a.label}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); a.onClick(); }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            a.onClick();
+          }}
           className={`flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary ${
             a.danger ? 'text-destructive' : 'text-muted-foreground hover:text-foreground'
           }`}
@@ -45,19 +49,36 @@ function Actions({ actions }: { actions?: EntityItemAction[] }) {
 }
 
 /** Carte ou ligne compacte selon `view`. Cliquable via `to` (lien) ou `onClick`. */
-export default function EntityCard({ to, onClick, active, title, subtitle, badge, thumbnailUrl, view, actions }: EntityCardProps) {
+export default function EntityCard({
+  to,
+  onClick,
+  active,
+  title,
+  subtitle,
+  badge,
+  thumbnailUrl,
+  view,
+  actions,
+}: EntityCardProps) {
   const activeRing = active ? 'border-primary ring-1 ring-primary' : 'border-border';
   const clickable = onClick ? 'cursor-pointer text-left w-full' : '';
 
   const wrap = (inner: ReactNode) => {
     if (to) return <Link to={to}>{inner}</Link>;
-    if (onClick) return <button type="button" onClick={onClick} className="block w-full text-left">{inner}</button>;
+    if (onClick)
+      return (
+        <button type="button" onClick={onClick} className="block w-full text-left">
+          {inner}
+        </button>
+      );
     return inner;
   };
 
   if (view === 'compact') {
     return wrap(
-      <div className={`group flex items-center gap-3 rounded-md border ${activeRing} bg-card px-3 py-2 transition-colors hover:border-primary ${clickable}`}>
+      <div
+        className={`group flex items-center gap-3 rounded-md border ${activeRing} bg-card px-3 py-2 transition-colors hover:border-primary ${clickable}`}
+      >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-secondary/60">
           {thumbnailUrl ? (
             <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
@@ -77,7 +98,9 @@ export default function EntityCard({ to, onClick, active, title, subtitle, badge
 
   // Vue cartes
   return wrap(
-    <div className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-colors hover:border-primary`}>
+    <div
+      className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-colors hover:border-primary`}
+    >
       <div className="relative flex aspect-video items-center justify-center bg-secondary/40">
         {thumbnailUrl ? (
           <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />

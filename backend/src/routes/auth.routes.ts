@@ -25,19 +25,32 @@ const credentialsSchema = z.object({
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 });
 
-type UserRow = RawUserIdentity & { role: import('@prisma/client').Role; status?: import('@prisma/client').UserStatus };
+type UserRow = RawUserIdentity & {
+  role: import('@prisma/client').Role;
+  status?: import('@prisma/client').UserStatus;
+};
 const publicUser = (u: UserRow) =>
   toPublicUser({
-    id: u.id, email: u.email, name: u.name ?? null,
-    firstName: u.firstName ?? null, lastName: u.lastName ?? null,
-    username: u.username ?? null, avatarKey: u.avatarKey ?? null,
+    id: u.id,
+    email: u.email,
+    name: u.name ?? null,
+    firstName: u.firstName ?? null,
+    lastName: u.lastName ?? null,
+    username: u.username ?? null,
+    avatarKey: u.avatarKey ?? null,
   }).then((view) => ({ ...view, role: u.role, status: u.status }));
 
 // POST /api/auth/register — crée un artiste (ouvert ; restreint par invitation en 8.x)
 router.post(
   '/register',
   authLimiter,
-  validate({ body: z.object({ email: z.string().email().max(254), password: passwordSchema, name: z.string().max(120).optional() }) }),
+  validate({
+    body: z.object({
+      email: z.string().email().max(254),
+      password: passwordSchema,
+      name: z.string().max(120).optional(),
+    }),
+  }),
   async (req, res) => {
     const { email, password, name } = req.body as { email: string; password: string; name?: string };
     const existing = await prisma.user.findUnique({ where: { email } });

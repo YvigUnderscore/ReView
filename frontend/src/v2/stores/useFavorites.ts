@@ -3,8 +3,12 @@ import { api } from '../../lib/apiClient';
 
 export type FavType = 'PROJECT' | 'SEQUENCE' | 'SHOT' | 'ASSET';
 export interface Favorite {
-  id: number; type: FavType; entityId: number;
-  label: string; projectId: number; to: string;
+  id: number;
+  type: FavType;
+  entityId: number;
+  label: string;
+  projectId: number;
+  to: string;
 }
 
 interface FavState {
@@ -37,12 +41,18 @@ export const useFavorites = create<FavState>((set, get) => ({
     if (exists) {
       // Retrait optimiste
       set({ favorites: get().favorites.filter((f) => key(f.type, f.entityId) !== key(type, entityId)) });
-      try { await api.del(`/api/favorites/${type}/${entityId}`); } catch { await get().load(); }
+      try {
+        await api.del(`/api/favorites/${type}/${entityId}`);
+      } catch {
+        await get().load();
+      }
     } else {
       try {
         await api.post('/api/favorites', { type, entityId });
         await get().load();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   },
 }));

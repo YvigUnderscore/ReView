@@ -75,9 +75,7 @@ export interface StorageContext {
   versionName: string;
 }
 
-export const resolveStorageContextForVersion = async (
-  versionId: number,
-): Promise<StorageContext | null> => {
+export const resolveStorageContextForVersion = async (versionId: number): Promise<StorageContext | null> => {
   const version = await prisma.version.findUnique({
     where: { id: versionId },
     select: {

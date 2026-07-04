@@ -40,7 +40,7 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Variables d\'environnement invalides :');
+  console.error("❌ Variables d'environnement invalides :");
   console.error(parsed.error.flatten().fieldErrors);
   process.exit(1);
 }

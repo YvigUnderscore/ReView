@@ -9,7 +9,11 @@ import { conflict } from '../lib/errors';
 const router = Router();
 
 const slugify = (s: string) =>
-  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'studio';
+  s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'studio';
 
 /** Indique si l'instance n'est pas encore configurée (aucun Studio). */
 router.get('/status', async (_req, res) => {
@@ -27,7 +31,12 @@ router.post(
     body: z.object({
       studioName: z.string().min(2).max(120),
       adminEmail: z.string().email().max(254),
-      adminPassword: z.string().min(8).max(128).regex(/[A-Za-z]/).regex(/[0-9]/),
+      adminPassword: z
+        .string()
+        .min(8)
+        .max(128)
+        .regex(/[A-Za-z]/)
+        .regex(/[0-9]/),
       adminName: z.string().max(120).optional(),
     }),
   }),

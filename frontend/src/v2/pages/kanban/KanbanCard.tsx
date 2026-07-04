@@ -22,7 +22,9 @@ export function KanbanCardBody({ task, dragging }: { task: BoardTask; dragging?:
           >
             {task.name}
           </Link>
-          <div className="mt-0.5 truncate text-muted-foreground">{task.shotCode} · {task.type}</div>
+          <div className="mt-0.5 truncate text-muted-foreground">
+            {task.shotCode} · {task.type}
+          </div>
         </div>
         {task.assignee && (
           <Avatar seed={task.assignee.id} initials={initialsFrom(task.assignee.name)} size={22} />

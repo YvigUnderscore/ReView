@@ -23,7 +23,8 @@ export function usePresence() {
   const [onlineIds, setOnlineIds] = useState<Set<number>>(new Set());
 
   const reload = () =>
-    api.get<{ users: PresenceUser[] }>('/api/users/presence')
+    api
+      .get<{ users: PresenceUser[] }>('/api/users/presence')
       .then((d) => {
         setUsers(d.users);
         setOnlineIds(new Set(d.users.filter((u) => u.online).map((u) => u.id)));

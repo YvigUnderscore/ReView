@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useRecents, trackRecent, type RecentEntry } from './useRecents';
 
 const entry = (n: number): Omit<RecentEntry, 'at'> => ({
-  key: `shot:${n}`, type: 'shot', label: `SH0${n}0`, to: `/projects/1?tab=shots&shot=${n}`,
+  key: `shot:${n}`,
+  type: 'shot',
+  label: `SH0${n}0`,
+  to: `/projects/1?tab=shots&shot=${n}`,
 });
 
 beforeEach(() => {

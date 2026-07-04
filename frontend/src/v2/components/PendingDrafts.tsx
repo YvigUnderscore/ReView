@@ -9,7 +9,9 @@ import type { Media } from '../types/api';
 
 /** GET /api/media/drafts — brouillon + localisation lisible. */
 type Draft = Pick<Media, 'id' | 'originalName' | 'kind' | 'status'> & {
-  versionName: string; location: string; createdAt: string;
+  versionName: string;
+  location: string;
+  createdAt: string;
 };
 
 /**
@@ -34,18 +36,29 @@ export default function PendingDrafts() {
   }, [uploads, qc]);
 
   // Publier/supprimer un brouillon affecte aussi les listes de versions et de médias
-  const refresh = () => Promise.all([
-    qc.invalidateQueries({ queryKey: qk.drafts }),
-    qc.invalidateQueries({ queryKey: ['versions'] }),
-    qc.invalidateQueries({ queryKey: ['media'] }),
-  ]);
+  const refresh = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: qk.drafts }),
+      qc.invalidateQueries({ queryKey: ['versions'] }),
+      qc.invalidateQueries({ queryKey: ['media'] }),
+    ]);
   const publish = async (id: number) => {
     setBusy(id);
-    try { await api.post(`/api/media/${id}/publish`); await refresh(); } finally { setBusy(null); }
+    try {
+      await api.post(`/api/media/${id}/publish`);
+      await refresh();
+    } finally {
+      setBusy(null);
+    }
   };
   const remove = async (id: number) => {
     setBusy(id);
-    try { await api.del(`/api/media/${id}`); await refresh(); } finally { setBusy(null); }
+    try {
+      await api.del(`/api/media/${id}`);
+      await refresh();
+    } finally {
+      setBusy(null);
+    }
   };
 
   if (drafts.length === 0) return null;
@@ -57,24 +70,52 @@ export default function PendingDrafts() {
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <FileClock size={15} className="text-amber-400" /> Brouillons en attente
-              <span className="rounded-full bg-amber-500/20 px-1.5 text-xs text-amber-300">{drafts.length}</span>
+              <span className="rounded-full bg-amber-500/20 px-1.5 text-xs text-amber-300">
+                {drafts.length}
+              </span>
             </div>
-            <button onClick={() => setOpen(false)} className="rounded p-1 text-muted-foreground hover:bg-secondary"><X size={15} /></button>
+            <button
+              onClick={() => setOpen(false)}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary"
+            >
+              <X size={15} />
+            </button>
           </div>
           <div className="custom-scrollbar flex-1 overflow-y-auto p-2">
             {drafts.map((d) => (
               <div key={d.id} className="mb-1.5 rounded-md border border-border bg-background p-2 text-xs">
-                <div className="truncate font-medium" title={d.originalName}>{d.originalName}</div>
-                {d.location && <div className="truncate text-[11px] text-muted-foreground" title={d.location}>{d.location}</div>}
-                <div className="mt-0.5 text-[10px] text-muted-foreground">{d.versionName} · {d.kind} · {d.status}</div>
+                <div className="truncate font-medium" title={d.originalName}>
+                  {d.originalName}
+                </div>
+                {d.location && (
+                  <div className="truncate text-[11px] text-muted-foreground" title={d.location}>
+                    {d.location}
+                  </div>
+                )}
+                <div className="mt-0.5 text-[10px] text-muted-foreground">
+                  {d.versionName} · {d.kind} · {d.status}
+                </div>
                 <div className="mt-1.5 flex items-center gap-1">
-                  <Link to={`/review/${d.id}`} onClick={() => setOpen(false)} className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 hover:bg-secondary/60">
+                  <Link
+                    to={`/review/${d.id}`}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 hover:bg-secondary/60"
+                  >
                     <Eye size={11} /> Voir
                   </Link>
-                  <button disabled={busy === d.id} onClick={() => publish(d.id)} className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-primary-foreground disabled:opacity-50">
+                  <button
+                    disabled={busy === d.id}
+                    onClick={() => publish(d.id)}
+                    className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-primary-foreground disabled:opacity-50"
+                  >
                     <Send size={11} /> Publier
                   </button>
-                  <button disabled={busy === d.id} onClick={() => remove(d.id)} title="Supprimer" className="ml-auto flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-destructive hover:bg-secondary/60 disabled:opacity-50">
+                  <button
+                    disabled={busy === d.id}
+                    onClick={() => remove(d.id)}
+                    title="Supprimer"
+                    className="ml-auto flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-destructive hover:bg-secondary/60 disabled:opacity-50"
+                  >
                     <Trash2 size={11} />
                   </button>
                 </div>

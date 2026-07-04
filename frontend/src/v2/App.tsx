@@ -49,10 +49,16 @@ function AppRoutes() {
   });
   const needsSetup = setup?.needsSetup ?? null;
 
-  useEffect(() => { init(); }, [init]);
+  useEffect(() => {
+    init();
+  }, [init]);
 
   if (!ready || needsSetup === null) {
-    return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">Chargement…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+        Chargement…
+      </div>
+    );
   }
 
   return (
@@ -67,18 +73,110 @@ function AppRoutes() {
         ) : (
           <>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<Protected><ProjectsPage /></Protected>} />
-            <Route path="/projects/:id" element={<Protected><ProjectPage /></Protected>} />
-            <Route path="/projects/:id/kanban" element={<Protected><KanbanPage /></Protected>} />
-            <Route path="/tasks/:id" element={<Protected><TaskPage /></Protected>} />
-            <Route path="/assets/:id" element={<Protected><AssetPage /></Protected>} />
-            <Route path="/review/:mediaId" element={<Protected><ReviewPage /></Protected>} />
-            <Route path="/projects/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="project" /></Suspense></Protected>} />
-            <Route path="/assets/:id/board" element={<Protected><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}><BoardPage scope="asset" /></Suspense></Protected>} />
-            <Route path="/admin" element={<Protected><AdminPage /></Protected>} />
-            <Route path="/admin/:section" element={<Protected><AdminPage /></Protected>} />
-            <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
-            <Route path="/docs" element={<Protected><DocumentationPage /></Protected>} />
+            <Route
+              path="/"
+              element={
+                <Protected>
+                  <ProjectsPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/projects/:id"
+              element={
+                <Protected>
+                  <ProjectPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/projects/:id/kanban"
+              element={
+                <Protected>
+                  <KanbanPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/tasks/:id"
+              element={
+                <Protected>
+                  <TaskPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/assets/:id"
+              element={
+                <Protected>
+                  <AssetPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/review/:mediaId"
+              element={
+                <Protected>
+                  <ReviewPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/projects/:id/board"
+              element={
+                <Protected>
+                  <Suspense
+                    fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}
+                  >
+                    <BoardPage scope="project" />
+                  </Suspense>
+                </Protected>
+              }
+            />
+            <Route
+              path="/assets/:id/board"
+              element={
+                <Protected>
+                  <Suspense
+                    fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}
+                  >
+                    <BoardPage scope="asset" />
+                  </Suspense>
+                </Protected>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <Protected>
+                  <AdminPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/admin/:section"
+              element={
+                <Protected>
+                  <AdminPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <Protected>
+                  <ProfilePage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/docs"
+              element={
+                <Protected>
+                  <DocumentationPage />
+                </Protected>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         )}

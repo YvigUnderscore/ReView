@@ -16,31 +16,70 @@ export interface Shape {
   width: number;
   alpha?: number; // opacité 0..1 (défaut 1)
   pts?: number[][]; // path
-  x?: number; y?: number; w?: number; h?: number; // rect
-  cx?: number; cy?: number; rx?: number; ry?: number; // ellipse
-  x1?: number; y1?: number; x2?: number; y2?: number; // arrow
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number; // rect
+  cx?: number;
+  cy?: number;
+  rx?: number;
+  ry?: number; // ellipse
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number; // arrow
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 const TOOL_ICONS: { id: Tool; label: string }[] = [
-  { id: 'draw', label: '✏️' }, { id: 'rect', label: '▭' }, { id: 'ellipse', label: '◯' },
-  { id: 'arrow', label: '↗' }, { id: 'move', label: '✋' }, { id: 'erase', label: '⌫' },
+  { id: 'draw', label: '✏️' },
+  { id: 'rect', label: '▭' },
+  { id: 'ellipse', label: '◯' },
+  { id: 'arrow', label: '↗' },
+  { id: 'move', label: '✋' },
+  { id: 'erase', label: '⌫' },
 ];
 
 export function AnnotationToolbar({
-  tool, setTool, color, setColor, width, setWidth, alpha, setAlpha, onUndo, onRedo, onClear, canUndo, canRedo,
+  tool,
+  setTool,
+  color,
+  setColor,
+  width,
+  setWidth,
+  alpha,
+  setAlpha,
+  onUndo,
+  onRedo,
+  onClear,
+  canUndo,
+  canRedo,
 }: {
-  tool: Tool; setTool: (t: Tool) => void; color: string; setColor: (c: string) => void;
-  width: number; setWidth: (w: number) => void; alpha: number; setAlpha: (a: number) => void;
-  onUndo: () => void; onRedo: () => void; onClear: () => void; canUndo: boolean; canRedo: boolean;
+  tool: Tool;
+  setTool: (t: Tool) => void;
+  color: string;
+  setColor: (c: string) => void;
+  width: number;
+  setWidth: (w: number) => void;
+  alpha: number;
+  setAlpha: (a: number) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onClear: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
     <div className="relative flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-card p-1.5 text-sm">
       {TOOL_ICONS.map((t) => (
-        <button key={t.id} onClick={() => setTool(t.id)} title={t.id}
-          className={`h-8 w-8 rounded ${tool === t.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>
+        <button
+          key={t.id}
+          onClick={() => setTool(t.id)}
+          title={t.id}
+          className={`h-8 w-8 rounded ${tool === t.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+        >
           {t.label}
         </button>
       ))}
@@ -56,24 +95,66 @@ export function AnnotationToolbar({
       </button>
       {pickerOpen && (
         <div className="absolute left-0 top-full z-30 mt-1">
-          <ColorPicker color={color} alpha={alpha} onChange={(c, a) => { setColor(c); setAlpha(a); }} />
+          <ColorPicker
+            color={color}
+            alpha={alpha}
+            onChange={(c, a) => {
+              setColor(c);
+              setAlpha(a);
+            }}
+          />
         </div>
       )}
       <span className="mx-1 h-6 w-px bg-border" />
-      <input type="range" min={1} max={12} value={width} onChange={(e) => setWidth(Number(e.target.value))} title="Épaisseur" className="w-20" />
+      <input
+        type="range"
+        min={1}
+        max={12}
+        value={width}
+        onChange={(e) => setWidth(Number(e.target.value))}
+        title="Épaisseur"
+        className="w-20"
+      />
       <span className="mx-1 h-6 w-px bg-border" />
-      <button onClick={onUndo} disabled={!canUndo} className="h-8 rounded px-2 hover:bg-muted disabled:opacity-40">↶</button>
-      <button onClick={onRedo} disabled={!canRedo} className="h-8 rounded px-2 hover:bg-muted disabled:opacity-40">↷</button>
-      <button onClick={onClear} className="h-8 rounded px-2 hover:bg-muted">Effacer</button>
+      <button
+        onClick={onUndo}
+        disabled={!canUndo}
+        className="h-8 rounded px-2 hover:bg-muted disabled:opacity-40"
+      >
+        ↶
+      </button>
+      <button
+        onClick={onRedo}
+        disabled={!canRedo}
+        className="h-8 rounded px-2 hover:bg-muted disabled:opacity-40"
+      >
+        ↷
+      </button>
+      <button onClick={onClear} className="h-8 rounded px-2 hover:bg-muted">
+        Effacer
+      </button>
     </div>
   );
 }
 
 export function AnnotationCanvas({
-  shapes, onChange, editable, tool, color, width, alpha = 1, margin = 0, captureAspect,
+  shapes,
+  onChange,
+  editable,
+  tool,
+  color,
+  width,
+  alpha = 1,
+  margin = 0,
+  captureAspect,
 }: {
-  shapes: Shape[]; onChange?: (s: Shape[]) => void; editable: boolean;
-  tool: Tool; color: string; width: number; alpha?: number;
+  shapes: Shape[];
+  onChange?: (s: Shape[]) => void;
+  editable: boolean;
+  tool: Tool;
+  color: string;
+  width: number;
+  alpha?: number;
   /** Marge (fraction) de zone dessinable AUTOUR du média (annotations hors-cadre). */
   margin?: number;
   /**
@@ -106,24 +187,39 @@ export function AnnotationCanvas({
   const vbSize = 1 + 2 * margin;
 
   // Correction d'aspect (lecture seule) : compression/expansion horizontale autour du centre.
-  const sx = (!editable && captureAspect && aspect > 0) ? captureAspect / aspect : 1;
+  const sx = !editable && captureAspect && aspect > 0 ? captureAspect / aspect : 1;
   const groupTransform = sx !== 1 ? `translate(${0.5 * (1 - sx)} 0) scale(${sx} 1)` : undefined;
 
-  const pt = useCallback((e: React.PointerEvent) => {
-    const r = svgRef.current!.getBoundingClientRect();
-    return [
-      vbMin + ((e.clientX - r.left) / r.width) * vbSize,
-      vbMin + ((e.clientY - r.top) / r.height) * vbSize,
-    ] as [number, number];
-  }, [vbMin, vbSize]);
+  const pt = useCallback(
+    (e: React.PointerEvent) => {
+      const r = svgRef.current!.getBoundingClientRect();
+      return [
+        vbMin + ((e.clientX - r.left) / r.width) * vbSize,
+        vbMin + ((e.clientY - r.top) / r.height) * vbSize,
+      ] as [number, number];
+    },
+    [vbMin, vbSize],
+  );
 
   const hit = (p: [number, number]): Shape | undefined => {
     // Test simple : proximité (path) ou bounding box (formes)
     const near = (a: number, b: number) => Math.abs(a - b) < 0.03;
     return [...shapes].reverse().find((s) => {
       if (s.type === 'path') return s.pts?.some(([x, y]) => Math.hypot(x - p[0], y - p[1]) < 0.03);
-      if (s.type === 'rect') return p[0] >= (s.x ?? 0) - 0.02 && p[0] <= (s.x ?? 0) + (s.w ?? 0) + 0.02 && p[1] >= (s.y ?? 0) - 0.02 && p[1] <= (s.y ?? 0) + (s.h ?? 0) + 0.02;
-      if (s.type === 'ellipse') return Math.hypot((p[0] - (s.cx ?? 0)) / ((s.rx ?? 0.01) + 0.02), (p[1] - (s.cy ?? 0)) / ((s.ry ?? 0.01) + 0.02)) <= 1;
+      if (s.type === 'rect')
+        return (
+          p[0] >= (s.x ?? 0) - 0.02 &&
+          p[0] <= (s.x ?? 0) + (s.w ?? 0) + 0.02 &&
+          p[1] >= (s.y ?? 0) - 0.02 &&
+          p[1] <= (s.y ?? 0) + (s.h ?? 0) + 0.02
+        );
+      if (s.type === 'ellipse')
+        return (
+          Math.hypot(
+            (p[0] - (s.cx ?? 0)) / ((s.rx ?? 0.01) + 0.02),
+            (p[1] - (s.cy ?? 0)) / ((s.ry ?? 0.01) + 0.02),
+          ) <= 1
+        );
       if (s.type === 'arrow') return near(p[0], s.x2 ?? 0) && near(p[1], s.y2 ?? 0);
       return false;
     });
@@ -157,35 +253,53 @@ export function AnnotationCanvas({
     const p = pt(e);
     if (drag.current) {
       const d = drag.current;
-      const dx = p[0] - d.ox, dy = p[1] - d.oy;
+      const dx = p[0] - d.ox,
+        dy = p[1] - d.oy;
       drag.current = { ...d, ox: p[0], oy: p[1] };
       onChange?.(shapes.map((s) => (s.id === d.id ? translate(s, dx, dy) : s)));
       return;
     }
     if (!draft) return;
     if (draft.type === 'path') setDraft({ ...draft, pts: [...(draft.pts ?? []), p] });
-    else if (draft.type === 'rect') setDraft({ ...draft, w: p[0] - (draft.x ?? 0), h: p[1] - (draft.y ?? 0) });
-    else if (draft.type === 'ellipse') setDraft({ ...draft, rx: Math.abs(p[0] - (draft.cx ?? 0)), ry: Math.abs(p[1] - (draft.cy ?? 0)) });
+    else if (draft.type === 'rect')
+      setDraft({ ...draft, w: p[0] - (draft.x ?? 0), h: p[1] - (draft.y ?? 0) });
+    else if (draft.type === 'ellipse')
+      setDraft({ ...draft, rx: Math.abs(p[0] - (draft.cx ?? 0)), ry: Math.abs(p[1] - (draft.cy ?? 0)) });
     else if (draft.type === 'arrow') setDraft({ ...draft, x2: p[0], y2: p[1] });
   };
 
   const up = () => {
-    if (drag.current) { drag.current = null; return; }
-    if (draft) { onChange?.([...shapes, normalizeRect(draft)]); setDraft(null); }
+    if (drag.current) {
+      drag.current = null;
+      return;
+    }
+    if (draft) {
+      onChange?.([...shapes, normalizeRect(draft)]);
+      setDraft(null);
+    }
   };
 
   const all = draft ? [...shapes, draft] : shapes;
 
   return (
     <svg
-      ref={svgRef} viewBox={`${vbMin} ${vbMin} ${vbSize} ${vbSize}`} preserveAspectRatio="none"
+      ref={svgRef}
+      viewBox={`${vbMin} ${vbMin} ${vbSize} ${vbSize}`}
+      preserveAspectRatio="none"
       className="absolute"
       style={{
-        left: `${vbMin * 100}%`, top: `${vbMin * 100}%`, width: `${vbSize * 100}%`, height: `${vbSize * 100}%`,
+        left: `${vbMin * 100}%`,
+        top: `${vbMin * 100}%`,
+        width: `${vbSize * 100}%`,
+        height: `${vbSize * 100}%`,
         overflow: 'visible',
-        pointerEvents: editable ? 'auto' : 'none', cursor: editable ? 'crosshair' : 'default', touchAction: 'none',
+        pointerEvents: editable ? 'auto' : 'none',
+        cursor: editable ? 'crosshair' : 'default',
+        touchAction: 'none',
       }}
-      onPointerDown={down} onPointerMove={move} onPointerUp={up}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
     >
       <defs>
         <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
@@ -193,7 +307,9 @@ export function AnnotationCanvas({
         </marker>
       </defs>
       <g transform={groupTransform}>
-        {all.map((s) => <ShapeEl key={s.id} s={s} />)}
+        {all.map((s) => (
+          <ShapeEl key={s.id} s={s} />
+        ))}
       </g>
     </svg>
   );
@@ -216,8 +332,17 @@ function normalizeRect(s: Shape): Shape {
 }
 
 function ShapeEl({ s }: { s: Shape }) {
-  const common = { stroke: s.color, strokeWidth: s.width, strokeOpacity: s.alpha ?? 1, fill: 'none', vectorEffect: 'non-scaling-stroke' as const, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-  if (s.type === 'path') return <polyline points={(s.pts ?? []).map((p) => p.join(',')).join(' ')} {...common} />;
+  const common = {
+    stroke: s.color,
+    strokeWidth: s.width,
+    strokeOpacity: s.alpha ?? 1,
+    fill: 'none',
+    vectorEffect: 'non-scaling-stroke' as const,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+  if (s.type === 'path')
+    return <polyline points={(s.pts ?? []).map((p) => p.join(',')).join(' ')} {...common} />;
   if (s.type === 'rect') return <rect x={s.x} y={s.y} width={s.w} height={s.h} {...common} />;
   if (s.type === 'ellipse') return <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} {...common} />;
   return <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} {...common} markerEnd="url(#arrowhead)" />;

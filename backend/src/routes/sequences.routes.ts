@@ -15,23 +15,19 @@ router.use(authenticate);
 
 // GET /api/sequences?projectId=X — liste les séquences d'un projet
 // + `unsequencedShots` : nombre de shots du projet hors séquence (arbre sidebar)
-router.get(
-  '/',
-  validate({ query: z.object({ projectId: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const projectId = Number(req.query.projectId);
-    await assertProjectAccess(req, projectId);
-    const [sequences, unsequencedShots] = await Promise.all([
-      prisma.sequence.findMany({
-        where: { projectId, deletedAt: null },
-        orderBy: { order: 'asc' },
-        include: { _count: { select: { shots: true } } },
-      }),
-      prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null } }),
-    ]);
-    res.json({ sequences, unsequencedShots });
-  },
-);
+router.get('/', validate({ query: z.object({ projectId: z.coerce.number().int() }) }), async (req, res) => {
+  const projectId = Number(req.query.projectId);
+  await assertProjectAccess(req, projectId);
+  const [sequences, unsequencedShots] = await Promise.all([
+    prisma.sequence.findMany({
+      where: { projectId, deletedAt: null },
+      orderBy: { order: 'asc' },
+      include: { _count: { select: { shots: true } } },
+    }),
+    prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null } }),
+  ]);
+  res.json({ sequences, unsequencedShots });
+});
 
 // POST /api/sequences (admin/superviseur)
 router.post(
@@ -47,7 +43,10 @@ router.post(
   }),
   async (req, res) => {
     const { projectId, name, code, order } = req.body as {
-      projectId: number; name: string; code: string; order?: number;
+      projectId: number;
+      name: string;
+      code: string;
+      order?: number;
     };
     await assertProjectAccess(req, projectId);
     if (await prisma.sequence.findUnique({ where: { projectId_code: { projectId, code } } })) {
@@ -79,7 +78,8 @@ router.post(
   }),
   async (req, res) => {
     const { projectId, items } = req.body as {
-      projectId: number; items: { name: string; code: string; order?: number }[];
+      projectId: number;
+      items: { name: string; code: string; order?: number }[];
     };
     await assertProjectAccess(req, projectId);
     // Doublons dans le lot ou déjà existants → rejet global (rien n'est créé)
@@ -87,7 +87,8 @@ router.post(
     const dupInBatch = codes.find((c, i) => codes.indexOf(c) !== i);
     if (dupInBatch) throw badRequest(`Code en double dans le lot : ${dupInBatch}`, 'CODE_DUP');
     const existing = await prisma.sequence.findMany({
-      where: { projectId, code: { in: codes }, deletedAt: null }, select: { code: true },
+      where: { projectId, code: { in: codes }, deletedAt: null },
+      select: { code: true },
     });
     if (existing.length > 0) {
       throw badRequest(`Code(s) déjà existant(s) : ${existing.map((e) => e.code).join(', ')}`, 'CODE_TAKEN');

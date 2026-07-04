@@ -14,11 +14,25 @@ const MAX_SCALE = 20;
 const MARGIN = 0.5;
 
 export default function ImageReviewViewer({
-  src, alt, shapes, onChange, editable, tool, color, width, alpha,
+  src,
+  alt,
+  shapes,
+  onChange,
+  editable,
+  tool,
+  color,
+  width,
+  alpha,
 }: {
-  src: string; alt: string;
-  shapes: Shape[]; onChange?: (s: Shape[]) => void; editable: boolean;
-  tool: Tool; color: string; width: number; alpha: number;
+  src: string;
+  alt: string;
+  shapes: Shape[];
+  onChange?: (s: Shape[]) => void;
+  editable: boolean;
+  tool: Tool;
+  color: string;
+  width: number;
+  alpha: number;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const natural = useRef<{ w: number; h: number } | null>(null);
@@ -42,7 +56,8 @@ export default function ImageReviewViewer({
     if (!vp) return;
     const { clientWidth: vw, clientHeight: vh } = vp;
     const r = Math.min(vw / natW, vh / natH);
-    const w = natW * r, h = natH * r;
+    const w = natW * r,
+      h = natH * r;
     setBase({ w, h });
     setScale(1);
     setOffset({ x: (vw - w) / 2, y: (vh - h) / 2 });
@@ -58,7 +73,8 @@ export default function ImageReviewViewer({
     if (!base) return;
     e.preventDefault();
     const vp = viewportRef.current!.getBoundingClientRect();
-    const cx = e.clientX - vp.left, cy = e.clientY - vp.top;
+    const cx = e.clientX - vp.left,
+      cy = e.clientY - vp.top;
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
     const k = next / scale;
@@ -77,20 +93,28 @@ export default function ImageReviewViewer({
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!pan.current) return;
-    setOffset({ x: pan.current.ox + (e.clientX - pan.current.x), y: pan.current.oy + (e.clientY - pan.current.y) });
+    setOffset({
+      x: pan.current.ox + (e.clientX - pan.current.x),
+      y: pan.current.oy + (e.clientY - pan.current.y),
+    });
   };
-  const onPointerUp = () => { pan.current = null; };
+  const onPointerUp = () => {
+    pan.current = null;
+  };
 
   const zoomBy = (factor: number) => {
     const vp = viewportRef.current;
     if (!vp) return;
-    const cx = vp.clientWidth / 2, cy = vp.clientHeight / 2;
+    const cx = vp.clientWidth / 2,
+      cy = vp.clientHeight / 2;
     const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
     const k = next / scale;
     setOffset((o) => ({ x: cx - (cx - o.x) * k, y: cy - (cy - o.y) * k }));
     setScale(next);
   };
-  const reset = () => { if (natural.current) fit(natural.current.w, natural.current.h); };
+  const reset = () => {
+    if (natural.current) fit(natural.current.w, natural.current.h);
+  };
 
   return (
     <div className="relative h-full w-full">
@@ -108,7 +132,8 @@ export default function ImageReviewViewer({
           <div
             className="absolute left-0 top-0"
             style={{
-              width: base.w, height: base.h,
+              width: base.w,
+              height: base.h,
               transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
               transformOrigin: '0 0',
             }}
@@ -116,8 +141,14 @@ export default function ImageReviewViewer({
             <img src={src} alt={alt} className="block h-full w-full select-none" draggable={false} />
             {(editable || shapes.length > 0) && (
               <AnnotationCanvas
-                shapes={shapes} onChange={onChange} editable={editable}
-                tool={tool} color={color} width={width} alpha={alpha} margin={MARGIN}
+                shapes={shapes}
+                onChange={onChange}
+                editable={editable}
+                tool={tool}
+                color={color}
+                width={width}
+                alpha={alpha}
+                margin={MARGIN}
               />
             )}
           </div>
@@ -128,10 +159,18 @@ export default function ImageReviewViewer({
 
       {/* Contrôles de zoom */}
       <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-border bg-card/90 p-1 backdrop-blur">
-        <button onClick={() => zoomBy(1 / 1.25)} title="Dézoomer" className="rounded p-1 hover:bg-muted"><ZoomOut size={16} /></button>
-        <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">{Math.round(scale * 100)}%</span>
-        <button onClick={() => zoomBy(1.25)} title="Zoomer" className="rounded p-1 hover:bg-muted"><ZoomIn size={16} /></button>
-        <button onClick={reset} title="Ajuster" className="rounded p-1 hover:bg-muted"><Maximize size={16} /></button>
+        <button onClick={() => zoomBy(1 / 1.25)} title="Dézoomer" className="rounded p-1 hover:bg-muted">
+          <ZoomOut size={16} />
+        </button>
+        <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+          {Math.round(scale * 100)}%
+        </span>
+        <button onClick={() => zoomBy(1.25)} title="Zoomer" className="rounded p-1 hover:bg-muted">
+          <ZoomIn size={16} />
+        </button>
+        <button onClick={reset} title="Ajuster" className="rounded p-1 hover:bg-muted">
+          <Maximize size={16} />
+        </button>
       </div>
     </div>
   );

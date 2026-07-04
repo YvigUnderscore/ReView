@@ -7,7 +7,13 @@ import { qk } from '../lib/query';
 import { useProjectContext } from '../stores/useProjectContext';
 import type { AssetRef, ProjectRef, SequenceRef, ShotRef, Task } from '../types/api';
 import {
-  Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
 } from './ui/command';
 
 /**
@@ -26,8 +32,12 @@ interface SearchResults {
 
 const EMPTY: SearchResults = { projects: [], sequences: [], shots: [], assets: [], tasks: [] };
 
-export default function CommandPalette({ open, onOpenChange }: {
-  open: boolean; onOpenChange: (open: boolean) => void;
+export default function CommandPalette({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const navigate = useNavigate();
   const ctxProjectId = useProjectContext((s) => s.projectId);
@@ -71,9 +81,20 @@ export default function CommandPalette({ open, onOpenChange }: {
   const hasResults = Object.values(results).some((list) => list.length > 0);
 
   return (
-    <CommandDialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setQ(''); }} title="Recherche globale">
+    <CommandDialog
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) setQ('');
+      }}
+      title="Recherche globale"
+    >
       <Command shouldFilter={false}>
-        <CommandInput value={q} onValueChange={setQ} placeholder="Rechercher un projet, shot, asset, tâche…" />
+        <CommandInput
+          value={q}
+          onValueChange={setQ}
+          placeholder="Rechercher un projet, shot, asset, tâche…"
+        />
         <CommandList>
           {hasQuery && !hasResults && <CommandEmpty>Aucun résultat.</CommandEmpty>}
 
@@ -108,7 +129,11 @@ export default function CommandPalette({ open, onOpenChange }: {
           {results.sequences.length > 0 && (
             <CommandGroup heading="Séquences">
               {results.sequences.map((s) => (
-                <CommandItem key={s.id} value={`sequence-${s.id}`} onSelect={() => go(`/projects/${s.projectId}?tab=sequences&seq=${s.id}`)}>
+                <CommandItem
+                  key={s.id}
+                  value={`sequence-${s.id}`}
+                  onSelect={() => go(`/projects/${s.projectId}?tab=sequences&seq=${s.id}`)}
+                >
                   <Layers size={15} className="text-muted-foreground" />
                   <span className="truncate">{s.code}</span>
                   <span className="truncate text-xs text-muted-foreground">{s.name}</span>
@@ -119,7 +144,11 @@ export default function CommandPalette({ open, onOpenChange }: {
           {results.shots.length > 0 && (
             <CommandGroup heading="Shots">
               {results.shots.map((s) => (
-                <CommandItem key={s.id} value={`shot-${s.id}`} onSelect={() => go(`/projects/${s.projectId}?tab=shots&shot=${s.id}`)}>
+                <CommandItem
+                  key={s.id}
+                  value={`shot-${s.id}`}
+                  onSelect={() => go(`/projects/${s.projectId}?tab=shots&shot=${s.id}`)}
+                >
                   <Film size={15} className="text-muted-foreground" />
                   <span className="truncate">{s.code}</span>
                   <span className="truncate text-xs text-muted-foreground">{s.name}</span>

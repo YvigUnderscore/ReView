@@ -71,7 +71,9 @@ export default function MultiRowCreate({
                   onChange={(e) => update(i, f.key, e.target.value)}
                 >
                   {f.options.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
                   ))}
                 </select>
               ) : (

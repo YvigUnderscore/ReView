@@ -10,15 +10,15 @@ import { prisma } from './prisma';
  */
 
 export interface Department {
-  key: string;  // identifiant court stable (ex: ANIM)
+  key: string; // identifiant court stable (ex: ANIM)
   name: string; // libellé affiché (ex: Animation)
 }
 
 export interface Nomenclature {
   sequencePrefix: string; // ex: SQ
-  shotPrefix: string;     // ex: SH
-  padding: number;        // nombre de chiffres (ex: 3 → 010)
-  step: number;           // pas d'incrément (ex: 10 → 010, 020, 030)
+  shotPrefix: string; // ex: SH
+  padding: number; // nombre de chiffres (ex: 3 → 010)
+  step: number; // pas d'incrément (ex: 10 → 010, 020, 030)
 }
 
 export interface ProjectSettings {
@@ -45,13 +45,18 @@ const FALLBACK: ProjectSettings = {
 function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   const o = (raw ?? {}) as Partial<ProjectSettings>;
   const departments = Array.isArray(o.departments)
-    ? o.departments.filter((d): d is Department => !!d && typeof d.key === 'string' && typeof d.name === 'string')
+    ? o.departments.filter(
+        (d): d is Department => !!d && typeof d.key === 'string' && typeof d.name === 'string',
+      )
     : base.departments;
   const n = (o.nomenclature ?? {}) as Partial<Nomenclature>;
   const nomenclature: Nomenclature = {
-    sequencePrefix: typeof n.sequencePrefix === 'string' ? n.sequencePrefix : base.nomenclature.sequencePrefix,
+    sequencePrefix:
+      typeof n.sequencePrefix === 'string' ? n.sequencePrefix : base.nomenclature.sequencePrefix,
     shotPrefix: typeof n.shotPrefix === 'string' ? n.shotPrefix : base.nomenclature.shotPrefix,
-    padding: Number.isFinite(n.padding) ? Math.min(Math.max(Number(n.padding), 1), 8) : base.nomenclature.padding,
+    padding: Number.isFinite(n.padding)
+      ? Math.min(Math.max(Number(n.padding), 1), 8)
+      : base.nomenclature.padding,
     step: Number.isFinite(n.step) ? Math.max(Number(n.step), 1) : base.nomenclature.step,
   };
   return { departments, nomenclature };
@@ -61,8 +66,11 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
 export async function getStudioProjectDefaults(): Promise<ProjectSettings> {
   const row = await prisma.setting.findUnique({ where: { key: STUDIO_DEFAULTS_KEY } });
   if (!row) return FALLBACK;
-  try { return sanitize(JSON.parse(row.value), FALLBACK); }
-  catch { return FALLBACK; }
+  try {
+    return sanitize(JSON.parse(row.value), FALLBACK);
+  } catch {
+    return FALLBACK;
+  }
 }
 
 /** Enregistre les défauts studio. */

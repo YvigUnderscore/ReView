@@ -18,16 +18,25 @@ import type { ShotSummary } from '../types/api';
  * (le code prime ; le nom n'est qu'un repère secondaire).
  */
 export default function AssetAssignDialog({
-  assetId, projectId, assetName, onClose, onSaved,
+  assetId,
+  projectId,
+  assetName,
+  onClose,
+  onSaved,
 }: {
-  assetId: number; projectId: number; assetName: string; onClose: () => void; onSaved?: () => void;
+  assetId: number;
+  projectId: number;
+  assetName: string;
+  onClose: () => void;
+  onSaved?: () => void;
 }) {
   const qc = useQueryClient();
   const shotsQ = useShotsQuery(projectId);
   const seqsQ = useSequencesQuery(projectId);
   const assetQ = useQuery({
     queryKey: qk.asset(assetId),
-    queryFn: () => api.get<{ asset: { shots: { id: number }[]; sequences: { id: number }[] } }>(`/api/assets/${assetId}`),
+    queryFn: () =>
+      api.get<{ asset: { shots: { id: number }[]; sequences: { id: number }[] } }>(`/api/assets/${assetId}`),
   });
   const shots = useMemo(() => shotsQ.data ?? [], [shotsQ.data]);
   const sequences = useMemo(() => seqsQ.data?.sequences ?? [], [seqsQ.data]);
@@ -68,12 +77,17 @@ export default function AssetAssignDialog({
 
   // Regroupe les shots par séquence (codes triés numériquement), « Sans séquence » en dernier.
   const groups = useMemo(() => {
-    const sortedSeq = [...sequences].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-    const byCode = (a: ShotSummary, b: ShotSummary) => a.code.localeCompare(b.code, undefined, { numeric: true });
-    const list: { seq: { id: number; code: string; name: string }; shots: ShotSummary[] }[] = sortedSeq.map((seq) => ({
-      seq,
-      shots: shots.filter((s) => s.sequenceId === seq.id).sort(byCode),
-    }));
+    const sortedSeq = [...sequences].sort((a, b) =>
+      a.code.localeCompare(b.code, undefined, { numeric: true }),
+    );
+    const byCode = (a: ShotSummary, b: ShotSummary) =>
+      a.code.localeCompare(b.code, undefined, { numeric: true });
+    const list: { seq: { id: number; code: string; name: string }; shots: ShotSummary[] }[] = sortedSeq.map(
+      (seq) => ({
+        seq,
+        shots: shots.filter((s) => s.sequenceId === seq.id).sort(byCode),
+      }),
+    );
     const orphans = shots.filter((s) => s.sequenceId === null).sort(byCode);
     if (orphans.length) list.push({ seq: { id: -1, code: 'Sans séquence', name: '' }, shots: orphans });
     return list.filter((g) => g.shots.length > 0);
@@ -82,12 +96,19 @@ export default function AssetAssignDialog({
   const seqById = useMemo(() => new Map(sequences.map((s) => [s.id, s])), [sequences]);
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="flex max-h-[80vh] max-w-lg flex-col p-0">
         <div className="border-b border-border px-4 py-3">
           <DialogTitle className="text-sm">Assigner « {assetName} »</DialogTitle>
         </div>
-        {(error ?? loadError?.message) && <p className="px-4 pt-3 text-xs text-destructive">{error ?? loadError?.message}</p>}
+        {(error ?? loadError?.message) && (
+          <p className="px-4 pt-3 text-xs text-destructive">{error ?? loadError?.message}</p>
+        )}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <SkeletonRows count={4} />
@@ -95,12 +116,23 @@ export default function AssetAssignDialog({
             <div className="space-y-5">
               {/* Séquences entières */}
               <div>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Séquences entières</div>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Séquences entières
+                </div>
                 <div className="grid grid-cols-2 gap-1">
-                  {sequences.length === 0 && <p className="text-xs text-muted-foreground">Aucune séquence.</p>}
+                  {sequences.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Aucune séquence.</p>
+                  )}
                   {sequences.map((s) => (
-                    <label key={s.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50">
-                      <input type="checkbox" checked={sequenceIds.has(s.id)} onChange={() => toggle('sequenceIds', s.id)} />
+                    <label
+                      key={s.id}
+                      className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={sequenceIds.has(s.id)}
+                        onChange={() => toggle('sequenceIds', s.id)}
+                      />
                       <span className="font-medium">{s.code}</span>
                       {s.name && <span className="truncate text-muted-foreground">· {s.name}</span>}
                     </label>
@@ -110,20 +142,35 @@ export default function AssetAssignDialog({
 
               {/* Shots regroupés par séquence */}
               <div>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Shots</div>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Shots
+                </div>
                 {groups.length === 0 && <p className="text-xs text-muted-foreground">Aucun shot.</p>}
                 <div className="space-y-3">
                   {groups.map((g) => (
                     <div key={g.seq.id}>
-                      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-primary/80">{g.seq.code}</div>
+                      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-primary/80">
+                        {g.seq.code}
+                      </div>
                       <div className="grid grid-cols-2 gap-1">
                         {g.shots.map((sh) => {
                           const seqCode = sh.sequenceId != null ? seqById.get(sh.sequenceId)?.code : null;
                           return (
-                            <label key={sh.id} className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50">
-                              <input type="checkbox" checked={shotIds.has(sh.id)} onChange={() => toggle('shotIds', sh.id)} />
-                              <span className="font-medium">{seqCode ? `${seqCode} · ${sh.code}` : sh.code}</span>
-                              {sh.name && sh.name !== sh.code && <span className="truncate text-muted-foreground">· {sh.name}</span>}
+                            <label
+                              key={sh.id}
+                              className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={shotIds.has(sh.id)}
+                                onChange={() => toggle('shotIds', sh.id)}
+                              />
+                              <span className="font-medium">
+                                {seqCode ? `${seqCode} · ${sh.code}` : sh.code}
+                              </span>
+                              {sh.name && sh.name !== sh.code && (
+                                <span className="truncate text-muted-foreground">· {sh.name}</span>
+                              )}
                             </label>
                           );
                         })}
@@ -136,7 +183,9 @@ export default function AssetAssignDialog({
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
-          <Button variant="outline" size="sm" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Annuler
+          </Button>
           <Button size="sm" onClick={save} disabled={busy || loading}>
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </Button>

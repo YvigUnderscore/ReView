@@ -14,7 +14,8 @@ function scheduleTrashSweep(): void {
     try {
       const days = await getNumericSetting(SETTING_KEYS.TRASH_RETENTION_DAYS);
       const purged = await purgeExpiredTrash(days);
-      if (purged > 0) console.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
+      if (purged > 0)
+        console.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
     } catch (err) {
       console.error('[Trash] échec du balayage de purge :', err);
     }

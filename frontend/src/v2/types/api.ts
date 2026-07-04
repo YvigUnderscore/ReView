@@ -13,8 +13,7 @@ export type UserStatus = 'AVAILABLE' | 'AWAY' | 'DND';
 export type ProjectStatus = 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'ARCHIVED';
 export type AssetType = 'CHARACTER' | 'PROP' | 'ENVIRONMENT' | 'VEHICLE' | 'FX' | 'OTHER';
 export type TaskType =
-  | 'MODELING' | 'RIGGING' | 'ANIMATION' | 'FX' | 'LIGHTING'
-  | 'COMPOSITING' | 'LOOKDEV' | 'LAYOUT' | 'OTHER';
+  'MODELING' | 'RIGGING' | 'ANIMATION' | 'FX' | 'LIGHTING' | 'COMPOSITING' | 'LOOKDEV' | 'LAYOUT' | 'OTHER';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'RETAKE';
 export type VersionStatus = 'DRAFT' | 'REVIEW' | 'PUBLISHED';
 export type MediaKind = 'VIDEO' | 'IMAGE' | 'MODEL_3D';
@@ -53,23 +52,44 @@ export interface Project {
 }
 export type ProjectRef = Pick<Project, 'id' | 'name'>;
 
-export interface Sequence { id: number; code: string; name: string; order: number }
+export interface Sequence {
+  id: number;
+  code: string;
+  name: string;
+  order: number;
+}
 export type SequenceRef = Pick<Sequence, 'id' | 'code' | 'name'>;
 /** GET /api/sequences?projectId= */
 export type SequenceSummary = Sequence & { _count: { shots: number } };
 
-export interface Shot { id: number; code: string; name: string; sequenceId: number | null; thumbnailUrl?: string | null }
+export interface Shot {
+  id: number;
+  code: string;
+  name: string;
+  sequenceId: number | null;
+  thumbnailUrl?: string | null;
+}
 export type ShotRef = Pick<Shot, 'id' | 'code' | 'name'>;
 /** GET /api/shots?projectId= */
 export type ShotSummary = Shot & { _count?: { tasks: number }; assets?: AssetRef[] };
 
-export interface Asset { id: number; name: string; type: AssetType; thumbnailUrl?: string | null }
+export interface Asset {
+  id: number;
+  name: string;
+  type: AssetType;
+  thumbnailUrl?: string | null;
+}
 export type AssetRef = Pick<Asset, 'id' | 'name' | 'type'>;
 /** GET /api/assets/:id — liens N-N vers shots/séquences. */
 export type AssetDetail = AssetRef & { projectId: number; shots: ShotRef[]; sequences: SequenceRef[] };
 
 // ── Tâches ────────────────────────────────────────────────────────────────────
-export interface Task { id: number; name: string; type: TaskType; status: TaskStatus }
+export interface Task {
+  id: number;
+  name: string;
+  type: TaskType;
+  status: TaskStatus;
+}
 /** Listes (kanban, activité projet) : assigné joint. */
 export type TaskWithAssignee = Task & { assignee: UserRef | null };
 /** GET /api/tasks/:id — contexte de localisation (shot/asset + projet). */
@@ -79,11 +99,24 @@ export type TaskDetail = Task & {
 };
 
 // ── Versions & médias ─────────────────────────────────────────────────────────
-export interface Version { id: number; name: string; status: VersionStatus; published: boolean }
+export interface Version {
+  id: number;
+  name: string;
+  status: VersionStatus;
+  published: boolean;
+}
 /** GET /api/versions?taskId=|assetId= — _count.media filtré par visibilité. */
-export type VersionListItem = Version & { createdAt: string; author: UserRef | null; _count: { media: number } };
+export type VersionListItem = Version & {
+  createdAt: string;
+  author: UserRef | null;
+  _count: { media: number };
+};
 /** GET /api/versions/:id — médias visibles inclus. */
-export type VersionDetail = Version & { taskId: number | null; assetId: number | null; media: MediaSummary[] };
+export type VersionDetail = Version & {
+  taskId: number | null;
+  assetId: number | null;
+  media: MediaSummary[];
+};
 
 export interface Media {
   id: number;
@@ -105,7 +138,11 @@ export interface Membership {
 }
 
 // ── Commentaires de review ────────────────────────────────────────────────────
-export interface ReviewReaction { id: number; emoji: string; userId: number | null }
+export interface ReviewReaction {
+  id: number;
+  emoji: string;
+  userId: number | null;
+}
 export interface ReviewComment {
   id: number;
   content: string;
@@ -134,7 +171,18 @@ export interface Notification {
 }
 
 // ── Réglages projet (nomenclature / départements) ─────────────────────────────
-export interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number }
-export interface Department { key: string; name: string }
+export interface Nomenclature {
+  sequencePrefix: string;
+  shotPrefix: string;
+  padding: number;
+  step: number;
+}
+export interface Department {
+  key: string;
+  name: string;
+}
 /** GET /api/projects/:id/settings — aussi la shape des défauts studio (admin). */
-export interface ProjectSettings { departments: Department[]; nomenclature: Nomenclature }
+export interface ProjectSettings {
+  departments: Department[];
+  nomenclature: Nomenclature;
+}

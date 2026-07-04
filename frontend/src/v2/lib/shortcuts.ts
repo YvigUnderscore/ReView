@@ -27,19 +27,34 @@ export function useGlobalShortcuts({ projectId, onHelp }: { projectId: number | 
       if (pendingG.current) {
         pendingG.current = false;
         window.clearTimeout(timer.current);
-        if (key === 'p') { e.preventDefault(); navigate('/'); }
-        else if (key === 'k' && projectId !== null) { e.preventDefault(); navigate(`/projects/${projectId}/kanban`); }
-        else if (key === 'b' && projectId !== null) { e.preventDefault(); navigate(`/projects/${projectId}/board`); }
+        if (key === 'p') {
+          e.preventDefault();
+          navigate('/');
+        } else if (key === 'k' && projectId !== null) {
+          e.preventDefault();
+          navigate(`/projects/${projectId}/kanban`);
+        } else if (key === 'b' && projectId !== null) {
+          e.preventDefault();
+          navigate(`/projects/${projectId}/board`);
+        }
         return;
       }
       if (key === 'g') {
         pendingG.current = true;
-        timer.current = window.setTimeout(() => { pendingG.current = false; }, 1000);
+        timer.current = window.setTimeout(() => {
+          pendingG.current = false;
+        }, 1000);
         return;
       }
-      if (e.key === '?') { e.preventDefault(); onHelp(); }
+      if (e.key === '?') {
+        e.preventDefault();
+        onHelp();
+      }
     };
     document.addEventListener('keydown', down);
-    return () => { document.removeEventListener('keydown', down); window.clearTimeout(timer.current); };
+    return () => {
+      document.removeEventListener('keydown', down);
+      window.clearTimeout(timer.current);
+    };
   }, [navigate, projectId, onHelp]);
 }

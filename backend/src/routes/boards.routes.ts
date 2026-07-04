@@ -48,15 +48,26 @@ async function writeBoard(req: Request, res: Response, scope: Scope): Promise<vo
   res.json({ board });
 }
 
-const idParam = (key: 'projectId' | 'assetId') => validate({ params: z.object({ [key]: z.coerce.number().int() }) });
-const bodySchema = validate({ body: z.object({ document: z.any(), summary: z.string().max(500).optional() }) });
+const idParam = (key: 'projectId' | 'assetId') =>
+  validate({ params: z.object({ [key]: z.coerce.number().int() }) });
+const bodySchema = validate({
+  body: z.object({ document: z.any(), summary: z.string().max(500).optional() }),
+});
 
 // ── Board projet ─────────────────────────────────────────────────────────────
-router.get('/project/:projectId', idParam('projectId'), (req, res) => readBoard(req, res, { projectId: Number(req.params.projectId) }));
-router.put('/project/:projectId', idParam('projectId'), bodySchema, (req, res) => writeBoard(req, res, { projectId: Number(req.params.projectId) }));
+router.get('/project/:projectId', idParam('projectId'), (req, res) =>
+  readBoard(req, res, { projectId: Number(req.params.projectId) }),
+);
+router.put('/project/:projectId', idParam('projectId'), bodySchema, (req, res) =>
+  writeBoard(req, res, { projectId: Number(req.params.projectId) }),
+);
 
 // ── Board asset ──────────────────────────────────────────────────────────────
-router.get('/asset/:assetId', idParam('assetId'), (req, res) => readBoard(req, res, { assetId: Number(req.params.assetId) }));
-router.put('/asset/:assetId', idParam('assetId'), bodySchema, (req, res) => writeBoard(req, res, { assetId: Number(req.params.assetId) }));
+router.get('/asset/:assetId', idParam('assetId'), (req, res) =>
+  readBoard(req, res, { assetId: Number(req.params.assetId) }),
+);
+router.put('/asset/:assetId', idParam('assetId'), bodySchema, (req, res) =>
+  writeBoard(req, res, { assetId: Number(req.params.assetId) }),
+);
 
 export default router;

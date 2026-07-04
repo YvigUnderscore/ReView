@@ -33,7 +33,9 @@ export default function Tabs({
             {t.icon}
             {t.label}
             {t.badge != null && t.badge > 0 && (
-              <span className="rounded-full bg-secondary px-1.5 text-xs text-muted-foreground">{t.badge}</span>
+              <span className="rounded-full bg-secondary px-1.5 text-xs text-muted-foreground">
+                {t.badge}
+              </span>
             )}
             {isActive && (
               <motion.div

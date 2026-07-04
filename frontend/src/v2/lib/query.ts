@@ -30,7 +30,8 @@ export const qk = {
   sequences: (projectId: number) => ['sequences', projectId] as const,
   sequence: (id: number) => ['sequence', id] as const,
   shots: (projectId: number) => ['shots', projectId] as const,
-  shotsOfSequence: (projectId: number, sequenceId: number | 'none') => ['shots', projectId, sequenceId] as const,
+  shotsOfSequence: (projectId: number, sequenceId: number | 'none') =>
+    ['shots', projectId, sequenceId] as const,
   shot: (id: number) => ['shot', id] as const,
   assets: (projectId: number) => ['assets', projectId] as const,
   asset: (id: number) => ['asset', id] as const,

@@ -1,5 +1,14 @@
 import { Link, useParams } from 'react-router-dom';
-import { Activity, FolderCog, History, LayoutDashboard, Server, Settings as SettingsIcon, Trash2, Users as UsersIcon } from 'lucide-react';
+import {
+  Activity,
+  FolderCog,
+  History,
+  LayoutDashboard,
+  Server,
+  Settings as SettingsIcon,
+  Trash2,
+  Users as UsersIcon,
+} from 'lucide-react';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import OverviewTab from './admin/OverviewTab';
@@ -27,7 +36,11 @@ export default function AdminPage() {
   const role = useAuth((s) => s.user?.role);
   const { section } = useParams();
   if (role !== 'ADMIN') {
-    return <Shell title="Administration"><p className="text-sm text-destructive">Accès réservé aux administrateurs.</p></Shell>;
+    return (
+      <Shell title="Administration">
+        <p className="text-sm text-destructive">Accès réservé aux administrateurs.</p>
+      </Shell>
+    );
   }
   const active = SECTIONS.find((s) => s.key === section) ?? SECTIONS[0];
   const Active = active.Component;
@@ -45,7 +58,9 @@ export default function AdminPage() {
                 key={s.key}
                 to={`/admin/${s.key}`}
                 className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                  on ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                  on
+                    ? 'bg-secondary text-foreground'
+                    : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
                 }`}
               >
                 <Icon size={16} /> {s.label}
@@ -53,7 +68,9 @@ export default function AdminPage() {
             );
           })}
         </nav>
-        <div className="min-w-0 flex-1"><Active /></div>
+        <div className="min-w-0 flex-1">
+          <Active />
+        </div>
       </div>
     </Shell>
   );

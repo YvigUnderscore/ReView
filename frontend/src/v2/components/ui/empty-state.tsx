@@ -32,12 +32,19 @@ export default function EmptyState({
       )}
     >
       {Icon && (
-        <div className={cn('flex items-center justify-center rounded-full bg-secondary text-muted-foreground', compact ? 'h-9 w-9' : 'h-12 w-12')}>
+        <div
+          className={cn(
+            'flex items-center justify-center rounded-full bg-secondary text-muted-foreground',
+            compact ? 'h-9 w-9' : 'h-12 w-12',
+          )}
+        >
           <Icon size={compact ? 18 : 24} />
         </div>
       )}
       <p className={cn('font-medium', compact ? 'text-sm' : 'text-base')}>{title}</p>
-      {description && <p className={cn('max-w-sm text-muted-foreground', compact ? 'text-xs' : 'text-sm')}>{description}</p>}
+      {description && (
+        <p className={cn('max-w-sm text-muted-foreground', compact ? 'text-xs' : 'text-sm')}>{description}</p>
+      )}
       {action && onAction && (
         <Button size="sm" variant="outline" className="mt-2" onClick={onAction}>
           {action}

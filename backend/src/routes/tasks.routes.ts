@@ -26,13 +26,18 @@ router.get(
   async (req, res) => {
     const shotId = req.query.shotId ? Number(req.query.shotId) : undefined;
     const assetId = req.query.assetId ? Number(req.query.assetId) : undefined;
-    const projectId = shotId ? await resolveProjectIdForShot(shotId) : await resolveProjectIdForAsset(assetId!);
+    const projectId = shotId
+      ? await resolveProjectIdForShot(shotId)
+      : await resolveProjectIdForAsset(assetId!);
     if (!projectId) throw notFound('Parent introuvable');
     await assertProjectAccess(req, projectId);
     const tasks = await prisma.task.findMany({
       where: shotId ? { shotId } : { assetId },
       orderBy: { order: 'asc' },
-      include: { assignee: { select: { id: true, name: true, email: true } }, _count: { select: { versions: true } } },
+      include: {
+        assignee: { select: { id: true, name: true, email: true } },
+        _count: { select: { versions: true } },
+      },
     });
     res.json({ tasks });
   },
@@ -51,12 +56,20 @@ router.post(
         assigneeId: z.number().int().nullable().optional(),
         order: z.number().int().optional(),
       })
-      .refine((b) => (b.shotId === undefined) !== (b.assetId === undefined), 'Fournir exactement shotId OU assetId'),
+      .refine(
+        (b) => (b.shotId === undefined) !== (b.assetId === undefined),
+        'Fournir exactement shotId OU assetId',
+      ),
   }),
   async (req, res) => {
     if (!isGlobalManager(req.user!.role)) throw forbidden('Réservé aux superviseurs/admins');
     const body = req.body as {
-      name: string; type: TaskType; shotId?: number; assetId?: number; assigneeId?: number | null; order?: number;
+      name: string;
+      type: TaskType;
+      shotId?: number;
+      assetId?: number;
+      assigneeId?: number | null;
+      order?: number;
     };
     const projectId = body.shotId
       ? await resolveProjectIdForShot(body.shotId)
@@ -76,9 +89,20 @@ router.post(
       include: { assignee: { select: { id: true, name: true } } },
     });
     if (body.assigneeId && body.assigneeId !== req.user!.id) {
-      await notify({ userId: body.assigneeId, type: 'TASK_ASSIGNED', content: `Tâche assignée : ${task.name}`, projectId, referenceId: task.id });
+      await notify({
+        userId: body.assigneeId,
+        type: 'TASK_ASSIGNED',
+        content: `Tâche assignée : ${task.name}`,
+        projectId,
+        referenceId: task.id,
+      });
     }
-    emitToProject(projectId, 'task:update', { projectId, id: task.id, shotId: task.shotId, assetId: task.assetId });
+    emitToProject(projectId, 'task:update', {
+      projectId,
+      id: task.id,
+      shotId: task.shotId,
+      assetId: task.assetId,
+    });
     res.status(201).json({ task });
   },
 );
@@ -94,7 +118,9 @@ router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) 
       // Contexte de localisation pour le fil d'ariane (projet › séquence · shot › tâche)
       shot: {
         select: {
-          id: true, code: true, name: true,
+          id: true,
+          code: true,
+          name: true,
           project: { select: { id: true, name: true } },
           sequence: { select: { id: true, code: true, name: true } },
         },
@@ -149,29 +175,36 @@ router.patch(
     });
     const newAssignee = (body as { assigneeId?: number | null }).assigneeId;
     if (newAssignee && newAssignee !== req.user!.id) {
-      await notify({ userId: newAssignee, type: 'TASK_ASSIGNED', content: `Tâche assignée : ${updated.name}`, projectId, referenceId: id });
+      await notify({
+        userId: newAssignee,
+        type: 'TASK_ASSIGNED',
+        content: `Tâche assignée : ${updated.name}`,
+        projectId,
+        referenceId: id,
+      });
     }
-    emitToProject(projectId, 'task:update', { projectId, id, shotId: updated.shotId, assetId: updated.assetId });
+    emitToProject(projectId, 'task:update', {
+      projectId,
+      id,
+      shotId: updated.shotId,
+      assetId: updated.assetId,
+    });
     res.json({ task: updated });
   },
 );
 
 // DELETE /api/tasks/:id (admin/superviseur)
-router.delete(
-  '/:id',
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
-  async (req, res) => {
-    if (!isGlobalManager(req.user!.role)) throw forbidden('Réservé aux superviseurs/admins');
-    const id = Number(req.params.id);
-    const task = await prisma.task.findUnique({ where: { id }, select: { shotId: true, assetId: true } });
-    if (!task) throw notFound('Tâche introuvable');
-    const projectId = await resolveProjectIdForTask(id);
-    if (!projectId) throw notFound('Tâche introuvable');
-    await assertProjectAccess(req, projectId);
-    await prisma.task.delete({ where: { id } });
-    emitToProject(projectId, 'task:update', { projectId, id, shotId: task.shotId, assetId: task.assetId });
-    res.status(204).end();
-  },
-);
+router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
+  if (!isGlobalManager(req.user!.role)) throw forbidden('Réservé aux superviseurs/admins');
+  const id = Number(req.params.id);
+  const task = await prisma.task.findUnique({ where: { id }, select: { shotId: true, assetId: true } });
+  if (!task) throw notFound('Tâche introuvable');
+  const projectId = await resolveProjectIdForTask(id);
+  if (!projectId) throw notFound('Tâche introuvable');
+  await assertProjectAccess(req, projectId);
+  await prisma.task.delete({ where: { id } });
+  emitToProject(projectId, 'task:update', { projectId, id, shotId: task.shotId, assetId: task.assetId });
+  res.status(204).end();
+});
 
 export default router;

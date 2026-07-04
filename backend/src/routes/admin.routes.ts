@@ -26,13 +26,17 @@ router.put(
   '/project-defaults',
   validate({
     body: z.object({
-      departments: z.array(z.object({ key: z.string().min(1).max(40), name: z.string().min(1).max(80) })).optional(),
-      nomenclature: z.object({
-        sequencePrefix: z.string().max(16),
-        shotPrefix: z.string().max(16),
-        padding: z.number().int().min(1).max(8),
-        step: z.number().int().min(1),
-      }).optional(),
+      departments: z
+        .array(z.object({ key: z.string().min(1).max(40), name: z.string().min(1).max(80) }))
+        .optional(),
+      nomenclature: z
+        .object({
+          sequencePrefix: z.string().max(16),
+          shotPrefix: z.string().max(16),
+          padding: z.number().int().min(1).max(8),
+          step: z.number().int().min(1),
+        })
+        .optional(),
     }),
   }),
   async (req, res) => {
@@ -54,7 +58,12 @@ router.get('/dashboard', async (_req, res) => {
       orderBy: { createdAt: 'desc' },
       take: 10,
       select: {
-        id: true, originalName: true, kind: true, status: true, size: true, createdAt: true,
+        id: true,
+        originalName: true,
+        kind: true,
+        status: true,
+        size: true,
+        createdAt: true,
         uploader: { select: { id: true, name: true } },
       },
     }),
@@ -71,9 +80,20 @@ router.get('/dashboard', async (_req, res) => {
 // GET /api/admin/stats — métriques métier complètes (admin)
 router.get('/stats', async (_req, res) => {
   const [
-    userCount, usersByRole, projectCount, sequenceCount, shotCount, assetCount,
-    versionCount, mediaCount, mediaByKind, mediaByStatus, commentCount, storageAgg,
-    topStorageUsers, jobCounts,
+    userCount,
+    usersByRole,
+    projectCount,
+    sequenceCount,
+    shotCount,
+    assetCount,
+    versionCount,
+    mediaCount,
+    mediaByKind,
+    mediaByStatus,
+    commentCount,
+    storageAgg,
+    topStorageUsers,
+    jobCounts,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
@@ -88,15 +108,26 @@ router.get('/stats', async (_req, res) => {
     prisma.comment.count(),
     prisma.mediaObject.aggregate({ _sum: { size: true } }),
     prisma.user.findMany({
-      orderBy: { storageUsed: 'desc' }, take: 5,
+      orderBy: { storageUsed: 'desc' },
+      take: 5,
       select: { id: true, name: true, username: true, email: true, storageUsed: true, storageLimit: true },
     }),
     mediaQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed').catch(() => null),
   ]);
 
   res.json({
-    users: { total: userCount, byRole: Object.fromEntries(usersByRole.map((r) => [r.role, r._count._all])), online: getOnlineUserIds().length },
-    pipeline: { projects: projectCount, sequences: sequenceCount, shots: shotCount, assets: assetCount, versions: versionCount },
+    users: {
+      total: userCount,
+      byRole: Object.fromEntries(usersByRole.map((r) => [r.role, r._count._all])),
+      online: getOnlineUserIds().length,
+    },
+    pipeline: {
+      projects: projectCount,
+      sequences: sequenceCount,
+      shots: shotCount,
+      assets: assetCount,
+      versions: versionCount,
+    },
     media: {
       count: mediaCount,
       byKind: Object.fromEntries(mediaByKind.map((m) => [m.kind, m._count._all])),
@@ -106,8 +137,10 @@ router.get('/stats', async (_req, res) => {
     comments: commentCount,
     jobs: jobCounts,
     topStorageUsers: topStorageUsers.map((u) => ({
-      id: u.id, name: u.username ?? u.name ?? u.email,
-      storageUsed: Number(u.storageUsed), storageLimit: u.storageLimit ? Number(u.storageLimit) : null,
+      id: u.id,
+      name: u.username ?? u.name ?? u.email,
+      storageUsed: Number(u.storageUsed),
+      storageLimit: u.storageLimit ? Number(u.storageLimit) : null,
     })),
   });
 });
@@ -122,12 +155,17 @@ router.get('/system', async (_req, res) => {
   try {
     const s = await statfs(process.cwd());
     disk = { total: s.blocks * s.bsize, free: s.bfree * s.bsize };
-  } catch { /* statfs indisponible (selon OS) */ }
+  } catch {
+    /* statfs indisponible (selon OS) */
+  }
 
   // Santé des services
   const [db, redisOk, minio] = await Promise.all([
     prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false),
-    mediaQueue.client.then((c) => (c as unknown as { ping: () => Promise<string> }).ping()).then(() => true).catch(() => false),
+    mediaQueue.client
+      .then((c) => (c as unknown as { ping: () => Promise<string> }).ping())
+      .then(() => true)
+      .catch(() => false),
     storage.ping(),
   ]);
 
@@ -141,7 +179,12 @@ router.get('/system', async (_req, res) => {
       uptimeSec: os.uptime(),
       processUptimeSec: Math.round(process.uptime()),
     },
-    memory: { total: totalmem, free: freemem, used: totalmem - freemem, processRss: process.memoryUsage().rss },
+    memory: {
+      total: totalmem,
+      free: freemem,
+      used: totalmem - freemem,
+      processRss: process.memoryUsage().rss,
+    },
     disk,
     services: { database: db, redis: redisOk, minio },
   });
@@ -187,7 +230,12 @@ router.get('/trash', async (_req, res) => {
 router.post('/jobs/retry', async (req, res) => {
   const failed = await mediaQueue.getFailed();
   await Promise.all(failed.map((job) => job.retry().catch(() => undefined)));
-  logAudit({ userId: req.user!.id, action: 'JOBS_RETRY', entityType: 'Queue', metadata: { count: failed.length } });
+  logAudit({
+    userId: req.user!.id,
+    action: 'JOBS_RETRY',
+    entityType: 'Queue',
+    metadata: { count: failed.length },
+  });
   res.json({ retried: failed.length });
 });
 

@@ -12,7 +12,8 @@ export default function SettingsTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: qk.admin('settings'),
-    queryFn: () => api.get<{ settings: Record<string, string> }>('/api/studio/settings').then((d) => d.settings),
+    queryFn: () =>
+      api.get<{ settings: Record<string, string> }>('/api/studio/settings').then((d) => d.settings),
   });
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [savedKey, setSavedKey] = useState<string | null>(null);
@@ -22,8 +23,11 @@ export default function SettingsTab() {
     try {
       await api.put('/api/studio/settings', { key, value: settings[key] ?? '' });
       qc.invalidateQueries({ queryKey: qk.admin('settings') });
-      setSavedKey(key); setTimeout(() => setSavedKey(null), 1500);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Enregistrement impossible'); }
+      setSavedKey(key);
+      setTimeout(() => setSavedKey(null), 1500);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+    }
   };
 
   if (isLoading) return <SkeletonRows count={5} />;
@@ -32,7 +36,12 @@ export default function SettingsTab() {
       {SETTINGS_FIELDS.map((f) => (
         <div key={f.key} className="flex flex-wrap items-center gap-2 text-sm">
           <label className="w-64 text-muted-foreground">{f.label}</label>
-          <Input className="flex-1 py-1 text-xs" placeholder={f.hint} value={settings[f.key] ?? ''} onChange={(e) => setEdits((s) => ({ ...s, [f.key]: e.target.value }))} />
+          <Input
+            className="flex-1 py-1 text-xs"
+            placeholder={f.hint}
+            value={settings[f.key] ?? ''}
+            onChange={(e) => setEdits((s) => ({ ...s, [f.key]: e.target.value }))}
+          />
           <Button variant="outline" size="sm" onClick={() => save(f.key)}>
             {savedKey === f.key ? '✓ Enregistré' : 'Enregistrer'}
           </Button>

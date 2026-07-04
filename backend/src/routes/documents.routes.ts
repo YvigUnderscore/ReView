@@ -13,7 +13,17 @@ import { forbidden, notFound } from '../lib/errors';
 const router = Router();
 router.use(authenticate);
 
-const authorSelect = { select: { id: true, name: true, email: true, firstName: true, lastName: true, username: true, avatarKey: true } } as const;
+const authorSelect = {
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    firstName: true,
+    lastName: true,
+    username: true,
+    avatarKey: true,
+  },
+} as const;
 const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
 // GET /api/documents?projectId=&scope=&scopeId= — liste visible
@@ -52,7 +62,10 @@ router.get(
 
 // GET /api/documents/:id — détail (+ URL PDF présignée)
 router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
-  const doc = await prisma.document.findUnique({ where: { id: Number(req.params.id) }, include: { createdBy: authorSelect } });
+  const doc = await prisma.document.findUnique({
+    where: { id: Number(req.params.id) },
+    include: { createdBy: authorSelect },
+  });
   if (!doc) throw notFound('Document introuvable');
   if (doc.projectId) await assertProjectAccess(req, doc.projectId);
   const fileUrl = doc.fileKey ? await storage.getPresignedGetUrl(doc.fileKey) : null;
@@ -76,8 +89,13 @@ router.post(
   async (req, res) => {
     if (req.user!.role === Role.CLIENT) throw forbidden('Création réservée à l’équipe');
     const body = req.body as {
-      title: string; kind: DocKind; content?: string; fileKey?: string;
-      scope: DocScope; projectId?: number | null; scopeId?: number | null;
+      title: string;
+      kind: DocKind;
+      content?: string;
+      fileKey?: string;
+      scope: DocScope;
+      projectId?: number | null;
+      scopeId?: number | null;
     };
     if (body.projectId) await assertProjectAccess(req, body.projectId);
     const doc = await prisma.document.create({
@@ -85,7 +103,7 @@ router.post(
         title: body.title,
         kind: body.kind,
         content: body.kind === DocKind.RICH ? sanitizeHtml(body.content ?? '') : null,
-        fileKey: body.kind === DocKind.PDF ? body.fileKey ?? null : null,
+        fileKey: body.kind === DocKind.PDF ? (body.fileKey ?? null) : null,
         scope: body.scope,
         projectId: body.projectId ?? null,
         scopeId: body.scopeId ?? null,
@@ -114,9 +132,16 @@ router.patch(
     const id = Number(req.params.id);
     const existing = await prisma.document.findUnique({ where: { id } });
     if (!existing) throw notFound('Document introuvable');
-    if (existing.createdById !== req.user!.id && !isManager(req.user!.role)) throw forbidden('Édition non autorisée');
+    if (existing.createdById !== req.user!.id && !isManager(req.user!.role))
+      throw forbidden('Édition non autorisée');
     if (existing.projectId) await assertProjectAccess(req, existing.projectId);
-    const body = req.body as { title?: string; content?: string; scope?: DocScope; projectId?: number | null; scopeId?: number | null };
+    const body = req.body as {
+      title?: string;
+      content?: string;
+      scope?: DocScope;
+      projectId?: number | null;
+      scopeId?: number | null;
+    };
     const doc = await prisma.document.update({
       where: { id },
       data: {
@@ -137,7 +162,8 @@ router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() 
   const id = Number(req.params.id);
   const existing = await prisma.document.findUnique({ where: { id } });
   if (!existing) throw notFound('Document introuvable');
-  if (existing.createdById !== req.user!.id && !isManager(req.user!.role)) throw forbidden('Suppression non autorisée');
+  if (existing.createdById !== req.user!.id && !isManager(req.user!.role))
+    throw forbidden('Suppression non autorisée');
   if (existing.fileKey) await storage.deleteObject(existing.fileKey).catch(() => undefined);
   await prisma.document.delete({ where: { id } });
   res.status(204).end();

@@ -41,7 +41,10 @@ export function Gauge({ label, pct }: { label: string; pct: number }) {
   const color = pct > 90 ? '#ef4444' : pct > 75 ? '#f59e0b' : '#22c55e';
   return (
     <div>
-      <div className="mb-1 flex justify-between text-xs"><span className="text-muted-foreground">{label}</span><span>{pct}%</span></div>
+      <div className="mb-1 flex justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span>{pct}%</span>
+      </div>
       <div className="h-2 overflow-hidden rounded-full bg-secondary">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
       </div>
@@ -50,18 +53,30 @@ export function Gauge({ label, pct }: { label: string; pct: number }) {
 }
 
 export function Row({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between"><dt className="text-muted-foreground">{k}</dt><dd>{v}</dd></div>;
+  return (
+    <div className="flex justify-between">
+      <dt className="text-muted-foreground">{k}</dt>
+      <dd>{v}</dd>
+    </div>
+  );
 }
 
 export function ServiceHealth({ services }: { services: System['services'] }) {
-  const items: [string, boolean][] = [['PostgreSQL', services.database], ['Redis', services.redis], ['MinIO', services.minio]];
+  const items: [string, boolean][] = [
+    ['PostgreSQL', services.database],
+    ['Redis', services.redis],
+    ['MinIO', services.minio],
+  ];
   return (
     <div className="space-y-1.5">
       {items.map(([name, ok]) => (
         <div key={name} className="flex items-center justify-between text-sm">
           <span>{name}</span>
           <span className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-400' : 'text-destructive'}`}>
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: ok ? '#22c55e' : '#ef4444' }} />
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: ok ? '#22c55e' : '#ef4444' }}
+            />
             {ok ? 'OK' : 'Hors service'}
           </span>
         </div>

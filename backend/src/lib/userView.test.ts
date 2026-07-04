@@ -11,7 +11,7 @@ describe('displayName', () => {
   it('compose prénom + nom', () => {
     expect(displayName({ id: 1, email: 'e@x.io', firstName: 'John', lastName: 'Doe' })).toBe('John Doe');
   });
-  it('retombe sur l\'email en dernier recours', () => {
+  it("retombe sur l'email en dernier recours", () => {
     expect(displayName({ id: 1, email: 'a@b.c' })).toBe('a@b.c');
   });
 });
@@ -20,7 +20,7 @@ describe('initials', () => {
   it('combine prénom + nom', () => {
     expect(initials({ id: 1, email: 'e@x.io', firstName: 'John', lastName: 'Doe' })).toBe('JD');
   });
-  it('dérive deux initiales d\'un nom à deux mots', () => {
+  it("dérive deux initiales d'un nom à deux mots", () => {
     expect(initials({ id: 1, email: 'e@x.io', name: 'Jane Roe' })).toBe('JR');
   });
   it('prend les deux premières lettres pour un nom à un mot', () => {

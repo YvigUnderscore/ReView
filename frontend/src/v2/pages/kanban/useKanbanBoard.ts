@@ -25,7 +25,13 @@ export function useKanbanBoard(projectId: number) {
   });
 
   const tasks: BoardTask[] = shots.flatMap((s, i) =>
-    (taskQueries[i]?.data ?? []).map((t) => ({ ...t, shotId: s.id, shotCode: s.code, sequenceId: s.sequenceId ?? null })));
+    (taskQueries[i]?.data ?? []).map((t) => ({
+      ...t,
+      shotId: s.id,
+      shotCode: s.code,
+      sequenceId: s.sequenceId ?? null,
+    })),
+  );
 
   const isLoading = shotsQ.isLoading || taskQueries.some((q) => q.isLoading);
   const loadError = (shotsQ.error ?? taskQueries.find((q) => q.error)?.error)?.message ?? null;
@@ -35,7 +41,9 @@ export function useKanbanBoard(projectId: number) {
     const t = tasks.find((x) => x.id === taskId);
     if (!t || t.status === status) return;
     const key = qk.tasks(t.shotId);
-    qc.setQueryData<TaskWithAssignee[]>(key, (old) => old?.map((x) => (x.id === taskId ? { ...x, status } : x)));
+    qc.setQueryData<TaskWithAssignee[]>(key, (old) =>
+      old?.map((x) => (x.id === taskId ? { ...x, status } : x)),
+    );
     try {
       await api.patch(`/api/tasks/${taskId}`, { status });
     } catch (e) {

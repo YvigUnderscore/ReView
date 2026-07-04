@@ -4,7 +4,14 @@ import type { TaskStatus } from '../types/api';
  * Statuts de tâche — source unique des libellés FR et couleurs.
  * Ne jamais redéclarer ces mappings dans une page : importer d'ici.
  */
-export const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'PENDING_REVIEW', 'RETAKE', 'REJECTED', 'APPROVED'] as const satisfies readonly TaskStatus[];
+export const TASK_STATUSES = [
+  'TODO',
+  'IN_PROGRESS',
+  'PENDING_REVIEW',
+  'RETAKE',
+  'REJECTED',
+  'APPROVED',
+] as const satisfies readonly TaskStatus[];
 
 export const TASK_STATUS_LABEL: Record<string, string> = {
   TODO: 'À faire',
@@ -36,5 +43,10 @@ export const TASK_STATUS_BAR: Record<string, string> = {
 
 // Priorité décroissante : ce qui demande une action remonte en haut des listes.
 export const TASK_STATUS_PRIORITY: Record<string, number> = {
-  RETAKE: 0, REJECTED: 1, PENDING_REVIEW: 2, IN_PROGRESS: 3, TODO: 4, APPROVED: 5,
+  RETAKE: 0,
+  REJECTED: 1,
+  PENDING_REVIEW: 2,
+  IN_PROGRESS: 3,
+  TODO: 4,
+  APPROVED: 5,
 };

@@ -12,7 +12,10 @@ type RecentMedia = MediaRef & { thumbnailUrl: string | null };
 // Hissé hors du render (règle react-hooks/static-components)
 function StatCard({ label, value, onClick }: { label: string; value: number; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-primary">
+    <button
+      onClick={onClick}
+      className="rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-primary"
+    >
       <div className="text-3xl font-semibold">{value}</div>
       <div className="mt-1 text-sm text-muted-foreground">{label}</div>
     </button>
@@ -23,13 +26,23 @@ function StatCard({ label, value, onClick }: { label: string; value: number; onC
  * Vue d'ensemble du projet (10.C1) : compteurs, derniers médias publiés
  * (vignettes cliquables → review), progression + activité (ProjectActivity).
  */
-export default function OverviewTab({ name, projectId, canManage, counts, onGo }: {
-  name: string; projectId: number; canManage: boolean;
-  counts: { sequences: number; shots: number; assets: number }; onGo: (k: string) => void;
+export default function OverviewTab({
+  name,
+  projectId,
+  canManage,
+  counts,
+  onGo,
+}: {
+  name: string;
+  projectId: number;
+  canManage: boolean;
+  counts: { sequences: number; shots: number; assets: number };
+  onGo: (k: string) => void;
 }) {
   const { data, isError } = useQuery({
     queryKey: qk.projectMedia(projectId),
-    queryFn: () => api.get<{ media: RecentMedia[] }>(`/api/media?projectId=${projectId}`).then((d) => d.media),
+    queryFn: () =>
+      api.get<{ media: RecentMedia[] }>(`/api/media?projectId=${projectId}`).then((d) => d.media),
   });
   const media = isError ? [] : (data?.slice(0, 8) ?? null);
 
@@ -44,13 +57,19 @@ export default function OverviewTab({ name, projectId, canManage, counts, onGo }
 
       {/* Derniers médias publiés : vignettes cliquables vers la review */}
       <section className="mt-6">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Derniers médias publiés</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Derniers médias publiés
+        </h3>
         {media === null ? (
           <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">
-            {Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="aspect-video w-full" />)}
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} className="aspect-video w-full" />
+            ))}
           </div>
         ) : media.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aucun média publié pour l’instant — ils apparaîtront ici dès la première publication.</p>
+          <p className="text-xs text-muted-foreground">
+            Aucun média publié pour l’instant — ils apparaîtront ici dès la première publication.
+          </p>
         ) : (
           <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">
             {media.map((m) => (
@@ -64,7 +83,9 @@ export default function OverviewTab({ name, projectId, canManage, counts, onGo }
                   {m.thumbnailUrl ? (
                     <img src={m.thumbnailUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-muted-foreground"><FileVideo size={20} /></div>
+                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                      <FileVideo size={20} />
+                    </div>
                   )}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <Play size={18} className="text-primary" />

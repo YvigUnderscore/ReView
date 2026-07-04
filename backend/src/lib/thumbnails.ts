@@ -24,8 +24,7 @@ export const firstMediaThumbKeyForProject = (projectId: number) =>
 export const firstMediaThumbKeyForAsset = (assetId: number) =>
   firstMediaThumbKey({ OR: [{ assetId }, { task: { assetId } }] });
 
-export const firstMediaThumbKeyForShot = (shotId: number) =>
-  firstMediaThumbKey({ task: { shotId } });
+export const firstMediaThumbKeyForShot = (shotId: number) => firstMediaThumbKey({ task: { shotId } });
 
 /** URL présignée de la miniature effective (explicite ou fallback premier média). */
 export async function effectiveThumbnailUrl(

@@ -38,7 +38,9 @@ router.post(
   }),
   async (req, res) => {
     const { projectId, permission, expiresInDays } = req.body as {
-      projectId: number; permission: SharePermission; expiresInDays?: number;
+      projectId: number;
+      permission: SharePermission;
+      expiresInDays?: number;
     };
     await assertProjectAccess(req, projectId);
     const token = randomBytes(24).toString('hex');
@@ -46,7 +48,13 @@ router.post(
     const link = await prisma.shareLink.create({
       data: { token, projectId, permission, expiresAt, createdById: req.user!.id },
     });
-    logAudit({ userId: req.user!.id, action: 'SHARE_CREATE', entityType: 'Project', entityId: projectId, metadata: { permission } });
+    logAudit({
+      userId: req.user!.id,
+      action: 'SHARE_CREATE',
+      entityType: 'Project',
+      entityId: projectId,
+      metadata: { permission },
+    });
     res.status(201).json({ link });
   },
 );

@@ -168,22 +168,40 @@ export async function purgeExpiredTrash(retentionDays: number): Promise<number> 
   let purged = 0;
 
   const media = await prisma.mediaObject.findMany({ where: expired, select: { id: true } });
-  for (const m of media) { await purgeMedia(m.id); purged++; }
+  for (const m of media) {
+    await purgeMedia(m.id);
+    purged++;
+  }
 
   const versions = await prisma.version.findMany({ where: expired, select: { id: true } });
-  for (const v of versions) { await purgeVersion(v.id); purged++; }
+  for (const v of versions) {
+    await purgeVersion(v.id);
+    purged++;
+  }
 
   const shots = await prisma.shot.findMany({ where: expired, select: { id: true } });
-  for (const s of shots) { await purgeShot(s.id); purged++; }
+  for (const s of shots) {
+    await purgeShot(s.id);
+    purged++;
+  }
 
   const sequences = await prisma.sequence.findMany({ where: expired, select: { id: true } });
-  for (const s of sequences) { await purgeSequence(s.id); purged++; }
+  for (const s of sequences) {
+    await purgeSequence(s.id);
+    purged++;
+  }
 
   const assets = await prisma.asset.findMany({ where: expired, select: { id: true } });
-  for (const a of assets) { await purgeAsset(a.id); purged++; }
+  for (const a of assets) {
+    await purgeAsset(a.id);
+    purged++;
+  }
 
   const projects = await prisma.project.findMany({ where: expired, select: { id: true } });
-  for (const p of projects) { await purgeProject(p.id); purged++; }
+  for (const p of projects) {
+    await purgeProject(p.id);
+    purged++;
+  }
 
   return purged;
 }

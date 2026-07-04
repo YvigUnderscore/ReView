@@ -21,10 +21,17 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
   });
   const version = versionQ.data ?? null;
   // Query dépendante : liste des versions de la tâche/asset parente
-  const parent = version ? (version.taskId ? `taskId=${version.taskId}` : version.assetId ? `assetId=${version.assetId}` : null) : null;
+  const parent = version
+    ? version.taskId
+      ? `taskId=${version.taskId}`
+      : version.assetId
+        ? `assetId=${version.assetId}`
+        : null
+    : null;
   const versionsQ = useQuery({
     queryKey: qk.versions(parent ?? ''),
-    queryFn: () => api.get<{ versions: VersionListItem[] }>(`/api/versions?${parent}`).then((d) => d.versions),
+    queryFn: () =>
+      api.get<{ versions: VersionListItem[] }>(`/api/versions?${parent}`).then((d) => d.versions),
     enabled: parent !== null,
   });
   const versions = versionsQ.data ?? [];
@@ -38,9 +45,14 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
         queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${vid}`).then((d) => d.version),
       });
       const first = v.media[0];
-      if (!first) { toast.error(`Aucun média visible dans la version ${v.name}`); return; }
+      if (!first) {
+        toast.error(`Aucun média visible dans la version ${v.name}`);
+        return;
+      }
       navigate(`/review/${first.id}`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Version inaccessible'); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Version inaccessible');
+    }
   };
 
   if (!version) return null;
@@ -50,14 +62,20 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
 
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <label className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground" title="Changer de version">
+      <label
+        className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
+        title="Changer de version"
+      >
         <Layers size={13} />
         <select
           value={version.id}
           onChange={(e) => goToVersion(Number(e.target.value))}
           className="bg-transparent text-xs font-medium text-foreground focus:outline-none [&>option]:bg-background"
         >
-          {(versions.length > 0 ? versions : [{ id: version.id, name: version.name, _count: { media: version.media.length } }]).map((v) => (
+          {(versions.length > 0
+            ? versions
+            : [{ id: version.id, name: version.name, _count: { media: version.media.length } }]
+          ).map((v) => (
             <option key={v.id} value={v.id}>
               {v.name} · {v._count.media} média{v._count.media > 1 ? 's' : ''}
             </option>
@@ -74,7 +92,9 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
           >
             <ChevronLeft size={14} />
           </button>
-          <span className="font-mono">{idx + 1}/{version.media.length}</span>
+          <span className="font-mono">
+            {idx + 1}/{version.media.length}
+          </span>
           <button
             disabled={!next}
             onClick={() => next && navigate(`/review/${next.id}`)}

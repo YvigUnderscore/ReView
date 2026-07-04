@@ -36,7 +36,10 @@ function Keys({ keys }: { keys: string[] }) {
   return (
     <span className="flex shrink-0 items-center gap-1">
       {keys.map((k) => (
-        <kbd key={k} className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[11px] font-medium">
+        <kbd
+          key={k}
+          className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[11px] font-medium"
+        >
           {k}
         </kbd>
       ))}
@@ -44,8 +47,12 @@ function Keys({ keys }: { keys: string[] }) {
   );
 }
 
-export default function ShortcutsHelp({ open, onOpenChange }: {
-  open: boolean; onOpenChange: (open: boolean) => void;
+export default function ShortcutsHelp({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,7 +63,9 @@ export default function ShortcutsHelp({ open, onOpenChange }: {
         <div className="space-y-4">
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.title}</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {g.title}
+              </p>
               <ul className="space-y-1.5">
                 {g.shortcuts.map((s) => (
                   <li key={s.label} className="flex items-center justify-between gap-4 text-sm">

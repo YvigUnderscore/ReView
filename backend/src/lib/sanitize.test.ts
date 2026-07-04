@@ -10,7 +10,7 @@ describe('sanitizeHtml', () => {
   it('neutralise les balises <script>', () => {
     expect(sanitizeHtml('<script>alert(1)</script>hi')).not.toContain('<script>');
   });
-  it('retire les gestionnaires d\'événements inline (on*)', () => {
+  it("retire les gestionnaires d'événements inline (on*)", () => {
     expect(sanitizeHtml('<a href="x" onclick="evil()">l</a>')).not.toContain('onclick');
   });
   it('conserve les balises sûres', () => {

@@ -17,8 +17,12 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b),
+    d = max - min;
   let h = 0;
   if (d !== 0) {
     if (max === r) h = ((g - b) / d) % 6;
@@ -30,8 +34,12 @@ function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
   return [h, max === 0 ? 0 : d / max, max];
 }
 function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
-  const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
-  let r = 0, g = 0, b = 0;
+  const c = v * s,
+    x = c * (1 - Math.abs(((h / 60) % 2) - 1)),
+    m = v - c;
+  let r = 0,
+    g = 0,
+    b = 0;
   if (h < 60) [r, g, b] = [c, x, 0];
   else if (h < 120) [r, g, b] = [x, c, 0];
   else if (h < 180) [r, g, b] = [0, c, x];
@@ -42,16 +50,22 @@ function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
 }
 
 export default function ColorPicker({
-  color, alpha, onChange,
+  color,
+  alpha,
+  onChange,
 }: {
-  color: string; alpha: number; onChange: (color: string, alpha: number) => void;
+  color: string;
+  alpha: number;
+  onChange: (color: string, alpha: number) => void;
 }) {
   const [h, s, v] = rgbToHsv(...hexToRgb(color));
   const [hue, setHue] = useState(h);
   const svRef = useRef<HTMLDivElement>(null);
 
   // Resynchronise la teinte si la couleur change de l'extérieur (preset…)
-  useEffect(() => { setHue(rgbToHsv(...hexToRgb(color))[0]); }, [color]);
+  useEffect(() => {
+    setHue(rgbToHsv(...hexToRgb(color))[0]);
+  }, [color]);
 
   const emit = (nh: number, ns: number, nv: number, na = alpha) => {
     const [r, g, b] = hsvToRgb(nh, ns, nv);
@@ -73,9 +87,16 @@ export default function ColorPicker({
       <div
         ref={svRef}
         className="relative h-32 w-full cursor-crosshair rounded"
-        style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})` }}
-        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); pickSV(e); }}
-        onPointerMove={(e) => { if (e.buttons === 1) pickSV(e); }}
+        style={{
+          background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
+        }}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          pickSV(e);
+        }}
+        onPointerMove={(e) => {
+          if (e.buttons === 1) pickSV(e);
+        }}
       >
         <div
           className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow"
@@ -85,16 +106,32 @@ export default function ColorPicker({
 
       {/* Teinte */}
       <input
-        type="range" min={0} max={359} value={Math.round(hue)}
-        onChange={(e) => { const nh = Number(e.target.value); setHue(nh); emit(nh, s, v); }}
+        type="range"
+        min={0}
+        max={359}
+        value={Math.round(hue)}
+        onChange={(e) => {
+          const nh = Number(e.target.value);
+          setHue(nh);
+          emit(nh, s, v);
+        }}
         className="mt-2 h-3 w-full cursor-pointer appearance-none rounded"
-        style={{ background: 'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)' }}
+        style={{
+          background:
+            'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)',
+        }}
       />
 
       {/* Alpha */}
-      <div className="mt-2 rounded" style={{ background: 'repeating-conic-gradient(#666 0% 25%, #999 0% 50%) 50% / 8px 8px' }}>
+      <div
+        className="mt-2 rounded"
+        style={{ background: 'repeating-conic-gradient(#666 0% 25%, #999 0% 50%) 50% / 8px 8px' }}
+      >
         <input
-          type="range" min={0} max={100} value={Math.round(alpha * 100)}
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(alpha * 100)}
           onChange={(e) => onChange(color, Number(e.target.value) / 100)}
           className="h-3 w-full cursor-pointer appearance-none rounded"
           style={{ background: `linear-gradient(to right, transparent, ${color})` }}
@@ -114,8 +151,13 @@ export default function ColorPicker({
         ))}
       </div>
       <div className="mt-2 flex items-center gap-2 text-xs">
-        <span className="inline-block h-4 w-4 rounded border border-border" style={{ background: color, opacity: alpha }} />
-        <span className="font-mono text-muted-foreground">{color.toUpperCase()} · α{Math.round(alpha * 100)}%</span>
+        <span
+          className="inline-block h-4 w-4 rounded border border-border"
+          style={{ background: color, opacity: alpha }}
+        />
+        <span className="font-mono text-muted-foreground">
+          {color.toUpperCase()} · α{Math.round(alpha * 100)}%
+        </span>
       </div>
     </div>
   );

@@ -24,14 +24,27 @@ export default function TaskPage() {
   const canCreate = role !== 'CLIENT';
   const canPublish = role === 'ADMIN' || role === 'SUPERVISOR';
   const enqueue = useUploadStore((s) => s.enqueue);
-  const { task, versions, isLoading, loadError, createVersion, publishVersion, publishMedia, removeVersion, removeMedia } = useTaskVersions(taskId);
+  const {
+    task,
+    versions,
+    isLoading,
+    loadError,
+    createVersion,
+    publishVersion,
+    publishMedia,
+    removeVersion,
+    removeMedia,
+  } = useTaskVersions(taskId);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [target, setTarget] = useState<number | null>(null);
   const [delVersion, setDelVersion] = useState<VersionListItem | null>(null);
   const [delMedia, setDelMedia] = useState<{ versionId: number; media: MediaSummary } | null>(null);
 
-  const onUploadClick = (versionId: number) => { setTarget(versionId); fileRef.current?.click(); };
+  const onUploadClick = (versionId: number) => {
+    setTarget(versionId);
+    fileRef.current?.click();
+  };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && target != null) enqueue(file, target);
@@ -50,19 +63,29 @@ export default function TaskPage() {
     <Shell title={task?.name ?? 'Tâche'} breadcrumb={<EntityBreadcrumb entity="task" id={taskId} />}>
       {/* Localisation (projet › shot/asset) */}
       <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-        {project && <Link to={`/projects/${project.id}`} className="hover:text-foreground">{project.name}</Link>}
+        {project && (
+          <Link to={`/projects/${project.id}`} className="hover:text-foreground">
+            {project.name}
+          </Link>
+        )}
         {task?.shot && (
           <>
             <ChevronRight size={12} />
-            <Link to={`/projects/${task.shot.project.id}?tab=shots&shot=${task.shot.id}`} className="hover:text-foreground">
-              {task.shot.sequence ? `${task.shot.sequence.code} · ` : ''}{task.shot.code}
+            <Link
+              to={`/projects/${task.shot.project.id}?tab=shots&shot=${task.shot.id}`}
+              className="hover:text-foreground"
+            >
+              {task.shot.sequence ? `${task.shot.sequence.code} · ` : ''}
+              {task.shot.code}
             </Link>
           </>
         )}
         {task?.asset && (
           <>
             <ChevronRight size={12} />
-            <Link to={`/assets/${task.asset.id}`} className="hover:text-foreground">{task.asset.name}</Link>
+            <Link to={`/assets/${task.asset.id}`} className="hover:text-foreground">
+              {task.asset.name}
+            </Link>
           </>
         )}
       </div>
@@ -70,9 +93,17 @@ export default function TaskPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold">{task?.name ?? `Tâche #${taskId}`}</h1>
           {task && <Badge variant="secondary">{task.type}</Badge>}
-          {task && <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[task.status] ?? ''}`}>{TASK_STATUS_LABEL[task.status] ?? task.status}</span>}
+          {task && (
+            <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[task.status] ?? ''}`}>
+              {TASK_STATUS_LABEL[task.status] ?? task.status}
+            </span>
+          )}
         </div>
-        {canCreate && <Button size="sm" onClick={() => createVersion()}>+ Nouvelle version</Button>}
+        {canCreate && (
+          <Button size="sm" onClick={() => createVersion()}>
+            + Nouvelle version
+          </Button>
+        )}
       </div>
       {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
 
@@ -84,12 +115,20 @@ export default function TaskPage() {
       <input ref={fileRef} type="file" className="hidden" onChange={onFile} />
 
       {isLoading ? (
-        <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        <div className="space-y-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
       ) : versions.length === 0 ? (
         <EmptyState
           icon={Layers}
           title="Aucune version"
-          description={canCreate ? 'Créez une première version ou déposez un média ci-dessus pour démarrer l’historique de cette tâche.' : 'Aucune version publiée pour cette tâche.'}
+          description={
+            canCreate
+              ? 'Créez une première version ou déposez un média ci-dessus pour démarrer l’historique de cette tâche.'
+              : 'Aucune version publiée pour cette tâche.'
+          }
           action={canCreate ? 'Créer une version' : undefined}
           onAction={canCreate ? () => createVersion() : undefined}
         />
@@ -116,17 +155,26 @@ export default function TaskPage() {
       {canCreate && (
         <FullPageDropzone
           onDrop={onDropFiles}
-          label={versions[0] ? `Déposez pour ajouter à ${versions[0].name}` : 'Déposez pour créer une première version'}
+          label={
+            versions[0]
+              ? `Déposez pour ajouter à ${versions[0].name}`
+              : 'Déposez pour créer une première version'
+          }
         />
       )}
 
       <ConfirmDialog
         open={!!delVersion}
         title="Supprimer la version ?"
-        message={<>La version « {delVersion?.name} » et ses médias seront déplacés dans la corbeille du projet.</>}
+        message={
+          <>La version « {delVersion?.name} » et ses médias seront déplacés dans la corbeille du projet.</>
+        }
         confirmLabel="Mettre à la corbeille"
         danger
-        onConfirm={() => { if (delVersion) removeVersion(delVersion.id); setDelVersion(null); }}
+        onConfirm={() => {
+          if (delVersion) removeVersion(delVersion.id);
+          setDelVersion(null);
+        }}
         onCancel={() => setDelVersion(null)}
       />
       <ConfirmDialog
@@ -135,7 +183,10 @@ export default function TaskPage() {
         message={<>« {delMedia?.media.originalName} » sera déplacé dans la corbeille du projet.</>}
         confirmLabel="Mettre à la corbeille"
         danger
-        onConfirm={() => { if (delMedia) removeMedia(delMedia.versionId, delMedia.media.id); setDelMedia(null); }}
+        onConfirm={() => {
+          if (delMedia) removeMedia(delMedia.versionId, delMedia.media.id);
+          setDelMedia(null);
+        }}
         onCancel={() => setDelMedia(null)}
       />
     </Shell>

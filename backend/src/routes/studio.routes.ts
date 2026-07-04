@@ -53,7 +53,11 @@ router.put(
   validate({ body: z.object({ key: z.string().min(1).max(100), value: z.string().max(2000) }) }),
   async (req, res) => {
     const { key, value } = req.body as { key: string; value: string };
-    const setting = await prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
+    const setting = await prisma.setting.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value },
+    });
     res.json({ setting });
   },
 );

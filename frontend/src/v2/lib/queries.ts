@@ -20,7 +20,10 @@ export function useProjectsQuery() {
 export function useSequencesQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.sequences(projectId),
-    queryFn: () => api.get<{ sequences: SequenceSummary[]; unsequencedShots: number }>(`/api/sequences?projectId=${projectId}`),
+    queryFn: () =>
+      api.get<{ sequences: SequenceSummary[]; unsequencedShots: number }>(
+        `/api/sequences?projectId=${projectId}`,
+      ),
     enabled,
   });
 }
@@ -29,7 +32,8 @@ export function useSequencesQuery(projectId: number, enabled = true) {
 export function useShotsQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.shots(projectId),
-    queryFn: () => api.get<{ shots: ShotSummary[] }>(`/api/shots?projectId=${projectId}`).then((d) => d.shots),
+    queryFn: () =>
+      api.get<{ shots: ShotSummary[] }>(`/api/shots?projectId=${projectId}`).then((d) => d.shots),
     enabled,
   });
 }
@@ -44,7 +48,10 @@ export function useAssetsQuery(projectId: number, enabled = true) {
 }
 
 /** Notifications de l'utilisateur courant (+ compteur non-lus) — cloche topbar (10.C5). */
-export interface NotificationsData { notifications: Notification[]; unread: number }
+export interface NotificationsData {
+  notifications: Notification[];
+  unread: number;
+}
 export function useNotificationsQuery(enabled = true) {
   return useQuery({
     queryKey: qk.notifications,

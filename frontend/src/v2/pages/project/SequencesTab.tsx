@@ -16,9 +16,22 @@ import ModeSwitch, { type CreateMode } from './ModeSwitch';
 import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData } from './projectTypes';
 
 /** Onglet Séquences : création (simple / lot / auto), édition inline, détail en accordéon. */
-export default function SequencesTab({ projectId, sequences, canManage, reload, focusId = null, onFocus, nomenclature }: {
-  projectId: number; sequences: Sequence[]; canManage: boolean; reload: () => Promise<void>;
-  focusId?: number | null; onFocus: (id: number | null) => void; nomenclature: Nomenclature;
+export default function SequencesTab({
+  projectId,
+  sequences,
+  canManage,
+  reload,
+  focusId = null,
+  onFocus,
+  nomenclature,
+}: {
+  projectId: number;
+  sequences: Sequence[];
+  canManage: boolean;
+  reload: () => Promise<void>;
+  focusId?: number | null;
+  onFocus: (id: number | null) => void;
+  nomenclature: Nomenclature;
 }) {
   const [newSeq, setNewSeq] = useState({ name: '', code: '' });
   const [mode, setMode] = useState<CreateMode>('simple');
@@ -36,9 +49,11 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
     try {
       await api.post('/api/sequences', { projectId, code: newSeq.code, name: newSeq.name || newSeq.code });
       toast.success(`Séquence « ${newSeq.code} » créée`);
-      setNewSeq({ name: '', code: '' }); reload();
+      setNewSeq({ name: '', code: '' });
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
   const createBulk = async (rows: Record<string, string>[]) => {
     await api.post('/api/sequences/bulk', {
@@ -48,19 +63,30 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
     toast.success(`${rows.length} séquence(s) créée(s)`);
     await reload();
   };
-  const startEdit = (s: Sequence) => { setEditing(s.id); setEditVals({ code: s.code, name: s.name }); };
+  const startEdit = (s: Sequence) => {
+    setEditing(s.id);
+    setEditVals({ code: s.code, name: s.name });
+  };
   const saveEdit = async (id: number) => {
-    try { await api.patch(`/api/sequences/${id}`, editVals); toast.success('Séquence modifiée'); setEditing(null); reload(); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+    try {
+      await api.patch(`/api/sequences/${id}`, editVals);
+      toast.success('Séquence modifiée');
+      setEditing(null);
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    }
   };
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
       await api.del(`/api/sequences/${deleting.id}`);
       toast.success('Séquence déplacée dans la corbeille');
-      setDeleting(null); reload();
+      setDeleting(null);
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   return (
@@ -72,7 +98,11 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
       {canManage && mode === 'auto' && (
         <BatchGenerator
-          defaults={{ prefix: nomenclature.sequencePrefix, step: nomenclature.step, padding: nomenclature.padding }}
+          defaults={{
+            prefix: nomenclature.sequencePrefix,
+            step: nomenclature.step,
+            padding: nomenclature.padding,
+          }}
           onSubmit={(items) => createBulk(items.map((it) => ({ code: it.code, name: it.name })))}
         />
       )}
@@ -80,7 +110,11 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
         <MultiRowCreate
           addLabel="Créer les séquences"
           fields={[
-            { key: 'code', placeholder: `Code (${nomenclature.sequencePrefix}${'0'.repeat(nomenclature.padding)})`, className: 'w-32' },
+            {
+              key: 'code',
+              placeholder: `Code (${nomenclature.sequencePrefix}${'0'.repeat(nomenclature.padding)})`,
+              className: 'w-32',
+            },
             { key: 'name', placeholder: 'Nom (optionnel)', className: 'flex-1' },
           ]}
           onSubmit={createBulk}
@@ -88,9 +122,22 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
       )}
       {canManage && mode === 'simple' && (
         <form onSubmit={create} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
-          <input className="w-28 rounded border border-input bg-background px-2 py-1.5 text-xs" placeholder="Code" value={newSeq.code} onChange={(e) => setNewSeq((s) => ({ ...s, code: e.target.value }))} required />
-          <input className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs" placeholder="Nom (optionnel)" value={newSeq.name} onChange={(e) => setNewSeq((s) => ({ ...s, name: e.target.value }))} />
-          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground"><Plus size={14} /> Séquence</button>
+          <input
+            className="w-28 rounded border border-input bg-background px-2 py-1.5 text-xs"
+            placeholder="Code"
+            value={newSeq.code}
+            onChange={(e) => setNewSeq((s) => ({ ...s, code: e.target.value }))}
+            required
+          />
+          <input
+            className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
+            placeholder="Nom (optionnel)"
+            value={newSeq.name}
+            onChange={(e) => setNewSeq((s) => ({ ...s, name: e.target.value }))}
+          />
+          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground">
+            <Plus size={14} /> Séquence
+          </button>
         </form>
       )}
       {sequences.length === 0 ? (
@@ -98,7 +145,11 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
           compact
           icon={Film}
           title="Aucune séquence"
-          description={canManage ? 'Créez vos séquences ci-dessus — elles regroupent les shots (SQ010, SQ020…).' : 'Les séquences du projet apparaîtront ici.'}
+          description={
+            canManage
+              ? 'Créez vos séquences ci-dessus — elles regroupent les shots (SQ010, SQ020…).'
+              : 'Les séquences du projet apparaîtront ici.'
+          }
         />
       ) : (
         <div className="space-y-1.5">
@@ -106,10 +157,28 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
             <div key={s.id} className="rounded-md border border-border bg-card">
               {editing === s.id ? (
                 <div className="flex items-center gap-2 px-3 py-2">
-                  <input className="w-28 rounded border border-input bg-background px-2 py-1 text-xs" value={editVals.code} onChange={(e) => setEditVals((v) => ({ ...v, code: e.target.value }))} />
-                  <input className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs" value={editVals.name} onChange={(e) => setEditVals((v) => ({ ...v, name: e.target.value }))} />
-                  <button onClick={() => saveEdit(s.id)} className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">Enregistrer</button>
-                  <button onClick={() => setEditing(null)} className="rounded border border-border px-2 py-1 text-xs">Annuler</button>
+                  <input
+                    className="w-28 rounded border border-input bg-background px-2 py-1 text-xs"
+                    value={editVals.code}
+                    onChange={(e) => setEditVals((v) => ({ ...v, code: e.target.value }))}
+                  />
+                  <input
+                    className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
+                    value={editVals.name}
+                    onChange={(e) => setEditVals((v) => ({ ...v, name: e.target.value }))}
+                  />
+                  <button
+                    onClick={() => saveEdit(s.id)}
+                    className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground"
+                  >
+                    Enregistrer
+                  </button>
+                  <button
+                    onClick={() => setEditing(null)}
+                    className="rounded border border-border px-2 py-1 text-xs"
+                  >
+                    Annuler
+                  </button>
                 </div>
               ) : (
                 <div className="group flex items-center justify-between px-3 py-2">
@@ -120,8 +189,20 @@ export default function SequencesTab({ projectId, sequences, canManage, reload, 
                     <FavoriteButton type="SEQUENCE" entityId={s.id} />
                     {canManage && (
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button onClick={() => startEdit(s)} title="Modifier" className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary">{EditIcon}</button>
-                        <button onClick={() => setDeleting(s)} title="Supprimer" className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-secondary">{DeleteIcon}</button>
+                        <button
+                          onClick={() => startEdit(s)}
+                          title="Modifier"
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
+                        >
+                          {EditIcon}
+                        </button>
+                        <button
+                          onClick={() => setDeleting(s)}
+                          title="Supprimer"
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-secondary"
+                        >
+                          {DeleteIcon}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -153,11 +234,18 @@ function SequenceDetail({ sequenceId }: { sequenceId: number }) {
   });
   const data = seqData?.sequence ?? null;
 
-  if (!data) return <div className="border-t border-border px-3 py-2"><SkeletonRows count={2} /></div>;
+  if (!data)
+    return (
+      <div className="border-t border-border px-3 py-2">
+        <SkeletonRows count={2} />
+      </div>
+    );
   return (
     <div className="space-y-3 border-t border-border px-3 py-3">
       <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Shots ({data.shots.length})</div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Shots ({data.shots.length})
+        </div>
         {data.shots.length === 0 ? (
           <p className="text-xs text-muted-foreground">Aucun shot.</p>
         ) : (
@@ -165,20 +253,28 @@ function SequenceDetail({ sequenceId }: { sequenceId: number }) {
             {data.shots.map((sh) => (
               <span key={sh.id} className="rounded border border-border bg-background px-2 py-0.5 text-xs">
                 {sh.code} <span className="text-muted-foreground">· {sh.name}</span>
-                {sh.assets.length > 0 && <span className="ml-1 text-[10px] text-primary">{sh.assets.length} asset(s)</span>}
+                {sh.assets.length > 0 && (
+                  <span className="ml-1 text-[10px] text-primary">{sh.assets.length} asset(s)</span>
+                )}
               </span>
             ))}
           </div>
         )}
       </div>
       <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Assets de la séquence ({data.assets.length})</div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Assets de la séquence ({data.assets.length})
+        </div>
         {data.assets.length === 0 ? (
           <p className="text-xs text-muted-foreground">Aucun asset assigné.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {data.assets.map((a) => (
-              <Link key={a.id} to={`/assets/${a.id}`} className="rounded border border-border bg-background px-2 py-0.5 text-xs hover:border-primary">
+              <Link
+                key={a.id}
+                to={`/assets/${a.id}`}
+                className="rounded border border-border bg-background px-2 py-0.5 text-xs hover:border-primary"
+              >
                 {a.name} <span className="text-muted-foreground">· {a.type}</span>
               </Link>
             ))}

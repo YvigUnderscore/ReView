@@ -22,7 +22,8 @@ export function useTaskVersions(taskId: number) {
   });
   const versionsQ = useQuery({
     queryKey: versionsKey,
-    queryFn: () => api.get<{ versions: VersionListItem[] }>(`/api/versions?taskId=${taskId}`).then((d) => d.versions),
+    queryFn: () =>
+      api.get<{ versions: VersionListItem[] }>(`/api/versions?taskId=${taskId}`).then((d) => d.versions),
   });
 
   const invalidateVersions = () => qc.invalidateQueries({ queryKey: versionsKey });
@@ -42,7 +43,10 @@ export function useTaskVersions(taskId: number) {
       toast.success(`Version « ${version.name} » créée`);
       await invalidateVersions();
       return version;
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Création impossible'); return null; }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Création impossible');
+      return null;
+    }
   };
   const publishVersion = async (vid: number) => {
     try {
@@ -50,7 +54,9 @@ export function useTaskVersions(taskId: number) {
       toast.success('Version publiée');
       invalidateVersions();
       qc.invalidateQueries({ queryKey: qk.version(vid) });
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Publication impossible'); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Publication impossible');
+    }
   };
   const publishMedia = async (versionId: number, mediaId: number) => {
     try {
@@ -58,14 +64,18 @@ export function useTaskVersions(taskId: number) {
       toast.success('Média publié pour l’équipe');
       qc.invalidateQueries({ queryKey: qk.version(versionId) });
       invalidateVersions();
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Publication impossible'); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Publication impossible');
+    }
   };
   const removeVersion = async (vid: number) => {
     try {
       await api.del(`/api/versions/${vid}`);
       toast.success('Version déplacée dans la corbeille');
       await invalidateVersions();
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Suppression impossible'); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+    }
   };
   const removeMedia = async (versionId: number, mediaId: number) => {
     try {
@@ -73,7 +83,9 @@ export function useTaskVersions(taskId: number) {
       toast.success('Média déplacé dans la corbeille');
       qc.invalidateQueries({ queryKey: qk.version(versionId) });
       invalidateVersions();
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Suppression impossible'); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+    }
   };
 
   return {
@@ -81,6 +93,10 @@ export function useTaskVersions(taskId: number) {
     versions: versionsQ.data ?? [],
     isLoading: taskQ.isLoading || versionsQ.isLoading,
     loadError: (taskQ.error ?? versionsQ.error)?.message ?? null,
-    createVersion, publishVersion, publishMedia, removeVersion, removeMedia,
+    createVersion,
+    publishVersion,
+    publishMedia,
+    removeVersion,
+    removeMedia,
   };
 }

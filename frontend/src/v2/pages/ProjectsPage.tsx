@@ -34,10 +34,13 @@ const STATUS_OPTIONS: readonly ProjectStatus[] = ['ACTIVE', 'ON_HOLD', 'COMPLETE
 
 function StatusBadge({ status }: { status: string }) {
   const variant =
-    status === 'ACTIVE' ? 'success'
-    : status === 'ON_HOLD' ? 'warning'
-    : status === 'COMPLETED' ? 'info'
-    : 'muted' as const;
+    status === 'ACTIVE'
+      ? 'success'
+      : status === 'ON_HOLD'
+        ? 'warning'
+        : status === 'COMPLETED'
+          ? 'info'
+          : ('muted' as const);
   return <Badge variant={variant}>{STATUS_LABEL[status] ?? status}</Badge>;
 }
 
@@ -61,9 +64,11 @@ export default function ProjectsPage() {
     try {
       await api.post('/api/projects', { name });
       toast.success(`Projet « ${name} » créé`);
-      setName(''); invalidate();
+      setName('');
+      invalidate();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { toast.error(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   const confirmDelete = async () => {
@@ -71,9 +76,11 @@ export default function ProjectsPage() {
     try {
       await api.del(`/api/projects/${deleting.id}`);
       toast.success('Projet déplacé dans la corbeille');
-      setDeleting(null); invalidate();
+      setDeleting(null);
+      invalidate();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
     }
-    catch (err) { toast.error(err instanceof Error ? err.message : 'Erreur'); }
   };
 
   return (
@@ -86,8 +93,15 @@ export default function ProjectsPage() {
 
       {canManage && (
         <form onSubmit={create} className="mb-6 flex gap-2">
-          <Input className="flex-1" placeholder="Nouveau projet…" value={name} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit"><Plus size={16} /> Créer</Button>
+          <Input
+            className="flex-1"
+            placeholder="Nouveau projet…"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Button type="submit">
+            <Plus size={16} /> Créer
+          </Button>
         </form>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
@@ -98,9 +112,11 @@ export default function ProjectsPage() {
         <EmptyState
           icon={FolderKanban}
           title="Aucun projet pour l'instant"
-          description={canManage
-            ? 'Créez votre premier projet ci-dessus pour organiser vos séquences, shots et assets.'
-            : 'Vous n’êtes membre d’aucun projet. Demandez à un superviseur de vous ajouter.'}
+          description={
+            canManage
+              ? 'Créez votre premier projet ci-dessus pour organiser vos séquences, shots et assets.'
+              : 'Vous n’êtes membre d’aucun projet. Demandez à un superviseur de vous ajouter.'
+          }
         />
       ) : (
         <EntityContainer view={view}>
@@ -114,11 +130,23 @@ export default function ProjectsPage() {
               thumbnailUrl={p.thumbnailUrl}
               badge={<StatusBadge status={p.status} />}
               actions={[
-                { icon: <Star size={15} fill={isFav(p.id) ? 'currentColor' : 'none'} className={isFav(p.id) ? 'text-amber-400' : ''} />, label: 'Favori', onClick: () => toggleFav('PROJECT', p.id) },
-                ...(canManage ? [
-                  { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
-                  { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
-                ] : []),
+                {
+                  icon: (
+                    <Star
+                      size={15}
+                      fill={isFav(p.id) ? 'currentColor' : 'none'}
+                      className={isFav(p.id) ? 'text-amber-400' : ''}
+                    />
+                  ),
+                  label: 'Favori',
+                  onClick: () => toggleFav('PROJECT', p.id),
+                },
+                ...(canManage
+                  ? [
+                      { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
+                      { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
+                    ]
+                  : []),
               ]}
             />
           ))}
@@ -129,14 +157,22 @@ export default function ProjectsPage() {
         <EditProjectModal
           project={editing}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); invalidate(); }}
+          onSaved={() => {
+            setEditing(null);
+            invalidate();
+          }}
         />
       )}
 
       <ConfirmDialog
         open={!!deleting}
         title="Supprimer le projet ?"
-        message={<>Le projet « {deleting?.name} » sera déplacé dans la corbeille. Vous pourrez le restaurer depuis l'administration.</>}
+        message={
+          <>
+            Le projet « {deleting?.name} » sera déplacé dans la corbeille. Vous pourrez le restaurer depuis
+            l'administration.
+          </>
+        }
         confirmLabel="Mettre à la corbeille"
         danger
         onConfirm={confirmDelete}
@@ -146,7 +182,15 @@ export default function ProjectsPage() {
   );
 }
 
-function EditProjectModal({ project, onClose, onSaved }: { project: Project; onClose: () => void; onSaved: () => void }) {
+function EditProjectModal({
+  project,
+  onClose,
+  onSaved,
+}: {
+  project: Project;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? '');
   const [status, setStatus] = useState(project.status);
@@ -158,11 +202,18 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
       await api.patch(`/api/projects/${project.id}`, { name, description: description || null, status });
       toast.success('Projet mis à jour');
       onSaved();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Erreur'); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    }
   };
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent>
         <form onSubmit={save} className="space-y-3">
           <DialogHeader>
@@ -178,14 +229,26 @@ function EditProjectModal({ project, onClose, onSaved }: { project: Project; onC
           </div>
           <div className="space-y-1">
             <Label>Statut</Label>
-            <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            <Select
+              className="w-full"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </option>
+              ))}
             </Select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>Annuler</Button>
-            <Button type="submit" size="sm">Enregistrer</Button>
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button type="submit" size="sm">
+              Enregistrer
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

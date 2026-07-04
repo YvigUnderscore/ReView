@@ -13,43 +13,65 @@ export interface MediaResp {
   fps: number | null;
 }
 
-export interface Transform { yaw: number; pitch: number; roll: number; scale: number }
+export interface Transform {
+  yaw: number;
+  pitch: number;
+  roll: number;
+  scale: number;
+}
 export const DEFAULT_TRANSFORM: Transform = { yaw: 0, pitch: 0, roll: 0, scale: 1 };
 
-export interface Hotspot3D { position: string; normal: string }
+export interface Hotspot3D {
+  position: string;
+  normal: string;
+}
 
 // Type minimal des méthodes model-viewer utilisées (caméra + raycast + animations).
 export interface ModelViewerEl extends HTMLElement {
   getBoundingClientRect: () => DOMRect;
-  positionAndNormalFromPoint?: (x: number, y: number) => { position: { toString(): string }; normal: { toString(): string } } | null;
+  positionAndNormalFromPoint?: (
+    x: number,
+    y: number,
+  ) => { position: { toString(): string }; normal: { toString(): string } } | null;
   getCameraOrbit?: () => { theta: number; phi: number; radius: number };
   getCameraTarget?: () => { x: number; y: number; z: number };
   getFieldOfView?: () => number;
-  cameraOrbit?: string; cameraTarget?: string; fieldOfView?: string;
+  cameraOrbit?: string;
+  cameraTarget?: string;
+  fieldOfView?: string;
   availableAnimations?: string[];
   loaded?: boolean;
   play?: (opts?: { repetitions?: number }) => void;
   pause?: () => void;
 }
 
-export interface ModelCamera { orbit: { theta: number; phi: number; radius: number }; target?: { x: number; y: number; z: number }; fov?: number; aspect?: number }
+export interface ModelCamera {
+  orbit: { theta: number; phi: number; radius: number };
+  target?: { x: number; y: number; z: number };
+  fov?: number;
+  aspect?: number;
+}
 
 /** Classe de la zone média (cadre commun aux viewers vidéo/image/3D). */
-export const VIEWER_ZONE = 'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/40';
+export const VIEWER_ZONE =
+  'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/40';
 
 /** Timecode HH:MM:SS:FF à partir d'un index de frame et du fps. */
 export function tcFromFrame(frame: number, fps: number): string {
   const f = Math.max(0, Math.round(frame));
   const totalSec = Math.floor(f / fps);
   const ff = f % Math.round(fps);
-  const ss = totalSec % 60, mm = Math.floor(totalSec / 60) % 60, hh = Math.floor(totalSec / 3600);
+  const ss = totalSec % 60,
+    mm = Math.floor(totalSec / 60) % 60,
+    hh = Math.floor(totalSec / 3600);
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(hh)}:${p(mm)}:${p(ss)}:${p(ff)}`;
 }
 
 /** Durée mm:ss (timeline). */
 export function formatTime(s: number): string {
-  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+  const m = Math.floor(s / 60),
+    sec = Math.floor(s % 60);
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 

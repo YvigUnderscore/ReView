@@ -27,10 +27,23 @@ const versionInc = { include: { task: taskInc, asset: assetInc } } as const;
 
 type ProjRow = { id: number; name: string; deletedAt: Date | null };
 type SeqRow = { id: number; code: string; name: string; deletedAt: Date | null };
-type ShotRow = { id: number; code: string; name: string; deletedAt: Date | null; sequence: SeqRow | null; project: ProjRow };
+type ShotRow = {
+  id: number;
+  code: string;
+  name: string;
+  deletedAt: Date | null;
+  sequence: SeqRow | null;
+  project: ProjRow;
+};
 type AssetRow = { id: number; name: string; type: string; deletedAt: Date | null; project: ProjRow };
 type TaskRow = { id: number; name: string; type: string; shot: ShotRow | null; asset: AssetRow | null };
-type VersionRow = { id: number; name: string; deletedAt: Date | null; task: TaskRow | null; asset: AssetRow | null };
+type VersionRow = {
+  id: number;
+  name: string;
+  deletedAt: Date | null;
+  task: TaskRow | null;
+  asset: AssetRow | null;
+};
 
 function fromProject(p: ProjRow | null): BreadcrumbContext | null {
   if (!p || p.deletedAt) return null;
@@ -42,7 +55,10 @@ function fromShot(s: ShotRow | null): BreadcrumbContext | null {
   if (!s || s.deletedAt || !base) return null;
   return {
     ...base,
-    sequence: s.sequence && !s.sequence.deletedAt ? { id: s.sequence.id, code: s.sequence.code, name: s.sequence.name } : null,
+    sequence:
+      s.sequence && !s.sequence.deletedAt
+        ? { id: s.sequence.id, code: s.sequence.code, name: s.sequence.name }
+        : null,
     shot: { id: s.id, code: s.code, name: s.name },
   };
 }

@@ -55,7 +55,8 @@ export const useUploadStore = create<UploadState>((set, get) => ({
         updateUpload(id, { status: 'uploading' });
         const res = await uploadMedia(file, versionId, {
           kind: item.kind,
-          onProgress: (pct) => updateUpload(id, { progress: pct, status: pct >= 100 ? 'finalizing' : 'uploading' }),
+          onProgress: (pct) =>
+            updateUpload(id, { progress: pct, status: pct >= 100 ? 'finalizing' : 'uploading' }),
         });
         updateUpload(id, { status: 'done', progress: 100, mediaObjectId: res.mediaObjectId });
       } catch (err) {
@@ -70,5 +71,8 @@ export const useUploadStore = create<UploadState>((set, get) => ({
     set((s) => ({ uploads: s.uploads.map((u) => (u.id === id ? { ...u, ...patch } : u)) })),
   removeUpload: (id) => set((s) => ({ uploads: s.uploads.filter((u) => u.id !== id) })),
   clearCompleted: () => set((s) => ({ uploads: s.uploads.filter((u) => u.status !== 'done') })),
-  activeCount: () => get().uploads.filter((u) => u.status === 'uploading' || u.status === 'finalizing' || u.status === 'pending').length,
+  activeCount: () =>
+    get().uploads.filter(
+      (u) => u.status === 'uploading' || u.status === 'finalizing' || u.status === 'pending',
+    ).length,
 }));

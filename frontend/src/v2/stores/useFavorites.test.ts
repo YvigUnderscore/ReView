@@ -7,7 +7,14 @@ vi.mock('../../lib/apiClient', () => ({
 }));
 const apiMock = vi.mocked(api);
 
-const fav: Favorite = { id: 1, type: 'SHOT', entityId: 5, label: 'SH010', projectId: 1, to: '/projects/1?tab=shots&shot=5' };
+const fav: Favorite = {
+  id: 1,
+  type: 'SHOT',
+  entityId: 5,
+  label: 'SH010',
+  projectId: 1,
+  to: '/projects/1?tab=shots&shot=5',
+};
 
 beforeEach(() => {
   vi.mocked(apiMock.get).mockReset();
@@ -35,7 +42,11 @@ describe('useFavorites', () => {
   it('toggle retrait : optimiste (retiré avant la réponse serveur)', async () => {
     useFavorites.setState({ favorites: [fav], loaded: true });
     let resolveDel!: () => void;
-    vi.mocked(apiMock.del).mockReturnValue(new Promise<unknown>((r) => { resolveDel = () => r(undefined); }));
+    vi.mocked(apiMock.del).mockReturnValue(
+      new Promise<unknown>((r) => {
+        resolveDel = () => r(undefined);
+      }),
+    );
     const p = useFavorites.getState().toggle('SHOT', 5);
     expect(useFavorites.getState().isFav('SHOT', 5)).toBe(false); // déjà retiré
     resolveDel();

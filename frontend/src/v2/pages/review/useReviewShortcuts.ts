@@ -12,7 +12,11 @@ import { stepVideoFrame } from './reviewTypes';
  * La lecture arrière n'existe pas en HTML5 : elle est simulée par un pas de
  * requestAnimationFrame qui décrémente currentTime à vitesse réelle.
  */
-export function useReviewShortcuts({ videoRef, fps, onMarker }: {
+export function useReviewShortcuts({
+  videoRef,
+  fps,
+  onMarker,
+}: {
   videoRef: RefObject<HTMLVideoElement | null>;
   fps: number;
   onMarker: () => void;
@@ -21,21 +25,31 @@ export function useReviewShortcuts({ videoRef, fps, onMarker }: {
 
   useEffect(() => {
     const stopShuttle = () => {
-      if (shuttle.current) { cancelAnimationFrame(shuttle.current.raf); shuttle.current = null; }
+      if (shuttle.current) {
+        cancelAnimationFrame(shuttle.current.raf);
+        shuttle.current = null;
+      }
     };
 
     const shuttleBack = () => {
       const v = videoRef.current;
       if (!v) return;
       v.pause();
-      if (shuttle.current) { shuttle.current.speed = Math.min(shuttle.current.speed * 2, 8); return; }
+      if (shuttle.current) {
+        shuttle.current.speed = Math.min(shuttle.current.speed * 2, 8);
+        return;
+      }
       const tick = (now: number) => {
-        const s = shuttle.current, vv = videoRef.current;
+        const s = shuttle.current,
+          vv = videoRef.current;
         if (!s || !vv) return;
         const dt = (now - s.last) / 1000;
         s.last = now;
         vv.currentTime = Math.max(0, vv.currentTime - dt * s.speed);
-        if (vv.currentTime <= 0) { stopShuttle(); return; }
+        if (vv.currentTime <= 0) {
+          stopShuttle();
+          return;
+        }
         s.raf = requestAnimationFrame(tick);
       };
       shuttle.current = { speed: 1, last: performance.now(), raf: requestAnimationFrame(tick) };
@@ -44,7 +58,12 @@ export function useReviewShortcuts({ videoRef, fps, onMarker }: {
     const playForward = () => {
       const v = videoRef.current;
       if (!v) return;
-      if (shuttle.current || v.paused) { stopShuttle(); v.playbackRate = 1; void v.play(); return; }
+      if (shuttle.current || v.paused) {
+        stopShuttle();
+        v.playbackRate = 1;
+        void v.play();
+        return;
+      }
       v.playbackRate = Math.min(v.playbackRate * 2, 8);
     };
 
@@ -56,15 +75,43 @@ export function useReviewShortcuts({ videoRef, fps, onMarker }: {
       if (!v) return;
       switch (e.key.toLowerCase()) {
         case ' ':
-          e.preventDefault(); stopShuttle();
-          if (v.paused) { v.playbackRate = 1; void v.play(); } else v.pause();
+          e.preventDefault();
+          stopShuttle();
+          if (v.paused) {
+            v.playbackRate = 1;
+            void v.play();
+          } else v.pause();
           break;
-        case 'arrowleft': e.preventDefault(); stopShuttle(); stepVideoFrame(v, fps, e.shiftKey ? -10 : -1); break;
-        case 'arrowright': e.preventDefault(); stopShuttle(); stepVideoFrame(v, fps, e.shiftKey ? 10 : 1); break;
-        case 'j': e.preventDefault(); shuttleBack(); break;
-        case 'k': e.preventDefault(); stopShuttle(); v.pause(); v.playbackRate = 1; break;
-        case 'l': e.preventDefault(); playForward(); break;
-        case 'm': e.preventDefault(); stopShuttle(); v.pause(); onMarker(); break;
+        case 'arrowleft':
+          e.preventDefault();
+          stopShuttle();
+          stepVideoFrame(v, fps, e.shiftKey ? -10 : -1);
+          break;
+        case 'arrowright':
+          e.preventDefault();
+          stopShuttle();
+          stepVideoFrame(v, fps, e.shiftKey ? 10 : 1);
+          break;
+        case 'j':
+          e.preventDefault();
+          shuttleBack();
+          break;
+        case 'k':
+          e.preventDefault();
+          stopShuttle();
+          v.pause();
+          v.playbackRate = 1;
+          break;
+        case 'l':
+          e.preventDefault();
+          playForward();
+          break;
+        case 'm':
+          e.preventDefault();
+          stopShuttle();
+          v.pause();
+          onMarker();
+          break;
       }
     };
 

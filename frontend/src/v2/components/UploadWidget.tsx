@@ -10,7 +10,9 @@ export default function UploadWidget() {
     <div className="fixed bottom-4 right-4 z-50 w-80 rounded-lg border border-border bg-card shadow-lg">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-sm font-medium">Transferts ({uploads.length})</span>
-        <button onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">Nettoyer</button>
+        <button onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">
+          Nettoyer
+        </button>
       </div>
       <ul className="max-h-64 overflow-auto p-2 space-y-2">
         {uploads.map((u) => (

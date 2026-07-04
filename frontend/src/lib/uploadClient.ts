@@ -22,8 +22,9 @@ function putWithProgress(url: string, file: File, onProgress: (pct: number) => v
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`PUT ${xhr.status}`)));
-    xhr.onerror = () => reject(new Error('Erreur réseau pendant l\'upload'));
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`PUT ${xhr.status}`));
+    xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
     xhr.send(file);
   });
 }
@@ -49,7 +50,13 @@ export async function uploadMedia(
 
   const { mediaObjectId, uploadUrl } = await api.post<{ mediaObjectId: number; uploadUrl: string }>(
     '/api/media/upload-url',
-    { versionId, filename: file.name, contentType: file.type || 'application/octet-stream', kind, size: file.size },
+    {
+      versionId,
+      filename: file.name,
+      contentType: file.type || 'application/octet-stream',
+      kind,
+      size: file.size,
+    },
   );
 
   await putWithProgress(uploadUrl, file, opts.onProgress ?? (() => {}));

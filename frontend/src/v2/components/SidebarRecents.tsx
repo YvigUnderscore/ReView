@@ -28,7 +28,11 @@ export default function SidebarRecents() {
             className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <span className="truncate">{r.label}</span>
-            {r.sublabel && <span className="ml-auto shrink-0 max-w-[40%] truncate text-[10px] text-muted-foreground/70">{r.sublabel}</span>}
+            {r.sublabel && (
+              <span className="ml-auto shrink-0 max-w-[40%] truncate text-[10px] text-muted-foreground/70">
+                {r.sublabel}
+              </span>
+            )}
           </Link>
         ))}
       </div>
