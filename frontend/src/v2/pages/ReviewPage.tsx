@@ -60,7 +60,7 @@ function ReviewContent({ id }: { id: number }) {
   const commentsQ = useQuery({
     queryKey: qk.comments(id),
     queryFn: () =>
-      api.get<{ comments: ReviewComment[] }>(`/api/comments?mediaObjectId=${id}`).then((d) => d.comments),
+      api.get<{ items: ReviewComment[] }>(`/api/comments?mediaObjectId=${id}`).then((d) => d.items),
   });
   const comments = commentsQ.data ?? null;
   const error = (mediaQ.error ?? commentsQ.error)?.message ?? null;

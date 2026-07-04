@@ -11,6 +11,7 @@ import { emitToProject } from './SocketService';
 import { enqueueMediaJob } from './JobService';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
+import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
 /**
  * Logique métier des médias (upload présigné, finalize/validation magic bytes,
@@ -136,23 +137,28 @@ export async function finalize(user: SessionUser, id: number) {
   return { media: serializeMedia(updated), detectedExtension: detected };
 }
 
-/** Bibliothèque : médias publiés (READY) d'un projet, avec URLs présignées. */
-export async function listPublished(user: SessionUser, projectId: number, kind?: MediaKind) {
+/** Bibliothèque paginée : médias publiés (READY) d'un projet, avec URLs présignées. */
+export async function listPublished(
+  user: SessionUser,
+  projectId: number,
+  kind: MediaKind | undefined,
+  p: PaginationParams,
+): Promise<Paginated<unknown>> {
   if (!(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
-  const media = await prisma.mediaObject.findMany({
-    where: {
-      published: true,
-      deletedAt: null,
-      status: MediaStatus.READY,
-      ...(kind ? { kind } : {}),
-      version: {
-        OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
-      },
+  const where = {
+    published: true,
+    deletedAt: null,
+    status: MediaStatus.READY,
+    ...(kind ? { kind } : {}),
+    version: {
+      OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
     },
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  });
-  return Promise.all(
+  };
+  const [media, total] = await Promise.all([
+    prisma.mediaObject.findMany({ where, orderBy: { createdAt: 'desc' }, ...pageArgs(p) }),
+    prisma.mediaObject.count({ where }),
+  ]);
+  const items = await Promise.all(
     media.map(async (m) => ({
       id: m.id,
       kind: m.kind,
@@ -161,6 +167,7 @@ export async function listPublished(user: SessionUser, projectId: number, kind?:
       url: await storage.getPresignedGetUrl(m.storageKey),
     })),
   );
+  return paginate(items, total, p);
 }
 
 /** Brouillons (non publiés) de l'utilisateur, avec localisation lisible. */

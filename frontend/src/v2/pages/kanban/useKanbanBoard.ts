@@ -20,7 +20,7 @@ export function useKanbanBoard(projectId: number) {
   const taskQueries = useQueries({
     queries: shots.map((s) => ({
       queryKey: qk.tasks(s.id),
-      queryFn: () => api.get<{ tasks: TaskWithAssignee[] }>(`/api/tasks?shotId=${s.id}`).then((d) => d.tasks),
+      queryFn: () => api.get<{ items: TaskWithAssignee[] }>(`/api/tasks?shotId=${s.id}`).then((d) => d.items),
     })),
   });
 

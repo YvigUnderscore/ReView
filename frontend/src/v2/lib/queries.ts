@@ -8,11 +8,19 @@ import type { Asset, Notification, Project, SequenceSummary, ShotSummary } from 
  * Les queries propres à une seule page restent définies dans la page.
  */
 
+/** Enveloppe de liste paginée renvoyée par les endpoints bornés (10.D1). */
+interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 /** Liste des projets accessibles — partagée Shell / ProjectsPage / DocumentationPage. */
 export function useProjectsQuery() {
   return useQuery({
     queryKey: qk.projects,
-    queryFn: () => api.get<{ projects: Project[] }>('/api/projects').then((d) => d.projects),
+    queryFn: () => api.get<Page<Project>>('/api/projects').then((d) => d.items),
   });
 }
 
@@ -32,8 +40,7 @@ export function useSequencesQuery(projectId: number, enabled = true) {
 export function useShotsQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.shots(projectId),
-    queryFn: () =>
-      api.get<{ shots: ShotSummary[] }>(`/api/shots?projectId=${projectId}`).then((d) => d.shots),
+    queryFn: () => api.get<Page<ShotSummary>>(`/api/shots?projectId=${projectId}`).then((d) => d.items),
     enabled,
   });
 }
@@ -42,7 +49,7 @@ export function useShotsQuery(projectId: number, enabled = true) {
 export function useAssetsQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.assets(projectId),
-    queryFn: () => api.get<{ assets: Asset[] }>(`/api/assets?projectId=${projectId}`).then((d) => d.assets),
+    queryFn: () => api.get<Page<Asset>>(`/api/assets?projectId=${projectId}`).then((d) => d.items),
     enabled,
   });
 }

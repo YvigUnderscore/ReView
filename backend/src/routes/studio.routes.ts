@@ -7,6 +7,7 @@ import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { isValidDiscordWebhook } from '../lib/sanitize';
 import { badRequest, notFound } from '../lib/errors';
+import { paginationQuery, readPagination, pageArgs, paginate } from '../lib/pagination';
 
 const router = Router();
 router.use(authenticate);
@@ -62,10 +63,14 @@ router.put(
   },
 );
 
-// GET /api/studio/audit — journal d'audit (admin)
-router.get('/audit', requireRole(Role.ADMIN), async (_req, res) => {
-  const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 200 });
-  res.json({ logs });
+// GET /api/studio/audit — journal d'audit paginé (admin) — { items, total, page, pageSize } (10.D1)
+router.get('/audit', requireRole(Role.ADMIN), validate({ query: paginationQuery }), async (req, res) => {
+  const p = readPagination(req.query);
+  const [items, total] = await Promise.all([
+    prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, ...pageArgs(p) }),
+    prisma.auditLog.count(),
+  ]);
+  res.json(paginate(items, total, p));
 });
 
 export default router;

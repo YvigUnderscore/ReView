@@ -75,10 +75,10 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
   await page.evaluate(async (name) => {
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
-    const { projects } = (await fetch('/api/projects', { headers }).then((r) => r.json())) as {
-      projects: { id: number; name: string }[];
+    const { items } = (await fetch('/api/projects', { headers }).then((r) => r.json())) as {
+      items: { id: number; name: string }[];
     };
-    for (const p of projects.filter((x) => x.name === name)) {
+    for (const p of items.filter((x) => x.name === name)) {
       await fetch(`/api/projects/${p.id}`, { method: 'DELETE', headers });
     }
   }, PROJECT);

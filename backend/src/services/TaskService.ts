@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
 import { emitToProject } from './SocketService';
 import { forbidden, notFound } from '../lib/errors';
+import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
 /**
  * Logique métier des tâches (liste, création XOR Shot/Asset, mise à jour avec droits
@@ -36,16 +37,26 @@ async function notifyAssignee(
     });
 }
 
-/** Tâches d'un Shot ou d'un Asset. */
-export async function list(shotId?: number, assetId?: number) {
-  return prisma.task.findMany({
-    where: shotId ? { shotId } : { assetId },
-    orderBy: { order: 'asc' },
-    include: {
-      assignee: { select: { id: true, name: true, email: true } },
-      _count: { select: { versions: true } },
-    },
-  });
+/** Tâches paginées d'un Shot ou d'un Asset. */
+export async function list(
+  p: PaginationParams,
+  shotId?: number,
+  assetId?: number,
+): Promise<Paginated<unknown>> {
+  const where = shotId ? { shotId } : { assetId };
+  const [items, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      orderBy: { order: 'asc' },
+      ...pageArgs(p),
+      include: {
+        assignee: { select: { id: true, name: true, email: true } },
+        _count: { select: { versions: true } },
+      },
+    }),
+    prisma.task.count({ where }),
+  ]);
+  return paginate(items, total, p);
 }
 
 export interface CreateTaskInput {

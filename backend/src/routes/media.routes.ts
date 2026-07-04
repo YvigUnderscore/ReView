@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { MediaKind } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { paginationQuery, readPagination } from '../lib/pagination';
 import * as MediaService from '../services/MediaService';
 
 const router = Router();
@@ -45,15 +46,19 @@ router.post('/:id/finalize', validate({ params: idParam }), async (req, res) => 
 router.get(
   '/',
   validate({
-    query: z.object({ projectId: z.coerce.number().int(), kind: z.nativeEnum(MediaKind).optional() }),
+    query: z
+      .object({ projectId: z.coerce.number().int(), kind: z.nativeEnum(MediaKind).optional() })
+      .merge(paginationQuery),
   }),
   async (req, res) => {
-    const media = await MediaService.listPublished(
-      req.user!,
-      Number(req.query.projectId),
-      req.query.kind as MediaKind | undefined,
+    res.json(
+      await MediaService.listPublished(
+        req.user!,
+        Number(req.query.projectId),
+        req.query.kind as MediaKind | undefined,
+        readPagination(req.query),
+      ),
     );
-    res.json({ media });
   },
 );
 

@@ -10,27 +10,38 @@ import { softDeleteAsset, restoreAsset, purgeAsset } from '../lib/trash';
 import { firstMediaThumbKeyForAsset, effectiveThumbnailUrl } from '../lib/thumbnails';
 import { logAudit } from '../services/AuditService';
 import { badRequest, notFound } from '../lib/errors';
+import { paginationQuery, readPagination, pageArgs, paginate } from '../lib/pagination';
 
 const router = Router();
 router.use(authenticate);
 
-// GET /api/assets?projectId=X
-router.get('/', validate({ query: z.object({ projectId: z.coerce.number().int() }) }), async (req, res) => {
-  const projectId = Number(req.query.projectId);
-  await assertProjectAccess(req, projectId);
-  const assets = await prisma.asset.findMany({
-    where: { projectId, deletedAt: null },
-    orderBy: { name: 'asc' },
-    include: { _count: { select: { versions: true, tasks: true } } },
-  });
-  const withThumbs = await Promise.all(
-    assets.map(async (a) => ({
-      ...a,
-      thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, await firstMediaThumbKeyForAsset(a.id)),
-    })),
-  );
-  res.json({ assets: withThumbs });
-});
+// GET /api/assets?projectId=X — paginé (10.D1)
+router.get(
+  '/',
+  validate({ query: z.object({ projectId: z.coerce.number().int() }).merge(paginationQuery) }),
+  async (req, res) => {
+    const projectId = Number(req.query.projectId);
+    await assertProjectAccess(req, projectId);
+    const p = readPagination(req.query);
+    const where = { projectId, deletedAt: null };
+    const [assets, total] = await Promise.all([
+      prisma.asset.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        ...pageArgs(p),
+        include: { _count: { select: { versions: true, tasks: true } } },
+      }),
+      prisma.asset.count({ where }),
+    ]);
+    const items = await Promise.all(
+      assets.map(async (a) => ({
+        ...a,
+        thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, await firstMediaThumbKeyForAsset(a.id)),
+      })),
+    );
+    res.json(paginate(items, total, p));
+  },
+);
 
 // POST /api/assets (admin/superviseur)
 router.post(

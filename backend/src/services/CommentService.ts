@@ -6,6 +6,7 @@ import { notify, sendDiscord } from './NotificationService';
 import { toPublicUser } from '../lib/userView';
 import { storage } from './StorageService';
 import { badRequest, forbidden } from '../lib/errors';
+import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
 /**
  * Logique métier des commentaires de review (fil, enrichissement auteur/pièces jointes,
@@ -71,14 +72,20 @@ async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
 }
 const asRawComment = (c: unknown) => c as RawComment;
 
-/** Fil de commentaires (racines + réponses) d'un média, enrichi. */
-export async function listThread(mediaObjectId: number) {
-  const comments = await prisma.comment.findMany({
-    where: { mediaObjectId, parentId: null },
-    orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
-    include: { ...commentInclude, replies: { orderBy: { createdAt: 'asc' }, include: commentInclude } },
-  });
-  return Promise.all(comments.map((c) => enrichComment(asRawComment(c))));
+/** Fil de commentaires (racines paginées + réponses imbriquées) d'un média, enrichi. */
+export async function listThread(mediaObjectId: number, p: PaginationParams): Promise<Paginated<unknown>> {
+  const where = { mediaObjectId, parentId: null };
+  const [comments, total] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
+      ...pageArgs(p),
+      include: { ...commentInclude, replies: { orderBy: { createdAt: 'asc' }, include: commentInclude } },
+    }),
+    prisma.comment.count({ where }),
+  ]);
+  const items = await Promise.all(comments.map((c) => enrichComment(asRawComment(c))));
+  return paginate(items, total, p);
 }
 
 /** URL présignée PUT pour une image jointe au fil. */

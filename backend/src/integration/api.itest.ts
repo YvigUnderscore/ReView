@@ -66,7 +66,30 @@ describe('API — auth & RBAC', () => {
   it('GET /api/projects avec token → 200 + tableau', async () => {
     const r = await request(app).get('/api/projects').set('Authorization', `Bearer ${token}`);
     expect(r.status).toBe(200);
-    expect(Array.isArray(r.body.projects)).toBe(true);
+    expect(Array.isArray(r.body.items)).toBe(true);
+    expect(typeof r.body.total).toBe('number');
+  });
+  it('GET /api/projects paginé → enveloppe { items, total, page, pageSize } bornée', async () => {
+    // Deux projets au moins pour vérifier le bornage.
+    await request(app)
+      .post('/api/projects')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: `Pag A ${Date.now()}` });
+    await request(app)
+      .post('/api/projects')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: `Pag B ${Date.now()}` });
+    const r = await request(app)
+      .get('/api/projects?page=1&pageSize=1')
+      .set('Authorization', `Bearer ${token}`);
+    expect(r.status).toBe(200);
+    expect(r.body.page).toBe(1);
+    expect(r.body.pageSize).toBe(1);
+    expect(r.body.items.length).toBeLessThanOrEqual(1);
+    expect(r.body.total).toBeGreaterThanOrEqual(2);
+    // pageSize hors borne (> 100) → rejeté par Zod (400).
+    const bad = await request(app).get('/api/projects?pageSize=500').set('Authorization', `Bearer ${token}`);
+    expect(bad.status).toBe(400);
   });
   it('GET /api/auth/me → utilisateur courant', async () => {
     const r = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
@@ -176,7 +199,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .get(`/api/comments?mediaObjectId=${mediaObjectId}`)
       .set('Authorization', `Bearer ${artistToken}`);
     expect(list.status).toBe(200);
-    expect(list.body.comments.length).toBeGreaterThanOrEqual(1);
+    expect(list.body.items.length).toBeGreaterThanOrEqual(1);
   });
 
   it('partage client : lien COMMENT → accès public + commentaire invité', async () => {
@@ -271,14 +294,14 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
     // GET /api/shots?sequenceId=none → uniquement le shot orphelin
     const orphans = await request(app).get(`/api/shots?projectId=${projectId}&sequenceId=none`).set(auth);
     expect(orphans.status).toBe(200);
-    expect(orphans.body.shots.map((s: { id: number }) => s.id)).toEqual([orphan.body.shot.id]);
+    expect(orphans.body.items.map((s: { id: number }) => s.id)).toEqual([orphan.body.shot.id]);
 
     // GET /api/shots?sequenceId=<id> → uniquement le shot de la séquence
     const bySeq = await request(app)
       .get(`/api/shots?projectId=${projectId}&sequenceId=${seq.body.sequence.id}`)
       .set(auth);
     expect(bySeq.status).toBe(200);
-    expect(bySeq.body.shots.map((s: { id: number }) => s.id)).toEqual([inSeq.body.shot.id]);
+    expect(bySeq.body.items.map((s: { id: number }) => s.id)).toEqual([inSeq.body.shot.id]);
   });
 });
 

@@ -67,7 +67,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
   const qc = useQueryClient();
   const { data, isError } = useQuery({
     queryKey: qk.tasks(shotId),
-    queryFn: () => api.get<{ tasks: Task[] }>(`/api/tasks?shotId=${shotId}`).then((d) => d.tasks),
+    queryFn: () => api.get<{ items: Task[] }>(`/api/tasks?shotId=${shotId}`).then((d) => d.items),
   });
   const tasks = isError ? [] : (data ?? null);
   const [task, setTask] = useState({ name: '', type: 'ANIMATION' });

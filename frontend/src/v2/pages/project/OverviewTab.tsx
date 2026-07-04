@@ -42,7 +42,7 @@ export default function OverviewTab({
   const { data, isError } = useQuery({
     queryKey: qk.projectMedia(projectId),
     queryFn: () =>
-      api.get<{ media: RecentMedia[] }>(`/api/media?projectId=${projectId}`).then((d) => d.media),
+      api.get<{ items: RecentMedia[] }>(`/api/media?projectId=${projectId}`).then((d) => d.items),
   });
   const media = isError ? [] : (data?.slice(0, 8) ?? null);
 

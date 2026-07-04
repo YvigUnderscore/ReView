@@ -61,10 +61,10 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
       queryKey: qk.shotsOfSequence(projectId, seqId === NO_SEQ ? 'none' : seqId),
       queryFn: () =>
         api
-          .get<{ shots: ShotRef[] }>(
+          .get<{ items: ShotRef[] }>(
             `/api/shots?projectId=${projectId}&sequenceId=${seqId === NO_SEQ ? 'none' : seqId}`,
           )
-          .then((d) => d.shots),
+          .then((d) => d.items),
     })),
   });
   const shotsBySeq: Record<number, ShotRef[] | undefined> = {};

@@ -86,7 +86,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
   const libraryQ = useQuery({
     queryKey: qk.projectMedia(projectId ?? 0, 'IMAGE'),
     queryFn: () =>
-      api.get<{ media: MediaLite[] }>(`/api/media?projectId=${projectId}&kind=IMAGE`).then((d) => d.media),
+      api.get<{ items: MediaLite[] }>(`/api/media?projectId=${projectId}&kind=IMAGE`).then((d) => d.items),
     enabled: showLib && projectId != null,
   });
   const library = libraryQ.data ?? [];

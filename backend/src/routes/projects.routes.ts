@@ -4,6 +4,7 @@ import { Role, ProjectStatus } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { requireRole, requireProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
+import { paginationQuery, readPagination } from '../lib/pagination';
 import * as ProjectService from '../services/ProjectService';
 
 const router = Router();
@@ -11,9 +12,10 @@ router.use(authenticate);
 
 const projectIdParam = z.object({ projectId: z.coerce.number().int() });
 
-// GET /api/projects — admin/superviseur : tout ; sinon : projets dont l'user est membre
-router.get('/', async (req, res) => {
-  res.json({ projects: await ProjectService.listProjects(req.user!) });
+// GET /api/projects — admin/superviseur : tout ; sinon : projets dont l'user est membre.
+// Paginé : { items, total, page, pageSize } (10.D1).
+router.get('/', validate({ query: paginationQuery }), async (req, res) => {
+  res.json(await ProjectService.listProjects(req.user!, readPagination(req.query)));
 });
 
 // POST /api/projects (admin/superviseur)

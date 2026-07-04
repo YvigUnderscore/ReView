@@ -5,6 +5,7 @@ import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pipeline';
 import { notFound } from '../lib/errors';
+import { paginationQuery, readPagination } from '../lib/pagination';
 import * as CommentService from '../services/CommentService';
 
 const router = Router();
@@ -20,16 +21,16 @@ async function resolveCommentAccess(req: Request, commentId: number): Promise<nu
   return projectId;
 }
 
-// GET /api/comments?mediaObjectId=X — fil de commentaires (racines + réponses) d'un média
+// GET /api/comments?mediaObjectId=X — fil (racines paginées + réponses) d'un média (10.D1)
 router.get(
   '/',
-  validate({ query: z.object({ mediaObjectId: z.coerce.number().int() }) }),
+  validate({ query: z.object({ mediaObjectId: z.coerce.number().int() }).merge(paginationQuery) }),
   async (req, res) => {
     const mediaObjectId = Number(req.query.mediaObjectId);
     const projectId = await resolveProjectIdForMedia(mediaObjectId);
     if (!projectId) throw notFound('Média introuvable');
     await assertProjectAccess(req, projectId);
-    res.json({ comments: await CommentService.listThread(mediaObjectId) });
+    res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query)));
   },
 );
 

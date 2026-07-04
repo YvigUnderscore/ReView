@@ -7,7 +7,7 @@ import type { AuditRow } from './adminShared';
 export default function AuditTab() {
   const { data: audit, isLoading } = useQuery({
     queryKey: qk.admin('audit'),
-    queryFn: () => api.get<{ logs: AuditRow[] }>('/api/studio/audit').then((d) => d.logs),
+    queryFn: () => api.get<{ items: AuditRow[] }>('/api/studio/audit').then((d) => d.items),
   });
   if (isLoading) return <SkeletonRows count={6} />;
   return (

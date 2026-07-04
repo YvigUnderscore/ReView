@@ -7,6 +7,7 @@ import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { resolveProjectSettings } from '../lib/projectSettings';
 import { slugify } from '../lib/slug';
 import { notFound, badRequest } from '../lib/errors';
+import { type PaginationParams, type Paginated, pageArgs, paginate, orderByFrom } from '../lib/pagination';
 
 /**
  * Logique métier des projets (liste avec miniatures, CRUD, membres, réglages,
@@ -22,18 +23,26 @@ const versionInProject = (projectId: number) => ({
   OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
 });
 
-/** Liste des projets visibles (globale pour admin/superviseur, membership sinon) + miniatures. */
-export async function listProjects(user: SessionUser) {
+/** Liste paginée des projets visibles (globale pour admin/superviseur, membership sinon) + miniatures. */
+export async function listProjects(user: SessionUser, p: PaginationParams): Promise<Paginated<unknown>> {
   const where = isGlobal(user.role)
     ? { deletedAt: null }
     : { deletedAt: null, memberships: { some: { userId: user.id } } };
-  const projects = await prisma.project.findMany({ where, orderBy: { updatedAt: 'desc' } });
-  return Promise.all(
-    projects.map(async (p) => ({
-      ...p,
-      thumbnailUrl: await effectiveThumbnailUrl(p.thumbnailKey, await firstMediaThumbKeyForProject(p.id)),
+  const orderBy = orderByFrom(p, ['updatedAt', 'createdAt', 'name'], { updatedAt: 'desc' });
+  const [projects, total] = await Promise.all([
+    prisma.project.findMany({ where, orderBy, ...pageArgs(p) }),
+    prisma.project.count({ where }),
+  ]);
+  const items = await Promise.all(
+    projects.map(async (proj) => ({
+      ...proj,
+      thumbnailUrl: await effectiveThumbnailUrl(
+        proj.thumbnailKey,
+        await firstMediaThumbKeyForProject(proj.id),
+      ),
     })),
   );
+  return paginate(items, total, p);
 }
 
 export interface CreateProjectInput {

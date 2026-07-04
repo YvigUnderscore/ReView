@@ -4,6 +4,7 @@ import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';
 import { firstMediaThumbKeyForShot, effectiveThumbnailUrl } from '../lib/thumbnails';
 import { logAudit } from './AuditService';
 import { badRequest, notFound } from '../lib/errors';
+import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
 /**
  * Logique métier des shots (liste + miniatures, création simple/lot avec unicité de
@@ -11,24 +12,34 @@ import { badRequest, notFound } from '../lib/errors';
  * asserté dans la route ; ces fonctions reçoivent des paramètres validés (10.D8).
  */
 
-/** Shots d'un projet (filtre séquence : id, `none` = hors séquence, ou tous) + miniatures. */
-export async function list(projectId: number, seq: number | 'none' | undefined) {
+/** Shots paginés d'un projet (filtre séquence : id, `none` = hors séquence, ou tous) + miniatures. */
+export async function list(
+  projectId: number,
+  seq: number | 'none' | undefined,
+  p: PaginationParams,
+): Promise<Paginated<unknown>> {
   const seqFilter =
     seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
-  const shots = await prisma.shot.findMany({
-    where: { projectId, deletedAt: null, ...seqFilter },
-    orderBy: { order: 'asc' },
-    include: {
-      _count: { select: { tasks: true } },
-      assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
-    },
-  });
-  return Promise.all(
+  const where = { projectId, deletedAt: null, ...seqFilter };
+  const [shots, total] = await Promise.all([
+    prisma.shot.findMany({
+      where,
+      orderBy: { order: 'asc' },
+      ...pageArgs(p),
+      include: {
+        _count: { select: { tasks: true } },
+        assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
+      },
+    }),
+    prisma.shot.count({ where }),
+  ]);
+  const items = await Promise.all(
     shots.map(async (s) => ({
       ...s,
       thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, await firstMediaThumbKeyForShot(s.id)),
     })),
   );
+  return paginate(items, total, p);
 }
 
 /** Vérifie que la séquence (si fournie) appartient bien au projet. */

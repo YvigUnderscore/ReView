@@ -6,6 +6,7 @@ import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForTask, resolveProjectIdForShot, resolveProjectIdForAsset } from '../lib/pipeline';
 import { forbidden, notFound } from '../lib/errors';
+import { paginationQuery, readPagination } from '../lib/pagination';
 import * as TaskService from '../services/TaskService';
 
 const router = Router();
@@ -21,12 +22,13 @@ async function resolveTaskAccess(req: Request, id: number): Promise<number> {
   return projectId;
 }
 
-// GET /api/tasks?shotId=X | ?assetId=Y
+// GET /api/tasks?shotId=X | ?assetId=Y — paginé (10.D1)
 router.get(
   '/',
   validate({
     query: z
       .object({ shotId: z.coerce.number().int().optional(), assetId: z.coerce.number().int().optional() })
+      .merge(paginationQuery)
       .refine((q) => q.shotId !== undefined || q.assetId !== undefined, 'shotId ou assetId requis'),
   }),
   async (req, res) => {
@@ -37,7 +39,7 @@ router.get(
       : await resolveProjectIdForAsset(assetId!);
     if (!projectId) throw notFound('Parent introuvable');
     await assertProjectAccess(req, projectId);
-    res.json({ tasks: await TaskService.list(shotId, assetId) });
+    res.json(await TaskService.list(readPagination(req.query), shotId, assetId));
   },
 );
 

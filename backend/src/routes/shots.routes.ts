@@ -6,6 +6,7 @@ import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForShot } from '../lib/pipeline';
 import { notFound } from '../lib/errors';
+import { paginationQuery, readPagination } from '../lib/pagination';
 import * as ShotService from '../services/ShotService';
 
 const router = Router();
@@ -21,20 +22,22 @@ async function resolveShotAccess(req: Request, shotId: number): Promise<number> 
   return projectId;
 }
 
-// GET /api/shots?projectId=X[&sequenceId=Y|none] — « none » = shots hors séquence
+// GET /api/shots?projectId=X[&sequenceId=Y|none] — « none » = shots hors séquence. Paginé (10.D1).
 router.get(
   '/',
   validate({
-    query: z.object({
-      projectId: z.coerce.number().int(),
-      sequenceId: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
-    }),
+    query: z
+      .object({
+        projectId: z.coerce.number().int(),
+        sequenceId: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
+      })
+      .merge(paginationQuery),
   }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     const seq = req.query.sequenceId as unknown as number | 'none' | undefined;
-    res.json({ shots: await ShotService.list(projectId, seq) });
+    res.json(await ShotService.list(projectId, seq, readPagination(req.query)));
   },
 );
 
