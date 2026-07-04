@@ -1,85 +1,88 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/apiClient';
-import { qk } from '../lib/query';
-import { useShotsQuery } from '../lib/queries';
+import { useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  DndContext, DragOverlay, KeyboardSensor, PointerSensor,
+  pointerWithin, useSensor, useSensors,
+  type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core';
+import { KanbanSquare } from 'lucide-react';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
+import EmptyState from '../components/ui/empty-state';
 import { TASK_STATUSES, TASK_STATUS_LABEL } from '../lib/taskStatus';
-import type { TaskStatus, TaskWithAssignee } from '../types/api';
+import type { TaskStatus, UserRef } from '../types/api';
+import { useKanbanBoard } from './kanban/useKanbanBoard';
+import KanbanColumn from './kanban/KanbanColumn';
+import { KanbanCardBody } from './kanban/KanbanCard';
+import KanbanFilters, { type KanbanFilterState } from './kanban/KanbanFilters';
 
-type BoardTask = TaskWithAssignee & { shotId: number; shotCode: string };
-
-const COLUMNS = TASK_STATUSES.map((key) => ({ key, label: TASK_STATUS_LABEL[key] }));
+const EMPTY_FILTER: KanbanFilterState = { assignee: '', type: '', sequence: '' };
 
 export default function KanbanPage() {
   const { id } = useParams();
   const projectId = Number(id);
-  const qc = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-  const [dragId, setDragId] = useState<number | null>(null);
+  const { sequences, tasks, isLoading, loadError, move } = useKanbanBoard(projectId);
+  const [filter, setFilter] = useState<KanbanFilterState>(EMPTY_FILTER);
+  const [activeId, setActiveId] = useState<number | null>(null);
 
-  const shotsQ = useShotsQuery(projectId);
-  const shots = shotsQ.data ?? [];
-  const taskQueries = useQueries({
-    queries: shots.map((s) => ({
-      queryKey: qk.tasks(s.id),
-      queryFn: () => api.get<{ tasks: TaskWithAssignee[] }>(`/api/tasks?shotId=${s.id}`).then((d) => d.tasks),
-    })),
-  });
-  const tasks: BoardTask[] = shots.flatMap((s, i) =>
-    (taskQueries[i]?.data ?? []).map((t) => ({ ...t, shotId: s.id, shotCode: s.code })));
-  const loadError = (shotsQ.error ?? taskQueries.find((q) => q.error)?.error)?.message ?? null;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
 
-  // Déplacement optimiste dans le cache du shot concerné ; rollback par invalidation.
-  const move = async (taskId: number, status: TaskStatus) => {
-    const t = tasks.find((x) => x.id === taskId);
-    if (!t || t.status === status) return;
-    const key = qk.tasks(t.shotId);
-    qc.setQueryData<TaskWithAssignee[]>(key, (old) => old?.map((x) => (x.id === taskId ? { ...x, status } : x)));
-    try { await api.patch(`/api/tasks/${taskId}`, { status }); }
-    catch (e) { qc.invalidateQueries({ queryKey: key }); setError(e instanceof Error ? e.message : 'Erreur'); }
+  // Assignés distincts présents sur le board (pour le filtre).
+  const assignees: UserRef[] = useMemo(() => {
+    const m = new Map<number, string | null>();
+    tasks.forEach((t) => { if (t.assignee) m.set(t.assignee.id, t.assignee.name); });
+    return [...m].map(([aid, name]) => ({ id: aid, name }));
+  }, [tasks]);
+
+  const filtered = useMemo(() => tasks.filter((t) => {
+    if (filter.assignee === 'none' && t.assignee) return false;
+    if (filter.assignee && filter.assignee !== 'none' && String(t.assignee?.id) !== filter.assignee) return false;
+    if (filter.type && t.type !== filter.type) return false;
+    if (filter.sequence === 'none' && t.sequenceId != null) return false;
+    if (filter.sequence && filter.sequence !== 'none' && String(t.sequenceId) !== filter.sequence) return false;
+    return true;
+  }), [tasks, filter]);
+
+  const activeTask = activeId != null ? tasks.find((t) => t.id === activeId) ?? null : null;
+
+  const onDragStart = (e: DragStartEvent) => setActiveId(Number(e.active.id));
+  const onDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
+    if (e.over?.id != null) move(Number(e.active.id), e.over.id as TaskStatus);
   };
 
   return (
     <Shell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />}>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Kanban</h1>
-        <Link to={`/projects/${projectId}`} className="text-sm text-muted-foreground hover:text-foreground">← Projet</Link>
+        <KanbanFilters value={filter} onChange={setFilter} assignees={assignees} sequences={sequences} />
       </div>
-      {(error ?? loadError) && <p className="mb-4 text-sm text-destructive">{error ?? loadError}</p>}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {COLUMNS.map((col) => {
-          const colTasks = tasks.filter((t) => t.status === col.key);
-          return (
-            <div
-              key={col.key}
-              className="rounded-lg border border-border bg-card/50 p-2"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => { if (dragId != null) { move(dragId, col.key); setDragId(null); } }}
-            >
-              <div className="mb-2 flex items-center justify-between px-1 text-xs font-medium text-muted-foreground">
-                <span>{col.label}</span><span>{colTasks.length}</span>
-              </div>
-              <div className="space-y-2">
-                {colTasks.map((t) => (
-                  <div
-                    key={t.id}
-                    draggable
-                    onDragStart={() => setDragId(t.id)}
-                    className="cursor-grab rounded-md border border-border bg-card p-2 text-xs active:cursor-grabbing"
-                  >
-                    <Link to={`/tasks/${t.id}`} className="font-medium hover:underline">{t.name}</Link>
-                    <div className="mt-1 text-muted-foreground">{t.shotCode} · {t.type}</div>
-                    {t.assignee && <div className="text-muted-foreground">→ {t.assignee.name}</div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
+      {!isLoading && tasks.length === 0 ? (
+        <EmptyState
+          icon={KanbanSquare}
+          title="Aucune tâche pour l'instant"
+          description="Créez des shots et des tâches depuis le projet pour les suivre ici. Glissez une carte d'une colonne à l'autre pour changer son statut."
+        />
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setActiveId(null)}
+        >
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            {TASK_STATUSES.map((key) => (
+              <KanbanColumn key={key} id={key} label={TASK_STATUS_LABEL[key]!} tasks={filtered.filter((t) => t.status === key)} />
+            ))}
+          </div>
+          <DragOverlay>{activeTask && <KanbanCardBody task={activeTask} dragging />}</DragOverlay>
+        </DndContext>
+      )}
     </Shell>
   );
 }
