@@ -5,6 +5,7 @@ import { initSocket } from './services/SocketService';
 import { storage } from './services/StorageService';
 import { purgeExpiredTrash } from './lib/trash';
 import { getNumericSetting, SETTING_KEYS } from './lib/settings';
+import { logger } from './lib/logger';
 
 const TRASH_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000; // quotidien
 
@@ -15,9 +16,9 @@ function scheduleTrashSweep(): void {
       const days = await getNumericSetting(SETTING_KEYS.TRASH_RETENTION_DAYS);
       const purged = await purgeExpiredTrash(days);
       if (purged > 0)
-        console.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
+        logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
     } catch (err) {
-      console.error('[Trash] échec du balayage de purge :', err);
+      logger.error({ err }, '[Trash] échec du balayage de purge');
     }
   };
   // Premier passage différé de 60 s pour ne pas alourdir le démarrage.
@@ -36,11 +37,11 @@ async function main(): Promise<void> {
   scheduleTrashSweep();
 
   server.listen(env.PORT, () => {
-    console.info(`✅ ReView 2.0 backend démarré sur le port ${env.PORT} (${env.NODE_ENV})`);
+    logger.info(`✅ ReView 2.0 backend démarré sur le port ${env.PORT} (${env.NODE_ENV})`);
   });
 }
 
 main().catch((err) => {
-  console.error('❌ Échec du démarrage du serveur :', err);
+  logger.error({ err }, '❌ Échec du démarrage du serveur');
   process.exit(1);
 });

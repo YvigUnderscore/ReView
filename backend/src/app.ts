@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { env } from './config/env';
 import { rateLimit } from './middleware/rateLimit';
 import { errorHandler } from './middleware/error';
+import { httpLogger } from './middleware/httpLogger';
 
 import setupRoutes from './routes/setup.routes';
 import authRoutes from './routes/auth.routes';
@@ -32,6 +33,8 @@ export const createApp = (): Express => {
   const app = express();
 
   app.set('trust proxy', 1);
+  // Journalisation HTTP structurée le plus tôt possible (request-id sur toutes les réponses).
+  app.use(httpLogger);
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },

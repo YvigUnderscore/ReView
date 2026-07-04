@@ -15,6 +15,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createWriteStream, createReadStream } from 'node:fs';
 import { env } from '../config/env';
+import { logger } from '../lib/logger';
 
 /**
  * Abstraction du stockage objet (MinIO, S3-compatible).
@@ -68,7 +69,7 @@ class StorageService {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch {
       await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
-      console.info(`[Storage] bucket « ${this.bucket} » créé.`);
+      logger.info(`[Storage] bucket « ${this.bucket} » créé.`);
     }
     await this.ensureCors();
   }
@@ -103,9 +104,9 @@ class StorageService {
           },
         }),
       );
-      console.info(`[Storage] CORS configuré pour ${origins.join(', ')}.`);
+      logger.info(`[Storage] CORS configuré pour ${origins.join(', ')}.`);
     } catch (err) {
-      console.warn('[Storage] Configuration CORS ignorée :', (err as Error).message);
+      logger.warn(`[Storage] Configuration CORS ignorée : ${(err as Error).message}`);
     }
   }
 

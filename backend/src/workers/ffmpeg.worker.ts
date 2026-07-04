@@ -12,6 +12,7 @@ import { QUEUE_NAMES, type MediaJobData } from '../services/JobService';
 import { prisma } from '../lib/prisma';
 import { storage, StorageService } from '../services/StorageService';
 import { MediaStatus } from '@prisma/client';
+import { logger } from '../lib/logger';
 
 /**
  * Worker de traitement média (FFmpeg) — BullMQ.
@@ -246,13 +247,13 @@ export const ffmpegWorker = new Worker<MediaJobData>(
 );
 
 ffmpegWorker.on('completed', (job) =>
-  console.info(`[ffmpeg.worker] ✓ ${job.name} media=${job.data.mediaObjectId}`),
+  logger.info(`[ffmpeg.worker] ✓ ${job.name} media=${job.data.mediaObjectId}`),
 );
 ffmpegWorker.on('failed', (job, err) =>
-  console.error(`[ffmpeg.worker] ✗ media=${job?.data.mediaObjectId}: ${err.message}`),
+  logger.error({ err }, `[ffmpeg.worker] ✗ media=${job?.data.mediaObjectId}`),
 );
 
 if (require.main === module) {
   ffmpegWorker.run();
-  console.info('[ffmpeg.worker] démarré.');
+  logger.info('[ffmpeg.worker] démarré.');
 }

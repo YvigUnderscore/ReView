@@ -9,6 +9,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
 
+  // Journalisation (pino) : niveau explicite ou dérivé de NODE_ENV si absent.
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+
   // Base de données
   DATABASE_URL: z.string().min(1, 'DATABASE_URL est requis'),
 
@@ -40,6 +43,8 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
+  // Exception au « pas de console » : ce fail-fast s'exécute AVANT que le logger
+  // (qui dépend de `env`) puisse exister. On écrit donc directement sur stderr.
   console.error("❌ Variables d'environnement invalides :");
   console.error(parsed.error.flatten().fieldErrors);
   process.exit(1);

@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
 
 /**
  * Journalise une action sensible dans l'audit log (tolérant aux erreurs).
@@ -20,5 +21,5 @@ export function logAudit(params: {
         metadata: (params.metadata ?? {}) as object,
       },
     })
-    .catch((err) => console.warn('[Audit] échec :', err instanceof Error ? err.message : err));
+    .catch((err) => logger.warn({ err }, '[Audit] échec'));
 }

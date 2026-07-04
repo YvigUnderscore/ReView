@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { emitToUser } from './SocketService';
 import { isValidDiscordWebhook } from '../lib/sanitize';
+import { logger } from '../lib/logger';
 
 /**
  * Crée une notification in-app et la pousse en temps réel à l'utilisateur ciblé.
@@ -39,6 +40,6 @@ export async function sendDiscord(content: string): Promise<void> {
       body: JSON.stringify({ content }),
     });
   } catch (err) {
-    console.warn('[Discord] envoi échoué :', err instanceof Error ? err.message : err);
+    logger.warn({ err }, '[Discord] envoi échoué');
   }
 }

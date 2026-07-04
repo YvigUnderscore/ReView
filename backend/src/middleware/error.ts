@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { AppError } from '../lib/errors';
+import { logger } from '../lib/logger';
 
 /**
  * Gestionnaire d'erreurs global. Standardise les réponses JSON et ne fuite jamais
@@ -18,6 +19,7 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
-  console.error(`[Erreur] ${req.method} ${req.url} :`, err);
+  // Logger enfant corrélé au request-id (pino-http) si disponible, sinon logger global.
+  (req.log ?? logger).error({ err }, 'Erreur non gérée');
   res.status(500).json({ error: 'Erreur interne du serveur' });
 };
