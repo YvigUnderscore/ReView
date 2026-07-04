@@ -77,7 +77,7 @@ export default function ProjectsPage() {
   };
 
   return (
-    <Shell title="Projets">
+    <Shell>
       <ResumeCard />
       <div className="mb-5 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Projets</h1>

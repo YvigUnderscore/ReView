@@ -66,7 +66,7 @@ export default function DocumentationPage() {
   };
 
   return (
-    <Shell title="Documentation">
+    <Shell>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Documentation</h1>
         <div className="flex items-center gap-2">

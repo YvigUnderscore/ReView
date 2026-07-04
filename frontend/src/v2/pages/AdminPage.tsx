@@ -33,7 +33,7 @@ export default function AdminPage() {
   const Active = active.Component;
 
   return (
-    <Shell title="Administration">
+    <Shell>
       <h1 className="mb-4 text-xl font-semibold">Administration</h1>
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-48 md:flex-col md:overflow-visible md:pb-0">

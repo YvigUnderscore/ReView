@@ -80,7 +80,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <Shell title="Mon profil">
+    <Shell>
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="text-xl font-semibold">Mon profil</h1>
 
