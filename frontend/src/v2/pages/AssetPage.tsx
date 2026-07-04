@@ -10,6 +10,7 @@ import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import AssetAssignDialog from '../components/AssetAssignDialog';
 import FavoriteButton from '../components/FavoriteButton';
+import FullPageDropzone from '../components/FullPageDropzone';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import type { AssetDetail, MediaSummary, VersionDetail, VersionListItem } from '../types/api';
@@ -80,6 +81,19 @@ export default function AssetPage() {
     const file = e.target.files?.[0];
     if (file && target) enqueue(file, target);
     if (fileRef.current) fileRef.current.value = '';
+  };
+  // Drop-zone plein-écran : dépose vers la dernière version (en crée une si besoin).
+  const onDropFiles = async (files: File[]) => {
+    let vid: number | null = versions[0]?.id ?? null;
+    if (vid == null) {
+      try {
+        const { version } = await api.post<{ version: { id: number } }>('/api/versions', { assetId });
+        vid = version.id;
+        toast.success('Version créée');
+        invalidateVersions();
+      } catch (e) { toast.error(e instanceof Error ? e.message : 'Création de version impossible'); return; }
+    }
+    files.forEach((f) => enqueue(f, vid!));
   };
 
   return (
@@ -165,6 +179,13 @@ export default function AssetPage() {
         ))}
         {versions.length === 0 && <p className="text-sm text-muted-foreground">Aucune version.</p>}
       </div>
+
+      {canCreate && (
+        <FullPageDropzone
+          onDrop={onDropFiles}
+          label={versions[0] ? `Déposez pour ajouter à ${versions[0].name}` : 'Déposez pour créer une première version'}
+        />
+      )}
     </Shell>
   );
 }

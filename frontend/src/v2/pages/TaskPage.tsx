@@ -6,6 +6,7 @@ import { useUploadStore } from '../../stores/useUploadStore';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import ConfirmDialog from '../components/ConfirmDialog';
+import FullPageDropzone from '../components/FullPageDropzone';
 import EmptyState from '../components/ui/empty-state';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -110,6 +111,13 @@ export default function TaskPage() {
             />
           ))}
         </ol>
+      )}
+
+      {canCreate && (
+        <FullPageDropzone
+          onDrop={onDropFiles}
+          label={versions[0] ? `Déposez pour ajouter à ${versions[0].name}` : 'Déposez pour créer une première version'}
+        />
       )}
 
       <ConfirmDialog
