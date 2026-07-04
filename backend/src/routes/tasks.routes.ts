@@ -76,7 +76,7 @@ router.post(
       include: { assignee: { select: { id: true, name: true } } },
     });
     if (body.assigneeId && body.assigneeId !== req.user!.id) {
-      await notify({ userId: body.assigneeId, type: 'ASSIGN', content: `Tâche assignée : ${task.name}`, projectId, referenceId: task.id });
+      await notify({ userId: body.assigneeId, type: 'TASK_ASSIGNED', content: `Tâche assignée : ${task.name}`, projectId, referenceId: task.id });
     }
     emitToProject(projectId, 'task:update', { projectId, id: task.id, shotId: task.shotId, assetId: task.assetId });
     res.status(201).json({ task });
@@ -149,7 +149,7 @@ router.patch(
     });
     const newAssignee = (body as { assigneeId?: number | null }).assigneeId;
     if (newAssignee && newAssignee !== req.user!.id) {
-      await notify({ userId: newAssignee, type: 'ASSIGN', content: `Tâche assignée : ${updated.name}`, projectId, referenceId: id });
+      await notify({ userId: newAssignee, type: 'TASK_ASSIGNED', content: `Tâche assignée : ${updated.name}`, projectId, referenceId: id });
     }
     emitToProject(projectId, 'task:update', { projectId, id, shotId: updated.shotId, assetId: updated.assetId });
     res.json({ task: updated });

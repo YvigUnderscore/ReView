@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from './query';
-import type { Asset, Project, SequenceSummary, ShotSummary } from '../types/api';
+import type { Asset, Notification, Project, SequenceSummary, ShotSummary } from '../types/api';
 
 /**
  * Hooks Query partagés entre plusieurs composants (une clé = une shape).
@@ -39,6 +39,16 @@ export function useAssetsQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.assets(projectId),
     queryFn: () => api.get<{ assets: Asset[] }>(`/api/assets?projectId=${projectId}`).then((d) => d.assets),
+    enabled,
+  });
+}
+
+/** Notifications de l'utilisateur courant (+ compteur non-lus) — cloche topbar (10.C5). */
+export interface NotificationsData { notifications: Notification[]; unread: number }
+export function useNotificationsQuery(enabled = true) {
+  return useQuery({
+    queryKey: qk.notifications,
+    queryFn: () => api.get<NotificationsData>('/api/notifications'),
     enabled,
   });
 }

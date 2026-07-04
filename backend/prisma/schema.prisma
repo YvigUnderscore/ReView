@@ -426,9 +426,9 @@ model Notification {
   id          Int      @id @default(autoincrement())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      Int
-  type        String   @default("SYSTEM") // MENTION, REPLY, STATUS, SYSTEM…
+  type        String   @default("SYSTEM") // TASK_ASSIGNED, COMMENT_ASSIGNED, REPLY, SYSTEM…
   content     String
-  referenceId Int?
+  referenceId Int? // cible navigable selon le type : id de tâche (TASK_ASSIGNED) ou de média (REPLY/COMMENT_ASSIGNED)
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId   Int?
   isRead      Boolean  @default(false)

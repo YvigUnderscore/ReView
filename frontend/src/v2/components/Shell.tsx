@@ -12,6 +12,7 @@ import SidebarFooter from './SidebarFooter';
 import SidebarProjectTree from './SidebarProjectTree';
 import SidebarRecents from './SidebarRecents';
 import CommandPalette from './CommandPalette';
+import NotificationBell from './NotificationBell';
 import ShortcutsHelp from './ShortcutsHelp';
 import { useGlobalShortcuts } from '../lib/shortcuts';
 import { useSocketInvalidation } from '../lib/socketBridge';
@@ -165,6 +166,7 @@ export default function Shell({ children, title, breadcrumb }: { children: React
             <Search size={14} /> Rechercher…
             <kbd className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
           </button>
+          <NotificationBell />
         </header>
         <motion.main
           key={pathname}

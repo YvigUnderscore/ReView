@@ -120,6 +120,19 @@ export interface ReviewComment {
   replies?: ReviewComment[];
 }
 
+// ── Notifications ─────────────────────────────────────────────────────────────
+/** referenceId = tâche (TASK_ASSIGNED) ou média (REPLY/COMMENT_ASSIGNED) ; sinon projet. */
+export type NotificationType = 'TASK_ASSIGNED' | 'COMMENT_ASSIGNED' | 'REPLY' | 'SYSTEM';
+export interface Notification {
+  id: number;
+  type: NotificationType | string;
+  content: string;
+  referenceId: number | null;
+  projectId: number | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 // ── Réglages projet (nomenclature / départements) ─────────────────────────────
 export interface Nomenclature { sequencePrefix: string; shotPrefix: string; padding: number; step: number }
 export interface Department { key: string; name: string }

@@ -291,3 +291,53 @@ describe('API — contexte breadcrumb (/api/context)', () => {
     expect(invalid.status).toBe(400);
   });
 });
+
+describe('API — notifications (assignation de tâche)', () => {
+  it('notifie l\'assigné, expose le compteur non-lus, marque lu / tout lu, scope par utilisateur', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+    const artistAuth = { Authorization: `Bearer ${artistToken}` };
+
+    // Projet + membership de l'artiste
+    const proj = await request(app).post('/api/projects').set(auth).send({ name: `IT Notif ${suffix}` });
+    const projectId = proj.body.project.id;
+    await request(app).post(`/api/projects/${projectId}/members`).set(auth).send({ userId: artistId });
+
+    // Tâche assignée à l'artiste (par l'admin) → notification pour l'artiste
+    const shot = await request(app).post('/api/shots').set(auth).send({ projectId, name: 'Notif shot', code: `NF${suffix}` });
+    const task = await request(app).post('/api/tasks').set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'Notif task', type: 'ANIMATION', assigneeId: artistId });
+    expect(task.status).toBe(201);
+    const taskId = task.body.task.id;
+
+    // L'artiste voit la notification : type navigable + référence = tâche + compteur non-lus
+    const listArtist = await request(app).get('/api/notifications').set(artistAuth);
+    expect(listArtist.status).toBe(200);
+    const notif = listArtist.body.notifications.find(
+      (n: { type: string; referenceId: number }) => n.type === 'TASK_ASSIGNED' && n.referenceId === taskId,
+    );
+    expect(notif).toBeTruthy();
+    expect(notif.projectId).toBe(projectId);
+    expect(notif.isRead).toBe(false);
+    expect(listArtist.body.unread).toBeGreaterThanOrEqual(1);
+
+    // Scope par utilisateur : l'admin (auteur de l'assignation) n'est pas notifié
+    const listAdmin = await request(app).get('/api/notifications').set(auth);
+    expect(listAdmin.body.notifications.some(
+      (n: { type: string; referenceId: number }) => n.type === 'TASK_ASSIGNED' && n.referenceId === taskId,
+    )).toBe(false);
+
+    // RBAC : l'admin ne peut pas marquer la notification de l'artiste (404) ; l'artiste oui
+    const foreign = await request(app).patch(`/api/notifications/${notif.id}/read`).set(auth);
+    expect(foreign.status).toBe(404);
+    const read = await request(app).patch(`/api/notifications/${notif.id}/read`).set(artistAuth);
+    expect(read.status).toBe(200);
+    expect(read.body.notification.isRead).toBe(true);
+
+    // POST read-all → plus aucune non-lue pour l'artiste
+    const readAll = await request(app).post('/api/notifications/read-all').set(artistAuth);
+    expect(readAll.status).toBe(200);
+    const after = await request(app).get('/api/notifications').set(artistAuth);
+    expect(after.body.unread).toBe(0);
+  });
+});

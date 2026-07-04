@@ -41,6 +41,7 @@ export const qk = {
   version: (id: number) => ['version', id] as const,
   media: (id: number) => ['media', id] as const,
   drafts: ['drafts'] as const,
+  notifications: ['notifications'] as const,
   comments: (mediaId: number) => ['comments', mediaId] as const,
   context: (entity: string, id: number) => ['context', entity, id] as const,
   search: (q: string) => ['search', q] as const,

@@ -143,7 +143,8 @@ router.post(
     if (body.parentId) {
       const parent = await prisma.comment.findUnique({ where: { id: body.parentId }, select: { userId: true } });
       if (parent?.userId && parent.userId !== req.user!.id) {
-        await notify({ userId: parent.userId, type: 'REPLY', content: 'Nouvelle réponse à votre commentaire', projectId, referenceId: comment.id });
+        // referenceId = média (et non le commentaire) → navigable vers la review côté front (10.C5).
+        await notify({ userId: parent.userId, type: 'REPLY', content: 'Nouvelle réponse à votre commentaire', projectId, referenceId: body.mediaObjectId });
       }
     } else {
       void sendDiscord(`💬 Nouveau commentaire sur un média (projet #${projectId})`);
@@ -200,7 +201,8 @@ router.patch(
 
     // Notifie le nouvel assigné (hors auto-assignation)
     if (body.assigneeId && body.assigneeId !== req.user!.id) {
-      await notify({ userId: body.assigneeId, type: 'ASSIGN', content: 'Un commentaire vous a été assigné', projectId, referenceId: id });
+      // referenceId = média du commentaire → navigable vers la review côté front (10.C5).
+      await notify({ userId: body.assigneeId, type: 'COMMENT_ASSIGNED', content: 'Un commentaire vous a été assigné', projectId, referenceId: comment.mediaObjectId });
     }
     res.json({ comment: enriched });
   },
