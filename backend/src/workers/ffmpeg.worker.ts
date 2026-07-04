@@ -13,6 +13,7 @@ import { prisma } from '../lib/prisma';
 import { storage, StorageService } from '../services/StorageService';
 import { MediaStatus } from '@prisma/client';
 import { logger } from '../lib/logger';
+import { startStorageCleanupWorker } from './storageCleanup.worker';
 
 /**
  * Worker de traitement média (FFmpeg) — BullMQ.
@@ -256,4 +257,6 @@ ffmpegWorker.on('failed', (job, err) =>
 if (require.main === module) {
   ffmpegWorker.run();
   logger.info('[ffmpeg.worker] démarré.');
+  // Même process worker : traite aussi la file de nettoyage storage (retry des orphelins).
+  startStorageCleanupWorker();
 }

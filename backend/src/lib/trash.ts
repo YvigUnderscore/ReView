@@ -1,5 +1,7 @@
 import { prisma } from './prisma';
 import { storage } from '../services/StorageService';
+import { enqueueStorageCleanup } from '../services/JobService';
+import { logger } from './logger';
 
 /**
  * Corbeille : soft-delete / restauration / purge définitive, avec cascade descendante
@@ -17,11 +19,47 @@ import { storage } from '../services/StorageService';
 
 type MediaKeys = { storageKey: string; thumbnailKey: string | null };
 
-/** Supprime les objets MinIO (média + miniature) en best-effort. */
-async function deleteMediaObjects(medias: MediaKeys[]): Promise<void> {
+/** Aplati les clés storage (média + miniature) d'une liste de médias. */
+function mediaStorageKeys(medias: MediaKeys[]): string[] {
+  const keys: string[] = [];
   for (const m of medias) {
-    if (m.storageKey) await storage.deleteObject(m.storageKey).catch(() => undefined);
-    if (m.thumbnailKey) await storage.deleteObject(m.thumbnailKey).catch(() => undefined);
+    if (m.storageKey) keys.push(m.storageKey);
+    if (m.thumbnailKey) keys.push(m.thumbnailKey);
+  }
+  return keys;
+}
+
+/**
+ * Supprime des objets MinIO **après** que la DB a été purgée. Ne lève jamais : un
+ * échec storage n'a plus d'impact sur la cohérence DB (déjà committée). Les clés en
+ * échec sont journalisées et enfilées pour retry (journal des orphelins, cf. 10.D7).
+ */
+async function deleteStorageAfterCommit(keys: string[], prefixes: string[] = []): Promise<void> {
+  const failedKeys: string[] = [];
+  for (const key of keys) {
+    try {
+      await storage.deleteObject(key);
+    } catch (err) {
+      failedKeys.push(key);
+      logger.warn({ err, key }, '[Trash] suppression objet storage échouée (retry enfilé)');
+    }
+  }
+  const failedPrefixes: string[] = [];
+  for (const prefix of prefixes) {
+    try {
+      await storage.deletePrefix(prefix);
+    } catch (err) {
+      failedPrefixes.push(prefix);
+      logger.warn({ err, prefix }, '[Trash] suppression préfixe storage échouée (retry enfilé)');
+    }
+  }
+  if (failedKeys.length > 0 || failedPrefixes.length > 0) {
+    await enqueueStorageCleanup({ keys: failedKeys, prefixes: failedPrefixes }).catch((err) =>
+      logger.error(
+        { err, keys: failedKeys, prefixes: failedPrefixes },
+        "[Trash] impossible d'enfiler le nettoyage storage — orphelins non retentés",
+      ),
+    );
   }
 }
 
@@ -102,14 +140,18 @@ export async function restoreProject(id: number): Promise<void> {
 
 // ── Purge définitive (DB + MinIO) ────────────────────────────────────────────────
 
+// Invariant 10.D7 : la suppression DB (atomique via cascade) précède TOUJOURS la
+// suppression storage. Un échec MinIO ne laisse donc jamais la DB incohérente ;
+// les objets orphelins sont journalisés et retentés (deleteStorageAfterCommit).
+
 export async function purgeMedia(id: number): Promise<void> {
   const media = await prisma.mediaObject.findUnique({
     where: { id },
     select: { storageKey: true, thumbnailKey: true },
   });
   if (!media) return;
-  await deleteMediaObjects([media]);
   await prisma.mediaObject.delete({ where: { id } });
+  await deleteStorageAfterCommit(mediaStorageKeys([media]));
 }
 
 export async function purgeVersion(id: number): Promise<void> {
@@ -117,8 +159,8 @@ export async function purgeVersion(id: number): Promise<void> {
     where: { versionId: id },
     select: { storageKey: true, thumbnailKey: true },
   });
-  await deleteMediaObjects(medias);
   await prisma.version.delete({ where: { id } }); // cascade DB des médias
+  await deleteStorageAfterCommit(mediaStorageKeys(medias));
 }
 
 export async function purgeShot(id: number): Promise<void> {
@@ -126,8 +168,8 @@ export async function purgeShot(id: number): Promise<void> {
     where: { version: { task: { shotId: id } } },
     select: { storageKey: true, thumbnailKey: true },
   });
-  await deleteMediaObjects(medias);
   await prisma.shot.delete({ where: { id } }); // cascade DB : tasks → versions → médias
+  await deleteStorageAfterCommit(mediaStorageKeys(medias));
 }
 
 export async function purgeAsset(id: number): Promise<void> {
@@ -135,8 +177,8 @@ export async function purgeAsset(id: number): Promise<void> {
     where: { version: { OR: [{ assetId: id }, { task: { assetId: id } }] } },
     select: { storageKey: true, thumbnailKey: true },
   });
-  await deleteMediaObjects(medias);
   await prisma.asset.delete({ where: { id } });
+  await deleteStorageAfterCommit(mediaStorageKeys(medias));
 }
 
 export async function purgeSequence(id: number): Promise<void> {
@@ -148,10 +190,9 @@ export async function purgeSequence(id: number): Promise<void> {
 export async function purgeProject(id: number): Promise<void> {
   const project = await prisma.project.findUnique({ where: { id }, select: { slug: true } });
   if (!project) return;
-  // Nouvelles clés lisibles + anciennes clés numériques (legacy).
-  await storage.deletePrefix(`projects/${project.slug}/`).catch(() => undefined);
-  await storage.deletePrefix(`projects/${id}/`).catch(() => undefined);
   await prisma.project.delete({ where: { id } }); // cascade DB intégrale
+  // Storage après commit — nouvelles clés lisibles + anciennes clés numériques (legacy).
+  await deleteStorageAfterCommit([], [`projects/${project.slug}/`, `projects/${id}/`]);
 }
 
 // ── Purge automatique (balayage planifié) ────────────────────────────────────────
