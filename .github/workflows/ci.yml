@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "v2/**"]
+    branches: [main, dev, "v2/**"]
   pull_request:
     branches: [main]
 
@@ -27,7 +27,7 @@ jobs:
         run: npm test
 
   frontend-checks:
-    name: Frontend — lint, typecheck & build
+    name: Frontend — lint, typecheck, tests & build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -44,6 +44,8 @@ jobs:
         run: npm run lint
       - name: Typecheck (tsc)
         run: npm run typecheck
+      - name: Tests unitaires (Vitest)
+        run: npm test
       - name: Build (Vite)
         run: npm run build
 

@@ -40,6 +40,9 @@ step "Frontend — lint (eslint)"
 step "Frontend — typecheck (tsc --noEmit)"
 ( cd "$ROOT/frontend" && npm run typecheck )
 
+step "Frontend — tests unitaires (vitest)"
+( cd "$ROOT/frontend" && npm test )
+
 step "Frontend — build (vite build)"
 ( cd "$ROOT/frontend" && npm run build )
 
