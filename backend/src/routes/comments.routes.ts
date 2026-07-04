@@ -1,76 +1,24 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { z } from 'zod';
-import { Role } from '@prisma/client';
-import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
-import { sanitizeHtml } from '../lib/sanitize';
 import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pipeline';
-import { emitToProject } from '../services/SocketService';
-import { notify, sendDiscord } from '../services/NotificationService';
-import { toPublicUser } from '../lib/userView';
-import { storage } from '../services/StorageService';
-import { badRequest, forbidden, notFound } from '../lib/errors';
+import { notFound } from '../lib/errors';
+import * as CommentService from '../services/CommentService';
 
 const router = Router();
 router.use(authenticate);
 
-const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
+const idParam = z.object({ id: z.coerce.number().int() });
 
-const commentInclude = {
-  author: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      username: true,
-      avatarKey: true,
-    },
-  },
-  reactions: { select: { id: true, emoji: true, userId: true } },
-} as const;
-
-// Remplace l'auteur brut par une vue publique (displayName, initials, avatarUrl présigné).
-type RawAuthor = {
-  id: number;
-  name: string | null;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-  username: string | null;
-  avatarKey: string | null;
-};
-type RawAttachment = { key: string; name?: string; contentType?: string };
-interface RawComment {
-  author: RawAuthor;
-  replies?: RawComment[];
-  attachments?: unknown;
-  [k: string]: unknown;
+/** Résout le projet d'un commentaire + assertion d'accès (RBAC) → renvoie le projectId. */
+async function resolveCommentAccess(req: Request, commentId: number): Promise<number> {
+  const projectId = await resolveProjectIdForComment(commentId);
+  if (!projectId) throw notFound('Commentaire introuvable');
+  await assertProjectAccess(req, projectId);
+  return projectId;
 }
-
-// Résout les pièces jointes (clés MinIO) en URLs présignées affichables.
-async function resolveAttachments(attachments: unknown): Promise<unknown> {
-  if (!Array.isArray(attachments)) return attachments ?? undefined;
-  return Promise.all(
-    (attachments as RawAttachment[]).map(async (a) => ({
-      ...a,
-      url: a.key ? await storage.getPresignedGetUrl(a.key).catch(() => null) : null,
-    })),
-  );
-}
-
-async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
-  return {
-    ...c,
-    author: await toPublicUser(c.author),
-    attachments: await resolveAttachments(c.attachments),
-    replies: c.replies ? await Promise.all(c.replies.map(enrichComment)) : undefined,
-  };
-}
-const asRawComment = (c: unknown) => c as RawComment;
 
 // GET /api/comments?mediaObjectId=X — fil de commentaires (racines + réponses) d'un média
 router.get(
@@ -81,16 +29,7 @@ router.get(
     const projectId = await resolveProjectIdForMedia(mediaObjectId);
     if (!projectId) throw notFound('Média introuvable');
     await assertProjectAccess(req, projectId);
-
-    const comments = await prisma.comment.findMany({
-      where: { mediaObjectId, parentId: null },
-      orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
-      include: {
-        ...commentInclude,
-        replies: { orderBy: { createdAt: 'asc' }, include: commentInclude },
-      },
-    });
-    res.json({ comments: await Promise.all(comments.map((c) => enrichComment(asRawComment(c)))) });
+    res.json({ comments: await CommentService.listThread(mediaObjectId) });
   },
 );
 
@@ -105,10 +44,7 @@ router.post(
   }),
   async (req, res) => {
     const { filename, contentType } = req.body as { filename: string; contentType: string };
-    const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const key = `comments/attachments/${req.user!.id}/${Date.now()}-${safe}`;
-    const url = await storage.getPresignedPutUrl(key, contentType, 900);
-    res.json({ url, key });
+    res.json(await CommentService.presignAttachment(req.user!.id, filename, contentType));
   },
 );
 
@@ -137,80 +73,18 @@ router.post(
     }),
   }),
   async (req, res) => {
-    const body = req.body as {
-      mediaObjectId: number;
-      content: string;
-      timestamp?: number;
-      duration?: number;
-      annotation?: unknown;
-      cameraState?: unknown;
-      attachments?: { key: string; name?: string; contentType?: string }[];
-      parentId?: number;
-    };
-    const projectId = await resolveProjectIdForMedia(body.mediaObjectId);
+    const projectId = await resolveProjectIdForMedia(req.body.mediaObjectId);
     if (!projectId) throw notFound('Média introuvable');
     await assertProjectAccess(req, projectId);
-
-    // Sécurité : seules les clés du dossier de pièces jointes sont acceptées
-    const attachments = (body.attachments ?? []).filter((a) => a.key.startsWith('comments/attachments/'));
-
-    // Une réponse doit cibler un commentaire du même média
-    if (body.parentId) {
-      const parent = await prisma.comment.findUnique({
-        where: { id: body.parentId },
-        select: { mediaObjectId: true },
-      });
-      if (!parent || parent.mediaObjectId !== body.mediaObjectId)
-        throw badRequest('Commentaire parent invalide');
-    }
-
-    const comment = await prisma.comment.create({
-      data: {
-        mediaObjectId: body.mediaObjectId,
-        userId: req.user!.id,
-        content: sanitizeHtml(body.content),
-        timestamp: body.timestamp ?? null,
-        duration: body.duration ?? null,
-        annotation: (body.annotation ?? undefined) as object | undefined,
-        cameraState: (body.cameraState ?? undefined) as object | undefined,
-        attachments: attachments.length > 0 ? (attachments as object) : undefined,
-        parentId: body.parentId ?? null,
-      },
-      include: commentInclude,
-    });
-    const enriched = await enrichComment(asRawComment(comment));
-
-    emitToProject(projectId, 'comment:new', enriched);
-
-    // Notifications : réponse → auteur du commentaire parent ; sinon ping Discord projet.
-    if (body.parentId) {
-      const parent = await prisma.comment.findUnique({
-        where: { id: body.parentId },
-        select: { userId: true },
-      });
-      if (parent?.userId && parent.userId !== req.user!.id) {
-        // referenceId = média (et non le commentaire) → navigable vers la review côté front (10.C5).
-        await notify({
-          userId: parent.userId,
-          type: 'REPLY',
-          content: 'Nouvelle réponse à votre commentaire',
-          projectId,
-          referenceId: body.mediaObjectId,
-        });
-      }
-    } else {
-      void sendDiscord(`💬 Nouveau commentaire sur un média (projet #${projectId})`);
-    }
-    res.status(201).json({ comment: enriched });
+    res.status(201).json({ comment: await CommentService.create(req.user!, projectId, req.body) });
   },
 );
 
-// PATCH /api/comments/:id — édition contenu (auteur), résolution (auteur/superviseur),
-// visibilité client + assignation (superviseur/admin).
+// PATCH /api/comments/:id — édition (auteur), résolution, visibilité client + assignation (superviseur+)
 router.patch(
   '/:id',
   validate({
-    params: z.object({ id: z.coerce.number().int() }),
+    params: idParam,
     body: z.object({
       content: z.string().min(1).max(10000).optional(),
       isResolved: z.boolean().optional(),
@@ -220,90 +94,29 @@ router.patch(
   }),
   async (req, res) => {
     const id = Number(req.params.id);
-    const existing = await prisma.comment.findUnique({ where: { id }, select: { userId: true } });
-    if (!existing) throw notFound('Commentaire introuvable');
-    const projectId = await resolveProjectIdForComment(id);
-    if (!projectId) throw notFound('Commentaire orphelin');
-    await assertProjectAccess(req, projectId);
-
-    const body = req.body as {
-      content?: string;
-      isResolved?: boolean;
-      isVisibleToClient?: boolean;
-      assigneeId?: number | null;
-    };
-    const manager = isManager(req.user!.role);
-    const isAuthor = existing.userId === req.user!.id;
-
-    if (body.content !== undefined && !isAuthor) throw forbidden("Seul l'auteur peut éditer le contenu");
-    if ((body.isVisibleToClient !== undefined || body.assigneeId !== undefined) && !manager) {
-      throw forbidden('Réservé aux superviseurs/admins');
-    }
-    if (body.isResolved !== undefined && !manager && !isAuthor) throw forbidden('Résolution non autorisée');
-
-    const comment = await prisma.comment.update({
-      where: { id },
-      data: {
-        ...(body.content !== undefined ? { content: sanitizeHtml(body.content), isEdited: true } : {}),
-        ...(body.isResolved !== undefined ? { isResolved: body.isResolved } : {}),
-        ...(body.isVisibleToClient !== undefined ? { isVisibleToClient: body.isVisibleToClient } : {}),
-        ...(body.assigneeId !== undefined ? { assigneeId: body.assigneeId } : {}),
-      },
-      include: commentInclude,
-    });
-    const enriched = await enrichComment(asRawComment(comment));
-    emitToProject(projectId, 'comment:update', enriched);
-
-    // Notifie le nouvel assigné (hors auto-assignation)
-    if (body.assigneeId && body.assigneeId !== req.user!.id) {
-      // referenceId = média du commentaire → navigable vers la review côté front (10.C5).
-      await notify({
-        userId: body.assigneeId,
-        type: 'COMMENT_ASSIGNED',
-        content: 'Un commentaire vous a été assigné',
-        projectId,
-        referenceId: comment.mediaObjectId,
-      });
-    }
-    res.json({ comment: enriched });
+    const projectId = await resolveCommentAccess(req, id);
+    const comment = await CommentService.update(req.user!, projectId, id, req.body);
+    if (!comment) throw notFound('Commentaire introuvable');
+    res.json({ comment });
   },
 );
 
 // DELETE /api/comments/:id — auteur ou superviseur/admin
-router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
+router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
-  const existing = await prisma.comment.findUnique({ where: { id }, select: { userId: true } });
-  if (!existing) throw notFound('Commentaire introuvable');
-  const projectId = await resolveProjectIdForComment(id);
-  if (!projectId) throw notFound('Commentaire orphelin');
-  await assertProjectAccess(req, projectId);
-  if (!isManager(req.user!.role) && existing.userId !== req.user!.id) {
-    throw forbidden("Suppression réservée à l'auteur ou un superviseur");
-  }
-  await prisma.comment.delete({ where: { id } });
-  emitToProject(projectId, 'comment:delete', { id });
+  const projectId = await resolveCommentAccess(req, id);
+  if (!(await CommentService.remove(req.user!, projectId, id))) throw notFound('Commentaire introuvable');
   res.status(204).end();
 });
 
 // POST /api/comments/:id/reactions — ajoute/maj une réaction emoji
 router.post(
   '/:id/reactions',
-  validate({
-    params: z.object({ id: z.coerce.number().int() }),
-    body: z.object({ emoji: z.string().min(1).max(16) }),
-  }),
+  validate({ params: idParam, body: z.object({ emoji: z.string().min(1).max(16) }) }),
   async (req, res) => {
     const id = Number(req.params.id);
-    const projectId = await resolveProjectIdForComment(id);
-    if (!projectId) throw notFound('Commentaire introuvable');
-    await assertProjectAccess(req, projectId);
-    const { emoji } = req.body as { emoji: string };
-    const reaction = await prisma.reaction.upsert({
-      where: { commentId_userId_emoji: { commentId: id, userId: req.user!.id, emoji } },
-      update: {},
-      create: { commentId: id, userId: req.user!.id, emoji },
-    });
-    emitToProject(projectId, 'comment:reaction', { commentId: id, reaction });
+    const projectId = await resolveCommentAccess(req, id);
+    const reaction = await CommentService.addReaction(req.user!, projectId, id, req.body.emoji);
     res.status(201).json({ reaction });
   },
 );
@@ -314,14 +127,8 @@ router.delete(
   validate({ params: z.object({ id: z.coerce.number().int(), emoji: z.string().min(1).max(16) }) }),
   async (req, res) => {
     const id = Number(req.params.id);
-    const emoji = String(req.params.emoji);
-    const projectId = await resolveProjectIdForComment(id);
-    if (!projectId) throw notFound('Commentaire introuvable');
-    await assertProjectAccess(req, projectId);
-    await prisma.reaction
-      .delete({ where: { commentId_userId_emoji: { commentId: id, userId: req.user!.id, emoji } } })
-      .catch(() => undefined);
-    emitToProject(projectId, 'comment:reaction:remove', { commentId: id, emoji, userId: req.user!.id });
+    const projectId = await resolveCommentAccess(req, id);
+    await CommentService.removeReaction(req.user!.id, projectId, id, String(req.params.emoji));
     res.status(204).end();
   },
 );
