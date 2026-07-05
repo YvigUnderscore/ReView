@@ -52,7 +52,15 @@ export default defineConfig([
       'react-hooks/immutability': 'error',
       'react-hooks/purity': 'error',
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
+      // Budget de taille (10.F4) : composant/page ≤ 300 lignes de code (hors blancs/
+      // commentaires). Au-delà : découper en sous-composants / hooks.
+      'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
     },
+  },
+  // Les fichiers de test et E2E ne sont pas soumis au budget de taille.
+  {
+    files: ['**/*.test.{ts,tsx}', 'e2e/**/*.ts'],
+    rules: { 'max-lines': 'off' },
   },
   // Désactive les règles ESLint stylistiques susceptibles d'entrer en conflit avec
   // Prettier (formatage géré exclusivement par Prettier — cf. 10.F2). Toujours en dernier.

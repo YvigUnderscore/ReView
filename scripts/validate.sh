@@ -19,6 +19,23 @@ WITH_E2E=0
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$1"; }
 
+# ---------- Budget de taille (10.F4) ----------
+# Le frontend est couvert par la règle ESLint `max-lines` (300). Le backend n'a pas
+# d'ESLint : on garde-fou ici la taille des routes (≤ 200 lignes ; la logique métier
+# vit dans services/). Étend la suite, ne l'affaiblit jamais.
+step "Budget — taille des routes backend (≤ 200 lignes)"
+OVER_BUDGET="$(
+  find "$ROOT/backend/src/routes" -name '*.ts' | while read -r f; do
+    n=$(wc -l <"$f")
+    if [ "$n" -gt 200 ]; then printf '  %s (%s lignes)\n' "${f#"$ROOT/"}" "$n"; fi
+  done
+)" || true
+if [ -n "$OVER_BUDGET" ]; then
+  printf '\033[0;31m✗ Routes backend au-dessus du budget (200 lignes) :\n%s\033[0m\n' "$OVER_BUDGET"
+  printf '\033[0;31m  → extraire la logique métier vers services/ (cf. 10.D8).\033[0m\n'
+  exit 1
+fi
+
 # ---------- Backend ----------
 step "Backend — format (prettier --check)"
 ( cd "$ROOT/backend" && npm run format:check )

@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Crosshair, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -11,7 +10,7 @@ import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import ImageReviewViewer from '../components/ImageReviewViewer';
 import type { ReviewComment } from '../types/api';
-import { AnnotationCanvas, AnnotationToolbar, type Shape } from '../components/AnnotationCanvas';
+import { AnnotationCanvas, type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
@@ -21,6 +20,7 @@ import Model3DPane from './review/Model3DPane';
 import Model3DToolbar from './review/Model3DToolbar';
 import VideoPane from './review/VideoPane';
 import CommentsPanel from './review/CommentsPanel';
+import ReviewAnnotationBar from './review/ReviewAnnotationBar';
 
 /** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
 export default function ReviewPage() {
@@ -246,48 +246,13 @@ function ReviewContent({ id }: { id: number }) {
         <div className="flex min-h-0 flex-1 gap-4">
           <section className="flex min-w-0 flex-1 flex-col gap-2">
             {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady) && (
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <button
-                  onClick={toggleAnnotating}
-                  className={`flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm ${ann.annotating ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary/60'}`}
-                >
-                  <Pencil size={14} /> {ann.annotating ? 'Terminer l’annotation' : 'Annoter'}
-                </button>
-                {ann.viewed && (
-                  <button
-                    onClick={clearSelection}
-                    className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60"
-                  >
-                    Masquer l’annotation
-                  </button>
-                )}
-                {ann.annotating && kind === 'MODEL_3D' && (
-                  <button
-                    onClick={placeHotspotCenter}
-                    title="Replacer le hotspot au centre du viewer"
-                    className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60"
-                  >
-                    <Crosshair size={14} /> Recentrer le hotspot
-                  </button>
-                )}
-                {ann.annotating && (
-                  <AnnotationToolbar
-                    tool={ann.tool}
-                    setTool={ann.setTool}
-                    color={ann.color}
-                    setColor={ann.setColor}
-                    width={ann.penWidth}
-                    setWidth={ann.setPenWidth}
-                    alpha={ann.alpha}
-                    setAlpha={ann.setAlpha}
-                    onUndo={ann.undo}
-                    onRedo={ann.redo}
-                    onClear={ann.clear}
-                    canUndo={ann.canUndo}
-                    canRedo={ann.canRedo}
-                  />
-                )}
-              </div>
+              <ReviewAnnotationBar
+                ann={ann}
+                kind={kind}
+                onToggle={toggleAnnotating}
+                onClearSelection={clearSelection}
+                onPlaceHotspot={placeHotspotCenter}
+              />
             )}
 
             {/* Skeleton du viewer pendant le chargement (10.B5) */}

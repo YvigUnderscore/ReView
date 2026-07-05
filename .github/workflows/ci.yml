@@ -21,6 +21,11 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      - name: Budget — taille des routes (≤ 200 lignes)
+        run: |
+          over=$(find src/routes -name '*.ts' | while read -r f; do
+            n=$(wc -l <"$f"); [ "$n" -gt 200 ] && echo "$f ($n)"; done)
+          if [ -n "$over" ]; then echo "Routes hors budget :"; echo "$over"; exit 1; fi
       - name: Format (Prettier)
         run: npm run format:check
       - name: Typecheck
