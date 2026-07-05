@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -70,6 +70,36 @@ function ReviewContent({ id }: { id: number }) {
   const splat = useSplat(splatUrl, data?.media.originalName ?? '');
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
+
+  // Miniature splat (10.G) : pas de rendu headless serveur → capture client best-effort si
+  // absente. Réservée aux gestionnaires du média (le backend re-vérifie via assertMediaManage).
+  const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
+  const thumbedRef = useRef(false);
+  const { ready: splatReadyState, captureThumbnail } = splat;
+  useEffect(() => {
+    if (
+      data?.media.kind !== 'SPLAT' ||
+      !splatReadyState ||
+      data?.thumbnailUrl ||
+      !canManageMedia ||
+      thumbedRef.current
+    )
+      return;
+    thumbedRef.current = true;
+    const t = setTimeout(async () => {
+      const dataUrl = await captureThumbnail();
+      if (!dataUrl) return;
+      try {
+        const { thumbnailUrl } = await api.post<{ thumbnailUrl: string }>(`/api/media/${id}/thumbnail`, {
+          dataUrl,
+        });
+        qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
+      } catch {
+        // best-effort : miniature silencieuse (ex. droits insuffisants)
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [data, splatReadyState, canManageMedia, captureThumbnail, id, qc]);
 
   const seek = (t: number) => {
     if (videoRef.current) {

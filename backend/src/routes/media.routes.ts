@@ -84,6 +84,18 @@ router.post('/:id/reprocess', validate({ params: idParam }), async (req, res) =>
 });
 
 /**
+ * POST /api/media/:id/thumbnail — enregistre une miniature capturée côté client
+ * (rendu Three.js pour splat/3D — pas de rendu headless serveur). Data URL image base64.
+ */
+router.post(
+  '/:id/thumbnail',
+  validate({ params: idParam, body: z.object({ dataUrl: z.string().min(1).max(1_600_000) }) }),
+  async (req, res) => {
+    res.json(await MediaService.setThumbnail(req.user!, Number(req.params.id), req.body.dataUrl));
+  },
+);
+
+/**
  * GET /api/media/:id — objet média complet + URLs présignées (original, miniature, proxy).
  */
 router.get('/:id', validate({ params: idParam }), async (req, res) => {

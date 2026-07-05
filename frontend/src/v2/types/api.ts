@@ -125,6 +125,7 @@ export interface Media {
   status: MediaStatus;
   published: boolean;
   versionId: number;
+  uploaderId: number | null;
 }
 export type MediaRef = Pick<Media, 'id' | 'kind' | 'originalName'>;
 export type MediaSummary = Pick<Media, 'id' | 'kind' | 'originalName' | 'status' | 'published'>;

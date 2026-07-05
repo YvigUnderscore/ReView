@@ -2,7 +2,7 @@ import { MediaKind, MediaStatus, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
-import { validateMediaHeader, getExtension } from '../lib/fileSignatures';
+import { validateMediaHeader, getExtension, detectImage } from '../lib/fileSignatures';
 import { resolveProjectIdForVersion, resolveStorageContextForVersion } from '../lib/pipeline';
 import { slugifyFilename } from '../lib/slug';
 import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
@@ -291,6 +291,32 @@ export async function getUrl(user: SessionUser, id: number) {
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('Accès au projet refusé');
   return storage.getPresignedGetUrl(media.storageKey);
+}
+
+const MAX_THUMBNAIL_BYTES = 1_500_000;
+
+/**
+ * Enregistre une miniature fournie par le client (capture d'un rendu, ex. splat/3D via
+ * Three.js — pas de rendu headless serveur possible). Data URL image/jpeg|png|webp base64,
+ * validée par magic bytes, stockée dans MinIO, référencée par `thumbnailKey`. Réservé aux
+ * gestionnaires du média (uploader/superviseur+). Renvoie l'URL présignée de la miniature.
+ */
+export async function setThumbnail(user: SessionUser, id: number, dataUrl: string) {
+  await assertMediaManage(id, user);
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i.exec(dataUrl);
+  if (!m) throw badRequest('Miniature invalide (data URL image attendue)', 'INVALID_THUMBNAIL');
+  const contentType = m[1]!.toLowerCase();
+  const buf = Buffer.from(m[2]!, 'base64');
+  if (buf.length === 0 || buf.length > MAX_THUMBNAIL_BYTES)
+    throw badRequest('Miniature vide ou trop volumineuse', 'INVALID_THUMBNAIL');
+  if (!detectImage(buf.subarray(0, 16)))
+    throw badRequest('Contenu de miniature non reconnu comme image', 'INVALID_THUMBNAIL');
+
+  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+  const key = StorageService.thumbnailKey(id, ext);
+  await storage.putObject(key, buf, contentType);
+  await prisma.mediaObject.update({ where: { id }, data: { thumbnailKey: key } });
+  return { thumbnailUrl: await storage.getPresignedGetUrl(key) };
 }
 
 /** Vérifie que l'utilisateur peut gérer ce média (uploader ou superviseur+) et renvoie le projet. */

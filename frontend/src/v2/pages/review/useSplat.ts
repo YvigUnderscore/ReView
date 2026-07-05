@@ -29,6 +29,24 @@ interface SplatScene {
 
 const asVec = (v: { x: number; y: number; z: number }) => ({ x: v.x, y: v.y, z: v.z });
 
+/** Downscale le canvas WebGL en JPEG (data URL) pour une miniature légère (fond sombre). */
+function toThumbnail(canvas: HTMLCanvasElement, maxDim = 480): string | null {
+  const { width, height } = canvas;
+  if (!width || !height) return null;
+  const scale = Math.min(1, maxDim / Math.max(width, height));
+  const tw = Math.max(1, Math.round(width * scale));
+  const th = Math.max(1, Math.round(height * scale));
+  const c2 = document.createElement('canvas');
+  c2.width = tw;
+  c2.height = th;
+  const ctx = c2.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#0b0b0d'; // renderer alpha:true → fond sombre pour éviter le noir JPEG
+  ctx.fillRect(0, 0, tw, th);
+  ctx.drawImage(canvas, 0, 0, tw, th);
+  return c2.toDataURL('image/jpeg', 0.72);
+}
+
 export interface SplatViewer {
   containerRef: React.RefObject<HTMLDivElement | null>;
   ready: boolean;
@@ -39,6 +57,8 @@ export interface SplatViewer {
   raycastCenter: () => Hotspot3D | null;
   /** Affiche (ou masque si null) le marqueur de hotspot, projeté à l'écran à chaque frame. */
   showHotspot: (hs: Hotspot3D | null) => void;
+  /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
+  captureThumbnail: () => Promise<string | null>;
 }
 
 export function useSplat(url: string | null, fileName: string): SplatViewer {
@@ -47,6 +67,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
   const threeRef = useRef<ThreeModule | null>(null);
   // Position monde du hotspot à afficher (null = masqué). Lue par la boucle de rendu.
   const hotspotRef = useRef<THREE.Vector3 | null>(null);
+  // Résolveur d'une capture de miniature en attente (rempli après le prochain rendu).
+  const captureReq = useRef<((d: string | null) => void) | null>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -156,6 +178,12 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         } else if (marker.style.display !== 'none') {
           marker.style.display = 'none';
         }
+        // Capture de miniature demandée : le buffer de dessin est intact juste après le rendu.
+        if (captureReq.current) {
+          const cb = captureReq.current;
+          captureReq.current = null;
+          cb(toThumbnail(renderer.domElement));
+        }
       });
 
       sceneRef.current = { renderer, scene, camera, controls, mesh };
@@ -176,6 +204,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       sceneRef.current = null;
       threeRef.current = null;
       hotspotRef.current = null;
+      captureReq.current?.(null);
+      captureReq.current = null;
     };
   }, [url, fileName]);
 
@@ -232,5 +262,23 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z) ? new THREE.Vector3(x, y, z) : null;
   }, []);
 
-  return { containerRef, ready, loadError, captureCamera, restoreCamera, raycastCenter, showHotspot };
+  const captureThumbnail = useCallback(
+    (): Promise<string | null> =>
+      new Promise((resolve) => {
+        if (!sceneRef.current) resolve(null);
+        else captureReq.current = resolve;
+      }),
+    [],
+  );
+
+  return {
+    containerRef,
+    ready,
+    loadError,
+    captureCamera,
+    restoreCamera,
+    raycastCenter,
+    showHotspot,
+    captureThumbnail,
+  };
 }

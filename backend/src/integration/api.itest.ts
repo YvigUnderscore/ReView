@@ -256,6 +256,61 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ guestName: 'Client IT', content: 'Commentaire invité' });
     expect(guest.status).toBe(201);
   });
+
+  it('miniature média (10.G) : POST /thumbnail stocke une image et alimente thumbnailUrl', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Thumb ${suffix}` });
+    const projectId = proj.body.project.id;
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
+      .send({ projectId, name: 'S', code: `TH${suffix}` });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
+    const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
+
+    // Média splat (PLY) : finalize → READY immédiat (aucun worker).
+    const ply = Buffer.concat([Buffer.from('ply\n', 'ascii'), Buffer.alloc(60)]);
+    const up = await request(app).post('/api/media/upload-url').set(auth).send({
+      versionId: ver.body.version.id,
+      filename: 's.ply',
+      contentType: 'application/octet-stream',
+      kind: 'SPLAT',
+      size: ply.length,
+    });
+    await fetch(up.body.uploadUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/octet-stream' },
+      body: ply,
+    });
+    const mediaId = up.body.mediaObjectId;
+    const fin = await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
+    expect(fin.body.media.status).toBe('READY');
+
+    // data URL non-image → 400.
+    const bad = await request(app)
+      .post(`/api/media/${mediaId}/thumbnail`)
+      .set(auth)
+      .send({ dataUrl: 'data:text/plain;base64,aGVsbG8=' });
+    expect(bad.status).toBe(400);
+
+    // JPEG minimal (magic FF D8 FF) → 200 + thumbnailUrl présignée.
+    const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(20)]);
+    const dataUrl = `data:image/jpeg;base64,${jpeg.toString('base64')}`;
+    const thumb = await request(app).post(`/api/media/${mediaId}/thumbnail`).set(auth).send({ dataUrl });
+    expect(thumb.status).toBe(200);
+    expect(thumb.body.thumbnailUrl).toBeTruthy();
+
+    // Le détail média expose désormais la miniature.
+    const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(detail.body.thumbnailUrl).toBeTruthy();
+  });
 });
 
 describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
