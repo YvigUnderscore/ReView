@@ -9,3 +9,11 @@ services:
   redis:
     ports:
       - "${REDIS_PORT:-6379}:6379"
+  # En dev local, NODE_ENV=development : les garde-fous de production (secrets forts,
+  # CORS strict — cf. config/env.ts) sont inactifs. La prod déploie SANS cet override.
+  backend:
+    environment:
+      NODE_ENV: development
+  worker:
+    environment:
+      NODE_ENV: development

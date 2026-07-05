@@ -69,8 +69,14 @@ export const createApp = (): Express => {
   app.use('/api/versions', versionsRoutes);
   app.use('/api/comments', commentsRoutes);
   app.use('/api/boards', boardsRoutes);
-  app.use('/api/share', shareRoutes);
-  app.use('/api/client', clientRoutes);
+  // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).
+  const shareLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: { error: 'Trop de requêtes sur le partage, réessayez plus tard.' },
+  });
+  app.use('/api/share', shareLimiter, shareRoutes);
+  app.use('/api/client', shareLimiter, clientRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/favorites', favoritesRoutes);

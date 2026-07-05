@@ -5,7 +5,7 @@ import { z } from 'zod';
  * Chargement + validation des variables d'environnement au démarrage.
  * Échoue tôt (fail-fast) si une variable critique manque.
  */
-const envSchema = z.object({
+const baseEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
 
@@ -38,6 +38,37 @@ const envSchema = z.object({
 
   // CORS
   CORS_ORIGIN: z.string().default('*'),
+});
+
+/** Un secret est « faible » s'il est trop court ou ressemble à un placeholder. */
+const isWeakSecret = (s: string): boolean =>
+  s.length < 32 || /change[_-]?me|^changeme$|secret_change/i.test(s);
+
+/**
+ * Durcissement production (10.D5) : en `NODE_ENV=production`, refuse de démarrer
+ * avec des secrets par défaut/faibles ou une configuration CORS permissive.
+ * (En dev/test, ces contrôles sont inactifs pour ne pas gêner le travail local.)
+ */
+export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
+  if (val.NODE_ENV !== 'production') return;
+  if (isWeakSecret(val.JWT_SECRET))
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['JWT_SECRET'],
+      message: 'JWT_SECRET faible/par défaut interdit en production (≥ 32 caractères aléatoires)',
+    });
+  if (val.CORS_ORIGIN === '*')
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['CORS_ORIGIN'],
+      message: "CORS_ORIGIN='*' interdit en production (spécifier la ou les origines exactes)",
+    });
+  if (val.S3_ACCESS_KEY === 'minioadmin' || val.S3_SECRET_KEY === 'minioadmin')
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['S3_SECRET_KEY'],
+      message: 'Identifiants S3/MinIO par défaut (minioadmin) interdits en production',
+    });
 });
 
 const parsed = envSchema.safeParse(process.env);
