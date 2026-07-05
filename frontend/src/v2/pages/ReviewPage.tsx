@@ -11,7 +11,7 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
-import { resolveGlbSrc, type MediaResp, type Transform } from './review/reviewTypes';
+import { resolveGlbSrc, type MediaResp, type SplatTransform } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { useModel3D } from './review/useModel3D';
 import ReviewHeader from './review/ReviewHeader';
@@ -103,7 +103,7 @@ function ReviewContent({ id }: { id: number }) {
 
   // Transformation splat enregistrée → met à jour le cache média (splatTransform) sans refetch.
   const onSplatTransformSaved = useCallback(
-    (transform: Transform | null) =>
+    (transform: SplatTransform | null) =>
       qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, splatTransform: transform } : old)),
     [qc, id],
   );

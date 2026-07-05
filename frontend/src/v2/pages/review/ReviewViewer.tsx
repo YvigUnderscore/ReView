@@ -3,7 +3,7 @@ import type { ReviewComment, Role } from '../../types/api';
 import { AnnotationCanvas } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
-import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type Transform } from './reviewTypes';
+import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatTransform } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3D } from './useModel3D';
 import type { SplatViewer } from './splat/useSplat';
@@ -11,7 +11,7 @@ import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
 import SplatPane from './splat/SplatPane';
-import SplatTransformToolbar from './splat/SplatTransformToolbar';
+import SplatEditor from './splat/editor/SplatEditor';
 import VideoPane from './VideoPane';
 
 /**
@@ -66,7 +66,7 @@ export default function ReviewViewer({
   onManualSeek: () => void;
   onMarker: () => void;
   onReprocess: () => void;
-  onSplatTransformSaved: (transform: Transform | null) => void;
+  onSplatTransformSaved: (transform: SplatTransform | null) => void;
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
@@ -185,7 +185,7 @@ export default function ReviewViewer({
       {kind === 'SPLAT' && data && (
         <>
           {showSplatEdit && (
-            <SplatTransformToolbar
+            <SplatEditor
               splat={splat}
               mediaId={data.media.id}
               saved={savedTransform}

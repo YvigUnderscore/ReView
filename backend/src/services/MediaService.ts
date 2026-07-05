@@ -285,15 +285,18 @@ export async function getDetail(user: SessionUser, id: number) {
 }
 
 export interface SplatTransformInput {
-  yaw: number;
-  pitch: number;
-  roll: number;
-  scale: number;
+  /** Translation monde [x, y, z]. */
+  position: [number, number, number];
+  /** Rotation en quaternion [x, y, z, w] (natif Three, sans conversion). */
+  quaternion: [number, number, number, number];
+  /** Échelle par axe [x, y, z]. */
+  scale: [number, number, number];
 }
 
 /**
- * Enregistre (ou efface si null) la transformation (orientation/échelle) d'un splat dans
- * `metadata.splatTransform`. Réservé aux gestionnaires du média ; splat uniquement (10.G).
+ * Enregistre (ou efface si null) la transformation TRS (position/rotation/échelle) d'un splat
+ * dans `metadata.splatTransform`, telle que produite par les gizmos 3D. Réservé aux
+ * gestionnaires du média ; splat uniquement (10.G).
  */
 export async function setSplatTransform(
   user: SessionUser,

@@ -96,28 +96,23 @@ router.post(
 );
 
 /**
- * PATCH /api/media/:id/transform — enregistre (ou efface) la transformation
- * (orientation/échelle) d'un splat avant publication. Réservé aux gestionnaires (10.G).
+ * PATCH /api/media/:id/transform — enregistre (ou efface) la transformation TRS
+ * (position/quaternion/échelle, produite par les gizmos 3D) d'un splat avant publication.
+ * Réservé aux gestionnaires (10.G).
  */
-router.patch(
-  '/:id/transform',
-  validate({
-    params: idParam,
-    body: z.object({
-      transform: z
-        .object({
-          yaw: z.number().min(-360).max(360),
-          pitch: z.number().min(-360).max(360),
-          roll: z.number().min(-360).max(360),
-          scale: z.number().positive().max(100),
-        })
-        .nullable(),
-    }),
-  }),
-  async (req, res) => {
-    res.json(await MediaService.setSplatTransform(req.user!, Number(req.params.id), req.body.transform));
-  },
-);
+const finite = z.number().finite();
+const splatTransformBody = z.object({
+  transform: z
+    .object({
+      position: z.tuple([finite, finite, finite]),
+      quaternion: z.tuple([finite, finite, finite, finite]),
+      scale: z.tuple([finite.positive().max(1000), finite.positive().max(1000), finite.positive().max(1000)]),
+    })
+    .nullable(),
+});
+router.patch('/:id/transform', validate({ params: idParam, body: splatTransformBody }), async (req, res) => {
+  res.json(await MediaService.setSplatTransform(req.user!, Number(req.params.id), req.body.transform));
+});
 
 /**
  * GET /api/media/:id — objet média complet + URLs présignées (original, miniature, proxy).

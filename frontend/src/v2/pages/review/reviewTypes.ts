@@ -10,6 +10,22 @@ export interface Transform {
 }
 export const DEFAULT_TRANSFORM: Transform = { yaw: 0, pitch: 0, roll: 0, scale: 1 };
 
+/**
+ * Transformation TRS d'un splat (10.G) — position/quaternion/échelle, exactement ce que les
+ * gizmos 3D (TransformControls) produisent, sans conversion euler. Persistée dans
+ * `metadata.splatTransform`, appliquée au SplatMesh (dérive de THREE.Object3D).
+ */
+export interface SplatTransform {
+  position: [number, number, number];
+  quaternion: [number, number, number, number];
+  scale: [number, number, number];
+}
+export const IDENTITY_SPLAT_TRANSFORM: SplatTransform = {
+  position: [0, 0, 0],
+  quaternion: [0, 0, 0, 1],
+  scale: [1, 1, 1],
+};
+
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
   media: Media;
@@ -19,8 +35,8 @@ export interface MediaResp {
   glbUrl: string | null;
   startFrame: number;
   fps: number | null;
-  /** Transformation (orientation/échelle) enregistrée pour un splat — 10.G. */
-  splatTransform: Transform | null;
+  /** Transformation TRS (position/quaternion/échelle) enregistrée pour un splat — 10.G. */
+  splatTransform: SplatTransform | null;
 }
 
 export interface Hotspot3D {

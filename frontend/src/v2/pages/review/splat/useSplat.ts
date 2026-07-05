@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { Hotspot3D, SplatCamera, Transform } from '../reviewTypes';
+import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { SplatMesh } from '@sparkjsdev/spark';
+import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
 import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
@@ -16,7 +18,21 @@ import { toThumbnail } from './scene/thumbnail';
  * three + OrbitControls + Spark sont importés dynamiquement (uniquement à l'ouverture d'un
  * splat) pour rester hors du bundle initial — les imports type-only ci-dessus sont erased.
  */
-type SplatScene = SplatSceneCore & { mesh: import('@sparkjsdev/spark').SplatMesh };
+type SplatScene = SplatSceneCore & { mesh: SplatMesh };
+
+/**
+ * Poignée impérative vers la scène Three.js du splat, exposée aux hooks d'édition (gizmos,
+ * sélection). Les composants React de haut niveau n'y touchent pas — seule la couche `editor/`
+ * consomme Three via cette poignée, gardant la séparation scène / édition.
+ */
+export interface SplatSceneHandle {
+  THREE: typeof import('three');
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  controls: OrbitControls;
+  mesh: SplatMesh;
+  dom: HTMLElement;
+}
 
 const asVec = (v: { x: number; y: number; z: number }) => ({ x: v.x, y: v.y, z: v.z });
 
@@ -32,8 +48,10 @@ export interface SplatViewer {
   showHotspot: (hs: Hotspot3D | null) => void;
   /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
   captureThumbnail: () => Promise<string | null>;
-  /** Applique une transformation (orientation/échelle) au splat — preview live et chargement. */
-  applyTransform: (t: Transform | null) => void;
+  /** Applique une transformation TRS au splat — preview live des gizmos et au chargement. */
+  applyTransform: (t: SplatTransform | null) => void;
+  /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
+  getSceneHandle: () => SplatSceneHandle | null;
 }
 
 export function useSplat(url: string | null, fileName: string): SplatViewer {
@@ -204,13 +222,35 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     [],
   );
 
-  const applyTransform = useCallback((t: Transform | null) => {
+  const applyTransform = useCallback((t: SplatTransform | null) => {
     const s = sceneRef.current;
     if (!s) return;
-    // SplatMesh dérive de THREE.Object3D → rotation/échelle natives (aucun mode « editable »).
-    const d = Math.PI / 180;
-    s.mesh.rotation.set((t?.pitch ?? 0) * d, (t?.yaw ?? 0) * d, (t?.roll ?? 0) * d);
-    s.mesh.scale.setScalar(t?.scale ?? 1);
+    // SplatMesh dérive de THREE.Object3D → position/quaternion/échelle natifs (aucun « editable »).
+    // Tolérant : une valeur absente ou d'un ancien format → identité.
+    const m = s.mesh;
+    if (t && Array.isArray(t.position) && Array.isArray(t.quaternion) && Array.isArray(t.scale)) {
+      m.position.fromArray(t.position);
+      m.quaternion.fromArray(t.quaternion);
+      m.scale.fromArray(t.scale);
+    } else {
+      m.position.set(0, 0, 0);
+      m.quaternion.set(0, 0, 0, 1);
+      m.scale.set(1, 1, 1);
+    }
+  }, []);
+
+  const getSceneHandle = useCallback((): SplatSceneHandle | null => {
+    const s = sceneRef.current;
+    const THREE = threeRef.current;
+    if (!s || !THREE) return null;
+    return {
+      THREE,
+      scene: s.scene,
+      camera: s.camera,
+      controls: s.controls,
+      mesh: s.mesh,
+      dom: s.renderer.domElement,
+    };
   }, []);
 
   return {
@@ -223,5 +263,6 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     showHotspot,
     captureThumbnail,
     applyTransform,
+    getSceneHandle,
   };
 }

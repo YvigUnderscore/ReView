@@ -351,11 +351,11 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const bad = await request(app)
       .patch(`/api/media/${mediaId}/transform`)
       .set(auth)
-      .send({ transform: { yaw: 0, pitch: 0, roll: 0, scale: -1 } });
+      .send({ transform: { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: [-1, 1, 1] } });
     expect(bad.status).toBe(400);
 
-    // Transformation valide → 200 + détail média l'expose.
-    const tf = { yaw: 90, pitch: 0, roll: 0, scale: 1.5 };
+    // Transformation TRS valide → 200 + détail média l'expose.
+    const tf = { position: [1, 0, -2], quaternion: [0, 0.7071, 0, 0.7071], scale: [1.5, 1.5, 1.5] };
     const patch = await request(app)
       .patch(`/api/media/${mediaId}/transform`)
       .set(auth)
