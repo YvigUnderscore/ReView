@@ -1,4 +1,4 @@
-import { type ComponentProps } from 'react';
+import { type ComponentProps, useEffect } from 'react';
 import type { ReviewComment, Role } from '../../types/api';
 import { AnnotationCanvas } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
@@ -71,6 +71,14 @@ export default function ReviewViewer({
     kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
   const showEditTools = canEditTransform && !(data?.media.published ?? false);
+
+  // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
+  // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).
+  const { showHotspot } = splat;
+  const splatHotspot = kind === 'SPLAT' ? (ann.viewed3d ?? ann.hotspot3d) : null;
+  useEffect(() => {
+    if (kind === 'SPLAT') showHotspot(splatHotspot);
+  }, [kind, splatHotspot, showHotspot]);
 
   // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer de
   // taille différente. Le wrapper est en pointer-events-none : en lecture on peut orbiter

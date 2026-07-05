@@ -111,17 +111,19 @@ function ReviewContent({ id }: { id: number }) {
   };
 
   const placeHotspotCenter = () => {
-    const h = model3d.hotspotAtCenter();
+    const h = data?.media.kind === 'SPLAT' ? splat.raycastCenter() : model3d.hotspotAtCenter();
     if (h) ann.setHotspot3d(h);
   };
 
-  // Démarre/arrête l'annotation. À l'ouverture sur un modèle 3D, place un hotspot au centre.
+  // Démarre/arrête l'annotation. À l'ouverture sur un modèle 3D ou un splat, place un
+  // hotspot de surface au centre du viewer (raycast).
   const toggleAnnotating = () => {
     ann.setAnnotating((prev) => {
       const next = !prev;
       if (next) {
         clearSelection();
-        if (data?.media.kind === 'MODEL_3D') setTimeout(placeHotspotCenter, 0);
+        const k = data?.media.kind;
+        if (k === 'MODEL_3D' || k === 'SPLAT') setTimeout(placeHotspotCenter, 0);
       }
       return next;
     });
@@ -138,9 +140,9 @@ function ReviewContent({ id }: { id: number }) {
     const timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
     const cameraState =
       kind === 'MODEL_3D' ? model3d.captureCamera() : kind === 'SPLAT' ? splat.captureCamera() : undefined;
-    // Annotation : 3D = hotspot (au centre) + dessins 2D ; autres = dessins 2D.
+    // Annotation : 3D/splat = hotspot de surface + dessins 2D ; autres = dessins 2D.
     let annotation: unknown;
-    if (kind === 'MODEL_3D') {
+    if (kind === 'MODEL_3D' || kind === 'SPLAT') {
       const parts: unknown[] = [];
       if (ann.hotspot3d)
         parts.push({ type: 'hotspot', position: ann.hotspot3d.position, normal: ann.hotspot3d.normal });

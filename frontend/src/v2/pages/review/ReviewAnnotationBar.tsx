@@ -32,7 +32,7 @@ export default function ReviewAnnotationBar({
           Masquer l’annotation
         </button>
       )}
-      {ann.annotating && kind === 'MODEL_3D' && (
+      {ann.annotating && (kind === 'MODEL_3D' || kind === 'SPLAT') && (
         <button
           onClick={onPlaceHotspot}
           title="Replacer le hotspot au centre du viewer"
