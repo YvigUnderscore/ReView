@@ -54,6 +54,7 @@ export default function ProjectsPage() {
   const qc = useQueryClient();
   const { data: projects, error } = useProjectsQuery();
   const [name, setName] = useState('');
+  const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
   const invalidate = () => qc.invalidateQueries({ queryKey: qk.projects });
@@ -65,6 +66,7 @@ export default function ProjectsPage() {
       await api.post('/api/projects', { name });
       toast.success(`Projet « ${name} » créé`);
       setName('');
+      setCreating(false);
       invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -86,25 +88,46 @@ export default function ProjectsPage() {
   return (
     <Shell>
       <ResumeCard />
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Projets</h1>
-        <ViewToggle contextKey="projects" />
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <Plus size={16} /> Créer
+            </Button>
+          )}
+          <ViewToggle contextKey="projects" />
+        </div>
       </div>
-
-      {canManage && (
-        <form onSubmit={create} className="mb-6 flex gap-2">
-          <Input
-            className="flex-1"
-            placeholder="Nouveau projet…"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Button type="submit">
-            <Plus size={16} /> Créer
-          </Button>
-        </form>
-      )}
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
+
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent>
+          <form onSubmit={create} className="space-y-3">
+            <DialogHeader>
+              <DialogTitle>Nouveau projet</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label>Nom du projet</Label>
+              <Input
+                autoFocus
+                placeholder="Mon projet"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" size="sm" onClick={() => setCreating(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" size="sm">
+                Créer
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {projects === undefined ? (
         <SkeletonCards />
@@ -114,9 +137,11 @@ export default function ProjectsPage() {
           title="Aucun projet pour l'instant"
           description={
             canManage
-              ? 'Créez votre premier projet ci-dessus pour organiser vos séquences, shots et assets.'
+              ? 'Créez votre premier projet avec le bouton « + Créer » pour organiser vos séquences, shots et assets.'
               : 'Vous n’êtes membre d’aucun projet. Demandez à un superviseur de vous ajouter.'
           }
+          action={canManage ? 'Créer un projet' : undefined}
+          onAction={() => setCreating(true)}
         />
       ) : (
         <EntityContainer view={view}>

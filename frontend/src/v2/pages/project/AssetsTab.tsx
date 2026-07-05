@@ -9,6 +9,11 @@ import EntityCard, { EntityContainer, DeleteIcon } from '../../components/Entity
 import ConfirmDialog from '../../components/ConfirmDialog';
 import AssetAssignDialog from '../../components/AssetAssignDialog';
 import EmptyState from '../../components/ui/empty-state';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Select } from '../../components/ui/select';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ASSET_TYPES, type Asset } from './projectTypes';
 
 /** Onglet Assets réutilisables : création, cartes, assignation shots/séquences. */
@@ -28,6 +33,7 @@ export default function AssetsTab({
   const toggleFav = useFavorites((s) => s.toggle);
   const isFav = (id: number) => favs.some((f) => f.type === 'ASSET' && f.entityId === id);
   const [newAsset, setNewAsset] = useState({ name: '', type: 'CHARACTER' });
+  const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Asset | null>(null);
   const [assigning, setAssigning] = useState<Asset | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +44,7 @@ export default function AssetsTab({
       await api.post('/api/assets', { projectId, ...newAsset });
       toast.success(`Asset « ${newAsset.name} » créé`);
       setNewAsset({ name: '', type: 'CHARACTER' });
+      setCreating(false);
       reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -59,34 +66,58 @@ export default function AssetsTab({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">Assets réutilisables</h2>
-        <ViewToggle contextKey={`assets:${projectId}`} />
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <Plus size={16} /> Créer
+            </Button>
+          )}
+          <ViewToggle contextKey={`assets:${projectId}`} />
+        </div>
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
-      {canManage && (
-        <form onSubmit={create} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
-          <input
-            className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder="Nom de l'asset"
-            value={newAsset.name}
-            onChange={(e) => setNewAsset((s) => ({ ...s, name: e.target.value }))}
-            required
-          />
-          <select
-            className="rounded border border-input bg-background px-2 py-1.5 text-xs"
-            value={newAsset.type}
-            onChange={(e) => setNewAsset((s) => ({ ...s, type: e.target.value }))}
-          >
-            {ASSET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground">
-            <Plus size={14} /> Asset
-          </button>
-        </form>
-      )}
+
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent>
+          <form onSubmit={create} className="space-y-3">
+            <DialogHeader>
+              <DialogTitle>Nouvel asset</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label>Nom de l'asset</Label>
+              <Input
+                autoFocus
+                placeholder="Personnage, décor, prop…"
+                value={newAsset.name}
+                onChange={(e) => setNewAsset((s) => ({ ...s, name: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Type</Label>
+              <Select
+                className="w-full"
+                value={newAsset.type}
+                onChange={(e) => setNewAsset((s) => ({ ...s, type: e.target.value }))}
+              >
+                {ASSET_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" size="sm" onClick={() => setCreating(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" size="sm">
+                Créer
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       {assets.length === 0 ? (
         <EmptyState
           compact
@@ -94,9 +125,11 @@ export default function AssetsTab({
           title="Aucun asset"
           description={
             canManage
-              ? 'Créez vos assets réutilisables ci-dessus (personnages, décors, props…).'
+              ? 'Créez vos assets réutilisables avec « + Créer » (personnages, décors, props…).'
               : 'Les assets du projet apparaîtront ici.'
           }
+          action={canManage ? 'Créer un asset' : undefined}
+          onAction={() => setCreating(true)}
         />
       ) : (
         <EntityContainer view={view}>
