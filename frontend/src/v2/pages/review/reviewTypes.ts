@@ -2,6 +2,14 @@ import type { Media } from '../../types/api';
 
 /** Types et utilitaires partagés de la review (découpage 10.C2). */
 
+export interface Transform {
+  yaw: number;
+  pitch: number;
+  roll: number;
+  scale: number;
+}
+export const DEFAULT_TRANSFORM: Transform = { yaw: 0, pitch: 0, roll: 0, scale: 1 };
+
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
   media: Media;
@@ -11,15 +19,9 @@ export interface MediaResp {
   glbUrl: string | null;
   startFrame: number;
   fps: number | null;
+  /** Transformation (orientation/échelle) enregistrée pour un splat — 10.G. */
+  splatTransform: Transform | null;
 }
-
-export interface Transform {
-  yaw: number;
-  pitch: number;
-  roll: number;
-  scale: number;
-}
-export const DEFAULT_TRANSFORM: Transform = { yaw: 0, pitch: 0, roll: 0, scale: 1 };
 
 export interface Hotspot3D {
   position: string;

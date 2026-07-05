@@ -11,7 +11,7 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
-import { resolveGlbSrc, type MediaResp } from './review/reviewTypes';
+import { resolveGlbSrc, type MediaResp, type Transform } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { useModel3D } from './review/useModel3D';
 import ReviewHeader from './review/ReviewHeader';
@@ -100,6 +100,13 @@ function ReviewContent({ id }: { id: number }) {
     }, 600);
     return () => clearTimeout(t);
   }, [data, splatReadyState, canManageMedia, captureThumbnail, id, qc]);
+
+  // Transformation splat enregistrée → met à jour le cache média (splatTransform) sans refetch.
+  const onSplatTransformSaved = useCallback(
+    (transform: Transform | null) =>
+      qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, splatTransform: transform } : old)),
+    [qc, id],
+  );
 
   const seek = (t: number) => {
     if (videoRef.current) {
@@ -273,6 +280,8 @@ function ReviewContent({ id }: { id: number }) {
             reprocessing={reprocessing}
             role={role}
             canEditTransform={canEditTransform}
+            canManage={canManageMedia}
+            onSplatTransformSaved={onSplatTransformSaved}
             onToggleAnnotating={toggleAnnotating}
             onClearSelection={clearSelection}
             onPlaceHotspot={placeHotspotCenter}

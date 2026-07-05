@@ -96,6 +96,30 @@ router.post(
 );
 
 /**
+ * PATCH /api/media/:id/transform — enregistre (ou efface) la transformation
+ * (orientation/échelle) d'un splat avant publication. Réservé aux gestionnaires (10.G).
+ */
+router.patch(
+  '/:id/transform',
+  validate({
+    params: idParam,
+    body: z.object({
+      transform: z
+        .object({
+          yaw: z.number().min(-360).max(360),
+          pitch: z.number().min(-360).max(360),
+          roll: z.number().min(-360).max(360),
+          scale: z.number().positive().max(100),
+        })
+        .nullable(),
+    }),
+  }),
+  async (req, res) => {
+    res.json(await MediaService.setSplatTransform(req.user!, Number(req.params.id), req.body.transform));
+  },
+);
+
+/**
  * GET /api/media/:id — objet média complet + URLs présignées (original, miniature, proxy).
  */
 router.get('/:id', validate({ params: idParam }), async (req, res) => {

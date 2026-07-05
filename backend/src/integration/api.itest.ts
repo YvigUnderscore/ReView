@@ -311,6 +311,64 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(detail.body.thumbnailUrl).toBeTruthy();
   });
+
+  it('transformation splat (10.G) : PATCH /transform persiste et alimente splatTransform', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Transform ${suffix}` });
+    const projectId = proj.body.project.id;
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
+      .send({ projectId, name: 'S', code: `TF${suffix}` });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
+    const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
+
+    // Média splat (PLY) → READY.
+    const ply = Buffer.concat([Buffer.from('ply\n', 'ascii'), Buffer.alloc(60)]);
+    const up = await request(app).post('/api/media/upload-url').set(auth).send({
+      versionId: ver.body.version.id,
+      filename: 's.ply',
+      contentType: 'application/octet-stream',
+      kind: 'SPLAT',
+      size: ply.length,
+    });
+    await fetch(up.body.uploadUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/octet-stream' },
+      body: ply,
+    });
+    const mediaId = up.body.mediaObjectId;
+    await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
+
+    // Transformation invalide (échelle négative) → 400.
+    const bad = await request(app)
+      .patch(`/api/media/${mediaId}/transform`)
+      .set(auth)
+      .send({ transform: { yaw: 0, pitch: 0, roll: 0, scale: -1 } });
+    expect(bad.status).toBe(400);
+
+    // Transformation valide → 200 + détail média l'expose.
+    const tf = { yaw: 90, pitch: 0, roll: 0, scale: 1.5 };
+    const patch = await request(app)
+      .patch(`/api/media/${mediaId}/transform`)
+      .set(auth)
+      .send({ transform: tf });
+    expect(patch.status).toBe(200);
+    const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(detail.body.splatTransform).toEqual(tf);
+
+    // Réinitialisation (null) → détail média expose null.
+    await request(app).patch(`/api/media/${mediaId}/transform`).set(auth).send({ transform: null });
+    const reset = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(reset.body.splatTransform).toBeNull();
+  });
 });
 
 describe('API — arbre sidebar (séquences + shots hors séquence)', () => {

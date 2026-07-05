@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SplatMesh } from '@sparkjsdev/spark';
-import type { Hotspot3D, SplatCamera } from './reviewTypes';
+import type { Hotspot3D, SplatCamera, Transform } from './reviewTypes';
 
 /**
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
@@ -59,6 +59,8 @@ export interface SplatViewer {
   showHotspot: (hs: Hotspot3D | null) => void;
   /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
   captureThumbnail: () => Promise<string | null>;
+  /** Applique une transformation (orientation/échelle) au splat — preview live et chargement. */
+  applyTransform: (t: Transform | null) => void;
 }
 
 export function useSplat(url: string | null, fileName: string): SplatViewer {
@@ -271,6 +273,15 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     [],
   );
 
+  const applyTransform = useCallback((t: Transform | null) => {
+    const s = sceneRef.current;
+    if (!s) return;
+    // SplatMesh dérive de THREE.Object3D → rotation/échelle natives (aucun mode « editable »).
+    const d = Math.PI / 180;
+    s.mesh.rotation.set((t?.pitch ?? 0) * d, (t?.yaw ?? 0) * d, (t?.roll ?? 0) * d);
+    s.mesh.scale.setScalar(t?.scale ?? 1);
+  }, []);
+
   return {
     containerRef,
     ready,
@@ -280,5 +291,6 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     raycastCenter,
     showHotspot,
     captureThumbnail,
+    applyTransform,
   };
 }

@@ -1,4 +1,4 @@
-import { MediaKind, MediaStatus, Role } from '@prisma/client';
+import { MediaKind, MediaStatus, Prisma, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
@@ -263,6 +263,7 @@ export async function getDetail(user: SessionUser, id: number) {
     fps?: number;
     width?: number;
     height?: number;
+    splatTransform?: unknown;
   };
   const [url, thumbnailUrl, proxyUrl, glbUrl, project] = await Promise.all([
     storage.getPresignedGetUrl(media.storageKey),
@@ -279,7 +280,39 @@ export async function getDetail(user: SessionUser, id: number) {
     glbUrl,
     startFrame: project?.startFrame ?? 1001,
     fps: meta.fps ?? null,
+    splatTransform: meta.splatTransform ?? null,
   };
+}
+
+export interface SplatTransformInput {
+  yaw: number;
+  pitch: number;
+  roll: number;
+  scale: number;
+}
+
+/**
+ * Enregistre (ou efface si null) la transformation (orientation/échelle) d'un splat dans
+ * `metadata.splatTransform`. Réservé aux gestionnaires du média ; splat uniquement (10.G).
+ */
+export async function setSplatTransform(
+  user: SessionUser,
+  id: number,
+  transform: SplatTransformInput | null,
+) {
+  await assertMediaManage(id, user);
+  const media = await prisma.mediaObject.findUnique({
+    where: { id },
+    select: { metadata: true, kind: true },
+  });
+  if (!media) throw notFound('Média introuvable');
+  if (media.kind !== MediaKind.SPLAT) throw badRequest('Transformation réservée aux splats', 'NOT_SPLAT');
+  const metadata = {
+    ...((media.metadata ?? {}) as object),
+    splatTransform: transform,
+  } as Prisma.InputJsonObject;
+  await prisma.mediaObject.update({ where: { id }, data: { metadata } });
+  return { splatTransform: transform };
 }
 
 /** URL présignée GET pour le serving direct depuis MinIO. */

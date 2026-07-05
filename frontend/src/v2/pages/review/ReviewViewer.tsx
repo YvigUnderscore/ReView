@@ -3,7 +3,7 @@ import type { ReviewComment, Role } from '../../types/api';
 import { AnnotationCanvas } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
-import { resolveGlbSrc, VIEWER_ZONE, type MediaResp } from './reviewTypes';
+import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type Transform } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3D } from './useModel3D';
 import type { SplatViewer } from './useSplat';
@@ -11,6 +11,7 @@ import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
 import SplatPane from './SplatPane';
+import SplatTransformToolbar from './SplatTransformToolbar';
 import VideoPane from './VideoPane';
 
 /**
@@ -33,6 +34,7 @@ export default function ReviewViewer({
   reprocessing,
   role,
   canEditTransform,
+  canManage,
   onToggleAnnotating,
   onClearSelection,
   onPlaceHotspot,
@@ -40,6 +42,7 @@ export default function ReviewViewer({
   onManualSeek,
   onMarker,
   onReprocess,
+  onSplatTransformSaved,
 }: {
   data: MediaResp | null;
   error: string | null;
@@ -55,6 +58,7 @@ export default function ReviewViewer({
   reprocessing: boolean;
   role?: Role;
   canEditTransform: boolean;
+  canManage: boolean;
   onToggleAnnotating: () => void;
   onClearSelection: () => void;
   onPlaceHotspot: () => void;
@@ -62,6 +66,7 @@ export default function ReviewViewer({
   onManualSeek: () => void;
   onMarker: () => void;
   onReprocess: () => void;
+  onSplatTransformSaved: (transform: Transform | null) => void;
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
@@ -71,14 +76,23 @@ export default function ReviewViewer({
     kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
   const showEditTools = canEditTransform && !(data?.media.published ?? false);
+  // Transformation splat (orientation/échelle) réservée au mode avant-publication (10.G).
+  const showSplatEdit = splatReady && canManage && !(data?.media.published ?? false);
+  const savedTransform = data?.splatTransform ?? null;
 
   // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
   // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).
-  const { showHotspot } = splat;
+  const { showHotspot, applyTransform, ready: splatReadyFlag } = splat;
   const splatHotspot = kind === 'SPLAT' ? (ann.viewed3d ?? ann.hotspot3d) : null;
   useEffect(() => {
     if (kind === 'SPLAT') showHotspot(splatHotspot);
   }, [kind, splatHotspot, showHotspot]);
+
+  // Transformation sauvegardée appliquée en lecture seule quand la toolbar d'édition n'est pas
+  // montée (la toolbar pilote elle-même applyTransform en mode édition — évite la double appli).
+  useEffect(() => {
+    if (kind === 'SPLAT' && !showSplatEdit && splatReadyFlag) applyTransform(savedTransform);
+  }, [kind, showSplatEdit, splatReadyFlag, applyTransform, savedTransform]);
 
   // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer de
   // taille différente. Le wrapper est en pointer-events-none : en lecture on peut orbiter
@@ -169,13 +183,23 @@ export default function ReviewViewer({
       )}
 
       {kind === 'SPLAT' && data && (
-        <SplatPane
-          containerRef={splat.containerRef}
-          ready={splat.ready}
-          loadError={splat.loadError}
-          status={data.media.status}
-          overlay={renderOverlay()}
-        />
+        <>
+          {showSplatEdit && (
+            <SplatTransformToolbar
+              splat={splat}
+              mediaId={data.media.id}
+              saved={savedTransform}
+              onSaved={onSplatTransformSaved}
+            />
+          )}
+          <SplatPane
+            containerRef={splat.containerRef}
+            ready={splat.ready}
+            loadError={splat.loadError}
+            status={data.media.status}
+            overlay={renderOverlay()}
+          />
+        </>
       )}
     </section>
   );
