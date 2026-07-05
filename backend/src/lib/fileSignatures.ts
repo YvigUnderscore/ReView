@@ -90,6 +90,31 @@ export const detect3D = (buf: Buffer, hintExt: string | null, size: number): str
 };
 
 /**
+ * Gaussian Splat : PLY (dont compressé), SPZ, SPLAT, KSPLAT, SOG/SOGS (viewer Spark/SparkJS).
+ * Servis tels quels (aucune conversion serveur). La plupart n'ont pas de magic bytes fiable
+ * → validés par extension + taille (comme les formats 3D texte).
+ */
+export const detectSplat = (buf: Buffer, hintExt: string | null, size: number): string | null => {
+  // PLY (texte ou binaire, dont compressed-ply) : magic ASCII 'ply' + fin de ligne.
+  if (
+    buf.length >= 4 &&
+    buf[0] === 0x70 &&
+    buf[1] === 0x6c &&
+    buf[2] === 0x79 &&
+    (buf[3] === 0x0a || buf[3] === 0x0d)
+  )
+    return '.ply';
+  // SPZ : conteneur gzip (1F 8B) encapsulant l'en-tête NGSP.
+  if (hintExt === '.spz' && buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b) return '.spz';
+  // SPLAT : binaire brut, 32 octets par splat → taille multiple de 32.
+  if (hintExt === '.splat' && size > 0 && size % 32 === 0) return '.splat';
+  // KSPLAT / SOG / SOGS : conteneurs sans magic stable → hint d'extension + taille.
+  const HINT_SPLAT = ['.ksplat', '.sog', '.sogs'];
+  if (hintExt && HINT_SPLAT.includes(hintExt) && size > 0) return hintExt;
+  return null;
+};
+
+/**
  * Valide un buffer d'en-tête selon le type de média attendu.
  * Retourne l'extension canonique détectée, ou null si invalide.
  */
@@ -106,6 +131,8 @@ export const validateMediaHeader = (
       return detectImage(buf);
     case MediaKind.MODEL_3D:
       return detect3D(buf, hintExt, size);
+    case MediaKind.SPLAT:
+      return detectSplat(buf, hintExt, size);
     default:
       return null;
   }

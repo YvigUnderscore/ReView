@@ -71,6 +71,7 @@ enum MediaKind {
   VIDEO
   IMAGE
   MODEL_3D
+  SPLAT // Gaussian Splat (viewer Spark/SparkJS, Three.js) — réintro 10.G
 }
 
 enum MediaStatus {

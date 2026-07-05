@@ -52,6 +52,14 @@ export interface ModelCamera {
   aspect?: number;
 }
 
+/** Vue caméra d'un Gaussian Splat (viewer Spark) — position/cible libres, cf. cameraState. */
+export interface SplatCamera {
+  position: { x: number; y: number; z: number };
+  target: { x: number; y: number; z: number };
+  fov?: number;
+  aspect?: number;
+}
+
 /** Classe de la zone média (cadre commun aux viewers vidéo/image/3D). */
 export const VIEWER_ZONE =
   'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/40';

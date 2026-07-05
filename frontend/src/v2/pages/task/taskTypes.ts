@@ -1,4 +1,4 @@
-import { Box, FileVideo, Image } from 'lucide-react';
+import { Box, FileVideo, Image, Sparkles } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { MediaKind, VersionStatus } from '../../types/api';
 
@@ -27,4 +27,5 @@ export const MEDIA_KIND_ICON: Record<
   VIDEO: FileVideo,
   IMAGE: Image,
   MODEL_3D: Box,
+  SPLAT: Sparkles,
 };

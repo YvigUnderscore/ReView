@@ -8,19 +8,16 @@ import { uploadCommentImages } from '../../lib/commentAttachments';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
-import ImageReviewViewer from '../components/ImageReviewViewer';
 import type { ReviewComment } from '../types/api';
-import { AnnotationCanvas, type Shape } from '../components/AnnotationCanvas';
+import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
-import { resolveGlbSrc, VIEWER_ZONE, type MediaResp } from './review/reviewTypes';
+import { resolveGlbSrc, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { useModel3D } from './review/useModel3D';
 import ReviewHeader from './review/ReviewHeader';
-import Model3DPane from './review/Model3DPane';
-import Model3DToolbar from './review/Model3DToolbar';
-import VideoPane from './review/VideoPane';
+import ReviewViewer from './review/ReviewViewer';
+import { useSplat } from './review/useSplat';
 import CommentsPanel from './review/CommentsPanel';
-import ReviewAnnotationBar from './review/ReviewAnnotationBar';
 
 /** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
 export default function ReviewPage() {
@@ -68,6 +65,9 @@ function ReviewContent({ id }: { id: number }) {
   const ann = useAnnotations();
   const glbSrc = resolveGlbSrc(data);
   const model3d = useModel3D(data, glbSrc);
+  // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
+  const splatUrl = data?.media.kind === 'SPLAT' ? data.url : null;
+  const splat = useSplat(splatUrl, data?.media.originalName ?? '');
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
@@ -104,7 +104,10 @@ function ReviewContent({ id }: { id: number }) {
     const cam = c.cameraState as { aspect?: number } | null;
     ann.setViewedAspect(cam?.aspect ?? null);
     if (c.timestamp != null) seek(c.timestamp);
-    if (c.cameraState != null) model3d.restoreCamera(c.cameraState);
+    if (c.cameraState != null) {
+      if (data?.media.kind === 'SPLAT') splat.restoreCamera(c.cameraState);
+      else model3d.restoreCamera(c.cameraState);
+    }
   };
 
   const placeHotspotCenter = () => {
@@ -133,7 +136,8 @@ function ReviewContent({ id }: { id: number }) {
   const submitComment = async (text: string, files: File[]): Promise<boolean> => {
     const kind = data?.media.kind;
     const timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
-    const cameraState = kind === 'MODEL_3D' ? model3d.captureCamera() : undefined;
+    const cameraState =
+      kind === 'MODEL_3D' ? model3d.captureCamera() : kind === 'SPLAT' ? splat.captureCamera() : undefined;
     // Annotation : 3D = hotspot (au centre) + dessins 2D ; autres = dessins 2D.
     let annotation: unknown;
     if (kind === 'MODEL_3D') {
@@ -196,30 +200,8 @@ function ReviewContent({ id }: { id: number }) {
   };
 
   const kind = data?.media.kind;
-  const src = data?.proxyUrl ?? data?.url;
   const fps = data?.fps ?? fpsOverride;
   const startFrame = data?.startFrame ?? 1001;
-  // Outils d'édition 3D masqués une fois publié : le dernier état enregistré (version.transform)
-  // reste appliqué au modèle, mais on ne propose plus de le modifier.
-  const showEditTools = canEditTransform && !(data?.media.published ?? false);
-  const model3dReady =
-    kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
-  // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer
-  // de taille différente. Le wrapper est en pointer-events-none : en lecture on peut
-  // toujours orbiter (le modèle reçoit les events) ; en édition la SVG les capte.
-  const renderOverlay = (captureAspect?: number) =>
-    ann.annotating || ann.viewed ? (
-      <AnnotationCanvas
-        shapes={ann.viewed ?? ann.annot}
-        onChange={ann.setShapes}
-        editable={ann.annotating && !ann.viewed}
-        tool={ann.tool}
-        color={ann.color}
-        width={ann.penWidth}
-        alpha={ann.alpha}
-        captureAspect={captureAspect}
-      />
-    ) : null;
 
   return (
     <Shell
@@ -244,76 +226,29 @@ function ReviewContent({ id }: { id: number }) {
 
         {/* Corps : viewer (large) + commentaires (panneau) */}
         <div className="flex min-h-0 flex-1 gap-4">
-          <section className="flex min-w-0 flex-1 flex-col gap-2">
-            {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady) && (
-              <ReviewAnnotationBar
-                ann={ann}
-                kind={kind}
-                onToggle={toggleAnnotating}
-                onClearSelection={clearSelection}
-                onPlaceHotspot={placeHotspotCenter}
-              />
-            )}
-
-            {/* Skeleton du viewer pendant le chargement (10.B5) */}
-            {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
-
-            {kind === 'VIDEO' && src && (
-              <VideoPane
-                src={src}
-                videoRef={videoRef}
-                programmaticSeekRef={programmaticSeekRef}
-                overlay={renderOverlay()}
-                comments={comments ?? []}
-                selectedId={selectedCommentId}
-                onSelectComment={selectComment}
-                onManualSeek={clearSelection}
-                onMarker={openComposer}
-                fps={fps}
-                fpsDetected={data?.fps != null}
-                setFpsOverride={setFpsOverride}
-                startFrame={startFrame}
-              />
-            )}
-
-            {kind === 'IMAGE' && data?.url && (
-              <div className={VIEWER_ZONE}>
-                <div className="absolute inset-0">
-                  <ImageReviewViewer
-                    src={data.url}
-                    alt={data.media.originalName}
-                    shapes={ann.viewed ?? ann.annot}
-                    onChange={ann.setShapes}
-                    editable={ann.annotating && !ann.viewed}
-                    tool={ann.tool}
-                    color={ann.color}
-                    width={ann.penWidth}
-                    alpha={ann.alpha}
-                  />
-                </div>
-              </div>
-            )}
-
-            {kind === 'MODEL_3D' && data && (
-              <>
-                <Model3DPane
-                  status={data.media.status}
-                  ready={model3dReady}
-                  glbSrc={glbSrc}
-                  modelRef={model3d.modelRef}
-                  transform={model3d.transform}
-                  freeCamera={model3d.freeCamera}
-                  hotspots={ann.viewed3d ? [ann.viewed3d] : ann.hotspot3d ? [ann.hotspot3d] : []}
-                  animationName={model3d.currentAnim ?? undefined}
-                  overlay={renderOverlay(ann.viewedAspect ?? undefined)}
-                  canReprocess={role !== 'CLIENT'}
-                  reprocessing={reprocessing}
-                  onReprocess={reprocessMedia}
-                />
-                {model3dReady && <Model3DToolbar m={model3d} showEditTools={showEditTools} />}
-              </>
-            )}
-          </section>
+          <ReviewViewer
+            data={data}
+            error={error}
+            ann={ann}
+            model3d={model3d}
+            splat={splat}
+            videoRef={videoRef}
+            programmaticSeekRef={programmaticSeekRef}
+            comments={comments}
+            selectedCommentId={selectedCommentId}
+            fps={fps}
+            setFpsOverride={setFpsOverride}
+            reprocessing={reprocessing}
+            role={role}
+            canEditTransform={canEditTransform}
+            onToggleAnnotating={toggleAnnotating}
+            onClearSelection={clearSelection}
+            onPlaceHotspot={placeHotspotCenter}
+            onSelectComment={selectComment}
+            onManualSeek={clearSelection}
+            onMarker={openComposer}
+            onReprocess={reprocessMedia}
+          />
 
           {commentsOpen && (
             <CommentsPanel

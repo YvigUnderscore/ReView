@@ -13,6 +13,14 @@ describe('inferMediaKind', () => {
     expect(inferMediaKind(f('archive.zip', 'application/zip'))).toBe('MODEL_3D');
   });
 
+  it('reconnaît les Gaussian Splats par extension (viewer Spark)', () => {
+    expect(inferMediaKind(f('scan.ply'))).toBe('SPLAT');
+    expect(inferMediaKind(f('scene.spz'))).toBe('SPLAT');
+    expect(inferMediaKind(f('cloud.splat'))).toBe('SPLAT');
+    expect(inferMediaKind(f('big.ksplat'))).toBe('SPLAT');
+    expect(inferMediaKind(f('compressed.SOG'))).toBe('SPLAT');
+  });
+
   it('reconnaît vidéo et image par type MIME', () => {
     expect(inferMediaKind(f('plan.mp4', 'video/mp4'))).toBe('VIDEO');
     expect(inferMediaKind(f('ref.png', 'image/png'))).toBe('IMAGE');

@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { MediaKind } from '@prisma/client';
-import { detectVideo, detectImage, detect3D, validateMediaHeader, getExtension } from './fileSignatures';
+import {
+  detectVideo,
+  detectImage,
+  detect3D,
+  detectSplat,
+  validateMediaHeader,
+  getExtension,
+} from './fileSignatures';
 
 const buf = (...bytes: number[]) => Buffer.from(bytes);
 
@@ -48,6 +55,30 @@ describe('detect3D', () => {
   });
 });
 
+describe('detectSplat', () => {
+  it('reconnaît un PLY (magic « ply\\n », dont compressé)', () => {
+    expect(detectSplat(buf(0x70, 0x6c, 0x79, 0x0a), '.ply', 1000)).toBe('.ply');
+    expect(detectSplat(buf(0x70, 0x6c, 0x79, 0x0d), '.ply', 1000)).toBe('.ply');
+  });
+  it('reconnaît un SPZ (gzip 1F 8B + hint .spz)', () => {
+    expect(detectSplat(buf(0x1f, 0x8b, 0x08, 0), '.spz', 5000)).toBe('.spz');
+    expect(detectSplat(buf(0, 0, 0, 0), '.spz', 5000)).toBeNull();
+  });
+  it('reconnaît un SPLAT par hint + taille multiple de 32', () => {
+    expect(detectSplat(buf(1, 2, 3, 4), '.splat', 64)).toBe('.splat');
+    expect(detectSplat(buf(1, 2, 3, 4), '.splat', 65)).toBeNull();
+  });
+  it('reconnaît KSPLAT / SOG / SOGS par hint + taille', () => {
+    expect(detectSplat(buf(1, 2, 3, 4), '.ksplat', 500)).toBe('.ksplat');
+    expect(detectSplat(buf(1, 2, 3, 4), '.sog', 500)).toBe('.sog');
+    expect(detectSplat(buf(1, 2, 3, 4), '.sogs', 500)).toBe('.sogs');
+    expect(detectSplat(buf(1, 2, 3, 4), '.sog', 0)).toBeNull();
+  });
+  it('rejette un format inconnu', () => {
+    expect(detectSplat(buf(0, 1, 2, 3), '.txt', 100)).toBeNull();
+  });
+});
+
 describe('validateMediaHeader', () => {
   it('valide selon le kind attendu', () => {
     expect(
@@ -56,6 +87,7 @@ describe('validateMediaHeader', () => {
     expect(
       validateMediaHeader(MediaKind.VIDEO, buf(0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0), '.jpg', 100),
     ).toBeNull();
+    expect(validateMediaHeader(MediaKind.SPLAT, buf(0x70, 0x6c, 0x79, 0x0a), '.ply', 100)).toBe('.ply');
   });
 });
 

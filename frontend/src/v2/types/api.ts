@@ -16,7 +16,7 @@ export type TaskType =
   'MODELING' | 'RIGGING' | 'ANIMATION' | 'FX' | 'LIGHTING' | 'COMPOSITING' | 'LOOKDEV' | 'LAYOUT' | 'OTHER';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'RETAKE';
 export type VersionStatus = 'DRAFT' | 'REVIEW' | 'PUBLISHED';
-export type MediaKind = 'VIDEO' | 'IMAGE' | 'MODEL_3D';
+export type MediaKind = 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'SPLAT';
 export type MediaStatus = 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED';
 
 // ── Utilisateurs ──────────────────────────────────────────────────────────────

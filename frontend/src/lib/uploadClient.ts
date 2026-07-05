@@ -2,11 +2,14 @@ import { api, getToken } from './apiClient';
 import type { MediaKind } from '../v2/types/api';
 
 const MODEL_EXT = ['.glb', '.gltf', '.fbx', '.usdz', '.usdc', '.usda', '.obj', '.zip'];
+// Gaussian Splat (viewer Spark/SparkJS) — cf. detectSplat côté backend.
+const SPLAT_EXT = ['.ply', '.splat', '.spz', '.ksplat', '.sog', '.sogs'];
 
 /** Déduit le MediaKind d'un fichier à partir de son type MIME / extension. */
 export function inferMediaKind(file: File): MediaKind {
   const name = file.name.toLowerCase();
   const ext = name.slice(name.lastIndexOf('.'));
+  if (SPLAT_EXT.includes(ext)) return 'SPLAT';
   if (MODEL_EXT.includes(ext)) return 'MODEL_3D';
   if (file.type.startsWith('video/')) return 'VIDEO';
   if (file.type.startsWith('image/')) return 'IMAGE';
