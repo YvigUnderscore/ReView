@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { MotionConfig } from 'framer-motion';
 import { Toaster } from 'sonner';
 import { api } from '../lib/apiClient';
 import { queryClient, qk } from './lib/query';
@@ -32,7 +33,10 @@ function Protected({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppRoutes />
+      {/* reducedMotion="user" : framer respecte prefers-reduced-motion globalement (10.B6). */}
+      <MotionConfig reducedMotion="user">
+        <AppRoutes />
+      </MotionConfig>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

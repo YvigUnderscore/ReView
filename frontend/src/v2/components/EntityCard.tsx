@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Image as ImageIcon, Pencil, Trash2 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { ViewMode } from '../stores/useViewPref';
+import { staggerContainer, fadeInUp } from '../lib/motion';
 
 export interface EntityItemAction {
   icon: ReactNode;
@@ -96,10 +98,10 @@ export default function EntityCard({
     );
   }
 
-  // Vue cartes
+  // Vue cartes — léger « hover lift » (désactivé si prefers-reduced-motion)
   return wrap(
     <div
-      className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-colors hover:border-primary`}
+      className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-colors`}
     >
       <div className="relative flex aspect-video items-center justify-center bg-secondary/40">
         {thumbnailUrl ? (
@@ -122,12 +124,21 @@ export default function EntityCard({
   );
 }
 
-/** Conteneur adaptatif : grille en mode cartes, pile en mode compact. */
+/** Conteneur adaptatif : grille en mode cartes (apparition en cascade), pile en mode compact. */
 export function EntityContainer({ view, children }: { view: ViewMode; children: ReactNode }) {
-  return view === 'cards' ? (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{children}</div>
-  ) : (
-    <div className="space-y-1.5">{children}</div>
+  const reduce = useReducedMotion();
+  if (view !== 'cards') return <div className="space-y-1.5">{children}</div>;
+  const gridClass = 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+  // Reduced-motion : rendu statique, aucune animation.
+  if (reduce) return <div className={gridClass}>{children}</div>;
+  return (
+    <motion.div className={gridClass} variants={staggerContainer} initial="hidden" animate="show">
+      {Children.map(children, (child, i) => (
+        <motion.div key={i} variants={fadeInUp}>
+          {child}
+        </motion.div>
+      ))}
+    </motion.div>
   );
 }
 

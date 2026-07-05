@@ -1,6 +1,7 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
+import { transition as pageTransition } from '../lib/motion';
 import {
   FolderKanban,
   Shield,
@@ -214,7 +215,7 @@ export default function Shell({
           key={pathname}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
+          transition={pageTransition}
           className="custom-scrollbar flex-1 overflow-auto p-6"
         >
           {children}

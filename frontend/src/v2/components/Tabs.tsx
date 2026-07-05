@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { DURATION } from '../lib/motion';
 import type { ReactNode } from 'react';
 
 export interface TabDef {
@@ -41,7 +42,7 @@ export default function Tabs({
               <motion.div
                 layoutId="tab-underline"
                 className="absolute inset-x-0 -bottom-px h-0.5 bg-primary"
-                transition={{ duration: 0.2 }}
+                transition={{ duration: DURATION.base }}
               />
             )}
           </button>
