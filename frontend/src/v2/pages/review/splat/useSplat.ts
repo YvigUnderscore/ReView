@@ -1,51 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { SplatMesh } from '@sparkjsdev/spark';
-import type { Hotspot3D, SplatCamera, Transform } from './reviewTypes';
+import type { Hotspot3D, SplatCamera, Transform } from '../reviewTypes';
+import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
+import { frameCameraToMesh } from './scene/frameCamera';
+import { raycastCenter as raycastCenterCore } from './scene/raycast';
+import { toThumbnail } from './scene/thumbnail';
 
 /**
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
- * Monte une scène Three.js (WebGL2) avec un `SplatMesh` chargé depuis l'URL présignée,
- * `OrbitControls` pour la navigation, et expose la capture/restauration de la vue caméra
+ * Orchestrateur mince : délègue le montage de la scène à `scene/createScene`, l'auto-cadrage à
+ * `scene/frameCamera`, le raycast à `scene/raycast` et la miniature à `scene/thumbnail`. Gère
+ * ici le cycle de vie React, la boucle de rendu, le marqueur de hotspot et la vue caméra
  * (stockée dans `Comment.cameraState`, comme la review 3D). Aucune dépendance à model-viewer.
  *
- * Hotspots de surface (10.G) : le SplatMesh est `raycastable` ; `raycastCenter()` lance un
- * rayon au centre du viewer et renvoie un `Hotspot3D` (position + normale face caméra).
- * `showHotspot()` affiche un marqueur DOM projeté monde→écran à chaque frame.
- *
  * three + OrbitControls + Spark sont importés dynamiquement (uniquement à l'ouverture d'un
- * splat) pour rester hors du bundle initial — les imports ci-dessus sont type-only (erased).
+ * splat) pour rester hors du bundle initial — les imports type-only ci-dessus sont erased.
  */
-type ThreeModule = typeof import('three');
-
-interface SplatScene {
-  renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  controls: OrbitControls;
-  mesh: SplatMesh;
-}
+type SplatScene = SplatSceneCore & { mesh: import('@sparkjsdev/spark').SplatMesh };
 
 const asVec = (v: { x: number; y: number; z: number }) => ({ x: v.x, y: v.y, z: v.z });
-
-/** Downscale le canvas WebGL en JPEG (data URL) pour une miniature légère (fond sombre). */
-function toThumbnail(canvas: HTMLCanvasElement, maxDim = 480): string | null {
-  const { width, height } = canvas;
-  if (!width || !height) return null;
-  const scale = Math.min(1, maxDim / Math.max(width, height));
-  const tw = Math.max(1, Math.round(width * scale));
-  const th = Math.max(1, Math.round(height * scale));
-  const c2 = document.createElement('canvas');
-  c2.width = tw;
-  c2.height = th;
-  const ctx = c2.getContext('2d');
-  if (!ctx) return null;
-  ctx.fillStyle = '#0b0b0d'; // renderer alpha:true → fond sombre pour éviter le noir JPEG
-  ctx.fillRect(0, 0, tw, th);
-  ctx.drawImage(canvas, 0, 0, tw, th);
-  return c2.toDataURL('image/jpeg', 0.72);
-}
 
 export interface SplatViewer {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -66,7 +39,7 @@ export interface SplatViewer {
 export function useSplat(url: string | null, fileName: string): SplatViewer {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SplatScene | null>(null);
-  const threeRef = useRef<ThreeModule | null>(null);
+  const threeRef = useRef<typeof import('three') | null>(null);
   // Position monde du hotspot à afficher (null = masqué). Lue par la boucle de rendu.
   const hotspotRef = useRef<THREE.Vector3 | null>(null);
   // Résolveur d'une capture de miniature en attente (rempli après le prochain rendu).
@@ -90,10 +63,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       if (cancelled || !containerRef.current) return;
       threeRef.current = THREE;
 
-      const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.domElement.style.cssText = 'width:100%;height:100%;display:block';
-      container.appendChild(renderer.domElement);
+      const modules: SplatModules = { THREE, OrbitControls, SparkRenderer, SplatMesh };
+      const { renderer, scene, camera, controls } = createScene(modules, container);
 
       // Marqueur de hotspot (DOM, projeté à l'écran) — n'intercepte pas les events (orbite libre).
       const marker = document.createElement('div');
@@ -103,42 +74,11 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       marker.style.display = 'none';
       container.appendChild(marker);
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(60, 1, 0.01, 1000);
-      camera.position.set(0, 0, 3);
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      scene.add(new SparkRenderer({ renderer }));
-
-      // Auto-cadrage : après chargement, cale caméra + cible OrbitControls sur la bbox du
-      // splat (une seule fois — l'utilisateur oriente ensuite librement à l'orbite).
+      // Auto-cadrage : après chargement, cale caméra + cible sur la bbox du splat (une seule fois).
       let framed = false;
-      const frameCamera = () => {
-        if (framed) return;
-        try {
-          const box = mesh.getBoundingBox(true); // centres uniquement (robuste aux splats aberrants)
-          if (box.isEmpty()) return;
-          const center = box.getCenter(new THREE.Vector3());
-          const radius = box.getBoundingSphere(new THREE.Sphere()).radius;
-          if (!Number.isFinite(radius) || radius <= 0) return;
-          // Distance pour faire tenir la sphère dans le plus contraint des FOV (portrait inclus).
-          const vFov = (camera.fov * Math.PI) / 180;
-          const hFov = 2 * Math.atan(Math.tan(vFov / 2) * (camera.aspect || 1));
-          const dist = (radius / Math.sin(Math.min(vFov, hFov) / 2)) * 1.2;
-          camera.position.copy(center).add(new THREE.Vector3(0, 0, dist));
-          camera.near = Math.max(radius / 100, 0.001);
-          camera.far = radius * 100;
-          camera.updateProjectionMatrix();
-          controls.target.copy(center);
-          controls.update();
-          framed = true;
-        } catch {
-          // bbox indisponible → on conserve la position par défaut (0,0,3).
-        }
-      };
       const onReady = () => {
         if (cancelled) return;
-        frameCamera();
+        if (!framed) framed = frameCameraToMesh(THREE, mesh, camera, controls);
         setReady(true);
       };
 
@@ -241,16 +181,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     const s = sceneRef.current;
     const THREE = threeRef.current;
     if (!s || !THREE) return null;
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), s.camera); // centre du viewer (NDC 0,0)
-    const hits: { distance: number; point: THREE.Vector3; object: THREE.Object3D }[] = [];
-    s.mesh.raycast(raycaster, hits);
-    if (hits.length === 0) return null;
-    hits.sort((a, b) => a.distance - b.distance);
-    const p = hits[0]!.point;
-    // Pas de normale de surface pour un splat → normale face caméra (usage : compat/orientation).
-    const n = s.camera.position.clone().sub(p).normalize();
-    return { position: `${p.x} ${p.y} ${p.z}`, normal: `${n.x} ${n.y} ${n.z}` };
+    return raycastCenterCore(THREE, s.camera, s.mesh);
   }, []);
 
   const showHotspot = useCallback((hs: Hotspot3D | null) => {

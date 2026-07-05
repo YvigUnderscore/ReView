@@ -6,12 +6,12 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type Transform } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3D } from './useModel3D';
-import type { SplatViewer } from './useSplat';
+import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
-import SplatPane from './SplatPane';
-import SplatTransformToolbar from './SplatTransformToolbar';
+import SplatPane from './splat/SplatPane';
+import SplatTransformToolbar from './splat/SplatTransformToolbar';
 import VideoPane from './VideoPane';
 
 /**

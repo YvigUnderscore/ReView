@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Move3d, RotateCcw, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
-import { DEFAULT_TRANSFORM, type Transform } from './reviewTypes';
+import { api } from '../../../../lib/apiClient';
+import { DEFAULT_TRANSFORM, type Transform } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
 
 /**

@@ -1,5 +1,5 @@
 import { type ReactNode, type RefObject } from 'react';
-import { VIEWER_ZONE } from './reviewTypes';
+import { VIEWER_ZONE } from '../reviewTypes';
 
 /**
  * Pane Gaussian Splat de la review (viewer Spark/SparkJS) — 10.G.

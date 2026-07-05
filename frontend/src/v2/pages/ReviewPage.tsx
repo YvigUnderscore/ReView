@@ -16,7 +16,7 @@ import { useAnnotations } from './review/useAnnotations';
 import { useModel3D } from './review/useModel3D';
 import ReviewHeader from './review/ReviewHeader';
 import ReviewViewer from './review/ReviewViewer';
-import { useSplat } from './review/useSplat';
+import { useSplat } from './review/splat/useSplat';
 import CommentsPanel from './review/CommentsPanel';
 
 /** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
