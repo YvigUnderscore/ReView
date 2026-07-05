@@ -6,6 +6,7 @@ import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
 import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
+import { buildPointCloud, setFalloff, type RenderMode } from './scene/renderModes';
 import { toThumbnail } from './scene/thumbnail';
 
 /**
@@ -50,6 +51,8 @@ export interface SplatViewer {
   captureThumbnail: () => Promise<string | null>;
   /** Applique une transformation TRS au splat — preview live des gizmos et au chargement. */
   applyTransform: (t: SplatTransform | null) => void;
+  /** Bascule le mode de visualisation (splats / ellipses gaussiennes / points). */
+  setRenderMode: (mode: RenderMode) => void;
   /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
   getSceneHandle: () => SplatSceneHandle | null;
 }
@@ -62,6 +65,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
   const hotspotRef = useRef<THREE.Vector3 | null>(null);
   // Résolveur d'une capture de miniature en attente (rempli après le prochain rendu).
   const captureReq = useRef<((d: string | null) => void) | null>(null);
+  // Nuage de points du mode « points » (enfant du mesh, construit à la demande).
+  const pointsRef = useRef<THREE.Points | null>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -82,7 +87,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       threeRef.current = THREE;
 
       const modules: SplatModules = { THREE, OrbitControls, SparkRenderer, SplatMesh };
-      const { renderer, scene, camera, controls } = createScene(modules, container);
+      const { renderer, scene, camera, controls, spark } = createScene(modules, container);
 
       // Marqueur de hotspot (DOM, projeté à l'écran) — n'intercepte pas les events (orbite libre).
       const marker = document.createElement('div');
@@ -146,11 +151,17 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         }
       });
 
-      sceneRef.current = { renderer, scene, camera, controls, mesh };
+      sceneRef.current = { renderer, scene, camera, controls, spark, mesh };
       cleanup = () => {
         ro.disconnect();
         renderer.setAnimationLoop(null);
         controls.dispose();
+        if (pointsRef.current) {
+          pointsRef.current.geometry.dispose();
+          (pointsRef.current.material as THREE.Material).dispose();
+          pointsRef.current.removeFromParent();
+          pointsRef.current = null;
+        }
         (mesh as unknown as { dispose?: () => void }).dispose?.();
         renderer.dispose();
         renderer.domElement.remove();
@@ -253,6 +264,25 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     };
   }, []);
 
+  const setRenderMode = useCallback((mode: RenderMode) => {
+    const s = sceneRef.current;
+    const THREE = threeRef.current;
+    if (!s || !THREE) return;
+    if (mode === 'points') {
+      // Masque les splats (opacité 0) mais garde le mesh « visible » pour rendre l'overlay enfant.
+      s.mesh.opacity = 0;
+      if (!pointsRef.current) {
+        pointsRef.current = buildPointCloud(THREE, s.mesh);
+        s.mesh.add(pointsRef.current);
+      }
+      pointsRef.current.visible = true;
+    } else {
+      s.mesh.opacity = 1;
+      if (pointsRef.current) pointsRef.current.visible = false;
+      setFalloff(s.spark, mode === 'ellipses' ? 0 : 1);
+    }
+  }, []);
+
   return {
     containerRef,
     ready,
@@ -263,6 +293,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     showHotspot,
     captureThumbnail,
     applyTransform,
+    setRenderMode,
     getSceneHandle,
   };
 }

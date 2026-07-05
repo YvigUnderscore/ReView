@@ -24,9 +24,18 @@ export default function SplatEditor({
   saved: SplatTransform | null;
   onSaved: (t: SplatTransform | null) => void;
 }) {
-  const { gizmoMode, setGizmoMode, transform, dirty, onGizmoChange, markSaved, resetState } =
-    useSplatEditor(saved);
-  const { applyTransform, ready } = splat;
+  const {
+    gizmoMode,
+    setGizmoMode,
+    renderMode,
+    setRenderMode,
+    transform,
+    dirty,
+    onGizmoChange,
+    markSaved,
+    resetState,
+  } = useSplatEditor(saved);
+  const { applyTransform, setRenderMode: applyRenderMode, ready } = splat;
   const [busy, setBusy] = useState(false);
 
   useTransformGizmo(splat, { enabled: true, mode: gizmoMode, onChange: onGizmoChange });
@@ -35,6 +44,12 @@ export default function SplatEditor({
   useEffect(() => {
     if (ready) applyTransform(saved);
   }, [ready, applyTransform, saved]);
+
+  // Applique le mode de visualisation courant ; rétablit « splats » en quittant l'édition.
+  useEffect(() => {
+    if (ready) applyRenderMode(renderMode);
+  }, [ready, applyRenderMode, renderMode]);
+  useEffect(() => () => applyRenderMode('splats'), [applyRenderMode]);
 
   const save = async () => {
     setBusy(true);
@@ -69,6 +84,8 @@ export default function SplatEditor({
     <SplatEditorToolbar
       gizmoMode={gizmoMode}
       onGizmoMode={setGizmoMode}
+      renderMode={renderMode}
+      onRenderMode={setRenderMode}
       dirty={dirty}
       busy={busy}
       onSave={() => void save()}

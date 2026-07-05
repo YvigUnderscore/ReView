@@ -1,14 +1,16 @@
 import { useCallback, useState } from 'react';
 import { IDENTITY_SPLAT_TRANSFORM, type SplatTransform } from '../../reviewTypes';
+import type { RenderMode } from '../scene/renderModes';
 import type { GizmoMode } from './gizmos/useTransformGizmo';
 
 /**
- * État de l'éditeur de splat (10.G) : outil/mode de gizmo actif et transformation TRS courante.
- * Sciemment découplé du rendu (Three vit dans `gizmos/`) et de la persistance (dans `SplatEditor`).
- * Grandit aux chantiers suivants (sélection, volumes, historique).
+ * État de l'éditeur de splat (10.G) : outil/mode de gizmo actif, mode de visualisation et
+ * transformation TRS courante. Découplé du rendu (Three vit dans `gizmos/`/`scene/`) et de la
+ * persistance (dans `SplatEditor`). Grandit aux chantiers suivants (sélection, volumes, historique).
  */
 export function useSplatEditor(saved: SplatTransform | null) {
   const [gizmoMode, setGizmoMode] = useState<GizmoMode>('translate');
+  const [renderMode, setRenderMode] = useState<RenderMode>('splats');
   const [transform, setTransform] = useState<SplatTransform>(saved ?? IDENTITY_SPLAT_TRANSFORM);
   const [dirty, setDirty] = useState(false);
 
@@ -24,5 +26,15 @@ export function useSplatEditor(saved: SplatTransform | null) {
     setDirty(false);
   }, []);
 
-  return { gizmoMode, setGizmoMode, transform, dirty, onGizmoChange, markSaved, resetState };
+  return {
+    gizmoMode,
+    setGizmoMode,
+    renderMode,
+    setRenderMode,
+    transform,
+    dirty,
+    onGizmoChange,
+    markSaved,
+    resetState,
+  };
 }

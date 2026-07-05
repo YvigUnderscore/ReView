@@ -16,6 +16,7 @@ export interface SplatSceneCore {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
+  spark: SparkRenderer;
 }
 
 /**
@@ -37,7 +38,8 @@ export function createScene(
   camera.position.set(0, 0, 3);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  scene.add(new SparkRenderer({ renderer }));
+  const spark = new SparkRenderer({ renderer });
+  scene.add(spark);
 
-  return { renderer, scene, camera, controls };
+  return { renderer, scene, camera, controls, spark };
 }
