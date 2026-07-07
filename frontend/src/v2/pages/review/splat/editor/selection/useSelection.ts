@@ -36,8 +36,8 @@ export function useSelection(splat: SplatViewer) {
     if (selected.size === 0) return;
     const { THREE, mesh } = handle;
     const positions: number[] = [];
-    mesh.forEachSplat((index, center) => {
-      if (selected.has(index)) positions.push(center.x, center.y, center.z);
+    mesh.forEachSplat((index, center, _scales, _quat, opacity) => {
+      if (opacity > 0 && selected.has(index)) positions.push(center.x, center.y, center.z);
     });
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));

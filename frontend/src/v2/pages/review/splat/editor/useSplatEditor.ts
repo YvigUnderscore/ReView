@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { api } from '../../../../../lib/apiClient';
 import { isEditable } from '../../../../lib/shortcuts';
@@ -6,6 +6,8 @@ import { IDENTITY_SPLAT_TRANSFORM, type SplatTransform } from '../../reviewTypes
 import type { RenderMode } from '../scene/renderModes';
 import type { SplatViewer } from '../useSplat';
 import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
+import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
+import { useEditHistory } from './operations/history';
 import { useSelection } from './selection/useSelection';
 
 /** Outil actif de l'éditeur : gizmo de transformation ou sélection (rectangle/lasso). */
@@ -42,6 +44,10 @@ export function useSplatEditor(
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const selection = useSelection(splat);
+  const history = useEditHistory();
+  // Masque de suppression cumulé (indices masqués) — persisté au chantier H5.
+  const deletedRef = useRef<Set<number>>(new Set());
+  const [deletedCount, setDeletedCount] = useState(0);
 
   const isGizmoTool = GIZMO_TOOLS.includes(tool);
 
@@ -69,13 +75,55 @@ export function useSplatEditor(
     if (enabled) return () => applyRenderMode('splats');
   }, [enabled, applyRenderMode]);
 
-  // Raccourcis outils (T/R/S/B/L) — inactifs dans les champs et dialogs, sans modificateur.
+  /** Supprime (masque) la sélection courante — opération annulable (undo/redo). */
+  const deleteSelection = useCallback(() => {
+    const handle = splat.getSceneHandle();
+    if (!handle || selection.selected.size === 0) return;
+    const hidden = hideSplats(handle, selection.selected);
+    if (!hidden) return;
+    const deleted = deletedRef.current;
+    for (const i of hidden.indices) deleted.add(i);
+    setDeletedCount(deleted.size);
+    selection.clear();
+    history.push({
+      label: 'Suppression de splats',
+      undo: () => {
+        restoreSplats(handle, hidden);
+        for (const i of hidden.indices) deleted.delete(i);
+        setDeletedCount(deleted.size);
+      },
+      redo: () => {
+        rehideSplats(handle, hidden);
+        for (const i of hidden.indices) deleted.add(i);
+        setDeletedCount(deleted.size);
+      },
+    });
+  }, [splat, selection, history]);
+
+  // Raccourcis : outils (T/R/S/B/L sans modificateur), Suppr (suppression sélection),
+  // Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y (historique). Inactifs dans les champs et dialogs.
   useEffect(() => {
     if (!enabled) return;
     const down = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
       if (isEditable(e.target) || document.querySelector('[role="dialog"]')) return;
-      const next = TOOL_KEYS[e.key.toLowerCase()];
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        if (key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          history.undo();
+        } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+          e.preventDefault();
+          history.redo();
+        }
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSelection();
+        return;
+      }
+      const next = TOOL_KEYS[key];
       if (next) {
         e.preventDefault();
         setTool(next);
@@ -83,7 +131,7 @@ export function useSplatEditor(
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, [enabled]);
+  }, [enabled, history, deleteSelection]);
 
   const save = useCallback(async () => {
     setBusy(true);
@@ -124,6 +172,9 @@ export function useSplatEditor(
     dirty,
     busy,
     selection,
+    deleteSelection,
+    deletedCount,
+    history,
     save,
     reset,
   };

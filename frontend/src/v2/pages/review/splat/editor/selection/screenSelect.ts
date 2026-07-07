@@ -19,7 +19,8 @@ export function selectByShape(
   const v = new THREE.Vector3();
   const hits: number[] = [];
   mesh.updateWorldMatrix(true, false);
-  mesh.forEachSplat((index, center) => {
+  mesh.forEachSplat((index, center, _scales, _quat, opacity) => {
+    if (opacity <= 0) return; // splat masqué (suppression non-destructive) : insélectionnable
     v.copy(center).applyMatrix4(mesh.matrixWorld).project(camera);
     if (v.z >= 1 || v.z <= -1) return; // hors du frustum near/far (dont derrière la caméra)
     const x = (v.x * 0.5 + 0.5) * width;

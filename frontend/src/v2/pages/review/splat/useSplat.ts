@@ -268,17 +268,21 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     const s = sceneRef.current;
     const THREE = threeRef.current;
     if (!s || !THREE) return;
+    // L'overlay de points est reconstruit à chaque entrée dans le mode (les suppressions
+    // non-destructives entre deux bascules doivent en disparaître).
+    if (pointsRef.current) {
+      pointsRef.current.geometry.dispose();
+      (pointsRef.current.material as THREE.Material).dispose();
+      pointsRef.current.removeFromParent();
+      pointsRef.current = null;
+    }
     if (mode === 'points') {
       // Masque les splats (opacité 0) mais garde le mesh « visible » pour rendre l'overlay enfant.
       s.mesh.opacity = 0;
-      if (!pointsRef.current) {
-        pointsRef.current = buildPointCloud(THREE, s.mesh);
-        s.mesh.add(pointsRef.current);
-      }
-      pointsRef.current.visible = true;
+      pointsRef.current = buildPointCloud(THREE, s.mesh);
+      s.mesh.add(pointsRef.current);
     } else {
       s.mesh.opacity = 1;
-      if (pointsRef.current) pointsRef.current.visible = false;
       setFalloff(s.spark, mode === 'ellipses' ? 0 : 1);
     }
   }, []);

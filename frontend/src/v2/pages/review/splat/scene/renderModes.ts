@@ -30,8 +30,8 @@ export function buildPointCloud(THREE: typeof import('three'), mesh: SplatMesh):
   const positions: number[] = [];
   const colors: number[] = [];
   let count = 0;
-  mesh.forEachSplat((_i, center, _scales, _quat, _opacity, color) => {
-    if (count >= MAX_POINTS) return;
+  mesh.forEachSplat((_i, center, _scales, _quat, opacity, color) => {
+    if (count >= MAX_POINTS || opacity <= 0) return; // splats masqués exclus du nuage
     positions.push(center.x, center.y, center.z);
     colors.push(color.r, color.g, color.b);
     count++;

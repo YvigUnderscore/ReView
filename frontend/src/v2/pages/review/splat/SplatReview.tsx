@@ -48,6 +48,12 @@ export default function SplatReview({
           onRenderMode={editor.setRenderMode}
           selectedCount={editor.selection.selected.size}
           onClearSelection={editor.selection.clear}
+          deletedCount={editor.deletedCount}
+          onDelete={editor.deleteSelection}
+          canUndo={editor.history.canUndo}
+          canRedo={editor.history.canRedo}
+          onUndo={editor.history.undo}
+          onRedo={editor.history.redo}
           dirty={editor.dirty}
           busy={editor.busy}
           onSave={() => void editor.save()}

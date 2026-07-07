@@ -4,11 +4,14 @@ import {
   Lasso,
   Maximize2,
   Move3d,
+  Redo2,
   RotateCcw,
   RotateCw,
   Save,
   Sparkles,
   SquareDashedMousePointer,
+  Trash2,
+  Undo2,
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -82,6 +85,12 @@ export default function SplatEditorToolbar({
   onRenderMode,
   selectedCount,
   onClearSelection,
+  deletedCount,
+  onDelete,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   dirty,
   busy,
   onSave,
@@ -93,6 +102,13 @@ export default function SplatEditorToolbar({
   onRenderMode: (m: RenderMode) => void;
   selectedCount: number;
   onClearSelection: () => void;
+  /** Splats masqués par la suppression non-destructive (0 = aucun). */
+  deletedCount: number;
+  onDelete: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   dirty: boolean;
   busy: boolean;
   onSave: () => void;
@@ -139,6 +155,39 @@ export default function SplatEditorToolbar({
           </button>
         </span>
       )}
+
+      {deletedCount > 0 && (
+        <span className="rounded-md bg-secondary/40 px-2 py-1 text-muted-foreground">
+          <span className="font-mono text-foreground">{deletedCount.toLocaleString('fr-FR')}</span> masqués
+        </span>
+      )}
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onDelete}
+          disabled={selectedCount === 0}
+          title="Supprimer la sélection (Suppr) — non-destructif, annulable"
+          className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+        >
+          <Trash2 size={13} /> Supprimer
+        </button>
+        <button
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Annuler (Ctrl+Z)"
+          className="flex items-center justify-center rounded-md border border-border p-1.5 hover:bg-secondary/60 disabled:opacity-50"
+        >
+          <Undo2 size={13} />
+        </button>
+        <button
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="Rétablir (Ctrl+Y)"
+          className="flex items-center justify-center rounded-md border border-border p-1.5 hover:bg-secondary/60 disabled:opacity-50"
+        >
+          <Redo2 size={13} />
+        </button>
+      </div>
 
       <div className="ml-auto flex items-center gap-2">
         <button
