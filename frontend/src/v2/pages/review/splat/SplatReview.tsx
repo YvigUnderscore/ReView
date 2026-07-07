@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import type { MediaResp, SplatTransform } from '../reviewTypes';
+import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SplatEditorToolbar from './editor/SplatEditorToolbar';
@@ -17,7 +17,6 @@ export default function SplatReview({
   data,
   splat,
   showEdit,
-  saved,
   onSaved,
   overlay,
 }: {
@@ -25,17 +24,18 @@ export default function SplatReview({
   splat: SplatViewer;
   /** Éditeur monté (média non publié + gestionnaire + viewer prêt). */
   showEdit: boolean;
-  saved: SplatTransform | null;
-  onSaved: (t: SplatTransform | null) => void;
+  onSaved: (patch: SplatEditsPatch) => void;
   overlay: ReactNode;
 }) {
-  const editor = useSplatEditor(splat, data.media.id, saved, onSaved, showEdit);
+  const saved = data.splatEdits;
+  const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl != null, onSaved, showEdit);
   const { applyTransform, ready, getSceneHandle } = splat;
 
   // Lecture seule : applique la transformation enregistrée (l'éditeur la gère sinon).
+  const savedTransform = saved?.transform ?? null;
   useEffect(() => {
-    if (!showEdit && ready) applyTransform(saved);
-  }, [showEdit, ready, applyTransform, saved]);
+    if (!showEdit && ready) applyTransform(savedTransform);
+  }, [showEdit, ready, applyTransform, savedTransform]);
 
   const selectTool = editor.tool === 'select-rect' ? 'rect' : editor.tool === 'select-lasso' ? 'lasso' : null;
 

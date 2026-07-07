@@ -54,6 +54,17 @@ describe('createHistory', () => {
     expect(h.redo()).toBe(false);
   });
 
+  it('undoAll annule tout dans l’ordre inverse', () => {
+    const h = createHistory();
+    const calls: string[] = [];
+    h.push({ label: 'a', undo: () => calls.push('a'), redo: () => undefined });
+    h.push({ label: 'b', undo: () => calls.push('b'), redo: () => undefined });
+    h.undoAll();
+    expect(calls).toEqual(['b', 'a']);
+    expect(h.canUndo).toBe(false);
+    expect(h.canRedo).toBe(true);
+  });
+
   it('clear vide les deux piles', () => {
     const h = createHistory();
     h.push(op('a'));

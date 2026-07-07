@@ -312,13 +312,13 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(detail.body.thumbnailUrl).toBeTruthy();
   });
 
-  it('transformation splat (10.G) : PATCH /transform persiste et alimente splatTransform', async () => {
+  it('éditions splat (10.G) : PATCH /splat-edits + masque, verrouillés à la publication', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
       .post('/api/projects')
       .set(auth)
-      .send({ name: `IT Transform ${suffix}` });
+      .send({ name: `IT SplatEdits ${suffix}` });
     const projectId = proj.body.project.id;
     const shot = await request(app)
       .post('/api/shots')
@@ -347,27 +347,65 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const mediaId = up.body.mediaObjectId;
     await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
 
-    // Transformation invalide (échelle négative) → 400.
+    // Éditions invalides (échelle négative) → 400.
     const bad = await request(app)
-      .patch(`/api/media/${mediaId}/transform`)
+      .patch(`/api/media/${mediaId}/splat-edits`)
       .set(auth)
-      .send({ transform: { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: [-1, 1, 1] } });
+      .send({
+        edits: {
+          transform: { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: [-1, 1, 1] },
+          volumes: [],
+        },
+      });
     expect(bad.status).toBe(400);
 
-    // Transformation TRS valide → 200 + détail média l'expose.
-    const tf = { position: [1, 0, -2], quaternion: [0, 0.7071, 0, 0.7071], scale: [1.5, 1.5, 1.5] };
-    const patch = await request(app)
-      .patch(`/api/media/${mediaId}/transform`)
-      .set(auth)
-      .send({ transform: tf });
+    // Éditions valides (transform TRS + volume de crop) → 200 + détail média les expose.
+    const edits = {
+      transform: {
+        position: [1, 0, -2],
+        quaternion: [0, 0.7071, 0, 0.7071],
+        scale: [1.5, 1.5, 1.5],
+      },
+      volumes: [
+        {
+          shape: 'box',
+          mode: 'delete',
+          position: [0, 1, 0],
+          quaternion: [0, 0, 0, 1],
+          scale: [2, 2, 2],
+        },
+      ],
+    };
+    const patch = await request(app).patch(`/api/media/${mediaId}/splat-edits`).set(auth).send({ edits });
     expect(patch.status).toBe(200);
     const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
-    expect(detail.body.splatTransform).toEqual(tf);
+    expect(detail.body.splatEdits).toEqual(edits);
+    expect(detail.body.splatMaskUrl).toBeNull();
 
-    // Réinitialisation (null) → détail média expose null.
-    await request(app).patch(`/api/media/${mediaId}/transform`).set(auth).send({ transform: null });
-    const reset = await request(app).get(`/api/media/${mediaId}`).set(auth);
-    expect(reset.body.splatTransform).toBeNull();
+    // Masque de suppression (bitset base64) → URL présignée exposée + compte.
+    const mask = Buffer.from([0b00000101, 0b00000010]); // splats 0, 2 et 9 masqués
+    const putMask = await request(app)
+      .put(`/api/media/${mediaId}/splat-mask`)
+      .set(auth)
+      .send({ data: mask.toString('base64'), count: 3 });
+    expect(putMask.status).toBe(200);
+    expect(putMask.body.splatMaskUrl).toBeTruthy();
+    const withMask = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(withMask.body.splatMaskUrl).toBeTruthy();
+    expect(withMask.body.splatMaskCount).toBe(3);
+
+    // Effacement du masque → détail sans URL.
+    await request(app).delete(`/api/media/${mediaId}/splat-mask`).set(auth);
+    const noMask = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(noMask.body.splatMaskUrl).toBeNull();
+
+    // Publication → l'édition est verrouillée (400 ALREADY_PUBLISHED).
+    await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
+    const locked = await request(app)
+      .patch(`/api/media/${mediaId}/splat-edits`)
+      .set(auth)
+      .send({ edits: null });
+    expect(locked.status).toBe(400);
   });
 });
 

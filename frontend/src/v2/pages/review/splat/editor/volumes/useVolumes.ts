@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
+import type { SdfVolumeData } from '../../../reviewTypes';
 import type { SplatViewer } from '../../useSplat';
+import { readMeshTransform } from '../gizmos/meshTransform';
 import type { EditOp } from '../operations/history';
 import {
   createVolume,
@@ -26,7 +28,7 @@ export interface VolumeItem {
  * ajout/retrait annulables (via l'historique fourni). Les objets Spark/Three vivent dans un
  * ref (`VolumeRuntime`) ; la sérialisation pour persistance arrive au chantier H5.
  */
-export function useVolumes(splat: SplatViewer, pushHistory: (op: EditOp) => void) {
+export function useVolumes(splat: SplatViewer, pushHistory: (op: EditOp) => void, onChanged: () => void) {
   const { getSceneHandle } = splat;
   const [volumes, setVolumes] = useState<VolumeItem[]>([]);
   // Volume actif (gizmo attaché à son SDF) — id + objet, posés ensemble dans les handlers
@@ -45,21 +47,24 @@ export function useVolumes(splat: SplatViewer, pushHistory: (op: EditOp) => void
       const item: VolumeItem = { id, shape, mode: 'delete' };
       setVolumes((v) => [...v, item]);
       setActive({ id, sdf: runtime.sdf });
+      onChanged();
       pushHistory({
         label: 'Ajout de volume',
         undo: () => {
           detachVolume(runtime);
           setVolumes((v) => v.filter((x) => x.id !== id));
           setActive((a) => (a?.id === id ? null : a));
+          onChanged();
         },
         redo: () => {
           reattachVolume(handle, runtime);
           setVolumes((v) => [...v, item]);
           setActive({ id, sdf: runtime.sdf });
+          onChanged();
         },
       });
     },
-    [getSceneHandle, pushHistory],
+    [getSceneHandle, pushHistory, onChanged],
   );
 
   const remove = useCallback(
@@ -72,35 +77,53 @@ export function useVolumes(splat: SplatViewer, pushHistory: (op: EditOp) => void
       detachVolume(runtime);
       setVolumes((v) => v.filter((x) => x.id !== id));
       setActive((a) => (a?.id === id ? null : a));
+      onChanged();
       pushHistory({
         label: 'Retrait de volume',
         undo: () => {
           reattachVolume(handle, runtime);
           setVolumes((v) => [...v, item]);
+          onChanged();
         },
         redo: () => {
           detachVolume(runtime);
           setVolumes((v) => v.filter((x) => x.id !== id));
           setActive((a) => (a?.id === id ? null : a));
+          onChanged();
         },
       });
     },
-    [getSceneHandle, pushHistory, volumes],
+    [getSceneHandle, pushHistory, volumes, onChanged],
   );
 
   /** Bascule creuser ↔ isoler (hors historique : réversible d'un clic). */
-  const toggleMode = useCallback((id: number) => {
-    const runtime = runtimes.current.get(id);
-    if (!runtime) return;
-    setVolumes((v) =>
-      v.map((x) => {
-        if (x.id !== id) return x;
-        const mode: VolumeMode = x.mode === 'delete' ? 'isolate' : 'delete';
-        setVolumeMode(runtime, mode);
-        return { ...x, mode };
+  const toggleMode = useCallback(
+    (id: number) => {
+      const runtime = runtimes.current.get(id);
+      if (!runtime) return;
+      setVolumes((v) =>
+        v.map((x) => {
+          if (x.id !== id) return x;
+          const mode: VolumeMode = x.mode === 'delete' ? 'isolate' : 'delete';
+          setVolumeMode(runtime, mode);
+          return { ...x, mode };
+        }),
+      );
+      onChanged();
+    },
+    [onChanged],
+  );
+
+  /** Sérialise les volumes (TRS local du SDF + forme + mode) pour la persistance (H5). */
+  const serialize = useCallback(
+    (): SdfVolumeData[] =>
+      volumes.flatMap((v) => {
+        const runtime = runtimes.current.get(v.id);
+        if (!runtime) return [];
+        return [{ shape: v.shape, mode: v.mode, ...readMeshTransform(runtime.sdf) }];
       }),
-    );
-  }, []);
+    [volumes],
+  );
 
   /** Sélectionne (ou désélectionne) le volume — le gizmo s'attache à son SDF. */
   const select = useCallback((id: number) => {
@@ -126,6 +149,7 @@ export function useVolumes(splat: SplatViewer, pushHistory: (op: EditOp) => void
     remove,
     toggleMode,
     select,
+    serialize,
   };
 }
 

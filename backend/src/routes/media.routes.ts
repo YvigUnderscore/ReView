@@ -96,26 +96,8 @@ router.post(
 );
 
 /**
- * PATCH /api/media/:id/transform — enregistre (ou efface) la transformation TRS
- * (position/quaternion/échelle, produite par les gizmos 3D) d'un splat avant publication.
- * Réservé aux gestionnaires (10.G).
- */
-const finite = z.number().finite();
-const splatTransformBody = z.object({
-  transform: z
-    .object({
-      position: z.tuple([finite, finite, finite]),
-      quaternion: z.tuple([finite, finite, finite, finite]),
-      scale: z.tuple([finite.positive().max(1000), finite.positive().max(1000), finite.positive().max(1000)]),
-    })
-    .nullable(),
-});
-router.patch('/:id/transform', validate({ params: idParam, body: splatTransformBody }), async (req, res) => {
-  res.json(await MediaService.setSplatTransform(req.user!, Number(req.params.id), req.body.transform));
-});
-
-/**
  * GET /api/media/:id — objet média complet + URLs présignées (original, miniature, proxy).
+ * Les éditions splat (transform/volumes/masque) vivent dans media-splat.routes.ts (10.G).
  */
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
   res.json(await MediaService.getDetail(req.user!, Number(req.params.id)));

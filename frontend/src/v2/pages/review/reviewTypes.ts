@@ -13,7 +13,7 @@ export const DEFAULT_TRANSFORM: Transform = { yaw: 0, pitch: 0, roll: 0, scale: 
 /**
  * Transformation TRS d'un splat (10.G) — position/quaternion/échelle, exactement ce que les
  * gizmos 3D (TransformControls) produisent, sans conversion euler. Persistée dans
- * `metadata.splatTransform`, appliquée au SplatMesh (dérive de THREE.Object3D).
+ * `metadata.splatEdits.transform`, appliquée au SplatMesh (dérive de THREE.Object3D).
  */
 export interface SplatTransform {
   position: [number, number, number];
@@ -26,6 +26,25 @@ export const IDENTITY_SPLAT_TRANSFORM: SplatTransform = {
   scale: [1, 1, 1],
 };
 
+/** Volume de crop SDF sérialisé (boîte/sphère, creuser/isoler) — miroir du Zod backend. */
+export interface SdfVolumeData {
+  shape: 'box' | 'sphere';
+  mode: 'delete' | 'isolate';
+  position: [number, number, number];
+  quaternion: [number, number, number, number];
+  scale: [number, number, number];
+}
+
+/** Éditions non-destructives d'un splat (10.G) : `metadata.splatEdits` (le masque de
+ * suppression, binaire, vit à part dans MinIO — cf. `splatMaskUrl`). */
+export interface SplatEdits {
+  transform: SplatTransform | null;
+  volumes: SdfVolumeData[];
+}
+
+/** Mise à jour du cache média après enregistrement des éditions splat (composition 10.E2). */
+export type SplatEditsPatch = Partial<Pick<MediaResp, 'splatEdits' | 'splatMaskUrl' | 'splatMaskCount'>>;
+
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
   media: Media;
@@ -35,8 +54,12 @@ export interface MediaResp {
   glbUrl: string | null;
   startFrame: number;
   fps: number | null;
-  /** Transformation TRS (position/quaternion/échelle) enregistrée pour un splat — 10.G. */
-  splatTransform: SplatTransform | null;
+  /** Éditions non-destructives enregistrées pour un splat (transform + volumes) — 10.G. */
+  splatEdits: SplatEdits | null;
+  /** URL présignée du masque de suppression binaire (bitset), ou null. */
+  splatMaskUrl: string | null;
+  /** Nombre de splats masqués par le masque de suppression. */
+  splatMaskCount: number;
 }
 
 export interface Hotspot3D {

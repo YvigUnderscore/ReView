@@ -2,12 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { api } from '../../../../../lib/apiClient';
 import { isEditable } from '../../../../lib/shortcuts';
-import { IDENTITY_SPLAT_TRANSFORM, type SplatTransform } from '../../reviewTypes';
+import {
+  IDENTITY_SPLAT_TRANSFORM,
+  type SplatEdits,
+  type SplatEditsPatch,
+  type SplatTransform,
+} from '../../reviewTypes';
 import type { RenderMode } from '../scene/renderModes';
 import type { SplatViewer } from '../useSplat';
 import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
 import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
 import { useEditHistory } from './operations/history';
+import { bytesToBase64, encodeMask } from './persistence/mask';
 import { useSelection } from './selection/useSelection';
 import { useVolumes } from './volumes/useVolumes';
 
@@ -27,27 +33,30 @@ const TOOL_KEYS: Record<string, EditorTool> = {
 
 /**
  * État et actions de l'éditeur de splat (10.G), sur le modèle de `useModel3D` : outil actif
- * (gizmo/sélection), mode de visualisation, transformation TRS + persistance (PATCH
- * `/api/media/:id/transform`, toasts), sélection par splat et raccourcis clavier. La logique
- * Three vit dans `gizmos/`, `selection/` et `scene/` ; les composants ne font que rendre.
+ * (gizmo/sélection), mode de visualisation, transformation TRS + volumes + masque de
+ * suppression, persistance non-destructive (PATCH `/api/media/:id/splat-edits` + masque
+ * binaire, toasts), sélection par splat et raccourcis clavier. La logique Three vit dans
+ * `gizmos/`, `selection/`, `volumes/` et `scene/` ; les composants ne font que rendre.
  */
 export function useSplatEditor(
   splat: SplatViewer,
   mediaId: number,
-  saved: SplatTransform | null,
-  onSaved: (t: SplatTransform | null) => void,
+  saved: SplatEdits | null,
+  hasSavedMask: boolean,
+  onSaved: (patch: SplatEditsPatch) => void,
   enabled: boolean,
 ) {
   const { applyTransform, setRenderMode: applyRenderMode, ready } = splat;
   const [tool, setTool] = useState<EditorTool>('translate');
   const [renderMode, setRenderMode] = useState<RenderMode>('splats');
-  const [transform, setTransform] = useState<SplatTransform>(saved ?? IDENTITY_SPLAT_TRANSFORM);
+  const [transform, setTransform] = useState<SplatTransform>(saved?.transform ?? IDENTITY_SPLAT_TRANSFORM);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
+  const markDirty = useCallback(() => setDirty(true), []);
   const selection = useSelection(splat);
   const history = useEditHistory();
-  const volumes = useVolumes(splat, history.push);
-  // Masque de suppression cumulé (indices masqués) — persisté au chantier H5.
+  const volumes = useVolumes(splat, history.push, markDirty);
+  // Masque de suppression cumulé (indices masqués), sérialisé en bitset à l'enregistrement.
   const deletedRef = useRef<Set<number>>(new Set());
   const [deletedCount, setDeletedCount] = useState(0);
 
@@ -69,9 +78,10 @@ export function useSplatEditor(
   });
 
   // Applique la transformation enregistrée au chargement ; le gizmo suit ensuite le mesh.
+  const savedTransform = saved?.transform ?? null;
   useEffect(() => {
-    if (enabled && ready) applyTransform(saved);
-  }, [enabled, ready, applyTransform, saved]);
+    if (enabled && ready) applyTransform(savedTransform);
+  }, [enabled, ready, applyTransform, savedTransform]);
 
   // Applique le mode de visualisation courant ; rétablit « splats » en quittant l'édition.
   useEffect(() => {
@@ -90,6 +100,7 @@ export function useSplatEditor(
     const deleted = deletedRef.current;
     for (const i of hidden.indices) deleted.add(i);
     setDeletedCount(deleted.size);
+    setDirty(true);
     selection.clear();
     history.push({
       label: 'Suppression de splats',
@@ -139,35 +150,58 @@ export function useSplatEditor(
     return () => document.removeEventListener('keydown', down);
   }, [enabled, history, deleteSelection]);
 
+  /** Enregistre toutes les éditions : transform + volumes (JSON) et masque de suppression. */
   const save = useCallback(async () => {
     setBusy(true);
     try {
-      await api.patch(`/api/media/${mediaId}/transform`, { transform });
-      onSaved(transform);
+      const edits: SplatEdits = { transform, volumes: volumes.serialize() };
+      const { splatEdits } = await api.patch<{ splatEdits: SplatEdits | null }>(
+        `/api/media/${mediaId}/splat-edits`,
+        { edits },
+      );
+      const patch: SplatEditsPatch = { splatEdits };
+      const deleted = deletedRef.current;
+      if (deleted.size > 0) {
+        const mask = await api.put<{ splatMaskUrl: string; splatMaskCount: number }>(
+          `/api/media/${mediaId}/splat-mask`,
+          { data: bytesToBase64(encodeMask(deleted)), count: deleted.size },
+        );
+        patch.splatMaskUrl = mask.splatMaskUrl;
+        patch.splatMaskCount = mask.splatMaskCount;
+      } else if (hasSavedMask) {
+        await api.del(`/api/media/${mediaId}/splat-mask`);
+        patch.splatMaskUrl = null;
+        patch.splatMaskCount = 0;
+      }
+      onSaved(patch);
       setDirty(false);
-      toast.success('Transformation enregistrée');
+      toast.success('Éditions enregistrées');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la transformation");
+      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement des éditions");
     } finally {
       setBusy(false);
     }
-  }, [mediaId, transform, onSaved]);
+  }, [mediaId, transform, volumes, hasSavedMask, onSaved]);
 
+  /** Réinitialise tout : annule l'historique (suppressions, volumes), transform identité, purge serveur. */
   const reset = useCallback(async () => {
     setBusy(true);
     try {
-      await api.patch(`/api/media/${mediaId}/transform`, { transform: null });
+      history.undoAll(); // restaure les splats masqués et retire les volumes de la scène
+      await api.patch(`/api/media/${mediaId}/splat-edits`, { edits: null });
+      if (hasSavedMask) await api.del(`/api/media/${mediaId}/splat-mask`);
       applyTransform(null);
       setTransform(IDENTITY_SPLAT_TRANSFORM);
+      history.clear();
       setDirty(false);
-      onSaved(null);
-      toast.success('Transformation réinitialisée');
+      onSaved({ splatEdits: null, splatMaskUrl: null, splatMaskCount: 0 });
+      toast.success('Éditions réinitialisées');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur à la réinitialisation');
     } finally {
       setBusy(false);
     }
-  }, [mediaId, applyTransform, onSaved]);
+  }, [mediaId, applyTransform, history, hasSavedMask, onSaved]);
 
   return {
     tool,

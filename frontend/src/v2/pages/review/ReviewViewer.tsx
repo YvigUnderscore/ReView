@@ -3,7 +3,7 @@ import type { ReviewComment, Role } from '../../types/api';
 import { AnnotationCanvas } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
-import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatTransform } from './reviewTypes';
+import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3D } from './useModel3D';
 import type { SplatViewer } from './splat/useSplat';
@@ -41,7 +41,7 @@ export default function ReviewViewer({
   onManualSeek,
   onMarker,
   onReprocess,
-  onSplatTransformSaved,
+  onSplatEditsSaved,
 }: {
   data: MediaResp | null;
   error: string | null;
@@ -65,7 +65,7 @@ export default function ReviewViewer({
   onManualSeek: () => void;
   onMarker: () => void;
   onReprocess: () => void;
-  onSplatTransformSaved: (transform: SplatTransform | null) => void;
+  onSplatEditsSaved: (patch: SplatEditsPatch) => void;
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
@@ -77,7 +77,6 @@ export default function ReviewViewer({
   const showEditTools = canEditTransform && !(data?.media.published ?? false);
   // Transformation splat (orientation/échelle) réservée au mode avant-publication (10.G).
   const showSplatEdit = splatReady && canManage && !(data?.media.published ?? false);
-  const savedTransform = data?.splatTransform ?? null;
 
   // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
   // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).
@@ -180,8 +179,7 @@ export default function ReviewViewer({
           data={data}
           splat={splat}
           showEdit={showSplatEdit}
-          saved={savedTransform}
-          onSaved={onSplatTransformSaved}
+          onSaved={onSplatEditsSaved}
           overlay={renderOverlay()}
         />
       )}

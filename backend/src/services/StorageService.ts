@@ -207,6 +207,10 @@ class StorageService {
   static thumbnailKey(mediaId: number, ext = 'webp'): string {
     return `derived/${mediaId}/thumbnail.${ext}`;
   }
+  /** Masque de suppression non-destructif d'un splat (bitset binaire) — 10.G. */
+  static splatMaskKey(mediaId: number): string {
+    return `derived/${mediaId}/splat-mask.bin`;
+  }
   static avatarKey(userId: number, ext: string): string {
     return `avatars/${userId}${ext}`;
   }

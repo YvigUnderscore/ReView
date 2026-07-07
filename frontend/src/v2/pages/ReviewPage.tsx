@@ -11,7 +11,7 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
-import { resolveGlbSrc, type MediaResp, type SplatTransform } from './review/reviewTypes';
+import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { useModel3D } from './review/useModel3D';
 import ReviewHeader from './review/ReviewHeader';
@@ -101,10 +101,10 @@ function ReviewContent({ id }: { id: number }) {
     return () => clearTimeout(t);
   }, [data, splatReadyState, canManageMedia, captureThumbnail, id, qc]);
 
-  // Transformation splat enregistrée → met à jour le cache média (splatTransform) sans refetch.
-  const onSplatTransformSaved = useCallback(
-    (transform: SplatTransform | null) =>
-      qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, splatTransform: transform } : old)),
+  // Éditions splat enregistrées → met à jour le cache média (splatEdits/masque) sans refetch.
+  const onSplatEditsSaved = useCallback(
+    (patch: SplatEditsPatch) =>
+      qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, ...patch } : old)),
     [qc, id],
   );
 
@@ -281,7 +281,7 @@ function ReviewContent({ id }: { id: number }) {
             role={role}
             canEditTransform={canEditTransform}
             canManage={canManageMedia}
-            onSplatTransformSaved={onSplatTransformSaved}
+            onSplatEditsSaved={onSplatEditsSaved}
             onToggleAnnotating={toggleAnnotating}
             onClearSelection={clearSelection}
             onPlaceHotspot={placeHotspotCenter}

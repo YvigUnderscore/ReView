@@ -35,6 +35,12 @@ export function createHistory() {
       past.push(op);
       return true;
     },
+    /** Annule toutes les opérations (réinitialisation complète de l'éditeur). */
+    undoAll(): void {
+      while (this.undo()) {
+        /* dépile jusqu'au vide */
+      }
+    },
     clear(): void {
       past.length = 0;
       future.length = 0;
@@ -72,13 +78,17 @@ export function useEditHistory() {
   const redo = useCallback(() => {
     if (h.redo()) bump();
   }, [h]);
+  const undoAll = useCallback(() => {
+    h.undoAll();
+    bump();
+  }, [h]);
   const clear = useCallback(() => {
     h.clear();
     bump();
   }, [h]);
   const { canUndo, canRedo } = h;
   return useMemo(
-    () => ({ push, undo, redo, clear, canUndo, canRedo }),
-    [push, undo, redo, clear, canUndo, canRedo],
+    () => ({ push, undo, redo, undoAll, clear, canUndo, canRedo }),
+    [push, undo, redo, undoAll, clear, canUndo, canRedo],
   );
 }

@@ -1,4 +1,4 @@
-import { MediaKind, MediaStatus, Prisma, Role } from '@prisma/client';
+import { MediaKind, MediaStatus, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
@@ -263,13 +263,16 @@ export async function getDetail(user: SessionUser, id: number) {
     fps?: number;
     width?: number;
     height?: number;
-    splatTransform?: unknown;
+    splatEdits?: unknown;
+    splatMaskKey?: string;
+    splatMaskCount?: number;
   };
-  const [url, thumbnailUrl, proxyUrl, glbUrl, project] = await Promise.all([
+  const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, project] = await Promise.all([
     storage.getPresignedGetUrl(media.storageKey),
     media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
     meta.proxyKey ? storage.getPresignedGetUrl(meta.proxyKey) : Promise.resolve(null),
     meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
+    meta.splatMaskKey ? storage.getPresignedGetUrl(meta.splatMaskKey) : Promise.resolve(null),
     prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
   ]);
   return {
@@ -280,42 +283,11 @@ export async function getDetail(user: SessionUser, id: number) {
     glbUrl,
     startFrame: project?.startFrame ?? 1001,
     fps: meta.fps ?? null,
-    splatTransform: meta.splatTransform ?? null,
+    // Éditions splat non-destructives (10.G) : JSON + masque binaire (SplatEditService).
+    splatEdits: meta.splatEdits ?? null,
+    splatMaskUrl,
+    splatMaskCount: meta.splatMaskCount ?? 0,
   };
-}
-
-export interface SplatTransformInput {
-  /** Translation monde [x, y, z]. */
-  position: [number, number, number];
-  /** Rotation en quaternion [x, y, z, w] (natif Three, sans conversion). */
-  quaternion: [number, number, number, number];
-  /** Échelle par axe [x, y, z]. */
-  scale: [number, number, number];
-}
-
-/**
- * Enregistre (ou efface si null) la transformation TRS (position/rotation/échelle) d'un splat
- * dans `metadata.splatTransform`, telle que produite par les gizmos 3D. Réservé aux
- * gestionnaires du média ; splat uniquement (10.G).
- */
-export async function setSplatTransform(
-  user: SessionUser,
-  id: number,
-  transform: SplatTransformInput | null,
-) {
-  await assertMediaManage(id, user);
-  const media = await prisma.mediaObject.findUnique({
-    where: { id },
-    select: { metadata: true, kind: true },
-  });
-  if (!media) throw notFound('Média introuvable');
-  if (media.kind !== MediaKind.SPLAT) throw badRequest('Transformation réservée aux splats', 'NOT_SPLAT');
-  const metadata = {
-    ...((media.metadata ?? {}) as object),
-    splatTransform: transform,
-  } as Prisma.InputJsonObject;
-  await prisma.mediaObject.update({ where: { id }, data: { metadata } });
-  return { splatTransform: transform };
 }
 
 /** URL présignée GET pour le serving direct depuis MinIO. */
