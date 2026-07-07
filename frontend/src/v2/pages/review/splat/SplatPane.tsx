@@ -12,17 +12,23 @@ export default function SplatPane({
   loadError,
   status,
   overlay,
+  editorOverlay,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
   loadError: boolean;
   status: string;
   overlay: ReactNode;
+  /** Overlay interactif de l'éditeur (tracé de sélection) — capte le pointeur, contrairement à `overlay`. */
+  editorOverlay?: ReactNode;
 }) {
   return (
     <div className={VIEWER_ZONE}>
       {/* Conteneur de la scène Three.js (rempli par useSplat) — toujours monté */}
       <div ref={containerRef} className="absolute inset-0" />
+
+      {/* Overlay d'édition (sélection rectangle/lasso) — au-dessus du canvas, sous les états */}
+      {editorOverlay}
 
       {loadError ? (
         <div className="max-w-sm space-y-2 p-6 text-center text-sm text-muted-foreground">

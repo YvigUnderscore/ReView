@@ -10,8 +10,7 @@ import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
-import SplatPane from './splat/SplatPane';
-import SplatEditor from './splat/editor/SplatEditor';
+import SplatReview from './splat/SplatReview';
 import VideoPane from './VideoPane';
 
 /**
@@ -82,17 +81,11 @@ export default function ReviewViewer({
 
   // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
   // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).
-  const { showHotspot, applyTransform, ready: splatReadyFlag } = splat;
+  const { showHotspot } = splat;
   const splatHotspot = kind === 'SPLAT' ? (ann.viewed3d ?? ann.hotspot3d) : null;
   useEffect(() => {
     if (kind === 'SPLAT') showHotspot(splatHotspot);
   }, [kind, splatHotspot, showHotspot]);
-
-  // Transformation sauvegardée appliquée en lecture seule quand la toolbar d'édition n'est pas
-  // montée (la toolbar pilote elle-même applyTransform en mode édition — évite la double appli).
-  useEffect(() => {
-    if (kind === 'SPLAT' && !showSplatEdit && splatReadyFlag) applyTransform(savedTransform);
-  }, [kind, showSplatEdit, splatReadyFlag, applyTransform, savedTransform]);
 
   // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer de
   // taille différente. Le wrapper est en pointer-events-none : en lecture on peut orbiter
@@ -183,23 +176,14 @@ export default function ReviewViewer({
       )}
 
       {kind === 'SPLAT' && data && (
-        <>
-          {showSplatEdit && (
-            <SplatEditor
-              splat={splat}
-              mediaId={data.media.id}
-              saved={savedTransform}
-              onSaved={onSplatTransformSaved}
-            />
-          )}
-          <SplatPane
-            containerRef={splat.containerRef}
-            ready={splat.ready}
-            loadError={splat.loadError}
-            status={data.media.status}
-            overlay={renderOverlay()}
-          />
-        </>
+        <SplatReview
+          data={data}
+          splat={splat}
+          showEdit={showSplatEdit}
+          saved={savedTransform}
+          onSaved={onSplatTransformSaved}
+          overlay={renderOverlay()}
+        />
       )}
     </section>
   );

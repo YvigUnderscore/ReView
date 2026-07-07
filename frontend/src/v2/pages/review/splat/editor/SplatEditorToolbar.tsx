@@ -1,18 +1,42 @@
-import { Circle, Grip, Maximize2, Move3d, RotateCcw, RotateCw, Save, Sparkles } from 'lucide-react';
+import {
+  Circle,
+  Grip,
+  Lasso,
+  Maximize2,
+  Move3d,
+  RotateCcw,
+  RotateCw,
+  Save,
+  Sparkles,
+  SquareDashedMousePointer,
+  X,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { RenderMode } from '../scene/renderModes';
-import type { GizmoMode } from './gizmos/useTransformGizmo';
+import type { EditorTool } from './useSplatEditor';
 
 /**
- * Barre d'outils de l'éditeur de splat (10.G) — style « logiciel 3D ». Groupe outils (gizmo
- * déplacer/tourner/échelle, pilote le gizmo 3D visible dans la scène) + groupe visualisation
- * (splats / ellipses gaussiennes / points) + enregistrer/réinitialiser. Tokens de thème +
- * icônes lucide, cohérent avec les autres toolbars de review. S'étoffe aux chantiers suivants.
+ * Barre d'outils de l'éditeur de splat (10.G) — style « logiciel 3D ». Groupe outils (gizmos
+ * déplacer/tourner/échelle + sélection rectangle/lasso, raccourcis T/R/S/B/L), groupe
+ * visualisation (splats / ellipses gaussiennes / points), compteur de sélection, enregistrer /
+ * réinitialiser. Tokens de thème + icônes lucide, cohérent avec les autres toolbars de review.
  */
-const GIZMOS: { mode: GizmoMode; icon: LucideIcon; label: string; hint: string }[] = [
-  { mode: 'translate', icon: Move3d, label: 'Déplacer', hint: 'Déplacer le splat' },
-  { mode: 'rotate', icon: RotateCw, label: 'Tourner', hint: 'Faire pivoter le splat' },
-  { mode: 'scale', icon: Maximize2, label: 'Échelle', hint: "Mettre à l'échelle le splat" },
+const TOOLS: { tool: EditorTool; icon: LucideIcon; label: string; hint: string }[] = [
+  { tool: 'translate', icon: Move3d, label: 'Déplacer', hint: 'Déplacer le splat (T)' },
+  { tool: 'rotate', icon: RotateCw, label: 'Tourner', hint: 'Faire pivoter le splat (R)' },
+  { tool: 'scale', icon: Maximize2, label: 'Échelle', hint: "Mettre à l'échelle le splat (S)" },
+  {
+    tool: 'select-rect',
+    icon: SquareDashedMousePointer,
+    label: 'Rectangle',
+    hint: 'Sélection rectangle (B) — Maj ajoute, Alt retire',
+  },
+  {
+    tool: 'select-lasso',
+    icon: Lasso,
+    label: 'Lasso',
+    hint: 'Sélection lasso (L) — Maj ajoute, Alt retire',
+  },
 ];
 
 const RENDER_MODES: { mode: RenderMode; icon: LucideIcon; label: string; hint: string }[] = [
@@ -52,19 +76,23 @@ function SegButton({
 }
 
 export default function SplatEditorToolbar({
-  gizmoMode,
-  onGizmoMode,
+  tool,
+  onTool,
   renderMode,
   onRenderMode,
+  selectedCount,
+  onClearSelection,
   dirty,
   busy,
   onSave,
   onReset,
 }: {
-  gizmoMode: GizmoMode;
-  onGizmoMode: (m: GizmoMode) => void;
+  tool: EditorTool;
+  onTool: (t: EditorTool) => void;
   renderMode: RenderMode;
   onRenderMode: (m: RenderMode) => void;
+  selectedCount: number;
+  onClearSelection: () => void;
   dirty: boolean;
   busy: boolean;
   onSave: () => void;
@@ -73,14 +101,14 @@ export default function SplatEditorToolbar({
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs">
       <div className="flex items-center gap-1 rounded-md bg-secondary/40 p-0.5">
-        {GIZMOS.map(({ mode, icon, label, hint }) => (
+        {TOOLS.map(({ tool: t, icon, label, hint }) => (
           <SegButton
-            key={mode}
+            key={t}
             icon={icon}
             label={label}
             hint={hint}
-            active={gizmoMode === mode}
-            onClick={() => onGizmoMode(mode)}
+            active={tool === t}
+            onClick={() => onTool(t)}
           />
         ))}
       </div>
@@ -97,6 +125,20 @@ export default function SplatEditorToolbar({
           />
         ))}
       </div>
+
+      {selectedCount > 0 && (
+        <span className="flex items-center gap-1.5 rounded-md bg-secondary/40 px-2 py-1 text-muted-foreground">
+          <span className="font-mono text-foreground">{selectedCount.toLocaleString('fr-FR')}</span>
+          sélectionnés
+          <button
+            onClick={onClearSelection}
+            title="Tout désélectionner"
+            className="rounded p-0.5 hover:bg-secondary hover:text-foreground"
+          >
+            <X size={12} />
+          </button>
+        </span>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <button
