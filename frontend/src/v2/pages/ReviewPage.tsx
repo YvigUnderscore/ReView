@@ -101,11 +101,25 @@ function ReviewContent({ id }: { id: number }) {
     return () => clearTimeout(t);
   }, [data, splatReadyState, canManageMedia, captureThumbnail, id, qc]);
 
-  // Éditions splat enregistrées → met à jour le cache média (splatEdits/masque) sans refetch.
+  // Éditions splat enregistrées → met à jour le cache média (splatEdits/masque) sans refetch,
+  // puis régénère la miniature (le rendu a changé) — best-effort, après stabilisation du rendu.
   const onSplatEditsSaved = useCallback(
-    (patch: SplatEditsPatch) =>
-      qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, ...patch } : old)),
-    [qc, id],
+    (patch: SplatEditsPatch) => {
+      qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, ...patch } : old));
+      setTimeout(async () => {
+        const dataUrl = await captureThumbnail();
+        if (!dataUrl) return;
+        try {
+          const { thumbnailUrl } = await api.post<{ thumbnailUrl: string }>(`/api/media/${id}/thumbnail`, {
+            dataUrl,
+          });
+          qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
+        } catch {
+          // best-effort : miniature silencieuse
+        }
+      }, 400);
+    },
+    [qc, id, captureThumbnail],
   );
 
   const seek = (t: number) => {

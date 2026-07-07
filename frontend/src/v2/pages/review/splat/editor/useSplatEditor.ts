@@ -13,6 +13,7 @@ import type { SplatViewer } from '../useSplat';
 import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
 import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
 import { useEditHistory } from './operations/history';
+import { applyMaskIndices, fetchMaskIndices } from './persistence/applyEdits';
 import { bytesToBase64, encodeMask } from './persistence/mask';
 import { useSelection } from './selection/useSelection';
 import { useVolumes } from './volumes/useVolumes';
@@ -42,7 +43,7 @@ export function useSplatEditor(
   splat: SplatViewer,
   mediaId: number,
   saved: SplatEdits | null,
-  hasSavedMask: boolean,
+  savedMaskUrl: string | null,
   onSaved: (patch: SplatEditsPatch) => void,
   enabled: boolean,
 ) {
@@ -55,10 +56,26 @@ export function useSplatEditor(
   const markDirty = useCallback(() => setDirty(true), []);
   const selection = useSelection(splat);
   const history = useEditHistory();
-  const volumes = useVolumes(splat, history.push, markDirty);
+  const volumes = useVolumes(splat, history.push, markDirty, enabled ? (saved?.volumes ?? null) : null);
   // Masque de suppression cumulé (indices masqués), sérialisé en bitset à l'enregistrement.
   const deletedRef = useRef<Set<number>>(new Set());
   const [deletedCount, setDeletedCount] = useState(0);
+  const maskInitRef = useRef(false);
+
+  // Recharge le masque persisté (une fois) : masque appliqué + compteur initialisé, pour que
+  // les suppressions suivantes s'y cumulent à l'enregistrement.
+  useEffect(() => {
+    if (!enabled || !ready || maskInitRef.current || !savedMaskUrl) return;
+    maskInitRef.current = true;
+    const handle = splat.getSceneHandle();
+    if (!handle) return;
+    fetchMaskIndices(savedMaskUrl)
+      .then((indices) => {
+        deletedRef.current = applyMaskIndices(handle, indices);
+        setDeletedCount(deletedRef.current.size);
+      })
+      .catch(() => toast.error('Masque de suppression illisible'));
+  }, [enabled, ready, savedMaskUrl, splat]);
 
   const isGizmoTool = GIZMO_TOOLS.includes(tool);
 
@@ -168,7 +185,7 @@ export function useSplatEditor(
         );
         patch.splatMaskUrl = mask.splatMaskUrl;
         patch.splatMaskCount = mask.splatMaskCount;
-      } else if (hasSavedMask) {
+      } else if (savedMaskUrl) {
         await api.del(`/api/media/${mediaId}/splat-mask`);
         patch.splatMaskUrl = null;
         patch.splatMaskCount = 0;
@@ -181,7 +198,7 @@ export function useSplatEditor(
     } finally {
       setBusy(false);
     }
-  }, [mediaId, transform, volumes, hasSavedMask, onSaved]);
+  }, [mediaId, transform, volumes, savedMaskUrl, onSaved]);
 
   /** Réinitialise tout : annule l'historique (suppressions, volumes), transform identité, purge serveur. */
   const reset = useCallback(async () => {
@@ -189,7 +206,7 @@ export function useSplatEditor(
     try {
       history.undoAll(); // restaure les splats masqués et retire les volumes de la scène
       await api.patch(`/api/media/${mediaId}/splat-edits`, { edits: null });
-      if (hasSavedMask) await api.del(`/api/media/${mediaId}/splat-mask`);
+      if (savedMaskUrl) await api.del(`/api/media/${mediaId}/splat-mask`);
       applyTransform(null);
       setTransform(IDENTITY_SPLAT_TRANSFORM);
       history.clear();
@@ -201,7 +218,7 @@ export function useSplatEditor(
     } finally {
       setBusy(false);
     }
-  }, [mediaId, applyTransform, history, hasSavedMask, onSaved]);
+  }, [mediaId, applyTransform, history, savedMaskUrl, onSaved]);
 
   return {
     tool,

@@ -5,6 +5,7 @@ import type { SplatViewer } from '../../useSplat';
 import { readMeshTransform } from '../gizmos/meshTransform';
 import type { EditOp } from '../operations/history';
 import {
+  applyVolumeData,
   createVolume,
   detachVolume,
   disposeVolume,
@@ -28,14 +29,40 @@ export interface VolumeItem {
  * ajout/retrait annulables (via l'historique fourni). Les objets Spark/Three vivent dans un
  * ref (`VolumeRuntime`) ; la sérialisation pour persistance arrive au chantier H5.
  */
-export function useVolumes(splat: SplatViewer, pushHistory: (op: EditOp) => void, onChanged: () => void) {
-  const { getSceneHandle } = splat;
+export function useVolumes(
+  splat: SplatViewer,
+  pushHistory: (op: EditOp) => void,
+  onChanged: () => void,
+  /** Volumes persistés à recréer au chargement de l'éditeur (null = aucun). */
+  initial: SdfVolumeData[] | null,
+) {
+  const { getSceneHandle, ready } = splat;
   const [volumes, setVolumes] = useState<VolumeItem[]>([]);
   // Volume actif (gizmo attaché à son SDF) — id + objet, posés ensemble dans les handlers
   // (pas de lecture du ref `runtimes` pendant le render, règle react-hooks/refs).
   const [active, setActive] = useState<{ id: number; sdf: THREE.Object3D } | null>(null);
   const runtimes = useRef(new Map<number, VolumeRuntime>());
   const nextId = useRef(1);
+  const initedRef = useRef(false);
+
+  // Recrée les volumes persistés (une fois le viewer prêt) — hors historique, sans dirty.
+  useEffect(() => {
+    if (initedRef.current || !ready || !initial?.length) return;
+    initedRef.current = true;
+    const handle = getSceneHandle();
+    if (!handle) return;
+    void (async () => {
+      const items: VolumeItem[] = [];
+      for (const data of initial) {
+        const id = nextId.current++;
+        const runtime = await createVolume(handle, data.shape, data.mode, true);
+        applyVolumeData(runtime, data);
+        runtimes.current.set(id, runtime);
+        items.push({ id, shape: data.shape, mode: data.mode });
+      }
+      setVolumes((v) => [...v, ...items]);
+    })();
+  }, [ready, initial, getSceneHandle]);
 
   const add = useCallback(
     async (shape: VolumeShape) => {

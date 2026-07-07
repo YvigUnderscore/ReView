@@ -3,7 +3,9 @@ import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SplatEditorToolbar from './editor/SplatEditorToolbar';
+import { applyMaskIndices, applySavedVolumes, fetchMaskIndices } from './editor/persistence/applyEdits';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
+import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 import VolumesBar from './editor/volumes/VolumesBar';
 import SplatPane from './SplatPane';
 
@@ -28,7 +30,7 @@ export default function SplatReview({
   overlay: ReactNode;
 }) {
   const saved = data.splatEdits;
-  const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl != null, onSaved, showEdit);
+  const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl, onSaved, showEdit);
   const { applyTransform, ready, getSceneHandle } = splat;
 
   // Lecture seule : applique la transformation enregistrée (l'éditeur la gère sinon).
@@ -36,6 +38,32 @@ export default function SplatReview({
   useEffect(() => {
     if (!showEdit && ready) applyTransform(savedTransform);
   }, [showEdit, ready, applyTransform, savedTransform]);
+
+  // Lecture seule : applique volumes de crop (sans filaire) et masque de suppression —
+  // les éditions comptent pour tous les spectateurs, pas seulement l'éditeur.
+  const savedVolumes = saved?.volumes ?? null;
+  const maskUrl = data.splatMaskUrl;
+  useEffect(() => {
+    if (showEdit || !ready) return;
+    const handle = getSceneHandle();
+    if (!handle) return;
+    let disposed = false;
+    let created: VolumeRuntime[] = [];
+    void (async () => {
+      if (savedVolumes?.length) {
+        created = await applySavedVolumes(handle, savedVolumes, false);
+        if (disposed) created.forEach(disposeVolume);
+      }
+      if (maskUrl) {
+        const indices = await fetchMaskIndices(maskUrl).catch(() => []);
+        if (!disposed && indices.length) applyMaskIndices(handle, indices);
+      }
+    })();
+    return () => {
+      disposed = true;
+      created.forEach(disposeVolume);
+    };
+  }, [showEdit, ready, getSceneHandle, savedVolumes, maskUrl]);
 
   const selectTool = editor.tool === 'select-rect' ? 'rect' : editor.tool === 'select-lasso' ? 'lasso' : null;
 

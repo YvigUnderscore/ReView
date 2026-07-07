@@ -28,6 +28,8 @@ export async function createVolume(
   handle: SplatSceneHandle,
   shape: VolumeShape,
   mode: VolumeMode,
+  /** Filaire visible (true en édition ; false en lecture seule — le volume agit sans se voir). */
+  showWire = true,
 ): Promise<VolumeRuntime> {
   const { THREE, mesh } = handle;
   const { SplatEdit, SplatEditRgbaBlendMode, SplatEditSdf, SplatEditSdfType } =
@@ -60,10 +62,21 @@ export async function createVolume(
     new THREE.LineBasicMaterial({ color: mode === 'delete' ? WIRE_DELETE : WIRE_ISOLATE }),
   );
   geo.dispose();
+  wire.visible = showWire;
   sdf.add(wire);
 
   mesh.add(edit);
   return { edit, sdf, wire };
+}
+
+/** Applique une TRS sérialisée au SDF du volume (rechargement d'éditions persistées). */
+export function applyVolumeData(
+  runtime: VolumeRuntime,
+  data: { position: number[]; quaternion: number[]; scale: number[] },
+): void {
+  runtime.sdf.position.fromArray(data.position);
+  runtime.sdf.quaternion.fromArray(data.quaternion);
+  runtime.sdf.scale.fromArray(data.scale);
 }
 
 /** Change l'effet du volume (creuser ↔ isoler) et la couleur du filaire. */
