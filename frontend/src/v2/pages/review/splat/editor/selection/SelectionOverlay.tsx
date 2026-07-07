@@ -34,7 +34,11 @@ export default function SelectionOverlay({
 
   const onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // pointeur synthétique (tests) sans capture possible — le drag fonctionne quand même
+    }
     const p = local(e);
     setDrag({ start: p, points: [p] });
   };
