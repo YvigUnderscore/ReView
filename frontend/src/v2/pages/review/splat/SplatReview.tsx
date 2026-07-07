@@ -4,6 +4,7 @@ import type { SplatViewer } from './useSplat';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SplatEditorToolbar from './editor/SplatEditorToolbar';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
+import VolumesBar from './editor/volumes/VolumesBar';
 import SplatPane from './SplatPane';
 
 /**
@@ -60,6 +61,7 @@ export default function SplatReview({
           onReset={() => void editor.reset()}
         />
       )}
+      {showEdit && <VolumesBar volumes={editor.volumes} />}
       <SplatPane
         containerRef={splat.containerRef}
         ready={splat.ready}

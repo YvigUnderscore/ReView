@@ -9,6 +9,7 @@ import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
 import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
 import { useEditHistory } from './operations/history';
 import { useSelection } from './selection/useSelection';
+import { useVolumes } from './volumes/useVolumes';
 
 /** Outil actif de l'éditeur : gizmo de transformation ou sélection (rectangle/lasso). */
 export type EditorTool = GizmoMode | 'select-rect' | 'select-lasso';
@@ -45,6 +46,7 @@ export function useSplatEditor(
   const [busy, setBusy] = useState(false);
   const selection = useSelection(splat);
   const history = useEditHistory();
+  const volumes = useVolumes(splat, history.push);
   // Masque de suppression cumulé (indices masqués) — persisté au chantier H5.
   const deletedRef = useRef<Set<number>>(new Set());
   const [deletedCount, setDeletedCount] = useState(0);
@@ -55,11 +57,15 @@ export function useSplatEditor(
     setTransform(t);
     setDirty(true);
   }, []);
+  // Un volume sélectionné capte le gizmo : sa TRS vit dans l'objet Three (sérialisée en H5),
+  // elle ne touche pas la transformation du splat.
+  const volumeGizmoChange = useCallback(() => undefined, []);
 
   useTransformGizmo(splat, {
     enabled: enabled && isGizmoTool,
     mode: isGizmoTool ? (tool as GizmoMode) : 'translate',
-    onChange: onGizmoChange,
+    target: volumes.activeSdf,
+    onChange: volumes.activeSdf ? volumeGizmoChange : onGizmoChange,
   });
 
   // Applique la transformation enregistrée au chargement ; le gizmo suit ensuite le mesh.
@@ -174,6 +180,7 @@ export function useSplatEditor(
     selection,
     deleteSelection,
     deletedCount,
+    volumes,
     history,
     save,
     reset,
