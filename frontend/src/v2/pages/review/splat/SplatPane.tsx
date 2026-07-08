@@ -13,6 +13,7 @@ export default function SplatPane({
   status,
   overlay,
   editorOverlay,
+  hud,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
@@ -21,6 +22,8 @@ export default function SplatPane({
   overlay: ReactNode;
   /** Overlay interactif de l'éditeur (tracé de sélection) — capte le pointeur, contrairement à `overlay`. */
   editorOverlay?: ReactNode;
+  /** HUD flottant superposé au canvas (toolbars, stats, réglages) — cf. hud/ViewerHud. */
+  hud?: ReactNode;
 }) {
   return (
     <div className={VIEWER_ZONE}>
@@ -29,6 +32,9 @@ export default function SplatPane({
 
       {/* Overlay d'édition (sélection rectangle/lasso) — au-dessus du canvas, sous les états */}
       {editorOverlay}
+
+      {/* HUD flottant (au-dessus des overlays, sous les états de repli) */}
+      {hud}
 
       {loadError ? (
         <div className="max-w-sm space-y-2 p-6 text-center text-sm text-muted-foreground">

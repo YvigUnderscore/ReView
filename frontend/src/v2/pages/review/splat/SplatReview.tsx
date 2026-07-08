@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
+import { Gauge, Settings2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
 import { useSplatEditor } from './editor/useSplatEditor';
@@ -7,13 +8,17 @@ import { applyMaskIndices, applySavedVolumes, fetchMaskIndices } from './editor/
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 import VolumesBar from './editor/volumes/VolumesBar';
+import StatsPanel from './hud/StatsPanel';
+import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
+import ViewerSettingsPanel from './hud/ViewerSettingsPanel';
 import SplatPane from './SplatPane';
 
 /**
- * Bloc splat de la review (10.G) : orchestre le viewer (SplatPane) et l'éditeur avant
- * publication (toolbar + gizmos + sélection). Extrait de ReviewViewer pour garder tout le
- * domaine splat sous `splat/` — ReviewViewer ne fait que monter ce composant. L'état éditeur
- * vit dans `useSplatEditor` ; en lecture seule, la transformation enregistrée est appliquée ici.
+ * Bloc splat de la review (10.G) : orchestre le viewer (SplatPane), le HUD flottant (stats,
+ * réglages — 10.G-V1) et l'éditeur avant publication (toolbar + gizmos + sélection), superposés
+ * au canvas façon logiciel 3D. Extrait de ReviewViewer pour garder tout le domaine splat sous
+ * `splat/` — ReviewViewer ne fait que monter ce composant. L'état éditeur vit dans
+ * `useSplatEditor` ; en lecture seule, la transformation enregistrée est appliquée ici.
  */
 export default function SplatReview({
   data,
@@ -31,7 +36,16 @@ export default function SplatReview({
 }) {
   const saved = data.splatEdits;
   const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl, onSaved, showEdit);
-  const { applyTransform, ready, getSceneHandle } = splat;
+  const { applyTransform, ready, getSceneHandle, setCullingOff } = splat;
+
+  // Panneaux du HUD (état local de session — réglages spectateur non persistés).
+  const [showStats, setShowStats] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [cullingOff, setCullingOffState] = useState(true);
+  const onCullingOff = (off: boolean) => {
+    setCullingOffState(off);
+    setCullingOff(off);
+  };
 
   // Lecture seule : applique la transformation enregistrée (l'éditeur la gère sinon).
   const savedTransform = saved?.transform ?? null;
@@ -68,44 +82,72 @@ export default function SplatReview({
   const selectTool = editor.tool === 'select-rect' ? 'rect' : editor.tool === 'select-lasso' ? 'lasso' : null;
 
   return (
-    <>
-      {showEdit && (
-        <SplatEditorToolbar
-          tool={editor.tool}
-          onTool={editor.setTool}
-          renderMode={editor.renderMode}
-          onRenderMode={editor.setRenderMode}
-          selectedCount={editor.selection.selected.size}
-          onClearSelection={editor.selection.clear}
-          deletedCount={editor.deletedCount}
-          onDelete={editor.deleteSelection}
-          canUndo={editor.history.canUndo}
-          canRedo={editor.history.canRedo}
-          onUndo={editor.history.undo}
-          onRedo={editor.history.redo}
-          dirty={editor.dirty}
-          busy={editor.busy}
-          onSave={() => void editor.save()}
-          onReset={() => void editor.reset()}
-        />
-      )}
-      {showEdit && <VolumesBar volumes={editor.volumes} />}
-      <SplatPane
-        containerRef={splat.containerRef}
-        ready={splat.ready}
-        loadError={splat.loadError}
-        status={data.media.status}
-        overlay={overlay}
-        editorOverlay={
-          showEdit && selectTool && ready ? (
-            <SelectionOverlay
-              tool={selectTool}
-              getCanvas={() => getSceneHandle()?.dom ?? null}
-              onCommit={editor.selection.commitShape}
-            />
-          ) : null
-        }
-      />
-    </>
+    <SplatPane
+      containerRef={splat.containerRef}
+      ready={splat.ready}
+      loadError={splat.loadError}
+      status={data.media.status}
+      overlay={overlay}
+      editorOverlay={
+        showEdit && selectTool && ready ? (
+          <SelectionOverlay
+            tool={selectTool}
+            getCanvas={() => getSceneHandle()?.dom ?? null}
+            onCommit={editor.selection.commitShape}
+          />
+        ) : null
+      }
+      hud={
+        ready ? (
+          <ViewerHud
+            topLeft={
+              showEdit ? (
+                <>
+                  <SplatEditorToolbar
+                    tool={editor.tool}
+                    onTool={editor.setTool}
+                    renderMode={editor.renderMode}
+                    onRenderMode={editor.setRenderMode}
+                    selectedCount={editor.selection.selected.size}
+                    onClearSelection={editor.selection.clear}
+                    deletedCount={editor.deletedCount}
+                    onDelete={editor.deleteSelection}
+                    canUndo={editor.history.canUndo}
+                    canRedo={editor.history.canRedo}
+                    onUndo={editor.history.undo}
+                    onRedo={editor.history.redo}
+                    dirty={editor.dirty}
+                    busy={editor.busy}
+                    onSave={() => void editor.save()}
+                    onReset={() => void editor.reset()}
+                  />
+                  <VolumesBar volumes={editor.volumes} />
+                </>
+              ) : undefined
+            }
+            topRight={
+              <>
+                <HudGroup>
+                  <HudIconButton
+                    icon={Gauge}
+                    hint="Statistiques de rendu (FPS, splats, draw calls)"
+                    active={showStats}
+                    onClick={() => setShowStats((v) => !v)}
+                  />
+                  <HudIconButton
+                    icon={Settings2}
+                    hint="Réglages du viewer (culling…)"
+                    active={showSettings}
+                    onClick={() => setShowSettings((v) => !v)}
+                  />
+                </HudGroup>
+                {showStats && <StatsPanel splat={splat} />}
+                {showSettings && <ViewerSettingsPanel cullingOff={cullingOff} onCullingOff={onCullingOff} />}
+              </>
+            }
+          />
+        ) : null
+      }
+    />
   );
 }

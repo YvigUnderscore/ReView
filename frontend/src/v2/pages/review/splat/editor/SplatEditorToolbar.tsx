@@ -115,7 +115,7 @@ export default function SplatEditorToolbar({
   onReset: () => void;
 }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs">
+    <div className="pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-md border border-border bg-card/85 px-3 py-2 text-xs shadow-sm backdrop-blur">
       <div className="flex items-center gap-1 rounded-md bg-secondary/40 p-0.5">
         {TOOLS.map(({ tool: t, icon, label, hint }) => (
           <SegButton

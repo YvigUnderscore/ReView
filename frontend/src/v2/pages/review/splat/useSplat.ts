@@ -7,7 +7,9 @@ import { createScene, type SplatModules, type SplatSceneCore } from './scene/cre
 import { frameCameraToMesh } from './scene/frameCamera';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
 import { buildPointCloud, setFalloff, type RenderMode } from './scene/renderModes';
+import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
 import { toThumbnail } from './scene/thumbnail';
+import { applyCulling } from './scene/viewerConfig';
 
 /**
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
@@ -53,6 +55,10 @@ export interface SplatViewer {
   applyTransform: (t: SplatTransform | null) => void;
   /** Bascule le mode de visualisation (splats / ellipses gaussiennes / points). */
   setRenderMode: (mode: RenderMode) => void;
+  /** Abonne un panneau aux stats de rendu (FPS, splats, draw calls) — mesurées si abonné. */
+  subscribeStats: (cb: (stats: SplatStats) => void) => () => void;
+  /** Neutralise (défaut) ou rétablit le culling Spark (clipXY/maxPixelRadius) — réglage live. */
+  setCullingOff: (off: boolean) => void;
   /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
   getSceneHandle: () => SplatSceneHandle | null;
 }
@@ -67,6 +73,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
   const captureReq = useRef<((d: string | null) => void) | null>(null);
   // Nuage de points du mode « points » (enfant du mesh, construit à la demande).
   const pointsRef = useRef<THREE.Points | null>(null);
+  // Échantillonneur de stats (FPS, splats) alimenté par la boucle de rendu.
+  const statsRef = useRef<StatsSampler | null>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -88,6 +96,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
 
       const modules: SplatModules = { THREE, OrbitControls, SparkRenderer, SplatMesh };
       const { renderer, scene, camera, controls, spark } = createScene(modules, container);
+      // Culling neutralisé par défaut (10.G-V1) : rien ne disparaît en bord de cadre/overscale.
+      applyCulling(spark, true);
 
       // Marqueur de hotspot (DOM, projeté à l'écran) — n'intercepte pas les events (orbite libre).
       const marker = document.createElement('div');
@@ -107,6 +117,11 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
 
       const mesh = new SplatMesh({ url, fileName, raycastable: true, onLoad: onReady });
       scene.add(mesh);
+      statsRef.current = createStatsSampler(() => ({
+        activeSplats: spark.activeSplats,
+        totalSplats: mesh.packedSplats?.numSplats ?? 0,
+        calls: renderer.info.render.calls,
+      }));
       const init = (mesh as unknown as { initialized?: Promise<unknown> }).initialized;
       init?.then(onReady).catch(() => !cancelled && setLoadError(true));
 
@@ -126,6 +141,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       renderer.setAnimationLoop(() => {
         controls.update();
         renderer.render(scene, camera);
+        statsRef.current?.frame(performance.now());
         // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
         const hs = hotspotRef.current;
         const w = container.clientWidth;
@@ -175,6 +191,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       sceneRef.current = null;
       threeRef.current = null;
       hotspotRef.current = null;
+      statsRef.current = null;
       captureReq.current?.(null);
       captureReq.current = null;
     };
@@ -250,6 +267,17 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     }
   }, []);
 
+  const subscribeStats = useCallback((cb: (stats: SplatStats) => void): (() => void) => {
+    // L'échantillonneur existe dès le montage de la scène (avant `ready`) ; les panneaux du
+    // HUD ne sont montés qu'une fois le viewer prêt, l'abonnement est donc toujours effectif.
+    return statsRef.current?.subscribe(cb) ?? (() => undefined);
+  }, []);
+
+  const setCullingOff = useCallback((off: boolean) => {
+    const s = sceneRef.current;
+    if (s) applyCulling(s.spark, off);
+  }, []);
+
   const getSceneHandle = useCallback((): SplatSceneHandle | null => {
     const s = sceneRef.current;
     const THREE = threeRef.current;
@@ -298,6 +326,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     captureThumbnail,
     applyTransform,
     setRenderMode,
+    subscribeStats,
+    setCullingOff,
     getSceneHandle,
   };
 }

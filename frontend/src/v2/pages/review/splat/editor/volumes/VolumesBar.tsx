@@ -8,7 +8,7 @@ import type { VolumesState } from './useVolumes';
  */
 export default function VolumesBar({ volumes }: { volumes: VolumesState }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs">
+    <div className="pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-md border border-border bg-card/85 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
       <span className="text-muted-foreground">Volumes</span>
       <button
         onClick={() => void volumes.add('box')}
