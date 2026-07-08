@@ -8,9 +8,14 @@ import { useNavigate } from 'react-router-dom';
  * (Ctrl+K vit dans CommandPalette, qui doit primer partout).
  */
 
-export const isEditable = (el: EventTarget | null): boolean =>
-  el instanceof HTMLElement &&
-  (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+/** Types d'input qui ne saisissent pas de texte : le focus dessus ne bloque pas les raccourcis. */
+const NON_TEXT_INPUT = /^(checkbox|radio|button|submit|reset|range|color|file)$/;
+
+export const isEditable = (el: EventTarget | null): boolean => {
+  if (!(el instanceof HTMLElement)) return false;
+  if (el instanceof HTMLInputElement) return !NON_TEXT_INPUT.test(el.type);
+  return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable;
+};
 
 export function useGlobalShortcuts({ projectId, onHelp }: { projectId: number | null; onHelp: () => void }) {
   const navigate = useNavigate();
