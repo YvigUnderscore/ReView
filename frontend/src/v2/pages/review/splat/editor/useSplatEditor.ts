@@ -8,6 +8,7 @@ import {
   type SplatEditsPatch,
   type SplatTransform,
 } from '../../reviewTypes';
+import { frameCameraToMesh, frameCameraToSphere } from '../scene/frameCamera';
 import type { RenderMode } from '../scene/renderModes';
 import type { SplatViewer } from '../useSplat';
 import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
@@ -15,6 +16,7 @@ import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSpla
 import { useEditHistory } from './operations/history';
 import { applyMaskIndices, fetchMaskIndices } from './persistence/applyEdits';
 import { bytesToBase64, encodeMask } from './persistence/mask';
+import { meshBounds, selectionBounds } from './selection/bounds';
 import { useSelection } from './selection/useSelection';
 import { useVolumes } from './volumes/useVolumes';
 
@@ -134,8 +136,23 @@ export function useSplatEditor(
     });
   }, [splat, selection, history]);
 
-  // Raccourcis : outils (T/R/S/B/L sans modificateur), Suppr (suppression sélection),
-  // Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y (historique). Inactifs dans les champs et dialogs.
+  /** F : cadre la sélection courante (sinon tout le splat) en gardant la direction de vue. */
+  const frameSelection = useCallback(() => {
+    const handle = splat.getSceneHandle();
+    if (!handle) return;
+    const bounds = selectionBounds(handle, selection.selected) ?? meshBounds(handle);
+    if (bounds) frameCameraToSphere(handle.camera, handle.controls, bounds.center, bounds.radius);
+  }, [splat, selection]);
+
+  /** H : vue d'origine (recadrage global identique au cadrage initial). */
+  const frameHome = useCallback(() => {
+    const handle = splat.getSceneHandle();
+    if (handle) frameCameraToMesh(handle.THREE, handle.mesh, handle.camera, handle.controls);
+  }, [splat]);
+
+  // Raccourcis : outils (T/R/S/B/L sans modificateur), F/H (cadrer sélection / vue d'origine),
+  // Suppr (suppression sélection), Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y (historique). Inactifs dans
+  // les champs et dialogs.
   useEffect(() => {
     if (!enabled) return;
     const down = (e: KeyboardEvent) => {
@@ -157,6 +174,16 @@ export function useSplatEditor(
         deleteSelection();
         return;
       }
+      if (key === 'f') {
+        e.preventDefault();
+        frameSelection();
+        return;
+      }
+      if (key === 'h') {
+        e.preventDefault();
+        frameHome();
+        return;
+      }
       const next = TOOL_KEYS[key];
       if (next) {
         e.preventDefault();
@@ -165,7 +192,7 @@ export function useSplatEditor(
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, [enabled, history, deleteSelection]);
+  }, [enabled, history, deleteSelection, frameSelection, frameHome]);
 
   /** Enregistre toutes les éditions : transform + volumes (JSON) et masque de suppression. */
   const save = useCallback(async () => {

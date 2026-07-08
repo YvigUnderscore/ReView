@@ -4,6 +4,7 @@ import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SplatMesh } from '@sparkjsdev/spark';
 import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
 import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
+import { createFlyControls } from './scene/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
 import { buildPointCloud, setFalloff, type RenderMode } from './scene/renderModes';
@@ -98,6 +99,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       const { renderer, scene, camera, controls, spark } = createScene(modules, container);
       // Culling neutralisé par défaut (10.G-V1) : rien ne disparaît en bord de cadre/overscale.
       applyCulling(spark, true);
+      // Navigation fly type Unreal (clic droit + ZQSD/WASD + A/E) — gèle l'orbite en vol.
+      const fly = createFlyControls(THREE, camera, controls, renderer.domElement);
 
       // Marqueur de hotspot (DOM, projeté à l'écran) — n'intercepte pas les events (orbite libre).
       const marker = document.createElement('div');
@@ -138,10 +141,17 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       ro.observe(container);
 
       const proj = new THREE.Vector3();
+      let lastFrameMs = performance.now();
       renderer.setAnimationLoop(() => {
-        controls.update();
+        const now = performance.now();
+        const dt = (now - lastFrameMs) / 1000;
+        lastFrameMs = now;
+        // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
+        // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
+        if (fly.flying) fly.update(dt);
+        else controls.update();
         renderer.render(scene, camera);
-        statsRef.current?.frame(performance.now());
+        statsRef.current?.frame(now);
         // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
         const hs = hotspotRef.current;
         const w = container.clientWidth;
@@ -171,6 +181,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       cleanup = () => {
         ro.disconnect();
         renderer.setAnimationLoop(null);
+        fly.dispose();
         controls.dispose();
         if (pointsRef.current) {
           pointsRef.current.geometry.dispose();

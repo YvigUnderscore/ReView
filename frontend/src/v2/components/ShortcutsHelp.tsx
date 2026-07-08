@@ -27,6 +27,21 @@ const GROUPS: { title: string; shortcuts: { keys: string[]; label: string }[] }[
     ],
   },
   {
+    title: 'Review splat',
+    shortcuts: [
+      {
+        keys: ['Clic droit', 'ZQSD'],
+        label: 'Vol type Unreal — A/E : descendre/monter, molette : vitesse, Maj : accélérer',
+      },
+      { keys: ['T', 'R', 'S'], label: 'Gizmos déplacer / tourner / échelle (éditeur)' },
+      { keys: ['B', 'L'], label: 'Sélection rectangle / lasso (Maj ajoute, Alt retire)' },
+      { keys: ['F'], label: 'Cadrer la sélection (ou tout le splat)' },
+      { keys: ['H'], label: "Vue d'origine" },
+      { keys: ['Suppr'], label: 'Supprimer la sélection (non-destructif)' },
+      { keys: ['Ctrl', 'Z / Y'], label: 'Annuler / rétablir' },
+    ],
+  },
+  {
     title: 'Aide',
     shortcuts: [{ keys: ['?'], label: 'Afficher ce panneau' }],
   },
