@@ -1,18 +1,46 @@
+import { Play } from 'lucide-react';
+import type { DebugColorMode } from '../scene/effects/debugColor';
+import type { RevealConfig } from '../presentation/usePresentation';
+import type { RevealType } from '../scene/effects/reveal';
 import { HudGroup } from './ViewerHud';
 
+const REVEALS: { value: RevealType | 'none'; label: string }[] = [
+  { value: 'none', label: 'Aucun' },
+  { value: 'fade', label: 'Fondu' },
+  { value: 'sweep', label: 'Balayage' },
+  { value: 'dissolve', label: 'Dissolution' },
+];
+
+const DEBUGS: { value: DebugColorMode; label: string }[] = [
+  { value: 'none', label: 'Couleurs' },
+  { value: 'normal', label: 'Normales' },
+  { value: 'depth', label: 'Profondeur' },
+];
+
 /**
- * Réglages live du viewer splat (10.G-V1, togglable) : culling. Réglages locaux à la session
- * (non persistés) ; le panneau s'enrichira au fil des chantiers (DoF V5, debug color V6, LOD V7).
+ * Réglages live du viewer splat (10.G-V1/V6, togglable) : culling, debug color (inspection
+ * locale) et effet de reveal (type + durée — persisté par le gestionnaire via « Présentation »,
+ * re-jouable localement). Réglages de session, non persistés en eux-mêmes.
  */
 export default function ViewerSettingsPanel({
   cullingOff,
   onCullingOff,
+  debugMode,
+  onDebugMode,
+  reveal,
+  onReveal,
+  onReplayReveal,
 }: {
   cullingOff: boolean;
   onCullingOff: (off: boolean) => void;
+  debugMode: DebugColorMode;
+  onDebugMode: (mode: DebugColorMode) => void;
+  reveal: RevealConfig | null;
+  onReveal: (reveal: RevealConfig | null) => void;
+  onReplayReveal: () => void;
 }) {
   return (
-    <HudGroup>
+    <HudGroup className="max-w-64">
       <label
         className="flex cursor-pointer items-center gap-2"
         title="Par défaut Spark rogne les splats en bord de cadre (centres à 40 % hors cadre, rayon écran 512 px) — neutralisé, rien ne disparaît en zoom fort ; désactiver pour retrouver les défauts Spark (plus rapide sur les très gros nuages)."
@@ -25,6 +53,68 @@ export default function ViewerSettingsPanel({
         />
         <span className="text-foreground">Culling neutralisé</span>
       </label>
+
+      <label
+        className="flex items-center gap-1.5 text-muted-foreground"
+        title="Colorisation d'inspection (locale) : normales des gaussiennes ou heatmap de profondeur"
+      >
+        Debug
+        <select
+          value={debugMode}
+          onChange={(e) => onDebugMode(e.target.value as DebugColorMode)}
+          className="rounded border border-border bg-background/60 px-1 py-0.5 text-[11px] text-foreground"
+        >
+          {DEBUGS.map((d) => (
+            <option key={d.value} value={d.value}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label
+        className="flex items-center gap-1.5 text-muted-foreground"
+        title="Effet d'apparition à l'ouverture — persisté avec la présentation (bouton « Présentation »)"
+      >
+        Reveal
+        <select
+          value={reveal?.type ?? 'none'}
+          onChange={(e) => {
+            const type = e.target.value as RevealType | 'none';
+            onReveal(type === 'none' ? null : { type, durationMs: reveal?.durationMs ?? 2500 });
+          }}
+          className="rounded border border-border bg-background/60 px-1 py-0.5 text-[11px] text-foreground"
+        >
+          {REVEALS.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {reveal && (
+        <>
+          <label className="flex items-center gap-1 text-muted-foreground" title="Durée du reveal (secondes)">
+            <input
+              type="range"
+              min={500}
+              max={10000}
+              step={250}
+              value={reveal.durationMs}
+              onChange={(e) => onReveal({ ...reveal, durationMs: Number(e.target.value) })}
+              className="h-1 w-14 accent-primary"
+            />
+            <span className="font-mono text-foreground">{(reveal.durationMs / 1000).toFixed(1)}s</span>
+          </label>
+          <button
+            onClick={onReplayReveal}
+            title="Rejouer l'effet d'apparition"
+            className="flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+          >
+            <Play size={11} /> Rejouer
+          </button>
+        </>
+      )}
     </HudGroup>
   );
 }
