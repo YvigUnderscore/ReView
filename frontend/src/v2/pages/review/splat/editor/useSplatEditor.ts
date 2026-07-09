@@ -56,16 +56,18 @@ export function useSplatEditor(
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const markDirty = useCallback(() => setDirty(true), []);
-  const selection = useSelection(splat);
-  const history = useEditHistory();
-  const volumes = useVolumes(splat, history.push, markDirty, enabled ? (saved?.volumes ?? null) : null);
   // Masque de suppression cumulé (indices masqués), sérialisé en bitset à l'enregistrement.
   const deletedRef = useRef<Set<number>>(new Set());
+  const isHidden = useCallback((index: number) => deletedRef.current.has(index), []);
+  const selection = useSelection(splat, isHidden);
+  const history = useEditHistory();
+  const volumes = useVolumes(splat, history.push, markDirty, enabled ? (saved?.volumes ?? null) : null);
   const [deletedCount, setDeletedCount] = useState(0);
   const maskInitRef = useRef(false);
 
   // Recharge le masque persisté (une fois) : masque appliqué + compteur initialisé, pour que
   // les suppressions suivantes s'y cumulent à l'enregistrement.
+  const notifyHiddenChanged = selection.markDirty;
   useEffect(() => {
     if (!enabled || !ready || maskInitRef.current || !savedMaskUrl) return;
     maskInitRef.current = true;
@@ -75,9 +77,10 @@ export function useSplatEditor(
       .then((indices) => {
         deletedRef.current = applyMaskIndices(handle, indices);
         setDeletedCount(deletedRef.current.size);
+        notifyHiddenChanged(deletedRef.current);
       })
       .catch(() => toast.error('Masque de suppression illisible'));
-  }, [enabled, ready, savedMaskUrl, splat]);
+  }, [enabled, ready, savedMaskUrl, splat, notifyHiddenChanged]);
 
   const isGizmoTool = GIZMO_TOOLS.includes(tool);
 
@@ -121,17 +124,20 @@ export function useSplatEditor(
     setDeletedCount(deleted.size);
     setDirty(true);
     selection.clear();
+    selection.markDirty(hidden.indices);
     history.push({
       label: 'Suppression de splats',
       undo: () => {
         restoreSplats(handle, hidden);
         for (const i of hidden.indices) deleted.delete(i);
         setDeletedCount(deleted.size);
+        selection.markDirty(hidden.indices);
       },
       redo: () => {
         rehideSplats(handle, hidden);
         for (const i of hidden.indices) deleted.add(i);
         setDeletedCount(deleted.size);
+        selection.markDirty(hidden.indices);
       },
     });
   }, [splat, selection, history]);

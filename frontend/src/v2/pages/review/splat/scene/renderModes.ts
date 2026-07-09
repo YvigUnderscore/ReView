@@ -4,10 +4,14 @@ import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 /**
  * Modes de visualisation d'un splat (10.G), à la manière d'un logiciel 3D :
  * - `splats`   : rendu gaussien normal (falloff plein) ;
- * - `ellipses` : chaque gaussienne en ellipse pleine/plate (falloff nul) ;
+ * - `ellipses` : chaque gaussienne en **bordure translucide** (falloff nul + opacité réduite,
+ *                V2) — les contours des ellipses se lisent sans que la masse ne bouche la vue ;
  * - `points`   : nuage de centres (overlay `THREE.Points`, splats masqués).
  */
 export type RenderMode = 'splats' | 'ellipses' | 'points';
+
+/** Opacité du mode « ellipses » : assez faible pour lire les contours superposés (~15 %). */
+export const ELLIPSES_OPACITY = 0.15;
 
 /** Garde-fou perf : nombre max de points construits pour le mode « points ». */
 const MAX_POINTS = 1_500_000;

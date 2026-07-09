@@ -7,7 +7,7 @@ import { createScene, type SplatModules, type SplatSceneCore } from './scene/cre
 import { createFlyControls } from './scene/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
-import { buildPointCloud, setFalloff, type RenderMode } from './scene/renderModes';
+import { buildPointCloud, ELLIPSES_OPACITY, setFalloff, type RenderMode } from './scene/renderModes';
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
 import { toThumbnail } from './scene/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
@@ -320,9 +320,13 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       s.mesh.opacity = 0;
       pointsRef.current = buildPointCloud(THREE, s.mesh);
       s.mesh.add(pointsRef.current);
+    } else if (mode === 'ellipses') {
+      // Bordures : ellipses plates (falloff nul) rendues translucides (V2).
+      s.mesh.opacity = ELLIPSES_OPACITY;
+      setFalloff(s.spark, 0);
     } else {
       s.mesh.opacity = 1;
-      setFalloff(s.spark, mode === 'ellipses' ? 0 : 1);
+      setFalloff(s.spark, 1);
     }
   }, []);
 

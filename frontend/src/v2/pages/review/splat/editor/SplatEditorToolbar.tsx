@@ -44,7 +44,12 @@ const TOOLS: { tool: EditorTool; icon: LucideIcon; label: string; hint: string }
 
 const RENDER_MODES: { mode: RenderMode; icon: LucideIcon; label: string; hint: string }[] = [
   { mode: 'splats', icon: Sparkles, label: 'Splats', hint: 'Rendu gaussien (splats)' },
-  { mode: 'ellipses', icon: Circle, label: 'Ellipses', hint: 'Ellipses gaussiennes pleines' },
+  {
+    mode: 'ellipses',
+    icon: Circle,
+    label: 'Ellipses',
+    hint: 'Ellipses gaussiennes en bordures translucides',
+  },
   { mode: 'points', icon: Grip, label: 'Points', hint: 'Nuage de points (centres)' },
 ];
 
