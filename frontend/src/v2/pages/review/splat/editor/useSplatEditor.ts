@@ -11,6 +11,7 @@ import {
 import { frameCameraToMesh, frameCameraToSphere } from '../scene/frameCamera';
 import type { RenderMode } from '../scene/renderModes';
 import type { SplatViewer } from '../useSplat';
+import { readMeshTransform } from './gizmos/meshTransform';
 import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
 import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
 import { useEditHistory } from './operations/history';
@@ -90,9 +91,19 @@ export function useSplatEditor(
     setTransform(t);
     setDirty(true);
   }, []);
-  // Un volume sélectionné capte le gizmo : sa TRS vit dans l'objet Three (sérialisée en H5),
-  // elle ne touche pas la transformation du splat.
-  const volumeGizmoChange = useCallback(() => undefined, []);
+  // Un volume sélectionné capte le gizmo : sa TRS vit dans l'objet Three (sérialisée à
+  // l'enregistrement) — on la reflète dans un état pour les champs numériques (V4) + dirty.
+  const [volumeTrs, setVolumeTrs] = useState<SplatTransform | null>(null);
+  const volumeGizmoChange = useCallback((t: SplatTransform) => {
+    setVolumeTrs(t);
+    setDirty(true);
+  }, []);
+
+  // Synchronise la TRS affichée quand la cible du gizmo change (sélection/désélection volume).
+  const activeSdf = volumes.activeSdf;
+  useEffect(() => {
+    setVolumeTrs(activeSdf ? readMeshTransform(activeSdf) : null);
+  }, [activeSdf]);
 
   useTransformGizmo(splat, {
     enabled: enabled && isGizmoTool,
@@ -100,6 +111,33 @@ export function useSplatEditor(
     target: volumes.activeSdf,
     onChange: volumes.activeSdf ? volumeGizmoChange : onGizmoChange,
   });
+
+  /** Saisie des champs numériques (V4) : applique la TRS à la cible du gizmo (splat ou volume). */
+  const commitFields = useCallback(
+    (t: SplatTransform) => {
+      if (activeSdf) {
+        activeSdf.position.fromArray(t.position);
+        activeSdf.quaternion.fromArray(t.quaternion);
+        activeSdf.scale.fromArray(t.scale);
+        setVolumeTrs(t);
+      } else {
+        applyTransform(t);
+        setTransform(t);
+      }
+      setDirty(true);
+    },
+    [activeSdf, applyTransform],
+  );
+
+  const activeVolumeItem = volumes.volumes.find((v) => v.id === volumes.activeId) ?? null;
+  /** Cible des champs numériques du HUD : volume actif sinon splat entier. */
+  const fields = {
+    label: activeVolumeItem
+      ? `${activeVolumeItem.shape === 'box' ? 'Boîte' : 'Sphère'} ${volumes.volumes.indexOf(activeVolumeItem) + 1}`
+      : 'Splat',
+    value: volumeTrs && activeSdf ? volumeTrs : transform,
+    commit: commitFields,
+  };
 
   // Applique la transformation enregistrée au chargement ; le gizmo suit ensuite le mesh.
   const savedTransform = saved?.transform ?? null;
@@ -260,6 +298,7 @@ export function useSplatEditor(
     setTool,
     brushRadius,
     setBrushRadius,
+    fields,
     renderMode,
     setRenderMode,
     transform,

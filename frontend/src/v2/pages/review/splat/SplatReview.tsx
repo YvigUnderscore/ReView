@@ -9,6 +9,7 @@ import SelectionOverlay from './editor/selection/SelectionOverlay';
 import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 import VolumesBar from './editor/volumes/VolumesBar';
 import StatsPanel from './hud/StatsPanel';
+import TransformFields from './hud/TransformFields';
 import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
 import ViewerSettingsPanel from './hud/ViewerSettingsPanel';
 import SplatPane from './SplatPane';
@@ -135,6 +136,11 @@ export default function SplatReview({
                     onReset={() => void editor.reset()}
                   />
                   <VolumesBar volumes={editor.volumes} />
+                  <TransformFields
+                    label={editor.fields.label}
+                    value={editor.fields.value}
+                    onCommit={editor.fields.commit}
+                  />
                 </>
               ) : undefined
             }
