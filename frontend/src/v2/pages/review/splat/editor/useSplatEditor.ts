@@ -20,8 +20,8 @@ import { meshBounds, selectionBounds } from './selection/bounds';
 import { useSelection } from './selection/useSelection';
 import { useVolumes } from './volumes/useVolumes';
 
-/** Outil actif de l'éditeur : gizmo de transformation ou sélection (rectangle/lasso). */
-export type EditorTool = GizmoMode | 'select-rect' | 'select-lasso';
+/** Outil actif de l'éditeur : gizmo de transformation ou sélection (rectangle/lasso/pinceau). */
+export type EditorTool = GizmoMode | 'select-rect' | 'select-lasso' | 'brush';
 
 const GIZMO_TOOLS: readonly EditorTool[] = ['translate', 'rotate', 'scale'];
 
@@ -32,6 +32,7 @@ const TOOL_KEYS: Record<string, EditorTool> = {
   s: 'scale',
   b: 'select-rect', // B = box select (convention DCC)
   l: 'select-lasso',
+  p: 'brush', // P = pinceau de surface
 };
 
 /**
@@ -51,6 +52,7 @@ export function useSplatEditor(
 ) {
   const { applyTransform, setRenderMode: applyRenderMode, ready } = splat;
   const [tool, setTool] = useState<EditorTool>('translate');
+  const [brushRadius, setBrushRadius] = useState(40);
   const [renderMode, setRenderMode] = useState<RenderMode>('splats');
   const [transform, setTransform] = useState<SplatTransform>(saved?.transform ?? IDENTITY_SPLAT_TRANSFORM);
   const [dirty, setDirty] = useState(false);
@@ -256,6 +258,8 @@ export function useSplatEditor(
   return {
     tool,
     setTool,
+    brushRadius,
+    setBrushRadius,
     renderMode,
     setRenderMode,
     transform,

@@ -91,6 +91,7 @@ export function createSelectionHighlight(
       }
       const [tr, tg, tb] = HIGHLIGHT_RGB;
       for (const i of selected) {
+        if (tinted.has(i)) continue; // déjà teinté (brush incrémental : n'écrit que les entrants)
         const o = i * 4;
         work[o] = tr;
         work[o + 1] = tg;

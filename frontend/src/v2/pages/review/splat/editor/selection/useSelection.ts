@@ -3,6 +3,7 @@ import type { SplatViewer } from '../../useSplat';
 import { createSelectionHighlight, type SelectionHighlight } from './highlight';
 import { captureCenters, selectByShape } from './screenSelect';
 import type { SelectCombine, SelectionShape } from './shapes2d';
+import { selectByBrush } from './surfaceBrush';
 
 /**
  * Sélection par splat (10.G, perf/lisibilité revues en V2) : ensemble d'indices sélectionnés,
@@ -60,6 +61,25 @@ export function useSelection(splat: SplatViewer, isHidden: (index: number) => bo
     [getSceneHandle, isHidden],
   );
 
+  /** Coup de pinceau de surface (V3) : disque écran + bande de profondeur au point touché. */
+  const commitBrush = useCallback(
+    (
+      point: { x: number; y: number },
+      radiusPx: number,
+      combine: SelectCombine,
+      viewport: { width: number; height: number },
+    ) => {
+      const handle = getSceneHandle();
+      if (!handle) return;
+      if (!centersRef.current) centersRef.current = captureCenters(handle.mesh);
+      const centers = centersRef.current;
+      setSelected(
+        (prev) => selectByBrush(handle, centers, isHidden, viewport, point, radiusPx, prev, combine) ?? prev,
+      );
+    },
+    [getSceneHandle, isHidden],
+  );
+
   /** Signale des indices (dé)masqués — la teinte resynchronise leur alpha au prochain apply. */
   const markDirty = useCallback((indices: Iterable<number>) => {
     highlightRef.current?.markDirty(indices);
@@ -67,7 +87,7 @@ export function useSelection(splat: SplatViewer, isHidden: (index: number) => bo
 
   const clear = useCallback(() => setSelected(new Set()), []);
 
-  return { selected, commitShape, clear, markDirty };
+  return { selected, commitShape, commitBrush, clear, markDirty };
 }
 
 export type SelectionState = ReturnType<typeof useSelection>;

@@ -1,4 +1,5 @@
 import {
+  Brush,
   Circle,
   Grip,
   Lasso,
@@ -39,6 +40,12 @@ const TOOLS: { tool: EditorTool; icon: LucideIcon; label: string; hint: string }
     icon: Lasso,
     label: 'Lasso',
     hint: 'Sélection lasso (L) — Maj ajoute, Alt retire',
+  },
+  {
+    tool: 'brush',
+    icon: Brush,
+    label: 'Pinceau',
+    hint: 'Pinceau de surface (P) — ne prend que les splats en surface ; Maj ajoute, Alt retire',
   },
 ];
 
@@ -86,6 +93,8 @@ function SegButton({
 export default function SplatEditorToolbar({
   tool,
   onTool,
+  brushRadius,
+  onBrushRadius,
   renderMode,
   onRenderMode,
   selectedCount,
@@ -103,6 +112,8 @@ export default function SplatEditorToolbar({
 }: {
   tool: EditorTool;
   onTool: (t: EditorTool) => void;
+  brushRadius: number;
+  onBrushRadius: (r: number) => void;
   renderMode: RenderMode;
   onRenderMode: (m: RenderMode) => void;
   selectedCount: number;
@@ -133,6 +144,24 @@ export default function SplatEditorToolbar({
           />
         ))}
       </div>
+
+      {tool === 'brush' && (
+        <label
+          className="flex items-center gap-1.5 rounded-md bg-secondary/40 px-2 py-1 text-muted-foreground"
+          title="Rayon du pinceau (pixels)"
+        >
+          Rayon
+          <input
+            type="range"
+            min={8}
+            max={150}
+            value={brushRadius}
+            onChange={(e) => onBrushRadius(Number(e.target.value))}
+            className="h-1 w-20 accent-primary"
+          />
+          <span className="w-6 font-mono text-foreground">{brushRadius}</span>
+        </label>
+      )}
 
       <div className="flex items-center gap-1 rounded-md bg-secondary/40 p-0.5">
         {RENDER_MODES.map(({ mode, icon, label, hint }) => (

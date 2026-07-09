@@ -79,7 +79,14 @@ export default function SplatReview({
     };
   }, [showEdit, ready, getSceneHandle, savedVolumes, maskUrl]);
 
-  const selectTool = editor.tool === 'select-rect' ? 'rect' : editor.tool === 'select-lasso' ? 'lasso' : null;
+  const selectTool =
+    editor.tool === 'select-rect'
+      ? ('rect' as const)
+      : editor.tool === 'select-lasso'
+        ? ('lasso' as const)
+        : editor.tool === 'brush'
+          ? ('brush' as const)
+          : null;
 
   return (
     <SplatPane
@@ -92,8 +99,12 @@ export default function SplatReview({
         showEdit && selectTool && ready ? (
           <SelectionOverlay
             tool={selectTool}
+            brushRadius={editor.brushRadius}
             getCanvas={() => getSceneHandle()?.dom ?? null}
             onCommit={editor.selection.commitShape}
+            onBrush={(point, combine, viewport) =>
+              editor.selection.commitBrush(point, editor.brushRadius, combine, viewport)
+            }
           />
         ) : null
       }
@@ -106,6 +117,8 @@ export default function SplatReview({
                   <SplatEditorToolbar
                     tool={editor.tool}
                     onTool={editor.setTool}
+                    brushRadius={editor.brushRadius}
+                    onBrushRadius={editor.setBrushRadius}
                     renderMode={editor.renderMode}
                     onRenderMode={editor.setRenderMode}
                     selectedCount={editor.selection.selected.size}
