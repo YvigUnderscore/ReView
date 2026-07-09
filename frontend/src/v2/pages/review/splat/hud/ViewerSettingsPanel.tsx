@@ -2,7 +2,15 @@ import { Play } from 'lucide-react';
 import type { DebugColorMode } from '../scene/effects/debugColor';
 import type { RevealConfig } from '../presentation/usePresentation';
 import type { RevealType } from '../scene/effects/reveal';
+import type { LodMode } from '../scene/lod';
 import { HudGroup } from './ViewerHud';
+
+const LODS: { value: LodMode; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'on', label: 'Activé' },
+  { value: 'off', label: 'Désactivé' },
+  { value: 'streaming', label: 'Streaming' },
+];
 
 const REVEALS: { value: RevealType | 'none'; label: string }[] = [
   { value: 'none', label: 'Aucun' },
@@ -30,6 +38,8 @@ export default function ViewerSettingsPanel({
   reveal,
   onReveal,
   onReplayReveal,
+  lodMode,
+  onLodMode,
 }: {
   cullingOff: boolean;
   onCullingOff: (off: boolean) => void;
@@ -38,6 +48,8 @@ export default function ViewerSettingsPanel({
   reveal: RevealConfig | null;
   onReveal: (reveal: RevealConfig | null) => void;
   onReplayReveal: () => void;
+  lodMode: LodMode;
+  onLodMode: (mode: LodMode) => void;
 }) {
   return (
     <HudGroup className="max-w-64">
@@ -52,6 +64,24 @@ export default function ViewerSettingsPanel({
           className="accent-primary"
         />
         <span className="text-foreground">Culling neutralisé</span>
+      </label>
+
+      <label
+        className="flex items-center gap-1.5 text-muted-foreground"
+        title="Niveau de détail : Auto active le LOD sous 15 fps pendant 5 s (relâché au-dessus de 25 fps) ; Streaming charge les pages à la demande — persisté avec la présentation"
+      >
+        LOD
+        <select
+          value={lodMode}
+          onChange={(e) => onLodMode(e.target.value as LodMode)}
+          className="rounded border border-border bg-background/60 px-1 py-0.5 text-[11px] text-foreground"
+        >
+          {LODS.map((l) => (
+            <option key={l.value} value={l.value}>
+              {l.label}
+            </option>
+          ))}
+        </select>
       </label>
 
       <label

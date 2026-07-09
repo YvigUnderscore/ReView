@@ -7,6 +7,7 @@ import { useCameraKeyframes } from '../camera/useCameraKeyframes';
 import { useCameraRig } from '../camera/useCameraRig';
 import { createDebugColor, type DebugColorMode, type DebugColorRuntime } from '../scene/effects/debugColor';
 import { createReveal, type RevealRuntime, type RevealType } from '../scene/effects/reveal';
+import { applyLod, createAutoLod, type LodMode } from '../scene/lod';
 import type { SplatViewer } from '../useSplat';
 
 export interface RevealConfig {
@@ -25,7 +26,7 @@ export function usePresentation(
   data: MediaResp,
   onSaved: (patch: SplatEditsPatch) => void,
 ) {
-  const { ready, captureCamera, getSceneHandle, subscribeFrame } = splat;
+  const { ready, captureCamera, getSceneHandle, subscribeFrame, subscribeStats } = splat;
   const kf = useCameraKeyframes(splat);
   const rig = useCameraRig(splat, data.splatPresentation, kf);
   const [busy, setBusy] = useState(false);
@@ -33,8 +34,40 @@ export function usePresentation(
   // Compteur de lecture du reveal : > 0 → joue (initialisé à 1 si persisté → rejoué à l'ouverture).
   const [revealRun, setRevealRun] = useState(() => (data.splatPresentation?.reveal ? 1 : 0));
   const [debugMode, setDebugMode] = useState<DebugColorMode>('none');
+  const [lodMode, setLodMode] = useState<LodMode>(data.splatPresentation?.lodDefault ?? 'auto');
 
   const replayReveal = useCallback(() => setRevealRun((v) => v + 1), []);
+
+  // LOD (V7) : modes on/off/streaming appliqués directement ; auto = machine à états sur le
+  // FPS échantillonné (< 15 fps pendant 5 s → LOD, hystérésis à 25 fps pour relâcher).
+  useEffect(() => {
+    if (!ready) return;
+    const handle = getSceneHandle();
+    if (!handle) return;
+    const spark = handle.spark;
+    if (lodMode !== 'auto') {
+      applyLod(spark, lodMode !== 'off', lodMode === 'streaming');
+      return () => applyLod(spark, false, false);
+    }
+    const auto = createAutoLod();
+    applyLod(spark, false, false);
+    // L'échantillonneur émet toutes les ~500 ms (fenêtre du sampler V1).
+    const off = subscribeStats((stats) => {
+      const was = auto.engaged;
+      if (auto.step(stats.fps, 500) !== was) {
+        applyLod(spark, auto.engaged, false);
+        toast.info(
+          auto.engaged
+            ? 'LOD activé automatiquement (fréquence d’images faible)'
+            : 'LOD désactivé (fréquence d’images rétablie)',
+        );
+      }
+    });
+    return () => {
+      off();
+      applyLod(spark, false, false);
+    };
+  }, [ready, lodMode, getSceneHandle, subscribeStats]);
 
   // Lecture de l'effet de reveal (à l'ouverture et sur « Rejouer »).
   useEffect(() => {
@@ -115,6 +148,7 @@ export function usePresentation(
       if (rig.aperture > 0)
         presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
       if (reveal) presentation.reveal = reveal;
+      presentation.lodDefault = lodMode;
       if (kf.keyframes.length >= 2) presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop };
       const { splatPresentation } = await api.patch<{ splatPresentation: SplatPresentation | null }>(
         `/api/media/${data.media.id}/splat-presentation`,
@@ -162,6 +196,8 @@ export function usePresentation(
     replayReveal,
     debugMode,
     setDebugMode,
+    lodMode,
+    setLodMode,
     save,
     clear,
     applyOrbitPreset,

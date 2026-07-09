@@ -179,6 +179,8 @@ export default function SplatReview({
                     reveal={pres.reveal}
                     onReveal={pres.setReveal}
                     onReplayReveal={pres.replayReveal}
+                    lodMode={pres.lodMode}
+                    onLodMode={pres.setLodMode}
                   />
                 )}
               </>
