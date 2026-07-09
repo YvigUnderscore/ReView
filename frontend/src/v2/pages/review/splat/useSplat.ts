@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { SplatMesh } from '@sparkjsdev/spark';
+import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
 import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
 import { createFlyControls } from './scene/flyControls';
@@ -35,6 +35,7 @@ export interface SplatSceneHandle {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   mesh: SplatMesh;
+  spark: SparkRenderer;
   dom: HTMLElement;
 }
 
@@ -58,6 +59,8 @@ export interface SplatViewer {
   setRenderMode: (mode: RenderMode) => void;
   /** Abonne un panneau aux stats de rendu (FPS, splats, draw calls) — mesurées si abonné. */
   subscribeStats: (cb: (stats: SplatStats) => void) => () => void;
+  /** Abonne un callback à chaque frame rendue (dt en secondes) — animations caméra (V5). */
+  subscribeFrame: (cb: (dt: number) => void) => () => void;
   /** Neutralise (défaut) ou rétablit le culling Spark (clipXY/maxPixelRadius) — réglage live. */
   setCullingOff: (off: boolean) => void;
   /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
@@ -76,6 +79,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
   const pointsRef = useRef<THREE.Points | null>(null);
   // Échantillonneur de stats (FPS, splats) alimenté par la boucle de rendu.
   const statsRef = useRef<StatsSampler | null>(null);
+  // Callbacks appelés à chaque frame (dt en secondes) — animation caméra, presets (V5).
+  const frameCbs = useRef(new Set<(dt: number) => void>());
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -87,6 +92,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
 
     let cancelled = false;
     let cleanup: (() => void) | null = null;
+    const frameCallbacks = frameCbs.current;
 
     void (async () => {
       const THREE = await import('three');
@@ -150,6 +156,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
         if (fly.flying) fly.update(dt);
         else controls.update();
+        frameCbs.current.forEach((cb) => cb(dt));
         renderer.render(scene, camera);
         statsRef.current?.frame(now);
         // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
@@ -203,6 +210,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       threeRef.current = null;
       hotspotRef.current = null;
       statsRef.current = null;
+      frameCallbacks.clear();
       captureReq.current?.(null);
       captureReq.current = null;
     };
@@ -289,6 +297,11 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     if (s) applyCulling(s.spark, off);
   }, []);
 
+  const subscribeFrame = useCallback((cb: (dt: number) => void): (() => void) => {
+    frameCbs.current.add(cb);
+    return () => frameCbs.current.delete(cb);
+  }, []);
+
   const getSceneHandle = useCallback((): SplatSceneHandle | null => {
     const s = sceneRef.current;
     const THREE = threeRef.current;
@@ -299,6 +312,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       camera: s.camera,
       controls: s.controls,
       mesh: s.mesh,
+      spark: s.spark,
       dom: s.renderer.domElement,
     };
   }, []);
@@ -342,6 +356,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     applyTransform,
     setRenderMode,
     subscribeStats,
+    subscribeFrame,
     setCullingOff,
     getSceneHandle,
   };

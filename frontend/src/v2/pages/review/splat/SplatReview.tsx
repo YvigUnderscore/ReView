@@ -1,7 +1,14 @@
 import { Gauge, Settings2 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
-import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
+import { toast } from 'sonner';
+import { api } from '../../../../lib/apiClient';
+import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
+import CameraBar from './camera/CameraBar';
+import { orbitPreset } from './camera/cameraAnim';
+import KeyframeTimeline from './camera/KeyframeTimeline';
+import { useCameraKeyframes } from './camera/useCameraKeyframes';
+import { useCameraRig } from './camera/useCameraRig';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SplatEditorToolbar from './editor/SplatEditorToolbar';
 import { applyMaskIndices, applySavedVolumes, fetchMaskIndices } from './editor/persistence/applyEdits';
@@ -25,6 +32,7 @@ export default function SplatReview({
   data,
   splat,
   showEdit,
+  canPresent,
   onSaved,
   overlay,
 }: {
@@ -32,12 +40,14 @@ export default function SplatReview({
   splat: SplatViewer;
   /** Éditeur monté (média non publié + gestionnaire + viewer prêt). */
   showEdit: boolean;
+  /** Gestionnaire : peut persister la présentation (autorisé même publié — mise en scène). */
+  canPresent: boolean;
   onSaved: (patch: SplatEditsPatch) => void;
   overlay: ReactNode;
 }) {
   const saved = data.splatEdits;
   const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl, onSaved, showEdit);
-  const { applyTransform, ready, getSceneHandle, setCullingOff } = splat;
+  const { applyTransform, ready, getSceneHandle, setCullingOff, captureCamera } = splat;
 
   // Panneaux du HUD (état local de session — réglages spectateur non persistés).
   const [showStats, setShowStats] = useState(false);
@@ -46,6 +56,57 @@ export default function SplatReview({
   const onCullingOff = (off: boolean) => {
     setCullingOffState(off);
     setCullingOff(off);
+  };
+
+  // Caméra (V5) : animation keyframe + réglages fov/DoF, présentation rejouée pour tous.
+  const kf = useCameraKeyframes(splat);
+  const rig = useCameraRig(splat, data.splatPresentation, kf);
+  const [presBusy, setPresBusy] = useState(false);
+
+  /** Enregistre la présentation : vue courante + DoF + animation (gestionnaire). */
+  const savePresentation = async () => {
+    setPresBusy(true);
+    try {
+      const view = captureCamera();
+      const presentation: SplatPresentation = {};
+      if (view) presentation.camera = { position: view.position, target: view.target, fov: view.fov };
+      if (rig.aperture > 0)
+        presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
+      if (kf.keyframes.length >= 2) presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop };
+      const { splatPresentation } = await api.patch<{ splatPresentation: SplatPresentation | null }>(
+        `/api/media/${data.media.id}/splat-presentation`,
+        { presentation },
+      );
+      onSaved({ splatPresentation });
+      toast.success('Présentation enregistrée — rejouée pour tous à l’ouverture');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la présentation");
+    } finally {
+      setPresBusy(false);
+    }
+  };
+
+  /** Efface la présentation persistée (retour au cadrage automatique). */
+  const clearPresentation = async () => {
+    setPresBusy(true);
+    try {
+      await api.patch(`/api/media/${data.media.id}/splat-presentation`, { presentation: null });
+      onSaved({ splatPresentation: null });
+      kf.setAll([], true);
+      toast.success('Présentation effacée');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la présentation");
+    } finally {
+      setPresBusy(false);
+    }
+  };
+
+  /** Preset orbite : un tour complet autour de la cible courante, en boucle. */
+  const applyOrbitPreset = () => {
+    const view = captureCamera();
+    if (!view) return;
+    kf.setAll(orbitPreset(view), true);
+    kf.play();
   };
 
   // Lecture seule : applique la transformation enregistrée (l'éditeur la gère sinon).
@@ -162,6 +223,20 @@ export default function SplatReview({
                 </HudGroup>
                 {showStats && <StatsPanel splat={splat} />}
                 {showSettings && <ViewerSettingsPanel cullingOff={cullingOff} onCullingOff={onCullingOff} />}
+              </>
+            }
+            bottomLeft={
+              <>
+                <CameraBar rig={rig} kf={kf} />
+                {canPresent && (
+                  <KeyframeTimeline
+                    kf={kf}
+                    onOrbitPreset={applyOrbitPreset}
+                    onSave={() => void savePresentation()}
+                    onClear={() => void clearPresentation()}
+                    busy={presBusy}
+                  />
+                )}
               </>
             }
           />

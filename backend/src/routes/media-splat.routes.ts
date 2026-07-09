@@ -76,4 +76,59 @@ router.delete('/:id/splat-mask', validate({ params: idParam }), async (req, res)
   res.json(await SplatEditService.clearSplatMask(req.user!, Number(req.params.id)));
 });
 
+const camPose = z.object({
+  position: z.object({ x: finite, y: finite, z: finite }),
+  target: z.object({ x: finite, y: finite, z: finite }),
+  fov: finite.min(5).max(150).optional(),
+});
+
+/**
+ * PATCH /api/media/:id/splat-presentation — présentation persistée (10.G-V5) : caméra de base,
+ * DoF, reveal, LOD par défaut, animation caméra keyframe. Gestionnaire ; **autorisée même sur
+ * un média publié** (mise en scène de la review — le média n'est pas altéré).
+ */
+router.patch(
+  '/:id/splat-presentation',
+  validate({
+    params: idParam,
+    body: z.object({
+      presentation: z
+        .object({
+          camera: camPose.optional(),
+          dof: z
+            .object({ focalDistance: finite.positive().max(100000), apertureAngle: finite.min(0).max(1) })
+            .optional(),
+          reveal: z
+            .object({
+              type: z.enum(['fade', 'sweep', 'dissolve']),
+              durationMs: z.number().int().min(100).max(30000),
+            })
+            .optional(),
+          lodDefault: z.enum(['auto', 'on', 'off', 'streaming']).optional(),
+          cameraAnim: z
+            .object({
+              keyframes: z
+                .array(
+                  z.object({
+                    t: finite.min(0).max(3600000), // ms depuis le début de l'animation
+                    pose: camPose,
+                    easing: z.enum(['linear', 'ease-in', 'ease-out', 'ease-in-out']),
+                  }),
+                )
+                .min(2)
+                .max(64),
+              loop: z.boolean(),
+            })
+            .optional(),
+        })
+        .nullable(),
+    }),
+  }),
+  async (req, res) => {
+    res.json(
+      await SplatEditService.setSplatPresentation(req.user!, Number(req.params.id), req.body.presentation),
+    );
+  },
+);
+
 export default router;

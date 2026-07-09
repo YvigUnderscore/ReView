@@ -399,6 +399,40 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const noMask = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(noMask.body.splatMaskUrl).toBeNull();
 
+    // Présentation persistée (10.G-V5) : caméra + DoF + animation keyframe → détail l'expose.
+    const presentation = {
+      camera: { position: { x: 0, y: 1, z: 5 }, target: { x: 0, y: 0, z: 0 }, fov: 50 },
+      dof: { focalDistance: 4.2, apertureAngle: 0.02 },
+      cameraAnim: {
+        keyframes: [
+          { t: 0, pose: { position: { x: 0, y: 1, z: 5 }, target: { x: 0, y: 0, z: 0 } }, easing: 'linear' },
+          {
+            t: 4000,
+            pose: { position: { x: 5, y: 1, z: 0 }, target: { x: 0, y: 0, z: 0 } },
+            easing: 'ease-in-out',
+          },
+        ],
+        loop: true,
+      },
+    };
+    const putPres = await request(app)
+      .patch(`/api/media/${mediaId}/splat-presentation`)
+      .set(auth)
+      .send({ presentation });
+    expect(putPres.status).toBe(200);
+    const withPres = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(withPres.body.splatPresentation).toEqual(presentation);
+    // Présentation invalide (1 seule keyframe) → 400.
+    const badPres = await request(app)
+      .patch(`/api/media/${mediaId}/splat-presentation`)
+      .set(auth)
+      .send({
+        presentation: {
+          cameraAnim: { keyframes: [presentation.cameraAnim.keyframes[0]], loop: false },
+        },
+      });
+    expect(badPres.status).toBe(400);
+
     // Publication → l'édition est verrouillée (400 ALREADY_PUBLISHED).
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
     const locked = await request(app)
@@ -406,6 +440,15 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .set(auth)
       .send({ edits: null });
     expect(locked.status).toBe(400);
+
+    // … mais la présentation reste modifiable après publication (mise en scène, V5).
+    const presAfterPublish = await request(app)
+      .patch(`/api/media/${mediaId}/splat-presentation`)
+      .set(auth)
+      .send({ presentation: null });
+    expect(presAfterPublish.status).toBe(200);
+    const cleared = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(cleared.body.splatPresentation).toBeNull();
   });
 });
 

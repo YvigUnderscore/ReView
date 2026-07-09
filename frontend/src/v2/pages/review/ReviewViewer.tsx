@@ -179,6 +179,7 @@ export default function ReviewViewer({
           data={data}
           splat={splat}
           showEdit={showSplatEdit}
+          canPresent={splatReady && canManage}
           onSaved={onSplatEditsSaved}
           overlay={renderOverlay()}
         />

@@ -43,7 +43,32 @@ export interface SplatEdits {
 }
 
 /** Mise à jour du cache média après enregistrement des éditions splat (composition 10.E2). */
-export type SplatEditsPatch = Partial<Pick<MediaResp, 'splatEdits' | 'splatMaskUrl' | 'splatMaskCount'>>;
+export type SplatEditsPatch = Partial<
+  Pick<MediaResp, 'splatEdits' | 'splatMaskUrl' | 'splatMaskCount' | 'splatPresentation'>
+>;
+
+/** Easing d'un segment d'animation caméra (10.G-V5). */
+export type CameraEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+
+/** Pose keyframe de l'animation caméra (temps en ms depuis le début). */
+export interface SplatCameraKeyframe {
+  t: number;
+  pose: SplatCamera;
+  easing: CameraEasing;
+}
+
+/**
+ * Présentation persistée d'un splat (10.G-V5) : `metadata.splatPresentation` — écrite par le
+ * gestionnaire, **rejouée pour tous** à l'ouverture ; les spectateurs modifient en live sans
+ * persister. Miroir du Zod backend (media-splat.routes).
+ */
+export interface SplatPresentation {
+  camera?: SplatCamera;
+  dof?: { focalDistance: number; apertureAngle: number };
+  reveal?: { type: 'fade' | 'sweep' | 'dissolve'; durationMs: number };
+  lodDefault?: 'auto' | 'on' | 'off' | 'streaming';
+  cameraAnim?: { keyframes: SplatCameraKeyframe[]; loop: boolean };
+}
 
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
@@ -60,6 +85,8 @@ export interface MediaResp {
   splatMaskUrl: string | null;
   /** Nombre de splats masqués par le masque de suppression. */
   splatMaskCount: number;
+  /** Présentation persistée (caméra/DoF/reveal/LOD/animation) — 10.G-V5, rejouée pour tous. */
+  splatPresentation: SplatPresentation | null;
 }
 
 export interface Hotspot3D {

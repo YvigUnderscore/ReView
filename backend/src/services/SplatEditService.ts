@@ -48,6 +48,28 @@ async function assertEditableSplat(user: SessionUser, id: number) {
   return media;
 }
 
+/**
+ * Enregistre (ou efface si null) la présentation persistée du splat (10.G-V5) : caméra de
+ * base, profondeur de champ, reveal, LOD par défaut, animation caméra keyframe. Écrite par un
+ * gestionnaire et **rejouée pour tous** à l'ouverture ; contrairement aux éditions, elle reste
+ * modifiable après publication (mise en scène de la review, le média n'est pas altéré).
+ */
+export async function setSplatPresentation(user: SessionUser, id: number, presentation: object | null) {
+  await assertMediaManage(id, user);
+  const media = await prisma.mediaObject.findUnique({
+    where: { id },
+    select: { metadata: true, kind: true },
+  });
+  if (!media) throw notFound('Média introuvable');
+  if (media.kind !== MediaKind.SPLAT) throw badRequest('Présentation réservée aux splats', 'NOT_SPLAT');
+  const metadata = {
+    ...((media.metadata ?? {}) as object),
+    splatPresentation: presentation as Prisma.InputJsonValue | null,
+  } as Prisma.InputJsonObject;
+  await prisma.mediaObject.update({ where: { id }, data: { metadata } });
+  return { splatPresentation: presentation };
+}
+
 /** Enregistre (ou efface si null/vide) les éditions JSON — transformation TRS + volumes. */
 export async function setSplatEdits(user: SessionUser, id: number, edits: SplatEditsInput | null) {
   const media = await assertEditableSplat(user, id);

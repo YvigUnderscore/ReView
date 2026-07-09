@@ -44,11 +44,22 @@ export function HudIconButton({
   );
 }
 
-export default function ViewerHud({ topLeft, topRight }: { topLeft?: ReactNode; topRight?: ReactNode }) {
+export default function ViewerHud({
+  topLeft,
+  topRight,
+  bottomLeft,
+}: {
+  topLeft?: ReactNode;
+  topRight?: ReactNode;
+  bottomLeft?: ReactNode;
+}) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-between gap-2 p-2">
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">{topLeft}</div>
-      <div className="flex shrink-0 flex-col items-end gap-1.5">{topRight}</div>
+    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">{topLeft}</div>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">{topRight}</div>
+      </div>
+      {bottomLeft && <div className="flex flex-col items-start gap-1.5">{bottomLeft}</div>}
     </div>
   );
 }
