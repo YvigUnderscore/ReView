@@ -124,7 +124,18 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         setReady(true);
       };
 
-      const mesh = new SplatMesh({ url, fileName, raycastable: true, onLoad: onReady });
+      // `lod: true` : les données LOD sont construites au chargement (worker WASM) — sans
+      // elles, `SparkRenderer.enableLod` est inerte (driveLod filtre sur packedSplats.lodSplats).
+      // `nonLod: true` : conserve AUSSI les splats de base (sans lui, le rendu direct — LOD
+      // désengagé, notre défaut — est vide). Le LOD ne s'applique que si V7 l'engage.
+      const mesh = new SplatMesh({
+        url,
+        fileName,
+        raycastable: true,
+        lod: true,
+        nonLod: true,
+        onLoad: onReady,
+      });
       scene.add(mesh);
       statsRef.current = createStatsSampler(() => ({
         activeSplats: spark.activeSplats,
