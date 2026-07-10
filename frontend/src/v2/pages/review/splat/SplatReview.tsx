@@ -6,6 +6,9 @@ import CameraBar from './camera/CameraBar';
 import KeyframeTimeline from './camera/KeyframeTimeline';
 import CompareBar from './compare/CompareBar';
 import { useSplatCompare } from './compare/useSplatCompare';
+import PaintBar from './paint/PaintBar';
+import PaintOverlay from './paint/PaintOverlay';
+import type { SplatPaintState } from './paint/useSplatPaint';
 import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SplatEditorToolbar from './editor/SplatEditorToolbar';
@@ -31,6 +34,7 @@ export default function SplatReview({
   splat,
   showEdit,
   canPresent,
+  paint,
   onSaved,
   overlay,
 }: {
@@ -40,6 +44,8 @@ export default function SplatReview({
   showEdit: boolean;
   /** Gestionnaire : peut persister la présentation (autorisé même publié — mise en scène). */
   canPresent: boolean;
+  /** Painter 3D (V9) — instancié par la page (les traits partent avec le commentaire). */
+  paint: SplatPaintState;
   onSaved: (patch: SplatEditsPatch) => void;
   overlay: ReactNode;
 }) {
@@ -110,7 +116,13 @@ export default function SplatReview({
       status={data.media.status}
       overlay={overlay}
       editorOverlay={
-        showEdit && selectTool && ready ? (
+        paint.active && ready ? (
+          <PaintOverlay
+            color={paint.color}
+            getCanvas={() => getSceneHandle()?.dom ?? null}
+            onStroke={paint.addStroke}
+          />
+        ) : showEdit && selectTool && ready ? (
           <SelectionOverlay
             tool={selectTool}
             brushRadius={editor.brushRadius}
@@ -192,6 +204,7 @@ export default function SplatReview({
             bottomLeft={
               <>
                 {!showEdit && compare.enabled && <CompareBar compare={compare} />}
+                <PaintBar paint={paint} />
                 <CameraBar rig={pres.rig} kf={pres.kf} />
                 {canPresent && (
                   <KeyframeTimeline

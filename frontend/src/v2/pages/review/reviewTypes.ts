@@ -47,6 +47,20 @@ export type SplatEditsPatch = Partial<
   Pick<MediaResp, 'splatEdits' | 'splatMaskUrl' | 'splatMaskCount' | 'splatPresentation'>
 >;
 
+/**
+ * Trait du painter 3D (10.G-V9) : polyligne peinte sur la surface du splat, stockée en
+ * **espace-objet** du SplatMesh dans le tableau `Comment.annotation` (comme les hotspots) —
+ * elle suit la transformation du média et reste visible pour tous.
+ */
+export interface SplatPaintStroke {
+  type: 'splat-paint';
+  /** Coordonnées xyz aplaties (espace objet). */
+  points: number[];
+  color: string;
+  /** Épaisseur relative (1 à 5). */
+  width: number;
+}
+
 /** Easing d'un segment d'animation caméra (10.G-V5). */
 export type CameraEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 

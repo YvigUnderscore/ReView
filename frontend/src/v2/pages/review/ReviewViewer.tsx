@@ -6,6 +6,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3D } from './useModel3D';
+import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Model3DPane from './Model3DPane';
@@ -24,6 +25,7 @@ export default function ReviewViewer({
   ann,
   model3d,
   splat,
+  paint,
   videoRef,
   programmaticSeekRef,
   comments,
@@ -48,6 +50,7 @@ export default function ReviewViewer({
   ann: ReturnType<typeof useAnnotations>;
   model3d: ReturnType<typeof useModel3D>;
   splat: SplatViewer;
+  paint: SplatPaintState;
   videoRef: ComponentProps<typeof VideoPane>['videoRef'];
   programmaticSeekRef: ComponentProps<typeof VideoPane>['programmaticSeekRef'];
   comments: ReviewComment[] | null;
@@ -180,6 +183,7 @@ export default function ReviewViewer({
           splat={splat}
           showEdit={showSplatEdit}
           canPresent={splatReady && canManage}
+          paint={paint}
           onSaved={onSplatEditsSaved}
           overlay={renderOverlay()}
         />
