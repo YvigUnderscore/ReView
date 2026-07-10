@@ -25,6 +25,14 @@ export default function ReviewHeader({
         {!published && (
           <span className="shrink-0 rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Brouillon</span>
         )}
+        {published && data.editedAfterPublishAt && (
+          <span
+            title={`Édité après publication le ${new Date(data.editedAfterPublishAt).toLocaleString('fr-FR')}`}
+            className="shrink-0 rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground"
+          >
+            Modifié après publication
+          </span>
+        )}
         <VersionNavigator versionId={data.media.versionId} mediaId={data.media.id} />
       </div>
       <div className="flex shrink-0 items-center gap-2 text-sm">

@@ -433,15 +433,20 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       });
     expect(badPres.status).toBe(400);
 
-    // Publication → l'édition est verrouillée (400 ALREADY_PUBLISHED).
+    // Publication → l'édition RESTE possible (V10) et pose le marqueur post-publication.
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
-    const locked = await request(app)
+    const postPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-edits`)
       .set(auth)
-      .send({ edits: null });
-    expect(locked.status).toBe(400);
+      .send({ edits });
+    expect(postPublish.status).toBe(200);
+    expect(postPublish.body.editedAfterPublishAt).toBeTruthy();
+    const marked = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(marked.body.editedAfterPublishAt).toBeTruthy();
+    expect(marked.body.editedAfterPublishById).toBeGreaterThan(0);
 
-    // … mais la présentation reste modifiable après publication (mise en scène, V5).
+    // La présentation reste elle aussi modifiable après publication (mise en scène, V5) —
+    // sans poser le marqueur (le média n'est pas altéré).
     const presAfterPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-presentation`)
       .set(auth)

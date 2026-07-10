@@ -44,7 +44,10 @@ export interface SplatEdits {
 
 /** Mise à jour du cache média après enregistrement des éditions splat (composition 10.E2). */
 export type SplatEditsPatch = Partial<
-  Pick<MediaResp, 'splatEdits' | 'splatMaskUrl' | 'splatMaskCount' | 'splatPresentation'>
+  Pick<
+    MediaResp,
+    'splatEdits' | 'splatMaskUrl' | 'splatMaskCount' | 'splatPresentation' | 'editedAfterPublishAt'
+  >
 >;
 
 /**
@@ -59,6 +62,29 @@ export interface SplatPaintStroke {
   color: string;
   /** Épaisseur relative (1 à 5). */
   width: number;
+}
+
+/**
+ * Sépare les parties d'une annotation de commentaire : hotspot 3D et formes 2D — les traits
+ * du painter (`splat-paint`, V9) sont exclus des formes (rendu 3D dédié).
+ */
+export function splitAnnotationParts(annotation: unknown): {
+  hotspot: Hotspot3D | null;
+  shapes: unknown[];
+} {
+  if (!Array.isArray(annotation)) return { hotspot: null, shapes: [] };
+  const parts = annotation as Array<{
+    type?: string;
+    position?: string;
+    normal?: string;
+    space?: 'object';
+  }>;
+  const hs = parts.find((x) => x?.type === 'hotspot');
+  const shapes = parts.filter((x) => x && x.type !== 'hotspot' && x.type !== 'splat-paint');
+  return {
+    hotspot: hs?.position && hs.normal ? { position: hs.position, normal: hs.normal, space: hs.space } : null,
+    shapes,
+  };
 }
 
 /** Easing d'un segment d'animation caméra (10.G-V5). */
@@ -101,11 +127,17 @@ export interface MediaResp {
   splatMaskCount: number;
   /** Présentation persistée (caméra/DoF/reveal/LOD/animation) — 10.G-V5, rejouée pour tous. */
   splatPresentation: SplatPresentation | null;
+  /** Marqueur « modifié après publication » (10.G-V10) — badge côté review. */
+  editedAfterPublishAt: string | null;
+  editedAfterPublishById: number | null;
 }
 
 export interface Hotspot3D {
   position: string;
   normal: string;
+  /** 'object' : coordonnées en espace-objet du SplatMesh (suit la transformation, 10.G-V10).
+   *  Absent : hotspot historique en espace monde (model-viewer gère son propre espace). */
+  space?: 'object';
 }
 
 // Type minimal des méthodes model-viewer utilisées (caméra + raycast + animations).

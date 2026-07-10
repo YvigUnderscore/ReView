@@ -8,8 +8,9 @@ import { assertMediaManage } from './MediaService';
  * Éditions non-destructives d'un splat (10.G) : transformation TRS + volumes de crop SDF
  * (JSON `metadata.splatEdits`) et masque de suppression par splat (bitset binaire dans MinIO,
  * référencé par `metadata.splatMaskKey`). Le fichier splat original n'est jamais modifié ;
- * les éditions sont ré-appliquées au chargement du viewer. Écriture réservée aux gestionnaires,
- * sur un splat **non publié** (l'édition est verrouillée à la publication).
+ * les éditions sont ré-appliquées au chargement du viewer. Écriture réservée aux gestionnaires ;
+ * **autorisée même après publication** (10.G-V10) — toute écriture sur un média publié pose le
+ * marqueur `editedAfterPublishAt/ById` (badge « modifié après publication » côté review).
  */
 
 type SessionUser = { id: number; role: import('@prisma/client').Role };
@@ -35,7 +36,7 @@ export interface SplatEditsInput {
 
 const MAX_MASK_BYTES = 4_000_000;
 
-/** Gestionnaire + splat + non publié (l'édition est verrouillée après publication). */
+/** Gestionnaire + splat — l'édition reste autorisée après publication (marqueur posé, V10). */
 async function assertEditableSplat(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({
@@ -44,8 +45,14 @@ async function assertEditableSplat(user: SessionUser, id: number) {
   });
   if (!media) throw notFound('Média introuvable');
   if (media.kind !== MediaKind.SPLAT) throw badRequest('Édition réservée aux splats', 'NOT_SPLAT');
-  if (media.published) throw badRequest('Média publié : édition verrouillée', 'ALREADY_PUBLISHED');
   return media;
+}
+
+/** Marqueur « modifié après publication » (fusionné au metadata si le média est publié). */
+function editedMarker(user: SessionUser, media: { published: boolean }) {
+  return media.published
+    ? { editedAfterPublishAt: new Date().toISOString(), editedAfterPublishById: user.id }
+    : {};
 }
 
 /**
@@ -74,12 +81,14 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
 export async function setSplatEdits(user: SessionUser, id: number, edits: SplatEditsInput | null) {
   const media = await assertEditableSplat(user, id);
   const value = edits && (edits.transform || edits.volumes.length > 0) ? edits : null;
+  const marker = editedMarker(user, media);
   const metadata = {
     ...((media.metadata ?? {}) as object),
     splatEdits: value,
+    ...marker,
   } as Prisma.InputJsonObject;
   await prisma.mediaObject.update({ where: { id }, data: { metadata } });
-  return { splatEdits: value };
+  return { splatEdits: value, ...marker };
 }
 
 /** Enregistre le masque de suppression (bitset base64 → MinIO) et référence sa clé. */
@@ -90,19 +99,24 @@ export async function setSplatMask(user: SessionUser, id: number, dataBase64: st
     throw badRequest('Masque vide ou trop volumineux', 'INVALID_MASK');
   const key = StorageService.splatMaskKey(id);
   await storage.putObject(key, buf, 'application/octet-stream');
+  const marker = editedMarker(user, media);
   const metadata = {
     ...((media.metadata ?? {}) as object),
     splatMaskKey: key,
     splatMaskCount: count,
+    ...marker,
   } as Prisma.InputJsonObject;
   await prisma.mediaObject.update({ where: { id }, data: { metadata } });
-  return { splatMaskUrl: await storage.getPresignedGetUrl(key), splatMaskCount: count };
+  return { splatMaskUrl: await storage.getPresignedGetUrl(key), splatMaskCount: count, ...marker };
 }
 
 /** Efface le masque de suppression (métadonnées d'abord, objet MinIO en best-effort). */
 export async function clearSplatMask(user: SessionUser, id: number) {
   const media = await assertEditableSplat(user, id);
-  const meta = { ...((media.metadata ?? {}) as Record<string, unknown>) };
+  const meta: Record<string, unknown> = {
+    ...((media.metadata ?? {}) as Record<string, unknown>),
+    ...editedMarker(user, media),
+  };
   const key = typeof meta.splatMaskKey === 'string' ? meta.splatMaskKey : null;
   delete meta.splatMaskKey;
   delete meta.splatMaskCount;

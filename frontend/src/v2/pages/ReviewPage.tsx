@@ -11,7 +11,12 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
-import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './review/reviewTypes';
+import {
+  resolveGlbSrc,
+  splitAnnotationParts,
+  type MediaResp,
+  type SplatEditsPatch,
+} from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { useModel3D } from './review/useModel3D';
 import ReviewHeader from './review/ReviewHeader';
@@ -142,25 +147,14 @@ function ReviewContent({ id }: { id: number }) {
   // Sélection d'un commentaire : restaure ensemble seek + annotation 2D/3D + caméra (animée).
   const selectComment = (c: ReviewComment) => {
     setSelectedCommentId(c.id);
-    const a = c.annotation as Array<{ type?: string; position?: string; normal?: string }> | null;
-    if (Array.isArray(a)) {
-      const hs = a.find((x) => x?.type === 'hotspot');
-      // Formes 2D uniquement : les hotspots et traits painter 3D (V9) ont leur propre rendu.
-      const shapes = a.filter((x) => {
-        const t = x && (x as { type?: string }).type;
-        return x && t !== 'hotspot' && t !== 'splat-paint';
-      });
-      ann.setViewed3d(hs?.position && hs.normal ? { position: hs.position, normal: hs.normal } : null);
-      if (shapes.length > 0) {
-        ann.setAnnotating(false);
-        ann.setViewed(shapes as unknown as Shape[]);
-      } else ann.setViewed(null);
-    } else {
-      ann.setViewed(null);
-      ann.setViewed3d(null);
-    }
+    const { hotspot, shapes } = splitAnnotationParts(c.annotation);
+    ann.setViewed3d(hotspot);
+    if (shapes.length > 0) {
+      ann.setAnnotating(false);
+      ann.setViewed(shapes as unknown as Shape[]);
+    } else ann.setViewed(null);
     // Traits du painter 3D (V9) : rendus sur le splat pour ce commentaire.
-    if (data?.media.kind === 'SPLAT') paint.showFromAnnotation(a);
+    if (data?.media.kind === 'SPLAT') paint.showFromAnnotation(c.annotation);
     // Ratio capturé (3D: cameraState.aspect) pour caler l'overlay
     const cam = c.cameraState as { aspect?: number } | null;
     ann.setViewedAspect(cam?.aspect ?? null);
@@ -206,7 +200,12 @@ function ReviewContent({ id }: { id: number }) {
     if (kind === 'MODEL_3D' || kind === 'SPLAT') {
       const parts: unknown[] = [];
       if (ann.hotspot3d)
-        parts.push({ type: 'hotspot', position: ann.hotspot3d.position, normal: ann.hotspot3d.normal });
+        parts.push({
+          type: 'hotspot',
+          position: ann.hotspot3d.position,
+          normal: ann.hotspot3d.normal,
+          space: ann.hotspot3d.space, // espace-objet (splat, V10) — suit la transformation
+        });
       if (kind === 'SPLAT') parts.push(...paint.serializePending()); // traits du painter (V9)
       parts.push(...ann.annot);
       annotation = parts.length ? parts : undefined;

@@ -71,8 +71,9 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SplatScene | null>(null);
   const threeRef = useRef<typeof import('three') | null>(null);
-  // Position monde du hotspot à afficher (null = masqué). Lue par la boucle de rendu.
-  const hotspotRef = useRef<THREE.Vector3 | null>(null);
+  // Hotspot à afficher (null = masqué), lu par la boucle de rendu. `objectSpace` : le point
+  // est en espace-objet du mesh (V10) et suit sa transformation ; sinon espace monde (ancien).
+  const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   // Résolveur d'une capture de miniature en attente (rempli après le prochain rendu).
   const captureReq = useRef<((d: string | null) => void) | null>(null);
   // Nuage de points du mode « points » (enfant du mesh, construit à la demande).
@@ -175,7 +176,9 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         const w = container.clientWidth;
         const h = container.clientHeight;
         if (hs && w > 0 && h > 0) {
-          proj.copy(hs).project(camera);
+          proj.copy(hs.point);
+          if (hs.objectSpace) proj.applyMatrix4(mesh.matrixWorld);
+          proj.project(camera);
           if (proj.z < 1) {
             const x = (proj.x * 0.5 + 0.5) * w;
             const y = (-proj.y * 0.5 + 0.5) * h;
@@ -268,7 +271,9 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     }
     const [x, y, z] = hs.position.split(/\s+/).map((v) => parseFloat(v));
     hotspotRef.current =
-      Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z) ? new THREE.Vector3(x, y, z) : null;
+      Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)
+        ? { point: new THREE.Vector3(x, y, z), objectSpace: hs.space === 'object' }
+        : null;
   }, []);
 
   const captureThumbnail = useCallback(

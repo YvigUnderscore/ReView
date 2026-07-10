@@ -267,6 +267,8 @@ export async function getDetail(user: SessionUser, id: number) {
     splatMaskKey?: string;
     splatMaskCount?: number;
     splatPresentation?: unknown;
+    editedAfterPublishAt?: string;
+    editedAfterPublishById?: number;
   };
   const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, project] = await Promise.all([
     storage.getPresignedGetUrl(media.storageKey),
@@ -290,6 +292,9 @@ export async function getDetail(user: SessionUser, id: number) {
     splatMaskCount: meta.splatMaskCount ?? 0,
     // Présentation persistée (10.G-V5) : caméra/DoF/reveal/LOD/animation, rejouée pour tous.
     splatPresentation: meta.splatPresentation ?? null,
+    // Marqueur « modifié après publication » (10.G-V10) → badge côté review.
+    editedAfterPublishAt: meta.editedAfterPublishAt ?? null,
+    editedAfterPublishById: meta.editedAfterPublishById ?? null,
   };
 }
 

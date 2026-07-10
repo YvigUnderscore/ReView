@@ -77,9 +77,10 @@ export default function ReviewViewer({
   const model3dReady =
     kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
-  const showEditTools = canEditTransform && !(data?.media.published ?? false);
-  // Transformation splat (orientation/échelle) réservée au mode avant-publication (10.G).
-  const showSplatEdit = splatReady && canManage && !(data?.media.published ?? false);
+  // Édition post-publication autorisée (10.G-V10) : toute écriture sur un média publié pose
+  // le marqueur « modifié après publication » côté backend (badge dans l'en-tête).
+  const showEditTools = canEditTransform;
+  const showSplatEdit = splatReady && canManage;
 
   // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
   // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).

@@ -203,7 +203,7 @@ export default function SplatReview({
             }
             bottomLeft={
               <>
-                {!showEdit && compare.enabled && <CompareBar compare={compare} />}
+                {compare.enabled && <CompareBar compare={compare} />}
                 <PaintBar paint={paint} />
                 <CameraBar rig={pres.rig} kf={pres.kf} />
                 {canPresent && (

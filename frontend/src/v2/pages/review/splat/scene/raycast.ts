@@ -5,7 +5,9 @@ import type { Hotspot3D } from '../../reviewTypes';
 /**
  * Hotspot de surface (10.G) : lance un rayon au centre du viewer (NDC 0,0) sur le splat
  * `raycastable` et renvoie le point le plus proche + une normale face caméra (les splats
- * n'ont pas de normale de surface). `null` si le rayon ne touche rien. Extrait de `useSplat`.
+ * n'ont pas de normale de surface). Le point est stocké en **espace-objet** du mesh
+ * (10.G-V10) : il suit la transformation du média (réorientation automatique). `null` si le
+ * rayon ne touche rien. Extrait de `useSplat`.
  */
 export function raycastCenter(
   THREE: typeof import('three'),
@@ -20,5 +22,7 @@ export function raycastCenter(
   hits.sort((a, b) => a.distance - b.distance);
   const p = hits[0]!.point;
   const n = camera.position.clone().sub(p).normalize();
-  return { position: `${p.x} ${p.y} ${p.z}`, normal: `${n.x} ${n.y} ${n.z}` };
+  mesh.updateMatrixWorld();
+  const local = p.clone().applyMatrix4(new THREE.Matrix4().copy(mesh.matrixWorld).invert());
+  return { position: `${local.x} ${local.y} ${local.z}`, normal: `${n.x} ${n.y} ${n.z}`, space: 'object' };
 }
