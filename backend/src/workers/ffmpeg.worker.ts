@@ -150,10 +150,17 @@ function makeThumbnail(input: string, output: string, isVideo: boolean): Promise
   });
 }
 
-/** Transcode une vidéo en proxy MP4 web (h264 + aac, faststart). */
-function transcodeProxy(input: string, output: string): Promise<void> {
+/** Transcode une vidéo en proxy MP4 web (h264 + aac, faststart), avec fenêtre de trim en option. */
+function transcodeProxy(
+  input: string,
+  output: string,
+  window?: { startSec: number; durationSec: number },
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    ffmpeg(input)
+    const cmd = ffmpeg(input);
+    // Trim non-destructif (10.G-V10) : seek + durée, ré-encodage → coupe précise à la frame.
+    if (window) cmd.setStartTime(window.startSec).setDuration(window.durationSec);
+    cmd
       .outputOptions([
         '-c:v libx264',
         '-preset veryfast',
@@ -213,6 +220,35 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
         where: { id: mediaId },
         data: { status: MediaStatus.READY, thumbnailKey: thumbKey, metadata: metadata as object },
       });
+    } else if (kind === 'trim') {
+      // Trim non-destructif (10.G-V10) : proxy trimé depuis l'original, borné par metadata.trim.
+      const trim = metadata.trim as { inFrame?: number; outFrame?: number } | undefined;
+      const fps = typeof metadata.fps === 'number' && metadata.fps > 0 ? metadata.fps : 24;
+      if (!trim || typeof trim.inFrame !== 'number' || typeof trim.outFrame !== 'number') {
+        logger.warn(`[ffmpeg.worker] trim media=${mediaId} sans metadata.trim — ignoré`);
+        return;
+      }
+      const startSec = trim.inFrame / fps;
+      const durationSec = Math.max((trim.outFrame - trim.inFrame) / fps, 1 / fps);
+      const trimPath = join(dir, 'proxy-trim.mp4');
+      await transcodeProxy(src, trimPath, { startSec, durationSec });
+      const trimProxyKey = `derived/${mediaId}/proxy-trim.mp4`;
+      await storage.uploadFile(trimProxyKey, trimPath, 'video/mp4');
+      // Relit le metadata au moment de l'écriture (le trim a pu être modifié/effacé pendant
+      // le job — dans ce cas la clé posée ne correspondrait plus : on ne l'écrit que si le
+      // trim en base est toujours celui traité).
+      const fresh = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
+      const freshMeta: Record<string, unknown> = { ...((fresh?.metadata ?? {}) as object) };
+      const freshTrim = freshMeta.trim as { inFrame?: number; outFrame?: number } | undefined;
+      if (freshTrim?.inFrame === trim.inFrame && freshTrim?.outFrame === trim.outFrame) {
+        freshMeta.trimProxyKey = trimProxyKey;
+        await prisma.mediaObject.update({
+          where: { id: mediaId },
+          data: { metadata: freshMeta as object },
+        });
+      } else {
+        await storage.deleteObject(trimProxyKey).catch(() => undefined);
+      }
     } else if (kind === 'thumbnail') {
       // Image : sonde dimensions + miniature
       Object.assign(metadata, await probe(src));
@@ -238,9 +274,11 @@ export const ffmpegWorker = new Worker<MediaJobData>(
     try {
       await handle(job.data.mediaObjectId, job.data.kind);
     } catch (err) {
-      await prisma.mediaObject
-        .update({ where: { id: job.data.mediaObjectId }, data: { status: MediaStatus.FAILED } })
-        .catch(() => undefined);
+      // Un trim raté ne condamne pas le média : il reste READY (proxy d'origine servi).
+      if (job.data.kind !== 'trim')
+        await prisma.mediaObject
+          .update({ where: { id: job.data.mediaObjectId }, data: { status: MediaStatus.FAILED } })
+          .catch(() => undefined);
       throw err;
     }
   },

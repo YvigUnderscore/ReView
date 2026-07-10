@@ -269,11 +269,15 @@ export async function getDetail(user: SessionUser, id: number) {
     splatPresentation?: unknown;
     editedAfterPublishAt?: string;
     editedAfterPublishById?: number;
+    trim?: { inFrame: number; outFrame: number };
+    trimProxyKey?: string;
   };
+  // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
+  const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
   const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, project] = await Promise.all([
     storage.getPresignedGetUrl(media.storageKey),
     media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
-    meta.proxyKey ? storage.getPresignedGetUrl(meta.proxyKey) : Promise.resolve(null),
+    proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
     meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
     meta.splatMaskKey ? storage.getPresignedGetUrl(meta.splatMaskKey) : Promise.resolve(null),
     prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
@@ -295,6 +299,9 @@ export async function getDetail(user: SessionUser, id: number) {
     // Marqueur « modifié après publication » (10.G-V10) → badge côté review.
     editedAfterPublishAt: meta.editedAfterPublishAt ?? null,
     editedAfterPublishById: meta.editedAfterPublishById ?? null,
+    // Trim vidéo non-destructif (10.G-V10) : bornes + proxy trimé prêt ou en cours.
+    trim: meta.trim ?? null,
+    trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),
   };
 }
 

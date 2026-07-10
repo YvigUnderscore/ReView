@@ -12,7 +12,7 @@ export const QUEUE_NAMES = {
 
 export interface MediaJobData {
   mediaObjectId: number;
-  kind: 'transcode' | 'thumbnail' | 'convert3d';
+  kind: 'transcode' | 'thumbnail' | 'convert3d' | 'trim';
 }
 
 export const mediaQueue = new Queue<MediaJobData, void, string>(QUEUE_NAMES.MEDIA, {

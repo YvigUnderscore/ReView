@@ -13,6 +13,7 @@ import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
 import SplatReview from './splat/SplatReview';
 import VideoPane from './VideoPane';
+import VideoTrimBar from './VideoTrimBar';
 
 /**
  * Zone viewer de la review : barre d'annotation + pane adapté au type de média
@@ -123,21 +124,32 @@ export default function ReviewViewer({
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
 
       {kind === 'VIDEO' && src && (
-        <VideoPane
-          src={src}
-          videoRef={videoRef}
-          programmaticSeekRef={programmaticSeekRef}
-          overlay={renderOverlay()}
-          comments={comments ?? []}
-          selectedId={selectedCommentId}
-          onSelectComment={onSelectComment}
-          onManualSeek={onManualSeek}
-          onMarker={onMarker}
-          fps={fps}
-          fpsDetected={data?.fps != null}
-          setFpsOverride={setFpsOverride}
-          startFrame={startFrame}
-        />
+        <>
+          <VideoPane
+            src={src}
+            videoRef={videoRef}
+            programmaticSeekRef={programmaticSeekRef}
+            overlay={renderOverlay()}
+            comments={comments ?? []}
+            selectedId={selectedCommentId}
+            onSelectComment={onSelectComment}
+            onManualSeek={onManualSeek}
+            onMarker={onMarker}
+            fps={fps}
+            fpsDetected={data?.fps != null}
+            setFpsOverride={setFpsOverride}
+            startFrame={startFrame}
+            trimRange={
+              // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
+              data?.trim && !data.trimProxyReady
+                ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
+                : null
+            }
+          />
+          {data && canManage && (
+            <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
+          )}
+        </>
       )}
 
       {kind === 'IMAGE' && data?.url && (

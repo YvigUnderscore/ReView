@@ -46,7 +46,13 @@ export interface SplatEdits {
 export type SplatEditsPatch = Partial<
   Pick<
     MediaResp,
-    'splatEdits' | 'splatMaskUrl' | 'splatMaskCount' | 'splatPresentation' | 'editedAfterPublishAt'
+    | 'splatEdits'
+    | 'splatMaskUrl'
+    | 'splatMaskCount'
+    | 'splatPresentation'
+    | 'editedAfterPublishAt'
+    | 'trim'
+    | 'trimProxyReady'
   >
 >;
 
@@ -130,6 +136,9 @@ export interface MediaResp {
   /** Marqueur « modifié après publication » (10.G-V10) — badge côté review. */
   editedAfterPublishAt: string | null;
   editedAfterPublishById: number | null;
+  /** Trim vidéo non-destructif (10.G-V10) : bornes en frames, proxy trimé prêt ou en cours. */
+  trim: { inFrame: number; outFrame: number } | null;
+  trimProxyReady: boolean;
 }
 
 export interface Hotspot3D {

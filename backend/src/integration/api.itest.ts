@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app';
+import { MediaStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 /**
  * Tests d'intégration API (nécessitent Postgres/Redis/MinIO).
@@ -454,6 +456,84 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(presAfterPublish.status).toBe(200);
     const cleared = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(cleared.body.splatPresentation).toBeNull();
+  });
+
+  it('trim vidéo (10.G-V10) : non-destructif, bornes validées, marqueur post-publication', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Trim ${suffix}` });
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
+      .send({ projectId: proj.body.project.id, name: 'S', code: `TR${suffix}` });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
+    const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
+
+    // Vidéo MP4 minimale (magic bytes 'ftyp') → PROCESSING (transcode), puis READY forcé :
+    // le worker FFmpeg est un process séparé, absent des tests d'intégration.
+    const mp4 = Buffer.concat([
+      Buffer.from([0, 0, 0, 0x18]),
+      Buffer.from('ftypisom', 'ascii'),
+      Buffer.alloc(64),
+    ]);
+    const up = await request(app).post('/api/media/upload-url').set(auth).send({
+      versionId: ver.body.version.id,
+      filename: 'v.mp4',
+      contentType: 'video/mp4',
+      kind: 'VIDEO',
+      size: mp4.length,
+    });
+    await fetch(up.body.uploadUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'video/mp4' },
+      body: mp4,
+    });
+    const mediaId = up.body.mediaObjectId;
+    await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
+    await prisma.mediaObject.update({
+      where: { id: mediaId },
+      data: { status: MediaStatus.READY, metadata: { fps: 24 } },
+    });
+
+    // Bornes invalides → 400.
+    const bad = await request(app)
+      .patch(`/api/media/${mediaId}/trim`)
+      .set(auth)
+      .send({ trim: { inFrame: 50, outFrame: 10 } });
+    expect(bad.status).toBe(400);
+
+    // Trim valide (brouillon) : bornes exposées, proxy pas encore produit, pas de marqueur.
+    const set = await request(app)
+      .patch(`/api/media/${mediaId}/trim`)
+      .set(auth)
+      .send({ trim: { inFrame: 10, outFrame: 50 } });
+    expect(set.status).toBe(200);
+    expect(set.body.trim).toEqual({ inFrame: 10, outFrame: 50 });
+    expect(set.body.trimProxyReady).toBe(false);
+    const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(detail.body.trim).toEqual({ inFrame: 10, outFrame: 50 });
+    expect(detail.body.editedAfterPublishAt).toBeNull();
+
+    // Publication → un nouveau trim pose le marqueur « modifié après publication ».
+    await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
+    const retrim = await request(app)
+      .patch(`/api/media/${mediaId}/trim`)
+      .set(auth)
+      .send({ trim: { inFrame: 0, outFrame: 30 } });
+    expect(retrim.status).toBe(200);
+    expect(retrim.body.editedAfterPublishAt).toBeTruthy();
+
+    // Effacement du trim → retour au proxy d'origine.
+    const clear = await request(app).patch(`/api/media/${mediaId}/trim`).set(auth).send({ trim: null });
+    expect(clear.status).toBe(200);
+    const cleared2 = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(cleared2.body.trim).toBeNull();
   });
 });
 

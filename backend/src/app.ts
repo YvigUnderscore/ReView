@@ -14,6 +14,7 @@ import studioRoutes from './routes/studio.routes';
 import projectsRoutes from './routes/projects.routes';
 import mediaRoutes from './routes/media.routes';
 import mediaSplatRoutes from './routes/media-splat.routes';
+import mediaVideoRoutes from './routes/media-video.routes';
 import sequencesRoutes from './routes/sequences.routes';
 import shotsRoutes from './routes/shots.routes';
 import assetsRoutes from './routes/assets.routes';
@@ -64,6 +65,7 @@ export const createApp = (): Express => {
   app.use('/api/projects', projectsRoutes);
   app.use('/api/media', mediaRoutes);
   app.use('/api/media', mediaSplatRoutes); // éditions splat (10.G)
+  app.use('/api/media', mediaVideoRoutes); // trim vidéo non-destructif (10.G-V10)
   app.use('/api/sequences', sequencesRoutes);
   app.use('/api/shots', shotsRoutes);
   app.use('/api/assets', assetsRoutes);

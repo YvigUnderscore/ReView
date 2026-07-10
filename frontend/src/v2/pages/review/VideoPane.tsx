@@ -23,6 +23,7 @@ export default function VideoPane({
   fpsDetected,
   setFpsOverride,
   startFrame,
+  trimRange,
 }: {
   src: string;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -38,6 +39,8 @@ export default function VideoPane({
   fpsDetected: boolean;
   setFpsOverride: (fps: number) => void;
   startFrame: number;
+  /** Fenêtre de trim (secondes) — zones hors coupe grisées sur la timeline (10.G-V10). */
+  trimRange?: { start: number; end: number } | null;
 }) {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -90,6 +93,7 @@ export default function VideoPane({
           selectedId={selectedId}
           onSeek={seekTo}
           onSelectComment={onSelectComment}
+          trimRange={trimRange}
         />
       )}
 

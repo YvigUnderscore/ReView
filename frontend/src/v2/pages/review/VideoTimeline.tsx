@@ -10,6 +10,7 @@ export default function VideoTimeline({
   selectedId,
   onSeek,
   onSelectComment,
+  trimRange,
 }: {
   currentTime: number;
   duration: number;
@@ -17,6 +18,8 @@ export default function VideoTimeline({
   selectedId: number | null;
   onSeek: (t: number) => void;
   onSelectComment: (c: ReviewComment) => void;
+  /** Fenêtre de trim (secondes) — zones hors coupe grisées (10.G-V10). */
+  trimRange?: { start: number; end: number } | null;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
@@ -48,6 +51,24 @@ export default function VideoTimeline({
           style={{ width: `${progress * 100}%` }}
         />
       </div>
+
+      {/* Zones hors trim (grisées) — la coupe non-destructive visible d'un coup d'œil */}
+      {trimRange && duration > 0 && (
+        <>
+          {trimRange.start > 0 && (
+            <div
+              className="pointer-events-none absolute inset-y-0 left-1 z-[5] rounded-l bg-background/70"
+              style={{ width: `${Math.min(trimRange.start / duration, 1) * 100}%` }}
+            />
+          )}
+          {trimRange.end < duration && (
+            <div
+              className="pointer-events-none absolute inset-y-0 right-1 z-[5] rounded-r bg-background/70"
+              style={{ width: `${Math.min(1 - trimRange.end / duration, 1) * 100}%` }}
+            />
+          )}
+        </>
+      )}
 
       {/* Curseur de lecture */}
       <div
