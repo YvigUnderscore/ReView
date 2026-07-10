@@ -2,6 +2,8 @@ node_modules/
 dev_data/
 storage/
 .env
+.github
+.claude
 /.jules
 *.bat
 /tmp/
