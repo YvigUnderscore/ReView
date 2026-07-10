@@ -33,9 +33,10 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
   }
   await expect(page.getByRole('heading', { name: 'Projets', exact: true }).first()).toBeVisible();
 
-  // ── 2) Créer un projet et l'ouvrir ───────────────────────────────────────────
-  await page.getByPlaceholder('Nouveau projet…').fill(PROJECT);
+  // ── 2) Créer un projet (bouton « + Créer » → dialog, 10.B8-fin) et l'ouvrir ──
   await page.getByRole('button', { name: 'Créer', exact: true }).click();
+  await page.getByPlaceholder('Mon projet').fill(PROJECT);
+  await page.getByRole('dialog').getByRole('button', { name: 'Créer', exact: true }).click();
   await page
     .locator('main')
     .getByRole('link', { name: new RegExp(PROJECT) })
