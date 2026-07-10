@@ -4,6 +4,8 @@ import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
 import CameraBar from './camera/CameraBar';
 import KeyframeTimeline from './camera/KeyframeTimeline';
+import CompareBar from './compare/CompareBar';
+import { useSplatCompare } from './compare/useSplatCompare';
 import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SplatEditorToolbar from './editor/SplatEditorToolbar';
@@ -56,6 +58,8 @@ export default function SplatReview({
 
   // Présentation (V5/V6) : caméra (rig + keyframes), reveal, debug color — rejouée pour tous.
   const pres = usePresentation(splat, data, onSaved);
+  // Comparaison (V8) : autres splats de la même version — switch A/B + « voir tous ».
+  const compare = useSplatCompare(splat, data.media);
 
   // Lecture seule : applique la transformation enregistrée (l'éditeur la gère sinon).
   const savedTransform = saved?.transform ?? null;
@@ -187,6 +191,7 @@ export default function SplatReview({
             }
             bottomLeft={
               <>
+                {!showEdit && compare.enabled && <CompareBar compare={compare} />}
                 <CameraBar rig={pres.rig} kf={pres.kf} />
                 {canPresent && (
                   <KeyframeTimeline
