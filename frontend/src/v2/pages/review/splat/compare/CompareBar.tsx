@@ -1,4 +1,4 @@
-import { Columns3 } from 'lucide-react';
+import { Columns3, Ruler } from 'lucide-react';
 import { HudGroup } from '../hud/ViewerHud';
 import type { SplatCompareState } from './useSplatCompare';
 
@@ -41,6 +41,18 @@ export default function CompareBar({ compare }: { compare: SplatCompareState }) 
         }`}
       >
         <Columns3 size={13} /> Voir tous
+      </button>
+      <button
+        onClick={compare.toggleNormalized}
+        title="Afficher chaque splat à son échelle brute (sans unification des tailles par bounding box)"
+        aria-pressed={!compare.normalized}
+        className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition-colors ${
+          !compare.normalized
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+        }`}
+      >
+        <Ruler size={13} /> Taille réelle
       </button>
     </HudGroup>
   );

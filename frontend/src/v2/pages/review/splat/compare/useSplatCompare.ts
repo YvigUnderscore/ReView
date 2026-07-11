@@ -6,14 +6,17 @@ import { api } from '../../../../../lib/apiClient';
 import { qk } from '../../../../lib/query';
 import type { Media, MediaSummary, VersionDetail } from '../../../../types/api';
 import type { MediaResp } from '../../reviewTypes';
-import type { SplatViewer } from '../useSplat';
+import { visibleLocalBox } from '../scene/visibleBounds';
+import type { SplatSceneHandle, SplatViewer } from '../useSplat';
+import { normalizationFor, type SiblingNormalization } from './normalize';
 
 /**
  * Comparaison des splats d'une même version (10.G-V8) : si la version porte plusieurs médias
  * SPLAT, charge les frères dans la même scène (même caméra) — **switch A/B** avec fondu,
  * **« voir tous »** côte à côte avec glissement. Réutilise la query de version du navigateur
  * (`qk.version`). Mono-média : inactif (no-op). Les frères sont chargés bruts (sans leurs
- * éditions non-destructives) — objectif comparatif.
+ * éditions non-destructives) — objectif comparatif. Leur taille est **unifiée par bounding
+ * box** sur le splat de référence (11.H), toggle « Taille réelle » pour revenir au brut.
  */
 
 /** Décalages côte à côte centrés (pur) : n positions espacées de `spacing`. */
@@ -29,6 +32,36 @@ export function splatSiblings(media: MediaSummary[]): MediaSummary[] {
 const FADE_MS = 350;
 const SLIDE_MS = 450;
 
+/** Normalisation d'un frère vs le splat de référence (bbox visibles, espace pivot) — 11.H. */
+function computeNormalization(handle: SplatSceneHandle, sibling: SplatMesh): SiblingNormalization | null {
+  const { THREE, mesh } = handle;
+  const refBox = visibleLocalBox(THREE, mesh);
+  const sibBox = visibleLocalBox(THREE, sibling);
+  if (!refBox || !sibBox) return null;
+  // Référence en espace pivot : bbox locale passée par la transform utilisateur du mesh.
+  mesh.updateMatrix();
+  refBox.applyMatrix4(mesh.matrix);
+  const refSphere = refBox.getBoundingSphere(new THREE.Sphere());
+  const sibSphere = sibBox.getBoundingSphere(new THREE.Sphere());
+  return normalizationFor(
+    refSphere.radius,
+    refSphere.center.toArray() as [number, number, number],
+    sibSphere.radius,
+    sibSphere.center.toArray() as [number, number, number],
+  );
+}
+
+/** Applique (ou retire) la normalisation au frère — échelle brute et origine sinon. */
+function applyNormalization(mesh: SplatMesh, norm: SiblingNormalization | null, on: boolean): void {
+  if (on && norm) {
+    mesh.scale.setScalar(norm.scale);
+    mesh.position.fromArray(norm.offset);
+  } else {
+    mesh.scale.setScalar(1);
+    mesh.position.set(0, 0, 0);
+  }
+}
+
 export function useSplatCompare(splat: SplatViewer, current: Media) {
   const { getSceneHandle, subscribeFrame } = splat;
   const versionQ = useQuery({
@@ -41,7 +74,11 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
   const [mode, setMode] = useState<'single' | 'all'>('single');
   const [activeId, setActiveId] = useState(current.id);
   const [busy, setBusy] = useState(false);
+  // Tailles unifiées par bbox (11.H) — actif par défaut, toggle « Taille réelle ».
+  const [normalized, setNormalized] = useState(true);
   const siblingsRef = useRef(new Map<number, SplatMesh>());
+  // Normalisation calculée une fois par frère (échelle + recentrage vs la référence).
+  const normRef = useRef(new Map<number, SiblingNormalization | null>());
   // Position X d'origine de chaque mesh (le principal porte sa transform enregistrée).
   const baseXRef = useRef(new Map<number, number>());
 
@@ -95,10 +132,15 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
       // Enfant du pivot (11.E) : hérite du flip d'orientation, comme le splat principal.
       handle.pivot.add(mesh);
       await (mesh as unknown as { initialized?: Promise<unknown> }).initialized;
+      // Taille unifiée sur la référence (11.H) — mémorisée pour le toggle « Taille réelle ».
+      const norm = computeNormalization(handle, mesh);
+      normRef.current.set(id, norm);
+      applyNormalization(mesh, norm, normalized);
+      baseXRef.current.set(id, mesh.position.x);
       siblingsRef.current.set(id, mesh);
       return mesh;
     },
-    [getSceneHandle],
+    [getSceneHandle, normalized],
   );
 
   /** Tous les meshes en scène : le principal + les frères chargés. */
@@ -136,14 +178,17 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
       const handle = getSceneHandle();
       if (!handle) return;
       for (const m of splats) if (m.id !== current.id) await ensureSibling(m.id);
+      // Espacement = plus grande largeur affichée (bbox visible × échelle appliquée, 11.H) —
+      // avec la normalisation active, toutes les largeurs sont proches de la référence.
       let spacing = 2;
-      try {
-        const box = handle.mesh.getBoundingBox(true);
-        if (!box.isEmpty())
-          spacing = (box.max.x - box.min.x) * 1.15 * Math.max(...handle.mesh.scale.toArray());
-      } catch {
-        // bbox indisponible : espacement par défaut
+      let maxWidth = 0;
+      for (const m of splats) {
+        const mesh = m.id === current.id ? handle.mesh : siblingsRef.current.get(m.id);
+        if (!mesh) continue;
+        const box = visibleLocalBox(handle.THREE, mesh);
+        if (box) maxWidth = Math.max(maxWidth, (box.max.x - box.min.x) * Math.abs(mesh.scale.x));
       }
+      if (maxWidth > 0) spacing = maxWidth * 1.15;
       const offsets = sideBySideOffsets(splats.length, spacing);
       splats.forEach((m, i) => {
         const mesh = m.id === current.id ? handle.mesh : siblingsRef.current.get(m.id);
@@ -159,6 +204,18 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     }
   }, [getSceneHandle, splats, current.id, ensureSibling, fade, slideX]);
 
+  /** Toggle « Taille réelle » (11.H) : bascule normalisation ↔ échelles brutes de tous les frères. */
+  const toggleNormalized = useCallback(() => {
+    const next = !normalized;
+    setNormalized(next);
+    for (const [id, mesh] of siblingsRef.current) {
+      applyNormalization(mesh, normRef.current.get(id) ?? null, next);
+      baseXRef.current.set(id, mesh.position.x);
+    }
+    // En mode « voir tous », ré-écarte avec le nouvel espacement (les largeurs ont changé).
+    if (mode === 'all') void viewAll();
+  }, [normalized, mode, viewAll]);
+
   // Démontage : retire et libère les frères chargés (le principal appartient au viewer).
   useEffect(() => {
     const map = siblingsRef.current;
@@ -171,7 +228,7 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     };
   }, []);
 
-  return { enabled, splats, mode, activeId, busy, switchTo, viewAll };
+  return { enabled, splats, mode, activeId, busy, normalized, toggleNormalized, switchTo, viewAll };
 }
 
 export type SplatCompareState = ReturnType<typeof useSplatCompare>;
