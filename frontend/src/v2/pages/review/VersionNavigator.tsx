@@ -56,6 +56,10 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
   };
 
   if (!version) return null;
+  // La version courante peut être absente de la liste (ex. soft-deleted mais média encore
+  // ouvert) : on la préfixe pour que le sélecteur reflète toujours où l'on se trouve.
+  const current = { id: version.id, name: version.name, _count: { media: version.media.length } };
+  const options = versions.some((v) => v.id === version.id) ? versions : [current, ...versions];
   const idx = version.media.findIndex((m) => m.id === mediaId);
   const prev = idx > 0 ? version.media[idx - 1] : null;
   const next = idx >= 0 && idx < version.media.length - 1 ? version.media[idx + 1] : null;
@@ -72,10 +76,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
           onChange={(e) => goToVersion(Number(e.target.value))}
           className="bg-transparent text-xs font-medium text-foreground focus:outline-none [&>option]:bg-background"
         >
-          {(versions.length > 0
-            ? versions
-            : [{ id: version.id, name: version.name, _count: { media: version.media.length } }]
-          ).map((v) => (
+          {options.map((v) => (
             <option key={v.id} value={v.id}>
               {v.name} · {v._count.media} média{v._count.media > 1 ? 's' : ''}
             </option>
