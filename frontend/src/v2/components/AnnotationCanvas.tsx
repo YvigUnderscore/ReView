@@ -146,6 +146,9 @@ export function AnnotationCanvas({
     }
     if (tool === 'text') {
       // Un clic pose le point d'ancrage ; la saisie se fait dans l'input flottant.
+      // preventDefault : sans lui, le focus par défaut du mousedown vole le focus de
+      // l'input fraîchement monté → blur immédiat → saisie fermée avant de taper.
+      e.preventDefault();
       commitTextDraft();
       setTextDraft({ x: p[0], y: p[1], value: '' });
       return;
@@ -188,87 +191,98 @@ export function AnnotationCanvas({
     }
   };
 
-  // Valide la saisie de texte en cours (Entrée, blur ou nouveau clic).
+  // Valide la saisie de texte en cours (Entrée, blur ou nouveau clic). Effet hors
+  // updater : un setState parent dans un updater est illégal (double-invocation StrictMode).
   const commitTextDraft = () => {
-    setTextDraft((d) => {
-      const value = d?.value.trim();
-      if (d && value) {
-        onChange?.([
-          ...shapes,
-          { id: uid(), type: 'text', color, width, alpha, x: d.x, y: d.y, text: value },
-        ]);
-      }
-      return null;
-    });
+    const value = textDraft?.value.trim();
+    if (textDraft && value) {
+      onChange?.([
+        ...shapes,
+        { id: uid(), type: 'text', color, width, alpha, x: textDraft.x, y: textDraft.y, text: value },
+      ]);
+    }
+    setTextDraft(null);
   };
 
   const all = draft ? [...shapes, draft] : shapes;
 
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`${vbMin} ${vbMin} ${vbSize} ${vbSize}`}
-      preserveAspectRatio="none"
-      className="absolute"
-      style={{
-        left: `${vbMin * 100}%`,
-        top: `${vbMin * 100}%`,
-        width: `${vbSize * 100}%`,
-        height: `${vbSize * 100}%`,
-        overflow: 'visible',
-        pointerEvents: editable ? 'auto' : 'none',
-        cursor: editable ? 'crosshair' : 'default',
-        touchAction: 'none',
-      }}
-      onPointerDown={down}
-      onPointerMove={move}
-      onPointerUp={up}
-    >
-      <defs>
-        <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="context-stroke" />
-        </marker>
-      </defs>
-      <g transform={groupTransform}>
-        {all.map((s) => (
-          <ShapeEl key={s.id} s={s} textScaleX={aspect > 0 ? 1 / aspect : 1} />
-        ))}
-      </g>
-      {/* Saisie de texte : input HTML en unités viewBox via foreignObject contre-échellé */}
+    <>
       {editable && textDraft && (
-        <foreignObject
-          x={textDraft.x}
-          y={textDraft.y - 0.03}
-          width={0.001}
-          height={0.001}
-          style={{ overflow: 'visible' }}
-        >
-          <input
-            autoFocus
-            value={textDraft.value}
-            placeholder="Texte…"
-            onChange={(e) => setTextDraft((d) => (d ? { ...d, value: e.target.value } : d))}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === 'Enter') commitTextDraft();
-              if (e.key === 'Escape') setTextDraft(null);
-            }}
-            onBlur={commitTextDraft}
-            onPointerDown={(e) => e.stopPropagation()}
-            style={{
-              // foreignObject : 1 px CSS = 1 unité viewBox → tout est exprimé en fractions.
-              width: '0.35px',
-              height: '0.06px',
-              fontSize: '0.028px',
-              padding: '0.008px',
-              transform: aspect > 0 ? `scaleX(${1 / aspect})` : undefined,
-              transformOrigin: 'left top',
-            }}
-            className="rounded border border-primary bg-background/90 text-foreground focus:outline-none"
-          />
-        </foreignObject>
+        <TextDraftInput
+          draft={textDraft}
+          onChangeValue={(v) => setTextDraft((d) => (d ? { ...d, value: v } : d))}
+          onCommit={commitTextDraft}
+          onCancel={() => setTextDraft(null)}
+        />
       )}
-    </svg>
+      <svg
+        ref={svgRef}
+        viewBox={`${vbMin} ${vbMin} ${vbSize} ${vbSize}`}
+        preserveAspectRatio="none"
+        className="absolute"
+        style={{
+          left: `${vbMin * 100}%`,
+          top: `${vbMin * 100}%`,
+          width: `${vbSize * 100}%`,
+          height: `${vbSize * 100}%`,
+          overflow: 'visible',
+          pointerEvents: editable ? 'auto' : 'none',
+          cursor: editable ? 'crosshair' : 'default',
+          touchAction: 'none',
+        }}
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+      >
+        <defs>
+          <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="context-stroke" />
+          </marker>
+        </defs>
+        <g transform={groupTransform}>
+          {all.map((s) => (
+            <ShapeEl key={s.id} s={s} textScaleX={aspect > 0 ? 1 / aspect : 1} />
+          ))}
+        </g>
+      </svg>
+    </>
+  );
+}
+
+/** Input flottant de l'outil texte : HTML positionné en % du média (hors du SVG,
+ * qui déformerait la saisie via son viewBox normalisé). Entrée valide, Échap annule. */
+function TextDraftInput({
+  draft,
+  onChangeValue,
+  onCommit,
+  onCancel,
+}: {
+  draft: { x: number; y: number; value: string };
+  onChangeValue: (v: string) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <input
+      // Focus différé : laisse passer l'action par défaut du clic d'origine avant de
+      // prendre le focus (sinon le focus par défaut du mousedown le vole → blur → fermé).
+      ref={(el) => {
+        if (el) setTimeout(() => el.focus(), 0);
+      }}
+      value={draft.value}
+      placeholder="Texte…"
+      onChange={(e) => onChangeValue(e.target.value)}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') onCommit();
+        if (e.key === 'Escape') onCancel();
+      }}
+      onBlur={onCommit}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="absolute z-10 w-48 rounded border border-primary bg-background/90 px-1.5 py-0.5 text-sm text-foreground focus:outline-none"
+      style={{ left: `${draft.x * 100}%`, top: `${(draft.y - 0.02) * 100}%` }}
+    />
   );
 }
 
