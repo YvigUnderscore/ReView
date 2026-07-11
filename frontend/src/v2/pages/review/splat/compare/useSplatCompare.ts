@@ -92,7 +92,8 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
       const { SplatMesh } = await import('@sparkjsdev/spark');
       const mesh = new SplatMesh({ url: detail.url, fileName: detail.media.originalName });
       mesh.opacity = 0;
-      handle.scene.add(mesh);
+      // Enfant du pivot (11.E) : hérite du flip d'orientation, comme le splat principal.
+      handle.pivot.add(mesh);
       await (mesh as unknown as { initialized?: Promise<unknown> }).initialized;
       siblingsRef.current.set(id, mesh);
       return mesh;

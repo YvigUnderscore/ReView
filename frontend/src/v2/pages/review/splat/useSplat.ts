@@ -6,6 +6,7 @@ import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
 import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
 import { createFlyControls } from './scene/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
+import { createHotspotMarker } from './scene/hotspotMarker';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
 import { buildPointCloud, ELLIPSES_OPACITY, setFalloff, type RenderMode } from './scene/renderModes';
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
@@ -22,7 +23,7 @@ import { applyCulling } from './scene/viewerConfig';
  * three + OrbitControls + Spark sont importés dynamiquement (uniquement à l'ouverture d'un
  * splat) pour rester hors du bundle initial — les imports type-only ci-dessus sont erased.
  */
-type SplatScene = SplatSceneCore & { mesh: SplatMesh };
+type SplatScene = SplatSceneCore & { mesh: SplatMesh; pivot: THREE.Group };
 
 /**
  * Poignée impérative vers la scène Three.js du splat, exposée aux hooks d'édition (gizmos,
@@ -35,6 +36,9 @@ export interface SplatSceneHandle {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   mesh: SplatMesh;
+  /** Parent du mesh portant le flip d'orientation à l'import (11.E) — les splats frères
+   *  (comparaison A/B) doivent y être ajoutés pour hériter de la même convention d'axes. */
+  pivot: THREE.Group;
   spark: SparkRenderer;
   dom: HTMLElement;
 }
@@ -55,6 +59,9 @@ export interface SplatViewer {
   captureThumbnail: () => Promise<string | null>;
   /** Applique une transformation TRS au splat — preview live des gizmos et au chargement. */
   applyTransform: (t: SplatTransform | null) => void;
+  /** Flip d'orientation à l'import (11.E) : true (défaut) = convention .ply/.spz Y-down
+   *  redressée (rotation π sur X du groupe parent) ; false = fichier laissé tel quel. */
+  setBaseFlip: (flip: boolean) => void;
   /** Bascule le mode de visualisation (splats / ellipses gaussiennes / points). */
   setRenderMode: (mode: RenderMode) => void;
   /** Abonne un panneau aux stats de rendu (FPS, splats, draw calls) — mesurées si abonné. */
@@ -110,12 +117,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       const fly = createFlyControls(THREE, camera, controls, renderer.domElement);
 
       // Marqueur de hotspot (DOM, projeté à l'écran) — n'intercepte pas les events (orbite libre).
-      const marker = document.createElement('div');
-      marker.className =
-        'pointer-events-none absolute left-0 top-0 z-[5] flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary text-[11px] font-semibold text-primary-foreground shadow';
-      marker.textContent = '1';
-      marker.style.display = 'none';
-      container.appendChild(marker);
+      const marker = createHotspotMarker(THREE, container);
 
       // Auto-cadrage : après chargement, cale caméra + cible sur la bbox du splat (une seule fois).
       let framed = false;
@@ -137,7 +139,13 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         nonLod: true,
         onLoad: onReady,
       });
-      scene.add(mesh);
+      // Orientation à l'import (11.E) : les .ply/.spz gaussians sont généralement Y-down —
+      // un groupe parent porte le flip (rotation π sur X), la transform utilisateur restant
+      // sur le mesh (gizmo, hotspots et painter suivent matrixWorld, le flip est transparent).
+      const pivot = new THREE.Group();
+      pivot.rotation.x = Math.PI;
+      scene.add(pivot);
+      pivot.add(mesh);
       statsRef.current = createStatsSampler(() => ({
         activeSplats: spark.activeSplats,
         totalSplats: mesh.packedSplats?.numSplats ?? 0,
@@ -158,7 +166,6 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       const ro = new ResizeObserver(resize);
       ro.observe(container);
 
-      const proj = new THREE.Vector3();
       let lastFrameMs = performance.now();
       renderer.setAnimationLoop(() => {
         const now = performance.now();
@@ -172,24 +179,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         renderer.render(scene, camera);
         statsRef.current?.frame(now);
         // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
-        const hs = hotspotRef.current;
-        const w = container.clientWidth;
-        const h = container.clientHeight;
-        if (hs && w > 0 && h > 0) {
-          proj.copy(hs.point);
-          if (hs.objectSpace) proj.applyMatrix4(mesh.matrixWorld);
-          proj.project(camera);
-          if (proj.z < 1) {
-            const x = (proj.x * 0.5 + 0.5) * w;
-            const y = (-proj.y * 0.5 + 0.5) * h;
-            marker.style.transform = `translate(${x - 10}px, ${y - 10}px)`;
-            marker.style.display = 'flex';
-          } else {
-            marker.style.display = 'none';
-          }
-        } else if (marker.style.display !== 'none') {
-          marker.style.display = 'none';
-        }
+        marker.update(hotspotRef.current, camera, mesh, container.clientWidth, container.clientHeight);
         // Capture de miniature demandée : le buffer de dessin est intact juste après le rendu.
         if (captureReq.current) {
           const cb = captureReq.current;
@@ -198,7 +188,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         }
       });
 
-      sceneRef.current = { renderer, scene, camera, controls, spark, mesh };
+      sceneRef.current = { renderer, scene, camera, controls, spark, mesh, pivot };
       cleanup = () => {
         ro.disconnect();
         renderer.setAnimationLoop(null);
@@ -302,6 +292,13 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     }
   }, []);
 
+  const setBaseFlip = useCallback((flip: boolean) => {
+    const s = sceneRef.current;
+    if (!s) return;
+    s.pivot.rotation.x = flip ? Math.PI : 0;
+    s.pivot.updateMatrixWorld(true);
+  }, []);
+
   const subscribeStats = useCallback((cb: (stats: SplatStats) => void): (() => void) => {
     // L'échantillonneur existe dès le montage de la scène (avant `ready`) ; les panneaux du
     // HUD ne sont montés qu'une fois le viewer prêt, l'abonnement est donc toujours effectif.
@@ -328,6 +325,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       camera: s.camera,
       controls: s.controls,
       mesh: s.mesh,
+      pivot: s.pivot,
       spark: s.spark,
       dom: s.renderer.domElement,
     };
@@ -370,6 +368,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     showHotspot,
     captureThumbnail,
     applyTransform,
+    setBaseFlip,
     setRenderMode,
     subscribeStats,
     subscribeFrame,

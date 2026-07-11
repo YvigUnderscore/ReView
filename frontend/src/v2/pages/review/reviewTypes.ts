@@ -40,6 +40,9 @@ export interface SdfVolumeData {
 export interface SplatEdits {
   transform: SplatTransform | null;
   volumes: SdfVolumeData[];
+  /** Flip d'orientation à l'import (11.E) : true/absent = convention Y-down redressée ;
+   *  false = fichier laissé tel quel (bouton « Retourner » de l'éditeur). */
+  baseFlip?: boolean;
 }
 
 /** Mise à jour du cache média après enregistrement des éditions splat (composition 10.E2). */

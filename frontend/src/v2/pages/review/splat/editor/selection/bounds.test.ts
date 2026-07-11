@@ -9,7 +9,7 @@ function makeHandle(matrix = new THREE.Matrix4()): SplatSceneHandle {
   const opacities = [1, 1, 0];
   const mesh = {
     matrixWorld: matrix,
-    updateMatrixWorld: () => undefined,
+    updateWorldMatrix: () => undefined,
     forEachSplat: (cb: (i: number, c: THREE.Vector3, s: null, q: null, o: number) => void) => {
       centers.forEach((c, i) => cb(i, c, null, null, opacities[i]));
     },

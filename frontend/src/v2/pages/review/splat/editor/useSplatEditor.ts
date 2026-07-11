@@ -51,11 +51,13 @@ export function useSplatEditor(
   onSaved: (patch: SplatEditsPatch) => void,
   enabled: boolean,
 ) {
-  const { applyTransform, setRenderMode: applyRenderMode, ready } = splat;
+  const { applyTransform, setBaseFlip: applyBaseFlip, setRenderMode: applyRenderMode, ready } = splat;
   const [tool, setTool] = useState<EditorTool>('translate');
   const [brushRadius, setBrushRadius] = useState(40);
   const [renderMode, setRenderMode] = useState<RenderMode>('splats');
   const [transform, setTransform] = useState<SplatTransform>(saved?.transform ?? IDENTITY_SPLAT_TRANSFORM);
+  // Flip d'orientation à l'import (11.E) : true (défaut) = convention Y-down redressée.
+  const [baseFlip, setBaseFlipState] = useState(saved?.baseFlip ?? true);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const markDirty = useCallback(() => setDirty(true), []);
@@ -144,6 +146,17 @@ export function useSplatEditor(
   useEffect(() => {
     if (enabled && ready) applyTransform(savedTransform);
   }, [enabled, ready, applyTransform, savedTransform]);
+
+  // Applique le flip d'orientation courant (11.E) — persisté à l'enregistrement.
+  useEffect(() => {
+    if (enabled && ready) applyBaseFlip(baseFlip);
+  }, [enabled, ready, applyBaseFlip, baseFlip]);
+
+  /** Bouton « Retourner » : bascule le flip d'orientation à l'import (11.E). */
+  const toggleBaseFlip = useCallback(() => {
+    setBaseFlipState((f) => !f);
+    setDirty(true);
+  }, []);
 
   // Applique le mode de visualisation courant ; rétablit « splats » en quittant l'édition.
   useEffect(() => {
@@ -244,7 +257,7 @@ export function useSplatEditor(
   const save = useCallback(async () => {
     setBusy(true);
     try {
-      const edits: SplatEdits = { transform, volumes: volumes.serialize() };
+      const edits: SplatEdits = { transform, volumes: volumes.serialize(), baseFlip };
       const { splatEdits } = await api.patch<{ splatEdits: SplatEdits | null }>(
         `/api/media/${mediaId}/splat-edits`,
         { edits },
@@ -271,7 +284,7 @@ export function useSplatEditor(
     } finally {
       setBusy(false);
     }
-  }, [mediaId, transform, volumes, savedMaskUrl, onSaved]);
+  }, [mediaId, transform, baseFlip, volumes, savedMaskUrl, onSaved]);
 
   /** Réinitialise tout : annule l'historique (suppressions, volumes), transform identité, purge serveur. */
   const reset = useCallback(async () => {
@@ -282,6 +295,7 @@ export function useSplatEditor(
       if (savedMaskUrl) await api.del(`/api/media/${mediaId}/splat-mask`);
       applyTransform(null);
       setTransform(IDENTITY_SPLAT_TRANSFORM);
+      setBaseFlipState(true); // retour à la convention d'import (l'effet ré-applique le flip)
       history.clear();
       setDirty(false);
       onSaved({ splatEdits: null, splatMaskUrl: null, splatMaskCount: 0 });
@@ -302,6 +316,8 @@ export function useSplatEditor(
     renderMode,
     setRenderMode,
     transform,
+    baseFlip,
+    toggleBaseFlip,
     dirty,
     busy,
     selection,

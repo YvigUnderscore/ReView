@@ -21,7 +21,7 @@ export function selectionBounds(
   const { THREE, mesh } = handle;
   const box = new THREE.Box3();
   const world = new THREE.Vector3();
-  mesh.updateMatrixWorld();
+  mesh.updateWorldMatrix(true, false); // ancêtres inclus (pivot de flip, 11.E)
   mesh.forEachSplat((index, center, _scales, _quat, opacity) => {
     if (opacity <= 0 || !selected.has(index)) return;
     world.copy(center).applyMatrix4(mesh.matrixWorld);
@@ -37,7 +37,7 @@ export function meshBounds(handle: SplatSceneHandle): BoundsSphere | null {
   const { THREE, mesh } = handle;
   const local = visibleLocalBox(THREE, mesh);
   if (!local) return null;
-  mesh.updateMatrixWorld();
+  mesh.updateWorldMatrix(true, false); // ancêtres inclus (pivot de flip, 11.E)
   const box = local.applyMatrix4(mesh.matrixWorld);
   return sphereFromBox(THREE, box);
 }

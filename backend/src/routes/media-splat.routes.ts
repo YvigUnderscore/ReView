@@ -42,6 +42,8 @@ router.patch(
               }),
             )
             .max(32),
+          // Flip d'orientation à l'import (11.E) : true/absent = convention Y-down redressée.
+          baseFlip: z.boolean().optional(),
         })
         .nullable(),
     }),

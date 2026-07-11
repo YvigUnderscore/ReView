@@ -33,6 +33,8 @@ export interface SdfVolumeInput {
 export interface SplatEditsInput {
   transform: SplatTransformInput | null;
   volumes: SdfVolumeInput[];
+  /** Flip d'orientation à l'import (11.E) : true/absent = convention Y-down redressée. */
+  baseFlip?: boolean;
 }
 
 const MAX_MASK_BYTES = 4_000_000;
@@ -75,7 +77,9 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
 /** Enregistre (ou efface si null/vide) les éditions JSON — transformation TRS + volumes. */
 export async function setSplatEdits(user: SessionUser, id: number, edits: SplatEditsInput | null) {
   const media = await assertEditableSplat(user, id);
-  const value = edits && (edits.transform || edits.volumes.length > 0) ? edits : null;
+  // Ne persiste que s'il y a quelque chose à retenir (baseFlip false = override d'orientation).
+  const value =
+    edits && (edits.transform || edits.volumes.length > 0 || edits.baseFlip === false) ? edits : null;
   const metadata = {
     ...((media.metadata ?? {}) as object),
     splatEdits: value,

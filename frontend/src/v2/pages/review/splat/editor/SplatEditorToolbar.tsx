@@ -1,6 +1,7 @@
 import {
   Brush,
   Circle,
+  FlipVertical2,
   Grip,
   Lasso,
   Maximize2,
@@ -105,6 +106,8 @@ export default function SplatEditorToolbar({
   canRedo,
   onUndo,
   onRedo,
+  baseFlip,
+  onToggleFlip,
   dirty,
   busy,
   onSave,
@@ -125,6 +128,9 @@ export default function SplatEditorToolbar({
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  /** Flip d'orientation à l'import (11.E) : true = convention Y-down redressée (défaut). */
+  baseFlip: boolean;
+  onToggleFlip: () => void;
   dirty: boolean;
   busy: boolean;
   onSave: () => void;
@@ -220,6 +226,20 @@ export default function SplatEditorToolbar({
           className="flex items-center justify-center rounded-md border border-border p-1.5 hover:bg-secondary/60 disabled:opacity-50"
         >
           <Redo2 size={13} />
+        </button>
+        <button
+          onClick={onToggleFlip}
+          aria-pressed={!baseFlip}
+          title={
+            baseFlip
+              ? 'Orientation redressée à l’import (convention Y-down) — cliquer pour revenir au fichier brut'
+              : 'Orientation du fichier brut — cliquer pour redresser haut/bas'
+          }
+          className={`flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-medium hover:bg-secondary/60 ${
+            baseFlip ? 'text-muted-foreground' : 'bg-secondary text-foreground'
+          }`}
+        >
+          <FlipVertical2 size={13} /> Retourner
         </button>
       </div>
 

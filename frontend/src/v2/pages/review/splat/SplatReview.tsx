@@ -51,7 +51,7 @@ export default function SplatReview({
 }) {
   const saved = data.splatEdits;
   const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl, onSaved, showEdit);
-  const { applyTransform, ready, getSceneHandle, setCullingOff } = splat;
+  const { applyTransform, setBaseFlip, ready, getSceneHandle, setCullingOff } = splat;
 
   // Panneaux du HUD (état local de session — réglages spectateur non persistés).
   const [showStats, setShowStats] = useState(false);
@@ -67,11 +67,16 @@ export default function SplatReview({
   // Comparaison (V8) : autres splats de la même version — switch A/B + « voir tous ».
   const compare = useSplatCompare(splat, data.media);
 
-  // Lecture seule : applique la transformation enregistrée (l'éditeur la gère sinon).
+  // Lecture seule : applique la transformation et le flip d'orientation enregistrés
+  // (l'éditeur les gère sinon).
   const savedTransform = saved?.transform ?? null;
+  const savedFlip = saved?.baseFlip ?? true;
   useEffect(() => {
-    if (!showEdit && ready) applyTransform(savedTransform);
-  }, [showEdit, ready, applyTransform, savedTransform]);
+    if (!showEdit && ready) {
+      applyTransform(savedTransform);
+      setBaseFlip(savedFlip);
+    }
+  }, [showEdit, ready, applyTransform, savedTransform, setBaseFlip, savedFlip]);
 
   // Lecture seule : applique volumes de crop (sans filaire) et masque de suppression —
   // les éditions comptent pour tous les spectateurs, pas seulement l'éditeur.
@@ -155,6 +160,8 @@ export default function SplatReview({
                     canRedo={editor.history.canRedo}
                     onUndo={editor.history.undo}
                     onRedo={editor.history.redo}
+                    baseFlip={editor.baseFlip}
+                    onToggleFlip={editor.toggleBaseFlip}
                     dirty={editor.dirty}
                     busy={editor.busy}
                     onSave={() => void editor.save()}
