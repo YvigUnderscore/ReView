@@ -41,8 +41,11 @@ describe('selectionBounds', () => {
 });
 
 describe('meshBounds', () => {
-  it('transforme la bbox du mesh en monde', () => {
+  it('englobe les splats visibles (masqué exclu, 11.D) et applique la transform monde', () => {
     const b = meshBounds(makeHandle(new THREE.Matrix4().makeScale(2, 2, 2)));
-    expect(b!.radius).toBeCloseTo(Math.sqrt(3) * 2);
+    // Splats visibles (0,0,0) et (2,0,0) → bbox locale [0..2] ; échelle ×2 → centre (2,0,0), rayon 2.
+    expect(b!.center.x).toBeCloseTo(2);
+    expect(b!.center.y).toBeCloseTo(0);
+    expect(b!.radius).toBeCloseTo(2);
   });
 });

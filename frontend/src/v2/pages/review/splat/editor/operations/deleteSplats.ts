@@ -1,3 +1,4 @@
+import { invalidateVisibleBounds } from '../../scene/visibleBounds';
 import type { SplatSceneHandle } from '../../useSplat';
 
 /** Splats masqués par une opération de suppression (opacités d'origine pour l'annulation). */
@@ -16,6 +17,8 @@ function commitPackedChange(handle: SplatSceneHandle): void {
   const packed = handle.mesh.packedSplats;
   if (packed) packed.needsUpdate = true;
   handle.mesh.updateGenerator();
+  // La bbox « visible » (cadrage F/H, 11.D) dépend des opacités : cache à invalider.
+  invalidateVisibleBounds(handle.mesh);
 }
 
 /**

@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SplatMesh } from '@sparkjsdev/spark';
+import { visibleLocalBox } from './visibleBounds';
 
 /**
  * Auto-cadrage caméra (10.G) : cale la caméra + la cible OrbitControls sur la bbox du splat,
@@ -42,8 +43,10 @@ export function frameCameraToMesh(
   controls: OrbitControls,
 ): boolean {
   try {
-    const box = mesh.getBoundingBox(true); // centres uniquement (robuste aux splats aberrants)
-    if (box.isEmpty()) return false;
+    // Centres des splats visibles uniquement (11.D) : après suppression, H recadre sur ce qui
+    // reste — repli sur la bbox Spark complète si les données ne sont pas disponibles.
+    const box = visibleLocalBox(THREE, mesh);
+    if (!box) return false;
     const center = box.getCenter(new THREE.Vector3());
     const radius = box.getBoundingSphere(new THREE.Sphere()).radius;
     if (!Number.isFinite(radius) || radius <= 0) return false;

@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { visibleLocalBox } from '../../scene/visibleBounds';
 import type { SplatSceneHandle } from '../../useSplat';
 
 /**
@@ -31,18 +32,14 @@ export function selectionBounds(
   return sphere ? { ...sphere, radius: Math.max(sphere.radius, 0.05) } : null;
 }
 
-/** Sphère englobante du splat entier (monde), ou null si la bbox est indisponible. */
+/** Sphère englobante des splats visibles du mesh (monde), ou null si indisponible (11.D). */
 export function meshBounds(handle: SplatSceneHandle): BoundsSphere | null {
   const { THREE, mesh } = handle;
-  try {
-    const local = mesh.getBoundingBox(true);
-    if (local.isEmpty()) return null;
-    mesh.updateMatrixWorld();
-    const box = local.clone().applyMatrix4(mesh.matrixWorld);
-    return sphereFromBox(THREE, box);
-  } catch {
-    return null;
-  }
+  const local = visibleLocalBox(THREE, mesh);
+  if (!local) return null;
+  mesh.updateMatrixWorld();
+  const box = local.applyMatrix4(mesh.matrixWorld);
+  return sphereFromBox(THREE, box);
 }
 
 function sphereFromBox(three: typeof THREE, box: THREE.Box3): BoundsSphere | null {
