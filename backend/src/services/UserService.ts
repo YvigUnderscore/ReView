@@ -194,3 +194,32 @@ export async function deleteUser(actorId: number, id: number) {
   await prisma.user.delete({ where: { id } });
   logAudit({ userId: actorId, action: 'USER_DELETE', entityType: 'User', entityId: id });
 }
+
+// ── Préférences UI (JSON libre par utilisateur : vues kanban, etc.) ──────────
+
+const PREFERENCES_MAX_BYTES = 32_768;
+
+export async function getPreferences(userId: number): Promise<Record<string, unknown>> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
+  if (!u) throw notFound('Utilisateur introuvable');
+  return (u.preferences ?? {}) as Record<string, unknown>;
+}
+
+/** Merge superficiel : clé à `null` = suppression ; taille totale bornée. */
+export async function updatePreferences(
+  userId: number,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const next = { ...(await getPreferences(userId)) };
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === null) delete next[k];
+    else next[k] = v;
+  }
+  if (JSON.stringify(next).length > PREFERENCES_MAX_BYTES)
+    throw badRequest('Préférences trop volumineuses', 'PREFERENCES_TOO_LARGE');
+  await prisma.user.update({
+    where: { id: userId },
+    data: { preferences: next as object },
+  });
+  return next;
+}

@@ -18,9 +18,11 @@ import EmptyState from '../components/ui/empty-state';
 import { TASK_STATUSES, TASK_STATUS_LABEL } from '../lib/taskStatus';
 import type { TaskStatus, UserRef } from '../types/api';
 import { useKanbanBoard } from './kanban/useKanbanBoard';
+import type { KanbanFilterState } from './kanban/kanbanTypes';
 import KanbanColumn from './kanban/KanbanColumn';
 import { KanbanCardBody } from './kanban/KanbanCard';
-import KanbanFilters, { type KanbanFilterState } from './kanban/KanbanFilters';
+import KanbanFilters from './kanban/KanbanFilters';
+import KanbanViews from './kanban/KanbanViews';
 
 const EMPTY_FILTER: KanbanFilterState = { assignee: '', type: '', sequence: '' };
 
@@ -72,7 +74,10 @@ export default function KanbanPage() {
     <Shell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Kanban</h1>
-        <KanbanFilters value={filter} onChange={setFilter} assignees={assignees} sequences={sequences} />
+        <div className="flex flex-wrap items-center gap-2">
+          <KanbanFilters value={filter} onChange={setFilter} assignees={assignees} sequences={sequences} />
+          <KanbanViews projectId={projectId} filter={filter} onApply={setFilter} />
+        </div>
       </div>
       {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
       {!isLoading && tasks.length === 0 ? (

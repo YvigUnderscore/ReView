@@ -52,6 +52,20 @@ router.patch(
   },
 );
 
+// GET /api/users/me/preferences — préférences UI (vues kanban sauvegardées, etc.)
+router.get('/me/preferences', async (req, res) => {
+  res.json({ preferences: await UserService.getPreferences(req.user!.id) });
+});
+
+// PATCH /api/users/me/preferences — merge superficiel (clé à null = suppression)
+router.patch(
+  '/me/preferences',
+  validate({ body: z.record(z.string().max(64), z.unknown()) }),
+  async (req, res) => {
+    res.json({ preferences: await UserService.updatePreferences(req.user!.id, req.body) });
+  },
+);
+
 // PATCH /api/users/me/status — statut manuel (dispo/absent/ne pas déranger)
 router.patch(
   '/me/status',

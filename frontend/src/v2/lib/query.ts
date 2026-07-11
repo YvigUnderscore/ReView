@@ -47,6 +47,7 @@ export const qk = {
   context: (entity: string, id: number) => ['context', entity, id] as const,
   search: (q: string) => ['search', q] as const,
   users: ['users'] as const,
+  preferences: ['preferences'] as const,
   documents: (projectId: number | null) => ['documents', projectId ?? 'all'] as const,
   document: (id: number) => ['document', id] as const,
   admin: (section: string) => ['admin', section] as const,

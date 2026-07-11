@@ -1,12 +1,7 @@
 import { Select } from '../../components/ui/select';
 import { TASK_TYPES } from '../project/projectTypes';
 import type { SequenceSummary, UserRef } from '../../types/api';
-
-export interface KanbanFilterState {
-  assignee: string;
-  type: string;
-  sequence: string;
-}
+import type { KanbanFilterState } from './kanbanTypes';
 
 /** Filtres du board : assigné / type de tâche / séquence (selects natifs stylés). */
 export default function KanbanFilters({
