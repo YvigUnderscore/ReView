@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check } from 'lucide-react';
+import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check, Paperclip } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
+import { isImageAttachment } from '../../../lib/commentAttachments';
 import Avatar from '../Avatar';
 import ReplyComposer from './ReplyComposer';
 import CommentReactions from './CommentReactions';
@@ -154,12 +155,13 @@ export default function CommentItem({
           />
         )}
 
-        {/* Pièces jointes images */}
+        {/* Pièces jointes : vignettes (images) + chips téléchargeables (PDF/zip/texte) */}
         {Array.isArray(c.attachments) && c.attachments.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {c.attachments.map(
               (a, i) =>
-                a.url && (
+                a.url &&
+                (isImageAttachment(a.contentType) ? (
                   <a key={i} onClick={stop} href={a.url} target="_blank" rel="noreferrer" className="block">
                     <img
                       src={a.url}
@@ -167,7 +169,19 @@ export default function CommentItem({
                       className="h-20 w-20 rounded border border-border object-cover"
                     />
                   </a>
-                ),
+                ) : (
+                  <a
+                    key={i}
+                    onClick={stop}
+                    href={a.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex max-w-[14rem] items-center gap-1 rounded border border-border bg-secondary/50 px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  >
+                    <Paperclip size={12} className="shrink-0" />
+                    <span className="truncate">{a.name ?? 'Pièce jointe'}</span>
+                  </a>
+                )),
             )}
           </div>
         )}

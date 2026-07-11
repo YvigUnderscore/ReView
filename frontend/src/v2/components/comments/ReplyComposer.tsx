@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
-import { uploadCommentImages } from '../../../lib/commentAttachments';
+import { ATTACHMENT_ACCEPT, uploadCommentAttachments } from '../../../lib/commentAttachments';
 
 /** Zone de réponse à un commentaire (texte + images jointes). */
 export default function ReplyComposer({
@@ -24,7 +24,7 @@ export default function ReplyComposer({
     if (!text.trim() && files.length === 0) return;
     setBusy(true);
     try {
-      const attachments = files.length > 0 ? await uploadCommentImages(files) : undefined;
+      const attachments = files.length > 0 ? await uploadCommentAttachments(files) : undefined;
       await api.post('/api/comments', { mediaObjectId, parentId, content: text || '(image)', attachments });
       setText('');
       setFiles([]);
@@ -60,7 +60,7 @@ export default function ReplyComposer({
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept={ATTACHMENT_ACCEPT}
             multiple
             className="hidden"
             onChange={(e) => {

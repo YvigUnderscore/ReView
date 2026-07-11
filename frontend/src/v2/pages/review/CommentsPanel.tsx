@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent, type RefObject } from 'react';
 import { ImagePlus, X } from 'lucide-react';
+import { ATTACHMENT_ACCEPT } from '../../../lib/commentAttachments';
 import ReviewComments from '../../components/ReviewComments';
 import type { ReviewComment } from '../../types/api';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -113,7 +114,7 @@ export default function CommentsPanel({
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept={ATTACHMENT_ACCEPT}
             multiple
             className="hidden"
             onChange={(e) => {

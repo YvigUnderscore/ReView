@@ -34,13 +34,16 @@ router.get(
   },
 );
 
-// POST /api/comments/attachments/presign — URL présignée pour une image jointe au fil
+// POST /api/comments/attachments/presign — URL présignée pour une pièce jointe au fil
+// (images affichées en vignettes ; PDF/zip/texte en chips téléchargeables — backlog P2)
 router.post(
   '/attachments/presign',
   validate({
     body: z.object({
       filename: z.string().min(1).max(200),
-      contentType: z.string().regex(/^image\/(png|jpe?g|webp|gif)$/),
+      contentType: z
+        .string()
+        .regex(/^(image\/(png|jpe?g|webp|gif)|application\/pdf|application\/zip|text\/plain)$/),
     }),
   }),
   async (req, res) => {

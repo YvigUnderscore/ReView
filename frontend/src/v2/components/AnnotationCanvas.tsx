@@ -2,15 +2,15 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 
 /**
  * Overlay d'annotation 2D (SVG, coordonnées normalisées 0..1 → suit la taille du média).
- * Outils : dessin libre, rectangle, ellipse, flèche, gomme (clic forme), déplacement.
+ * Outils : dessin libre, rectangle, ellipse, flèche, texte, gomme (clic forme), déplacement.
  * Couleurs + épaisseur, undo/redo, effacer tout. Contrôlé : `shapes` + `onChange`.
  * En lecture seule (`editable=false`), affiche les formes fournies sans interaction.
  */
-export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'move' | 'erase';
+export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'text' | 'move' | 'erase';
 
 export interface Shape {
   id: string;
-  type: 'path' | 'rect' | 'ellipse' | 'arrow';
+  type: 'path' | 'rect' | 'ellipse' | 'arrow' | 'text';
   color: string;
   width: number;
   alpha?: number; // opacité 0..1 (défaut 1)
@@ -18,7 +18,7 @@ export interface Shape {
   x?: number;
   y?: number;
   w?: number;
-  h?: number; // rect
+  h?: number; // rect (x/y = ancre du texte)
   cx?: number;
   cy?: number;
   rx?: number;
@@ -27,7 +27,11 @@ export interface Shape {
   y1?: number;
   x2?: number;
   y2?: number; // arrow
+  text?: string; // texte (10.G backlog : annotations avancées)
 }
+
+/** Hauteur de police normalisée (fraction de la hauteur du média) selon l'épaisseur choisie. */
+const textFontSize = (width: number): number => 0.02 + width * 0.005;
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -61,20 +65,22 @@ export function AnnotationCanvas({
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [draft, setDraft] = useState<Shape | null>(null);
+  const [textDraft, setTextDraft] = useState<{ x: number; y: number; value: string } | null>(null);
   const drag = useRef<{ id: string; ox: number; oy: number } | null>(null);
   const [aspect, setAspect] = useState(0);
 
-  // Suit le ratio largeur/hauteur réel du canvas (pour la correction d'aspect en lecture).
+  // Suit le ratio largeur/hauteur réel du canvas : correction d'aspect en lecture (3D)
+  // et contre-échelle horizontale du texte (glyphes non déformés malgré le viewBox 1×1).
   useEffect(() => {
     const el = svgRef.current;
-    if (!el || !captureAspect) return;
+    if (!el) return;
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect();
       if (r.height > 0) setAspect(r.width / r.height);
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [captureAspect]);
+  }, []);
 
   // viewBox étendu : 0..1 = média, valeurs négatives / >1 = hors-cadre.
   const vbMin = -margin;
@@ -115,6 +121,9 @@ export function AnnotationCanvas({
           ) <= 1
         );
       if (s.type === 'arrow') return near(p[0], s.x2 ?? 0) && near(p[1], s.y2 ?? 0);
+      if (s.type === 'text')
+        // Zone approximative : de l'ancre vers la droite (le texte s'étend depuis son point).
+        return p[0] >= (s.x ?? 0) - 0.02 && p[0] <= (s.x ?? 0) + 0.25 && Math.abs(p[1] - (s.y ?? 0)) <= 0.04;
       return false;
     });
   };
@@ -133,6 +142,12 @@ export function AnnotationCanvas({
     if (tool === 'move') {
       const s = hit(p);
       if (s) drag.current = { id: s.id, ox: p[0], oy: p[1] };
+      return;
+    }
+    if (tool === 'text') {
+      // Un clic pose le point d'ancrage ; la saisie se fait dans l'input flottant.
+      commitTextDraft();
+      setTextDraft({ x: p[0], y: p[1], value: '' });
       return;
     }
     const base = { id: uid(), color, width, alpha };
@@ -173,6 +188,20 @@ export function AnnotationCanvas({
     }
   };
 
+  // Valide la saisie de texte en cours (Entrée, blur ou nouveau clic).
+  const commitTextDraft = () => {
+    setTextDraft((d) => {
+      const value = d?.value.trim();
+      if (d && value) {
+        onChange?.([
+          ...shapes,
+          { id: uid(), type: 'text', color, width, alpha, x: d.x, y: d.y, text: value },
+        ]);
+      }
+      return null;
+    });
+  };
+
   const all = draft ? [...shapes, draft] : shapes;
 
   return (
@@ -202,16 +231,50 @@ export function AnnotationCanvas({
       </defs>
       <g transform={groupTransform}>
         {all.map((s) => (
-          <ShapeEl key={s.id} s={s} />
+          <ShapeEl key={s.id} s={s} textScaleX={aspect > 0 ? 1 / aspect : 1} />
         ))}
       </g>
+      {/* Saisie de texte : input HTML en unités viewBox via foreignObject contre-échellé */}
+      {editable && textDraft && (
+        <foreignObject
+          x={textDraft.x}
+          y={textDraft.y - 0.03}
+          width={0.001}
+          height={0.001}
+          style={{ overflow: 'visible' }}
+        >
+          <input
+            autoFocus
+            value={textDraft.value}
+            placeholder="Texte…"
+            onChange={(e) => setTextDraft((d) => (d ? { ...d, value: e.target.value } : d))}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') commitTextDraft();
+              if (e.key === 'Escape') setTextDraft(null);
+            }}
+            onBlur={commitTextDraft}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{
+              // foreignObject : 1 px CSS = 1 unité viewBox → tout est exprimé en fractions.
+              width: '0.35px',
+              height: '0.06px',
+              fontSize: '0.028px',
+              padding: '0.008px',
+              transform: aspect > 0 ? `scaleX(${1 / aspect})` : undefined,
+              transformOrigin: 'left top',
+            }}
+            className="rounded border border-primary bg-background/90 text-foreground focus:outline-none"
+          />
+        </foreignObject>
+      )}
     </svg>
   );
 }
 
 function translate(s: Shape, dx: number, dy: number): Shape {
   if (s.type === 'path') return { ...s, pts: s.pts?.map(([x, y]) => [x + dx, y + dy]) };
-  if (s.type === 'rect') return { ...s, x: (s.x ?? 0) + dx, y: (s.y ?? 0) + dy };
+  if (s.type === 'rect' || s.type === 'text') return { ...s, x: (s.x ?? 0) + dx, y: (s.y ?? 0) + dy };
   if (s.type === 'ellipse') return { ...s, cx: (s.cx ?? 0) + dx, cy: (s.cy ?? 0) + dy };
   return { ...s, x1: (s.x1 ?? 0) + dx, y1: (s.y1 ?? 0) + dy, x2: (s.x2 ?? 0) + dx, y2: (s.y2 ?? 0) + dy };
 }
@@ -225,7 +288,7 @@ function normalizeRect(s: Shape): Shape {
   return s;
 }
 
-function ShapeEl({ s }: { s: Shape }) {
+function ShapeEl({ s, textScaleX = 1 }: { s: Shape; textScaleX?: number }) {
   const common = {
     stroke: s.color,
     strokeWidth: s.width,
@@ -239,5 +302,20 @@ function ShapeEl({ s }: { s: Shape }) {
     return <polyline points={(s.pts ?? []).map((p) => p.join(',')).join(' ')} {...common} />;
   if (s.type === 'rect') return <rect x={s.x} y={s.y} width={s.w} height={s.h} {...common} />;
   if (s.type === 'ellipse') return <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} {...common} />;
+  if (s.type === 'text')
+    // Contre-échelle X autour de l'ancre : glyphes non déformés malgré le viewBox étiré.
+    return (
+      <text
+        transform={`translate(${s.x ?? 0} ${s.y ?? 0}) scale(${textScaleX} 1)`}
+        fill={s.color}
+        fillOpacity={s.alpha ?? 1}
+        fontSize={textFontSize(s.width)}
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+        dominantBaseline="middle"
+        style={{ userSelect: 'none' }}
+      >
+        {s.text}
+      </text>
+    );
   return <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} {...common} markerEnd="url(#arrowhead)" />;
 }

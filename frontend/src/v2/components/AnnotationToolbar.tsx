@@ -7,6 +7,7 @@ const TOOL_ICONS: { id: Tool; label: string }[] = [
   { id: 'rect', label: '▭' },
   { id: 'ellipse', label: '◯' },
   { id: 'arrow', label: '↗' },
+  { id: 'text', label: 'T' },
   { id: 'move', label: '✋' },
   { id: 'erase', label: '⌫' },
 ];

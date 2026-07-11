@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { uploadCommentImages } from '../../lib/commentAttachments';
+import { uploadCommentAttachments } from '../../lib/commentAttachments';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
@@ -164,7 +164,7 @@ function ReviewContent({ id }: { id: number }) {
       annotation = ann.annot.length ? ann.annot : undefined;
     }
     try {
-      const attachments = files.length > 0 ? await uploadCommentImages(files) : undefined;
+      const attachments = files.length > 0 ? await uploadCommentAttachments(files) : undefined;
       await api.post('/api/comments', {
         mediaObjectId: id,
         content: text || '(image)',
