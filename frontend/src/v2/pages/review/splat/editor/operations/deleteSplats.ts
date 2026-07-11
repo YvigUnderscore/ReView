@@ -7,6 +7,18 @@ export interface HiddenSplats {
 }
 
 /**
+ * Reflet immédiat d'une mutation du packedSplats (11.C) : `needsUpdate` ne fait que ré-uploader
+ * la texture de données — l'accumulateur trié de Spark n'est reconstruit que si le générateur
+ * du mesh est invalidé (`updateGenerator`). Sans lui, le masquage n'apparaît qu'au prochain
+ * mouvement caméra (ou par effet de bord du détachement de la surbrillance).
+ */
+function commitPackedChange(handle: SplatSceneHandle): void {
+  const packed = handle.mesh.packedSplats;
+  if (packed) packed.needsUpdate = true;
+  handle.mesh.updateGenerator();
+}
+
+/**
  * Suppression non-destructive de splats (10.G) : met l'opacité à 0 dans les données paquées
  * en mémoire (`PackedSplats.setSplat`) — le fichier original n'est jamais modifié ; le masque
  * est persisté à part (H5) et ré-appliqué au chargement. Renvoie les opacités d'origine pour
@@ -24,7 +36,7 @@ export function hideSplats(handle: SplatSceneHandle, indices: Iterable<number>):
     packed.setSplat(i, center, scales, quaternion, 0, color);
   }
   if (hidden.indices.length === 0) return null;
-  packed.needsUpdate = true;
+  commitPackedChange(handle);
   return hidden;
 }
 
@@ -36,7 +48,7 @@ export function restoreSplats(handle: SplatSceneHandle, hidden: HiddenSplats): v
     const { center, scales, quaternion, color } = packed.getSplat(i);
     packed.setSplat(i, center, scales, quaternion, hidden.opacities[k]!, color);
   });
-  packed.needsUpdate = true;
+  commitPackedChange(handle);
 }
 
 /** Rétablissement (redo) : re-masque les splats de l'opération. */
@@ -47,5 +59,5 @@ export function rehideSplats(handle: SplatSceneHandle, hidden: HiddenSplats): vo
     const { center, scales, quaternion, color } = packed.getSplat(i);
     packed.setSplat(i, center, scales, quaternion, 0, color);
   }
-  packed.needsUpdate = true;
+  commitPackedChange(handle);
 }
