@@ -70,6 +70,8 @@ export interface SplatViewer {
   subscribeFrame: (cb: (dt: number) => void) => () => void;
   /** Neutralise (défaut) ou rétablit le culling Spark (clipXY/maxPixelRadius) — réglage live. */
   setCullingOff: (off: boolean) => void;
+  /** Vol en cours (clic droit + ZQSD) — les raccourcis d'édition doivent rester inertes (11.G). */
+  isFlying: () => boolean;
   /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
   getSceneHandle: () => SplatSceneHandle | null;
 }
@@ -89,6 +91,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
   const statsRef = useRef<StatsSampler | null>(null);
   // Callbacks appelés à chaque frame (dt en secondes) — animation caméra, presets (V5).
   const frameCbs = useRef(new Set<(dt: number) => void>());
+  // Contrôles de vol (clic droit + ZQSD) — exposés pour inhiber les raccourcis d'édition (11.G).
+  const flyRef = useRef<ReturnType<typeof createFlyControls> | null>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -115,6 +119,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       applyCulling(spark, true);
       // Navigation fly type Unreal (clic droit + ZQSD/WASD + A/E) — gèle l'orbite en vol.
       const fly = createFlyControls(THREE, camera, controls, renderer.domElement);
+      flyRef.current = fly;
 
       // Marqueur de hotspot (DOM, projeté à l'écran) — n'intercepte pas les events (orbite libre).
       const marker = createHotspotMarker(THREE, container);
@@ -193,6 +198,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         ro.disconnect();
         renderer.setAnimationLoop(null);
         fly.dispose();
+        flyRef.current = null;
         controls.dispose();
         if (pointsRef.current) {
           pointsRef.current.geometry.dispose();
@@ -310,6 +316,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     if (s) applyCulling(s.spark, off);
   }, []);
 
+  const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
+
   const subscribeFrame = useCallback((cb: (dt: number) => void): (() => void) => {
     frameCbs.current.add(cb);
     return () => frameCbs.current.delete(cb);
@@ -373,6 +381,7 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     subscribeStats,
     subscribeFrame,
     setCullingOff,
+    isFlying,
     getSceneHandle,
   };
 }

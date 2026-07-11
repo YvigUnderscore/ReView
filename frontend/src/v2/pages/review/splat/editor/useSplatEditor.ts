@@ -11,7 +11,9 @@ import {
 import { frameCameraToMesh, frameCameraToSphere } from '../scene/frameCamera';
 import type { RenderMode } from '../scene/renderModes';
 import type { SplatViewer } from '../useSplat';
+import type { GizmoTargetKind } from './gizmos/gizmoSettings';
 import { readMeshTransform } from './gizmos/meshTransform';
+import { useGizmoSettings } from './gizmos/useGizmoSettings';
 import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
 import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
 import { useEditHistory } from './operations/history';
@@ -22,13 +24,14 @@ import { useSelection } from './selection/useSelection';
 import { syncSphereRadius } from './volumes/cropVolume';
 import { useVolumes } from './volumes/useVolumes';
 
-/** Outil actif de l'éditeur : gizmo de transformation ou sélection (rectangle/lasso/pinceau). */
-export type EditorTool = GizmoMode | 'select-rect' | 'select-lasso' | 'brush';
+/** Outil actif de l'éditeur : navigation (défaut, aucun outil), gizmo ou sélection. */
+export type EditorTool = 'navigate' | GizmoMode | 'select-rect' | 'select-lasso' | 'brush';
 
 const GIZMO_TOOLS: readonly EditorTool[] = ['translate', 'rotate', 'scale'];
 
 /** Raccourcis clavier de l'éditeur (sans modificateur, hors champs de saisie). */
 const TOOL_KEYS: Record<string, EditorTool> = {
+  v: 'navigate', // V = retour au mode navigation (aucun outil actif)
   t: 'translate',
   r: 'rotate',
   s: 'scale',
@@ -53,7 +56,8 @@ export function useSplatEditor(
   enabled: boolean,
 ) {
   const { applyTransform, setBaseFlip: applyBaseFlip, setRenderMode: applyRenderMode, ready } = splat;
-  const [tool, setTool] = useState<EditorTool>('translate');
+  // Mode navigation par défaut (11.G) : ouvrir l'éditeur n'active aucun gizmo ni sélection.
+  const [tool, setTool] = useState<EditorTool>('navigate');
   const [brushRadius, setBrushRadius] = useState(40);
   const [renderMode, setRenderMode] = useState<RenderMode>('splats');
   const [transform, setTransform] = useState<SplatTransform>(saved?.transform ?? IDENTITY_SPLAT_TRANSFORM);
@@ -113,10 +117,15 @@ export function useSplatEditor(
     setVolumeTrs(activeSdf ? readMeshTransform(activeSdf) : null);
   }, [activeSdf]);
 
+  // Réglages du gizmo par type de cible (11.G) : mémorisés séparément, persistés localStorage.
+  const targetKind: GizmoTargetKind = activeSdf ? 'volume' : 'splat';
+  const gizmo = useGizmoSettings(targetKind);
+
   useTransformGizmo(splat, {
     enabled: enabled && isGizmoTool,
     mode: isGizmoTool ? (tool as GizmoMode) : 'translate',
     target: volumes.activeSdf,
+    settings: gizmo.settings,
     onChange: volumes.activeSdf ? volumeGizmoChange : onGizmoChange,
   });
 
@@ -144,6 +153,8 @@ export function useSplatEditor(
     label: activeVolumeItem
       ? `${activeVolumeItem.shape === 'box' ? 'Boîte' : 'Sphère'} ${volumes.volumes.indexOf(activeVolumeItem) + 1}`
       : 'Splat',
+    /** Forme de la cible (11.G) : champs contextualisés (rayon sphère / demi-extents boîte). */
+    shape: activeVolumeItem?.shape ?? null,
     value: volumeTrs && activeSdf ? volumeTrs : transform,
     commit: commitFields,
   };
@@ -223,6 +234,8 @@ export function useSplatEditor(
     if (!enabled) return;
     const down = (e: KeyboardEvent) => {
       if (isEditable(e.target) || document.querySelector('[role="dialog"]')) return;
+      // En vol (clic droit + ZQSD, 11.G) : les touches pilotent la caméra, pas les outils.
+      if (splat.isFlying()) return;
       const key = e.key.toLowerCase();
       if ((e.ctrlKey || e.metaKey) && !e.altKey) {
         if (key === 'z' && !e.shiftKey) {
@@ -258,7 +271,7 @@ export function useSplatEditor(
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, [enabled, history, deleteSelection, frameSelection, frameHome]);
+  }, [enabled, history, deleteSelection, frameSelection, frameHome, splat]);
 
   /** Enregistre toutes les éditions : transform + volumes (JSON) et masque de suppression. */
   const save = useCallback(async () => {
@@ -320,6 +333,7 @@ export function useSplatEditor(
     brushRadius,
     setBrushRadius,
     fields,
+    gizmo,
     renderMode,
     setRenderMode,
     transform,

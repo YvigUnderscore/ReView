@@ -170,8 +170,10 @@ export default function SplatReview({
                   <VolumesBar volumes={editor.volumes} />
                   <TransformFields
                     label={editor.fields.label}
+                    shape={editor.fields.shape}
                     value={editor.fields.value}
                     onCommit={editor.fields.commit}
+                    gizmo={editor.gizmo}
                   />
                 </>
               ) : undefined

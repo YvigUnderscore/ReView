@@ -3,6 +3,7 @@ import {
   Circle,
   FlipVertical2,
   Grip,
+  Hand,
   Lasso,
   Maximize2,
   Move3d,
@@ -27,6 +28,12 @@ import type { EditorTool } from './useSplatEditor';
  * réinitialiser. Tokens de thème + icônes lucide, cohérent avec les autres toolbars de review.
  */
 const TOOLS: { tool: EditorTool; icon: LucideIcon; label: string; hint: string }[] = [
+  {
+    tool: 'navigate',
+    icon: Hand,
+    label: 'Naviguer',
+    hint: 'Naviguer (V) — orbite / vol clic droit, aucun outil actif (mode par défaut)',
+  },
   { tool: 'translate', icon: Move3d, label: 'Déplacer', hint: 'Déplacer le splat (T)' },
   { tool: 'rotate', icon: RotateCw, label: 'Tourner', hint: 'Faire pivoter le splat (R)' },
   { tool: 'scale', icon: Maximize2, label: 'Échelle', hint: "Mettre à l'échelle le splat (S)" },
