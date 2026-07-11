@@ -19,6 +19,7 @@ import { applyMaskIndices, fetchMaskIndices } from './persistence/applyEdits';
 import { bytesToBase64, encodeMask } from './persistence/mask';
 import { meshBounds, selectionBounds } from './selection/bounds';
 import { useSelection } from './selection/useSelection';
+import { syncSphereRadius } from './volumes/cropVolume';
 import { useVolumes } from './volumes/useVolumes';
 
 /** Outil actif de l'éditeur : gizmo de transformation ou sélection (rectangle/lasso/pinceau). */
@@ -96,13 +97,18 @@ export function useSplatEditor(
   // Un volume sélectionné capte le gizmo : sa TRS vit dans l'objet Three (sérialisée à
   // l'enregistrement) — on la reflète dans un état pour les champs numériques (V4) + dirty.
   const [volumeTrs, setVolumeTrs] = useState<SplatTransform | null>(null);
-  const volumeGizmoChange = useCallback((t: SplatTransform) => {
-    setVolumeTrs(t);
-    setDirty(true);
-  }, []);
+  const activeSdf = volumes.activeSdf;
+  const volumeGizmoChange = useCallback(
+    (t: SplatTransform) => {
+      // Sphère : le rayon SDF effectif suit l'échelle posée par le gizmo (11.F).
+      if (activeSdf) syncSphereRadius(activeSdf);
+      setVolumeTrs(t);
+      setDirty(true);
+    },
+    [activeSdf],
+  );
 
   // Synchronise la TRS affichée quand la cible du gizmo change (sélection/désélection volume).
-  const activeSdf = volumes.activeSdf;
   useEffect(() => {
     setVolumeTrs(activeSdf ? readMeshTransform(activeSdf) : null);
   }, [activeSdf]);
@@ -121,6 +127,7 @@ export function useSplatEditor(
         activeSdf.position.fromArray(t.position);
         activeSdf.quaternion.fromArray(t.quaternion);
         activeSdf.scale.fromArray(t.scale);
+        syncSphereRadius(activeSdf); // rayon SDF sphère dérivé de l'échelle (11.F)
         setVolumeTrs(t);
       } else {
         applyTransform(t);

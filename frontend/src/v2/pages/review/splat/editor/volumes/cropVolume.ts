@@ -13,8 +13,20 @@ const WIRE_ISOLATE = 0x22c55e;
 /** Objets Spark/Three d'un volume vivant dans la scène (non sérialisés — cf. H5). */
 export interface VolumeRuntime {
   edit: THREE.Object3D & { invert: boolean };
-  sdf: THREE.Object3D;
+  sdf: THREE.Object3D & { radius: number };
   wire: THREE.LineSegments;
+}
+
+/**
+ * Synchronise le rayon effectif d'un SDF sphère sur son échelle (11.F) : le shader Spark
+ * ignore `scale` pour la sphère — le volume réellement creusé a pour rayon `sdf.radius` seul.
+ * Sans cette recopie, le gizmo (qui agit sur `scale`) grossissait le filaire mais pas le crop.
+ * Échelle anisotrope : moyenne des composantes (le SDF sphère est isotrope par nature).
+ */
+export function syncSphereRadius(sdf: THREE.Object3D): void {
+  if (sdf.userData.volumeShape !== 'sphere') return;
+  const s = sdf.scale;
+  (sdf as unknown as { radius: number }).radius = (Math.abs(s.x) + Math.abs(s.y) + Math.abs(s.z)) / 3;
 }
 
 /**
@@ -23,6 +35,10 @@ export interface VolumeRuntime {
  * MULTIPLY — l'intérieur du volume est effacé du rendu ; `invert` sur l'édit isole au
  * contraire l'intérieur. Le SDF est un Object3D : le gizmo le déplace/tourne/redimensionne
  * nativement. Un filaire enfant matérialise le volume (rouge = creuser, vert = isoler).
+ *
+ * Correspondance filaire ↔ SDF (11.F, sémantique shader Spark) : boîte → demi-extents =
+ * `scale` (filaire 2×2×2, `radius` 0 = pas d'arrondi de coins) ; sphère → rayon = `radius`,
+ * recopié depuis `scale` (cf. syncSphereRadius).
  */
 export async function createVolume(
   handle: SplatSceneHandle,
@@ -43,8 +59,9 @@ export async function createVolume(
     type: shape === 'box' ? SplatEditSdfType.BOX : SplatEditSdfType.SPHERE,
     opacity: 0,
     color: new THREE.Color(1, 1, 1),
-    radius: 1,
+    radius: 0, // boîte : aucun arrondi ; sphère : recopié depuis l'échelle juste après
   });
+  sdf.userData.volumeShape = shape;
   edit.addSdf(sdf);
   edit.add(sdf); // enfant → transform par le graphe de scène (gizmo)
 
@@ -54,9 +71,11 @@ export async function createVolume(
   const radius = Math.max(box.getBoundingSphere(new THREE.Sphere()).radius, 0.001);
   sdf.position.copy(center);
   sdf.scale.setScalar(radius / 3);
+  syncSphereRadius(sdf);
 
-  // Filaire de visualisation (unité : boîte 1³ / sphère r=1, suit l'échelle du SDF).
-  const geo = shape === 'box' ? new THREE.BoxGeometry(1, 1, 1) : new THREE.SphereGeometry(1, 16, 12);
+  // Filaire de visualisation, calé sur le volume réellement creusé : boîte 2³ (demi-extent 1,
+  // suit `scale` = demi-extents SDF) / sphère r=1 (suit `scale`, dont le rayon SDF est dérivé).
+  const geo = shape === 'box' ? new THREE.BoxGeometry(2, 2, 2) : new THREE.SphereGeometry(1, 16, 12);
   const wire = new THREE.LineSegments(
     new THREE.EdgesGeometry(geo),
     new THREE.LineBasicMaterial({ color: mode === 'delete' ? WIRE_DELETE : WIRE_ISOLATE }),
@@ -66,7 +85,7 @@ export async function createVolume(
   sdf.add(wire);
 
   mesh.add(edit);
-  return { edit, sdf, wire };
+  return { edit, sdf: sdf as VolumeRuntime['sdf'], wire };
 }
 
 /** Applique une TRS sérialisée au SDF du volume (rechargement d'éditions persistées). */
@@ -77,6 +96,8 @@ export function applyVolumeData(
   runtime.sdf.position.fromArray(data.position);
   runtime.sdf.quaternion.fromArray(data.quaternion);
   runtime.sdf.scale.fromArray(data.scale);
+  // Volumes persistés avant 11.F : le rayon sphère est re-dérivé de l'échelle (migration lecture).
+  syncSphereRadius(runtime.sdf);
 }
 
 /** Change l'effet du volume (creuser ↔ isoler) et la couleur du filaire. */
