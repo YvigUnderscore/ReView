@@ -1,24 +1,25 @@
-# docker-compose.prod.yml — surcharge de production (TLS + sécurité)
+# docker-compose.prod.yml — surcharge de production (durcissement 8.7 : TLS + secrets)
 #
 # Usage :
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Prérequis :
 #   - Certificats TLS dans ./nginx/certs/ (fullchain.pem + privkey.pem)
-#     (ex. générés avec Certbot : /etc/letsencrypt/live/YOUR_DOMAIN/)
-#   - .env renseigné avec des secrets forts (voir .env.example)
+#     (ex. Certbot : /etc/letsencrypt/live/<domaine>/ ; auto-signés possibles pour un essai)
+#   - .env renseigné avec des secrets forts (voir .env.example) — les variables critiques
+#     sont REQUISES ici (${VAR:?…} : compose refuse de démarrer sans) et re-vérifiées par
+#     backend/config/env.ts qui refuse les valeurs faibles/défaut en production (10.D5).
 #
 # Ce fichier :
-#   - Ajoute nginx en reverse-proxy HTTPS devant backend + frontend
-#   - Retire les ports directement exposés pour backend et frontend
-#   - Supprime l'accès public à la console MinIO (port 9001)
-#   - Restreint CORS_ORIGIN à l'URL de production
-
+#   - Ajoute nginx en reverse-proxy HTTPS devant frontend + backend + MinIO
+#   - Retire TOUS les ports hôte de frontend/backend/minio (`!reset` — compose ≥ 2.24) :
+#     seul nginx est exposé ; MinIO est servi via https://<domaine>/<bucket>/…
+#     (poser S3_PUBLIC_ENDPOINT=https://<domaine>) ; console MinIO accessible
+#     uniquement par tunnel ssh/VPN.
 services:
-
-  # ── Nginx reverse-proxy TLS ─────────────────────────────────────────────────
+  # ── Nginx reverse-proxy TLS (seul service exposé) ───────────────────────────
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     ports:
       - "80:80"
       - "443:443"
@@ -30,25 +31,32 @@ services:
         condition: service_healthy
       frontend:
         condition: service_started
+      minio:
+        condition: service_healthy
     restart: always
 
-  # ── Backend : ports retirés (accès via nginx uniquement) ────────────────────
-  backend:
-    ports: []
+  # ── Secrets requis (pas de défaut faible en production) ─────────────────────
+  postgres:
     environment:
-      CORS_ORIGIN: ${CORS_ORIGIN}          # OBLIGATOIRE : ex. https://review.mystudio.com
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}  # URL publique MinIO ou CDN S3
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fort requis en production (openssl rand -hex 32)}
 
-  # ── Worker (inchangé, hérite de backend) ────────────────────────────────────
-  worker: {}
-
-  # ── Frontend : ports retirés (accès via nginx uniquement) ───────────────────
-  frontend:
-    ports: []
-
-  # ── MinIO : console 9001 non exposée publiquement ───────────────────────────
   minio:
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      # Port 9001 (console) volontairement non exposé en prod.
-      # Pour y accéder : ssh tunnel ou VPN uniquement.
+    ports: !reset []
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER requis en production (pas de minioadmin)}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD fort requis en production}
+
+  backend:
+    ports: !reset []
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis en production (≥ 32 caractères aléatoires)}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN requis en production (URL exacte du frontend, pas *)}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT requis en production (https://<domaine>)}
+
+  worker:
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis en production}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT requis en production}
+
+  frontend:
+    ports: !reset []
