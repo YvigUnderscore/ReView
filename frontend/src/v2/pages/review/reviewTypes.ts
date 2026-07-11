@@ -46,13 +46,7 @@ export interface SplatEdits {
 export type SplatEditsPatch = Partial<
   Pick<
     MediaResp,
-    | 'splatEdits'
-    | 'splatMaskUrl'
-    | 'splatMaskCount'
-    | 'splatPresentation'
-    | 'editedAfterPublishAt'
-    | 'trim'
-    | 'trimProxyReady'
+    'splatEdits' | 'splatMaskUrl' | 'splatMaskCount' | 'splatPresentation' | 'trim' | 'trimProxyReady'
   >
 >;
 
@@ -133,9 +127,6 @@ export interface MediaResp {
   splatMaskCount: number;
   /** Présentation persistée (caméra/DoF/reveal/LOD/animation) — 10.G-V5, rejouée pour tous. */
   splatPresentation: SplatPresentation | null;
-  /** Marqueur « modifié après publication » (10.G-V10) — badge côté review. */
-  editedAfterPublishAt: string | null;
-  editedAfterPublishById: number | null;
   /** Trim vidéo non-destructif (10.G-V10) : bornes en frames, proxy trimé prêt ou en cours. */
   trim: { inFrame: number; outFrame: number } | null;
   trimProxyReady: boolean;

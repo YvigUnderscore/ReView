@@ -33,7 +33,6 @@ export default function ReviewPage() {
 function ReviewContent({ id }: { id: number }) {
   const userId = useAuth((s) => s.user?.id) ?? 0;
   const role = useAuth((s) => s.user?.role);
-  const canEditTransform = role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST';
 
   const qc = useQueryClient();
   const [commentsOpen, setCommentsOpen] = useState(true);
@@ -77,9 +76,15 @@ function ReviewContent({ id }: { id: number }) {
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
-  // Miniature splat + patch du cache après enregistrement des éditions (extrait, budget 10.F4).
+  // Verrou de publication (Phase 11) : un média publié est définitivement figé — tous les
+  // outils d'édition (trim, transform, éditeur splat, miniature) sont masqués. Seule la
+  // présentation (mise en scène) reste pilotable par les gestionnaires.
+  const published = data?.media.published ?? true;
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
-  const onSplatEditsSaved = useSplatThumbnail(id, data, splat, canManageMedia);
+  const canEditMedia = canManageMedia && !published;
+  const canEditTransform = !published && (role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST');
+  // Miniature splat + patch du cache après enregistrement des éditions (extrait, budget 10.F4).
+  const onSplatEditsSaved = useSplatThumbnail(id, data, splat, canEditMedia);
 
   const seek = (t: number) => {
     if (videoRef.current) {
@@ -259,6 +264,7 @@ function ReviewContent({ id }: { id: number }) {
             reprocessing={reprocessing}
             role={role}
             canEditTransform={canEditTransform}
+            canEdit={canEditMedia}
             canManage={canManageMedia}
             onSplatEditsSaved={onSplatEditsSaved}
             onToggleAnnotating={toggleAnnotating}

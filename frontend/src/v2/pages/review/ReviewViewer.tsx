@@ -37,6 +37,7 @@ export default function ReviewViewer({
   reprocessing,
   role,
   canEditTransform,
+  canEdit,
   canManage,
   onToggleAnnotating,
   onClearSelection,
@@ -64,6 +65,9 @@ export default function ReviewViewer({
   reprocessing: boolean;
   role?: Role;
   canEditTransform: boolean;
+  /** Édition du média (trim, éditeur splat) — faux dès que le média est publié (Phase 11). */
+  canEdit: boolean;
+  /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
   canManage: boolean;
   onToggleAnnotating: () => void;
   onClearSelection: () => void;
@@ -83,10 +87,10 @@ export default function ReviewViewer({
   const model3dReady =
     kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
-  // Édition post-publication autorisée (10.G-V10) : toute écriture sur un média publié pose
-  // le marqueur « modifié après publication » côté backend (badge dans l'en-tête).
+  // Verrou de publication (Phase 11) : les outils d'édition disparaissent dès la publication
+  // (le backend refuse de toute façon en 403) ; la présentation reste pilotable (canManage).
   const showEditTools = canEditTransform;
-  const showSplatEdit = splatReady && canManage;
+  const showSplatEdit = splatReady && canEdit;
 
   // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
   // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).
@@ -152,7 +156,7 @@ export default function ReviewViewer({
                   : null
               }
             />
-            {data && canManage && (
+            {data && canEdit && (
               <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
             )}
           </div>
