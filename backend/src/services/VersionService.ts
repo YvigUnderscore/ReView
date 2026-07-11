@@ -4,6 +4,7 @@ import { softDeleteVersion, restoreVersion, purgeVersion } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { forbidden, notFound } from '../lib/errors';
+import { assertNotPublished } from '../lib/publishLock';
 
 /**
  * Logique métier des versions (liste avec comptage média respectant la visibilité,
@@ -89,13 +90,18 @@ export interface UpdateVersionInput {
 }
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateVersionInput) {
-  const version = await prisma.version.findUnique({ where: { id }, select: { authorId: true } });
+  const version = await prisma.version.findUnique({
+    where: { id },
+    select: { authorId: true, published: true },
+  });
   if (!version) throw notFound('Version introuvable');
   const manager = isGlobalManager(user.role);
   const isAuthor = version.authorId === user.id;
   if (!manager && !isAuthor) throw forbidden("Modification réservée à l'auteur ou un superviseur");
   if (body.status === VersionStatus.PUBLISHED && !manager)
     throw forbidden('Seul un superviseur/admin peut publier une version');
+  // Verrou de publication (Phase 11) : la transform 3D d'une version publiée est figée.
+  if (body.transform !== undefined) assertNotPublished(version);
 
   const updated = await prisma.version.update({
     where: { id },

@@ -11,6 +11,7 @@ import { emitToProject } from './SocketService';
 import { enqueueMediaJob } from './JobService';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
+import { assertNotPublished } from '../lib/publishLock';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
 /**
@@ -226,12 +227,13 @@ export async function publish(user: SessionUser, id: number) {
   return serializeMedia(updated);
 }
 
-/** Relance le job de traitement d'un média (échec/bloqué). */
+/** Relance le job de traitement d'un média (échec/bloqué, non publié). */
 export async function reprocess(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Média introuvable');
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload non finalisé', 'NOT_FINALIZED');
+  assertNotPublished(media);
 
   const jobKind = jobKindFor(media.kind, getExtension(media.originalName));
   if (!jobKind) {
@@ -267,8 +269,6 @@ export async function getDetail(user: SessionUser, id: number) {
     splatMaskKey?: string;
     splatMaskCount?: number;
     splatPresentation?: unknown;
-    editedAfterPublishAt?: string;
-    editedAfterPublishById?: number;
     trim?: { inFrame: number; outFrame: number };
     trimProxyKey?: string;
   };
@@ -296,9 +296,6 @@ export async function getDetail(user: SessionUser, id: number) {
     splatMaskCount: meta.splatMaskCount ?? 0,
     // Présentation persistée (10.G-V5) : caméra/DoF/reveal/LOD/animation, rejouée pour tous.
     splatPresentation: meta.splatPresentation ?? null,
-    // Marqueur « modifié après publication » (10.G-V10) → badge côté review.
-    editedAfterPublishAt: meta.editedAfterPublishAt ?? null,
-    editedAfterPublishById: meta.editedAfterPublishById ?? null,
     // Trim vidéo non-destructif (10.G-V10) : bornes + proxy trimé prêt ou en cours.
     trim: meta.trim ?? null,
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),
@@ -322,10 +319,14 @@ const MAX_THUMBNAIL_BYTES = 1_500_000;
  * Enregistre une miniature fournie par le client (capture d'un rendu, ex. splat/3D via
  * Three.js — pas de rendu headless serveur possible). Data URL image/jpeg|png|webp base64,
  * validée par magic bytes, stockée dans MinIO, référencée par `thumbnailKey`. Réservé aux
- * gestionnaires du média (uploader/superviseur+). Renvoie l'URL présignée de la miniature.
+ * gestionnaires du média (uploader/superviseur+), média non publié uniquement (verrou
+ * Phase 11). Renvoie l'URL présignée de la miniature.
  */
 export async function setThumbnail(user: SessionUser, id: number, dataUrl: string) {
   await assertMediaManage(id, user);
+  const media = await prisma.mediaObject.findUnique({ where: { id }, select: { published: true } });
+  if (!media) throw notFound('Média introuvable');
+  assertNotPublished(media);
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i.exec(dataUrl);
   if (!m) throw badRequest('Miniature invalide (data URL image attendue)', 'INVALID_THUMBNAIL');
   const contentType = m[1]!.toLowerCase();

@@ -435,20 +435,25 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       });
     expect(badPres.status).toBe(400);
 
-    // Publication → l'édition RESTE possible (V10) et pose le marqueur post-publication.
+    // Publication → verrou définitif (Phase 11) : toute édition du splat est refusée (403).
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
     const postPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-edits`)
       .set(auth)
       .send({ edits });
-    expect(postPublish.status).toBe(200);
-    expect(postPublish.body.editedAfterPublishAt).toBeTruthy();
-    const marked = await request(app).get(`/api/media/${mediaId}`).set(auth);
-    expect(marked.body.editedAfterPublishAt).toBeTruthy();
-    expect(marked.body.editedAfterPublishById).toBeGreaterThan(0);
+    expect(postPublish.status).toBe(403);
+    const maskAfterPublish = await request(app)
+      .put(`/api/media/${mediaId}/splat-mask`)
+      .set(auth)
+      .send({ data: mask.toString('base64'), count: 3 });
+    expect(maskAfterPublish.status).toBe(403);
+    const clearAfterPublish = await request(app).delete(`/api/media/${mediaId}/splat-mask`).set(auth);
+    expect(clearAfterPublish.status).toBe(403);
+    // Les éditions pré-publication restent servies telles quelles.
+    const lockedDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(lockedDetail.body.splatEdits).toEqual(edits);
 
-    // La présentation reste elle aussi modifiable après publication (mise en scène, V5) —
-    // sans poser le marqueur (le média n'est pas altéré).
+    // Seule la présentation (mise en scène, V5) reste modifiable après publication.
     const presAfterPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-presentation`)
       .set(auth)
@@ -458,7 +463,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(cleared.body.splatPresentation).toBeNull();
   });
 
-  it('trim vidéo (10.G-V10) : non-destructif, bornes validées, marqueur post-publication', async () => {
+  it('trim vidéo (10.G-V10) : non-destructif, bornes validées, verrouillé à la publication', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
@@ -508,7 +513,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ trim: { inFrame: 50, outFrame: 10 } });
     expect(bad.status).toBe(400);
 
-    // Trim valide (brouillon) : bornes exposées, proxy pas encore produit, pas de marqueur.
+    // Trim valide (brouillon) : bornes exposées, proxy pas encore produit.
     const set = await request(app)
       .patch(`/api/media/${mediaId}/trim`)
       .set(auth)
@@ -518,22 +523,32 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(set.body.trimProxyReady).toBe(false);
     const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(detail.body.trim).toEqual({ inFrame: 10, outFrame: 50 });
-    expect(detail.body.editedAfterPublishAt).toBeNull();
 
-    // Publication → un nouveau trim pose le marqueur « modifié après publication ».
+    // Effacement du trim (brouillon) → retour au proxy d'origine.
+    const clear = await request(app).patch(`/api/media/${mediaId}/trim`).set(auth).send({ trim: null });
+    expect(clear.status).toBe(200);
+    const cleared2 = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(cleared2.body.trim).toBeNull();
+
+    // Re-pose puis publication → verrou définitif (Phase 11) : tout trim est refusé (403).
+    await request(app)
+      .patch(`/api/media/${mediaId}/trim`)
+      .set(auth)
+      .send({ trim: { inFrame: 10, outFrame: 50 } });
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
     const retrim = await request(app)
       .patch(`/api/media/${mediaId}/trim`)
       .set(auth)
       .send({ trim: { inFrame: 0, outFrame: 30 } });
-    expect(retrim.status).toBe(200);
-    expect(retrim.body.editedAfterPublishAt).toBeTruthy();
-
-    // Effacement du trim → retour au proxy d'origine.
-    const clear = await request(app).patch(`/api/media/${mediaId}/trim`).set(auth).send({ trim: null });
-    expect(clear.status).toBe(200);
-    const cleared2 = await request(app).get(`/api/media/${mediaId}`).set(auth);
-    expect(cleared2.body.trim).toBeNull();
+    expect(retrim.status).toBe(403);
+    const clearAfterPublish = await request(app)
+      .patch(`/api/media/${mediaId}/trim`)
+      .set(auth)
+      .send({ trim: null });
+    expect(clearAfterPublish.status).toBe(403);
+    // Le trim posé avant publication reste servi tel quel.
+    const lockedDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(lockedDetail.body.trim).toEqual({ inFrame: 10, outFrame: 50 });
   });
 });
 

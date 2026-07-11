@@ -6,8 +6,8 @@ import * as MediaVideoService from '../services/MediaVideoService';
 
 /**
  * Retouches vidéo non-destructives (10.G-V10) — sous-routeur monté sous /api/media.
- * Trim in/out en frames : gestionnaires du média ; autorisé même publié (marqueur
- * « modifié après publication » posé par le service). L'original n'est jamais modifié.
+ * Trim in/out en frames : gestionnaires du média, vidéo non publiée uniquement
+ * (verrou Phase 11, vérifié par le service). L'original n'est jamais modifié.
  */
 const router = Router();
 router.use(authenticate);
