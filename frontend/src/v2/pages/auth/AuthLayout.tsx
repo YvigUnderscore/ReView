@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../../lib/motion';
+import { useT } from '../../lib/i18n';
+import LocaleSwitch from '../../components/LocaleSwitch';
 
 /**
  * Écran d'authentification scindé (10.B7) : panneau identité à gauche (logo, tagline,
@@ -16,6 +18,7 @@ export function AuthLayout({
   subtitle: string;
   children: ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="grid min-h-screen bg-background text-foreground lg:grid-cols-2">
       <aside className="relative hidden flex-col justify-between overflow-hidden border-r border-border p-10 lg:flex">
@@ -26,11 +29,12 @@ export function AuthLayout({
           <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
           <p className="max-w-sm text-muted-foreground">{subtitle}</p>
         </div>
-        <p className="relative text-xs text-muted-foreground">
-          Review collaborative de médias pour studios VFX &amp; post-production.
-        </p>
+        <p className="relative text-xs text-muted-foreground">{t('auth.tagline')}</p>
       </aside>
-      <main className="flex items-center justify-center p-6">
+      <main className="relative flex items-center justify-center p-6">
+        <div className="absolute right-4 top-4">
+          <LocaleSwitch />
+        </div>
         <motion.div variants={fadeInUp} initial="hidden" animate="show" className="w-full max-w-sm">
           {children}
         </motion.div>

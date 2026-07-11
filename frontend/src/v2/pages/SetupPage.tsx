@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { useAuth, type AuthUser } from '../stores/useAuth';
+import { useT, type MessageKey } from '../lib/i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { AuthLayout } from './auth/AuthLayout';
 
-const STEPS = ['Studio', 'Compte admin'] as const;
+const STEP_KEYS: MessageKey[] = ['setup.step.studio', 'setup.step.admin'];
 
 export default function SetupPage() {
+  const tr = useT();
   const setAuth = useAuth((s) => s.setAuth);
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -22,7 +24,7 @@ export default function SetupPage() {
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const next = () => {
-    if (!form.studioName.trim()) return setError('Indiquez le nom de votre studio.');
+    if (!form.studioName.trim()) return setError(tr('setup.studioName.required'));
     setError(null);
     setStep(1);
   };
@@ -36,21 +38,18 @@ export default function SetupPage() {
       setAuth(token, user);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Échec de configuration');
+      setError(err instanceof Error ? err.message : tr('setup.error.generic'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <AuthLayout
-      title="Bienvenue sur ReView."
-      subtitle="Configurons votre studio en deux étapes. Vous pourrez tout ajuster ensuite."
-    >
+    <AuthLayout title={tr('setup.title')} subtitle={tr('setup.subtitle')}>
       {/* Progression */}
       <ol className="mb-6 flex items-center gap-2 text-xs">
-        {STEPS.map((label, i) => (
-          <li key={label} className="flex items-center gap-2">
+        {STEP_KEYS.map((key, i) => (
+          <li key={key} className="flex items-center gap-2">
             <span
               className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-medium ${
                 i <= step
@@ -61,9 +60,9 @@ export default function SetupPage() {
               {i + 1}
             </span>
             <span className={i === step ? 'font-medium text-foreground' : 'text-muted-foreground'}>
-              {label}
+              {tr(key)}
             </span>
-            {i < STEPS.length - 1 && <span className="mx-1 h-px w-6 bg-border" />}
+            {i < STEP_KEYS.length - 1 && <span className="mx-1 h-px w-6 bg-border" />}
           </li>
         ))}
       </ol>
@@ -77,35 +76,35 @@ export default function SetupPage() {
           className="space-y-4"
         >
           <div className="space-y-1.5">
-            <Label htmlFor="studioName">Nom du studio</Label>
+            <Label htmlFor="studioName">{tr('setup.studioName')}</Label>
             <Input
               id="studioName"
-              placeholder="Mon Studio"
+              placeholder={tr('setup.studioName.placeholder')}
               value={form.studioName}
               onChange={set('studioName')}
               autoFocus
               required
             />
-            <p className="text-xs text-muted-foreground">Le nom affiché à votre équipe.</p>
+            <p className="text-xs text-muted-foreground">{tr('setup.studioName.hint')}</p>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full">
-            Continuer
+            {tr('setup.continue')}
           </Button>
         </form>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="adminName">Votre nom</Label>
+            <Label htmlFor="adminName">{tr('setup.adminName')}</Label>
             <Input
               id="adminName"
-              placeholder="Jean Dupont"
+              placeholder={tr('setup.adminName.placeholder')}
               value={form.adminName}
               onChange={set('adminName')}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="adminEmail">Email admin</Label>
+            <Label htmlFor="adminEmail">{tr('setup.adminEmail')}</Label>
             <Input
               id="adminEmail"
               type="email"
@@ -117,11 +116,11 @@ export default function SetupPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="adminPassword">Mot de passe</Label>
+            <Label htmlFor="adminPassword">{tr('setup.password')}</Label>
             <Input
               id="adminPassword"
               type="password"
-              placeholder="8+ car., 1 lettre, 1 chiffre"
+              placeholder={tr('setup.password.placeholder')}
               value={form.adminPassword}
               onChange={set('adminPassword')}
               autoComplete="new-password"
@@ -142,7 +141,7 @@ export default function SetupPage() {
               <ArrowLeft size={16} />
             </Button>
             <Button type="submit" disabled={busy} className="w-full">
-              {busy ? 'Création…' : 'Créer le studio'}
+              {busy ? tr('setup.submitting') : tr('setup.submit')}
             </Button>
           </div>
         </form>
