@@ -57,3 +57,50 @@ export async function markOffline(userId: number): Promise<void> {
 export async function touch(userId: number): Promise<void> {
   await persistLastSeen(userId);
 }
+
+// ── Présence par review (backlog P2 10.G) ────────────────────────────────────
+// Spectateurs d'un média en cours de review, in-memory : mediaId → userId →
+// { identité publique, nombre d'onglets }. La diffusion (event `review:presence`)
+// est faite par SocketService sur la room `review_{mediaId}`.
+
+export interface ReviewViewer {
+  id: number;
+  displayName: string;
+  initials: string;
+  avatarUrl: string | null;
+}
+
+const reviewRooms = new Map<number, Map<number, { viewer: ReviewViewer; count: number }>>();
+
+export function getReviewViewers(mediaId: number): ReviewViewer[] {
+  return [...(reviewRooms.get(mediaId)?.values() ?? [])].map((e) => e.viewer);
+}
+
+/** Entrée d'un spectateur (multi-onglets : compteur) → liste à jour. */
+export function joinReview(mediaId: number, viewer: ReviewViewer): ReviewViewer[] {
+  let room = reviewRooms.get(mediaId);
+  if (!room) {
+    room = new Map();
+    reviewRooms.set(mediaId, room);
+  }
+  const entry = room.get(viewer.id);
+  if (entry) {
+    entry.count += 1;
+    entry.viewer = viewer; // identité rafraîchie (avatar présigné le plus récent)
+  } else {
+    room.set(viewer.id, { viewer, count: 1 });
+  }
+  return getReviewViewers(mediaId);
+}
+
+/** Sortie d'un spectateur (dernier onglet → retiré de la liste) → liste à jour. */
+export function leaveReview(mediaId: number, userId: number): ReviewViewer[] {
+  const room = reviewRooms.get(mediaId);
+  const entry = room?.get(userId);
+  if (room && entry) {
+    if (entry.count <= 1) room.delete(userId);
+    else entry.count -= 1;
+    if (room.size === 0) reviewRooms.delete(mediaId);
+  }
+  return getReviewViewers(mediaId);
+}

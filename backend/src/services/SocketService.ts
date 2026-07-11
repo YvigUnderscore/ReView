@@ -4,7 +4,17 @@ import { verifyToken } from '../lib/jwt';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { env } from '../config/env';
-import { markOnline, markOffline, touch, setPresenceBroadcaster } from './PresenceService';
+import {
+  markOnline,
+  markOffline,
+  touch,
+  setPresenceBroadcaster,
+  joinReview,
+  leaveReview,
+  getReviewViewers,
+} from './PresenceService';
+import { resolveProjectIdForMedia } from '../lib/pipeline';
+import { toPublicUser } from '../lib/userView';
 
 let io: SocketServer | undefined;
 
@@ -50,7 +60,61 @@ export const initSocket = (server: HttpServer): SocketServer => {
       void markOnline(uid);
       // Activité : le client émet `activity` (interactions) → rafraîchit lastSeenAt.
       socket.on('activity', () => void touch(uid));
-      socket.on('disconnect', () => void markOffline(uid));
+
+      // Présence par review : avatars « en train de regarder » (backlog P2 10.G).
+      // RBAC revérifié au join ; identité publique résolue une fois par entrée.
+      const joinedReviews = new Set<number>();
+      const emitViewers = (mediaId: number) =>
+        io?.to(`review_${mediaId}`).emit('review:presence', {
+          mediaId,
+          viewers: getReviewViewers(mediaId),
+        });
+      socket.on('join_review', async (mediaId: number) => {
+        const mid = Number(mediaId);
+        if (!Number.isInteger(mid)) return;
+        if (joinedReviews.has(mid)) return emitViewers(mid);
+        const projectId = await resolveProjectIdForMedia(mid);
+        if (!projectId || !(await checkProjectAccess(uid, socket.user!.role, projectId))) return;
+        const raw = await prisma.user.findUnique({
+          where: { id: uid },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            avatarKey: true,
+          },
+        });
+        if (!raw) return;
+        const pub = await toPublicUser(raw);
+        socket.join(`review_${mid}`);
+        joinedReviews.add(mid);
+        joinReview(mid, {
+          id: pub.id,
+          displayName: pub.displayName,
+          initials: pub.initials,
+          avatarUrl: pub.avatarUrl,
+        });
+        emitViewers(mid);
+      });
+      socket.on('leave_review', (mediaId: number) => {
+        const mid = Number(mediaId);
+        if (!joinedReviews.delete(mid)) return;
+        socket.leave(`review_${mid}`);
+        leaveReview(mid, uid);
+        emitViewers(mid);
+      });
+
+      socket.on('disconnect', () => {
+        void markOffline(uid);
+        for (const mid of joinedReviews) {
+          leaveReview(mid, uid);
+          emitViewers(mid);
+        }
+        joinedReviews.clear();
+      });
     }
     if (socket.shareProjectId) socket.join(`project_${socket.shareProjectId}`);
 

@@ -1,6 +1,8 @@
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import Avatar from '../../components/Avatar';
 import type { MediaResp } from './reviewTypes';
 import VersionNavigator from './VersionNavigator';
+import { useReviewPresence } from './useReviewPresence';
 
 /**
  * En-tête de la review : nom du média + badge brouillon, sélecteur de version
@@ -18,6 +20,7 @@ export default function ReviewHeader({
   onToggleComments: () => void;
 }) {
   const published = data.media.published;
+  const viewers = useReviewPresence(data.media.id);
   return (
     <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
@@ -36,6 +39,21 @@ export default function ReviewHeader({
         <VersionNavigator versionId={data.media.versionId} mediaId={data.media.id} />
       </div>
       <div className="flex shrink-0 items-center gap-2 text-sm">
+        {viewers.length > 0 && (
+          <div
+            className="flex items-center -space-x-2"
+            title={`En train de regarder : ${viewers.map((v) => v.displayName).join(', ')}`}
+          >
+            {viewers.slice(0, 5).map((v) => (
+              <span key={v.id} className="rounded-full ring-2 ring-background">
+                <Avatar seed={v.id} initials={v.initials} avatarUrl={v.avatarUrl} size={24} />
+              </span>
+            ))}
+            {viewers.length > 5 && (
+              <span className="pl-3 text-xs text-muted-foreground">+{viewers.length - 5}</span>
+            )}
+          </div>
+        )}
         {!published && (
           <button
             onClick={onPublish}
