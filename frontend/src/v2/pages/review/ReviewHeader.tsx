@@ -2,6 +2,7 @@ import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import type { MediaResp } from './reviewTypes';
 import VersionNavigator from './VersionNavigator';
+import VideoCompareSelect from './VideoCompareSelect';
 import { useReviewPresence } from './useReviewPresence';
 
 /**
@@ -13,11 +14,15 @@ export default function ReviewHeader({
   onPublish,
   commentsOpen,
   onToggleComments,
+  compareId,
+  onCompareChange,
 }: {
   data: MediaResp;
   onPublish: () => void;
   commentsOpen: boolean;
   onToggleComments: () => void;
+  compareId: number | null;
+  onCompareChange: (mediaId: number | null) => void;
 }) {
   const published = data.media.published;
   const viewers = useReviewPresence(data.media.id);
@@ -37,6 +42,14 @@ export default function ReviewHeader({
           </span>
         )}
         <VersionNavigator versionId={data.media.versionId} mediaId={data.media.id} />
+        {data.media.kind === 'VIDEO' && (
+          <VideoCompareSelect
+            versionId={data.media.versionId}
+            mediaId={data.media.id}
+            compareId={compareId}
+            onCompareChange={onCompareChange}
+          />
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-2 text-sm">
         {viewers.length > 0 && (

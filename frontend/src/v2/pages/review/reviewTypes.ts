@@ -212,6 +212,14 @@ export function resolveGlbSrc(data: MediaResp | null): string | null {
   return data.glbUrl ?? (/\.(glb|gltf)(\?|$)/i.test(data.url) ? data.url : null);
 }
 
+/** Premier média vidéo comparable d'une version (comparaison A/B, backlog P2). */
+export function findCompareVideo(
+  media: Array<{ id: number; kind: string }>,
+  excludeId: number,
+): number | null {
+  return media.find((m) => m.kind === 'VIDEO' && m.id !== excludeId)?.id ?? null;
+}
+
 /** Décale la vidéo de `delta` frames (met en pause pour un pas précis). */
 export function stepVideoFrame(video: HTMLVideoElement | null, fps: number, delta: number): void {
   if (!video) return;

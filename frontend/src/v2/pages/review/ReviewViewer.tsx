@@ -12,6 +12,7 @@ import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
 import SplatReview from './splat/SplatReview';
+import VideoComparePane from './VideoComparePane';
 import VideoPane from './VideoPane';
 import VideoTrimBar from './VideoTrimBar';
 
@@ -45,6 +46,8 @@ export default function ReviewViewer({
   onMarker,
   onReprocess,
   onSplatEditsSaved,
+  compareId,
+  onCloseCompare,
 }: {
   data: MediaResp | null;
   error: string | null;
@@ -70,6 +73,8 @@ export default function ReviewViewer({
   onMarker: () => void;
   onReprocess: () => void;
   onSplatEditsSaved: (patch: SplatEditsPatch) => void;
+  compareId: number | null;
+  onCloseCompare: () => void;
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
@@ -124,32 +129,38 @@ export default function ReviewViewer({
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
 
       {kind === 'VIDEO' && src && (
-        <>
-          <VideoPane
-            src={src}
-            videoRef={videoRef}
-            programmaticSeekRef={programmaticSeekRef}
-            overlay={renderOverlay()}
-            comments={comments ?? []}
-            selectedId={selectedCommentId}
-            onSelectComment={onSelectComment}
-            onManualSeek={onManualSeek}
-            onMarker={onMarker}
-            fps={fps}
-            fpsDetected={data?.fps != null}
-            setFpsOverride={setFpsOverride}
-            startFrame={startFrame}
-            trimRange={
-              // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
-              data?.trim && !data.trimProxyReady
-                ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
-                : null
-            }
-          />
-          {data && canManage && (
-            <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
+        <div className="flex min-h-0 flex-1 gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <VideoPane
+              src={src}
+              videoRef={videoRef}
+              programmaticSeekRef={programmaticSeekRef}
+              overlay={renderOverlay()}
+              comments={comments ?? []}
+              selectedId={selectedCommentId}
+              onSelectComment={onSelectComment}
+              onManualSeek={onManualSeek}
+              onMarker={onMarker}
+              fps={fps}
+              fpsDetected={data?.fps != null}
+              setFpsOverride={setFpsOverride}
+              startFrame={startFrame}
+              trimRange={
+                // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
+                data?.trim && !data.trimProxyReady
+                  ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
+                  : null
+              }
+            />
+            {data && canManage && (
+              <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
+            )}
+          </div>
+          {/* Comparaison A/B : pane B synchronisé sur le lecteur maître (backlog P2). */}
+          {compareId != null && (
+            <VideoComparePane compareId={compareId} masterRef={videoRef} onClose={onCloseCompare} />
           )}
-        </>
+        </div>
       )}
 
       {kind === 'IMAGE' && data?.url && (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -11,13 +11,9 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
-import {
-  resolveGlbSrc,
-  splitAnnotationParts,
-  type MediaResp,
-  type SplatEditsPatch,
-} from './review/reviewTypes';
+import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
+import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useModel3D } from './review/useModel3D';
 import ReviewHeader from './review/ReviewHeader';
 import ReviewViewer from './review/ReviewViewer';
@@ -45,6 +41,8 @@ function ReviewContent({ id }: { id: number }) {
   const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
   const [fpsOverride, setFpsOverride] = useState(24);
   const [reprocessing, setReprocessing] = useState(false);
+  // Comparaison A/B vidéo (backlog P2) : média B affiché côte à côte, lecture synchronisée.
+  const [compareId, setCompareId] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -79,56 +77,9 @@ function ReviewContent({ id }: { id: number }) {
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
-  // Miniature splat (10.G) : pas de rendu headless serveur → capture client best-effort si
-  // absente. Réservée aux gestionnaires du média (le backend re-vérifie via assertMediaManage).
+  // Miniature splat + patch du cache après enregistrement des éditions (extrait, budget 10.F4).
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
-  const thumbedRef = useRef(false);
-  const { ready: splatReadyState, captureThumbnail } = splat;
-  useEffect(() => {
-    if (
-      data?.media.kind !== 'SPLAT' ||
-      !splatReadyState ||
-      data?.thumbnailUrl ||
-      !canManageMedia ||
-      thumbedRef.current
-    )
-      return;
-    thumbedRef.current = true;
-    const t = setTimeout(async () => {
-      const dataUrl = await captureThumbnail();
-      if (!dataUrl) return;
-      try {
-        const { thumbnailUrl } = await api.post<{ thumbnailUrl: string }>(`/api/media/${id}/thumbnail`, {
-          dataUrl,
-        });
-        qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
-      } catch {
-        // best-effort : miniature silencieuse (ex. droits insuffisants)
-      }
-    }, 600);
-    return () => clearTimeout(t);
-  }, [data, splatReadyState, canManageMedia, captureThumbnail, id, qc]);
-
-  // Éditions splat enregistrées → met à jour le cache média (splatEdits/masque) sans refetch,
-  // puis régénère la miniature (le rendu a changé) — best-effort, après stabilisation du rendu.
-  const onSplatEditsSaved = useCallback(
-    (patch: SplatEditsPatch) => {
-      qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, ...patch } : old));
-      setTimeout(async () => {
-        const dataUrl = await captureThumbnail();
-        if (!dataUrl) return;
-        try {
-          const { thumbnailUrl } = await api.post<{ thumbnailUrl: string }>(`/api/media/${id}/thumbnail`, {
-            dataUrl,
-          });
-          qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
-        } catch {
-          // best-effort : miniature silencieuse
-        }
-      }, 400);
-    },
-    [qc, id, captureThumbnail],
-  );
+  const onSplatEditsSaved = useSplatThumbnail(id, data, splat, canManageMedia);
 
   const seek = (t: number) => {
     if (videoRef.current) {
@@ -279,6 +230,8 @@ function ReviewContent({ id }: { id: number }) {
             onPublish={publishMedia}
             commentsOpen={commentsOpen}
             onToggleComments={() => setCommentsOpen((o) => !o)}
+            compareId={compareId}
+            onCompareChange={setCompareId}
           />
         ) : !error ? (
           <div className="mb-3 flex shrink-0 items-center gap-3">
@@ -315,6 +268,8 @@ function ReviewContent({ id }: { id: number }) {
             onManualSeek={clearSelection}
             onMarker={openComposer}
             onReprocess={reprocessMedia}
+            compareId={compareId}
+            onCloseCompare={() => setCompareId(null)}
           />
 
           {commentsOpen && (
