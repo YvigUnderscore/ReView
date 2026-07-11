@@ -224,7 +224,7 @@ export default function ShotsTab({
                       <Star
                         size={15}
                         fill={isFav(shot.id) ? 'currentColor' : 'none'}
-                        className={isFav(shot.id) ? 'text-amber-400' : ''}
+                        className={isFav(shot.id) ? 'text-warning' : ''}
                       />
                     ),
                     label: 'Favori',

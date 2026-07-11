@@ -69,10 +69,8 @@ export default function PendingDrafts() {
         <div className="flex max-h-[60vh] w-80 flex-col rounded-lg border border-border bg-card shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <FileClock size={15} className="text-amber-400" /> Brouillons en attente
-              <span className="rounded-full bg-amber-500/20 px-1.5 text-xs text-amber-300">
-                {drafts.length}
-              </span>
+              <FileClock size={15} className="text-warning" /> Brouillons en attente
+              <span className="rounded-full bg-warning/15 px-1.5 text-xs text-warning">{drafts.length}</span>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -126,7 +124,7 @@ export default function PendingDrafts() {
       ) : (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-sm text-amber-200 shadow-lg backdrop-blur transition-colors hover:bg-amber-500/25"
+          className="flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3 py-2 text-sm text-warning shadow-lg backdrop-blur transition-colors hover:bg-warning/25"
         >
           <FileClock size={16} />
           {drafts.length} brouillon{drafts.length > 1 ? 's' : ''} en attente

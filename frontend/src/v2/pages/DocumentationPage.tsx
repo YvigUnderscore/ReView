@@ -118,7 +118,7 @@ export default function DocumentationPage() {
               }`}
             >
               {d.kind === 'PDF' ? (
-                <FileType2 size={16} className="shrink-0 text-red-400" />
+                <FileType2 size={16} className="shrink-0 text-destructive" />
               ) : (
                 <FileText size={16} className="shrink-0 text-primary" />
               )}

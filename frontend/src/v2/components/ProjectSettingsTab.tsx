@@ -89,7 +89,7 @@ export default function ProjectSettingsTab({
   return (
     <div className="max-w-2xl space-y-6">
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {msg && <p className="text-sm text-green-400">{msg}</p>}
+      {msg && <p className="text-sm text-success">{msg}</p>}
 
       {/* Frame de départ */}
       <section className="rounded-lg border border-border bg-card p-4">

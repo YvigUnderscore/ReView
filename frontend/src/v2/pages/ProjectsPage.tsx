@@ -160,7 +160,7 @@ export default function ProjectsPage() {
                     <Star
                       size={15}
                       fill={isFav(p.id) ? 'currentColor' : 'none'}
-                      className={isFav(p.id) ? 'text-amber-400' : ''}
+                      className={isFav(p.id) ? 'text-warning' : ''}
                     />
                   ),
                   label: 'Favori',

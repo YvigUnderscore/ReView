@@ -72,11 +72,8 @@ export function ServiceHealth({ services }: { services: System['services'] }) {
       {items.map(([name, ok]) => (
         <div key={name} className="flex items-center justify-between text-sm">
           <span>{name}</span>
-          <span className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-400' : 'text-destructive'}`}>
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ background: ok ? '#22c55e' : '#ef4444' }}
-            />
+          <span className={`flex items-center gap-1.5 text-xs ${ok ? 'text-success' : 'text-destructive'}`}>
+            <span className={`inline-block h-2 w-2 rounded-full ${ok ? 'bg-success' : 'bg-destructive'}`} />
             {ok ? 'OK' : 'Hors service'}
           </span>
         </div>

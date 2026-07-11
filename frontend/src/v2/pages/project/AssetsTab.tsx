@@ -147,7 +147,7 @@ export default function AssetsTab({
                     <Star
                       size={15}
                       fill={isFav(a.id) ? 'currentColor' : 'none'}
-                      className={isFav(a.id) ? 'text-amber-400' : ''}
+                      className={isFav(a.id) ? 'text-warning' : ''}
                     />
                   ),
                   label: 'Favori',

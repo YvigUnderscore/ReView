@@ -24,7 +24,7 @@ export default function FavoriteButton({
       }}
       title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
       aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-      className={`rounded p-1 transition-colors hover:bg-secondary ${isFav ? 'text-amber-400' : 'text-muted-foreground hover:text-foreground'} ${className}`}
+      className={`rounded p-1 transition-colors hover:bg-secondary ${isFav ? 'text-warning' : 'text-muted-foreground hover:text-foreground'} ${className}`}
     >
       <Star size={size} fill={isFav ? 'currentColor' : 'none'} />
     </button>

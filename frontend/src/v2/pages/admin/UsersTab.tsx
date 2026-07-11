@@ -63,7 +63,7 @@ export default function UsersTab() {
                 <td className="px-3 py-2">
                   <span className="font-medium">{u.displayName ?? u.name ?? '—'}</span>
                   {u.online && (
-                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-green-500" title="En ligne" />
+                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-success" title="En ligne" />
                   )}
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{u.email}</td>

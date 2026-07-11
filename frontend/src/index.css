@@ -4,53 +4,67 @@
 
 @layer base {
   /*
-   * Thème ReView — identité « lampe de studio » : accent ambre chaud sur neutres froids.
-   * Le mode SOMBRE est le mode par défaut (usage studio) ; la classe `dark` est posée
-   * sur <html> par stores/useTheme.ts. Toute couleur de l'app passe par ces tokens.
+   * Thème ReView (Phase 12) — bleu nuit + cyan/magenta.
+   * Le mode SOMBRE est le mode par défaut (palette de référence : background #0B0E14,
+   * surfaces #121620, bordures #1E2433, texte #E6EBEF/#9BA3B2, primaire cyan #00F0FF,
+   * magenta #FF2095 = --accent-2). Le mode CLAIR est dérivé (mêmes teintes, luminosités
+   * inversées ; cyan/magenta assombris pour rester lisibles sur fond clair).
+   * La classe `dark` est posée sur <html> par stores/useTheme.ts.
+   * Toute couleur de l'app passe par ces tokens — statuts inclus (success/warning/info/accent-2).
    */
   :root {
-    --background: 220 20% 98%;
-    --foreground: 224 20% 10%;
+    --background: 220 25% 97%;
+    --foreground: 222 30% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 224 20% 10%;
+    --card-foreground: 222 30% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 20% 10%;
-    --primary: 27 92% 47%;
+    --popover-foreground: 222 30% 10%;
+    --primary: 187 100% 30%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 93%;
-    --secondary-foreground: 224 20% 12%;
-    --muted: 220 15% 93%;
-    --muted-foreground: 222 12% 44%;
-    --accent: 27 92% 94%;
-    --accent-foreground: 27 80% 28%;
-    --destructive: 0 76% 50%;
+    --secondary: 220 20% 92%;
+    --secondary-foreground: 222 30% 12%;
+    --muted: 220 20% 92%;
+    --muted-foreground: 220 12% 42%;
+    --accent: 187 80% 92%;
+    --accent-foreground: 187 100% 22%;
+    --accent-2: 328 90% 44%;
+    --accent-2-foreground: 0 0% 100%;
+    --destructive: 3 85% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 14% 88%;
-    --input: 220 14% 84%;
-    --ring: 27 92% 47%;
+    --success: 151 90% 30%;
+    --warning: 40 95% 38%;
+    --info: 210 90% 42%;
+    --border: 220 16% 87%;
+    --input: 220 16% 83%;
+    --ring: 187 100% 30%;
     --radius: 0.625rem;
   }
 
   .dark {
-    --background: 225 16% 7%;
-    --foreground: 220 14% 92%;
-    --card: 225 15% 9%;
-    --card-foreground: 220 14% 92%;
-    --popover: 225 15% 10%;
-    --popover-foreground: 220 14% 92%;
-    --primary: 28 92% 55%;
-    --primary-foreground: 226 30% 8%;
-    --secondary: 224 13% 15%;
-    --secondary-foreground: 220 14% 92%;
-    --muted: 224 13% 14%;
-    --muted-foreground: 221 10% 62%;
-    --accent: 28 60% 16%;
-    --accent-foreground: 28 90% 78%;
-    --destructive: 0 68% 52%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 224 13% 16%;
-    --input: 224 13% 19%;
-    --ring: 28 92% 55%;
+    --background: 220 29% 6%;
+    --foreground: 207 22% 92%;
+    --card: 223 28% 10%;
+    --card-foreground: 207 22% 92%;
+    --popover: 223 28% 11%;
+    --popover-foreground: 207 22% 92%;
+    --primary: 184 100% 50%;
+    --primary-foreground: 220 29% 6%;
+    --secondary: 223 26% 16%;
+    --secondary-foreground: 207 22% 92%;
+    --muted: 223 27% 13%;
+    --muted-foreground: 219 13% 65%;
+    --accent: 184 70% 14%;
+    --accent-foreground: 184 100% 72%;
+    --accent-2: 328 100% 56%;
+    --accent-2-foreground: 0 0% 100%;
+    --destructive: 3 100% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 151 100% 45%;
+    --warning: 45 100% 51%;
+    --info: 199 95% 60%;
+    --border: 223 26% 16%;
+    --input: 223 26% 20%;
+    --ring: 184 100% 50%;
   }
 }
 

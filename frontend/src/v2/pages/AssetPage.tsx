@@ -228,7 +228,7 @@ export default function AssetPage() {
                       <div className="text-muted-foreground">
                         {m.kind} · {m.status}
                         {!m.published && (
-                          <span className="ml-1 rounded bg-amber-500/20 px-1 text-amber-300">Brouillon</span>
+                          <span className="ml-1 rounded bg-warning/15 px-1 text-warning">Brouillon</span>
                         )}
                       </div>
                     </Link>

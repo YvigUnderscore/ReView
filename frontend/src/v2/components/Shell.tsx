@@ -132,7 +132,7 @@ export default function Shell({
             {/* Favoris */}
             <div className="pt-3">
               <div className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Star size={13} className="text-amber-400" /> Favoris
+                <Star size={13} className="text-warning" /> Favoris
               </div>
               {favorites.length === 0 ? (
                 <p className="px-3 py-1 text-xs text-muted-foreground">Aucun favori.</p>
@@ -145,7 +145,7 @@ export default function Shell({
                       className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                       title={f.label}
                     >
-                      <Star size={13} className="shrink-0 text-amber-400" fill="currentColor" />
+                      <Star size={13} className="shrink-0 text-warning" fill="currentColor" />
                       <span className="truncate">{f.label}</span>
                     </Link>
                   ))}

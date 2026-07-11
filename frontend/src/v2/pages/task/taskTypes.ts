@@ -10,13 +10,13 @@ export const VERSION_STATUS_LABEL: Record<VersionStatus, string> = {
 };
 export const VERSION_STATUS_COLOR: Record<VersionStatus, string> = {
   DRAFT: 'bg-muted text-muted-foreground',
-  REVIEW: 'bg-amber-500/20 text-amber-300',
-  PUBLISHED: 'bg-green-500/20 text-green-300',
+  REVIEW: 'bg-warning/15 text-warning',
+  PUBLISHED: 'bg-success/15 text-success',
 };
 export const VERSION_STATUS_DOT: Record<VersionStatus, string> = {
   DRAFT: 'bg-muted-foreground/50',
-  REVIEW: 'bg-amber-400',
-  PUBLISHED: 'bg-green-400',
+  REVIEW: 'bg-warning',
+  PUBLISHED: 'bg-success',
 };
 
 /** Icône représentant le type de média (vignette de repli). */
