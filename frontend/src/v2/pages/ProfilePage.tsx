@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useAuth, type AuthUser } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
@@ -174,8 +176,49 @@ export default function ProfilePage() {
             Changer le mot de passe
           </Button>
         </section>
+
+        <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">Notifications</h2>
+          <DigestToggle />
+        </section>
       </div>
     </Shell>
+  );
+}
+
+/** Abonnement au digest quotidien par email (préférence `emailDigest`, backlog P2). */
+function DigestToggle() {
+  const qc = useQueryClient();
+  const prefsQ = useQuery({
+    queryKey: qk.preferences,
+    queryFn: () =>
+      api
+        .get<{ preferences: { emailDigest?: boolean } }>('/api/users/me/preferences')
+        .then((d) => d.preferences),
+  });
+  const enabled = prefsQ.data?.emailDigest === true;
+
+  const toggle = async () => {
+    try {
+      await api.patch('/api/users/me/preferences', { emailDigest: !enabled });
+      qc.invalidateQueries({ queryKey: qk.preferences });
+      toast.success(!enabled ? 'Digest quotidien activé' : 'Digest quotidien désactivé');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    }
+  };
+
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={enabled}
+        disabled={prefsQ.isLoading}
+        onChange={toggle}
+        className="h-4 w-4 accent-primary"
+      />
+      Recevoir chaque matin un résumé par email de l’activité de mes projets
+    </label>
   );
 }
 

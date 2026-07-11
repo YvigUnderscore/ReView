@@ -38,6 +38,21 @@ const baseEnvSchema = z.object({
 
   // CORS
   CORS_ORIGIN: z.string().default('*'),
+
+  // Email sortant (digest quotidien) — optionnel : sans SMTP_HOST, aucun envoi.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('ReView <no-reply@review.local>'),
+  // Heure locale (0-23) d'envoi du digest quotidien.
+  DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
+  // URL publique de l'app (liens dans les emails) ; sans elle, liens omis.
+  APP_URL: z.string().optional(),
 });
 
 /** Un secret est « faible » s'il est trop court ou ressemble à un placeholder. */

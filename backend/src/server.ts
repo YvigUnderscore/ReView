@@ -5,6 +5,7 @@ import { initSocket } from './services/SocketService';
 import { storage } from './services/StorageService';
 import { purgeExpiredTrash } from './lib/trash';
 import { getNumericSetting, SETTING_KEYS } from './lib/settings';
+import { sendDailyDigests } from './services/DigestService';
 import { logger } from './lib/logger';
 
 const TRASH_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000; // quotidien
@@ -26,6 +27,25 @@ function scheduleTrashSweep(): void {
   setInterval(sweep, TRASH_SWEEP_INTERVAL_MS).unref();
 }
 
+/** Digest email quotidien : premier envoi à DIGEST_HOUR (heure locale), puis toutes les 24 h. */
+function scheduleDailyDigest(): void {
+  const run = async () => {
+    try {
+      await sendDailyDigests();
+    } catch (err) {
+      logger.error({ err }, '[Digest] échec de l’envoi quotidien');
+    }
+  };
+  const next = new Date();
+  next.setHours(env.DIGEST_HOUR, 0, 0, 0);
+  if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
+  setTimeout(() => {
+    void run();
+    setInterval(run, 24 * 60 * 60 * 1000).unref();
+  }, next.getTime() - Date.now()).unref();
+  logger.info(`[Digest] prochain envoi planifié : ${next.toLocaleString('fr-FR')}`);
+}
+
 async function main(): Promise<void> {
   // S'assure que le bucket MinIO existe avant d'accepter du trafic.
   await storage.ensureBucket();
@@ -35,6 +55,7 @@ async function main(): Promise<void> {
   initSocket(server);
 
   scheduleTrashSweep();
+  scheduleDailyDigest();
 
   server.listen(env.PORT, () => {
     logger.info(`✅ ReView 2.0 backend démarré sur le port ${env.PORT} (${env.NODE_ENV})`);
