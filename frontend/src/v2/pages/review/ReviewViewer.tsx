@@ -231,7 +231,12 @@ export default function ReviewViewer({
           {model3dReady && (
             <>
               <Model3DToolbar m={model3d} showEditTools={showEditTools} />
-              <Model3DCameraBar model3d={model3d} />
+              <Model3DCameraBar
+                model3d={model3d}
+                data={data}
+                canManage={canManage}
+                onSaved={onSplatEditsSaved}
+              />
             </>
           )}
         </>

@@ -1,4 +1,8 @@
+import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '../../../lib/apiClient';
+import type { MediaResp, SplatEditsPatch, SplatPresentation } from './reviewTypes';
 import { HudGroup, HudIconButton } from './hud/ViewerHud';
 import { orbitPreset } from './splat/camera/cameraAnim';
 import { useCameraKeyframes } from './splat/camera/useCameraKeyframes';
@@ -10,16 +14,89 @@ const deg = (rad: number) => Math.round((rad * 180) / Math.PI);
 /**
  * Barre caméra du viewer 3D Three (mode layout, Phase 15/16) : focale (fov), tilt (roll), et
  * **timeline keyframes** (ajouter une pose, preset orbite, lecture/scrub, courbes) — réutilise
- * le lecteur `useCameraKeyframes` commun via l'interface `CameraController`. Session seule pour
- * l'instant (la persistance « présentation » 3D commune arrive avec le backend dédié).
+ * le lecteur `useCameraKeyframes` commun via l'interface `CameraController`. La **présentation
+ * persistée** (caméra de base + animation) est rejouée pour tous à l'ouverture ; le gestionnaire
+ * l'enregistre (champ `splatPresentation` réutilisé, générique caméra).
  */
-export default function Model3DCameraBar({ model3d }: { model3d: Model3DThreeState }) {
+export default function Model3DCameraBar({
+  model3d,
+  data,
+  canManage,
+  onSaved,
+}: {
+  model3d: Model3DThreeState;
+  data: MediaResp;
+  canManage: boolean;
+  onSaved: (patch: SplatEditsPatch) => void;
+}) {
   const kf = useCameraKeyframes(model3d);
+  const [busy, setBusy] = useState(false);
+  const { setAll, play } = kf;
+  const { ready, restoreCamera, setFov, setRoll } = model3d;
+
+  // Rejeu de la présentation persistée à l'ouverture (une fois la scène prête), pour tous.
+  const appliedRef = useRef(false);
+  const pres = data.splatPresentation;
+  useEffect(() => {
+    if (!ready || appliedRef.current || !pres) return;
+    appliedRef.current = true;
+    if (pres.camera) {
+      restoreCamera(pres.camera);
+      if (pres.camera.fov != null) setFov(pres.camera.fov);
+      if (pres.camera.roll != null) setRoll(pres.camera.roll);
+    }
+    if (pres.cameraAnim && pres.cameraAnim.keyframes.length >= 2) {
+      setAll(pres.cameraAnim.keyframes, pres.cameraAnim.loop, pres.cameraAnim.smooth);
+      play();
+    }
+  }, [ready, pres, restoreCamera, setFov, setRoll, setAll, play]);
+
   const applyOrbitPreset = () => {
     const view = model3d.captureCamera();
     if (!view) return;
     kf.setAll(orbitPreset(view), true);
     kf.play();
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const view = model3d.captureCamera();
+      const presentation: SplatPresentation = {};
+      if (view)
+        presentation.camera = {
+          position: view.position,
+          target: view.target,
+          fov: view.fov,
+          roll: view.roll,
+        };
+      if (kf.keyframes.length >= 2)
+        presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
+      const { splatPresentation } = await api.patch<{ splatPresentation: SplatPresentation | null }>(
+        `/api/media/${data.media.id}/splat-presentation`,
+        { presentation },
+      );
+      onSaved({ splatPresentation });
+      toast.success('Présentation enregistrée — rejouée pour tous à l’ouverture');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la présentation");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const clear = async () => {
+    setBusy(true);
+    try {
+      await api.patch(`/api/media/${data.media.id}/splat-presentation`, { presentation: null });
+      onSaved({ splatPresentation: null });
+      kf.setAll([], true);
+      toast.success('Présentation effacée');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la présentation");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -73,7 +150,13 @@ export default function Model3DCameraBar({ model3d }: { model3d: Model3DThreeSta
           </>
         )}
       </HudGroup>
-      <KeyframeTimeline kf={kf} onOrbitPreset={applyOrbitPreset} />
+      <KeyframeTimeline
+        kf={kf}
+        onOrbitPreset={applyOrbitPreset}
+        onSave={canManage ? save : undefined}
+        onClear={canManage ? clear : undefined}
+        busy={busy}
+      />
     </>
   );
 }

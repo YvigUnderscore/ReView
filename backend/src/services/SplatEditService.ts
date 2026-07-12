@@ -65,7 +65,10 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
     select: { metadata: true, kind: true },
   });
   if (!media) throw notFound('Média introuvable');
-  if (media.kind !== MediaKind.SPLAT) throw badRequest('Présentation réservée aux splats', 'NOT_SPLAT');
+  // Présentation caméra générique (rejouée pour tous) : splat ET modèle 3D Three (Phase 15).
+  // Le champ garde le nom `splatPresentation` (réutilisé) ; DoF/reveal/LOD restent propres au splat.
+  if (media.kind !== MediaKind.SPLAT && media.kind !== MediaKind.MODEL_3D)
+    throw badRequest('Présentation réservée aux médias 3D/splat', 'NOT_3D');
   const metadata = {
     ...((media.metadata ?? {}) as object),
     splatPresentation: presentation as Prisma.InputJsonValue | null,
