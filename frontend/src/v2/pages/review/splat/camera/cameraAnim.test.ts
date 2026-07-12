@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SplatCameraKeyframe } from '../../reviewTypes';
-import { animDuration, applyEasing, orbitPreset, sampleAnim } from './cameraAnim';
+import { animDuration, applyEasing, orbitPreset, sampleAnim, samplePoseSpline } from './cameraAnim';
 
 const pose = (x: number, fov?: number) => ({
   position: { x, y: 0, z: 0 },
@@ -36,6 +36,33 @@ describe('sampleAnim', () => {
   it('null si moins de 2 keyframes', () => {
     expect(sampleAnim([KF[0]], 0, false)).toBeNull();
     expect(sampleAnim([], 0, true)).toBeNull();
+  });
+});
+
+describe('interpolation par courbes (16.A)', () => {
+  // 4 poses non alignées pour distinguer spline et segments linéaires.
+  const curve: SplatCameraKeyframe[] = [
+    { t: 0, pose: { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } }, easing: 'linear' },
+    { t: 1000, pose: { position: { x: 10, y: 10, z: 0 }, target: { x: 0, y: 0, z: 0 } }, easing: 'linear' },
+    { t: 2000, pose: { position: { x: 20, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } }, easing: 'linear' },
+    { t: 3000, pose: { position: { x: 30, y: 10, z: 0 }, target: { x: 0, y: 0, z: 0 } }, easing: 'linear' },
+  ];
+
+  it('la spline passe exactement par les keyframes (u=0 et u=1)', () => {
+    expect(samplePoseSpline(curve, 1, 0).position).toMatchObject({ x: 10, y: 10 });
+    expect(samplePoseSpline(curve, 1, 1).position).toMatchObject({ x: 20, y: 0 });
+  });
+
+  it('la spline dévie de la droite dans le segment (courbe)', () => {
+    // t=1250 → segment [1000,2000], u=0,25. Linéaire : y = 7,5 ; spline ≠ 7,5.
+    const lin = sampleAnim(curve, 1250, false, false)!;
+    const sp = sampleAnim(curve, 1250, false, true)!;
+    expect(lin.position.y).toBeCloseTo(7.5);
+    expect(sp.position.y).not.toBeCloseTo(7.5);
+  });
+
+  it('smooth=false reste identique au linéaire', () => {
+    expect(sampleAnim(curve, 1250, false, false)!.position.y).toBeCloseTo(7.5);
   });
 });
 

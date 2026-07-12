@@ -17,6 +17,8 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
   const { subscribeFrame, restoreCamera, captureCamera, getSceneHandle } = splat;
   const [keyframes, setKeyframes] = useState<SplatCameraKeyframe[]>([]);
   const [loop, setLoop] = useState(true);
+  // Interpolation par courbes (16.A) : trajectoire Catmull-Rom lissée au lieu de segments droits.
+  const [smooth, setSmooth] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [autoPaused, setAutoPaused] = useState(false);
   // Position de lecture : ref à la frame, état throttlé (~10 Hz) pour le scrub UI.
@@ -26,10 +28,12 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
   // Copies « dernière valeur » lues par la boucle de lecture (mises à jour en effet).
   const kfRef = useRef(keyframes);
   const loopRef = useRef(loop);
+  const smoothRef = useRef(smooth);
   useEffect(() => {
     kfRef.current = keyframes;
     loopRef.current = loop;
-  }, [keyframes, loop]);
+    smoothRef.current = smooth;
+  }, [keyframes, loop, smooth]);
 
   // Boucle de lecture : avance le temps, échantillonne la pose, l'applique à la caméra.
   useEffect(() => {
@@ -37,7 +41,7 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
     return subscribeFrame((dt) => {
       timeRef.current += dt * 1000;
       const kf = kfRef.current;
-      const pose = sampleAnim(kf, timeRef.current, loopRef.current);
+      const pose = sampleAnim(kf, timeRef.current, loopRef.current, smoothRef.current);
       if (!pose) return;
       restoreCamera(pose);
       if (!loopRef.current && timeRef.current >= animDuration(kf)) setPlaying(false);
@@ -85,7 +89,7 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
     (t: number) => {
       timeRef.current = t;
       setTimeMs(t);
-      const pose = sampleAnim(kfRef.current, t, false);
+      const pose = sampleAnim(kfRef.current, t, false, smoothRef.current);
       if (pose) restoreCamera(pose);
     },
     [restoreCamera],
@@ -120,17 +124,25 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
   );
 
   /** Remplace toute l'animation (chargement de la présentation persistée, preset orbite). */
-  const setAll = useCallback((kf: SplatCameraKeyframe[], loopValue: boolean) => {
+  const setAll = useCallback((kf: SplatCameraKeyframe[], loopValue: boolean, smoothValue = false) => {
     timeRef.current = 0;
     setTimeMs(0);
     setKeyframes(kf);
     setLoop(loopValue);
+    setSmooth(smoothValue);
   }, []);
+
+  const toggleSmooth = useCallback(() => {
+    setSmooth((s) => !s);
+    onEdited?.();
+  }, [onEdited]);
 
   return {
     keyframes,
     loop,
     setLoop,
+    smooth,
+    toggleSmooth,
     playing,
     autoPaused,
     play,

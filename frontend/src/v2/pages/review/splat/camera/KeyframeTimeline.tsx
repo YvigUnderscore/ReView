@@ -107,6 +107,18 @@ export default function KeyframeTimeline({
             />
             Boucle
           </label>
+          <label
+            className="flex cursor-pointer items-center gap-1 text-muted-foreground"
+            title="Interpolation par courbes lissées (Catmull-Rom) au lieu de segments droits"
+          >
+            <input
+              type="checkbox"
+              checked={kf.smooth}
+              onChange={kf.toggleSmooth}
+              className="accent-primary"
+            />
+            Courbes
+          </label>
         </>
       )}
 

@@ -110,7 +110,7 @@ export interface SplatPresentation {
   dof?: { focalDistance: number; apertureAngle: number };
   reveal?: { type: 'fade' | 'sweep' | 'dissolve'; durationMs: number };
   lodDefault?: 'auto' | 'on' | 'off' | 'streaming';
-  cameraAnim?: { keyframes: SplatCameraKeyframe[]; loop: boolean };
+  cameraAnim?: { keyframes: SplatCameraKeyframe[]; loop: boolean; smooth?: boolean };
 }
 
 /** Réponse de GET /api/media/:id (viewer review). */

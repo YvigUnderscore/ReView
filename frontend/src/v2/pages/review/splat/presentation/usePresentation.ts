@@ -149,7 +149,8 @@ export function usePresentation(
         presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
       if (reveal) presentation.reveal = reveal;
       presentation.lodDefault = lodMode;
-      if (kf.keyframes.length >= 2) presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop };
+      if (kf.keyframes.length >= 2)
+        presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
       const { splatPresentation } = await api.patch<{ splatPresentation: SplatPresentation | null }>(
         `/api/media/${data.media.id}/splat-presentation`,
         { presentation },

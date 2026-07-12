@@ -120,6 +120,7 @@ router.patch(
                 .min(2)
                 .max(64),
               loop: z.boolean(),
+              smooth: z.boolean().optional(), // interpolation par courbes (16.A)
             })
             .optional(),
         })

@@ -62,7 +62,7 @@ export function useCameraRig(
       h.spark.apertureAngle = presentation.dof.apertureAngle;
     }
     if (presentation?.cameraAnim && presentation.cameraAnim.keyframes.length >= 2) {
-      setAll(presentation.cameraAnim.keyframes, presentation.cameraAnim.loop);
+      setAll(presentation.cameraAnim.keyframes, presentation.cameraAnim.loop, presentation.cameraAnim.smooth);
       play();
     }
   }, [ready, presentation, getSceneHandle, restoreCamera, setAll, play]);

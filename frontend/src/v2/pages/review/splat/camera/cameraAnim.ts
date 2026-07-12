@@ -38,6 +38,42 @@ export function lerpPose(a: SplatCamera, b: SplatCamera, u: number): SplatCamera
   return pose;
 }
 
+// ── Interpolation par courbes (16.A) : spline Catmull-Rom uniforme ──────────────
+// Trajectoire lissée passant par chaque keyframe (position/cible) — mouvement de caméra
+// continu façon logiciel 3D. À u=0 renvoie p1, à u=1 renvoie p2 (passe par les poses).
+function catmull1(p0: number, p1: number, p2: number, p3: number, u: number): number {
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return (
+    0.5 * (2 * p1 + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (-p0 + 3 * p1 - 3 * p2 + p3) * u3)
+  );
+}
+const catmullVec = (
+  p0: { x: number; y: number; z: number },
+  p1: { x: number; y: number; z: number },
+  p2: { x: number; y: number; z: number },
+  p3: { x: number; y: number; z: number },
+  u: number,
+) => ({
+  x: catmull1(p0.x, p1.x, p2.x, p3.x, u),
+  y: catmull1(p0.y, p1.y, p2.y, p3.y, u),
+  z: catmull1(p0.z, p1.z, p2.z, p3.z, u),
+});
+
+/** Pose lissée sur le segment [i, i+1] (spline à travers les voisins), u∈[0,1] déjà « easé ». */
+export function samplePoseSpline(keyframes: SplatCameraKeyframe[], i: number, u: number): SplatCamera {
+  const k1 = keyframes[i].pose;
+  const k2 = keyframes[i + 1].pose;
+  const k0 = (keyframes[i - 1] ?? keyframes[i]).pose; // extrémités : voisin dupliqué
+  const k3 = (keyframes[i + 2] ?? keyframes[i + 1]).pose;
+  const pose: SplatCamera = {
+    position: catmullVec(k0.position, k1.position, k2.position, k3.position, u),
+    target: catmullVec(k0.target, k1.target, k2.target, k3.target, u),
+  };
+  if (k1.fov != null || k2.fov != null) pose.fov = lerp(k1.fov ?? k2.fov ?? 60, k2.fov ?? k1.fov ?? 60, u);
+  return pose;
+}
+
 /** Durée totale de l'animation (t de la dernière keyframe). */
 export function animDuration(keyframes: SplatCameraKeyframe[]): number {
   return keyframes.length > 0 ? keyframes[keyframes.length - 1].t : 0;
@@ -46,11 +82,13 @@ export function animDuration(keyframes: SplatCameraKeyframe[]): number {
 /**
  * Pose de la caméra au temps `timeMs`. En boucle, le temps est enroulé sur la durée ; sinon il
  * est borné à la dernière pose. `null` si moins de 2 keyframes (pas d'animation).
+ * `smooth` (16.A) : interpolation par courbes Catmull-Rom au lieu de segments linéaires.
  */
 export function sampleAnim(
   keyframes: SplatCameraKeyframe[],
   timeMs: number,
   loop: boolean,
+  smooth = false,
 ): SplatCamera | null {
   if (keyframes.length < 2) return null;
   const duration = animDuration(keyframes);
@@ -63,7 +101,8 @@ export function sampleAnim(
     if (t > k1.t) continue;
     const span = k1.t - k0.t;
     const u = span > 0 ? (t - k0.t) / span : 1;
-    return lerpPose(k0.pose, k1.pose, applyEasing(u, k0.easing));
+    const eased = applyEasing(u, k0.easing);
+    return smooth ? samplePoseSpline(keyframes, i, eased) : lerpPose(k0.pose, k1.pose, eased);
   }
   return keyframes[keyframes.length - 1].pose;
 }
