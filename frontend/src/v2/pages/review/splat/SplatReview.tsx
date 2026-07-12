@@ -1,7 +1,10 @@
 import { Gauge, Settings2 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { isEditable } from '../../../lib/shortcuts';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
+import { frameCameraToMesh, frameCameraToSphere } from './scene/frameCamera';
+import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import CameraBar from './camera/CameraBar';
 import KeyframeTimeline from './camera/KeyframeTimeline';
 import CompareBar from './compare/CompareBar';
@@ -103,6 +106,39 @@ export default function SplatReview({
       created.forEach(disposeVolume);
     };
   }, [showEdit, ready, getSceneHandle, savedVolumes, maskUrl]);
+
+  // Cadrage F/H, actif pour **tous** (y compris en review post-publish) : F cadre la sélection
+  // si présente (édition), sinon le splat visible ; H rétablit la vue d'origine.
+  const selectedSet = editor.selection.selected;
+  const frameView = useCallback(() => {
+    const handle = getSceneHandle();
+    if (!handle) return;
+    const bounds = (selectedSet.size ? selectionBounds(handle, selectedSet) : null) ?? meshBounds(handle);
+    if (bounds) frameCameraToSphere(handle.camera, handle.controls, bounds.center, bounds.radius);
+  }, [getSceneHandle, selectedSet]);
+  const homeView = useCallback(() => {
+    const handle = getSceneHandle();
+    if (handle) frameCameraToMesh(handle.THREE, handle.mesh, handle.camera, handle.controls);
+  }, [getSceneHandle]);
+
+  // Raccourcis F/H côté viewer (post-publish). En édition, l'éditeur gère déjà F/H (sélection).
+  useEffect(() => {
+    if (showEdit || !ready) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (isEditable(e.target) || document.querySelector('[role="dialog"]')) return;
+      if (splat.isFlying() || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'f') {
+        e.preventDefault();
+        frameView();
+      } else if (k === 'h') {
+        e.preventDefault();
+        homeView();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showEdit, ready, frameView, homeView, splat]);
 
   const selectTool =
     editor.tool === 'select-rect'
@@ -214,7 +250,7 @@ export default function SplatReview({
               <>
                 {compare.enabled && <CompareBar compare={compare} />}
                 <PaintBar paint={paint} />
-                <CameraBar rig={pres.rig} kf={pres.kf} />
+                <CameraBar rig={pres.rig} kf={pres.kf} onFrame={frameView} onHome={homeView} />
                 {canPresent && (
                   <KeyframeTimeline
                     kf={pres.kf}

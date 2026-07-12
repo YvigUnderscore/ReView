@@ -1,17 +1,31 @@
-import { Aperture, Crosshair, Pause, Play, RotateCcw } from 'lucide-react';
+import { Aperture, Crosshair, Frame, Home, Pause, Play, RotateCcw } from 'lucide-react';
 import { HudGroup, HudIconButton } from '../../hud/ViewerHud';
 import type { CameraKeyframesState } from './useCameraKeyframes';
 import type { CameraRigState } from './useCameraRig';
 
 /**
- * Barre caméra du HUD (10.G-V5), visible pour **tous** les spectateurs : focale (fov),
+ * Barre caméra du HUD (10.G-V5), visible pour **tous** les spectateurs : cadrage F/H (cadrer la
+ * sélection ou le splat / vue d'origine — actifs aussi en review post-publish), focale (fov),
  * profondeur de champ (ouverture + mise au point au clic), lecture de l'animation persistée
  * (pause auto au moindre input, bouton « Réactiver »). Réglages locaux — seul le gestionnaire
  * persiste (via l'éditeur keyframe, cf. KeyframeTimeline).
  */
-export default function CameraBar({ rig, kf }: { rig: CameraRigState; kf: CameraKeyframesState }) {
+export default function CameraBar({
+  rig,
+  kf,
+  onFrame,
+  onHome,
+}: {
+  rig: CameraRigState;
+  kf: CameraKeyframesState;
+  onFrame: () => void;
+  onHome: () => void;
+}) {
   return (
     <HudGroup>
+      <HudIconButton icon={Frame} hint="Cadrer la sélection ou le splat (F)" onClick={onFrame} />
+      <HudIconButton icon={Home} hint="Vue d'origine (H)" onClick={onHome} />
+      <span className="h-4 w-px bg-border" />
       <label className="flex items-center gap-1.5 text-muted-foreground" title="Focale (champ de vision)">
         Focale
         <input
