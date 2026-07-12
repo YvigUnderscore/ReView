@@ -1,5 +1,7 @@
-import { Orbit, Plus, Save, Trash2, X } from 'lucide-react';
+import { Download, Orbit, Plus, Save, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import type { CameraEasing } from '../../reviewTypes';
+import { downloadCameraGltf } from '../../three/exportCameraGltf';
 import { HudGroup } from '../../hud/ViewerHud';
 import type { CameraKeyframesState } from './useCameraKeyframes';
 
@@ -120,6 +122,15 @@ export default function KeyframeTimeline({
             />
             Courbes
           </label>
+          <button
+            onClick={() =>
+              void downloadCameraGltf(kf.keyframes).catch(() => toast.error('Export caméra impossible'))
+            }
+            title="Télécharger l'animation caméra (glTF) — importable dans un logiciel 3D (Blender, Maya, Houdini)"
+            className="flex items-center gap-1 rounded-md border border-border px-2 py-1 font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+          >
+            <Download size={12} /> glTF
+          </button>
         </>
       )}
 
