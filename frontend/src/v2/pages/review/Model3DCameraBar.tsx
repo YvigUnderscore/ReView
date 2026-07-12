@@ -3,6 +3,7 @@ import { Pause, PictureInPicture2, Play, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from './reviewTypes';
+import type { Annotations } from './useAnnotations';
 import { HudGroup, HudIconButton } from './hud/ViewerHud';
 import { orbitPreset } from './splat/camera/cameraAnim';
 import { useCameraKeyframes } from './splat/camera/useCameraKeyframes';
@@ -23,17 +24,34 @@ export default function Model3DCameraBar({
   data,
   canManage,
   onSaved,
+  ann,
 }: {
   model3d: Model3DThreeState;
   data: MediaResp;
   canManage: boolean;
   onSaved: (patch: SplatEditsPatch) => void;
+  ann: Annotations;
 }) {
   // Le lecteur keyframe pilote la **caméra layout** en mode PiP (sinon la caméra principale).
   const kf = useCameraKeyframes(model3d.layoutController);
   const [busy, setBusy] = useState(false);
   const { setAll, play } = kf;
   const { ready, restoreCamera, setFov, setRoll } = model3d;
+
+  // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
+  const viewedCameraAnim = ann.viewedCameraAnim;
+  useEffect(() => {
+    if (viewedCameraAnim) {
+      setAll(viewedCameraAnim.keyframes, viewedCameraAnim.loop, viewedCameraAnim.smooth);
+      play();
+    }
+  }, [viewedCameraAnim, setAll, play]);
+
+  const attach = () => {
+    if (kf.keyframes.length < 2) return;
+    ann.setCameraAnim({ keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth });
+    toast.success('Animation caméra jointe au prochain commentaire');
+  };
 
   // Rejeu de la présentation persistée à l'ouverture (une fois la scène prête), pour tous.
   const appliedRef = useRef(false);
@@ -163,6 +181,7 @@ export default function Model3DCameraBar({
         onSave={canManage ? save : undefined}
         onClear={canManage ? clear : undefined}
         busy={busy}
+        onAttach={attach}
       />
     </>
   );

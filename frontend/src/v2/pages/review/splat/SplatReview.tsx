@@ -1,7 +1,9 @@
 import { Gauge, Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { isEditable } from '../../../lib/shortcuts';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
+import type { Annotations } from '../useAnnotations';
 import type { SplatViewer } from './useSplat';
 import { frameCameraToMesh, frameCameraToSphere } from './scene/frameCamera';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
@@ -40,6 +42,7 @@ export default function SplatReview({
   paint,
   onSaved,
   overlay,
+  ann,
 }: {
   data: MediaResp;
   splat: SplatViewer;
@@ -51,6 +54,8 @@ export default function SplatReview({
   paint: SplatPaintState;
   onSaved: (patch: SplatEditsPatch) => void;
   overlay: ReactNode;
+  /** Annotations (mode layout : joindre/rejouer une animation caméra dans les commentaires). */
+  ann: Annotations;
 }) {
   const saved = data.splatEdits;
   const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl, onSaved, showEdit);
@@ -69,6 +74,23 @@ export default function SplatReview({
   const pres = usePresentation(splat, data, onSaved);
   // Comparaison (V8) : autres splats de la même version — switch A/B + « voir tous ».
   const compare = useSplatCompare(splat, data.media);
+
+  // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
+  const { setAll: kfSetAll, play: kfPlay } = pres.kf;
+  const viewedCameraAnim = ann.viewedCameraAnim;
+  useEffect(() => {
+    if (viewedCameraAnim) {
+      kfSetAll(viewedCameraAnim.keyframes, viewedCameraAnim.loop, viewedCameraAnim.smooth);
+      kfPlay();
+    }
+  }, [viewedCameraAnim, kfSetAll, kfPlay]);
+
+  const attachLayout = useCallback(() => {
+    const kf = pres.kf;
+    if (kf.keyframes.length < 2) return;
+    ann.setCameraAnim({ keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth });
+    toast.success('Animation caméra jointe au prochain commentaire');
+  }, [pres.kf, ann]);
 
   // Lecture seule : applique la transformation et le flip d'orientation enregistrés
   // (l'éditeur les gère sinon).
@@ -252,15 +274,14 @@ export default function SplatReview({
                 {compare.enabled && <CompareBar compare={compare} />}
                 <PaintBar paint={paint} />
                 <CameraBar rig={pres.rig} kf={pres.kf} onFrame={frameView} onHome={homeView} />
-                {canPresent && (
-                  <KeyframeTimeline
-                    kf={pres.kf}
-                    onOrbitPreset={pres.applyOrbitPreset}
-                    onSave={() => void pres.save()}
-                    onClear={() => void pres.clear()}
-                    busy={pres.busy}
-                  />
-                )}
+                <KeyframeTimeline
+                  kf={pres.kf}
+                  onOrbitPreset={pres.applyOrbitPreset}
+                  onSave={canPresent ? () => void pres.save() : undefined}
+                  onClear={canPresent ? () => void pres.clear() : undefined}
+                  busy={pres.busy}
+                  onAttach={attachLayout}
+                />
               </>
             }
           />

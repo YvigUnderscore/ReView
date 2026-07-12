@@ -68,25 +68,48 @@ export interface SplatPaintStroke {
 }
 
 /**
- * Sépare les parties d'une annotation de commentaire : hotspot 3D et formes 2D — les traits
- * du painter (`splat-paint`, V9) sont exclus des formes (rendu 3D dédié).
+ * Animation caméra jointe à un commentaire (mode layout) : au lieu de dessiner, l'utilisateur
+ * crée/joint une animation caméra, rejouée quand le commentaire est sélectionné. Stockée comme
+ * part `{ type:'camera-anim', ... }` dans `Comment.annotation`.
+ */
+export interface SplatLayoutAnim {
+  keyframes: SplatCameraKeyframe[];
+  loop: boolean;
+  smooth?: boolean;
+}
+
+/**
+ * Sépare les parties d'une annotation de commentaire : hotspot 3D, animation caméra (mode
+ * layout) et formes 2D — les traits du painter (`splat-paint`, V9) et l'anim caméra sont exclus
+ * des formes (rendus dédiés).
  */
 export function splitAnnotationParts(annotation: unknown): {
   hotspot: Hotspot3D | null;
   shapes: unknown[];
+  cameraAnim: SplatLayoutAnim | null;
 } {
-  if (!Array.isArray(annotation)) return { hotspot: null, shapes: [] };
+  if (!Array.isArray(annotation)) return { hotspot: null, shapes: [], cameraAnim: null };
   const parts = annotation as Array<{
     type?: string;
     position?: string;
     normal?: string;
     space?: 'object';
+    keyframes?: SplatCameraKeyframe[];
+    loop?: boolean;
+    smooth?: boolean;
   }>;
   const hs = parts.find((x) => x?.type === 'hotspot');
-  const shapes = parts.filter((x) => x && x.type !== 'hotspot' && x.type !== 'splat-paint');
+  const anim = parts.find((x) => x?.type === 'camera-anim');
+  const shapes = parts.filter(
+    (x) => x && x.type !== 'hotspot' && x.type !== 'splat-paint' && x.type !== 'camera-anim',
+  );
   return {
     hotspot: hs?.position && hs.normal ? { position: hs.position, normal: hs.normal, space: hs.space } : null,
     shapes,
+    cameraAnim:
+      anim && Array.isArray(anim.keyframes) && anim.keyframes.length >= 2
+        ? { keyframes: anim.keyframes, loop: !!anim.loop, smooth: anim.smooth }
+        : null,
   };
 }
 

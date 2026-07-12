@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Shape, Tool } from '../../components/AnnotationCanvas';
-import type { Hotspot3D } from './reviewTypes';
+import type { Hotspot3D, SplatLayoutAnim } from './reviewTypes';
 
 /**
  * État de l'annotation du composer (dessin 2D + hotspot 3D) avec undo/redo,
@@ -28,10 +28,14 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
   const [future, setFuture] = useState<Shape[][]>([]);
   const [annotating, setAnnotating] = useState(false);
   const [hotspot3d, setHotspot3d] = useState<Hotspot3D | null>(null);
+  // Animation caméra jointe au commentaire en cours (mode layout) — staged avant envoi.
+  const [cameraAnim, setCameraAnim] = useState<SplatLayoutAnim | null>(null);
   // Annotation d'un commentaire sélectionné (lecture seule)
   const [viewed, setViewed] = useState<Shape[] | null>(null);
   const [viewed3d, setViewed3d] = useState<Hotspot3D | null>(null);
   const [viewedAspect, setViewedAspect] = useState<number | null>(null);
+  // Animation caméra du commentaire sélectionné — rejouée par le viewer.
+  const [viewedCameraAnim, setViewedCameraAnim] = useState<SplatLayoutAnim | null>(null);
 
   const setShapes = (next: Shape[]) => {
     setPast((p) => [...p, annot]);
@@ -62,6 +66,7 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
     setPast([]);
     setFuture([]);
     setHotspot3d(null);
+    setCameraAnim(null);
     setAnnotating(false);
   };
 
@@ -70,6 +75,7 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
     setViewed(null);
     setViewed3d(null);
     setViewedAspect(null);
+    setViewedCameraAnim(null);
   };
 
   return {
@@ -92,12 +98,16 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
     setAnnotating,
     hotspot3d,
     setHotspot3d,
+    cameraAnim,
+    setCameraAnim,
     viewed,
     setViewed,
     viewed3d,
     setViewed3d,
     viewedAspect,
     setViewedAspect,
+    viewedCameraAnim,
+    setViewedCameraAnim,
     resetComposer,
     clearViewed,
   };

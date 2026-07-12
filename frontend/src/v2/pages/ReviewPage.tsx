@@ -120,8 +120,10 @@ function ReviewContent({ id }: { id: number }) {
   // Sélection d'un commentaire : restaure ensemble seek + annotation 2D/3D + caméra (animée).
   const selectComment = (c: ReviewComment) => {
     setSelectedCommentId(c.id);
-    const { hotspot, shapes } = splitAnnotationParts(c.annotation);
+    const { hotspot, shapes, cameraAnim } = splitAnnotationParts(c.annotation);
     ann.setViewed3d(hotspot);
+    // Mode layout : anim caméra jointe → rejouée par le viewer (3D/splat).
+    ann.setViewedCameraAnim(cameraAnim);
     if (shapes.length > 0) {
       ann.setAnnotating(false);
       ann.setViewed(shapes as unknown as Shape[]);
@@ -180,6 +182,14 @@ function ReviewContent({ id }: { id: number }) {
           space: ann.hotspot3d.space, // espace-objet (splat, V10) — suit la transformation
         });
       if (kind === 'SPLAT') parts.push(...paint.serializePending()); // traits du painter (V9)
+      // Mode layout : anim caméra jointe au commentaire (au lieu de dessiner).
+      if (ann.cameraAnim)
+        parts.push({
+          type: 'camera-anim',
+          keyframes: ann.cameraAnim.keyframes,
+          loop: ann.cameraAnim.loop,
+          smooth: ann.cameraAnim.smooth,
+        });
       parts.push(...ann.annot);
       annotation = parts.length ? parts : undefined;
     } else {

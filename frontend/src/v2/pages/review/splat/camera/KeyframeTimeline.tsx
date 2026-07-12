@@ -1,4 +1,4 @@
-import { Download, Orbit, Plus, Save, Trash2, X } from 'lucide-react';
+import { Download, MessageSquarePlus, Orbit, Plus, Save, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CameraEasing } from '../../reviewTypes';
 import { downloadCameraGltf } from '../../three/exportCameraGltf';
@@ -25,6 +25,7 @@ export default function KeyframeTimeline({
   onSave,
   onClear,
   busy,
+  onAttach,
 }: {
   kf: CameraKeyframesState;
   onOrbitPreset: () => void;
@@ -32,6 +33,8 @@ export default function KeyframeTimeline({
   onSave?: () => void;
   onClear?: () => void;
   busy?: boolean;
+  /** Mode layout : joint l'animation courante au prochain commentaire (au lieu de dessiner). */
+  onAttach?: () => void;
 }) {
   return (
     <HudGroup>
@@ -131,6 +134,15 @@ export default function KeyframeTimeline({
           >
             <Download size={12} /> glTF
           </button>
+          {onAttach && (
+            <button
+              onClick={onAttach}
+              title="Joindre cette animation caméra au prochain commentaire (mode layout)"
+              className="flex items-center gap-1 rounded-md border border-border px-2 py-1 font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+            >
+              <MessageSquarePlus size={12} /> Joindre
+            </button>
+          )}
         </>
       )}
 

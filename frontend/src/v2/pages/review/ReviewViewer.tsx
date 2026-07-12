@@ -237,6 +237,7 @@ export default function ReviewViewer({
                 data={data}
                 canManage={canManage}
                 onSaved={onSplatEditsSaved}
+                ann={ann}
               />
             </>
           )}
@@ -252,6 +253,7 @@ export default function ReviewViewer({
           paint={paint}
           onSaved={onSplatEditsSaved}
           overlay={renderOverlay()}
+          ann={ann}
         />
       )}
 
