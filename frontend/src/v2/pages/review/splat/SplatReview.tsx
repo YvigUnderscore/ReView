@@ -155,6 +155,7 @@ export default function SplatReview({
       ready={splat.ready}
       loadError={splat.loadError}
       status={data.media.status}
+      aspect={data.splatPresentation?.camera?.aspect}
       overlay={overlay}
       editorOverlay={
         paint.active && ready ? (

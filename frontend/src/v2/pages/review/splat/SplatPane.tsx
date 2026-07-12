@@ -1,10 +1,12 @@
 import { type ReactNode, type RefObject } from 'react';
 import { VIEWER_ZONE } from '../reviewTypes';
+import ReviewFrame from '../ReviewFrame';
 
 /**
  * Pane Gaussian Splat de la review (viewer Spark/SparkJS) — 10.G.
  * Le hook `useSplat` monte la scène Three.js dans `containerRef` ; ce composant gère le
- * cadre, les états de repli (chargement, échec) et l'overlay d'annotation 2D superposé.
+ * cadre de review à aspect fixe (V6 — canvas letterboxé, non étiré à l'écran), les états de
+ * repli (chargement, échec) et l'overlay d'annotation 2D superposé.
  */
 export default function SplatPane({
   containerRef,
@@ -14,6 +16,7 @@ export default function SplatPane({
   overlay,
   editorOverlay,
   hud,
+  aspect,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
@@ -24,31 +27,39 @@ export default function SplatPane({
   editorOverlay?: ReactNode;
   /** HUD flottant superposé au canvas (toolbars, stats, réglages) — cf. hud/ViewerHud. */
   hud?: ReactNode;
+  /** Aspect du cadre de review fixe (issu de la caméra de présentation) — défaut 16:9 (V6). */
+  aspect?: number;
 }) {
   return (
     <div className={VIEWER_ZONE}>
-      {/* Conteneur de la scène Three.js (rempli par useSplat) — toujours monté */}
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* Cadre de review à aspect fixe : canvas + overlays + HUD y rendent, letterboxés (V6) */}
+      <ReviewFrame aspect={aspect}>
+        {/* Conteneur de la scène Three.js (rempli par useSplat) — toujours monté */}
+        <div ref={containerRef} className="absolute inset-0" />
 
-      {/* Overlay d'édition (sélection rectangle/lasso) — au-dessus du canvas, sous les états */}
-      {editorOverlay}
+        {/* Overlay d'édition (sélection rectangle/lasso) — au-dessus du canvas, sous les états */}
+        {editorOverlay}
 
-      {/* HUD flottant (au-dessus des overlays, sous les états de repli) */}
-      {hud}
+        {/* HUD flottant (au-dessus des overlays, sous les états de repli) */}
+        {hud}
 
+        {/* Overlay de dessin 2D superposé (s'aligne sur la vue caméra courante) */}
+        {overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
+      </ReviewFrame>
+
+      {/* États de repli — centrés dans toute la zone (hors letterbox) */}
       {loadError ? (
-        <div className="max-w-sm space-y-2 p-6 text-center text-sm text-muted-foreground">
-          <p>
+        <div className="absolute inset-0 flex items-center justify-center p-6">
+          <p className="max-w-sm text-center text-sm text-muted-foreground">
             Splat non affichable : le fichier n’a pas pu être chargé. Vérifiez le format (.ply, .spz, .splat,
             .ksplat, .sog) ou ré-uploadez le média.
           </p>
         </div>
       ) : status === 'PROCESSING' || !ready ? (
-        <div className="text-center text-sm text-muted-foreground">Chargement du splat…</div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-sm text-muted-foreground">Chargement du splat…</span>
+        </div>
       ) : null}
-
-      {/* Overlay de dessin 2D superposé (s'aligne sur la vue caméra courante) */}
-      {overlay && <div className="absolute inset-0 pointer-events-none">{overlay}</div>}
     </div>
   );
 }
