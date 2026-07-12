@@ -224,6 +224,7 @@ export default function ReviewViewer({
             loadError={model3d.loadError}
             containerRef={model3d.containerRef}
             overlay={renderOverlay(ann.viewedAspect ?? undefined)}
+            layoutMode={model3d.layoutMode}
             canReprocess={role !== 'CLIENT'}
             reprocessing={reprocessing}
             onReprocess={onReprocess}

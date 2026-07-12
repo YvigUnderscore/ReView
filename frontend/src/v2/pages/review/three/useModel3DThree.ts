@@ -12,19 +12,23 @@ import { loadModel } from './loadModel';
 import { fitDistance, resizeRendererCamera } from './sceneConfig';
 import { createObjectMarker, raycastModelCenter } from './objectHotspot';
 import { captureModelCamera, restoreModelCamera } from './modelCamera';
+import { useModelAnimations } from './useModelAnimations';
+import { useModelLayout } from './useModelLayout';
 
 interface SceneRuntime {
   scene: ModelScene;
   mixer: THREE.AnimationMixer | null;
   clips: THREE.AnimationClip[];
+  /** Caméra « layout » du PiP (mode layout) — pilotée par le lecteur keyframe quand actif. */
+  layoutCam: THREE.PerspectiveCamera;
 }
 
 /**
- * Viewer modèle 3D **Three.js** (Phase 15, migration model-viewer → Three) : monte le socle
- * `createModelScene`, charge le GLB (`loadModel`), gère la boucle de rendu (damping + mixer
- * d'animation), la transformation utilisateur (sur le groupe parent), les hotspots raycast en
- * espace-objet, et la capture/restauration de vue caméra. API alignée sur l'ancien `useModel3D`
- * (mêmes noms) pour réutiliser `Model3DToolbar`.
+ * Viewer modèle 3D **Three.js** (Phase 15) : socle `createModelScene`, chargement GLB, boucle de
+ * rendu (damping + mixer), transformation utilisateur, hotspots espace-objet, caméra
+ * (capture/restauration, tilt, focale) et **mode layout** (PiP « in/out camera » via
+ * `useModelLayout`). Animations extraites dans `useModelAnimations`. API alignée sur l'ancien
+ * `useModel3D` pour réutiliser `Model3DToolbar`.
  */
 export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const active = data?.media.kind === 'MODEL_3D';
@@ -34,16 +38,12 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const threeRef = useRef<typeof import('three') | null>(null);
   const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
-  // Callbacks par frame (animation caméra keyframe — mode layout, cf. useCameraKeyframes).
   const frameCbs = useRef(new Set<(dt: number) => void>());
   const [ready, setReady] = useState(false);
   const [fov, setFovState] = useState(45);
   const [roll, setRollState] = useState(0);
   const [loadError, setLoadError] = useState(false);
   const [freeCamera, setFreeCamera] = useState(false);
-  const [animations, setAnimations] = useState<string[]>([]);
-  const [currentAnim, setCurrentAnim] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
   const [savedTf, setSavedTf] = useState(false);
 
   // Transformation enregistrée sur la version, surchargée par l'édition locale non sauvegardée.
@@ -61,6 +61,28 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     () => tfEdit ?? (savedTransform ? { ...DEFAULT_TRANSFORM, ...savedTransform } : DEFAULT_TRANSFORM),
     [tfEdit, savedTransform],
   );
+
+  // ── Contrôleur caméra (commun avec le splat) : boucle, canvas, capture/restauration ──
+  const subscribeFrame = useCallback((cb: (dt: number) => void) => {
+    frameCbs.current.add(cb);
+    return () => frameCbs.current.delete(cb);
+  }, []);
+  const getDom = useCallback(() => runtimeRef.current?.scene.renderer.domElement ?? containerRef.current, []);
+  const captureCamera = useCallback(() => {
+    const rt = runtimeRef.current;
+    const THREE = threeRef.current;
+    return rt && THREE ? captureModelCamera(THREE, rt.scene.camera, rt.scene.controls) : undefined;
+  }, []);
+  const restoreCamera = useCallback((state: unknown) => {
+    const rt = runtimeRef.current;
+    const THREE = threeRef.current;
+    if (rt && THREE) restoreModelCamera(THREE, rt.scene.camera, rt.scene.controls, state);
+  }, []);
+
+  const anim = useModelAnimations(runtimeRef, actionRef);
+  const { init: animInit } = anim;
+  const layout = useModelLayout({ runtimeRef, threeRef, subscribeFrame, getDom, captureCamera });
+  const { renderPip } = layout;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -91,26 +113,21 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       }
       scene.root.add(model.object);
       const mixer = model.animations.length ? new THREE.AnimationMixer(model.object) : null;
-      runtimeRef.current = { scene, mixer, clips: model.animations };
-      setAnimations(model.animations.map((c) => c.name));
-      setCurrentAnim(model.animations[0]?.name ?? null);
+      const layoutCam = new THREE.PerspectiveCamera(45, 16 / 9, 0.01, 1000);
+      runtimeRef.current = { scene, mixer, clips: model.animations, layoutCam };
+      animInit(model.animations);
 
-      const resize = () => {
-        if (
-          resizeRendererCamera(scene.renderer, scene.camera, container.clientWidth, container.clientHeight)
-        ) {
-          const dist = fitDistance(model.radius, scene.camera.fov, scene.camera.aspect);
-          if (dist > 0 && scene.camera.position.length() < 1e-6) scene.camera.position.set(0, 0, dist);
-        }
-      };
-      // Cadrage initial (une fois l'aspect connu).
-      resizeRendererCamera(scene.renderer, scene.camera, container.clientWidth, container.clientHeight);
+      const resize = () =>
+        resizeRendererCamera(scene.renderer, scene.camera, container.clientWidth, container.clientHeight);
+      resize();
+      // Cadrage initial (une fois l'aspect connu) + near/far partagés avec la caméra layout.
       const dist = fitDistance(model.radius, scene.camera.fov, scene.camera.aspect || 1);
       if (dist > 0) {
         scene.camera.position.set(0, 0, dist);
-        scene.camera.near = Math.max(model.radius / 100, 0.001);
-        scene.camera.far = model.radius * 100;
+        scene.camera.near = layoutCam.near = Math.max(model.radius / 100, 0.001);
+        scene.camera.far = layoutCam.far = model.radius * 100;
         scene.camera.updateProjectionMatrix();
+        layoutCam.updateProjectionMatrix();
         scene.controls.update();
       }
       const ro = new ResizeObserver(resize);
@@ -125,6 +142,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         mixer?.update(dt);
         frameCbs.current.forEach((cb) => cb(dt));
         scene.renderer.render(scene.scene, scene.camera);
+        renderPip(); // PiP de la caméra layout (no-op hors mode layout)
         marker.update(
           hotspotRef.current,
           scene.camera,
@@ -149,7 +167,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       hotspotRef.current = null;
       actionRef.current = null;
     };
-  }, [active, glbSrc]);
+  }, [active, glbSrc, animInit, renderPip]);
 
   // Applique la transformation (orientation + échelle) au groupe parent, en live.
   useEffect(() => {
@@ -162,43 +180,6 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     const rt = runtimeRef.current;
     if (rt) rt.scene.controls.enablePan = freeCamera;
   }, [freeCamera, ready]);
-
-  const playAnim = useCallback(() => {
-    const rt = runtimeRef.current;
-    if (!rt?.mixer) return;
-    if (actionRef.current?.paused) {
-      actionRef.current.paused = false;
-      setPlaying(true);
-      return;
-    }
-    const clip = rt.clips.find((c) => c.name === currentAnim) ?? rt.clips[0];
-    if (!clip) return;
-    actionRef.current?.stop();
-    const action = rt.mixer.clipAction(clip);
-    action.reset().play();
-    actionRef.current = action;
-    setPlaying(true);
-  }, [currentAnim]);
-
-  const pauseAnim = useCallback(() => {
-    if (actionRef.current) actionRef.current.paused = true;
-    setPlaying(false);
-  }, []);
-
-  const selectAnim = useCallback(
-    (name: string) => {
-      setCurrentAnim(name);
-      const rt = runtimeRef.current;
-      if (!rt?.mixer) return;
-      const clip = rt.clips.find((c) => c.name === name);
-      if (!clip) return;
-      actionRef.current?.stop();
-      const action = rt.mixer.clipAction(clip);
-      actionRef.current = action;
-      if (playing) action.reset().play();
-    },
-    [playing],
-  );
 
   const updateTransform = useCallback(
     (patch: Partial<Transform>) => {
@@ -240,26 +221,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         : null;
   }, []);
 
-  const captureCamera = useCallback(() => {
-    const rt = runtimeRef.current;
-    const THREE = threeRef.current;
-    return rt && THREE ? captureModelCamera(THREE, rt.scene.camera, rt.scene.controls) : undefined;
-  }, []);
-
-  const restoreCamera = useCallback((state: unknown) => {
-    const rt = runtimeRef.current;
-    const THREE = threeRef.current;
-    if (rt && THREE) restoreModelCamera(THREE, rt.scene.camera, rt.scene.controls, state);
-  }, []);
-
-  // Contrôleur caméra (mode layout) : boucle de rendu + canvas, pour useCameraKeyframes.
-  const subscribeFrame = useCallback((cb: (dt: number) => void) => {
-    frameCbs.current.add(cb);
-    return () => frameCbs.current.delete(cb);
-  }, []);
-  const getDom = useCallback(() => runtimeRef.current?.scene.renderer.domElement ?? containerRef.current, []);
-
-  /** Focale (fov) — live. */
+  /** Focale (fov) — live (caméra principale). */
   const setFov = useCallback((value: number) => {
     setFovState(value);
     const rt = runtimeRef.current;
@@ -292,12 +254,12 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     clearLoadError,
     freeCamera,
     setFreeCamera,
-    animations,
-    currentAnim,
-    playing,
-    playAnim,
-    pauseAnim,
-    selectAnim,
+    animations: anim.animations,
+    currentAnim: anim.currentAnim,
+    playing: anim.playing,
+    playAnim: anim.playAnim,
+    pauseAnim: anim.pauseAnim,
+    selectAnim: anim.selectAnim,
     hotspotAtCenter,
     showHotspot,
     captureCamera,
@@ -308,6 +270,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     setFov,
     roll,
     setRoll,
+    layoutMode: layout.layoutMode,
+    setLayoutMode: layout.setLayoutMode,
+    layoutController: layout.layoutController,
   };
 }
 

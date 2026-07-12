@@ -14,6 +14,7 @@ export default function Model3DThreePane({
   loadError,
   containerRef,
   overlay,
+  layoutMode,
   canReprocess,
   reprocessing,
   onReprocess,
@@ -22,6 +23,8 @@ export default function Model3DThreePane({
   loadError: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   overlay: ReactNode;
+  /** Mode layout actif : encadre le PiP (rendu WebGL en coin bas-droit) d'un cadre « fenêtre ». */
+  layoutMode: boolean;
   canReprocess: boolean;
   reprocessing: boolean;
   onReprocess: () => void;
@@ -34,6 +37,15 @@ export default function Model3DThreePane({
         {/* Conteneur de la scène Three.js (rempli par useModel3DThree) — toujours monté */}
         <div ref={containerRef} className="absolute inset-0" />
         {overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
+        {/* Cadre « fenêtre flottante » du PiP (le rendu WebGL est dessiné dessous en scissor) */}
+        {layoutMode && (
+          <div className="pointer-events-none absolute bottom-2.5 right-2.5 w-[28%] overflow-hidden rounded-md border border-primary/70 shadow-lg">
+            <div className="aspect-video" />
+            <span className="absolute left-1 top-1 rounded bg-primary/80 px-1 text-[10px] font-medium text-primary-foreground">
+              Caméra layout
+            </span>
+          </div>
+        )}
       </ReviewFrame>
 
       {status === 'PROCESSING' ? (

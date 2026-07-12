@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pause, Play, RotateCcw } from 'lucide-react';
+import { Pause, PictureInPicture2, Play, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from './reviewTypes';
@@ -29,7 +29,8 @@ export default function Model3DCameraBar({
   canManage: boolean;
   onSaved: (patch: SplatEditsPatch) => void;
 }) {
-  const kf = useCameraKeyframes(model3d);
+  // Le lecteur keyframe pilote la **caméra layout** en mode PiP (sinon la caméra principale).
+  const kf = useCameraKeyframes(model3d.layoutController);
   const [busy, setBusy] = useState(false);
   const { setAll, play } = kf;
   const { ready, restoreCamera, setFov, setRoll } = model3d;
@@ -129,6 +130,12 @@ export default function Model3DCameraBar({
           />
           <span className="w-8 font-mono text-foreground">{deg(model3d.roll)}°</span>
         </label>
+        <HudIconButton
+          icon={PictureInPicture2}
+          hint="Mode layout : sortir de la caméra (vue libre) et voir son point de vue dans une fenêtre flottante (PiP)"
+          active={model3d.layoutMode}
+          onClick={() => model3d.setLayoutMode(!model3d.layoutMode)}
+        />
         {kf.keyframes.length >= 2 && (
           <>
             <span className="h-4 w-px bg-border" />
