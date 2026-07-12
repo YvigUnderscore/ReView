@@ -12,6 +12,7 @@ import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
 import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
+import ReviewsPage from './pages/ReviewsPage';
 import ProjectPage from './pages/ProjectPage';
 import TaskPage from './pages/TaskPage';
 import ReviewPage from './pages/ReviewPage';
@@ -91,6 +92,14 @@ function AppRoutes() {
               element={
                 <Protected>
                   <ProjectsPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/reviews"
+              element={
+                <Protected>
+                  <ReviewsPage />
                 </Protected>
               }
             />

@@ -63,6 +63,37 @@ router.get(
 );
 
 /**
+ * GET /api/media/reviews — page « Reviews » globale (12.C) : médias publiés de mes
+ * projets + mes brouillons, filtres projet/type/statut, tri récent, paginé.
+ */
+router.get(
+  '/reviews',
+  validate({
+    query: z
+      .object({
+        projectId: z.coerce.number().int().optional(),
+        kind: z.nativeEnum(MediaKind).optional(),
+        status: z.enum(['published', 'draft']).optional(),
+      })
+      .merge(paginationQuery),
+  }),
+  async (req, res) => {
+    const q = req.query;
+    res.json(
+      await MediaService.listReviews(
+        req.user!,
+        {
+          projectId: q.projectId ? Number(q.projectId) : undefined,
+          kind: q.kind as MediaKind | undefined,
+          status: q.status as 'published' | 'draft' | undefined,
+        },
+        readPagination(q),
+      ),
+    );
+  },
+);
+
+/**
  * POST /api/media/:id/publish — publie un média brouillon (réservé à l'uploader).
  */
 router.post('/:id/publish', validate({ params: idParam }), async (req, res) => {

@@ -1,4 +1,4 @@
-import { MediaKind, MediaStatus, Role } from '@prisma/client';
+import { MediaKind, MediaStatus, Prisma, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
@@ -167,6 +167,102 @@ export async function listPublished(
       thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
       url: await storage.getPresignedGetUrl(m.storageKey),
     })),
+  );
+  return paginate(items, total, p);
+}
+
+export interface ReviewsFilter {
+  projectId?: number;
+  kind?: MediaKind;
+  status?: 'published' | 'draft';
+}
+
+/**
+ * Page « Reviews » globale (12.C) : médias publiés (READY) de tous mes projets
+ * + mes propres brouillons, cross-projets par membership (ADMIN/SUPERVISOR = tous),
+ * filtrables par projet/type/statut, tri du plus récent au plus ancien.
+ */
+export async function listReviews(
+  user: SessionUser,
+  filter: ReviewsFilter,
+  p: PaginationParams,
+): Promise<Paginated<unknown>> {
+  const isGlobal = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
+  const project: Prisma.ProjectWhereInput = {
+    deletedAt: null,
+    ...(filter.projectId ? { id: filter.projectId } : {}),
+    ...(isGlobal ? {} : { memberships: { some: { userId: user.id } } }),
+  };
+  // Visibilité : les brouillons ne sont montrés qu'à leur uploader (même sémantique que getDetail).
+  const visibility: Prisma.MediaObjectWhereInput =
+    filter.status === 'draft'
+      ? { published: false, uploaderId: user.id }
+      : filter.status === 'published'
+        ? { published: true }
+        : { OR: [{ published: true }, { published: false, uploaderId: user.id }] };
+  const where: Prisma.MediaObjectWhereInput = {
+    deletedAt: null,
+    status: MediaStatus.READY,
+    ...(filter.kind ? { kind: filter.kind } : {}),
+    version: {
+      deletedAt: null,
+      OR: [
+        { task: { shot: { deletedAt: null, project } } },
+        { task: { asset: { deletedAt: null, project } } },
+        { asset: { deletedAt: null, project } },
+      ],
+    },
+    AND: [visibility],
+  };
+  const projectSelect = { select: { id: true, name: true } };
+  const [media, total] = await Promise.all([
+    prisma.mediaObject.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      ...pageArgs(p),
+      include: {
+        uploader: { select: { id: true, name: true } },
+        version: {
+          select: {
+            name: true,
+            task: {
+              select: {
+                name: true,
+                shot: {
+                  select: { code: true, sequence: { select: { code: true } }, project: projectSelect },
+                },
+                asset: { select: { name: true, project: projectSelect } },
+              },
+            },
+            asset: { select: { name: true, project: projectSelect } },
+          },
+        },
+      },
+    }),
+    prisma.mediaObject.count({ where }),
+  ]);
+  const items = await Promise.all(
+    media.map(async (m) => {
+      const t = m.version?.task;
+      const location = t?.shot
+        ? `${t.shot.sequence ? t.shot.sequence.code + ' · ' : ''}${t.shot.code} › ${t.name}`
+        : t?.asset
+          ? `${t.asset.name} › ${t.name}`
+          : (m.version?.asset?.name ?? '');
+      const project = t?.shot?.project ?? t?.asset?.project ?? m.version?.asset?.project ?? null;
+      return {
+        id: m.id,
+        kind: m.kind,
+        name: m.originalName,
+        published: m.published,
+        createdAt: m.createdAt,
+        thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
+        location,
+        versionName: m.version?.name ?? '',
+        project,
+        uploader: m.uploader?.name ?? null,
+      };
+    }),
   );
   return paginate(items, total, p);
 }
