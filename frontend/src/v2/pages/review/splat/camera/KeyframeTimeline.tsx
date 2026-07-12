@@ -1,4 +1,4 @@
-import { Download, MessageSquarePlus, Orbit, Plus, Save, Trash2, X } from 'lucide-react';
+import { Download, MessageSquarePlus, Orbit, Plus, Save, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CameraEasing } from '../../reviewTypes';
 import { downloadCameraGltf } from '../../three/exportCameraGltf';
@@ -26,6 +26,7 @@ export default function KeyframeTimeline({
   onClear,
   busy,
   onAttach,
+  onImport,
 }: {
   kf: CameraKeyframesState;
   onOrbitPreset: () => void;
@@ -35,10 +36,30 @@ export default function KeyframeTimeline({
   busy?: boolean;
   /** Mode layout : joint l'animation courante au prochain commentaire (au lieu de dessiner). */
   onAttach?: () => void;
+  /** Importe une animation caméra depuis un fichier glTF (remplace l'animation courante). */
+  onImport?: (file: File) => void;
 }) {
   return (
     <HudGroup>
       <span className="font-medium text-foreground">Animation</span>
+      {onImport && (
+        <label
+          title="Importer une animation caméra depuis un fichier glTF (d'un logiciel 3D)"
+          className="flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+        >
+          <Upload size={12} /> Importer
+          <input
+            type="file"
+            accept=".gltf,.glb,model/gltf+json,model/gltf-binary"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onImport(f);
+              e.target.value = '';
+            }}
+          />
+        </label>
+      )}
       <button
         onClick={kf.addFromView}
         title="Ajouter une pose depuis la vue courante"

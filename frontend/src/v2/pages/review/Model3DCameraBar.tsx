@@ -8,6 +8,7 @@ import { HudGroup, HudIconButton } from './hud/ViewerHud';
 import { orbitPreset } from './splat/camera/cameraAnim';
 import { useCameraKeyframes } from './splat/camera/useCameraKeyframes';
 import KeyframeTimeline from './splat/camera/KeyframeTimeline';
+import { importCameraFromGltf } from './three/importCameraGltf';
 import type { Model3DThreeState } from './three/useModel3DThree';
 
 const deg = (rad: number) => Math.round((rad * 180) / Math.PI);
@@ -51,6 +52,20 @@ export default function Model3DCameraBar({
     if (kf.keyframes.length < 2) return;
     ann.setCameraAnim({ keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth });
     toast.success('Animation caméra jointe au prochain commentaire');
+  };
+
+  const importGltf = (file: File) => {
+    void importCameraFromGltf(file)
+      .then((animData) => {
+        if (!animData) {
+          toast.error('Aucune animation caméra dans ce fichier');
+          return;
+        }
+        setAll(animData.keyframes, false, false);
+        play();
+        toast.success('Animation caméra importée');
+      })
+      .catch(() => toast.error('Import caméra impossible'));
   };
 
   // Rejeu de la présentation persistée à l'ouverture (une fois la scène prête), pour tous.
@@ -182,6 +197,7 @@ export default function Model3DCameraBar({
         onClear={canManage ? clear : undefined}
         busy={busy}
         onAttach={attach}
+        onImport={importGltf}
       />
     </>
   );

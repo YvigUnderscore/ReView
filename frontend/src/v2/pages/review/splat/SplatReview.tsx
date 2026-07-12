@@ -7,6 +7,7 @@ import type { Annotations } from '../useAnnotations';
 import type { SplatViewer } from './useSplat';
 import { frameCameraToMesh, frameCameraToSphere } from './scene/frameCamera';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
+import { importCameraFromGltf } from '../three/importCameraGltf';
 import CameraBar from './camera/CameraBar';
 import KeyframeTimeline from './camera/KeyframeTimeline';
 import CompareBar from './compare/CompareBar';
@@ -91,6 +92,23 @@ export default function SplatReview({
     ann.setCameraAnim({ keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth });
     toast.success('Animation caméra jointe au prochain commentaire');
   }, [pres.kf, ann]);
+
+  const importLayout = useCallback(
+    (file: File) => {
+      void importCameraFromGltf(file)
+        .then((animData) => {
+          if (!animData) {
+            toast.error('Aucune animation caméra dans ce fichier');
+            return;
+          }
+          pres.kf.setAll(animData.keyframes, false, false);
+          pres.kf.play();
+          toast.success('Animation caméra importée');
+        })
+        .catch(() => toast.error('Import caméra impossible'));
+    },
+    [pres.kf],
+  );
 
   // Lecture seule : applique la transformation et le flip d'orientation enregistrés
   // (l'éditeur les gère sinon).
@@ -281,6 +299,7 @@ export default function SplatReview({
                   onClear={canPresent ? () => void pres.clear() : undefined}
                   busy={pres.busy}
                   onAttach={attachLayout}
+                  onImport={importLayout}
                 />
               </>
             }
