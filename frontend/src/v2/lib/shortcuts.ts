@@ -34,7 +34,7 @@ export function useGlobalShortcuts({ projectId, onHelp }: { projectId: number | 
         window.clearTimeout(timer.current);
         if (key === 'p') {
           e.preventDefault();
-          navigate('/');
+          navigate('/projects');
         } else if (key === 'k' && projectId !== null) {
           e.preventDefault();
           navigate(`/projects/${projectId}/kanban`);

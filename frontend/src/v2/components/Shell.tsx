@@ -68,7 +68,7 @@ export default function Shell({
   const routeProjectId = pathname.startsWith('/projects/') ? Number(params.id) : null;
   const isEntityPage = ENTITY_PAGE_RE.test(pathname);
   const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
-  const isProjectsRoot = pathname === '/' || pathname.startsWith('/projects');
+  const isProjectsRoot = pathname.startsWith('/projects');
 
   const openHelp = useCallback(() => setHelpOpen(true), []);
   useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp });
@@ -96,7 +96,7 @@ export default function Shell({
 
           <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto px-3">
             <Link
-              to="/"
+              to="/projects"
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                 isProjectsRoot
                   ? 'bg-secondary text-foreground'

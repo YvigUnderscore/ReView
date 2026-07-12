@@ -133,7 +133,7 @@ export default function AssetPage() {
           <Link to={`/assets/${assetId}/board`} className="text-primary hover:underline">
             Board
           </Link>
-          <Link to="/" className="text-muted-foreground hover:text-foreground">
+          <Link to="/projects" className="text-muted-foreground hover:text-foreground">
             ← Projets
           </Link>
         </div>

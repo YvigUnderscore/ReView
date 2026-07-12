@@ -12,7 +12,6 @@ import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../components/EntityCard';
 import ConfirmDialog from '../components/ConfirmDialog';
-import ResumeCard from '../components/ResumeCard';
 import { useFavorites } from '../stores/useFavorites';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -87,7 +86,6 @@ export default function ProjectsPage() {
 
   return (
     <Shell>
-      <ResumeCard />
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Projets</h1>
         <div className="flex items-center gap-2">

@@ -31,6 +31,9 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
     await page.fill('#password', PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
   }
+  // La racine est la page Accueil (12.B) → passer sur la page Projets
+  await expect(page.getByRole('heading', { name: /Bonjour|Accueil/ }).first()).toBeVisible();
+  await page.goto('/projects');
   await expect(page.getByRole('heading', { name: 'Projets', exact: true }).first()).toBeVisible();
 
   // ── 2) Créer un projet (bouton « + Créer » → dialog, 10.B8-fin) et l'ouvrir ──

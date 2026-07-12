@@ -42,7 +42,7 @@ interface Segment {
 function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
   const pid = ctx.project.id;
   const segments: Segment[] = [
-    { label: 'Projets', to: '/' },
+    { label: 'Projets', to: '/projects' },
     { label: ctx.project.name, to: `/projects/${pid}` },
   ];
   if (ctx.sequence)

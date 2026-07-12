@@ -10,6 +10,7 @@ import { useAuth } from './stores/useAuth';
 import { useTheme } from './stores/useTheme';
 import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
+import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectPage from './pages/ProjectPage';
 import TaskPage from './pages/TaskPage';
@@ -79,6 +80,14 @@ function AppRoutes() {
             <Route path="/login" element={<LoginPage />} />
             <Route
               path="/"
+              element={
+                <Protected>
+                  <HomePage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/projects"
               element={
                 <Protected>
                   <ProjectsPage />
