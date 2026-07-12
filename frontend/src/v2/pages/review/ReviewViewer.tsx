@@ -9,6 +9,7 @@ import type { useModel3D } from './useModel3D';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
+import Filmstrip from './Filmstrip';
 import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
 import SplatReview from './splat/SplatReview';
@@ -202,6 +203,7 @@ export default function ReviewViewer({
               color={ann.color}
               width={ann.penWidth}
               alpha={ann.alpha}
+              info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
             />
           </div>
         </div>
@@ -238,6 +240,9 @@ export default function ReviewViewer({
           overlay={renderOverlay()}
         />
       )}
+
+      {/* Filmstrip généralisé : médias de la version courante, tous types (14.E) */}
+      {data && <Filmstrip versionId={data.media.versionId} mediaId={data.media.id} />}
     </section>
   );
 }

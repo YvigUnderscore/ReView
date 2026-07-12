@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Info } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
 
 /**
@@ -23,6 +23,7 @@ export default function ImageReviewViewer({
   color,
   width,
   alpha,
+  info,
 }: {
   src: string;
   alt: string;
@@ -33,12 +34,15 @@ export default function ImageReviewViewer({
   color: string;
   width: number;
   alpha: number;
+  /** Métadonnées affichées dans le panneau infos repliable (14.D). */
+  info?: { format?: string | null; sizeBytes?: number | null };
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const natural = useRef<{ w: number; h: number } | null>(null);
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [base, setBase] = useState<{ w: number; h: number } | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [showInfo, setShowInfo] = useState(false);
   const pan = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   // Re-fit si la source change : ajustement d'état pendant le render
@@ -64,7 +68,7 @@ export default function ImageReviewViewer({
   };
 
   const onImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    natural.current = { w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight };
+    setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight });
     fit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
   };
 
@@ -113,8 +117,21 @@ export default function ImageReviewViewer({
     setScale(next);
   };
   const reset = () => {
-    if (natural.current) fit(natural.current.w, natural.current.h);
+    if (natural) fit(natural.w, natural.h);
   };
+  // 100 % : un pixel image = un pixel écran (scale = taille naturelle / taille de base), centré.
+  const oneToOne = () => {
+    const vp = viewportRef.current;
+    if (!vp || !base || !natural) return;
+    const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, natural.w / base.w));
+    const cx = vp.clientWidth / 2,
+      cy = vp.clientHeight / 2;
+    const k = next / scale;
+    setOffset((o) => ({ x: cx - (cx - o.x) * k, y: cy - (cy - o.y) * k }));
+    setScale(next);
+  };
+  const fmtSize = (b?: number | null) =>
+    b == null ? null : b > 1e6 ? `${(b / 1e6).toFixed(1)} Mo` : `${Math.round(b / 1e3)} Ko`;
 
   return (
     <div className="relative h-full w-full">
@@ -157,7 +174,36 @@ export default function ImageReviewViewer({
         {!base && <img src={src} alt={alt} onLoad={onImgLoad} className="invisible absolute" />}
       </div>
 
-      {/* Contrôles de zoom */}
+      {/* Panneau infos repliable (14.D) */}
+      {showInfo && (
+        <div className="absolute right-3 top-3 min-w-[10rem] rounded-md border border-border bg-card/95 p-2 text-xs backdrop-blur">
+          <div className="mb-1 font-medium text-foreground">Informations</div>
+          <dl className="space-y-0.5 text-muted-foreground">
+            {natural && (
+              <div className="flex justify-between gap-3">
+                <dt>Résolution</dt>
+                <dd className="tabular-nums text-foreground">
+                  {natural.w} × {natural.h}
+                </dd>
+              </div>
+            )}
+            {info?.format && (
+              <div className="flex justify-between gap-3">
+                <dt>Format</dt>
+                <dd className="text-foreground">{info.format}</dd>
+              </div>
+            )}
+            {fmtSize(info?.sizeBytes) && (
+              <div className="flex justify-between gap-3">
+                <dt>Poids</dt>
+                <dd className="text-foreground">{fmtSize(info?.sizeBytes)}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      )}
+
+      {/* Contrôles de zoom (14.D : + 100 % et infos) */}
       <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-border bg-card/90 p-1 backdrop-blur">
         <button onClick={() => zoomBy(1 / 1.25)} title="Dézoomer" className="rounded p-1 hover:bg-muted">
           <ZoomOut size={16} />
@@ -168,8 +214,23 @@ export default function ImageReviewViewer({
         <button onClick={() => zoomBy(1.25)} title="Zoomer" className="rounded p-1 hover:bg-muted">
           <ZoomIn size={16} />
         </button>
+        <button
+          onClick={oneToOne}
+          title="Taille réelle (100 %)"
+          className="rounded px-1.5 py-1 text-xs font-medium hover:bg-muted"
+        >
+          1:1
+        </button>
         <button onClick={reset} title="Ajuster" className="rounded p-1 hover:bg-muted">
           <Maximize size={16} />
+        </button>
+        <button
+          onClick={() => setShowInfo((v) => !v)}
+          title="Informations"
+          aria-pressed={showInfo}
+          className={`rounded p-1 hover:bg-muted ${showInfo ? 'text-primary' : ''}`}
+        >
+          <Info size={16} />
         </button>
       </div>
     </div>
