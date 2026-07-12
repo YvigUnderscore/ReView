@@ -61,6 +61,22 @@ export default function CameraBar({
         onClick={rig.toggleFocusPick}
       />
 
+      <label
+        className="flex items-center gap-1.5 text-muted-foreground"
+        title="Tilt (roll) : inclinaison de la caméra autour de l'axe de vue"
+      >
+        Tilt
+        <input
+          type="range"
+          min={-180}
+          max={180}
+          value={Math.round((rig.roll * 180) / Math.PI)}
+          onChange={(e) => rig.setRoll((Number(e.target.value) * Math.PI) / 180)}
+          className="h-1 w-16 accent-primary"
+        />
+        <span className="w-8 font-mono text-foreground">{Math.round((rig.roll * 180) / Math.PI)}°</span>
+      </label>
+
       {kf.keyframes.length >= 2 && (
         <>
           <span className="h-4 w-px bg-border" />

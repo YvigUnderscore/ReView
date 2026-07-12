@@ -99,7 +99,7 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
   const addFromView = useCallback(() => {
     const view = captureCamera();
     if (!view) return;
-    const pose = { position: view.position, target: view.target, fov: view.fov };
+    const pose = { position: view.position, target: view.target, fov: view.fov, roll: view.roll };
     setKeyframes((kf) => [
       ...kf,
       { t: kf.length > 0 ? animDuration(kf) + STEP_MS : 0, pose, easing: 'ease-in-out' },

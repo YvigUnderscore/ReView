@@ -10,6 +10,7 @@ import { createHotspotMarker } from './scene/hotspotMarker';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
 import { createPointCloud, type PointCloud } from './scene/pointCloud';
 import { ELLIPSES_OPACITY, setFalloff, type RenderMode } from './scene/renderModes';
+import { captureSplatCamera, restoreSplatCamera } from './scene/splatCameraState';
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
 import { toThumbnail } from './scene/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
@@ -43,8 +44,6 @@ export interface SplatSceneHandle {
   spark: SparkRenderer;
   dom: HTMLElement;
 }
-
-const asVec = (v: { x: number; y: number; z: number }) => ({ x: v.x, y: v.y, z: v.z });
 
 export interface SplatViewer {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -230,28 +229,15 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
 
   const captureCamera = useCallback((): SplatCamera | undefined => {
     const s = sceneRef.current;
-    if (!s) return undefined;
-    return {
-      position: asVec(s.camera.position),
-      target: asVec(s.controls.target),
-      fov: s.camera.fov,
-      aspect: s.camera.aspect,
-    };
+    const THREE = threeRef.current;
+    if (!s || !THREE) return undefined;
+    return captureSplatCamera(THREE, s.camera, s.controls);
   }, []);
 
   const restoreCamera = useCallback((state: unknown) => {
     const s = sceneRef.current;
-    if (!s || !state || typeof state !== 'object') return;
-    const c = state as Partial<SplatCamera>;
-    if (c.position) s.camera.position.set(c.position.x, c.position.y, c.position.z);
-    if (c.fov != null) {
-      s.camera.fov = c.fov;
-      s.camera.updateProjectionMatrix();
-    }
-    if (c.target) {
-      s.controls.target.set(c.target.x, c.target.y, c.target.z);
-      s.controls.update();
-    }
+    const THREE = threeRef.current;
+    if (s && THREE) restoreSplatCamera(THREE, s.camera, s.controls, state);
   }, []);
 
   const raycastCenter = useCallback((): Hotspot3D | null => {

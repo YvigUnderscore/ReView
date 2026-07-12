@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { SplatPresentation } from '../../reviewTypes';
+import { applyRoll } from '../../three/cameraRoll';
 import type { SplatViewer } from '../useSplat';
 import type { CameraKeyframesState } from './useCameraKeyframes';
 
@@ -20,6 +21,7 @@ export function useCameraRig(
   // le rejeu en effet n'applique qu'à la scène, sans setState (règle set-state-in-effect).
   const [fov, setFovState] = useState(() => presentation?.camera?.fov ?? 60);
   const [aperture, setApertureState] = useState(() => presentation?.dof?.apertureAngle ?? 0);
+  const [roll, setRollState] = useState(() => presentation?.camera?.roll ?? 0);
   const [focusPick, setFocusPick] = useState(false);
   const appliedRef = useRef(false);
 
@@ -43,6 +45,19 @@ export function useCameraRig(
       if (angle > 0 && !(h.spark.focalDistance > 0))
         h.spark.focalDistance = h.camera.position.distanceTo(h.controls.target);
       h.spark.apertureAngle = angle;
+    },
+    [getSceneHandle],
+  );
+
+  /** Tilt (roll) de la caméra, en radians — oriente `camera.up` selon la direction de vue (layout). */
+  const setRoll = useCallback(
+    (value: number) => {
+      setRollState(value);
+      const h = getSceneHandle();
+      if (!h) return;
+      const forward = new h.THREE.Vector3().subVectors(h.controls.target, h.camera.position);
+      applyRoll(h.THREE, h.camera, forward, value);
+      h.controls.update();
     },
     [getSceneHandle],
   );
@@ -100,7 +115,7 @@ export function useCameraRig(
 
   const toggleFocusPick = useCallback(() => setFocusPick((v) => !v), []);
 
-  return { fov, setFov, aperture, setAperture, focalDistance, focusPick, toggleFocusPick };
+  return { fov, setFov, aperture, setAperture, roll, setRoll, focalDistance, focusPick, toggleFocusPick };
 }
 
 export type CameraRigState = ReturnType<typeof useCameraRig>;

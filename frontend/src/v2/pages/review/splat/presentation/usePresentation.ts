@@ -144,7 +144,13 @@ export function usePresentation(
     try {
       const view = captureCamera();
       const presentation: SplatPresentation = {};
-      if (view) presentation.camera = { position: view.position, target: view.target, fov: view.fov };
+      if (view)
+        presentation.camera = {
+          position: view.position,
+          target: view.target,
+          fov: view.fov,
+          roll: view.roll,
+        };
       if (rig.aperture > 0)
         presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
       if (reveal) presentation.reveal = reveal;
