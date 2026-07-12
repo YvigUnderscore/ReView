@@ -31,6 +31,7 @@ import documentsRoutes from './routes/documents.routes';
 import contextRoutes from './routes/context.routes';
 import searchRoutes from './routes/search.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import bulkRoutes from './routes/bulk.routes';
 import docsRoutes from './routes/docs.routes';
 
 export const createApp = (): Express => {
@@ -89,6 +90,7 @@ export const createApp = (): Express => {
   app.use('/api/context', contextRoutes);
   app.use('/api/search', searchRoutes);
   app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/bulk', bulkRoutes);
   // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
   app.use('/api', docsRoutes);
 

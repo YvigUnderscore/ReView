@@ -102,6 +102,47 @@ export async function softDeleteProject(id: number): Promise<void> {
   await prisma.project.update({ where: { id }, data: { deletedAt: new Date() } });
 }
 
+// ── Soft-delete en lot (13.C) ─────────────────────────────────────────────────
+// Une seule transaction par domaine (updateMany), cascade descendante identique au
+// singulier. Les ids ont déjà été validés (accès projet) par le BulkService appelant.
+
+export async function softDeleteSequences(ids: number[]): Promise<void> {
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.shot.updateMany({ where: { sequenceId: { in: ids } }, data: { deletedAt: now } }),
+    prisma.sequence.updateMany({ where: { id: { in: ids } }, data: { deletedAt: now } }),
+  ]);
+}
+
+export async function softDeleteShots(ids: number[]): Promise<void> {
+  await prisma.shot.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
+}
+
+export async function softDeleteAssets(ids: number[]): Promise<void> {
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.mediaObject.updateMany({ where: { version: { assetId: { in: ids } } }, data: { deletedAt: now } }),
+    prisma.version.updateMany({ where: { assetId: { in: ids } }, data: { deletedAt: now } }),
+    prisma.asset.updateMany({ where: { id: { in: ids } }, data: { deletedAt: now } }),
+  ]);
+}
+
+export async function softDeleteVersions(ids: number[]): Promise<void> {
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.mediaObject.updateMany({ where: { versionId: { in: ids } }, data: { deletedAt: now } }),
+    prisma.version.updateMany({ where: { id: { in: ids } }, data: { deletedAt: now } }),
+  ]);
+}
+
+export async function softDeleteMedias(ids: number[]): Promise<void> {
+  await prisma.mediaObject.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
+}
+
+export async function softDeleteProjects(ids: number[]): Promise<void> {
+  await prisma.project.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
+}
+
 // ── Restauration ────────────────────────────────────────────────────────────────
 
 export async function restoreSequence(id: number): Promise<void> {
@@ -136,6 +177,45 @@ export async function restoreMedia(id: number): Promise<void> {
 
 export async function restoreProject(id: number): Promise<void> {
   await prisma.project.update({ where: { id }, data: { deletedAt: null } });
+}
+
+// ── Restauration en lot (13.C) ────────────────────────────────────────────────
+
+export async function restoreSequences(ids: number[]): Promise<void> {
+  await prisma.$transaction([
+    prisma.shot.updateMany({ where: { sequenceId: { in: ids } }, data: { deletedAt: null } }),
+    prisma.sequence.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } }),
+  ]);
+}
+
+export async function restoreShots(ids: number[]): Promise<void> {
+  await prisma.shot.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } });
+}
+
+export async function restoreAssets(ids: number[]): Promise<void> {
+  await prisma.$transaction([
+    prisma.mediaObject.updateMany({
+      where: { version: { assetId: { in: ids } } },
+      data: { deletedAt: null },
+    }),
+    prisma.version.updateMany({ where: { assetId: { in: ids } }, data: { deletedAt: null } }),
+    prisma.asset.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } }),
+  ]);
+}
+
+export async function restoreVersions(ids: number[]): Promise<void> {
+  await prisma.$transaction([
+    prisma.mediaObject.updateMany({ where: { versionId: { in: ids } }, data: { deletedAt: null } }),
+    prisma.version.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } }),
+  ]);
+}
+
+export async function restoreMedias(ids: number[]): Promise<void> {
+  await prisma.mediaObject.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } });
+}
+
+export async function restoreProjects(ids: number[]): Promise<void> {
+  await prisma.project.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } });
 }
 
 // ── Purge définitive (DB + MinIO) ────────────────────────────────────────────────

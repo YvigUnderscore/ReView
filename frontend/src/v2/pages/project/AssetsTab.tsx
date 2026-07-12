@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { Box, Link2, Plus, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Box, FolderOpen, Link2, Plus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useFavorites } from '../../stores/useFavorites';
+import { useMultiSelect } from '../../lib/useMultiSelect';
+import { bulkDelete } from '../../lib/bulkApi';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
 import EntityCard, { EntityContainer, DeleteIcon } from '../../components/EntityCard';
+import type { EntityItemAction } from '../../components/EntityCard';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import SelectionBar from '../../components/ui/selection-bar';
 import AssetAssignDialog from '../../components/AssetAssignDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
@@ -29,6 +34,7 @@ export default function AssetsTab({
   reload: () => Promise<void>;
 }) {
   const view = useViewMode(`assets:${projectId}`);
+  const navigate = useNavigate();
   const favs = useFavorites((s) => s.favorites);
   const toggleFav = useFavorites((s) => s.toggle);
   const isFav = (id: number) => favs.some((f) => f.type === 'ASSET' && f.entityId === id);
@@ -36,7 +42,21 @@ export default function AssetsTab({
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Asset | null>(null);
   const [assigning, setAssigning] = useState<Asset | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sel = useMultiSelect(assets.map((a) => a.id));
+
+  const confirmBulkDelete = async () => {
+    try {
+      const { count } = await bulkDelete('assets', sel.ids);
+      toast.success(`${count} asset(s) déplacé(s) dans la corbeille`);
+      sel.clear();
+      setBulkDeleting(false);
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,41 +153,81 @@ export default function AssetsTab({
         />
       ) : (
         <EntityContainer view={view}>
-          {assets.map((a) => (
-            <EntityCard
-              key={a.id}
-              to={`/assets/${a.id}`}
-              view={view}
-              title={a.name}
-              subtitle={a.type}
-              thumbnailUrl={a.thumbnailUrl}
-              actions={[
-                {
-                  icon: (
-                    <Star
-                      size={15}
-                      fill={isFav(a.id) ? 'currentColor' : 'none'}
-                      className={isFav(a.id) ? 'text-warning' : ''}
-                    />
-                  ),
-                  label: 'Favori',
-                  onClick: () => toggleFav('ASSET', a.id),
-                },
-                ...(canManage
-                  ? [
-                      {
-                        icon: <Link2 size={15} />,
-                        label: 'Assigner à des shots/séquences',
-                        onClick: () => setAssigning(a),
-                      },
-                      { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(a) },
-                    ]
-                  : []),
-              ]}
-            />
-          ))}
+          {assets.map((a) => {
+            const favAction: EntityItemAction = {
+              icon: (
+                <Star
+                  size={15}
+                  fill={isFav(a.id) ? 'currentColor' : 'none'}
+                  className={isFav(a.id) ? 'text-warning' : ''}
+                />
+              ),
+              label: 'Favori',
+              onClick: () => toggleFav('ASSET', a.id),
+            };
+            const manageActions: EntityItemAction[] = canManage
+              ? [
+                  {
+                    icon: <Link2 size={15} />,
+                    label: 'Assigner à des shots/séquences',
+                    onClick: () => setAssigning(a),
+                  },
+                  { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(a) },
+                ]
+              : [];
+            return (
+              <EntityCard
+                key={a.id}
+                to={`/assets/${a.id}`}
+                view={view}
+                title={a.name}
+                subtitle={a.type}
+                thumbnailUrl={a.thumbnailUrl}
+                selection={
+                  canManage
+                    ? { selected: sel.isSelected(a.id), onSelect: (m) => sel.onSelect(a.id, m) }
+                    : undefined
+                }
+                actions={[favAction, ...manageActions]}
+                contextActions={[
+                  {
+                    icon: <FolderOpen size={14} />,
+                    label: 'Ouvrir',
+                    onClick: () => navigate(`/assets/${a.id}`),
+                  },
+                  favAction,
+                  ...manageActions,
+                ]}
+              />
+            );
+          })}
         </EntityContainer>
       )}
+
+      {canManage && (
+        <SelectionBar
+          count={sel.count}
+          label="asset(s)"
+          onClear={sel.clear}
+          actions={[
+            {
+              label: 'Supprimer',
+              icon: <Trash2 size={14} />,
+              danger: true,
+              onClick: () => setBulkDeleting(true),
+            },
+          ]}
+        />
+      )}
+      <ConfirmDialog
+        open={bulkDeleting}
+        title="Supprimer les assets ?"
+        message={<>{sel.count} asset(s) et leurs versions/médias seront déplacés dans la corbeille.</>}
+        confirmLabel="Mettre à la corbeille"
+        danger
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleting(false)}
+      />
       {assigning && (
         <AssetAssignDialog
           assetId={assigning.id}

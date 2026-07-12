@@ -1,14 +1,20 @@
 import { useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Clapperboard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Clapperboard, FolderOpen, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectsQuery } from '../lib/queries';
+import { useMultiSelect } from '../lib/useMultiSelect';
+import { bulkDelete } from '../lib/bulkApi';
 import type { MediaKind } from '../types/api';
 import Shell from '../components/Shell';
 import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer } from '../components/EntityCard';
+import ConfirmDialog from '../components/ConfirmDialog';
+import SelectionBar from '../components/ui/selection-bar';
 import { Badge } from '../components/ui/badge';
 import { Select } from '../components/ui/select';
 import { SkeletonCards } from '../components/ui/skeleton';
@@ -28,10 +34,13 @@ const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT
  */
 export default function ReviewsPage() {
   const view = useViewMode('reviews');
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: projects } = useProjectsQuery();
   const [projectId, setProjectId] = useState('');
   const [kind, setKind] = useState('');
   const [status, setStatus] = useState('');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const params = new URLSearchParams();
   if (projectId) params.set('projectId', projectId);
@@ -44,6 +53,29 @@ export default function ReviewsPage() {
     queryFn: () => api.get<Page<ReviewItem>>(`/api/media/reviews${qs ? `?${qs}` : ''}`),
     placeholderData: keepPreviousData,
   });
+
+  const sel = useMultiSelect(data?.items.map((m) => m.id) ?? []);
+  const refresh = () => qc.invalidateQueries({ queryKey: ['reviews'] });
+  const confirmBulkDelete = async () => {
+    try {
+      const { count } = await bulkDelete('media', sel.ids);
+      toast.success(`${count} média(s) déplacé(s) dans la corbeille`);
+      sel.clear();
+      setBulkDeleting(false);
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
+  const deleteOne = async (id: number) => {
+    try {
+      await bulkDelete('media', [id]);
+      toast.success('Média déplacé dans la corbeille');
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
 
   return (
     <Shell title="Reviews">
@@ -99,6 +131,20 @@ export default function ReviewsPage() {
                 title={m.name}
                 subtitle={[m.project?.name, m.location].filter(Boolean).join(' · ') || undefined}
                 thumbnailUrl={m.thumbnailUrl}
+                selection={{ selected: sel.isSelected(m.id), onSelect: (mods) => sel.onSelect(m.id, mods) }}
+                contextActions={[
+                  {
+                    icon: <FolderOpen size={14} />,
+                    label: 'Ouvrir',
+                    onClick: () => navigate(`/review/${m.id}`),
+                  },
+                  {
+                    icon: <Trash2 size={14} />,
+                    label: 'Supprimer',
+                    danger: true,
+                    onClick: () => deleteOne(m.id),
+                  },
+                ]}
                 badge={
                   m.published ? (
                     <Badge variant="info">{MEDIA_KIND_LABEL[m.kind]}</Badge>
@@ -111,6 +157,30 @@ export default function ReviewsPage() {
           </EntityContainer>
         </>
       )}
+
+      <SelectionBar
+        count={sel.count}
+        label="média(s)"
+        onClear={sel.clear}
+        actions={[
+          {
+            label: 'Supprimer',
+            icon: <Trash2 size={14} />,
+            danger: true,
+            onClick: () => setBulkDeleting(true),
+          },
+        ]}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleting}
+        title="Supprimer les médias ?"
+        message={<>{sel.count} média(s) seront déplacés dans la corbeille.</>}
+        confirmLabel="Mettre à la corbeille"
+        danger
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleting(false)}
+      />
     </Shell>
   );
 }

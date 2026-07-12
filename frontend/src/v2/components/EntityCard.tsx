@@ -4,12 +4,21 @@ import { Children, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { ViewMode } from '../stores/useViewPref';
 import { staggerContainer, fadeInUp } from '../lib/motion';
+import type { SelectModifiers } from '../lib/useMultiSelect';
+import { Checkbox } from './ui/checkbox';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
 
 export interface EntityItemAction {
   icon: ReactNode;
   label: string;
   onClick: () => void;
   danger?: boolean;
+}
+
+/** État de multi-sélection d'une carte (13.A). */
+export interface EntitySelection {
+  selected: boolean;
+  onSelect: (mods: SelectModifiers) => void;
 }
 
 export interface EntityCardProps {
@@ -23,6 +32,10 @@ export interface EntityCardProps {
   view: ViewMode;
   /** Boutons d'action (édition/suppression…) visibles au survol. */
   actions?: EntityItemAction[];
+  /** Multi-sélection : affiche une case cochable (survol ou cochée). */
+  selection?: EntitySelection;
+  /** Actions du menu contextuel (clic droit). */
+  contextActions?: EntityItemAction[];
 }
 
 function Actions({ actions }: { actions?: EntityItemAction[] }) {
@@ -50,6 +63,29 @@ function Actions({ actions }: { actions?: EntityItemAction[] }) {
   );
 }
 
+/** Case de sélection : capte les modificateurs (Shift/Ctrl) et neutralise la navigation. */
+function SelectBox({ selection, className }: { selection: EntitySelection; className?: string }) {
+  return (
+    <div
+      className={`${className ?? ''} ${
+        selection.selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      } transition-opacity`}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        selection.onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+      }}
+    >
+      <Checkbox
+        checked={selection.selected}
+        onCheckedChange={() => {}}
+        tabIndex={-1}
+        aria-label="Sélectionner"
+      />
+    </div>
+  );
+}
+
 /** Carte ou ligne compacte selon `view`. Cliquable via `to` (lien) ou `onClick`. */
 export default function EntityCard({
   to,
@@ -61,19 +97,38 @@ export default function EntityCard({
   thumbnailUrl,
   view,
   actions,
+  selection,
+  contextActions,
 }: EntityCardProps) {
-  const activeRing = active ? 'border-primary ring-1 ring-primary' : 'border-border';
+  const highlighted = active || selection?.selected;
+  const activeRing = highlighted ? 'border-primary ring-1 ring-primary' : 'border-border';
   const clickable = onClick ? 'cursor-pointer text-left w-full' : '';
 
   const wrap = (inner: ReactNode) => {
-    if (to) return <Link to={to}>{inner}</Link>;
-    if (onClick)
-      return (
+    let node: ReactNode;
+    if (to) node = <Link to={to}>{inner}</Link>;
+    else if (onClick)
+      node = (
         <button type="button" onClick={onClick} className="block w-full text-left">
           {inner}
         </button>
       );
-    return inner;
+    else node = inner;
+
+    if (!contextActions?.length) return node;
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{node}</ContextMenuTrigger>
+        <ContextMenuContent>
+          {contextActions.map((a) => (
+            <ContextMenuItem key={a.label} danger={a.danger} onSelect={() => a.onClick()}>
+              {a.icon}
+              {a.label}
+            </ContextMenuItem>
+          ))}
+        </ContextMenuContent>
+      </ContextMenu>
+    );
   };
 
   if (view === 'compact') {
@@ -81,6 +136,7 @@ export default function EntityCard({
       <div
         className={`group flex items-center gap-3 rounded-md border ${activeRing} bg-card px-3 py-2 transition-colors hover:border-primary ${clickable}`}
       >
+        {selection && <SelectBox selection={selection} />}
         <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-secondary/60">
           {thumbnailUrl ? (
             <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
@@ -109,6 +165,7 @@ export default function EntityCard({
         ) : (
           <ImageIcon size={28} className="text-muted-foreground/50" />
         )}
+        {selection && <SelectBox selection={selection} className="absolute left-1.5 top-1.5" />}
         <div className="absolute right-1.5 top-1.5">
           <Actions actions={actions} />
         </div>

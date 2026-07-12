@@ -7,6 +7,11 @@ import { slugify } from './slug';
  * Retournent `null` si l'entité est introuvable.
  */
 
+export const resolveProjectIdForProject = async (id: number): Promise<number | null> => {
+  const project = await prisma.project.findUnique({ where: { id }, select: { id: true } });
+  return project?.id ?? null;
+};
+
 export const resolveProjectIdForSequence = async (id: number): Promise<number | null> => {
   const seq = await prisma.sequence.findUnique({ where: { id }, select: { projectId: true } });
   return seq?.projectId ?? null;

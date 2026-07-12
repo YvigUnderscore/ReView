@@ -1,24 +1,28 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Star, FolderKanban } from 'lucide-react';
+import { Plus, Star, FolderKanban, Trash2, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
-import type { Project, ProjectStatus } from '../types/api';
+import type { Project } from '../types/api';
 import Shell from '../components/Shell';
 import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../components/EntityCard';
+import type { EntityItemAction } from '../components/EntityCard';
 import ConfirmDialog from '../components/ConfirmDialog';
+import SelectionBar from '../components/ui/selection-bar';
+import { useMultiSelect } from '../lib/useMultiSelect';
+import { bulkDelete } from '../lib/bulkApi';
+import EditProjectModal from './projects/EditProjectModal';
 import { useFavorites } from '../stores/useFavorites';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Label } from '../components/ui/label';
-import { Select } from '../components/ui/select';
-import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
@@ -29,7 +33,6 @@ const STATUS_LABEL: Record<string, string> = {
   COMPLETED: 'Terminé',
   ARCHIVED: 'Archivé',
 };
-const STATUS_OPTIONS: readonly ProjectStatus[] = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
 
 function StatusBadge({ status }: { status: string }) {
   const variant =
@@ -51,12 +54,27 @@ export default function ProjectsPage() {
   const toggleFav = useFavorites((s) => s.toggle);
   const isFav = (id: number) => favs.some((f) => f.type === 'PROJECT' && f.entityId === id);
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { data: projects, error } = useProjectsQuery();
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const sel = useMultiSelect(projects?.map((p) => p.id) ?? []);
   const invalidate = () => qc.invalidateQueries({ queryKey: qk.projects });
+
+  const confirmBulkDelete = async () => {
+    try {
+      const { count } = await bulkDelete('projects', sel.ids);
+      toast.success(`${count} projet(s) déplacé(s) dans la corbeille`);
+      sel.clear();
+      setBulkDeleting(false);
+      invalidate();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,38 +161,77 @@ export default function ProjectsPage() {
         />
       ) : (
         <EntityContainer view={view}>
-          {projects.map((p) => (
-            <EntityCard
-              key={p.id}
-              to={`/projects/${p.id}`}
-              view={view}
-              title={p.name}
-              subtitle={p.description ?? undefined}
-              thumbnailUrl={p.thumbnailUrl}
-              badge={<StatusBadge status={p.status} />}
-              actions={[
-                {
-                  icon: (
-                    <Star
-                      size={15}
-                      fill={isFav(p.id) ? 'currentColor' : 'none'}
-                      className={isFav(p.id) ? 'text-warning' : ''}
-                    />
-                  ),
-                  label: 'Favori',
-                  onClick: () => toggleFav('PROJECT', p.id),
-                },
-                ...(canManage
-                  ? [
-                      { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
-                      { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
-                    ]
-                  : []),
-              ]}
-            />
-          ))}
+          {projects.map((p) => {
+            const favAction: EntityItemAction = {
+              icon: (
+                <Star
+                  size={15}
+                  fill={isFav(p.id) ? 'currentColor' : 'none'}
+                  className={isFav(p.id) ? 'text-warning' : ''}
+                />
+              ),
+              label: 'Favori',
+              onClick: () => toggleFav('PROJECT', p.id),
+            };
+            const manageActions: EntityItemAction[] = canManage
+              ? [
+                  { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
+                  { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
+                ]
+              : [];
+            return (
+              <EntityCard
+                key={p.id}
+                to={`/projects/${p.id}`}
+                view={view}
+                title={p.name}
+                subtitle={p.description ?? undefined}
+                thumbnailUrl={p.thumbnailUrl}
+                badge={<StatusBadge status={p.status} />}
+                selection={{ selected: sel.isSelected(p.id), onSelect: (m) => sel.onSelect(p.id, m) }}
+                actions={[favAction, ...manageActions]}
+                contextActions={[
+                  {
+                    icon: <FolderOpen size={14} />,
+                    label: 'Ouvrir',
+                    onClick: () => navigate(`/projects/${p.id}`),
+                  },
+                  favAction,
+                  ...manageActions,
+                ]}
+              />
+            );
+          })}
         </EntityContainer>
       )}
+
+      {canManage && (
+        <SelectionBar
+          count={sel.count}
+          label="projet(s)"
+          onClear={sel.clear}
+          actions={[
+            {
+              label: 'Supprimer',
+              icon: <Trash2 size={14} />,
+              danger: true,
+              onClick: () => setBulkDeleting(true),
+            },
+          ]}
+        />
+      )}
+
+      <ConfirmDialog
+        open={bulkDeleting}
+        title="Supprimer les projets ?"
+        message={
+          <>{sel.count} projet(s) seront déplacés dans la corbeille. Restaurables depuis l'administration.</>
+        }
+        confirmLabel="Mettre à la corbeille"
+        danger
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleting(false)}
+      />
 
       {editing && (
         <EditProjectModal
@@ -202,79 +259,5 @@ export default function ProjectsPage() {
         onCancel={() => setDeleting(null)}
       />
     </Shell>
-  );
-}
-
-function EditProjectModal({
-  project,
-  onClose,
-  onSaved,
-}: {
-  project: Project;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState(project.name);
-  const [description, setDescription] = useState(project.description ?? '');
-  const [status, setStatus] = useState(project.status);
-  const [error, setError] = useState<string | null>(null);
-
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.patch(`/api/projects/${project.id}`, { name, description: description || null, status });
-      toast.success('Projet mis à jour');
-      onSaved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
-    }
-  };
-
-  return (
-    <Dialog
-      open
-      onOpenChange={(o) => {
-        if (!o) onClose();
-      }}
-    >
-      <DialogContent>
-        <form onSubmit={save} className="space-y-3">
-          <DialogHeader>
-            <DialogTitle>Éditer le projet</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-1">
-            <Label>Nom</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} required />
-          </div>
-          <div className="space-y-1">
-            <Label>Description</Label>
-            <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Statut</Label>
-            <Select
-              className="w-full"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-            >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" size="sm">
-              Enregistrer
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
