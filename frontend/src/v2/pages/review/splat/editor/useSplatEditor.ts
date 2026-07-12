@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { api } from '../../../../../lib/apiClient';
-import { isEditable } from '../../../../lib/shortcuts';
 import {
   IDENTITY_SPLAT_TRANSFORM,
   type SplatEdits,
@@ -21,6 +20,7 @@ import { applyMaskIndices, fetchMaskIndices } from './persistence/applyEdits';
 import { bytesToBase64, encodeMask } from './persistence/mask';
 import { meshBounds, selectionBounds } from './selection/bounds';
 import { useSelection } from './selection/useSelection';
+import { useEditorShortcuts } from './useEditorShortcuts';
 import { syncSphereRadius } from './volumes/cropVolume';
 import { useVolumes } from './volumes/useVolumes';
 
@@ -28,17 +28,6 @@ import { useVolumes } from './volumes/useVolumes';
 export type EditorTool = 'navigate' | GizmoMode | 'select-rect' | 'select-lasso' | 'brush';
 
 const GIZMO_TOOLS: readonly EditorTool[] = ['translate', 'rotate', 'scale'];
-
-/** Raccourcis clavier de l'éditeur (sans modificateur, hors champs de saisie). */
-const TOOL_KEYS: Record<string, EditorTool> = {
-  v: 'navigate', // V = retour au mode navigation (aucun outil actif)
-  t: 'translate',
-  r: 'rotate',
-  s: 'scale',
-  b: 'select-rect', // B = box select (convention DCC)
-  l: 'select-lasso',
-  p: 'brush', // P = pinceau de surface
-};
 
 /**
  * État et actions de l'éditeur de splat (10.G), sur le modèle de `useModel3D` : outil actif
@@ -184,6 +173,13 @@ export function useSplatEditor(
     if (enabled) return () => applyRenderMode('splats');
   }, [enabled, applyRenderMode]);
 
+  // Mode points : la teinte de sélection (portée par le mesh, opacité 0 ici) est reflétée dans
+  // l'overlay de points — à l'entrée du mode comme à chaque changement (no-op hors mode points).
+  const selectedSet = selection.selected;
+  useEffect(() => {
+    if (enabled && ready && renderMode === 'points') splat.reflectSelection(selectedSet);
+  }, [enabled, ready, renderMode, selectedSet, splat]);
+
   /** Supprime (masque) la sélection courante — opération annulable (undo/redo). */
   const deleteSelection = useCallback(() => {
     const handle = splat.getSceneHandle();
@@ -196,6 +192,7 @@ export function useSplatEditor(
     setDirty(true);
     selection.clear();
     selection.markDirty(hidden.indices);
+    splat.reflectHidden(hidden.indices, true); // reflet immédiat en mode points
     history.push({
       label: 'Suppression de splats',
       undo: () => {
@@ -203,12 +200,14 @@ export function useSplatEditor(
         for (const i of hidden.indices) deleted.delete(i);
         setDeletedCount(deleted.size);
         selection.markDirty(hidden.indices);
+        splat.reflectHidden(hidden.indices, false);
       },
       redo: () => {
         rehideSplats(handle, hidden);
         for (const i of hidden.indices) deleted.add(i);
         setDeletedCount(deleted.size);
         selection.markDirty(hidden.indices);
+        splat.reflectHidden(hidden.indices, true);
       },
     });
   }, [splat, selection, history]);
@@ -227,51 +226,8 @@ export function useSplatEditor(
     if (handle) frameCameraToMesh(handle.THREE, handle.mesh, handle.camera, handle.controls);
   }, [splat]);
 
-  // Raccourcis : outils (T/R/S/B/L sans modificateur), F/H (cadrer sélection / vue d'origine),
-  // Suppr (suppression sélection), Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y (historique). Inactifs dans
-  // les champs et dialogs.
-  useEffect(() => {
-    if (!enabled) return;
-    const down = (e: KeyboardEvent) => {
-      if (isEditable(e.target) || document.querySelector('[role="dialog"]')) return;
-      // En vol (clic droit + ZQSD, 11.G) : les touches pilotent la caméra, pas les outils.
-      if (splat.isFlying()) return;
-      const key = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
-        if (key === 'z' && !e.shiftKey) {
-          e.preventDefault();
-          history.undo();
-        } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
-          e.preventDefault();
-          history.redo();
-        }
-        return;
-      }
-      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        deleteSelection();
-        return;
-      }
-      if (key === 'f') {
-        e.preventDefault();
-        frameSelection();
-        return;
-      }
-      if (key === 'h') {
-        e.preventDefault();
-        frameHome();
-        return;
-      }
-      const next = TOOL_KEYS[key];
-      if (next) {
-        e.preventDefault();
-        setTool(next);
-      }
-    };
-    document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
-  }, [enabled, history, deleteSelection, frameSelection, frameHome, splat]);
+  // Raccourcis clavier (extraits dans un hook dédié pour tenir le budget de taille).
+  useEditorShortcuts({ enabled, splat, history, deleteSelection, frameSelection, frameHome, setTool });
 
   /** Enregistre toutes les éditions : transform + volumes (JSON) et masque de suppression. */
   const save = useCallback(async () => {

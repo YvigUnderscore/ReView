@@ -8,7 +8,8 @@ import { createFlyControls } from './scene/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { createHotspotMarker } from './scene/hotspotMarker';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
-import { buildPointCloud, ELLIPSES_OPACITY, setFalloff, type RenderMode } from './scene/renderModes';
+import { createPointCloud, type PointCloud } from './scene/pointCloud';
+import { ELLIPSES_OPACITY, setFalloff, type RenderMode } from './scene/renderModes';
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
 import { toThumbnail } from './scene/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
@@ -64,6 +65,10 @@ export interface SplatViewer {
   setBaseFlip: (flip: boolean) => void;
   /** Bascule le mode de visualisation (splats / ellipses gaussiennes / points). */
   setRenderMode: (mode: RenderMode) => void;
+  /** Reflète la sélection courante dans l'overlay « points » (teinte) — no-op hors mode points. */
+  reflectSelection: (selected: ReadonlySet<number>) => void;
+  /** Reflète un (dé)masquage de splats dans l'overlay « points » — no-op hors mode points. */
+  reflectHidden: (indices: Iterable<number>, hidden: boolean) => void;
   /** Abonne un panneau aux stats de rendu (FPS, splats, draw calls) — mesurées si abonné. */
   subscribeStats: (cb: (stats: SplatStats) => void) => () => void;
   /** Abonne un callback à chaque frame rendue (dt en secondes) — animations caméra (V5). */
@@ -85,8 +90,9 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
   const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   // Résolveur d'une capture de miniature en attente (rempli après le prochain rendu).
   const captureReq = useRef<((d: string | null) => void) | null>(null);
-  // Nuage de points du mode « points » (enfant du mesh, construit à la demande).
-  const pointsRef = useRef<THREE.Points | null>(null);
+  // Overlay « nuage de points » du mode points (enfant du mesh, construit à la demande) —
+  // réactif à la sélection et aux suppressions (setSelection/setHidden).
+  const pointsRef = useRef<PointCloud | null>(null);
   // Échantillonneur de stats (FPS, splats) alimenté par la boucle de rendu.
   const statsRef = useRef<StatsSampler | null>(null);
   // Callbacks appelés à chaque frame (dt en secondes) — animation caméra, presets (V5).
@@ -200,12 +206,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
         fly.dispose();
         flyRef.current = null;
         controls.dispose();
-        if (pointsRef.current) {
-          pointsRef.current.geometry.dispose();
-          (pointsRef.current.material as THREE.Material).dispose();
-          pointsRef.current.removeFromParent();
-          pointsRef.current = null;
-        }
+        pointsRef.current?.dispose();
+        pointsRef.current = null;
         (mesh as unknown as { dispose?: () => void }).dispose?.();
         renderer.dispose();
         renderer.domElement.remove();
@@ -343,19 +345,15 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     const s = sceneRef.current;
     const THREE = threeRef.current;
     if (!s || !THREE) return;
-    // L'overlay de points est reconstruit à chaque entrée dans le mode (les suppressions
-    // non-destructives entre deux bascules doivent en disparaître).
-    if (pointsRef.current) {
-      pointsRef.current.geometry.dispose();
-      (pointsRef.current.material as THREE.Material).dispose();
-      pointsRef.current.removeFromParent();
-      pointsRef.current = null;
-    }
+    // L'overlay de points est reconstruit à chaque entrée dans le mode (l'état masqué courant
+    // est capté à la construction ; sélection et suppressions suivantes reflétées en direct).
+    pointsRef.current?.dispose();
+    pointsRef.current = null;
     if (mode === 'points') {
       // Masque les splats (opacité 0) mais garde le mesh « visible » pour rendre l'overlay enfant.
       s.mesh.opacity = 0;
-      pointsRef.current = buildPointCloud(THREE, s.mesh);
-      s.mesh.add(pointsRef.current);
+      pointsRef.current = createPointCloud(THREE, s.mesh);
+      s.mesh.add(pointsRef.current.points);
     } else if (mode === 'ellipses') {
       // Bordures : ellipses plates (falloff nul) rendues translucides (V2).
       s.mesh.opacity = ELLIPSES_OPACITY;
@@ -364,6 +362,14 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       s.mesh.opacity = 1;
       setFalloff(s.spark, 1);
     }
+  }, []);
+
+  const reflectSelection = useCallback((selected: ReadonlySet<number>) => {
+    pointsRef.current?.setSelection(selected);
+  }, []);
+
+  const reflectHidden = useCallback((indices: Iterable<number>, hidden: boolean) => {
+    pointsRef.current?.setHidden(indices, hidden);
   }, []);
 
   return {
@@ -378,6 +384,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     applyTransform,
     setBaseFlip,
     setRenderMode,
+    reflectSelection,
+    reflectHidden,
     subscribeStats,
     subscribeFrame,
     setCullingOff,
