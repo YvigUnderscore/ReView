@@ -11,6 +11,7 @@ export default function VideoTimeline({
   onSeek,
   onSelectComment,
   trimRange,
+  loop,
 }: {
   currentTime: number;
   duration: number;
@@ -20,6 +21,8 @@ export default function VideoTimeline({
   onSelectComment: (c: ReviewComment) => void;
   /** Fenêtre de trim (secondes) — zones hors coupe grisées (10.G-V10). */
   trimRange?: { start: number; end: number } | null;
+  /** Points de boucle I/O (secondes, 14.B) — région surlignée entre in et out. */
+  loop?: { in: number | null; out: number | null };
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
@@ -66,6 +69,31 @@ export default function VideoTimeline({
               className="pointer-events-none absolute inset-y-0 right-1 z-[5] rounded-r bg-background/70"
               style={{ width: `${Math.min(1 - trimRange.end / duration, 1) * 100}%` }}
             />
+          )}
+        </>
+      )}
+
+      {/* Région de boucle I/O (14.B) + poignées */}
+      {loop && duration > 0 && (loop.in != null || loop.out != null) && (
+        <>
+          {loop.in != null && loop.out != null && (
+            <div
+              className="pointer-events-none absolute inset-y-0 z-[6] rounded bg-primary/20"
+              style={{
+                left: `calc(${(loop.in / duration) * 100}% * (100% - 8px) / 100% + 4px)`,
+                width: `${(Math.max(loop.out - loop.in, 0) / duration) * 100}%`,
+              }}
+            />
+          )}
+          {(['in', 'out'] as const).map((k) =>
+            loop[k] != null ? (
+              <div
+                key={k}
+                className="pointer-events-none absolute inset-y-1 z-[7] w-0.5 rounded-full bg-primary"
+                style={{ left: `calc(${(loop[k]! / duration) * 100}% * (100% - 8px) / 100% + 4px)` }}
+                title={k === 'in' ? 'Point de boucle I' : 'Point de boucle O'}
+              />
+            ) : null,
           )}
         </>
       )}

@@ -1,5 +1,5 @@
 import { Aperture, Crosshair, Pause, Play, RotateCcw } from 'lucide-react';
-import { HudGroup, HudIconButton } from '../hud/ViewerHud';
+import { HudGroup, HudIconButton } from '../../hud/ViewerHud';
 import type { CameraKeyframesState } from './useCameraKeyframes';
 import type { CameraRigState } from './useCameraRig';
 

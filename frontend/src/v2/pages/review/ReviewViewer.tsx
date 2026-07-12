@@ -1,4 +1,4 @@
-import { type ComponentProps, useEffect } from 'react';
+import { type ComponentProps, useEffect, useState } from 'react';
 import type { ReviewComment, Role } from '../../types/api';
 import { AnnotationCanvas } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
@@ -13,6 +13,7 @@ import Model3DPane from './Model3DPane';
 import Model3DToolbar from './Model3DToolbar';
 import SplatReview from './splat/SplatReview';
 import VideoComparePane from './VideoComparePane';
+import VideoWipeOverlay from './VideoWipeOverlay';
 import VideoPane from './VideoPane';
 import VideoTrimBar from './VideoTrimBar';
 
@@ -91,6 +92,12 @@ export default function ReviewViewer({
   // (le backend refuse de toute façon en 403) ; la présentation reste pilotable (canManage).
   const showEditTools = canEditTransform;
   const showSplatEdit = splatReady && canEdit;
+  // Comparaison A/B vidéo : côte-à-côte ou wipe (14.C).
+  const [compareMode, setCompareMode] = useState<'side' | 'wipe'>('side');
+  const closeCompare = () => {
+    setCompareMode('side');
+    onCloseCompare();
+  };
 
   // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
   // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).
@@ -140,6 +147,16 @@ export default function ReviewViewer({
               videoRef={videoRef}
               programmaticSeekRef={programmaticSeekRef}
               overlay={renderOverlay()}
+              compareOverlay={
+                compareId != null && compareMode === 'wipe' ? (
+                  <VideoWipeOverlay
+                    compareId={compareId}
+                    masterRef={videoRef}
+                    onClose={closeCompare}
+                    onSide={() => setCompareMode('side')}
+                  />
+                ) : null
+              }
               comments={comments ?? []}
               selectedId={selectedCommentId}
               onSelectComment={onSelectComment}
@@ -160,9 +177,14 @@ export default function ReviewViewer({
               <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
             )}
           </div>
-          {/* Comparaison A/B : pane B synchronisé sur le lecteur maître (backlog P2). */}
-          {compareId != null && (
-            <VideoComparePane compareId={compareId} masterRef={videoRef} onClose={onCloseCompare} />
+          {/* Comparaison A/B côte à côte : pane B synchronisé sur le lecteur maître. */}
+          {compareId != null && compareMode === 'side' && (
+            <VideoComparePane
+              compareId={compareId}
+              masterRef={videoRef}
+              onClose={closeCompare}
+              onWipe={() => setCompareMode('wipe')}
+            />
           )}
         </div>
       )}

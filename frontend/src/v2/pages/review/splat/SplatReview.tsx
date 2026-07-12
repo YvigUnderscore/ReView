@@ -18,7 +18,7 @@ import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 import VolumesBar from './editor/volumes/VolumesBar';
 import StatsPanel from './hud/StatsPanel';
 import TransformFields from './hud/TransformFields';
-import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
+import ViewerHud, { HudGroup, HudIconButton } from '../hud/ViewerHud';
 import ViewerSettingsPanel from './hud/ViewerSettingsPanel';
 import SplatPane from './SplatPane';
 

@@ -1,26 +1,6 @@
 import type { UserStatus } from '../types/api';
 import { STATUS_COLOR } from '../lib/userStatus';
-
-// Palette stable de couleurs de repli (dérivée d'un identifiant).
-const COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#f59e0b',
-  '#84cc16',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
-  '#3b82f6',
-  '#6366f1',
-  '#8b5cf6',
-  '#a855f7',
-  '#ec4899',
-];
-
-function colorFor(seed: number | string): string {
-  const n = typeof seed === 'number' ? seed : [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
-  return COLORS[n % COLORS.length]!;
-}
+import { userColor as colorFor } from '../lib/userColor';
 
 /**
  * Avatar utilisateur : image uploadée si disponible, sinon pastille à initiales

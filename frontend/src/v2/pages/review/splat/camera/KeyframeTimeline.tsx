@@ -1,6 +1,6 @@
 import { Orbit, Plus, Save, Trash2, X } from 'lucide-react';
 import type { CameraEasing } from '../../reviewTypes';
-import { HudGroup } from '../hud/ViewerHud';
+import { HudGroup } from '../../hud/ViewerHud';
 import type { CameraKeyframesState } from './useCameraKeyframes';
 
 const EASINGS: { value: CameraEasing; label: string }[] = [

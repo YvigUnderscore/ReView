@@ -1,5 +1,5 @@
 import { Paintbrush, Undo2, X } from 'lucide-react';
-import { HudGroup, HudIconButton } from '../hud/ViewerHud';
+import { HudGroup, HudIconButton } from '../../hud/ViewerHud';
 import type { SplatPaintState } from './useSplatPaint';
 
 /** Couleurs de trait proposées (données d'annotation, pas des tokens de thème). */

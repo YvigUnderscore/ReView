@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SplatStats } from '../scene/stats';
 import type { SplatViewer } from '../useSplat';
-import { HudGroup } from './ViewerHud';
+import { HudGroup } from '../../hud/ViewerHud';
 
 const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR');
 

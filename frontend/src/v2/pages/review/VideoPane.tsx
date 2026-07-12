@@ -1,19 +1,21 @@
-import { useState, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { ReviewComment } from '../../types/api';
-import { stepVideoFrame, tcFromFrame, VIEWER_ZONE } from './reviewTypes';
+import { stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import VideoTimeline from './VideoTimeline';
+import VideoTransport from './VideoTransport';
 
 /**
- * Pane vidéo de la review : lecteur + overlay d'annotation, timeline à marqueurs
- * de commentaires, barre de métriques (frame, timecode, pas de frame, fps) et
- * raccourcis clavier (espace, ←/→, J/K/L, M — voir useReviewShortcuts).
+ * Pane vidéo de la review (14.B) : lecteur **custom** (plus de `controls` natif) + overlay
+ * d'annotation, timeline unique (scrub + marqueurs commentaires + boucle I/O + trim) et
+ * barre de transport HUD. Raccourcis clavier via useReviewShortcuts (espace/JKL/←→/I-O/M).
  */
 export default function VideoPane({
   src,
   videoRef,
   programmaticSeekRef,
   overlay,
+  compareOverlay,
   comments,
   selectedId,
   onSelectComment,
@@ -30,6 +32,8 @@ export default function VideoPane({
   /** Drapeau partagé : distingue un seek programmatique d'un déplacement manuel (qui désélectionne). */
   programmaticSeekRef: { current: boolean };
   overlay: ReactNode;
+  /** Overlay de comparaison A/B en mode wipe (couvre la zone vidéo, 14.C). */
+  compareOverlay?: ReactNode;
   comments: ReviewComment[];
   selectedId: number | null;
   onSelectComment: (c: ReviewComment) => void;
@@ -44,14 +48,59 @@ export default function VideoPane({
 }) {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [loopIn, setLoopIn] = useState<number | null>(null);
+  const [loopOut, setLoopOut] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useReviewShortcuts({ videoRef, fps, onMarker });
+  const markLoopIn = useCallback(() => {
+    const v = videoRef.current;
+    if (v) setLoopIn(v.currentTime);
+  }, [videoRef]);
+  const markLoopOut = useCallback(() => {
+    const v = videoRef.current;
+    if (v) setLoopOut(v.currentTime);
+  }, [videoRef]);
+  const clearLoop = useCallback(() => {
+    setLoopIn(null);
+    setLoopOut(null);
+  }, []);
+
+  useReviewShortcuts({
+    videoRef,
+    fps,
+    onMarker,
+    onLoopIn: markLoopIn,
+    onLoopOut: markLoopOut,
+    onClearLoop: clearLoop,
+  });
+
+  // Applique volume/mute au lecteur.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v) {
+      v.volume = volume;
+      v.muted = muted;
+    }
+  }, [videoRef, volume, muted]);
 
   const seekTo = (t: number) => {
     const v = videoRef.current;
     if (v) {
       programmaticSeekRef.current = true;
       v.currentTime = t;
+    }
+  };
+
+  const onTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const v = e.currentTarget;
+    setCurrentFrame(Math.round(v.currentTime * fps));
+    // Boucle I/O : au-delà de O, on repart de I (14.B).
+    if (loopIn != null && loopOut != null && loopOut > loopIn && v.currentTime >= loopOut) {
+      programmaticSeekRef.current = true;
+      v.currentTime = loopIn;
     }
   };
 
@@ -64,16 +113,29 @@ export default function VideoPane({
     onManualSeek();
   };
 
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.playbackRate = 1;
+      void v.play();
+    } else v.pause();
+  };
+
+  const fullscreen = () => void containerRef.current?.requestFullscreen?.();
+
   return (
     <>
-      <div className={VIEWER_ZONE}>
+      <div className={VIEWER_ZONE} ref={containerRef}>
         <div className="relative inline-block max-h-full">
           <video
             ref={videoRef}
             src={src}
-            controls
-            className="block max-h-[calc(100vh-16rem)] max-w-full"
-            onTimeUpdate={(e) => setCurrentFrame(Math.round(e.currentTarget.currentTime * fps))}
+            className="block max-h-[calc(100vh-16rem)] max-w-full cursor-pointer"
+            onClick={togglePlay}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onTimeUpdate={onTimeUpdate}
             onLoadedMetadata={(e) => {
               setCurrentFrame(Math.round(e.currentTarget.currentTime * fps));
               setDuration(e.currentTarget.duration);
@@ -82,9 +144,10 @@ export default function VideoPane({
           />
           {overlay}
         </div>
+        {compareOverlay}
       </div>
 
-      {/* Timeline avec marqueurs de commentaires */}
+      {/* Timeline unique : scrub + marqueurs commentaires + boucle I/O + trim */}
       {duration > 0 && (
         <VideoTimeline
           currentTime={currentFrame / fps}
@@ -94,45 +157,31 @@ export default function VideoPane({
           onSeek={seekTo}
           onSelectComment={onSelectComment}
           trimRange={trimRange}
+          loop={{ in: loopIn, out: loopOut }}
         />
       )}
 
-      {/* Barre de métriques : frame + timecode affichés en permanence */}
-      <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-md border border-border bg-card px-3 py-1.5 text-xs">
-        <span className="font-mono text-sm">
-          Frame <span className="text-primary">{startFrame + currentFrame}</span>
-        </span>
-        <span className="text-muted-foreground">TC {tcFromFrame(currentFrame, fps)}</span>
-        <span className="text-muted-foreground">|</span>
-        <button
-          onClick={() => stepVideoFrame(videoRef.current, fps, -1)}
-          title="Frame précédente (←)"
-          className="rounded border border-border px-2 py-0.5 hover:bg-secondary/60"
-        >
-          ◀ -1
-        </button>
-        <button
-          onClick={() => stepVideoFrame(videoRef.current, fps, 1)}
-          title="Frame suivante (→)"
-          className="rounded border border-border px-2 py-0.5 hover:bg-secondary/60"
-        >
-          +1 ▶
-        </button>
-        <span className="text-muted-foreground">|</span>
-        <label className="flex items-center gap-1 text-muted-foreground">
-          fps
-          <input
-            type="number"
-            value={fps}
-            min={1}
-            max={120}
-            disabled={fpsDetected}
-            onChange={(e) => setFpsOverride(Number(e.target.value) || 24)}
-            className="w-14 rounded border border-input bg-background px-1 py-0.5 disabled:opacity-60"
-          />
-          {fpsDetected && <span className="text-[10px]">(détecté)</span>}
-        </label>
-      </div>
+      {/* Transport custom (remplace controls natif) */}
+      <VideoTransport
+        playing={playing}
+        onPlayPause={togglePlay}
+        onStep={(d) => stepVideoFrame(videoRef.current, fps, d)}
+        startFrame={startFrame}
+        currentFrame={currentFrame}
+        fps={fps}
+        fpsDetected={fpsDetected}
+        setFpsOverride={setFpsOverride}
+        volume={volume}
+        muted={muted}
+        onVolume={(val) => {
+          setVolume(val);
+          setMuted(val === 0);
+        }}
+        onToggleMute={() => setMuted((m) => !m)}
+        onFullscreen={fullscreen}
+        loopActive={loopIn != null || loopOut != null}
+        onClearLoop={clearLoop}
+      />
     </>
   );
 }

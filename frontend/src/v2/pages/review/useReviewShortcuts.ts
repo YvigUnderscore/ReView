@@ -7,6 +7,7 @@ import { stepVideoFrame } from './reviewTypes';
  * - Espace : lecture/pause · K : pause
  * - ←/→ : ±1 frame · Maj+←/→ : ±10 frames
  * - J / L : lecture arrière / avant (appuis répétés : ×2, ×4, ×8)
+ * - I / O : points d'entrée/sortie de boucle · Maj+I/O : efface la boucle
  * - M : pause + composer de commentaire (marqueur à la frame courante)
  * Inactifs dans les champs de saisie et quand un dialog est ouvert.
  * La lecture arrière n'existe pas en HTML5 : elle est simulée par un pas de
@@ -16,10 +17,19 @@ export function useReviewShortcuts({
   videoRef,
   fps,
   onMarker,
+  onLoopIn,
+  onLoopOut,
+  onClearLoop,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
   fps: number;
   onMarker: () => void;
+  /** I : marque le point d'entrée de boucle à la frame courante (14.B). */
+  onLoopIn?: () => void;
+  /** O : marque le point de sortie de boucle à la frame courante (14.B). */
+  onLoopOut?: () => void;
+  /** Maj+I ou Maj+O : efface la boucle. */
+  onClearLoop?: () => void;
 }) {
   const shuttle = useRef<{ speed: number; raf: number; last: number } | null>(null);
 
@@ -74,6 +84,16 @@ export function useReviewShortcuts({
       const v = videoRef.current;
       if (!v) return;
       switch (e.key.toLowerCase()) {
+        case 'i':
+          e.preventDefault();
+          if (e.shiftKey) onClearLoop?.();
+          else onLoopIn?.();
+          break;
+        case 'o':
+          e.preventDefault();
+          if (e.shiftKey) onClearLoop?.();
+          else onLoopOut?.();
+          break;
         case ' ':
           e.preventDefault();
           stopShuttle();
@@ -125,5 +145,5 @@ export function useReviewShortcuts({
       v?.removeEventListener('play', onPlay);
       stopShuttle();
     };
-  }, [videoRef, fps, onMarker]);
+  }, [videoRef, fps, onMarker, onLoopIn, onLoopOut, onClearLoop]);
 }

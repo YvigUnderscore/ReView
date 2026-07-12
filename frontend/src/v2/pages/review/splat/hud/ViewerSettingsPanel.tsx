@@ -3,7 +3,7 @@ import type { DebugColorMode } from '../scene/effects/debugColor';
 import type { RevealConfig } from '../presentation/usePresentation';
 import type { RevealType } from '../scene/effects/reveal';
 import type { LodMode } from '../scene/lod';
-import { HudGroup } from './ViewerHud';
+import { HudGroup } from '../../hud/ViewerHud';
 
 const LODS: { value: LodMode; label: string }[] = [
   { value: 'auto', label: 'Auto' },

@@ -6,10 +6,21 @@ import type { Hotspot3D } from './reviewTypes';
  * État de l'annotation du composer (dessin 2D + hotspot 3D) avec undo/redo,
  * et de l'annotation d'un commentaire sélectionné affichée en lecture seule
  * (`viewed*`, ratio du viewer capturé à l'enregistrement pour le 3D).
+ *
+ * `defaultColor` (14.F) = couleur attitrée de l'utilisateur (dérivée de l'id ou préférence
+ * enregistrée). Elle sert de valeur active tant que l'utilisateur n'a pas choisi une couleur
+ * manuellement (couleur **dérivée**, pas d'effet) ; `onColorChange` permet la persistance
+ * côté appelant.
  */
-export function useAnnotations() {
+export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (c: string) => void }) {
   const [tool, setTool] = useState<Tool>('draw');
-  const [color, setColor] = useState('#ef4444');
+  // Choix manuel prioritaire ; sinon couleur par défaut (préférence/id), rechargée sans effet.
+  const [manualColor, setManualColor] = useState<string | null>(null);
+  const color = manualColor ?? opts?.defaultColor ?? '#ef4444';
+  const setColor = (c: string) => {
+    setManualColor(c);
+    opts?.onColorChange?.(c);
+  };
   const [alpha, setAlpha] = useState(1);
   const [penWidth, setPenWidth] = useState(3);
   const [annot, setAnnot] = useState<Shape[]>([]);

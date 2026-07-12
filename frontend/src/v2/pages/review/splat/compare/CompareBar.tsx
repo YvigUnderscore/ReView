@@ -1,5 +1,5 @@
 import { Columns3, Ruler } from 'lucide-react';
-import { HudGroup } from '../hud/ViewerHud';
+import { HudGroup } from '../../hud/ViewerHud';
 import type { SplatCompareState } from './useSplatCompare';
 
 const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…` : name);

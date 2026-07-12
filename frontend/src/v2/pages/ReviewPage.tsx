@@ -6,6 +6,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { uploadCommentAttachments } from '../../lib/commentAttachments';
 import { useAuth } from '../stores/useAuth';
+import { userColor } from '../lib/userColor';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
@@ -65,7 +66,23 @@ function ReviewContent({ id }: { id: number }) {
   const comments = commentsQ.data ?? null;
   const error = (mediaQ.error ?? commentsQ.error)?.message ?? null;
 
-  const ann = useAnnotations();
+  // Couleur d'annotation par utilisateur (14.F) : préférence enregistrée sinon teinte
+  // dérivée de l'id (alignée avec les avatars) ; un choix manuel est persisté.
+  const prefsQ = useQuery({
+    queryKey: qk.preferences,
+    queryFn: () =>
+      api
+        .get<{ preferences: { annotationColor?: string } }>('/api/users/me/preferences')
+        .then((d) => d.preferences),
+    staleTime: 5 * 60_000,
+  });
+  const defaultColor = prefsQ.data?.annotationColor ?? userColor(userId);
+  const ann = useAnnotations({
+    defaultColor,
+    onColorChange: (c) => {
+      void api.patch('/api/users/me/preferences', { annotationColor: c });
+    },
+  });
   const glbSrc = resolveGlbSrc(data);
   const model3d = useModel3D(data, glbSrc);
   // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).

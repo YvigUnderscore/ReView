@@ -1,7 +1,7 @@
 import type { SplatTransform } from '../../reviewTypes';
 import type { GizmoSettings, GizmoTargetKind } from '../editor/gizmos/gizmoSettings';
 import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
-import { HudGroup } from './ViewerHud';
+import { HudGroup } from '../../hud/ViewerHud';
 
 /** Arrondi d'affichage (3 décimales) — évite le bruit flottant dans les champs. */
 const fmt = (v: number) => String(Math.round(v * 1000) / 1000);
