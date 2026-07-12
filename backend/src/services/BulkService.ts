@@ -24,6 +24,12 @@ import {
   restoreAssets,
   restoreVersions,
   restoreMedias,
+  purgeProject,
+  purgeSequence,
+  purgeShot,
+  purgeAsset,
+  purgeVersion,
+  purgeMedia,
 } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { assertMediaManage } from './MediaService';
@@ -72,13 +78,48 @@ const RESTORE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
   media: restoreMedias,
 };
 
-const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; type: string }> = {
-  projects: { del: 'PROJECT_BULK_DELETE', restore: 'PROJECT_BULK_RESTORE', type: 'Project' },
-  sequences: { del: 'SEQUENCE_BULK_DELETE', restore: 'SEQUENCE_BULK_RESTORE', type: 'Sequence' },
-  shots: { del: 'SHOT_BULK_DELETE', restore: 'SHOT_BULK_RESTORE', type: 'Shot' },
-  assets: { del: 'ASSET_BULK_DELETE', restore: 'ASSET_BULK_RESTORE', type: 'Asset' },
-  versions: { del: 'VERSION_BULK_DELETE', restore: 'VERSION_BULK_RESTORE', type: 'Version' },
-  media: { del: 'MEDIA_BULK_DELETE', restore: 'MEDIA_BULK_RESTORE', type: 'MediaObject' },
+// Purge définitive (DB + MinIO) — fonctions unitaires bouclées (chaque purge gère son storage).
+const PURGE: Record<DeleteDomain, (id: number) => Promise<void>> = {
+  projects: purgeProject,
+  sequences: purgeSequence,
+  shots: purgeShot,
+  assets: purgeAsset,
+  versions: purgeVersion,
+  media: purgeMedia,
+};
+
+const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; purge: string; type: string }> = {
+  projects: {
+    del: 'PROJECT_BULK_DELETE',
+    restore: 'PROJECT_BULK_RESTORE',
+    purge: 'PROJECT_BULK_PURGE',
+    type: 'Project',
+  },
+  sequences: {
+    del: 'SEQUENCE_BULK_DELETE',
+    restore: 'SEQUENCE_BULK_RESTORE',
+    purge: 'SEQUENCE_BULK_PURGE',
+    type: 'Sequence',
+  },
+  shots: { del: 'SHOT_BULK_DELETE', restore: 'SHOT_BULK_RESTORE', purge: 'SHOT_BULK_PURGE', type: 'Shot' },
+  assets: {
+    del: 'ASSET_BULK_DELETE',
+    restore: 'ASSET_BULK_RESTORE',
+    purge: 'ASSET_BULK_PURGE',
+    type: 'Asset',
+  },
+  versions: {
+    del: 'VERSION_BULK_DELETE',
+    restore: 'VERSION_BULK_RESTORE',
+    purge: 'VERSION_BULK_PURGE',
+    type: 'Version',
+  },
+  media: {
+    del: 'MEDIA_BULK_DELETE',
+    restore: 'MEDIA_BULK_RESTORE',
+    purge: 'MEDIA_BULK_PURGE',
+    type: 'MediaObject',
+  },
 };
 
 /**
@@ -120,6 +161,19 @@ export async function bulkRestore(user: SessionUser, domain: DeleteDomain, ids: 
   await RESTORE[domain](ids);
   const a = AUDIT_ACTION[domain];
   logAudit({ userId: user.id, action: a.restore, entityType: a.type, entityId: ids[0], metadata: { ids } });
+  return ids.length;
+}
+
+/**
+ * Purge définitive en lot (corbeille → suppression DB + MinIO). Même passe de validation
+ * d'accès que delete/restore, puis purge unitaire (chaque fonction gère la cascade DB et
+ * le nettoyage storage après commit). Irréversible.
+ */
+export async function bulkPurge(user: SessionUser, domain: DeleteDomain, ids: number[]): Promise<number> {
+  await assertDeleteAccess(user, domain, ids);
+  for (const id of ids) await PURGE[domain](id);
+  const a = AUDIT_ACTION[domain];
+  logAudit({ userId: user.id, action: a.purge, entityType: a.type, entityId: ids[0], metadata: { ids } });
   return ids.length;
 }
 

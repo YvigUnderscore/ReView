@@ -11,6 +11,9 @@ export const bulkDelete = (domain: BulkDeleteDomain, ids: number[]) =>
 export const bulkRestore = (domain: BulkDeleteDomain, ids: number[]) =>
   api.post<{ count: number }>(`/api/bulk/${domain}/restore`, { ids });
 
+export const bulkPurge = (domain: BulkDeleteDomain, ids: number[]) =>
+  api.post<{ count: number }>(`/api/bulk/${domain}/purge`, { ids });
+
 export const bulkPatchTasks = (ids: number[], patch: { status?: TaskStatus; assigneeId?: number | null }) =>
   api.patch<{ count: number }>('/api/bulk/tasks', { ids, ...patch });
 

@@ -30,17 +30,27 @@ vi.mock('../lib/trash', () => ({
   restoreAssets: vi.fn(),
   restoreVersions: vi.fn(),
   restoreMedias: vi.fn(),
+  purgeProject: vi.fn(),
+  purgeSequence: vi.fn(),
+  purgeShot: vi.fn(),
+  purgeAsset: vi.fn(),
+  purgeVersion: vi.fn(),
+  purgeMedia: vi.fn(),
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./MediaService', () => ({ assertMediaManage: vi.fn() }));
 vi.mock('./TaskService', () => ({ update: vi.fn() }));
 vi.mock('./VersionService', () => ({ update: vi.fn() }));
 
-import { bulkDelete, bulkMoveShots } from './BulkService';
+import { bulkDelete, bulkMoveShots, bulkPurge } from './BulkService';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
-import { resolveProjectIdForSequence, resolveProjectIdForVersion } from '../lib/pipeline';
-import { softDeleteSequences, softDeleteVersions } from '../lib/trash';
+import {
+  resolveProjectIdForProject,
+  resolveProjectIdForSequence,
+  resolveProjectIdForVersion,
+} from '../lib/pipeline';
+import { softDeleteSequences, softDeleteVersions, purgeProject } from '../lib/trash';
 import { assertMediaManage } from './MediaService';
 import { Role } from '@prisma/client';
 
@@ -81,6 +91,23 @@ describe('BulkService.bulkDelete — RBAC par domaine', () => {
   it('délègue les médias à assertMediaManage pour chaque id', async () => {
     await bulkDelete(artist, 'media', [4, 5]);
     expect(assertMediaManage).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('BulkService.bulkPurge — corbeille admin', () => {
+  it('refuse la purge de projets à un artiste (non manager)', async () => {
+    vi.mocked(resolveProjectIdForProject).mockResolvedValue(7);
+    await expect(bulkPurge(artist, 'projects', [1, 2])).rejects.toMatchObject({ statusCode: 403 });
+    expect(purgeProject).not.toHaveBeenCalled();
+  });
+
+  it('purge chaque projet sélectionné pour un admin', async () => {
+    vi.mocked(resolveProjectIdForProject).mockResolvedValue(7);
+    const n = await bulkPurge(admin, 'projects', [1, 2]);
+    expect(n).toBe(2);
+    expect(purgeProject).toHaveBeenCalledTimes(2);
+    expect(purgeProject).toHaveBeenCalledWith(1);
+    expect(purgeProject).toHaveBeenCalledWith(2);
   });
 });
 

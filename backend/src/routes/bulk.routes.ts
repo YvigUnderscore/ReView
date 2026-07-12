@@ -46,6 +46,17 @@ router.post(
   },
 );
 
+// POST /api/bulk/:domain/purge — purge définitive en lot (DB + MinIO, irréversible)
+router.post(
+  '/:domain/purge',
+  validate({ params: domainParam, body: z.object({ ids }) }),
+  async (req, res) => {
+    const { ids: list } = req.body as { ids: number[] };
+    const count = await BulkService.bulkPurge(req.user!, req.params.domain as BulkService.DeleteDomain, list);
+    res.json({ count });
+  },
+);
+
 // PATCH /api/bulk/tasks — statut / réassignation en lot
 router.patch(
   '/tasks',
