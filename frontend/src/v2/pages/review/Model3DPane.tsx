@@ -1,6 +1,7 @@
 import { createElement, type ReactNode, type RefObject } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { VIEWER_ZONE, type Hotspot3D, type Transform } from './reviewTypes';
+import ReviewFrame from './ReviewFrame';
 
 /**
  * Encapsule le web component <model-viewer>.
@@ -112,7 +113,9 @@ export default function Model3DPane({
           Conversion 3D en cours… (rechargez dans un instant)
         </div>
       ) : ready && glbSrc ? (
-        <>
+        // Cadre de review à aspect fixe (V6) : le viewer et l'overlay rendent letterboxés,
+        // non étirés à l'écran — annotations alignées quelle que soit la taille de fenêtre.
+        <ReviewFrame>
           <ModelViewer
             src={glbSrc}
             innerRef={modelRef}
@@ -122,8 +125,8 @@ export default function Model3DPane({
             animationName={animationName}
           />
           {/* Overlay de dessin 2D superposé au modèle (s'aligne via la vue caméra) */}
-          {overlay && <div className="absolute inset-0 pointer-events-none">{overlay}</div>}
-        </>
+          {overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
+        </ReviewFrame>
       ) : (
         <div className="max-w-sm space-y-3 p-6 text-center text-sm text-muted-foreground">
           <p>
