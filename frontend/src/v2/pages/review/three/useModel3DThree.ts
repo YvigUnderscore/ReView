@@ -6,6 +6,7 @@ import { api } from '../../../../lib/apiClient';
 import { qk } from '../../../lib/query';
 import { DEFAULT_TRANSFORM, type Hotspot3D, type MediaResp, type Transform } from '../reviewTypes';
 import { applyEulerTransform } from './applyTransform';
+import { applyRoll } from './cameraRoll';
 import { createModelScene, type ModelScene } from './createModelScene';
 import { loadModel } from './loadModel';
 import { fitDistance, resizeRendererCamera } from './sceneConfig';
@@ -33,7 +34,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const threeRef = useRef<typeof import('three') | null>(null);
   const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
+  // Callbacks par frame (animation caméra keyframe — mode layout, cf. useCameraKeyframes).
+  const frameCbs = useRef(new Set<(dt: number) => void>());
   const [ready, setReady] = useState(false);
+  const [fov, setFovState] = useState(45);
+  const [roll, setRollState] = useState(0);
   const [loadError, setLoadError] = useState(false);
   const [freeCamera, setFreeCamera] = useState(false);
   const [animations, setAnimations] = useState<string[]>([]);
@@ -118,6 +123,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         last = now;
         scene.controls.update();
         mixer?.update(dt);
+        frameCbs.current.forEach((cb) => cb(dt));
         scene.renderer.render(scene.scene, scene.camera);
         marker.update(
           hotspotRef.current,
@@ -236,13 +242,41 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
 
   const captureCamera = useCallback(() => {
     const rt = runtimeRef.current;
-    return rt ? captureModelCamera(rt.scene.camera, rt.scene.controls) : undefined;
+    const THREE = threeRef.current;
+    return rt && THREE ? captureModelCamera(THREE, rt.scene.camera, rt.scene.controls) : undefined;
   }, []);
 
   const restoreCamera = useCallback((state: unknown) => {
     const rt = runtimeRef.current;
     const THREE = threeRef.current;
     if (rt && THREE) restoreModelCamera(THREE, rt.scene.camera, rt.scene.controls, state);
+  }, []);
+
+  // Contrôleur caméra (mode layout) : boucle de rendu + canvas, pour useCameraKeyframes.
+  const subscribeFrame = useCallback((cb: (dt: number) => void) => {
+    frameCbs.current.add(cb);
+    return () => frameCbs.current.delete(cb);
+  }, []);
+  const getDom = useCallback(() => runtimeRef.current?.scene.renderer.domElement ?? containerRef.current, []);
+
+  /** Focale (fov) — live. */
+  const setFov = useCallback((value: number) => {
+    setFovState(value);
+    const rt = runtimeRef.current;
+    if (!rt) return;
+    rt.scene.camera.fov = value;
+    rt.scene.camera.updateProjectionMatrix();
+  }, []);
+
+  /** Tilt (roll) — oriente `camera.up` selon la direction de vue (mode layout). */
+  const setRoll = useCallback((value: number) => {
+    setRollState(value);
+    const rt = runtimeRef.current;
+    const THREE = threeRef.current;
+    if (!rt || !THREE) return;
+    const forward = new THREE.Vector3().subVectors(rt.scene.controls.target, rt.scene.camera.position);
+    applyRoll(THREE, rt.scene.camera, forward, value);
+    rt.scene.controls.update();
   }, []);
 
   const clearLoadError = useCallback(() => setLoadError(false), []);
@@ -268,6 +302,12 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     showHotspot,
     captureCamera,
     restoreCamera,
+    subscribeFrame,
+    getDom,
+    fov,
+    setFov,
+    roll,
+    setRoll,
   };
 }
 

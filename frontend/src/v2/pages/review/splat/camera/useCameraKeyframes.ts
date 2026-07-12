@@ -1,20 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CameraEasing, SplatCameraKeyframe } from '../../reviewTypes';
+import type { CameraEasing, SplatCamera, SplatCameraKeyframe } from '../../reviewTypes';
 import { FLY_MOVE_MAPPING } from '../scene/flyControls';
-import type { SplatViewer } from '../useSplat';
 import { animDuration, sampleAnim } from './cameraAnim';
 
 /** Écart par défaut entre deux poses ajoutées (ms). */
 const STEP_MS = 3000;
 
 /**
+ * Contrôleur caméra minimal requis par l'éditeur/lecteur keyframe — commun **3D et splat** :
+ * boucle de rendu (`subscribeFrame`), application/capture de pose, et canvas (auto-pause au
+ * moindre input). SplatViewer et le viewer 3D Three (`useModel3DThree`) le satisfont.
+ */
+export interface CameraController {
+  subscribeFrame(cb: (dt: number) => void): () => void;
+  restoreCamera(state: unknown): void;
+  captureCamera(): SplatCamera | undefined;
+  getDom(): HTMLElement | null;
+}
+
+/**
  * Éditeur/lecteur d'animation caméra keyframe (10.G-V5) : liste de poses (ajoutées depuis la
  * vue courante), easing par segment, lecture avec boucle, scrub. **Reprise en main auto** :
  * tout input utilisateur (orbite, molette, vol clavier) met la lecture en pause — le bouton
- * « Réactiver » la relance. La lecture s'appuie sur `subscribeFrame` du viewer.
+ * « Réactiver » la relance. La lecture s'appuie sur `subscribeFrame` du contrôleur.
  */
-export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
-  const { subscribeFrame, restoreCamera, captureCamera, getSceneHandle } = splat;
+export function useCameraKeyframes(splat: CameraController, onEdited?: () => void) {
+  const { subscribeFrame, restoreCamera, captureCamera, getDom } = splat;
   const [keyframes, setKeyframes] = useState<SplatCameraKeyframe[]>([]);
   const [loop, setLoop] = useState(true);
   // Interpolation par courbes (16.A) : trajectoire Catmull-Rom lissée au lieu de segments droits.
@@ -56,7 +67,7 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
   // Reprise en main automatique : orbite/molette/vol pendant la lecture → pause.
   useEffect(() => {
     if (!playing) return;
-    const dom = getSceneHandle()?.dom;
+    const dom = getDom();
     if (!dom) return;
     const pause = () => {
       setPlaying(false);
@@ -73,7 +84,7 @@ export function useCameraKeyframes(splat: SplatViewer, onEdited?: () => void) {
       dom.removeEventListener('wheel', pause);
       window.removeEventListener('keydown', onKey);
     };
-  }, [playing, getSceneHandle]);
+  }, [playing, getDom]);
 
   const play = useCallback(() => {
     setAutoPaused(false);

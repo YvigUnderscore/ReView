@@ -22,7 +22,7 @@ describe('modelCamera — capture/restauration de vue (V5)', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     camera.position.set(1, 2, 3);
     const controls = { target: new THREE.Vector3(4, 5, 6) } as never;
-    const s = captureModelCamera(camera, controls);
+    const s = captureModelCamera(THREE, camera, controls);
     expect(s.position).toEqual({ x: 1, y: 2, z: 3 });
     expect(s.target).toEqual({ x: 4, y: 5, z: 6 });
     expect(s.fov).toBe(50);

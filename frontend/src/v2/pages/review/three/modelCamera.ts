@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { applyRoll, rollFromUp } from './cameraRoll';
 
 /** Vue caméra d'un modèle Three (position/cible libres) — stockée dans `Comment.cameraState`. */
 export interface ModelCameraState {
@@ -7,6 +8,8 @@ export interface ModelCameraState {
   target: { x: number; y: number; z: number };
   fov?: number;
   aspect?: number;
+  /** Tilt (roll) autour de l'axe de vue, en radians (mode layout). */
+  roll?: number;
 }
 
 /** Orbite héritée de model-viewer (azimut/polaire/rayon) — relue de façon tolérante. */
@@ -34,15 +37,20 @@ export function orbitToPosition(
 }
 
 export function captureModelCamera(
+  three: typeof import('three'),
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
 ): ModelCameraState {
-  return {
+  const cam: ModelCameraState = {
     position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
     target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
     fov: camera.fov,
     aspect: camera.aspect,
   };
+  const forward = new three.Vector3().subVectors(controls.target, camera.position);
+  const roll = rollFromUp(three, forward, camera.up);
+  if (Math.abs(roll) > 1e-4) cam.roll = roll;
+  return cam;
 }
 
 /**
@@ -70,5 +78,8 @@ export function restoreModelCamera(
     camera.fov = s.fov;
     camera.updateProjectionMatrix();
   }
+  // Tilt (roll) : oriente `camera.up` selon la direction de vue (mode layout).
+  const forward = new three.Vector3().subVectors(controls.target, camera.position);
+  applyRoll(three, camera, forward, s.roll ?? 0);
   controls.update();
 }

@@ -78,6 +78,8 @@ export interface SplatViewer {
   isFlying: () => boolean;
   /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
   getSceneHandle: () => SplatSceneHandle | null;
+  /** Canvas de rendu (auto-pause de l'animation caméra) — satisfait `CameraController`. */
+  getDom: () => HTMLElement | null;
 }
 
 export function useSplat(url: string | null, fileName: string): SplatViewer {
@@ -350,6 +352,8 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     }
   }, []);
 
+  const getDom = useCallback(() => sceneRef.current?.renderer.domElement ?? null, []);
+
   const reflectSelection = useCallback((selected: ReadonlySet<number>) => {
     pointsRef.current?.setSelection(selected);
   }, []);
@@ -377,5 +381,6 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
     setCullingOff,
     isFlying,
     getSceneHandle,
+    getDom,
   };
 }

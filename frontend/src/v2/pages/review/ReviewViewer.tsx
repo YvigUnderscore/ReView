@@ -12,6 +12,7 @@ import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Filmstrip from './Filmstrip';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DToolbar from './Model3DToolbar';
+import Model3DCameraBar from './Model3DCameraBar';
 import SplatReview from './splat/SplatReview';
 import VideoComparePane from './VideoComparePane';
 import VideoWipeOverlay from './VideoWipeOverlay';
@@ -227,7 +228,12 @@ export default function ReviewViewer({
             reprocessing={reprocessing}
             onReprocess={onReprocess}
           />
-          {model3dReady && <Model3DToolbar m={model3d} showEditTools={showEditTools} />}
+          {model3dReady && (
+            <>
+              <Model3DToolbar m={model3d} showEditTools={showEditTools} />
+              <Model3DCameraBar model3d={model3d} />
+            </>
+          )}
         </>
       )}
 

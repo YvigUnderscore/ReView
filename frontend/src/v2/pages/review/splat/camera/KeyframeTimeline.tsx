@@ -26,9 +26,10 @@ export default function KeyframeTimeline({
 }: {
   kf: CameraKeyframesState;
   onOrbitPreset: () => void;
-  onSave: () => void;
-  onClear: () => void;
-  busy: boolean;
+  /** Persistance de la présentation (splat). Omis → animation de session seule (viewer 3D). */
+  onSave?: () => void;
+  onClear?: () => void;
+  busy?: boolean;
 }) {
   return (
     <HudGroup>
@@ -122,23 +123,29 @@ export default function KeyframeTimeline({
         </>
       )}
 
-      <span className="h-4 w-px bg-border" />
-      <button
-        onClick={onSave}
-        disabled={busy}
-        title="Enregistrer la présentation (caméra, DoF, animation) — rejouée pour tous à l'ouverture"
-        className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground disabled:opacity-50"
-      >
-        <Save size={12} /> Présentation
-      </button>
-      <button
-        onClick={onClear}
-        disabled={busy}
-        title="Effacer la présentation persistée"
-        className="flex items-center justify-center rounded-md border border-border p-1 text-muted-foreground hover:bg-secondary/60 hover:text-foreground disabled:opacity-50"
-      >
-        <Trash2 size={12} />
-      </button>
+      {onSave && (
+        <>
+          <span className="h-4 w-px bg-border" />
+          <button
+            onClick={onSave}
+            disabled={busy}
+            title="Enregistrer la présentation (caméra, DoF, animation) — rejouée pour tous à l'ouverture"
+            className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground disabled:opacity-50"
+          >
+            <Save size={12} /> Présentation
+          </button>
+          {onClear && (
+            <button
+              onClick={onClear}
+              disabled={busy}
+              title="Effacer la présentation persistée"
+              className="flex items-center justify-center rounded-md border border-border p-1 text-muted-foreground hover:bg-secondary/60 hover:text-foreground disabled:opacity-50"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+        </>
+      )}
     </HudGroup>
   );
 }
