@@ -149,6 +149,8 @@ export interface SplatCamera {
   target: { x: number; y: number; z: number };
   fov?: number;
   aspect?: number;
+  /** Tilt (roll) autour de l'axe de vue, en radians (mode layout) — 0/absent = horizon droit. */
+  roll?: number;
 }
 
 /** Classe de la zone média (cadre commun aux viewers vidéo/image/3D). */

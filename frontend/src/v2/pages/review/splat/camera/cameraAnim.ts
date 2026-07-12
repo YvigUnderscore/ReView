@@ -35,6 +35,7 @@ export function lerpPose(a: SplatCamera, b: SplatCamera, u: number): SplatCamera
     target: lerpVec(a.target, b.target, u),
   };
   if (a.fov != null || b.fov != null) pose.fov = lerp(a.fov ?? b.fov ?? 60, b.fov ?? a.fov ?? 60, u);
+  if (a.roll != null || b.roll != null) pose.roll = lerp(a.roll ?? 0, b.roll ?? 0, u);
   return pose;
 }
 
@@ -71,6 +72,7 @@ export function samplePoseSpline(keyframes: SplatCameraKeyframe[], i: number, u:
     target: catmullVec(k0.target, k1.target, k2.target, k3.target, u),
   };
   if (k1.fov != null || k2.fov != null) pose.fov = lerp(k1.fov ?? k2.fov ?? 60, k2.fov ?? k1.fov ?? 60, u);
+  if (k1.roll != null || k2.roll != null) pose.roll = lerp(k1.roll ?? 0, k2.roll ?? 0, u);
   return pose;
 }
 

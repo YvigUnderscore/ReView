@@ -82,6 +82,8 @@ const camPose = z.object({
   position: z.object({ x: finite, y: finite, z: finite }),
   target: z.object({ x: finite, y: finite, z: finite }),
   fov: finite.min(5).max(150).optional(),
+  // Tilt (roll) de la caméra autour de l'axe de vue, en radians (mode layout).
+  roll: finite.min(-Math.PI).max(Math.PI).optional(),
 });
 
 /**

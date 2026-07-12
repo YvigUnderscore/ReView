@@ -66,6 +66,33 @@ describe('interpolation par courbes (16.A)', () => {
   });
 });
 
+describe('tilt (roll) interpolé', () => {
+  const rollKf: SplatCameraKeyframe[] = [
+    {
+      t: 0,
+      pose: { position: { x: 0, y: 0, z: 0 }, target: { x: 1, y: 0, z: 0 }, roll: 0 },
+      easing: 'linear',
+    },
+    {
+      t: 1000,
+      pose: { position: { x: 0, y: 0, z: 0 }, target: { x: 1, y: 0, z: 0 }, roll: Math.PI / 2 },
+      easing: 'linear',
+    },
+  ];
+
+  it('interpole linéairement le roll (segments)', () => {
+    expect(sampleAnim(rollKf, 500, false)!.roll).toBeCloseTo(Math.PI / 4);
+  });
+
+  it('interpole le roll aussi en mode courbes (2 keyframes = linéaire)', () => {
+    expect(sampleAnim(rollKf, 250, false, true)!.roll).toBeCloseTo(Math.PI / 8);
+  });
+
+  it('roll absent → non défini dans la pose (rétro-compatible)', () => {
+    expect(sampleAnim(KF, 500, false)!.roll).toBeUndefined();
+  });
+});
+
 describe('applyEasing', () => {
   it('bornes 0/1 conservées pour tous les easings', () => {
     for (const e of ['linear', 'ease-in', 'ease-out', 'ease-in-out'] as const) {
