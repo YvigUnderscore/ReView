@@ -3,8 +3,11 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { motion } from 'framer-motion';
 import { transition as pageTransition } from '../lib/motion';
 import {
+  Home,
   FolderKanban,
-  Shield,
+  Film,
+  Users,
+  Settings,
   Clapperboard,
   ChevronRight,
   Star,
@@ -13,6 +16,7 @@ import {
   PanelLeftOpen,
   Search,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useProjectsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
@@ -30,6 +34,32 @@ import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
 const ENTITY_PAGE_RE = /^\/(tasks|assets|review)\//;
+
+/** Entrée de navigation fixe de la sidebar hybride (12.D). */
+function SideLink({
+  to,
+  icon: Icon,
+  label,
+  active,
+}: {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+        active
+          ? 'bg-secondary text-foreground'
+          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+      }`}
+    >
+      <Icon size={18} /> {label}
+    </Link>
+  );
+}
 
 export default function Shell({
   children,
@@ -95,20 +125,13 @@ export default function Shell({
           </div>
 
           <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto px-3">
-            <Link
-              to="/projects"
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                isProjectsRoot
-                  ? 'bg-secondary text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-              }`}
-            >
-              <FolderKanban size={18} /> Projets
-            </Link>
+            {/* Entrées fixes de la sidebar hybride (12.D) */}
+            <SideLink to="/" icon={Home} label="Accueil" active={pathname === '/'} />
+            <SideLink to="/projects" icon={FolderKanban} label="Projets" active={isProjectsRoot} />
 
-            {/* Raccourcis projets */}
+            {/* Arbre du projet courant (replié sous Projets) */}
             {projects.length > 0 && (
-              <div className="pl-2 pt-1">
+              <div className="pl-2">
                 {projects.map((p) => {
                   const isCurrent = p.id === currentProjectId;
                   return (
@@ -127,6 +150,25 @@ export default function Shell({
                   );
                 })}
               </div>
+            )}
+
+            <SideLink to="/reviews" icon={Film} label="Reviews" active={pathname.startsWith('/reviews')} />
+
+            {user?.role === 'ADMIN' && (
+              <>
+                <SideLink
+                  to="/admin/users"
+                  icon={Users}
+                  label="Membres"
+                  active={pathname.startsWith('/admin/users')}
+                />
+                <SideLink
+                  to="/admin"
+                  icon={Settings}
+                  label="Paramètres"
+                  active={pathname.startsWith('/admin') && !pathname.startsWith('/admin/users')}
+                />
+              </>
             )}
 
             {/* Favoris */}
@@ -155,29 +197,14 @@ export default function Shell({
 
             <SidebarRecents />
 
-            <Link
-              to="/docs"
-              className={`mt-3 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                pathname.startsWith('/docs')
-                  ? 'bg-secondary text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-              }`}
-            >
-              <BookText size={18} /> Documentation
-            </Link>
-
-            {user?.role === 'ADMIN' && (
-              <Link
-                to="/admin"
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                  pathname.startsWith('/admin')
-                    ? 'bg-secondary text-foreground'
-                    : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-                }`}
-              >
-                <Shield size={18} /> Administration
-              </Link>
-            )}
+            <div className="pt-3">
+              <SideLink
+                to="/docs"
+                icon={BookText}
+                label="Documentation"
+                active={pathname.startsWith('/docs')}
+              />
+            </div>
           </nav>
 
           <SidebarFooter />
@@ -199,13 +226,16 @@ export default function Shell({
           {breadcrumb ?? (
             <h1 className="truncate text-sm font-medium text-muted-foreground">{title ?? ''}</h1>
           )}
+          {/* Recherche permanente (12.D) : champ topbar ouvrant la palette Ctrl+K.
+              Bouton stylé en champ — évite la boucle de refocus au retour de la palette. */}
           <button
             onClick={() => setPaletteOpen(true)}
             title="Recherche globale (Ctrl+K)"
-            className="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            className="ml-auto flex w-full max-w-xs items-center gap-2 rounded-md border border-input bg-secondary/40 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
-            <Search size={14} /> Rechercher…
-            <kbd className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">
+            <Search size={15} className="shrink-0" />
+            <span className="flex-1 text-left">Rechercher…</span>
+            <kbd className="shrink-0 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">
               Ctrl K
             </kbd>
           </button>
