@@ -32,6 +32,7 @@ import contextRoutes from './routes/context.routes';
 import searchRoutes from './routes/search.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import bulkRoutes from './routes/bulk.routes';
+import hdriRoutes from './routes/hdri.routes';
 import docsRoutes from './routes/docs.routes';
 
 export const createApp = (): Express => {
@@ -64,6 +65,7 @@ export const createApp = (): Express => {
   app.use('/api/auth', authRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/studio', studioRoutes);
+  app.use('/api/studio/hdris', hdriRoutes);
   app.use('/api/projects', projectsRoutes);
   app.use('/api/media', mediaRoutes);
   app.use('/api/media', mediaSplatRoutes); // éditions splat (10.G)
