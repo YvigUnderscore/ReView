@@ -15,7 +15,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
-import { useModel3D } from './review/useModel3D';
+import { useModel3DThree } from './review/three/useModel3DThree';
 import ReviewHeader from './review/ReviewHeader';
 import ReviewViewer from './review/ReviewViewer';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
@@ -84,7 +84,7 @@ function ReviewContent({ id }: { id: number }) {
     },
   });
   const glbSrc = resolveGlbSrc(data);
-  const model3d = useModel3D(data, glbSrc);
+  const model3d = useModel3DThree(data, glbSrc);
   // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
   const splatUrl = data?.media.kind === 'SPLAT' ? data.url : null;
   const splat = useSplat(splatUrl, data?.media.originalName ?? '');

@@ -1,12 +1,18 @@
 import { Film, Move3d, Orbit, Pause, Play, RotateCcw, Save } from 'lucide-react';
 import { DEFAULT_TRANSFORM } from './reviewTypes';
-import type { Model3DState } from './useModel3D';
+import type { Model3DThreeState } from './three/useModel3DThree';
 
 /**
  * Barre d'outils 3D : caméra libre, animations du GLB, transformation
  * (orientation/échelle — masquée une fois le média publié).
  */
-export default function Model3DToolbar({ m, showEditTools }: { m: Model3DState; showEditTools: boolean }) {
+export default function Model3DToolbar({
+  m,
+  showEditTools,
+}: {
+  m: Model3DThreeState;
+  showEditTools: boolean;
+}) {
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs">
       <button

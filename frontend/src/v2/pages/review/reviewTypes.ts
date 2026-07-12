@@ -143,32 +143,6 @@ export interface Hotspot3D {
   space?: 'object';
 }
 
-// Type minimal des méthodes model-viewer utilisées (caméra + raycast + animations).
-export interface ModelViewerEl extends HTMLElement {
-  getBoundingClientRect: () => DOMRect;
-  positionAndNormalFromPoint?: (
-    x: number,
-    y: number,
-  ) => { position: { toString(): string }; normal: { toString(): string } } | null;
-  getCameraOrbit?: () => { theta: number; phi: number; radius: number };
-  getCameraTarget?: () => { x: number; y: number; z: number };
-  getFieldOfView?: () => number;
-  cameraOrbit?: string;
-  cameraTarget?: string;
-  fieldOfView?: string;
-  availableAnimations?: string[];
-  loaded?: boolean;
-  play?: (opts?: { repetitions?: number }) => void;
-  pause?: () => void;
-}
-
-export interface ModelCamera {
-  orbit: { theta: number; phi: number; radius: number };
-  target?: { x: number; y: number; z: number };
-  fov?: number;
-  aspect?: number;
-}
-
 /** Vue caméra d'un Gaussian Splat (viewer Spark) — position/cible libres, cf. cameraState. */
 export interface SplatCamera {
   position: { x: number; y: number; z: number };

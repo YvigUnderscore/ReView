@@ -5,12 +5,12 @@ import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
-import type { useModel3D } from './useModel3D';
+import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Filmstrip from './Filmstrip';
-import Model3DPane from './Model3DPane';
+import Model3DThreePane from './Model3DThreePane';
 import Model3DToolbar from './Model3DToolbar';
 import SplatReview from './splat/SplatReview';
 import VideoComparePane from './VideoComparePane';
@@ -55,7 +55,7 @@ export default function ReviewViewer({
   data: MediaResp | null;
   error: string | null;
   ann: ReturnType<typeof useAnnotations>;
-  model3d: ReturnType<typeof useModel3D>;
+  model3d: ReturnType<typeof useModel3DThree>;
   splat: SplatViewer;
   paint: SplatPaintState;
   videoRef: ComponentProps<typeof VideoPane>['videoRef'];
@@ -107,6 +107,13 @@ export default function ReviewViewer({
   useEffect(() => {
     if (kind === 'SPLAT') showHotspot(splatHotspot);
   }, [kind, splatHotspot, showHotspot]);
+
+  // Hotspot du modèle 3D (Three) : même logique que le splat — marqueur projeté par le viewer.
+  const { showHotspot: showModelHotspot } = model3d;
+  const model3dHotspot = kind === 'MODEL_3D' ? (ann.viewed3d ?? ann.hotspot3d) : null;
+  useEffect(() => {
+    if (kind === 'MODEL_3D') showModelHotspot(model3dHotspot);
+  }, [kind, model3dHotspot, showModelHotspot]);
 
   // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer de
   // taille différente. Le wrapper est en pointer-events-none : en lecture on peut orbiter
@@ -211,15 +218,10 @@ export default function ReviewViewer({
 
       {kind === 'MODEL_3D' && data && (
         <>
-          <Model3DPane
+          <Model3DThreePane
             status={data.media.status}
-            ready={model3dReady}
-            glbSrc={glbSrc}
-            modelRef={model3d.modelRef}
-            transform={model3d.transform}
-            freeCamera={model3d.freeCamera}
-            hotspots={ann.viewed3d ? [ann.viewed3d] : ann.hotspot3d ? [ann.hotspot3d] : []}
-            animationName={model3d.currentAnim ?? undefined}
+            loadError={model3d.loadError}
+            containerRef={model3d.containerRef}
             overlay={renderOverlay(ann.viewedAspect ?? undefined)}
             canReprocess={role !== 'CLIENT'}
             reprocessing={reprocessing}
