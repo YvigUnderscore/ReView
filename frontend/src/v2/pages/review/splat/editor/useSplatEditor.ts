@@ -7,13 +7,14 @@ import {
   type SplatEditsPatch,
   type SplatTransform,
 } from '../../reviewTypes';
-import { frameCameraToMesh, frameCameraToSphere } from '../scene/frameCamera';
+import { frameCameraToMesh } from '../scene/frameCamera';
 import type { RenderMode } from '../scene/renderModes';
 import type { SplatViewer } from '../useSplat';
-import type { GizmoTargetKind } from './gizmos/gizmoSettings';
-import { readMeshTransform } from './gizmos/meshTransform';
-import { useGizmoSettings } from './gizmos/useGizmoSettings';
-import { useTransformGizmo, type GizmoMode } from './gizmos/useTransformGizmo';
+import { frameCameraToSphere } from '../../viewer/frameCamera';
+import type { GizmoTargetKind } from '../../viewer/gizmos/gizmoSettings';
+import { readMeshTransform } from '../../viewer/gizmos/meshTransform';
+import { useGizmoSettings } from '../../viewer/gizmos/useGizmoSettings';
+import { useTransformGizmo, type GizmoMode } from '../../viewer/gizmos/useTransformGizmo';
 import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
 import { useEditHistory } from './operations/history';
 import { applyMaskIndices, fetchMaskIndices } from './persistence/applyEdits';

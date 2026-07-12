@@ -1,11 +1,12 @@
 import { Gauge, Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { isEditable } from '../../../lib/shortcuts';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
 import type { SplatViewer } from './useSplat';
-import { frameCameraToMesh, frameCameraToSphere } from './scene/frameCamera';
+import { frameCameraToMesh } from './scene/frameCamera';
+import { frameCameraToSphere } from '../viewer/frameCamera';
+import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFromGltf } from '../three/importCameraGltf';
 import CameraBar from './camera/CameraBar';
@@ -162,23 +163,12 @@ export default function SplatReview({
   }, [getSceneHandle]);
 
   // Raccourcis F/H côté viewer (post-publish). En édition, l'éditeur gère déjà F/H (sélection).
-  useEffect(() => {
-    if (showEdit || !ready) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (isEditable(e.target) || document.querySelector('[role="dialog"]')) return;
-      if (splat.isFlying() || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      const k = e.key.toLowerCase();
-      if (k === 'f') {
-        e.preventDefault();
-        frameView();
-      } else if (k === 'h') {
-        e.preventDefault();
-        homeView();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [showEdit, ready, frameView, homeView, splat]);
+  useFrameShortcuts({
+    active: !showEdit && ready,
+    isFlying: splat.isFlying,
+    onFrame: frameView,
+    onHome: homeView,
+  });
 
   const selectTool =
     editor.tool === 'select-rect'

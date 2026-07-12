@@ -1,10 +1,11 @@
-import { Film, Move3d, Orbit, Pause, Play, RotateCcw, Save } from 'lucide-react';
+import { Film, Move3d, Pause, Play, RotateCcw, Save } from 'lucide-react';
 import { DEFAULT_TRANSFORM } from './reviewTypes';
 import type { Model3DThreeState } from './three/useModel3DThree';
 
 /**
- * Barre d'outils 3D : caméra libre, animations du GLB, transformation
- * (orientation/échelle — masquée une fois le média publié).
+ * Barre d'outils 3D : animations du GLB, transformation (orientation/échelle — masquée une
+ * fois le média publié). La navigation caméra (orbite/pan/vol/F/H) est unifiée avec le splat
+ * (Phase 17) et vit dans le viewer — plus de toggle « Caméra libre ».
  */
 export default function Model3DToolbar({
   m,
@@ -15,21 +16,8 @@ export default function Model3DToolbar({
 }) {
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs">
-      <button
-        onClick={() => m.setFreeCamera((f) => !f)}
-        title="Déplacement libre (non recentré) : orbite/focale déverrouillées + translation par panning"
-        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-medium transition-colors ${m.freeCamera ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-secondary/60'}`}
-      >
-        <Orbit size={14} /> Caméra libre
-      </button>
-      {m.freeCamera && (
-        <span className="text-[11px] text-muted-foreground">
-          Translation : clic droit / Maj+glisser / 2 doigts
-        </span>
-      )}
       {m.animations.length > 0 && (
         <>
-          <span className="mx-1 h-5 w-px bg-border" />
           <button
             onClick={m.playing ? m.pauseAnim : m.playAnim}
             title={m.playing ? 'Pause' : 'Lire l’animation'}

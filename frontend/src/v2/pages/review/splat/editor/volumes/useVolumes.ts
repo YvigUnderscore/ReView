@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { SdfVolumeData } from '../../../reviewTypes';
 import type { SplatViewer } from '../../useSplat';
-import { readMeshTransform } from '../gizmos/meshTransform';
+import { readMeshTransform } from '../../../viewer/gizmos/meshTransform';
 import type { EditOp } from '../operations/history';
 import {
   applyVolumeData,

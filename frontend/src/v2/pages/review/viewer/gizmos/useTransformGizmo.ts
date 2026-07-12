@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import type { TransformControls } from 'three/addons/controls/TransformControls.js';
-import type { SplatTransform } from '../../../reviewTypes';
-import type { SplatViewer } from '../../useSplat';
+import type { SplatTransform } from '../../reviewTypes';
+import type { SceneViewer } from '../sceneHandle';
 import { DEFAULT_GIZMO_SETTINGS, type GizmoSettings } from './gizmoSettings';
 import { readMeshTransform } from './meshTransform';
 
@@ -19,19 +19,20 @@ function applyGizmoSettings(control: TransformControls, s: GizmoSettings): void 
 }
 
 /**
- * Gizmo de transformation 3D (10.G) : greffe un `TransformControls` (three addons) sur le
- * `SplatMesh` — ou sur `target` (ex. SDF d'un volume de crop) s'il est fourni — via la poignée
- * de scène exposée par `useSplat`. Le gizmo est **visible dans la scène** (plus de sliders en
- * menu) ; l'orbite est gelée pendant un drag, et chaque changement remonte la TRS de l'objet
- * manipulé via `onChange`. Import dynamique pour rester hors du bundle initial. Toute la
- * logique Three vit ici, pas dans les composants.
+ * Gizmo de transformation 3D (10.G, généralisé Phase 17) : greffe un `TransformControls`
+ * (three addons) sur l'objet principal du viewer (`handle.mesh` : SplatMesh ou root du modèle
+ * 3D) — ou sur `target` (ex. SDF d'un volume de crop) s'il est fourni — via la poignée de scène
+ * commune (`SceneViewer`). Le gizmo est **visible dans la scène** (plus de sliders en menu) ;
+ * l'orbite est gelée pendant un drag, et chaque changement remonte la TRS de l'objet manipulé
+ * via `onChange`. Import dynamique pour rester hors du bundle initial. Toute la logique Three
+ * vit ici, pas dans les composants.
  */
 export function useTransformGizmo(
-  splat: SplatViewer,
+  viewer: SceneViewer,
   opts: {
     enabled: boolean;
     mode: GizmoMode;
-    /** Cible du gizmo (par défaut : le SplatMesh). */
+    /** Cible du gizmo (par défaut : `handle.mesh` — SplatMesh ou root du modèle). */
     target?: THREE.Object3D | null;
     /** Réglages espace/snap/taille par cible (11.G) — défauts « splat » si absent. */
     settings?: GizmoSettings;
@@ -40,7 +41,7 @@ export function useTransformGizmo(
 ): void {
   const { enabled, mode, target } = opts;
   const settings = opts.settings ?? DEFAULT_GIZMO_SETTINGS.splat;
-  const { ready, getSceneHandle } = splat;
+  const { ready, getSceneHandle } = viewer;
   const onChangeRef = useRef(opts.onChange);
   onChangeRef.current = opts.onChange;
   const modeRef = useRef(mode);
@@ -54,7 +55,8 @@ export function useTransformGizmo(
     const handle = getSceneHandle();
     if (!handle) return;
     const { scene, camera, controls, mesh, dom } = handle;
-    const attached = target ?? (mesh as unknown as THREE.Object3D);
+    const attached = target ?? mesh;
+    if (!attached) return;
 
     let disposed = false;
     let cleanup: (() => void) | null = null;

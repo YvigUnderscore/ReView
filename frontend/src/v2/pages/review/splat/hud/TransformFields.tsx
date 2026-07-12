@@ -1,5 +1,5 @@
 import type { SplatTransform } from '../../reviewTypes';
-import type { GizmoSettings, GizmoTargetKind } from '../editor/gizmos/gizmoSettings';
+import type { GizmoSettings, GizmoTargetKind } from '../../viewer/gizmos/gizmoSettings';
 import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
 import { HudGroup } from '../../hud/ViewerHud';
 

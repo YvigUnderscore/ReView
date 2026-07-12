@@ -14,6 +14,10 @@ import { createObjectMarker, raycastModelCenter } from './objectHotspot';
 import { captureModelCamera, restoreModelCamera } from './modelCamera';
 import { useModelAnimations } from './useModelAnimations';
 import { useModelLayout } from './useModelLayout';
+import { createFlyControls, type FlyControls } from '../viewer/flyControls';
+import { frameCameraToSphere, objectBoundingSphere } from '../viewer/frameCamera';
+import type { ViewerSceneHandle } from '../viewer/sceneHandle';
+import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 
 interface SceneRuntime {
   scene: ModelScene;
@@ -21,14 +25,16 @@ interface SceneRuntime {
   clips: THREE.AnimationClip[];
   /** Caméra « layout » du PiP (mode layout) — pilotée par le lecteur keyframe quand actif. */
   layoutCam: THREE.PerspectiveCamera;
+  /** Rayon englobant du modèle chargé — vue d'origine (H) et recadrages. */
+  modelRadius: number;
 }
 
 /**
  * Viewer modèle 3D **Three.js** (Phase 15) : socle `createModelScene`, chargement GLB, boucle de
  * rendu (damping + mixer), transformation utilisateur, hotspots espace-objet, caméra
- * (capture/restauration, tilt, focale) et **mode layout** (PiP « in/out camera » via
- * `useModelLayout`). Animations extraites dans `useModelAnimations`. API alignée sur l'ancien
- * `useModel3D` pour réutiliser `Model3DToolbar`.
+ * (capture/restauration, tilt, focale), **navigation unifiée avec le splat** (Phase 17 : orbite +
+ * pan, vol clic droit + ZQSD, raccourcis F/H) et **mode layout** (PiP « in/out camera » via
+ * `useModelLayout`). Animations extraites dans `useModelAnimations`.
  */
 export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const active = data?.media.kind === 'MODEL_3D';
@@ -39,11 +45,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
   const frameCbs = useRef(new Set<(dt: number) => void>());
+  const flyRef = useRef<FlyControls | null>(null);
   const [ready, setReady] = useState(false);
   const [fov, setFovState] = useState(45);
   const [roll, setRollState] = useState(0);
   const [loadError, setLoadError] = useState(false);
-  const [freeCamera, setFreeCamera] = useState(false);
   const [savedTf, setSavedTf] = useState(false);
 
   // Transformation enregistrée sur la version, surchargée par l'édition locale non sauvegardée.
@@ -78,6 +84,43 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     const THREE = threeRef.current;
     if (rt && THREE) restoreModelCamera(THREE, rt.scene.camera, rt.scene.controls, state);
   }, []);
+  const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
+
+  /** Poignée impérative commune (gizmos, caméra-objet, cadrage) — cf. `viewer/sceneHandle`. */
+  const getSceneHandle = useCallback((): ViewerSceneHandle | null => {
+    const rt = runtimeRef.current;
+    const THREE = threeRef.current;
+    if (!rt || !THREE) return null;
+    return {
+      THREE,
+      scene: rt.scene.scene,
+      camera: rt.scene.camera,
+      controls: rt.scene.controls,
+      dom: rt.scene.renderer.domElement,
+      mesh: rt.scene.root,
+    };
+  }, []);
+
+  // Cadrage F/H, unifié avec le splat : F cadre le modèle (direction de vue conservée),
+  // H rétablit la vue d'origine (face au modèle, cible au centre).
+  const frameView = useCallback(() => {
+    const rt = runtimeRef.current;
+    const THREE = threeRef.current;
+    if (!rt || !THREE) return;
+    const bounds = objectBoundingSphere(THREE, rt.scene.root);
+    if (bounds) frameCameraToSphere(rt.scene.camera, rt.scene.controls, bounds.center, bounds.radius);
+  }, []);
+  const homeView = useCallback(() => {
+    const rt = runtimeRef.current;
+    if (!rt) return;
+    const { camera, controls } = rt.scene;
+    const dist = fitDistance(rt.modelRadius, camera.fov, camera.aspect || 1);
+    if (dist <= 0) return;
+    camera.position.set(0, 0, dist);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }, []);
+  useFrameShortcuts({ active: ready, isFlying, onFrame: frameView, onHome: homeView });
 
   const anim = useModelAnimations(runtimeRef, actionRef);
   const { init: animInit } = anim;
@@ -114,8 +157,12 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       scene.root.add(model.object);
       const mixer = model.animations.length ? new THREE.AnimationMixer(model.object) : null;
       const layoutCam = new THREE.PerspectiveCamera(45, 16 / 9, 0.01, 1000);
-      runtimeRef.current = { scene, mixer, clips: model.animations, layoutCam };
+      runtimeRef.current = { scene, mixer, clips: model.animations, layoutCam, modelRadius: model.radius };
       animInit(model.animations);
+      // Navigation unifiée avec le splat (Phase 17) : vol clic droit + ZQSD/WASD + A/E,
+      // pan sur le bouton du milieu (réglé par createFlyControls), orbite au clic gauche.
+      const fly = createFlyControls(THREE, scene.camera, scene.controls, scene.renderer.domElement);
+      flyRef.current = fly;
 
       const resize = () =>
         resizeRendererCamera(scene.renderer, scene.camera, container.clientWidth, container.clientHeight);
@@ -138,7 +185,10 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         const now = performance.now();
         const dt = (now - last) / 1000;
         last = now;
-        scene.controls.update();
+        // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
+        // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
+        if (fly.flying) fly.update(dt);
+        else scene.controls.update();
         mixer?.update(dt);
         frameCbs.current.forEach((cb) => cb(dt));
         scene.renderer.render(scene.scene, scene.camera);
@@ -155,6 +205,8 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       cleanup = () => {
         ro.disconnect();
         scene.renderer.setAnimationLoop(null);
+        fly.dispose();
+        flyRef.current = null;
         marker.remove();
         scene.dispose();
       };
@@ -174,12 +226,6 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     const rt = runtimeRef.current;
     if (rt && ready) applyEulerTransform(rt.scene.root, transform);
   }, [transform, ready]);
-
-  // « Caméra libre » : autorise le panning (translation de la cible) — sinon orbite seule.
-  useEffect(() => {
-    const rt = runtimeRef.current;
-    if (rt) rt.scene.controls.enablePan = freeCamera;
-  }, [freeCamera, ready]);
 
   const updateTransform = useCallback(
     (patch: Partial<Transform>) => {
@@ -252,8 +298,6 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     savedTf,
     loadError,
     clearLoadError,
-    freeCamera,
-    setFreeCamera,
     animations: anim.animations,
     currentAnim: anim.currentAnim,
     playing: anim.playing,
@@ -266,6 +310,10 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     restoreCamera,
     subscribeFrame,
     getDom,
+    getSceneHandle,
+    isFlying,
+    frameView,
+    homeView,
     fov,
     setFov,
     roll,

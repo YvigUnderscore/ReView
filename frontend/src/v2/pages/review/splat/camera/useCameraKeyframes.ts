@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CameraEasing, SplatCamera, SplatCameraKeyframe } from '../../reviewTypes';
-import { FLY_MOVE_MAPPING } from '../scene/flyControls';
+import { FLY_MOVE_MAPPING } from '../../viewer/flyControls';
 import { animDuration, sampleAnim } from './cameraAnim';
 
 /** Écart par défaut entre deux poses ajoutées (ms). */

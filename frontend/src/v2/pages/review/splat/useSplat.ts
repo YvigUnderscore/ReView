@@ -4,7 +4,7 @@ import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
 import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
-import { createFlyControls } from './scene/flyControls';
+import { createFlyControls } from '../viewer/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { createHotspotMarker } from './scene/hotspotMarker';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';

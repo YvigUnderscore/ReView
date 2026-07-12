@@ -1,4 +1,4 @@
-import type { SplatTransform } from '../../../reviewTypes';
+import type { SplatTransform } from '../../reviewTypes';
 
 /** Formes structurelles minimales d'un mesh Three (évite de dépendre de THREE dans les tests). */
 interface Vec3Like {
