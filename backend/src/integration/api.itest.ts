@@ -403,7 +403,14 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
 
     // Présentation persistée (10.G-V5) : caméra + DoF + animation keyframe → détail l'expose.
     const presentation = {
-      camera: { position: { x: 0, y: 1, z: 5 }, target: { x: 0, y: 0, z: 0 }, fov: 50 },
+      // aspect + roll persistés (Phase 17) : le cadre fixe et le tilt sont rejoués pour tous.
+      camera: {
+        position: { x: 0, y: 1, z: 5 },
+        target: { x: 0, y: 0, z: 0 },
+        fov: 50,
+        aspect: 1.777,
+        roll: 0.15,
+      },
       dof: { focalDistance: 4.2, apertureAngle: 0.02 },
       cameraAnim: {
         keyframes: [

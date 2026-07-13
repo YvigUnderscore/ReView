@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../../../lib/apiClient';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../../reviewTypes';
 import { orbitPreset } from '../camera/cameraAnim';
 import { useCameraKeyframes } from '../camera/useCameraKeyframes';
 import { useCameraRig } from '../camera/useCameraRig';
+import { cameraPoseFromView } from '../../camera/cameraPose';
+import { useCameraPresentation } from '../../camera/useCameraPresentation';
 import { createDebugColor, type DebugColorMode, type DebugColorRuntime } from '../scene/effects/debugColor';
 import { createReveal, type RevealRuntime, type RevealType } from '../scene/effects/reveal';
 import { applyLod, createAutoLod, type LodMode } from '../scene/lod';
@@ -29,7 +30,7 @@ export function usePresentation(
   const { ready, captureCamera, getSceneHandle, subscribeFrame, subscribeStats } = splat;
   const kf = useCameraKeyframes(splat);
   const rig = useCameraRig(splat, data.splatPresentation, kf);
-  const [busy, setBusy] = useState(false);
+  const { busy, persist, remove } = useCameraPresentation(data.media.id, onSaved);
   const [reveal, setReveal] = useState<RevealConfig | null>(data.splatPresentation?.reveal ?? null);
   // Compteur de lecture du reveal : > 0 → joue (initialisé à 1 si persisté → rejoué à l'ouverture).
   const [revealRun, setRevealRun] = useState(() => (data.splatPresentation?.reveal ? 1 : 0));
@@ -140,50 +141,23 @@ export function usePresentation(
 
   /** Enregistre la présentation : vue courante + DoF + reveal + animation (gestionnaire). */
   const save = async () => {
-    setBusy(true);
-    try {
-      const view = captureCamera();
-      const presentation: SplatPresentation = {};
-      if (view)
-        presentation.camera = {
-          position: view.position,
-          target: view.target,
-          fov: view.fov,
-          roll: view.roll,
-        };
-      if (rig.aperture > 0)
-        presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
-      if (reveal) presentation.reveal = reveal;
-      presentation.lodDefault = lodMode;
-      if (kf.keyframes.length >= 2)
-        presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
-      const { splatPresentation } = await api.patch<{ splatPresentation: SplatPresentation | null }>(
-        `/api/media/${data.media.id}/splat-presentation`,
-        { presentation },
-      );
-      onSaved({ splatPresentation });
-      toast.success('Présentation enregistrée — rejouée pour tous à l’ouverture');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la présentation");
-    } finally {
-      setBusy(false);
-    }
+    const view = captureCamera();
+    const presentation: SplatPresentation = {};
+    if (view) presentation.camera = cameraPoseFromView(view);
+    if (rig.aperture > 0)
+      presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
+    if (reveal) presentation.reveal = reveal;
+    presentation.lodDefault = lodMode;
+    if (kf.keyframes.length >= 2)
+      presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
+    await persist(presentation);
   };
 
   /** Efface la présentation persistée (retour au cadrage automatique). */
   const clear = async () => {
-    setBusy(true);
-    try {
-      await api.patch(`/api/media/${data.media.id}/splat-presentation`, { presentation: null });
-      onSaved({ splatPresentation: null });
-      kf.setAll([], true);
-      setReveal(null);
-      toast.success('Présentation effacée');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la présentation");
-    } finally {
-      setBusy(false);
-    }
+    await remove();
+    kf.setAll([], true);
+    setReveal(null);
   };
 
   /** Preset orbite : un tour complet autour de la cible courante, en boucle. */

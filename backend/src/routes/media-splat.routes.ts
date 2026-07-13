@@ -82,6 +82,8 @@ const camPose = z.object({
   position: z.object({ x: finite, y: finite, z: finite }),
   target: z.object({ x: finite, y: finite, z: finite }),
   fov: finite.min(5).max(150).optional(),
+  // Aspect (largeur/hauteur) du cadre de review fixe (Phase 17) — rejoué en letterbox pour tous.
+  aspect: finite.min(0.2).max(5).optional(),
   // Tilt (roll) de la caméra autour de l'axe de vue, en radians (mode layout).
   roll: finite.min(-Math.PI).max(Math.PI).optional(),
 });

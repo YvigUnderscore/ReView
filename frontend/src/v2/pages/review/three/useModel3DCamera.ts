@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
 import { orbitPreset } from '../splat/camera/cameraAnim';
 import { useCameraKeyframes } from '../splat/camera/useCameraKeyframes';
+import { cameraPoseFromView } from '../camera/cameraPose';
+import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { importCameraFromGltf } from './importCameraGltf';
 import type { Model3DThreeState } from './useModel3DThree';
 
@@ -23,7 +24,7 @@ export function useModel3DCamera(
   ann: Annotations,
 ) {
   const kf = useCameraKeyframes(model3d.layoutController);
-  const [busy, setBusy] = useState(false);
+  const { busy, persist, remove } = useCameraPresentation(data.media.id, onSaved);
   const { setAll, play } = kf;
   const { ready, restoreCamera, setFov, setRoll } = model3d;
 
@@ -84,46 +85,18 @@ export function useModel3DCamera(
   }, [model3d, kf]);
 
   const save = useCallback(async () => {
-    setBusy(true);
-    try {
-      const view = model3d.captureCamera();
-      const presentation: SplatPresentation = {};
-      if (view)
-        presentation.camera = {
-          position: view.position,
-          target: view.target,
-          fov: view.fov,
-          aspect: view.aspect,
-          roll: view.roll,
-        };
-      if (kf.keyframes.length >= 2)
-        presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
-      const { splatPresentation } = await api.patch<{ splatPresentation: SplatPresentation | null }>(
-        `/api/media/${data.media.id}/splat-presentation`,
-        { presentation },
-      );
-      onSaved({ splatPresentation });
-      toast.success('Présentation enregistrée — rejouée pour tous à l’ouverture');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la présentation");
-    } finally {
-      setBusy(false);
-    }
-  }, [model3d, kf.keyframes, kf.loop, kf.smooth, data.media.id, onSaved]);
+    const view = model3d.captureCamera();
+    const presentation: SplatPresentation = {};
+    if (view) presentation.camera = cameraPoseFromView(view);
+    if (kf.keyframes.length >= 2)
+      presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
+    await persist(presentation);
+  }, [model3d, kf.keyframes, kf.loop, kf.smooth, persist]);
 
   const clear = useCallback(async () => {
-    setBusy(true);
-    try {
-      await api.patch(`/api/media/${data.media.id}/splat-presentation`, { presentation: null });
-      onSaved({ splatPresentation: null });
-      kf.setAll([], true);
-      toast.success('Présentation effacée');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la présentation");
-    } finally {
-      setBusy(false);
-    }
-  }, [data.media.id, onSaved, kf]);
+    await remove();
+    kf.setAll([], true);
+  }, [remove, kf]);
 
   return {
     kf,

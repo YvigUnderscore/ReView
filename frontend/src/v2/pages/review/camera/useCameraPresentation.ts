@@ -1,0 +1,48 @@
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
+import { api } from '../../../../lib/apiClient';
+import type { SplatEditsPatch, SplatPresentation } from '../reviewTypes';
+
+/**
+ * Persistance de la présentation caméra (Phase 17), commune 3D/splat : PATCH
+ * `/api/media/:id/splat-presentation`, mise à jour du cache (`onSaved`), toasts et état `busy`.
+ * Les deux viewers construisent leur objet `SplatPresentation` (le splat ajoute dof/reveal/lod)
+ * puis appellent `persist` — un seul chemin réseau, plus de duplication.
+ */
+export function useCameraPresentation(mediaId: number, onSaved: (patch: SplatEditsPatch) => void) {
+  const [busy, setBusy] = useState(false);
+
+  const persist = useCallback(
+    async (presentation: SplatPresentation) => {
+      setBusy(true);
+      try {
+        const { splatPresentation } = await api.patch<{ splatPresentation: SplatPresentation | null }>(
+          `/api/media/${mediaId}/splat-presentation`,
+          { presentation },
+        );
+        onSaved({ splatPresentation });
+        toast.success('Présentation enregistrée — rejouée pour tous à l’ouverture');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la présentation");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [mediaId, onSaved],
+  );
+
+  const remove = useCallback(async () => {
+    setBusy(true);
+    try {
+      await api.patch(`/api/media/${mediaId}/splat-presentation`, { presentation: null });
+      onSaved({ splatPresentation: null });
+      toast.success('Présentation effacée');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la présentation");
+    } finally {
+      setBusy(false);
+    }
+  }, [mediaId, onSaved]);
+
+  return { busy, persist, remove };
+}
