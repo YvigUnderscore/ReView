@@ -10,9 +10,7 @@ import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
 import Filmstrip from './Filmstrip';
-import Model3DThreePane from './Model3DThreePane';
-import Model3DToolbar from './Model3DToolbar';
-import Model3DCameraBar from './Model3DCameraBar';
+import Model3DReview from './Model3DReview';
 import SplatReview from './splat/SplatReview';
 import VideoComparePane from './VideoComparePane';
 import VideoWipeOverlay from './VideoWipeOverlay';
@@ -218,30 +216,19 @@ export default function ReviewViewer({
       )}
 
       {kind === 'MODEL_3D' && data && (
-        <>
-          <Model3DThreePane
-            status={data.media.status}
-            loadError={model3d.loadError}
-            containerRef={model3d.containerRef}
-            overlay={renderOverlay(ann.viewedAspect ?? undefined)}
-            layoutMode={model3d.layoutMode}
-            canReprocess={role !== 'CLIENT'}
-            reprocessing={reprocessing}
-            onReprocess={onReprocess}
-          />
-          {model3dReady && (
-            <>
-              <Model3DToolbar m={model3d} showEditTools={showEditTools} />
-              <Model3DCameraBar
-                model3d={model3d}
-                data={data}
-                canManage={canManage}
-                onSaved={onSplatEditsSaved}
-                ann={ann}
-              />
-            </>
-          )}
-        </>
+        <Model3DReview
+          data={data}
+          model3d={model3d}
+          ann={ann}
+          canManage={canManage}
+          showEditTools={showEditTools}
+          role={role}
+          reprocessing={reprocessing}
+          onReprocess={onReprocess}
+          onSaved={onSplatEditsSaved}
+          overlay={renderOverlay(ann.viewedAspect ?? undefined)}
+          ready={model3dReady}
+        />
       )}
 
       {kind === 'SPLAT' && data && (

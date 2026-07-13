@@ -9,7 +9,7 @@ import { frameCameraToSphere } from '../viewer/frameCamera';
 import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFromGltf } from '../three/importCameraGltf';
-import CameraBar from './camera/CameraBar';
+import CameraBar from '../camera/CameraBar';
 import KeyframeTimeline from './camera/KeyframeTimeline';
 import CompareBar from './compare/CompareBar';
 import { useSplatCompare } from './compare/useSplatCompare';
@@ -281,7 +281,21 @@ export default function SplatReview({
               <>
                 {compare.enabled && <CompareBar compare={compare} />}
                 <PaintBar paint={paint} />
-                <CameraBar rig={pres.rig} kf={pres.kf} onFrame={frameView} onHome={homeView} />
+                <CameraBar
+                  fov={pres.rig.fov}
+                  onFov={pres.rig.setFov}
+                  roll={pres.rig.roll}
+                  onRoll={pres.rig.setRoll}
+                  onFrame={frameView}
+                  onHome={homeView}
+                  kf={pres.kf}
+                  dof={{
+                    aperture: pres.rig.aperture,
+                    onAperture: pres.rig.setAperture,
+                    focusPick: pres.rig.focusPick,
+                    onToggleFocusPick: pres.rig.toggleFocusPick,
+                  }}
+                />
                 <KeyframeTimeline
                   kf={pres.kf}
                   onOrbitPreset={pres.applyOrbitPreset}

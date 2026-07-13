@@ -4,6 +4,7 @@ import type { RevealConfig } from '../presentation/usePresentation';
 import type { RevealType } from '../scene/effects/reveal';
 import type { LodMode } from '../scene/lod';
 import { HudGroup } from '../../hud/ViewerHud';
+import HudNumber from '../../hud/HudNumber';
 
 const LODS: { value: LodMode; label: string }[] = [
   { value: 'auto', label: 'Auto' },
@@ -124,18 +125,16 @@ export default function ViewerSettingsPanel({
       </label>
       {reveal && (
         <>
-          <label className="flex items-center gap-1 text-muted-foreground" title="Durée du reveal (secondes)">
-            <input
-              type="range"
-              min={500}
-              max={10000}
-              step={250}
-              value={reveal.durationMs}
-              onChange={(e) => onReveal({ ...reveal, durationMs: Number(e.target.value) })}
-              className="h-1 w-14 accent-primary"
-            />
-            <span className="font-mono text-foreground">{(reveal.durationMs / 1000).toFixed(1)}s</span>
-          </label>
+          <HudNumber
+            label="Durée"
+            hint="Durée de l'effet d'apparition (secondes)"
+            value={Number((reveal.durationMs / 1000).toFixed(1))}
+            onChange={(s) => onReveal({ ...reveal, durationMs: Math.round(s * 1000) })}
+            min={0.5}
+            max={10}
+            step={0.1}
+            unit="s"
+          />
           <button
             onClick={onReplayReveal}
             title="Rejouer l'effet d'apparition"

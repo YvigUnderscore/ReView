@@ -2,6 +2,7 @@ import type { SplatTransform } from '../../reviewTypes';
 import type { GizmoSettings, GizmoTargetKind } from '../../viewer/gizmos/gizmoSettings';
 import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
 import { HudGroup } from '../../hud/ViewerHud';
+import HudNumber from '../../hud/HudNumber';
 
 /** Arrondi d'affichage (3 décimales) — évite le bruit flottant dans les champs. */
 const fmt = (v: number) => String(Math.round(v * 1000) / 1000);
@@ -180,21 +181,18 @@ export default function TransformFields({
           value={s.scaleSnap}
           onCommit={(scaleSnap) => gizmo.update({ scaleSnap })}
         />
-        <label
-          className="ml-auto flex items-center gap-1 text-muted-foreground"
-          title="Taille des poignées du gizmo pour cette cible"
-        >
-          Taille
-          <input
-            type="range"
+        <span className="ml-auto">
+          <HudNumber
+            label="Taille"
+            hint="Taille des poignées du gizmo pour cette cible"
+            value={s.size}
+            onChange={(size) => gizmo.update({ size })}
             min={0.4}
             max={2}
             step={0.05}
-            value={s.size}
-            onChange={(e) => gizmo.update({ size: Number(e.target.value) })}
-            className="h-1 w-14 accent-primary"
+            pixelsPerStep={6}
           />
-        </label>
+        </span>
       </div>
     </HudGroup>
   );
