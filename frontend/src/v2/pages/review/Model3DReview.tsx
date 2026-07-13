@@ -8,7 +8,7 @@ import Model3DThreePane from './Model3DThreePane';
 import Model3DAnimationsBar from './Model3DAnimationsBar';
 import Model3DTransformBar from './Model3DTransformBar';
 import CameraBar from './camera/CameraBar';
-import KeyframeTimeline from './splat/camera/KeyframeTimeline';
+import AnimPanel from './camera/timeline/AnimPanel';
 import ViewerHud from './hud/ViewerHud';
 
 /**
@@ -71,20 +71,21 @@ export default function Model3DReview({
                   onRoll={model3d.setRoll}
                   onFrame={model3d.frameView}
                   onHome={model3d.homeView}
-                  kf={cam.kf}
+                  kf={cam.anim}
                   layout={{
                     active: model3d.layoutMode,
                     onToggle: () => model3d.setLayoutMode(!model3d.layoutMode),
                   }}
                 />
-                <KeyframeTimeline
-                  kf={cam.kf}
+                <AnimPanel
+                  anim={cam.anim}
                   onOrbitPreset={cam.applyOrbitPreset}
                   onSave={cam.save}
                   onClear={cam.clear}
                   busy={cam.busy}
                   onAttach={cam.attach}
                   onImport={cam.importGltf}
+                  editable={canManage}
                 />
               </>
             }

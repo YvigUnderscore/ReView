@@ -412,16 +412,19 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
         roll: 0.15,
       },
       dof: { focalDistance: 4.2, apertureAngle: 0.02 },
+      // Animation caméra F-curves v2 (Phase 17) : canaux position X + focale.
       cameraAnim: {
-        keyframes: [
-          { t: 0, pose: { position: { x: 0, y: 1, z: 5 }, target: { x: 0, y: 0, z: 0 } }, easing: 'linear' },
-          {
-            t: 4000,
-            pose: { position: { x: 5, y: 1, z: 0 }, target: { x: 0, y: 0, z: 0 } },
-            easing: 'ease-in-out',
-          },
-        ],
+        version: 2 as const,
         loop: true,
+        channels: {
+          px: {
+            keys: [
+              { t: 0, v: 0, mode: 'auto' as const },
+              { t: 4000, v: 5, mode: 'linear' as const },
+            ],
+          },
+          fov: { keys: [{ t: 0, v: 50, mode: 'auto' as const }] },
+        },
       },
     };
     const putPres = await request(app)
@@ -431,13 +434,13 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(putPres.status).toBe(200);
     const withPres = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(withPres.body.splatPresentation).toEqual(presentation);
-    // Présentation invalide (1 seule keyframe) → 400.
+    // Présentation invalide (mode de tangente inconnu) → 400.
     const badPres = await request(app)
       .patch(`/api/media/${mediaId}/splat-presentation`)
       .set(auth)
       .send({
         presentation: {
-          cameraAnim: { keyframes: [presentation.cameraAnim.keyframes[0]], loop: false },
+          cameraAnim: { version: 2, loop: false, channels: { px: { keys: [{ t: 0, v: 0, mode: 'nope' }] } } },
         },
       });
     expect(badPres.status).toBe(400);

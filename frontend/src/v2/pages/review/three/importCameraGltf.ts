@@ -1,5 +1,6 @@
 import type { SplatCamera, SplatCameraKeyframe, SplatLayoutAnim } from '../reviewTypes';
 import { rollFromUp } from './cameraRoll';
+import { fromV1 } from '../camera/channels/model';
 
 /**
  * Import d'une **animation caméra** depuis un **glTF** (symétrique de `exportCameraGltf`) —
@@ -90,5 +91,6 @@ export async function importCameraFromGltf(file: File): Promise<SplatLayoutAnim 
   if (!clip) return null;
   const samples = samplesFromTracks(clip.tracks);
   if (samples.length < 2) return null;
-  return { keyframes: keyframesFromSamples(three, samples, fovDeg), loop: false, smooth: false };
+  // Les samples glTF (linéaires) → keyframes v1 → animation v2 par canaux (mode `linear`).
+  return fromV1(keyframesFromSamples(three, samples, fovDeg), false);
 }

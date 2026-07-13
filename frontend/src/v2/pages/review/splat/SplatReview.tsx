@@ -10,7 +10,7 @@ import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFromGltf } from '../three/importCameraGltf';
 import CameraBar from '../camera/CameraBar';
-import KeyframeTimeline from './camera/KeyframeTimeline';
+import AnimPanel from '../camera/timeline/AnimPanel';
 import CompareBar from './compare/CompareBar';
 import { useSplatCompare } from './compare/useSplatCompare';
 import PaintBar from './paint/PaintBar';
@@ -78,21 +78,20 @@ export default function SplatReview({
   const compare = useSplatCompare(splat, data.media);
 
   // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
-  const { setAll: kfSetAll, play: kfPlay } = pres.kf;
+  const { setAnim: animSetAnim, play: animPlay } = pres.anim;
   const viewedCameraAnim = ann.viewedCameraAnim;
   useEffect(() => {
     if (viewedCameraAnim) {
-      kfSetAll(viewedCameraAnim.keyframes, viewedCameraAnim.loop, viewedCameraAnim.smooth);
-      kfPlay();
+      animSetAnim(viewedCameraAnim);
+      animPlay();
     }
-  }, [viewedCameraAnim, kfSetAll, kfPlay]);
+  }, [viewedCameraAnim, animSetAnim, animPlay]);
 
   const attachLayout = useCallback(() => {
-    const kf = pres.kf;
-    if (kf.keyframes.length < 2) return;
-    ann.setCameraAnim({ keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth });
+    if (!pres.anim.hasAnimation) return;
+    ann.setCameraAnim(pres.anim.anim);
     toast.success('Animation caméra jointe au prochain commentaire');
-  }, [pres.kf, ann]);
+  }, [pres.anim, ann]);
 
   const importLayout = useCallback(
     (file: File) => {
@@ -102,13 +101,13 @@ export default function SplatReview({
             toast.error('Aucune animation caméra dans ce fichier');
             return;
           }
-          pres.kf.setAll(animData.keyframes, false, false);
-          pres.kf.play();
+          pres.anim.setAnim(animData);
+          pres.anim.play();
           toast.success('Animation caméra importée');
         })
         .catch(() => toast.error('Import caméra impossible'));
     },
-    [pres.kf],
+    [pres.anim],
   );
 
   // Lecture seule : applique la transformation et le flip d'orientation enregistrés
@@ -288,7 +287,7 @@ export default function SplatReview({
                   onRoll={pres.rig.setRoll}
                   onFrame={frameView}
                   onHome={homeView}
-                  kf={pres.kf}
+                  kf={pres.anim}
                   dof={{
                     aperture: pres.rig.aperture,
                     onAperture: pres.rig.setAperture,
@@ -296,14 +295,15 @@ export default function SplatReview({
                     onToggleFocusPick: pres.rig.toggleFocusPick,
                   }}
                 />
-                <KeyframeTimeline
-                  kf={pres.kf}
+                <AnimPanel
+                  anim={pres.anim}
                   onOrbitPreset={pres.applyOrbitPreset}
                   onSave={canPresent ? () => void pres.save() : undefined}
                   onClear={canPresent ? () => void pres.clear() : undefined}
                   busy={pres.busy}
                   onAttach={attachLayout}
                   onImport={importLayout}
+                  editable={canPresent}
                 />
               </>
             }

@@ -3,7 +3,8 @@ import { toast } from 'sonner';
 import type { SplatPresentation } from '../../reviewTypes';
 import { applyRoll } from '../../three/cameraRoll';
 import type { SplatViewer } from '../useSplat';
-import type { CameraKeyframesState } from './useCameraKeyframes';
+import { normalizeAnim } from '../../camera/channels/model';
+import type { CameraAnimState } from '../../camera/useCameraAnim';
 
 /**
  * Réglages caméra du viewer splat (10.G-V5) : focale (fov), profondeur de champ Spark
@@ -14,7 +15,7 @@ import type { CameraKeyframesState } from './useCameraKeyframes';
 export function useCameraRig(
   splat: SplatViewer,
   presentation: SplatPresentation | null,
-  kf: Pick<CameraKeyframesState, 'setAll' | 'play'>,
+  anim: Pick<CameraAnimState, 'setAnim' | 'play'>,
 ) {
   const { getSceneHandle, restoreCamera, ready } = splat;
   // États initialisés depuis la présentation persistée (le bloc splat remonte par média) —
@@ -66,7 +67,7 @@ export function useCameraRig(
   const focalDistance = useCallback(() => getSceneHandle()?.spark.focalDistance ?? 0, [getSceneHandle]);
 
   // Rejeu de la présentation persistée à l'ouverture (une fois le viewer prêt) — pour tous.
-  const { setAll, play } = kf;
+  const { setAnim, play } = anim;
   useEffect(() => {
     if (!ready || appliedRef.current) return;
     appliedRef.current = true;
@@ -76,11 +77,12 @@ export function useCameraRig(
       h.spark.focalDistance = presentation.dof.focalDistance;
       h.spark.apertureAngle = presentation.dof.apertureAngle;
     }
-    if (presentation?.cameraAnim && presentation.cameraAnim.keyframes.length >= 2) {
-      setAll(presentation.cameraAnim.keyframes, presentation.cameraAnim.loop, presentation.cameraAnim.smooth);
+    const anim2 = normalizeAnim(presentation?.cameraAnim);
+    if (anim2) {
+      setAnim(anim2);
       play();
     }
-  }, [ready, presentation, getSceneHandle, restoreCamera, setAll, play]);
+  }, [ready, presentation, getSceneHandle, restoreCamera, setAnim, play]);
 
   // Mise au point au clic : le prochain clic gauche sur le canvas règle la distance focale.
   useEffect(() => {

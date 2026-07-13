@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
 import type * as THREE from 'three';
 import type { SplatCamera } from '../reviewTypes';
-import type { CameraController } from '../splat/camera/useCameraKeyframes';
+import type { CameraController } from '../camera/useCameraAnim';
 import type { ModelScene } from './createModelScene';
 import { applyPoseToCamera } from './applyPose';
 import { captureModelCamera, restoreModelCamera } from './modelCamera';

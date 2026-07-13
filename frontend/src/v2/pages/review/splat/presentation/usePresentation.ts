@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../../reviewTypes';
-import { orbitPreset } from '../camera/cameraAnim';
-import { useCameraKeyframes } from '../camera/useCameraKeyframes';
 import { useCameraRig } from '../camera/useCameraRig';
 import { cameraPoseFromView } from '../../camera/cameraPose';
+import { useCameraAnim } from '../../camera/useCameraAnim';
+import { orbitPresetV2 } from '../../camera/channels/orbitPreset';
+import { emptyAnim, hasAnimation } from '../../camera/channels/model';
 import { useCameraPresentation } from '../../camera/useCameraPresentation';
 import { createDebugColor, type DebugColorMode, type DebugColorRuntime } from '../scene/effects/debugColor';
 import { createReveal, type RevealRuntime, type RevealType } from '../scene/effects/reveal';
@@ -28,8 +29,8 @@ export function usePresentation(
   onSaved: (patch: SplatEditsPatch) => void,
 ) {
   const { ready, captureCamera, getSceneHandle, subscribeFrame, subscribeStats } = splat;
-  const kf = useCameraKeyframes(splat);
-  const rig = useCameraRig(splat, data.splatPresentation, kf);
+  const anim = useCameraAnim(splat);
+  const rig = useCameraRig(splat, data.splatPresentation, anim);
   const { busy, persist, remove } = useCameraPresentation(data.media.id, onSaved);
   const [reveal, setReveal] = useState<RevealConfig | null>(data.splatPresentation?.reveal ?? null);
   // Compteur de lecture du reveal : > 0 → joue (initialisé à 1 si persisté → rejoué à l'ouverture).
@@ -148,15 +149,14 @@ export function usePresentation(
       presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
     if (reveal) presentation.reveal = reveal;
     presentation.lodDefault = lodMode;
-    if (kf.keyframes.length >= 2)
-      presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
+    if (hasAnimation(anim.anim)) presentation.cameraAnim = anim.anim;
     await persist(presentation);
   };
 
   /** Efface la présentation persistée (retour au cadrage automatique). */
   const clear = async () => {
     await remove();
-    kf.setAll([], true);
+    anim.setAnim(emptyAnim());
     setReveal(null);
   };
 
@@ -164,12 +164,12 @@ export function usePresentation(
   const applyOrbitPreset = () => {
     const view = captureCamera();
     if (!view) return;
-    kf.setAll(orbitPreset(view), true);
-    kf.play();
+    anim.setAnim(orbitPresetV2(view));
+    anim.play();
   };
 
   return {
-    kf,
+    anim,
     rig,
     busy,
     reveal,

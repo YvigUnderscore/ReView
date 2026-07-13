@@ -111,20 +111,29 @@ router.patch(
             })
             .optional(),
           lodDefault: z.enum(['auto', 'on', 'off', 'streaming']).optional(),
+          // Animation caméra « par canaux » (Phase 17, v2) : F-curves éditables (position/cible/
+          // focale/tilt), tangentes Hermite. Remplace le format v1 (keyframes + easing).
           cameraAnim: z
             .object({
-              keyframes: z
-                .array(
-                  z.object({
-                    t: finite.min(0).max(3600000), // ms depuis le début de l'animation
-                    pose: camPose,
-                    easing: z.enum(['linear', 'ease-in', 'ease-out', 'ease-in-out']),
-                  }),
-                )
-                .min(2)
-                .max(64),
+              version: z.literal(2),
               loop: z.boolean(),
-              smooth: z.boolean().optional(), // interpolation par courbes (16.A)
+              channels: z.record(
+                z.enum(['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'roll']),
+                z.object({
+                  keys: z
+                    .array(
+                      z.object({
+                        t: finite.min(0).max(3600000), // ms depuis le début
+                        v: finite,
+                        tin: finite.optional(),
+                        tout: finite.optional(),
+                        mode: z.enum(['auto', 'linear', 'step', 'free']),
+                      }),
+                    )
+                    .min(1)
+                    .max(256),
+                }),
+              ),
             })
             .optional(),
         })

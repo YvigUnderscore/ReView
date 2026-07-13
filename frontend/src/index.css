@@ -38,6 +38,12 @@
     --input: 220 16% 83%;
     --ring: 187 100% 30%;
     --radius: 0.625rem;
+    /* Courbes de l'éditeur d'animation caméra (Phase 17) — convention DCC X/Y/Z + focale/tilt. */
+    --curve-x: 3 80% 48%;
+    --curve-y: 145 65% 36%;
+    --curve-z: 214 85% 50%;
+    --curve-fov: 40 90% 42%;
+    --curve-roll: 300 65% 50%;
   }
 
   .dark {
@@ -65,6 +71,12 @@
     --border: 223 26% 16%;
     --input: 223 26% 20%;
     --ring: 184 100% 50%;
+    /* Courbes de l'éditeur d'animation caméra (Phase 17), teintes lisibles sur fond sombre. */
+    --curve-x: 3 100% 66%;
+    --curve-y: 145 70% 55%;
+    --curve-z: 210 100% 66%;
+    --curve-fov: 45 100% 60%;
+    --curve-roll: 300 90% 70%;
   }
 }
 

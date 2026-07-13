@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
-import { orbitPreset } from '../splat/camera/cameraAnim';
-import { useCameraKeyframes } from '../splat/camera/useCameraKeyframes';
+import { useCameraAnim } from '../camera/useCameraAnim';
+import { orbitPresetV2 } from '../camera/channels/orbitPreset';
+import { emptyAnim, hasAnimation, normalizeAnim } from '../camera/channels/model';
 import { cameraPoseFromView } from '../camera/cameraPose';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { importCameraFromGltf } from './importCameraGltf';
@@ -23,25 +24,25 @@ export function useModel3DCamera(
   onSaved: (patch: SplatEditsPatch) => void,
   ann: Annotations,
 ) {
-  const kf = useCameraKeyframes(model3d.layoutController);
+  const anim = useCameraAnim(model3d.layoutController);
   const { busy, persist, remove } = useCameraPresentation(data.media.id, onSaved);
-  const { setAll, play } = kf;
+  const { setAnim, play } = anim;
   const { ready, restoreCamera, setFov, setRoll } = model3d;
 
   // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
   const viewedCameraAnim = ann.viewedCameraAnim;
   useEffect(() => {
     if (viewedCameraAnim) {
-      setAll(viewedCameraAnim.keyframes, viewedCameraAnim.loop, viewedCameraAnim.smooth);
+      setAnim(viewedCameraAnim);
       play();
     }
-  }, [viewedCameraAnim, setAll, play]);
+  }, [viewedCameraAnim, setAnim, play]);
 
   const attach = useCallback(() => {
-    if (kf.keyframes.length < 2) return;
-    ann.setCameraAnim({ keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth });
+    if (!hasAnimation(anim.anim)) return;
+    ann.setCameraAnim(anim.anim);
     toast.success('Animation caméra jointe au prochain commentaire');
-  }, [kf.keyframes, kf.loop, kf.smooth, ann]);
+  }, [anim.anim, ann]);
 
   const importGltf = useCallback(
     (file: File) => {
@@ -51,13 +52,13 @@ export function useModel3DCamera(
             toast.error('Aucune animation caméra dans ce fichier');
             return;
           }
-          setAll(animData.keyframes, false, false);
+          setAnim(animData);
           play();
           toast.success('Animation caméra importée');
         })
         .catch(() => toast.error('Import caméra impossible'));
     },
-    [setAll, play],
+    [setAnim, play],
   );
 
   // Rejeu de la présentation persistée à l'ouverture (une fois la scène prête), pour tous.
@@ -71,35 +72,35 @@ export function useModel3DCamera(
       if (pres.camera.fov != null) setFov(pres.camera.fov);
       if (pres.camera.roll != null) setRoll(pres.camera.roll);
     }
-    if (pres.cameraAnim && pres.cameraAnim.keyframes.length >= 2) {
-      setAll(pres.cameraAnim.keyframes, pres.cameraAnim.loop, pres.cameraAnim.smooth);
+    const anim2 = normalizeAnim(pres.cameraAnim);
+    if (anim2) {
+      setAnim(anim2);
       play();
     }
-  }, [ready, pres, restoreCamera, setFov, setRoll, setAll, play]);
+  }, [ready, pres, restoreCamera, setFov, setRoll, setAnim, play]);
 
   const applyOrbitPreset = useCallback(() => {
     const view = model3d.captureCamera();
     if (!view) return;
-    kf.setAll(orbitPreset(view), true);
-    kf.play();
-  }, [model3d, kf]);
+    anim.setAnim(orbitPresetV2(view));
+    anim.play();
+  }, [model3d, anim]);
 
   const save = useCallback(async () => {
     const view = model3d.captureCamera();
     const presentation: SplatPresentation = {};
     if (view) presentation.camera = cameraPoseFromView(view);
-    if (kf.keyframes.length >= 2)
-      presentation.cameraAnim = { keyframes: kf.keyframes, loop: kf.loop, smooth: kf.smooth };
+    if (hasAnimation(anim.anim)) presentation.cameraAnim = anim.anim;
     await persist(presentation);
-  }, [model3d, kf.keyframes, kf.loop, kf.smooth, persist]);
+  }, [model3d, anim.anim, persist]);
 
   const clear = useCallback(async () => {
     await remove();
-    kf.setAll([], true);
-  }, [remove, kf]);
+    anim.setAnim(emptyAnim());
+  }, [remove, anim]);
 
   return {
-    kf,
+    anim,
     busy,
     attach,
     importGltf,

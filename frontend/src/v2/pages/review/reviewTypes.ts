@@ -1,4 +1,6 @@
 import type { Media } from '../../types/api';
+import { normalizeAnim } from './camera/channels/model';
+import type { CameraAnimV2 } from './camera/channels/model';
 
 /** Types et utilitaires partagés de la review (découpage 10.C2). */
 
@@ -69,19 +71,16 @@ export interface SplatPaintStroke {
 
 /**
  * Animation caméra jointe à un commentaire (mode layout) : au lieu de dessiner, l'utilisateur
- * crée/joint une animation caméra, rejouée quand le commentaire est sélectionné. Stockée comme
- * part `{ type:'camera-anim', ... }` dans `Comment.annotation`.
+ * crée/joint une animation caméra (F-curves v2), rejouée quand le commentaire est sélectionné.
+ * Stockée comme part `{ type:'camera-anim', version:2, loop, channels }` dans `Comment.annotation`.
  */
-export interface SplatLayoutAnim {
-  keyframes: SplatCameraKeyframe[];
-  loop: boolean;
-  smooth?: boolean;
-}
+export type SplatLayoutAnim = CameraAnimV2;
 
 /**
  * Sépare les parties d'une annotation de commentaire : hotspot 3D, animation caméra (mode
  * layout) et formes 2D — les traits du painter (`splat-paint`, V9) et l'anim caméra sont exclus
- * des formes (rendus dédiés).
+ * des formes (rendus dédiés). L'animation est **normalisée en v2** (les anciennes annotations
+ * v1 sont migrées à la lecture).
  */
 export function splitAnnotationParts(annotation: unknown): {
   hotspot: Hotspot3D | null;
@@ -94,9 +93,6 @@ export function splitAnnotationParts(annotation: unknown): {
     position?: string;
     normal?: string;
     space?: 'object';
-    keyframes?: SplatCameraKeyframe[];
-    loop?: boolean;
-    smooth?: boolean;
   }>;
   const hs = parts.find((x) => x?.type === 'hotspot');
   const anim = parts.find((x) => x?.type === 'camera-anim');
@@ -106,17 +102,14 @@ export function splitAnnotationParts(annotation: unknown): {
   return {
     hotspot: hs?.position && hs.normal ? { position: hs.position, normal: hs.normal, space: hs.space } : null,
     shapes,
-    cameraAnim:
-      anim && Array.isArray(anim.keyframes) && anim.keyframes.length >= 2
-        ? { keyframes: anim.keyframes, loop: !!anim.loop, smooth: anim.smooth }
-        : null,
+    cameraAnim: normalizeAnim(anim),
   };
 }
 
-/** Easing d'un segment d'animation caméra (10.G-V5). */
+/** Easing d'un segment d'animation caméra v1 (conservé pour la migration + import/export glTF). */
 export type CameraEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
-/** Pose keyframe de l'animation caméra (temps en ms depuis le début). */
+/** Pose keyframe d'animation caméra v1 (temps en ms) — format hérité, migré en v2 à la lecture. */
 export interface SplatCameraKeyframe {
   t: number;
   pose: SplatCamera;
@@ -126,14 +119,15 @@ export interface SplatCameraKeyframe {
 /**
  * Présentation persistée d'un splat (10.G-V5) : `metadata.splatPresentation` — écrite par le
  * gestionnaire, **rejouée pour tous** à l'ouverture ; les spectateurs modifient en live sans
- * persister. Miroir du Zod backend (media-splat.routes).
+ * persister. Miroir du Zod backend (media-splat.routes). L'animation caméra est au format v2
+ * (F-curves) — les présentations v1 sont migrées à la lecture (`normalizeAnim`).
  */
 export interface SplatPresentation {
   camera?: SplatCamera;
   dof?: { focalDistance: number; apertureAngle: number };
   reveal?: { type: 'fade' | 'sweep' | 'dissolve'; durationMs: number };
   lodDefault?: 'auto' | 'on' | 'off' | 'streaming';
-  cameraAnim?: { keyframes: SplatCameraKeyframe[]; loop: boolean; smooth?: boolean };
+  cameraAnim?: CameraAnimV2;
 }
 
 /** Réponse de GET /api/media/:id (viewer review). */

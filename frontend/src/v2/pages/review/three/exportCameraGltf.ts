@@ -1,5 +1,7 @@
-import type { SplatCameraKeyframe } from '../reviewTypes';
+import type { SplatCamera, SplatCameraKeyframe } from '../reviewTypes';
 import { applyPoseToCamera } from './applyPose';
+import { bakeToKeyframes } from '../camera/channels/hermite';
+import type { CameraAnimV2 } from '../camera/channels/model';
 
 /**
  * Export d'une **animation caméra** (keyframes de review) vers un **glTF 2.0** minimal —
@@ -113,4 +115,12 @@ export async function downloadCameraGltf(
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Base neutre pour le bake d'export (les canaux animés priment ; fov par défaut si non animé). */
+const EXPORT_BASE: SplatCamera = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 }, fov: 45 };
+
+/** Exporte une animation caméra v2 (F-curves) : bake en keyframes puis téléchargement glTF. */
+export async function downloadAnimGltf(anim: CameraAnimV2, filename = 'review-camera.gltf'): Promise<void> {
+  await downloadCameraGltf(bakeToKeyframes(anim, EXPORT_BASE), filename);
 }

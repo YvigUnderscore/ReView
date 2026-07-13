@@ -1,7 +1,7 @@
 import { Aperture, Crosshair, Frame, Home, Pause, PictureInPicture2, Play, RotateCcw } from 'lucide-react';
 import { HudGroup, HudIconButton } from '../hud/ViewerHud';
 import HudNumber from '../hud/HudNumber';
-import type { CameraKeyframesState } from '../splat/camera/useCameraKeyframes';
+import type { CameraAnimState } from './useCameraAnim';
 
 const RAD = Math.PI / 180;
 
@@ -29,7 +29,7 @@ export default function CameraBar({
   onRoll: (rad: number) => void;
   onFrame: () => void;
   onHome: () => void;
-  kf: CameraKeyframesState;
+  kf: Pick<CameraAnimState, 'hasAnimation' | 'playing' | 'play' | 'pause' | 'autoPaused'>;
   /** Profondeur de champ Spark (splat uniquement). */
   dof?: {
     aperture: number;
@@ -93,7 +93,7 @@ export default function CameraBar({
           onClick={layout.onToggle}
         />
       )}
-      {kf.keyframes.length >= 2 && (
+      {kf.hasAnimation && (
         <>
           <span className="h-4 w-px bg-border" />
           <HudIconButton

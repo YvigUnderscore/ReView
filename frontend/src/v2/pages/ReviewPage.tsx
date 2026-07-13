@@ -182,13 +182,13 @@ function ReviewContent({ id }: { id: number }) {
           space: ann.hotspot3d.space, // espace-objet (splat, V10) — suit la transformation
         });
       if (kind === 'SPLAT') parts.push(...paint.serializePending()); // traits du painter (V9)
-      // Mode layout : anim caméra jointe au commentaire (au lieu de dessiner).
+      // Mode layout : anim caméra (F-curves v2) jointe au commentaire (au lieu de dessiner).
       if (ann.cameraAnim)
         parts.push({
           type: 'camera-anim',
-          keyframes: ann.cameraAnim.keyframes,
+          version: ann.cameraAnim.version,
           loop: ann.cameraAnim.loop,
-          smooth: ann.cameraAnim.smooth,
+          channels: ann.cameraAnim.channels,
         });
       parts.push(...ann.annot);
       annotation = parts.length ? parts : undefined;
