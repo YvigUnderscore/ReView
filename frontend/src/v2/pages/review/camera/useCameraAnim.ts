@@ -4,6 +4,7 @@ import { FLY_MOVE_MAPPING } from '../viewer/flyControls';
 import {
   animDuration,
   animKeyTimes,
+  CHANNEL_IDS,
   deleteColumn,
   deleteKey,
   emptyAnim,
@@ -83,6 +84,16 @@ export function useCameraAnim(controller: CameraController) {
       setAnimState(setKeyTangent(animRef.current, channel, index, patch)),
     [],
   );
+  /** Écrit/écrase plusieurs canaux au temps `t` (drag de la caméra-objet — auto-key). Live. */
+  const strokeUpsertAt = useCallback((t: number, values: Partial<Record<ChannelId, number>>) => {
+    let next = animRef.current;
+    const time = Math.max(0, Math.round(t));
+    for (const id of CHANNEL_IDS) {
+      const v = values[id];
+      if (v != null) next = upsertKey(next, id, time, v);
+    }
+    setAnimState(next);
+  }, []);
 
   const undo = useCallback(() => {
     setPast((p) => {
@@ -247,6 +258,7 @@ export function useCameraAnim(controller: CameraController) {
     beginStroke,
     strokeMoveKey,
     strokeSetTangent,
+    strokeUpsertAt,
     undo,
     redo,
     canUndo: past.length > 0,

@@ -4,6 +4,7 @@ import type { Annotations } from './useAnnotations';
 import type { Model3DThreeState } from './three/useModel3DThree';
 import type { Role } from '../../types/api';
 import { useModel3DCamera } from './three/useModel3DCamera';
+import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DAnimationsBar from './Model3DAnimationsBar';
 import Model3DTransformBar from './Model3DTransformBar';
@@ -46,6 +47,15 @@ export default function Model3DReview({
   ready: boolean;
 }) {
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
+  // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
+  useCameraSceneRig({
+    getSceneHandle: model3d.getSceneHandle,
+    subscribeFrame: model3d.subscribeFrame,
+    ready,
+    active: model3d.layoutMode,
+    editable: canManage,
+    anim: cam.anim,
+  });
   return (
     <Model3DThreePane
       status={data.media.status}
