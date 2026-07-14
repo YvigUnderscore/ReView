@@ -3,6 +3,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useAuth } from '../stores/useAuth';
 import Shell from '../components/Shell';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 import ResumeCard from '../components/ResumeCard';
 import { Skeleton } from '../components/ui/skeleton';
 import LatestReviews from './home/LatestReviews';
@@ -33,6 +34,7 @@ export default function HomePage() {
           <p className="text-sm text-muted-foreground">Ce qui a bougé sur vos projets.</p>
         </div>
         {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
+        <AnnouncementBanner />
         <ResumeCard />
         {data === undefined ? (
           <div className="space-y-6">

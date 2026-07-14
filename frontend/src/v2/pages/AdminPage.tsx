@@ -4,6 +4,7 @@ import {
   FolderCog,
   History,
   LayoutDashboard,
+  Megaphone,
   Server,
   Settings as SettingsIcon,
   Sun,
@@ -19,6 +20,7 @@ import UsersTab from './admin/UsersTab';
 import SettingsTab from './admin/SettingsTab';
 import ProjectDefaultsTab from './admin/ProjectDefaultsTab';
 import HdriTab from './admin/HdriTab';
+import AnnouncementsTab from './admin/AnnouncementsTab';
 import TrashTab from './admin/TrashTab';
 import AuditTab from './admin/AuditTab';
 
@@ -31,6 +33,7 @@ const SECTIONS = [
   { key: 'settings', label: 'Réglages', icon: SettingsIcon, Component: SettingsTab },
   { key: 'defaults', label: 'Défauts projet', icon: FolderCog, Component: ProjectDefaultsTab },
   { key: 'hdri', label: 'HDRI', icon: Sun, Component: HdriTab },
+  { key: 'announcements', label: 'Annonces', icon: Megaphone, Component: AnnouncementsTab },
   { key: 'trash', label: 'Corbeille', icon: Trash2, Component: TrashTab },
   { key: 'audit', label: 'Audit', icon: History, Component: AuditTab },
 ] as const;

@@ -92,6 +92,18 @@ enum UserStatus {
   DND
 }
 
+enum AnnouncementType {
+  INFO
+  WARNING
+  MAINTENANCE
+}
+
+enum AnnouncementFrequency {
+  PERMANENT // affichée à chaque ouverture tant qu'active
+  FIRST_LOGIN // une seule fois par utilisateur
+  FIRST_OF_DAY // une fois par jour et par utilisateur
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Studio (singleton) & configuration
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,6 +161,7 @@ model User {
   passwordResets   PasswordReset[]
   favorites        Favorite[]
   documents        Document[]
+  announcementReads AnnouncementRead[]
 }
 
 model PasswordReset {
@@ -507,4 +520,35 @@ model Document {
 
   @@index([projectId])
   @@index([scope, scopeId])
+}
+
+// Annonces studio (bannière/modal au login/Accueil) — modèle complet (Phase 22)
+model Announcement {
+  id        Int                   @id @default(autoincrement())
+  title     String
+  body      String
+  type      AnnouncementType      @default(INFO)
+  frequency AnnouncementFrequency @default(PERMANENT)
+  // Ciblage par rôle (JSON tableau de Role ; vide = tous les rôles).
+  roles     Json                  @default("[]")
+  startsAt  DateTime? // début de la période d'affichage (NULL = immédiat)
+  endsAt    DateTime? // fin de la période (NULL = pas de fin)
+  active    Boolean               @default(true)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  reads AnnouncementRead[]
+}
+
+// Accusé de lecture d'une annonce par un utilisateur (pilote la fréquence d'affichage).
+model AnnouncementRead {
+  id             Int          @id @default(autoincrement())
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  announcementId Int
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, userId])
+  @@index([userId])
 }

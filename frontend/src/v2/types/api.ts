@@ -18,6 +18,25 @@ export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'APPROVED' 
 export type VersionStatus = 'DRAFT' | 'REVIEW' | 'PUBLISHED';
 export type MediaKind = 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'SPLAT';
 export type MediaStatus = 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED';
+export type AnnouncementType = 'INFO' | 'WARNING' | 'MAINTENANCE';
+export type AnnouncementFrequency = 'PERMANENT' | 'FIRST_LOGIN' | 'FIRST_OF_DAY';
+
+// ── Annonces studio (Phase 22) ────────────────────────────────────────────────
+export interface Announcement {
+  id: number;
+  title: string;
+  body: string;
+  type: AnnouncementType;
+  frequency: AnnouncementFrequency;
+  roles: Role[];
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+/** GET /api/announcements (admin) — avec nombre d'accusés de lecture. */
+export type AnnouncementAdmin = Announcement & { _count: { reads: number } };
 
 // ── Utilisateurs ──────────────────────────────────────────────────────────────
 /** Ligne complète de GET /api/users (admin). */

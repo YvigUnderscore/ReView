@@ -33,6 +33,7 @@ import searchRoutes from './routes/search.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import bulkRoutes from './routes/bulk.routes';
 import hdriRoutes from './routes/hdri.routes';
+import announcementsRoutes from './routes/announcements.routes';
 import docsRoutes from './routes/docs.routes';
 
 export const createApp = (): Express => {
@@ -92,6 +93,7 @@ export const createApp = (): Express => {
   app.use('/api/context', contextRoutes);
   app.use('/api/search', searchRoutes);
   app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/announcements', announcementsRoutes);
   app.use('/api/bulk', bulkRoutes);
   // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
   app.use('/api', docsRoutes);
