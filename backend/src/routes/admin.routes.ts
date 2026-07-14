@@ -9,6 +9,7 @@ import {
   setStudioProjectDefaults,
   projectSettingsSchema,
 } from '../lib/projectSettings';
+import { getTranscodeConfig, setTranscodeConfig, transcodeConfigSchema } from '../lib/transcodeConfig';
 import * as AdminService from '../services/AdminService';
 
 const router = Router();
@@ -24,6 +25,18 @@ router.put('/project-defaults', validate({ body: projectSettingsSchema }), async
   const settings = await setStudioProjectDefaults(req.body);
   logAudit({ userId: req.user!.id, action: 'PROJECT_DEFAULTS_UPDATE', entityType: 'Setting' });
   res.json({ settings });
+});
+
+// GET /api/admin/transcode — config de transcodage vidéo (contexte Vidéo)
+router.get('/transcode', async (_req, res) => {
+  res.json({ config: await getTranscodeConfig() });
+});
+
+// PUT /api/admin/transcode — enregistre la config de transcodage (lue par le worker HLS)
+router.put('/transcode', validate({ body: transcodeConfigSchema }), async (req, res) => {
+  const config = await setTranscodeConfig(req.body);
+  logAudit({ userId: req.user!.id, action: 'TRANSCODE_CONFIG_UPDATE', entityType: 'Setting' });
+  res.json({ config });
 });
 
 // GET /api/admin/dashboard — métriques studio (compat. ascendante, vue compacte)

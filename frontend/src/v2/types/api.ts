@@ -38,6 +38,21 @@ export interface Announcement {
 /** GET /api/announcements (admin) — avec nombre d'accusés de lecture. */
 export type AnnouncementAdmin = Announcement & { _count: { reads: number } };
 
+/** Palier de qualité HLS (contexte Vidéo). */
+export interface TranscodeRendition {
+  height: number;
+  videoBitrateK: number;
+}
+/** GET /api/admin/transcode — config de transcodage vidéo (contexte Vidéo, Phase 22/23). */
+export interface TranscodeConfig {
+  enabled: boolean;
+  crf: number;
+  preset: string;
+  audioBitrateK: number;
+  maxHeight: number;
+  ladder: TranscodeRendition[];
+}
+
 /** GET /api/studio/smtp — config SMTP (jamais le mot de passe). */
 export interface SmtpConfig {
   host: string;

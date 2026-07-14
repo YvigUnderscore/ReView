@@ -7,6 +7,7 @@ import {
   Mail,
   Megaphone,
   Server,
+  Video,
   Settings as SettingsIcon,
   Sun,
   Trash2,
@@ -21,6 +22,7 @@ import UsersTab from './admin/UsersTab';
 import SettingsTab from './admin/SettingsTab';
 import ProjectDefaultsTab from './admin/ProjectDefaultsTab';
 import HdriTab from './admin/HdriTab';
+import TranscodeTab from './admin/TranscodeTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
 import TrashTab from './admin/TrashTab';
@@ -35,6 +37,7 @@ const SECTIONS = [
   { key: 'settings', label: 'Réglages', icon: SettingsIcon, Component: SettingsTab },
   { key: 'defaults', label: 'Défauts projet', icon: FolderCog, Component: ProjectDefaultsTab },
   { key: 'hdri', label: 'HDRI', icon: Sun, Component: HdriTab },
+  { key: 'video', label: 'Vidéo', icon: Video, Component: TranscodeTab },
   { key: 'announcements', label: 'Annonces', icon: Megaphone, Component: AnnouncementsTab },
   { key: 'smtp', label: 'SMTP', icon: Mail, Component: SmtpTab },
   { key: 'trash', label: 'Corbeille', icon: Trash2, Component: TrashTab },
