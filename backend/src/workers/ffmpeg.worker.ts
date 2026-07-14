@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import { join, extname, dirname } from 'node:path';
-import { mkdtemp, rm, readdir, copyFile } from 'node:fs/promises';
+import { mkdtemp, rm, readdir, copyFile, mkdir, writeFile } from 'node:fs/promises';
 
 const execFileAsync = promisify(execFile);
 import { redisConnectionOptions } from '../lib/redis';
@@ -13,6 +13,8 @@ import { prisma } from '../lib/prisma';
 import { storage, StorageService } from '../services/StorageService';
 import { MediaStatus } from '@prisma/client';
 import { logger } from '../lib/logger';
+import { getTranscodeConfig, selectRenditions, type TranscodeConfig } from '../lib/transcodeConfig';
+import { buildMasterPlaylist, hlsContentType, renditionName, type HlsRendition } from '../lib/hls';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 
 /**
@@ -181,6 +183,87 @@ function transcodeProxy(
   });
 }
 
+/** Génère une rendition HLS (VOD, segments .ts + sous-playlist) dans `hlsDir` (Phase 23). */
+function transcodeHlsRendition(
+  input: string,
+  hlsDir: string,
+  name: string,
+  height: number,
+  videoBitrateK: number,
+  cfg: Pick<TranscodeConfig, 'preset' | 'audioBitrateK'>,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(input)
+      .outputOptions([
+        '-vf',
+        `scale=-2:${height}`,
+        '-c:v',
+        'libx264',
+        '-preset',
+        cfg.preset,
+        '-b:v',
+        `${videoBitrateK}k`,
+        '-maxrate',
+        `${Math.round(videoBitrateK * 1.07)}k`,
+        '-bufsize',
+        `${Math.round(videoBitrateK * 1.5)}k`,
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        '-b:a',
+        `${cfg.audioBitrateK}k`,
+        '-hls_time',
+        '6',
+        '-hls_playlist_type',
+        'vod',
+        '-hls_segment_filename',
+        join(hlsDir, `${name}_%03d.ts`),
+      ])
+      .output(join(hlsDir, `${name}.m3u8`))
+      .on('end', () => resolve())
+      .on('error', reject)
+      .run();
+  });
+}
+
+/**
+ * Produit l'échelle HLS adaptative (renditions + master.m3u8) et la pousse dans MinIO sous
+ * `derived/{id}/hls/`. Renvoie les renditions produites (métadonnées) ou `[]` si désactivé.
+ */
+async function buildHls(
+  input: string,
+  dir: string,
+  mediaId: number,
+  cfg: TranscodeConfig,
+  srcWidth: number,
+  srcHeight: number,
+): Promise<{ height: number; width: number; videoBitrateK: number }[]> {
+  const hlsDir = join(dir, 'hls');
+  await mkdir(hlsDir, { recursive: true });
+  const built: HlsRendition[] = [];
+  for (const r of selectRenditions(cfg, srcHeight)) {
+    const name = renditionName(r.height);
+    await transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg);
+    const width =
+      srcWidth > 0 && srcHeight > 0
+        ? Math.round(((srcWidth / srcHeight) * r.height) / 2) * 2
+        : Math.round(((16 / 9) * r.height) / 2) * 2;
+    built.push({
+      height: r.height,
+      width,
+      videoBitrateK: r.videoBitrateK,
+      audioBitrateK: cfg.audioBitrateK,
+      playlist: `${name}.m3u8`,
+    });
+  }
+  await writeFile(join(hlsDir, 'master.m3u8'), buildMasterPlaylist(built));
+  for (const f of await readdir(hlsDir)) {
+    await storage.uploadFile(`derived/${mediaId}/hls/${f}`, join(hlsDir, f), hlsContentType(f));
+  }
+  return built.map((b) => ({ height: b.height, width: b.width, videoBitrateK: b.videoBitrateK }));
+}
+
 async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void> {
   const media = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
   if (!media) throw new Error(`MediaObject ${mediaId} introuvable`);
@@ -222,6 +305,15 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       await makeThumbnail(src, thumbPath, midSec);
       const thumbKey = StorageService.thumbnailKey(mediaId, 'jpg');
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
+
+      // HLS adaptatif (Phase 23) : échelle multi-rendition + master, si activé et hauteur connue.
+      const tcfg = await getTranscodeConfig();
+      const srcHeight = typeof metadata.height === 'number' ? metadata.height : 0;
+      const srcWidth = typeof metadata.width === 'number' ? metadata.width : 0;
+      if (tcfg.enabled && srcHeight > 0) {
+        const renditions = await buildHls(src, dir, mediaId, tcfg, srcWidth, srcHeight);
+        metadata.hls = { renditions };
+      }
 
       await prisma.mediaObject.update({
         where: { id: mediaId },

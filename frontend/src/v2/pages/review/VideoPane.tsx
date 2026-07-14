@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import type { ReviewComment } from '../../types/api';
 import { stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
+import { useHlsPlayer } from './useHlsPlayer';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
 
@@ -26,8 +27,11 @@ export default function VideoPane({
   setFpsOverride,
   startFrame,
   trimRange,
+  hlsUrl,
 }: {
   src: string;
+  /** Master HLS servi par le proxy auth (Phase 23) — prioritaire sur `src` (MP4) si MSE dispo. */
+  hlsUrl?: string | null;
   videoRef: RefObject<HTMLVideoElement | null>;
   /** Drapeau partagé : distingue un seek programmatique d'un déplacement manuel (qui désélectionne). */
   programmaticSeekRef: { current: boolean };
@@ -54,6 +58,7 @@ export default function VideoPane({
   const [loopIn, setLoopIn] = useState<number | null>(null);
   const [loopOut, setLoopOut] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hls = useHlsPlayer(videoRef, hlsUrl ?? null);
 
   const markLoopIn = useCallback(() => {
     const v = videoRef.current;
@@ -130,7 +135,7 @@ export default function VideoPane({
         <div className="relative inline-block max-h-full">
           <video
             ref={videoRef}
-            src={src}
+            src={hls.active ? undefined : src}
             className="block max-h-[calc(100vh-16rem)] max-w-full cursor-pointer"
             onClick={togglePlay}
             onPlay={() => setPlaying(true)}
@@ -144,6 +149,21 @@ export default function VideoPane({
           />
           {overlay}
         </div>
+        {hls.active && hls.levels.length > 1 && (
+          <select
+            title="Qualité de lecture"
+            className="absolute right-2 top-2 rounded-md border border-border bg-black/60 px-2 py-1 text-xs text-white"
+            value={hls.mode}
+            onChange={(e) => hls.setLevel(Number(e.target.value))}
+          >
+            <option value={-1}>Auto</option>
+            {hls.levels.map((l, i) => (
+              <option key={i} value={i}>
+                {l.height}p
+              </option>
+            ))}
+          </select>
+        )}
         {compareOverlay}
       </div>
 
@@ -168,6 +188,7 @@ export default function VideoPane({
         onStep={(d) => stepVideoFrame(videoRef.current, fps, d)}
         startFrame={startFrame}
         currentFrame={currentFrame}
+        duration={duration}
         fps={fps}
         fpsDetected={fpsDetected}
         setFpsOverride={setFpsOverride}

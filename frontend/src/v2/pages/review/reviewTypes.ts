@@ -150,6 +150,8 @@ export interface MediaResp {
   /** Trim vidéo non-destructif (10.G-V10) : bornes en frames, proxy trimé prêt ou en cours. */
   trim: { inFrame: number; outFrame: number } | null;
   trimProxyReady: boolean;
+  /** HLS adaptatif (Phase 23) : renditions disponibles → lecture via le proxy `/hls/master.m3u8`. */
+  hls: { renditions: { height: number; width: number; videoBitrateK: number }[] } | null;
 }
 
 export interface Hotspot3D {

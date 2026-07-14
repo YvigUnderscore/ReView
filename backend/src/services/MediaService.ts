@@ -10,6 +10,7 @@ import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { enqueueMediaJob } from './JobService';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
+import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
@@ -367,6 +368,7 @@ export async function getDetail(user: SessionUser, id: number) {
     splatPresentation?: unknown;
     trim?: { inFrame: number; outFrame: number };
     trimProxyKey?: string;
+    hls?: { renditions: { height: number; width: number; videoBitrateK: number }[] };
   };
   // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
@@ -395,6 +397,8 @@ export async function getDetail(user: SessionUser, id: number) {
     // Trim vidéo non-destructif (10.G-V10) : bornes + proxy trimé prêt ou en cours.
     trim: meta.trim ?? null,
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),
+    // HLS adaptatif (Phase 23) : présent → master servi via /api/media/:id/hls/master.m3u8.
+    hls: meta.hls ?? null,
   };
 }
 
@@ -407,6 +411,27 @@ export async function getUrl(user: SessionUser, id: number) {
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('Accès au projet refusé');
   return storage.getPresignedGetUrl(media.storageKey);
+}
+
+/**
+ * Flux d'un fichier HLS (`derived/{id}/hls/{file}`) — proxy auth (Phase 23) : les playlists
+ * référencent des URI relatifs, servis derrière `/api/media/:id/hls/:file`. `file` est validé
+ * par la route (pas de traversée). Accès lecture (média publié ou uploader + membre projet).
+ */
+export async function getHlsFile(user: SessionUser, id: number, file: string) {
+  const media = await prisma.mediaObject.findUnique({
+    where: { id },
+    select: { published: true, uploaderId: true, versionId: true },
+  });
+  if (!media) throw notFound('Média introuvable');
+  if (!media.published && media.uploaderId !== user.id) throw notFound('Média introuvable');
+  const projectId = await resolveProjectIdForVersion(media.versionId);
+  if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('Accès au projet refusé');
+  const stream = await storage
+    .getObjectStream(`derived/${id}/hls/${file}`)
+    .catch(() => Promise.reject(notFound('Fichier HLS introuvable')));
+  return { stream, contentType: hlsContentType(file) };
 }
 
 const MAX_THUMBNAIL_BYTES = 1_500_000;

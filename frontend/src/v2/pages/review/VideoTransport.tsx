@@ -12,6 +12,7 @@ export default function VideoTransport({
   onStep,
   startFrame,
   currentFrame,
+  duration,
   fps,
   fpsDetected,
   setFpsOverride,
@@ -28,6 +29,8 @@ export default function VideoTransport({
   onStep: (delta: number) => void;
   startFrame: number;
   currentFrame: number;
+  /** Durée totale (s) — pour afficher la frame de fin. */
+  duration: number;
   fps: number;
   fpsDetected: boolean;
   setFpsOverride: (fps: number) => void;
@@ -57,6 +60,7 @@ export default function VideoTransport({
 
       <span className="font-mono text-sm">
         <span className="text-primary">{startFrame + currentFrame}</span>
+        <span className="text-muted-foreground"> / {startFrame + Math.round(duration * fps)}</span>
         <span className="ml-2 text-muted-foreground">TC {tcFromFrame(currentFrame, fps)}</span>
       </span>
 

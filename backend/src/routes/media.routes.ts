@@ -153,6 +153,28 @@ router.get('/:id/url', validate({ params: idParam }), async (req, res) => {
   res.json({ url: await MediaService.getUrl(req.user!, Number(req.params.id)) });
 });
 
+/**
+ * GET /api/media/:id/hls/:file — proxy des fichiers HLS (master/rendition/segment) depuis MinIO
+ * (Phase 23). `file` restreint (pas de `/` ni `..`) ; accès lecture re-vérifié dans le service.
+ */
+router.get(
+  '/:id/hls/:file',
+  validate({
+    params: z.object({ id: z.coerce.number().int(), file: z.string().regex(/^[A-Za-z0-9._-]+$/) }),
+  }),
+  async (req, res) => {
+    const { stream, contentType } = await MediaService.getHlsFile(
+      req.user!,
+      Number(req.params.id),
+      String(req.params.file),
+    );
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    stream.on('error', () => res.destroy());
+    stream.pipe(res);
+  },
+);
+
 // DELETE /api/media/:id — corbeille (soft-delete, uploader ou superviseur+)
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   await MediaService.trash(req.user!, Number(req.params.id));

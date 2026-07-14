@@ -83,6 +83,8 @@ export default function ReviewViewer({
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
+  // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent.
+  const hlsUrl = data?.hls ? `/api/media/${data.media.id}/hls/master.m3u8` : null;
   const startFrame = data?.startFrame ?? 1001;
   const glbSrc = resolveGlbSrc(data);
   const model3dReady =
@@ -151,6 +153,7 @@ export default function ReviewViewer({
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <VideoPane
               src={src}
+              hlsUrl={hlsUrl}
               videoRef={videoRef}
               programmaticSeekRef={programmaticSeekRef}
               overlay={renderOverlay()}
