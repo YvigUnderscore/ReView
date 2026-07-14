@@ -153,30 +153,6 @@ export async function system() {
   };
 }
 
-/** Séries temporelles (uploads & stockage / jour, inscriptions / jour) sur `days` (7–180). */
-export async function activity(daysRaw: number) {
-  const days = Math.min(Math.max(daysRaw || 30, 7), 180);
-  const since = new Date(Date.now() - days * 86_400_000);
-
-  const uploads = await prisma.$queryRaw<{ day: Date; count: bigint; bytes: bigint }[]>`
-    SELECT date_trunc('day', "createdAt") AS day, COUNT(*)::bigint AS count, COALESCE(SUM("size"), 0)::bigint AS bytes
-    FROM "MediaObject"
-    WHERE "createdAt" >= ${since}
-    GROUP BY day ORDER BY day ASC
-  `;
-  const signups = await prisma.$queryRaw<{ day: Date; count: bigint }[]>`
-    SELECT date_trunc('day', "createdAt") AS day, COUNT(*)::bigint AS count
-    FROM "User"
-    WHERE "createdAt" >= ${since}
-    GROUP BY day ORDER BY day ASC
-  `;
-  return {
-    days,
-    uploads: uploads.map((r) => ({ day: r.day, count: Number(r.count), bytes: Number(r.bytes) })),
-    signups: signups.map((r) => ({ day: r.day, count: Number(r.count) })),
-  };
-}
-
 /** Projets en corbeille (globale). */
 export async function trashProjects() {
   return prisma.project.findMany({

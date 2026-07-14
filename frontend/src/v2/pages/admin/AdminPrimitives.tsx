@@ -1,16 +1,39 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { System } from './adminShared';
 
 /** Petites primitives d'affichage partagées par les sections d'administration. */
 
-export function Metric({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
+export function Metric({
+  label,
+  value,
+  sub,
+  to,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  /** Si fourni, la carte devient cliquable et navigue vers les détails filtrés. */
+  to?: string;
+}) {
+  const body = (
+    <>
       <div className="text-2xl font-semibold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
       {sub && <div className="mt-0.5 text-[10px] text-primary">{sub}</div>}
-    </div>
+    </>
   );
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="block rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-secondary/40"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return <div className="rounded-lg border border-border bg-card p-4">{body}</div>;
 }
 
 export function Panel({ title, children }: { title: string; children: ReactNode }) {

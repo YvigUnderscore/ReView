@@ -41,11 +41,6 @@ router.get('/system', async (_req, res) => {
   res.json(await AdminService.system());
 });
 
-// GET /api/admin/activity?days=30 — séries temporelles (uploads & stockage / jour)
-router.get('/activity', async (req, res) => {
-  res.json(await AdminService.activity(Number(req.query.days)));
-});
-
 // GET /api/admin/trash — projets supprimés (corbeille globale, admin)
 router.get('/trash', async (_req, res) => {
   res.json({ projects: await AdminService.trashProjects() });

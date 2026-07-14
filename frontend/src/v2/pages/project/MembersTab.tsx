@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { DeleteIcon } from '../../components/EntityCard';
+import Avatar from '../../components/Avatar';
+import { initialsFrom } from '../../lib/initials';
 import type { Member } from './projectTypes';
 
 /** Onglet Membres : ajout/retrait des utilisateurs du projet. */
@@ -80,11 +82,14 @@ export default function MembersTab({ projectId }: { projectId: number }) {
             key={m.user.id}
             className="group flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
           >
-            <div>
-              <span className="text-sm font-medium">{m.user.name ?? m.user.email}</span>
-              <span className="ml-2 text-xs text-muted-foreground">
-                {m.user.email} · {m.user.role}
-              </span>
+            <div className="flex items-center gap-2">
+              <Avatar seed={m.user.id} initials={initialsFrom(m.user.name)} size={28} />
+              <div>
+                <span className="text-sm font-medium">{m.user.name ?? m.user.email}</span>
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {m.user.email} · {m.user.role}
+                </span>
+              </div>
             </div>
             <button
               onClick={() => remove(m.user.id)}

@@ -6,9 +6,11 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import Avatar from '../../components/Avatar';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { initialsFrom } from '../../lib/initials';
 import UserModal from './UserModal';
 import { fmtBytes } from './adminShared';
 import type { User } from '../../types/api';
@@ -61,10 +63,16 @@ export default function UsersTab() {
             {(users ?? []).map((u) => (
               <tr key={u.id} className="border-t border-border">
                 <td className="px-3 py-2">
-                  <span className="font-medium">{u.displayName ?? u.name ?? '—'}</span>
-                  {u.online && (
-                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-success" title="En ligne" />
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Avatar
+                      seed={u.id}
+                      initials={u.initials ?? initialsFrom(u.displayName ?? u.name)}
+                      avatarUrl={u.avatarUrl}
+                      size={28}
+                      online={u.online}
+                    />
+                    <span className="font-medium">{u.displayName ?? u.name ?? '—'}</span>
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
                 <td className="px-3 py-2">

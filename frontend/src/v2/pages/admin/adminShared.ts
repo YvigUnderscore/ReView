@@ -28,10 +28,11 @@ export interface System {
   disk: { total: number; free: number } | null;
   services: { database: boolean; redis: boolean; minio: boolean };
 }
-export interface ActivityData {
-  days: number;
-  uploads: { day: string; count: number; bytes: number }[];
-  signups: { day: string; count: number }[];
+export interface AuditUser {
+  id: number;
+  displayName: string;
+  initials: string;
+  avatarUrl: string | null;
 }
 export interface AuditRow {
   id: number;
@@ -39,20 +40,60 @@ export interface AuditRow {
   entityType: string | null;
   entityId: number | null;
   createdAt: string;
+  user?: AuditUser | null;
+}
+
+/** Libellé lisible d'une action d'audit (`PROJECT_DELETE` → « Projet supprimé »). */
+export function auditActionLabel(action: string): string {
+  const parts = action.split('_');
+  const verb = parts[parts.length - 1];
+  const subject = parts.slice(0, -1).join(' ');
+  const verbs: Record<string, string> = {
+    CREATE: 'créé',
+    UPDATE: 'modifié',
+    DELETE: 'supprimé',
+    PURGE: 'purgé',
+    RESTORE: 'restauré',
+    PUBLISH: 'publié',
+    LOGIN: 'connexion',
+  };
+  const subj = subject ? subject.charAt(0) + subject.slice(1).toLowerCase().replace(/_/g, ' ') : action;
+  return `${subj} ${verbs[verb ?? ''] ?? (verb ?? '').toLowerCase()}`.trim();
+}
+
+/** Lien de navigation vers l'entité concernée par une entrée d'audit (ou `null`). */
+export function auditEntityLink(entityType: string | null, entityId: number | null): string | null {
+  if (!entityType || !entityId) return null;
+  const routes: Record<string, string> = {
+    Project: `/projects/${entityId}`,
+    Asset: `/assets/${entityId}`,
+    Task: `/tasks/${entityId}`,
+    MediaObject: `/review/${entityId}`,
+  };
+  return routes[entityType] ?? null;
 }
 export type TrashProject = Pick<Project, 'id' | 'name' | 'status'> & { deletedAt: string };
 
-export const SETTINGS_FIELDS: { key: string; label: string; hint: string }[] = [
+export type SizeUnit = 'Mo' | 'Go';
+export interface SettingField {
+  key: string;
+  label: string;
+  hint: string;
+  /** Champ exprimé en taille (Mo/Go) — saisie convertie en octets à l'enregistrement. */
+  bytes?: boolean;
+}
+export const SETTINGS_FIELDS: SettingField[] = [
   {
     key: 'default_start_frame',
     label: 'Frame de départ par défaut',
     hint: 'ex. 1001 — appliqué aux nouveaux projets',
   },
-  { key: 'max_file_size', label: 'Taille max fichier (octets)', hint: 'ex. 5368709120 = 5 Go' },
+  { key: 'max_file_size', label: 'Taille max fichier', hint: 'ex. 5 Go', bytes: true },
   {
     key: 'storage_limit_user',
-    label: 'Quota stockage / utilisateur (octets)',
-    hint: 'ex. 10737418240 = 10 Go',
+    label: 'Quota stockage / utilisateur',
+    hint: 'ex. 10 Go',
+    bytes: true,
   },
   { key: 'max_concurrent_uploads', label: 'Uploads simultanés max', hint: 'ex. 5' },
   {
@@ -61,6 +102,24 @@ export const SETTINGS_FIELDS: { key: string; label: string; hint: string }[] = [
     hint: 'ex. 30 — 0 = purge auto désactivée',
   },
 ];
+
+const UNIT_MULT: Record<SizeUnit, number> = { Mo: 1e6, Go: 1e9 };
+
+/** Convertit une saisie (nombre en Mo/Go, décimale `.` ou `,`) en octets. `null` si invalide. */
+export function parseSizeToBytes(value: string, unit: SizeUnit): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed.replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * UNIT_MULT[unit]);
+}
+
+/** Octets → { value, unit } éditable : Go dès 1 Go, sinon Mo (2 décimales, sans zéros inutiles). */
+export function bytesToUnit(bytes: number): { value: string; unit: SizeUnit } {
+  const unit: SizeUnit = bytes >= 1e9 ? 'Go' : 'Mo';
+  const v = bytes / UNIT_MULT[unit];
+  return { value: String(Number(v.toFixed(2))), unit };
+}
 export const ROLES: Role[] = ['ADMIN', 'SUPERVISOR', 'ARTIST', 'CLIENT'];
 
 export const fmtBytes = (b: number) =>
@@ -75,5 +134,3 @@ export const fmtDuration = (s: number) => {
     m = Math.floor((s % 3600) / 60);
   return d > 0 ? `${d}j ${h}h` : h > 0 ? `${h}h ${m}min` : `${m}min`;
 };
-export const dayLabel = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' });

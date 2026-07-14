@@ -43,11 +43,5 @@ export function removeView(views: KanbanViewsPref, projectId: number, name: stri
   return next;
 }
 
-/** Initiales à partir d'un nom (repli pour l'avatar de l'assigné). */
-export function initialsFrom(name: string | null | undefined): string {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? '';
-  const last = parts.length > 1 ? parts[parts.length - 1]![0] : '';
-  return (first + last).toUpperCase() || '?';
-}
+// Initiales : helper partagé (relocalisé en `lib/initials`), ré-exporté pour compat.
+export { initialsFrom } from '../../lib/initials';

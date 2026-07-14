@@ -30,15 +30,20 @@ export default function OverviewTab() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        <Metric label="Utilisateurs" value={stats.users.total} sub={`${stats.users.online} en ligne`} />
-        <Metric label="Projets" value={stats.pipeline.projects} />
+        <Metric
+          label="Utilisateurs"
+          value={stats.users.total}
+          sub={`${stats.users.online} en ligne`}
+          to="/admin/users"
+        />
+        <Metric label="Projets" value={stats.pipeline.projects} to="/projects" />
         <Metric label="Séquences" value={stats.pipeline.sequences} />
         <Metric label="Shots" value={stats.pipeline.shots} />
         <Metric label="Assets" value={stats.pipeline.assets} />
         <Metric label="Versions" value={stats.pipeline.versions} />
-        <Metric label="Médias" value={stats.media.count} />
+        <Metric label="Médias" value={stats.media.count} to="/reviews" />
         <Metric label="Commentaires" value={stats.comments} />
-        <Metric label="Stockage" value={fmtBytes(stats.media.storageBytes)} />
+        <Metric label="Stockage" value={fmtBytes(stats.media.storageBytes)} to="/admin/users" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
