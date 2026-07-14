@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check, Paperclip } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { isImageAttachment } from '../../../lib/commentAttachments';
+import { Lightbox } from '../ui/lightbox';
 import Avatar from '../Avatar';
 import ReplyComposer from './ReplyComposer';
 import CommentReactions from './CommentReactions';
@@ -37,6 +38,12 @@ export default function CommentItem({
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+
+  // Images jointes (pour la lightbox carrousel — Phase 24).
+  const imageAtts = (Array.isArray(c.attachments) ? c.attachments : []).filter(
+    (a) => !!a.url && isImageAttachment(a.contentType),
+  );
 
   const isAuthor = c.author?.id === currentUserId;
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
@@ -162,13 +169,21 @@ export default function CommentItem({
               (a, i) =>
                 a.url &&
                 (isImageAttachment(a.contentType) ? (
-                  <a key={i} onClick={stop} href={a.url} target="_blank" rel="noreferrer" className="block">
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={(e) => {
+                      stop(e);
+                      setLightboxIdx(imageAtts.findIndex((im) => im.url === a.url));
+                    }}
+                    className="block"
+                  >
                     <img
                       src={a.url}
                       alt={a.name ?? ''}
                       className="h-20 w-20 rounded border border-border object-cover"
                     />
-                  </a>
+                  </button>
                 ) : (
                   <a
                     key={i}
@@ -184,6 +199,15 @@ export default function CommentItem({
                 )),
             )}
           </div>
+        )}
+        {lightboxIdx !== null && (
+          <Lightbox
+            images={imageAtts.map((a) => ({ src: a.url ?? '', alt: a.name ?? '' }))}
+            index={lightboxIdx}
+            open={lightboxIdx !== null}
+            onOpenChange={(o) => !o && setLightboxIdx(null)}
+            onIndexChange={setLightboxIdx}
+          />
         )}
 
         {/* Réactions + actions */}

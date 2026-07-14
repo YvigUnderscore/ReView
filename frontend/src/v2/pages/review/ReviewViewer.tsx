@@ -40,7 +40,6 @@ export default function ReviewViewer({
   canEditTransform,
   canEdit,
   canManage,
-  onToggleAnnotating,
   onClearSelection,
   onPlaceHotspot,
   onSelectComment,
@@ -70,7 +69,6 @@ export default function ReviewViewer({
   canEdit: boolean;
   /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
   canManage: boolean;
-  onToggleAnnotating: () => void;
   onClearSelection: () => void;
   onPlaceHotspot: () => void;
   onSelectComment: (c: ReviewComment) => void;
@@ -139,7 +137,6 @@ export default function ReviewViewer({
         <ReviewAnnotationBar
           ann={ann}
           kind={kind}
-          onToggle={onToggleAnnotating}
           onClearSelection={onClearSelection}
           onPlaceHotspot={onPlaceHotspot}
         />

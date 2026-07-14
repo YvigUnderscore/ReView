@@ -298,7 +298,6 @@ function ReviewContent({ id }: { id: number }) {
             canEdit={canEditMedia}
             canManage={canManageMedia}
             onSplatEditsSaved={onSplatEditsSaved}
-            onToggleAnnotating={toggleAnnotating}
             onClearSelection={clearSelection}
             onPlaceHotspot={placeHotspotCenter}
             onSelectComment={selectComment}
@@ -327,6 +326,8 @@ function ReviewContent({ id }: { id: number }) {
                 camera: kind === 'MODEL_3D' && ann.annotating,
               }}
               onSubmit={submitComment}
+              annotating={ann.annotating}
+              onToggleAnnotate={toggleAnnotating}
             />
           )}
         </div>

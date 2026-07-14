@@ -1,9 +1,12 @@
-import { useRef, useState, type FormEvent, type RefObject } from 'react';
-import { ImagePlus, X } from 'lucide-react';
+import { useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
+import { ImagePlus, PencilLine, X } from 'lucide-react';
 import { ATTACHMENT_ACCEPT } from '../../../lib/commentAttachments';
 import ReviewComments from '../../components/ReviewComments';
 import type { ReviewComment } from '../../types/api';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { Textarea } from '../../components/ui/textarea';
+import { ResizablePanel } from '../../components/ui/resizable';
+import { useImagePaste } from '../../lib/useImagePaste';
 
 /**
  * Panneau latéral des commentaires : liste (avec skeleton de chargement) +
@@ -24,6 +27,8 @@ export default function CommentsPanel({
   composerRef,
   hints,
   onSubmit,
+  annotating,
+  onToggleAnnotate,
 }: {
   comments: ReviewComment[] | null;
   mediaObjectId: number;
@@ -37,11 +42,15 @@ export default function CommentsPanel({
   composerRef: RefObject<HTMLTextAreaElement | null>;
   hints: { annotation: boolean; hotspot: boolean; camera: boolean };
   onSubmit: (content: string, files: File[]) => Promise<boolean>;
+  /** Mode annotation actif (bouton « Annoter » sous le champ, Phase 24). */
+  annotating?: boolean;
+  onToggleAnnotate?: () => void;
 }) {
   const [content, setContent] = useState('');
   const [attachFiles, setAttachFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const onPasteImage = useImagePaste((files) => setAttachFiles((fs) => [...fs, ...files]));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -57,8 +66,23 @@ export default function CommentsPanel({
     }
   };
 
+  // Entrée = saut de ligne (défaut textarea) ; Ctrl/Cmd+Entrée = envoi.
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      void submit(e as unknown as FormEvent);
+    }
+  };
+
   return (
-    <aside className="flex w-[380px] shrink-0 flex-col rounded-lg border border-border bg-card">
+    <ResizablePanel
+      storageKey="review-comments"
+      side="left"
+      defaultSize={380}
+      min={300}
+      max={680}
+      className="flex flex-col rounded-lg border border-border bg-card"
+    >
       <div className="shrink-0 border-b border-border px-4 py-2.5 text-sm font-semibold">
         Commentaires {comments && <span className="text-muted-foreground">· {comments.length}</span>}
       </div>
@@ -102,13 +126,16 @@ export default function CommentsPanel({
         {hints.camera && (
           <p className="mb-1.5 text-[11px] text-primary">📷 La vue caméra actuelle sera enregistrée</p>
         )}
-        <textarea
+        <Textarea
           ref={composerRef}
-          className="w-full resize-none rounded-md border border-input bg-background px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          rows={2}
-          placeholder="Ajouter un commentaire…"
+          autoGrow
+          minRows={2}
+          maxRows={10}
+          placeholder="Ajouter un commentaire… (Ctrl+Entrée pour envoyer)"
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          onKeyDown={onKeyDown}
+          onPaste={onPasteImage}
         />
         <div className="mt-2 flex items-center justify-between">
           <input
@@ -122,14 +149,30 @@ export default function CommentsPanel({
               if (fileRef.current) fileRef.current.value = '';
             }}
           />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            title="Joindre une image"
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <ImagePlus size={16} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              title="Joindre une image"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <ImagePlus size={16} />
+            </button>
+            {onToggleAnnotate && (
+              <button
+                type="button"
+                onClick={onToggleAnnotate}
+                title="Annoter le média"
+                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs ${
+                  annotating
+                    ? 'bg-primary/20 text-primary'
+                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                }`}
+              >
+                <PencilLine size={15} /> Annoter
+              </button>
+            )}
+          </div>
           <button
             type="submit"
             disabled={sending}
@@ -139,6 +182,6 @@ export default function CommentsPanel({
           </button>
         </div>
       </form>
-    </aside>
+    </ResizablePanel>
   );
 }
