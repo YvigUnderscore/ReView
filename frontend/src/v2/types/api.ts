@@ -134,7 +134,9 @@ export interface Media {
   uploaderId: number | null;
 }
 export type MediaRef = Pick<Media, 'id' | 'kind' | 'originalName'>;
-export type MediaSummary = Pick<Media, 'id' | 'kind' | 'originalName' | 'status' | 'published'>;
+export type MediaSummary = Pick<Media, 'id' | 'kind' | 'originalName' | 'status' | 'published'> & {
+  thumbnailUrl?: string | null;
+};
 
 // ── Membres du projet ─────────────────────────────────────────────────────────
 /** GET /api/projects/:id → memberships. */

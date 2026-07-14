@@ -1,7 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useAuth } from '../stores/useAuth';
@@ -12,8 +11,9 @@ import AssetAssignDialog from '../components/AssetAssignDialog';
 import FavoriteButton from '../components/FavoriteButton';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import type { AssetDetail, MediaSummary, VersionDetail, VersionListItem } from '../types/api';
+import { useVersions } from './task/useVersions';
+import VersionTimeline from './task/VersionTimeline';
+import type { AssetDetail } from '../types/api';
 
 export default function AssetPage() {
   const { id } = useParams();
@@ -23,100 +23,30 @@ export default function AssetPage() {
   const canPublish = role === 'ADMIN' || role === 'SUPERVISOR';
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const enqueue = useUploadStore((s) => s.enqueue);
-  const uploads = useUploadStore((s) => s.uploads);
   const qc = useQueryClient();
   const [assigning, setAssigning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [target, setTarget] = useState<number | null>(null);
-  // Versions dont la liste de médias est dépliée (une query par version dépliée)
-  const [openIds, setOpenIds] = useState<number[]>([]);
 
-  const versionsQ = useQuery({
-    queryKey: qk.versions(`assetId=${assetId}`),
-    queryFn: () =>
-      api.get<{ versions: VersionListItem[] }>(`/api/versions?assetId=${assetId}`).then((d) => d.versions),
-  });
-  const versions = versionsQ.data ?? [];
+  const {
+    versions,
+    isLoading,
+    loadError,
+    createVersion,
+    publishVersion,
+    publishMedia,
+    removeVersion,
+    removeMedia,
+  } = useVersions({ assetId });
   const assetQ = useQuery({
     queryKey: qk.asset(assetId),
     queryFn: () => api.get<{ asset: AssetDetail }>(`/api/assets/${assetId}`),
   });
   const asset = assetQ.data?.asset ?? null;
-  const loadError = versionsQ.error?.message ?? null;
 
-  const mediaQueries = useQueries({
-    queries: openIds.map((vid) => ({
-      queryKey: qk.version(vid),
-      queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${vid}`).then((d) => d.version),
-    })),
-  });
-  const mediaByVersion: Record<number, MediaSummary[] | undefined> = {};
-  openIds.forEach((vid, i) => {
-    mediaByVersion[vid] = mediaQueries[i]?.data?.media;
-  });
-
-  const invalidateVersions = () => qc.invalidateQueries({ queryKey: qk.versions(`assetId=${assetId}`) });
-  useEffect(() => {
-    if (uploads.some((u) => u.status === 'done')) {
-      qc.invalidateQueries({ queryKey: qk.versions(`assetId=${assetId}`) });
-      qc.invalidateQueries({ queryKey: ['version'] });
-    }
-  }, [uploads, qc, assetId]);
-
-  const createVersion = async () => {
-    try {
-      await api.post('/api/versions', { assetId });
-      toast.success('Version créée');
-      invalidateVersions();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
-    }
-  };
-  const publish = async (vid: number) => {
-    try {
-      await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' });
-      toast.success('Version publiée');
-      invalidateVersions();
-      qc.invalidateQueries({ queryKey: qk.version(vid) });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
-    }
-  };
-  const openMedia = (versionId: number) => {
-    if (openIds.includes(versionId)) qc.invalidateQueries({ queryKey: qk.version(versionId) });
-    else setOpenIds((ids) => [...ids, versionId]);
-  };
-  const publishMedia = async (versionId: number, mediaId: number) => {
-    try {
-      await api.post(`/api/media/${mediaId}/publish`);
-      toast.success('Média publié pour l’équipe');
-      qc.invalidateQueries({ queryKey: qk.version(versionId) });
-      invalidateVersions();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
-    }
-  };
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && target) enqueue(file, target);
-    if (fileRef.current) fileRef.current.value = '';
-  };
   // Drop-zone plein-écran : dépose vers la dernière version (en crée une si besoin).
   const onDropFiles = async (files: File[]) => {
     let vid: number | null = versions[0]?.id ?? null;
-    if (vid == null) {
-      try {
-        const { version } = await api.post<{ version: { id: number } }>('/api/versions', { assetId });
-        vid = version.id;
-        toast.success('Version créée');
-        invalidateVersions();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Création de version impossible');
-        return;
-      }
-    }
-    files.forEach((f) => enqueue(f, vid!));
+    if (vid == null) vid = (await createVersion())?.id ?? null;
+    if (vid != null) files.forEach((f) => enqueue(f, vid!));
   };
 
   return (
@@ -138,7 +68,7 @@ export default function AssetPage() {
           </Link>
         </div>
       </div>
-      {(error ?? loadError) && <p className="mb-4 text-sm text-destructive">{error ?? loadError}</p>}
+      {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
 
       {asset && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
@@ -181,78 +111,28 @@ export default function AssetPage() {
         />
       )}
       {canCreate && (
-        <Button className="mb-4" onClick={createVersion}>
+        <Button className="mb-4" onClick={() => void createVersion()}>
           + Nouvelle version
         </Button>
       )}
-      <input ref={fileRef} type="file" className="hidden" onChange={onFile} />
 
-      <div className="space-y-3">
-        {versions.map((v) => (
-          <div key={v.id} className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-medium">
-                {v.name}
-                <Badge variant="secondary">{v.status}</Badge>
-                {v.published && <Badge variant="success">publié</Badge>}
-              </div>
-              <div className="flex gap-2">
-                {canCreate && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setTarget(v.id);
-                      fileRef.current?.click();
-                    }}
-                  >
-                    Uploader un média
-                  </Button>
-                )}
-                {canPublish && !v.published && (
-                  <Button size="sm" variant="outline" onClick={() => publish(v.id)}>
-                    Publier
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" onClick={() => openMedia(v.id)}>
-                  Voir médias ({v._count?.media ?? 0})
-                </Button>
-              </div>
-            </div>
-            {mediaByVersion[v.id] && (
-              <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {mediaByVersion[v.id]!.map((m) => (
-                  <li key={m.id} className="rounded border border-border p-2 text-xs">
-                    <Link to={`/review/${m.id}`} className="block hover:text-primary">
-                      <div className="truncate">{m.originalName}</div>
-                      <div className="text-muted-foreground">
-                        {m.kind} · {m.status}
-                        {!m.published && (
-                          <span className="ml-1 rounded bg-warning/15 px-1 text-warning">Brouillon</span>
-                        )}
-                      </div>
-                    </Link>
-                    {!m.published && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-1 w-full text-[10px]"
-                        onClick={() => publishMedia(v.id, m.id)}
-                      >
-                        Publier le média
-                      </Button>
-                    )}
-                  </li>
-                ))}
-                {mediaByVersion[v.id]!.length === 0 && (
-                  <li className="text-xs text-muted-foreground">Aucun média</li>
-                )}
-              </ul>
-            )}
-          </div>
-        ))}
-        {versions.length === 0 && <p className="text-sm text-muted-foreground">Aucune version.</p>}
-      </div>
+      <VersionTimeline
+        versions={versions}
+        isLoading={isLoading}
+        canCreate={canCreate}
+        canPublish={canPublish}
+        contextKey={`asset:${assetId}`}
+        emptyDescription={
+          canCreate
+            ? 'Créez une première version ou déposez un média pour démarrer l’historique de cet asset.'
+            : 'Aucune version publiée pour cet asset.'
+        }
+        onCreateVersion={() => void createVersion()}
+        publishVersion={publishVersion}
+        publishMedia={publishMedia}
+        removeVersion={removeVersion}
+        removeMedia={removeMedia}
+      />
 
       {canCreate && (
         <FullPageDropzone

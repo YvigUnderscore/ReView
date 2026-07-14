@@ -1,21 +1,20 @@
-import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ChevronRight, Layers } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronRight } from 'lucide-react';
+import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
-import ConfirmDialog from '../components/ConfirmDialog';
 import FullPageDropzone from '../components/FullPageDropzone';
-import EmptyState from '../components/ui/empty-state';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Skeleton } from '../components/ui/skeleton';
 import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../lib/taskStatus';
-import { useTaskVersions } from './task/useTaskVersions';
-import VersionTimelineItem from './task/VersionTimelineItem';
+import { useVersions } from './task/useVersions';
+import VersionTimeline from './task/VersionTimeline';
 import TaskDropzone from './task/TaskDropzone';
-import type { MediaSummary, VersionListItem } from '../types/api';
+import type { TaskDetail } from '../types/api';
 
 export default function TaskPage() {
   const { id } = useParams();
@@ -24,8 +23,12 @@ export default function TaskPage() {
   const canCreate = role !== 'CLIENT';
   const canPublish = role === 'ADMIN' || role === 'SUPERVISOR';
   const enqueue = useUploadStore((s) => s.enqueue);
+  const taskQ = useQuery({
+    queryKey: qk.task(taskId),
+    queryFn: () => api.get<{ task: TaskDetail }>(`/api/tasks/${taskId}`).then((d) => d.task),
+  });
+  const task = taskQ.data ?? null;
   const {
-    task,
     versions,
     isLoading,
     loadError,
@@ -34,22 +37,8 @@ export default function TaskPage() {
     publishMedia,
     removeVersion,
     removeMedia,
-  } = useTaskVersions(taskId);
+  } = useVersions({ taskId });
 
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [target, setTarget] = useState<number | null>(null);
-  const [delVersion, setDelVersion] = useState<VersionListItem | null>(null);
-  const [delMedia, setDelMedia] = useState<{ versionId: number; media: MediaSummary } | null>(null);
-
-  const onUploadClick = (versionId: number) => {
-    setTarget(versionId);
-    fileRef.current?.click();
-  };
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && target != null) enqueue(file, target);
-    if (fileRef.current) fileRef.current.value = '';
-  };
   // Drop-zone permanente : dépose vers la dernière version (en crée une si besoin).
   const onDropFiles = async (files: File[]) => {
     let vid: number | null = versions[0]?.id ?? null;
@@ -112,45 +101,24 @@ export default function TaskPage() {
           <TaskDropzone latestVersionName={versions[0]?.name ?? null} onFiles={onDropFiles} />
         </div>
       )}
-      <input ref={fileRef} type="file" className="hidden" onChange={onFile} />
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : versions.length === 0 ? (
-        <EmptyState
-          icon={Layers}
-          title="Aucune version"
-          description={
-            canCreate
-              ? 'Créez une première version ou déposez un média ci-dessus pour démarrer l’historique de cette tâche.'
-              : 'Aucune version publiée pour cette tâche.'
-          }
-          action={canCreate ? 'Créer une version' : undefined}
-          onAction={canCreate ? () => createVersion() : undefined}
-        />
-      ) : (
-        <ol className="ml-1">
-          {versions.map((v, i) => (
-            <VersionTimelineItem
-              key={v.id}
-              version={v}
-              isLast={i === versions.length - 1}
-              defaultOpen={i === 0}
-              canCreate={canCreate}
-              canPublish={canPublish}
-              onUpload={onUploadClick}
-              onPublishVersion={publishVersion}
-              onDeleteVersion={setDelVersion}
-              onPublishMedia={publishMedia}
-              onDeleteMedia={(versionId, media) => setDelMedia({ versionId, media })}
-            />
-          ))}
-        </ol>
-      )}
+      <VersionTimeline
+        versions={versions}
+        isLoading={isLoading}
+        canCreate={canCreate}
+        canPublish={canPublish}
+        contextKey={`task:${taskId}`}
+        emptyDescription={
+          canCreate
+            ? 'Créez une première version ou déposez un média ci-dessus pour démarrer l’historique de cette tâche.'
+            : 'Aucune version publiée pour cette tâche.'
+        }
+        onCreateVersion={() => void createVersion()}
+        publishVersion={publishVersion}
+        publishMedia={publishMedia}
+        removeVersion={removeVersion}
+        removeMedia={removeMedia}
+      />
 
       {canCreate && (
         <FullPageDropzone
@@ -162,33 +130,6 @@ export default function TaskPage() {
           }
         />
       )}
-
-      <ConfirmDialog
-        open={!!delVersion}
-        title="Supprimer la version ?"
-        message={
-          <>La version « {delVersion?.name} » et ses médias seront déplacés dans la corbeille du projet.</>
-        }
-        confirmLabel="Mettre à la corbeille"
-        danger
-        onConfirm={() => {
-          if (delVersion) removeVersion(delVersion.id);
-          setDelVersion(null);
-        }}
-        onCancel={() => setDelVersion(null)}
-      />
-      <ConfirmDialog
-        open={!!delMedia}
-        title="Supprimer le média ?"
-        message={<>« {delMedia?.media.originalName} » sera déplacé dans la corbeille du projet.</>}
-        confirmLabel="Mettre à la corbeille"
-        danger
-        onConfirm={() => {
-          if (delMedia) removeMedia(delMedia.versionId, delMedia.media.id);
-          setDelMedia(null);
-        }}
-        onCancel={() => setDelMedia(null)}
-      />
     </Shell>
   );
 }

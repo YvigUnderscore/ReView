@@ -9,25 +9,79 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { timeAgo } from '../../lib/time';
 import { MEDIA_KIND_ICON, VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
 import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
+import type { ViewMode } from '../../stores/useViewPref';
 
-/** Vignette d'un média (icône selon le type) → review au clic ; actions publier/supprimer. */
+/** Miniature d'un média (vraie vignette ou icône selon le type). */
+function MediaThumb({ media, size }: { media: MediaSummary; size: number }) {
+  const Icon = MEDIA_KIND_ICON[media.kind];
+  return media.thumbnailUrl ? (
+    <img
+      src={media.thumbnailUrl}
+      alt={media.originalName}
+      loading="lazy"
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <Icon size={size} />
+  );
+}
+
+/** Vignette d'un média → review au clic ; actions publier/supprimer. Cartes ou ligne compacte. */
 function MediaTile({
   media,
+  view,
   canManage,
   onPublish,
   onDelete,
 }: {
   media: MediaSummary;
+  view: ViewMode;
   canManage: boolean;
   onPublish: (m: MediaSummary) => void;
   onDelete: (m: MediaSummary) => void;
 }) {
-  const Icon = MEDIA_KIND_ICON[media.kind];
+  if (view === 'compact') {
+    return (
+      <div className="group flex items-center gap-2 rounded-md border border-border bg-card p-1.5">
+        <Link to={`/review/${media.id}`} className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="relative flex aspect-video h-9 shrink-0 items-center justify-center overflow-hidden rounded bg-black/40 text-muted-foreground">
+            <MediaThumb media={media} size={14} />
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-xs text-foreground">{media.originalName}</div>
+            <div className="truncate text-[10px] text-muted-foreground">
+              {media.kind} · {media.status}
+              {!media.published && <span className="ml-1 text-primary">· Brouillon</span>}
+            </div>
+          </div>
+        </Link>
+        {canManage && (
+          <div className="flex shrink-0 items-center gap-1 text-[10px]">
+            {!media.published && (
+              <button
+                onClick={() => onPublish(media)}
+                className="rounded px-1.5 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                Publier
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(media)}
+              title="Supprimer"
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="group overflow-hidden rounded-md border border-border bg-card">
       <Link to={`/review/${media.id}`} title={`Ouvrir la review : ${media.originalName}`} className="block">
-        <div className="relative flex aspect-video items-center justify-center bg-black/40 text-muted-foreground">
-          <Icon size={22} />
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-black/40 text-muted-foreground">
+          <MediaThumb media={media} size={22} />
           {!media.published && (
             <span className="absolute left-1 top-1 rounded bg-primary/20 px-1 text-[10px] text-primary">
               Brouillon
@@ -70,6 +124,7 @@ export default function VersionTimelineItem({
   version,
   isLast,
   defaultOpen,
+  view,
   canCreate,
   canPublish,
   onUpload,
@@ -81,6 +136,7 @@ export default function VersionTimelineItem({
   version: VersionListItem;
   isLast: boolean;
   defaultOpen: boolean;
+  view: ViewMode;
   canCreate: boolean;
   canPublish: boolean;
   onUpload: (versionId: number) => void;
@@ -161,11 +217,16 @@ export default function VersionTimelineItem({
                 {canCreate ? ' Utilisez « Média » ou déposez un fichier ci-dessus.' : ''}
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              <div
+                className={
+                  view === 'compact' ? 'space-y-1.5' : 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4'
+                }
+              >
                 {media.map((m) => (
                   <MediaTile
                     key={m.id}
                     media={m}
+                    view={view}
                     canManage={canCreate}
                     onPublish={(mm) => onPublishMedia(version.id, mm.id)}
                     onDelete={(mm) => onDeleteMedia(version.id, mm)}

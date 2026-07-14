@@ -4,42 +4,41 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { useUploadStore } from '../../../stores/useUploadStore';
-import type { TaskDetail, Version, VersionListItem } from '../../types/api';
+import type { Version, VersionListItem } from '../../types/api';
+
+/** Portée d'une timeline de versions : rattachée à une tâche OU à un asset. */
+export type VersionScope = { taskId: number } | { assetId: number };
 
 /**
- * Données et mutations d'une tâche pour la timeline de versions (10.C3).
- * Lectures via Query (une clé = une shape) ; chaque mutation invalide les clés
- * concernées et produit un toast (feedback obligatoire).
+ * Données + mutations d'une timeline de versions, **partagées par TaskPage et AssetPage**
+ * (Phase 20). Lectures via Query ; chaque mutation invalide les clés concernées + toast.
  */
-export function useTaskVersions(taskId: number) {
+export function useVersions(scope: VersionScope) {
   const qc = useQueryClient();
   const uploads = useUploadStore((s) => s.uploads);
-  const versionsKey = qk.versions(`taskId=${taskId}`);
+  const filter = 'taskId' in scope ? `taskId=${scope.taskId}` : `assetId=${scope.assetId}`;
+  const createBody = 'taskId' in scope ? { taskId: scope.taskId } : { assetId: scope.assetId };
+  const versionsKey = qk.versions(filter);
 
-  const taskQ = useQuery({
-    queryKey: qk.task(taskId),
-    queryFn: () => api.get<{ task: TaskDetail }>(`/api/tasks/${taskId}`).then((d) => d.task),
-  });
   const versionsQ = useQuery({
     queryKey: versionsKey,
     queryFn: () =>
-      api.get<{ versions: VersionListItem[] }>(`/api/versions?taskId=${taskId}`).then((d) => d.versions),
+      api.get<{ versions: VersionListItem[] }>(`/api/versions?${filter}`).then((d) => d.versions),
   });
 
   const invalidateVersions = () => qc.invalidateQueries({ queryKey: versionsKey });
 
   // Un upload terminé rafraîchit la liste des versions + les médias de chaque version.
-  // (deps sur taskId, stable — versionsKey est recalculé à chaque render.)
   useEffect(() => {
     if (uploads.some((u) => u.status === 'done')) {
-      qc.invalidateQueries({ queryKey: qk.versions(`taskId=${taskId}`) });
+      qc.invalidateQueries({ queryKey: qk.versions(filter) });
       qc.invalidateQueries({ queryKey: ['version'] });
     }
-  }, [uploads, qc, taskId]);
+  }, [uploads, qc, filter]);
 
   const createVersion = async (): Promise<Version | null> => {
     try {
-      const { version } = await api.post<{ version: Version }>('/api/versions', { taskId });
+      const { version } = await api.post<{ version: Version }>('/api/versions', createBody);
       toast.success(`Version « ${version.name} » créée`);
       await invalidateVersions();
       return version;
@@ -89,10 +88,9 @@ export function useTaskVersions(taskId: number) {
   };
 
   return {
-    task: taskQ.data ?? null,
     versions: versionsQ.data ?? [],
-    isLoading: taskQ.isLoading || versionsQ.isLoading,
-    loadError: (taskQ.error ?? versionsQ.error)?.message ?? null,
+    isLoading: versionsQ.isLoading,
+    loadError: versionsQ.error?.message ?? null,
     createVersion,
     publishVersion,
     publishMedia,

@@ -1,5 +1,6 @@
 import { Role, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { storage } from './StorageService';
 import { softDeleteVersion, restoreVersion, purgeVersion } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
@@ -76,11 +77,26 @@ export async function getDetail(userId: number, id: number) {
       media: {
         where: { deletedAt: null, OR: [{ published: true }, { uploaderId: userId }] },
         orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          kind: true,
+          originalName: true,
+          status: true,
+          published: true,
+          thumbnailKey: true,
+        },
       },
     },
   });
   if (!version) throw notFound('Version introuvable');
-  return version;
+  // Présigne la miniature de chaque média (Phase 20 : vraies vignettes dans la timeline).
+  const media = await Promise.all(
+    version.media.map(async ({ thumbnailKey, ...m }) => ({
+      ...m,
+      thumbnailUrl: thumbnailKey ? await storage.getPresignedGetUrl(thumbnailKey) : null,
+    })),
+  );
+  return { ...version, media };
 }
 
 export interface UpdateVersionInput {
