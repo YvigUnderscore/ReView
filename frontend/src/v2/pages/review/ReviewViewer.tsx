@@ -2,6 +2,7 @@ import { type ComponentProps, useEffect, useState } from 'react';
 import type { ReviewComment, Role } from '../../types/api';
 import { AnnotationCanvas } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
+import ReferenceOverlay from './ReferenceOverlay';
 import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
@@ -212,6 +213,7 @@ export default function ReviewViewer({
               info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
             />
           </div>
+          <ReferenceOverlay mediaId={data.media.id} reference={data.reference} canManage={canManage} />
         </div>
       )}
 

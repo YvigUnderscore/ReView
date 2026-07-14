@@ -152,6 +152,8 @@ export interface MediaResp {
   trimProxyReady: boolean;
   /** HLS adaptatif (Phase 23) : renditions disponibles → lecture via le proxy `/hls/master.m3u8`. */
   hls: { renditions: { height: number; width: number; videoBitrateK: number }[] } | null;
+  /** Image de référence review 2D (Phase 24) : persistée & partagée (position en fractions du cadre). */
+  reference: { url: string; x: number; y: number; width: number } | null;
 }
 
 export interface Hotspot3D {

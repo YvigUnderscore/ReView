@@ -162,6 +162,7 @@ model User {
   favorites        Favorite[]
   documents        Document[]
   announcementReads AnnouncementRead[]
+  reviewReferences ReviewReference[]
 }
 
 model PasswordReset {
@@ -343,7 +344,25 @@ model MediaObject {
   uploader   User? @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
   uploaderId Int?
 
-  comments Comment[]
+  comments  Comment[]
+  reference ReviewReference?
+}
+
+// Image de référence d'une review 2D (Phase 24) : persistée & partagée (tous les spectateurs
+// la voient), déplaçable/redimensionnable. Position/échelle en fractions du cadre (0–1) →
+// indépendante de la taille d'écran. Non soumise au verrou de publication (aide de review).
+model ReviewReference {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int         @unique
+  storageKey    String // clé objet MinIO (derived/{id}/reference.*)
+  x             Float       @default(0.05) // coin haut-gauche (fraction du cadre)
+  y             Float       @default(0.05)
+  width         Float       @default(0.3) // largeur (fraction du cadre)
+  createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById   Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
