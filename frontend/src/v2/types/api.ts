@@ -38,6 +38,17 @@ export interface Announcement {
 /** GET /api/announcements (admin) — avec nombre d'accusés de lecture. */
 export type AnnouncementAdmin = Announcement & { _count: { reads: number } };
 
+/** GET /api/studio/smtp — config SMTP (jamais le mot de passe). */
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  from: string;
+  hasPassword: boolean;
+  envOverride: boolean;
+}
+
 // ── Utilisateurs ──────────────────────────────────────────────────────────────
 /** Ligne complète de GET /api/users (admin). */
 export interface User {

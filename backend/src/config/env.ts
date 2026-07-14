@@ -49,6 +49,9 @@ const baseEnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('ReView <no-reply@review.local>'),
+  // Clé de chiffrement des secrets stockés (SMTP…). Optionnelle : à défaut, dérivée de
+  // JWT_SECRET (SHA-256). En prod, JWT_SECRET est déjà durci (guard ci-dessous).
+  APP_ENCRYPTION_KEY: z.string().optional(),
   // Heure locale (0-23) d'envoi du digest quotidien.
   DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
   // URL publique de l'app (liens dans les emails) ; sans elle, liens omis.

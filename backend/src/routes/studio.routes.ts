@@ -9,6 +9,8 @@ import { isValidDiscordWebhook } from '../lib/sanitize';
 import { badRequest, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
+import * as SmtpService from '../services/SmtpService';
+import { sendMail } from '../lib/mailer';
 
 const router = Router();
 router.use(authenticate);
@@ -42,9 +44,9 @@ router.patch(
   },
 );
 
-// GET /api/studio/settings — réglages clé/valeur (admin)
+// GET /api/studio/settings — réglages clé/valeur (admin). `smtp_config` exclu (secret chiffré).
 router.get('/settings', requireRole(Role.ADMIN), async (_req, res) => {
-  const settings = await prisma.setting.findMany();
+  const settings = await prisma.setting.findMany({ where: { key: { not: 'smtp_config' } } });
   res.json({ settings: Object.fromEntries(settings.map((s) => [s.key, s.value])) });
 });
 
@@ -68,5 +70,40 @@ router.put(
 router.get('/audit', requireRole(Role.ADMIN), validate({ query: paginationQuery }), async (req, res) => {
   res.json(await AuditService.list(readPagination(req.query)));
 });
+
+const smtpSchema = z.object({
+  host: z.string().max(255).optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  secure: z.boolean().optional(),
+  user: z.string().max(255).optional(),
+  from: z.string().max(255).optional(),
+  password: z.string().max(255).optional(), // write-only (jamais renvoyé)
+});
+
+// GET /api/studio/smtp — config SMTP sans mot de passe (admin)
+router.get('/smtp', requireRole(Role.ADMIN), async (_req, res) => {
+  res.json({ smtp: await SmtpService.getPublicConfig() });
+});
+
+// PUT /api/studio/smtp — enregistre la config (mot de passe chiffré, write-only) (admin)
+router.put('/smtp', requireRole(Role.ADMIN), validate({ body: smtpSchema }), async (req, res) => {
+  res.json({ smtp: await SmtpService.setConfig(req.body) });
+});
+
+// POST /api/studio/smtp/test — envoie un email de test (admin)
+router.post(
+  '/smtp/test',
+  requireRole(Role.ADMIN),
+  validate({ body: z.object({ to: z.string().email() }) }),
+  async (req, res) => {
+    const ok = await sendMail(
+      req.body.to,
+      'ReView — test SMTP',
+      '<p>Ceci est un email de test envoyé depuis ReView. La configuration SMTP fonctionne.</p>',
+    );
+    if (!ok) throw badRequest('Envoi impossible (SMTP non configuré ou erreur)', 'SMTP_SEND_FAILED');
+    res.json({ sent: true });
+  },
+);
 
 export default router;

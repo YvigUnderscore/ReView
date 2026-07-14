@@ -156,7 +156,7 @@ ${blocks}
 
 /** Envoie le digest quotidien à tous les abonnés (préférence `emailDigest`). */
 export async function sendDailyDigests(now = new Date()): Promise<number> {
-  if (!isMailerConfigured()) {
+  if (!(await isMailerConfigured())) {
     logger.info('[Digest] SMTP non configuré : envoi quotidien sauté');
     return 0;
   }

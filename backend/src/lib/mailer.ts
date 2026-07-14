@@ -1,31 +1,31 @@
 import nodemailer, { type Transporter } from 'nodemailer';
-import { env } from '../config/env';
 import { logger } from './logger';
+import { getEffectiveConfig, type SmtpEffectiveConfig } from '../services/SmtpService';
 
 /**
- * Envoi d'emails (digest quotidien). Optionnel : sans SMTP_HOST configuré,
- * `isMailerConfigured()` renvoie false et aucun envoi n'est tenté.
+ * Envoi d'emails (digest quotidien, test SMTP). Configuration lue via `SmtpService`
+ * (base chiffrée + override environnement). Sans host configuré, aucun envoi n'est tenté.
  */
-let transporter: Transporter | null = null;
 
-export const isMailerConfigured = (): boolean => !!env.SMTP_HOST;
+/** Vrai si un serveur SMTP est configuré (base ou environnement). */
+export async function isMailerConfigured(): Promise<boolean> {
+  return (await getEffectiveConfig()) !== null;
+}
 
-function getTransporter(): Transporter {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_SECURE,
-      auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS ?? '' } : undefined,
-    });
-  }
-  return transporter;
+function buildTransport(cfg: SmtpEffectiveConfig): Transporter {
+  return nodemailer.createTransport({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    auth: cfg.user ? { user: cfg.user, pass: cfg.pass ?? '' } : undefined,
+  });
 }
 
 export async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
-  if (!isMailerConfigured()) return false;
+  const cfg = await getEffectiveConfig();
+  if (!cfg) return false;
   try {
-    await getTransporter().sendMail({ from: env.SMTP_FROM, to, subject, html });
+    await buildTransport(cfg).sendMail({ from: cfg.from, to, subject, html });
     return true;
   } catch (err) {
     logger.error({ err, to, subject }, '[Mailer] échec d’envoi');
