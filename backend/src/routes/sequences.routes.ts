@@ -6,12 +6,23 @@ import { authenticate } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForSequence } from '../lib/pipeline';
+import { pipelineOverrideSchema } from '../lib/projectSettings';
 import { softDeleteSequence, restoreSequence, purgeSequence } from '../lib/trash';
 import { logAudit } from '../services/AuditService';
 import { badRequest, notFound } from '../lib/errors';
 
 const router = Router();
 router.use(authenticate);
+
+// Champs d'une séquence (création). PATCH les rend optionnels via `.partial()`.
+const sequenceBody = z.object({
+  name: z.string().min(1).max(160),
+  code: z.string().min(1).max(60),
+  order: z.number().int().optional(),
+  settings: pipelineOverrideSchema.optional(),
+});
+const createSequenceBody = sequenceBody.extend({ projectId: z.number().int() });
+type CreateSequenceBody = z.infer<typeof createSequenceBody>;
 
 // GET /api/sequences?projectId=X — liste les séquences d'un projet
 // + `unsequencedShots` : nombre de shots du projet hors séquence (arbre sidebar)
@@ -33,26 +44,16 @@ router.get('/', validate({ query: z.object({ projectId: z.coerce.number().int() 
 router.post(
   '/',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({
-    body: z.object({
-      projectId: z.number().int(),
-      name: z.string().min(1).max(160),
-      code: z.string().min(1).max(60),
-      order: z.number().int().optional(),
-    }),
-  }),
+  validate({ body: createSequenceBody }),
   async (req, res) => {
-    const { projectId, name, code, order } = req.body as {
-      projectId: number;
-      name: string;
-      code: string;
-      order?: number;
-    };
+    const { projectId, name, code, order, settings } = req.body as CreateSequenceBody;
     await assertProjectAccess(req, projectId);
     if (await prisma.sequence.findUnique({ where: { projectId_code: { projectId, code } } })) {
       throw badRequest('Une séquence avec ce code existe déjà', 'CODE_TAKEN');
     }
-    const sequence = await prisma.sequence.create({ data: { projectId, name, code, order: order ?? 0 } });
+    const sequence = await prisma.sequence.create({
+      data: { projectId, name, code, order: order ?? 0, settings: settings ?? {} },
+    });
     res.status(201).json({ sequence });
   },
 );
@@ -130,11 +131,7 @@ router.patch(
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({
     params: z.object({ id: z.coerce.number().int() }),
-    body: z.object({
-      name: z.string().min(1).max(160).optional(),
-      code: z.string().min(1).max(60).optional(),
-      order: z.number().int().optional(),
-    }),
+    body: sequenceBody.partial(),
   }),
   async (req, res) => {
     const id = Number(req.params.id);

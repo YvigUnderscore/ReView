@@ -1,11 +1,14 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { logAudit } from '../services/AuditService';
-import { getStudioProjectDefaults, setStudioProjectDefaults } from '../lib/projectSettings';
+import {
+  getStudioProjectDefaults,
+  setStudioProjectDefaults,
+  projectSettingsSchema,
+} from '../lib/projectSettings';
 import * as AdminService from '../services/AdminService';
 
 const router = Router();
@@ -16,30 +19,12 @@ router.get('/project-defaults', async (_req, res) => {
   res.json({ settings: await getStudioProjectDefaults() });
 });
 
-// PUT /api/admin/project-defaults — départements + nomenclature par défaut (overridables/projet)
-router.put(
-  '/project-defaults',
-  validate({
-    body: z.object({
-      departments: z
-        .array(z.object({ key: z.string().min(1).max(40), name: z.string().min(1).max(80) }))
-        .optional(),
-      nomenclature: z
-        .object({
-          sequencePrefix: z.string().max(16),
-          shotPrefix: z.string().max(16),
-          padding: z.number().int().min(1).max(8),
-          step: z.number().int().min(1),
-        })
-        .optional(),
-    }),
-  }),
-  async (req, res) => {
-    const settings = await setStudioProjectDefaults(req.body);
-    logAudit({ userId: req.user!.id, action: 'PROJECT_DEFAULTS_UPDATE', entityType: 'Setting' });
-    res.json({ settings });
-  },
-);
+// PUT /api/admin/project-defaults — départements + nomenclature + pipeline par défaut
+router.put('/project-defaults', validate({ body: projectSettingsSchema }), async (req, res) => {
+  const settings = await setStudioProjectDefaults(req.body);
+  logAudit({ userId: req.user!.id, action: 'PROJECT_DEFAULTS_UPDATE', entityType: 'Setting' });
+  res.json({ settings });
+});
 
 // GET /api/admin/dashboard — métriques studio (compat. ascendante, vue compacte)
 router.get('/dashboard', async (_req, res) => {

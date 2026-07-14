@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForShot } from '../lib/pipeline';
+import { pipelineOverrideSchema } from '../lib/projectSettings';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as ShotService from '../services/ShotService';
@@ -13,6 +14,17 @@ const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
+
+// Champs d'un shot (création). PATCH les rend optionnels via `.partial()` (+ thumbnailKey).
+const shotBody = z.object({
+  sequenceId: z.number().int().nullable().optional(),
+  name: z.string().min(1).max(160),
+  code: z.string().min(1).max(60),
+  startFrame: z.number().int().nullable().optional(),
+  endFrame: z.number().int().nullable().optional(),
+  order: z.number().int().optional(),
+  settings: pipelineOverrideSchema.optional(),
+});
 
 /** Résout le projet d'un shot + assertion d'accès (RBAC dynamique) → renvoie le projectId. */
 async function resolveShotAccess(req: Request, shotId: number): Promise<number> {
@@ -45,17 +57,7 @@ router.get(
 router.post(
   '/',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({
-    body: z.object({
-      projectId: z.number().int(),
-      sequenceId: z.number().int().nullable().optional(),
-      name: z.string().min(1).max(160),
-      code: z.string().min(1).max(60),
-      startFrame: z.number().int().nullable().optional(),
-      endFrame: z.number().int().nullable().optional(),
-      order: z.number().int().optional(),
-    }),
-  }),
+  validate({ body: shotBody.extend({ projectId: z.number().int() }) }),
   async (req, res) => {
     await assertProjectAccess(req, req.body.projectId);
     res.status(201).json({ shot: await ShotService.create(req.body) });
@@ -67,22 +69,7 @@ router.post(
   '/bulk',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({
-    body: z.object({
-      projectId: z.number().int(),
-      items: z
-        .array(
-          z.object({
-            sequenceId: z.number().int().nullable().optional(),
-            name: z.string().min(1).max(160),
-            code: z.string().min(1).max(60),
-            startFrame: z.number().int().nullable().optional(),
-            endFrame: z.number().int().nullable().optional(),
-            order: z.number().int().optional(),
-          }),
-        )
-        .min(1)
-        .max(200),
-    }),
+    body: z.object({ projectId: z.number().int(), items: z.array(shotBody).min(1).max(200) }),
   }),
   async (req, res) => {
     const { projectId, items } = req.body as { projectId: number; items: ShotService.BulkShotItem[] };
@@ -104,15 +91,7 @@ router.patch(
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({
     params: idParam,
-    body: z.object({
-      sequenceId: z.number().int().nullable().optional(),
-      name: z.string().min(1).max(160).optional(),
-      code: z.string().min(1).max(60).optional(),
-      startFrame: z.number().int().nullable().optional(),
-      endFrame: z.number().int().nullable().optional(),
-      order: z.number().int().optional(),
-      thumbnailKey: z.string().max(512).nullable().optional(),
-    }),
+    body: shotBody.partial().extend({ thumbnailKey: z.string().max(512).nullable().optional() }),
   }),
   async (req, res) => {
     const id = Number(req.params.id);

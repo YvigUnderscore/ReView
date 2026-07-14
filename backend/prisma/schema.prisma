@@ -211,6 +211,8 @@ model Sequence {
   name      String
   code      String
   order     Int    @default(0)
+  // Réglages pipeline propres (override résolution/fps/frames du projet). JSON.
+  settings  Json   @default("{}")
   deletedAt DateTime?
 
   shots  Shot[]
@@ -230,6 +232,8 @@ model Shot {
   startFrame Int?
   endFrame   Int?
   order      Int       @default(0)
+  // Réglages pipeline propres (override résolution/fps du parent). JSON.
+  settings   Json      @default("{}")
   thumbnailKey String?
   deletedAt  DateTime?
 

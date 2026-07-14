@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { requireRole, requireProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { paginationQuery, readPagination } from '../lib/pagination';
+import { projectSettingsSchema } from '../lib/projectSettings';
 import * as ProjectService from '../services/ProjectService';
 
 const router = Router();
@@ -129,22 +130,7 @@ router.get(
 // PUT /api/projects/:projectId/settings — override des réglages projet (admin/superviseur)
 router.put(
   '/:projectId/settings',
-  validate({
-    params: projectIdParam,
-    body: z.object({
-      departments: z
-        .array(z.object({ key: z.string().min(1).max(40), name: z.string().min(1).max(80) }))
-        .optional(),
-      nomenclature: z
-        .object({
-          sequencePrefix: z.string().max(16),
-          shotPrefix: z.string().max(16),
-          padding: z.number().int().min(1).max(8),
-          step: z.number().int().min(1),
-        })
-        .optional(),
-    }),
-  }),
+  validate({ params: projectIdParam, body: projectSettingsSchema }),
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   async (req, res) => {
     const settings = await ProjectService.updateSettings(

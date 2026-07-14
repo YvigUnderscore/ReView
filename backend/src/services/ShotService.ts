@@ -1,4 +1,4 @@
-import { AssetType } from '@prisma/client';
+import { AssetType, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';
 import { firstMediaThumbKeyForShot, effectiveThumbnailUrl } from '../lib/thumbnails';
@@ -58,6 +58,7 @@ export interface CreateShotInput {
   startFrame?: number | null;
   endFrame?: number | null;
   order?: number;
+  settings?: Prisma.InputJsonValue;
 }
 
 export async function create(input: CreateShotInput) {
@@ -82,6 +83,7 @@ export async function create(input: CreateShotInput) {
       startFrame: input.startFrame ?? null,
       endFrame: input.endFrame ?? null,
       order: input.order ?? 0,
+      settings: input.settings ?? {},
     },
   });
 }
@@ -147,6 +149,7 @@ export interface UpdateShotInput {
   endFrame?: number | null;
   order?: number;
   thumbnailKey?: string | null;
+  settings?: Prisma.InputJsonValue;
 }
 
 export async function update(id: number, projectId: number, body: UpdateShotInput) {
