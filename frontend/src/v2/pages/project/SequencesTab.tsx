@@ -13,9 +13,11 @@ import { EditIcon, DeleteIcon } from '../../components/EntityCard';
 import EmptyState from '../../components/ui/empty-state';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import ModeSwitch, { type CreateMode } from './ModeSwitch';
+import SequenceEditDialog from './SequenceEditDialog';
 import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData } from './projectTypes';
+import type { PipelineSettings } from '../../types/api';
 
-/** Onglet Séquences : création (simple / lot / auto), édition inline, détail en accordéon. */
+/** Onglet Séquences : création (simple / lot / auto), édition (dialog), détail en accordéon. */
 export default function SequencesTab({
   projectId,
   sequences,
@@ -24,6 +26,7 @@ export default function SequencesTab({
   focusId = null,
   onFocus,
   nomenclature,
+  pipeline,
 }: {
   projectId: number;
   sequences: Sequence[];
@@ -32,11 +35,11 @@ export default function SequencesTab({
   focusId?: number | null;
   onFocus: (id: number | null) => void;
   nomenclature: Nomenclature;
+  pipeline: PipelineSettings;
 }) {
   const [newSeq, setNewSeq] = useState({ name: '', code: '' });
   const [mode, setMode] = useState<CreateMode>('simple');
-  const [editing, setEditing] = useState<number | null>(null);
-  const [editVals, setEditVals] = useState({ code: '', name: '' });
+  const [editing, setEditing] = useState<Sequence | null>(null);
   // Accordéon piloté par l'URL (?seq=ID) : back/forward et partage de lien cohérents (10.A6)
   const open = focusId;
   const [deleting, setDeleting] = useState<Sequence | null>(null);
@@ -62,20 +65,6 @@ export default function SequencesTab({
     });
     toast.success(`${rows.length} séquence(s) créée(s)`);
     await reload();
-  };
-  const startEdit = (s: Sequence) => {
-    setEditing(s.id);
-    setEditVals({ code: s.code, name: s.name });
-  };
-  const saveEdit = async (id: number) => {
-    try {
-      await api.patch(`/api/sequences/${id}`, editVals);
-      toast.success('Séquence modifiée');
-      setEditing(null);
-      reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
-    }
   };
   const confirmDelete = async () => {
     if (!deleting) return;
@@ -155,64 +144,49 @@ export default function SequencesTab({
         <div className="space-y-1.5">
           {sorted.map((s) => (
             <div key={s.id} className="rounded-md border border-border bg-card">
-              {editing === s.id ? (
-                <div className="flex items-center gap-2 px-3 py-2">
-                  <input
-                    className="w-28 rounded border border-input bg-background px-2 py-1 text-xs"
-                    value={editVals.code}
-                    onChange={(e) => setEditVals((v) => ({ ...v, code: e.target.value }))}
-                  />
-                  <input
-                    className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
-                    value={editVals.name}
-                    onChange={(e) => setEditVals((v) => ({ ...v, name: e.target.value }))}
-                  />
-                  <button
-                    onClick={() => saveEdit(s.id)}
-                    className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground"
-                  >
-                    Enregistrer
-                  </button>
-                  <button
-                    onClick={() => setEditing(null)}
-                    className="rounded border border-border px-2 py-1 text-xs"
-                  >
-                    Annuler
-                  </button>
+              <div className="group flex items-center justify-between px-3 py-2">
+                <button onClick={() => onFocus(open === s.id ? null : s.id)} className="text-left text-sm">
+                  <span className="font-medium">{s.code}</span> · {s.name}
+                </button>
+                <div className="flex items-center gap-1">
+                  <FavoriteButton type="SEQUENCE" entityId={s.id} />
+                  {canManage && (
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        onClick={() => setEditing(s)}
+                        title="Modifier"
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
+                      >
+                        {EditIcon}
+                      </button>
+                      <button
+                        onClick={() => setDeleting(s)}
+                        title="Supprimer"
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-secondary"
+                      >
+                        {DeleteIcon}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="group flex items-center justify-between px-3 py-2">
-                  <button onClick={() => onFocus(open === s.id ? null : s.id)} className="text-left text-sm">
-                    <span className="font-medium">{s.code}</span> · {s.name}
-                  </button>
-                  <div className="flex items-center gap-1">
-                    <FavoriteButton type="SEQUENCE" entityId={s.id} />
-                    {canManage && (
-                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          onClick={() => startEdit(s)}
-                          title="Modifier"
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
-                        >
-                          {EditIcon}
-                        </button>
-                        <button
-                          onClick={() => setDeleting(s)}
-                          title="Supprimer"
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-secondary"
-                        >
-                          {DeleteIcon}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              </div>
               {open === s.id && <SequenceDetail sequenceId={s.id} />}
             </div>
           ))}
         </div>
       )}
+      {editing && (
+        <SequenceEditDialog
+          sequence={editing}
+          pipeline={pipeline}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            reload();
+          }}
+        />
+      )}
+
       <ConfirmDialog
         open={!!deleting}
         title="Supprimer la séquence ?"

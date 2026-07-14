@@ -68,6 +68,10 @@ export default function ProjectSettingsTab({
     }
   };
 
+  const setRes = (k: 'width' | 'height', v: string) =>
+    setDraft((d) => d && { ...d, resolution: { ...d.resolution, [k]: Number(v) || 1 } });
+  const setFps = (v: string) => setDraft((d) => d && { ...d, framerate: Number(v) || 1 });
+
   const setNom = (k: keyof Nomenclature, v: string) =>
     setDraft(
       (d) =>
@@ -112,6 +116,49 @@ export default function ProjectSettingsTab({
             {savingFrame ? '…' : 'Enregistrer'}
           </button>
         </div>
+      </section>
+
+      {/* Format & cadence (résolution + fps) — défauts du projet, hérités par séquences/shots */}
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="text-sm font-medium">Format &amp; cadence</div>
+        <div className="mb-3 text-xs text-muted-foreground">
+          Résolution de livraison et cadence par défaut du projet (héritées par les séquences et shots,
+          override possible à leur niveau).
+        </div>
+        {draft ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Largeur (px)">
+              <input
+                type="number"
+                min={1}
+                className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
+                value={draft.resolution.width}
+                onChange={(e) => setRes('width', e.target.value)}
+              />
+            </Field>
+            <span className="pb-1.5 text-muted-foreground">×</span>
+            <Field label="Hauteur (px)">
+              <input
+                type="number"
+                min={1}
+                className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
+                value={draft.resolution.height}
+                onChange={(e) => setRes('height', e.target.value)}
+              />
+            </Field>
+            <Field label="Cadence (fps)">
+              <input
+                type="number"
+                min={1}
+                className="w-20 rounded border border-input bg-background px-2 py-1.5 text-xs"
+                value={draft.framerate}
+                onChange={(e) => setFps(e.target.value)}
+              />
+            </Field>
+          </div>
+        ) : (
+          <SkeletonRows count={1} />
+        )}
       </section>
 
       {/* Nomenclature */}

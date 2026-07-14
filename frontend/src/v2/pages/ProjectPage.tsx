@@ -82,6 +82,11 @@ export default function ProjectPage() {
     padding: 3,
     step: 10,
   };
+  // Pipeline projet résolu (résolution/cadence) — socle d'héritage pour séquences/shots.
+  const pipeline = {
+    resolution: settings?.resolution ?? { width: 1920, height: 1080 },
+    framerate: settings?.framerate ?? 24,
+  };
 
   const tabs = [
     { key: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard size={16} /> },
@@ -138,6 +143,7 @@ export default function ProjectPage() {
           focusId={focusShot}
           onFocus={setFocusShot}
           nomenclature={nomenclature}
+          pipeline={pipeline}
         />
       )}
       {tab === 'sequences' && (
@@ -149,6 +155,7 @@ export default function ProjectPage() {
           focusId={focusSeq}
           onFocus={setFocusSeq}
           nomenclature={nomenclature}
+          pipeline={pipeline}
         />
       )}
       {tab === 'assets' && (

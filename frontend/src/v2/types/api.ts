@@ -57,6 +57,8 @@ export interface Sequence {
   code: string;
   name: string;
   order: number;
+  /** Override pipeline (résolution/fps) hérité du projet — Phase 18/19. */
+  settings?: PipelineOverride;
 }
 export type SequenceRef = Pick<Sequence, 'id' | 'code' | 'name'>;
 /** GET /api/sequences?projectId= */
@@ -67,7 +69,11 @@ export interface Shot {
   code: string;
   name: string;
   sequenceId: number | null;
+  startFrame?: number | null;
+  endFrame?: number | null;
   thumbnailUrl?: string | null;
+  /** Override pipeline (résolution/fps) hérité séquence→projet — Phase 18/19. */
+  settings?: PipelineOverride;
 }
 export type ShotRef = Pick<Shot, 'id' | 'code' | 'name'>;
 /** GET /api/shots?projectId= */
@@ -182,8 +188,23 @@ export interface Department {
   key: string;
   name: string;
 }
+/** Résolution de livraison (px). */
+export interface Resolution {
+  width: number;
+  height: number;
+}
+/** Réglages pipeline effectifs (résolus) d'une entité — Phase 18. */
+export interface PipelineSettings {
+  resolution: Resolution;
+  framerate: number;
+}
+/** Override pipeline partiel (séquence/shot) : hérite du parent si absent. */
+export interface PipelineOverride {
+  resolution?: Resolution;
+  framerate?: number;
+}
 /** GET /api/projects/:id/settings — aussi la shape des défauts studio (admin). */
-export interface ProjectSettings {
+export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
 }

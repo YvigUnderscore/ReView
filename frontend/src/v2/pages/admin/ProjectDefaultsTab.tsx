@@ -46,6 +46,9 @@ export default function ProjectDefaultsTab() {
       (d) =>
         d && { ...d, departments: d.departments.map((dep, idx) => (idx === i ? { ...dep, [k]: v } : dep)) },
     );
+  const setRes = (k: 'width' | 'height', v: string) =>
+    setDraft((d) => d && { ...d, resolution: { ...d.resolution, [k]: Number(v) || 1 } });
+  const setFps = (v: string) => setDraft((d) => d && { ...d, framerate: Number(v) || 1 });
   const save = async () => {
     setBusy(true);
     try {
@@ -100,6 +103,39 @@ export default function ProjectDefaultsTab() {
               className="w-16 py-1.5 text-xs"
               value={String(draft.nomenclature.padding)}
               onChange={(e) => setNom('padding', e.target.value)}
+            />
+          </DefField>
+        </div>
+      </Panel>
+
+      <Panel title="Format &amp; cadence par défaut">
+        <div className="flex flex-wrap items-end gap-3">
+          <DefField label="Largeur (px)">
+            <Input
+              type="number"
+              min={1}
+              className="w-24 py-1.5 text-xs"
+              value={String(draft.resolution.width)}
+              onChange={(e) => setRes('width', e.target.value)}
+            />
+          </DefField>
+          <span className="pb-1.5 text-muted-foreground">×</span>
+          <DefField label="Hauteur (px)">
+            <Input
+              type="number"
+              min={1}
+              className="w-24 py-1.5 text-xs"
+              value={String(draft.resolution.height)}
+              onChange={(e) => setRes('height', e.target.value)}
+            />
+          </DefField>
+          <DefField label="Cadence (fps)">
+            <Input
+              type="number"
+              min={1}
+              className="w-20 py-1.5 text-xs"
+              value={String(draft.framerate)}
+              onChange={(e) => setFps(e.target.value)}
             />
           </DefField>
         </div>

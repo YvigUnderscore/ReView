@@ -5,17 +5,22 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
+import PipelineFields from './PipelineFields';
+import { applyOverride, formFromOverride, overrideFromForm } from './pipelineForm';
+import type { PipelineSettings } from '../../types/api';
 import type { Sequence, Shot } from './projectTypes';
 
-/** Modal d'édition d'un shot : code, nom, séquence (réassignation). */
+/** Modal d'édition d'un shot : code, nom, séquence, intervalle de frames, override pipeline. */
 export default function ShotEditDialog({
   shot,
   sequences,
+  pipeline,
   onClose,
   onSaved,
 }: {
   shot: Shot;
   sequences: Sequence[];
+  pipeline: PipelineSettings;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -23,7 +28,13 @@ export default function ShotEditDialog({
     code: shot.code,
     name: shot.name,
     sequenceId: shot.sequenceId ? String(shot.sequenceId) : '',
+    startFrame: shot.startFrame != null ? String(shot.startFrame) : '',
+    endFrame: shot.endFrame != null ? String(shot.endFrame) : '',
   });
+  // Héritage : pipeline projet, surchargé par l'override de la séquence sélectionnée.
+  const seqOverride = sequences.find((s) => String(s.id) === vals.sequenceId)?.settings;
+  const inherited = applyOverride(pipeline, seqOverride);
+  const [pipe, setPipe] = useState(() => formFromOverride(shot.settings, inherited));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +46,9 @@ export default function ShotEditDialog({
         code: vals.code,
         name: vals.name,
         sequenceId: vals.sequenceId ? Number(vals.sequenceId) : null,
+        startFrame: vals.startFrame ? Number(vals.startFrame) : null,
+        endFrame: vals.endFrame ? Number(vals.endFrame) : null,
+        settings: overrideFromForm(pipe, inherited),
       });
       toast.success('Shot modifié');
       onSaved();
@@ -57,16 +71,20 @@ export default function ShotEditDialog({
         </DialogHeader>
         {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
         <div className="space-y-2">
-          <Input
-            placeholder="Code"
-            value={vals.code}
-            onChange={(e) => setVals((v) => ({ ...v, code: e.target.value }))}
-          />
-          <Input
-            placeholder="Nom"
-            value={vals.name}
-            onChange={(e) => setVals((v) => ({ ...v, name: e.target.value }))}
-          />
+          <div className="flex gap-2">
+            <Input
+              placeholder="Code"
+              className="w-32"
+              value={vals.code}
+              onChange={(e) => setVals((v) => ({ ...v, code: e.target.value }))}
+            />
+            <Input
+              placeholder="Nom"
+              className="flex-1"
+              value={vals.name}
+              onChange={(e) => setVals((v) => ({ ...v, name: e.target.value }))}
+            />
+          </div>
           <Select
             className="w-full"
             value={vals.sequenceId}
@@ -79,6 +97,27 @@ export default function ShotEditDialog({
               </option>
             ))}
           </Select>
+          <div className="flex gap-2">
+            <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+              Frame de début
+              <Input
+                type="number"
+                placeholder="hérité"
+                value={vals.startFrame}
+                onChange={(e) => setVals((v) => ({ ...v, startFrame: e.target.value }))}
+              />
+            </label>
+            <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+              Frame de fin
+              <Input
+                type="number"
+                placeholder="hérité"
+                value={vals.endFrame}
+                onChange={(e) => setVals((v) => ({ ...v, endFrame: e.target.value }))}
+              />
+            </label>
+          </div>
+          <PipelineFields inherited={inherited} form={pipe} onChange={setPipe} idPrefix={`shot-${shot.id}`} />
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>

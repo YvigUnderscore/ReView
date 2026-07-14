@@ -14,6 +14,7 @@ import ModeSwitch, { type CreateMode } from './ModeSwitch';
 import ShotDetailDrawer from './ShotDetailDrawer';
 import ShotEditDialog from './ShotEditDialog';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
+import type { PipelineSettings } from '../../types/api';
 
 /**
  * Onglet Shots : création (simple / lot / auto), cartes groupées par séquence,
@@ -28,6 +29,7 @@ export default function ShotsTab({
   focusId = null,
   onFocus,
   nomenclature,
+  pipeline,
 }: {
   projectId: number;
   sequences: Sequence[];
@@ -37,6 +39,7 @@ export default function ShotsTab({
   focusId?: number | null;
   onFocus: (id: number | null) => void;
   nomenclature: Nomenclature;
+  pipeline: PipelineSettings;
 }) {
   const view = useViewMode(`shots:${projectId}`);
   const favs = useFavorites((s) => s.favorites);
@@ -261,6 +264,7 @@ export default function ShotsTab({
         <ShotEditDialog
           shot={editing}
           sequences={sortedSequences}
+          pipeline={pipeline}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
