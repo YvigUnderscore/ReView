@@ -15,6 +15,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
+import { useAutoThumbnail } from './review/useAutoThumbnail';
 import { useModel3DThree } from './review/three/useModel3DThree';
 import ReviewHeader from './review/ReviewHeader';
 import ReviewViewer from './review/ReviewViewer';
@@ -100,8 +101,11 @@ function ReviewContent({ id }: { id: number }) {
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
   const canEditMedia = canManageMedia && !published;
   const canEditTransform = !published && (role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST');
-  // Miniature splat + patch du cache après enregistrement des éditions (extrait, budget 10.F4).
-  const onSplatEditsSaved = useSplatThumbnail(id, data, splat, canEditMedia);
+  // Miniature auto à la 1re vue (splat + 3D), tous viewers, si absente (Phase 20).
+  useAutoThumbnail(id, data, 'SPLAT', splat.ready, splat.captureThumbnail);
+  useAutoThumbnail(id, data, 'MODEL_3D', model3d.ready, model3d.captureThumbnail);
+  // Patch du cache après enregistrement des éditions splat + recapture gestionnaire (10.F4).
+  const onSplatEditsSaved = useSplatThumbnail(id, splat, canEditMedia);
 
   const seek = (t: number) => {
     if (videoRef.current) {

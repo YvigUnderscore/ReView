@@ -12,7 +12,7 @@ import { createPointCloud, type PointCloud } from './scene/pointCloud';
 import { ELLIPSES_OPACITY, setFalloff, type RenderMode } from './scene/renderModes';
 import { captureSplatCamera, restoreSplatCamera } from './scene/splatCameraState';
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
-import { toThumbnail } from './scene/thumbnail';
+import { toThumbnail } from '../viewer/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
 
 /**

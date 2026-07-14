@@ -16,6 +16,7 @@ import { useModelAnimations } from './useModelAnimations';
 import { useModelLayout } from './useModelLayout';
 import { createFlyControls, type FlyControls } from '../viewer/flyControls';
 import { frameCameraToSphere, objectBoundingSphere } from '../viewer/frameCamera';
+import { useThumbnailCapture } from '../viewer/useThumbnailCapture';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 
@@ -45,6 +46,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
   const frameCbs = useRef(new Set<(dt: number) => void>());
+  const { onFrame: captureFrame, capture: captureThumbnail } = useThumbnailCapture();
   const flyRef = useRef<FlyControls | null>(null);
   const [ready, setReady] = useState(false);
   const [fov, setFovState] = useState(45);
@@ -200,6 +202,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
           container.clientWidth,
           container.clientHeight,
         );
+        captureFrame(scene.renderer.domElement); // miniature auto (Phase 20)
       });
       setReady(true);
       cleanup = () => {
@@ -219,7 +222,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       hotspotRef.current = null;
       actionRef.current = null;
     };
-  }, [active, glbSrc, animInit, renderPip]);
+  }, [active, glbSrc, animInit, renderPip, captureFrame]);
 
   // Applique la transformation (orientation + échelle) au groupe parent, en live.
   useEffect(() => {
@@ -306,6 +309,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     selectAnim: anim.selectAnim,
     hotspotAtCenter,
     showHotspot,
+    captureThumbnail,
     captureCamera,
     restoreCamera,
     subscribeFrame,

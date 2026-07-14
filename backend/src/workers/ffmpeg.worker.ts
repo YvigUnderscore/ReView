@@ -22,7 +22,7 @@ import { startStorageCleanupWorker } from './storageCleanup.worker';
  * FFmpeg, repousse les dérivés vers MinIO, met à jour MediaObject (status, thumbnailKey,
  * metadata), puis nettoie le temporaire. Aucun fichier ne persiste sur le serveur app.
  *
- *  - thumbnail : miniature JPEG (frame ~1s pour la vidéo, redimensionnement pour l'image)
+ *  - thumbnail : miniature JPEG (redimensionnement pour l'image ; la vidéo capture au centre)
  *  - transcode : sonde (ffprobe) + proxy MP4 (h264/aac, faststart) + miniature
  *  - convert3d : conversion FBX/OBJ/USD… → GLB (assimp) pour model-viewer (9.A1)
  *
@@ -136,11 +136,15 @@ function probe(path: string): Promise<{ duration?: number; width?: number; heigh
   });
 }
 
-/** Génère une miniature JPEG (frame vidéo à ~1s, ou redimensionnement image). */
-function makeThumbnail(input: string, output: string, isVideo: boolean): Promise<void> {
+/**
+ * Génère une miniature JPEG. Pour la vidéo, on capture la frame au **centre** (`seekSec`,
+ * typiquement durée/2 — plus représentatif qu'une frame de début souvent noire) ; pour
+ * l'image, pas de seek (redimensionnement direct).
+ */
+function makeThumbnail(input: string, output: string, seekSec?: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const cmd = ffmpeg(input);
-    if (isVideo) cmd.seekInput(1);
+    if (seekSec !== undefined && seekSec > 0) cmd.seekInput(seekSec);
     cmd
       .outputOptions(['-vframes 1', '-vf scale=640:-2'])
       .output(output)
@@ -212,7 +216,10 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       metadata.proxyKey = proxyKey;
 
       const thumbPath = join(dir, 'thumb.jpg');
-      await makeThumbnail(src, thumbPath, true);
+      // Frame au centre de la vidéo (durée/2) — repli à 1 s si la durée est inconnue.
+      const midSec =
+        typeof metadata.duration === 'number' && metadata.duration > 0 ? metadata.duration / 2 : 1;
+      await makeThumbnail(src, thumbPath, midSec);
       const thumbKey = StorageService.thumbnailKey(mediaId, 'jpg');
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
 
@@ -253,7 +260,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       // Image : sonde dimensions + miniature
       Object.assign(metadata, await probe(src));
       const thumbPath = join(dir, 'thumb.jpg');
-      await makeThumbnail(src, thumbPath, false);
+      await makeThumbnail(src, thumbPath);
       const thumbKey = StorageService.thumbnailKey(mediaId, 'jpg');
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
       await prisma.mediaObject.update({

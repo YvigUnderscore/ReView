@@ -418,11 +418,8 @@ const MAX_THUMBNAIL_BYTES = 1_500_000;
  * gestionnaires du média (uploader/superviseur+), média non publié uniquement (verrou
  * Phase 11). Renvoie l'URL présignée de la miniature.
  */
-export async function setThumbnail(user: SessionUser, id: number, dataUrl: string) {
-  await assertMediaManage(id, user);
-  const media = await prisma.mediaObject.findUnique({ where: { id }, select: { published: true } });
-  if (!media) throw notFound('Média introuvable');
-  assertNotPublished(media);
+/** Décode + valide une data URL image base64 → buffer + type + extension (lève si invalide). */
+function decodeThumbnailDataUrl(dataUrl: string): { buf: Buffer; contentType: string; ext: string } {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i.exec(dataUrl);
   if (!m) throw badRequest('Miniature invalide (data URL image attendue)', 'INVALID_THUMBNAIL');
   const contentType = m[1]!.toLowerCase();
@@ -431,12 +428,59 @@ export async function setThumbnail(user: SessionUser, id: number, dataUrl: strin
     throw badRequest('Miniature vide ou trop volumineuse', 'INVALID_THUMBNAIL');
   if (!detectImage(buf.subarray(0, 16)))
     throw badRequest('Contenu de miniature non reconnu comme image', 'INVALID_THUMBNAIL');
-
   const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+  return { buf, contentType, ext };
+}
+
+export async function setThumbnail(user: SessionUser, id: number, dataUrl: string) {
+  await assertMediaManage(id, user);
+  const media = await prisma.mediaObject.findUnique({ where: { id }, select: { published: true } });
+  if (!media) throw notFound('Média introuvable');
+  assertNotPublished(media);
+  const { buf, contentType, ext } = decodeThumbnailDataUrl(dataUrl);
   const key = StorageService.thumbnailKey(id, ext);
   await storage.putObject(key, buf, contentType);
   await prisma.mediaObject.update({ where: { id }, data: { thumbnailKey: key } });
   return { thumbnailUrl: await storage.getPresignedGetUrl(key) };
+}
+
+/**
+ * Miniature **auto** capturée côté client à la 1re visualisation d'un média 3D/splat (pas de
+ * rendu headless serveur). Bootstrap idempotent : n'écrit que si `thumbnailKey` est **absent**
+ * (jamais d'écrasement — n'entre donc pas en conflit avec le verrou de publication : on remplit
+ * un aperçu manquant, on ne modifie pas le média). Accès lecture suffisant (tout membre du
+ * projet qui voit le média). Concurrence gérée par un update conditionnel (une seule écriture).
+ */
+export async function setAutoThumbnail(user: SessionUser, id: number, dataUrl: string) {
+  const media = await prisma.mediaObject.findUnique({
+    where: { id },
+    select: { published: true, uploaderId: true, versionId: true, thumbnailKey: true },
+  });
+  if (!media) throw notFound('Média introuvable');
+  if (!media.published && media.uploaderId !== user.id) throw notFound('Média introuvable');
+  const projectId = await resolveProjectIdForVersion(media.versionId);
+  if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('Accès au projet refusé');
+  // Déjà une miniature (worker ou capture concurrente) : on ne touche à rien.
+  if (media.thumbnailKey) {
+    return { thumbnailUrl: await storage.getPresignedGetUrl(media.thumbnailKey), created: false };
+  }
+  const { buf, contentType, ext } = decodeThumbnailDataUrl(dataUrl);
+  const key = StorageService.thumbnailKey(id, ext);
+  await storage.putObject(key, buf, contentType);
+  // Écriture conditionnelle : ne pose la clé que si toujours nulle (anti-course).
+  const { count } = await prisma.mediaObject.updateMany({
+    where: { id, thumbnailKey: null },
+    data: { thumbnailKey: key },
+  });
+  if (count === 0) {
+    // Une capture concurrente a gagné : on supprime notre objet et on renvoie la sienne.
+    await storage.deleteObject(key).catch(() => undefined);
+    const fresh = await prisma.mediaObject.findUnique({ where: { id }, select: { thumbnailKey: true } });
+    const url = fresh?.thumbnailKey ? await storage.getPresignedGetUrl(fresh.thumbnailKey) : null;
+    return { thumbnailUrl: url, created: false };
+  }
+  return { thumbnailUrl: await storage.getPresignedGetUrl(key), created: true };
 }
 
 /** Vérifie que l'utilisateur peut gérer ce média (uploader ou superviseur+) et renvoie le projet. */

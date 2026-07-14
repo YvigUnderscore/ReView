@@ -127,6 +127,18 @@ router.post(
 );
 
 /**
+ * POST /api/media/:id/auto-thumbnail — miniature auto capturée à la 1re vue d'un média 3D/splat.
+ * Bootstrap idempotent (n'écrit que si `thumbnailKey` absent), accès lecture (tout membre projet).
+ */
+router.post(
+  '/:id/auto-thumbnail',
+  validate({ params: idParam, body: z.object({ dataUrl: z.string().min(1).max(1_600_000) }) }),
+  async (req, res) => {
+    res.json(await MediaService.setAutoThumbnail(req.user!, Number(req.params.id), req.body.dataUrl));
+  },
+);
+
+/**
  * GET /api/media/:id — objet média complet + URLs présignées (original, miniature, proxy).
  * Les éditions splat (transform/volumes/masque) vivent dans media-splat.routes.ts (10.G).
  */
