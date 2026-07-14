@@ -11,6 +11,7 @@ import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
 import * as SmtpService from '../services/SmtpService';
 import { sendMail } from '../lib/mailer';
+import { mailLayout } from '../lib/mailTemplate';
 
 const router = Router();
 router.use(authenticate);
@@ -99,7 +100,10 @@ router.post(
     const ok = await sendMail(
       req.body.to,
       'ReView — test SMTP',
-      '<p>Ceci est un email de test envoyé depuis ReView. La configuration SMTP fonctionne.</p>',
+      mailLayout(
+        'Test SMTP',
+        '<p>Ceci est un email de test envoyé depuis ReView. Si vous le recevez, la configuration SMTP fonctionne.</p>',
+      ),
     );
     if (!ok) throw badRequest('Envoi impossible (SMTP non configuré ou erreur)', 'SMTP_SEND_FAILED');
     res.json({ sent: true });

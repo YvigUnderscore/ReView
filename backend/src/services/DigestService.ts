@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
+import { mailLayout, MAIL_ACCENT } from '../lib/mailTemplate';
 import { displayName } from '../lib/userView';
 
 /**
@@ -123,7 +124,7 @@ export function renderDigestHtml(userName: string, digests: ProjectDigest[], dat
     .map((d) => {
       const link = env.APP_URL ? `${env.APP_URL}/projects/${d.projectId}` : null;
       const title = link
-        ? `<a href="${link}" style="color:#e8590c;text-decoration:none">${esc(d.projectName)}</a>`
+        ? `<a href="${link}" style="color:${MAIL_ACCENT};text-decoration:none">${esc(d.projectName)}</a>`
         : esc(d.projectName);
       const list = (label: string, items: string[]) =>
         items.length
@@ -146,12 +147,10 @@ ${list(
 </div>`;
     })
     .join('');
-  return `<div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:640px;margin:0 auto;color:#222">
-<h1 style="font-size:18px">ReView — digest du ${day}</h1>
-<p>Bonjour ${esc(userName)}, voici l'activité des dernières 24 heures sur vos projets :</p>
+  const content = `<p>Bonjour ${esc(userName)}, voici l'activité des dernières 24 heures sur vos projets :</p>
 ${blocks}
-<p style="color:#888;font-size:12px">Vous recevez cet email car le digest quotidien est activé dans votre profil ReView.</p>
-</div>`;
+<p style="color:#6b7280;font-size:12px">Vous recevez cet email car le digest quotidien est activé dans votre profil ReView.</p>`;
+  return mailLayout(`Digest du ${day}`, content);
 }
 
 /** Envoie le digest quotidien à tous les abonnés (préférence `emailDigest`). */
