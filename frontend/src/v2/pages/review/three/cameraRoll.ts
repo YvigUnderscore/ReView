@@ -26,12 +26,19 @@ export function applyRoll(
   forward: THREE.Vector3,
   roll: number,
 ): void {
+  if (!roll) {
+    // Roll nul → up monde par défaut (Phase 26, fix tilt) : ne fige plus un up projeté sur la
+    // vue courante, qui devenait obsolète dès qu'on orbitait ensuite (tilt résiduel). Vue quasi
+    // verticale exceptée (up ∥ vue → lookAt dégénéré) : on garde le up projeté.
+    const f0 = forward.clone().normalize();
+    if (Math.abs(f0.y) > 0.9999) camera.up.copy(baseUp(three, f0));
+    else camera.up.set(0, 1, 0);
+    return;
+  }
   const f = forward.clone().normalize();
   const up = baseUp(three, f);
-  if (roll) {
-    const perp = new three.Vector3().crossVectors(f, up); // dans le plan ⟂ vue
-    up.multiplyScalar(Math.cos(roll)).addScaledVector(perp, Math.sin(roll)).normalize();
-  }
+  const perp = new three.Vector3().crossVectors(f, up); // dans le plan ⟂ vue
+  up.multiplyScalar(Math.cos(roll)).addScaledVector(perp, Math.sin(roll)).normalize();
   camera.up.copy(up);
 }
 

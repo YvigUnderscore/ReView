@@ -32,4 +32,15 @@ describe('cameraRoll — tilt via camera.up (mode layout)', () => {
     applyRoll(THREE, camera, new THREE.Vector3(0, -1, 0), 0);
     expect(camera.up.length()).toBeCloseTo(1);
   });
+
+  it('roll 0 : restaure le up monde quel que soit l’axe de vue (Phase 26, fix tilt)', () => {
+    const camera = new THREE.PerspectiveCamera();
+    // Un roll non nul a figé un up penché ; revenir à 0 doit rendre (0,1,0), pas un up projeté.
+    const forward = new THREE.Vector3(1, -0.5, -1);
+    applyRoll(THREE, camera, forward, 0.7);
+    applyRoll(THREE, camera, forward, 0);
+    expect(camera.up.x).toBe(0);
+    expect(camera.up.y).toBe(1);
+    expect(camera.up.z).toBe(0);
+  });
 });
