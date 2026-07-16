@@ -37,6 +37,8 @@ export function useTransformGizmo(
     /** Réglages espace/snap/taille par cible (11.G) — défauts « splat » si absent. */
     settings?: GizmoSettings;
     onChange: (t: SplatTransform) => void;
+    /** Fin de manipulation (Phase 26) : TRS avant/après le drag → opération annulable. */
+    onCommit?: (before: SplatTransform, after: SplatTransform) => void;
   },
 ): void {
   const { enabled, mode, target } = opts;
@@ -44,6 +46,8 @@ export function useTransformGizmo(
   const { ready, getSceneHandle } = viewer;
   const onChangeRef = useRef(opts.onChange);
   onChangeRef.current = opts.onChange;
+  const onCommitRef = useRef(opts.onCommit);
+  onCommitRef.current = opts.onCommit;
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const settingsRef = useRef(settings);
@@ -71,8 +75,15 @@ export function useTransformGizmo(
       const helper = control.getHelper();
       scene.add(helper);
 
+      let dragStart: SplatTransform | null = null;
       const onDragging = (event: { value: unknown }) => {
         controls.enabled = !event.value; // gèle l'orbite pendant la manipulation du gizmo
+        if (event.value) {
+          dragStart = readMeshTransform(attached); // début de drag : snapshot pour l'historique
+        } else if (dragStart) {
+          onCommitRef.current?.(dragStart, readMeshTransform(attached));
+          dragStart = null;
+        }
       };
       const onObjectChange = () => onChangeRef.current(readMeshTransform(attached));
       control.addEventListener('dragging-changed', onDragging);

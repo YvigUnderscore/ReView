@@ -111,12 +111,41 @@ export function useSplatEditor(
   const targetKind: GizmoTargetKind = activeSdf ? 'volume' : 'splat';
   const gizmo = useGizmoSettings(targetKind);
 
+  // Undo/redo du gizmo (Phase 26) : à la fin d'un drag, pousse une opération annulable qui
+  // rejoue la TRS avant/après sur la cible (splat entier ou volume SDF actif).
+  const historyPush = history.push;
+  const gizmoCommit = useCallback(
+    (before: SplatTransform, after: SplatTransform) => {
+      const sdf = activeSdf;
+      if (sdf) {
+        const apply = (t: SplatTransform) => {
+          sdf.position.fromArray(t.position);
+          sdf.quaternion.fromArray(t.quaternion);
+          sdf.scale.fromArray(t.scale);
+          syncSphereRadius(sdf);
+          setVolumeTrs(t);
+          setDirty(true);
+        };
+        historyPush({ label: 'Transformer le volume', undo: () => apply(before), redo: () => apply(after) });
+      } else {
+        const apply = (t: SplatTransform) => {
+          applyTransform(t);
+          setTransform(t);
+          setDirty(true);
+        };
+        historyPush({ label: 'Transformer le splat', undo: () => apply(before), redo: () => apply(after) });
+      }
+    },
+    [activeSdf, applyTransform, historyPush],
+  );
+
   useTransformGizmo(splat, {
     enabled: enabled && isGizmoTool,
     mode: isGizmoTool ? (tool as GizmoMode) : 'translate',
     target: volumes.activeSdf,
     settings: gizmo.settings,
     onChange: volumes.activeSdf ? volumeGizmoChange : onGizmoChange,
+    onCommit: gizmoCommit,
   });
 
   /** Saisie des champs numériques (V4) : applique la TRS à la cible du gizmo (splat ou volume). */

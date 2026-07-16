@@ -4,32 +4,10 @@ import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
 import { HudGroup } from '../../hud/ViewerHud';
 import HudNumber from '../../hud/HudNumber';
 
-/** Arrondi d'affichage (3 décimales) — évite le bruit flottant dans les champs. */
+/** Arrondi d'affichage (3 décimales) — évite le bruit flottant dans les champs de snap. */
 const fmt = (v: number) => String(Math.round(v * 1000) / 1000);
 
-/**
- * Champ numérique « DCC » : non contrôlé pendant la saisie (commit au blur/Entrée), resynchronisé
- * quand la valeur externe change (drag du gizmo) via la clé de remontage — pas de setState en effet.
- */
-function NumField({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
-  const text = fmt(value);
-  return (
-    <input
-      key={text}
-      type="number"
-      step="any"
-      defaultValue={text}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur();
-      }}
-      onBlur={(e) => {
-        const v = Number(e.currentTarget.value);
-        if (Number.isFinite(v) && fmt(v) !== text) onCommit(v);
-      }}
-      className="w-16 rounded border border-border bg-background/60 px-1 py-0.5 text-right font-mono text-[11px] text-foreground [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-    />
-  );
-}
+const AXES = ['X', 'Y', 'Z'];
 
 /** Champ de snap : vide = libre (null), sinon pas d'accrochage strictement positif. */
 function SnapField({
@@ -64,13 +42,24 @@ function SnapField({
   );
 }
 
+/**
+ * Rangée TRS à trois `HudNumber` « drag-label » (Phase 26, remplace les inputs) : glisser la
+ * valeur pour l'ajuster (Maj ×10), double-clic pour saisir au clavier. Chaque axe commit son
+ * composant ; les bornes/pas dépendent de la grandeur (position/rotation/échelle).
+ */
 function Vec3Row({
   label,
   value,
+  min,
+  max,
+  step,
   onCommit,
 }: {
   label: string;
   value: [number, number, number];
+  min: number;
+  max: number;
+  step: number;
   onCommit: (next: [number, number, number]) => void;
 }) {
   const set = (i: number) => (v: number) => {
@@ -79,12 +68,22 @@ function Vec3Row({
     onCommit(next);
   };
   return (
-    <>
-      <span className="text-muted-foreground">{label}</span>
+    <div className="flex items-center gap-1.5">
+      <span className="w-16 text-muted-foreground">{label}</span>
       {value.map((v, i) => (
-        <NumField key={i} value={v} onCommit={set(i)} />
+        <HudNumber
+          key={i}
+          label={AXES[i]}
+          hint={`${label} ${AXES[i]}`}
+          value={v}
+          onChange={set(i)}
+          min={min}
+          max={max}
+          step={step}
+          pixelsPerStep={8}
+        />
       ))}
-    </>
+    </div>
   );
 }
 
@@ -120,36 +119,49 @@ export default function TransformFields({
   return (
     <HudGroup>
       <span className="font-medium text-foreground">{label}</span>
-      <div className="grid grid-cols-[auto_repeat(3,auto)] items-center gap-x-1.5 gap-y-1">
+      <div className="flex flex-col gap-1">
         <Vec3Row
           label="Position"
           value={value.position}
+          min={-10000}
+          max={10000}
+          step={0.001}
           onCommit={(position) => onCommit({ ...value, position })}
         />
         <Vec3Row
           label="Rotation °"
           value={quatToEulerDeg(value.quaternion)}
+          min={-360}
+          max={360}
+          step={0.1}
           onCommit={(deg) => onCommit({ ...value, quaternion: eulerDegToQuat(deg) })}
         />
         {shape === 'sphere' ? (
-          <>
-            <span className="text-muted-foreground" title="Rayon effectif du volume SDF (11.F)">
+          <div className="flex items-center gap-1.5">
+            <span className="w-16 text-muted-foreground" title="Rayon effectif du volume SDF (11.F)">
               Rayon
             </span>
-            <NumField
+            <HudNumber
+              label="R"
+              hint="Rayon effectif du volume SDF"
               value={radius}
-              onCommit={(r) => {
+              onChange={(r) => {
                 const v = Math.max(r, 0.001);
                 onCommit({ ...value, scale: [v, v, v] });
               }}
+              min={0.001}
+              max={10000}
+              step={0.001}
+              pixelsPerStep={8}
             />
-            <span />
-            <span />
-          </>
+          </div>
         ) : (
           <Vec3Row
             label={shape === 'box' ? 'Demi-ext.' : 'Échelle'}
             value={value.scale}
+            min={0.001}
+            max={10000}
+            step={0.001}
             onCommit={(scale) =>
               onCommit({ ...value, scale: scale.map((x) => Math.max(x, 0.001)) as [number, number, number] })
             }

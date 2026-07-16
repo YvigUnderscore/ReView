@@ -16,8 +16,8 @@ const TOOL_KEYS: Record<string, EditorTool> = {
 
 /**
  * Raccourcis clavier de l'éditeur de splat (extrait de `useSplatEditor` pour tenir le budget) :
- * outils (V/T/R/S/B/L/P sans modificateur), F/H (cadrer sélection / vue d'origine), Suppr
- * (suppression sélection), Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y (historique). Inactifs dans les champs,
+ * outils (V/T/R/S/B/L/P sans modificateur), Échap → navigation, F/H (cadrer sélection / vue
+ * d'origine), Suppr (suppression sélection), Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y (historique). Inactifs dans les champs,
  * les dialogs et pendant un vol (clic droit + ZQSD, 11.G — les touches pilotent la caméra).
  */
 export function useEditorShortcuts(opts: {
@@ -47,6 +47,11 @@ export function useEditorShortcuts(opts: {
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setTool('navigate'); // Échap → navigation (détache le gizmo/la sélection), Phase 26
+        return;
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         deleteSelection();
