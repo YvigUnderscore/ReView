@@ -372,24 +372,27 @@ export async function getDetail(user: SessionUser, id: number) {
   };
   // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
-  const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, project, referenceRow] = await Promise.all([
+  const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, project, references] = await Promise.all([
     storage.getPresignedGetUrl(media.storageKey),
     media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
     proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
     meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
     meta.splatMaskKey ? storage.getPresignedGetUrl(meta.splatMaskKey) : Promise.resolve(null),
     prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
-    prisma.reviewReference.findUnique({ where: { mediaObjectId: id } }),
+    // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
+    // assertMediaManage d'ici : un import croisé créerait un cycle).
+    prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
+      Promise.all(
+        rows.map(async (r) => ({
+          id: r.id,
+          url: await storage.getPresignedGetUrl(r.storageKey),
+          x: r.x,
+          y: r.y,
+          width: r.width,
+        })),
+      ),
+    ),
   ]);
-  // Image de référence review 2D (Phase 24) : persistée & partagée (position en fractions).
-  const reference = referenceRow
-    ? {
-        url: await storage.getPresignedGetUrl(referenceRow.storageKey),
-        x: referenceRow.x,
-        y: referenceRow.y,
-        width: referenceRow.width,
-      }
-    : null;
   return {
     media: serializeMedia(media),
     url,
@@ -409,8 +412,8 @@ export async function getDetail(user: SessionUser, id: number) {
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),
     // HLS adaptatif (Phase 23) : présent → master servi via /api/media/:id/hls/master.m3u8.
     hls: meta.hls ?? null,
-    // Image de référence review 2D (Phase 24) : persistée & partagée.
-    reference,
+    // Images de référence review 2D (Phase 24, multi-items) : persistées & partagées.
+    references,
   };
 }
 

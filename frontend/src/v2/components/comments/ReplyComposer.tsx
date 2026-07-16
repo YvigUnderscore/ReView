@@ -1,9 +1,15 @@
 import { useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
-import { ATTACHMENT_ACCEPT, uploadCommentAttachments } from '../../../lib/commentAttachments';
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_COMMENT_ATTACHMENTS,
+  uploadCommentAttachments,
+} from '../../../lib/commentAttachments';
+import { useImagePaste } from '../../lib/useImagePaste';
 
-/** Zone de réponse à un commentaire (texte + images jointes). */
+/** Zone de réponse à un commentaire (texte + images jointes, paste CTRL+V, 8 max). */
 export default function ReplyComposer({
   mediaObjectId,
   parentId,
@@ -19,6 +25,13 @@ export default function ReplyComposer({
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const addFiles = (add: File[]) => {
+    if (files.length + add.length > MAX_COMMENT_ATTACHMENTS)
+      toast.warning(`${MAX_COMMENT_ATTACHMENTS} pièces jointes max par commentaire`);
+    setFiles((fs) => [...fs, ...add].slice(0, MAX_COMMENT_ATTACHMENTS));
+  };
+  const onPasteImage = useImagePaste(addFiles);
 
   const send = async () => {
     if (!text.trim() && files.length === 0) return;
@@ -39,6 +52,7 @@ export default function ReplyComposer({
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onPaste={onPasteImage}
         rows={2}
         placeholder="Votre réponse…"
         className="w-full resize-none bg-transparent text-sm focus:outline-none"
@@ -64,7 +78,7 @@ export default function ReplyComposer({
             multiple
             className="hidden"
             onChange={(e) => {
-              setFiles((fs) => [...fs, ...Array.from(e.target.files ?? [])]);
+              addFiles(Array.from(e.target.files ?? []));
               if (fileRef.current) fileRef.current.value = '';
             }}
           />

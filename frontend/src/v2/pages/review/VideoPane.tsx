@@ -59,6 +59,22 @@ export default function VideoPane({
   const [loopOut, setLoopOut] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hls = useHlsPlayer(videoRef, hlsUrl ?? null);
+  // Boîte d'affichage : la vidéo remplit tout l'espace disponible (fit « contain » calculé),
+  // même en basse résolution — l'overlay d'annotation partage exactement la même boîte.
+  const [aspect, setAspect] = useState<number | null>(null);
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !aspect) return;
+    const fit = () => {
+      const h = Math.min(el.clientHeight, el.clientWidth / aspect);
+      setBox({ w: h * aspect, h });
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [aspect]);
 
   const markLoopIn = useCallback(() => {
     const v = videoRef.current;
@@ -132,11 +148,14 @@ export default function VideoPane({
   return (
     <>
       <div className={VIEWER_ZONE} ref={containerRef}>
-        <div className="relative inline-block max-h-full">
+        <div
+          className="relative"
+          style={box ? { width: box.w, height: box.h } : { maxWidth: '100%', maxHeight: '100%' }}
+        >
           <video
             ref={videoRef}
             src={hls.active ? undefined : src}
-            className="block max-h-[calc(100vh-16rem)] max-w-full cursor-pointer"
+            className="block h-full w-full cursor-pointer"
             onClick={togglePlay}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
@@ -144,6 +163,8 @@ export default function VideoPane({
             onLoadedMetadata={(e) => {
               setCurrentFrame(Math.round(e.currentTarget.currentTime * fps));
               setDuration(e.currentTarget.duration);
+              if (e.currentTarget.videoWidth > 0)
+                setAspect(e.currentTarget.videoWidth / e.currentTarget.videoHeight);
             }}
             onSeeking={onSeeking}
           />

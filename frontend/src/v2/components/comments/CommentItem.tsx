@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check, Paperclip } from 'lucide-react';
+import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
-import { isImageAttachment } from '../../../lib/commentAttachments';
-import { Lightbox } from '../ui/lightbox';
 import Avatar from '../Avatar';
 import ReplyComposer from './ReplyComposer';
 import CommentReactions from './CommentReactions';
+import CommentAttachmentList from './CommentAttachmentList';
 import type { ReviewComment } from '../../types/api';
 
 export interface CommentItemProps {
@@ -38,12 +37,6 @@ export default function CommentItem({
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
-
-  // Images jointes (pour la lightbox carrousel — Phase 24).
-  const imageAtts = (Array.isArray(c.attachments) ? c.attachments : []).filter(
-    (a) => !!a.url && isImageAttachment(a.contentType),
-  );
 
   const isAuthor = c.author?.id === currentUserId;
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
@@ -157,57 +150,14 @@ export default function CommentItem({
           </div>
         ) : (
           <div
-            className="prose-doc mt-0.5 max-w-none text-sm"
+            className="prose-doc mt-0.5 max-w-none whitespace-pre-wrap text-sm"
             dangerouslySetInnerHTML={{ __html: c.content }}
           />
         )}
 
-        {/* Pièces jointes : vignettes (images) + chips téléchargeables (PDF/zip/texte) */}
+        {/* Pièces jointes : 2 vignettes max + tuile « +x images » (lightbox), chips PDF/zip/texte */}
         {Array.isArray(c.attachments) && c.attachments.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {c.attachments.map(
-              (a, i) =>
-                a.url &&
-                (isImageAttachment(a.contentType) ? (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={(e) => {
-                      stop(e);
-                      setLightboxIdx(imageAtts.findIndex((im) => im.url === a.url));
-                    }}
-                    className="block"
-                  >
-                    <img
-                      src={a.url}
-                      alt={a.name ?? ''}
-                      className="h-20 w-20 rounded border border-border object-cover"
-                    />
-                  </button>
-                ) : (
-                  <a
-                    key={i}
-                    onClick={stop}
-                    href={a.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex max-w-[14rem] items-center gap-1 rounded border border-border bg-secondary/50 px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  >
-                    <Paperclip size={12} className="shrink-0" />
-                    <span className="truncate">{a.name ?? 'Pièce jointe'}</span>
-                  </a>
-                )),
-            )}
-          </div>
-        )}
-        {lightboxIdx !== null && (
-          <Lightbox
-            images={imageAtts.map((a) => ({ src: a.url ?? '', alt: a.name ?? '' }))}
-            index={lightboxIdx}
-            open={lightboxIdx !== null}
-            onOpenChange={(o) => !o && setLightboxIdx(null)}
-            onIndexChange={setLightboxIdx}
-          />
+          <CommentAttachmentList attachments={c.attachments} stop={stop} />
         )}
 
         {/* Réactions + actions */}

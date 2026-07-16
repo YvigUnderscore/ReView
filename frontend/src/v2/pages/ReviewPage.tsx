@@ -19,6 +19,7 @@ import { useAutoThumbnail } from './review/useAutoThumbnail';
 import { useModel3DThree } from './review/three/useModel3DThree';
 import ReviewHeader from './review/ReviewHeader';
 import ReviewViewer from './review/ReviewViewer';
+import { AnnotationTools } from './review/ReviewAnnotationBar';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
 import { useSplat } from './review/splat/useSplat';
 import CommentsPanel from './review/CommentsPanel';
@@ -299,7 +300,6 @@ function ReviewContent({ id }: { id: number }) {
             canManage={canManageMedia}
             onSplatEditsSaved={onSplatEditsSaved}
             onClearSelection={clearSelection}
-            onPlaceHotspot={placeHotspotCenter}
             onSelectComment={selectComment}
             onManualSeek={clearSelection}
             onMarker={openComposer}
@@ -328,6 +328,7 @@ function ReviewContent({ id }: { id: number }) {
               onSubmit={submitComment}
               annotating={ann.annotating}
               onToggleAnnotate={toggleAnnotating}
+              annotationTools={<AnnotationTools ann={ann} kind={kind} onPlaceHotspot={placeHotspotCenter} />}
             />
           )}
         </div>

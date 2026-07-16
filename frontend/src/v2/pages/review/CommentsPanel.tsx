@@ -1,6 +1,7 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
+import { useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { ImagePlus, PencilLine, X } from 'lucide-react';
-import { ATTACHMENT_ACCEPT } from '../../../lib/commentAttachments';
+import { toast } from 'sonner';
+import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
 import ReviewComments from '../../components/ReviewComments';
 import type { ReviewComment } from '../../types/api';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -29,6 +30,7 @@ export default function CommentsPanel({
   onSubmit,
   annotating,
   onToggleAnnotate,
+  annotationTools,
 }: {
   comments: ReviewComment[] | null;
   mediaObjectId: number;
@@ -45,12 +47,19 @@ export default function CommentsPanel({
   /** Mode annotation actif (bouton « Annoter » sous le champ, Phase 24). */
   annotating?: boolean;
   onToggleAnnotate?: () => void;
+  /** Barre d'outils d'annotation, affichée sous le composer quand le mode est actif. */
+  annotationTools?: ReactNode;
 }) {
   const [content, setContent] = useState('');
   const [attachFiles, setAttachFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const onPasteImage = useImagePaste((files) => setAttachFiles((fs) => [...fs, ...files]));
+  const addFiles = (files: File[]) => {
+    if (attachFiles.length + files.length > MAX_COMMENT_ATTACHMENTS)
+      toast.warning(`${MAX_COMMENT_ATTACHMENTS} pièces jointes max par commentaire`);
+    setAttachFiles((fs) => [...fs, ...files].slice(0, MAX_COMMENT_ATTACHMENTS));
+  };
+  const onPasteImage = useImagePaste(addFiles);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -145,7 +154,7 @@ export default function CommentsPanel({
             multiple
             className="hidden"
             onChange={(e) => {
-              setAttachFiles((fs) => [...fs, ...Array.from(e.target.files ?? [])]);
+              addFiles(Array.from(e.target.files ?? []));
               if (fileRef.current) fileRef.current.value = '';
             }}
           />
@@ -181,6 +190,10 @@ export default function CommentsPanel({
             {sending ? 'Envoi…' : 'Envoyer'}
           </button>
         </div>
+        {/* Barre d'outils d'annotation sous l'espace commentaire (activée par « Annoter »). */}
+        {annotating && annotationTools && (
+          <div className="mt-2 border-t border-border pt-2">{annotationTools}</div>
+        )}
       </form>
     </ResizablePanel>
   );

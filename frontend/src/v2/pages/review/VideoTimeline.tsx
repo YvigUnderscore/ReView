@@ -1,8 +1,9 @@
 import { useCallback, useRef } from 'react';
 import type { ReviewComment } from '../../types/api';
+import Avatar from '../../components/Avatar';
 import { formatTime } from './reviewTypes';
 
-/** Timeline vidéo avec marqueurs de commentaires horodatés. */
+/** Timeline vidéo : scrub à la souris + marqueurs de commentaires avec avatar de l'auteur. */
 export default function VideoTimeline({
   currentTime,
   duration,
@@ -25,11 +26,12 @@ export default function VideoTimeline({
   loop?: { in: number | null; out: number | null };
 }) {
   const barRef = useRef<HTMLDivElement>(null);
+  const scrubbing = useRef(false);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
   const timedComments = comments.filter((c) => c.timestamp != null);
 
   const seekFromEvent = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (e: { clientX: number }) => {
       const bar = barRef.current;
       if (!bar || duration <= 0) return;
       const rect = bar.getBoundingClientRect();
@@ -39,12 +41,28 @@ export default function VideoTimeline({
     [duration, onSeek],
   );
 
+  // Scrub : maintien du clic + glissement = déplacement continu dans la vidéo.
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    scrubbing.current = true;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    seekFromEvent(e);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (scrubbing.current) seekFromEvent(e);
+  };
+  const onPointerUp = () => {
+    scrubbing.current = false;
+  };
+
   return (
     <div
       ref={barRef}
-      className="relative h-8 shrink-0 cursor-pointer select-none rounded-md border border-border bg-card/60 px-1"
-      onClick={seekFromEvent}
-      title="Cliquer pour se déplacer"
+      className="relative h-9 shrink-0 cursor-pointer select-none rounded-md border border-border bg-card/60 px-1"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      title="Cliquer ou glisser pour se déplacer"
     >
       {/* Fond progress */}
       <div className="absolute inset-y-0 left-1 right-1 overflow-hidden rounded">
@@ -104,22 +122,33 @@ export default function VideoTimeline({
         style={{ left: `calc(${progress * 100}% * (100% - 8px) / 100% + 4px)` }}
       />
 
-      {/* Marqueurs de commentaires */}
+      {/* Marqueurs de commentaires : avatar de l'auteur de la review */}
       {timedComments.map((c) => {
         const pos = (c.timestamp! / duration) * 100;
         const selected = c.id === selectedId;
         return (
           <button
             key={c.id}
-            className={`absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all
-              ${selected ? 'h-4 w-4 border-primary bg-primary shadow-[0_0_0_2px_rgba(var(--primary)/0.3)]' : 'h-3 w-3 border-primary/60 bg-primary/40 hover:h-4 hover:w-4 hover:border-primary hover:bg-primary/80'}`}
+            className={`absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform ${
+              selected
+                ? 'scale-125 ring-2 ring-primary'
+                : 'ring-1 ring-primary/50 hover:scale-125 hover:ring-primary'
+            }`}
             style={{ left: `calc(${pos}% * (100% - 8px) / 100% + 4px)` }}
-            title={`${c.author?.name ?? 'Inconnu'} : ${c.content.slice(0, 60)}`}
+            title={`${c.author?.displayName ?? c.author?.name ?? c.guestName ?? 'Inconnu'} : ${c.content.slice(0, 60)}`}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onSelectComment(c);
             }}
-          />
+          >
+            <Avatar
+              seed={c.author?.id ?? c.guestName ?? 'g'}
+              initials={c.author?.initials ?? (c.guestName ?? '?').slice(0, 2).toUpperCase()}
+              avatarUrl={c.author?.avatarUrl}
+              size={18}
+            />
+          </button>
         );
       })}
 

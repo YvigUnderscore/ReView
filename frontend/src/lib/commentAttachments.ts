@@ -10,6 +10,9 @@ export interface CommentAttachment {
 /** Types acceptés en pièce jointe (miroir du Zod backend) : images + PDF/zip/texte. */
 export const ATTACHMENT_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,.pdf,.zip,.txt';
 
+/** Nombre maximal de pièces jointes par commentaire (miroir du Zod backend). */
+export const MAX_COMMENT_ATTACHMENTS = 8;
+
 export function isAllowedAttachment(contentType: string): boolean {
   return /^(image\/(png|jpe?g|webp|gif)|application\/(pdf|zip)|text\/plain)$/.test(contentType);
 }
@@ -24,7 +27,7 @@ export function isImageAttachment(contentType?: string): boolean {
  * Renvoie les descripteurs (clé/nom/type) à joindre au commentaire.
  */
 export async function uploadCommentAttachments(files: File[]): Promise<CommentAttachment[]> {
-  const allowed = files.filter((f) => isAllowedAttachment(f.type)).slice(0, 8);
+  const allowed = files.filter((f) => isAllowedAttachment(f.type)).slice(0, MAX_COMMENT_ATTACHMENTS);
   const out: CommentAttachment[] = [];
   for (const file of allowed) {
     const { url, key } = await api.post<{ url: string; key: string }>('/api/comments/attachments/presign', {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Info } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
 
@@ -24,6 +24,7 @@ export default function ImageReviewViewer({
   width,
   alpha,
   info,
+  pinned,
 }: {
   src: string;
   alt: string;
@@ -36,6 +37,9 @@ export default function ImageReviewViewer({
   alpha: number;
   /** Métadonnées affichées dans le panneau infos repliable (14.D). */
   info?: { format?: string | null; sizeBytes?: number | null };
+  /** Éléments épinglés au canvas (images de référence…) : rendus dans le plan transformé,
+   *  ils suivent le zoom/pan comme l'image. */
+  pinned?: ReactNode;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -137,13 +141,24 @@ export default function ImageReviewViewer({
     <div className="relative h-full w-full">
       <div
         ref={viewportRef}
-        className="relative h-full w-full overflow-hidden bg-black/40"
+        className="relative h-full w-full overflow-hidden"
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onContextMenu={(e) => e.preventDefault()}
-        style={{ cursor: editable ? 'crosshair' : 'grab', touchAction: 'none' }}
+        style={{
+          cursor: editable ? 'crosshair' : 'grab',
+          touchAction: 'none',
+          // Fond gris + grille de lignes blanches légères, fixée au canvas : la grille
+          // suit le pan (background-position) et le zoom (background-size).
+          backgroundColor: 'hsl(var(--muted) / 0.35)',
+          backgroundImage:
+            'linear-gradient(to right, rgba(255,255,255,0.07) 1px, transparent 1px),' +
+            'linear-gradient(to bottom, rgba(255,255,255,0.07) 1px, transparent 1px)',
+          backgroundSize: `${48 * scale}px ${48 * scale}px`,
+          backgroundPosition: `${offset.x}px ${offset.y}px`,
+        }}
       >
         {base && (
           <div
@@ -156,6 +171,7 @@ export default function ImageReviewViewer({
             }}
           >
             <img src={src} alt={alt} className="block h-full w-full select-none" draggable={false} />
+            {pinned}
             {(editable || shapes.length > 0) && (
               <AnnotationCanvas
                 shapes={shapes}

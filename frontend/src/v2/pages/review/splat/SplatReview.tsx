@@ -1,4 +1,4 @@
-import { Gauge, Settings2 } from 'lucide-react';
+import { Gauge, Grid3x3, Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
@@ -7,6 +7,7 @@ import type { SplatViewer } from './useSplat';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { frameCameraToSphere } from '../viewer/frameCamera';
 import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
+import { useSceneGrid } from '../viewer/useSceneGrid';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFromGltf } from '../three/importCameraGltf';
 import CameraBar from '../camera/CameraBar';
@@ -66,6 +67,8 @@ export default function SplatReview({
   // Panneaux du HUD (état local de session — réglages spectateur non persistés).
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
+  const grid = useSceneGrid(splat);
   const [cullingOff, setCullingOffState] = useState(true);
   const onCullingOff = (off: boolean) => {
     setCullingOffState(off);
@@ -258,6 +261,12 @@ export default function SplatReview({
                     hint="Réglages du viewer (culling…)"
                     active={showSettings}
                     onClick={() => setShowSettings((v) => !v)}
+                  />
+                  <HudIconButton
+                    icon={Grid3x3}
+                    hint="Grille de sol (repère d'orientation de la scène)"
+                    active={grid.visible}
+                    onClick={grid.toggle}
                   />
                 </HudGroup>
                 {showStats && <StatsPanel splat={splat} />}

@@ -2,7 +2,7 @@ import { type ComponentProps, useEffect, useState } from 'react';
 import type { ReviewComment, Role } from '../../types/api';
 import { AnnotationCanvas } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
-import ReferenceOverlay from './ReferenceOverlay';
+import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';
 import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
@@ -42,7 +42,6 @@ export default function ReviewViewer({
   canEdit,
   canManage,
   onClearSelection,
-  onPlaceHotspot,
   onSelectComment,
   onManualSeek,
   onMarker,
@@ -71,7 +70,6 @@ export default function ReviewViewer({
   /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
   canManage: boolean;
   onClearSelection: () => void;
-  onPlaceHotspot: () => void;
   onSelectComment: (c: ReviewComment) => void;
   onManualSeek: () => void;
   onMarker: () => void;
@@ -135,12 +133,7 @@ export default function ReviewViewer({
   return (
     <section className="flex min-w-0 flex-1 flex-col gap-2">
       {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady || splatReady) && (
-        <ReviewAnnotationBar
-          ann={ann}
-          kind={kind}
-          onClearSelection={onClearSelection}
-          onPlaceHotspot={onPlaceHotspot}
-        />
+        <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} />
       )}
 
       {/* Skeleton du viewer pendant le chargement (10.B5) */}
@@ -211,9 +204,20 @@ export default function ReviewViewer({
               width={ann.penWidth}
               alpha={ann.alpha}
               info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
+              pinned={
+                <ReviewCanvasRefs
+                  mediaId={data.media.id}
+                  references={data.references ?? []}
+                  canManage={canManage}
+                />
+              }
             />
           </div>
-          <ReferenceOverlay mediaId={data.media.id} reference={data.reference} canManage={canManage} />
+          <ReviewCanvasRefsControls
+            mediaId={data.media.id}
+            count={data.references?.length ?? 0}
+            canManage={canManage}
+          />
         </div>
       )}
 

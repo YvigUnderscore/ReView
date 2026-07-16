@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
@@ -6,15 +7,20 @@ import { badRequest, notFound } from '../lib/errors';
 import { assertMediaManage } from './MediaService';
 
 /**
- * Image de référence d'une review 2D (Phase 24) : une par média, **persistée & partagée**
- * (tous les spectateurs la voient), déplaçable/redimensionnable (position en fractions du
- * cadre). Aide de review → **non soumise au verrou de publication** ; gestion réservée aux
- * gestionnaires du média (uploader/superviseur+), lecture ouverte aux membres du projet.
+ * Images de référence d'une review 2D (Phase 24, multi-items) : **persistées & partagées**
+ * (tous les spectateurs les voient), épinglées au canvas de la review image — coordonnées en
+ * fractions de l'image de base, débordement autorisé autour. Aide de review → **non soumises
+ * au verrou de publication** ; gestion réservée aux gestionnaires du média, lecture ouverte
+ * aux membres du projet.
  */
 
 type SessionUser = { id: number; role: Role };
 
 const MAX_BYTES = 6_000_000;
+const MAX_REFS = 12;
+// Bornes du canvas : les références peuvent être posées autour de l'image de base.
+const POS_MIN = -3;
+const POS_MAX = 4;
 
 function decodeImageDataUrl(dataUrl: string): { buf: Buffer; ext: string; contentType: string } {
   const m = /^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/i.exec(dataUrl);
@@ -35,51 +41,68 @@ function decodeImageDataUrl(dataUrl: string): { buf: Buffer; ext: string; conten
   return { buf, ext, contentType };
 }
 
-async function serialize(ref: { storageKey: string; x: number; y: number; width: number }) {
-  return { url: await storage.getPresignedGetUrl(ref.storageKey), x: ref.x, y: ref.y, width: ref.width };
+const clampPos = (v: number) => Math.min(Math.max(v, POS_MIN), POS_MAX);
+const clampWidth = (v: number) => Math.min(Math.max(v, 0.02), 3);
+
+async function serialize(ref: { id: number; storageKey: string; x: number; y: number; width: number }) {
+  return {
+    id: ref.id,
+    url: await storage.getPresignedGetUrl(ref.storageKey),
+    x: ref.x,
+    y: ref.y,
+    width: ref.width,
+  };
 }
 
-/** Dépose/remplace l'image de référence (data URL). Gestionnaire du média uniquement. */
-export async function set(user: SessionUser, mediaId: number, dataUrl: string) {
+/** Ajoute une image de référence (data URL) au canvas. Gestionnaire du média uniquement. */
+export async function add(
+  user: SessionUser,
+  mediaId: number,
+  dataUrl: string,
+  pos?: { x?: number; y?: number; width?: number },
+) {
   await assertMediaManage(mediaId, user);
+  const count = await prisma.reviewReference.count({ where: { mediaObjectId: mediaId } });
+  if (count >= MAX_REFS)
+    throw badRequest(`${MAX_REFS} images de référence max par média`, 'TOO_MANY_REFERENCES');
   const { buf, ext, contentType } = decodeImageDataUrl(dataUrl);
-  const key = `derived/${mediaId}/reference.${ext}`;
+  const key = `derived/${mediaId}/reference-${randomUUID()}.${ext}`;
   await storage.putObject(key, buf, contentType);
-  const existing = await prisma.reviewReference.findUnique({ where: { mediaObjectId: mediaId } });
-  // Nettoie l'ancien objet si l'extension change (clé différente).
-  if (existing && existing.storageKey !== key) {
-    await storage.deleteObject(existing.storageKey).catch(() => undefined);
-  }
-  const ref = await prisma.reviewReference.upsert({
-    where: { mediaObjectId: mediaId },
-    update: { storageKey: key, createdById: user.id },
-    create: { mediaObjectId: mediaId, storageKey: key, createdById: user.id },
+  const ref = await prisma.reviewReference.create({
+    data: {
+      mediaObjectId: mediaId,
+      storageKey: key,
+      createdById: user.id,
+      x: clampPos(pos?.x ?? 1.05 + count * 0.03),
+      y: clampPos(pos?.y ?? count * 0.03),
+      width: clampWidth(pos?.width ?? 0.3),
+    },
   });
   return serialize(ref);
 }
 
-/** Met à jour la position/taille (fractions du cadre). Gestionnaire du média uniquement. */
+/** Met à jour la position/taille (fractions de l'image de base). Gestionnaire uniquement. */
 export async function updatePosition(
   user: SessionUser,
   mediaId: number,
+  refId: number,
   pos: { x: number; y: number; width: number },
 ) {
   await assertMediaManage(mediaId, user);
-  if (!(await prisma.reviewReference.findUnique({ where: { mediaObjectId: mediaId } })))
-    throw notFound('Image de référence introuvable');
-  const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
+  const existing = await prisma.reviewReference.findUnique({ where: { id: refId } });
+  if (!existing || existing.mediaObjectId !== mediaId) throw notFound('Image de référence introuvable');
   const ref = await prisma.reviewReference.update({
-    where: { mediaObjectId: mediaId },
-    data: { x: clamp01(pos.x), y: clamp01(pos.y), width: Math.min(Math.max(pos.width, 0.05), 1) },
+    where: { id: refId },
+    data: { x: clampPos(pos.x), y: clampPos(pos.y), width: clampWidth(pos.width) },
   });
   return serialize(ref);
 }
 
-/** Supprime l'image de référence (DB + MinIO). Gestionnaire du média uniquement. */
-export async function remove(user: SessionUser, mediaId: number) {
+/** Supprime une image de référence (DB + MinIO). Gestionnaire du média uniquement. */
+export async function remove(user: SessionUser, mediaId: number, refId: number) {
   await assertMediaManage(mediaId, user);
-  const ref = await prisma.reviewReference.findUnique({ where: { mediaObjectId: mediaId } });
-  if (!ref) return;
-  await prisma.reviewReference.delete({ where: { mediaObjectId: mediaId } });
+  const ref = await prisma.reviewReference.findUnique({ where: { id: refId } });
+  if (!ref || ref.mediaObjectId !== mediaId) return;
+  await prisma.reviewReference.delete({ where: { id: refId } });
   await storage.deleteObject(ref.storageKey).catch(() => undefined);
 }

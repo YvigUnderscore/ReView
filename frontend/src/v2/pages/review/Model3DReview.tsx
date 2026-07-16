@@ -1,16 +1,18 @@
 import type { ReactNode } from 'react';
+import { Grid3x3 } from 'lucide-react';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { Model3DThreeState } from './three/useModel3DThree';
 import type { Role } from '../../types/api';
 import { useModel3DCamera } from './three/useModel3DCamera';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
+import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DAnimationsBar from './Model3DAnimationsBar';
 import Model3DTransformBar from './Model3DTransformBar';
 import CameraBar from './camera/CameraBar';
 import AnimPanel from './camera/timeline/AnimPanel';
-import ViewerHud from './hud/ViewerHud';
+import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
 
 /**
  * Bloc modèle 3D de la review (Phase 17) : orchestre le viewer Three (Model3DThreePane) et le
@@ -47,6 +49,8 @@ export default function Model3DReview({
   ready: boolean;
 }) {
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
+  // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
+  const grid = useSceneGrid(model3d);
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
   useCameraSceneRig({
     getSceneHandle: model3d.getSceneHandle,
@@ -71,6 +75,16 @@ export default function Model3DReview({
         ready ? (
           <ViewerHud
             topLeft={showEditTools ? <Model3DTransformBar m={model3d} /> : undefined}
+            topRight={
+              <HudGroup>
+                <HudIconButton
+                  icon={Grid3x3}
+                  hint="Grille de sol (repère d'orientation de la scène)"
+                  active={grid.visible}
+                  onClick={grid.toggle}
+                />
+              </HudGroup>
+            }
             bottomLeft={
               <>
                 <Model3DAnimationsBar m={model3d} />

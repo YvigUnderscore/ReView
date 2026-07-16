@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isAllowedAttachment, isImageAttachment } from './commentAttachments';
+import { isAllowedAttachment, isImageAttachment, MAX_COMMENT_ATTACHMENTS } from './commentAttachments';
 
 describe('pièces jointes de commentaire — types acceptés', () => {
   it('accepte les images du whitelist', () => {
@@ -26,5 +26,9 @@ describe('pièces jointes de commentaire — types acceptés', () => {
     expect(isImageAttachment('image/png')).toBe(true);
     expect(isImageAttachment('application/pdf')).toBe(false);
     expect(isImageAttachment(undefined)).toBe(false);
+  });
+
+  it('plafonne à 8 pièces jointes par commentaire (miroir du Zod backend)', () => {
+    expect(MAX_COMMENT_ATTACHMENTS).toBe(8);
   });
 });
