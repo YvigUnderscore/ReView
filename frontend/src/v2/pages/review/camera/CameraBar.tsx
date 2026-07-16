@@ -1,6 +1,7 @@
 import { Aperture, Crosshair, Frame, Home, Pause, PictureInPicture2, Play, RotateCcw } from 'lucide-react';
 import { HudGroup, HudIconButton } from '../hud/ViewerHud';
 import HudNumber from '../hud/HudNumber';
+import { focalToFov, fovToFocal } from './focal';
 import type { CameraAnimState } from './useCameraAnim';
 
 const RAD = Math.PI / 180;
@@ -47,13 +48,13 @@ export default function CameraBar({
       <span className="h-4 w-px bg-border" />
       <HudNumber
         label="Focale"
-        hint="Focale (champ de vision vertical)"
-        value={Math.round(fov)}
-        onChange={onFov}
-        min={5}
-        max={150}
+        hint="Focale en millimètres (capteur 36 mm) — Phase 26"
+        value={Math.round(fovToFocal(fov))}
+        onChange={(mm) => onFov(focalToFov(Math.min(Math.max(mm, 7), 400)))}
+        min={7}
+        max={400}
         step={1}
-        unit="°"
+        unit="mm"
       />
       <HudNumber
         label="Tilt"
