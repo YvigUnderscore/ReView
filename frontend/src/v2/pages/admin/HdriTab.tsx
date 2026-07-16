@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Sun, Trash2, Upload } from 'lucide-react';
+import { Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
+import HdriPreview from './HdriPreview';
 
 interface HdriItem {
   id: string;
@@ -97,7 +98,7 @@ export default function HdriTab() {
                 key={h.id}
                 className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2"
               >
-                <Sun size={16} className="shrink-0 text-warning" />
+                <HdriPreview url={h.url} format={h.format} />
                 <span className="min-w-0 flex-1 truncate text-sm">{h.name}</span>
                 <span className="rounded bg-secondary/60 px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
                   {h.format}
