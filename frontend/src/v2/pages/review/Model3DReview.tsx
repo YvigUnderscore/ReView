@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Grid3x3 } from 'lucide-react';
+import { Grid3x3, Maximize } from 'lucide-react';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { Model3DThreeState } from './three/useModel3DThree';
@@ -51,6 +51,11 @@ export default function Model3DReview({
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(model3d);
+  // Plein écran sur la zone viewer (Phase 25).
+  const fullscreen = () =>
+    void (
+      model3d.containerRef.current?.closest('[data-viewer-zone]') as HTMLElement | null
+    )?.requestFullscreen?.();
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
   useCameraSceneRig({
     getSceneHandle: model3d.getSceneHandle,
@@ -83,6 +88,7 @@ export default function Model3DReview({
                   active={grid.visible}
                   onClick={grid.toggle}
                 />
+                <HudIconButton icon={Maximize} hint="Plein écran" onClick={fullscreen} />
               </HudGroup>
             }
             bottomLeft={

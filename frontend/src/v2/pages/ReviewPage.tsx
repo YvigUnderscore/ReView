@@ -89,7 +89,7 @@ function ReviewContent({ id }: { id: number }) {
   const model3d = useModel3DThree(data, glbSrc);
   // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
   const splatUrl = data?.media.kind === 'SPLAT' ? data.url : null;
-  const splat = useSplat(splatUrl, data?.media.originalName ?? '');
+  const splat = useSplat(splatUrl, data?.media.originalName ?? '', data?.splatPresentation?.camera?.aspect);
   // Painter 3D (10.G-V9) : traits de surface joints au prochain commentaire.
   const paint = useSplatPaint(splat, data?.media.kind === 'SPLAT');
 

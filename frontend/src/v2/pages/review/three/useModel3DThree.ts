@@ -14,6 +14,7 @@ import { createObjectMarker, raycastModelCenter } from './objectHotspot';
 import { captureModelCamera, restoreModelCamera } from './modelCamera';
 import { useModelAnimations } from './useModelAnimations';
 import { useModelLayout } from './useModelLayout';
+import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import { createFlyControls, type FlyControls } from '../viewer/flyControls';
 import { frameCameraToSphere, objectBoundingSphere } from '../viewer/frameCamera';
 import { useThumbnailCapture } from '../viewer/useThumbnailCapture';
@@ -48,6 +49,10 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const frameCbs = useRef(new Set<(dt: number) => void>());
   const { onFrame: captureFrame, capture: captureThumbnail } = useThumbnailCapture();
   const flyRef = useRef<FlyControls | null>(null);
+  // Aspect du cadre de livraison (présentation persistée) — la caméra le garde quel que soit
+  // l'écran, la vue étant étendue au conteneur entier (Phase 25, cf. resizeRendererCamera).
+  const frameAspectRef = useRef<number>(DEFAULT_REVIEW_ASPECT);
+  frameAspectRef.current = data?.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT;
   const [ready, setReady] = useState(false);
   const [fov, setFovState] = useState(45);
   const [roll, setRollState] = useState(0);
@@ -167,7 +172,13 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       flyRef.current = fly;
 
       const resize = () =>
-        resizeRendererCamera(scene.renderer, scene.camera, container.clientWidth, container.clientHeight);
+        resizeRendererCamera(
+          scene.renderer,
+          scene.camera,
+          container.clientWidth,
+          container.clientHeight,
+          frameAspectRef.current,
+        );
       resize();
       // Cadrage initial (une fois l'aspect connu) + near/far partagés avec la caméra layout.
       const dist = fitDistance(model.radius, scene.camera.fov, scene.camera.aspect || 1);

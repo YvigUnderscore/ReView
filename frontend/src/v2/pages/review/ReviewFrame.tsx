@@ -2,44 +2,81 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { DEFAULT_REVIEW_ASPECT, reviewFrame, type FrameRect } from './frameRect';
 
 /**
- * Cadre de review à aspect fixe (V6). Rend ses enfants (viewport WebGL 3D/splat + overlays
- * d'annotation + HUD) dans une box **letterboxée** d'aspect constant, centrée dans la zone
- * disponible : la mise en scène et les annotations 2D normalisées restent alignées pour tous
- * quelle que soit la taille de l'écran (le canvas ne « scale » plus avec la fenêtre). Les enfants
- * se positionnent en `absolute inset-0` par rapport à ce cadre. Rect calculé par le helper pur
- * `reviewFrame` (mesuré via ResizeObserver).
+ * Cadre de review (Phase 25 — viewer plein espace). Les enfants (canvas WebGL + HUD) occupent
+ * TOUT le conteneur ; le **cadre de livraison** (aspect fixe issu de la présentation) est
+ * matérialisé par un **guide letterbox** (zones hors-cadre assombries + liseré). Les éléments
+ * passés en `frame` (overlay d'annotation) sont ancrés au guide : les annotations normalisées
+ * 0..1 restent alignées pour tous les écrans — le cadre ne se resize plus selon la fenêtre
+ * (la caméra est étendue au conteneur par `setViewOffset`, cf. `resizeRendererCamera`).
  */
 export default function ReviewFrame({
   aspect = DEFAULT_REVIEW_ASPECT,
   children,
+  frame,
 }: {
   aspect?: number;
   children: ReactNode;
+  /** Contenu ancré au cadre de livraison (overlay d'annotation 2D). */
+  frame?: ReactNode;
 }) {
   const a = Number.isFinite(aspect) && aspect > 0 ? aspect : DEFAULT_REVIEW_ASPECT;
   const outerRef = useRef<HTMLDivElement>(null);
-  const [rect, setRect] = useState<FrameRect | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
     const el = outerRef.current;
     if (!el) return;
-    const measure = () => setRect(reviewFrame(a, el.clientWidth, el.clientHeight));
+    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [a]);
+  }, []);
+
+  const guide: FrameRect | null = size ? reviewFrame(a, size.w, size.h) : null;
+  const showGuide = !!guide && !!size && (guide.width < size.w - 1 || guide.height < size.h - 1);
 
   return (
     <div ref={outerRef} className="relative h-full w-full">
-      <div
-        className="absolute"
-        style={
-          rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : { inset: 0 }
-        }
-      >
-        {children}
-      </div>
+      {/* Viewer plein espace */}
+      <div className="absolute inset-0">{children}</div>
+
+      {/* Guide letterbox : hors-cadre assombri + liseré du cadre de livraison */}
+      {showGuide && guide && size && (
+        <div className="pointer-events-none absolute inset-0 z-[5]">
+          <div className="absolute left-0 top-0 w-full bg-black/40" style={{ height: guide.top }} />
+          <div
+            className="absolute bottom-0 left-0 w-full bg-black/40"
+            style={{ height: size.h - guide.top - guide.height }}
+          />
+          <div
+            className="absolute left-0 bg-black/40"
+            style={{ top: guide.top, height: guide.height, width: guide.left }}
+          />
+          <div
+            className="absolute right-0 bg-black/40"
+            style={{ top: guide.top, height: guide.height, width: size.w - guide.left - guide.width }}
+          />
+          <div
+            className="absolute border border-white/25"
+            style={{ left: guide.left, top: guide.top, width: guide.width, height: guide.height }}
+          />
+        </div>
+      )}
+
+      {/* Contenu ancré au cadre de livraison (annotations) */}
+      {frame && (
+        <div
+          className="absolute z-[6]"
+          style={
+            guide
+              ? { left: guide.left, top: guide.top, width: guide.width, height: guide.height }
+              : { inset: 0 }
+          }
+        >
+          {frame}
+        </div>
+      )}
     </div>
   );
 }

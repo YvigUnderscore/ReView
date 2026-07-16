@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Info } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Expand, Info } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
 
 /**
@@ -136,9 +136,11 @@ export default function ImageReviewViewer({
   };
   const fmtSize = (b?: number | null) =>
     b == null ? null : b > 1e6 ? `${(b / 1e6).toFixed(1)} Mo` : `${Math.round(b / 1e3)} Ko`;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const fullscreen = () => void rootRef.current?.requestFullscreen?.();
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={rootRef} className="relative h-full w-full bg-background">
       <div
         ref={viewportRef}
         className="relative h-full w-full overflow-hidden"
@@ -239,6 +241,9 @@ export default function ImageReviewViewer({
         </button>
         <button onClick={reset} title="Ajuster" className="rounded p-1 hover:bg-muted">
           <Maximize size={16} />
+        </button>
+        <button onClick={fullscreen} title="Plein écran" className="rounded p-1 hover:bg-muted">
+          <Expand size={16} />
         </button>
         <button
           onClick={() => setShowInfo((v) => !v)}

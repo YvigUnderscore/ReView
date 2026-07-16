@@ -1,4 +1,4 @@
-import { Gauge, Grid3x3, Settings2 } from 'lucide-react';
+import { Gauge, Grid3x3, Maximize, Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
@@ -69,6 +69,11 @@ export default function SplatReview({
   const [showSettings, setShowSettings] = useState(false);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(splat);
+  // Plein écran sur la zone viewer (Phase 25).
+  const fullscreen = () =>
+    void (
+      splat.containerRef.current?.closest('[data-viewer-zone]') as HTMLElement | null
+    )?.requestFullscreen?.();
   const [cullingOff, setCullingOffState] = useState(true);
   const onCullingOff = (off: boolean) => {
     setCullingOffState(off);
@@ -268,6 +273,7 @@ export default function SplatReview({
                     active={grid.visible}
                     onClick={grid.toggle}
                   />
+                  <HudIconButton icon={Maximize} hint="Plein écran" onClick={fullscreen} />
                 </HudGroup>
                 {showStats && <StatsPanel splat={splat} />}
                 {showSettings && (

@@ -1,9 +1,11 @@
-import { type ComponentProps, useEffect, useState } from 'react';
+import { type ComponentProps, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import type { ReviewComment, Role } from '../../types/api';
-import { AnnotationCanvas } from '../../components/AnnotationCanvas';
+import { AnnotationCanvas, type Shape } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';
 import { Skeleton } from '../../components/ui/skeleton';
+import { shapesOutsideFrame } from './frameRect';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3DThree } from './three/useModel3DThree';
@@ -115,18 +117,28 @@ export default function ReviewViewer({
 
   // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer de
   // taille différente. Le wrapper est en pointer-events-none : en lecture on peut orbiter
-  // (le modèle reçoit les events) ; en édition la SVG les capte.
+  // (le modèle reçoit les events) ; en édition la SVG les capte. Le dessin peut déborder du
+  // cadre de livraison (marge, Phase 25) — signalé une fois à l'auteur.
+  const warnedOutside = useRef(false);
+  const onShapesChange = (s: Shape[]) => {
+    ann.setShapes(s);
+    if (!warnedOutside.current && shapesOutsideFrame(s)) {
+      warnedOutside.current = true;
+      toast.info('Une annotation dépasse le cadre de livraison — elle restera visible mais hors cadre.');
+    }
+  };
   const renderOverlay = (captureAspect?: number) =>
     ann.annotating || ann.viewed ? (
       <AnnotationCanvas
         shapes={ann.viewed ?? ann.annot}
-        onChange={ann.setShapes}
+        onChange={onShapesChange}
         editable={ann.annotating && !ann.viewed}
         tool={ann.tool}
         color={ann.color}
         width={ann.penWidth}
         alpha={ann.alpha}
         captureAspect={captureAspect}
+        margin={0.5}
       />
     ) : null;
 

@@ -37,12 +37,15 @@ export default function Model3DThreePane({
 }) {
   const showError = loadError || (status !== 'PROCESSING' && status !== 'READY');
   return (
-    <div className={VIEWER_ZONE}>
-      {/* Cadre de review à aspect fixe (V6) : conteneur de scène + overlay letterboxés */}
-      <ReviewFrame aspect={aspect}>
+    <div className={VIEWER_ZONE} data-viewer-zone>
+      {/* Viewer plein espace + guide letterbox du cadre de livraison (Phase 25) ; l'overlay
+          d'annotation est ancré au guide (coordonnées normalisées alignées pour tous). */}
+      <ReviewFrame
+        aspect={aspect}
+        frame={overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
+      >
         {/* Conteneur de la scène Three.js (rempli par useModel3DThree) — toujours monté */}
         <div ref={containerRef} className="absolute inset-0" />
-        {overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
         {hud}
         {/* Cadre « fenêtre flottante » du PiP (le rendu WebGL est dessiné dessous en scissor) */}
         {layoutMode && (

@@ -31,9 +31,13 @@ export default function SplatPane({
   aspect?: number;
 }) {
   return (
-    <div className={VIEWER_ZONE}>
-      {/* Cadre de review à aspect fixe : canvas + overlays + HUD y rendent, letterboxés (V6) */}
-      <ReviewFrame aspect={aspect}>
+    <div className={VIEWER_ZONE} data-viewer-zone>
+      {/* Viewer plein espace + guide letterbox du cadre de livraison (Phase 25) ; l'overlay
+          d'annotation 2D est ancré au guide, la sélection éditeur reste plein cadre. */}
+      <ReviewFrame
+        aspect={aspect}
+        frame={overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
+      >
         {/* Conteneur de la scène Three.js (rempli par useSplat) — toujours monté */}
         <div ref={containerRef} className="absolute inset-0" />
 
@@ -42,9 +46,6 @@ export default function SplatPane({
 
         {/* HUD flottant (au-dessus des overlays, sous les états de repli) */}
         {hud}
-
-        {/* Overlay de dessin 2D superposé (s'aligne sur la vue caméra courante) */}
-        {overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
       </ReviewFrame>
 
       {/* États de repli — centrés dans toute la zone (hors letterbox) */}

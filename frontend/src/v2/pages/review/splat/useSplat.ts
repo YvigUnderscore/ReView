@@ -4,6 +4,8 @@ import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
 import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
+import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
+import { resizeRendererCamera } from '../three/sceneConfig';
 import { createFlyControls } from '../viewer/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { createHotspotMarker } from './scene/hotspotMarker';
@@ -82,8 +84,12 @@ export interface SplatViewer {
   getDom: () => HTMLElement | null;
 }
 
-export function useSplat(url: string | null, fileName: string): SplatViewer {
+export function useSplat(url: string | null, fileName: string, frameAspect?: number): SplatViewer {
   const containerRef = useRef<HTMLDivElement>(null);
+  // Aspect du cadre de livraison (Phase 25) : la caméra le garde quel que soit l'écran,
+  // la vue étant étendue au conteneur entier (setViewOffset, cf. resizeRendererCamera).
+  const frameAspectRef = useRef<number>(DEFAULT_REVIEW_ASPECT);
+  frameAspectRef.current = frameAspect ?? DEFAULT_REVIEW_ASPECT;
   const sceneRef = useRef<SplatScene | null>(null);
   const threeRef = useRef<typeof import('three') | null>(null);
   // Hotspot à afficher (null = masqué), lu par la boucle de rendu. `objectSpace` : le point
@@ -166,14 +172,14 @@ export function useSplat(url: string | null, fileName: string): SplatViewer {
       const init = (mesh as unknown as { initialized?: Promise<unknown> }).initialized;
       init?.then(onReady).catch(() => !cancelled && setLoadError(true));
 
-      const resize = () => {
-        const w = container.clientWidth;
-        const h = container.clientHeight;
-        if (w === 0 || h === 0) return;
-        renderer.setSize(w, h, false);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-      };
+      const resize = () =>
+        resizeRendererCamera(
+          renderer,
+          camera,
+          container.clientWidth,
+          container.clientHeight,
+          frameAspectRef.current,
+        );
       resize();
       const ro = new ResizeObserver(resize);
       ro.observe(container);

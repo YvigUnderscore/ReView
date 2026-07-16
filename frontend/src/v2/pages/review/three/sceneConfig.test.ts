@@ -27,6 +27,36 @@ describe('sceneConfig — socle Three (V0)', () => {
     expect(resizeRendererCamera({ setSize }, camera, 0, 900)).toBe(false);
   });
 
+  it('resizeRendererCamera + frameAspect : verrouille l’aspect du cadre et étend la vue (Phase 25)', () => {
+    const setSize = vi.fn();
+    const setViewOffset = vi.fn();
+    const updateProjectionMatrix = vi.fn();
+    const camera = { aspect: 0, setViewOffset, updateProjectionMatrix } as never;
+    // Conteneur 2000×900 (plus large que 16/9) : pleine vue = 1600×900, offset x = -200.
+    expect(resizeRendererCamera({ setSize }, camera, 2000, 900, 16 / 9)).toBe(true);
+    expect((camera as { aspect: number }).aspect).toBeCloseTo(16 / 9);
+    const [fw, fh, x, y, w, h] = setViewOffset.mock.calls[0] as number[];
+    expect(fw).toBeCloseTo(1600);
+    expect(fh).toBe(900);
+    expect(x).toBeCloseTo(-200);
+    expect(y).toBe(0);
+    expect(w).toBe(2000);
+    expect(h).toBe(900);
+  });
+
+  it('resizeRendererCamera sans frameAspect : lève un viewOffset résiduel', () => {
+    const setSize = vi.fn();
+    const clearViewOffset = vi.fn();
+    const camera = {
+      aspect: 0,
+      view: { enabled: true },
+      clearViewOffset,
+      updateProjectionMatrix: vi.fn(),
+    } as never;
+    resizeRendererCamera({ setSize }, camera, 800, 600);
+    expect(clearViewOffset).toHaveBeenCalledOnce();
+  });
+
   it('fitDistance : croît avec le rayon, contraint par le plus petit FOV, 0 si dégénéré', () => {
     const d = fitDistance(1, 45, 16 / 9);
     expect(d).toBeGreaterThan(0);
