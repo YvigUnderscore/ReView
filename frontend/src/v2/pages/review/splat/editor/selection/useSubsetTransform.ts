@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import type * as THREE from 'three';
 import type { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { SplatViewer } from '../../useSplat';
+import type { SubsetOp } from '../persistence/subsetOps';
 import type { GizmoMode } from '../../../viewer/gizmos/useTransformGizmo';
 import type { GizmoSettings } from '../../../viewer/gizmos/gizmoSettings';
 import type { EditOp } from '../operations/history';
@@ -37,9 +38,11 @@ export function useSubsetTransform(
     settings: GizmoSettings;
     pushHistory: (op: EditOp) => void;
     onChange: () => void;
+    /** Journal des ops committées (persistance Phase 28) — tenu en phase avec undo/redo. */
+    opsRef: RefObject<SubsetOp[]>;
   },
 ): void {
-  const { enabled, mode, selected, settings, pushHistory, onChange } = opts;
+  const { enabled, mode, selected, settings, pushHistory, onChange, opsRef } = opts;
   const { ready, getSceneHandle } = splat;
   const modeRef = useRef(mode);
   modeRef.current = mode;
@@ -94,10 +97,20 @@ export function useSubsetTransform(
         } else if (snap && lastDelta) {
           const s = snap;
           const d = lastDelta.clone();
+          // Journal de persistance (Phase 28) : l'op est enregistrée au commit et suit undo/redo.
+          const record = { delta: [...d.elements], indices: [...s.indices] };
+          opsRef.current.push(record);
           cbRef.current.pushHistory({
             label: 'Transformer la sélection',
-            undo: () => restoreSubset(handle, s),
-            redo: () => applySubsetDelta(handle, s, d),
+            undo: () => {
+              restoreSubset(handle, s);
+              const at = opsRef.current.indexOf(record);
+              if (at >= 0) opsRef.current.splice(at, 1);
+            },
+            redo: () => {
+              applySubsetDelta(handle, s, d);
+              opsRef.current.push(record);
+            },
           });
           // Recentre le proxy sur le nouveau barycentre, transform remise à l'identité.
           const after = snapshotSubset(handle, selected);
@@ -138,7 +151,7 @@ export function useSubsetTransform(
       cleanup?.();
       mesh.remove(proxy);
     };
-  }, [enabled, ready, getSceneHandle, selected]);
+  }, [enabled, ready, getSceneHandle, selected, opsRef]);
 
   useEffect(() => {
     controlRef.current?.setMode(mode);

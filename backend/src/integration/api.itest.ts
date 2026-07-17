@@ -401,6 +401,23 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const noMask = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(noMask.body.splatMaskUrl).toBeNull();
 
+    // Transformations de sous-ensembles (Phase 28) : ops binaires → URL présignée + compte.
+    const subsetOps = Buffer.alloc(148); // en-tête (8) + 1 op : 16×float64 (128) + n (4) + 2 indices (8)
+    subsetOps.writeUInt32LE(1, 0); // version
+    subsetOps.writeUInt32LE(1, 4); // 1 op
+    const putSubset = await request(app)
+      .put(`/api/media/${mediaId}/splat-subset`)
+      .set(auth)
+      .send({ data: subsetOps.toString('base64'), count: 1 });
+    expect(putSubset.status).toBe(200);
+    expect(putSubset.body.splatSubsetUrl).toBeTruthy();
+    const withSubset = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(withSubset.body.splatSubsetUrl).toBeTruthy();
+    expect(withSubset.body.splatSubsetCount).toBe(1);
+    await request(app).delete(`/api/media/${mediaId}/splat-subset`).set(auth);
+    const noSubset = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(noSubset.body.splatSubsetUrl).toBeNull();
+
     // Présentation persistée (10.G-V5) : caméra + DoF + animation keyframe → détail l'expose.
     const presentation = {
       // aspect + roll persistés (Phase 17) : le cadre fixe et le tilt sont rejoués pour tous.
@@ -510,7 +527,9 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       body: mp4,
     });
     const mediaId = up.body.mediaObjectId;
-    await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
+    // Pas de finalize ici : il enqueuerait un job transcode que le worker de la stack docker
+    // traiterait pendant le test (réécriture du metadata → perte du trim). L'objet du test est
+    // le trim et son verrou de publication — le média est figé READY directement.
     await prisma.mediaObject.update({
       where: { id: mediaId },
       data: { status: MediaStatus.READY, metadata: { fps: 24 } },

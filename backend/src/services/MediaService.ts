@@ -365,6 +365,8 @@ export async function getDetail(user: SessionUser, id: number) {
     splatEdits?: unknown;
     splatMaskKey?: string;
     splatMaskCount?: number;
+    splatSubsetKey?: string;
+    splatSubsetCount?: number;
     splatPresentation?: unknown;
     trim?: { inFrame: number; outFrame: number };
     trimProxyKey?: string;
@@ -372,27 +374,29 @@ export async function getDetail(user: SessionUser, id: number) {
   };
   // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
-  const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, project, references] = await Promise.all([
-    storage.getPresignedGetUrl(media.storageKey),
-    media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
-    proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
-    meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
-    meta.splatMaskKey ? storage.getPresignedGetUrl(meta.splatMaskKey) : Promise.resolve(null),
-    prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
-    // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
-    // assertMediaManage d'ici : un import croisé créerait un cycle).
-    prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
-      Promise.all(
-        rows.map(async (r) => ({
-          id: r.id,
-          url: await storage.getPresignedGetUrl(r.storageKey),
-          x: r.x,
-          y: r.y,
-          width: r.width,
-        })),
+  const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, splatSubsetUrl, project, references] =
+    await Promise.all([
+      storage.getPresignedGetUrl(media.storageKey),
+      media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
+      proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
+      meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
+      meta.splatMaskKey ? storage.getPresignedGetUrl(meta.splatMaskKey) : Promise.resolve(null),
+      meta.splatSubsetKey ? storage.getPresignedGetUrl(meta.splatSubsetKey) : Promise.resolve(null),
+      prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
+      // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
+      // assertMediaManage d'ici : un import croisé créerait un cycle).
+      prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
+        Promise.all(
+          rows.map(async (r) => ({
+            id: r.id,
+            url: await storage.getPresignedGetUrl(r.storageKey),
+            x: r.x,
+            y: r.y,
+            width: r.width,
+          })),
+        ),
       ),
-    ),
-  ]);
+    ]);
   return {
     media: serializeMedia(media),
     url,
@@ -405,6 +409,9 @@ export async function getDetail(user: SessionUser, id: number) {
     splatEdits: meta.splatEdits ?? null,
     splatMaskUrl,
     splatMaskCount: meta.splatMaskCount ?? 0,
+    // Transformations de sous-ensembles (Phase 28) : ops binaires rejouées au chargement.
+    splatSubsetUrl,
+    splatSubsetCount: meta.splatSubsetCount ?? 0,
     // Présentation persistée (10.G-V5) : caméra/DoF/reveal/LOD/animation, rejouée pour tous.
     splatPresentation: meta.splatPresentation ?? null,
     // Trim vidéo non-destructif (10.G-V10) : bornes + proxy trimé prêt ou en cours.

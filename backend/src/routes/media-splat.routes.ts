@@ -78,6 +78,36 @@ router.delete('/:id/splat-mask', validate({ params: idParam }), async (req, res)
   res.json(await SplatEditService.clearSplatMask(req.user!, Number(req.params.id)));
 });
 
+/**
+ * PUT /api/media/:id/splat-subset — transformations de sous-ensembles de splats (Phase 28) :
+ * ops binaires (matrice delta + indices) en base64 → MinIO. `count` = nombre d'ops.
+ */
+router.put(
+  '/:id/splat-subset',
+  validate({
+    params: idParam,
+    body: z.object({
+      data: z.string().min(1).max(5_400_000), // ops base64 (≈ 4 Mo binaire max)
+      count: z.number().int().positive(),
+    }),
+  }),
+  async (req, res) => {
+    res.json(
+      await SplatEditService.setSplatSubsetOps(
+        req.user!,
+        Number(req.params.id),
+        req.body.data,
+        req.body.count,
+      ),
+    );
+  },
+);
+
+/** DELETE /api/media/:id/splat-subset — efface les transformations de sous-ensembles. */
+router.delete('/:id/splat-subset', validate({ params: idParam }), async (req, res) => {
+  res.json(await SplatEditService.clearSplatSubsetOps(req.user!, Number(req.params.id)));
+});
+
 const camPose = z.object({
   position: z.object({ x: finite, y: finite, z: finite }),
   target: z.object({ x: finite, y: finite, z: finite }),

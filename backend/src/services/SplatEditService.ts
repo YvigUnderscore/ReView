@@ -108,6 +108,43 @@ export async function setSplatMask(user: SessionUser, id: number, dataBase64: st
   return { splatMaskUrl: await storage.getPresignedGetUrl(key), splatMaskCount: count };
 }
 
+/**
+ * Enregistre les transformations de sous-ensembles de splats (ops binaires delta+indices,
+ * base64 → MinIO) et référence leur clé (Phase 28) — rejouées au chargement pour tous.
+ */
+export async function setSplatSubsetOps(user: SessionUser, id: number, dataBase64: string, count: number) {
+  const media = await assertEditableSplat(user, id);
+  const buf = Buffer.from(dataBase64, 'base64');
+  if (buf.length === 0 || buf.length > MAX_MASK_BYTES)
+    throw badRequest('Transformations vides ou trop volumineuses', 'INVALID_SUBSET_OPS');
+  const key = StorageService.splatSubsetKey(id);
+  await storage.putObject(key, buf, 'application/octet-stream');
+  const metadata = {
+    ...((media.metadata ?? {}) as object),
+    splatSubsetKey: key,
+    splatSubsetCount: count,
+  } as Prisma.InputJsonObject;
+  await prisma.mediaObject.update({ where: { id }, data: { metadata } });
+  return { splatSubsetUrl: await storage.getPresignedGetUrl(key), splatSubsetCount: count };
+}
+
+/** Efface les transformations de sous-ensembles (métadonnées d'abord, MinIO en best-effort). */
+export async function clearSplatSubsetOps(user: SessionUser, id: number) {
+  const media = await assertEditableSplat(user, id);
+  const meta: Record<string, unknown> = {
+    ...((media.metadata ?? {}) as Record<string, unknown>),
+  };
+  const key = typeof meta.splatSubsetKey === 'string' ? meta.splatSubsetKey : null;
+  delete meta.splatSubsetKey;
+  delete meta.splatSubsetCount;
+  await prisma.mediaObject.update({
+    where: { id },
+    data: { metadata: meta as Prisma.InputJsonObject },
+  });
+  if (key) await storage.deleteObject(key).catch(() => undefined);
+  return { splatSubsetUrl: null };
+}
+
 /** Efface le masque de suppression (métadonnées d'abord, objet MinIO en best-effort). */
 export async function clearSplatMask(user: SessionUser, id: number) {
   const media = await assertEditableSplat(user, id);

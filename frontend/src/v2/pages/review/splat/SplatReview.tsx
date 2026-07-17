@@ -22,6 +22,7 @@ import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SplatEditorToolbar from './editor/SplatEditorToolbar';
 import { applyMaskIndices, applySavedVolumes, fetchMaskIndices } from './editor/persistence/applyEdits';
+import { applySubsetOps, fetchSubsetOps } from './editor/persistence/subsetOps';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 import VolumesBar from './editor/volumes/VolumesBar';
@@ -61,7 +62,15 @@ export default function SplatReview({
   ann: Annotations;
 }) {
   const saved = data.splatEdits;
-  const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl, onSaved, showEdit);
+  const editor = useSplatEditor(
+    splat,
+    data.media.id,
+    saved,
+    data.splatMaskUrl,
+    data.splatSubsetUrl,
+    onSaved,
+    showEdit,
+  );
   const { applyTransform, setBaseFlip, ready, getSceneHandle } = splat;
 
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
@@ -121,10 +130,11 @@ export default function SplatReview({
     }
   }, [showEdit, ready, applyTransform, savedTransform, setBaseFlip, savedFlip]);
 
-  // Lecture seule : applique volumes de crop (sans filaire) et masque de suppression —
-  // les éditions comptent pour tous les spectateurs, pas seulement l'éditeur.
+  // Lecture seule : applique volumes de crop (sans filaire), masque de suppression et
+  // transformations de sous-ensembles — les éditions comptent pour tous les spectateurs.
   const savedVolumes = saved?.volumes ?? null;
   const maskUrl = data.splatMaskUrl;
+  const subsetUrl = data.splatSubsetUrl;
   useEffect(() => {
     if (showEdit || !ready) return;
     const handle = getSceneHandle();
@@ -140,12 +150,16 @@ export default function SplatReview({
         const indices = await fetchMaskIndices(maskUrl).catch(() => []);
         if (!disposed && indices.length) applyMaskIndices(handle, indices);
       }
+      if (subsetUrl) {
+        const ops = await fetchSubsetOps(subsetUrl).catch(() => []);
+        if (!disposed && ops.length) applySubsetOps(handle, ops);
+      }
     })();
     return () => {
       disposed = true;
       created.forEach(disposeVolume);
     };
-  }, [showEdit, ready, getSceneHandle, savedVolumes, maskUrl]);
+  }, [showEdit, ready, getSceneHandle, savedVolumes, maskUrl, subsetUrl]);
 
   // Cadrage F/H, actif pour **tous** (y compris en review post-publish) : F cadre la sélection
   // si présente (édition), sinon le splat visible ; H rétablit la vue d'origine.

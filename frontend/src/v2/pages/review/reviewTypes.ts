@@ -51,7 +51,14 @@ export interface SplatEdits {
 export type SplatEditsPatch = Partial<
   Pick<
     MediaResp,
-    'splatEdits' | 'splatMaskUrl' | 'splatMaskCount' | 'splatPresentation' | 'trim' | 'trimProxyReady'
+    | 'splatEdits'
+    | 'splatMaskUrl'
+    | 'splatMaskCount'
+    | 'splatSubsetUrl'
+    | 'splatSubsetCount'
+    | 'splatPresentation'
+    | 'trim'
+    | 'trimProxyReady'
   >
 >;
 
@@ -160,6 +167,10 @@ export interface MediaResp {
   splatMaskUrl: string | null;
   /** Nombre de splats masqués par le masque de suppression. */
   splatMaskCount: number;
+  /** URL présignée des transformations de sous-ensembles (ops binaires), ou null — Phase 28. */
+  splatSubsetUrl: string | null;
+  /** Nombre d'ops de transformation de sous-ensembles enregistrées. */
+  splatSubsetCount: number;
   /** Présentation persistée (caméra/DoF/reveal/LOD/animation) — 10.G-V5, rejouée pour tous. */
   splatPresentation: SplatPresentation | null;
   /** Trim vidéo non-destructif (10.G-V10) : bornes en frames, proxy trimé prêt ou en cours. */

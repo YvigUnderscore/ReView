@@ -211,6 +211,10 @@ class StorageService {
   static splatMaskKey(mediaId: number): string {
     return `derived/${mediaId}/splat-mask.bin`;
   }
+  /** Transformations de sous-ensembles de splats (ops binaires delta+indices) — Phase 28. */
+  static splatSubsetKey(mediaId: number): string {
+    return `derived/${mediaId}/splat-subset.bin`;
+  }
   static avatarKey(userId: number, ext: string): string {
     return `avatars/${userId}${ext}`;
   }
