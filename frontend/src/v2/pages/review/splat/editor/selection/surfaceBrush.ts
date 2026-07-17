@@ -3,25 +3,24 @@ import type { SplatSceneHandle } from '../../useSplat';
 import { combineSelection, type SelectCombine } from './shapes2d';
 
 /**
- * Brush de surface (10.G-V3) : sélectionne les splats sous le disque du pinceau **et** proches
- * de la profondeur de la surface visée — un raycast au centre du pinceau donne le point de
+ * Brush de surface (10.G-V3 ; Phase 28) : sélectionne les splats sous le disque du pinceau **et**
+ * proches de la profondeur de la surface visée — un raycast au centre du pinceau donne le point de
  * surface, seuls les splats dont la profondeur vue tombe dans une bande autour de ce point sont
  * pris (les splats traversés loin derrière sont ignorés). Repli prévu par le plan : l'API
  * `Readback` de Spark lit par **index de splat**, pas par pixel — pas de depth-picking par
  * pixel exploitable en l'état ; `SplatMesh.raycast` fournit la surface, la bande fait le tri.
  */
 
-/** Demi-épaisseur (espace vue) de la bande de surface pour un rayon de brush donné. */
-export function depthBand(
-  hitViewZ: number,
-  radiusPx: number,
-  fovDeg: number,
-  viewportHeight: number,
-): number {
-  // Taille monde d'un pixel à la profondeur touchée × rayon écran : la bande est du même ordre
-  // que l'empreinte du pinceau sur la surface (facteur 2 de marge pour les surfaces obliques).
-  const worldPerPixel = (2 * hitViewZ * Math.tan((fovDeg * Math.PI) / 360)) / viewportHeight;
-  return Math.max(worldPerPixel * radiusPx * 2, 1e-6);
+/** Fraction de la profondeur touchée servant de demi-bande de surface (Phase 28). */
+export const DEPTH_BAND_FRACTION = 0.03;
+
+/**
+ * Demi-épaisseur (espace vue) de la bande de surface : **fixe** relativement à la profondeur
+ * touchée, **indépendante du rayon du pinceau** (Phase 28). Un gros pinceau ne creuse donc plus
+ * en profondeur (« perçage » corrigé) : il élargit l'empreinte à l'écran, pas l'épaisseur.
+ */
+export function depthBand(hitViewZ: number, fraction = DEPTH_BAND_FRACTION): number {
+  return Math.max(Math.abs(hitViewZ) * fraction, 1e-6);
 }
 
 /**
@@ -86,7 +85,7 @@ export function selectByBrush(
   // Profondeur vue de la surface = -z en espace caméra (équivaut au w du clip perspective).
   const hitView = hits[0]!.point.clone().applyMatrix4(camera.matrixWorldInverse);
   const viewZ = -hitView.z;
-  const halfDepth = depthBand(viewZ, radiusPx, camera.fov, viewport.height);
+  const halfDepth = depthBand(viewZ);
   mesh.updateWorldMatrix(true, false);
   const m = new THREE.Matrix4()
     .multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)

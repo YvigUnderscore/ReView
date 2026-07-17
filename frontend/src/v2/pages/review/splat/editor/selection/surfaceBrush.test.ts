@@ -51,12 +51,12 @@ describe('collectBrushHits', () => {
 });
 
 describe('depthBand', () => {
-  it('croît avec la profondeur et le rayon (empreinte du pinceau sur la surface)', () => {
-    const near = depthBand(1, 40, 60, 900);
-    const far = depthBand(10, 40, 60, 900);
-    const bigBrush = depthBand(1, 120, 60, 900);
-    expect(far).toBeCloseTo(near * 10);
-    expect(bigBrush).toBeCloseTo(near * 3);
+  it('croît avec la profondeur mais reste indépendante du rayon (ne perce plus)', () => {
+    const near = depthBand(1);
+    const far = depthBand(10);
+    expect(far).toBeCloseTo(near * 10); // proportionnelle à la profondeur
     expect(near).toBeGreaterThan(0);
+    // Fraction fixe de la profondeur — un « gros pinceau » ne change pas l'épaisseur.
+    expect(depthBand(1, 0.03)).toBeCloseTo(0.03);
   });
 });

@@ -18,27 +18,15 @@ export interface VolumeRuntime {
 }
 
 /**
- * Synchronise le rayon effectif d'un SDF sphère sur son échelle (11.F) : le shader Spark
- * ignore `scale` pour la sphère — le volume réellement creusé a pour rayon `sdf.radius` seul.
- * Sans cette recopie, le gizmo (qui agit sur `scale`) grossissait le filaire mais pas le crop.
- * Échelle anisotrope : moyenne des composantes (le SDF sphère est isotrope par nature).
- */
-export function syncSphereRadius(sdf: THREE.Object3D): void {
-  if (sdf.userData.volumeShape !== 'sphere') return;
-  const s = sdf.scale;
-  (sdf as unknown as { radius: number }).radius = (Math.abs(s.x) + Math.abs(s.y) + Math.abs(s.z)) / 3;
-}
-
-/**
  * Volumes de crop SDF non-destructifs (10.G) : un `SplatEdit` (enfant du SplatMesh — usage
  * documenté Spark, pas de `editable` global) contenant un `SplatEditSdf` opacité 0 en mode
  * MULTIPLY — l'intérieur du volume est effacé du rendu ; `invert` sur l'édit isole au
  * contraire l'intérieur. Le SDF est un Object3D : le gizmo le déplace/tourne/redimensionne
  * nativement. Un filaire enfant matérialise le volume (rouge = creuser, vert = isoler).
  *
- * Correspondance filaire ↔ SDF (11.F, sémantique shader Spark) : boîte → demi-extents =
- * `scale` (filaire 2×2×2, `radius` 0 = pas d'arrondi de coins) ; sphère → rayon = `radius`,
- * recopié depuis `scale` (cf. syncSphereRadius).
+ * Correspondance filaire ↔ SDF (11.F ; Phase 28, ellipsoïde) : boîte → demi-extents = `scale`
+ * (filaire 2×2×2, `radius` 0 = pas d'arrondi) ; « sphère » → **ELLIPSOID** (demi-axes = `scale`,
+ * `radius` 0), donc redimensionnement **non uniforme** natif (l'échelle des 3 axes est respectée).
  */
 export async function createVolume(
   handle: SplatSceneHandle,
@@ -56,12 +44,12 @@ export async function createVolume(
     invert: mode === 'isolate',
   });
   const sdf = new SplatEditSdf({
-    type: shape === 'box' ? SplatEditSdfType.BOX : SplatEditSdfType.SPHERE,
+    // « Sphère » = ELLIPSOID (demi-axes = échelle) → resize non uniforme correct (Phase 28).
+    type: shape === 'box' ? SplatEditSdfType.BOX : SplatEditSdfType.ELLIPSOID,
     opacity: 0,
     color: new THREE.Color(1, 1, 1),
-    radius: 0, // boîte : aucun arrondi ; sphère : recopié depuis l'échelle juste après
+    radius: 0, // aucun arrondi : boîte comme ellipsoïde tirent leur taille de `scale`
   });
-  sdf.userData.volumeShape = shape;
   edit.addSdf(sdf);
   edit.add(sdf); // enfant → transform par le graphe de scène (gizmo)
 
@@ -71,7 +59,6 @@ export async function createVolume(
   const radius = Math.max(box.getBoundingSphere(new THREE.Sphere()).radius, 0.001);
   sdf.position.copy(center);
   sdf.scale.setScalar(radius / 3);
-  syncSphereRadius(sdf);
 
   // Filaire de visualisation, calé sur le volume réellement creusé : boîte 2³ (demi-extent 1,
   // suit `scale` = demi-extents SDF) / sphère r=1 (suit `scale`, dont le rayon SDF est dérivé).
@@ -96,8 +83,6 @@ export function applyVolumeData(
   runtime.sdf.position.fromArray(data.position);
   runtime.sdf.quaternion.fromArray(data.quaternion);
   runtime.sdf.scale.fromArray(data.scale);
-  // Volumes persistés avant 11.F : le rayon sphère est re-dérivé de l'échelle (migration lecture).
-  syncSphereRadius(runtime.sdf);
 }
 
 /** Change l'effet du volume (creuser ↔ isoler) et la couleur du filaire. */

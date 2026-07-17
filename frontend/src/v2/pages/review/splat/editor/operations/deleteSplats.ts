@@ -13,7 +13,7 @@ export interface HiddenSplats {
  * du mesh est invalidé (`updateGenerator`). Sans lui, le masquage n'apparaît qu'au prochain
  * mouvement caméra (ou par effet de bord du détachement de la surbrillance).
  */
-function commitPackedChange(handle: SplatSceneHandle): void {
+export function commitPackedChange(handle: SplatSceneHandle): void {
   const packed = handle.mesh.packedSplats;
   if (packed) packed.needsUpdate = true;
   handle.mesh.updateGenerator();

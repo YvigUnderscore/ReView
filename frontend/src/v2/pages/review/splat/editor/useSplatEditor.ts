@@ -21,8 +21,8 @@ import { applyMaskIndices, fetchMaskIndices } from './persistence/applyEdits';
 import { bytesToBase64, encodeMask } from './persistence/mask';
 import { meshBounds, selectionBounds } from './selection/bounds';
 import { useSelection } from './selection/useSelection';
+import { useSubsetTransform } from './selection/useSubsetTransform';
 import { useEditorShortcuts } from './useEditorShortcuts';
-import { syncSphereRadius } from './volumes/cropVolume';
 import { useVolumes } from './volumes/useVolumes';
 
 /** Outil actif de l'éditeur : navigation (défaut, aucun outil), gizmo ou sélection. */
@@ -92,15 +92,11 @@ export function useSplatEditor(
   // l'enregistrement) — on la reflète dans un état pour les champs numériques (V4) + dirty.
   const [volumeTrs, setVolumeTrs] = useState<SplatTransform | null>(null);
   const activeSdf = volumes.activeSdf;
-  const volumeGizmoChange = useCallback(
-    (t: SplatTransform) => {
-      // Sphère : le rayon SDF effectif suit l'échelle posée par le gizmo (11.F).
-      if (activeSdf) syncSphereRadius(activeSdf);
-      setVolumeTrs(t);
-      setDirty(true);
-    },
-    [activeSdf],
-  );
+  const volumeGizmoChange = useCallback((t: SplatTransform) => {
+    // Box/ellipsoïde : la taille dérive directement de `scale` (aucune synchro de rayon, Phase 28).
+    setVolumeTrs(t);
+    setDirty(true);
+  }, []);
 
   // Synchronise la TRS affichée quand la cible du gizmo change (sélection/désélection volume).
   useEffect(() => {
@@ -122,7 +118,6 @@ export function useSplatEditor(
           sdf.position.fromArray(t.position);
           sdf.quaternion.fromArray(t.quaternion);
           sdf.scale.fromArray(t.scale);
-          syncSphereRadius(sdf);
           setVolumeTrs(t);
           setDirty(true);
         };
@@ -139,13 +134,26 @@ export function useSplatEditor(
     [activeSdf, applyTransform, historyPush],
   );
 
+  // TRS de sous-ensemble (Phase 28) : sélection non vide + aucun volume ciblé → le gizmo agit sur
+  // les seuls splats sélectionnés (au barycentre), pas sur le mesh entier.
+  const hasSubset = enabled && isGizmoTool && selection.selected.size > 0 && !activeSdf;
+
   useTransformGizmo(splat, {
-    enabled: enabled && isGizmoTool,
+    enabled: enabled && isGizmoTool && !hasSubset,
     mode: isGizmoTool ? (tool as GizmoMode) : 'translate',
     target: volumes.activeSdf,
     settings: gizmo.settings,
     onChange: volumes.activeSdf ? volumeGizmoChange : onGizmoChange,
     onCommit: gizmoCommit,
+  });
+
+  useSubsetTransform(splat, {
+    enabled: hasSubset,
+    mode: isGizmoTool ? (tool as GizmoMode) : 'translate',
+    selected: selection.selected,
+    settings: gizmo.settings,
+    pushHistory: history.push,
+    onChange: markDirty,
   });
 
   /** Saisie des champs numériques (V4) : applique la TRS à la cible du gizmo (splat ou volume). */
@@ -155,7 +163,6 @@ export function useSplatEditor(
         activeSdf.position.fromArray(t.position);
         activeSdf.quaternion.fromArray(t.quaternion);
         activeSdf.scale.fromArray(t.scale);
-        syncSphereRadius(activeSdf); // rayon SDF sphère dérivé de l'échelle (11.F)
         setVolumeTrs(t);
       } else {
         applyTransform(t);

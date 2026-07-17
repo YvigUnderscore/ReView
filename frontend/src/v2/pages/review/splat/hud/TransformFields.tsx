@@ -88,11 +88,11 @@ function Vec3Row({
 }
 
 /**
- * Champs numériques TRS du HUD (10.G-V4) : position, rotation en degrés (euler XYZ) et échelle
- * de la **cible du gizmo** (splat entier ou volume SDF actif). Two-way : un drag du gizmo met
- * à jour les champs ; une saisie applique la TRS à l'objet (commit au blur/Entrée).
- * Contextualisation (11.G) : sphère → un seul champ « Rayon » (le rayon SDF effectif) ;
- * boîte → « Demi-ext. » ; réglages espace/snap/taille du gizmo mémorisés par type de cible.
+ * Champs numériques TRS du HUD (10.G-V4 ; Phase 28) : position, rotation en degrés (euler XYZ) et
+ * échelle de la **cible du gizmo** (splat entier ou volume SDF actif). Two-way : un drag du gizmo
+ * met à jour les champs ; une saisie applique la TRS à l'objet (commit au blur/Entrée).
+ * Contextualisation : boîte → « Demi-ext. », ellipsoïde (« sphère ») → « Demi-axes » (non uniforme) ;
+ * réglages espace/snap/taille du gizmo mémorisés par type de cible.
  */
 export default function TransformFields({
   label,
@@ -115,7 +115,6 @@ export default function TransformFields({
   };
 }) {
   const s = gizmo.settings;
-  const radius = (Math.abs(value.scale[0]) + Math.abs(value.scale[1]) + Math.abs(value.scale[2])) / 3;
   return (
     <HudGroup>
       <span className="font-medium text-foreground">{label}</span>
@@ -136,37 +135,16 @@ export default function TransformFields({
           step={0.1}
           onCommit={(deg) => onCommit({ ...value, quaternion: eulerDegToQuat(deg) })}
         />
-        {shape === 'sphere' ? (
-          <div className="flex items-center gap-1.5">
-            <span className="w-16 text-muted-foreground" title="Rayon effectif du volume SDF (11.F)">
-              Rayon
-            </span>
-            <HudNumber
-              label="R"
-              hint="Rayon effectif du volume SDF"
-              value={radius}
-              onChange={(r) => {
-                const v = Math.max(r, 0.001);
-                onCommit({ ...value, scale: [v, v, v] });
-              }}
-              min={0.001}
-              max={10000}
-              step={0.001}
-              pixelsPerStep={8}
-            />
-          </div>
-        ) : (
-          <Vec3Row
-            label={shape === 'box' ? 'Demi-ext.' : 'Échelle'}
-            value={value.scale}
-            min={0.001}
-            max={10000}
-            step={0.001}
-            onCommit={(scale) =>
-              onCommit({ ...value, scale: scale.map((x) => Math.max(x, 0.001)) as [number, number, number] })
-            }
-          />
-        )}
+        <Vec3Row
+          label={shape === 'box' ? 'Demi-ext.' : shape === 'sphere' ? 'Demi-axes' : 'Échelle'}
+          value={value.scale}
+          min={0.001}
+          max={10000}
+          step={0.001}
+          onCommit={(scale) =>
+            onCommit({ ...value, scale: scale.map((x) => Math.max(x, 0.001)) as [number, number, number] })
+          }
+        />
       </div>
       {/* Réglages du gizmo, mémorisés par type de cible (splat / volume) — 11.G. */}
       <div className="mt-1 flex items-center gap-1.5 border-t border-border pt-1.5 text-[11px]">
