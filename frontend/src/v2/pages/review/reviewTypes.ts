@@ -183,13 +183,15 @@ export interface MediaResp {
   references: ReviewReferenceItem[];
 }
 
-/** Image de référence épinglée au canvas de la review image. */
+/** Image de référence épinglée au canvas de la review image (figée, liée à un commentaire). */
 export interface ReviewReferenceItem {
   id: number;
   url: string;
   x: number;
   y: number;
   width: number;
+  /** Commentaire porteur — affichée seulement quand il est sélectionné (null = historique). */
+  commentId: number | null;
 }
 
 export interface Hotspot3D {
@@ -239,12 +241,13 @@ export function resolveGlbSrc(data: MediaResp | null): string | null {
   return data.glbUrl ?? (/\.(glb|gltf)(\?|$)/i.test(data.url) ? data.url : null);
 }
 
-/** Premier média vidéo comparable d'une version (comparaison A/B, backlog P2). */
-export function findCompareVideo(
+/** Premier média comparable (même type) d'une version — comparaison A/B vidéo & image. */
+export function findCompareMedia(
   media: Array<{ id: number; kind: string }>,
   excludeId: number,
+  kind: string,
 ): number | null {
-  return media.find((m) => m.kind === 'VIDEO' && m.id !== excludeId)?.id ?? null;
+  return media.find((m) => m.kind === kind && m.id !== excludeId)?.id ?? null;
 }
 
 /** Décale la vidéo de `delta` frames (met en pause pour un pas précis). */

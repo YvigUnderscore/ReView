@@ -12,7 +12,10 @@ import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
+import ReviewContextMenu from './ReviewContextMenu';
 import Filmstrip from './Filmstrip';
+import ImageComparePane from './ImageComparePane';
+import ImageWipeOverlay from './ImageWipeOverlay';
 import Model3DReview from './Model3DReview';
 import SplatReview from './splat/SplatReview';
 import VideoComparePane from './VideoComparePane';
@@ -49,6 +52,7 @@ export default function ReviewViewer({
   onMarker,
   onReprocess,
   onSplatEditsSaved,
+  onToggleAnnotate,
   compareId,
   onCloseCompare,
 }: {
@@ -77,6 +81,8 @@ export default function ReviewViewer({
   onMarker: () => void;
   onReprocess: () => void;
   onSplatEditsSaved: (patch: SplatEditsPatch) => void;
+  /** Bascule le mode annotation (menu clic droit). */
+  onToggleAnnotate: () => void;
   compareId: number | null;
   onCloseCompare: () => void;
 }) {
@@ -142,8 +148,21 @@ export default function ReviewViewer({
       />
     ) : null;
 
+  // Un déplacement de la vue 3D/splat (orbite, vol, zoom) masque l'annotation du
+  // commentaire sélectionné : elle n'a de sens que depuis la caméra d'origine. La vidéo
+  // fait de même via seek manuel + lecture (VideoPane) ; l'image garde ses annotations
+  // (ancrées au pixel, elles suivent le zoom/pan).
+  const clearOnViewMove = () => {
+    if ((kind === 'MODEL_3D' || kind === 'SPLAT') && (selectedCommentId != null || ann.viewed))
+      onClearSelection();
+  };
+
   return (
-    <section className="flex min-w-0 flex-1 flex-col gap-2">
+    <section
+      className="relative flex min-w-0 flex-1 flex-col gap-2"
+      onPointerDownCapture={clearOnViewMove}
+      onWheelCapture={clearOnViewMove}
+    >
       {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady || splatReady) && (
         <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} />
       )}
@@ -151,45 +170,56 @@ export default function ReviewViewer({
       {/* Skeleton du viewer pendant le chargement (10.B5) */}
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
 
-      {kind === 'VIDEO' && src && (
+      {kind === 'VIDEO' && src && data && (
         <div className="flex min-h-0 flex-1 gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <VideoPane
-              src={src}
-              hlsUrl={hlsUrl}
-              videoRef={videoRef}
-              programmaticSeekRef={programmaticSeekRef}
-              overlay={renderOverlay()}
-              compareOverlay={
-                compareId != null && compareMode === 'wipe' ? (
-                  <VideoWipeOverlay
-                    compareId={compareId}
-                    masterRef={videoRef}
-                    onClose={closeCompare}
-                    onSide={() => setCompareMode('side')}
-                  />
-                ) : null
-              }
-              comments={comments ?? []}
-              selectedId={selectedCommentId}
-              onSelectComment={onSelectComment}
-              onManualSeek={onManualSeek}
-              onMarker={onMarker}
-              fps={fps}
-              fpsDetected={data?.fps != null}
-              setFpsOverride={setFpsOverride}
-              startFrame={startFrame}
-              trimRange={
-                // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
-                data?.trim && !data.trimProxyReady
-                  ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
-                  : null
-              }
-            />
-            {data && canEdit && (
-              <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
-            )}
-          </div>
+          <ReviewContextMenu
+            data={data}
+            videoRef={videoRef}
+            fps={fps}
+            canManage={canManage}
+            annotating={ann.annotating}
+            onToggleAnnotate={onToggleAnnotate}
+            hasViewed={!!ann.viewed}
+            onClearSelection={onClearSelection}
+          >
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <VideoPane
+                src={src}
+                hlsUrl={hlsUrl}
+                videoRef={videoRef}
+                programmaticSeekRef={programmaticSeekRef}
+                overlay={renderOverlay()}
+                compareOverlay={
+                  compareId != null && compareMode === 'wipe' ? (
+                    <VideoWipeOverlay
+                      compareId={compareId}
+                      masterRef={videoRef}
+                      onClose={closeCompare}
+                      onSide={() => setCompareMode('side')}
+                    />
+                  ) : null
+                }
+                comments={comments ?? []}
+                selectedId={selectedCommentId}
+                onSelectComment={onSelectComment}
+                onManualSeek={onManualSeek}
+                onMarker={onMarker}
+                fps={fps}
+                fpsDetected={data?.fps != null}
+                setFpsOverride={setFpsOverride}
+                startFrame={startFrame}
+                trimRange={
+                  // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
+                  data?.trim && !data.trimProxyReady
+                    ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
+                    : null
+                }
+              />
+              {data && canEdit && (
+                <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
+              )}
+            </div>
+          </ReviewContextMenu>
           {/* Comparaison A/B côte à côte : pane B synchronisé sur le lecteur maître. */}
           {compareId != null && compareMode === 'side' && (
             <VideoComparePane
@@ -202,36 +232,66 @@ export default function ReviewViewer({
         </div>
       )}
 
-      {kind === 'IMAGE' && data?.url && (
-        <div className={VIEWER_ZONE}>
-          <div className="absolute inset-0">
-            <ImageReviewViewer
-              src={data.url}
-              alt={data.media.originalName}
-              shapes={ann.viewed ?? ann.annot}
-              onChange={ann.setShapes}
-              editable={ann.annotating && !ann.viewed}
-              tool={ann.tool}
-              color={ann.color}
-              width={ann.penWidth}
-              alpha={ann.alpha}
-              info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
-              pinned={
-                <ReviewCanvasRefs
-                  mediaId={data.media.id}
-                  references={data.references ?? []}
-                  canManage={canManage}
-                />
-              }
-            />
-          </div>
-          <ReviewCanvasRefsControls
-            mediaId={data.media.id}
-            count={data.references?.length ?? 0}
-            canManage={canManage}
+      {kind === 'IMAGE' &&
+        data?.url &&
+        (compareId != null && compareMode === 'wipe' ? (
+          // Comparaison image en mode wipe : superposition à barre rotative (zoom suspendu).
+          <ImageWipeOverlay
+            aUrl={data.url}
+            aName={data.media.originalName}
+            compareId={compareId}
+            onClose={closeCompare}
+            onSide={() => setCompareMode('side')}
           />
-        </div>
-      )}
+        ) : (
+          <div className="flex min-h-0 flex-1 gap-3">
+            <ReviewContextMenu
+              data={data}
+              videoRef={videoRef}
+              fps={fps}
+              canManage={canManage}
+              annotating={ann.annotating}
+              onToggleAnnotate={onToggleAnnotate}
+              hasViewed={!!ann.viewed}
+              onClearSelection={onClearSelection}
+            >
+              <div className={VIEWER_ZONE}>
+                <div className="absolute inset-0">
+                  <ImageReviewViewer
+                    src={data.url}
+                    alt={data.media.originalName}
+                    shapes={ann.viewed ?? ann.annot}
+                    onChange={ann.setShapes}
+                    editable={ann.annotating && !ann.viewed}
+                    tool={ann.tool}
+                    color={ann.color}
+                    width={ann.penWidth}
+                    alpha={ann.alpha}
+                    info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
+                    pinned={
+                      <ReviewCanvasRefs
+                        mediaId={data.media.id}
+                        references={data.references ?? []}
+                        selectedCommentId={selectedCommentId}
+                        canManage={canManage}
+                        ann={ann}
+                      />
+                    }
+                  />
+                </div>
+                <ReviewCanvasRefsControls ann={ann} annotating={ann.annotating} />
+              </div>
+            </ReviewContextMenu>
+            {/* Comparaison A/B image côte à côte */}
+            {compareId != null && compareMode === 'side' && (
+              <ImageComparePane
+                compareId={compareId}
+                onClose={closeCompare}
+                onWipe={() => setCompareMode('wipe')}
+              />
+            )}
+          </div>
+        ))}
 
       {kind === 'MODEL_3D' && data && (
         <Model3DReview

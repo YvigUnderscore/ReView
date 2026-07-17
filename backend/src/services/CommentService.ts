@@ -5,6 +5,7 @@ import { emitToProject } from './SocketService';
 import { notify, sendDiscord } from './NotificationService';
 import { toPublicUser } from '../lib/userView';
 import { storage } from './StorageService';
+import * as ReviewReferenceService from './ReviewReferenceService';
 import { badRequest, forbidden } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
@@ -210,6 +211,8 @@ export async function remove(user: SessionUser, projectId: number, id: number): 
   if (!existing) return false;
   if (!isManager(user.role) && existing.userId !== user.id)
     throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+  // Purge MinIO des images de référence jointes (les lignes DB partent en cascade).
+  await ReviewReferenceService.purgeForComment(id);
   await prisma.comment.delete({ where: { id } });
   emitToProject(projectId, 'comment:delete', { id });
   return true;

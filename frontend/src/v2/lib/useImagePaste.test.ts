@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { imageFilesFromClipboard } from './useImagePaste';
+import { fileToImageDataUrl, imageFilesFromClipboard, isAcceptedImageType } from './useImagePaste';
 
 /** Fabrique un DataTransfer-like minimal pour le test (items + files). */
 function makeClipboard(files: { type: string }[]): DataTransfer {
@@ -28,5 +28,20 @@ describe('imageFilesFromClipboard (Phase 18)', () => {
   it('extrait plusieurs images', () => {
     const out = imageFilesFromClipboard(makeClipboard([{ type: 'image/jpeg' }, { type: 'image/webp' }]));
     expect(out.map((f) => f.type)).toEqual(['image/jpeg', 'image/webp']);
+  });
+});
+
+describe('fileToImageDataUrl (fix Ctrl+V « Image invalide »)', () => {
+  it('accepte les types backend tels quels', () => {
+    for (const t of ['image/png', 'image/JPEG', 'image/webp', 'image/gif'])
+      expect(isAcceptedImageType(t)).toBe(true);
+    expect(isAcceptedImageType('image/bmp')).toBe(false);
+    expect(isAcceptedImageType('')).toBe(false);
+  });
+
+  it('lit un type accepté en data URL sans ré-encodage', async () => {
+    const file = new File([new Uint8Array([1, 2, 3])], 'a.png', { type: 'image/png' });
+    const url = await fileToImageDataUrl(file);
+    expect(url.startsWith('data:image/png;base64,')).toBe(true);
   });
 });

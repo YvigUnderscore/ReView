@@ -312,6 +312,45 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     // Le détail média expose désormais la miniature.
     const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(detail.body.thumbnailUrl).toBeTruthy();
+
+    // Images de référence liées à un commentaire : ajout par l'auteur, exposées avec
+    // leur commentId dans le détail, commentaire invalide refusé, suppression OK.
+    const badRef = await request(app)
+      .post(`/api/media/${mediaId}/references`)
+      .set(auth)
+      .send({ dataUrl, commentId: 999999 });
+    expect(badRef.status).toBe(400);
+
+    const com = await request(app)
+      .post('/api/comments')
+      .set(auth)
+      .send({ mediaObjectId: mediaId, content: 'porteur de référence' });
+    expect(com.status).toBe(201);
+    const commentId = com.body.comment.id;
+
+    const ref = await request(app)
+      .post(`/api/media/${mediaId}/references`)
+      .set(auth)
+      .send({ dataUrl, commentId, x: 0.2, y: 0.1, width: 0.4 });
+    expect(ref.status).toBe(201);
+    expect(ref.body.reference.commentId).toBe(commentId);
+
+    const withRef = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(withRef.body.references).toHaveLength(1);
+    expect(withRef.body.references[0].commentId).toBe(commentId);
+
+    const delRef = await request(app)
+      .delete(`/api/media/${mediaId}/references/${ref.body.reference.id}`)
+      .set(auth);
+    expect(delRef.status).toBe(204);
+
+    // Miniature = présentation : reste modifiable après publication (exception au verrou).
+    await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
+    const thumbAfterPublish = await request(app)
+      .post(`/api/media/${mediaId}/thumbnail`)
+      .set(auth)
+      .send({ dataUrl });
+    expect(thumbAfterPublish.status).toBe(200);
   });
 
   it('éditions splat (10.G) : PATCH /splat-edits + masque, verrouillés à la publication', async () => {

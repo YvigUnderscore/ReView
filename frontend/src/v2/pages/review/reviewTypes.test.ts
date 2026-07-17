@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tcFromFrame, formatTime, findCompareVideo } from './reviewTypes';
+import { tcFromFrame, formatTime, findCompareMedia } from './reviewTypes';
 
 describe('tcFromFrame', () => {
   it('convertit un numéro de frame en timecode HH:MM:SS:FF', () => {
@@ -27,19 +27,21 @@ describe('formatTime', () => {
   });
 });
 
-describe('findCompareVideo — comparaison A/B', () => {
-  it('renvoie la première vidéo de la version', () => {
-    const media = [
-      { id: 10, kind: 'IMAGE' },
-      { id: 11, kind: 'VIDEO' },
-      { id: 12, kind: 'VIDEO' },
-    ];
-    expect(findCompareVideo(media, 99)).toBe(11);
+describe('findCompareMedia — comparaison A/B (vidéo & image)', () => {
+  const media = [
+    { id: 10, kind: 'IMAGE' },
+    { id: 11, kind: 'VIDEO' },
+    { id: 12, kind: 'VIDEO' },
+  ];
+
+  it('renvoie le premier média du type demandé', () => {
+    expect(findCompareMedia(media, 99, 'VIDEO')).toBe(11);
+    expect(findCompareMedia(media, 99, 'IMAGE')).toBe(10);
   });
 
-  it('exclut le média courant et renvoie null sans autre vidéo', () => {
-    expect(findCompareVideo([{ id: 11, kind: 'VIDEO' }], 11)).toBeNull();
-    expect(findCompareVideo([{ id: 10, kind: 'MODEL_3D' }], 99)).toBeNull();
-    expect(findCompareVideo([], 99)).toBeNull();
+  it('exclut le média courant et renvoie null sans autre média du type', () => {
+    expect(findCompareMedia([{ id: 11, kind: 'VIDEO' }], 11, 'VIDEO')).toBeNull();
+    expect(findCompareMedia([{ id: 10, kind: 'MODEL_3D' }], 99, 'VIDEO')).toBeNull();
+    expect(findCompareMedia([], 99, 'IMAGE')).toBeNull();
   });
 });

@@ -359,12 +359,17 @@ model ReviewReference {
   x             Float       @default(1.05) // coin haut-gauche (fraction de l'image de base)
   y             Float       @default(0)
   width         Float       @default(0.3) // largeur (fraction de la largeur de base)
+  // Commentaire porteur : la référence n'est affichée que lorsque ce commentaire est
+  // sélectionné (null = référence historique, toujours visible). Cascade à la suppression.
+  comment       Comment?    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId     Int?
   createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdById   Int?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   @@index([mediaObjectId])
+  @@index([commentId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -424,7 +429,8 @@ model Comment {
   assignee   User? @relation("CommentAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   assigneeId Int?
 
-  reactions Reaction[]
+  reactions  Reaction[]
+  references ReviewReference[] // images de référence jointes (affichées à la sélection)
 }
 
 model Reaction {

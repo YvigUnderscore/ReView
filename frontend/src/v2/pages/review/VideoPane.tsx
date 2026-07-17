@@ -155,9 +155,17 @@ export default function VideoPane({
           <video
             ref={videoRef}
             src={hls.active ? undefined : src}
+            // anonymous : autorise la capture canvas de la frame courante (menu clic droit,
+            // miniature) — MinIO/nginx renvoient les en-têtes CORS nécessaires.
+            crossOrigin="anonymous"
             className="block h-full w-full cursor-pointer"
             onClick={togglePlay}
-            onPlay={() => setPlaying(true)}
+            onPlay={() => {
+              setPlaying(true);
+              // Le timecode avance : l'annotation du commentaire sélectionné n'est plus
+              // alignée → on la masque (même logique que le seek manuel).
+              onManualSeek();
+            }}
             onPause={() => setPlaying(false)}
             onTimeUpdate={onTimeUpdate}
             onLoadedMetadata={(e) => {
@@ -170,21 +178,6 @@ export default function VideoPane({
           />
           {overlay}
         </div>
-        {hls.active && hls.levels.length > 1 && (
-          <select
-            title="Qualité de lecture"
-            className="absolute right-2 top-2 rounded-md border border-border bg-black/60 px-2 py-1 text-xs text-white"
-            value={hls.mode}
-            onChange={(e) => hls.setLevel(Number(e.target.value))}
-          >
-            <option value={-1}>Auto</option>
-            {hls.levels.map((l, i) => (
-              <option key={i} value={i}>
-                {l.height}p
-              </option>
-            ))}
-          </select>
-        )}
         {compareOverlay}
       </div>
 
@@ -223,6 +216,7 @@ export default function VideoPane({
         onFullscreen={fullscreen}
         loopActive={loopIn != null || loopOut != null}
         onClearLoop={clearLoop}
+        quality={{ active: hls.active, levels: hls.levels, mode: hls.mode, setLevel: hls.setLevel }}
       />
     </>
   );

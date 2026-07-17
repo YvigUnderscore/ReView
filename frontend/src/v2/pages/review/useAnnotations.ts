@@ -2,6 +2,15 @@ import { useState } from 'react';
 import type { Shape, Tool } from '../../components/AnnotationCanvas';
 import type { Hotspot3D, SplatLayoutAnim } from './reviewTypes';
 
+/** Image de référence en préparation dans le composer (locale, envoyée avec le commentaire). */
+export interface StagedReference {
+  key: string;
+  dataUrl: string;
+  x: number;
+  y: number;
+  width: number;
+}
+
 /**
  * État de l'annotation du composer (dessin 2D + hotspot 3D) avec undo/redo,
  * et de l'annotation d'un commentaire sélectionné affichée en lecture seule
@@ -28,6 +37,24 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
   const [future, setFuture] = useState<Shape[][]>([]);
   const [annotating, setAnnotating] = useState(false);
   const [hotspot3d, setHotspot3d] = useState<Hotspot3D | null>(null);
+  // Images de référence en préparation : posées/déplaçables tant que le commentaire n'est
+  // pas envoyé, puis figées côté serveur (liées au commentaire créé).
+  const [stagedRefs, setStagedRefs] = useState<StagedReference[]>([]);
+  const addStagedRef = (dataUrl: string) =>
+    setStagedRefs((rs) => [
+      ...rs,
+      {
+        key: Math.random().toString(36).slice(2, 9),
+        dataUrl,
+        x: 1.05 + rs.length * 0.03,
+        y: rs.length * 0.03,
+        width: 0.3,
+      },
+    ]);
+  const updateStagedRef = (key: string, patch: Partial<Pick<StagedReference, 'x' | 'y' | 'width'>>) =>
+    setStagedRefs((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const removeStagedRef = (key: string) => setStagedRefs((rs) => rs.filter((r) => r.key !== key));
+
   // Animation caméra jointe au commentaire en cours (mode layout) — staged avant envoi.
   const [cameraAnim, setCameraAnim] = useState<SplatLayoutAnim | null>(null);
   // Annotation d'un commentaire sélectionné (lecture seule)
@@ -67,6 +94,7 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
     setFuture([]);
     setHotspot3d(null);
     setCameraAnim(null);
+    setStagedRefs([]);
     setAnnotating(false);
   };
 
@@ -100,6 +128,10 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
     setHotspot3d,
     cameraAnim,
     setCameraAnim,
+    stagedRefs,
+    addStagedRef,
+    updateStagedRef,
+    removeStagedRef,
     viewed,
     setViewed,
     viewed3d,

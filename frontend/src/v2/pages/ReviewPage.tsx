@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { uploadCommentAttachments } from '../../lib/commentAttachments';
 import { useAuth } from '../stores/useAuth';
 import { userColor } from '../lib/userColor';
 import Shell from '../components/Shell';
@@ -14,6 +13,7 @@ import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
+import { useSubmitComment } from './review/useSubmitComment';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useAutoThumbnail } from './review/useAutoThumbnail';
 import { useModel3DThree } from './review/three/useModel3DThree';
@@ -138,7 +138,11 @@ function ReviewContent({ id }: { id: number }) {
     // Ratio capturé (3D: cameraState.aspect) pour caler l'overlay
     const cam = c.cameraState as { aspect?: number } | null;
     ann.setViewedAspect(cam?.aspect ?? null);
-    if (c.timestamp != null) seek(c.timestamp);
+    if (c.timestamp != null) {
+      // Pause : l'annotation est alignée sur cette frame ; la lecture la masquerait aussitôt.
+      videoRef.current?.pause();
+      seek(c.timestamp);
+    }
     if (c.cameraState != null) {
       if (data?.media.kind === 'SPLAT') splat.restoreCamera(c.cameraState);
       else model3d.restoreCamera(c.cameraState);
@@ -170,55 +174,15 @@ function ReviewContent({ id }: { id: number }) {
     setTimeout(() => composerRef.current?.focus(), 0);
   }, []);
 
-  const submitComment = async (text: string, files: File[]): Promise<boolean> => {
-    const kind = data?.media.kind;
-    const timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
-    const cameraState =
-      kind === 'MODEL_3D' ? model3d.captureCamera() : kind === 'SPLAT' ? splat.captureCamera() : undefined;
-    // Annotation : 3D/splat = hotspot de surface + dessins 2D ; autres = dessins 2D.
-    let annotation: unknown;
-    if (kind === 'MODEL_3D' || kind === 'SPLAT') {
-      const parts: unknown[] = [];
-      if (ann.hotspot3d)
-        parts.push({
-          type: 'hotspot',
-          position: ann.hotspot3d.position,
-          normal: ann.hotspot3d.normal,
-          space: ann.hotspot3d.space, // espace-objet (splat, V10) — suit la transformation
-        });
-      if (kind === 'SPLAT') parts.push(...paint.serializePending()); // traits du painter (V9)
-      // Mode layout : anim caméra (F-curves v2) jointe au commentaire (au lieu de dessiner).
-      if (ann.cameraAnim)
-        parts.push({
-          type: 'camera-anim',
-          version: ann.cameraAnim.version,
-          loop: ann.cameraAnim.loop,
-          channels: ann.cameraAnim.channels,
-        });
-      parts.push(...ann.annot);
-      annotation = parts.length ? parts : undefined;
-    } else {
-      annotation = ann.annot.length ? ann.annot : undefined;
-    }
-    try {
-      const attachments = files.length > 0 ? await uploadCommentAttachments(files) : undefined;
-      await api.post('/api/comments', {
-        mediaObjectId: id,
-        content: text || '(image)',
-        timestamp,
-        cameraState,
-        annotation,
-        attachments,
-      });
-      ann.resetComposer();
-      paint.clearPending();
-      await loadComments();
-      return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur à l'envoi du commentaire");
-      return false;
-    }
-  };
+  const submitComment = useSubmitComment({
+    id,
+    data,
+    ann,
+    paint,
+    videoRef,
+    captureCamera: () => (data?.media.kind === 'SPLAT' ? splat.captureCamera() : model3d.captureCamera()),
+    loadComments,
+  });
 
   const publishMedia = async () => {
     if (!data) return;
@@ -260,7 +224,9 @@ function ReviewContent({ id }: { id: number }) {
       title={data?.media.originalName ?? 'Review'}
       breadcrumb={<EntityBreadcrumb entity="media" id={id} />}
     >
-      <div className="flex h-[calc(100vh-7rem)] flex-col">
+      {/* Clic droit : menu custom des viewers — le menu natif du navigateur est désactivé
+          sur toute la review (les viewers 3D/splat utilisent le clic droit pour naviguer). */}
+      <div className="flex h-[calc(100vh-7rem)] flex-col" onContextMenu={(e) => e.preventDefault()}>
         {data ? (
           <ReviewHeader
             data={data}
@@ -304,6 +270,7 @@ function ReviewContent({ id }: { id: number }) {
             onManualSeek={clearSelection}
             onMarker={openComposer}
             onReprocess={reprocessMedia}
+            onToggleAnnotate={toggleAnnotating}
             compareId={compareId}
             onCloseCompare={() => setCompareId(null)}
           />
@@ -324,6 +291,7 @@ function ReviewContent({ id }: { id: number }) {
                 annotation: ann.annot.length > 0,
                 hotspot: !!ann.hotspot3d,
                 camera: kind === 'MODEL_3D' && ann.annotating,
+                references: ann.stagedRefs.length,
               }}
               onSubmit={submitComment}
               annotating={ann.annotating}

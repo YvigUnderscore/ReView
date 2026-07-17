@@ -1,6 +1,17 @@
-import { ChevronLeft, ChevronRight, Maximize, Pause, Play, Repeat, Volume2, VolumeX } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Maximize,
+  Pause,
+  Play,
+  Repeat,
+  SlidersHorizontal,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { HudGroup } from './hud/ViewerHud';
 import { tcFromFrame } from './reviewTypes';
+import type { HlsLevel } from './useHlsPlayer';
 
 /**
  * Barre de transport custom du lecteur vidéo (14.B) — remplace `<video controls>`.
@@ -23,6 +34,7 @@ export default function VideoTransport({
   onFullscreen,
   loopActive,
   onClearLoop,
+  quality,
 }: {
   playing: boolean;
   onPlayPause: () => void;
@@ -41,6 +53,8 @@ export default function VideoTransport({
   onFullscreen: () => void;
   loopActive: boolean;
   onClearLoop: () => void;
+  /** Qualité de lecture HLS (Phase 23) — `active` faux si le média n'a pas de renditions. */
+  quality?: { active: boolean; levels: HlsLevel[]; mode: number; setLevel: (i: number) => void };
 }) {
   const btn =
     'flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground';
@@ -88,6 +102,37 @@ export default function VideoTransport({
       </label>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Qualité de lecture (Phase 23) : Auto + paliers HLS ; « Originale » seule si le
+            média n'a pas de renditions (transcodé avant le HLS adaptatif). */}
+        <label
+          className="flex items-center gap-1 text-muted-foreground"
+          title={
+            quality?.active
+              ? 'Qualité de lecture (Auto = max soutenable)'
+              : 'Pas de renditions HLS pour ce média — lecture du proxy original'
+          }
+        >
+          <SlidersHorizontal size={13} />
+          <select
+            value={quality?.active ? quality.mode : 0}
+            disabled={!quality?.active}
+            onChange={(e) => quality?.setLevel(Number(e.target.value))}
+            className="rounded border border-input bg-background px-1 py-0.5 text-xs disabled:opacity-60 [&>option]:bg-background"
+          >
+            {quality?.active ? (
+              <>
+                <option value={-1}>Auto</option>
+                {quality.levels.map((l, i) => (
+                  <option key={i} value={i}>
+                    {l.height}p
+                  </option>
+                ))}
+              </>
+            ) : (
+              <option value={0}>Originale</option>
+            )}
+          </select>
+        </label>
         <button onClick={onToggleMute} title={muted ? 'Réactiver le son' : 'Couper le son'} className={btn}>
           {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>

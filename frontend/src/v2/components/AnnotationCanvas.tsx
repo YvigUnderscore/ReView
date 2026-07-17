@@ -1,40 +1,16 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import ShapeEl from './annotation/ShapeEl';
+import { hitShape, normalizeRect, translateShape, type Shape, type Tool } from './annotation/geometry';
+
+export type { Shape, Tool };
 
 /**
  * Overlay d'annotation 2D (SVG, coordonnées normalisées 0..1 → suit la taille du média).
- * Outils : dessin libre, rectangle, ellipse, flèche, texte, gomme (clic forme), déplacement.
+ * Outils : dessin libre, rectangle, ellipse, flèche, texte, gomme (clic **ou glisser**),
+ * déplacement — les deux derniers prévisualisent la forme visée au survol.
  * Couleurs + épaisseur, undo/redo, effacer tout. Contrôlé : `shapes` + `onChange`.
  * En lecture seule (`editable=false`), affiche les formes fournies sans interaction.
  */
-export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'text' | 'move' | 'erase';
-
-export interface Shape {
-  id: string;
-  type: 'path' | 'rect' | 'ellipse' | 'arrow' | 'text';
-  color: string;
-  width: number;
-  alpha?: number; // opacité 0..1 (défaut 1)
-  pts?: number[][]; // path
-  x?: number;
-  y?: number;
-  w?: number;
-  h?: number; // rect (x/y = ancre du texte)
-  cx?: number;
-  cy?: number;
-  rx?: number;
-  ry?: number; // ellipse
-  x1?: number;
-  y1?: number;
-  x2?: number;
-  y2?: number; // arrow
-  text?: string; // texte (10.G backlog : annotations avancées)
-}
-
-/** Hauteur de police normalisée (fraction de la hauteur du média) selon l'épaisseur choisie. */
-const textFontSize = (width: number): number => 0.02 + width * 0.005;
-
-const uid = () => Math.random().toString(36).slice(2, 9);
-
 export function AnnotationCanvas({
   shapes,
   onChange,
@@ -66,17 +42,20 @@ export function AnnotationCanvas({
   const svgRef = useRef<SVGSVGElement>(null);
   const [draft, setDraft] = useState<Shape | null>(null);
   const [textDraft, setTextDraft] = useState<{ x: number; y: number; value: string } | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const drag = useRef<{ id: string; ox: number; oy: number } | null>(null);
-  const [aspect, setAspect] = useState(0);
+  const erasing = useRef(false);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const aspect = size.h > 0 ? size.w / size.h : 0;
 
-  // Suit le ratio largeur/hauteur réel du canvas : correction d'aspect en lecture (3D)
-  // et contre-échelle horizontale du texte (glyphes non déformés malgré le viewBox 1×1).
+  // Suit la taille px réelle du canvas : correction d'aspect en lecture (3D), tête de
+  // flèche et contre-échelle du texte calculées en espace écran (viewBox 1×1 étiré).
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect();
-      if (r.height > 0) setAspect(r.width / r.height);
+      if (r.height > 0) setSize({ w: r.width, h: r.height });
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -101,31 +80,9 @@ export function AnnotationCanvas({
     [vbMin, vbSize],
   );
 
-  const hit = (p: [number, number]): Shape | undefined => {
-    // Test simple : proximité (path) ou bounding box (formes)
-    const near = (a: number, b: number) => Math.abs(a - b) < 0.03;
-    return [...shapes].reverse().find((s) => {
-      if (s.type === 'path') return s.pts?.some(([x, y]) => Math.hypot(x - p[0], y - p[1]) < 0.03);
-      if (s.type === 'rect')
-        return (
-          p[0] >= (s.x ?? 0) - 0.02 &&
-          p[0] <= (s.x ?? 0) + (s.w ?? 0) + 0.02 &&
-          p[1] >= (s.y ?? 0) - 0.02 &&
-          p[1] <= (s.y ?? 0) + (s.h ?? 0) + 0.02
-        );
-      if (s.type === 'ellipse')
-        return (
-          Math.hypot(
-            (p[0] - (s.cx ?? 0)) / ((s.rx ?? 0.01) + 0.02),
-            (p[1] - (s.cy ?? 0)) / ((s.ry ?? 0.01) + 0.02),
-          ) <= 1
-        );
-      if (s.type === 'arrow') return near(p[0], s.x2 ?? 0) && near(p[1], s.y2 ?? 0);
-      if (s.type === 'text')
-        // Zone approximative : de l'ancre vers la droite (le texte s'étend depuis son point).
-        return p[0] >= (s.x ?? 0) - 0.02 && p[0] <= (s.x ?? 0) + 0.25 && Math.abs(p[1] - (s.y ?? 0)) <= 0.04;
-      return false;
-    });
+  const eraseAt = (p: [number, number]) => {
+    const s = hitShape(shapes, p);
+    if (s) onChange?.(shapes.filter((x) => x.id !== s.id));
   };
 
   const down = (e: React.PointerEvent) => {
@@ -135,12 +92,12 @@ export function AnnotationCanvas({
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = pt(e);
     if (tool === 'erase') {
-      const s = hit(p);
-      if (s) onChange?.(shapes.filter((x) => x.id !== s.id));
+      erasing.current = true;
+      eraseAt(p);
       return;
     }
     if (tool === 'move') {
-      const s = hit(p);
+      const s = hitShape(shapes, p);
       if (s) drag.current = { id: s.id, ox: p[0], oy: p[1] };
       return;
     }
@@ -163,15 +120,24 @@ export function AnnotationCanvas({
   const move = (e: React.PointerEvent) => {
     if (!editable) return;
     const p = pt(e);
+    // Gomme au glisser : efface tout ce que le pointeur traverse.
+    if (erasing.current) {
+      eraseAt(p);
+      return;
+    }
     if (drag.current) {
       const d = drag.current;
       const dx = p[0] - d.ox,
         dy = p[1] - d.oy;
       drag.current = { ...d, ox: p[0], oy: p[1] };
-      onChange?.(shapes.map((s) => (s.id === d.id ? translate(s, dx, dy) : s)));
+      onChange?.(shapes.map((s) => (s.id === d.id ? translateShape(s, dx, dy) : s)));
       return;
     }
-    if (!draft) return;
+    if (!draft) {
+      // Prévisualisation au survol (déplacement/gomme) : forme visée surlignée.
+      if (tool === 'move' || tool === 'erase') setHoverId(hitShape(shapes, p)?.id ?? null);
+      return;
+    }
     if (draft.type === 'path') setDraft({ ...draft, pts: [...(draft.pts ?? []), p] });
     else if (draft.type === 'rect')
       setDraft({ ...draft, w: p[0] - (draft.x ?? 0), h: p[1] - (draft.y ?? 0) });
@@ -181,6 +147,7 @@ export function AnnotationCanvas({
   };
 
   const up = () => {
+    erasing.current = false;
     if (drag.current) {
       drag.current = null;
       return;
@@ -205,6 +172,16 @@ export function AnnotationCanvas({
   };
 
   const all = draft ? [...shapes, draft] : shapes;
+  const showHover = editable && !draft && (tool === 'move' || tool === 'erase');
+  const cursor = !editable
+    ? 'default'
+    : tool === 'move'
+      ? hoverId
+        ? 'move'
+        : 'default'
+      : tool === 'erase'
+        ? 'pointer'
+        : 'crosshair';
 
   return (
     <>
@@ -228,27 +205,30 @@ export function AnnotationCanvas({
           height: `${vbSize * 100}%`,
           overflow: 'visible',
           pointerEvents: editable ? 'auto' : 'none',
-          cursor: editable ? 'crosshair' : 'default',
+          cursor,
           touchAction: 'none',
         }}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
+        onPointerLeave={() => setHoverId(null)}
       >
-        <defs>
-          <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="context-stroke" />
-          </marker>
-        </defs>
         <g transform={groupTransform}>
           {all.map((s) => (
-            <ShapeEl key={s.id} s={s} textScaleX={aspect > 0 ? 1 / aspect : 1} />
+            <ShapeEl
+              key={s.id}
+              s={s}
+              size={size}
+              highlight={showHover && hoverId === s.id ? (tool === 'erase' ? 'erase' : 'move') : null}
+            />
           ))}
         </g>
       </svg>
     </>
   );
 }
+
+const uid = () => Math.random().toString(36).slice(2, 9);
 
 /** Input flottant de l'outil texte : HTML positionné en % du média (hors du SVG,
  * qui déformerait la saisie via son viewBox normalisé). Entrée valide, Échap annule. */
@@ -284,52 +264,4 @@ function TextDraftInput({
       style={{ left: `${draft.x * 100}%`, top: `${(draft.y - 0.02) * 100}%` }}
     />
   );
-}
-
-function translate(s: Shape, dx: number, dy: number): Shape {
-  if (s.type === 'path') return { ...s, pts: s.pts?.map(([x, y]) => [x + dx, y + dy]) };
-  if (s.type === 'rect' || s.type === 'text') return { ...s, x: (s.x ?? 0) + dx, y: (s.y ?? 0) + dy };
-  if (s.type === 'ellipse') return { ...s, cx: (s.cx ?? 0) + dx, cy: (s.cy ?? 0) + dy };
-  return { ...s, x1: (s.x1 ?? 0) + dx, y1: (s.y1 ?? 0) + dy, x2: (s.x2 ?? 0) + dx, y2: (s.y2 ?? 0) + dy };
-}
-
-function normalizeRect(s: Shape): Shape {
-  if (s.type === 'rect') {
-    const x = Math.min(s.x ?? 0, (s.x ?? 0) + (s.w ?? 0));
-    const y = Math.min(s.y ?? 0, (s.y ?? 0) + (s.h ?? 0));
-    return { ...s, x, y, w: Math.abs(s.w ?? 0), h: Math.abs(s.h ?? 0) };
-  }
-  return s;
-}
-
-function ShapeEl({ s, textScaleX = 1 }: { s: Shape; textScaleX?: number }) {
-  const common = {
-    stroke: s.color,
-    strokeWidth: s.width,
-    strokeOpacity: s.alpha ?? 1,
-    fill: 'none',
-    vectorEffect: 'non-scaling-stroke' as const,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-  if (s.type === 'path')
-    return <polyline points={(s.pts ?? []).map((p) => p.join(',')).join(' ')} {...common} />;
-  if (s.type === 'rect') return <rect x={s.x} y={s.y} width={s.w} height={s.h} {...common} />;
-  if (s.type === 'ellipse') return <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} {...common} />;
-  if (s.type === 'text')
-    // Contre-échelle X autour de l'ancre : glyphes non déformés malgré le viewBox étiré.
-    return (
-      <text
-        transform={`translate(${s.x ?? 0} ${s.y ?? 0}) scale(${textScaleX} 1)`}
-        fill={s.color}
-        fillOpacity={s.alpha ?? 1}
-        fontSize={textFontSize(s.width)}
-        fontFamily="ui-sans-serif, system-ui, sans-serif"
-        dominantBaseline="middle"
-        style={{ userSelect: 'none' }}
-      >
-        {s.text}
-      </text>
-    );
-  return <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} {...common} markerEnd="url(#arrowhead)" />;
 }

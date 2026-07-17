@@ -1,11 +1,13 @@
-import { Crosshair } from 'lucide-react';
+import { useEffect } from 'react';
+import { Crosshair, EyeOff } from 'lucide-react';
 import { AnnotationToolbar } from '../../components/AnnotationToolbar';
 import type { useAnnotations } from './useAnnotations';
 
 /**
- * Bouton « Masquer l'annotation » affiché au-dessus du viewer quand l'annotation d'un
- * commentaire est visible. Les outils de dessin vivent sous le champ de commentaire
- * (`AnnotationTools`, activés par « Annoter » — Phase 24).
+ * Pilule flottante « Masquer l'annotation », affichée **sur le viewer** (haut, centrée)
+ * quand l'annotation d'un commentaire est visible — accessible sans quitter l'image des
+ * yeux, fermable aussi avec Échap. Les outils de dessin vivent sous le champ de
+ * commentaire (`AnnotationTools`, activés par « Annoter » — Phase 24).
  */
 export default function ReviewAnnotationBar({
   ann,
@@ -14,14 +16,25 @@ export default function ReviewAnnotationBar({
   ann: ReturnType<typeof useAnnotations>;
   onClearSelection: () => void;
 }) {
-  if (!ann.viewed) return null;
+  const visible = !!ann.viewed;
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClearSelection();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [visible, onClearSelection]);
+
+  if (!visible) return null;
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2">
+    <div className="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2">
       <button
         onClick={onClearSelection}
-        className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary/60"
+        title="Masquer l'annotation affichée (Échap)"
+        className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1.5 text-sm shadow-lg backdrop-blur hover:bg-secondary"
       >
-        Masquer l’annotation
+        <EyeOff size={14} /> Masquer l’annotation
       </button>
     </div>
   );

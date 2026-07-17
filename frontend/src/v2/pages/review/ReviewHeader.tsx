@@ -2,7 +2,7 @@ import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import type { MediaResp } from './reviewTypes';
 import VersionNavigator from './VersionNavigator';
-import VideoCompareSelect from './VideoCompareSelect';
+import CompareSelect from './CompareSelect';
 import { useReviewPresence } from './useReviewPresence';
 
 /**
@@ -34,10 +34,11 @@ export default function ReviewHeader({
           <span className="shrink-0 rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Brouillon</span>
         )}
         <VersionNavigator versionId={data.media.versionId} mediaId={data.media.id} />
-        {data.media.kind === 'VIDEO' && (
-          <VideoCompareSelect
+        {(data.media.kind === 'VIDEO' || data.media.kind === 'IMAGE') && (
+          <CompareSelect
             versionId={data.media.versionId}
             mediaId={data.media.id}
+            kind={data.media.kind}
             compareId={compareId}
             onCompareChange={onCompareChange}
           />

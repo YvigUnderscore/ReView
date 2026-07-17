@@ -42,7 +42,7 @@ export default function CommentsPanel({
   selectedId: number | null;
   onSelect: (c: ReviewComment) => void;
   composerRef: RefObject<HTMLTextAreaElement | null>;
-  hints: { annotation: boolean; hotspot: boolean; camera: boolean };
+  hints: { annotation: boolean; hotspot: boolean; camera: boolean; references?: number };
   onSubmit: (content: string, files: File[]) => Promise<boolean>;
   /** Mode annotation actif (bouton « Annoter » sous le champ, Phase 24). */
   annotating?: boolean;
@@ -61,9 +61,11 @@ export default function CommentsPanel({
   };
   const onPasteImage = useImagePaste(addFiles);
 
+  // Une annotation (dessin, hotspot, référence) suffit : le texte est optionnel.
+  const hasPayload = hints.annotation || hints.hotspot || (hints.references ?? 0) > 0;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!content.trim() && attachFiles.length === 0) return;
+    if (!content.trim() && attachFiles.length === 0 && !hasPayload) return;
     setSending(true);
     try {
       if (await onSubmit(content, attachFiles)) {
@@ -128,7 +130,15 @@ export default function CommentsPanel({
             ))}
           </div>
         )}
-        {hints.annotation && <p className="mb-1.5 text-[11px] text-primary">✏️ Annotation jointe</p>}
+        {hints.annotation && (
+          <p className="mb-1.5 text-[11px] text-primary">✏️ Annotation jointe (texte optionnel)</p>
+        )}
+        {(hints.references ?? 0) > 0 && (
+          <p className="mb-1.5 text-[11px] text-primary">
+            🖼 {hints.references} image{(hints.references ?? 0) > 1 ? 's' : ''} de référence jointe
+            {(hints.references ?? 0) > 1 ? 's' : ''}
+          </p>
+        )}
         {hints.hotspot && (
           <p className="mb-1.5 text-[11px] text-primary">📍 Hotspot joint (centre du viewer)</p>
         )}

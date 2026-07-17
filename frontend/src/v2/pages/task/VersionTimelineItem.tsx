@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Play, Trash2, Upload } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, ChevronRight, ImagePlus, Play, Trash2, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { fileToThumbnailDataUrl } from '../review/mediaCapture';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import { timeAgo } from '../../lib/time';
@@ -26,15 +28,66 @@ function MediaThumb({ media, size }: { media: MediaSummary; size: number }) {
   );
 }
 
-/** Vignette d'un média → review au clic ; actions publier/supprimer. Cartes ou ligne compacte. */
+/** Bouton discret « Modifier la miniature » : fichier image → réduit → POST /thumbnail. */
+function ThumbEditButton({
+  mediaId,
+  versionId,
+  small,
+}: {
+  mediaId: number;
+  versionId: number;
+  small?: boolean;
+}) {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pick = async (file: File) => {
+    try {
+      await api.post(`/api/media/${mediaId}/thumbnail`, { dataUrl: await fileToThumbnailDataUrl(file) });
+      await qc.invalidateQueries({ queryKey: qk.version(versionId) });
+      toast.success('Miniature mise à jour');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Miniature non enregistrée');
+    }
+  };
+  return (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        title="Modifier la miniature"
+        className={
+          small
+            ? 'rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground'
+            : 'flex items-center justify-center px-2 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground'
+        }
+      >
+        <ImagePlus size={12} />
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void pick(f);
+          if (fileRef.current) fileRef.current.value = '';
+        }}
+      />
+    </>
+  );
+}
+
+/** Vignette d'un média → review au clic ; actions publier/supprimer/miniature. Cartes ou ligne compacte. */
 function MediaTile({
   media,
+  versionId,
   view,
   canManage,
   onPublish,
   onDelete,
 }: {
   media: MediaSummary;
+  versionId: number;
   view: ViewMode;
   canManage: boolean;
   onPublish: (m: MediaSummary) => void;
@@ -65,6 +118,7 @@ function MediaTile({
                 Publier
               </button>
             )}
+            <ThumbEditButton mediaId={media.id} versionId={versionId} small />
             <button
               onClick={() => onDelete(media)}
               title="Supprimer"
@@ -106,6 +160,7 @@ function MediaTile({
               Publier
             </button>
           )}
+          <ThumbEditButton mediaId={media.id} versionId={versionId} />
           <button
             onClick={() => onDelete(media)}
             title="Supprimer"
@@ -226,6 +281,7 @@ export default function VersionTimelineItem({
                   <MediaTile
                     key={m.id}
                     media={m}
+                    versionId={version.id}
                     view={view}
                     canManage={canCreate}
                     onPublish={(mm) => onPublishMedia(version.id, mm.id)}

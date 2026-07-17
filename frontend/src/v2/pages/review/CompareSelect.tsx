@@ -5,21 +5,24 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import type { VersionDetail, VersionListItem } from '../../types/api';
-import { findCompareVideo } from './reviewTypes';
+import { findCompareMedia } from './reviewTypes';
 
 /**
- * Sélecteur de comparaison A/B (backlog P2 10.G) : choisit une autre version de la
- * même tâche/asset et ouvre son premier média vidéo en pane synchronisé. Rendu
- * uniquement s'il existe au moins une autre version.
+ * Sélecteur de comparaison A/B (vidéo **et image**) : choisit une autre version de la
+ * même tâche/asset et ouvre son premier média du même type en pane synchronisé (vidéo)
+ * ou en côte-à-côte/wipe (image). Rendu uniquement s'il existe une autre version.
  */
-export default function VideoCompareSelect({
+export default function CompareSelect({
   versionId,
   mediaId,
+  kind,
   compareId,
   onCompareChange,
 }: {
   versionId: number;
   mediaId: number;
+  /** Type du média maître — le média B doit être du même type. */
+  kind: string;
   compareId: number | null;
   onCompareChange: (mediaId: number | null) => void;
 }) {
@@ -58,9 +61,11 @@ export default function VideoCompareSelect({
         queryKey: qk.version(vid),
         queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${vid}`).then((d) => d.version),
       });
-      const target = findCompareVideo(v.media, mediaId);
+      const target = findCompareMedia(v.media, mediaId, kind);
       if (!target) {
-        toast.error(`Aucune vidéo à comparer dans la version ${v.name}`);
+        toast.error(
+          `Aucun média ${kind === 'IMAGE' ? 'image' : 'vidéo'} à comparer dans la version ${v.name}`,
+        );
         setSelVid('');
         return onCompareChange(null);
       }
@@ -74,7 +79,7 @@ export default function VideoCompareSelect({
   return (
     <label
       className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
-      title="Comparer avec une autre version (lecture synchronisée)"
+      title="Comparer avec une autre version"
     >
       <Columns2 size={13} />
       <select

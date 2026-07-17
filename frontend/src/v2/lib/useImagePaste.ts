@@ -1,5 +1,42 @@
 import { useCallback } from 'react';
 
+/** Types image acceptés par le backend (data URL) — tout autre type est ré-encodé en PNG. */
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
+export const isAcceptedImageType = (type: string): boolean =>
+  ACCEPTED_IMAGE_TYPES.includes(type.toLowerCase());
+
+/** Lecture brute d'un fichier en data URL. */
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    r.readAsDataURL(file);
+  });
+}
+
+/**
+ * Fichier image → data URL **compatible backend**. Les types hors liste (bmp, avif,
+ * tiff…, ou type vide de certains presse-papiers) sont décodés puis ré-encodés en PNG
+ * via canvas — corrige le « Image invalide (data URL image attendue) » au Ctrl+V.
+ */
+export async function fileToImageDataUrl(file: File): Promise<string> {
+  if (isAcceptedImageType(file.type)) return readAsDataUrl(file);
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return canvas.toDataURL('image/png');
+  } catch {
+    // Décodage impossible : on tente la lecture brute (le backend tranchera).
+    return readAsDataUrl(file);
+  }
+}
+
 /** Extrait les fichiers image d'un presse-papiers (paste). Pur, testable. */
 export function imageFilesFromClipboard(data: DataTransfer | null): File[] {
   if (!data) return [];

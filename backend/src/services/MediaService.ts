@@ -393,6 +393,8 @@ export async function getDetail(user: SessionUser, id: number) {
             x: r.x,
             y: r.y,
             width: r.width,
+            // Commentaire porteur : affichée seulement quand il est sélectionné (null = historique).
+            commentId: r.commentId,
           })),
         ),
       ),
@@ -459,11 +461,12 @@ export async function getHlsFile(user: SessionUser, id: number, file: string) {
 const MAX_THUMBNAIL_BYTES = 1_500_000;
 
 /**
- * Enregistre une miniature fournie par le client (capture d'un rendu, ex. splat/3D via
- * Three.js — pas de rendu headless serveur possible). Data URL image/jpeg|png|webp base64,
- * validée par magic bytes, stockée dans MinIO, référencée par `thumbnailKey`. Réservé aux
- * gestionnaires du média (uploader/superviseur+), média non publié uniquement (verrou
- * Phase 11). Renvoie l'URL présignée de la miniature.
+ * Enregistre une miniature fournie par le client (capture d'un rendu ou fichier choisi).
+ * Data URL image/jpeg|png|webp base64, validée par magic bytes, stockée dans MinIO,
+ * référencée par `thumbnailKey`. Réservé aux gestionnaires du média (uploader/superviseur+).
+ * La miniature est de la **présentation** (comme `splatPresentation`) : elle reste
+ * modifiable après publication — exception assumée au verrou Phase 11 (le contenu du
+ * média, lui, reste figé).
  */
 /** Décode + valide une data URL image base64 → buffer + type + extension (lève si invalide). */
 function decodeThumbnailDataUrl(dataUrl: string): { buf: Buffer; contentType: string; ext: string } {
@@ -483,7 +486,6 @@ export async function setThumbnail(user: SessionUser, id: number, dataUrl: strin
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({ where: { id }, select: { published: true } });
   if (!media) throw notFound('Média introuvable');
-  assertNotPublished(media);
   const { buf, contentType, ext } = decodeThumbnailDataUrl(dataUrl);
   const key = StorageService.thumbnailKey(id, ext);
   await storage.putObject(key, buf, contentType);

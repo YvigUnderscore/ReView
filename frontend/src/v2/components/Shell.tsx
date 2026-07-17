@@ -8,7 +8,6 @@ import {
   Film,
   Users,
   Settings,
-  Clapperboard,
   ChevronRight,
   Star,
   BookText,
@@ -111,9 +110,23 @@ export default function Shell({
       {!collapsed && (
         <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-card/40">
           <div className="flex items-center justify-between px-4 py-4">
-            <Link to="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-              <Clapperboard size={20} className="text-primary" />
-              ReView
+            {/* Logo bannière (masque alpha teinté par le thème — blanc sur sombre, encre sur clair). */}
+            <Link to="/" title="Accueil" aria-label="ReView — Accueil">
+              <span
+                role="img"
+                aria-label="ReView"
+                className="block h-8 w-[72px] bg-foreground"
+                style={{
+                  WebkitMaskImage: 'url(/logo_banner.png)',
+                  maskImage: 'url(/logo_banner.png)',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskSize: 'contain',
+                  maskSize: 'contain',
+                  WebkitMaskPosition: 'left center',
+                  maskPosition: 'left center',
+                }}
+              />
             </Link>
             <button
               onClick={toggleCollapse}
