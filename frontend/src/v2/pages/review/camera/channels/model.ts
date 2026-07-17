@@ -33,6 +33,9 @@ export interface CameraAnimV2 {
   version: 2;
   loop: boolean;
   channels: Partial<Record<ChannelId, Channel>>;
+  /** Durée de lecture réglable (ms) — override du plus grand temps de clé (Phase 27). Guide dans
+   *  le graph ; la lecture en boucle va de 0 à cette durée. Édition de clés au-delà autorisée. */
+  durationMs?: number;
 }
 
 export const emptyAnim = (loop = true): CameraAnimV2 => ({ version: 2, loop, channels: {} });
@@ -63,6 +66,19 @@ export function animDuration(anim: CameraAnimV2): number {
   let max = 0;
   for (const id of CHANNEL_IDS) for (const k of anim.channels[id]?.keys ?? []) if (k.t > max) max = k.t;
   return max;
+}
+
+/** Durée de lecture effective (ms) : override `durationMs` s'il est > 0, sinon le dernier temps de clé. */
+export function animPlayDuration(anim: CameraAnimV2): number {
+  return anim.durationMs && anim.durationMs > 0 ? anim.durationMs : animDuration(anim);
+}
+
+/** Fixe la durée de lecture réglable (0/undefined = automatique = dernier temps de clé). */
+export function setAnimDuration(anim: CameraAnimV2, durationMs: number | undefined): CameraAnimV2 {
+  const next = { ...anim };
+  if (durationMs && durationMs > 0) next.durationMs = Math.round(durationMs);
+  else delete next.durationMs;
+  return next;
 }
 
 /** Une animation est jouable dès qu'au moins un canal a 2 clés à des temps distincts. */
@@ -138,6 +154,61 @@ export function moveKey(
 
 export function deleteKey(anim: CameraAnimV2, id: ChannelId, index: number): CameraAnimV2 {
   return withChannel(anim, id, (ch) => ch.keys.splice(index, 1));
+}
+
+/** Une clé désignée par (canal, index) — sélection du graph editor (Phase 27). */
+export interface KeyRef {
+  channel: ChannelId;
+  index: number;
+}
+
+/**
+ * Déplace en **un seul passage** plusieurs clés (multi-sélection) désignées par leur index
+ * **dans `anim`** (le baseline capturé au début du drag) vers de nouvelles valeurs t/v. Applique
+ * toutes les modifications par canal avant de re-trier — les index restent cohérents pendant tout
+ * le geste. Pur/testable.
+ */
+export function moveKeysBatch(
+  anim: CameraAnimV2,
+  moves: Array<{ channel: ChannelId; index: number; t: number; v: number }>,
+): CameraAnimV2 {
+  const byChannel = new Map<ChannelId, Map<number, { t: number; v: number }>>();
+  for (const m of moves) {
+    let idxMap = byChannel.get(m.channel);
+    if (!idxMap) byChannel.set(m.channel, (idxMap = new Map()));
+    idxMap.set(m.index, { t: Math.max(0, Math.round(m.t)), v: m.v });
+  }
+  const channels = { ...anim.channels };
+  for (const [id, idxMap] of byChannel) {
+    const ch = cloneChannel(anim.channels[id]);
+    idxMap.forEach((patch, index) => {
+      const k = ch.keys[index];
+      if (k) {
+        k.t = patch.t;
+        k.v = patch.v;
+      }
+    });
+    ch.keys = sortKeys(ch.keys);
+    channels[id] = ch;
+  }
+  return { ...anim, channels };
+}
+
+/** Supprime en un passage un lot de clés (multi-sélection). Retire de la fin pour ne pas décaler. */
+export function deleteKeys(anim: CameraAnimV2, refs: readonly KeyRef[]): CameraAnimV2 {
+  const byChannel = new Map<ChannelId, number[]>();
+  for (const r of refs) {
+    const list = byChannel.get(r.channel) ?? [];
+    list.push(r.index);
+    byChannel.set(r.channel, list);
+  }
+  let next = anim;
+  for (const [id, indices] of byChannel) {
+    next = withChannel(next, id, (ch) => {
+      for (const index of [...indices].sort((a, b) => b - a)) ch.keys.splice(index, 1);
+    });
+  }
+  return next;
 }
 
 export function setKeyMode(

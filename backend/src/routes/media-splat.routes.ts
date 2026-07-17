@@ -117,6 +117,7 @@ router.patch(
             .object({
               version: z.literal(2),
               loop: z.boolean(),
+              durationMs: z.number().int().min(0).max(3600000).optional(),
               channels: z.record(
                 z.enum(['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'roll']),
                 z.object({

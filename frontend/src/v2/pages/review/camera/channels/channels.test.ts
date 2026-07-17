@@ -3,12 +3,16 @@ import type { SplatCamera, SplatCameraKeyframe } from '../../reviewTypes';
 import {
   animDuration,
   animKeyTimes,
+  animPlayDuration,
   deleteColumn,
+  deleteKeys,
   emptyAnim,
   fromV1,
   hasAnimation,
   moveKey,
+  moveKeysBatch,
   normalizeAnim,
+  setAnimDuration,
   upsertKey,
   upsertPoseAt,
 } from './model';
@@ -49,6 +53,40 @@ describe('model — opérations pures', () => {
     a = upsertPoseAt(a, 1000, pose(10));
     a = deleteColumn(a, 1000);
     expect(animKeyTimes(a)).toEqual([0]);
+  });
+
+  it('moveKeysBatch déplace un lot multi-canaux depuis les index du baseline', () => {
+    let a = upsertKey(emptyAnim(), 'px', 0, 0);
+    a = upsertKey(a, 'px', 1000, 5);
+    a = upsertKey(a, 'py', 1000, 3);
+    // Décale de +500 ms les deux clés à 1000 (index 1 sur px, index 0 sur py).
+    const b = moveKeysBatch(a, [
+      { channel: 'px', index: 1, t: 1500, v: 5 },
+      { channel: 'py', index: 0, t: 1500, v: 3 },
+    ]);
+    expect(b.channels.px?.keys.map((k) => k.t)).toEqual([0, 1500]);
+    expect(b.channels.py?.keys.map((k) => k.t)).toEqual([1500]);
+  });
+
+  it('deleteKeys supprime un lot sans décaler les index restants', () => {
+    let a = upsertKey(emptyAnim(), 'px', 0, 0);
+    a = upsertKey(a, 'px', 1000, 5);
+    a = upsertKey(a, 'px', 2000, 9);
+    const b = deleteKeys(a, [
+      { channel: 'px', index: 0 },
+      { channel: 'px', index: 2 },
+    ]);
+    expect(b.channels.px?.keys.map((k) => [k.t, k.v])).toEqual([[1000, 5]]);
+  });
+
+  it('durée réglable : animPlayDuration prend l’override sinon le dernier temps', () => {
+    let a = upsertKey(upsertKey(emptyAnim(), 'px', 0, 0), 'px', 1000, 10);
+    expect(animPlayDuration(a)).toBe(1000);
+    a = setAnimDuration(a, 3000);
+    expect(animPlayDuration(a)).toBe(3000);
+    a = setAnimDuration(a, 0); // retour automatique
+    expect(a.durationMs).toBeUndefined();
+    expect(animPlayDuration(a)).toBe(1000);
   });
 });
 

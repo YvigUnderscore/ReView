@@ -29,20 +29,24 @@ export function createCameraObject(
   const body = new THREE.Group();
   const s = size;
 
-  // Corps : petite boîte + frustum (4 arêtes vers un rectangle en -Z).
-  const boxGeo = new THREE.BoxGeometry(s * 0.6, s * 0.45, s * 0.5);
-  const boxMat = new THREE.MeshBasicMaterial({ color: PRIMARY, wireframe: true });
-  body.add(new THREE.Mesh(boxGeo, boxMat));
+  // Corps : petite boîte (opaque) + frustum vers **+Z** (Object3D.lookAt oriente +Z vers la cible,
+  // donc l'objectif s'ouvre vers la cible — Phase 27, corrige l'orientation « à l'envers »).
+  const boxGeo = new THREE.BoxGeometry(s * 0.7, s * 0.5, s * 0.9);
+  const boxMat = new THREE.MeshBasicMaterial({ color: PRIMARY });
+  const boxWireMat = new THREE.MeshBasicMaterial({ color: 0x001018, wireframe: true });
+  const box = new THREE.Mesh(boxGeo, boxMat);
+  box.add(new THREE.Mesh(boxGeo, boxWireMat));
+  body.add(box);
 
   const d = s * 1.2; // profondeur du frustum
   const w = s * 0.7;
   const h = s * 0.5;
-  const apex = new THREE.Vector3(0, 0, 0);
+  const apex = new THREE.Vector3(0, 0, s * 0.45);
   const corners = [
-    new THREE.Vector3(-w, -h, -d),
-    new THREE.Vector3(w, -h, -d),
-    new THREE.Vector3(w, h, -d),
-    new THREE.Vector3(-w, h, -d),
+    new THREE.Vector3(-w, -h, d),
+    new THREE.Vector3(w, -h, d),
+    new THREE.Vector3(w, h, d),
+    new THREE.Vector3(-w, h, d),
   ];
   const pts: THREE.Vector3[] = [];
   corners.forEach((c) => {
@@ -73,7 +77,7 @@ export function createCameraObject(
   const update = (pose: SplatCamera) => {
     body.position.set(pose.position.x, pose.position.y, pose.position.z);
     _target.set(pose.target.x, pose.target.y, pose.target.z);
-    body.lookAt(_target); // oriente -Z vers la cible
+    body.lookAt(_target); // Group : oriente +Z vers la cible (frustum ouvert vers la cible)
     targetMarker.position.copy(_target);
   };
 
@@ -92,6 +96,7 @@ export function createCameraObject(
     scene.remove(body, targetMarker, traj);
     boxGeo.dispose();
     boxMat.dispose();
+    boxWireMat.dispose();
     frustumGeo.dispose();
     frustumMat.dispose();
     trajGeo.dispose();

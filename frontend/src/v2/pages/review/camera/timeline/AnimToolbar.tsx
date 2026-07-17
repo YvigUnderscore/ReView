@@ -1,7 +1,7 @@
 import {
   Diamond,
   Download,
-  ListTree,
+  KeyRound,
   MessageSquarePlus,
   Orbit,
   Pause,
@@ -9,26 +9,23 @@ import {
   Redo2,
   Repeat,
   Save,
-  Spline,
   Trash2,
   Undo2,
   Upload,
 } from 'lucide-react';
+import { useState } from 'react';
 import { HudIconButton } from '../../hud/ViewerHud';
+import HudNumber from '../../hud/HudNumber';
 import type { CameraAnimState } from '../useCameraAnim';
 
-/** Mode d'affichage de l'éditeur : dopesheet (timing) ou graph editor (F-curves). */
-export type AnimEditMode = 'dope' | 'graph';
-
 /**
- * Barre d'outils de l'éditeur d'animation caméra (Phase 17) : transport (play/pause, boucle,
- * temps), pose de clé, preset orbite, import/export glTF, undo/redo, bascule dopesheet/courbes,
- * et — pour le gestionnaire — joindre au commentaire + enregistrer/effacer la présentation.
+ * Barre d'outils de l'éditeur d'animation caméra (Phase 17/27) : transport (play/pause, boucle,
+ * temps), pose de clé, **auto-key**, **durée de lecture réglable**, preset orbite, import/export
+ * glTF, undo/redo, et — pour le gestionnaire — joindre au commentaire + enregistrer/effacer la
+ * présentation. Le dopesheet a été retiré (graph editor unique, Phase 27).
  */
 export default function AnimToolbar({
   anim,
-  mode,
-  onMode,
   onOrbitPreset,
   onImport,
   onExport,
@@ -39,9 +36,7 @@ export default function AnimToolbar({
   editable,
 }: {
   anim: CameraAnimState;
-  mode: AnimEditMode;
-  onMode: (m: AnimEditMode) => void;
-  onOrbitPreset: () => void;
+  onOrbitPreset: (radiusScale?: number) => void;
   onImport?: (file: File) => void;
   onExport: () => void;
   onAttach?: () => void;
@@ -51,6 +46,7 @@ export default function AnimToolbar({
   editable: boolean;
 }) {
   const has = anim.hasAnimation;
+  const [orbitScale, setOrbitScale] = useState(1);
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="font-medium text-foreground">Animation</span>
@@ -81,27 +77,41 @@ export default function AnimToolbar({
             <Diamond size={12} /> Clé
           </button>
           <HudIconButton
+            icon={KeyRound}
+            hint="Auto-key : tout geste caméra pose une clé au temps de lecture"
+            active={anim.autoKey}
+            onClick={() => anim.setAutoKey(!anim.autoKey)}
+          />
+          <HudNumber
+            label="Durée"
+            hint="Durée de lecture (s) — 0 = automatique (dernière clé). Guide dans le graphe."
+            value={Number((anim.playDuration / 1000).toFixed(2))}
+            onChange={(s) => anim.setDuration(s > 0 ? Math.round(s * 1000) : undefined)}
+            min={0}
+            max={600}
+            step={0.5}
+            unit="s"
+          />
+          <HudIconButton
             icon={Orbit}
-            hint="Preset : orbite complète autour de la cible"
-            onClick={onOrbitPreset}
+            hint="Preset : orbite complète autour de la cible courante (centre = cible cadrée)"
+            onClick={() => onOrbitPreset(orbitScale)}
+          />
+          <HudNumber
+            label="Dist."
+            hint="Distance d'orbite — multiplie le rayon caméra↔centre courant"
+            value={orbitScale}
+            onChange={setOrbitScale}
+            min={0.25}
+            max={4}
+            step={0.05}
+            pixelsPerStep={6}
+            unit="×"
           />
           <HudIconButton icon={Undo2} hint="Annuler" onClick={anim.undo} disabled={!anim.canUndo} />
           <HudIconButton icon={Redo2} hint="Rétablir" onClick={anim.redo} disabled={!anim.canRedo} />
         </>
       )}
-      <span className="h-4 w-px bg-border" />
-      <HudIconButton
-        icon={ListTree}
-        hint="Vue dopesheet (timing)"
-        active={mode === 'dope'}
-        onClick={() => onMode('dope')}
-      />
-      <HudIconButton
-        icon={Spline}
-        hint="Vue courbes (F-curves)"
-        active={mode === 'graph'}
-        onClick={() => onMode('graph')}
-      />
       {onImport && editable && (
         <label
           title="Importer une animation caméra depuis un glTF (d'un logiciel 3D)"

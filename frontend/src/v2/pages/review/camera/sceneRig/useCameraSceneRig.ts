@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { ViewerSceneHandle } from '../../viewer/sceneHandle';
 import { objectBoundingSphere } from '../../viewer/frameCamera';
@@ -8,6 +8,9 @@ import type { CameraAnimState } from '../useCameraAnim';
 import { createCameraObject, type CameraObjectRuntime } from './cameraObject';
 
 const BASE_POSE = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } };
+
+/** Mode du gizmo de la caméra-objet : déplacer la pose ou réorienter le regard. */
+export type RigGizmoMode = 'translate' | 'rotate';
 
 /**
  * Caméra-objet dans la scène (Phase 17, mode layout) : monte le mesh caméra + sa trajectoire dans
@@ -27,6 +30,9 @@ export function useCameraSceneRig(opts: {
   const { getSceneHandle, subscribeFrame, ready, active, editable, anim } = opts;
   const objRef = useRef<CameraObjectRuntime | null>(null);
   const controlRef = useRef<TransformControls | null>(null);
+  const [mode, setMode] = useState<RigGizmoMode>('translate');
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   // Copies « dernière valeur » lues par les listeners/boucles (évite de recréer les effets).
   const animRef = useRef(anim);
   animRef.current = anim;
@@ -55,20 +61,35 @@ export function useCameraSceneRig(opts: {
       scene.add(helper);
       controlRef.current = control;
 
-      // Cible courante du gizmo : corps (position) ou marqueur (cible du regard).
+      // Cible courante du gizmo : corps (position/orientation) ou marqueur (cible du regard).
       let editing: 'body' | 'target' | null = null;
+      // Distance de regard figée au début d'une rotation (conservée en réorientant la cible).
+      let rotateDist = 0;
+      const fwd = new THREE.Vector3();
       const onDragging = (e: { value: unknown }) => {
         controls.enabled = !e.value; // gèle l'orbite pendant la manipulation
-        if (e.value) animRef.current.beginStroke();
+        if (e.value) {
+          animRef.current.beginStroke();
+          rotateDist = obj.body.position.distanceTo(obj.targetMarker.position) || 1;
+        }
       };
       const onObjectChange = () => {
         const a = animRef.current;
         const times = animKeyTimes(a.anim);
-        const selTime = a.selection
-          ? a.anim.channels[a.selection.channel]?.keys[a.selection.index]?.t
-          : undefined;
+        // Clé « primaire » (dernière de la multi-sélection) → auto-key au temps de cette clé.
+        const primary = a.selection[a.selection.length - 1];
+        const selTime = primary ? a.anim.channels[primary.channel]?.keys[primary.index]?.t : undefined;
         const t = selTime ?? (times.length ? a.timeMs : 0);
-        if (editing === 'body') {
+        if (editing === 'body' && modeRef.current === 'rotate') {
+          // Rotation du corps → réoriente la cible (+Z du corps), distance de regard conservée.
+          const p = obj.body.position;
+          fwd.set(0, 0, 1).applyQuaternion(obj.body.quaternion);
+          a.strokeUpsertAt(t, {
+            tx: p.x + fwd.x * rotateDist,
+            ty: p.y + fwd.y * rotateDist,
+            tz: p.z + fwd.z * rotateDist,
+          });
+        } else if (editing === 'body') {
           const p = obj.body.position;
           a.strokeUpsertAt(t, { px: p.x, py: p.y, pz: p.z });
         } else if (editing === 'target') {
@@ -79,7 +100,8 @@ export function useCameraSceneRig(opts: {
       control.addEventListener('dragging-changed', onDragging as never);
       control.addEventListener('objectChange', onObjectChange);
 
-      // Sélection de la cible du gizmo au clic (raycast sur corps / marqueur).
+      // Sélection de la cible du gizmo au clic (raycast sur corps / marqueur). Le corps prend le
+      // mode courant (translate/rotate) ; le marqueur de cible reste en translation.
       const raycaster = new THREE.Raycaster();
       const ndc = new THREE.Vector2();
       const onPointerDown = (ev: PointerEvent) => {
@@ -92,9 +114,11 @@ export function useCameraSceneRig(opts: {
         raycaster.setFromCamera(ndc, camera);
         if (raycaster.intersectObject(obj.targetMarker, true).length) {
           editing = 'target';
+          control.setMode('translate');
           control.attach(obj.targetMarker);
         } else if (raycaster.intersectObject(obj.body, true).length) {
           editing = 'body';
+          control.setMode(modeRef.current);
           control.attach(obj.body);
         }
       };
@@ -136,6 +160,14 @@ export function useCameraSceneRig(opts: {
       trajKeyRef.current = '';
     };
   }, [active, ready, editable, getSceneHandle, subscribeFrame]);
+
+  // Applique le mode courant au gizmo quand il est attaché au corps (sans réinstaller le gizmo).
+  useEffect(() => {
+    const c = controlRef.current;
+    if (c && c.object === objRef.current?.body) c.setMode(mode);
+  }, [mode]);
+
+  return { mode, setMode };
 }
 
 /** Signature légère de l'animation (temps+valeurs px) pour ne recalculer la trajectoire qu'au besoin. */

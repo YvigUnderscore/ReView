@@ -4,6 +4,7 @@ import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTyp
 import type { Annotations } from '../useAnnotations';
 import { useCameraAnim } from '../camera/useCameraAnim';
 import { orbitPresetV2 } from '../camera/channels/orbitPreset';
+import { confirmReplaceAnim } from '../camera/confirmReplaceAnim';
 import { emptyAnim, hasAnimation, normalizeAnim } from '../camera/channels/model';
 import { cameraPoseFromView } from '../camera/cameraPose';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
@@ -79,12 +80,19 @@ export function useModel3DCamera(
     }
   }, [ready, pres, restoreCamera, setFov, setRoll, setAnim, play]);
 
-  const applyOrbitPreset = useCallback(() => {
-    const view = model3d.captureCamera();
-    if (!view) return;
-    anim.setAnim(orbitPresetV2(view));
-    anim.play();
-  }, [model3d, anim]);
+  const applyOrbitPreset = useCallback(
+    (radiusScale = 1) => {
+      const view = model3d.captureCamera();
+      if (!view) return;
+      const run = () => {
+        anim.setAnim(orbitPresetV2(view, { radiusScale }));
+        anim.play();
+      };
+      if (anim.hasAnimation) confirmReplaceAnim(run);
+      else run();
+    },
+    [model3d, anim],
+  );
 
   const save = useCallback(async () => {
     const view = model3d.captureCamera();

@@ -1,15 +1,24 @@
-import { useRef } from 'react';
-import type { CameraAnimV2, ChannelId } from '../channels/model';
+import { useRef, useState } from 'react';
+import type { CameraAnimV2, ChannelId, KeyRef } from '../channels/model';
 import { evalChannel } from '../channels/hermite';
 import { CHANNEL_META, channelColor } from './channelMeta';
+import CurveGrid from './CurveGrid';
 import { timeToX, valueToY, xToTime, yToValue, type TimeView, type ValueView } from './viewTransform';
 
 const HANDLE_PX = 34; // longueur écran des poignées de tangente
 
-interface Sel {
+/** Origine d'un déplacement groupé : clé (canal+index) et ses valeurs de départ (baseline). */
+interface KeyOrigin {
   channel: ChannelId;
   index: number;
+  t0: number;
+  v0: number;
 }
+
+type DragState =
+  | { kind: 'keys'; baseline: CameraAnimV2; tDown: number; vDown: number; origins: KeyOrigin[] }
+  | { kind: 'in' | 'out'; channel: ChannelId; index: number }
+  | { kind: 'band'; x0: number; y0: number };
 
 /** Points d'une F-curve échantillonnée sur la fenêtre visible (polyline SVG). */
 function curvePath(anim: CameraAnimV2, id: ChannelId, tv: TimeView, vv: ValueView): string {
@@ -24,11 +33,15 @@ function curvePath(anim: CameraAnimV2, id: ChannelId, tv: TimeView, vv: ValueVie
   return `M${pts.join(' L')}`;
 }
 
+const inSel = (sel: readonly KeyRef[], id: ChannelId, i: number) =>
+  sel.some((s) => s.channel === id && s.index === i);
+
 /**
- * Graph editor F-curves (Phase 17) : trace une courbe par canal visible, ses clés en points
- * **déplaçables** (x = temps, y = valeur) et, pour la clé sélectionnée, des **poignées de
- * tangente** draggables (mode `free`). Double-clic sur une courbe = ajouter une clé. Molette =
- * zoom temporel. En lecture seule, les interactions d'édition sont inertes (playhead + affichage).
+ * Graph editor F-curves (Phase 17/27) : grille de fond, une courbe par canal visible, ses clés en
+ * points **déplaçables** (multi-sélection : rubber-band + Maj pour ajouter, déplacement groupé) et,
+ * pour la clé primaire, des **poignées de tangente** draggables. Double-clic sur une courbe = ajouter
+ * une clé ; molette = zoom temporel ; guide vertical = durée réglable. En lecture seule, l'édition
+ * est inerte (playhead + affichage).
  */
 export default function CurveCanvas({
   anim,
@@ -40,11 +53,12 @@ export default function CurveCanvas({
   editable,
   width,
   height,
+  guideT,
   onZoom,
   onScrub,
   onSelect,
   onBeginStroke,
-  onMoveKey,
+  onMoveKeys,
   onSetTangent,
   onAddKey,
 }: {
@@ -53,43 +67,123 @@ export default function CurveCanvas({
   timeView: TimeView;
   valueView: ValueView;
   playheadT: number;
-  selection: Sel | null;
+  selection: readonly KeyRef[];
   editable: boolean;
   width: number;
   height: number;
+  /** Guide de durée de lecture (ms) — trait vertical repère (Phase 27). */
+  guideT?: number;
   onZoom: (pivotT: number, factor: number) => void;
   onScrub: (t: number) => void;
-  onSelect: (sel: Sel | null) => void;
+  onSelect: (sel: KeyRef[]) => void;
   onBeginStroke: () => void;
-  onMoveKey: (channel: ChannelId, index: number, patch: { t: number; v: number }) => void;
+  onMoveKeys: (
+    baseline: CameraAnimV2,
+    moves: Array<{ channel: ChannelId; index: number; t: number; v: number }>,
+  ) => void;
   onSetTangent: (channel: ChannelId, index: number, patch: { tin?: number; tout?: number }) => void;
   onAddKey: (channel: ChannelId, t: number, v: number) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const drag = useRef<{ kind: 'key' | 'in' | 'out'; channel: ChannelId; index: number } | null>(null);
+  const drag = useRef<DragState | null>(null);
+  const [band, setBand] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const tv: TimeView = { ...timeView, width };
   const vv: ValueView = { ...valueView, height };
+  const primary = selection[selection.length - 1];
 
   const localX = (clientX: number) => clientX - (svgRef.current?.getBoundingClientRect().left ?? 0);
   const localY = (clientY: number) => clientY - (svgRef.current?.getBoundingClientRect().top ?? 0);
 
+  const visibleChannels = CHANNEL_META.filter((c) => visible.has(c.id) && anim.channels[c.id]?.keys.length);
+
+  /** Démarre un déplacement groupé depuis la sélection `sel` (baseline = animation courante). */
+  const startKeyDrag = (sel: readonly KeyRef[], e: React.PointerEvent) => {
+    const origins: KeyOrigin[] = [];
+    for (const s of sel) {
+      const k = anim.channels[s.channel]?.keys[s.index];
+      if (k) origins.push({ channel: s.channel, index: s.index, t0: k.t, v0: k.v });
+    }
+    onBeginStroke();
+    drag.current = {
+      kind: 'keys',
+      baseline: anim,
+      tDown: xToTime(localX(e.clientX), tv),
+      vDown: yToValue(localY(e.clientY), vv),
+      origins,
+    };
+    (e.currentTarget as SVGElement).setPointerCapture(e.pointerId);
+  };
+
+  const onKeyPointerDown = (e: React.PointerEvent, id: ChannelId, i: number) => {
+    e.stopPropagation();
+    const already = inSel(selection, id, i);
+    let next: KeyRef[];
+    if (e.shiftKey)
+      next = already
+        ? selection.filter((s) => !(s.channel === id && s.index === i))
+        : [...selection, { channel: id, index: i }];
+    else next = already ? [...selection] : [{ channel: id, index: i }];
+    onSelect(next);
+    if (!editable || (e.shiftKey && already)) return;
+    startKeyDrag(next, e);
+  };
+
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d) return;
-    const t = xToTime(localX(e.clientX), tv);
-    const v = yToValue(localY(e.clientY), vv);
+    if (d.kind === 'band') {
+      setBand({ x0: d.x0, y0: d.y0, x1: localX(e.clientX), y1: localY(e.clientY) });
+      return;
+    }
+    if (d.kind === 'keys') {
+      const dt = xToTime(localX(e.clientX), tv) - d.tDown;
+      const dv = yToValue(localY(e.clientY), vv) - d.vDown;
+      onMoveKeys(
+        d.baseline,
+        d.origins.map((o) => ({ channel: o.channel, index: o.index, t: o.t0 + dt, v: o.v0 + dv })),
+      );
+      return;
+    }
+    // Tangente (poignée) de la clé primaire.
     const key = anim.channels[d.channel]?.keys[d.index];
     if (!key) return;
-    if (d.kind === 'key') onMoveKey(d.channel, d.index, { t: Math.max(0, Math.round(t)), v });
-    else {
-      const dt = t - key.t;
-      if (Math.abs(dt) < 1e-3) return;
-      const slope = (v - key.v) / dt;
-      onSetTangent(d.channel, d.index, d.kind === 'out' ? { tout: slope } : { tin: slope });
-    }
+    const t = xToTime(localX(e.clientX), tv);
+    const v = yToValue(localY(e.clientY), vv);
+    const deltaT = t - key.t;
+    if (Math.abs(deltaT) < 1e-3) return;
+    const slope = (v - key.v) / deltaT;
+    onSetTangent(d.channel, d.index, d.kind === 'out' ? { tout: slope } : { tin: slope });
   };
 
-  const visibleChannels = CHANNEL_META.filter((c) => visible.has(c.id) && anim.channels[c.id]?.keys.length);
+  const commitBand = (rect: { x0: number; y0: number; x1: number; y1: number }, additive: boolean) => {
+    const xMin = Math.min(rect.x0, rect.x1);
+    const xMax = Math.max(rect.x0, rect.x1);
+    const yMin = Math.min(rect.y0, rect.y1);
+    const yMax = Math.max(rect.y0, rect.y1);
+    const picked: KeyRef[] = [];
+    for (const c of visibleChannels) {
+      anim.channels[c.id]!.keys.forEach((k, i) => {
+        const x = timeToX(k.t, tv);
+        const y = valueToY(k.v, vv);
+        if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) picked.push({ channel: c.id, index: i });
+      });
+    }
+    onSelect(
+      additive ? [...selection, ...picked.filter((p) => !inSel(selection, p.channel, p.index))] : picked,
+    );
+  };
+
+  const onUp = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (d?.kind === 'band') {
+      const moved = Math.hypot(localX(e.clientX) - d.x0, localY(e.clientY) - d.y0) > 3;
+      if (moved) commitBand({ x0: d.x0, y0: d.y0, x1: localX(e.clientX), y1: localY(e.clientY) }, e.shiftKey);
+      else onScrub(Math.max(0, xToTime(d.x0, tv)));
+    }
+    if (drag.current) (e.currentTarget as SVGElement).releasePointerCapture?.(e.pointerId);
+    drag.current = null;
+    setBand(null);
+  };
 
   return (
     <svg
@@ -98,18 +192,29 @@ export default function CurveCanvas({
       height={height}
       className="min-w-0 flex-1 touch-none select-none"
       onPointerMove={onMove}
-      onPointerUp={(e) => {
-        if (drag.current) (e.currentTarget as SVGElement).releasePointerCapture?.(e.pointerId);
-        drag.current = null;
-      }}
+      onPointerUp={onUp}
       onPointerDown={(e) => {
-        if (e.target === e.currentTarget) onScrub(Math.max(0, xToTime(localX(e.clientX), tv)));
+        if (e.target !== e.currentTarget) return;
+        drag.current = { kind: 'band', x0: localX(e.clientX), y0: localY(e.clientY) };
+        (e.currentTarget as SVGElement).setPointerCapture(e.pointerId);
       }}
-      onWheel={(e) => {
-        onZoom(xToTime(localX(e.clientX), tv), e.deltaY < 0 ? 0.85 : 1.18);
-      }}
+      onWheel={(e) => onZoom(xToTime(localX(e.clientX), tv), e.deltaY < 0 ? 0.85 : 1.18)}
     >
-      {/* Playhead */}
+      <CurveGrid timeView={timeView} valueView={valueView} width={width} height={height} />
+
+      {guideT != null && guideT > 0 && (
+        <line
+          x1={timeToX(guideT, tv)}
+          x2={timeToX(guideT, tv)}
+          y1={0}
+          y2={height}
+          stroke="hsl(var(--muted-foreground))"
+          strokeWidth={1}
+          strokeDasharray="4 3"
+          opacity={0.7}
+        />
+      )}
+
       <line
         x1={timeToX(playheadT, tv)}
         x2={timeToX(playheadT, tv)}
@@ -139,17 +244,17 @@ export default function CurveCanvas({
             {keys.map((k, i) => {
               const kx = timeToX(k.t, tv);
               const ky = valueToY(k.v, vv);
-              const isSel = selection?.channel === c.id && selection.index === i;
+              const isSel = inSel(selection, c.id, i);
+              const isPrimary = primary?.channel === c.id && primary.index === i;
               return (
                 <g key={i}>
-                  {isSel && editable && (
+                  {isPrimary && editable && (
                     <>
                       {(['in', 'out'] as const).map((side) => {
                         const dir = side === 'out' ? 1 : -1;
                         const slope = side === 'out' ? (k.tout ?? 0) : (k.tin ?? 0);
                         const hx = kx + dir * HANDLE_PX;
-                        const tAtH = xToTime(hx, tv);
-                        const hy = valueToY(k.v + slope * (tAtH - k.t), vv);
+                        const hy = valueToY(k.v + slope * (xToTime(hx, tv) - k.t), vv);
                         return (
                           <g key={side}>
                             <line
@@ -189,14 +294,7 @@ export default function CurveCanvas({
                     stroke={color}
                     strokeWidth={1.5}
                     style={{ cursor: editable ? 'move' : 'pointer' }}
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      onSelect({ channel: c.id, index: i });
-                      if (!editable) return;
-                      onBeginStroke();
-                      drag.current = { kind: 'key', channel: c.id, index: i };
-                      (e.currentTarget as SVGElement).setPointerCapture(e.pointerId);
-                    }}
+                    onPointerDown={(e) => onKeyPointerDown(e, c.id, i)}
                   />
                 </g>
               );
@@ -204,6 +302,19 @@ export default function CurveCanvas({
           </g>
         );
       })}
+
+      {band && (
+        <rect
+          x={Math.min(band.x0, band.x1)}
+          y={Math.min(band.y0, band.y1)}
+          width={Math.abs(band.x1 - band.x0)}
+          height={Math.abs(band.y1 - band.y0)}
+          fill="hsl(var(--primary))"
+          fillOpacity={0.12}
+          stroke="hsl(var(--primary))"
+          strokeWidth={1}
+        />
+      )}
     </svg>
   );
 }

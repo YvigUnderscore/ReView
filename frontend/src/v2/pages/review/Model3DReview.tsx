@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Grid3x3, Maximize } from 'lucide-react';
+import { Grid3x3, Maximize, Move3d, Rotate3d } from 'lucide-react';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { Model3DThreeState } from './three/useModel3DThree';
@@ -57,7 +57,7 @@ export default function Model3DReview({
       model3d.containerRef.current?.closest('[data-viewer-zone]') as HTMLElement | null
     )?.requestFullscreen?.();
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
-  useCameraSceneRig({
+  const rig = useCameraSceneRig({
     getSceneHandle: model3d.getSceneHandle,
     subscribeFrame: model3d.subscribeFrame,
     ready,
@@ -81,15 +81,34 @@ export default function Model3DReview({
           <ViewerHud
             topLeft={showEditTools ? <Model3DTransformBar m={model3d} /> : undefined}
             topRight={
-              <HudGroup>
-                <HudIconButton
-                  icon={Grid3x3}
-                  hint="Grille de sol (repère d'orientation de la scène)"
-                  active={grid.visible}
-                  onClick={grid.toggle}
-                />
-                <HudIconButton icon={Maximize} hint="Plein écran" onClick={fullscreen} />
-              </HudGroup>
+              <>
+                {model3d.layoutMode && canManage && (
+                  <HudGroup>
+                    <span className="text-muted-foreground">Caméra-objet</span>
+                    <HudIconButton
+                      icon={Move3d}
+                      hint="Déplacer la caméra-objet (pose)"
+                      active={rig.mode === 'translate'}
+                      onClick={() => rig.setMode('translate')}
+                    />
+                    <HudIconButton
+                      icon={Rotate3d}
+                      hint="Orienter la caméra-objet (regard)"
+                      active={rig.mode === 'rotate'}
+                      onClick={() => rig.setMode('rotate')}
+                    />
+                  </HudGroup>
+                )}
+                <HudGroup>
+                  <HudIconButton
+                    icon={Grid3x3}
+                    hint="Grille de sol (repère d'orientation de la scène)"
+                    active={grid.visible}
+                    onClick={grid.toggle}
+                  />
+                  <HudIconButton icon={Maximize} hint="Plein écran" onClick={fullscreen} />
+                </HudGroup>
+              </>
             }
             bottomLeft={
               <>

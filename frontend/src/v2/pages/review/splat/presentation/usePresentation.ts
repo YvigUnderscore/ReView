@@ -5,6 +5,7 @@ import { useCameraRig } from '../camera/useCameraRig';
 import { cameraPoseFromView } from '../../camera/cameraPose';
 import { useCameraAnim } from '../../camera/useCameraAnim';
 import { orbitPresetV2 } from '../../camera/channels/orbitPreset';
+import { confirmReplaceAnim } from '../../camera/confirmReplaceAnim';
 import { emptyAnim, hasAnimation } from '../../camera/channels/model';
 import { useCameraPresentation } from '../../camera/useCameraPresentation';
 import { createDebugColor, type DebugColorMode, type DebugColorRuntime } from '../scene/effects/debugColor';
@@ -160,12 +161,17 @@ export function usePresentation(
     setReveal(null);
   };
 
-  /** Preset orbite : un tour complet autour de la cible courante, en boucle. */
-  const applyOrbitPreset = () => {
+  /** Preset orbite : un tour complet autour de la cible courante, en boucle. `radiusScale` règle la
+   *  distance ; avertit avant d'écraser une animation existante (Phase 27). */
+  const applyOrbitPreset = (radiusScale = 1) => {
     const view = captureCamera();
     if (!view) return;
-    anim.setAnim(orbitPresetV2(view));
-    anim.play();
+    const run = () => {
+      anim.setAnim(orbitPresetV2(view, { radiusScale }));
+      anim.play();
+    };
+    if (anim.hasAnimation) confirmReplaceAnim(run);
+    else run();
   };
 
   return {

@@ -1,5 +1,12 @@
 import type { SplatCamera, SplatCameraKeyframe } from '../../reviewTypes';
-import { animDuration, animKeyTimes, type Channel, type CameraAnimV2, type CurveKey } from './model';
+import {
+  animDuration,
+  animKeyTimes,
+  animPlayDuration,
+  type Channel,
+  type CameraAnimV2,
+  type CurveKey,
+} from './model';
 
 /**
  * Échantillonnage des F-curves (Phase 17) : interpolation d'Hermite cubique par segment, tangentes
@@ -67,7 +74,8 @@ export function evalChannel(channel: Channel | undefined, t: number, fallback: n
  * pas jouable (moins de 2 temps de clés — le garde-fou est côté appelant, ici on renvoie `base`).
  */
 export function sampleAnimV2(anim: CameraAnimV2, timeMs: number, base: SplatCamera): SplatCamera {
-  const duration = animDuration(anim);
+  // Durée de lecture effective (override réglable ou dernier temps de clé) — Phase 27.
+  const duration = animPlayDuration(anim);
   const t =
     duration <= 0
       ? 0

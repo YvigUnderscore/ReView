@@ -4,20 +4,19 @@ import { FLY_MOVE_MAPPING } from '../viewer/flyControls';
 import {
   animDuration,
   animKeyTimes,
+  animPlayDuration,
   CHANNEL_IDS,
-  deleteColumn,
-  deleteKey,
+  deleteKeys,
   emptyAnim,
   hasAnimation as animHasAnimation,
-  moveColumn,
-  moveKey,
-  setKeyMode,
+  moveKeysBatch,
+  setAnimDuration,
   setKeyTangent,
   upsertKey,
   upsertPoseAt,
   type CameraAnimV2,
   type ChannelId,
-  type TangentMode,
+  type KeyRef,
 } from './channels/model';
 import { sampleAnimV2 } from './channels/hermite';
 
@@ -35,10 +34,11 @@ export interface CameraController {
 const HISTORY_LIMIT = 100;
 
 /**
- * Lecteur + éditeur d'animation caméra par F-curves (Phase 17, v2) : transport (play/pause/scrub,
- * boucle), échantillonnage Hermite par frame, **reprise en main auto** (tout input met en pause),
- * édition des clés (poser depuis la vue, déplacer temps/valeur, tangentes, modes, colonnes) et
- * undo/redo local. Remplace `useCameraKeyframes`. La lecture s'appuie sur `subscribeFrame`.
+ * Lecteur + éditeur d'animation caméra par F-curves (Phase 17, v2 ; Phase 27) : transport
+ * (play/pause/scrub, boucle **0→durée réglable**), échantillonnage Hermite par frame, **reprise en
+ * main auto** (tout input met en pause), édition des clés (poser depuis la vue, **multi-sélection**
+ * + déplacement groupé, tangentes, suppression de lot) et undo/redo local. **Auto-key** optionnel :
+ * tout geste caméra pose une clé au temps de lecture. La lecture s'appuie sur `subscribeFrame`.
  */
 export function useCameraAnim(controller: CameraController) {
   const { subscribeFrame, restoreCamera, captureCamera, getDom } = controller;
@@ -46,18 +46,26 @@ export function useCameraAnim(controller: CameraController) {
   const [playing, setPlaying] = useState(false);
   const [autoPaused, setAutoPaused] = useState(false);
   const [timeMs, setTimeMs] = useState(0);
-  // Sélection de clés (dopesheet/graph) — { channel, index }.
-  const [selection, setSelection] = useState<{ channel: ChannelId; index: number } | null>(null);
+  // Multi-sélection de clés (graph editor) — la dernière est « primaire » (poignées de tangente,
+  // caméra-objet). Phase 27.
+  const [selection, setSelectionState] = useState<KeyRef[]>([]);
+  const [autoKey, setAutoKey] = useState(false);
   const [past, setPast] = useState<CameraAnimV2[]>([]);
   const [future, setFuture] = useState<CameraAnimV2[]>([]);
 
   const timeRef = useRef(0);
   const lastUi = useRef(0);
   const animRef = useRef(anim);
+  const selectionRef = useRef(selection);
   const baseRef = useRef<SplatCamera>({ position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } });
   useEffect(() => {
     animRef.current = anim;
   }, [anim]);
+  useEffect(() => {
+    selectionRef.current = selection;
+  }, [selection]);
+
+  const setSelection = useCallback((sels: KeyRef[]) => setSelectionState(sels), []);
 
   // ── Édition avec historique : chaque mutation empile l'état courant (undo). ──
   const pushHistory = useCallback(() => {
@@ -71,12 +79,16 @@ export function useCameraAnim(controller: CameraController) {
     },
     [pushHistory],
   );
-  // Geste continu (drag d'une clé/tangente) : un seul snapshot au début, puis mises à jour live
-  // sans empiler — un undo annule tout le geste.
+  // Geste continu (drag d'une/plusieurs clés/tangente) : un seul snapshot au début, puis mises à
+  // jour live sans empiler — un undo annule tout le geste.
   const beginStroke = useCallback(() => pushHistory(), [pushHistory]);
-  const strokeMoveKey = useCallback(
-    (channel: ChannelId, index: number, patch: { t?: number; v?: number }) =>
-      setAnimState(moveKey(animRef.current, channel, index, patch)),
+  /**
+   * Déplacement groupé (multi-sélection) recalculé depuis le baseline capturé au début du drag :
+   * les index restent cohérents pendant tout le geste (Phase 27).
+   */
+  const strokeMoveKeys = useCallback(
+    (baseline: CameraAnimV2, moves: Array<{ channel: ChannelId; index: number; t: number; v: number }>) =>
+      setAnimState(moveKeysBatch(baseline, moves)),
     [],
   );
   const strokeSetTangent = useCallback(
@@ -121,6 +133,7 @@ export function useCameraAnim(controller: CameraController) {
       setTimeMs(0);
       setPast([]);
       setFuture([]);
+      setSelectionState([]);
       const view = captureCamera();
       if (view) baseRef.current = view;
       setAnimState(next);
@@ -129,6 +142,11 @@ export function useCameraAnim(controller: CameraController) {
   );
 
   const setLoop = useCallback((loop: boolean) => commit({ ...animRef.current, loop }), [commit]);
+  /** Durée de lecture réglable (0/undefined = automatique = dernier temps de clé). */
+  const setDuration = useCallback(
+    (ms: number | undefined) => commit(setAnimDuration(animRef.current, ms)),
+    [commit],
+  );
 
   // Boucle de lecture : avance le temps, échantillonne la pose, l'applique à la caméra.
   useEffect(() => {
@@ -137,7 +155,7 @@ export function useCameraAnim(controller: CameraController) {
       timeRef.current += dt * 1000;
       const a = animRef.current;
       restoreCamera(sampleAnimV2(a, timeRef.current, baseRef.current));
-      const duration = animDuration(a);
+      const duration = animPlayDuration(a);
       if (!a.loop && timeRef.current >= duration) setPlaying(false);
       const now = performance.now();
       if (now - lastUi.current > 100) {
@@ -194,7 +212,7 @@ export function useCameraAnim(controller: CameraController) {
       const view = captureCamera();
       if (!view) return;
       const time = t != null ? Math.max(0, Math.round(t)) : Math.round(timeRef.current);
-      if (!hasAnimationRef(animRef.current)) baseRef.current = view;
+      if (!animHasAnimation(animRef.current)) baseRef.current = view;
       commit(upsertPoseAt(animRef.current, time, view));
     },
     [captureCamera, commit],
@@ -206,30 +224,52 @@ export function useCameraAnim(controller: CameraController) {
       commit(upsertKey(animRef.current, channel, Math.max(0, t), v)),
     [commit],
   );
-  const editKey = useCallback(
-    (channel: ChannelId, index: number, patch: { t?: number; v?: number }) =>
-      commit(moveKey(animRef.current, channel, index, patch)),
-    [commit],
-  );
-  const removeKey = useCallback(
-    (channel: ChannelId, index: number) => commit(deleteKey(animRef.current, channel, index)),
-    [commit],
-  );
-  const changeKeyMode = useCallback(
-    (channel: ChannelId, index: number, mode: TangentMode) =>
-      commit(setKeyMode(animRef.current, channel, index, mode)),
-    [commit],
-  );
-  const changeKeyTangent = useCallback(
-    (channel: ChannelId, index: number, patch: { tin?: number; tout?: number }) =>
-      commit(setKeyTangent(animRef.current, channel, index, patch)),
-    [commit],
-  );
-  const removeColumn = useCallback((t: number) => commit(deleteColumn(animRef.current, t)), [commit]);
-  const shiftColumn = useCallback(
-    (t: number, delta: number) => commit(moveColumn(animRef.current, t, delta)),
-    [commit],
-  );
+
+  /** Supprime les clés sélectionnées (Suppr). */
+  const removeSelection = useCallback(() => {
+    const sels = selectionRef.current;
+    if (!sels.length) return;
+    commit(deleteKeys(animRef.current, sels));
+    setSelectionState([]);
+  }, [commit]);
+
+  // Auto-key (Phase 27) : activé, tout geste caméra (drag orbite/pan, molette) pose une clé de la
+  // vue courante au temps de lecture — façon DCC.
+  useEffect(() => {
+    if (!autoKey) return;
+    const dom = getDom();
+    if (!dom) return;
+    let sx = 0;
+    let sy = 0;
+    let moved = false;
+    let wheelTimer: number | undefined;
+    const onDown = (e: PointerEvent) => {
+      sx = e.clientX;
+      sy = e.clientY;
+      moved = false;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) > 3) moved = true;
+    };
+    const onUp = () => {
+      if (moved) insertKeyAtView();
+    };
+    const onWheel = () => {
+      window.clearTimeout(wheelTimer);
+      wheelTimer = window.setTimeout(() => insertKeyAtView(), 250);
+    };
+    dom.addEventListener('pointerdown', onDown);
+    dom.addEventListener('pointermove', onMove);
+    dom.addEventListener('pointerup', onUp);
+    dom.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      window.clearTimeout(wheelTimer);
+      dom.removeEventListener('pointerdown', onDown);
+      dom.removeEventListener('pointermove', onMove);
+      dom.removeEventListener('pointerup', onUp);
+      dom.removeEventListener('wheel', onWheel);
+    };
+  }, [autoKey, getDom, insertKeyAtView]);
 
   return {
     anim,
@@ -239,6 +279,8 @@ export function useCameraAnim(controller: CameraController) {
     hasAnimation: animHasAnimation(anim),
     keyTimes: animKeyTimes(anim),
     duration: animDuration(anim),
+    playDuration: animPlayDuration(anim),
+    setDuration,
     playing,
     autoPaused,
     play,
@@ -247,16 +289,13 @@ export function useCameraAnim(controller: CameraController) {
     timeMs,
     selection,
     setSelection,
+    autoKey,
+    setAutoKey,
     insertKeyAtView,
     addKey,
-    editKey,
-    removeKey,
-    changeKeyMode,
-    changeKeyTangent,
-    removeColumn,
-    shiftColumn,
+    removeSelection,
     beginStroke,
-    strokeMoveKey,
+    strokeMoveKeys,
     strokeSetTangent,
     strokeUpsertAt,
     undo,
@@ -265,7 +304,5 @@ export function useCameraAnim(controller: CameraController) {
     canRedo: future.length > 0,
   };
 }
-
-const hasAnimationRef = (a: CameraAnimV2) => animHasAnimation(a);
 
 export type CameraAnimState = ReturnType<typeof useCameraAnim>;
