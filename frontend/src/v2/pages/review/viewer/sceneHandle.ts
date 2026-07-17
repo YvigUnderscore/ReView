@@ -13,6 +13,8 @@ export interface ViewerSceneHandle {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   dom: HTMLElement;
+  /** Renderer WebGL — requis pour l'éclairage HDRI (PMREM, exposition), 3D (Phase 29). */
+  renderer?: THREE.WebGLRenderer;
   /** Objet principal manipulable (SplatMesh côté splat, groupe `root` côté 3D) — cible par
    *  défaut des gizmos de transformation. */
   mesh?: THREE.Object3D;

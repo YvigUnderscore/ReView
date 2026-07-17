@@ -5,11 +5,13 @@ import type { Annotations } from './useAnnotations';
 import type { Model3DThreeState } from './three/useModel3DThree';
 import type { Role } from '../../types/api';
 import { useModel3DCamera } from './three/useModel3DCamera';
+import { useModel3DLighting } from './three/useModel3DLighting';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DAnimationsBar from './Model3DAnimationsBar';
 import Model3DTransformBar from './Model3DTransformBar';
+import LightingBar from './LightingBar';
 import CameraBar from './camera/CameraBar';
 import AnimPanel from './camera/timeline/AnimPanel';
 import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
@@ -49,6 +51,8 @@ export default function Model3DReview({
   ready: boolean;
 }) {
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
+  // Éclairage HDRI (Phase 29) : défaut rejoué pour tous, tweak spectateur temporaire.
+  const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(model3d);
   // Plein écran sur la zone viewer (Phase 25).
@@ -113,6 +117,7 @@ export default function Model3DReview({
             bottomLeft={
               <>
                 <Model3DAnimationsBar m={model3d} />
+                <LightingBar lighting={lighting} />
                 <CameraBar
                   fov={model3d.fov}
                   onFov={model3d.setFov}

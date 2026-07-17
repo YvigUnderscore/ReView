@@ -55,4 +55,5 @@ export const qk = {
   document: (id: number) => ['document', id] as const,
   admin: (section: string) => ['admin', section] as const,
   board: (scope: string, id: number) => ['board', scope, id] as const,
+  hdris: ['hdris'] as const,
 } as const;

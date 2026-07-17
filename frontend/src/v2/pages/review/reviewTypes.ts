@@ -128,7 +128,22 @@ export interface SplatPresentation {
   reveal?: { type: 'fade' | 'sweep' | 'dissolve'; durationMs: number };
   lodDefault?: 'auto' | 'on' | 'off' | 'streaming';
   cameraAnim?: CameraAnimV2;
+  /** Éclairage/HDRI par défaut du viewer 3D (Phase 29) — rejoué pour tous, tweak spectateur temporaire. */
+  lighting?: LightingConfig;
 }
+
+/** Réglages d'éclairage HDRI du viewer 3D (Phase 29). `hdriId` référence la bibliothèque instance. */
+export interface LightingConfig {
+  hdriId?: string;
+  /** Exposition du tone mapping (0–10, 1 = neutre). */
+  exposure: number;
+  /** Rotation de l'environnement autour de Y, en degrés. */
+  rotationDeg: number;
+  /** Afficher l'HDRI en fond (sinon fond transparent, éclairage seul). */
+  showBackground: boolean;
+}
+
+export const DEFAULT_LIGHTING: LightingConfig = { exposure: 1, rotationDeg: 0, showBackground: false };
 
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {

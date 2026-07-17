@@ -111,6 +111,15 @@ router.patch(
             })
             .optional(),
           lodDefault: z.enum(['auto', 'on', 'off', 'streaming']).optional(),
+          // Éclairage/HDRI par défaut du viewer 3D (Phase 29) — rejoué pour tous.
+          lighting: z
+            .object({
+              hdriId: z.string().max(300).optional(),
+              exposure: finite.min(0).max(10),
+              rotationDeg: finite.min(-360).max(360),
+              showBackground: z.boolean(),
+            })
+            .optional(),
           // Animation caméra « par canaux » (Phase 17, v2) : F-curves éditables (position/cible/
           // focale/tilt), tangentes Hermite. Remplace le format v1 (keyframes + easing).
           cameraAnim: z

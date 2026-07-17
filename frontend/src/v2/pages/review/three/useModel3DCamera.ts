@@ -96,11 +96,12 @@ export function useModel3DCamera(
 
   const save = useCallback(async () => {
     const view = model3d.captureCamera();
-    const presentation: SplatPresentation = {};
+    // Préserve les autres champs persistés (dont l'éclairage HDRI, Phase 29).
+    const presentation: SplatPresentation = { ...(data.splatPresentation ?? {}) };
     if (view) presentation.camera = cameraPoseFromView(view);
     if (hasAnimation(anim.anim)) presentation.cameraAnim = anim.anim;
     await persist(presentation);
-  }, [model3d, anim.anim, persist]);
+  }, [model3d, anim.anim, persist, data.splatPresentation]);
 
   const clear = useCallback(async () => {
     await remove();

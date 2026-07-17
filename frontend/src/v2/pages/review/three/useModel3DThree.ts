@@ -104,6 +104,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       camera: rt.scene.camera,
       controls: rt.scene.controls,
       dom: rt.scene.renderer.domElement,
+      renderer: rt.scene.renderer,
       mesh: rt.scene.root,
     };
   }, []);
