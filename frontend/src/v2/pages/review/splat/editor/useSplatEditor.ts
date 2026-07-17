@@ -22,6 +22,7 @@ import { useSelection } from './selection/useSelection';
 import { useSubsetTransform } from './selection/useSubsetTransform';
 import { useEditorShortcuts } from './useEditorShortcuts';
 import { useVolumes } from './volumes/useVolumes';
+import { useCropReflect } from './volumes/useCropReflect';
 
 /** Outil actif de l'éditeur : navigation (défaut, aucun outil), gizmo ou sélection. */
 export type EditorTool = 'navigate' | GizmoMode | 'select-rect' | 'select-lasso' | 'brush';
@@ -202,6 +203,8 @@ export function useSplatEditor(
   useEffect(() => {
     if (enabled && ready && renderMode === 'points') splat.reflectSelection(selectedSet);
   }, [enabled, ready, renderMode, selectedSet, splat]);
+  // Reflet des volumes de crop dans l'overlay de points (Phase 28) — recalcul débouncé.
+  useCropReflect(splat, { enabled, renderMode, volumes, trsTick: volumeTrs });
 
   /** Supprime (masque) la sélection courante — opération annulable (undo/redo). */
   const deleteSelection = useCallback(() => {

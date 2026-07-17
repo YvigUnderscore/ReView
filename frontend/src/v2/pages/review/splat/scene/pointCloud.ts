@@ -26,6 +26,9 @@ export interface PointCloud {
   setSelection(selected: ReadonlySet<number>): void;
   /** Masque (`hidden=true`) ou rétablit des points — suppression non-destructive reflétée live. */
   setHidden(indices: Iterable<number>, hidden: boolean): void;
+  /** Remplace l'ensemble des points escamotés par les volumes de crop (canal séparé du masque —
+   *  retirer un volume ne révèle pas un point supprimé, et inversement). Phase 28. */
+  setCropped(indices: Iterable<number>): void;
   dispose(): void;
 }
 
@@ -37,6 +40,11 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
   const colors = new Float32Array(n * 3); // tampon rendu (base + teinte)
   const baseColors = new Float32Array(n * 3); // couleurs d'origine
 
+  // Deux canaux d'escamotage indépendants : masque de suppression et volumes de crop (un point
+  // n'est visible que hors des deux) — cf. `setHidden` / `setCropped`.
+  const maskHidden = new Set<number>();
+  let cropped: ReadonlySet<number> = new Set<number>();
+
   mesh.forEachSplat((i, center, _scales, _quat, opacity, color) => {
     if (i >= n) return;
     const o = i * 3;
@@ -44,6 +52,7 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
     basePositions[o + 1] = center.y;
     basePositions[o + 2] = center.z;
     const visible = opacity > 0; // splats déjà masqués (masque chargé) → escamotés
+    if (!visible) maskHidden.add(i);
     positions[o] = visible ? center.x : NaN;
     positions[o + 1] = visible ? center.y : NaN;
     positions[o + 2] = visible ? center.z : NaN;
@@ -74,6 +83,15 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
     colors[o + 2] = baseColors[o + 2]!;
   };
 
+  /** Recalcule la visibilité d'un point (hors masque ET hors crop → position d'origine). */
+  const refresh = (i: number) => {
+    const o = i * 3;
+    const hide = maskHidden.has(i) || cropped.has(i);
+    positions[o] = hide ? NaN : basePositions[o]!;
+    positions[o + 1] = hide ? NaN : basePositions[o + 1]!;
+    positions[o + 2] = hide ? NaN : basePositions[o + 2]!;
+  };
+
   return {
     points,
     setSelection(selected) {
@@ -92,17 +110,21 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
     setHidden(indices, hidden) {
       for (const i of indices) {
         if (i >= n) continue;
-        const o = i * 3;
-        if (hidden) {
-          positions[o] = NaN;
-          positions[o + 1] = NaN;
-          positions[o + 2] = NaN;
-        } else {
-          positions[o] = basePositions[o]!;
-          positions[o + 1] = basePositions[o + 1]!;
-          positions[o + 2] = basePositions[o + 2]!;
-        }
+        if (hidden) maskHidden.add(i);
+        else maskHidden.delete(i);
+        refresh(i);
       }
+      posAttr.needsUpdate = true;
+    },
+    setCropped(indices) {
+      const next = new Set<number>();
+      for (const i of indices) if (i < n) next.add(i);
+      // Diff incrémental : seuls les points qui changent d'état sont réécrits (après l'échange,
+      // pour que `refresh` lise le nouvel ensemble).
+      const prev = cropped;
+      cropped = next;
+      for (const i of prev) if (!next.has(i)) refresh(i);
+      for (const i of next) if (!prev.has(i)) refresh(i);
       posAttr.needsUpdate = true;
     },
     dispose() {
