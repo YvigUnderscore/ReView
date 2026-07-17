@@ -38,7 +38,7 @@ export default function CameraBar({
     focusPick: boolean;
     onToggleFocusPick: () => void;
   };
-  /** Mode layout « in/out camera » (PiP) — viewer 3D (splat : lot F). */
+  /** Mode layout « in/out camera » (PiP) — viewers 3D et splat (Phase 27). */
   layout?: { active: boolean; onToggle: () => void };
 }) {
   return (

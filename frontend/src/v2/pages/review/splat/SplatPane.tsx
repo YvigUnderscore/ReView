@@ -16,6 +16,7 @@ export default function SplatPane({
   overlay,
   editorOverlay,
   hud,
+  pip,
   aspect,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -27,6 +28,8 @@ export default function SplatPane({
   editorOverlay?: ReactNode;
   /** HUD flottant superposé au canvas (toolbars, stats, réglages) — cf. hud/ViewerHud. */
   hud?: ReactNode;
+  /** Fenêtre PiP du mode layout (PipFrame — le rendu WebGL est dessiné dessous en scissor). */
+  pip?: ReactNode;
   /** Aspect du cadre de review fixe (issu de la caméra de présentation) — défaut 16:9 (V6). */
   aspect?: number;
 }) {
@@ -46,6 +49,7 @@ export default function SplatPane({
 
         {/* HUD flottant (au-dessus des overlays, sous les états de repli) */}
         {hud}
+        {pip}
       </ReviewFrame>
 
       {/* États de repli — centrés dans toute la zone (hors letterbox) */}

@@ -15,6 +15,8 @@ import LightingBar from './LightingBar';
 import CameraBar from './camera/CameraBar';
 import AnimPanel from './camera/timeline/AnimPanel';
 import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
+import PipFrame from './viewer/PipFrame';
+import { DEFAULT_REVIEW_ASPECT } from './frameRect';
 
 /**
  * Bloc modèle 3D de la review (Phase 17) : orchestre le viewer Three (Model3DThreePane) et le
@@ -76,7 +78,15 @@ export default function Model3DReview({
       containerRef={model3d.containerRef}
       overlay={overlay}
       aspect={data.splatPresentation?.camera?.aspect}
-      layoutMode={model3d.layoutMode}
+      pip={
+        model3d.layoutMode ? (
+          <PipFrame
+            label="Caméra layout"
+            aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
+            onRect={model3d.setPipRect}
+          />
+        ) : undefined
+      }
       canReprocess={role !== 'CLIENT'}
       reprocessing={reprocessing}
       onReprocess={onReprocess}

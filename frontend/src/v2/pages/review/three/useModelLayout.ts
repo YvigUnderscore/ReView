@@ -5,19 +5,7 @@ import type { CameraController } from '../camera/useCameraAnim';
 import type { ModelScene } from './createModelScene';
 import { applyPoseToCamera } from './applyPose';
 import { captureModelCamera, restoreModelCamera } from './modelCamera';
-
-/** Rectangle du PiP (caméra layout), coin bas-droit — coords GL (y depuis le bas), CSS pixels. */
-export function pipRect(
-  w: number,
-  h: number,
-  frac = 0.28,
-  margin = 10,
-  aspect = 16 / 9,
-): { x: number; y: number; w: number; h: number } {
-  const pw = Math.max(1, Math.round(Math.min(w * frac, w - 2 * margin)));
-  const ph = Math.max(1, Math.min(Math.round(pw / aspect), h - 2 * margin));
-  return { x: Math.max(margin, w - pw - margin), y: margin, w: pw, h: ph };
-}
+import { renderPipPass, type PipRect } from '../viewer/pipWindow';
 
 interface LayoutRuntime {
   scene: ModelScene;
@@ -42,6 +30,12 @@ export function useModelLayout(opts: {
   const { runtimeRef, threeRef, subscribeFrame, getDom, captureCamera } = opts;
   const [layoutMode, setLayoutModeState] = useState(false);
   const layoutModeRef = useRef(false);
+  // Rect de la fenêtre PiP (px CSS, origine haut-gauche) — suivi par la passe scissor (PipFrame).
+  const pipRectRef = useRef<PipRect | null>(null);
+
+  const setPipRect = useCallback((rect: PipRect | null) => {
+    pipRectRef.current = rect;
+  }, []);
 
   const setLayoutMode = useCallback(
     (on: boolean) => {
@@ -77,25 +71,11 @@ export function useModelLayout(opts: {
   const renderPip = useCallback(() => {
     if (!layoutModeRef.current) return;
     const rt = runtimeRef.current;
-    if (!rt) return;
-    const r = rt.scene.renderer;
-    const dom = r.domElement;
-    const w = dom.clientWidth;
-    const h = dom.clientHeight;
-    if (w <= 0 || h <= 0) return;
-    const rect = pipRect(w, h);
-    rt.layoutCam.aspect = rect.w / rect.h;
-    rt.layoutCam.updateProjectionMatrix();
-    r.setScissorTest(true);
-    r.setScissor(rect.x, rect.y, rect.w, rect.h);
-    r.setViewport(rect.x, rect.y, rect.w, rect.h);
-    r.autoClear = false;
-    r.clearDepth(); // scissor actif → n'efface la profondeur que dans le PiP
-    r.render(rt.scene.scene, rt.layoutCam);
-    r.autoClear = true;
-    r.setScissorTest(false);
-    r.setViewport(0, 0, w, h);
+    const rect = pipRectRef.current;
+    if (!rt || !rect) return;
+    const dom = rt.scene.renderer.domElement;
+    renderPipPass(rt.scene.renderer, rt.scene.scene, rt.layoutCam, rect, dom.clientWidth, dom.clientHeight);
   }, [runtimeRef]);
 
-  return { layoutMode, setLayoutMode, layoutController, renderPip };
+  return { layoutMode, setLayoutMode, layoutController, renderPip, setPipRect };
 }

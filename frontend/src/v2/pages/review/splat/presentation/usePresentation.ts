@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../../reviewTypes';
 import { useCameraRig } from '../camera/useCameraRig';
+import { useSplatLayout } from '../camera/useSplatLayout';
 import { cameraPoseFromView } from '../../camera/cameraPose';
 import { useCameraAnim } from '../../camera/useCameraAnim';
 import { orbitPresetV2 } from '../../camera/channels/orbitPreset';
@@ -30,7 +31,10 @@ export function usePresentation(
   onSaved: (patch: SplatEditsPatch) => void,
 ) {
   const { ready, captureCamera, getSceneHandle, subscribeFrame, subscribeStats } = splat;
-  const anim = useCameraAnim(splat);
+  // Mode layout (Phase 27) : hors mode, le controller est transparent (caméra principale) ;
+  // en mode, le lecteur keyframe pilote la caméra layout rendue dans le PiP.
+  const layout = useSplatLayout(splat);
+  const anim = useCameraAnim(layout.layoutController);
   const rig = useCameraRig(splat, data.splatPresentation, anim);
   const { busy, persist, remove } = useCameraPresentation(data.media.id, onSaved);
   const [reveal, setReveal] = useState<RevealConfig | null>(data.splatPresentation?.reveal ?? null);
@@ -176,6 +180,7 @@ export function usePresentation(
 
   return {
     anim,
+    layout,
     rig,
     busy,
     reveal,

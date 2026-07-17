@@ -1,5 +1,4 @@
-import { Gauge, Grid3x3, Maximize, Settings2 } from 'lucide-react';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
@@ -12,6 +11,8 @@ import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFromGltf } from '../three/importCameraGltf';
 import CameraBar from '../camera/CameraBar';
 import AnimPanel from '../camera/timeline/AnimPanel';
+import PipFrame from '../viewer/PipFrame';
+import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import CompareBar from './compare/CompareBar';
 import { useSplatCompare } from './compare/useSplatCompare';
 import PaintBar from './paint/PaintBar';
@@ -24,10 +25,9 @@ import { applyMaskIndices, applySavedVolumes, fetchMaskIndices } from './editor/
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 import VolumesBar from './editor/volumes/VolumesBar';
-import StatsPanel from './hud/StatsPanel';
+import TopRightControls from './hud/TopRightControls';
 import TransformFields from './hud/TransformFields';
-import ViewerHud, { HudGroup, HudIconButton } from '../hud/ViewerHud';
-import ViewerSettingsPanel from './hud/ViewerSettingsPanel';
+import ViewerHud from '../hud/ViewerHud';
 import SplatPane from './SplatPane';
 
 /**
@@ -62,11 +62,8 @@ export default function SplatReview({
 }) {
   const saved = data.splatEdits;
   const editor = useSplatEditor(splat, data.media.id, saved, data.splatMaskUrl, onSaved, showEdit);
-  const { applyTransform, setBaseFlip, ready, getSceneHandle, setCullingOff } = splat;
+  const { applyTransform, setBaseFlip, ready, getSceneHandle } = splat;
 
-  // Panneaux du HUD (état local de session — réglages spectateur non persistés).
-  const [showStats, setShowStats] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(splat);
   // Plein écran sur la zone viewer (Phase 25).
@@ -74,11 +71,6 @@ export default function SplatReview({
     void (
       splat.containerRef.current?.closest('[data-viewer-zone]') as HTMLElement | null
     )?.requestFullscreen?.();
-  const [cullingOff, setCullingOffState] = useState(true);
-  const onCullingOff = (off: boolean) => {
-    setCullingOffState(off);
-    setCullingOff(off);
-  };
 
   // Présentation (V5/V6) : caméra (rig + keyframes), reveal, debug color — rejouée pour tous.
   const pres = usePresentation(splat, data, onSaved);
@@ -194,6 +186,15 @@ export default function SplatReview({
       status={data.media.status}
       aspect={data.splatPresentation?.camera?.aspect}
       overlay={overlay}
+      pip={
+        pres.layout.layoutMode && ready ? (
+          <PipFrame
+            label="Caméra layout"
+            aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
+            onRect={splat.setPipRect}
+          />
+        ) : undefined
+      }
       editorOverlay={
         paint.active && ready ? (
           <PaintOverlay
@@ -253,43 +254,13 @@ export default function SplatReview({
               ) : undefined
             }
             topRight={
-              <>
-                <HudGroup>
-                  <HudIconButton
-                    icon={Gauge}
-                    hint="Statistiques de rendu (FPS, splats, draw calls)"
-                    active={showStats}
-                    onClick={() => setShowStats((v) => !v)}
-                  />
-                  <HudIconButton
-                    icon={Settings2}
-                    hint="Réglages du viewer (culling…)"
-                    active={showSettings}
-                    onClick={() => setShowSettings((v) => !v)}
-                  />
-                  <HudIconButton
-                    icon={Grid3x3}
-                    hint="Grille de sol (repère d'orientation de la scène)"
-                    active={grid.visible}
-                    onClick={grid.toggle}
-                  />
-                  <HudIconButton icon={Maximize} hint="Plein écran" onClick={fullscreen} />
-                </HudGroup>
-                {showStats && <StatsPanel splat={splat} />}
-                {showSettings && (
-                  <ViewerSettingsPanel
-                    cullingOff={cullingOff}
-                    onCullingOff={onCullingOff}
-                    debugMode={pres.debugMode}
-                    onDebugMode={pres.setDebugMode}
-                    reveal={pres.reveal}
-                    onReveal={pres.setReveal}
-                    onReplayReveal={pres.replayReveal}
-                    lodMode={pres.lodMode}
-                    onLodMode={pres.setLodMode}
-                  />
-                )}
-              </>
+              <TopRightControls
+                splat={splat}
+                pres={pres}
+                canPresent={canPresent}
+                grid={grid}
+                onFullscreen={fullscreen}
+              />
             }
             bottomLeft={
               <>
@@ -308,6 +279,10 @@ export default function SplatReview({
                     onAperture: pres.rig.setAperture,
                     focusPick: pres.rig.focusPick,
                     onToggleFocusPick: pres.rig.toggleFocusPick,
+                  }}
+                  layout={{
+                    active: pres.layout.layoutMode,
+                    onToggle: () => pres.layout.setLayoutMode(!pres.layout.layoutMode),
                   }}
                 />
                 <AnimPanel

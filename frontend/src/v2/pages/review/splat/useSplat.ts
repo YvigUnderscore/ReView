@@ -16,6 +16,9 @@ import { captureSplatCamera, restoreSplatCamera } from './scene/splatCameraState
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
 import { toThumbnail } from '../viewer/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
+import { renderPipPass, type PipRect } from '../viewer/pipWindow';
+import { applyPoseToCamera } from '../three/applyPose';
+import { applySplatTransform, parseHotspotPoint } from './scene/meshPose';
 
 /**
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
@@ -27,7 +30,12 @@ import { applyCulling } from './scene/viewerConfig';
  * three + OrbitControls + Spark sont importés dynamiquement (uniquement à l'ouverture d'un
  * splat) pour rester hors du bundle initial — les imports type-only ci-dessus sont erased.
  */
-type SplatScene = SplatSceneCore & { mesh: SplatMesh; pivot: THREE.Group };
+type SplatScene = SplatSceneCore & {
+  mesh: SplatMesh;
+  pivot: THREE.Group;
+  /** Caméra « layout » du PiP (mode layout, Phase 27) — pilotée par le lecteur keyframe. */
+  layoutCam: THREE.PerspectiveCamera;
+};
 
 /**
  * Poignée impérative vers la scène Three.js du splat, exposée aux hooks d'édition (gizmos,
@@ -78,6 +86,11 @@ export interface SplatViewer {
   setCullingOff: (off: boolean) => void;
   /** Vol en cours (clic droit + ZQSD) — les raccourcis d'édition doivent rester inertes (11.G). */
   isFlying: () => boolean;
+  /** Rect de la fenêtre PiP (px CSS, origine haut-gauche) — non-null : 2ᵉ passe de rendu de la
+   *  caméra layout dans ce rect (mode layout, Phase 27) ; null : PiP éteint. */
+  setPipRect: (rect: PipRect | null) => void;
+  /** Applique une pose (position/cible/fov/roll) à la caméra layout du PiP. */
+  restorePipCamera: (state: unknown) => void;
   /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
   getSceneHandle: () => SplatSceneHandle | null;
   /** Canvas de rendu (auto-pause de l'animation caméra) — satisfait `CameraController`. */
@@ -106,6 +119,8 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   const frameCbs = useRef(new Set<(dt: number) => void>());
   // Contrôles de vol (clic droit + ZQSD) — exposés pour inhiber les raccourcis d'édition (11.G).
   const flyRef = useRef<ReturnType<typeof createFlyControls> | null>(null);
+  // Rect de la fenêtre PiP (mode layout, Phase 27) — non-null : 2ᵉ passe de rendu par frame.
+  const pipRectRef = useRef<PipRect | null>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -164,6 +179,8 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       pivot.rotation.x = Math.PI;
       scene.add(pivot);
       pivot.add(mesh);
+      // Caméra layout du PiP (mode layout) : indépendante de la caméra libre, sans viewOffset.
+      const layoutCam = new THREE.PerspectiveCamera(camera.fov, 16 / 9, camera.near, camera.far);
       statsRef.current = createStatsSampler(() => ({
         activeSplats: spark.activeSplats,
         totalSplats: mesh.packedSplats?.numSplats ?? 0,
@@ -195,6 +212,10 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
         else controls.update();
         frameCbs.current.forEach((cb) => cb(dt));
         renderer.render(scene, camera);
+        // PiP du mode layout (Phase 27) : vue de la caméra layout dans la fenêtre flottante.
+        const pip = pipRectRef.current;
+        if (pip)
+          renderPipPass(renderer, scene, layoutCam, pip, container.clientWidth, container.clientHeight);
         statsRef.current?.frame(now);
         // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
         marker.update(hotspotRef.current, camera, mesh, container.clientWidth, container.clientHeight);
@@ -206,7 +227,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
         }
       });
 
-      sceneRef.current = { renderer, scene, camera, controls, spark, mesh, pivot };
+      sceneRef.current = { renderer, scene, camera, controls, spark, mesh, pivot, layoutCam };
       cleanup = () => {
         ro.disconnect();
         renderer.setAnimationLoop(null);
@@ -228,6 +249,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       sceneRef.current = null;
       threeRef.current = null;
       hotspotRef.current = null;
+      pipRectRef.current = null;
       statsRef.current = null;
       frameCallbacks.clear();
       captureReq.current?.(null);
@@ -257,15 +279,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
 
   const showHotspot = useCallback((hs: Hotspot3D | null) => {
     const THREE = threeRef.current;
-    if (!hs || !THREE) {
-      hotspotRef.current = null;
-      return;
-    }
-    const [x, y, z] = hs.position.split(/\s+/).map((v) => parseFloat(v));
-    hotspotRef.current =
-      Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)
-        ? { point: new THREE.Vector3(x, y, z), objectSpace: hs.space === 'object' }
-        : null;
+    hotspotRef.current = hs && THREE ? parseHotspotPoint(THREE, hs) : null;
   }, []);
 
   const captureThumbnail = useCallback(
@@ -279,19 +293,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
 
   const applyTransform = useCallback((t: SplatTransform | null) => {
     const s = sceneRef.current;
-    if (!s) return;
-    // SplatMesh dérive de THREE.Object3D → position/quaternion/échelle natifs (aucun « editable »).
-    // Tolérant : une valeur absente ou d'un ancien format → identité.
-    const m = s.mesh;
-    if (t && Array.isArray(t.position) && Array.isArray(t.quaternion) && Array.isArray(t.scale)) {
-      m.position.fromArray(t.position);
-      m.quaternion.fromArray(t.quaternion);
-      m.scale.fromArray(t.scale);
-    } else {
-      m.position.set(0, 0, 0);
-      m.quaternion.set(0, 0, 0, 1);
-      m.scale.set(1, 1, 1);
-    }
+    if (s) applySplatTransform(s.mesh, t);
   }, []);
 
   const setBaseFlip = useCallback((flip: boolean) => {
@@ -313,6 +315,16 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   }, []);
 
   const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
+
+  const setPipRect = useCallback((rect: PipRect | null) => {
+    pipRectRef.current = rect;
+  }, []);
+
+  const restorePipCamera = useCallback((state: unknown) => {
+    const s = sceneRef.current;
+    const THREE = threeRef.current;
+    if (s && THREE) applyPoseToCamera(THREE, s.layoutCam, state as SplatCamera);
+  }, []);
 
   const subscribeFrame = useCallback((cb: (dt: number) => void): (() => void) => {
     frameCbs.current.add(cb);
@@ -386,6 +398,8 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     subscribeFrame,
     setCullingOff,
     isFlying,
+    setPipRect,
+    restorePipCamera,
     getSceneHandle,
     getDom,
   };
