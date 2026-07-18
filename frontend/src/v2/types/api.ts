@@ -147,6 +147,8 @@ export type TaskWithAssignee = Task & { assignee: UserRef | null };
 export type TaskDetail = Task & {
   shot?: (ShotRef & { project: ProjectRef; sequence?: SequenceRef | null }) | null;
   asset?: (AssetRef & { project: ProjectRef }) | null;
+  /** Commentaire de review d'origine (32.D) — lien retour `?comment=`. */
+  sourceComment?: { id: number; mediaObjectId: number } | null;
 };
 
 // ── Versions & médias ─────────────────────────────────────────────────────────

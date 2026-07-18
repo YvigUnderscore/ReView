@@ -2,7 +2,7 @@ import { Role, TaskType, TaskStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
 import { emitToProject } from './SocketService';
-import { forbidden, notFound } from '../lib/errors';
+import { badRequest, forbidden, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
 /**
@@ -85,6 +85,56 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
   return task;
 }
 
+/** Nom de tâche depuis un contenu de commentaire : texte sans balises, tronqué. */
+export function taskNameFromComment(html: string): string {
+  const text = html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return 'Retour de review';
+  return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+}
+
+/**
+ * Crée une tâche kanban depuis un commentaire de review (32.D) : rattachée au
+ * shot/asset porteur de la version du média, assigné du commentaire repris,
+ * lien retour via `sourceCommentId` (frame/annotation restaurées par ?comment=).
+ */
+export async function createFromComment(user: SessionUser, projectId: number, commentId: number) {
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    include: {
+      media: {
+        select: {
+          version: {
+            select: { assetId: true, task: { select: { shotId: true, assetId: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!comment) throw notFound('Commentaire introuvable');
+  const version = comment.media.version;
+  const shotId = version.task?.shotId ?? null;
+  const assetId = version.task?.assetId ?? version.assetId ?? null;
+  if (!shotId && !assetId) throw badRequest('Média sans shot/asset rattaché');
+
+  const task = await prisma.task.create({
+    data: {
+      name: taskNameFromComment(comment.content),
+      type: TaskType.OTHER,
+      shotId,
+      assetId: shotId ? null : assetId,
+      assigneeId: comment.assigneeId,
+      sourceCommentId: comment.id,
+    },
+    include: { assignee: { select: { id: true, name: true } } },
+  });
+  await notifyAssignee(comment.assigneeId, user.id, projectId, task.id, task.name);
+  emitTaskUpdate(projectId, task);
+  return task;
+}
+
 /** Détail d'une tâche (assigné, versions, contexte shot/asset pour le fil d'ariane). */
 export async function getDetail(id: number) {
   const task = await prisma.task.findUnique({
@@ -102,6 +152,8 @@ export async function getDetail(id: number) {
         },
       },
       asset: { select: { id: true, name: true, type: true, project: { select: { id: true, name: true } } } },
+      // Commentaire d'origine (32.D) : lien retour vers la review à la frame/annotation.
+      sourceComment: { select: { id: true, mediaObjectId: true } },
     },
   });
   if (!task) throw notFound('Tâche introuvable');

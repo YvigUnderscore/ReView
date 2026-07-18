@@ -1,5 +1,7 @@
-import { Link2 } from 'lucide-react';
+import { Link2, ListTodo } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { api } from '../../lib/apiClient';
 import CommentItem from './comments/CommentItem';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
 import { commentLink } from '../pages/review/deepLink';
@@ -29,12 +31,26 @@ export default function ReviewComments({
   /** Sélectionne un commentaire : seek + annotation + caméra restaurés ensemble. */
   onSelect: (c: ReviewComment) => void;
 }) {
+  const navigate = useNavigate();
+  const canCreateTask = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
+
   // Lien profond (32.E) : URL de la review courante ciblant ce commentaire.
   const copyLink = (c: ReviewComment) =>
     void navigator.clipboard
       .writeText(commentLink(window.location.origin, window.location.pathname, c.id))
       .then(() => toast.success('Lien copié'))
       .catch(() => toast.error('Copie impossible'));
+
+  // Commentaire → tâche kanban (32.D) : shot/asset et assigné repris côté backend.
+  const createTask = (c: ReviewComment) =>
+    void api
+      .post<{ task: { id: number; name: string } }>(`/api/comments/${c.id}/task`)
+      .then(({ task }) =>
+        toast.success(`Tâche créée : ${task.name}`, {
+          action: { label: 'Ouvrir', onClick: () => navigate(`/tasks/${task.id}`) },
+        }),
+      )
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Création impossible'));
 
   return (
     <div className="space-y-2">
@@ -62,6 +78,11 @@ export default function ReviewComments({
             <ContextMenuItem onSelect={() => copyLink(c)}>
               <Link2 size={14} /> Copier le lien au commentaire
             </ContextMenuItem>
+            {canCreateTask && (
+              <ContextMenuItem onSelect={() => createTask(c)}>
+                <ListTodo size={14} /> Créer une tâche kanban
+              </ContextMenuItem>
+            )}
           </ContextMenuContent>
         </ContextMenu>
       ))}

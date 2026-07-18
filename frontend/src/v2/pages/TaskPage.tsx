@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, MessageSquare } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { projectPath } from '../lib/slug';
@@ -87,6 +87,15 @@ export default function TaskPage() {
             <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[task.status] ?? ''}`}>
               {TASK_STATUS_LABEL[task.status] ?? task.status}
             </span>
+          )}
+          {/* Lien retour (32.D) : la review s'ouvre sur le commentaire d'origine. */}
+          {task?.sourceComment && (
+            <Link
+              to={`/review/${task.sourceComment.mediaObjectId}?comment=${task.sourceComment.id}`}
+              className="flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <MessageSquare size={12} /> Commentaire d’origine
+            </Link>
           )}
         </div>
         {canCreate && (

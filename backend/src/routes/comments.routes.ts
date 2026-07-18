@@ -4,9 +4,11 @@ import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pipeline';
-import { notFound } from '../lib/errors';
+import { Role } from '@prisma/client';
+import { forbidden, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as CommentService from '../services/CommentService';
+import * as TaskService from '../services/TaskService';
 
 const router = Router();
 router.use(authenticate);
@@ -111,6 +113,16 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const projectId = await resolveCommentAccess(req, id);
   if (!(await CommentService.remove(req.user!, projectId, id))) throw notFound('Commentaire introuvable');
   res.status(204).end();
+});
+
+// POST /api/comments/:id/task — crée une tâche kanban depuis le commentaire (32.D,
+// superviseur/admin comme la création de tâche classique)
+router.post('/:id/task', validate({ params: idParam }), async (req, res) => {
+  if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
+    throw forbidden('Réservé aux superviseurs/admins');
+  const id = Number(req.params.id);
+  const projectId = await resolveCommentAccess(req, id);
+  res.status(201).json({ task: await TaskService.createFromComment(req.user!, projectId, id) });
 });
 
 // POST /api/comments/:id/reactions — ajoute/maj une réaction emoji

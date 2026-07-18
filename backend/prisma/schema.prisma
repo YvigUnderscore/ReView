@@ -299,6 +299,10 @@ model Task {
   assignee   User? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   assigneeId Int?
 
+  // Tâche créée depuis un commentaire de review (32.D) — lien retour frame/annotation.
+  sourceComment   Comment? @relation("TaskSourceComment", fields: [sourceCommentId], references: [id], onDelete: SetNull)
+  sourceCommentId Int?
+
   versions Version[] @relation("TaskVersions")
 }
 
@@ -475,6 +479,7 @@ model Comment {
 
   reactions  Reaction[]
   references ReviewReference[] // images de référence jointes (affichées à la sélection)
+  spawnedTasks Task[] @relation("TaskSourceComment") // tâches kanban créées depuis ce commentaire (32.D)
 }
 
 model Reaction {
