@@ -21,7 +21,12 @@ export interface StagedReference {
  * manuellement (couleur **dérivée**, pas d'effet) ; `onColorChange` permet la persistance
  * côté appelant.
  */
-export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (c: string) => void }) {
+export function useAnnotations(opts?: {
+  defaultColor?: string;
+  onColorChange?: (c: string) => void;
+  /** Formes initiales du composer (initialiseur paresseux — brouillon local 32.C). */
+  initialShapes?: () => Shape[];
+}) {
   const [tool, setTool] = useState<Tool>('draw');
   // Choix manuel prioritaire ; sinon couleur par défaut (préférence/id), rechargée sans effet.
   const [manualColor, setManualColor] = useState<string | null>(null);
@@ -32,7 +37,7 @@ export function useAnnotations(opts?: { defaultColor?: string; onColorChange?: (
   };
   const [alpha, setAlpha] = useState(1);
   const [penWidth, setPenWidth] = useState(3);
-  const [annot, setAnnot] = useState<Shape[]>([]);
+  const [annot, setAnnot] = useState<Shape[]>(opts?.initialShapes ?? []);
   const [past, setPast] = useState<Shape[][]>([]);
   const [future, setFuture] = useState<Shape[][]>([]);
   const [annotating, setAnnotating] = useState(false);

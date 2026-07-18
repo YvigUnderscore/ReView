@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check } from 'lucide-react';
+import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check, CheckCircle2, RotateCcw } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import Avatar from '../Avatar';
 import ReplyComposer from './ReplyComposer';
@@ -42,6 +42,17 @@ export default function CommentItem({
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
   const canEdit = isAuthor;
   const canDelete = isAuthor || isManager;
+  // Résolution (32.A) : auteur ou superviseur/admin, sur les commentaires racine.
+  const canResolve = !isReply && (isAuthor || isManager);
+
+  const toggleResolved = async () => {
+    try {
+      await api.patch(`/api/comments/${c.id}`, { isResolved: !c.isResolved });
+      reload();
+    } catch {
+      /* ignore */
+    }
+  };
 
   const startEdit = () => {
     // Édition en texte brut (le HTML stocké provient d'une saisie texte)
@@ -80,7 +91,7 @@ export default function CommentItem({
       className={
         isReply
           ? 'flex gap-2.5'
-          : `group flex gap-2.5 rounded-lg border p-2.5 transition-colors ${
+          : `group flex gap-2.5 rounded-lg border p-2.5 transition-colors ${c.isResolved ? 'opacity-70' : ''} ${
               selected
                 ? 'border-primary/60 bg-primary/[0.06] shadow-sm'
                 : `border-border/60 bg-secondary/30 ${selectable ? 'cursor-pointer hover:border-border hover:bg-secondary/60' : ''}`
@@ -99,6 +110,21 @@ export default function CommentItem({
             {c.author?.displayName ?? c.author?.name ?? c.guestName ?? 'Anonyme'}
           </span>
           <span className="text-[10px] text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
+          {c.isEdited && <span className="text-[10px] italic text-muted-foreground">modifié</span>}
+          {c.isResolved && (
+            <span
+              title={
+                c.resolvedBy
+                  ? `Résolu par ${c.resolvedBy.displayName ?? c.resolvedBy.name ?? '?'}${
+                      c.resolvedAt ? ` le ${new Date(c.resolvedAt).toLocaleString()}` : ''
+                    }`
+                  : 'Résolu'
+              }
+              className="inline-flex items-center gap-1 rounded bg-success/15 px-1.5 py-0.5 text-[11px] text-success"
+            >
+              <CheckCircle2 size={10} /> Résolu
+            </span>
+          )}
           {/* Badges indicateurs : la carte entière est cliquable pour tout restaurer. */}
           {c.timestamp != null && (
             <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 font-mono text-[11px] text-primary">
@@ -172,6 +198,19 @@ export default function CommentItem({
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <Reply size={13} /> Répondre
+            </button>
+          )}
+          {canResolve && (
+            <button
+              onClick={(e) => {
+                stop(e);
+                void toggleResolved();
+              }}
+              title={c.isResolved ? 'Rouvrir' : 'Marquer comme résolu'}
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              {c.isResolved ? <RotateCcw size={12} /> : <CheckCircle2 size={13} />}
+              {!c.isResolved && 'Résoudre'}
             </button>
           )}
           {canEdit && !editing && (

@@ -226,6 +226,10 @@ export interface ReviewComment {
   guestName: string | null;
   cameraState: unknown;
   annotation: unknown;
+  isEdited: boolean;
+  isResolved: boolean;
+  resolvedBy?: AuthorRef | null;
+  resolvedAt?: string | null;
   attachments?: CommentAttachment[];
   reactions?: ReviewReaction[];
   replies?: ReviewComment[];

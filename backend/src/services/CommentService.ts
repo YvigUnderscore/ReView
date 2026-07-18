@@ -19,18 +19,21 @@ type SessionUser = { id: number; role: Role };
 
 const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
-const commentInclude = {
-  author: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      username: true,
-      avatarKey: true,
-    },
+const userSelect = {
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    firstName: true,
+    lastName: true,
+    username: true,
+    avatarKey: true,
   },
+} as const;
+
+const commentInclude = {
+  author: userSelect,
+  resolvedBy: userSelect,
   reactions: { select: { id: true, emoji: true, userId: true } },
 } as const;
 
@@ -47,6 +50,7 @@ type RawAuthor = {
 type RawAttachment = { key: string; name?: string; contentType?: string };
 interface RawComment {
   author: RawAuthor;
+  resolvedBy?: RawAuthor | null;
   replies?: RawComment[];
   attachments?: unknown;
   [k: string]: unknown;
@@ -67,6 +71,7 @@ async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
   return {
     ...c,
     author: await toPublicUser(c.author),
+    resolvedBy: c.resolvedBy ? await toPublicUser(c.resolvedBy) : null,
     attachments: await resolveAttachments(c.attachments),
     replies: c.replies ? await Promise.all(c.replies.map(enrichComment)) : undefined,
   };
@@ -183,7 +188,14 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     where: { id },
     data: {
       ...(body.content !== undefined ? { content: sanitizeHtml(body.content), isEdited: true } : {}),
-      ...(body.isResolved !== undefined ? { isResolved: body.isResolved } : {}),
+      // Trace de résolution (32.A) : qui a résolu et quand ; effacée à la réouverture.
+      ...(body.isResolved !== undefined
+        ? {
+            isResolved: body.isResolved,
+            resolvedById: body.isResolved ? user.id : null,
+            resolvedAt: body.isResolved ? new Date() : null,
+          }
+        : {}),
       ...(body.isVisibleToClient !== undefined ? { isVisibleToClient: body.isVisibleToClient } : {}),
       ...(body.assigneeId !== undefined ? { assigneeId: body.assigneeId } : {}),
     },

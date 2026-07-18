@@ -1,4 +1,12 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { ImagePlus, PencilLine, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
@@ -8,6 +16,15 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { Textarea } from '../../components/ui/textarea';
 import { ResizablePanel } from '../../components/ui/resizable';
 import { useImagePaste } from '../../lib/useImagePaste';
+import { clearDraft, loadDraft, saveDraft } from './commentDraft';
+
+/** Filtre de résolution du fil (32.A). */
+type ResolutionFilter = 'all' | 'open' | 'resolved';
+const FILTERS: { value: ResolutionFilter; label: string }[] = [
+  { value: 'all', label: 'Tous' },
+  { value: 'open', label: 'Ouverts' },
+  { value: 'resolved', label: 'Résolus' },
+];
 
 /**
  * Panneau latéral des commentaires : liste (avec skeleton de chargement) +
@@ -50,10 +67,15 @@ export default function CommentsPanel({
   /** Barre d'outils d'annotation, affichée sous le composer quand le mode est actif. */
   annotationTools?: ReactNode;
 }) {
-  const [content, setContent] = useState('');
+  // Brouillon local (32.C) : le texte en cours survit à un rechargement/navigation.
+  const [content, setContent] = useState(() => loadDraft(mediaObjectId)?.content ?? '');
+  const [filter, setFilter] = useState<ResolutionFilter>('all');
   const [attachFiles, setAttachFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    saveDraft(mediaObjectId, { content });
+  }, [content, mediaObjectId]);
   const addFiles = (files: File[]) => {
     if (attachFiles.length + files.length > MAX_COMMENT_ATTACHMENTS)
       toast.warning(`${MAX_COMMENT_ATTACHMENTS} pièces jointes max par commentaire`);
@@ -69,6 +91,7 @@ export default function CommentsPanel({
     setSending(true);
     try {
       if (await onSubmit(content, attachFiles)) {
+        clearDraft(mediaObjectId);
         setContent('');
         setAttachFiles([]);
       }
@@ -94,15 +117,41 @@ export default function CommentsPanel({
       max={680}
       className="flex flex-col rounded-lg border border-border bg-card"
     >
-      <div className="shrink-0 border-b border-border px-4 py-2.5 text-sm font-semibold">
-        Commentaires {comments && <span className="text-muted-foreground">· {comments.length}</span>}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm font-semibold">
+        <span>
+          Commentaires{' '}
+          {comments && (
+            <span className="font-normal text-muted-foreground">
+              · {comments.filter((c) => !c.isResolved).length} ouvert
+              {comments.filter((c) => !c.isResolved).length > 1 ? 's' : ''} / {comments.length}
+            </span>
+          )}
+        </span>
+        {/* Filtre ouverts/résolus (32.A) */}
+        <div className="flex rounded-md border border-border p-0.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-normal ${
+                filter === f.value
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="custom-scrollbar min-h-0 flex-1 overflow-auto p-4">
         {comments === null ? (
           <SkeletonRows count={4} />
         ) : (
           <ReviewComments
-            comments={comments}
+            comments={comments.filter(
+              (c) => filter === 'all' || (filter === 'open' ? !c.isResolved : c.isResolved),
+            )}
             mediaObjectId={mediaObjectId}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}

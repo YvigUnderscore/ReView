@@ -153,6 +153,7 @@ model User {
   assignedTasks    Task[]              @relation("TaskAssignee")
   comments         Comment[]           @relation("CommentAuthor")
   assignedComments Comment[]           @relation("CommentAssignee")
+  resolvedComments Comment[]           @relation("CommentResolver")
   reactions        Reaction[]
   notifications    Notification[]
   createdShares    ShareLink[]         @relation("ShareCreator")
@@ -458,6 +459,9 @@ model Comment {
   screenshotKey String? // capture annotée (MinIO)
   attachments   Json? // pièces jointes (clés MinIO)
   isResolved    Boolean  @default(false)
+  resolvedBy    User?    @relation("CommentResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedById  Int?
+  resolvedAt    DateTime?
   isVisibleToClient Boolean @default(false)
   isEdited      Boolean  @default(false)
   createdAt     DateTime @default(now())

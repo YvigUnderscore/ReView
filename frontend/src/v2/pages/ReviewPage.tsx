@@ -15,6 +15,7 @@ import { type Shape } from '../components/AnnotationCanvas';
 import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
+import { loadDraft, saveDraft } from './review/commentDraft';
 import { useSubmitComment } from './review/useSubmitComment';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useAutoThumbnail } from './review/useAutoThumbnail';
@@ -104,7 +105,12 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     onColorChange: (c) => {
       void api.patch('/api/users/me/preferences', { annotationColor: c });
     },
+    // Brouillon local (32.C) : les formes 2D en cours survivent à un rechargement.
+    initialShapes: () => (loadDraft(id)?.shapes as Shape[] | undefined) ?? [],
   });
+  useEffect(() => {
+    saveDraft(id, { shapes: ann.annot });
+  }, [ann.annot, id]);
   const glbSrc = resolveGlbSrc(data);
   const model3d = useModel3DThree(data, glbSrc);
   // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
