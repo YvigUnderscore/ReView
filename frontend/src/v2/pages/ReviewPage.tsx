@@ -16,6 +16,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { loadDraft, saveDraft } from './review/commentDraft';
+import { useDeepLink } from './review/useDeepLink';
 import { useSubmitComment } from './review/useSubmitComment';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useAutoThumbnail } from './review/useAutoThumbnail';
@@ -174,6 +175,9 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
       else model3d.restoreCamera(c.cameraState);
     }
   };
+
+  // Lien profond (32.E) : `?frame=`/`?comment=` appliqué une fois à l'arrivée.
+  useDeepLink({ data, comments, videoRef, programmaticSeekRef, fallbackFps: fpsOverride, selectComment });
 
   const placeHotspotCenter = () => {
     const h = data?.media.kind === 'SPLAT' ? splat.raycastCenter() : model3d.hotspotAtCenter();

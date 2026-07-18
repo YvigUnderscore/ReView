@@ -7,6 +7,7 @@ import {
   Download,
   EyeOff,
   Image as ImageIcon,
+  Link2,
   PencilLine,
   Play,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import {
 } from '../../components/ui/context-menu';
 import { stepVideoFrame, type MediaResp } from './reviewTypes';
 import { captureVideoFrame, copyImageToClipboard, downloadImage, toThumbnailDataUrl } from './mediaCapture';
+import { frameLink } from './deepLink';
 
 /**
  * Menu clic droit des reviews **image & vidéo** (le clic droit des viewers 3D/splat sert
@@ -119,6 +121,21 @@ export default function ReviewContextMenu({
               }
             >
               <Download size={14} /> Télécharger la frame
+            </ContextMenuItem>
+            {/* Lien profond (32.E) : URL ouvrant la review à la frame courante. */}
+            <ContextMenuItem
+              onSelect={() =>
+                run('Lien copié', async () => {
+                  const v = videoRef.current;
+                  if (!v) throw new Error('Lecteur vidéo indisponible');
+                  const frame = data.startFrame + Math.round(v.currentTime * fps);
+                  await navigator.clipboard.writeText(
+                    frameLink(window.location.origin, window.location.pathname, frame),
+                  );
+                })
+              }
+            >
+              <Link2 size={14} /> Copier le lien à cette frame
             </ContextMenuItem>
             {canManage && (
               <ContextMenuItem
