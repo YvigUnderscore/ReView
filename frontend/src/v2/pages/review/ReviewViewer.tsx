@@ -53,6 +53,7 @@ export default function ReviewViewer({
   onReprocess,
   onSplatEditsSaved,
   onToggleAnnotate,
+  onFullscreen,
   compareId,
   onCloseCompare,
 }: {
@@ -83,6 +84,8 @@ export default function ReviewViewer({
   onSplatEditsSaved: (patch: SplatEditsPatch) => void;
   /** Bascule le mode annotation (menu clic droit). */
   onToggleAnnotate: () => void;
+  /** Bascule le plein écran de tout le bloc review (viewer + playbar + commentaires). */
+  onFullscreen: () => void;
   compareId: number | null;
   onCloseCompare: () => void;
 }) {
@@ -91,14 +94,11 @@ export default function ReviewViewer({
   // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent.
   const hlsUrl = data?.hls ? `/api/media/${data.media.id}/hls/master.m3u8` : null;
   const startFrame = data?.startFrame ?? 1001;
-  const glbSrc = resolveGlbSrc(data);
   const model3dReady =
-    kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!glbSrc && !model3d.loadError;
+    kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!resolveGlbSrc(data) && !model3d.loadError;
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
-  // Verrou de publication (Phase 11) : les outils d'édition disparaissent dès la publication
-  // (le backend refuse de toute façon en 403) ; la présentation reste pilotable (canManage).
-  const showEditTools = canEditTransform;
-  const showSplatEdit = splatReady && canEdit;
+  // Verrou de publication (Phase 11) : les outils d'édition (canEditTransform) disparaissent
+  // dès la publication (backend en 403) ; la présentation reste pilotable (canManage).
   // Comparaison A/B vidéo : côte-à-côte ou wipe (14.C).
   const [compareMode, setCompareMode] = useState<'side' | 'wipe'>('side');
   const closeCompare = () => {
@@ -148,10 +148,9 @@ export default function ReviewViewer({
       />
     ) : null;
 
-  // Un déplacement de la vue 3D/splat (orbite, vol, zoom) masque l'annotation du
-  // commentaire sélectionné : elle n'a de sens que depuis la caméra d'origine. La vidéo
-  // fait de même via seek manuel + lecture (VideoPane) ; l'image garde ses annotations
-  // (ancrées au pixel, elles suivent le zoom/pan).
+  // Un déplacement de la vue 3D/splat (orbite, vol, zoom) masque l'annotation du commentaire
+  // sélectionné (elle n'a de sens que depuis la caméra d'origine). Vidéo : idem via seek/lecture
+  // ; image : annotations ancrées au pixel, conservées au zoom/pan.
   const clearOnViewMove = () => {
     if ((kind === 'MODEL_3D' || kind === 'SPLAT') && (selectedCommentId != null || ann.viewed))
       onClearSelection();
@@ -208,6 +207,7 @@ export default function ReviewViewer({
                 fpsDetected={data?.fps != null}
                 setFpsOverride={setFpsOverride}
                 startFrame={startFrame}
+                onFullscreen={onFullscreen}
                 trimRange={
                   // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
                   data?.trim && !data.trimProxyReady
@@ -273,6 +273,7 @@ export default function ReviewViewer({
                     width={ann.penWidth}
                     alpha={ann.alpha}
                     info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
+                    onFullscreen={onFullscreen}
                     pinned={
                       <ReviewCanvasRefs
                         mediaId={data.media.id}
@@ -304,11 +305,12 @@ export default function ReviewViewer({
           model3d={model3d}
           ann={ann}
           canManage={canManage}
-          showEditTools={showEditTools}
+          showEditTools={canEditTransform}
           role={role}
           reprocessing={reprocessing}
           onReprocess={onReprocess}
           onSaved={onSplatEditsSaved}
+          onFullscreen={onFullscreen}
           overlay={renderOverlay(ann.viewedAspect ?? undefined)}
           ready={model3dReady}
         />
@@ -318,10 +320,11 @@ export default function ReviewViewer({
         <SplatReview
           data={data}
           splat={splat}
-          showEdit={showSplatEdit}
+          showEdit={splatReady && canEdit}
           canPresent={splatReady && canManage}
           paint={paint}
           onSaved={onSplatEditsSaved}
+          onFullscreen={onFullscreen}
           overlay={renderOverlay()}
           ann={ann}
         />

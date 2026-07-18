@@ -25,6 +25,7 @@ export default function ImageReviewViewer({
   alpha,
   info,
   pinned,
+  onFullscreen,
 }: {
   src: string;
   alt: string;
@@ -40,6 +41,8 @@ export default function ImageReviewViewer({
   /** Éléments épinglés au canvas (images de référence…) : rendus dans le plan transformé,
    *  ils suivent le zoom/pan comme l'image. */
   pinned?: ReactNode;
+  /** Plein écran de tout le bloc review (fourni par la page) ; sinon plein écran local. */
+  onFullscreen?: () => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -137,7 +140,8 @@ export default function ImageReviewViewer({
   const fmtSize = (b?: number | null) =>
     b == null ? null : b > 1e6 ? `${(b / 1e6).toFixed(1)} Mo` : `${Math.round(b / 1e3)} Ko`;
   const rootRef = useRef<HTMLDivElement>(null);
-  const fullscreen = () => void rootRef.current?.requestFullscreen?.();
+  // Plein écran : celui fourni par la page (bloc review complet) sinon repli local à l'image.
+  const fullscreen = onFullscreen ?? (() => void rootRef.current?.requestFullscreen?.());
 
   return (
     <div ref={rootRef} className="relative h-full w-full bg-background">

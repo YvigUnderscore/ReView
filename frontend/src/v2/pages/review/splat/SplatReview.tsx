@@ -45,6 +45,7 @@ export default function SplatReview({
   canPresent,
   paint,
   onSaved,
+  onFullscreen,
   overlay,
   ann,
 }: {
@@ -57,6 +58,8 @@ export default function SplatReview({
   /** Painter 3D (V9) — instancié par la page (les traits partent avec le commentaire). */
   paint: SplatPaintState;
   onSaved: (patch: SplatEditsPatch) => void;
+  /** Bascule le plein écran de tout le bloc review (viewer + commentaires). */
+  onFullscreen: () => void;
   overlay: ReactNode;
   /** Annotations (mode layout : joindre/rejouer une animation caméra dans les commentaires). */
   ann: Annotations;
@@ -75,12 +78,6 @@ export default function SplatReview({
 
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(splat);
-  // Plein écran sur la zone viewer (Phase 25).
-  const fullscreen = () =>
-    void (
-      splat.containerRef.current?.closest('[data-viewer-zone]') as HTMLElement | null
-    )?.requestFullscreen?.();
-
   // Présentation (V5/V6) : caméra (rig + keyframes), reveal, debug color — rejouée pour tous.
   const pres = usePresentation(splat, data, onSaved);
   // Comparaison (V8) : autres splats de la même version — switch A/B + « voir tous ».
@@ -273,7 +270,7 @@ export default function SplatReview({
                 pres={pres}
                 canPresent={canPresent}
                 grid={grid}
-                onFullscreen={fullscreen}
+                onFullscreen={onFullscreen}
               />
             }
             bottomLeft={

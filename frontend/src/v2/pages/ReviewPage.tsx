@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -50,6 +50,22 @@ function ReviewContent({ id }: { id: number }) {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   // Drapeau : distingue un seek programmatique d'un déplacement manuel (qui désélectionne).
   const programmaticSeekRef = useRef(false);
+
+  // Plein écran **unifié** : on met tout le bloc review (en-tête + viewer + playbar +
+  // commentaires) en plein écran — pas seulement la zone viewer — pour que la barre de
+  // transport vidéo reste visible et que le panneau de commentaires soit accessible dans
+  // tous les modes (le bouton de bascule de l'en-tête est alors à l'écran).
+  const reviewRootRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const onFs = () => setIsFullscreen(document.fullscreenElement === reviewRootRef.current);
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void reviewRootRef.current?.requestFullscreen?.();
+  }, []);
 
   // staleTime Infinity : le GET régénère des URLs présignées à chaque appel — un
   // refetch en arrière-plan rechargerait le viewer en pleine lecture. Les mutations
@@ -226,7 +242,11 @@ function ReviewContent({ id }: { id: number }) {
     >
       {/* Clic droit : menu custom des viewers — le menu natif du navigateur est désactivé
           sur toute la review (les viewers 3D/splat utilisent le clic droit pour naviguer). */}
-      <div className="flex h-[calc(100vh-7rem)] flex-col" onContextMenu={(e) => e.preventDefault()}>
+      <div
+        ref={reviewRootRef}
+        className={`flex flex-col ${isFullscreen ? 'h-screen bg-background p-4' : 'h-[calc(100vh-7rem)]'}`}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {data ? (
           <ReviewHeader
             data={data}
@@ -271,6 +291,7 @@ function ReviewContent({ id }: { id: number }) {
             onMarker={openComposer}
             onReprocess={reprocessMedia}
             onToggleAnnotate={toggleAnnotating}
+            onFullscreen={toggleFullscreen}
             compareId={compareId}
             onCloseCompare={() => setCompareId(null)}
           />

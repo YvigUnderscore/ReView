@@ -35,6 +35,7 @@ export default function Model3DReview({
   reprocessing,
   onReprocess,
   onSaved,
+  onFullscreen,
   overlay,
   ready,
 }: {
@@ -48,6 +49,8 @@ export default function Model3DReview({
   reprocessing: boolean;
   onReprocess: () => void;
   onSaved: (patch: SplatEditsPatch) => void;
+  /** Bascule le plein écran de tout le bloc review (viewer + commentaires). */
+  onFullscreen: () => void;
   overlay: ReactNode;
   /** Modèle chargé et affichable (HUD monté seulement alors). */
   ready: boolean;
@@ -57,11 +60,6 @@ export default function Model3DReview({
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(model3d);
-  // Plein écran sur la zone viewer (Phase 25).
-  const fullscreen = () =>
-    void (
-      model3d.containerRef.current?.closest('[data-viewer-zone]') as HTMLElement | null
-    )?.requestFullscreen?.();
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
   const rig = useCameraSceneRig({
     getSceneHandle: model3d.getSceneHandle,
@@ -120,7 +118,7 @@ export default function Model3DReview({
                     active={grid.visible}
                     onClick={grid.toggle}
                   />
-                  <HudIconButton icon={Maximize} hint="Plein écran" onClick={fullscreen} />
+                  <HudIconButton icon={Maximize} hint="Plein écran" onClick={onFullscreen} />
                 </HudGroup>
               </>
             }

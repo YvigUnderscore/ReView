@@ -63,6 +63,7 @@ export default function VideoPane({
   trimRange,
   hlsUrl,
   timelineSprite,
+  onFullscreen,
 }: {
   src: string;
   /** Master HLS servi par le proxy auth (Phase 23) — prioritaire sur `src` (MP4) si MSE dispo. */
@@ -86,6 +87,8 @@ export default function VideoPane({
   trimRange?: { start: number; end: number } | null;
   /** Sprite de miniatures de la timeline (filmstrip ~1 vignette / 3 s). */
   timelineSprite?: { url: string; meta: TimelineSpriteMeta } | null;
+  /** Bascule le plein écran de tout le bloc review (playbar incluse). */
+  onFullscreen: () => void;
 }) {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -209,8 +212,6 @@ export default function VideoPane({
     }
   };
 
-  const fullscreen = () => void containerRef.current?.requestFullscreen?.();
-
   return (
     <>
       <div className={VIEWER_ZONE} ref={containerRef}>
@@ -288,7 +289,7 @@ export default function VideoPane({
           setMuted(val === 0);
         }}
         onToggleMute={() => setMuted((m) => !m)}
-        onFullscreen={fullscreen}
+        onFullscreen={onFullscreen}
         loopActive={loopIn != null || loopOut != null}
         onClearLoop={clearLoop}
         loopAll={loopAll}
