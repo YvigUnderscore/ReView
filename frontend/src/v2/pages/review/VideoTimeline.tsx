@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReviewComment } from '../../types/api';
 import Avatar from '../../components/Avatar';
 import { formatTime } from './reviewTypes';
-import { filmstripSlots, spriteSlotCss, type TimelineSpriteMeta } from './timelineSprite';
+import { spriteIndexAt, spriteSlotCss, type TimelineSpriteMeta } from './timelineSprite';
 
-/** Timeline vidéo : scrub à la souris + filmstrip de miniatures (sprite worker,
- * affiché **au survol** en bandeau flottant) + marqueurs de commentaires avec avatar. */
+/** Timeline vidéo : scrub à la souris + miniature de survol (la vignette du sprite sous
+ * le curseur, façon YouTube) + marqueurs de commentaires avec avatar de l'auteur. */
 export default function VideoTimeline({
   currentTime,
   duration,
@@ -29,7 +29,7 @@ export default function VideoTimeline({
   trimRange?: { start: number; end: number } | null;
   /** Points de boucle I/O (secondes, 14.B) — région surlignée entre in et out. */
   loop?: { in: number | null; out: number | null };
-  /** Sprite de miniatures (~1 vignette / 3 s) affiché au survol de la timeline. */
+  /** Sprite de miniatures (~1 vignette / 3 s) : celle sous le curseur s'affiche au survol. */
   sprite?: { url: string; meta: TimelineSpriteMeta } | null;
   /** Début/fin du glissement — le lecteur bascule en basse qualité pendant le scrub. */
   onScrubStart?: () => void;
@@ -38,7 +38,8 @@ export default function VideoTimeline({
   const barRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
   const [barWidth, setBarWidth] = useState(0);
-  const [hovered, setHovered] = useState(false);
+  // Abscisse du curseur (px, relative à la barre) — pilote la miniature de survol.
+  const [hoverX, setHoverX] = useState<number | null>(null);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
   const timedComments = comments.filter((c) => c.timestamp != null);
 
@@ -51,9 +52,22 @@ export default function VideoTimeline({
     return () => ro.disconnect();
   }, []);
 
-  const stripH = 40; // hauteur px du filmstrip flottant
-  const showStrip = !!sprite && duration > 0 && hovered;
-  const slots = showStrip ? filmstripSlots(barWidth - 8, stripH, duration, sprite!.meta) : [];
+  // Miniature de survol : la vignette du sprite à l'instant pointé, centrée sur le
+  // curseur (clampée aux bords de la barre).
+  const thumbH = 68;
+  const thumb =
+    sprite && duration > 0 && hoverX != null && barWidth > 0
+      ? (() => {
+          const time = (hoverX / barWidth) * duration;
+          const w = (sprite.meta.tileW / sprite.meta.tileH) * thumbH;
+          return {
+            time,
+            index: spriteIndexAt(time, sprite.meta),
+            w,
+            left: Math.max(0, Math.min(hoverX - w / 2, barWidth - w)),
+          };
+        })()
+      : null;
 
   const seekFromEvent = useCallback(
     (e: { clientX: number }) => {
@@ -74,20 +88,24 @@ export default function VideoTimeline({
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     seekFromEvent(e);
   };
+  const trackHover = (e: { clientX: number }) => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (rect) setHoverX(Math.max(0, Math.min(e.clientX - rect.left, rect.width)));
+  };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    setHovered(true);
+    trackHover(e);
     if (scrubbing.current) seekFromEvent(e);
   };
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (scrubbing.current) onScrubEnd?.();
     scrubbing.current = false;
-    // Fin de scrub hors de la barre (pointer capture) : le filmstrip se referme.
+    // Fin de scrub hors de la barre (pointer capture) : la miniature se referme.
     const rect = barRef.current?.getBoundingClientRect();
     if (
       rect &&
       (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom)
     )
-      setHovered(false);
+      setHoverX(null);
   };
 
   return (
@@ -97,30 +115,30 @@ export default function VideoTimeline({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerEnter={() => setHovered(true)}
+      onPointerEnter={trackHover}
       onPointerLeave={() => {
-        if (!scrubbing.current) setHovered(false);
+        if (!scrubbing.current) setHoverX(null);
       }}
       title="Cliquer ou glisser pour se déplacer"
     >
-      {/* Filmstrip flottant : miniatures visibles uniquement au survol / pendant le scrub */}
-      {showStrip && slots.length > 0 && (
-        <div className="pointer-events-none absolute bottom-full left-0 right-0 z-30 mb-1 rounded-md border border-border bg-card/95 p-1 shadow-lg backdrop-blur">
-          <div className="flex justify-between overflow-hidden rounded">
-            {slots.map((idx, i) => (
-              <div
-                key={i}
-                className="shrink-0"
-                style={{
-                  width: (sprite!.meta.tileW / sprite!.meta.tileH) * stripH,
-                  height: stripH,
-                  backgroundImage: `url(${sprite!.url})`,
-                  backgroundRepeat: 'no-repeat',
-                  ...spriteSlotCss(idx, sprite!.meta, stripH),
-                }}
-              />
-            ))}
-          </div>
+      {/* Miniature de survol : la vignette à l'instant pointé, suivant le curseur */}
+      {thumb && (
+        <div
+          className="pointer-events-none absolute bottom-full z-30 mb-1.5 overflow-hidden rounded-md border border-border bg-card shadow-lg"
+          style={{ left: thumb.left, width: thumb.w }}
+        >
+          <div
+            style={{
+              width: thumb.w,
+              height: thumbH,
+              backgroundImage: `url(${sprite!.url})`,
+              backgroundRepeat: 'no-repeat',
+              ...spriteSlotCss(thumb.index, sprite!.meta, thumbH),
+            }}
+          />
+          <p className="bg-card/95 py-0.5 text-center font-mono text-[10px] text-muted-foreground">
+            {formatTime(thumb.time)}
+          </p>
         </div>
       )}
 

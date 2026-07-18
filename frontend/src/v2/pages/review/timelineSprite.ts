@@ -1,7 +1,7 @@
 /**
  * Affichage du sprite de miniatures de la timeline vidéo : le worker produit UNE image
- * JPEG tuilée (`metadata.timelineSprite`), la timeline la découpe en fond via
- * background-position. Helpers purs, testés.
+ * JPEG tuilée (`metadata.timelineSprite`), la timeline en affiche la vignette sous le
+ * curseur via background-position. Helpers purs, testés.
  */
 
 export interface TimelineSpriteMeta {
@@ -34,21 +34,4 @@ export function spriteSlotCss(index: number, meta: TimelineSpriteMeta, displayH:
     backgroundSize: `${meta.cols * meta.tileW * scale}px ${meta.rows * meta.tileH * scale}px`,
     backgroundPosition: `${-col * meta.tileW * scale}px ${-row * meta.tileH * scale}px`,
   };
-}
-
-/**
- * Répartition du filmstrip : combien de cases afficher pour une barre de `barWidth` px
- * (cases de ratio vignette, hauteur `displayH`), et l'index de vignette de chaque case
- * (échantillonné sur la durée).
- */
-export function filmstripSlots(
-  barWidth: number,
-  displayH: number,
-  durationSec: number,
-  meta: TimelineSpriteMeta,
-): number[] {
-  if (barWidth <= 0 || displayH <= 0 || durationSec <= 0) return [];
-  const slotW = Math.max(16, (meta.tileW / meta.tileH) * displayH);
-  const n = Math.max(1, Math.floor(barWidth / slotW));
-  return Array.from({ length: n }, (_, i) => spriteIndexAt(((i + 0.5) / n) * durationSec, meta));
 }

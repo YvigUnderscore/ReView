@@ -132,7 +132,7 @@ export default function VideoTransport({
           className="flex items-center gap-1 text-muted-foreground"
           title={
             quality?.active
-              ? 'Qualité de lecture (Auto = max soutenable)'
+              ? 'Qualité de lecture (défaut : la plus haute)'
               : 'Pas de renditions HLS pour ce média — lecture du proxy original'
           }
         >
@@ -148,14 +148,11 @@ export default function VideoTransport({
             className="rounded border border-input bg-background px-1 py-0.5 text-xs disabled:opacity-60 [&>option]:bg-background"
           >
             {quality?.active ? (
-              <>
-                <option value={-1}>Auto</option>
-                {quality.levels.map((l, i) => (
-                  <option key={i} value={i}>
-                    {l.height}p
-                  </option>
-                ))}
-              </>
+              quality.levels.map((l, i) => (
+                <option key={i} value={i}>
+                  {l.height}p
+                </option>
+              ))
             ) : (
               <option value={0}>Originale</option>
             )}

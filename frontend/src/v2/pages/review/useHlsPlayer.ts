@@ -10,24 +10,23 @@ export interface HlsLevel {
 /**
  * Lecture HLS adaptative (Phase 23) via hls.js (MSE). Le manifeste et les segments sont servis
  * par le proxy authentifié `/api/media/:id/hls/*` → le token JWT est injecté par `xhrSetup`.
- * `mode` = niveau courant : -1 = **Auto** (défaut, hls.js choisit la max qualité soutenable).
- * Sans support MSE (`active=false`), l'appelant retombe sur le proxy MP4.
  *
- * En plus : `switching` (changement de qualité en cours — feedback UI), et le **mode scrub**
- * (`beginScrub`/`endScrub`) qui force temporairement la rendition la plus basse pendant le
- * glissement de la timeline (seek réactif), puis restaure la qualité choisie **immédiatement**
- * au lâcher (y compris en Auto, via `nextAutoLevel` calé sur le niveau d'avant-scrub).
+ * **Pas de mode Auto** : l'ABR retombait en basse qualité sans que le sélecteur le reflète.
+ * La lecture démarre verrouillée sur la **rendition la plus haute** dès le manifeste ; la
+ * qualité affichée est toujours la qualité servie. `switching` = changement de qualité en
+ * cours (feedback UI, avec garde-fou anti-blocage). Le **mode scrub** (`beginScrub`/
+ * `endScrub`) force temporairement la rendition la plus basse pendant le glissement de la
+ * timeline (seek réactif), puis restaure la qualité choisie **immédiatement** au lâcher.
+ * Sans support MSE (`active=false`), l'appelant retombe sur le proxy MP4.
  */
 export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUrl: string | null) {
   const [levels, setLevels] = useState<HlsLevel[]>([]);
-  const [mode, setMode] = useState(-1); // -1 = auto
+  const [mode, setMode] = useState(0); // index du niveau choisi (défaut : max, calé au manifeste)
   const [switching, setSwitching] = useState(false);
   const hlsRef = useRef<Hls | null>(null);
-  // Mode qualité choisi par l'utilisateur, restauré en fin de scrub.
-  const userModeRef = useRef(-1);
+  // Niveau choisi par l'utilisateur, restauré en fin de scrub.
+  const userModeRef = useRef(0);
   const scrubbing = useRef(false);
-  // Niveau effectif avant le scrub : cible du retour immédiat en mode Auto.
-  const preScrubLevel = useRef(-1);
   const switchTimer = useRef<number | undefined>(undefined);
   const active = !!hlsUrl && Hls.isSupported();
 
@@ -53,6 +52,14 @@ export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUr
     hls.loadSource(hlsUrl);
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       setLevels(hls.levels.map((l) => ({ height: l.height, bitrate: l.bitrate })));
+      // Verrouille la meilleure rendition avant le premier fragment (pas d'ABR).
+      let hi = 0;
+      hls.levels.forEach((l, i) => {
+        if (l.height > hls.levels[hi]!.height) hi = i;
+      });
+      userModeRef.current = hi;
+      setMode(hi);
+      hls.currentLevel = hi;
     });
     hls.on(Hls.Events.LEVEL_SWITCHED, () => {
       window.clearTimeout(switchTimer.current);
@@ -73,9 +80,8 @@ export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUr
     const hls = hlsRef.current;
     if (!hls || scrubbing.current) return; // appliqué en fin de scrub
     // Spinner seulement si un vrai switch va se produire (sinon LEVEL_SWITCHED ne vient pas).
-    const willSwitch = idx === -1 ? !hls.autoLevelEnabled : hls.currentLevel !== idx;
-    if (willSwitch) markSwitching();
-    hls.currentLevel = idx; // -1 = auto
+    if (hls.currentLevel !== idx) markSwitching();
+    hls.currentLevel = idx;
   };
 
   // Index de la rendition la plus basse (les niveaux hls.js sont triés par bande passante).
@@ -94,30 +100,18 @@ export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUr
     const hls = hlsRef.current;
     if (!hls || scrubbing.current) return;
     scrubbing.current = true;
-    preScrubLevel.current = hls.currentLevel;
     const low = lowestLevel();
     if (low >= 0 && hls.currentLevel !== low) hls.currentLevel = low;
   }, [lowestLevel]);
 
-  /** Fin de scrub : retour **immédiat** à la qualité choisie (ou au niveau Auto d'avant). */
+  /** Fin de scrub : retour **immédiat** à la qualité choisie (flush du buffer basse déf). */
   const endScrub = useCallback(() => {
     const hls = hlsRef.current;
     if (!scrubbing.current) return;
     scrubbing.current = false;
     if (!hls) return;
-    const target = userModeRef.current;
-    if (target >= 0) {
-      if (hls.currentLevel !== target) markSwitching();
-      hls.currentLevel = target; // flush immédiat du buffer basse qualité
-    } else {
-      // Auto : réactive l'ABR, et force le prochain chargement au niveau d'avant-scrub
-      // (sinon hls.js remonterait progressivement depuis la rendition basse).
-      if (preScrubLevel.current >= 0 && hls.currentLevel !== preScrubLevel.current) {
-        markSwitching();
-        hls.nextAutoLevel = preScrubLevel.current;
-      }
-      hls.currentLevel = -1;
-    }
+    if (hls.currentLevel !== userModeRef.current) markSwitching();
+    hls.currentLevel = userModeRef.current;
   }, [markSwitching]);
 
   return { active, levels, mode, setLevel, switching, beginScrub, endScrub };

@@ -103,8 +103,7 @@ export default function VideoPane({
   // Feedback au changement de qualité : toast + spinner (hls.switching) le temps du switch.
   const changeQuality = (idx: number) => {
     hls.setLevel(idx);
-    const label = idx === -1 ? 'Auto' : `${hls.levels[idx]?.height ?? '?'}p`;
-    toast.success(`Qualité de lecture : ${label}`);
+    toast.success(`Qualité de lecture : ${hls.levels[idx]?.height ?? '?'}p`);
   };
   // Boîte d'affichage : la vidéo remplit tout l'espace disponible (fit « contain » calculé),
   // même en basse résolution — l'overlay d'annotation partage exactement la même boîte.
