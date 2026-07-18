@@ -12,77 +12,67 @@
 
 ---
 
-**ReView** est une plateforme de review collaborative conçue pour les studios VFX, équipes de post-production et créatifs. Review vidéo frame-par-frame, annotations, 3D, board de référence — tout en un.
+**ReView** est une plateforme de review collaborative conçue pour les studios VFX, équipes de post-production et créatifs : review vidéo frame-par-frame, images annotées, modèles 3D, Gaussian splats, boards de référence, kanban et administration studio — tout en un, sur votre propre infrastructure. Une instance = un studio.
 
 ## ✨ Fonctionnalités
 
 ### 🎬 Review vidéo & image
-Annotations vectorielles (crayon, formes, flèches) liées à la frame exacte. Commentaires horodatés, fils de discussion, mentions (@User).
+Lecture HLS adaptative multi-rendition, navigation frame-par-frame précise, comparaison A/B et wipe entre versions, plein écran immersif. Annotations vectorielles ancrées au cadre de livraison, commentaires liés à la frame exacte, guide letterbox à l'aspect de livraison.
 
 ### 🧊 Review 3D
-Modèles GLB/glTF natifs via `@google/model-viewer`. Conversion serveur automatique depuis FBX, OBJ, USD, DAE, STL → GLB.
+Viewer Three.js façon DCC : navigation orbit/fly unifiée, éclairage HDRI (bibliothèque studio), transform avec gizmo + undo/redo, caméra animée par F-curves (dopesheet + graph editor), focale en mm sur capteur 36 mm, aperçu PiP.
 
-### 📋 Board de référence
-Board Excalidraw (MIT) par Projet et par Asset — mood, références, médias insérables depuis la bibliothèque.
+### ✨ Gaussian splats
+Viewer **Spark (SparkJS)** + éditeur **non-destructif** : sélection pinceau/volumes, masquage, teinte, TRS — le fichier original n'est jamais modifié, les éditions sont rejouées à l'identique pour tous. Mise en scène (caméra, DoF) persistée par média.
+
+### 📋 Boards & kanban
+Board Excalidraw par projet et par asset (mood, références). Kanban par projet, tâches typées pipeline, multi-sélection et actions en masse.
 
 ### 🔄 Versioning & pipeline
-Hiérarchie Projet → Séquence → Shot → Asset → Version. Brouillon (draft) avant publication, historique complet, comparaison de versions.
+Hiérarchie Projet → Séquence → Shot / Asset → Tâche → Version. Brouillon avant publication, **verrou de publication** (le contenu publié est immuable — on corrige par une nouvelle version), réglages de livraison hérités (résolution, framerate, plages de frames).
 
-### 👥 Collaboration temps réel
-Socket.io · Kanban · Notifications · Rôles RBAC (Admin, Member, Client) · Liens de review sécurisés pour clients externes.
+### 👥 Collaboration & administration
+Socket.io temps réel · Notifications · RBAC (Admin, Supervisor, Artist, Client) · Liens de partage client révocables (lecture ou commentaire) · Admin studio complet (utilisateurs, transcodage HLS, HDRI, SMTP, annonces, corbeille, audit).
+
+### 📚 Documentation intégrée
+Le manuel produit (dossier [`DOCUMENTATION/`](DOCUMENTATION/README.md), en anglais) est versionné avec le code et servi dans l'application sur la page `/docs`. La référence API interactive (OpenAPI/Scalar) est sur `/api/docs`.
 
 ## 🚀 Démarrage rapide
 
 ```bash
-# Cloner le dépôt
 git clone https://github.com/YvigUnderscore/ReView-app.git
 cd ReView-app
-
-# Copier et configurer les variables d'environnement
-cp .env.example .env
-# → éditer .env (JWT_SECRET, MinIO, PostgreSQL, Redis…)
-
-# Lancer avec Docker (recommandé)
-docker compose up -d
+cp .env.example .env   # → éditer JWT_SECRET, MinIO, PostgreSQL, Redis…
+docker compose up -d --build
 ```
 
-L'application sera disponible sur `http://localhost:5173` (frontend) et `http://localhost:3000` (API).
+L'application est disponible sur **http://localhost:3429** (API sur `:3430`). Guide complet : [Installation](DOCUMENTATION/getting-started/installation.md).
 
-## 🔑 Comptes & mot de passe par défaut
+## 🔑 Comptes & premier lancement
 
-Deux modes d'initialisation :
-
-### Premier lancement réel (recommandé)
-
-Sans seed, l'instance démarre en **mode setup** : le premier écran te fait créer le
-studio et le compte **administrateur**. Tu choisis toi-même l'email et le mot de passe
-(≥ 8 caractères, au moins 1 lettre et 1 chiffre). **Aucun mot de passe par défaut n'existe
-en production.**
-
-### Seed de développement
-
-En exécutant `npm run seed` (dans `backend/`), des comptes de démonstration sont créés :
+- **Premier lancement réel** : sans seed, l'instance démarre en **mode setup** — le premier écran crée le studio et le compte administrateur. Aucun mot de passe par défaut n'existe en production.
+- **Seed de développement** (`npm run seed` dans `backend/`) :
 
 | Compte | Email | Mot de passe |
 |--------|-------|--------------|
-| **Admin** | `admin@review.local` | `admin1234` |
-| **Artiste** | `artist@review.local` | `artist1234` |
+| Admin | `admin@review.local` | `admin1234` |
+| Artiste | `artist@review.local` | `artist1234` |
 
-> ⚠️ **Ne jamais utiliser ces identifiants en production.** Ils sont réservés au
-> développement local — change-les ou n'exécute pas le seed sur une instance exposée.
+> ⚠️ Réservé au développement local — ne jamais exposer une instance seedée.
 
 ## Stack
 
 | Couche | Technologie |
 |--------|-------------|
 | Backend | Node.js + Express 5 + TypeScript + Prisma + PostgreSQL |
-| Frontend | React 19 + Vite 7 + Tailwind CSS + shadcn/ui |
-| Auth | JWT |
-| Temps réel | Socket.io |
-| Jobs | BullMQ + Redis (workers FFmpeg, conversion 3D) |
-| 3D viewer | `@google/model-viewer` |
+| Frontend | React 19 + Vite 7 + Tailwind CSS + primitives style shadcn |
+| Auth / Temps réel | JWT / Socket.io |
+| Jobs | BullMQ + Redis (worker FFmpeg : HLS multi-rendition, miniatures, conversion 3D→GLB assimp) |
+| 3D / Splat | Three.js / Spark (SparkJS) |
 | Board | Excalidraw (MIT) |
-| Stockage | MinIO (S3-compatible) |
+| Stockage | MinIO (S3-compatible), URLs présignées |
+
+Détails d'architecture : [DOCUMENTATION/infrastructure/architecture.md](DOCUMENTATION/infrastructure/architecture.md).
 
 ## Star History
 
@@ -100,8 +90,8 @@ En exécutant `npm run seed` (dans `backend/`), des comptes de démonstration so
 - **[Express](https://expressjs.com/)** (MIT) · **[Prisma](https://www.prisma.io/)** (Apache-2.0)
 - **[TailwindCSS](https://tailwindcss.com/)** (MIT) · **[shadcn/ui](https://ui.shadcn.com/)** (MIT)
 - **[Framer Motion](https://www.framer.com/motion/)** (MIT) · **[Lucide React](https://lucide.dev/)** (ISC)
-- **[FFmpeg](https://ffmpeg.org/)** (LGPL/GPL) · **[Google model-viewer](https://modelviewer.dev/)** (Apache-2.0)
-- **[Excalidraw](https://excalidraw.com/)** (MIT)
+- **[FFmpeg](https://ffmpeg.org/)** (LGPL/GPL) · **[Three.js](https://threejs.org/)** (MIT) · **[Spark](https://sparkjs.dev/)** (MIT)
+- **[Excalidraw](https://excalidraw.com/)** (MIT) · **[marked](https://marked.js.org/)** (MIT)
 - **[Socket.IO](https://socket.io/)** (MIT) · **[BullMQ](https://bullmq.io/)** (MIT) · **[MinIO](https://min.io/)** (AGPL-3.0)
 - **[Bcrypt.js](https://github.com/dcodeIO/bcrypt.js)** (MIT) · **[JsonWebToken](https://github.com/auth0/node-jsonwebtoken)** (MIT)
 - **[Helmet](https://helmetjs.github.io/)** (MIT) · **[Zod](https://zod.dev/)** (MIT)
