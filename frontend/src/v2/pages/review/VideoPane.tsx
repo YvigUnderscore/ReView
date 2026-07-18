@@ -113,6 +113,18 @@ export default function VideoPane({
   // même en basse résolution — l'overlay d'annotation partage exactement la même boîte.
   const [aspect, setAspect] = useState<number | null>(null);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  // Plein écran vidéo immersif (hook dédié) : vidéo plein écran + playbar translucide qui
+  // s'efface après 1 s sans mouvement de souris. Complémentaire du plein écran unifié.
+  const paneRef = useRef<HTMLDivElement>(null);
+  const {
+    active: videoOnlyFs,
+    controlsVisible,
+    poke: pokeControls,
+    toggle: toggleVideoFullscreen,
+  } = useVideoFullscreen(paneRef);
+  // `videoOnlyFs` en dépendance : l'entrée/sortie du plein écran change la taille du
+  // conteneur → on re-mesure la boîte (sinon la vidéo garderait sa taille d'avant, minuscule
+  // au centre de l'écran noir).
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !aspect) return;
@@ -124,7 +136,7 @@ export default function VideoPane({
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [aspect]);
+  }, [aspect, videoOnlyFs]);
 
   const markLoopIn = useCallback(() => {
     const v = videoRef.current;
@@ -212,16 +224,6 @@ export default function VideoPane({
       v.pause();
     }
   };
-
-  // Plein écran vidéo immersif (hook dédié) : vidéo plein écran + playbar translucide qui
-  // s'efface après 1 s sans mouvement de souris. Complémentaire du plein écran unifié.
-  const paneRef = useRef<HTMLDivElement>(null);
-  const {
-    active: videoOnlyFs,
-    controlsVisible,
-    poke: pokeControls,
-    toggle: toggleVideoFullscreen,
-  } = useVideoFullscreen(paneRef);
 
   return (
     <div
