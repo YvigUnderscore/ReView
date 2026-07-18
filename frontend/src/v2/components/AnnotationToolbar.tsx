@@ -117,7 +117,23 @@ export function AnnotationToolbar({
   canUndo: boolean;
   canRedo: boolean;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+  // Position du sélecteur de couleur : `fixed`, ancré à la pastille et ouvert vers le
+  // haut (la palette vit en bas de l'écran dans le composer) — jamais de débordement
+  // de page ni de scrollbar. Repli vers le bas si la place manque en haut.
+  const [pickerPos, setPickerPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
+  const pickerBtnRef = useRef<HTMLButtonElement>(null);
+  const togglePicker = () => {
+    if (pickerPos) return setPickerPos(null);
+    const r = pickerBtnRef.current!.getBoundingClientRect();
+    const W = 224; // w-56
+    const H = 280; // hauteur approx du picker
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - W - 8));
+    setPickerPos(
+      r.top > H + 12
+        ? { left, bottom: window.innerHeight - r.top + 6 }
+        : { left, top: Math.min(r.bottom + 6, window.innerHeight - H - 8) },
+    );
+  };
   const [previewOpen, setPreviewOpen] = useState(false);
   const previewTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(previewTimer.current), []);
@@ -148,15 +164,19 @@ export function AnnotationToolbar({
       {/* Pastille couleur courante → ouvre le sélecteur indépendant du navigateur */}
       <button
         type="button"
-        onClick={() => setPickerOpen((o) => !o)}
+        ref={pickerBtnRef}
+        onClick={togglePicker}
         title="Couleur & opacité"
         className="h-7 w-7 rounded-full border border-border"
         style={{ background: `linear-gradient(${color}, ${color})`, opacity: 1 }}
       >
         <span className="block h-full w-full rounded-full" style={{ background: color, opacity: alpha }} />
       </button>
-      {pickerOpen && (
-        <div className="absolute left-0 top-full z-30 mt-1">
+      {pickerPos && (
+        <div
+          className="fixed z-[70]"
+          style={{ left: pickerPos.left, top: pickerPos.top, bottom: pickerPos.bottom }}
+        >
           <ColorPicker
             color={color}
             alpha={alpha}
