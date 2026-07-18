@@ -14,7 +14,14 @@ import { storage, StorageService } from '../services/StorageService';
 import { MediaStatus } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { getTranscodeConfig, selectRenditions, type TranscodeConfig } from '../lib/transcodeConfig';
-import { buildMasterPlaylist, hlsContentType, renditionName, type HlsRendition } from '../lib/hls';
+import {
+  buildMasterPlaylist,
+  hlsContentType,
+  hlsGopSize,
+  HLS_SEGMENT_SEC,
+  renditionName,
+  type HlsRendition,
+} from '../lib/hls';
 import { planTimelineSprite, type TimelineSpritePlan } from '../lib/timelineSprite';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 
@@ -203,7 +210,12 @@ function transcodeProxy(
   });
 }
 
-/** Génère une rendition HLS (VOD, segments .ts + sous-playlist) dans `hlsDir` (Phase 23). */
+/**
+ * Génère une rendition HLS (VOD, segments .ts + sous-playlist) dans `hlsDir` (Phase 23).
+ * GOP **fixe** calé sur le fps (une keyframe par segment, scene-cut désactivé) : sans lui,
+ * libx264 espace les keyframes jusqu'à ~10 s → segments énormes, switch de qualité très
+ * lent et image figée pendant que l'audio continue.
+ */
 function transcodeHlsRendition(
   input: string,
   hlsDir: string,
@@ -211,7 +223,9 @@ function transcodeHlsRendition(
   height: number,
   videoBitrateK: number,
   cfg: Pick<TranscodeConfig, 'preset' | 'audioBitrateK'>,
+  fps?: number,
 ): Promise<void> {
+  const gop = hlsGopSize(fps);
   return new Promise((resolve, reject) => {
     ffmpeg(input)
       .outputOptions([
@@ -227,6 +241,12 @@ function transcodeHlsRendition(
         `${Math.round(videoBitrateK * 1.07)}k`,
         '-bufsize',
         `${Math.round(videoBitrateK * 1.5)}k`,
+        '-g',
+        String(gop),
+        '-keyint_min',
+        String(gop),
+        '-sc_threshold',
+        '0',
         '-pix_fmt',
         'yuv420p',
         '-c:a',
@@ -234,7 +254,7 @@ function transcodeHlsRendition(
         '-b:a',
         `${cfg.audioBitrateK}k`,
         '-hls_time',
-        '6',
+        String(HLS_SEGMENT_SEC),
         '-hls_playlist_type',
         'vod',
         '-hls_segment_filename',
@@ -258,13 +278,14 @@ async function buildHls(
   cfg: TranscodeConfig,
   srcWidth: number,
   srcHeight: number,
+  srcFps?: number,
 ): Promise<{ height: number; width: number; videoBitrateK: number }[]> {
   const hlsDir = join(dir, 'hls');
   await mkdir(hlsDir, { recursive: true });
   const built: HlsRendition[] = [];
   for (const r of selectRenditions(cfg, srcHeight)) {
     const name = renditionName(r.height);
-    await transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg);
+    await transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg, srcFps);
     const width =
       srcWidth > 0 && srcHeight > 0
         ? Math.round(((srcWidth / srcHeight) * r.height) / 2) * 2
@@ -290,12 +311,14 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
 
   const dir = await mkdtemp(join(tmpdir(), 'review-'));
   try {
-    // Conserver l'extension d'origine (assimp/ffmpeg détectent le format par extension)
-    const ext = extname(media.originalName) || '.bin';
-    const src = join(dir, `src${ext}`);
-    await storage.downloadToFile(media.storageKey, src);
-
     const metadata: Record<string, unknown> = { ...(media.metadata as object) };
+    // Source vidéo supprimée après transcodage (gain de place) : les retraitements
+    // (trim, reprocess) repartent du proxy MP4 — seul fichier « source » restant.
+    const sourceGone = metadata.sourceDeleted === true && typeof metadata.proxyKey === 'string';
+    // Conserver l'extension d'origine (assimp/ffmpeg détectent le format par extension)
+    const ext = sourceGone ? '.mp4' : extname(media.originalName) || '.bin';
+    const src = join(dir, `src${ext}`);
+    await storage.downloadToFile(sourceGone ? (metadata.proxyKey as string) : media.storageKey, src);
 
     if (kind === 'convert3d') {
       // Conversion → GLB pour model-viewer (corrige l'erreur DataView sur FBX/OBJ bruts)
@@ -331,7 +354,8 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       const srcHeight = typeof metadata.height === 'number' ? metadata.height : 0;
       const srcWidth = typeof metadata.width === 'number' ? metadata.width : 0;
       if (tcfg.enabled && srcHeight > 0) {
-        const renditions = await buildHls(src, dir, mediaId, tcfg, srcWidth, srcHeight);
+        const srcFps = typeof metadata.fps === 'number' ? metadata.fps : undefined;
+        const renditions = await buildHls(src, dir, mediaId, tcfg, srcWidth, srcHeight, srcFps);
         metadata.hls = { renditions };
       }
 
@@ -354,10 +378,20 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
         }
       }
 
+      // Tous les dérivés sont produits : la source originale ne sert plus — supprimée
+      // pour libérer l'espace (le flag est posé AVANT le delete : en cas d'échec du
+      // delete, seul l'espace n'est pas récupéré, les URLs pointent déjà le proxy).
+      metadata.sourceDeleted = true;
       await prisma.mediaObject.update({
         where: { id: mediaId },
         data: { status: MediaStatus.READY, thumbnailKey: thumbKey, metadata: metadata as object },
       });
+      if (!sourceGone)
+        await storage
+          .deleteObject(media.storageKey)
+          .catch((err) =>
+            logger.warn({ err }, `[ffmpeg.worker] suppression source échouée media=${mediaId}`),
+          );
     } else if (kind === 'trim') {
       // Trim non-destructif (10.G-V10) : proxy trimé depuis l'original, borné par metadata.trim.
       const trim = metadata.trim as { inFrame?: number; outFrame?: number } | undefined;

@@ -166,7 +166,7 @@ export async function listPublished(
       kind: m.kind,
       originalName: m.originalName,
       thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
-      url: await storage.getPresignedGetUrl(m.storageKey),
+      url: await storage.getPresignedGetUrl(mediaSourceKey(m)),
     })),
   );
   return paginate(items, total, p);
@@ -348,6 +348,15 @@ export async function reprocess(user: SessionUser, id: number) {
   return { media: serializeMedia(updated), requeued: true };
 }
 
+/**
+ * Clé « source » réellement servie d'un média : après transcodage vidéo, l'original est
+ * supprimé (gain de place) et le proxy MP4 devient la source.
+ */
+export function mediaSourceKey(media: { storageKey: string; metadata: unknown }): string {
+  const meta = (media.metadata ?? {}) as { proxyKey?: string; sourceDeleted?: boolean };
+  return meta.sourceDeleted && meta.proxyKey ? meta.proxyKey : media.storageKey;
+}
+
 /** Détail complet d'un média + URLs présignées (original, miniature, proxy, glb). */
 export async function getDetail(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
@@ -358,6 +367,7 @@ export async function getDetail(user: SessionUser, id: number) {
     throw forbidden('Accès au projet refusé');
   const meta = (media.metadata ?? {}) as {
     proxyKey?: string;
+    sourceDeleted?: boolean;
     glbKey?: string;
     fps?: number;
     width?: number;
@@ -383,6 +393,7 @@ export async function getDetail(user: SessionUser, id: number) {
   };
   // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
+  const sourceKey = mediaSourceKey(media);
   const [
     url,
     thumbnailUrl,
@@ -394,7 +405,7 @@ export async function getDetail(user: SessionUser, id: number) {
     project,
     references,
   ] = await Promise.all([
-    storage.getPresignedGetUrl(media.storageKey),
+    storage.getPresignedGetUrl(sourceKey),
     media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
     proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
     meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
@@ -465,7 +476,7 @@ export async function getUrl(user: SessionUser, id: number) {
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('Accès au projet refusé');
-  return storage.getPresignedGetUrl(media.storageKey);
+  return storage.getPresignedGetUrl(mediaSourceKey(media));
 }
 
 /**

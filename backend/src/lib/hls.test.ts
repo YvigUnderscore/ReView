@@ -1,9 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { buildMasterPlaylist, renditionName, hlsContentType, type HlsRendition } from './hls';
+import {
+  buildMasterPlaylist,
+  renditionName,
+  hlsContentType,
+  hlsGopSize,
+  HLS_SEGMENT_SEC,
+  type HlsRendition,
+} from './hls';
 
 describe('hls (Phase 23)', () => {
   it('renditionName', () => {
     expect(renditionName(720)).toBe('720p');
+  });
+
+  it('hlsGopSize = une keyframe par segment, calée sur le fps (repli 25)', () => {
+    expect(hlsGopSize(24)).toBe(24 * HLS_SEGMENT_SEC);
+    expect(hlsGopSize(29.97)).toBe(Math.round(29.97 * HLS_SEGMENT_SEC));
+    expect(hlsGopSize(undefined)).toBe(25 * HLS_SEGMENT_SEC);
+    expect(hlsGopSize(0)).toBe(25 * HLS_SEGMENT_SEC);
+    expect(hlsGopSize(NaN)).toBe(25 * HLS_SEGMENT_SEC);
   });
 
   it('hlsContentType distingue playlist et segment', () => {

@@ -4,6 +4,7 @@ import { SharePermission } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { storage } from '../services/StorageService';
+import { mediaSourceKey } from '../services/MediaService';
 import { sanitizeHtml } from '../lib/sanitize';
 import { emitToProject } from '../services/SocketService';
 import { forbidden, notFound } from '../lib/errors';
@@ -73,7 +74,7 @@ router.get(
       where: { id, ...publishedMediaWhere(share.projectId) },
     });
     if (!media) throw notFound('Média introuvable ou non publié');
-    res.json({ url: await storage.getPresignedGetUrl(media.storageKey) });
+    res.json({ url: await storage.getPresignedGetUrl(mediaSourceKey(media)) });
   },
 );
 
