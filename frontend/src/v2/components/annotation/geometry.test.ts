@@ -27,7 +27,7 @@ describe('arrowHead', () => {
   it('taille bornée par la longueur du trait et null si dégénérée', () => {
     const size = { w: 1000, h: 1000 };
     const tiny = arrowHead(0.5, 0.5, 0.52, 0.5, size, 12)!;
-    // headLen ≤ 50 % de la longueur (20 px) → base ≥ x=0.51.
+    // headLen ≤ 45 % de la longueur (20 px) → base ≥ x=0.51.
     expect(tiny.left[0]).toBeGreaterThanOrEqual(0.51 - 1e-6);
     expect(arrowHead(0.5, 0.5, 0.5, 0.5, size, 4)).toBeNull();
     expect(arrowHead(0, 0, 1, 1, { w: 0, h: 0 }, 4)).toBeNull();

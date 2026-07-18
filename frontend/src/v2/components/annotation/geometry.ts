@@ -36,16 +36,15 @@ export interface ArrowHead {
   /** Ailes gauche/droite du triangle. */
   left: [number, number];
   right: [number, number];
-  /** Encoche arrière (base concave, look effilé). */
-  notch: [number, number];
-  /** Fin du fût : le trait s'arrête là pour ne pas dépasser de la tête. */
+  /** Fin du fût : légèrement DANS la tête (aucun jour entre trait et triangle). */
   shaftEnd: [number, number];
 }
 
 /**
  * Tête de flèche calculée en **espace écran** (px) puis renvoyée en coordonnées
  * normalisées : la tête n'est jamais déformée par le viewBox étiré (aspect ≠ 1),
- * et sa taille suit l'épaisseur du trait. `size` = dimensions px du canvas.
+ * et sa taille suit l'épaisseur du trait. Triangle net (rendu fill+stroke à joints
+ * ronds côté ShapeEl → coins adoucis). `size` = dimensions px du canvas.
  */
 export function arrowHead(
   x1: number,
@@ -69,9 +68,9 @@ export function arrowHead(
   // Perpendiculaire unitaire.
   const px = -uy,
     py = ux;
-  // Longueur de tête proportionnelle à l'épaisseur, bornée par la longueur du trait.
-  const headLen = Math.min(Math.max(12, strokeWidth * 3.2), len * 0.5);
-  const headW = headLen * 0.8;
+  // Tête proportionnelle à l'épaisseur (angle ~40°), bornée par la longueur du trait.
+  const headLen = Math.min(Math.max(10, strokeWidth * 3.5), len * 0.45);
+  const headW = headLen * 0.75;
   const baseX = bx - ux * headLen,
     baseY = by - uy * headLen;
   const norm = (x: number, y: number): [number, number] => [x / size.w, y / size.h];
@@ -79,8 +78,7 @@ export function arrowHead(
     tip: norm(bx, by),
     left: norm(baseX + (px * headW) / 2, baseY + (py * headW) / 2),
     right: norm(baseX - (px * headW) / 2, baseY - (py * headW) / 2),
-    notch: norm(bx - ux * headLen * 0.72, by - uy * headLen * 0.72),
-    shaftEnd: norm(bx - ux * headLen * 0.6, by - uy * headLen * 0.6),
+    shaftEnd: norm(bx - ux * headLen * 0.85, by - uy * headLen * 0.85),
   };
 }
 

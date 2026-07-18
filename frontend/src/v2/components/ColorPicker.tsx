@@ -143,6 +143,7 @@ export default function ColorPicker({
         {PRESETS.map((c) => (
           <button
             key={c}
+            type="button" // le picker peut vivre dans un <form> (composer) : pas de submit
             onClick={() => onChange(c, alpha)}
             className={`h-5 w-5 rounded-full border ${color.toLowerCase() === c ? 'ring-2 ring-ring' : 'border-border'}`}
             style={{ backgroundColor: c }}

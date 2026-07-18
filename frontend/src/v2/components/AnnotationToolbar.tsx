@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import { Circle, Eraser, Hand, MoveUpRight, Pencil, Redo2, Square, Type, Undo2 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import ColorPicker from './ColorPicker';
 import { arrowHead, textFontSize } from './annotation/geometry';
 import type { Tool } from './AnnotationCanvas';
 
-const TOOL_ICONS: { id: Tool; label: string; title: string }[] = [
-  { id: 'draw', label: '✏️', title: 'Dessin libre' },
-  { id: 'rect', label: '▭', title: 'Rectangle' },
-  { id: 'ellipse', label: '◯', title: 'Ellipse' },
-  { id: 'arrow', label: '↗', title: 'Flèche' },
-  { id: 'text', label: 'T', title: 'Texte' },
-  { id: 'move', label: '✋', title: 'Déplacer une forme' },
-  { id: 'erase', label: '⌫', title: 'Gomme (clic ou glisser)' },
+const TOOL_ICONS: { id: Tool; icon: LucideIcon; title: string }[] = [
+  { id: 'draw', icon: Pencil, title: 'Dessin libre' },
+  { id: 'rect', icon: Square, title: 'Rectangle' },
+  { id: 'ellipse', icon: Circle, title: 'Ellipse' },
+  { id: 'arrow', icon: MoveUpRight, title: 'Flèche' },
+  { id: 'text', icon: Type, title: 'Texte' },
+  { id: 'move', icon: Hand, title: 'Déplacer une forme' },
+  { id: 'erase', icon: Eraser, title: 'Gomme (clic ou glisser)' },
 ];
 
 /**
@@ -53,9 +55,13 @@ function ToolSizePreview({ width, color, alpha }: { width: number; color: string
                 strokeLinecap="round"
               />
               <path
-                d={`M ${head.tip[0] * W} ${head.tip[1] * H} L ${head.left[0] * W} ${head.left[1] * H} L ${head.notch[0] * W} ${head.notch[1] * H} L ${head.right[0] * W} ${head.right[1] * H} Z`}
+                d={`M ${head.tip[0] * W} ${head.tip[1] * H} L ${head.left[0] * W} ${head.left[1] * H} L ${head.right[0] * W} ${head.right[1] * H} Z`}
                 fill={color}
                 fillOpacity={alpha}
+                stroke={color}
+                strokeOpacity={alpha}
+                strokeWidth={width}
+                strokeLinejoin="round"
               />
             </>
           )}
@@ -125,19 +131,23 @@ export function AnnotationToolbar({
 
   return (
     <div className="relative flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-card p-1.5 text-sm">
+      {/* type=button partout : la palette vit DANS le <form> du composer — un bouton
+          sans type y vaut submit et enverrait le commentaire au choix d'un outil. */}
       {TOOL_ICONS.map((t) => (
         <button
           key={t.id}
+          type="button"
           onClick={() => setTool(t.id)}
           title={t.title}
-          className={`h-8 w-8 rounded ${tool === t.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+          className={`flex h-8 w-8 items-center justify-center rounded ${tool === t.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
         >
-          {t.label}
+          <t.icon size={16} />
         </button>
       ))}
       <span className="mx-1 h-6 w-px bg-border" />
       {/* Pastille couleur courante → ouvre le sélecteur indépendant du navigateur */}
       <button
+        type="button"
         onClick={() => setPickerOpen((o) => !o)}
         title="Couleur & opacité"
         className="h-7 w-7 rounded-full border border-border"
@@ -173,20 +183,24 @@ export function AnnotationToolbar({
       />
       <span className="mx-1 h-6 w-px bg-border" />
       <button
+        type="button"
         onClick={onUndo}
         disabled={!canUndo}
+        title="Annuler"
         className="h-8 rounded px-2 hover:bg-muted disabled:opacity-40"
       >
-        ↶
+        <Undo2 size={15} />
       </button>
       <button
+        type="button"
         onClick={onRedo}
         disabled={!canRedo}
+        title="Rétablir"
         className="h-8 rounded px-2 hover:bg-muted disabled:opacity-40"
       >
-        ↷
+        <Redo2 size={15} />
       </button>
-      <button onClick={onClear} className="h-8 rounded px-2 hover:bg-muted">
+      <button type="button" onClick={onClear} className="h-8 rounded px-2 hover:bg-muted">
         Effacer
       </button>
       {previewOpen && <ToolSizePreview width={width} color={color} alpha={alpha} />}

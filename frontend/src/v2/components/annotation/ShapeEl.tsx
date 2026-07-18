@@ -77,17 +77,30 @@ export default function ShapeEl({
       </text>
     );
 
-  // Flèche : fût + tête triangulaire effilée calculée en espace écran (jamais déformée).
+  // Flèche : fût + tête triangulaire calculée en espace écran (jamais déformée).
+  // La tête est remplie ET contourée du même trait à joints ronds : pointes adoucies,
+  // taille visuelle cohérente avec l'épaisseur du fût.
   const head = arrowHead(s.x1 ?? 0, s.y1 ?? 0, s.x2 ?? 0, s.y2 ?? 0, size, s.width);
   const shaftEnd: [number, number] = head ? head.shaftEnd : [s.x2 ?? 0, s.y2 ?? 0];
   const headPath = head
-    ? `M ${head.tip[0]} ${head.tip[1]} L ${head.left[0]} ${head.left[1]} L ${head.notch[0]} ${head.notch[1]} L ${head.right[0]} ${head.right[1]} Z`
+    ? `M ${head.tip[0]} ${head.tip[1]} L ${head.left[0]} ${head.left[1]} L ${head.right[0]} ${head.right[1]} Z`
     : null;
   return (
     <>
       {halo && <line x1={s.x1} y1={s.y1} x2={shaftEnd[0]} y2={shaftEnd[1]} {...halo} />}
       <line x1={s.x1} y1={s.y1} x2={shaftEnd[0]} y2={shaftEnd[1]} {...common} />
-      {headPath && <path d={headPath} fill={s.color} fillOpacity={s.alpha ?? 1} stroke="none" />}
+      {headPath && (
+        <path
+          d={headPath}
+          fill={s.color}
+          fillOpacity={s.alpha ?? 1}
+          stroke={s.color}
+          strokeOpacity={s.alpha ?? 1}
+          strokeWidth={s.width}
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
     </>
   );
 }

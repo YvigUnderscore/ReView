@@ -1,9 +1,11 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReviewComment } from '../../types/api';
 import Avatar from '../../components/Avatar';
 import { formatTime } from './reviewTypes';
+import { filmstripSlots, spriteSlotCss, type TimelineSpriteMeta } from './timelineSprite';
 
-/** Timeline vidéo : scrub à la souris + marqueurs de commentaires avec avatar de l'auteur. */
+/** Timeline vidéo : scrub à la souris + filmstrip de miniatures (sprite worker) +
+ * marqueurs de commentaires avec avatar de l'auteur. */
 export default function VideoTimeline({
   currentTime,
   duration,
@@ -13,6 +15,9 @@ export default function VideoTimeline({
   onSelectComment,
   trimRange,
   loop,
+  sprite,
+  onScrubStart,
+  onScrubEnd,
 }: {
   currentTime: number;
   duration: number;
@@ -24,11 +29,29 @@ export default function VideoTimeline({
   trimRange?: { start: number; end: number } | null;
   /** Points de boucle I/O (secondes, 14.B) — région surlignée entre in et out. */
   loop?: { in: number | null; out: number | null };
+  /** Sprite de miniatures (~1 vignette / 3 s) affiché en fond de timeline. */
+  sprite?: { url: string; meta: TimelineSpriteMeta } | null;
+  /** Début/fin du glissement — le lecteur bascule en basse qualité pendant le scrub. */
+  onScrubStart?: () => void;
+  onScrubEnd?: () => void;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
+  const [barWidth, setBarWidth] = useState(0);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
   const timedComments = comments.filter((c) => c.timestamp != null);
+
+  // Largeur de barre suivie pour dimensionner le filmstrip.
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setBarWidth(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const stripH = 40; // hauteur px du filmstrip (barre h-14 quand sprite présent)
+  const slots = sprite && duration > 0 ? filmstripSlots(barWidth - 8, stripH, duration, sprite.meta) : [];
 
   const seekFromEvent = useCallback(
     (e: { clientX: number }) => {
@@ -45,6 +68,7 @@ export default function VideoTimeline({
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     scrubbing.current = true;
+    onScrubStart?.();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     seekFromEvent(e);
   };
@@ -52,21 +76,39 @@ export default function VideoTimeline({
     if (scrubbing.current) seekFromEvent(e);
   };
   const onPointerUp = () => {
+    if (scrubbing.current) onScrubEnd?.();
     scrubbing.current = false;
   };
 
   return (
     <div
       ref={barRef}
-      className="relative h-9 shrink-0 cursor-pointer select-none rounded-md border border-border bg-card/60 px-1"
+      className={`relative ${sprite ? 'h-14' : 'h-9'} shrink-0 cursor-pointer select-none rounded-md border border-border bg-card/60 px-1`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       title="Cliquer ou glisser pour se déplacer"
     >
-      {/* Fond progress */}
+      {/* Fond progress (+ filmstrip de miniatures si le sprite existe) */}
       <div className="absolute inset-y-0 left-1 right-1 overflow-hidden rounded">
         <div className="h-full rounded bg-secondary/40" />
+        {sprite && slots.length > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-between opacity-70">
+            {slots.map((idx, i) => (
+              <div
+                key={i}
+                className="shrink-0"
+                style={{
+                  width: (sprite.meta.tileW / sprite.meta.tileH) * stripH,
+                  height: stripH,
+                  backgroundImage: `url(${sprite.url})`,
+                  backgroundRepeat: 'no-repeat',
+                  ...spriteSlotCss(idx, sprite.meta, stripH),
+                }}
+              />
+            ))}
+          </div>
+        )}
         <div
           className="absolute inset-y-0 left-0 rounded bg-primary/30 transition-none"
           style={{ width: `${progress * 100}%` }}

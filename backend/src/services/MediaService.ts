@@ -371,34 +371,53 @@ export async function getDetail(user: SessionUser, id: number) {
     trim?: { inFrame: number; outFrame: number };
     trimProxyKey?: string;
     hls?: { renditions: { height: number; width: number; videoBitrateK: number }[] };
+    timelineSprite?: {
+      key: string;
+      intervalSec: number;
+      count: number;
+      cols: number;
+      rows: number;
+      tileW: number;
+      tileH: number;
+    };
   };
   // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
-  const [url, thumbnailUrl, proxyUrl, glbUrl, splatMaskUrl, splatSubsetUrl, project, references] =
-    await Promise.all([
-      storage.getPresignedGetUrl(media.storageKey),
-      media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
-      proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
-      meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
-      meta.splatMaskKey ? storage.getPresignedGetUrl(meta.splatMaskKey) : Promise.resolve(null),
-      meta.splatSubsetKey ? storage.getPresignedGetUrl(meta.splatSubsetKey) : Promise.resolve(null),
-      prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
-      // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
-      // assertMediaManage d'ici : un import croisé créerait un cycle).
-      prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
-        Promise.all(
-          rows.map(async (r) => ({
-            id: r.id,
-            url: await storage.getPresignedGetUrl(r.storageKey),
-            x: r.x,
-            y: r.y,
-            width: r.width,
-            // Commentaire porteur : affichée seulement quand il est sélectionné (null = historique).
-            commentId: r.commentId,
-          })),
-        ),
+  const [
+    url,
+    thumbnailUrl,
+    proxyUrl,
+    glbUrl,
+    splatMaskUrl,
+    splatSubsetUrl,
+    timelineSpriteUrl,
+    project,
+    references,
+  ] = await Promise.all([
+    storage.getPresignedGetUrl(media.storageKey),
+    media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
+    proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
+    meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
+    meta.splatMaskKey ? storage.getPresignedGetUrl(meta.splatMaskKey) : Promise.resolve(null),
+    meta.splatSubsetKey ? storage.getPresignedGetUrl(meta.splatSubsetKey) : Promise.resolve(null),
+    meta.timelineSprite?.key ? storage.getPresignedGetUrl(meta.timelineSprite.key) : Promise.resolve(null),
+    prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
+    // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
+    // assertMediaManage d'ici : un import croisé créerait un cycle).
+    prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
+      Promise.all(
+        rows.map(async (r) => ({
+          id: r.id,
+          url: await storage.getPresignedGetUrl(r.storageKey),
+          x: r.x,
+          y: r.y,
+          width: r.width,
+          // Commentaire porteur : affichée seulement quand il est sélectionné (null = historique).
+          commentId: r.commentId,
+        })),
       ),
-    ]);
+    ),
+  ]);
   return {
     media: serializeMedia(media),
     url,
@@ -421,6 +440,18 @@ export async function getDetail(user: SessionUser, id: number) {
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),
     // HLS adaptatif (Phase 23) : présent → master servi via /api/media/:id/hls/master.m3u8.
     hls: meta.hls ?? null,
+    // Sprite de miniatures de la timeline (vignette ~toutes les 3 s, un seul JPEG).
+    timelineSprite: meta.timelineSprite
+      ? {
+          intervalSec: meta.timelineSprite.intervalSec,
+          count: meta.timelineSprite.count,
+          cols: meta.timelineSprite.cols,
+          rows: meta.timelineSprite.rows,
+          tileW: meta.timelineSprite.tileW,
+          tileH: meta.timelineSprite.tileH,
+        }
+      : null,
+    timelineSpriteUrl,
     // Images de référence review 2D (Phase 24, multi-items) : persistées & partagées.
     references,
   };

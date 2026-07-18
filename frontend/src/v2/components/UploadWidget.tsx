@@ -1,6 +1,30 @@
-import { useUploadStore } from '../../stores/useUploadStore';
+import { CheckCircle2, Loader2 } from 'lucide-react';
+import { useUploadStore, type UploadItem } from '../../stores/useUploadStore';
 
-/** Widget d'upload non-bloquant (bas-droite). Lit le store Zustand global. */
+/** Libellé d'état lisible — le traitement serveur dépend du type de média. */
+function statusLabel(u: UploadItem): string {
+  switch (u.status) {
+    case 'pending':
+      return 'En attente…';
+    case 'uploading':
+      return `Envoi ${u.progress}%`;
+    case 'finalizing':
+      return 'Validation…';
+    case 'processing':
+      return u.kind === 'VIDEO'
+        ? 'Transcodage (proxy + HLS)…'
+        : u.kind === 'MODEL_3D'
+          ? 'Conversion 3D → GLB…'
+          : 'Traitement…';
+    case 'done':
+      return 'Terminé';
+    case 'error':
+      return 'Échec';
+  }
+}
+
+/** Widget d'upload non-bloquant (bas-droite). Lit le store Zustand global — l'item passe
+ * automatiquement en « Transcodage… » après l'envoi d'une vidéo, jusqu'à READY. */
 export default function UploadWidget() {
   const uploads = useUploadStore((s) => s.uploads);
   const clear = useUploadStore((s) => s.clearCompleted);
@@ -14,18 +38,29 @@ export default function UploadWidget() {
           Nettoyer
         </button>
       </div>
-      <ul className="max-h-64 overflow-auto p-2 space-y-2">
+      <ul className="max-h-64 space-y-2 overflow-auto p-2">
         {uploads.map((u) => (
           <li key={u.id} className="text-xs">
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="truncate">{u.filename}</span>
-              <span className="text-muted-foreground">{u.status}</span>
+              <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
+                {(u.status === 'processing' || u.status === 'finalizing') && (
+                  <Loader2 size={11} className="animate-spin text-primary" />
+                )}
+                {u.status === 'done' && <CheckCircle2 size={11} className="text-success" />}
+                {statusLabel(u)}
+              </span>
             </div>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-muted">
-              <div
-                className={`h-full ${u.status === 'error' ? 'bg-destructive' : 'bg-primary'}`}
-                style={{ width: `${u.progress}%` }}
-              />
+              {u.status === 'processing' ? (
+                // Traitement serveur : durée inconnue → barre indéterminée animée.
+                <div className="h-full w-1/3 animate-pulse rounded bg-primary/70" />
+              ) : (
+                <div
+                  className={`h-full ${u.status === 'error' ? 'bg-destructive' : 'bg-primary'}`}
+                  style={{ width: `${u.progress}%` }}
+                />
+              )}
             </div>
             {u.error && <p className="mt-1 text-destructive">{u.error}</p>}
           </li>

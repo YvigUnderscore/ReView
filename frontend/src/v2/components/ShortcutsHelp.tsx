@@ -23,7 +23,16 @@ const GROUPS: { title: string; shortcuts: { keys: string[]; label: string }[] }[
       { keys: ['J'], label: 'Lecture arrière (répéter : ×2, ×4, ×8)' },
       { keys: ['K'], label: 'Pause' },
       { keys: ['L'], label: 'Lecture avant (répéter : ×2, ×4, ×8)' },
+      { keys: ['I', 'O'], label: 'Point de boucle in / out (Maj+I/O : effacer)' },
       { keys: ['M'], label: 'Commenter à la frame courante' },
+    ],
+  },
+  {
+    title: 'Review (tous types)',
+    shortcuts: [
+      { keys: ['Échap'], label: "Masquer l'annotation affichée" },
+      { keys: ['Ctrl', 'V'], label: 'Coller une image de référence (review image)' },
+      { keys: ['Clic droit'], label: 'Menu contextuel (image/vidéo) — navigation en 3D/splat' },
     ],
   },
   {

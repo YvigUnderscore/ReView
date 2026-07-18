@@ -1,5 +1,7 @@
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { useState } from 'react';
+import { Keyboard, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import Avatar from '../../components/Avatar';
+import ShortcutsHelp from '../../components/ShortcutsHelp';
 import type { MediaResp } from './reviewTypes';
 import VersionNavigator from './VersionNavigator';
 import CompareSelect from './CompareSelect';
@@ -26,6 +28,7 @@ export default function ReviewHeader({
 }) {
   const published = data.media.published;
   const viewers = useReviewPresence(data.media.id);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   return (
     <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
@@ -69,6 +72,13 @@ export default function ReviewHeader({
           </button>
         )}
         <button
+          onClick={() => setShortcutsOpen(true)}
+          title="Raccourcis clavier (?)"
+          className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <Keyboard size={16} />
+        </button>
+        <button
           onClick={onToggleComments}
           title={commentsOpen ? 'Masquer les commentaires' : 'Afficher les commentaires'}
           className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -76,6 +86,7 @@ export default function ReviewHeader({
           {commentsOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
         </button>
       </div>
+      <ShortcutsHelp open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }

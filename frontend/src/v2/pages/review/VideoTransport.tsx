@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Loader2,
   Maximize,
   Pause,
   Play,
@@ -54,7 +55,14 @@ export default function VideoTransport({
   loopActive: boolean;
   onClearLoop: () => void;
   /** Qualité de lecture HLS (Phase 23) — `active` faux si le média n'a pas de renditions. */
-  quality?: { active: boolean; levels: HlsLevel[]; mode: number; setLevel: (i: number) => void };
+  quality?: {
+    active: boolean;
+    levels: HlsLevel[];
+    mode: number;
+    setLevel: (i: number) => void;
+    /** Changement de qualité en cours (spinner à côté du sélecteur). */
+    switching?: boolean;
+  };
 }) {
   const btn =
     'flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground';
@@ -112,7 +120,11 @@ export default function VideoTransport({
               : 'Pas de renditions HLS pour ce média — lecture du proxy original'
           }
         >
-          <SlidersHorizontal size={13} />
+          {quality?.switching ? (
+            <Loader2 size={13} className="animate-spin text-primary" />
+          ) : (
+            <SlidersHorizontal size={13} />
+          )}
           <select
             value={quality?.active ? quality.mode : 0}
             disabled={!quality?.active}

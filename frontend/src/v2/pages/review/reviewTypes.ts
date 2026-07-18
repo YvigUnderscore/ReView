@@ -178,6 +178,16 @@ export interface MediaResp {
   trimProxyReady: boolean;
   /** HLS adaptatif (Phase 23) : renditions disponibles → lecture via le proxy `/hls/master.m3u8`. */
   hls: { renditions: { height: number; width: number; videoBitrateK: number }[] } | null;
+  /** Sprite de miniatures de la timeline (~1 vignette / 3 s, un seul JPEG tuilé). */
+  timelineSprite: {
+    intervalSec: number;
+    count: number;
+    cols: number;
+    rows: number;
+    tileW: number;
+    tileH: number;
+  } | null;
+  timelineSpriteUrl: string | null;
   /** Images de référence review 2D (Phase 24, multi-items) : persistées & partagées,
    *  épinglées au canvas (coordonnées en fractions de l'image de base). */
   references: ReviewReferenceItem[];

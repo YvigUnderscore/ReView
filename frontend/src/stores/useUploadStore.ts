@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { uploadMedia, inferMediaKind } from '../lib/uploadClient';
+import { api } from '../lib/apiClient';
 import type { MediaKind } from '../v2/types/api';
 
 /**
@@ -8,9 +9,13 @@ import type { MediaKind } from '../v2/types/api';
  * Permet la navigation libre pendant un upload : l'état vit ici, hors de l'arbre de
  * pages, et survit aux changements de route. Le flux délègue à `uploadClient`
  * (URL présignée → PUT direct MinIO → finalize), donc rien ne bloque le thread UI.
+ *
+ * Après finalize, si le média part en traitement (transcodage vidéo, conversion 3D…),
+ * l'item passe en `processing` et le store **suit le statut** (poll léger) jusqu'à
+ * READY/FAILED — la notification d'upload devient une notification de transcodage.
  */
 
-export type UploadStatus = 'pending' | 'uploading' | 'finalizing' | 'done' | 'error';
+export type UploadStatus = 'pending' | 'uploading' | 'finalizing' | 'processing' | 'done' | 'error';
 
 export interface UploadItem {
   id: string;
@@ -22,6 +27,9 @@ export interface UploadItem {
   mediaObjectId?: number;
   error?: string;
 }
+
+const POLL_MS = 3000;
+const POLL_MAX_MS = 20 * 60_000; // au-delà on abandonne le suivi (le worker a un souci)
 
 interface UploadState {
   uploads: UploadItem[];
@@ -58,7 +66,13 @@ export const useUploadStore = create<UploadState>((set, get) => ({
           onProgress: (pct) =>
             updateUpload(id, { progress: pct, status: pct >= 100 ? 'finalizing' : 'uploading' }),
         });
-        updateUpload(id, { status: 'done', progress: 100, mediaObjectId: res.mediaObjectId });
+        if (res.status === 'PROCESSING') {
+          // Traitement serveur (transcodage/conversion) : on suit jusqu'à READY.
+          updateUpload(id, { status: 'processing', progress: 100, mediaObjectId: res.mediaObjectId });
+          followProcessing(id, res.mediaObjectId, get);
+        } else {
+          updateUpload(id, { status: 'done', progress: 100, mediaObjectId: res.mediaObjectId });
+        }
       } catch (err) {
         updateUpload(id, { status: 'error', error: err instanceof Error ? err.message : 'Échec' });
       }
@@ -73,6 +87,33 @@ export const useUploadStore = create<UploadState>((set, get) => ({
   clearCompleted: () => set((s) => ({ uploads: s.uploads.filter((u) => u.status !== 'done') })),
   activeCount: () =>
     get().uploads.filter(
-      (u) => u.status === 'uploading' || u.status === 'finalizing' || u.status === 'pending',
+      (u) =>
+        u.status === 'uploading' ||
+        u.status === 'finalizing' ||
+        u.status === 'processing' ||
+        u.status === 'pending',
     ).length,
 }));
+
+/** Poll léger du statut média jusqu'à READY/FAILED (item retiré du store = arrêt). */
+function followProcessing(id: string, mediaObjectId: number, get: () => UploadState) {
+  const startedAt = Date.now();
+  const tick = async () => {
+    const item = get().uploads.find((u) => u.id === id);
+    if (!item || item.status !== 'processing') return; // retiré ou terminé entre-temps
+    if (Date.now() - startedAt > POLL_MAX_MS) {
+      get().updateUpload(id, { status: 'error', error: 'Traitement trop long — voir la review' });
+      return;
+    }
+    try {
+      const { media } = await api.get<{ media: { status: string } }>(`/api/media/${mediaObjectId}`);
+      if (media.status === 'READY') return get().updateUpload(id, { status: 'done' });
+      if (media.status === 'FAILED')
+        return get().updateUpload(id, { status: 'error', error: 'Traitement échoué (worker)' });
+    } catch {
+      // Erreur réseau transitoire : on retentera au prochain tick.
+    }
+    window.setTimeout(() => void tick(), POLL_MS);
+  };
+  window.setTimeout(() => void tick(), POLL_MS);
+}

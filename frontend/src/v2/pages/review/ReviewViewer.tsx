@@ -214,6 +214,11 @@ export default function ReviewViewer({
                     ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
                     : null
                 }
+                timelineSprite={
+                  data.timelineSprite && data.timelineSpriteUrl
+                    ? { url: data.timelineSpriteUrl, meta: data.timelineSprite }
+                    : null
+                }
               />
               {data && canEdit && (
                 <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />

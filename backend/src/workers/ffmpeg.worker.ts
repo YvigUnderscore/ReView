@@ -15,6 +15,7 @@ import { MediaStatus } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { getTranscodeConfig, selectRenditions, type TranscodeConfig } from '../lib/transcodeConfig';
 import { buildMasterPlaylist, hlsContentType, renditionName, type HlsRendition } from '../lib/hls';
+import { planTimelineSprite, type TimelineSpritePlan } from '../lib/timelineSprite';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 
 /**
@@ -149,6 +150,25 @@ function makeThumbnail(input: string, output: string, seekSec?: number): Promise
     if (seekSec !== undefined && seekSec > 0) cmd.seekInput(seekSec);
     cmd
       .outputOptions(['-vframes 1', '-vf scale=640:-2'])
+      .output(output)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .run();
+  });
+}
+
+/** Tuile les vignettes de timeline (1 frame / intervalle) dans un unique JPEG léger. */
+function makeTimelineSprite(input: string, output: string, plan: TimelineSpritePlan): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(input)
+      .outputOptions([
+        '-vf',
+        `fps=1/${plan.intervalSec},scale=${plan.tileW}:${plan.tileH},tile=${plan.cols}x${plan.rows}`,
+        '-frames:v',
+        '1',
+        '-q:v',
+        '7',
+      ])
       .output(output)
       .on('end', () => resolve())
       .on('error', reject)
@@ -313,6 +333,25 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       if (tcfg.enabled && srcHeight > 0) {
         const renditions = await buildHls(src, dir, mediaId, tcfg, srcWidth, srcHeight);
         metadata.hls = { renditions };
+      }
+
+      // Sprite de timeline (vignette ~toutes les 3 s, un seul JPEG) — best effort :
+      // un échec de sprite ne condamne pas le transcodage.
+      const plan = planTimelineSprite(
+        typeof metadata.duration === 'number' ? metadata.duration : undefined,
+        srcWidth,
+        srcHeight,
+      );
+      if (plan) {
+        try {
+          const spritePath = join(dir, 'timeline-sprite.jpg');
+          await makeTimelineSprite(src, spritePath, plan);
+          const spriteKey = `derived/${mediaId}/timeline-sprite.jpg`;
+          await storage.uploadFile(spriteKey, spritePath, 'image/jpeg');
+          metadata.timelineSprite = { ...plan, key: spriteKey };
+        } catch (err) {
+          logger.warn({ err }, `[ffmpeg.worker] sprite timeline échoué media=${mediaId}`);
+        }
       }
 
       await prisma.mediaObject.update({

@@ -11,7 +11,9 @@ import type { useWipe } from './useWipe';
  */
 export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe> }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef<'move' | 'rotate' | null>(null);
+  // Rotation : le pivot est FIGÉ au début du drag (le centre courant de la barre) — sans
+  // ça, le centre recalculé bouge avec l'angle et la rotation « part dans tous les sens ».
+  const dragging = useRef<{ mode: 'move' | 'rotate'; pivot: [number, number] } | null>(null);
   const { pos, setPos, angle, setAngle, size, setSize } = wipe;
 
   useEffect(() => {
@@ -33,18 +35,26 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
   const rotY = cy - Math.cos(a) * rotDist;
 
   const onPointerMove = (e: React.PointerEvent) => {
-    const mode = dragging.current;
+    const d = dragging.current;
     const rect = rootRef.current?.getBoundingClientRect();
-    if (!mode || !rect) return;
+    if (!d || !rect) return;
     const x = e.clientX - rect.left,
       y = e.clientY - rect.top;
-    if (mode === 'move') setPos(wipePosFromPoint(x, y, angle, rect.width, rect.height));
-    else setAngle(wipeAngleFromPoint(x, y, cx, cy));
+    if (d.mode === 'move') {
+      setPos(wipePosFromPoint(x, y, angle, rect.width, rect.height));
+      return;
+    }
+    // Rotation autour du pivot figé : nouvel angle depuis le pivot, puis `pos` recalculé
+    // pour que la barre continue de passer PAR le pivot (elle tourne sur place).
+    const [pvx, pvy] = d.pivot;
+    const nextAngle = wipeAngleFromPoint(x, y, pvx, pvy);
+    setAngle(nextAngle);
+    setPos(wipePosFromPoint(pvx, pvy, nextAngle, rect.width, rect.height));
   };
   const grab = (mode: 'move' | 'rotate') => (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dragging.current = mode;
+    dragging.current = { mode, pivot: [cx, cy] };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const release = () => (dragging.current = null);

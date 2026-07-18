@@ -1,10 +1,44 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { ReviewComment } from '../../types/api';
 import { stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import { useHlsPlayer } from './useHlsPlayer';
+import type { TimelineSpriteMeta } from './timelineSprite';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
+
+/**
+ * Buffering du lecteur : vrai quand la vidéo attend des données (seek/switch qualité),
+ * avec un léger délai anti-scintillement — pilote le spinner discret sur le viewer.
+ */
+function useVideoBuffering(videoRef: RefObject<HTMLVideoElement | null>, src: string) {
+  const [buffering, setBuffering] = useState(false);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    let timer: number | undefined;
+    const start = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setBuffering(true), 180);
+    };
+    const stop = () => {
+      window.clearTimeout(timer);
+      setBuffering(false);
+    };
+    const startEvents = ['waiting', 'seeking', 'stalled'] as const;
+    const stopEvents = ['playing', 'canplay', 'seeked'] as const;
+    startEvents.forEach((e) => v.addEventListener(e, start));
+    stopEvents.forEach((e) => v.addEventListener(e, stop));
+    return () => {
+      window.clearTimeout(timer);
+      startEvents.forEach((e) => v.removeEventListener(e, start));
+      stopEvents.forEach((e) => v.removeEventListener(e, stop));
+    };
+  }, [videoRef, src]);
+  return buffering;
+}
 
 /**
  * Pane vidéo de la review (14.B) : lecteur **custom** (plus de `controls` natif) + overlay
@@ -28,6 +62,7 @@ export default function VideoPane({
   startFrame,
   trimRange,
   hlsUrl,
+  timelineSprite,
 }: {
   src: string;
   /** Master HLS servi par le proxy auth (Phase 23) — prioritaire sur `src` (MP4) si MSE dispo. */
@@ -49,6 +84,8 @@ export default function VideoPane({
   startFrame: number;
   /** Fenêtre de trim (secondes) — zones hors coupe grisées sur la timeline (10.G-V10). */
   trimRange?: { start: number; end: number } | null;
+  /** Sprite de miniatures de la timeline (filmstrip ~1 vignette / 3 s). */
+  timelineSprite?: { url: string; meta: TimelineSpriteMeta } | null;
 }) {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -59,6 +96,14 @@ export default function VideoPane({
   const [loopOut, setLoopOut] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hls = useHlsPlayer(videoRef, hlsUrl ?? null);
+  const buffering = useVideoBuffering(videoRef, src);
+
+  // Feedback au changement de qualité : toast + spinner (hls.switching) le temps du switch.
+  const changeQuality = (idx: number) => {
+    hls.setLevel(idx);
+    const label = idx === -1 ? 'Auto' : `${hls.levels[idx]?.height ?? '?'}p`;
+    toast.success(`Qualité de lecture : ${label}`);
+  };
   // Boîte d'affichage : la vidéo remplit tout l'espace disponible (fit « contain » calculé),
   // même en basse résolution — l'overlay d'annotation partage exactement la même boîte.
   const [aspect, setAspect] = useState<number | null>(null);
@@ -178,6 +223,13 @@ export default function VideoPane({
           />
           {overlay}
         </div>
+        {/* Spinner discret : buffering (seek/scrub) ou changement de qualité en cours. */}
+        {(buffering || hls.switching) && (
+          <div className="pointer-events-none absolute bottom-3 left-3 z-30 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur">
+            <Loader2 size={13} className="animate-spin" />
+            {hls.switching ? 'Changement de qualité…' : 'Chargement…'}
+          </div>
+        )}
         {compareOverlay}
       </div>
 
@@ -192,6 +244,9 @@ export default function VideoPane({
           onSelectComment={onSelectComment}
           trimRange={trimRange}
           loop={{ in: loopIn, out: loopOut }}
+          sprite={timelineSprite}
+          onScrubStart={hls.beginScrub}
+          onScrubEnd={hls.endScrub}
         />
       )}
 
@@ -216,7 +271,13 @@ export default function VideoPane({
         onFullscreen={fullscreen}
         loopActive={loopIn != null || loopOut != null}
         onClearLoop={clearLoop}
-        quality={{ active: hls.active, levels: hls.levels, mode: hls.mode, setLevel: hls.setLevel }}
+        quality={{
+          active: hls.active,
+          levels: hls.levels,
+          mode: hls.mode,
+          setLevel: changeQuality,
+          switching: hls.switching,
+        }}
       />
     </>
   );
