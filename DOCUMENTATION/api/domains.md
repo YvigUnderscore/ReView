@@ -20,7 +20,8 @@ detail lives in the interactive reference at `/api/docs`.
 | `/api/media/*/video` | Video-specific: HLS manifests, trim |
 | `/api/media/*/splat` | Splat edits, masks, presentation |
 | `/api/media-reference` | Reference images |
-| `/api/comments` | Comments & annotations |
+| `/api/comments` | Comments & annotations (threads, resolution, mentions, reactions, voice-note attachments, comment→task) |
+| `/api/watch` | Notification subscriptions (watch/unwatch shot, asset or version) |
 | `/api/boards` | Excalidraw boards (project/asset) |
 | `/api/documents` | Rich-text documents (Documents page) |
 | `/api/dashboard` | Home dashboard aggregates |

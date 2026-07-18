@@ -24,7 +24,10 @@ From a task you can:
 - browse its versions and open any media in review;
 - upload a new version;
 - change status/assignee;
-- jump to the parent shot/asset and project (breadcrumb).
+- jump to the parent shot/asset and project (breadcrumb);
+- when the task was created from a review comment (right-click a comment →
+  *Créer une tâche kanban*), a **Commentaire d'origine** chip opens the review
+  at the exact frame/annotation of that comment.
 
 ## Related pages
 
