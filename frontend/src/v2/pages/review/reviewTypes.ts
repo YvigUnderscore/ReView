@@ -267,6 +267,38 @@ export function stepVideoFrame(video: HTMLVideoElement | null, fps: number, delt
   video.currentTime = Math.max(0, video.currentTime + delta / fps);
 }
 
+/**
+ * Coalesceur de seeks pour le scrub : n'écrit `currentTime` que lorsque le seek précédent
+ * est terminé (`seeked`), en ne retenant que la **dernière** position demandée. Sans lui,
+ * le scrub inonde le lecteur de seeks (chacun avorte le précédent) et hls.js finit dans un
+ * état incohérent après le lâcher — un clic simple (seek unique) ne bugue pas, lui.
+ */
+export function createSeekCoalescer(video: HTMLVideoElement, beforeSeek?: () => void) {
+  let pending: number | null = null;
+  const apply = (t: number) => {
+    beforeSeek?.();
+    video.currentTime = t;
+  };
+  const onSeeked = () => {
+    if (pending != null) {
+      const t = pending;
+      pending = null;
+      apply(t);
+    }
+  };
+  video.addEventListener('seeked', onSeeked);
+  return {
+    seek(t: number) {
+      if (video.seeking) pending = t;
+      else apply(t);
+    },
+    dispose() {
+      pending = null;
+      video.removeEventListener('seeked', onSeeked);
+    },
+  };
+}
+
 // Lancement de lecture en attente de données (un seul à la fois par élément vidéo).
 const pendingPlay = new WeakMap<HTMLVideoElement, () => void>();
 

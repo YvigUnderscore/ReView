@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ReviewComment } from '../../types/api';
-import { cancelPendingPlay, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
+import { cancelPendingPlay, createSeekCoalescer, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import { useHlsPlayer } from './useHlsPlayer';
 import type { TimelineSpriteMeta } from './timelineSprite';
@@ -153,11 +153,29 @@ export default function VideoPane({
     }
   }, [videoRef, volume, muted]);
 
-  const seekTo = (t: number) => {
+  // Coalesceur de seeks : le scrub émet des dizaines de seeks/s ; sans coalescing chaque
+  // `currentTime =` avorte le précédent et hls.js finit dans un état incohérent après le
+  // lâcher (un clic simple = un seul seek ne bugue pas). On n'applique la position suivante
+  // qu'une fois le seek courant terminé, en ne gardant que la dernière demandée.
+  const seekCoalescerRef = useRef<ReturnType<typeof createSeekCoalescer> | null>(null);
+  useEffect(() => {
     const v = videoRef.current;
-    if (v) {
+    if (!v) return;
+    const c = createSeekCoalescer(v, () => {
       programmaticSeekRef.current = true;
-      v.currentTime = t;
+    });
+    seekCoalescerRef.current = c;
+    return () => {
+      c.dispose();
+      seekCoalescerRef.current = null;
+    };
+  }, [videoRef, programmaticSeekRef, src]);
+
+  const seekTo = (t: number) => {
+    if (seekCoalescerRef.current) seekCoalescerRef.current.seek(t);
+    else if (videoRef.current) {
+      programmaticSeekRef.current = true;
+      videoRef.current.currentTime = t;
     }
   };
 

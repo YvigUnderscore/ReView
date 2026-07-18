@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { tcFromFrame, formatTime, findCompareMedia, safePlay, cancelPendingPlay } from './reviewTypes';
+import {
+  tcFromFrame,
+  formatTime,
+  findCompareMedia,
+  safePlay,
+  cancelPendingPlay,
+  createSeekCoalescer,
+} from './reviewTypes';
 
 describe('tcFromFrame', () => {
   it('convertit un numéro de frame en timecode HH:MM:SS:FF', () => {
@@ -67,6 +74,55 @@ describe('safePlay — pas de son sur image figée', () => {
     expect(raw.removeEventListener).toHaveBeenCalledWith('canplay', expect.any(Function));
     listeners.get('canplay')?.(); // même si l'événement arrive, plus de lecture
     expect(raw.play).not.toHaveBeenCalled();
+  });
+});
+
+describe('createSeekCoalescer — scrub sans inonder le lecteur', () => {
+  /** Stub vidéo : `seeking` piloté, `currentTime` observé, `seeked` déclenchable. */
+  function fakeVideo() {
+    const listeners = new Map<string, () => void>();
+    const v = {
+      seeking: false,
+      currentTime: 0,
+      addEventListener: vi.fn((ev: string, fn: () => void) => listeners.set(ev, fn)),
+      removeEventListener: vi.fn((ev: string) => listeners.delete(ev)),
+    };
+    return { v: v as unknown as HTMLVideoElement, raw: v, fireSeeked: () => listeners.get('seeked')?.() };
+  }
+
+  it('applique immédiatement quand aucun seek n’est en cours, avec beforeSeek', () => {
+    const { v, raw } = fakeVideo();
+    const before = vi.fn();
+    const c = createSeekCoalescer(v, before);
+    c.seek(3);
+    expect(raw.currentTime).toBe(3);
+    expect(before).toHaveBeenCalledOnce();
+  });
+
+  it('coalesce : ne garde que la DERNIÈRE position pendant un seek en cours', () => {
+    const { v, raw, fireSeeked } = fakeVideo();
+    const c = createSeekCoalescer(v);
+    c.seek(3); // appliqué
+    raw.seeking = true;
+    c.seek(4); // en attente
+    c.seek(5); // remplace l'attente
+    c.seek(6); // remplace encore
+    expect(raw.currentTime).toBe(3); // rien de neuf tant que le seek n'est pas fini
+    raw.seeking = false;
+    fireSeeked();
+    expect(raw.currentTime).toBe(6); // seule la dernière position est appliquée
+  });
+
+  it('dispose retire le listener et oublie l’attente', () => {
+    const { v, raw, fireSeeked } = fakeVideo();
+    const c = createSeekCoalescer(v);
+    c.seek(3);
+    raw.seeking = true;
+    c.seek(9);
+    c.dispose();
+    fireSeeked();
+    expect(raw.currentTime).toBe(3); // l'attente est oubliée
+    expect(raw.removeEventListener).toHaveBeenCalledWith('seeked', expect.any(Function));
   });
 });
 
