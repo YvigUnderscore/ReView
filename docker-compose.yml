@@ -108,7 +108,10 @@ services:
     restart: always
 
   frontend:
-    build: ./frontend
+    # Contexte racine : le build embarque DOCUMENTATION/ (page /docs in-app).
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     ports:
       - "${PORT:-3429}:80"
     depends_on:

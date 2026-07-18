@@ -11,6 +11,7 @@ storage/
 # Build artifacts
 backend/dist/
 frontend/dist/
+frontend/public/docs/
 *.tsbuildinfo
 
 # Logs & couverture de tests
@@ -29,7 +30,7 @@ CLAUDE.md
 AGENTS.md
 
 # Docs internes (audit, rapports — non nécessaires à l'app)
-docs/
+/docs/
 
 # Playwright (10.F3)
 frontend/test-results/

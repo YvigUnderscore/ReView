@@ -137,4 +137,14 @@
   .prose-doc ol { @apply my-2 list-decimal pl-6; }
   .prose-doc a { @apply text-primary underline; }
   .prose-doc blockquote { @apply my-2 border-l-2 border-border pl-3 text-muted-foreground; }
+  /* Extensions markdown (page /docs — documentation produit) */
+  .prose-doc h1 { @apply mb-3 mt-1 text-xl font-bold; }
+  .prose-doc code { @apply rounded bg-secondary px-1 py-0.5 font-mono text-[0.85em]; }
+  .prose-doc pre { @apply my-3 overflow-x-auto rounded-md border border-border bg-secondary p-3; }
+  .prose-doc pre code { @apply bg-transparent p-0; }
+  .prose-doc table { @apply my-3 w-full border-collapse text-left; }
+  .prose-doc th { @apply border-b border-border px-2 py-1.5 font-semibold; }
+  .prose-doc td { @apply border-b border-border/50 px-2 py-1.5 align-top; }
+  .prose-doc hr { @apply my-4 border-border; }
+  .prose-doc img { @apply my-3 max-w-full rounded-md border border-border; }
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FolderKanban, Layers, Film, Box, ListTodo, KanbanSquare, PenTool } from 'lucide-react';
+import { FolderKanban, Layers, Film, Box, ListTodo, KanbanSquare, PenTool, BookText } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
+import { projectPath } from '../lib/slug';
 import { useProjectContext } from '../stores/useProjectContext';
 import type { AssetRef, ProjectRef, SequenceRef, ShotRef, Task } from '../types/api';
 import {
@@ -113,13 +114,16 @@ export default function CommandPalette({
                   </CommandItem>
                 </>
               )}
+              <CommandItem value="nav-docs" onSelect={() => go('/docs')}>
+                <BookText size={15} className="text-muted-foreground" /> Documentation
+              </CommandItem>
             </CommandGroup>
           )}
 
           {results.projects.length > 0 && (
             <CommandGroup heading="Projets">
               {results.projects.map((p) => (
-                <CommandItem key={p.id} value={`project-${p.id}`} onSelect={() => go(`/projects/${p.id}`)}>
+                <CommandItem key={p.id} value={`project-${p.id}`} onSelect={() => go(projectPath(p))}>
                   <FolderKanban size={15} className="text-muted-foreground" />
                   <span className="truncate">{p.name}</span>
                 </CommandItem>

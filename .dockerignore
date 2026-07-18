@@ -1,0 +1,16 @@
+# Contexte docker racine (build frontend : accès à frontend/ + DOCUMENTATION/).
+# Tout le reste est exclu pour garder le contexte minimal.
+.git
+**/node_modules
+**/dist
+**/coverage
+*.log
+backend/
+storage/
+dev_data/
+logs/
+docs/
+plans/
+tmp/
+assets_for_testing/
+frontend/public/docs/

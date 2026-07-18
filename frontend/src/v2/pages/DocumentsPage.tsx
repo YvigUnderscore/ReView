@@ -9,10 +9,10 @@ import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
 import RichTextEditor from '../components/RichTextEditor';
 import ConfirmDialog from '../components/ConfirmDialog';
-import CreateDocModal from './documentation/CreateDocModal';
-import { SCOPE_LABEL, type Doc } from './documentation/docTypes';
+import CreateDocModal from './documents/CreateDocModal';
+import { SCOPE_LABEL, type Doc } from './documents/docTypes';
 
-export default function DocumentationPage() {
+export default function DocumentsPage() {
   const role = useAuth((s) => s.user?.role);
   const canEdit = role !== 'CLIENT';
   const qc = useQueryClient();
@@ -74,7 +74,7 @@ export default function DocumentationPage() {
   return (
     <Shell>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Documentation</h1>
+        <h1 className="text-xl font-semibold">Documents</h1>
         <div className="flex items-center gap-2">
           <select
             value={filterProject}
@@ -84,7 +84,7 @@ export default function DocumentationPage() {
             }}
             className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
           >
-            <option value="">Documentation globale</option>
+            <option value="">Documents globaux</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}

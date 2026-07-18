@@ -1,31 +1,26 @@
-# Stage 1: Build the React application
+# Build du frontend. Contexte docker = racine du repo (voir docker-compose.yml) :
+# le script prebuild (scripts/build-docs.mjs) copie DOCUMENTATION/ dans public/docs.
 # Node 22 requis par Vite 7 (Node 18 n'est plus supporté).
 FROM node:22-alpine AS build
 
-WORKDIR /app
+WORKDIR /app/frontend
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
-
-# Install dependencies
+# Dépendances (couche cache)
+COPY frontend/package*.json ./
 RUN npm install
 
-# Copy the rest of the application
-COPY . .
+# Sources frontend + documentation produit (embarquée sur /docs)
+COPY frontend/ ./
+COPY DOCUMENTATION/ ../DOCUMENTATION/
 
-# Build the application
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
 
-# Copy the build output to Nginx's html directory
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/frontend/dist /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port 80 (internal to container)
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]

@@ -11,13 +11,14 @@ import {
   ChevronRight,
   Star,
   BookText,
+  FileText,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useProjectsQuery } from '../lib/queries';
-import { projectPath } from '../lib/slug';
+import { projectPath, parseIdParam } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
 import { useProjectContext } from '../stores/useProjectContext';
@@ -95,7 +96,8 @@ export default function Shell({
   // ou, sur les pages d'entité (/tasks, /assets, /review), depuis le contexte
   // résolu par le breadcrumb (useProjectContext).
   const ctxProjectId = useProjectContext((s) => s.projectId);
-  const routeProjectId = pathname.startsWith('/projects/') ? Number(params.id) : null;
+  const routeId = parseIdParam(params.id);
+  const routeProjectId = pathname.startsWith('/projects/') && !Number.isNaN(routeId) ? routeId : null;
   const isEntityPage = ENTITY_PAGE_RE.test(pathname);
   const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
   const isProjectsRoot = pathname.startsWith('/projects');
@@ -151,7 +153,7 @@ export default function Shell({
                   return (
                     <div key={p.id}>
                       <Link
-                        to={`/projects/${p.id}`}
+                        to={projectPath(p)}
                         className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors ${
                           isCurrent ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
@@ -212,6 +214,12 @@ export default function Shell({
             <SidebarRecents />
 
             <div className="pt-3">
+              <SideLink
+                to="/documents"
+                icon={FileText}
+                label="Documents"
+                active={pathname.startsWith('/documents')}
+              />
               <SideLink
                 to="/docs"
                 icon={BookText}

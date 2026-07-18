@@ -4,7 +4,9 @@
   "version": "1.0.2",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/build-docs.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/build-docs.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"*.config.ts\"",
@@ -31,6 +33,7 @@
     "framer-motion": "^12.24.10",
     "hls.js": "^1.6.16",
     "lucide-react": "^0.561.0",
+    "marked": "^18.0.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.10.1",
@@ -64,5 +67,9 @@
     "typescript-eslint": "^8.62.1",
     "vite": "^7.3.2",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "lodash-es": "^4.18.1",
+    "nanoid@<3.3.8": "3.3.16"
   }
 }

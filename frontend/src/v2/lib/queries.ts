@@ -16,7 +16,7 @@ interface Page<T> {
   pageSize: number;
 }
 
-/** Liste des projets accessibles — partagée Shell / ProjectsPage / DocumentationPage. */
+/** Liste des projets accessibles — partagée Shell / ProjectsPage / DocumentsPage. */
 export function useProjectsQuery() {
   return useQuery({
     queryKey: qk.projects,

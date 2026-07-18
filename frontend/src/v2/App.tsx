@@ -20,7 +20,8 @@ import KanbanPage from './pages/KanbanPage';
 import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
 import ProfilePage from './pages/ProfilePage';
-import DocumentationPage from './pages/DocumentationPage';
+import DocumentsPage from './pages/DocumentsPage';
+import DocsPage from './pages/DocsPage';
 
 // Board (Excalidraw) chargé en lazy pour code-splitter sa lourde dépendance
 const BoardPage = lazy(() => import('./pages/BoardPage'));
@@ -192,10 +193,18 @@ function AppRoutes() {
               }
             />
             <Route
+              path="/documents"
+              element={
+                <Protected>
+                  <DocumentsPage />
+                </Protected>
+              }
+            />
+            <Route
               path="/docs"
               element={
                 <Protected>
-                  <DocumentationPage />
+                  <DocsPage />
                 </Protected>
               }
             />
