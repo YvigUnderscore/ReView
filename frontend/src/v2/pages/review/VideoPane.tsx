@@ -5,6 +5,7 @@ import type { ReviewComment } from '../../types/api';
 import { cancelPendingPlay, createSeekCoalescer, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import { useHlsPlayer } from './useHlsPlayer';
+import { useVideoFullscreen } from './useVideoFullscreen';
 import type { TimelineSpriteMeta } from './timelineSprite';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
@@ -212,26 +213,30 @@ export default function VideoPane({
     }
   };
 
-  // Plein écran **vidéo seule** : ne met en plein écran que le pane vidéo (image + playbar),
-  // sans en-tête ni panneau de commentaires — complémentaire du plein écran unifié (page).
+  // Plein écran vidéo immersif (hook dédié) : vidéo plein écran + playbar translucide qui
+  // s'efface après 1 s sans mouvement de souris. Complémentaire du plein écran unifié.
   const paneRef = useRef<HTMLDivElement>(null);
-  const [videoOnlyFs, setVideoOnlyFs] = useState(false);
-  useEffect(() => {
-    const onFs = () => setVideoOnlyFs(document.fullscreenElement === paneRef.current);
-    document.addEventListener('fullscreenchange', onFs);
-    return () => document.removeEventListener('fullscreenchange', onFs);
-  }, []);
-  const toggleVideoFullscreen = () => {
-    if (document.fullscreenElement === paneRef.current) void document.exitFullscreen();
-    else void paneRef.current?.requestFullscreen?.();
-  };
+  const {
+    active: videoOnlyFs,
+    controlsVisible,
+    poke: pokeControls,
+    toggle: toggleVideoFullscreen,
+  } = useVideoFullscreen(paneRef);
 
   return (
     <div
       ref={paneRef}
-      className={`flex min-h-0 flex-1 flex-col gap-2 ${videoOnlyFs ? 'bg-background p-2' : ''}`}
+      onPointerMove={videoOnlyFs ? pokeControls : undefined}
+      className={
+        videoOnlyFs
+          ? `relative h-full w-full bg-black ${controlsVisible ? '' : 'cursor-none'}`
+          : 'flex min-h-0 flex-1 flex-col gap-2'
+      }
     >
-      <div className={VIEWER_ZONE} ref={containerRef}>
+      <div
+        className={`${VIEWER_ZONE} ${videoOnlyFs ? 'absolute inset-0 rounded-none border-0 bg-black' : ''}`}
+        ref={containerRef}
+      >
         <div
           className="relative"
           style={box ? { width: box.w, height: box.h } : { maxWidth: '100%', maxHeight: '100%' }}
@@ -273,54 +278,66 @@ export default function VideoPane({
         {compareOverlay}
       </div>
 
-      {/* Timeline unique : scrub + marqueurs commentaires + boucle I/O + trim */}
-      {duration > 0 && (
-        <VideoTimeline
-          currentTime={currentFrame / fps}
-          duration={duration}
-          comments={comments}
-          selectedId={selectedId}
-          onSeek={seekTo}
-          onSelectComment={onSelectComment}
-          trimRange={trimRange}
-          loop={{ in: loopIn, out: loopOut }}
-          sprite={timelineSprite}
-        />
-      )}
+      {/* Playbar : en mode immersif, bandeau translucide sombre en surimpression, masqué
+          après 1 s d'inactivité ; sinon, éléments normaux du flux (display:contents). */}
+      <div
+        className={
+          videoOnlyFs
+            ? `absolute inset-x-0 bottom-0 z-40 flex flex-col gap-2 bg-black/60 p-3 backdrop-blur-sm transition-opacity duration-300 ${
+                controlsVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`
+            : 'contents'
+        }
+      >
+        {/* Timeline unique : scrub + marqueurs commentaires + boucle I/O + trim */}
+        {duration > 0 && (
+          <VideoTimeline
+            currentTime={currentFrame / fps}
+            duration={duration}
+            comments={comments}
+            selectedId={selectedId}
+            onSeek={seekTo}
+            onSelectComment={onSelectComment}
+            trimRange={trimRange}
+            loop={{ in: loopIn, out: loopOut }}
+            sprite={timelineSprite}
+          />
+        )}
 
-      {/* Transport custom (remplace controls natif) */}
-      <VideoTransport
-        playing={playing}
-        onPlayPause={togglePlay}
-        onStep={(d) => stepVideoFrame(videoRef.current, fps, d)}
-        startFrame={startFrame}
-        currentFrame={currentFrame}
-        duration={duration}
-        fps={fps}
-        fpsDetected={fpsDetected}
-        setFpsOverride={setFpsOverride}
-        volume={volume}
-        muted={muted}
-        onVolume={(val) => {
-          setVolume(val);
-          setMuted(val === 0);
-        }}
-        onToggleMute={() => setMuted((m) => !m)}
-        onFullscreen={onFullscreen}
-        onFullscreenVideo={toggleVideoFullscreen}
-        videoOnlyFs={videoOnlyFs}
-        loopActive={loopIn != null || loopOut != null}
-        onClearLoop={clearLoop}
-        loopAll={loopAll}
-        onToggleLoopAll={() => setLoopAll((l) => !l)}
-        quality={{
-          active: hls.active,
-          levels: hls.levels,
-          level: hls.level,
-          setLevel: changeQuality,
-          switching: hls.switching,
-        }}
-      />
+        {/* Transport custom (remplace controls natif) */}
+        <VideoTransport
+          playing={playing}
+          onPlayPause={togglePlay}
+          onStep={(d) => stepVideoFrame(videoRef.current, fps, d)}
+          startFrame={startFrame}
+          currentFrame={currentFrame}
+          duration={duration}
+          fps={fps}
+          fpsDetected={fpsDetected}
+          setFpsOverride={setFpsOverride}
+          volume={volume}
+          muted={muted}
+          onVolume={(val) => {
+            setVolume(val);
+            setMuted(val === 0);
+          }}
+          onToggleMute={() => setMuted((m) => !m)}
+          onFullscreen={onFullscreen}
+          onFullscreenVideo={toggleVideoFullscreen}
+          videoOnlyFs={videoOnlyFs}
+          loopActive={loopIn != null || loopOut != null}
+          onClearLoop={clearLoop}
+          loopAll={loopAll}
+          onToggleLoopAll={() => setLoopAll((l) => !l)}
+          quality={{
+            active: hls.active,
+            levels: hls.levels,
+            level: hls.level,
+            setLevel: changeQuality,
+            switching: hls.switching,
+          }}
+        />
+      </div>
     </div>
   );
 }
