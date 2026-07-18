@@ -14,12 +14,19 @@ export const ATTACHMENT_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,.pdf
 export const MAX_COMMENT_ATTACHMENTS = 8;
 
 export function isAllowedAttachment(contentType: string): boolean {
-  return /^(image\/(png|jpe?g|webp|gif)|application\/(pdf|zip)|text\/plain)$/.test(contentType);
+  return /^(image\/(png|jpe?g|webp|gif)|application\/(pdf|zip)|text\/plain|audio\/(webm|ogg|mp4|mpeg|wav))(;.*)?$/.test(
+    contentType,
+  );
 }
 
 /** Pièce jointe affichable en vignette (les autres = chip fichier téléchargeable). */
 export function isImageAttachment(contentType?: string): boolean {
   return !!contentType && contentType.startsWith('image/');
+}
+
+/** Note vocale (32.F) : lue inline dans le fil via un lecteur audio. */
+export function isAudioAttachment(contentType?: string): boolean {
+  return !!contentType && contentType.startsWith('audio/');
 }
 
 /**

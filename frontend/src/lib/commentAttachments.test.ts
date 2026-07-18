@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { isAllowedAttachment, isImageAttachment, MAX_COMMENT_ATTACHMENTS } from './commentAttachments';
+import {
+  isAllowedAttachment,
+  isAudioAttachment,
+  isImageAttachment,
+  MAX_COMMENT_ATTACHMENTS,
+} from './commentAttachments';
 
 describe('pièces jointes de commentaire — types acceptés', () => {
   it('accepte les images du whitelist', () => {
@@ -13,6 +18,16 @@ describe('pièces jointes de commentaire — types acceptés', () => {
     expect(isAllowedAttachment('application/pdf')).toBe(true);
     expect(isAllowedAttachment('application/zip')).toBe(true);
     expect(isAllowedAttachment('text/plain')).toBe(true);
+  });
+
+  it('accepte les notes vocales (32.F), avec ou sans codecs', () => {
+    expect(isAllowedAttachment('audio/webm')).toBe(true);
+    expect(isAllowedAttachment('audio/webm;codecs=opus')).toBe(true);
+    expect(isAllowedAttachment('audio/ogg')).toBe(true);
+    expect(isAllowedAttachment('audio/flac')).toBe(false);
+    expect(isAudioAttachment('audio/webm')).toBe(true);
+    expect(isAudioAttachment('image/png')).toBe(false);
+    expect(isAudioAttachment(undefined)).toBe(false);
   });
 
   it('refuse les autres types', () => {

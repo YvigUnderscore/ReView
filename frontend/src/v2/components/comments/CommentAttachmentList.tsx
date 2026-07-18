@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Paperclip } from 'lucide-react';
-import { isImageAttachment, type CommentAttachment } from '../../../lib/commentAttachments';
+import {
+  isAudioAttachment,
+  isImageAttachment,
+  type CommentAttachment,
+} from '../../../lib/commentAttachments';
 import { Lightbox } from '../ui/lightbox';
 
 /**
@@ -51,10 +55,26 @@ export default function CommentAttachmentList({
           <span className="text-[10px]">images</span>
         </button>
       )}
+      {/* Notes vocales (32.F) : lecteur audio inline */}
       {attachments.map(
         (a, i) =>
           a.url &&
-          !isImageAttachment(a.contentType) && (
+          isAudioAttachment(a.contentType) && (
+            <audio
+              key={`audio-${i}`}
+              controls
+              preload="metadata"
+              src={a.url}
+              onClick={stop}
+              className="h-8 w-full max-w-[16rem]"
+            />
+          ),
+      )}
+      {attachments.map(
+        (a, i) =>
+          a.url &&
+          !isImageAttachment(a.contentType) &&
+          !isAudioAttachment(a.contentType) && (
             <a
               key={i}
               onClick={stop}

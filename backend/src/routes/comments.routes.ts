@@ -37,7 +37,7 @@ router.get(
 );
 
 // POST /api/comments/attachments/presign — URL présignée pour une pièce jointe au fil
-// (images affichées en vignettes ; PDF/zip/texte en chips téléchargeables — backlog P2)
+// (images en vignettes ; PDF/zip/texte en chips ; audio = notes vocales lues inline, 32.F)
 router.post(
   '/attachments/presign',
   validate({
@@ -45,7 +45,9 @@ router.post(
       filename: z.string().min(1).max(200),
       contentType: z
         .string()
-        .regex(/^(image\/(png|jpe?g|webp|gif)|application\/pdf|application\/zip|text\/plain)$/),
+        .regex(
+          /^(image\/(png|jpe?g|webp|gif)|application\/pdf|application\/zip|text\/plain|audio\/(webm|ogg|mp4|mpeg|wav))(;.*)?$/,
+        ),
     }),
   }),
   async (req, res) => {

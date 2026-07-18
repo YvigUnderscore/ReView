@@ -18,6 +18,7 @@ import { ResizablePanel } from '../../components/ui/resizable';
 import { useImagePaste } from '../../lib/useImagePaste';
 import { useMentions } from '../../components/comments/useMentions';
 import MentionMenu from '../../components/comments/MentionMenu';
+import VoiceRecorderButton from '../../components/comments/VoiceRecorderButton';
 import { clearDraft, loadDraft, saveDraft } from './commentDraft';
 
 /** Filtre de résolution du fil (32.A). */
@@ -239,6 +240,8 @@ export default function CommentsPanel({
             >
               <ImagePlus size={16} />
             </button>
+            {/* Note vocale (32.F) : jointe comme pièce audio, lue inline dans le fil. */}
+            <VoiceRecorderButton onRecorded={(f) => addFiles([f])} />
             {onToggleAnnotate && (
               <button
                 type="button"
