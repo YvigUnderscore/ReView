@@ -64,6 +64,10 @@ export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUr
     hls.on(Hls.Events.LEVEL_SWITCHED, () => {
       window.clearTimeout(switchTimer.current);
       setSwitching(false);
+      // En pause, le flush du switch peut laisser un trou vidéo à la position courante
+      // (image figée au prochain play alors que l'audio est chargé) : micro-seek sur
+      // place pour que hls.js recharge le segment et resynchronise le décodeur.
+      if (video.paused && video.readyState < 3) video.currentTime = Math.max(0, video.currentTime - 0.001);
     });
     return () => {
       hls.destroy();

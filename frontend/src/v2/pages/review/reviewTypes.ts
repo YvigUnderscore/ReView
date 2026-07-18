@@ -266,3 +266,37 @@ export function stepVideoFrame(video: HTMLVideoElement | null, fps: number, delt
   video.pause();
   video.currentTime = Math.max(0, video.currentTime + delta / fps);
 }
+
+// Lancement de lecture en attente de données (un seul à la fois par élément vidéo).
+const pendingPlay = new WeakMap<HTMLVideoElement, () => void>();
+
+/** Annule un lancement de lecture en attente (l'utilisateur a mis en pause entre-temps). */
+export function cancelPendingPlay(video: HTMLVideoElement): void {
+  pendingPlay.get(video)?.();
+  pendingPlay.delete(video);
+}
+
+/**
+ * Lance la lecture seulement quand l'**image** est décodable à la position courante.
+ * Après un changement de rendition HLS en pause, le buffer vidéo peut avoir un trou à la
+ * position courante alors que l'audio, lui, est chargé : un `play()` direct donne du son
+ * sur image figée. On force d'abord un micro-seek sur place (hls.js recharge le segment /
+ * saute le trou — l'équivalent du « frame suivante puis relire » manuel), puis on attend
+ * `canplay` avant de démarrer.
+ */
+export function safePlay(video: HTMLVideoElement): void {
+  cancelPendingPlay(video);
+  video.playbackRate = 1;
+  if (video.readyState >= 3 /* HAVE_FUTURE_DATA */) {
+    void video.play();
+    return;
+  }
+  video.currentTime = Math.max(0, video.currentTime - 0.001);
+  const onReady = () => {
+    pendingPlay.delete(video);
+    video.removeEventListener('canplay', onReady);
+    void video.play();
+  };
+  pendingPlay.set(video, () => video.removeEventListener('canplay', onReady));
+  video.addEventListener('canplay', onReady);
+}

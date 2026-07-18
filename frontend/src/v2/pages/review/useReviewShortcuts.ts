@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { isEditable } from '../../lib/shortcuts';
-import { stepVideoFrame } from './reviewTypes';
+import { cancelPendingPlay, safePlay, stepVideoFrame } from './reviewTypes';
 
 /**
  * Raccourcis clavier de la review vidéo (10.C2) :
@@ -70,8 +70,7 @@ export function useReviewShortcuts({
       if (!v) return;
       if (shuttle.current || v.paused) {
         stopShuttle();
-        v.playbackRate = 1;
-        void v.play();
+        safePlay(v); // attend que l'image soit décodable (pas de son sur image figée)
         return;
       }
       v.playbackRate = Math.min(v.playbackRate * 2, 8);
@@ -97,10 +96,11 @@ export function useReviewShortcuts({
         case ' ':
           e.preventDefault();
           stopShuttle();
-          if (v.paused) {
-            v.playbackRate = 1;
-            void v.play();
-          } else v.pause();
+          if (v.paused) safePlay(v);
+          else {
+            cancelPendingPlay(v);
+            v.pause();
+          }
           break;
         case 'arrowleft':
           e.preventDefault();
@@ -119,6 +119,7 @@ export function useReviewShortcuts({
         case 'k':
           e.preventDefault();
           stopShuttle();
+          cancelPendingPlay(v);
           v.pause();
           v.playbackRate = 1;
           break;
@@ -129,6 +130,7 @@ export function useReviewShortcuts({
         case 'm':
           e.preventDefault();
           stopShuttle();
+          cancelPendingPlay(v);
           v.pause();
           onMarker();
           break;

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { tcFromFrame, formatTime, findCompareMedia } from './reviewTypes';
+import { describe, it, expect, vi } from 'vitest';
+import { tcFromFrame, formatTime, findCompareMedia, safePlay, cancelPendingPlay } from './reviewTypes';
 
 describe('tcFromFrame', () => {
   it('convertit un numéro de frame en timecode HH:MM:SS:FF', () => {
@@ -24,6 +24,49 @@ describe('formatTime', () => {
     expect(formatTime(0)).toBe('00:00');
     expect(formatTime(65.7)).toBe('01:05');
     expect(formatTime(600)).toBe('10:00');
+  });
+});
+
+describe('safePlay — pas de son sur image figée', () => {
+  /** Stub minimal d'élément vidéo (readyState piloté, listeners capturés). */
+  function fakeVideo(readyState: number) {
+    const listeners = new Map<string, () => void>();
+    const v = {
+      readyState,
+      paused: true,
+      playbackRate: 2,
+      currentTime: 10,
+      play: vi.fn(async () => undefined),
+      addEventListener: vi.fn((ev: string, fn: () => void) => listeners.set(ev, fn)),
+      removeEventListener: vi.fn((ev: string) => listeners.delete(ev)),
+    };
+    return { v: v as unknown as HTMLVideoElement, raw: v, listeners };
+  }
+
+  it('image décodable (readyState ≥ 3) : lecture immédiate à vitesse 1', () => {
+    const { v, raw } = fakeVideo(4);
+    safePlay(v);
+    expect(raw.play).toHaveBeenCalledOnce();
+    expect(raw.playbackRate).toBe(1);
+    expect(raw.currentTime).toBe(10); // pas de micro-seek inutile
+  });
+
+  it('données manquantes : micro-seek sur place puis lecture différée à canplay', () => {
+    const { v, raw, listeners } = fakeVideo(2);
+    safePlay(v);
+    expect(raw.play).not.toHaveBeenCalled();
+    expect(raw.currentTime).toBeCloseTo(9.999, 5); // micro-seek → hls.js recharge le segment
+    listeners.get('canplay')?.();
+    expect(raw.play).toHaveBeenCalledOnce();
+  });
+
+  it('cancelPendingPlay annule un lancement en attente (pause entre-temps)', () => {
+    const { v, raw, listeners } = fakeVideo(1);
+    safePlay(v);
+    cancelPendingPlay(v);
+    expect(raw.removeEventListener).toHaveBeenCalledWith('canplay', expect.any(Function));
+    listeners.get('canplay')?.(); // même si l'événement arrive, plus de lecture
+    expect(raw.play).not.toHaveBeenCalled();
   });
 });
 

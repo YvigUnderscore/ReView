@@ -37,6 +37,9 @@ export default function VideoTimeline({
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
+  // Vrai glissement seulement (seuil px) : un simple clic ne doit PAS basculer le lecteur
+  // en basse qualité (le double flush bas→haut autour d'un clic créait des trous de buffer).
+  const dragStart = useRef<{ x: number; started: boolean } | null>(null);
   const [barWidth, setBarWidth] = useState(0);
   // Abscisse du curseur (px, relative à la barre) — pilote la miniature de survol.
   const [hoverX, setHoverX] = useState<number | null>(null);
@@ -84,7 +87,7 @@ export default function VideoTimeline({
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     scrubbing.current = true;
-    onScrubStart?.();
+    dragStart.current = { x: e.clientX, started: false };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     seekFromEvent(e);
   };
@@ -94,11 +97,18 @@ export default function VideoTimeline({
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     trackHover(e);
-    if (scrubbing.current) seekFromEvent(e);
+    if (!scrubbing.current) return;
+    const d = dragStart.current;
+    if (d && !d.started && Math.abs(e.clientX - d.x) > 3) {
+      d.started = true;
+      onScrubStart?.();
+    }
+    seekFromEvent(e);
   };
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (scrubbing.current) onScrubEnd?.();
+    if (scrubbing.current && dragStart.current?.started) onScrubEnd?.();
     scrubbing.current = false;
+    dragStart.current = null;
     // Fin de scrub hors de la barre (pointer capture) : la miniature se referme.
     const rect = barRef.current?.getBoundingClientRect();
     if (

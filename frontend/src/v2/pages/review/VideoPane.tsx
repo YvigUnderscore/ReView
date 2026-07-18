@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ReviewComment } from '../../types/api';
-import { stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
+import { cancelPendingPlay, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import { useHlsPlayer } from './useHlsPlayer';
 import type { TimelineSpriteMeta } from './timelineSprite';
@@ -183,10 +183,12 @@ export default function VideoPane({
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) {
-      v.playbackRate = 1;
-      void v.play();
-    } else v.pause();
+    // safePlay : ne démarre que quand l'image est décodable (pas de son sur image figée).
+    if (v.paused) safePlay(v);
+    else {
+      cancelPendingPlay(v);
+      v.pause();
+    }
   };
 
   const fullscreen = () => void containerRef.current?.requestFullscreen?.();
