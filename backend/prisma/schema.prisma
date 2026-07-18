@@ -163,6 +163,7 @@ model User {
   documents        Document[]
   announcementReads AnnouncementRead[]
   reviewReferences ReviewReference[]
+  reviewDecisions  ReviewDecision[]    @relation("DecisionAuthor")
 }
 
 model PasswordReset {
@@ -321,6 +322,45 @@ model Version {
   authorId Int?
 
   media MediaObject[]
+
+  // Décision de review courante (Phase 31) — dénormalisée depuis le dernier ReviewDecision.
+  reviewStatus   ReviewStatus?    @relation(fields: [reviewStatusId], references: [id], onDelete: SetNull)
+  reviewStatusId Int?
+  decisions      ReviewDecision[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Circuit d'approbation (Phase 31) : statuts de review personnalisables (studio)
+// et décisions par version avec historique.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ReviewStatus {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  color      String // hex (#RRGGBB) affiché sur badges/pastilles
+  order      Int      @default(0)
+  isApproval Boolean  @default(false) // statut « validé » (stats, verrous futurs)
+  isRetake   Boolean  @default(false) // statut « à refaire »
+  isDefault  Boolean  @default(false) // proposé par défaut à la pose de décision
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  versions  Version[]
+  decisions ReviewDecision[]
+}
+
+model ReviewDecision {
+  id        Int          @id @default(autoincrement())
+  version   Version      @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId Int
+  status    ReviewStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  statusId  Int
+  comment   String?
+  author    User?        @relation("DecisionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId  Int?
+  createdAt DateTime     @default(now())
+
+  @@index([versionId, createdAt])
 }
 
 model MediaObject {

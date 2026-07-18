@@ -1,4 +1,4 @@
-import type { MediaKind, ProjectRef } from '../../types/api';
+import type { MediaKind, ProjectRef, ReviewStatus } from '../../types/api';
 
 /** Item de la page Reviews globale (12.C) — construit par MediaService.listReviews. */
 export interface ReviewItem {
@@ -10,6 +10,8 @@ export interface ReviewItem {
   thumbnailUrl: string | null;
   location: string;
   versionName: string;
+  /** Décision de review courante de la version (Phase 31), null si aucune. */
+  reviewStatus: Pick<ReviewStatus, 'id' | 'name' | 'color'> | null;
   project: ProjectRef | null;
   uploader: string | null;
 }

@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { Keyboard, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ClipboardCheck, Keyboard, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 import Avatar from '../../components/Avatar';
 import ShortcutsHelp from '../../components/ShortcutsHelp';
+import ReviewDecisionBadge from '../../components/ReviewDecisionBadge';
+import ReviewDecisionDialog from '../../components/ReviewDecisionDialog';
+import { useAuth } from '../../stores/useAuth';
 import type { MediaResp } from './reviewTypes';
+import type { VersionDetail } from '../../types/api';
 import VersionNavigator from './VersionNavigator';
 import CompareSelect from './CompareSelect';
 import { useReviewPresence } from './useReviewPresence';
 
 /**
  * En-tête de la review : nom du média + badge brouillon, sélecteur de version
- * et précédent/suivant entre médias (10.C2), publication, repli des commentaires.
+ * et précédent/suivant entre médias (10.C2), publication, décision de review
+ * (Phase 31), repli des commentaires.
  */
 export default function ReviewHeader({
   data,
@@ -29,6 +37,17 @@ export default function ReviewHeader({
   const published = data.media.published;
   const viewers = useReviewPresence(data.media.id);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [decisionOpen, setDecisionOpen] = useState(false);
+  const role = useAuth((s) => s.user?.role);
+  const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
+  const versionId = data.media.versionId;
+  // Décision courante de la version (badge en-tête) — même clé que la timeline des versions.
+  const versionQ = useQuery({
+    queryKey: qk.version(versionId),
+    queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`).then((d) => d.version),
+    staleTime: 30_000,
+  });
+  const reviewStatus = versionQ.data?.reviewStatus ?? null;
   return (
     <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
@@ -36,10 +55,10 @@ export default function ReviewHeader({
         {!published && (
           <span className="shrink-0 rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Brouillon</span>
         )}
-        <VersionNavigator versionId={data.media.versionId} mediaId={data.media.id} />
+        <VersionNavigator versionId={versionId} mediaId={data.media.id} />
         {(data.media.kind === 'VIDEO' || data.media.kind === 'IMAGE') && (
           <CompareSelect
-            versionId={data.media.versionId}
+            versionId={versionId}
             mediaId={data.media.id}
             kind={data.media.kind}
             compareId={compareId}
@@ -72,6 +91,14 @@ export default function ReviewHeader({
           </button>
         )}
         <button
+          onClick={() => setDecisionOpen(true)}
+          title={canDecide ? 'Décision de review' : 'Historique des décisions'}
+          className="flex items-center gap-1.5 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <ClipboardCheck size={16} />
+          {reviewStatus && <ReviewDecisionBadge status={reviewStatus} />}
+        </button>
+        <button
           onClick={() => setShortcutsOpen(true)}
           title="Raccourcis clavier (?)"
           className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -87,6 +114,13 @@ export default function ReviewHeader({
         </button>
       </div>
       <ShortcutsHelp open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <ReviewDecisionDialog
+        versionId={versionId}
+        versionName={versionQ.data?.name ?? `Version ${versionId}`}
+        open={decisionOpen}
+        onOpenChange={setDecisionOpen}
+        canDecide={canDecide}
+      />
     </div>
   );
 }

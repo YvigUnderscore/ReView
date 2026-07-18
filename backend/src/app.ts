@@ -21,6 +21,7 @@ import shotsRoutes from './routes/shots.routes';
 import assetsRoutes from './routes/assets.routes';
 import tasksRoutes from './routes/tasks.routes';
 import versionsRoutes from './routes/versions.routes';
+import reviewStatusesRoutes from './routes/review-statuses.routes';
 import commentsRoutes from './routes/comments.routes';
 import boardsRoutes from './routes/boards.routes';
 import shareRoutes from './routes/share.routes';
@@ -78,6 +79,7 @@ export const createApp = (): Express => {
   app.use('/api/assets', assetsRoutes);
   app.use('/api/tasks', tasksRoutes);
   app.use('/api/versions', versionsRoutes);
+  app.use('/api/review-statuses', reviewStatusesRoutes); // statuts de review custom (Phase 31)
   app.use('/api/comments', commentsRoutes);
   app.use('/api/boards', boardsRoutes);
   // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).

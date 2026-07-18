@@ -74,6 +74,8 @@ router.get(
         projectId: z.coerce.number().int().optional(),
         kind: z.nativeEnum(MediaKind).optional(),
         status: z.enum(['published', 'draft']).optional(),
+        // Filtre par décision de review (Phase 31) : id de statut ou 'none' (sans décision)
+        decision: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
       })
       .merge(paginationQuery),
   }),
@@ -86,6 +88,7 @@ router.get(
           projectId: q.projectId ? Number(q.projectId) : undefined,
           kind: q.kind as MediaKind | undefined,
           status: q.status as 'published' | 'draft' | undefined,
+          decision: q.decision === 'none' ? 'none' : q.decision ? Number(q.decision) : undefined,
         },
         readPagination(q),
       ),

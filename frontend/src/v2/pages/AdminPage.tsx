@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   Activity,
   Box,
+  ClipboardCheck,
   FolderCog,
   History,
   LayoutDashboard,
@@ -23,6 +24,7 @@ import SettingsTab from './admin/SettingsTab';
 import ProjectDefaultsTab from './admin/ProjectDefaultsTab';
 import HdriTab from './admin/HdriTab';
 import TranscodeTab from './admin/TranscodeTab';
+import ReviewStatusTab from './admin/ReviewStatusTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
 import TrashTab from './admin/TrashTab';
@@ -54,6 +56,13 @@ const SECTIONS = [
   },
   { key: 'hdri', group: 'Contextes de review', label: '3D & Splat', icon: Box, Component: HdriTab },
   { key: 'video', group: 'Contextes de review', label: 'Vidéo', icon: Video, Component: TranscodeTab },
+  {
+    key: 'review-statuses',
+    group: 'Contextes de review',
+    label: 'Statuts',
+    icon: ClipboardCheck,
+    Component: ReviewStatusTab,
+  },
   {
     key: 'announcements',
     group: 'Communications',

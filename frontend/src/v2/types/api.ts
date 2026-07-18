@@ -150,11 +150,31 @@ export type TaskDetail = Task & {
 };
 
 // ── Versions & médias ─────────────────────────────────────────────────────────
+/** Statut de review personnalisable du studio (Phase 31). */
+export interface ReviewStatus {
+  id: number;
+  name: string;
+  color: string; // hex #RRGGBB
+  order: number;
+  isApproval: boolean;
+  isRetake: boolean;
+  isDefault: boolean;
+}
+/** Décision de review historisée d'une version (Phase 31). */
+export interface ReviewDecision {
+  id: number;
+  status: ReviewStatus;
+  comment: string | null;
+  author: UserRef | null;
+  createdAt: string;
+}
 export interface Version {
   id: number;
   name: string;
   status: VersionStatus;
   published: boolean;
+  /** Décision de review courante (dernière posée), null si aucune. */
+  reviewStatus?: ReviewStatus | null;
 }
 /** GET /api/versions?taskId=|assetId= — _count.media filtré par visibilité. */
 export type VersionListItem = Version & {

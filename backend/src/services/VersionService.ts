@@ -32,6 +32,7 @@ export async function list(userId: number, taskId?: number, assetId?: number) {
     orderBy: { createdAt: 'desc' },
     include: {
       author: { select: { id: true, name: true } },
+      reviewStatus: true, // décision de review courante (Phase 31)
       // Corbeille exclue, brouillons visibles par leur uploader seul (ne révèle pas ceux d'autrui).
       _count: {
         select: { media: { where: { deletedAt: null, OR: [{ published: true }, { uploaderId: userId }] } } },
@@ -74,6 +75,7 @@ export async function getDetail(userId: number, id: number) {
     where: { id },
     include: {
       author: { select: { id: true, name: true } },
+      reviewStatus: true, // décision de review courante (Phase 31)
       media: {
         where: { deletedAt: null, OR: [{ published: true }, { uploaderId: userId }] },
         orderBy: { createdAt: 'asc' },

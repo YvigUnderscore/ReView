@@ -119,6 +119,17 @@ async function main(): Promise<void> {
     },
   });
 
+  // Statuts de review classiques (Phase 31) — idempotent (aussi bootstrapés au 1er GET)
+  const reviewStatuses = [
+    { name: 'Pending', color: '#F5A623', order: 0, isDefault: true },
+    { name: 'Approved', color: '#2ECC71', order: 1, isApproval: true },
+    { name: 'Retake', color: '#E74C3C', order: 2, isRetake: true },
+    { name: 'CBB', color: '#3498DB', order: 3 },
+  ];
+  for (const s of reviewStatuses) {
+    await prisma.reviewStatus.upsert({ where: { name: s.name }, update: {}, create: s });
+  }
+
   console.info('✅ Seed terminé.');
   console.info('   Admin  : admin@review.local / admin1234');
   console.info('   Artiste: artist@review.local / artist1234');

@@ -1,181 +1,27 @@
-import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, ImagePlus, Play, Trash2, Upload } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronDown, ChevronRight, ClipboardCheck, Trash2, Upload } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
-import { fileToThumbnailDataUrl } from '../review/mediaCapture';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+} from '../../components/ui/context-menu';
+import ReviewDecisionBadge from '../../components/ReviewDecisionBadge';
+import ReviewDecisionDialog from '../../components/ReviewDecisionDialog';
 import { timeAgo } from '../../lib/time';
-import { reviewPath } from '../../lib/slug';
-import { MEDIA_KIND_ICON, VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
+import { useAuth } from '../../stores/useAuth';
+import MediaTile from './MediaTile';
+import { VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
 import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
 import type { ViewMode } from '../../stores/useViewPref';
 
-/** Miniature d'un média (vraie vignette ou icône selon le type). */
-function MediaThumb({ media, size }: { media: MediaSummary; size: number }) {
-  const Icon = MEDIA_KIND_ICON[media.kind];
-  return media.thumbnailUrl ? (
-    <img
-      src={media.thumbnailUrl}
-      alt={media.originalName}
-      loading="lazy"
-      className="h-full w-full object-cover"
-    />
-  ) : (
-    <Icon size={size} />
-  );
-}
-
-/** Bouton discret « Modifier la miniature » : fichier image → réduit → POST /thumbnail. */
-function ThumbEditButton({
-  mediaId,
-  versionId,
-  small,
-}: {
-  mediaId: number;
-  versionId: number;
-  small?: boolean;
-}) {
-  const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const pick = async (file: File) => {
-    try {
-      await api.post(`/api/media/${mediaId}/thumbnail`, { dataUrl: await fileToThumbnailDataUrl(file) });
-      await qc.invalidateQueries({ queryKey: qk.version(versionId) });
-      toast.success('Miniature mise à jour');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Miniature non enregistrée');
-    }
-  };
-  return (
-    <>
-      <button
-        onClick={() => fileRef.current?.click()}
-        title="Modifier la miniature"
-        className={
-          small
-            ? 'rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground'
-            : 'flex items-center justify-center px-2 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground'
-        }
-      >
-        <ImagePlus size={12} />
-      </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void pick(f);
-          if (fileRef.current) fileRef.current.value = '';
-        }}
-      />
-    </>
-  );
-}
-
-/** Vignette d'un média → review au clic ; actions publier/supprimer/miniature. Cartes ou ligne compacte. */
-function MediaTile({
-  media,
-  versionId,
-  view,
-  canManage,
-  onPublish,
-  onDelete,
-}: {
-  media: MediaSummary;
-  versionId: number;
-  view: ViewMode;
-  canManage: boolean;
-  onPublish: (m: MediaSummary) => void;
-  onDelete: (m: MediaSummary) => void;
-}) {
-  if (view === 'compact') {
-    return (
-      <div className="group flex items-center gap-2 rounded-md border border-border bg-card p-1.5">
-        <Link to={reviewPath(media)} className="flex min-w-0 flex-1 items-center gap-2">
-          <div className="relative flex aspect-video h-9 shrink-0 items-center justify-center overflow-hidden rounded bg-black/40 text-muted-foreground">
-            <MediaThumb media={media} size={14} />
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-xs text-foreground">{media.originalName}</div>
-            <div className="truncate text-[10px] text-muted-foreground">
-              {media.kind} · {media.status}
-              {!media.published && <span className="ml-1 text-primary">· Brouillon</span>}
-            </div>
-          </div>
-        </Link>
-        {canManage && (
-          <div className="flex shrink-0 items-center gap-1 text-[10px]">
-            {!media.published && (
-              <button
-                onClick={() => onPublish(media)}
-                className="rounded px-1.5 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-              >
-                Publier
-              </button>
-            )}
-            <ThumbEditButton mediaId={media.id} versionId={versionId} small />
-            <button
-              onClick={() => onDelete(media)}
-              title="Supprimer"
-              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-  return (
-    <div className="group overflow-hidden rounded-md border border-border bg-card">
-      <Link to={reviewPath(media)} title={`Ouvrir la review : ${media.originalName}`} className="block">
-        <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-black/40 text-muted-foreground">
-          <MediaThumb media={media} size={22} />
-          {!media.published && (
-            <span className="absolute left-1 top-1 rounded bg-primary/20 px-1 text-[10px] text-primary">
-              Brouillon
-            </span>
-          )}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-            <Play size={18} className="text-primary" />
-          </div>
-        </div>
-        <div className="truncate px-1.5 pt-1 text-[11px] text-foreground">{media.originalName}</div>
-        <div className="truncate px-1.5 pb-1 text-[10px] text-muted-foreground">
-          {media.kind} · {media.status}
-        </div>
-      </Link>
-      {canManage && (
-        <div className="flex border-t border-border text-[10px]">
-          {!media.published && (
-            <button
-              onClick={() => onPublish(media)}
-              className="flex-1 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              Publier
-            </button>
-          )}
-          <ThumbEditButton mediaId={media.id} versionId={versionId} />
-          <button
-            onClick={() => onDelete(media)}
-            title="Supprimer"
-            className="flex items-center justify-center px-2 py-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Nœud de la timeline : une version (rail + en-tête + médias dépliables + actions). */
+/** Nœud de la timeline : une version (rail + en-tête + médias dépliables + actions).
+ *  Clic droit sur la carte → décision de review (Phase 31, SUPERVISOR+). */
 export default function VersionTimelineItem({
   version,
   isLast,
@@ -202,6 +48,9 @@ export default function VersionTimelineItem({
   onDeleteMedia: (versionId: number, media: MediaSummary) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [decisionOpen, setDecisionOpen] = useState(false);
+  const role = useAuth((s) => s.user?.role);
+  const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
   const mediaQ = useQuery({
     queryKey: qk.version(version.id),
     queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${version.id}`).then((d) => d.version),
@@ -218,82 +67,107 @@ export default function VersionTimelineItem({
         {!isLast && <span className="absolute left-1/2 top-4 h-full w-px -translate-x-1/2 bg-border" />}
       </div>
 
-      <div className="min-w-0 flex-1 rounded-lg border border-border bg-card">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-          <button onClick={() => setOpen((o) => !o)} className="flex min-w-0 items-center gap-2 text-left">
-            {open ? (
-              <ChevronDown size={15} className="shrink-0 text-muted-foreground" />
-            ) : (
-              <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
-            )}
-            <span className="font-semibold">{version.name}</span>
-            <span className={`rounded px-1.5 py-0.5 text-[10px] ${VERSION_STATUS_COLOR[version.status]}`}>
-              {VERSION_STATUS_LABEL[version.status]}
-            </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {version.author?.name ? `${version.author.name} · ` : ''}
-              {timeAgo(version.createdAt)} · {version._count.media} média{version._count.media > 1 ? 's' : ''}
-            </span>
-          </button>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {canCreate && (
-              <Button size="sm" variant="outline" onClick={() => onUpload(version.id)}>
-                <Upload size={13} /> Média
-              </Button>
-            )}
-            {canPublish && !version.published && (
-              <Button size="sm" variant="outline" onClick={() => onPublishVersion(version.id)}>
-                Publier
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onDeleteVersion(version)}
-                className="text-muted-foreground hover:text-destructive"
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="min-w-0 flex-1 rounded-lg border border-border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <button
+                onClick={() => setOpen((o) => !o)}
+                className="flex min-w-0 items-center gap-2 text-left"
               >
-                <Trash2 size={13} />
-              </Button>
-            )}
-          </div>
-        </div>
+                {open ? (
+                  <ChevronDown size={15} className="shrink-0 text-muted-foreground" />
+                ) : (
+                  <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
+                )}
+                <span className="font-semibold">{version.name}</span>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] ${VERSION_STATUS_COLOR[version.status]}`}>
+                  {VERSION_STATUS_LABEL[version.status]}
+                </span>
+                {version.reviewStatus && <ReviewDecisionBadge status={version.reviewStatus} />}
+                <span className="truncate text-xs text-muted-foreground">
+                  {version.author?.name ? `${version.author.name} · ` : ''}
+                  {timeAgo(version.createdAt)} · {version._count.media} média
+                  {version._count.media > 1 ? 's' : ''}
+                </span>
+              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {canCreate && (
+                  <Button size="sm" variant="outline" onClick={() => onUpload(version.id)}>
+                    <Upload size={13} /> Média
+                  </Button>
+                )}
+                {canPublish && !version.published && (
+                  <Button size="sm" variant="outline" onClick={() => onPublishVersion(version.id)}>
+                    Publier
+                  </Button>
+                )}
+                {canCreate && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onDeleteVersion(version)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 size={13} />
+                  </Button>
+                )}
+              </div>
+            </div>
 
-        {open && (
-          <div className="border-t border-border p-3">
-            {mediaQ.isLoading ? (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                {Array.from({ length: 3 }, (_, i) => (
-                  <Skeleton key={i} className="aspect-video w-full" />
-                ))}
-              </div>
-            ) : media.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Aucun média dans cette version.
-                {canCreate ? ' Utilisez « Média » ou déposez un fichier ci-dessus.' : ''}
-              </p>
-            ) : (
-              <div
-                className={
-                  view === 'compact' ? 'space-y-1.5' : 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4'
-                }
-              >
-                {media.map((m) => (
-                  <MediaTile
-                    key={m.id}
-                    media={m}
-                    versionId={version.id}
-                    view={view}
-                    canManage={canCreate}
-                    onPublish={(mm) => onPublishMedia(version.id, mm.id)}
-                    onDelete={(mm) => onDeleteMedia(version.id, mm)}
-                  />
-                ))}
+            {open && (
+              <div className="border-t border-border p-3">
+                {mediaQ.isLoading ? (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <Skeleton key={i} className="aspect-video w-full" />
+                    ))}
+                  </div>
+                ) : media.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Aucun média dans cette version.
+                    {canCreate ? ' Utilisez « Média » ou déposez un fichier ci-dessus.' : ''}
+                  </p>
+                ) : (
+                  <div
+                    className={
+                      view === 'compact'
+                        ? 'space-y-1.5'
+                        : 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4'
+                    }
+                  >
+                    {media.map((m) => (
+                      <MediaTile
+                        key={m.id}
+                        media={m}
+                        versionId={version.id}
+                        view={view}
+                        canManage={canCreate}
+                        onPublish={(mm) => onPublishMedia(version.id, mm.id)}
+                        onDelete={(mm) => onDeleteMedia(version.id, mm)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => setDecisionOpen(true)}>
+            <ClipboardCheck size={14} />
+            {canDecide ? 'Décision de review…' : 'Historique des décisions…'}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      <ReviewDecisionDialog
+        versionId={version.id}
+        versionName={version.name}
+        open={decisionOpen}
+        onOpenChange={setDecisionOpen}
+        canDecide={canDecide}
+      />
     </li>
   );
 }

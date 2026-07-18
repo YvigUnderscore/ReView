@@ -5,7 +5,7 @@ import { Clapperboard, FolderOpen, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { useProjectsQuery } from '../lib/queries';
+import { useProjectsQuery, useReviewStatusesQuery } from '../lib/queries';
 import { reviewPath } from '../lib/slug';
 import { useMultiSelect } from '../lib/useMultiSelect';
 import { bulkDelete } from '../lib/bulkApi';
@@ -15,6 +15,7 @@ import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer } from '../components/EntityCard';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ReviewDecisionBadge from '../components/ReviewDecisionBadge';
 import SelectionBar from '../components/ui/selection-bar';
 import { Badge } from '../components/ui/badge';
 import { Select } from '../components/ui/select';
@@ -38,15 +39,18 @@ export default function ReviewsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: projects } = useProjectsQuery();
+  const { data: reviewStatuses } = useReviewStatusesQuery();
   const [projectId, setProjectId] = useState('');
   const [kind, setKind] = useState('');
   const [status, setStatus] = useState('');
+  const [decision, setDecision] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const params = new URLSearchParams();
   if (projectId) params.set('projectId', projectId);
   if (kind) params.set('kind', kind);
   if (status) params.set('status', status);
+  if (decision) params.set('decision', decision);
   const qs = params.toString();
 
   const { data, error } = useQuery({
@@ -104,6 +108,15 @@ export default function ReviewsPage() {
             <option value="published">Publiés</option>
             <option value="draft">Mes brouillons</option>
           </Select>
+          <Select value={decision} onChange={(e) => setDecision(e.target.value)} className="text-xs">
+            <option value="">Toutes décisions</option>
+            <option value="none">Sans décision</option>
+            {(reviewStatuses ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
           <ViewToggle contextKey="reviews" />
         </div>
       </div>
@@ -147,11 +160,14 @@ export default function ReviewsPage() {
                   },
                 ]}
                 badge={
-                  m.published ? (
-                    <Badge variant="info">{MEDIA_KIND_LABEL[m.kind]}</Badge>
-                  ) : (
-                    <Badge variant="warning">Brouillon</Badge>
-                  )
+                  <span className="flex items-center gap-1">
+                    {m.published ? (
+                      <Badge variant="info">{MEDIA_KIND_LABEL[m.kind]}</Badge>
+                    ) : (
+                      <Badge variant="warning">Brouillon</Badge>
+                    )}
+                    {m.reviewStatus && <ReviewDecisionBadge status={m.reviewStatus} />}
+                  </span>
                 }
               />
             ))}

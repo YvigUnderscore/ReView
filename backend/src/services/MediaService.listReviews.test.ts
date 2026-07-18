@@ -85,6 +85,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
       thumbnailUrl: 'https://minio/thumbs/5.jpg',
       location: 'SQ01 · SH010 › Comp',
       versionName: 'V02',
+      reviewStatus: null,
       project: { id: 7, name: 'Film' },
       uploader: 'Ana',
     });

@@ -11,6 +11,7 @@ import {
 } from '../lib/pipeline';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import * as VersionService from '../services/VersionService';
+import * as ReviewDecisionService from '../services/ReviewDecisionService';
 
 const router = Router();
 router.use(authenticate);
@@ -116,6 +117,32 @@ router.post('/:id/restore', validate({ params: idParam }), async (req, res) => {
   const projectId = await resolveVersionAccess(req, id);
   await VersionService.restore(req.user!, projectId, id);
   res.status(204).end();
+});
+
+// POST /api/versions/:id/decision — décision de review (SUPERVISOR+), historisée (Phase 31)
+router.post(
+  '/:id/decision',
+  validate({
+    params: idParam,
+    body: z.object({ statusId: z.number().int(), comment: z.string().max(2000).optional() }),
+  }),
+  async (req, res) => {
+    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
+      throw forbidden('Décision réservée aux superviseurs');
+    const id = Number(req.params.id);
+    const projectId = await resolveVersionAccess(req, id);
+    const { statusId, comment } = req.body as { statusId: number; comment?: string };
+    res.status(201).json({
+      decision: await ReviewDecisionService.decide(req.user!, projectId, id, statusId, comment),
+    });
+  },
+);
+
+// GET /api/versions/:id/decisions — historique des décisions (membres du projet)
+router.get('/:id/decisions', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  await resolveVersionAccess(req, id);
+  res.json({ decisions: await ReviewDecisionService.history(id) });
 });
 
 // DELETE /api/versions/:id/purge — suppression définitive (superviseur+)

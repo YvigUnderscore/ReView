@@ -176,6 +176,8 @@ export interface ReviewsFilter {
   projectId?: number;
   kind?: MediaKind;
   status?: 'published' | 'draft';
+  /** Filtre par décision de review courante : id de ReviewStatus, ou 'none' = sans décision. */
+  decision?: number | 'none';
 }
 
 /**
@@ -207,6 +209,11 @@ export async function listReviews(
     ...(filter.kind ? { kind: filter.kind } : {}),
     version: {
       deletedAt: null,
+      ...(filter.decision === 'none'
+        ? { reviewStatusId: null }
+        : filter.decision !== undefined
+          ? { reviewStatusId: filter.decision }
+          : {}),
       OR: [
         { task: { shot: { deletedAt: null, project } } },
         { task: { asset: { deletedAt: null, project } } },
@@ -226,6 +233,7 @@ export async function listReviews(
         version: {
           select: {
             name: true,
+            reviewStatus: { select: { id: true, name: true, color: true } },
             task: {
               select: {
                 name: true,
@@ -260,6 +268,7 @@ export async function listReviews(
         thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
         location,
         versionName: m.version?.name ?? '',
+        reviewStatus: m.version?.reviewStatus ?? null,
         project,
         uploader: m.uploader?.name ?? null,
       };

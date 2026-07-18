@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from './query';
-import type { Asset, Notification, Project, SequenceSummary, ShotSummary } from '../types/api';
+import type { Asset, Notification, Project, ReviewStatus, SequenceSummary, ShotSummary } from '../types/api';
 
 /**
  * Hooks Query partagés entre plusieurs composants (une clé = une shape).
@@ -50,6 +50,16 @@ export function useAssetsQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.assets(projectId),
     queryFn: () => api.get<Page<Asset>>(`/api/assets?projectId=${projectId}`).then((d) => d.items),
+    enabled,
+  });
+}
+
+/** Statuts de review du studio (Phase 31) — badges, filtres, menus de décision. */
+export function useReviewStatusesQuery(enabled = true) {
+  return useQuery({
+    queryKey: qk.reviewStatuses,
+    queryFn: () => api.get<{ statuses: ReviewStatus[] }>('/api/review-statuses').then((d) => d.statuses),
+    staleTime: 5 * 60 * 1000,
     enabled,
   });
 }

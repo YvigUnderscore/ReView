@@ -58,4 +58,6 @@ export const qk = {
   hdris: ['hdris'] as const,
   docsManifest: () => ['docs', 'manifest'] as const,
   docsPage: (path: string) => ['docs', 'page', path] as const,
+  reviewStatuses: ['review-statuses'] as const,
+  versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
 } as const;
