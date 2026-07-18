@@ -35,6 +35,8 @@ export default function VideoTransport({
   onFullscreen,
   loopActive,
   onClearLoop,
+  loopAll,
+  onToggleLoopAll,
   quality,
 }: {
   playing: boolean;
@@ -54,6 +56,9 @@ export default function VideoTransport({
   onFullscreen: () => void;
   loopActive: boolean;
   onClearLoop: () => void;
+  /** Lecture en boucle de toute la vidéo (indépendante de la boucle I/O). */
+  loopAll: boolean;
+  onToggleLoopAll: () => void;
   /** Qualité de lecture HLS (Phase 23) — `active` faux si le média n'a pas de renditions. */
   quality?: {
     active: boolean;
@@ -79,6 +84,17 @@ export default function VideoTransport({
           <ChevronRight size={16} />
         </button>
       </div>
+      <button
+        onClick={onToggleLoopAll}
+        title={loopAll ? 'Lecture en boucle activée — cliquer pour désactiver' : 'Lire en boucle'}
+        className={
+          loopAll
+            ? 'flex h-7 w-7 items-center justify-center rounded bg-primary/15 text-primary hover:bg-primary/25'
+            : btn
+        }
+      >
+        <Repeat size={15} />
+      </button>
 
       <span className="font-mono text-sm">
         <span className="text-primary">{startFrame + currentFrame}</span>
@@ -89,10 +105,10 @@ export default function VideoTransport({
       {loopActive && (
         <button
           onClick={onClearLoop}
-          title="Boucle active — cliquer pour l'effacer (Maj+I/O)"
+          title="Boucle entre les points I/O — cliquer pour l'effacer (Maj+I/O)"
           className="flex h-7 items-center gap-1 rounded bg-primary/15 px-2 text-primary hover:bg-primary/25"
         >
-          <Repeat size={13} /> Boucle
+          <Repeat size={13} /> Boucle I/O
         </button>
       )}
 

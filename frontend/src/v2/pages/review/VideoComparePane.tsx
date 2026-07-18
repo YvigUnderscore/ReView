@@ -45,10 +45,10 @@ export default function VideoComparePane({
         <div className="flex items-center gap-1">
           <button
             onClick={onWipe}
-            title="Mode wipe (superposition)"
-            className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            title="Basculer en mode wipe (superposition à barre)"
+            className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
           >
-            <SplitSquareHorizontal size={14} />
+            <SplitSquareHorizontal size={13} /> Wipe
           </button>
           <button
             onClick={onClose}

@@ -131,6 +131,19 @@ export function translateShape(s: Shape, dx: number, dy: number): Shape {
   return { ...s, x1: (s.x1 ?? 0) + dx, y1: (s.y1 ?? 0) + dy, x2: (s.x2 ?? 0) + dx, y2: (s.y2 ?? 0) + dy };
 }
 
+/** Ellipse inscrite dans le rectangle défini par deux coins (tracé coin-à-coin, comme le rect). */
+export function ellipseFromCorners(
+  start: [number, number],
+  p: [number, number],
+): { cx: number; cy: number; rx: number; ry: number } {
+  return {
+    cx: (start[0] + p[0]) / 2,
+    cy: (start[1] + p[1]) / 2,
+    rx: Math.abs(p[0] - start[0]) / 2,
+    ry: Math.abs(p[1] - start[1]) / 2,
+  };
+}
+
 /** Normalise un rect dessiné dans n'importe quel sens (w/h positifs). */
 export function normalizeRect(s: Shape): Shape {
   if (s.type === 'rect') {

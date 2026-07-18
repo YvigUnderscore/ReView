@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { arrowHead, hitShape, normalizeRect, translateShape, type Shape } from './geometry';
+import {
+  arrowHead,
+  ellipseFromCorners,
+  hitShape,
+  normalizeRect,
+  translateShape,
+  type Shape,
+} from './geometry';
 
 describe('arrowHead', () => {
   it('flèche horizontale : tête symétrique, pointe au point d’arrivée', () => {
@@ -53,6 +60,22 @@ describe('hitShape', () => {
     const r1: Shape = { id: 'r1', type: 'rect', color: '#fff', width: 3, x: 0.4, y: 0.4, w: 0.2, h: 0.2 };
     const r2: Shape = { ...r1, id: 'r2' };
     expect(hitShape([r1, r2], [0.5, 0.5])?.id).toBe('r2');
+  });
+});
+
+describe('ellipseFromCorners', () => {
+  it('inscrit l’ellipse dans le rectangle des deux coins', () => {
+    const e = ellipseFromCorners([0.2, 0.3], [0.6, 0.5]);
+    expect(e.cx).toBeCloseTo(0.4, 10);
+    expect(e.cy).toBeCloseTo(0.4, 10);
+    expect(e.rx).toBeCloseTo(0.2, 10);
+    expect(e.ry).toBeCloseTo(0.1, 10);
+  });
+  it('indépendante du sens du tracé (coin bas-droit → haut-gauche)', () => {
+    expect(ellipseFromCorners([0.6, 0.5], [0.2, 0.3])).toEqual(ellipseFromCorners([0.2, 0.3], [0.6, 0.5]));
+  });
+  it('dégénérée au point de départ : rayons nuls centrés sur le coin', () => {
+    expect(ellipseFromCorners([0.5, 0.5], [0.5, 0.5])).toEqual({ cx: 0.5, cy: 0.5, rx: 0, ry: 0 });
   });
 });
 

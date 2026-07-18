@@ -4,8 +4,8 @@ import Avatar from '../../components/Avatar';
 import { formatTime } from './reviewTypes';
 import { filmstripSlots, spriteSlotCss, type TimelineSpriteMeta } from './timelineSprite';
 
-/** Timeline vidéo : scrub à la souris + filmstrip de miniatures (sprite worker) +
- * marqueurs de commentaires avec avatar de l'auteur. */
+/** Timeline vidéo : scrub à la souris + filmstrip de miniatures (sprite worker,
+ * affiché **au survol** en bandeau flottant) + marqueurs de commentaires avec avatar. */
 export default function VideoTimeline({
   currentTime,
   duration,
@@ -29,7 +29,7 @@ export default function VideoTimeline({
   trimRange?: { start: number; end: number } | null;
   /** Points de boucle I/O (secondes, 14.B) — région surlignée entre in et out. */
   loop?: { in: number | null; out: number | null };
-  /** Sprite de miniatures (~1 vignette / 3 s) affiché en fond de timeline. */
+  /** Sprite de miniatures (~1 vignette / 3 s) affiché au survol de la timeline. */
   sprite?: { url: string; meta: TimelineSpriteMeta } | null;
   /** Début/fin du glissement — le lecteur bascule en basse qualité pendant le scrub. */
   onScrubStart?: () => void;
@@ -38,6 +38,7 @@ export default function VideoTimeline({
   const barRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
   const [barWidth, setBarWidth] = useState(0);
+  const [hovered, setHovered] = useState(false);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
   const timedComments = comments.filter((c) => c.timestamp != null);
 
@@ -50,8 +51,9 @@ export default function VideoTimeline({
     return () => ro.disconnect();
   }, []);
 
-  const stripH = 40; // hauteur px du filmstrip (barre h-14 quand sprite présent)
-  const slots = sprite && duration > 0 ? filmstripSlots(barWidth - 8, stripH, duration, sprite.meta) : [];
+  const stripH = 40; // hauteur px du filmstrip flottant
+  const showStrip = !!sprite && duration > 0 && hovered;
+  const slots = showStrip ? filmstripSlots(barWidth - 8, stripH, duration, sprite!.meta) : [];
 
   const seekFromEvent = useCallback(
     (e: { clientX: number }) => {
@@ -73,42 +75,58 @@ export default function VideoTimeline({
     seekFromEvent(e);
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    setHovered(true);
     if (scrubbing.current) seekFromEvent(e);
   };
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (scrubbing.current) onScrubEnd?.();
     scrubbing.current = false;
+    // Fin de scrub hors de la barre (pointer capture) : le filmstrip se referme.
+    const rect = barRef.current?.getBoundingClientRect();
+    if (
+      rect &&
+      (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom)
+    )
+      setHovered(false);
   };
 
   return (
     <div
       ref={barRef}
-      className={`relative ${sprite ? 'h-14' : 'h-9'} shrink-0 cursor-pointer select-none rounded-md border border-border bg-card/60 px-1`}
+      className="relative h-9 shrink-0 cursor-pointer select-none rounded-md border border-border bg-card/60 px-1"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => {
+        if (!scrubbing.current) setHovered(false);
+      }}
       title="Cliquer ou glisser pour se déplacer"
     >
-      {/* Fond progress (+ filmstrip de miniatures si le sprite existe) */}
-      <div className="absolute inset-y-0 left-1 right-1 overflow-hidden rounded">
-        <div className="h-full rounded bg-secondary/40" />
-        {sprite && slots.length > 0 && (
-          <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-between opacity-70">
+      {/* Filmstrip flottant : miniatures visibles uniquement au survol / pendant le scrub */}
+      {showStrip && slots.length > 0 && (
+        <div className="pointer-events-none absolute bottom-full left-0 right-0 z-30 mb-1 rounded-md border border-border bg-card/95 p-1 shadow-lg backdrop-blur">
+          <div className="flex justify-between overflow-hidden rounded">
             {slots.map((idx, i) => (
               <div
                 key={i}
                 className="shrink-0"
                 style={{
-                  width: (sprite.meta.tileW / sprite.meta.tileH) * stripH,
+                  width: (sprite!.meta.tileW / sprite!.meta.tileH) * stripH,
                   height: stripH,
-                  backgroundImage: `url(${sprite.url})`,
+                  backgroundImage: `url(${sprite!.url})`,
                   backgroundRepeat: 'no-repeat',
-                  ...spriteSlotCss(idx, sprite.meta, stripH),
+                  ...spriteSlotCss(idx, sprite!.meta, stripH),
                 }}
               />
             ))}
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Fond progress */}
+      <div className="absolute inset-y-0 left-1 right-1 overflow-hidden rounded">
+        <div className="h-full rounded bg-secondary/40" />
         <div
           className="absolute inset-y-0 left-0 rounded bg-primary/30 transition-none"
           style={{ width: `${progress * 100}%` }}

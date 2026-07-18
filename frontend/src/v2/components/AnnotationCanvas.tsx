@@ -1,6 +1,13 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import ShapeEl from './annotation/ShapeEl';
-import { hitShape, normalizeRect, translateShape, type Shape, type Tool } from './annotation/geometry';
+import {
+  ellipseFromCorners,
+  hitShape,
+  normalizeRect,
+  translateShape,
+  type Shape,
+  type Tool,
+} from './annotation/geometry';
 
 export type { Shape, Tool };
 
@@ -45,6 +52,8 @@ export function AnnotationCanvas({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const drag = useRef<{ id: string; ox: number; oy: number } | null>(null);
   const erasing = useRef(false);
+  // Coin de départ de l'ellipse : tracée coin-à-coin (comme le rect), pas depuis le centre.
+  const ellipseStart = useRef<[number, number] | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const aspect = size.h > 0 ? size.w / size.h : 0;
 
@@ -113,8 +122,10 @@ export function AnnotationCanvas({
     const base = { id: uid(), color, width, alpha };
     if (tool === 'draw') setDraft({ ...base, type: 'path', pts: [p] });
     else if (tool === 'rect') setDraft({ ...base, type: 'rect', x: p[0], y: p[1], w: 0, h: 0 });
-    else if (tool === 'ellipse') setDraft({ ...base, type: 'ellipse', cx: p[0], cy: p[1], rx: 0, ry: 0 });
-    else if (tool === 'arrow') setDraft({ ...base, type: 'arrow', x1: p[0], y1: p[1], x2: p[0], y2: p[1] });
+    else if (tool === 'ellipse') {
+      ellipseStart.current = p;
+      setDraft({ ...base, type: 'ellipse', cx: p[0], cy: p[1], rx: 0, ry: 0 });
+    } else if (tool === 'arrow') setDraft({ ...base, type: 'arrow', x1: p[0], y1: p[1], x2: p[0], y2: p[1] });
   };
 
   const move = (e: React.PointerEvent) => {
@@ -142,12 +153,13 @@ export function AnnotationCanvas({
     else if (draft.type === 'rect')
       setDraft({ ...draft, w: p[0] - (draft.x ?? 0), h: p[1] - (draft.y ?? 0) });
     else if (draft.type === 'ellipse')
-      setDraft({ ...draft, rx: Math.abs(p[0] - (draft.cx ?? 0)), ry: Math.abs(p[1] - (draft.cy ?? 0)) });
+      setDraft({ ...draft, ...ellipseFromCorners(ellipseStart.current ?? p, p) });
     else if (draft.type === 'arrow') setDraft({ ...draft, x2: p[0], y2: p[1] });
   };
 
   const up = () => {
     erasing.current = false;
+    ellipseStart.current = null;
     if (drag.current) {
       drag.current = null;
       return;

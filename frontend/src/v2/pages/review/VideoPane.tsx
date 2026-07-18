@@ -94,6 +94,8 @@ export default function VideoPane({
   const [muted, setMuted] = useState(false);
   const [loopIn, setLoopIn] = useState<number | null>(null);
   const [loopOut, setLoopOut] = useState<number | null>(null);
+  // Lecture en boucle de toute la vidéo (indépendante de la boucle I/O).
+  const [loopAll, setLoopAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hls = useHlsPlayer(videoRef, hlsUrl ?? null);
   const buffering = useVideoBuffering(videoRef, src);
@@ -203,6 +205,7 @@ export default function VideoPane({
             // anonymous : autorise la capture canvas de la frame courante (menu clic droit,
             // miniature) — MinIO/nginx renvoient les en-têtes CORS nécessaires.
             crossOrigin="anonymous"
+            loop={loopAll}
             className="block h-full w-full cursor-pointer"
             onClick={togglePlay}
             onPlay={() => {
@@ -271,6 +274,8 @@ export default function VideoPane({
         onFullscreen={fullscreen}
         loopActive={loopIn != null || loopOut != null}
         onClearLoop={clearLoop}
+        loopAll={loopAll}
+        onToggleLoopAll={() => setLoopAll((l) => !l)}
         quality={{
           active: hls.active,
           levels: hls.levels,

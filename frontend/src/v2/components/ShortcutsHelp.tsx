@@ -83,7 +83,8 @@ export default function ShortcutsHelp({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      {/* max-h + scroll : la liste des raccourcis ne doit jamais déborder de l'écran. */}
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Raccourcis clavier</DialogTitle>
         </DialogHeader>
