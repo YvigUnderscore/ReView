@@ -5,6 +5,7 @@ import Avatar from '../Avatar';
 import ReplyComposer from './ReplyComposer';
 import CommentReactions from './CommentReactions';
 import CommentAttachmentList from './CommentAttachmentList';
+import { highlightMentions } from './mentions';
 import type { ReviewComment } from '../../types/api';
 
 export interface CommentItemProps {
@@ -177,7 +178,7 @@ export default function CommentItem({
         ) : (
           <div
             className="prose-doc mt-0.5 max-w-none whitespace-pre-wrap text-sm"
-            dangerouslySetInnerHTML={{ __html: c.content }}
+            dangerouslySetInnerHTML={{ __html: highlightMentions(c.content) }}
           />
         )}
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Bell, CheckCheck, ListTodo, MessageSquare, Reply } from 'lucide-react';
+import { AtSign, Bell, CheckCheck, ListTodo, MessageSquare, Reply } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { getSocket } from '../../lib/socket';
 import { qk } from '../lib/query';
@@ -15,7 +15,7 @@ import type { Notification } from '../types/api';
 /** Cible navigable d'une notification selon son type (référence = tâche ou média). */
 function linkFor(n: Notification): string | null {
   if (n.type === 'TASK_ASSIGNED' && n.referenceId) return `/tasks/${n.referenceId}`;
-  if ((n.type === 'REPLY' || n.type === 'COMMENT_ASSIGNED') && n.referenceId)
+  if ((n.type === 'REPLY' || n.type === 'COMMENT_ASSIGNED' || n.type === 'MENTION') && n.referenceId)
     return `/review/${n.referenceId}`;
   if (n.projectId) return `/projects/${n.projectId}`;
   return null;
@@ -26,6 +26,7 @@ function IconFor({ type }: { type: Notification['type'] }) {
   if (type === 'TASK_ASSIGNED') return <ListTodo size={16} className={cls} />;
   if (type === 'REPLY') return <Reply size={16} className={cls} />;
   if (type === 'COMMENT_ASSIGNED') return <MessageSquare size={16} className={cls} />;
+  if (type === 'MENTION') return <AtSign size={16} className={cls} />;
   return <Bell size={16} className={cls} />;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
@@ -40,7 +40,8 @@ export default function ReviewDecisionDialog({
         .then((d) => d.decisions),
     enabled: open,
   });
-  const statuses = statusesQ.data ?? [];
+  // Référence stable exigée par l'effet de pré-sélection (exhaustive-deps).
+  const statuses = useMemo(() => statusesQ.data ?? [], [statusesQ.data]);
   const history = historyQ.data ?? [];
   const current = history[0]?.status ?? null;
 

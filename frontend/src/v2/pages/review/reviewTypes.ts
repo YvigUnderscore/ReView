@@ -155,6 +155,8 @@ export const DEFAULT_LIGHTING: LightingConfig = { exposure: 1, rotationDeg: 0, s
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
   media: Media;
+  /** Projet porteur (mentions, liens profonds). */
+  projectId: number;
   url: string;
   thumbnailUrl: string | null;
   proxyUrl: string | null;

@@ -8,6 +8,8 @@ import {
   uploadCommentAttachments,
 } from '../../../lib/commentAttachments';
 import { useImagePaste } from '../../lib/useImagePaste';
+import { useMentions } from './useMentions';
+import MentionMenu from './MentionMenu';
 
 /** Zone de réponse à un commentaire (texte + images jointes, paste CTRL+V, 8 max). */
 export default function ReplyComposer({
@@ -25,6 +27,9 @@ export default function ReplyComposer({
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  // Autocomplete des mentions @membre (32.B).
+  const mentions = useMentions(text, setText, textRef);
 
   const addFiles = (add: File[]) => {
     if (files.length + add.length > MAX_COMMENT_ATTACHMENTS)
@@ -49,14 +54,23 @@ export default function ReplyComposer({
 
   return (
     <div className="mt-2 rounded-md border border-border bg-background p-2">
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onPaste={onPasteImage}
-        rows={2}
-        placeholder="Votre réponse…"
-        className="w-full resize-none bg-transparent text-sm focus:outline-none"
-      />
+      <div className="relative">
+        <MentionMenu mentions={mentions} />
+        <textarea
+          ref={textRef}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            mentions.refresh();
+          }}
+          onClick={mentions.refresh}
+          onKeyDown={(e) => mentions.onKeyDown(e)}
+          onPaste={onPasteImage}
+          rows={2}
+          placeholder="Votre réponse… (@ pour mentionner)"
+          className="w-full resize-none bg-transparent text-sm focus:outline-none"
+        />
+      </div>
       {files.length > 0 && (
         <div className="mb-1 flex flex-wrap gap-1">
           {files.map((f, i) => (

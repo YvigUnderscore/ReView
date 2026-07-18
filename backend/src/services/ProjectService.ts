@@ -85,7 +85,12 @@ export async function getProject(projectId: number) {
   const project = await prisma.project.findFirst({
     where: { id: projectId, deletedAt: null },
     include: {
-      memberships: { include: { user: { select: { id: true, name: true, email: true, role: true } } } },
+      memberships: {
+        include: {
+          // username exposé pour l'autocomplete des mentions @user (32.B).
+          user: { select: { id: true, name: true, email: true, role: true, username: true } },
+        },
+      },
     },
   });
   if (!project) throw notFound('Projet introuvable');

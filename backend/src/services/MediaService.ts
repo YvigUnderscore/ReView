@@ -440,6 +440,8 @@ export async function getDetail(user: SessionUser, id: number) {
   ]);
   return {
     media: serializeMedia(media),
+    // Projet porteur : évite au front une résolution séparée (mentions, liens profonds).
+    projectId,
     url,
     thumbnailUrl,
     proxyUrl,

@@ -16,6 +16,8 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { Textarea } from '../../components/ui/textarea';
 import { ResizablePanel } from '../../components/ui/resizable';
 import { useImagePaste } from '../../lib/useImagePaste';
+import { useMentions } from '../../components/comments/useMentions';
+import MentionMenu from '../../components/comments/MentionMenu';
 import { clearDraft, loadDraft, saveDraft } from './commentDraft';
 
 /** Filtre de résolution du fil (32.A). */
@@ -82,6 +84,8 @@ export default function CommentsPanel({
     setAttachFiles((fs) => [...fs, ...files].slice(0, MAX_COMMENT_ATTACHMENTS));
   };
   const onPasteImage = useImagePaste(addFiles);
+  // Autocomplete des mentions @membre (32.B).
+  const mentions = useMentions(content, setContent, composerRef);
 
   // Une annotation (dessin, hotspot, référence) suffit : le texte est optionnel.
   const hasPayload = hints.annotation || hints.hotspot || (hints.references ?? 0) > 0;
@@ -101,7 +105,9 @@ export default function CommentsPanel({
   };
 
   // Entrée = saut de ligne (défaut textarea) ; Ctrl/Cmd+Entrée = envoi.
+  // Le menu de mentions consomme flèches/Entrée/Tab/Échap quand il est ouvert.
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentions.onKeyDown(e)) return;
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       void submit(e as unknown as FormEvent);
@@ -194,17 +200,24 @@ export default function CommentsPanel({
         {hints.camera && (
           <p className="mb-1.5 text-[11px] text-primary">📷 La vue caméra actuelle sera enregistrée</p>
         )}
-        <Textarea
-          ref={composerRef}
-          autoGrow
-          minRows={2}
-          maxRows={10}
-          placeholder="Ajouter un commentaire… (Ctrl+Entrée pour envoyer)"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={onKeyDown}
-          onPaste={onPasteImage}
-        />
+        <div className="relative">
+          <MentionMenu mentions={mentions} />
+          <Textarea
+            ref={composerRef}
+            autoGrow
+            minRows={2}
+            maxRows={10}
+            placeholder="Ajouter un commentaire… (Ctrl+Entrée pour envoyer, @ pour mentionner)"
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              mentions.refresh();
+            }}
+            onClick={mentions.refresh}
+            onKeyDown={onKeyDown}
+            onPaste={onPasteImage}
+          />
+        </div>
         <div className="mt-2 flex items-center justify-between">
           <input
             ref={fileRef}

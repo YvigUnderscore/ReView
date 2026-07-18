@@ -102,6 +102,51 @@ export async function presignAttachment(userId: number, filename: string, conten
   return { url, key };
 }
 
+/** Jetons `@xxx` d'un texte (mentions 32.B) — dédoublonnés, en minuscules. */
+export function extractMentionTokens(content: string): string[] {
+  const tokens = [...content.matchAll(/(^|[\s([{.,;:!?'"«»])@([a-zA-Z0-9._-]+)/g)].map((m) =>
+    m[2]!.toLowerCase(),
+  );
+  return [...new Set(tokens)];
+}
+
+/**
+ * Notifie les membres du projet mentionnés par `@username` (ou `@partie-locale` de
+ * l'email pour les comptes sans pseudo). L'auteur du commentaire est exclu.
+ */
+async function notifyMentions(
+  actorId: number,
+  projectId: number,
+  mediaObjectId: number,
+  content: string,
+): Promise<number[]> {
+  const tokens = extractMentionTokens(content);
+  if (tokens.length === 0) return [];
+  const members = await prisma.projectMembership.findMany({
+    where: { projectId },
+    select: { user: { select: { id: true, username: true, email: true } } },
+  });
+  const targets = members
+    .map((m) => m.user)
+    .filter((u) => {
+      if (u.id === actorId) return false;
+      const handles = [u.username, u.email.split('@')[0]].filter(Boolean) as string[];
+      return handles.some((h) => tokens.includes(h.toLowerCase()));
+    });
+  await Promise.all(
+    targets.map((u) =>
+      notify({
+        userId: u.id,
+        type: 'MENTION',
+        content: 'Vous avez été mentionné dans un commentaire',
+        projectId,
+        referenceId: mediaObjectId,
+      }),
+    ),
+  );
+  return targets.map((u) => u.id);
+}
+
 export interface CreateCommentInput {
   mediaObjectId: number;
   content: string;
@@ -144,13 +189,17 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
   const enriched = await enrichComment(asRawComment(comment));
   emitToProject(projectId, 'comment:new', enriched);
 
-  // Notifications : réponse → auteur du commentaire parent ; sinon ping Discord projet.
+  // Mentions @user (32.B) : notification ciblée des membres cités.
+  const mentioned = await notifyMentions(user.id, projectId, body.mediaObjectId, comment.content);
+
+  // Notifications : réponse → auteur du commentaire parent (sauf déjà notifié par
+  // mention) ; sinon ping Discord projet.
   if (body.parentId) {
     const parent = await prisma.comment.findUnique({
       where: { id: body.parentId },
       select: { userId: true },
     });
-    if (parent?.userId && parent.userId !== user.id) {
+    if (parent?.userId && parent.userId !== user.id && !mentioned.includes(parent.userId)) {
       // referenceId = média (et non le commentaire) → navigable vers la review côté front (10.C5).
       await notify({
         userId: parent.userId,
