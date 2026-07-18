@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
+import { mediaSlug, parseIdParam } from '../lib/slug';
+import { useCanonicalSlug } from '../lib/useCanonicalSlug';
 import { useAuth } from '../stores/useAuth';
 import { userColor } from '../lib/userColor';
 import Shell from '../components/Shell';
@@ -27,13 +29,13 @@ import CommentsPanel from './review/CommentsPanel';
 /** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
 export default function ReviewPage() {
   const { mediaId } = useParams();
-  const id = Number(mediaId);
+  const id = parseIdParam(mediaId);
   // key : réinitialise tout l'état (annotations, sélection, vidéo) au changement de
   // média — navigation précédent/suivant ou changement de version sans quitter l'écran.
-  return <ReviewContent key={id} id={id} />;
+  return <ReviewContent key={id} id={id} rawParam={mediaId} />;
 }
 
-function ReviewContent({ id }: { id: number }) {
+function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const userId = useAuth((s) => s.user?.id) ?? 0;
   const role = useAuth((s) => s.user?.role);
 
@@ -76,6 +78,8 @@ function ReviewContent({ id }: { id: number }) {
     staleTime: Infinity,
   });
   const data = mediaQ.data ?? null;
+  // URL parlante : `/review/219` → `/review/perso-principal-v01-219` dès le nom connu.
+  useCanonicalSlug(rawParam, data ? mediaSlug(data.media.originalName, id) : null);
   const commentsQ = useQuery({
     queryKey: qk.comments(id),
     queryFn: () =>

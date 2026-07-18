@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { MessageSquare, Clapperboard } from 'lucide-react';
 import { timeAgo } from '../../lib/time';
+import { reviewPath } from '../../lib/slug';
 import { MEDIA_KIND_ICON } from '../task/taskTypes';
 import type { DashboardReview } from './homeTypes';
 
@@ -60,7 +61,7 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           <Link
-            to={`/review/${hero.mediaId}`}
+            to={reviewPath({ id: hero.mediaId, originalName: hero.name })}
             className="group block overflow-hidden rounded-md border border-border transition-colors hover:border-primary/60"
           >
             <Thumb review={hero} large />
@@ -82,7 +83,7 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
             {rest.map((r) => (
               <Link
                 key={r.mediaId}
-                to={`/review/${r.mediaId}`}
+                to={reviewPath({ id: r.mediaId, originalName: r.name })}
                 className="group flex items-center gap-3 rounded-md border border-border p-2 transition-colors hover:border-primary/60"
               >
                 <Thumb review={r} />

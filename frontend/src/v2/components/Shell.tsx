@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useProjectsQuery } from '../lib/queries';
+import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import { useFavorites } from '../stores/useFavorites';
 import { useProjectContext } from '../stores/useProjectContext';

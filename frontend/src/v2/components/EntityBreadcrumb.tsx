@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
+import { entitySlug } from '../lib/slug';
 import { trackRecent } from '../stores/useRecents';
 import { useProjectContext } from '../stores/useProjectContext';
 import type { AssetRef, MediaRef, ProjectRef, SequenceRef, ShotRef, Task, Version } from '../types/api';
@@ -41,13 +42,14 @@ interface Segment {
 
 function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
   const pid = ctx.project.id;
+  const pslug = entitySlug(ctx.project.name, pid);
   const segments: Segment[] = [
     { label: 'Projets', to: '/projects' },
-    { label: ctx.project.name, to: `/projects/${pid}` },
+    { label: ctx.project.name, to: `/projects/${pslug}` },
   ];
   if (ctx.sequence)
-    segments.push({ label: ctx.sequence.code, to: `/projects/${pid}?tab=sequences&seq=${ctx.sequence.id}` });
-  if (ctx.shot) segments.push({ label: ctx.shot.code, to: `/projects/${pid}?tab=shots&shot=${ctx.shot.id}` });
+    segments.push({ label: ctx.sequence.code, to: `/projects/${pslug}?tab=sequences&seq=${ctx.sequence.id}` });
+  if (ctx.shot) segments.push({ label: ctx.shot.code, to: `/projects/${pslug}?tab=shots&shot=${ctx.shot.id}` });
   if (ctx.asset) segments.push({ label: ctx.asset.name, to: `/assets/${ctx.asset.id}` });
   if (ctx.task) segments.push({ label: ctx.task.name, to: `/tasks/${ctx.task.id}` });
   if (ctx.version) segments.push({ label: ctx.version.name, to: ctx.task ? `/tasks/${ctx.task.id}` : null });

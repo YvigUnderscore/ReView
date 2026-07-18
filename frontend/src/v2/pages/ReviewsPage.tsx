@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectsQuery } from '../lib/queries';
+import { reviewPath } from '../lib/slug';
 import { useMultiSelect } from '../lib/useMultiSelect';
 import { bulkDelete } from '../lib/bulkApi';
 import type { MediaKind } from '../types/api';
@@ -126,7 +127,7 @@ export default function ReviewsPage() {
             {data.items.map((m) => (
               <EntityCard
                 key={m.id}
-                to={`/review/${m.id}`}
+                to={reviewPath({ id: m.id, originalName: m.name })}
                 view={view}
                 title={m.name}
                 subtitle={[m.project?.name, m.location].filter(Boolean).join(' · ') || undefined}
@@ -136,7 +137,7 @@ export default function ReviewsPage() {
                   {
                     icon: <FolderOpen size={14} />,
                     label: 'Ouvrir',
-                    onClick: () => navigate(`/review/${m.id}`),
+                    onClick: () => navigate(reviewPath({ id: m.id, originalName: m.name })),
                   },
                   {
                     icon: <Trash2 size={14} />,

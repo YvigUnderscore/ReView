@@ -23,12 +23,13 @@ import KanbanColumn from './kanban/KanbanColumn';
 import { KanbanCardBody } from './kanban/KanbanCard';
 import KanbanFilters from './kanban/KanbanFilters';
 import KanbanViews from './kanban/KanbanViews';
+import { parseIdParam } from '../lib/slug';
 
 const EMPTY_FILTER: KanbanFilterState = { assignee: '', type: '', sequence: '' };
 
 export default function KanbanPage() {
   const { id } = useParams();
-  const projectId = Number(id);
+  const projectId = parseIdParam(id);
   const { sequences, tasks, isLoading, loadError, move } = useKanbanBoard(projectId);
   const [filter, setFilter] = useState<KanbanFilterState>(EMPTY_FILTER);
   const [activeId, setActiveId] = useState<number | null>(null);

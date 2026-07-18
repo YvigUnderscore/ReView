@@ -9,6 +9,7 @@ import { fileToThumbnailDataUrl } from '../review/mediaCapture';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import { timeAgo } from '../../lib/time';
+import { reviewPath } from '../../lib/slug';
 import { MEDIA_KIND_ICON, VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
 import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
 import type { ViewMode } from '../../stores/useViewPref';
@@ -96,7 +97,7 @@ function MediaTile({
   if (view === 'compact') {
     return (
       <div className="group flex items-center gap-2 rounded-md border border-border bg-card p-1.5">
-        <Link to={`/review/${media.id}`} className="flex min-w-0 flex-1 items-center gap-2">
+        <Link to={reviewPath(media)} className="flex min-w-0 flex-1 items-center gap-2">
           <div className="relative flex aspect-video h-9 shrink-0 items-center justify-center overflow-hidden rounded bg-black/40 text-muted-foreground">
             <MediaThumb media={media} size={14} />
           </div>
@@ -133,7 +134,7 @@ function MediaTile({
   }
   return (
     <div className="group overflow-hidden rounded-md border border-border bg-card">
-      <Link to={`/review/${media.id}`} title={`Ouvrir la review : ${media.originalName}`} className="block">
+      <Link to={reviewPath(media)} title={`Ouvrir la review : ${media.originalName}`} className="block">
         <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-black/40 text-muted-foreground">
           <MediaThumb media={media} size={22} />
           {!media.published && (

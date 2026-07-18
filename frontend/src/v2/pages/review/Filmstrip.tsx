@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Video, Image as ImageIcon, Box, Boxes, type LucideIcon } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { reviewPath } from '../../lib/slug';
 import type { MediaKind, VersionDetail } from '../../types/api';
 
 const KIND_ICON: Record<MediaKind, LucideIcon> = {
@@ -34,7 +35,7 @@ export default function Filmstrip({ versionId, mediaId }: { versionId: number; m
         return (
           <button
             key={m.id}
-            onClick={() => !active && navigate(`/review/${m.id}`)}
+            onClick={() => !active && navigate(reviewPath(m))}
             title={m.originalName}
             className={`flex h-12 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded border text-[10px] transition-colors ${
               active

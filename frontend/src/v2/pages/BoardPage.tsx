@@ -8,6 +8,7 @@ import { qk } from '../lib/query';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { useTheme } from '../stores/useTheme';
+import { parseIdParam } from '../lib/slug';
 import type { MediaRef } from '../types/api';
 
 /**
@@ -40,7 +41,7 @@ const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
 export default function BoardPage({ scope }: { scope: Scope }) {
   const { id } = useParams();
   const theme = useTheme((s) => s.theme);
-  const targetId = Number(id);
+  const targetId = parseIdParam(id);
   const base = `/api/boards/${scope}/${targetId}`;
   const [saved, setSaved] = useState(true);
   const [error, setError] = useState<string | null>(null);

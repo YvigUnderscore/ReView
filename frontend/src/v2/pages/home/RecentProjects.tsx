@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, FolderKanban } from 'lucide-react';
 import { useProjectsQuery } from '../../lib/queries';
+import { projectPath } from '../../lib/slug';
 
 /** Projets récents (tri serveur updatedAt desc) — colonne latérale de l'Accueil. */
 export default function RecentProjects() {
@@ -23,7 +24,7 @@ export default function RecentProjects() {
           {projects.map((p) => (
             <Link
               key={p.id}
-              to={`/projects/${p.id}`}
+              to={projectPath(p)}
               className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary/60"
             >
               {p.thumbnailUrl ? (

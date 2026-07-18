@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
+import { entitySlug, projectPath, parseIdParam } from '../lib/slug';
+import { useCanonicalSlug } from '../lib/useCanonicalSlug';
 import { useSequencesQuery, useShotsQuery, useAssetsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import FavoriteButton from '../components/FavoriteButton';
@@ -32,7 +34,7 @@ import type { ProjectSettings } from './project/projectTypes';
 /** Page projet — orchestrateur des onglets (découpage 10.C1, sous-composants dans pages/project/). */
 export default function ProjectPage() {
   const { id } = useParams();
-  const projectId = Number(id);
+  const projectId = parseIdParam(id);
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,6 +56,8 @@ export default function ProjectPage() {
     queryFn: () => api.get<{ project: { name: string; startFrame: number } }>(`/api/projects/${projectId}`),
   });
   const name = projData?.project.name ?? '';
+  // URL parlante : remplace `/projects/390` par `/projects/le-projet-390` une fois le nom connu.
+  useCanonicalSlug(id, name ? entitySlug(name, projectId) : null);
   const { data: settingsData } = useQuery({
     queryKey: qk.projectSettings(projectId),
     queryFn: () => api.get<{ settings: ProjectSettings }>(`/api/projects/${projectId}/settings`),
@@ -107,13 +111,13 @@ export default function ProjectPage() {
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Link
-            to={`/projects/${projectId}/kanban`}
+            to={projectPath({ id: projectId, name }, '/kanban')}
             className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
           >
             <KanbanSquare size={16} /> Kanban
           </Link>
           <Link
-            to={`/projects/${projectId}/board`}
+            to={projectPath({ id: projectId, name }, '/board')}
             className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
           >
             <PenTool size={16} /> Board

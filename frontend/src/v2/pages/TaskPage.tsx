@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
+import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
 import Shell from '../components/Shell';
@@ -53,7 +54,7 @@ export default function TaskPage() {
       {/* Localisation (projet › shot/asset) */}
       <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
         {project && (
-          <Link to={`/projects/${project.id}`} className="hover:text-foreground">
+          <Link to={projectPath(project)} className="hover:text-foreground">
             {project.name}
           </Link>
         )}
@@ -61,7 +62,7 @@ export default function TaskPage() {
           <>
             <ChevronRight size={12} />
             <Link
-              to={`/projects/${task.shot.project.id}?tab=shots&shot=${task.shot.id}`}
+              to={projectPath(task.shot.project, `?tab=shots&shot=${task.shot.id}`)}
               className="hover:text-foreground"
             >
               {task.shot.sequence ? `${task.shot.sequence.code} · ` : ''}

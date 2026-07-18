@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileVideo, Play } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { reviewPath } from '../../lib/slug';
 import ProjectActivity from '../../components/ProjectActivity';
 import { Skeleton } from '../../components/ui/skeleton';
 import type { MediaRef } from '../../types/api';
@@ -75,7 +76,7 @@ export default function OverviewTab({
             {media.map((m) => (
               <Link
                 key={m.id}
-                to={`/review/${m.id}`}
+                to={reviewPath(m)}
                 title={`Ouvrir la review : ${m.originalName}`}
                 className="group overflow-hidden rounded-md border border-border bg-card transition-colors hover:border-primary"
               >

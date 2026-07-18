@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { reviewPath } from '../../lib/slug';
 import type { VersionDetail, VersionListItem } from '../../types/api';
 
 /**
@@ -49,7 +50,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
         toast.error(`Aucun média visible dans la version ${v.name}`);
         return;
       }
-      navigate(`/review/${first.id}`);
+      navigate(reviewPath(first));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Version inaccessible');
     }
@@ -87,7 +88,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
         <div className="flex items-center gap-1 rounded-md border border-border px-1 py-0.5 text-xs text-muted-foreground">
           <button
             disabled={!prev}
-            onClick={() => prev && navigate(`/review/${prev.id}`)}
+            onClick={() => prev && navigate(reviewPath(prev))}
             title={prev ? `Média précédent : ${prev.originalName}` : 'Premier média de la version'}
             className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >
@@ -98,7 +99,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
           </span>
           <button
             disabled={!next}
-            onClick={() => next && navigate(`/review/${next.id}`)}
+            onClick={() => next && navigate(reviewPath(next))}
             title={next ? `Média suivant : ${next.originalName}` : 'Dernier média de la version'}
             className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >

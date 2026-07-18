@@ -212,8 +212,25 @@ export default function VideoPane({
     }
   };
 
+  // Plein écran **vidéo seule** : ne met en plein écran que le pane vidéo (image + playbar),
+  // sans en-tête ni panneau de commentaires — complémentaire du plein écran unifié (page).
+  const paneRef = useRef<HTMLDivElement>(null);
+  const [videoOnlyFs, setVideoOnlyFs] = useState(false);
+  useEffect(() => {
+    const onFs = () => setVideoOnlyFs(document.fullscreenElement === paneRef.current);
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+  const toggleVideoFullscreen = () => {
+    if (document.fullscreenElement === paneRef.current) void document.exitFullscreen();
+    else void paneRef.current?.requestFullscreen?.();
+  };
+
   return (
-    <>
+    <div
+      ref={paneRef}
+      className={`flex min-h-0 flex-1 flex-col gap-2 ${videoOnlyFs ? 'bg-background p-2' : ''}`}
+    >
       <div className={VIEWER_ZONE} ref={containerRef}>
         <div
           className="relative"
@@ -290,6 +307,8 @@ export default function VideoPane({
         }}
         onToggleMute={() => setMuted((m) => !m)}
         onFullscreen={onFullscreen}
+        onFullscreenVideo={toggleVideoFullscreen}
+        videoOnlyFs={videoOnlyFs}
         loopActive={loopIn != null || loopOut != null}
         onClearLoop={clearLoop}
         loopAll={loopAll}
@@ -302,6 +321,6 @@ export default function VideoPane({
           switching: hls.switching,
         }}
       />
-    </>
+    </div>
   );
 }

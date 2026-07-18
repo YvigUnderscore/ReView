@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectsQuery } from '../lib/queries';
+import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import type { Project } from '../types/api';
 import Shell from '../components/Shell';
@@ -182,7 +183,7 @@ export default function ProjectsPage() {
             return (
               <EntityCard
                 key={p.id}
-                to={`/projects/${p.id}`}
+                to={projectPath(p)}
                 view={view}
                 title={p.name}
                 subtitle={p.description ?? undefined}
@@ -194,7 +195,7 @@ export default function ProjectsPage() {
                   {
                     icon: <FolderOpen size={14} />,
                     label: 'Ouvrir',
-                    onClick: () => navigate(`/projects/${p.id}`),
+                    onClick: () => navigate(projectPath(p)),
                   },
                   favAction,
                   ...manageActions,

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileClock, X, Trash2, Send, Eye } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
+import { reviewPath } from '../lib/slug';
 import { useUploadStore } from '../../stores/useUploadStore';
 import type { Media } from '../types/api';
 
@@ -95,7 +96,7 @@ export default function PendingDrafts() {
                 </div>
                 <div className="mt-1.5 flex items-center gap-1">
                   <Link
-                    to={`/review/${d.id}`}
+                    to={reviewPath(d)}
                     onClick={() => setOpen(false)}
                     className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 hover:bg-secondary/60"
                   >

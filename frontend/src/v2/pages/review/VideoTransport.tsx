@@ -1,8 +1,10 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Expand,
   Loader2,
   Maximize,
+  Minimize,
   Pause,
   Play,
   Repeat,
@@ -33,6 +35,8 @@ export default function VideoTransport({
   onVolume,
   onToggleMute,
   onFullscreen,
+  onFullscreenVideo,
+  videoOnlyFs,
   loopActive,
   onClearLoop,
   loopAll,
@@ -53,7 +57,12 @@ export default function VideoTransport({
   muted: boolean;
   onVolume: (v: number) => void;
   onToggleMute: () => void;
+  /** Plein écran unifié (viewer + playbar + espace commentaires). */
   onFullscreen: () => void;
+  /** Plein écran vidéo seule (image + playbar, sans commentaires). */
+  onFullscreenVideo: () => void;
+  /** Vrai quand le plein écran vidéo seule est actif (icône réduire). */
+  videoOnlyFs: boolean;
   loopActive: boolean;
   onClearLoop: () => void;
   /** Lecture en boucle de toute la vidéo (indépendante de la boucle I/O). */
@@ -172,7 +181,14 @@ export default function VideoTransport({
           title="Volume"
           className="h-1 w-20 accent-primary"
         />
-        <button onClick={onFullscreen} title="Plein écran" className={btn}>
+        <button
+          onClick={onFullscreenVideo}
+          title={videoOnlyFs ? 'Quitter le plein écran vidéo' : 'Plein écran vidéo seule (sans commentaires)'}
+          className={btn}
+        >
+          {videoOnlyFs ? <Minimize size={16} /> : <Expand size={16} />}
+        </button>
+        <button onClick={onFullscreen} title="Plein écran avec l’espace review" className={btn}>
           <Maximize size={16} />
         </button>
       </div>
