@@ -11,12 +11,14 @@ vi.mock('../lib/prisma', () => ({
     },
     reviewDecision: { count: vi.fn(), findMany: vi.fn() },
     version: { findFirst: vi.fn() },
+    mediaObject: { findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./NotificationService', () => ({ notify: vi.fn() }));
+vi.mock('./WatchService', () => ({ notifyWatchers: vi.fn().mockResolvedValue([]) }));
 
 import { ensureDefaultStatuses, listStatuses, deleteStatus, decide } from './ReviewDecisionService';
 import { prisma } from '../lib/prisma';

@@ -13,6 +13,7 @@ import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
+import { notifyWatchers } from './WatchService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
 /**
@@ -329,7 +330,16 @@ export async function publish(user: SessionUser, id: number) {
   if (media.uploaderId !== user.id) throw notFound('Média introuvable');
   const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
   const projectId = await resolveProjectIdForVersion(media.versionId);
-  if (projectId) emitToProject(projectId, 'media:update', { projectId, id, versionId: media.versionId });
+  if (projectId) {
+    emitToProject(projectId, 'media:update', { projectId, id, versionId: media.versionId });
+    // Suiveurs (32.G) : publication sur la chaîne version/shot/asset.
+    await notifyWatchers({
+      mediaObjectId: id,
+      projectId,
+      content: `Nouveau média publié : ${media.originalName}`,
+      exclude: [user.id],
+    });
+  }
   return serializeMedia(updated);
 }
 

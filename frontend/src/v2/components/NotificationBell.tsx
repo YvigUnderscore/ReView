@@ -15,7 +15,10 @@ import type { Notification } from '../types/api';
 /** Cible navigable d'une notification selon son type (référence = tâche ou média). */
 function linkFor(n: Notification): string | null {
   if (n.type === 'TASK_ASSIGNED' && n.referenceId) return `/tasks/${n.referenceId}`;
-  if ((n.type === 'REPLY' || n.type === 'COMMENT_ASSIGNED' || n.type === 'MENTION') && n.referenceId)
+  if (
+    (n.type === 'REPLY' || n.type === 'COMMENT_ASSIGNED' || n.type === 'MENTION' || n.type === 'WATCH') &&
+    n.referenceId
+  )
     return `/review/${n.referenceId}`;
   if (n.projectId) return `/projects/${n.projectId}`;
   return null;

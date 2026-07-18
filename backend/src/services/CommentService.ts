@@ -6,6 +6,7 @@ import { notify, sendDiscord } from './NotificationService';
 import { toPublicUser } from '../lib/userView';
 import { storage } from './StorageService';
 import * as ReviewReferenceService from './ReviewReferenceService';
+import { notifyWatchers } from './WatchService';
 import { badRequest, forbidden } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
@@ -210,6 +211,13 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       });
     }
   } else {
+    // Suiveurs (32.G) : nouveau commentaire racine sur la chaîne version/shot/asset.
+    await notifyWatchers({
+      mediaObjectId: body.mediaObjectId,
+      projectId,
+      content: 'Nouveau commentaire sur un élément suivi',
+      exclude: [user.id, ...mentioned],
+    });
     void sendDiscord(`💬 Nouveau commentaire sur un média (projet #${projectId})`);
   }
   return enriched;

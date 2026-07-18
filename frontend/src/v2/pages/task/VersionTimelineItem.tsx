@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, ClipboardCheck, Trash2, Upload } from 'lucide-react';
+import { Bell, BellOff, ChevronDown, ChevronRight, ClipboardCheck, Trash2, Upload } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
@@ -15,6 +15,7 @@ import ReviewDecisionBadge from '../../components/ReviewDecisionBadge';
 import ReviewDecisionDialog from '../../components/ReviewDecisionDialog';
 import { timeAgo } from '../../lib/time';
 import { useAuth } from '../../stores/useAuth';
+import { useWatch } from '../../lib/useWatch';
 import MediaTile from './MediaTile';
 import { VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
 import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
@@ -51,6 +52,9 @@ export default function VersionTimelineItem({
   const [decisionOpen, setDecisionOpen] = useState(false);
   const role = useAuth((s) => s.user?.role);
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
+  // Suivi de notifications de la version (32.G).
+  const watch = useWatch();
+  const watching = watch.isWatching('VERSION', version.id);
   const mediaQ = useQuery({
     queryKey: qk.version(version.id),
     queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${version.id}`).then((d) => d.version),
@@ -157,6 +161,11 @@ export default function VersionTimelineItem({
           <ContextMenuItem onClick={() => setDecisionOpen(true)}>
             <ClipboardCheck size={14} />
             {canDecide ? 'Décision de review…' : 'Historique des décisions…'}
+          </ContextMenuItem>
+          {/* Suivi (32.G) : notifications sur commentaires/publications/décisions. */}
+          <ContextMenuItem onClick={() => watch.toggle('VERSION', version.id)}>
+            {watching ? <BellOff size={14} /> : <Bell size={14} />}
+            {watching ? 'Ne plus suivre cette version' : 'Suivre cette version'}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

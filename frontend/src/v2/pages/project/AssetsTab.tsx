@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, FolderOpen, Link2, Plus, Star, Trash2 } from 'lucide-react';
+import { Bell, BellOff, Box, FolderOpen, Link2, Plus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useFavorites } from '../../stores/useFavorites';
+import { useWatch } from '../../lib/useWatch';
 import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import ViewToggle from '../../components/ViewToggle';
@@ -37,6 +38,8 @@ export default function AssetsTab({
   const navigate = useNavigate();
   const favs = useFavorites((s) => s.favorites);
   const toggleFav = useFavorites((s) => s.toggle);
+  // Suivi de notifications par asset (32.G, clic droit).
+  const watch = useWatch();
   const isFav = (id: number) => favs.some((f) => f.type === 'ASSET' && f.entityId === id);
   const [newAsset, setNewAsset] = useState({ name: '', type: 'CHARACTER' });
   const [creating, setCreating] = useState(false);
@@ -196,6 +199,12 @@ export default function AssetsTab({
                     onClick: () => navigate(`/assets/${a.id}`),
                   },
                   favAction,
+                  // Suivi (32.G) : notifications sur l'activité de l'asset.
+                  {
+                    icon: watch.isWatching('ASSET', a.id) ? <BellOff size={14} /> : <Bell size={14} />,
+                    label: watch.isWatching('ASSET', a.id) ? 'Ne plus suivre cet asset' : 'Suivre cet asset',
+                    onClick: () => watch.toggle('ASSET', a.id),
+                  },
                   ...manageActions,
                 ]}
               />

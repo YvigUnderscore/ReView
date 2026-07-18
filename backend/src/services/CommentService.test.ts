@@ -17,6 +17,7 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./NotificationService', () => ({ notify: vi.fn(), sendDiscord: vi.fn() }));
 vi.mock('./ReviewReferenceService', () => ({ purgeForComment: vi.fn() }));
+vi.mock('./WatchService', () => ({ notifyWatchers: vi.fn().mockResolvedValue([]) }));
 vi.mock('./StorageService', () => ({
   storage: {
     getPresignedGetUrl: vi.fn().mockResolvedValue('https://minio/url'),

@@ -154,6 +154,7 @@ model User {
   comments         Comment[]           @relation("CommentAuthor")
   assignedComments Comment[]           @relation("CommentAssignee")
   resolvedComments Comment[]           @relation("CommentResolver")
+  watches          Watch[]
   reactions        Reaction[]
   notifications    Notification[]
   createdShares    ShareLink[]         @relation("ShareCreator")
@@ -529,6 +530,26 @@ model Notification {
   createdAt   DateTime @default(now())
 
   @@index([userId])
+}
+
+// Suivi de notifications (32.G) : un utilisateur « suit » un shot, un asset ou une
+// version ; toute activité (commentaire racine, publication, décision) le notifie.
+enum WatchTargetType {
+  SHOT
+  ASSET
+  VERSION
+}
+
+model Watch {
+  id         Int             @id @default(autoincrement())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  targetType WatchTargetType
+  targetId   Int
+  createdAt  DateTime        @default(now())
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
 }
 
 model AuditLog {

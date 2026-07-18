@@ -2,6 +2,7 @@ import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
 import { notify } from './NotificationService';
+import { notifyWatchers } from './WatchService';
 import { emitToProject } from './SocketService';
 import { badRequest, conflict, notFound } from '../lib/errors';
 
@@ -131,6 +132,20 @@ export async function decide(
       referenceId: versionId,
     });
   }
+  // Suiveurs (32.G) : décision posée sur la chaîne version/shot/asset (référence =
+  // premier média de la version, navigable vers la review).
+  const firstMedia = await prisma.mediaObject.findFirst({
+    where: { versionId },
+    orderBy: { id: 'asc' },
+    select: { id: true },
+  });
+  await notifyWatchers({
+    versionId,
+    projectId,
+    content: `Décision « ${status.name} » sur la version ${version.name}`,
+    referenceId: firstMedia?.id ?? null,
+    exclude: [user.id, ...(version.authorId ? [version.authorId] : [])],
+  });
   return decision;
 }
 
