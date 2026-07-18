@@ -63,7 +63,8 @@ export default function VideoTransport({
   quality?: {
     active: boolean;
     levels: HlsLevel[];
-    mode: number;
+    /** Index de la rendition servie (verrouillée, pas d'ABR). */
+    level: number;
     setLevel: (i: number) => void;
     /** Changement de qualité en cours (spinner à côté du sélecteur). */
     switching?: boolean;
@@ -142,7 +143,7 @@ export default function VideoTransport({
             <SlidersHorizontal size={13} />
           )}
           <select
-            value={quality?.active ? quality.mode : 0}
+            value={quality?.active ? quality.level : 0}
             disabled={!quality?.active}
             onChange={(e) => quality?.setLevel(Number(e.target.value))}
             className="rounded border border-input bg-background px-1 py-0.5 text-xs disabled:opacity-60 [&>option]:bg-background"

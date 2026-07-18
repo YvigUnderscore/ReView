@@ -249,8 +249,6 @@ export default function VideoPane({
           trimRange={trimRange}
           loop={{ in: loopIn, out: loopOut }}
           sprite={timelineSprite}
-          onScrubStart={hls.beginScrub}
-          onScrubEnd={hls.endScrub}
         />
       )}
 
@@ -280,7 +278,7 @@ export default function VideoPane({
         quality={{
           active: hls.active,
           levels: hls.levels,
-          mode: hls.mode,
+          level: hls.level,
           setLevel: changeQuality,
           switching: hls.switching,
         }}
