@@ -63,5 +63,6 @@ export const qk = {
   playlists: (projectId: number) => ['playlists', projectId] as const,
   playlist: (id: number) => ['playlist', id] as const,
   liveSessions: (projectId: number) => ['live-sessions', projectId] as const,
+  timelineMarkers: (mediaId: number) => ['timeline-markers', mediaId] as const,
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
 } as const;

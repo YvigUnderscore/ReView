@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ReviewComment } from '../../types/api';
+import { Bookmark } from 'lucide-react';
+import type { ReviewComment, TimelineMarker } from '../../types/api';
 import Avatar from '../../components/Avatar';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '../../components/ui/context-menu';
 import { formatTime } from './reviewTypes';
 import { spriteIndexAt, spriteSlotCss, type TimelineSpriteMeta } from './timelineSprite';
+import { MarkerDialog, MarkerTicks } from './TimelineMarkers';
+import type { TimelineMarkersApi } from './useTimelineMarkers';
 
 /** Timeline vidéo : scrub à la souris + miniature de survol (la vignette du sprite sous
- * le curseur, façon YouTube) + marqueurs de commentaires avec avatar de l'auteur. */
+ * le curseur, façon YouTube) + marqueurs de commentaires avec avatar de l'auteur +
+ * marqueurs nommés/colorés partagés posés par clic droit (34.C). */
 export default function VideoTimeline({
   currentTime,
   duration,
@@ -16,6 +26,9 @@ export default function VideoTimeline({
   trimRange,
   loop,
   sprite,
+  markersApi,
+  fps = 24,
+  startFrame = 1001,
 }: {
   currentTime: number;
   duration: number;
@@ -29,10 +42,19 @@ export default function VideoTimeline({
   loop?: { in: number | null; out: number | null };
   /** Sprite de miniatures (~1 vignette / 3 s) : celle sous le curseur s'affiche au survol. */
   sprite?: { url: string; meta: TimelineSpriteMeta } | null;
+  /** Marqueurs partagés (34.C) — absent : timeline sans marqueurs (comparaison B…). */
+  markersApi?: TimelineMarkersApi;
+  fps?: number;
+  startFrame?: number;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
   const [barWidth, setBarWidth] = useState(0);
+  // Marqueurs partagés (34.C) : frame visée par le clic droit + dialog création/édition.
+  const ctxFrame = useRef(0);
+  const [markerDialog, setMarkerDialog] = useState<{ frame: number; editing: TimelineMarker | null } | null>(
+    null,
+  );
   // Abscisse du curseur (px, relative à la barre) — pilote la miniature de survol.
   const [hoverX, setHoverX] = useState<number | null>(null);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
@@ -101,7 +123,17 @@ export default function VideoTimeline({
       setHoverX(null);
   };
 
-  return (
+  // Clic droit sur la barre : mémorise la frame pointée (menu « Ajouter un marqueur ici »)
+  // et ne remonte pas au menu contextuel global du viewer.
+  const onBarContextMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect || duration <= 0) return;
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    ctxFrame.current = Math.round(ratio * duration * (fps || 24));
+  };
+
+  const bar = (
     <div
       ref={barRef}
       className="relative h-9 shrink-0 cursor-pointer select-none rounded-md border border-border bg-card/60 px-1"
@@ -112,6 +144,7 @@ export default function VideoTimeline({
       onPointerLeave={() => {
         if (!scrubbing.current) setHoverX(null);
       }}
+      onContextMenu={markersApi ? onBarContextMenu : undefined}
       title="Cliquer ou glisser pour se déplacer"
     >
       {/* Miniature de survol : la vignette à l'instant pointé, suivant le curseur */}
@@ -223,10 +256,46 @@ export default function VideoTimeline({
         );
       })}
 
+      {/* Marqueurs nommés/colorés partagés (34.C) */}
+      {markersApi && (
+        <MarkerTicks
+          api={markersApi}
+          duration={duration}
+          fps={fps}
+          onSeek={onSeek}
+          onEdit={(m) => setMarkerDialog({ frame: m.frame, editing: m })}
+        />
+      )}
+
       {/* Timecode affiché à droite */}
       <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground pointer-events-none">
         {formatTime(currentTime)} / {formatTime(duration)}
       </span>
     </div>
+  );
+
+  // Sans API marqueurs (pane B de comparaison) ou sans droit d'écriture : barre nue.
+  if (!markersApi?.canWrite) return bar;
+  return (
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{bar}</ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => setMarkerDialog({ frame: ctxFrame.current, editing: null })}>
+            <Bookmark size={14} /> Ajouter un marqueur ici…
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      {markerDialog !== null && (
+        <MarkerDialog
+          key={markerDialog.editing?.id ?? `new-${markerDialog.frame}`}
+          onClose={() => setMarkerDialog(null)}
+          frame={markerDialog.frame}
+          startFrame={startFrame}
+          editing={markerDialog.editing}
+          api={markersApi}
+        />
+      )}
+    </>
   );
 }

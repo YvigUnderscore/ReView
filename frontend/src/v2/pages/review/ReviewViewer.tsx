@@ -162,6 +162,7 @@ export default function ReviewViewer({
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <VideoPane
                 src={src}
+                mediaId={data.media.id}
                 hlsUrl={hlsUrl}
                 videoRef={videoRef}
                 programmaticSeekRef={programmaticSeekRef}

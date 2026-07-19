@@ -219,6 +219,17 @@ export interface PlaylistItemEntry {
 /** GET /api/playlists/:id — items ordonnés. */
 export type PlaylistDetail = Omit<PlaylistSummary, '_count'> & { items: PlaylistItemEntry[] };
 
+/** Marqueur de timeline nommé/coloré partagé (Phase 34.C). */
+export interface TimelineMarker {
+  id: number;
+  frame: number;
+  name: string;
+  color: string;
+  authorId: number | null;
+  authorName: string | null;
+  createdAt: string;
+}
+
 /** GET /api/live/sessions?projectId= — session live en cours (badges LIVE, retours 33). */
 export interface LiveSessionSummary {
   key: string;

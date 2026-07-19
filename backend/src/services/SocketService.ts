@@ -261,3 +261,8 @@ export const emitToUser = (userId: number, event: string, data: unknown): void =
 export const emitToProject = (projectId: number, event: string, data: unknown): void => {
   io?.to(`project_${projectId}`).emit(event, data);
 };
+
+/** Room des spectateurs d'une review (jointe via `join_review`). */
+export const emitToReview = (mediaId: number, event: string, data: unknown): void => {
+  io?.to(`review_${mediaId}`).emit(event, data);
+};

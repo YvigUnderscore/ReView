@@ -167,6 +167,7 @@ model User {
   reviewReferences ReviewReference[]
   reviewDecisions  ReviewDecision[]    @relation("DecisionAuthor")
   playlists        Playlist[]          @relation("PlaylistAuthor")
+  timelineMarkers  TimelineMarker[]    @relation("TimelineMarkerAuthor")
 }
 
 model PasswordReset {
@@ -425,8 +426,25 @@ model MediaObject {
   uploader   User? @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
   uploaderId Int?
 
-  comments   Comment[]
-  references ReviewReference[]
+  comments        Comment[]
+  references      ReviewReference[]
+  timelineMarkers TimelineMarker[]
+}
+
+// Marqueurs de timeline nommés/colorés, partagés entre spectateurs (Phase 34.C) :
+// posés par clic droit sur la timeline vidéo, visibles par tous les membres du projet.
+model TimelineMarker {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+  frame         Int // frame du média (0-based, indépendante du startFrame d'affichage)
+  name          String
+  color         String      @default("#22d3ee")
+  author        User?       @relation("TimelineMarkerAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId      Int?
+  createdAt     DateTime    @default(now())
+
+  @@index([mediaObjectId])
 }
 
 // Images de référence d'une review 2D (Phase 24, multi-items) : persistées & partagées,

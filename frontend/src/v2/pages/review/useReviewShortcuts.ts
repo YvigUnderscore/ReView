@@ -20,6 +20,7 @@ export function useReviewShortcuts({
   onLoopIn,
   onLoopOut,
   onClearLoop,
+  onShuttle,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
   fps: number;
@@ -30,6 +31,8 @@ export function useReviewShortcuts({
   onLoopOut?: () => void;
   /** Maj+I ou Maj+O : efface la boucle. */
   onClearLoop?: () => void;
+  /** Vitesse de la lecture arrière J (négative), null à l'arrêt — affichage 34.C. */
+  onShuttle?: (speed: number | null) => void;
 }) {
   const shuttle = useRef<{ speed: number; raf: number; last: number } | null>(null);
 
@@ -38,6 +41,7 @@ export function useReviewShortcuts({
       if (shuttle.current) {
         cancelAnimationFrame(shuttle.current.raf);
         shuttle.current = null;
+        onShuttle?.(null);
       }
     };
 
@@ -47,6 +51,7 @@ export function useReviewShortcuts({
       v.pause();
       if (shuttle.current) {
         shuttle.current.speed = Math.min(shuttle.current.speed * 2, 8);
+        onShuttle?.(-shuttle.current.speed);
         return;
       }
       const tick = (now: number) => {
@@ -63,6 +68,7 @@ export function useReviewShortcuts({
         s.raf = requestAnimationFrame(tick);
       };
       shuttle.current = { speed: 1, last: performance.now(), raf: requestAnimationFrame(tick) };
+      onShuttle?.(-1);
     };
 
     const playForward = () => {
@@ -147,5 +153,5 @@ export function useReviewShortcuts({
       v?.removeEventListener('play', onPlay);
       stopShuttle();
     };
-  }, [videoRef, fps, onMarker, onLoopIn, onLoopOut, onClearLoop]);
+  }, [videoRef, fps, onMarker, onLoopIn, onLoopOut, onClearLoop, onShuttle]);
 }

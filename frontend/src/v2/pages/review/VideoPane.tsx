@@ -5,41 +5,12 @@ import type { ReviewComment } from '../../types/api';
 import { cancelPendingPlay, createSeekCoalescer, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import { useHlsPlayer } from './useHlsPlayer';
+import { useTimelineMarkers } from './useTimelineMarkers';
 import { useVideoFullscreen } from './useVideoFullscreen';
+import { usePlaybackSpeed, useVideoBuffering } from './videoPaneHooks';
 import type { TimelineSpriteMeta } from './timelineSprite';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
-
-/**
- * Buffering du lecteur : vrai quand la vidéo attend des données (seek/switch qualité),
- * avec un léger délai anti-scintillement — pilote le spinner discret sur le viewer.
- */
-function useVideoBuffering(videoRef: RefObject<HTMLVideoElement | null>, src: string) {
-  const [buffering, setBuffering] = useState(false);
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    let timer: number | undefined;
-    const start = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => setBuffering(true), 180);
-    };
-    const stop = () => {
-      window.clearTimeout(timer);
-      setBuffering(false);
-    };
-    const startEvents = ['waiting', 'seeking', 'stalled'] as const;
-    const stopEvents = ['playing', 'canplay', 'seeked'] as const;
-    startEvents.forEach((e) => v.addEventListener(e, start));
-    stopEvents.forEach((e) => v.addEventListener(e, stop));
-    return () => {
-      window.clearTimeout(timer);
-      startEvents.forEach((e) => v.removeEventListener(e, start));
-      stopEvents.forEach((e) => v.removeEventListener(e, stop));
-    };
-  }, [videoRef, src]);
-  return buffering;
-}
 
 /**
  * Pane vidéo de la review (14.B) : lecteur **custom** (plus de `controls` natif) + overlay
@@ -48,6 +19,7 @@ function useVideoBuffering(videoRef: RefObject<HTMLVideoElement | null>, src: st
  */
 export default function VideoPane({
   src,
+  mediaId,
   videoRef,
   programmaticSeekRef,
   overlay,
@@ -67,6 +39,8 @@ export default function VideoPane({
   onFullscreen,
 }: {
   src: string;
+  /** Média affiché — marqueurs de timeline partagés (34.C). */
+  mediaId: number;
   /** Master HLS servi par le proxy auth (Phase 23) — prioritaire sur `src` (MP4) si MSE dispo. */
   hlsUrl?: string | null;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -103,6 +77,10 @@ export default function VideoPane({
   const containerRef = useRef<HTMLDivElement>(null);
   const hls = useHlsPlayer(videoRef, hlsUrl ?? null);
   const buffering = useVideoBuffering(videoRef, src);
+  // Marqueurs de timeline partagés (34.C) — posés par clic droit sur la timeline.
+  const markersApi = useTimelineMarkers(mediaId);
+  // Vitesse de lecture affichée (34.C) : shuttle arrière (J) prioritaire sur playbackRate.
+  const playbackSpeed = usePlaybackSpeed(videoRef, src, playing);
 
   // Feedback au changement de qualité : toast + spinner (hls.switching) le temps du switch.
   const changeQuality = (idx: number) => {
@@ -158,6 +136,7 @@ export default function VideoPane({
     onLoopIn: markLoopIn,
     onLoopOut: markLoopOut,
     onClearLoop: clearLoop,
+    onShuttle: playbackSpeed.onShuttle,
   });
 
   // Applique volume/mute au lecteur.
@@ -270,6 +249,12 @@ export default function VideoPane({
           />
           {overlay}
         </div>
+        {/* Vitesse de lecture (34.C) : visible dès qu'on n'est pas en lecture normale ×1. */}
+        {playbackSpeed.visible && (
+          <div className="pointer-events-none absolute right-3 top-3 z-30 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur">
+            {playbackSpeed.speed < 0 ? '◀' : '▶'} ×{Math.abs(playbackSpeed.speed)}
+          </div>
+        )}
         {/* Spinner discret : buffering (seek/scrub) ou changement de qualité en cours. */}
         {(buffering || hls.switching) && (
           <div className="pointer-events-none absolute bottom-3 left-3 z-30 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur">
@@ -303,6 +288,9 @@ export default function VideoPane({
             trimRange={trimRange}
             loop={{ in: loopIn, out: loopOut }}
             sprite={timelineSprite}
+            markersApi={markersApi}
+            fps={fps}
+            startFrame={startFrame}
           />
         )}
 
