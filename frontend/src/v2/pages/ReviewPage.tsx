@@ -21,6 +21,7 @@ import { useDeepLink } from './review/useDeepLink';
 import { useLiveSession } from './review/useLiveSession';
 import { useMediaActions } from './review/useMediaActions';
 import { useSubmitComment } from './review/useSubmitComment';
+import { useTimelineMarkers } from './review/useTimelineMarkers';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useAutoThumbnail } from './review/useAutoThumbnail';
 import { useModel3DThree } from './review/three/useModel3DThree';
@@ -249,6 +250,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const fps = data?.fps ?? fpsOverride;
   const startFrame = data?.startFrame ?? 1001;
 
+  // Marqueurs de timeline (34.C) en séparateurs du fil de commentaires (retours 34) —
+  // même query que le lecteur (cache partagé), désactivée hors vidéo (mediaId 0).
+  const markersApi = useTimelineMarkers(kind === 'VIDEO' ? id : 0);
+
   return (
     <Shell
       title={data?.media.originalName ?? 'Review'}
@@ -328,6 +333,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
               startFrame={startFrame}
               selectedId={selectedCommentId}
               onSelect={selectComment}
+              markers={kind === 'VIDEO' ? markersApi.markers : undefined}
+              onMarkerSeek={(m) => seek(m.frame / fps)}
               composerRef={composerRef}
               hints={{
                 annotation: ann.annot.length > 0,

@@ -39,19 +39,29 @@ export function MarkerTicks({
         const t = m.frame / (fps || 24);
         if (t > duration) return null;
         const tick = (
+          // Zone de clic élargie (10 px) autour du trait de 4 px — survol et clic droit
+          // confortables. stopPropagation sur contextmenu : sans lui le menu de la barre
+          // (« Ajouter un marqueur ici… ») s'ouvrait aussi et rendait celui-ci inopérant.
           <button
-            className="absolute bottom-0 top-1/2 z-[15] w-1 -translate-x-1/2 rounded-t-sm opacity-90 hover:opacity-100"
-            style={{
-              left: `calc(${(t / duration) * 100}% * (100% - 8px) / 100% + 4px)`,
-              background: m.color,
-            }}
-            title={`${m.name}${m.authorName ? ` — ${m.authorName}` : ''}`}
+            className="group absolute bottom-0 top-1/2 z-[15] flex w-2.5 -translate-x-1/2 justify-center"
+            style={{ left: `calc(${(t / duration) * 100}% * (100% - 8px) / 100% + 4px)` }}
             onPointerDown={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onSeek(t);
             }}
-          />
+          >
+            <span
+              className="h-full w-1 rounded-t-sm opacity-90 group-hover:opacity-100"
+              style={{ background: m.color }}
+            />
+            {/* Tooltip custom : nom + auteur au survol (le title natif était trop discret). */}
+            <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-0.5 text-[10px] text-foreground shadow-lg group-hover:block">
+              {m.name}
+              {m.authorName ? <span className="text-muted-foreground"> — {m.authorName}</span> : null}
+            </span>
+          </button>
         );
         if (!api.canManage(m)) return <span key={m.id}>{tick}</span>;
         return (

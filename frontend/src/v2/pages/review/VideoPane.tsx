@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ReviewComment } from '../../types/api';
@@ -7,7 +7,7 @@ import { useReviewShortcuts } from './useReviewShortcuts';
 import { useHlsPlayer } from './useHlsPlayer';
 import { useTimelineMarkers } from './useTimelineMarkers';
 import { useVideoFullscreen } from './useVideoFullscreen';
-import { usePlaybackSpeed, useVideoBuffering } from './videoPaneHooks';
+import { shouldLoopBack, useLoopPoints, usePlaybackSpeed, useVideoBuffering } from './videoPaneHooks';
 import type { TimelineSpriteMeta } from './timelineSprite';
 import { RangeAnnotationsOverlay } from './RangeAnnotations';
 import CompositionGuides from './CompositionGuides';
@@ -75,8 +75,8 @@ export default function VideoPane({
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
-  const [loopIn, setLoopIn] = useState<number | null>(null);
-  const [loopOut, setLoopOut] = useState<number | null>(null);
+  // Boucle I/O désactivable sans perdre les points (retours 34) — toggle dans le transport.
+  const loop = useLoopPoints(videoRef);
   // Lecture en boucle de toute la vidéo (indépendante de la boucle I/O).
   const [loopAll, setLoopAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,30 +121,18 @@ export default function VideoPane({
     return () => ro.disconnect();
   }, [aspect, videoOnlyFs]);
 
-  const markLoopIn = useCallback(() => {
-    const v = videoRef.current;
-    if (v) setLoopIn(v.currentTime);
-  }, [videoRef]);
-  const markLoopOut = useCallback(() => {
-    const v = videoRef.current;
-    if (v) setLoopOut(v.currentTime);
-  }, [videoRef]);
-  const clearLoop = useCallback(() => {
-    setLoopIn(null);
-    setLoopOut(null);
-  }, []);
   // Boucle remontée à l'orchestrateur : plage in→out du prochain commentaire (34.A).
   useEffect(() => {
-    onLoopChange?.({ in: loopIn, out: loopOut });
-  }, [loopIn, loopOut, onLoopChange]);
+    onLoopChange?.({ in: loop.loopIn, out: loop.loopOut });
+  }, [loop.loopIn, loop.loopOut, onLoopChange]);
 
   useReviewShortcuts({
     videoRef,
     fps,
     onMarker,
-    onLoopIn: markLoopIn,
-    onLoopOut: markLoopOut,
-    onClearLoop: clearLoop,
+    onLoopIn: loop.markIn,
+    onLoopOut: loop.markOut,
+    onClearLoop: loop.clear,
     onShuttle: playbackSpeed.onShuttle,
   });
 
@@ -186,10 +174,11 @@ export default function VideoPane({
   const onTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const v = e.currentTarget;
     setCurrentFrame(Math.round(v.currentTime * fps));
-    // Boucle I/O : au-delà de O, on repart de I (14.B).
-    if (loopIn != null && loopOut != null && loopOut > loopIn && v.currentTime >= loopOut) {
+    // Boucle I/O : au-delà de O, on repart de I — en lecture seulement, la navigation
+    // manuelle dépasse librement le point O (retours 34).
+    if (shouldLoopBack(loop.loopIn, loop.loopOut, loop.enabled, v.paused, v.currentTime)) {
       programmaticSeekRef.current = true;
-      v.currentTime = loopIn;
+      v.currentTime = loop.loopIn!;
     }
   };
 
@@ -299,7 +288,7 @@ export default function VideoPane({
             onSeek={seekTo}
             onSelectComment={onSelectComment}
             trimRange={trimRange}
-            loop={{ in: loopIn, out: loopOut }}
+            loop={{ in: loop.loopIn, out: loop.loopOut }}
             sprite={timelineSprite}
             markersApi={markersApi}
             fps={fps}
@@ -328,8 +317,10 @@ export default function VideoPane({
           onFullscreen={onFullscreen}
           onFullscreenVideo={toggleVideoFullscreen}
           videoOnlyFs={videoOnlyFs}
-          loopActive={loopIn != null || loopOut != null}
-          onClearLoop={clearLoop}
+          loopActive={loop.loopIn != null || loop.loopOut != null}
+          loopEnabled={loop.enabled}
+          onToggleLoopEnabled={loop.toggleEnabled}
+          onClearLoop={loop.clear}
           loopAll={loopAll}
           onToggleLoopAll={() => setLoopAll((l) => !l)}
           quality={{

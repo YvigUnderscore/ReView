@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Volume2,
   VolumeX,
+  X,
 } from 'lucide-react';
 import { HudGroup } from './hud/ViewerHud';
 import { tcFromFrame } from './reviewTypes';
@@ -38,6 +39,8 @@ export default function VideoTransport({
   onFullscreenVideo,
   videoOnlyFs,
   loopActive,
+  loopEnabled,
+  onToggleLoopEnabled,
   onClearLoop,
   loopAll,
   onToggleLoopAll,
@@ -64,6 +67,9 @@ export default function VideoTransport({
   /** Vrai quand le plein écran vidéo seule est actif (icône réduire). */
   videoOnlyFs: boolean;
   loopActive: boolean;
+  /** Boucle I/O activée : rebouclage à la lecture. Désactiver conserve les points (retours 34). */
+  loopEnabled: boolean;
+  onToggleLoopEnabled: () => void;
   onClearLoop: () => void;
   /** Lecture en boucle de toute la vidéo (indépendante de la boucle I/O). */
   loopAll: boolean;
@@ -113,13 +119,30 @@ export default function VideoTransport({
       </span>
 
       {loopActive && (
-        <button
-          onClick={onClearLoop}
-          title="Boucle entre les points I/O — cliquer pour l'effacer (Maj+I/O)"
-          className="flex h-7 items-center gap-1 rounded bg-primary/15 px-2 text-primary hover:bg-primary/25"
-        >
-          <Repeat size={13} /> Boucle I/O
-        </button>
+        <span className="flex h-7 items-center overflow-hidden rounded border border-border">
+          <button
+            onClick={onToggleLoopEnabled}
+            title={
+              loopEnabled
+                ? 'Boucle entre les points I/O active — cliquer pour la suspendre (les points restent posés)'
+                : 'Boucle I/O suspendue — cliquer pour reboucler entre les points I/O'
+            }
+            className={`flex h-full items-center gap-1 px-2 ${
+              loopEnabled
+                ? 'bg-primary/15 text-primary hover:bg-primary/25'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            }`}
+          >
+            <Repeat size={13} /> Boucle I/O
+          </button>
+          <button
+            onClick={onClearLoop}
+            title="Effacer les points I/O (Maj+I / Maj+O)"
+            className="flex h-full items-center border-l border-border px-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <X size={12} />
+          </button>
+        </span>
       )}
 
       <label className="flex items-center gap-1 text-muted-foreground">

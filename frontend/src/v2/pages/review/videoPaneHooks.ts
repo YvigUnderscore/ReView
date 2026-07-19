@@ -1,9 +1,55 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useState, type RefObject } from 'react';
 
 /**
  * Hooks du pane vidéo (extraits de VideoPane, budget 300) : buffering du lecteur et
  * vitesse de lecture affichée (34.C).
  */
+
+/**
+ * Rebouclage I/O (retours 34) : on ne repart au point I **qu'en lecture** — en navigation
+ * manuelle (pause, scrub, flèches) on doit pouvoir dépasser librement le point O — et
+ * seulement si la boucle est activée (le toggle ne supprime pas les points I/O).
+ */
+export function shouldLoopBack(
+  loopIn: number | null,
+  loopOut: number | null,
+  enabled: boolean,
+  paused: boolean,
+  currentTime: number,
+): boolean {
+  return (
+    enabled && !paused && loopIn != null && loopOut != null && loopOut > loopIn && currentTime >= loopOut
+  );
+}
+
+/**
+ * Points de boucle I/O du lecteur : marquage à la frame courante (raccourcis I/O),
+ * effacement (Maj+I/O ou ×), et activation débrayable — désactiver la boucle **conserve**
+ * les points (retours 34). Poser un point réactive la boucle.
+ */
+export function useLoopPoints(videoRef: RefObject<HTMLVideoElement | null>) {
+  const [loopIn, setLoopIn] = useState<number | null>(null);
+  const [loopOut, setLoopOut] = useState<number | null>(null);
+  const [enabled, setEnabled] = useState(true);
+  const markIn = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    setLoopIn(v.currentTime);
+    setEnabled(true);
+  }, [videoRef]);
+  const markOut = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    setLoopOut(v.currentTime);
+    setEnabled(true);
+  }, [videoRef]);
+  const clear = useCallback(() => {
+    setLoopIn(null);
+    setLoopOut(null);
+  }, []);
+  const toggleEnabled = useCallback(() => setEnabled((e) => !e), []);
+  return { loopIn, loopOut, enabled, markIn, markOut, clear, toggleEnabled };
+}
 
 /**
  * Buffering du lecteur : vrai quand la vidéo attend des données (seek/switch qualité),

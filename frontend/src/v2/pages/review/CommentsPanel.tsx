@@ -11,7 +11,7 @@ import { ImagePlus, PencilLine, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
 import ReviewComments from '../../components/ReviewComments';
-import type { ReviewComment } from '../../types/api';
+import type { ReviewComment, TimelineMarker } from '../../types/api';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Textarea } from '../../components/ui/textarea';
 import { ResizablePanel } from '../../components/ui/resizable';
@@ -45,6 +45,8 @@ export default function CommentsPanel({
   startFrame,
   selectedId,
   onSelect,
+  markers,
+  onMarkerSeek,
   composerRef,
   hints,
   onSubmit,
@@ -61,6 +63,9 @@ export default function CommentsPanel({
   startFrame: number;
   selectedId: number | null;
   onSelect: (c: ReviewComment) => void;
+  /** Marqueurs de timeline (vidéo) — séparateurs cliquables du fil (retours 34). */
+  markers?: TimelineMarker[];
+  onMarkerSeek?: (m: TimelineMarker) => void;
   composerRef: RefObject<HTMLTextAreaElement | null>;
   hints: {
     annotation: boolean;
@@ -174,6 +179,8 @@ export default function CommentsPanel({
             startFrame={startFrame}
             selectedId={selectedId}
             onSelect={onSelect}
+            markers={markers}
+            onMarkerSeek={onMarkerSeek}
           />
         )}
       </div>
