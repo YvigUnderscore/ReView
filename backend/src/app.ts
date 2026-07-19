@@ -44,6 +44,7 @@ import searchRoutes from './routes/search.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import bulkRoutes from './routes/bulk.routes';
 import hdriRoutes from './routes/hdri.routes';
+import ocioRoutes from './routes/ocio.routes';
 import announcementsRoutes from './routes/announcements.routes';
 import docsRoutes from './routes/docs.routes';
 import watchRoutes from './routes/watch.routes';
@@ -103,6 +104,7 @@ export const createApp = (): Express => {
   app.use('/api/users', usersRoutes);
   app.use('/api/studio', studioRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
+  app.use('/api/studio/ocio', ocioRoutes);
   app.use('/api/projects', projectsExtraRoutes); // usage/quotas + duplicate (38) — avant /:id
   app.use('/api/projects', projectsRoutes);
   app.use('/api/media', mediaUploadRoutes); // multipart résumable (37.A) — avant /:id

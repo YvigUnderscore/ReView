@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Mail,
   Megaphone,
+  Palette,
   Server,
   Share2,
   Video,
@@ -28,6 +29,7 @@ import UsersTab from './admin/UsersTab';
 import SettingsTab from './admin/SettingsTab';
 import ProjectDefaultsTab from './admin/ProjectDefaultsTab';
 import HdriTab from './admin/HdriTab';
+import OcioTab from './admin/OcioTab';
 import TranscodeTab from './admin/TranscodeTab';
 import DistributionTab from './admin/DistributionTab';
 import ApiWebhooksTab from './admin/ApiWebhooksTab';
@@ -66,6 +68,7 @@ const SECTIONS = [
     Component: ProjectDefaultsTab,
   },
   { key: 'hdri', group: 'Contextes de review', label: '3D & Splat', icon: Box, Component: HdriTab },
+  { key: 'ocio', group: 'Contextes de review', label: 'Couleur (OCIO)', icon: Palette, Component: OcioTab },
   { key: 'video', group: 'Contextes de review', label: 'Vidéo', icon: Video, Component: TranscodeTab },
   {
     key: 'distribution',
