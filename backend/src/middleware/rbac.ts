@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { forbidden, unauthorized } from '../lib/errors';
+import { effectiveProjectRole, canManageProject } from '../lib/projectRoles';
 
 /**
  * Exige que l'utilisateur authentifié possède l'un des rôles donnés.
@@ -67,4 +68,31 @@ export const assertProjectAccess = async (req: Request, projectId: number): Prom
   if (!(await checkProjectAccess(req.user.id, req.user.role, projectId))) {
     throw forbidden('Accès au projet refusé');
   }
+};
+
+/**
+ * Gestion projet (38.E) — lit `req.params.projectId` et autorise si le rôle EFFECTIF de
+ * l'utilisateur sur ce projet est ADMIN/SUPERVISOR (élévation locale via membership.role
+ * incluse), remplaçant `requireRole(ADMIN, SUPERVISOR)` sur les routes de gestion projet.
+ */
+export const requireProjectManage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: 'Non authentifié' });
+    return;
+  }
+  const projectId = Number(req.params.projectId);
+  if (!Number.isInteger(projectId)) {
+    res.status(400).json({ error: 'projectId invalide' });
+    return;
+  }
+  const role = await effectiveProjectRole(req.user.id, req.user.role, projectId);
+  if (!canManageProject(role)) {
+    res.status(403).json({ error: 'Gestion du projet réservée aux superviseurs' });
+    return;
+  }
+  next();
 };

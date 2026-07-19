@@ -5,6 +5,7 @@ import { emitToProject } from './SocketService';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
+import { assertCanContribute } from '../lib/projectRoles';
 
 /**
  * Logique métier des tâches (liste, création XOR Shot/Asset, mise à jour avec droits
@@ -70,6 +71,7 @@ export interface CreateTaskInput {
 }
 
 export async function create(user: SessionUser, projectId: number, body: CreateTaskInput) {
+  await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas de tâche
   await assertProjectWritable(projectId); // 38.B
   const task = await prisma.task.create({
     data: {

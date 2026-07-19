@@ -19,6 +19,7 @@ import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertProjectQuota } from '../lib/projectQuota';
+import { assertCanContribute } from '../lib/projectRoles';
 import { notifyWatchers } from './WatchService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
@@ -64,6 +65,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   if (!storageCtx) throw notFound('Version introuvable ou non rattachée à un projet');
   const projectId = storageCtx.projectId;
   if (!(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
+  await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas d'upload
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
 
   // Quotas configurables (admin exempté du quota de stockage).

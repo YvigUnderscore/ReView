@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Role, ProjectStatus } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
-import { requireRole, requireProjectAccess } from '../middleware/rbac';
+import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
+import { effectiveProjectRole } from '../lib/projectRoles';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import { projectSettingsSchema } from '../lib/projectSettings';
 import * as ProjectService from '../services/ProjectService';
@@ -40,9 +41,14 @@ router.post(
   },
 );
 
-// GET /api/projects/:projectId
+// GET /api/projects/:projectId — inclut `myRole` (rôle effectif de l'appelant, 38.E)
 router.get('/:projectId', validate({ params: projectIdParam }), requireProjectAccess, async (req, res) => {
-  res.json({ project: await ProjectService.getProject(Number(req.params.projectId)) });
+  const projectId = Number(req.params.projectId);
+  const [project, myRole] = await Promise.all([
+    ProjectService.getProject(projectId),
+    effectiveProjectRole(req.user!.id, req.user!.role, projectId),
+  ]);
+  res.json({ project: { ...project, myRole } });
 });
 
 // PATCH /api/projects/:projectId (admin/superviseur)
@@ -116,7 +122,7 @@ router.post(
     params: projectIdParam,
     body: z.object({ userId: z.number().int(), role: z.nativeEnum(Role).optional() }),
   }),
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  requireProjectManage, // 38.E : superviseur local autorisé
   async (req, res) => {
     const { userId, role } = req.body as { userId: number; role?: Role };
     const membership = await ProjectService.addMember(Number(req.params.projectId), userId, role);
@@ -138,7 +144,7 @@ router.get(
 router.put(
   '/:projectId/settings',
   validate({ params: projectIdParam, body: projectSettingsSchema }),
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  requireProjectManage, // 38.E : superviseur local autorisé
   async (req, res) => {
     const settings = await ProjectService.updateSettings(
       req.user!,
@@ -163,7 +169,7 @@ router.get(
 router.delete(
   '/:projectId/members/:userId',
   validate({ params: z.object({ projectId: z.coerce.number().int(), userId: z.coerce.number().int() }) }),
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  requireProjectManage, // 38.E : superviseur local autorisé
   async (req, res) => {
     await ProjectService.removeMember(Number(req.params.projectId), Number(req.params.userId));
     res.status(204).end();
