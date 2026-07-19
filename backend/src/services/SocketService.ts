@@ -15,6 +15,15 @@ import {
 } from './PresenceService';
 import { resolveProjectIdForMedia } from '../lib/pipeline';
 import { toPublicUser } from '../lib/userView';
+import {
+  parseLiveKey,
+  joinLive,
+  leaveLive,
+  handoffLive,
+  isLivePilot,
+  getLiveState,
+  type LiveParticipant,
+} from './LiveSessionService';
 
 let io: SocketServer | undefined;
 
@@ -107,6 +116,66 @@ export const initSocket = (server: HttpServer): SocketServer => {
         emitViewers(mid);
       });
 
+      // ── Salle de review live (33.B) : rooms `live_<key>`, pilote + spectateurs. ──
+      // RBAC revérifié au join (média ou playlist → projet) ; `live:sync` n'est relayé
+      // que depuis le pilote, payload opaque (playhead/pause/média courant/caméra).
+      const joinedLives = new Set<string>();
+      const emitLiveState = (key: string, state: ReturnType<typeof joinLive> | null) =>
+        io?.to(`live_${key}`).emit('live:state', { key, state });
+      const resolveLiveProject = async (key: string): Promise<number | null> => {
+        const target = parseLiveKey(key);
+        if (!target) return null;
+        if (target.type === 'media') return resolveProjectIdForMedia(target.id);
+        const playlist = await prisma.playlist.findUnique({
+          where: { id: target.id },
+          select: { projectId: true },
+        });
+        return playlist?.projectId ?? null;
+      };
+      socket.on('live:join', async (key: string) => {
+        // Re-join idempotent (navigation interne) : ré-émet simplement l'état courant.
+        if (joinedLives.has(key)) return emitLiveState(key, getLiveState(key));
+        const projectId = await resolveLiveProject(key);
+        if (!projectId || !(await checkProjectAccess(uid, socket.user!.role, projectId))) return;
+        const raw = await prisma.user.findUnique({
+          where: { id: uid },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            avatarKey: true,
+          },
+        });
+        if (!raw) return;
+        const pub = await toPublicUser(raw);
+        const participant: LiveParticipant = {
+          id: pub.id,
+          displayName: pub.displayName,
+          initials: pub.initials,
+          avatarUrl: pub.avatarUrl,
+        };
+        socket.join(`live_${key}`);
+        joinedLives.add(key);
+        emitLiveState(key, joinLive(key, participant));
+      });
+      socket.on('live:leave', (key: string) => {
+        if (!joinedLives.delete(key)) return;
+        socket.leave(`live_${key}`);
+        emitLiveState(key, leaveLive(key, uid));
+      });
+      socket.on('live:sync', (key: string, payload: unknown) => {
+        if (!joinedLives.has(key) || !isLivePilot(key, uid)) return;
+        socket.to(`live_${key}`).emit('live:sync', { key, payload });
+      });
+      socket.on('live:handoff', (key: string, toUserId: number) => {
+        if (!joinedLives.has(key)) return;
+        const state = handoffLive(key, uid, Number(toUserId));
+        if (state) emitLiveState(key, state);
+      });
+
       socket.on('disconnect', () => {
         void markOffline(uid);
         for (const mid of joinedReviews) {
@@ -114,6 +183,8 @@ export const initSocket = (server: HttpServer): SocketServer => {
           emitViewers(mid);
         }
         joinedReviews.clear();
+        for (const key of joinedLives) emitLiveState(key, leaveLive(key, uid));
+        joinedLives.clear();
       });
     }
     if (socket.shareProjectId) socket.join(`project_${socket.shareProjectId}`);

@@ -11,8 +11,11 @@ import { useAuth } from '../../stores/useAuth';
 import type { MediaResp } from './reviewTypes';
 import type { VersionDetail } from '../../types/api';
 import VersionNavigator from './VersionNavigator';
+import PlaylistNavigator from './PlaylistNavigator';
 import CompareSelect from './CompareSelect';
+import LiveControl from './LiveControl';
 import { useReviewPresence } from './useReviewPresence';
+import type { LiveSession } from './useLiveSession';
 
 /**
  * En-tête de la review : nom du média + badge brouillon, sélecteur de version
@@ -26,6 +29,7 @@ export default function ReviewHeader({
   onToggleComments,
   compareId,
   onCompareChange,
+  live,
 }: {
   data: MediaResp;
   onPublish: () => void;
@@ -33,6 +37,7 @@ export default function ReviewHeader({
   onToggleComments: () => void;
   compareId: number | null;
   onCompareChange: (mediaId: number | null) => void;
+  live: LiveSession;
 }) {
   const published = data.media.published;
   const viewers = useReviewPresence(data.media.id);
@@ -56,6 +61,7 @@ export default function ReviewHeader({
           <span className="shrink-0 rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Brouillon</span>
         )}
         <VersionNavigator versionId={versionId} mediaId={data.media.id} />
+        <PlaylistNavigator versionId={versionId} />
         {(data.media.kind === 'VIDEO' || data.media.kind === 'IMAGE') && (
           <CompareSelect
             versionId={versionId}
@@ -67,6 +73,7 @@ export default function ReviewHeader({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2 text-sm">
+        <LiveControl live={live} />
         {viewers.length > 0 && (
           <div
             className="flex items-center -space-x-2"

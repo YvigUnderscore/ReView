@@ -17,6 +17,7 @@ import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/re
 import { useAnnotations } from './review/useAnnotations';
 import { loadDraft, saveDraft } from './review/commentDraft';
 import { useDeepLink } from './review/useDeepLink';
+import { useLiveSession } from './review/useLiveSession';
 import { useSubmitComment } from './review/useSubmitComment';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useAutoThumbnail } from './review/useAutoThumbnail';
@@ -179,6 +180,17 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Lien profond (32.E) : `?frame=`/`?comment=` appliqué une fois à l'arrivée.
   useDeepLink({ data, comments, videoRef, programmaticSeekRef, fallbackFps: fpsOverride, selectComment });
 
+  // Salle de review live (33.B) : pilote → diffusion ; spectateur → application.
+  const live = useLiveSession({
+    mediaId: id,
+    kind: data?.media.kind,
+    videoRef,
+    programmaticSeekRef,
+    captureCamera: () => (data?.media.kind === 'SPLAT' ? splat.captureCamera() : model3d.captureCamera()),
+    restoreCamera: (cam) =>
+      data?.media.kind === 'SPLAT' ? splat.restoreCamera(cam) : model3d.restoreCamera(cam),
+  });
+
   const placeHotspotCenter = () => {
     const h = data?.media.kind === 'SPLAT' ? splat.raycastCenter() : model3d.hotspotAtCenter();
     if (h) ann.setHotspot3d(h);
@@ -269,6 +281,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onToggleComments={() => setCommentsOpen((o) => !o)}
             compareId={compareId}
             onCompareChange={setCompareId}
+            live={live}
           />
         ) : !error ? (
           <div className="mb-3 flex shrink-0 items-center gap-3">
