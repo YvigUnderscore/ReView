@@ -27,9 +27,13 @@ From a task you can:
 - jump to the parent shot/asset and project (breadcrumb);
 - when the task was created from a review comment (right-click a comment →
   *Créer une tâche kanban*), a **Commentaire d'origine** chip opens the review
-  at the exact frame/annotation of that comment.
+  at the exact frame/annotation of that comment;
+- tick items on the task **checklist**. The assignee (or a manager) can check/
+  uncheck items; managers add or remove items. Checklists can also be populated in
+  bulk via [CSV import](../admin-guide/project-organization.md#csv-import--export-shotgrid--ftrack--kitsu-bridge).
 
 ## Related pages
 
 - [Projects & pipeline](projects-and-pipeline.md)
+- [Project organization (admin)](../admin-guide/project-organization.md)
 - [Navigation & search](navigation-and-search.md)

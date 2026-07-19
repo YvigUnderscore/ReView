@@ -26,3 +26,8 @@ The admin area (`/admin`, `ADMIN` role only) is organised in grouped sections:
 | Maintenance | Accès médias | Who viewed which media, when — see [Identity, API & audit](identity-and-api.md) |
 
 Each section is directly addressable (`/admin/<section>`).
+
+Project-level organization (archiving, duplication, storage quotas, upload naming,
+per-project roles, CSV import/export, task checklists) is managed from each
+project rather than the admin area — see
+[Project organization & per-project rights](project-organization.md).

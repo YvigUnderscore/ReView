@@ -29,7 +29,14 @@ From *Admin → Utilisateurs*:
 - Password rules and SMTP-based emails (invitations, resets) depend on the
   [SMTP configuration](smtp-and-announcements.md).
 
+## Per-project roles
+
+A member's global role can be overridden **per project** (local elevation to
+supervisor, or restriction to client) without changing their studio-wide role —
+see [Project organization & per-project rights](project-organization.md#per-project-roles).
+
 ## Related pages
 
+- [Project organization & per-project rights](project-organization.md)
 - [Sharing with clients](../user-guide/sharing.md)
 - [Security model](../infrastructure/security.md)

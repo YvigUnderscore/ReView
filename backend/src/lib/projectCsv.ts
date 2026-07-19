@@ -98,9 +98,14 @@ export function parseShotsCsv(text: string): ParseResult {
   return { rows, errors };
 }
 
-/** Échappe un champ CSV (guillemets si séparateur/quote/retour présent). */
+/**
+ * Échappe un champ CSV (guillemets si séparateur/quote/retour présent) et neutralise
+ * l'injection de formule tableur : un champ commençant par `= + - @` (ou tab/CR) est préfixé
+ * d'une apostrophe pour qu'Excel/Sheets ne l'interprète pas comme une formule.
+ */
 function csvField(v: string): string {
-  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 export interface ExportShotRow {

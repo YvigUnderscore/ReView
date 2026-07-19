@@ -46,4 +46,12 @@ describe('projectCsv.toShotsCsv (38.G)', () => {
     expect(back[0]).toEqual({ sequence: 'SQ01', shot: 'SH01', name: 'Plan, large', tasks: ['Anim', 'Comp'] });
     expect(back[1]).toEqual({ sequence: null, shot: 'SH02', name: 'SH02', tasks: [] });
   });
+
+  it('neutralise l’injection de formule (CP-SEC) : préfixe apostrophe', () => {
+    const csv = toShotsCsv([{ sequence: null, shot: '=cmd()', name: '@x', tasks: ['+y'] }]);
+    const line = csv.split('\n')[1];
+    expect(line).toContain("'=cmd()");
+    expect(line).toContain("'@x");
+    expect(line).toContain("'+y");
+  });
 });
