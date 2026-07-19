@@ -10,6 +10,7 @@ import {
 } from '../../components/ui/context-menu';
 import { formatTime } from './reviewTypes';
 import { spriteIndexAt, spriteSlotCss, type TimelineSpriteMeta } from './timelineSprite';
+import { RangeSegments } from './RangeAnnotations';
 import { MarkerDialog, MarkerTicks } from './TimelineMarkers';
 import type { TimelineMarkersApi } from './useTimelineMarkers';
 
@@ -255,6 +256,15 @@ export default function VideoTimeline({
           </button>
         );
       })}
+
+      {/* Plages annotées in→out (34.A) : segment fin à la couleur de l'auteur + poignées */}
+      <RangeSegments
+        comments={comments}
+        duration={duration}
+        fps={fps}
+        selectedId={selectedId}
+        onSelectComment={onSelectComment}
+      />
 
       {/* Marqueurs nommés/colorés partagés (34.C) */}
       {markersApi && (

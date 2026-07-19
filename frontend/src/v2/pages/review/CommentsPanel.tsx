@@ -62,7 +62,14 @@ export default function CommentsPanel({
   selectedId: number | null;
   onSelect: (c: ReviewComment) => void;
   composerRef: RefObject<HTMLTextAreaElement | null>;
-  hints: { annotation: boolean; hotspot: boolean; camera: boolean; references?: number };
+  hints: {
+    annotation: boolean;
+    hotspot: boolean;
+    camera: boolean;
+    references?: number;
+    /** Boucle I/O active (34.A) : le commentaire portera la plage in→out. */
+    range?: boolean;
+  };
   onSubmit: (content: string, files: File[]) => Promise<boolean>;
   /** Mode annotation actif (bouton « Annoter » sous le champ, Phase 24). */
   annotating?: boolean;
@@ -197,6 +204,11 @@ export default function CommentsPanel({
         )}
         {hints.hotspot && (
           <p className="mb-1.5 text-[11px] text-primary">📍 Hotspot joint (centre du viewer)</p>
+        )}
+        {hints.range && (
+          <p className="mb-1.5 text-[11px] text-primary">
+            ⏱ Plage I→O jointe — l’annotation restera visible sur toute la plage
+          </p>
         )}
         {hints.camera && (
           <p className="mb-1.5 text-[11px] text-primary">📷 La vue caméra actuelle sera enregistrée</p>

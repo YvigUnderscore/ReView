@@ -59,6 +59,7 @@ export default function ReviewViewer({
   sharedWipe,
   imageViewApiRef,
   onImageUserView,
+  onLoopChange,
 }: {
   data: MediaResp | null;
   error: string | null;
@@ -99,6 +100,8 @@ export default function ReviewViewer({
   /** Vue image partagée en session live (capture/application) + prise de main sur zoom/pan. */
   imageViewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onImageUserView?: () => void;
+  /** Boucle I/O remontée (34.A) — plage in→out du prochain commentaire. */
+  onLoopChange?: ComponentProps<typeof VideoPane>['onLoopChange'];
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
@@ -199,6 +202,7 @@ export default function ReviewViewer({
                     ? { url: data.timelineSpriteUrl, meta: data.timelineSprite }
                     : null
                 }
+                onLoopChange={onLoopChange}
               />
               {data && canEdit && (
                 <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />

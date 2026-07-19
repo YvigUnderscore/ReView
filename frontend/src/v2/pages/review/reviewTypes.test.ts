@@ -6,7 +6,27 @@ import {
   safePlay,
   cancelPendingPlay,
   createSeekCoalescer,
+  splitAnnotationParts,
 } from './reviewTypes';
+
+describe('splitAnnotationParts — plage in→out (34.A)', () => {
+  it('extrait la part range et l’exclut des formes', () => {
+    const out = splitAnnotationParts([
+      { type: 'range', inFrame: 10, outFrame: 40 },
+      { type: 'pen', points: [] },
+    ]);
+    expect(out.range).toEqual({ inFrame: 10, outFrame: 40 });
+    expect(out.shapes).toHaveLength(1);
+    expect((out.shapes[0] as { type: string }).type).toBe('pen');
+  });
+
+  it('plage invalide (out ≤ in, champs manquants) → null', () => {
+    expect(splitAnnotationParts([{ type: 'range', inFrame: 40, outFrame: 10 }]).range).toBeNull();
+    expect(splitAnnotationParts([{ type: 'range', inFrame: 5 }]).range).toBeNull();
+    expect(splitAnnotationParts([{ type: 'pen' }]).range).toBeNull();
+    expect(splitAnnotationParts(null).range).toBeNull();
+  });
+});
 
 describe('tcFromFrame', () => {
   it('convertit un numéro de frame en timecode HH:MM:SS:FF', () => {

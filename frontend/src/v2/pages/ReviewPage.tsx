@@ -51,6 +51,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const [fpsOverride, setFpsOverride] = useState(24);
   // Comparaison A/B + mode + wipe hissés ici pour être répliqués en live (retours 33).
   const compare = useCompareState();
+  // Boucle I/O remontée par le lecteur (34.A) : plage in→out du prochain commentaire.
+  const [loop, setLoop] = useState<{ in: number | null; out: number | null }>({ in: null, out: null });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -236,6 +238,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     videoRef,
     captureCamera: () => (data?.media.kind === 'SPLAT' ? splat.captureCamera() : model3d.captureCamera()),
     loadComments,
+    loop,
+    fps: data?.fps ?? fpsOverride,
   });
 
   // Publication + relance de conversion (extrait — budget 300 lignes).
@@ -310,6 +314,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             sharedWipe={sharedWipe}
             imageViewApiRef={imageViewApiRef}
             onImageUserView={live.claimInteraction}
+            onLoopChange={setLoop}
           />
 
           {commentsOpen && (
@@ -329,6 +334,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
                 hotspot: !!ann.hotspot3d,
                 camera: kind === 'MODEL_3D' && ann.annotating,
                 references: ann.stagedRefs.length,
+                range: kind === 'VIDEO' && loop.in != null && loop.out != null && loop.out > loop.in,
               }}
               onSubmit={submitComment}
               annotating={ann.annotating}

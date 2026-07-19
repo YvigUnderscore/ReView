@@ -93,23 +93,37 @@ export function splitAnnotationParts(annotation: unknown): {
   hotspot: Hotspot3D | null;
   shapes: unknown[];
   cameraAnim: SplatLayoutAnim | null;
+  /** Plage vidéo in→out (34.A) : l'annotation reste visible pendant toute la plage. */
+  range: { inFrame: number; outFrame: number } | null;
 } {
-  if (!Array.isArray(annotation)) return { hotspot: null, shapes: [], cameraAnim: null };
+  if (!Array.isArray(annotation)) return { hotspot: null, shapes: [], cameraAnim: null, range: null };
   const parts = annotation as Array<{
     type?: string;
     position?: string;
     normal?: string;
     space?: 'object';
+    inFrame?: number;
+    outFrame?: number;
   }>;
   const hs = parts.find((x) => x?.type === 'hotspot');
   const anim = parts.find((x) => x?.type === 'camera-anim');
+  const rangePart = parts.find((x) => x?.type === 'range');
   const shapes = parts.filter(
-    (x) => x && x.type !== 'hotspot' && x.type !== 'splat-paint' && x.type !== 'camera-anim',
+    (x) =>
+      x && x.type !== 'hotspot' && x.type !== 'splat-paint' && x.type !== 'camera-anim' && x.type !== 'range',
   );
+  const range =
+    rangePart &&
+    typeof rangePart.inFrame === 'number' &&
+    typeof rangePart.outFrame === 'number' &&
+    rangePart.outFrame > rangePart.inFrame
+      ? { inFrame: rangePart.inFrame, outFrame: rangePart.outFrame }
+      : null;
   return {
     hotspot: hs?.position && hs.normal ? { position: hs.position, normal: hs.normal, space: hs.space } : null,
     shapes,
     cameraAnim: normalizeAnim(anim),
+    range,
   };
 }
 

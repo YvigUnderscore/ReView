@@ -9,6 +9,7 @@ import { useTimelineMarkers } from './useTimelineMarkers';
 import { useVideoFullscreen } from './useVideoFullscreen';
 import { usePlaybackSpeed, useVideoBuffering } from './videoPaneHooks';
 import type { TimelineSpriteMeta } from './timelineSprite';
+import { RangeAnnotationsOverlay } from './RangeAnnotations';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
 
@@ -37,6 +38,7 @@ export default function VideoPane({
   hlsUrl,
   timelineSprite,
   onFullscreen,
+  onLoopChange,
 }: {
   src: string;
   /** Média affiché — marqueurs de timeline partagés (34.C). */
@@ -64,6 +66,8 @@ export default function VideoPane({
   timelineSprite?: { url: string; meta: TimelineSpriteMeta } | null;
   /** Bascule le plein écran de tout le bloc review (playbar incluse). */
   onFullscreen: () => void;
+  /** Boucle I/O remontée (34.A) : jointe comme plage in→out au prochain commentaire. */
+  onLoopChange?: (loop: { in: number | null; out: number | null }) => void;
 }) {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -128,6 +132,10 @@ export default function VideoPane({
     setLoopIn(null);
     setLoopOut(null);
   }, []);
+  // Boucle remontée à l'orchestrateur : plage in→out du prochain commentaire (34.A).
+  useEffect(() => {
+    onLoopChange?.({ in: loopIn, out: loopOut });
+  }, [loopIn, loopOut, onLoopChange]);
 
   useReviewShortcuts({
     videoRef,
@@ -247,6 +255,8 @@ export default function VideoPane({
             }}
             onSeeking={onSeeking}
           />
+          {/* Annotations sur plage in→out (34.A) : visibles pendant toute la plage. */}
+          <RangeAnnotationsOverlay comments={comments} currentFrame={currentFrame} selectedId={selectedId} />
           {overlay}
         </div>
         {/* Vitesse de lecture (34.C) : visible dès qu'on n'est pas en lecture normale ×1. */}

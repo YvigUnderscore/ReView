@@ -23,13 +23,23 @@ export function useSubmitComment(opts: {
   videoRef: RefObject<HTMLVideoElement | null>;
   captureCamera: () => unknown;
   loadComments: () => Promise<unknown>;
+  /** Boucle I/O active (secondes) : jointe comme plage in→out du commentaire (34.A). */
+  loop?: { in: number | null; out: number | null };
+  fps?: number;
 }) {
   const qc = useQueryClient();
-  const { id, data, ann, paint, videoRef, captureCamera, loadComments } = opts;
+  const { id, data, ann, paint, videoRef, captureCamera, loadComments, loop, fps } = opts;
 
   return async (text: string, files: File[]): Promise<boolean> => {
     const kind = data?.media.kind;
-    const timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
+    // Plage in→out (34.A) : la boucle I/O active à l'envoi devient la plage du commentaire
+    // (annotation visible pendant toute la plage) ; le marqueur s'ancre au point d'entrée.
+    const range =
+      kind === 'VIDEO' && loop && loop.in != null && loop.out != null && loop.out > loop.in
+        ? { inFrame: Math.round(loop.in * (fps || 24)), outFrame: Math.round(loop.out * (fps || 24)) }
+        : null;
+    let timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
+    if (range && loop) timestamp = loop.in!;
     const cameraState = kind === 'MODEL_3D' || kind === 'SPLAT' ? captureCamera() : undefined;
     // Annotation : 3D/splat = hotspot de surface + dessins 2D ; autres = dessins 2D.
     let annotation: unknown;
@@ -55,6 +65,12 @@ export function useSubmitComment(opts: {
       annotation = parts.length ? parts : undefined;
     } else {
       annotation = ann.annot.length ? ann.annot : undefined;
+    }
+    // Plage vidéo : part `range` ajoutée à l'annotation (créée au besoin).
+    if (range) {
+      const parts = Array.isArray(annotation) ? [...annotation] : [];
+      parts.push({ type: 'range', ...range });
+      annotation = parts;
     }
     try {
       const attachments = files.length > 0 ? await uploadCommentAttachments(files) : undefined;
