@@ -272,7 +272,9 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onPublish={publishMedia}
             commentsOpen={commentsOpen}
             onToggleComments={() => setCommentsOpen((o) => !o)}
-            compareId={compare.compareId}
+            compareIds={compare.compareIds}
+            onAddCompare={compare.addCompareId}
+            onRemoveCompare={compare.removeCompareId}
             onCompareChange={compare.setCompareId}
             live={live}
           />
@@ -312,8 +314,9 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onReprocess={reprocessMedia}
             onToggleAnnotate={toggleAnnotating}
             onFullscreen={toggleFullscreen}
-            compareId={compare.compareId}
+            compareIds={compare.compareIds}
             onCloseCompare={() => compare.setCompareId(null)}
+            onRemoveCompare={compare.removeCompareId}
             compareMode={compare.compareMode}
             onCompareModeChange={compare.setCompareMode}
             sharedWipe={sharedWipe}

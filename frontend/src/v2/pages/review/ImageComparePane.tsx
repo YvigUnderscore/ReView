@@ -1,22 +1,28 @@
 import { useQuery } from '@tanstack/react-query';
 import { X, SplitSquareHorizontal } from 'lucide-react';
+import type { ComponentProps } from 'react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 
 /**
- * Pane B de la comparaison A/B **image** : visionneuse zoom/pan indépendante, sans
- * annotation. Mode côte-à-côte ; `onWipe` bascule vers la superposition à barre.
+ * Pane B de la comparaison A/B **image** : visionneuse zoom/pan sans annotation, dont la
+ * vue est répliquée avec le maître (34.D — `viewApiRef`/`onViewChange` branchés sur le
+ * relais useImageCompareSync). Mode côte-à-côte ; `onWipe` bascule vers la superposition.
  */
 export default function ImageComparePane({
   compareId,
   onClose,
   onWipe,
+  viewApiRef,
+  onViewChange,
 }: {
   compareId: number;
   onClose: () => void;
   onWipe: () => void;
+  viewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
+  onViewChange?: ComponentProps<typeof ImageReviewViewer>['onViewChange'];
 }) {
   // staleTime Infinity : même règle que la review — URLs présignées, pas de refetch.
   const mediaQ = useQuery({
@@ -62,6 +68,8 @@ export default function ImageComparePane({
               color="#fff"
               width={3}
               alpha={1}
+              viewApiRef={viewApiRef}
+              onViewChange={onViewChange}
             />
           </div>
         )}

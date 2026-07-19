@@ -39,6 +39,7 @@ export default function ImageReviewViewer({
   onFullscreen,
   viewApiRef,
   onUserView,
+  onViewChange,
 }: {
   src: string;
   alt: string;
@@ -60,6 +61,8 @@ export default function ImageReviewViewer({
   viewApiRef?: React.MutableRefObject<ImageViewApi | null>;
   /** Interaction zoom/pan locale (molette, pan, boutons) — prise de main en session live. */
   onUserView?: () => void;
+  /** Vue émise à chaque changement (fit inclus) — réplication A/B de la comparaison (34.D). */
+  onViewChange?: (v: ImageView) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -99,17 +102,24 @@ export default function ImageReviewViewer({
   // Vue partagée en session live : capture (pilote) / application (spectateur) — le centre
   // est en fraction de l'image de base, indépendant de la taille de viewport de chacun.
   useEffect(() => {
+    const capture = (): ImageView | null => {
+      const vp = viewportRef.current;
+      if (!vp || !base) return null;
+      return {
+        scale,
+        cx: (vp.clientWidth / 2 - offset.x) / (base.w * scale),
+        cy: (vp.clientHeight / 2 - offset.y) / (base.h * scale),
+      };
+    };
+    // Réplication A/B (34.D) : chaque changement de vue est poussé au relais, qui
+    // l'applique à l'autre pane (l'écho est coupé côté relais).
+    if (onViewChange) {
+      const v = capture();
+      if (v) onViewChange(v);
+    }
     if (!viewApiRef) return;
     viewApiRef.current = {
-      capture: () => {
-        const vp = viewportRef.current;
-        if (!vp || !base) return null;
-        return {
-          scale,
-          cx: (vp.clientWidth / 2 - offset.x) / (base.w * scale),
-          cy: (vp.clientHeight / 2 - offset.y) / (base.h * scale),
-        };
-      },
+      capture,
       apply: (v) => {
         const vp = viewportRef.current;
         if (!vp || !base) return;
@@ -123,7 +133,7 @@ export default function ImageReviewViewer({
     return () => {
       viewApiRef.current = null;
     };
-  }, [viewApiRef, base, scale, offset]);
+  }, [viewApiRef, base, scale, offset, onViewChange]);
 
   // Zoom molette centré sur le curseur
   const onWheel = (e: React.WheelEvent) => {

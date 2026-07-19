@@ -1,35 +1,44 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Columns2 } from 'lucide-react';
+import { ChevronDown, Columns2, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import type { VersionDetail, VersionListItem } from '../../types/api';
 import { findCompareMedia } from './reviewTypes';
+import { MAX_COMPARE } from './useCompareState';
 
 /**
- * Sélecteur de comparaison A/B (vidéo **et image**) : choisit une autre version de la
- * même tâche/asset et ouvre son premier média du même type en pane synchronisé (vidéo)
- * ou en côte-à-côte/wipe (image). Rendu uniquement s'il existe une autre version.
+ * Sélecteur de comparaison (vidéo **et image**) : coche d'autres versions de la même
+ * tâche/asset — 1 version = A/B côte-à-côte/wipe ; 2-3 versions (vidéo, 34.D) = grille
+ * 2×2 synchronisée. L'image reste mono-comparaison (coche exclusive). Rendu uniquement
+ * s'il existe une autre version.
  */
 export default function CompareSelect({
   versionId,
   mediaId,
   kind,
-  compareId,
-  onCompareChange,
+  compareIds,
+  onAdd,
+  onRemove,
+  onSet,
 }: {
   versionId: number;
   mediaId: number;
-  /** Type du média maître — le média B doit être du même type. */
+  /** Type du média maître — les médias B doivent être du même type. */
   kind: string;
-  compareId: number | null;
-  onCompareChange: (mediaId: number | null) => void;
+  compareIds: number[];
+  onAdd: (mediaId: number) => void;
+  onRemove: (mediaId: number) => void;
+  /** Remplacement exclusif (image) — garde la sémantique A/B simple. */
+  onSet: (mediaId: number | null) => void;
 }) {
   const qc = useQueryClient();
-  const [selVid, setSelVid] = useState<number | ''>('');
-  // Valeur dérivée : une fermeture externe (pane) ramène le sélecteur à « Comparer… ».
-  const shown = compareId === null ? '' : selVid;
+  // Version cochée → média B résolu (nécessaire pour décocher et refléter l'état).
+  const [vidToMedia, setVidToMedia] = useState<Record<number, number>>({});
+  const multi = kind === 'VIDEO';
 
   // Mêmes queries que VersionNavigator (cache partagé) : version courante → liste parente.
   const versionQ = useQuery({
@@ -53,47 +62,79 @@ export default function CompareSelect({
   const others = (versionsQ.data ?? []).filter((v) => v.id !== versionId);
   if (others.length === 0) return null;
 
-  const pick = async (vid: number | '') => {
-    setSelVid(vid);
-    if (vid === '') return onCompareChange(null);
+  const checked = (vid: number) => {
+    const m = vidToMedia[vid];
+    return m != null && compareIds.includes(m);
+  };
+  const checkedCount = others.filter((v) => checked(v.id)).length;
+
+  const toggle = async (v: VersionListItem) => {
+    if (checked(v.id)) {
+      if (multi) onRemove(vidToMedia[v.id]!);
+      else onSet(null);
+      return;
+    }
     try {
-      const v = await qc.fetchQuery({
-        queryKey: qk.version(vid),
-        queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${vid}`).then((d) => d.version),
+      const detail = await qc.fetchQuery({
+        queryKey: qk.version(v.id),
+        queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${v.id}`).then((d) => d.version),
       });
-      const target = findCompareMedia(v.media, mediaId, kind);
+      const target = findCompareMedia(detail.media, mediaId, kind);
       if (!target) {
         toast.error(
           `Aucun média ${kind === 'IMAGE' ? 'image' : 'vidéo'} à comparer dans la version ${v.name}`,
         );
-        setSelVid('');
-        return onCompareChange(null);
+        return;
       }
-      onCompareChange(target);
+      setVidToMedia((m) => ({ ...m, [v.id]: target }));
+      if (multi) onAdd(target);
+      else onSet(target);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Version inaccessible');
-      setSelVid('');
     }
   };
 
+  const label =
+    compareIds.length === 0
+      ? 'Comparer…'
+      : compareIds.length === 1
+        ? `vs ${others.find((v) => checked(v.id))?.name ?? '…'}`
+        : `Grille · ${compareIds.length + 1}`;
+
   return (
-    <label
-      className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
-      title="Comparer avec une autre version"
-    >
-      <Columns2 size={13} />
-      <select
-        value={shown}
-        onChange={(e) => void pick(e.target.value === '' ? '' : Number(e.target.value))}
-        className="bg-transparent text-xs font-medium text-foreground focus:outline-none [&>option]:bg-background"
+    <Popover>
+      <PopoverTrigger
+        title={
+          multi ? 'Comparer avec d’autres versions (2-3 = grille 2×2)' : 'Comparer avec une autre version'
+        }
+        className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary"
       >
-        <option value="">Comparer…</option>
-        {others.map((v) => (
-          <option key={v.id} value={v.id}>
-            vs {v.name}
-          </option>
-        ))}
-      </select>
-    </label>
+        {compareIds.length >= 2 ? <LayoutGrid size={13} /> : <Columns2 size={13} />}
+        {label}
+        <ChevronDown size={12} className="text-muted-foreground" />
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-1">
+        {others.map((v) => {
+          const isOn = checked(v.id);
+          const disabled = multi && !isOn && checkedCount >= MAX_COMPARE;
+          return (
+            <button
+              key={v.id}
+              disabled={disabled}
+              onClick={() => void toggle(v)}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-secondary disabled:opacity-40"
+            >
+              <Checkbox checked={isOn} className="pointer-events-none" tabIndex={-1} />
+              <span className="truncate">{v.name}</span>
+            </button>
+          );
+        })}
+        {multi && (
+          <p className="px-2 pb-1 pt-1.5 text-[10px] text-muted-foreground">
+            2 versions et plus : grille 2×2 synchronisée (max {MAX_COMPARE + 1} à l’écran).
+          </p>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -7,9 +7,9 @@ import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
 
 /**
- * Pane B de la comparaison A/B vidéo (10.G + 14.C) : vidéo esclave, muette et sans
- * contrôles, synchronisée sur le lecteur maître (hook `useVideoSync`). Mode côte-à-côte ;
- * `onWipe` bascule vers le mode wipe (superposition + curseur).
+ * Pane B de la comparaison vidéo (10.G + 14.C + 34.D) : vidéo esclave, muette et sans
+ * contrôles, synchronisée sur le lecteur maître (hook `useVideoSync`). Côte-à-côte ou
+ * case de la grille 2×2 ; `onWipe` (absent en grille) bascule vers le mode wipe.
  */
 export default function VideoComparePane({
   compareId,
@@ -20,7 +20,8 @@ export default function VideoComparePane({
   compareId: number;
   masterRef: RefObject<HTMLVideoElement | null>;
   onClose: () => void;
-  onWipe: () => void;
+  /** Bascule wipe — proposé seulement en A/B simple (pas en grille 34.D). */
+  onWipe?: () => void;
 }) {
   const slaveRef = useRef<HTMLVideoElement>(null);
   const [slaveReady, setSlaveReady] = useState(false);
@@ -37,19 +38,21 @@ export default function VideoComparePane({
   useVideoSync(masterRef, slaveRef, slaveReady);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs">
         <span className="truncate text-muted-foreground">
           Comparaison : <span className="text-foreground">{data?.media.originalName ?? '…'}</span>
         </span>
         <div className="flex items-center gap-1">
-          <button
-            onClick={onWipe}
-            title="Basculer en mode wipe (superposition à barre)"
-            className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
-          >
-            <SplitSquareHorizontal size={13} /> Wipe
-          </button>
+          {onWipe && (
+            <button
+              onClick={onWipe}
+              title="Basculer en mode wipe (superposition à barre)"
+              className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
+            >
+              <SplitSquareHorizontal size={13} /> Wipe
+            </button>
+          )}
           <button
             onClick={onClose}
             title="Fermer la comparaison"
@@ -68,7 +71,7 @@ export default function VideoComparePane({
             muted
             playsInline
             onLoadedMetadata={() => setSlaveReady(true)}
-            className="pointer-events-none block max-h-[calc(100vh-16rem)] max-w-full"
+            className="pointer-events-none block max-h-full max-w-full"
           />
         )}
       </div>

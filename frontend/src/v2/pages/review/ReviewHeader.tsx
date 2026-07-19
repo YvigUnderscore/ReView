@@ -27,7 +27,9 @@ export default function ReviewHeader({
   onPublish,
   commentsOpen,
   onToggleComments,
-  compareId,
+  compareIds,
+  onAddCompare,
+  onRemoveCompare,
   onCompareChange,
   live,
 }: {
@@ -35,7 +37,11 @@ export default function ReviewHeader({
   onPublish: () => void;
   commentsOpen: boolean;
   onToggleComments: () => void;
-  compareId: number | null;
+  /** Médias B cochés (34.D) : 1 = A/B ; 2-3 = grille 2×2 (vidéo). */
+  compareIds: number[];
+  onAddCompare: (mediaId: number) => void;
+  onRemoveCompare: (mediaId: number) => void;
+  /** Remplacement exclusif (image / live). */
   onCompareChange: (mediaId: number | null) => void;
   live: LiveSession;
 }) {
@@ -67,8 +73,10 @@ export default function ReviewHeader({
             versionId={versionId}
             mediaId={data.media.id}
             kind={data.media.kind}
-            compareId={compareId}
-            onCompareChange={onCompareChange}
+            compareIds={compareIds}
+            onAdd={onAddCompare}
+            onRemove={onRemoveCompare}
+            onSet={onCompareChange}
           />
         )}
       </div>

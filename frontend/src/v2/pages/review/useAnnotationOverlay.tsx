@@ -1,8 +1,10 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { AnnotationCanvas, type Shape } from '../../components/AnnotationCanvas';
 import { shapesOutsideFrame } from './frameRect';
 import type { useAnnotations } from './useAnnotations';
+import type { useModel3DThree } from './three/useModel3DThree';
+import type { SplatViewer } from './splat/useSplat';
 
 /**
  * Overlay d'annotation 2D (extrait de ReviewViewer, budget 300) ; `captureAspect` (3D)
@@ -11,6 +13,25 @@ import type { useAnnotations } from './useAnnotations';
  * édition la SVG les capte. Le dessin peut déborder du cadre de livraison (marge,
  * Phase 25) — signalé une fois à l'auteur.
  */
+/**
+ * Hotspot 3D/splat (10.G, extrait de ReviewViewer) : affiche celui du commentaire
+ * sélectionné, sinon celui en cours de placement — marqueur projeté par le viewer.
+ */
+export function useHotspotDisplay(
+  kind: string | undefined,
+  ann: ReturnType<typeof useAnnotations>,
+  splat: SplatViewer,
+  model3d: ReturnType<typeof useModel3DThree>,
+) {
+  const { showHotspot } = splat;
+  const { showHotspot: showModelHotspot } = model3d;
+  const hotspot3d = kind === 'SPLAT' || kind === 'MODEL_3D' ? (ann.viewed3d ?? ann.hotspot3d) : null;
+  useEffect(() => {
+    if (kind === 'SPLAT') showHotspot(hotspot3d);
+    else if (kind === 'MODEL_3D') showModelHotspot(hotspot3d);
+  }, [kind, hotspot3d, showHotspot, showModelHotspot]);
+}
+
 export function useAnnotationOverlay(ann: ReturnType<typeof useAnnotations>) {
   const warnedOutside = useRef(false);
   const onShapesChange = (s: Shape[]) => {

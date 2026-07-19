@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import type { WipeShared } from './useWipe';
 
+/** Nombre max de panes B (34.D) : 3 esclaves + le maître = grille 2×2 pleine. */
+export const MAX_COMPARE = 3;
+
 /**
- * Comparaison A/B hissée dans l'orchestrateur (retours 33) : média B, mode
- * (côte-à-côte / wipe) et barre de wipe — le driver d'une session live les diffuse,
- * les spectateurs les appliquent.
+ * Comparaison hissée dans l'orchestrateur (retours 33 + 34.D) : liste des médias B
+ * (1 = A/B classique côte-à-côte/wipe ; 2-3 = grille 2×2 vidéo synchronisée), mode et
+ * barre de wipe. Le premier id reste la comparaison répliquée en session live.
  */
 export function useCompareState() {
-  const [compareId, setCompareId] = useState<number | null>(null);
+  const [compareIds, setCompareIds] = useState<number[]>([]);
   const [compareMode, setCompareMode] = useState<'side' | 'wipe'>('side');
   const [wipePos, setWipePos] = useState(0.5);
   const [wipeAngle, setWipeAngle] = useState(0);
+
+  /** Compat A/B simple (live, sélection image) : remplace toute la sélection. */
+  const setCompareId = (id: number | null) => setCompareIds(id == null ? [] : [id]);
+  const addCompareId = (id: number) =>
+    setCompareIds((ids) => (ids.includes(id) || ids.length >= MAX_COMPARE ? ids : [...ids, id]));
+  const removeCompareId = (id: number) => setCompareIds((ids) => ids.filter((i) => i !== id));
 
   /** Application d'une sync live (spectateur). */
   const applyWipe = (pos: number, angle: number) => {
@@ -28,8 +37,11 @@ export function useCompareState() {
   });
 
   return {
-    compareId,
+    compareIds,
+    compareId: compareIds[0] ?? null,
     setCompareId,
+    addCompareId,
+    removeCompareId,
     compareMode,
     setCompareMode,
     wipe: { pos: wipePos, angle: wipeAngle },
