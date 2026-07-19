@@ -9,6 +9,7 @@ import {
   type AcesAssetInfo,
   type AcesConfigKind,
 } from '../lib/ocioAces';
+import { parseOcioDisplays, type OcioDisplay } from '../lib/ocioDisplays';
 
 /**
  * Catalogue des configs couleur OCIO (39.B). Les configs ACES officielles sont récupérées depuis
@@ -167,6 +168,24 @@ export async function listInstalled(): Promise<(OcioEntry & { url: string })[]> 
 export async function getDefault(): Promise<OcioEntry | null> {
   const entries = await readLibrary();
   return entries.find((e) => e.isDefault) ?? entries[0] ?? null;
+}
+
+// Displays/views d'une config sont immuables une fois installée → cache par clé de stockage.
+const displaysCache = new Map<string, OcioDisplay[]>();
+
+/** Displays/views d'une config installée (parse du `.ocio` depuis MinIO, mis en cache). */
+export async function getConfigDisplays(id: string): Promise<OcioDisplay[]> {
+  const entries = await readLibrary();
+  const entry = entries.find((e) => e.id === id);
+  if (!entry) throw notFound('Config OCIO introuvable');
+  const cached = displaysCache.get(entry.storageKey);
+  if (cached) return cached;
+  const stream = await storage.getObjectStream(entry.storageKey);
+  const chunks: Buffer[] = [];
+  for await (const c of stream) chunks.push(c as Buffer);
+  const displays = parseOcioDisplays(Buffer.concat(chunks).toString('utf-8'));
+  displaysCache.set(entry.storageKey, displays);
+  return displays;
 }
 
 /**

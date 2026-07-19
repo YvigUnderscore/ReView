@@ -124,3 +124,14 @@ describe('projectSettings — defaultLighting (39.F)', () => {
     expect(() => projectSettingsSchema.parse({ defaultLighting: { ...valid, rotationDeg: 400 } })).toThrow();
   });
 });
+
+describe('projectSettings — color OCIO (39.B)', () => {
+  it('accepte une config couleur complète', () => {
+    const color = { configId: 'abc', display: 'sRGB - Display', view: 'ACES 1.0 - SDR Video' };
+    expect(projectSettingsSchema.parse({ color }).color).toEqual(color);
+  });
+
+  it('accepte une config couleur partielle', () => {
+    expect(projectSettingsSchema.parse({ color: { display: 'sRGB - Display' } }).color?.view).toBeUndefined();
+  });
+});

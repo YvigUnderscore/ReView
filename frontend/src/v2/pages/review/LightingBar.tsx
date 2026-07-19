@@ -8,10 +8,25 @@ import type { Model3DLightingState } from './three/useModel3DLighting';
  * instance, exposition, rotation Y, fond HDRI on/off. Le gestionnaire enregistre le réglage par
  * défaut (rejoué pour tous) ou l'efface ; les spectateurs tweakent en session (non persisté).
  */
-export default function LightingBar({ lighting }: { lighting: Model3DLightingState }) {
+export default function LightingBar({
+  lighting,
+  colorView,
+}: {
+  lighting: Model3DLightingState;
+  /** Intention couleur OCIO du projet (39.B) — badge lecture seule (display/view). */
+  colorView?: string;
+}) {
   const { cfg, setCfg, hdris, busy, save, clear } = lighting;
   return (
     <HudGroup>
+      {colorView && (
+        <span
+          title="Gestion de couleur OCIO du projet (display/view)"
+          className="rounded bg-secondary/60 px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground"
+        >
+          OCIO · {colorView}
+        </span>
+      )}
       <Sun size={14} className="text-muted-foreground" />
       <label
         className="flex items-center gap-1 text-muted-foreground"

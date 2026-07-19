@@ -351,6 +351,12 @@ export interface LightingDefault {
   showBackground: boolean;
   groundShadow: boolean;
 }
+/** Gestion de couleur OCIO d'un projet (39.B) : config + display/view. */
+export interface ColorSettings {
+  configId?: string;
+  display?: string;
+  view?: string;
+}
 /** GET /api/projects/:id/settings — aussi la shape des défauts studio (admin). */
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
@@ -361,6 +367,8 @@ export interface ProjectSettings extends PipelineSettings {
   burnin?: Partial<import('./share').BurninConfig>;
   /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */
   defaultLighting?: LightingDefault;
+  /** Gestion de couleur OCIO du projet (39.B) : config + display/view. */
+  color?: ColorSettings;
 }
 
 // Types du partage client (35.C/35.D) — module séparé pour le budget de lignes.

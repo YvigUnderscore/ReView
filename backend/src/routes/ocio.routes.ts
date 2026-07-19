@@ -21,6 +21,15 @@ router.get('/configs', async (_req, res) => {
   res.json({ configs: await OcioService.listInstalled() });
 });
 
+// GET /api/studio/ocio/configs/:id/displays — displays/views d'une config (choix projet).
+router.get(
+  '/configs/:id/displays',
+  validate({ params: z.object({ id: z.string().uuid() }) }),
+  async (req, res) => {
+    res.json({ displays: await OcioService.getConfigDisplays(req.params.id as string) });
+  },
+);
+
 // GET /api/studio/ocio/releases — releases ACES disponibles (admin ; fetch GitHub).
 router.get('/releases', requireRole(Role.ADMIN), async (_req, res) => {
   res.json({ releases: await OcioService.listReleases() });

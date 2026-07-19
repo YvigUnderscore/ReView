@@ -208,6 +208,8 @@ export interface MediaResp {
   splatPresentation: SplatPresentation | null;
   /** Éclairage HDRI par défaut du projet (39.F) : repli quand le média n'a pas le sien. */
   projectDefaultLighting: LightingConfig | null;
+  /** Gestion de couleur OCIO du projet (39.B) : intention display/view, affichée en badge. */
+  projectColor: { configId?: string; display?: string; view?: string } | null;
   /** Trim vidéo non-destructif (10.G-V10) : bornes en frames, proxy trimé prêt ou en cours. */
   trim: { inFrame: number; outFrame: number } | null;
   trimProxyReady: boolean;

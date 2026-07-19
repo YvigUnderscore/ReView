@@ -6,6 +6,7 @@ import ProjectBurninSection from './ProjectBurninSection';
 import ProjectStorageSection from './ProjectStorageSection';
 import ProjectNamingSection from './ProjectNamingSection';
 import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
+import ProjectColorSection from './ProjectColorSection';
 import type { Department, Nomenclature, ProjectSettings } from '../types/api';
 
 /**
@@ -266,6 +267,14 @@ export default function ProjectSettingsTab({
         <ProjectDefaultLightingSection
           value={draft.defaultLighting}
           onChange={(defaultLighting) => setDraft((d) => d && { ...d, defaultLighting })}
+        />
+      )}
+
+      {/* Gestion de couleur OCIO (39.B) : config + display/view, enregistré avec les réglages. */}
+      {draft && (
+        <ProjectColorSection
+          value={draft.color}
+          onChange={(color) => setDraft((d) => d && { ...d, color })}
         />
       )}
 

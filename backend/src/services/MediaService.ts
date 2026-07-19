@@ -510,6 +510,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     splatPresentation: meta.splatPresentation ?? null,
     // Éclairage HDRI par défaut du projet (39.F) : repli quand le média n'a pas le sien.
     projectDefaultLighting: projectSettings.defaultLighting ?? null,
+    // Gestion de couleur OCIO du projet (39.B) : intention display/view (badge review).
+    projectColor: projectSettings.color ?? null,
     // Trim vidéo non-destructif (10.G-V10) : bornes + proxy trimé prêt ou en cours.
     trim: meta.trim ?? null,
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),

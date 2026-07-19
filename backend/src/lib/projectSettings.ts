@@ -60,6 +60,17 @@ export interface LightingDefault {
   groundShadow: boolean;
 }
 
+/**
+ * Gestion de couleur du projet (39.B) : config OCIO + display/view choisis. `configId` référence une
+ * config installée (`OcioService`) ; vide = config par défaut du studio. Sans display/view, le viewer
+ * garde son rendu actuel (la transformation OCIO pixel-exacte est un lot ultérieur).
+ */
+export interface ColorSettings {
+  configId?: string;
+  display?: string;
+  view?: string;
+}
+
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
@@ -69,6 +80,8 @@ export interface ProjectSettings extends PipelineSettings {
   burnin?: Partial<BurninConfig>;
   /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */
   defaultLighting?: LightingDefault;
+  /** Gestion de couleur OCIO du projet (39.B) : config + display/view. */
+  color?: ColorSettings;
 }
 
 /**
@@ -155,6 +168,8 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   const burnin = sanitizeBurninOverride(o.burnin) ?? base.burnin;
   // Éclairage par défaut (39.F) : absent → hérite du socle ; présent → nettoyé/borné.
   const defaultLighting = 'defaultLighting' in o ? sanitizeLighting(o.defaultLighting) : base.defaultLighting;
+  // Couleur OCIO (39.B) : absent → hérite ; présent → nettoyé.
+  const color = 'color' in o ? sanitizeColor(o.color) : base.color;
   return {
     departments,
     nomenclature,
@@ -163,7 +178,23 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
     framerate,
     ...(burnin ? { burnin } : {}),
     ...(defaultLighting ? { defaultLighting } : {}),
+    ...(color ? { color } : {}),
   };
+}
+
+/** Nettoie les réglages couleur (39.B) : chaînes bornées, undefined si vide. */
+function sanitizeColor(raw: unknown): ColorSettings | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Partial<ColorSettings>;
+  const str = (v: unknown) => (typeof v === 'string' && v ? v.slice(0, 120) : undefined);
+  const out: ColorSettings = {};
+  const configId = str(o.configId);
+  const display = str(o.display);
+  const view = str(o.view);
+  if (configId) out.configId = configId;
+  if (display) out.display = display;
+  if (view) out.view = view;
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /** Nettoie l'éclairage par défaut (39.F) : bornes exposition/rotation, hdriId string, undefined si vide. */
@@ -282,6 +313,13 @@ export const projectSettingsSchema = z.object({
       rotationDeg: z.number().min(ROTATION_MIN).max(ROTATION_MAX),
       showBackground: z.boolean(),
       groundShadow: z.boolean(),
+    })
+    .optional(),
+  color: z
+    .object({
+      configId: z.string().max(120).optional(),
+      display: z.string().max(120).optional(),
+      view: z.string().max(120).optional(),
     })
     .optional(),
 });

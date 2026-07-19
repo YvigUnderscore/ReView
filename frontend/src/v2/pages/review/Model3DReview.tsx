@@ -162,7 +162,7 @@ export default function Model3DReview({
                 <Model3DAnimationsBar m={model3d} />
                 {compare.enabled && !showEditTools && <Model3DCompareBar compare={compare} />}
                 <BookmarksBar bm={bookmarks} />
-                <LightingBar lighting={lighting} />
+                <LightingBar lighting={lighting} colorView={data.projectColor?.view} />
                 <CameraBar
                   fov={model3d.fov}
                   onFov={model3d.setFov}
