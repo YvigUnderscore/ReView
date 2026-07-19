@@ -7,6 +7,9 @@ import type { Role } from '../../types/api';
 import { useModel3DCamera } from './three/useModel3DCamera';
 import { useModel3DLighting } from './three/useModel3DLighting';
 import { useModel3DInspect } from './three/useModel3DInspect';
+import { useModel3DBookmarks } from './three/useModel3DBookmarks';
+import { useTurntable } from './three/useTurntable';
+import { useSectionPlane } from './three/useSectionPlane';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
@@ -15,6 +18,9 @@ import Model3DTransformBar from './Model3DTransformBar';
 import LightingBar from './LightingBar';
 import InspectBar from './InspectBar';
 import ModelInfoPanel from './ModelInfoPanel';
+import BookmarksBar from './BookmarksBar';
+import TurntableBar from './TurntableBar';
+import SectionBar from './SectionBar';
 import CameraBar from './camera/CameraBar';
 import AnimPanel from './camera/timeline/AnimPanel';
 import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
@@ -63,6 +69,11 @@ export default function Model3DReview({
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
   // Inspection (Phase 39) : modes d'affichage + fiche technique — local à la session.
   const inspect = useModel3DInspect(model3d);
+  // Bookmarks caméra partagés (39.D) : vues nommées rejouées pour tous, raccourcis 1-9.
+  const bookmarks = useModel3DBookmarks(model3d, data, canManage, onSaved);
+  // Turntable + plan de coupe (39.D) : prévisualisations d'inspection session-local.
+  const turntable = useTurntable(model3d);
+  const section = useSectionPlane(model3d);
   const [infoOpen, setInfoOpen] = useState(false);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(model3d);
@@ -129,6 +140,8 @@ export default function Model3DReview({
                     />
                   </HudGroup>
                 )}
+                <TurntableBar tt={turntable} />
+                <SectionBar sec={section} />
                 <HudGroup>
                   <HudIconButton
                     icon={Grid3x3}
@@ -143,6 +156,7 @@ export default function Model3DReview({
             bottomLeft={
               <>
                 <Model3DAnimationsBar m={model3d} />
+                <BookmarksBar bm={bookmarks} />
                 <LightingBar lighting={lighting} />
                 <CameraBar
                   fov={model3d.fov}

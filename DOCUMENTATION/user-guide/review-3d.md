@@ -10,6 +10,15 @@ designed to feel like a DCC viewport.
 Unified DCC-style navigation: orbit, pan, dolly with the mouse, plus a **fly mode**
 for walkthroughs. Framing and tilt behave consistently across 3D and splat review.
 
+- **Camera bookmarks** — save the current view as a numbered, **shared** bookmark
+  (managers only, `+ Vue`); anyone recalls it by clicking its number or pressing keys
+  **1–9**. Bookmarks are persisted with the media and replayed for everyone.
+  Right-click a bookmark to remove it.
+- **Turntable** — auto-rotate the view around the target (axis X/Y/Z, speed in °/s).
+  A session-only inspection preview: nothing is saved and the model is untouched.
+- **Section plane** — clip half of the model along an axis; drag or type the plane
+  position and flip which side is kept. Session-only and non-destructive.
+
 ## Inspection
 
 - **Display modes** — the inspect bar (top-right HUD) switches between *shaded*,

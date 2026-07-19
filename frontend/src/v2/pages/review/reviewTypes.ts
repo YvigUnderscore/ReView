@@ -151,6 +151,14 @@ export interface SplatPresentation {
   cameraAnim?: CameraAnimV2;
   /** Éclairage/HDRI par défaut du viewer 3D (Phase 29) — rejoué pour tous, tweak spectateur temporaire. */
   lighting?: LightingConfig;
+  /** Bookmarks caméra partagés (39.D) : vues nommées rappelables (raccourcis 1-9), rejouées pour tous. */
+  bookmarks?: CameraBookmark[];
+}
+
+/** Vue caméra nommée et partagée du viewer 3D/splat (39.D) — persistée dans la présentation. */
+export interface CameraBookmark {
+  label?: string;
+  camera: SplatCamera;
 }
 
 /** Réglages d'éclairage HDRI du viewer 3D (Phase 29). `hdriId` référence la bibliothèque instance. */

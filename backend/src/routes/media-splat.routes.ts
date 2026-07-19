@@ -148,7 +148,14 @@ router.patch(
               exposure: finite.min(0).max(10),
               rotationDeg: finite.min(-360).max(360),
               showBackground: z.boolean(),
+              // Sol récepteur d'ombres (39.F) — optionnel (tolère les présentations antérieures).
+              groundShadow: z.boolean().optional(),
             })
+            .optional(),
+          // Bookmarks caméra partagés (39.D) : vues nommées rejouées/rappelables pour tous.
+          bookmarks: z
+            .array(z.object({ label: z.string().max(40).optional(), camera: camPose }))
+            .max(12)
             .optional(),
           // Animation caméra « par canaux » (Phase 17, v2) : F-curves éditables (position/cible/
           // focale/tilt), tangentes Hermite. Remplace le format v1 (keyframes + easing).
