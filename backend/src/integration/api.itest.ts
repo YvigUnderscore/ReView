@@ -98,6 +98,58 @@ describe('API — auth & RBAC', () => {
     expect(r.status).toBe(200);
     expect(r.body.user.role).toBe('ADMIN');
   });
+
+  it('sessions révocables (36.B) : login → liste → logout → token mort', async () => {
+    // Nouveau login dédié (mêmes comptes candidats que le beforeAll) → session propre.
+    let t = '';
+    for (const email of ['admin@review.local', 'ci-admin@review.local']) {
+      const r = await request(app).post('/api/auth/login').send({ email, password: 'admin1234' });
+      if (r.status === 200) {
+        t = r.body.token;
+        break;
+      }
+    }
+    expect(t).toBeTruthy();
+    const sessions = await request(app).get('/api/auth/sessions').set('Authorization', `Bearer ${t}`);
+    expect(sessions.status).toBe(200);
+    expect(sessions.body.sessions.some((s: { current: boolean }) => s.current)).toBe(true);
+
+    const out = await request(app).post('/api/auth/logout').set('Authorization', `Bearer ${t}`);
+    expect(out.status).toBe(204);
+    // La révocation invalide aussi l'access token (cache court-circuité par revokeSession).
+    const after = await request(app).get('/api/auth/sessions').set('Authorization', `Bearer ${t}`);
+    expect(after.status).toBe(401);
+  });
+
+  it("tokens d'API (36.C) : scope read → GET ok, écriture 403 ; révocation immédiate", async () => {
+    const created = await request(app)
+      .post('/api/auth/tokens')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'IT read', scopes: ['read'] });
+    expect(created.status).toBe(201);
+    const apiTok = created.body.token as string;
+    expect(apiTok).toMatch(/^rvk_/);
+
+    const read = await request(app).get('/api/projects').set('Authorization', `Bearer ${apiTok}`);
+    expect(read.status).toBe(200);
+    const write = await request(app)
+      .post('/api/projects')
+      .set('Authorization', `Bearer ${apiTok}`)
+      .send({ name: 'refusé' });
+    expect(write.status).toBe(403);
+    // Un token d'API ne peut pas créer de token (pas d'escalade).
+    const escal = await request(app)
+      .post('/api/auth/tokens')
+      .set('Authorization', `Bearer ${apiTok}`)
+      .send({ name: 'x', scopes: ['read'] });
+    expect(escal.status).toBe(403);
+
+    await request(app)
+      .delete(`/api/auth/tokens/${created.body.apiToken.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    const dead = await request(app).get('/api/projects').set('Authorization', `Bearer ${apiTok}`);
+    expect(dead.status).toBe(403);
+  });
 });
 
 describe('API — studio & admin', () => {
