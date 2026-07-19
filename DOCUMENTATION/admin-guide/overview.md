@@ -20,6 +20,7 @@ The admin area (`/admin`, `ADMIN` role only) is organised in grouped sections:
 | Communications | Annonces | Studio-wide announcements — see [SMTP & announcements](smtp-and-announcements.md) |
 | Communications | SMTP | Outgoing mail configuration |
 | Communications | API & Webhooks | Studio API tokens + outgoing webhooks — see [Identity, API & audit](identity-and-api.md) |
+| Maintenance | Jobs | BullMQ queues (retry, purge) + derived-files purge — see [Monitoring](../infrastructure/monitoring.md) |
 | Maintenance | Corbeille | Soft-deleted items, restore/purge |
 | Maintenance | Audit | Audit log of sensitive actions |
 | Maintenance | Accès médias | Who viewed which media, when — see [Identity, API & audit](identity-and-api.md) |

@@ -18,6 +18,12 @@ non-blocking upload widget**: you can keep navigating while uploads and processi
 continue. Media status progresses `UPLOADING → PROCESSING → READY` (or `FAILED`
 with an error you can retry from the UI).
 
+Large files (≥ 16 MB) upload in **resumable parts**: if the connection drops,
+re-uploading the same file to the same version picks up where it stopped. Every
+file also carries a **sha256 checksum** verified after transfer, and content
+already present in storage is **deduplicated** (instant upload). If the studio
+enabled the antivirus, infected files are quarantined and marked FAILED.
+
 ## Drafts & review-before-publish
 
 New versions are **drafts** by default. Drafts:
