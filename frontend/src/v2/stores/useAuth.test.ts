@@ -31,6 +31,30 @@ describe('useAuth', () => {
     expect(useAuth.getState().user?.email).toBe('a@b.c');
   });
 
+  it('login avec 2FA : renvoie le tmpToken sans connecter (36.A)', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ requires2fa: true, tmpToken: 'tmp-1' }));
+    const r = await useAuth.getState().login('a@b.c', 'pw');
+    expect(r.tmpToken).toBe('tmp-1');
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(useAuth.getState().user).toBeNull();
+  });
+
+  it('verify2fa : échange le code contre la session', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', refreshToken: 'r-2', user }));
+    await useAuth.getState().verify2fa('tmp-1', '123456');
+    expect(localStorage.getItem('token')).toBe('jwt-2');
+    expect(localStorage.getItem('refreshToken')).toBe('r-2');
+    expect(useAuth.getState().user?.id).toBe(1);
+  });
+
+  it('ssoLogin : stocke les tokens puis restaure le profil via /me', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ user }));
+    await useAuth.getState().ssoLogin('jwt-sso', 'r-sso');
+    expect(localStorage.getItem('token')).toBe('jwt-sso');
+    expect(localStorage.getItem('refreshToken')).toBe('r-sso');
+    expect(useAuth.getState().user?.email).toBe('a@b.c');
+  });
+
   it('logout : purge token et utilisateur', () => {
     localStorage.setItem('token', 'jwt-1');
     useAuth.setState({ user });

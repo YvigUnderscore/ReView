@@ -109,7 +109,7 @@ router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) 
 router.get('/me', authenticate, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) throw unauthorized('Utilisateur introuvable');
-  res.json({ user: await publicUser(user) });
+  res.json({ user: { ...(await publicUser(user)), twoFaEnabled: user.totpEnabledAt != null } });
 });
 
 export default router;

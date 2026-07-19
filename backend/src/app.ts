@@ -11,6 +11,8 @@ import setupRoutes from './routes/setup.routes';
 import authRoutes from './routes/auth.routes';
 import authSecurityRoutes from './routes/auth-security.routes';
 import webhooksRoutes from './routes/webhooks.routes';
+import auth2faRoutes from './routes/auth-2fa.routes';
+import authOidcRoutes from './routes/auth-oidc.routes';
 import usersRoutes from './routes/users.routes';
 import studioRoutes from './routes/studio.routes';
 import projectsRoutes from './routes/projects.routes';
@@ -72,6 +74,8 @@ export const createApp = (): Express => {
   // Routes par domaine
   app.use('/api/setup', setupRoutes);
   app.use('/api/auth', authRoutes);
+  app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
+  app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
   app.use('/api/auth', authSecurityRoutes); // sessions + tokens API (36.B/36.C)
   app.use('/api/users', usersRoutes);
   app.use('/api/studio', studioRoutes);

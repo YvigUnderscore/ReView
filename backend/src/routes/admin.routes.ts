@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
+import { getPublicOidcConfig, setOidcConfig, oidcConfigSchema } from '../lib/oidcConfig';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
@@ -54,6 +55,18 @@ router.put('/burnin', validate({ body: burninConfigSchema }), async (req, res) =
   const config = await setStudioBurninConfig(req.body);
   logAudit({ userId: req.user!.id, action: 'BURNIN_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
+});
+
+// GET /api/admin/oidc — config SSO (36.A, sans le secret)
+router.get('/oidc', async (_req, res) => {
+  res.json({ oidc: await getPublicOidcConfig() });
+});
+
+// PUT /api/admin/oidc — enregistre la config SSO (secret write-only, chiffré)
+router.put('/oidc', validate({ body: oidcConfigSchema }), async (req, res) => {
+  await setOidcConfig(req.body);
+  logAudit({ userId: req.user!.id, action: 'OIDC_CONFIG_UPDATE', entityType: 'Setting' });
+  res.json({ oidc: await getPublicOidcConfig() });
 });
 
 // GET /api/admin/api-tokens — tous les tokens d'API du studio (36.C, jamais le secret)

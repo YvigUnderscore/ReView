@@ -3,6 +3,9 @@ import {
   Activity,
   Box,
   ClipboardCheck,
+  Eye,
+  Fingerprint,
+  KeyRound,
   FolderCog,
   History,
   LayoutDashboard,
@@ -26,6 +29,9 @@ import ProjectDefaultsTab from './admin/ProjectDefaultsTab';
 import HdriTab from './admin/HdriTab';
 import TranscodeTab from './admin/TranscodeTab';
 import DistributionTab from './admin/DistributionTab';
+import ApiWebhooksTab from './admin/ApiWebhooksTab';
+import MediaAccessTab from './admin/MediaAccessTab';
+import IdentityTab from './admin/IdentityTab';
 import ReviewStatusTab from './admin/ReviewStatusTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
@@ -47,6 +53,7 @@ const SECTIONS = [
   },
   { key: 'activity', group: 'Studio', label: 'Activité', icon: Activity, Component: ActivityTab },
   { key: 'users', group: 'Studio', label: 'Utilisateurs', icon: UsersIcon, Component: UsersTab },
+  { key: 'identity', group: 'Studio', label: 'Identité (SSO)', icon: Fingerprint, Component: IdentityTab },
   { key: 'system', group: 'Studio', label: 'Système', icon: Server, Component: SystemTab },
   { key: 'settings', group: 'Studio', label: 'Réglages', icon: SettingsIcon, Component: SettingsTab },
   {
@@ -80,8 +87,22 @@ const SECTIONS = [
     Component: AnnouncementsTab,
   },
   { key: 'smtp', group: 'Communications', label: 'SMTP', icon: Mail, Component: SmtpTab },
+  {
+    key: 'api',
+    group: 'Communications',
+    label: 'API & Webhooks',
+    icon: KeyRound,
+    Component: ApiWebhooksTab,
+  },
   { key: 'trash', group: 'Maintenance', label: 'Corbeille', icon: Trash2, Component: TrashTab },
   { key: 'audit', group: 'Maintenance', label: 'Audit', icon: History, Component: AuditTab },
+  {
+    key: 'media-access',
+    group: 'Maintenance',
+    label: 'Accès médias',
+    icon: Eye,
+    Component: MediaAccessTab,
+  },
 ] as const;
 
 const GROUPS = ['Studio', 'Contextes de review', 'Communications', 'Maintenance'] as const;

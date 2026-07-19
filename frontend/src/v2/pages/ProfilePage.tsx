@@ -8,6 +8,7 @@ import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
 import SessionsSection from './profile/SessionsSection';
 import ApiTokensSection from './profile/ApiTokensSection';
+import TwoFaSection from './profile/TwoFaSection';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -184,7 +185,8 @@ export default function ProfilePage() {
           <DigestToggle />
         </section>
 
-        {/* Sécurité du compte (36.B/36.C) : sessions actives + tokens d'API. */}
+        {/* Sécurité du compte (36.A/36.B/36.C) : 2FA + sessions actives + tokens d'API. */}
+        <TwoFaSection />
         <SessionsSection />
         <ApiTokensSection />
       </div>
