@@ -22,6 +22,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3430',
         changeOrigin: true,
+      },
+      // Sans lui, aucun événement temps réel (présence, hls:changed, markers…) en preview.
+      '/socket.io': {
+        target: 'ws://localhost:3430',
+        ws: true,
       }
     }
   },
