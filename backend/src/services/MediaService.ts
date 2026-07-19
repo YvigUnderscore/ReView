@@ -16,6 +16,7 @@ import { isClamavEnabled } from '../lib/clamav';
 import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
+import { assertProjectWritable } from '../lib/projectGuard';
 import { notifyWatchers } from './WatchService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
@@ -61,6 +62,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   if (!storageCtx) throw notFound('Version introuvable ou non rattachée à un projet');
   const projectId = storageCtx.projectId;
   if (!(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
+  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
 
   // Quotas configurables (admin exempté du quota de stockage).
   const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);

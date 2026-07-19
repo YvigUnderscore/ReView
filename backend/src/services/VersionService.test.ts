@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({
-  prisma: { version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() } },
+  prisma: {
+    version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    // Projet writable par défaut (38.B) : le verrou d’archivage interroge project.findFirst.
+    project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
+  },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('../lib/trash', () => ({

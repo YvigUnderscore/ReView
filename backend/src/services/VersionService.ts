@@ -6,6 +6,7 @@ import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
+import { assertProjectWritable } from '../lib/projectGuard';
 
 /**
  * Logique métier des versions (liste avec comptage média respectant la visibilité,
@@ -48,6 +49,7 @@ export interface CreateVersionInput {
 }
 
 export async function create(user: SessionUser, projectId: number, body: CreateVersionInput) {
+  await assertProjectWritable(projectId); // 38.B
   // Nom auto-incrémenté (V01, V02…) si non fourni.
   let name = body.name;
   if (!name) {

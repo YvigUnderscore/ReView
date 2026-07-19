@@ -14,10 +14,15 @@ router.use(authenticate);
 const projectIdParam = z.object({ projectId: z.coerce.number().int() });
 
 // GET /api/projects — admin/superviseur : tout ; sinon : projets dont l'user est membre.
-// Paginé : { items, total, page, pageSize } (10.D1).
-router.get('/', validate({ query: paginationQuery }), async (req, res) => {
-  res.json(await ProjectService.listProjects(req.user!, readPagination(req.query)));
-});
+// Paginé : { items, total, page, pageSize } (10.D1). `archived=1` → onglet Archivés (38.B).
+router.get(
+  '/',
+  validate({ query: paginationQuery.extend({ archived: z.enum(['0', '1']).optional() }) }),
+  async (req, res) => {
+    const onlyArchived = req.query.archived === '1';
+    res.json(await ProjectService.listProjects(req.user!, readPagination(req.query), onlyArchived));
+  },
+);
 
 // POST /api/projects (admin/superviseur)
 router.post(

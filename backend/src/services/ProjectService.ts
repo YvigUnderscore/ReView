@@ -23,11 +23,22 @@ const versionInProject = (projectId: number) => ({
   OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
 });
 
-/** Liste paginée des projets visibles (globale pour admin/superviseur, membership sinon) + miniatures. */
-export async function listProjects(user: SessionUser, p: PaginationParams): Promise<Paginated<unknown>> {
+/**
+ * Liste paginée des projets visibles (globale pour admin/superviseur, membership sinon) +
+ * miniatures. Par défaut les projets ARCHIVED (38.B) sont exclus ; `onlyArchived` inverse
+ * le filtre pour l'onglet « Archivés ».
+ */
+export async function listProjects(
+  user: SessionUser,
+  p: PaginationParams,
+  onlyArchived = false,
+): Promise<Paginated<unknown>> {
+  const statusFilter = onlyArchived
+    ? { status: ProjectStatus.ARCHIVED }
+    : { status: { not: ProjectStatus.ARCHIVED } };
   const where = isGlobal(user.role)
-    ? { deletedAt: null }
-    : { deletedAt: null, memberships: { some: { userId: user.id } } };
+    ? { deletedAt: null, ...statusFilter }
+    : { deletedAt: null, ...statusFilter, memberships: { some: { userId: user.id } } };
   const orderBy = orderByFrom(p, ['updatedAt', 'createdAt', 'name'], { updatedAt: 'desc' });
   const [projects, total] = await Promise.all([
     prisma.project.findMany({ where, orderBy, ...pageArgs(p) }),

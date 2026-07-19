@@ -5,6 +5,7 @@ import { firstMediaThumbKeyForShot, effectiveThumbnailUrl } from '../lib/thumbna
 import { logAudit } from './AuditService';
 import { badRequest, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
+import { assertProjectWritable } from '../lib/projectGuard';
 
 /**
  * Logique métier des shots (liste + miniatures, création simple/lot avec unicité de
@@ -62,6 +63,7 @@ export interface CreateShotInput {
 }
 
 export async function create(input: CreateShotInput) {
+  await assertProjectWritable(input.projectId); // 38.B : projet archivé = lecture seule
   await assertSequenceInProject(input.sequenceId, input.projectId);
   // Unicité du code par séquence (les shots sans séquence sont un groupe à part).
   const clash = await prisma.shot.findFirst({
@@ -91,6 +93,7 @@ export async function create(input: CreateShotInput) {
 export type BulkShotItem = Omit<CreateShotInput, 'projectId'>;
 
 export async function createBulk(projectId: number, items: BulkShotItem[]) {
+  await assertProjectWritable(projectId); // 38.B
   // Les séquences référencées doivent appartenir au projet.
   const seqIds = [...new Set(items.map((i) => i.sequenceId).filter((v): v is number => !!v))];
   if (seqIds.length > 0) {
@@ -153,6 +156,7 @@ export interface UpdateShotInput {
 }
 
 export async function update(id: number, projectId: number, body: UpdateShotInput) {
+  await assertProjectWritable(projectId); // 38.B
   await assertSequenceInProject(body.sequenceId, projectId);
   // Si le code ou la séquence change, vérifier l'unicité (code unique par séquence).
   if (body.code !== undefined || body.sequenceId !== undefined) {
@@ -176,6 +180,7 @@ export interface AttachAssetInput {
 
 /** Rattache un asset existant OU en crée un et le rattache au shot. */
 export async function attachAsset(shotId: number, projectId: number, body: AttachAssetInput) {
+  await assertProjectWritable(projectId); // 38.B
   let assetId = body.assetId;
   if (assetId === undefined) {
     if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name: body.name! } } }))

@@ -9,6 +9,7 @@ import { resolveProjectIdForSequence } from '../lib/pipeline';
 import { pipelineOverrideSchema } from '../lib/projectSettings';
 import { softDeleteSequence, restoreSequence, purgeSequence } from '../lib/trash';
 import { logAudit } from '../services/AuditService';
+import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, notFound } from '../lib/errors';
 
 const router = Router();
@@ -48,6 +49,7 @@ router.post(
   async (req, res) => {
     const { projectId, name, code, order, settings } = req.body as CreateSequenceBody;
     await assertProjectAccess(req, projectId);
+    await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
     if (await prisma.sequence.findUnique({ where: { projectId_code: { projectId, code } } })) {
       throw badRequest('Une séquence avec ce code existe déjà', 'CODE_TAKEN');
     }
@@ -83,6 +85,7 @@ router.post(
       items: { name: string; code: string; order?: number }[];
     };
     await assertProjectAccess(req, projectId);
+    await assertProjectWritable(projectId); // 38.B
     // Doublons dans le lot ou déjà existants → rejet global (rien n'est créé)
     const codes = items.map((i) => i.code);
     const dupInBatch = codes.find((c, i) => codes.indexOf(c) !== i);
@@ -138,6 +141,7 @@ router.patch(
     const projectId = await resolveProjectIdForSequence(id);
     if (!projectId) throw notFound('Séquence introuvable');
     await assertProjectAccess(req, projectId);
+    await assertProjectWritable(projectId); // 38.B
     const sequence = await prisma.sequence.update({ where: { id }, data: req.body });
     res.json({ sequence });
   },

@@ -8,6 +8,7 @@ import { storage } from './StorageService';
 import * as ReviewReferenceService from './ReviewReferenceService';
 import { notifyWatchers } from './WatchService';
 import { emitWebhookEvent } from './WebhookService';
+import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, forbidden } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
@@ -161,6 +162,7 @@ export interface CreateCommentInput {
 }
 
 export async function create(user: SessionUser, projectId: number, body: CreateCommentInput) {
+  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
   // Sécurité : seules les clés du dossier de pièces jointes sont acceptées.
   const attachments = (body.attachments ?? []).filter((a) => a.key.startsWith('comments/attachments/'));
 

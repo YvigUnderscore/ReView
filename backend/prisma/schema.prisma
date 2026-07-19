@@ -278,6 +278,8 @@ model Project {
   thumbnailKey String?
   status       ProjectStatus @default(ACTIVE)
   startFrame   Int           @default(1001)
+  // Quota de stockage du projet en octets (38.D) — null = illimité.
+  storageQuota BigInt?
   // Réglages projet : départements, nomenclature (override des défauts studio). JSON.
   settings     Json          @default("{}")
   createdAt    DateTime      @default(now())
@@ -363,6 +365,8 @@ model Task {
   status     TaskStatus @default(TODO)
   name       String
   order      Int        @default(0)
+  // Checklist (38.F) : [{ text, done }] — posée depuis le template par type de tâche.
+  checklist  Json       @default("[]")
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 

@@ -26,11 +26,20 @@ interface Page<T> {
   pageSize: number;
 }
 
-/** Liste des projets accessibles — partagée Shell / ProjectsPage / DocumentsPage. */
+/** Liste des projets actifs (archivés exclus) — partagée Shell / ProjectsPage / DocumentsPage. */
 export function useProjectsQuery() {
   return useQuery({
     queryKey: qk.projects,
     queryFn: () => api.get<Page<Project>>('/api/projects').then((d) => d.items),
+  });
+}
+
+/** Projets archivés (38.B) — onglet « Archivés » de ProjectsPage. */
+export function useArchivedProjectsQuery(enabled = true) {
+  return useQuery({
+    queryKey: qk.projectsArchived,
+    queryFn: () => api.get<Page<Project>>('/api/projects?archived=1').then((d) => d.items),
+    enabled,
   });
 }
 

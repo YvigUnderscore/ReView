@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Star, FolderKanban, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Star, FolderKanban, Trash2, FolderOpen, ArchiveRestore } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { useProjectsQuery } from '../lib/queries';
+import { useProjectsQuery, useArchivedProjectsQuery } from '../lib/queries';
 import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import type { Project } from '../types/api';
@@ -22,30 +22,12 @@ import EditProjectModal from './projects/EditProjectModal';
 import { useFavorites } from '../stores/useFavorites';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
-
-const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: 'Actif',
-  ON_HOLD: 'En pause',
-  COMPLETED: 'Terminé',
-  ARCHIVED: 'Archivé',
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === 'ACTIVE'
-      ? 'success'
-      : status === 'ON_HOLD'
-        ? 'warning'
-        : status === 'COMPLETED'
-          ? 'info'
-          : ('muted' as const);
-  return <Badge variant={variant}>{STATUS_LABEL[status] ?? status}</Badge>;
-}
+import ProjectStatusBadge from './projects/ProjectStatusBadge';
+import ProjectsTabs from './projects/ProjectsTabs';
 
 export default function ProjectsPage() {
   const role = useAuth((s) => s.user?.role);
@@ -56,14 +38,31 @@ export default function ProjectsPage() {
   const isFav = (id: number) => favs.some((f) => f.type === 'PROJECT' && f.entityId === id);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: projects, error } = useProjectsQuery();
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
+  const active = useProjectsQuery();
+  const archived = useArchivedProjectsQuery(tab === 'archived');
+  const { data: projects, error } = tab === 'archived' ? archived : active;
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const sel = useMultiSelect(projects?.map((p) => p.id) ?? []);
-  const invalidate = () => qc.invalidateQueries({ queryKey: qk.projects });
+  // Une (dés)archivage change les deux listes : on invalide les deux clés.
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: qk.projects });
+    qc.invalidateQueries({ queryKey: qk.projectsArchived });
+  };
+
+  const restore = async (p: Project) => {
+    try {
+      await api.patch(`/api/projects/${p.id}`, { status: 'ACTIVE' });
+      toast.success(`Projet « ${p.name} » désarchivé`);
+      invalidate();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
 
   const confirmBulkDelete = async () => {
     try {
@@ -106,9 +105,12 @@ export default function ProjectsPage() {
   return (
     <Shell>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Projets</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">Projets</h1>
+          {canManage && <ProjectsTabs tab={tab} onChange={setTab} />}
+        </div>
         <div className="flex items-center gap-2">
-          {canManage && (
+          {canManage && tab === 'active' && (
             <Button size="sm" onClick={() => setCreating(true)}>
               <Plus size={16} /> Créer
             </Button>
@@ -149,17 +151,25 @@ export default function ProjectsPage() {
       {projects === undefined ? (
         <SkeletonCards />
       ) : projects.length === 0 ? (
-        <EmptyState
-          icon={FolderKanban}
-          title="Aucun projet pour l'instant"
-          description={
-            canManage
-              ? 'Créez votre premier projet avec le bouton « + Créer » pour organiser vos séquences, shots et assets.'
-              : 'Vous n’êtes membre d’aucun projet. Demandez à un superviseur de vous ajouter.'
-          }
-          action={canManage ? 'Créer un projet' : undefined}
-          onAction={() => setCreating(true)}
-        />
+        tab === 'archived' ? (
+          <EmptyState
+            icon={FolderKanban}
+            title="Aucun projet archivé"
+            description="Les projets que vous archivez (via Éditer → statut « Archivé ») apparaîtront ici, en lecture seule."
+          />
+        ) : (
+          <EmptyState
+            icon={FolderKanban}
+            title="Aucun projet pour l'instant"
+            description={
+              canManage
+                ? 'Créez votre premier projet avec le bouton « + Créer » pour organiser vos séquences, shots et assets.'
+                : 'Vous n’êtes membre d’aucun projet. Demandez à un superviseur de vous ajouter.'
+            }
+            action={canManage ? 'Créer un projet' : undefined}
+            onAction={() => setCreating(true)}
+          />
+        )
       ) : (
         <EntityContainer view={view}>
           {projects.map((p) => {
@@ -174,12 +184,20 @@ export default function ProjectsPage() {
               label: 'Favori',
               onClick: () => toggleFav('PROJECT', p.id),
             };
-            const manageActions: EntityItemAction[] = canManage
-              ? [
-                  { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
-                  { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
-                ]
-              : [];
+            const manageActions: EntityItemAction[] = !canManage
+              ? []
+              : tab === 'archived'
+                ? [
+                    {
+                      icon: <ArchiveRestore size={15} />,
+                      label: 'Désarchiver',
+                      onClick: () => restore(p),
+                    },
+                  ]
+                : [
+                    { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
+                    { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
+                  ];
             return (
               <EntityCard
                 key={p.id}
@@ -188,7 +206,7 @@ export default function ProjectsPage() {
                 title={p.name}
                 subtitle={p.description ?? undefined}
                 thumbnailUrl={p.thumbnailUrl}
-                badge={<StatusBadge status={p.status} />}
+                badge={<ProjectStatusBadge status={p.status} />}
                 selection={{ selected: sel.isSelected(p.id), onSelect: (m) => sel.onSelect(p.id, m) }}
                 actions={[favAction, ...manageActions]}
                 contextActions={[
@@ -206,7 +224,7 @@ export default function ProjectsPage() {
         </EntityContainer>
       )}
 
-      {canManage && (
+      {canManage && tab === 'active' && (
         <SelectionBar
           count={sel.count}
           label="projet(s)"

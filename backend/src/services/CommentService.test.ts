@@ -12,6 +12,8 @@ vi.mock('../lib/prisma', () => ({
     },
     reaction: { upsert: vi.fn(), delete: vi.fn() },
     projectMembership: { findMany: vi.fn() },
+    // Projet writable par défaut (38.B) : le verrou d’archivage interroge project.findFirst.
+    project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));

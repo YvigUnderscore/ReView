@@ -25,6 +25,7 @@ export const qk = {
   announcementsActive: ['announcements', 'active'] as const,
   reviews: (filter: string) => ['reviews', filter] as const,
   projects: ['projects'] as const,
+  projectsArchived: ['projects', 'archived'] as const,
   project: (id: number) => ['project', id] as const,
   projectActivity: (id: number) => ['project', id, 'activity'] as const,
   projectSettings: (id: number) => ['project', id, 'settings'] as const,
