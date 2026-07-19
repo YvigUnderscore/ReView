@@ -80,7 +80,7 @@ export default function VideoPane({
   // Lecture en boucle de toute la vidéo (indépendante de la boucle I/O).
   const [loopAll, setLoopAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const hls = useHlsPlayer(videoRef, hlsUrl ?? null);
+  const hls = useHlsPlayer(videoRef, hlsUrl ?? null, mediaId);
   const buffering = useVideoBuffering(videoRef, src);
   // Marqueurs de timeline partagés (34.C) — posés par clic droit sur la timeline.
   const markersApi = useTimelineMarkers(mediaId);

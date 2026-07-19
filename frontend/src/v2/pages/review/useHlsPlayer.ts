@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import Hls from 'hls.js';
 import { getToken } from '../../../lib/apiClient';
+import { getSocket } from '../../../lib/socket';
 
 export interface HlsLevel {
   height: number;
@@ -24,14 +25,27 @@ export interface HlsLevel {
  *   source des trous de buffer) ;
  * - `switching` = feedback UI du changement en cours, retombé par LEVEL_SWITCHED ou par
  *   un garde-fou (le spinner ne peut pas rester coincé).
+ *
+ * Échelle progressive (34.F) : `mediaId` fourni → à l'événement `hls:changed` (room de
+ * review, nouvelles renditions transcodées), le master est rechargé en préservant
+ * position/lecture ; qualité re-verrouillée sur la plus haute, sauf choix manuel.
  */
-export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUrl: string | null) {
+export function useHlsPlayer(
+  videoRef: RefObject<HTMLVideoElement | null>,
+  hlsUrl: string | null,
+  mediaId?: number,
+) {
   const [levels, setLevels] = useState<HlsLevel[]>([]);
   const [level, setLevelState] = useState(0);
   const [switching, setSwitching] = useState(false);
   const hlsRef = useRef<Hls | null>(null);
   const switchTimer = useRef<number | undefined>(undefined);
   const active = !!hlsUrl && Hls.isSupported();
+  // Rechargement du master (34.F) : génération bumpée par l'événement socket ; l'état de
+  // lecture (position/pause) et le choix manuel de qualité survivent au re-attach.
+  const [gen, setGen] = useState(0);
+  const restoreRef = useRef<{ t: number; paused: boolean } | null>(null);
+  const manualHeightRef = useRef<number | null>(null);
 
   const markSwitching = useCallback(() => {
     setSwitching(true);
@@ -53,13 +67,26 @@ export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUr
     hls.loadSource(hlsUrl);
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       setLevels(hls.levels.map((l) => ({ height: l.height, bitrate: l.bitrate })));
-      // Verrouille la meilleure rendition avant le premier fragment (pas d'ABR).
-      let hi = 0;
+      // Verrouille la meilleure rendition avant le premier fragment (pas d'ABR) — sauf
+      // qualité choisie manuellement, conservée à travers un rechargement 34.F.
+      let target = 0;
       hls.levels.forEach((l, i) => {
-        if (l.height > hls.levels[hi]!.height) hi = i;
+        if (l.height > hls.levels[target]!.height) target = i;
       });
-      setLevelState(hi);
-      hls.currentLevel = hi;
+      const manual = manualHeightRef.current;
+      if (manual != null) {
+        const idx = hls.levels.findIndex((l) => l.height === manual);
+        if (idx >= 0) target = idx;
+      }
+      setLevelState(target);
+      hls.currentLevel = target;
+      // Reprise après rechargement du master (34.F) : position et lecture restaurées.
+      const restore = restoreRef.current;
+      restoreRef.current = null;
+      if (restore && video) {
+        video.currentTime = restore.t;
+        if (!restore.paused) void video.play().catch(() => undefined);
+      }
     });
     hls.on(Hls.Events.LEVEL_SWITCHED, () => {
       window.clearTimeout(switchTimer.current);
@@ -75,11 +102,29 @@ export function useHlsPlayer(videoRef: RefObject<HTMLVideoElement | null>, hlsUr
       setLevels([]);
       setSwitching(false);
     };
-  }, [videoRef, hlsUrl]);
+  }, [videoRef, hlsUrl, gen]);
+
+  // Échelle progressive (34.F) : de nouvelles renditions sont prêtes → recharge le master.
+  useEffect(() => {
+    if (!active || !mediaId) return;
+    const socket = getSocket();
+    const onChanged = (e: { mediaId: number; renditions: number }) => {
+      if (e.mediaId !== mediaId || e.renditions <= levels.length) return;
+      const video = videoRef.current;
+      restoreRef.current = { t: video?.currentTime ?? 0, paused: video?.paused ?? true };
+      setGen((g) => g + 1);
+    };
+    socket.on('hls:changed', onChanged);
+    return () => {
+      socket.off('hls:changed', onChanged);
+    };
+  }, [active, mediaId, videoRef, levels.length]);
 
   /** Change la qualité de lecture (index de rendition). */
   const setLevel = (idx: number) => {
     setLevelState(idx);
+    // Choix manuel : conservé si le master est rechargé (nouvelles renditions 34.F).
+    manualHeightRef.current = levels[idx]?.height ?? null;
     const hls = hlsRef.current;
     if (!hls || hls.currentLevel === idx) return;
     markSwitching();

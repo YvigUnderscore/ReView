@@ -23,6 +23,8 @@ import {
   type HlsRendition,
 } from '../lib/hls';
 import { planTimelineSprite, type TimelineSpritePlan } from '../lib/timelineSprite';
+import { publishWorkerEvent } from '../lib/workerEvents';
+import { resolveProjectIdForVersion } from '../lib/pipeline';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 
 /**
@@ -267,9 +269,14 @@ function transcodeHlsRendition(
   });
 }
 
+type HlsRenditionMeta = { height: number; width: number; videoBitrateK: number };
+
 /**
  * Produit l'échelle HLS adaptative (renditions + master.m3u8) et la pousse dans MinIO sous
- * `derived/{id}/hls/`. Renvoie les renditions produites (métadonnées) ou `[]` si désactivé.
+ * `derived/{id}/hls/`. **Progressif (34.F)** : `selectRenditions` renvoie la plus basse en
+ * premier — chaque rendition est uploadée dès qu'elle est prête, le master est régénéré à
+ * chaque fois, et `onRendition` permet à l'appelant d'ouvrir la lecture dès la première.
+ * Renvoie les renditions produites (métadonnées) ou `[]` si désactivé.
  */
 async function buildHls(
   input: string,
@@ -279,11 +286,15 @@ async function buildHls(
   srcWidth: number,
   srcHeight: number,
   srcFps?: number,
-): Promise<{ height: number; width: number; videoBitrateK: number }[]> {
+  onRendition?: (renditions: HlsRenditionMeta[], building: boolean) => Promise<void>,
+): Promise<HlsRenditionMeta[]> {
   const hlsDir = join(dir, 'hls');
   await mkdir(hlsDir, { recursive: true });
   const built: HlsRendition[] = [];
-  for (const r of selectRenditions(cfg, srcHeight)) {
+  const metas = () =>
+    built.map((b) => ({ height: b.height, width: b.width, videoBitrateK: b.videoBitrateK }));
+  const todo = selectRenditions(cfg, srcHeight);
+  for (const [i, r] of todo.entries()) {
     const name = renditionName(r.height);
     await transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg, srcFps);
     const width =
@@ -297,12 +308,20 @@ async function buildHls(
       audioBitrateK: cfg.audioBitrateK,
       playlist: `${name}.m3u8`,
     });
+    // Upload de la rendition (segments + sous-playlist) puis master régénéré : le master
+    // en ligne ne référence jamais une rendition absente.
+    await writeFile(join(hlsDir, 'master.m3u8'), buildMasterPlaylist(built));
+    for (const f of (await readdir(hlsDir)).filter((f) => f === `${name}.m3u8` || f.startsWith(`${name}_`))) {
+      await storage.uploadFile(`derived/${mediaId}/hls/${f}`, join(hlsDir, f), hlsContentType(f));
+    }
+    await storage.uploadFile(
+      `derived/${mediaId}/hls/master.m3u8`,
+      join(hlsDir, 'master.m3u8'),
+      hlsContentType('master.m3u8'),
+    );
+    await onRendition?.(metas(), i < todo.length - 1);
   }
-  await writeFile(join(hlsDir, 'master.m3u8'), buildMasterPlaylist(built));
-  for (const f of await readdir(hlsDir)) {
-    await storage.uploadFile(`derived/${mediaId}/hls/${f}`, join(hlsDir, f), hlsContentType(f));
-  }
-  return built.map((b) => ({ height: b.height, width: b.width, videoBitrateK: b.videoBitrateK }));
+  return metas();
 }
 
 async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void> {
@@ -350,12 +369,43 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
 
       // HLS adaptatif (Phase 23) : échelle multi-rendition + master, si activé et hauteur connue.
+      // Progressif (34.F) : le média passe READY dès la PREMIÈRE rendition (lecture possible
+      // pendant que les qualités supérieures se transcodent) ; chaque rendition met à jour
+      // metadata.hls (flag `building`) et publie un événement relayé en socket à la review.
       const tcfg = await getTranscodeConfig();
       const srcHeight = typeof metadata.height === 'number' ? metadata.height : 0;
       const srcWidth = typeof metadata.width === 'number' ? metadata.width : 0;
       if (tcfg.enabled && srcHeight > 0) {
         const srcFps = typeof metadata.fps === 'number' ? metadata.fps : undefined;
-        const renditions = await buildHls(src, dir, mediaId, tcfg, srcWidth, srcHeight, srcFps);
+        const projectId = await resolveProjectIdForVersion(media.versionId);
+        let readyPosted = false;
+        const renditions = await buildHls(
+          src,
+          dir,
+          mediaId,
+          tcfg,
+          srcWidth,
+          srcHeight,
+          srcFps,
+          async (soFar, building) => {
+            metadata.hls = building ? { renditions: soFar, building: true } : { renditions: soFar };
+            await prisma.mediaObject.update({
+              where: { id: mediaId },
+              data: readyPosted
+                ? { metadata: metadata as object }
+                : { status: MediaStatus.READY, thumbnailKey: thumbKey, metadata: metadata as object },
+            });
+            readyPosted = true;
+            await publishWorkerEvent({
+              type: 'hls',
+              mediaId,
+              versionId: media.versionId,
+              projectId,
+              renditions: soFar.length,
+              building,
+            });
+          },
+        );
         metadata.hls = { renditions };
       }
 

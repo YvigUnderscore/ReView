@@ -32,6 +32,7 @@ import {
   type LiveSessionMeta,
 } from './LiveSessionService';
 import { notifyPlaylistLiveStarted } from './NotificationService';
+import { subscribeWorkerEvents } from '../lib/workerEvents';
 
 let io: SocketServer | undefined;
 
@@ -50,6 +51,18 @@ export const initSocket = (server: HttpServer): SocketServer => {
 
   // Diffusion de la liste des utilisateurs en ligne à tous les clients connectés.
   setPresenceBroadcaster((onlineUserIds) => io?.emit('presence:update', { onlineUserIds }));
+
+  // Événements du worker FFmpeg (34.F, redis pub/sub) : échelle HLS progressive —
+  // la review recharge son master (nouvelles qualités), le projet rafraîchit ses cartes.
+  subscribeWorkerEvents((e) => {
+    emitToReview(e.mediaId, 'hls:changed', e);
+    if (e.projectId != null)
+      emitToProject(e.projectId, 'media:update', {
+        projectId: e.projectId,
+        id: e.mediaId,
+        versionId: e.versionId,
+      });
+  });
 
   io.use(async (socket: AuthedSocket, next) => {
     const token = socket.handshake.query?.token;
