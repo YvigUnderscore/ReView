@@ -10,6 +10,7 @@ import { useModel3DInspect } from './three/useModel3DInspect';
 import { useModel3DBookmarks } from './three/useModel3DBookmarks';
 import { useTurntable } from './three/useTurntable';
 import { useSectionPlane } from './three/useSectionPlane';
+import { useModel3DCompare } from './three/useModel3DCompare';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
@@ -21,6 +22,7 @@ import ModelInfoPanel from './ModelInfoPanel';
 import BookmarksBar from './BookmarksBar';
 import TurntableBar from './TurntableBar';
 import SectionBar from './SectionBar';
+import Model3DCompareBar from './Model3DCompareBar';
 import CameraBar from './camera/CameraBar';
 import AnimPanel from './camera/timeline/AnimPanel';
 import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
@@ -74,6 +76,8 @@ export default function Model3DReview({
   // Turntable + plan de coupe (39.D) : prévisualisations d'inspection session-local.
   const turntable = useTurntable(model3d);
   const section = useSectionPlane(model3d);
+  // Comparaison A/B des modèles 3D d'une version (39.E) : caméra liée (même scène).
+  const compare = useModel3DCompare(model3d, data.media);
   const [infoOpen, setInfoOpen] = useState(false);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(model3d);
@@ -156,6 +160,7 @@ export default function Model3DReview({
             bottomLeft={
               <>
                 <Model3DAnimationsBar m={model3d} />
+                {compare.enabled && !showEditTools && <Model3DCompareBar compare={compare} />}
                 <BookmarksBar bm={bookmarks} />
                 <LightingBar lighting={lighting} />
                 <CameraBar

@@ -18,6 +18,9 @@ for walkthroughs. Framing and tilt behave consistently across 3D and splat revie
   A session-only inspection preview: nothing is saved and the model is untouched.
 - **Section plane** — clip half of the model along an axis; drag or type the plane
   position and flip which side is kept. Session-only and non-destructive.
+- **A/B compare** — when a version holds several 3D models, switch between them with a
+  linked camera (they share the scene), or *Voir tous* to line them up side by side.
+  The models are auto-normalized so their sizes are comparable.
 
 ## Inspection
 

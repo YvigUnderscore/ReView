@@ -18,6 +18,8 @@ export interface ViewerSceneHandle {
   /** Objet principal manipulable (SplatMesh côté splat, groupe `root` côté 3D) — cible par
    *  défaut des gizmos de transformation. */
   mesh?: THREE.Object3D;
+  /** Objet du modèle principal chargé (3D uniquement) — cible de la comparaison A/B (39.E). */
+  modelObject?: THREE.Object3D;
 }
 
 /** Contrat minimal d'un viewer exposant sa scène (paramètre des hooks transverses). */

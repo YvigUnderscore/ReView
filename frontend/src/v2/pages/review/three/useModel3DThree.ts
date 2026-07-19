@@ -28,6 +28,8 @@ export interface SceneRuntime {
   layoutCam: THREE.PerspectiveCamera;
   /** Rayon englobant du modèle chargé — vue d'origine (H) et recadrages. */
   modelRadius: number;
+  /** Objet du modèle principal chargé (enfant de `root`) — cible de la comparaison A/B (39.E). */
+  modelObject: THREE.Object3D;
 }
 
 /**
@@ -107,6 +109,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       dom: rt.scene.renderer.domElement,
       renderer: rt.scene.renderer,
       mesh: rt.scene.root,
+      modelObject: rt.modelObject,
     };
   }, []);
 
@@ -147,7 +150,14 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       scene.root.add(model.object);
       const mixer = model.animations.length ? new THREE.AnimationMixer(model.object) : null;
       const layoutCam = new THREE.PerspectiveCamera(45, 16 / 9, 0.01, 1000);
-      runtimeRef.current = { scene, mixer, clips: model.animations, layoutCam, modelRadius: model.radius };
+      runtimeRef.current = {
+        scene,
+        mixer,
+        clips: model.animations,
+        layoutCam,
+        modelRadius: model.radius,
+        modelObject: model.object,
+      };
       setExtensions(model.extensions);
       animInit(model.animations);
       // Navigation unifiée avec le splat (Phase 17) : vol clic droit + ZQSD/WASD + A/E,
