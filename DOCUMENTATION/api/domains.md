@@ -22,6 +22,7 @@ detail lives in the interactive reference at `/api/docs`.
 | `/api/media-reference` | Reference images |
 | `/api/comments` | Comments & annotations (threads, resolution, mentions, reactions, voice-note attachments, comment→task) |
 | `/api/watch` | Notification subscriptions (watch/unwatch shot, asset or version) |
+| `/api/playlists` | Dailies playlists (ordered versions per project, chained playback) |
 | `/api/boards` | Excalidraw boards (project/asset) |
 | `/api/documents` | Rich-text documents (Documents page) |
 | `/api/dashboard` | Home dashboard aggregates |

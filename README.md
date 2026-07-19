@@ -25,6 +25,12 @@ Viewer Three.js façon DCC : navigation orbit/fly unifiée, éclairage HDRI (bib
 ### ✨ Gaussian splats
 Viewer **Spark (SparkJS)** + éditeur **non-destructif** : sélection pinceau/volumes, masquage, teinte, TRS — le fichier original n'est jamais modifié, les éditions sont rejouées à l'identique pour tous. Mise en scène (caméra, DoF) persistée par média.
 
+### ✅ Approbation & dailies
+Circuit d'approbation avec **statuts de review personnalisables** par studio (décisions historisées par version, badges partout). **Playlists de dailies** cross-shots avec lecture enchaînée, et **salle de review live** synchronisée : un pilote diffuse lecture, navigation et caméra 3D à toute la salle, passage de main en un clic.
+
+### 💬 Commentaires v2
+Fils de discussion avec mentions @, résolution, réactions, notes vocales, brouillons locaux, liens profonds à la frame ou au commentaire, conversion commentaire → tâche kanban, suivi (watch) par shot/asset/version.
+
 ### 📋 Boards & kanban
 Board Excalidraw par projet et par asset (mood, références). Kanban par projet, tâches typées pipeline, multi-sélection et actions en masse.
 
