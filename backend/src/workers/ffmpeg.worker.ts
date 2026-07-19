@@ -39,6 +39,8 @@ import { SETTING_KEYS } from '../lib/settings';
 import { env } from '../config/env';
 import { qualityEncoderArgs, bitrateEncoderArgs, type VideoEncoder } from '../lib/videoEncoder';
 import { sha256File } from '../lib/checksum';
+import { isClamavEnabled, scanFile } from '../lib/clamav';
+import { logAudit } from '../services/AuditService';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 import { startWebhookWorker } from './webhook.worker';
 
@@ -591,6 +593,37 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       }
     }
 
+    // Scan antivirus opt-in (37.E) : fichier infecté → objet déplacé en quarantaine,
+    // média FAILED. clamd injoignable = erreur (retry BullMQ) — on ne publie pas sans scan.
+    if (isClamavEnabled() && !sourceGone) {
+      const scan = await scanFile(src);
+      if (!scan.clean) {
+        const quarantineKey = `quarantine/${mediaId}/${media.originalName}`;
+        await storage.copyObject(media.storageKey, quarantineKey).catch(() => undefined);
+        await storage.deleteObject(media.storageKey).catch(() => undefined);
+        await prisma.mediaObject.update({
+          where: { id: mediaId },
+          data: {
+            status: MediaStatus.FAILED,
+            metadata: { ...metadata, quarantined: scan.virus, quarantineKey } as object,
+          },
+        });
+        logAudit({
+          action: 'MEDIA_QUARANTINED',
+          entityType: 'MediaObject',
+          entityId: mediaId,
+          metadata: { virus: scan.virus, uploaderId: media.uploaderId },
+        });
+        logger.warn(`[ffmpeg.worker] média ${mediaId} en quarantaine (${scan.virus})`);
+        return;
+      }
+    }
+
+    if (kind === 'scan') {
+      // Antivirus seul (37.E) : le préambule ci-dessus a déjà scanné/quarantainé.
+      return;
+    }
+
     if (kind === 'convert3d') {
       // Conversion → GLB pour model-viewer (corrige l'erreur DataView sur FBX/OBJ bruts)
       const glbPath = join(dir, 'model.glb');
@@ -814,8 +847,9 @@ export const ffmpegWorker = new Worker<MediaJobData>(
     try {
       await handle(job.data.mediaObjectId, job.data.kind);
     } catch (err) {
-      // Un trim raté ne condamne pas le média : il reste READY (proxy d'origine servi).
-      if (job.data.kind !== 'trim')
+      // Un trim raté ne condamne pas le média (proxy d'origine servi) ; un scan en erreur
+      // (clamd injoignable) non plus — BullMQ retente, seule une détection met FAILED.
+      if (job.data.kind !== 'trim' && job.data.kind !== 'scan')
         await prisma.mediaObject
           .update({ where: { id: job.data.mediaObjectId }, data: { status: MediaStatus.FAILED } })
           .catch(() => undefined);

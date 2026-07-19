@@ -56,6 +56,9 @@ const baseEnvSchema = z.object({
   METRICS_TOKEN: z.string().optional(),
   // 37.D : encodeur vidéo du worker (h264_nvenc si GPU NVIDIA exposé au conteneur).
   VIDEO_ENCODER: z.enum(['libx264', 'h264_nvenc']).default('libx264'),
+  // 37.E : scan antivirus opt-in (clamd INSTREAM) — vide = désactivé.
+  CLAMAV_HOST: z.string().optional(),
+  CLAMAV_PORT: z.coerce.number().int().default(3310),
   // Heure locale (0-23) d'envoi du digest quotidien.
   DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
   // URL publique de l'app (liens dans les emails) ; sans elle, liens omis.

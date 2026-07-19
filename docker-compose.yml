@@ -62,6 +62,11 @@ services:
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       TZ: Europe/Paris
+      # 37.E : nécessaire aussi côté API (déclenche le job `scan` des médias sans traitement).
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      # 37.G : jeton d'accès à GET /metrics (vide = réseau interne uniquement).
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
     ports:
       - "${BPORT:-3430}:3000"
     depends_on:
@@ -95,6 +100,11 @@ services:
       S3_FORCE_PATH_STYLE: "true"
       REDIS_URL: redis://redis:6379
       TZ: Europe/Paris
+      # 37.D : h264_nvenc si un GPU NVIDIA est exposé au conteneur (repli libx264 sinon).
+      VIDEO_ENCODER: ${VIDEO_ENCODER:-libx264}
+      # 37.E : scan antivirus opt-in — pointer vers le service clamav (profil antivirus).
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,6 +115,42 @@ services:
       # Attend que le backend ait joué les migrations avant d'interroger la base.
       backend:
         condition: service_healthy
+    restart: always
+
+  # Monitoring opt-in (37.G) : `docker compose --profile monitoring up -d`
+  # Grafana sur :3431 (admin/admin au premier login), dashboard « ReView » provisionné.
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["monitoring"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    restart: always
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    profiles: ["monitoring"]
+    ports:
+      - "${GRAFANA_PORT:-3431}:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: always
+
+  # Antivirus opt-in (37.E) : `docker compose --profile antivirus up -d` + CLAMAV_HOST=clamav
+  clamav:
+    image: clamav/clamav:stable
+    profiles: ["antivirus"]
+    volumes:
+      - clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
     restart: always
 
   frontend:
@@ -123,3 +169,6 @@ volumes:
   pgdata:
   miniodata:
   redisdata:
+  clamav_db:
+  prometheus_data:
+  grafana_data:

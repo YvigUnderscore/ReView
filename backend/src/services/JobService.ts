@@ -13,7 +13,8 @@ export const QUEUE_NAMES = {
 
 export interface MediaJobData {
   mediaObjectId: number;
-  kind: 'transcode' | 'thumbnail' | 'convert3d' | 'trim';
+  // 'scan' (37.E) : antivirus seul, pour les médias servis tels quels (GLB natif, splats).
+  kind: 'transcode' | 'thumbnail' | 'convert3d' | 'trim' | 'scan';
 }
 
 export const mediaQueue = new Queue<MediaJobData, void, string>(QUEUE_NAMES.MEDIA, {

@@ -1,0 +1,11 @@
+# Prometheus (37.G) — scrape du backend ReView (profil compose `monitoring`).
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: review-backend
+    metrics_path: /metrics
+    # Si METRICS_TOKEN est défini côté backend, ajouter :
+    # params: { token: ["<votre jeton>"] }
+    static_configs:
+      - targets: ["backend:3000"]

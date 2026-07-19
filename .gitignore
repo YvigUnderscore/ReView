@@ -39,3 +39,4 @@ frontend/blob-report/
 
 # Certificats TLS de prod (montés dans nginx) — jamais commités
 nginx/certs/
+backups/

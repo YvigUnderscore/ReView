@@ -12,6 +12,7 @@ import { enqueueMediaJob } from './JobService';
 import { getLiveSyncHz, getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { logMediaAccess } from '../lib/mediaAccess';
 import { emitWebhookEvent } from './WebhookService';
+import { isClamavEnabled } from '../lib/clamav';
 import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
@@ -133,6 +134,9 @@ export async function finalize(user: SessionUser, id: number) {
     data: { status: jobKind ? MediaStatus.PROCESSING : MediaStatus.READY, size: BigInt(stat.size) },
   });
   if (jobKind) await enqueueMediaJob({ mediaObjectId: id, kind: jobKind });
+  // 37.E : les médias servis tels quels (GLB natif, splats) passent quand même à
+  // l'antivirus — READY tout de suite, quarantaine a posteriori si détection.
+  else if (isClamavEnabled()) await enqueueMediaJob({ mediaObjectId: id, kind: 'scan' });
 
   // Compteur de stockage utilisateur (affichage ; le quota utilise la somme live).
   if (media.uploaderId) {
