@@ -9,6 +9,8 @@ import { isValidDiscordWebhook } from '../lib/sanitize';
 import { badRequest, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
+import { storage } from '../services/StorageService';
+import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
 import * as SmtpService from '../services/SmtpService';
 import { sendMail } from '../lib/mailer';
 import { mailLayout } from '../lib/mailTemplate';
@@ -64,6 +66,41 @@ router.put(
       create: { key, value },
     });
     res.json({ setting });
+  },
+);
+
+// GET /api/studio/logo — URL présignée du logo studio (tous les connectés)
+router.get('/logo', async (_req, res) => {
+  const setting = await prisma.setting.findUnique({ where: { key: 'studio_logo_key' } });
+  res.json({ url: setting?.value ? await storage.getPresignedGetUrl(setting.value) : null });
+});
+
+// GET /api/studio/watermark — config watermark (tous les connectés : les viewers en ont besoin)
+router.get('/watermark', async (_req, res) => {
+  res.json({ watermark: await getWatermarkConfig() });
+});
+
+// PUT /api/studio/watermark — enregistre la config watermark (admin)
+router.put(
+  '/watermark',
+  requireRole(Role.ADMIN),
+  validate({ body: watermarkConfigSchema }),
+  async (req, res) => {
+    res.json({ watermark: await setWatermarkConfig(req.body) });
+  },
+);
+
+// POST /api/studio/logo/presign — upload du logo studio (35.D : burn-ins + page client).
+// La clé est ensuite enregistrée via PUT /settings (`studio_logo_key`).
+router.post(
+  '/logo/presign',
+  requireRole(Role.ADMIN),
+  validate({ body: z.object({ contentType: z.string().regex(/^image\/(png|jpe?g|webp)$/) }) }),
+  async (req, res) => {
+    const contentType = (req.body as { contentType: string }).contentType;
+    const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
+    const key = `branding/logo-${Date.now()}${ext}`;
+    res.json({ key, url: await storage.getPresignedPutUrl(key, contentType, 900) });
   },
 );
 

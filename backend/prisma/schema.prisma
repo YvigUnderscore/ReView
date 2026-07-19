@@ -554,16 +554,21 @@ model Reaction {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model ShareLink {
-  id          Int             @id @default(autoincrement())
-  token       String          @unique
-  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   Int
-  permission  SharePermission @default(VIEW)
-  expiresAt   DateTime?
-  revoked     Boolean         @default(false)
-  createdBy   User?           @relation("ShareCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  createdById Int?
-  createdAt   DateTime        @default(now())
+  id           Int             @id @default(autoincrement())
+  token        String          @unique
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int
+  permission   SharePermission @default(VIEW)
+  label        String? // nom lisible du lien (destinataire) — affiché dans l'admin et le watermark
+  passwordHash String? // bcrypt ; null = pas de mot de passe (35.C)
+  maxViews     Int? // limite de consultations ; null = illimité
+  viewCount    Int             @default(0)
+  lastViewedAt DateTime?
+  expiresAt    DateTime?
+  revoked      Boolean         @default(false)
+  createdBy    User?           @relation("ShareCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById  Int?
+  createdAt    DateTime        @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

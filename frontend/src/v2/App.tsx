@@ -25,6 +25,8 @@ import DocsPage from './pages/DocsPage';
 
 // Board (Excalidraw) chargé en lazy pour code-splitter sa lourde dépendance
 const BoardPage = lazy(() => import('./pages/BoardPage'));
+// Page client publique (35.D) : lazy — les visiteurs anonymes ne chargent pas l'app interne.
+const ClientSharePage = lazy(() => import('./pages/ClientSharePage'));
 
 function Protected({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
@@ -80,6 +82,14 @@ function AppRoutes() {
         ) : (
           <>
             <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/client/:token"
+              element={
+                <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement…</div>}>
+                  <ClientSharePage />
+                </Suspense>
+              }
+            />
             <Route
               path="/"
               element={

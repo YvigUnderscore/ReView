@@ -12,6 +12,7 @@ import {
   KanbanSquare,
   PenTool,
   Settings,
+  Share2,
 } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -30,6 +31,7 @@ import SequencesTab from './project/SequencesTab';
 import AssetsTab from './project/AssetsTab';
 import MembersTab from './project/MembersTab';
 import PlaylistsTab from './project/PlaylistsTab';
+import SharesTab from './project/SharesTab';
 import TrashTab from './project/TrashTab';
 import type { ProjectSettings } from './project/projectTypes';
 
@@ -101,6 +103,7 @@ export default function ProjectPage() {
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     ...(canManage ? [{ key: 'members', label: 'Membres', icon: <Users size={16} /> }] : []),
+    ...(canManage ? [{ key: 'shares', label: 'Partages', icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: 'Réglages', icon: <Settings size={16} /> }] : []),
     ...(canManage ? [{ key: 'trash', label: 'Corbeille', icon: <Trash2 size={16} /> }] : []),
   ];
@@ -170,6 +173,7 @@ export default function ProjectPage() {
       )}
       {tab === 'playlists' && <PlaylistsTab projectId={projectId} />}
       {tab === 'members' && canManage && <MembersTab projectId={projectId} />}
+      {tab === 'shares' && canManage && <SharesTab projectId={projectId} />}
       {tab === 'settings' && canManage && (
         <ProjectSettingsTab
           projectId={projectId}

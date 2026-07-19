@@ -65,4 +65,6 @@ export const qk = {
   liveSessions: (projectId: number) => ['live-sessions', projectId] as const,
   timelineMarkers: (mediaId: number) => ['timeline-markers', mediaId] as const,
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
+  shareLinks: (projectId: number) => ['share-links', projectId] as const,
+  watermarkConfig: ['watermark-config'] as const,
 } as const;

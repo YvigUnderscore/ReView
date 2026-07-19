@@ -252,11 +252,46 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const pub = await request(app).get(`/api/client/${tk}`);
     expect(pub.status).toBe(200);
     expect(pub.body.media.length).toBeGreaterThanOrEqual(1);
+    expect(pub.body.shareAuth).toBeTruthy();
+
+    // 35.C : les sous-routes exigent la session de partage émise par le GET initial.
+    const noAuth = await request(app)
+      .post(`/api/client/${tk}/media/${up.body.mediaObjectId}/comments`)
+      .send({ guestName: 'Client IT', content: 'Sans session' });
+    expect(noAuth.status).toBe(401);
 
     const guest = await request(app)
       .post(`/api/client/${tk}/media/${up.body.mediaObjectId}/comments`)
+      .set('X-Share-Auth', pub.body.shareAuth)
       .send({ guestName: 'Client IT', content: 'Commentaire invité' });
     expect(guest.status).toBe(201);
+
+    // Lien durci (35.C) : mot de passe + limite de vues.
+    const hard = await request(app)
+      .post('/api/share')
+      .set(auth)
+      .send({ projectId, permission: 'VIEW', password: 'secret-it', maxViews: 1, label: 'Client X' });
+    expect(hard.status).toBe(201);
+    expect(hard.body.link.hasPassword).toBe(true);
+    const htk = hard.body.link.token;
+
+    const locked = await request(app).get(`/api/client/${htk}`);
+    expect(locked.status).toBe(200);
+    expect(locked.body.locked).toBe(true);
+    expect(locked.body.project).toBeUndefined();
+
+    const badPw = await request(app).post(`/api/client/${htk}/unlock`).send({ password: 'mauvais' });
+    expect(badPw.status).toBe(401);
+
+    const unlock = await request(app).post(`/api/client/${htk}/unlock`).send({ password: 'secret-it' });
+    expect(unlock.status).toBe(200);
+    const opened = await request(app).get(`/api/client/${htk}`).set('X-Share-Auth', unlock.body.shareAuth);
+    expect(opened.status).toBe(200);
+    expect(opened.body.locked).toBe(false);
+
+    // maxViews=1 : une nouvelle session (nouveau unlock) est refusée, l'existante survit.
+    const again = await request(app).post(`/api/client/${htk}/unlock`).send({ password: 'secret-it' });
+    expect(again.status).toBe(410);
   });
 
   it('miniature média (10.G) : POST /thumbnail stocke une image et alimente thumbnailUrl', async () => {

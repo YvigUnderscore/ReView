@@ -9,6 +9,7 @@ import {
   Mail,
   Megaphone,
   Server,
+  Share2,
   Video,
   Settings as SettingsIcon,
   Trash2,
@@ -24,6 +25,7 @@ import SettingsTab from './admin/SettingsTab';
 import ProjectDefaultsTab from './admin/ProjectDefaultsTab';
 import HdriTab from './admin/HdriTab';
 import TranscodeTab from './admin/TranscodeTab';
+import DistributionTab from './admin/DistributionTab';
 import ReviewStatusTab from './admin/ReviewStatusTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
@@ -56,6 +58,13 @@ const SECTIONS = [
   },
   { key: 'hdri', group: 'Contextes de review', label: '3D & Splat', icon: Box, Component: HdriTab },
   { key: 'video', group: 'Contextes de review', label: 'Vidéo', icon: Video, Component: TranscodeTab },
+  {
+    key: 'distribution',
+    group: 'Contextes de review',
+    label: 'Diffusion',
+    icon: Share2,
+    Component: DistributionTab,
+  },
   {
     key: 'review-statuses',
     group: 'Contextes de review',

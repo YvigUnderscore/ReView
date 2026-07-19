@@ -1,5 +1,8 @@
 import { type ComponentProps } from 'react';
 import type { ReviewComment, Role } from '../../types/api';
+import { useAuth } from '../../stores/useAuth';
+import { useWatermarkConfigQuery } from '../../lib/queries';
+import WatermarkOverlay from '../../components/WatermarkOverlay';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -131,6 +134,14 @@ export default function ReviewViewer({
   // Overlay d'annotation 2D (extrait — budget 300 lignes).
   const renderOverlay = useAnnotationOverlay(ann);
 
+  // Watermark spectateur interne (35.B, opt-in admin) : identité du compte sur tout le viewer.
+  const wmUser = useAuth((s) => s.user);
+  const wmQ = useWatermarkConfigQuery();
+  const watermarkText =
+    wmQ.data?.internal && wmUser
+      ? `${wmUser.name ?? wmUser.email} — ${new Date().toLocaleDateString('fr-FR')}`
+      : null;
+
   // Un déplacement de la vue 3D/splat (orbite, vol, zoom) masque l'annotation du commentaire
   // sélectionné (elle n'a de sens que depuis la caméra d'origine). Vidéo : idem via seek/lecture
   // ; image : annotations ancrées au pixel, conservées au zoom/pan.
@@ -145,6 +156,7 @@ export default function ReviewViewer({
       onPointerDownCapture={clearOnViewMove}
       onWheelCapture={clearOnViewMove}
     >
+      {watermarkText && <WatermarkOverlay text={watermarkText} opacity={wmQ.data?.opacity} />}
       {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady || splatReady) && (
         <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} />
       )}

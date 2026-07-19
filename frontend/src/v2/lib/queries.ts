@@ -116,3 +116,15 @@ export function useLiveSessionsQuery(projectId: number | null) {
     staleTime: 10_000,
   });
 }
+
+/** Config watermark spectateur (35.B) — lue par les viewers internes. */
+export function useWatermarkConfigQuery() {
+  return useQuery({
+    queryKey: qk.watermarkConfig,
+    queryFn: () =>
+      api
+        .get<{ watermark: { internal: boolean; shares: boolean; opacity: number } }>('/api/studio/watermark')
+        .then((d) => d.watermark),
+    staleTime: 5 * 60 * 1000,
+  });
+}

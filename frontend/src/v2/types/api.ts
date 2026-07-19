@@ -334,3 +334,6 @@ export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
 }
+
+// Types du partage client (35.C/35.D) — module séparé pour le budget de lignes.
+export * from './share';
