@@ -38,6 +38,7 @@ import hdriRoutes from './routes/hdri.routes';
 import announcementsRoutes from './routes/announcements.routes';
 import docsRoutes from './routes/docs.routes';
 import watchRoutes from './routes/watch.routes';
+import playlistsRoutes from './routes/playlists.routes';
 
 export const createApp = (): Express => {
   const app = express();
@@ -101,6 +102,7 @@ export const createApp = (): Express => {
   app.use('/api/announcements', announcementsRoutes);
   app.use('/api/bulk', bulkRoutes);
   app.use('/api/watch', watchRoutes);
+  app.use('/api/playlists', playlistsRoutes); // dailies (Phase 33)
   // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
   app.use('/api', docsRoutes);
 

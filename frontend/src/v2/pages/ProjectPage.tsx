@@ -6,6 +6,7 @@ import {
   Clapperboard,
   Film,
   Box,
+  ListVideo,
   Users,
   Trash2,
   KanbanSquare,
@@ -28,6 +29,7 @@ import ShotsTab from './project/ShotsTab';
 import SequencesTab from './project/SequencesTab';
 import AssetsTab from './project/AssetsTab';
 import MembersTab from './project/MembersTab';
+import PlaylistsTab from './project/PlaylistsTab';
 import TrashTab from './project/TrashTab';
 import type { ProjectSettings } from './project/projectTypes';
 
@@ -97,6 +99,7 @@ export default function ProjectPage() {
     { key: 'shots', label: 'Shots', icon: <Clapperboard size={16} />, badge: shots.length },
     { key: 'sequences', label: 'Séquences', icon: <Film size={16} />, badge: sequences.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
+    { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     ...(canManage ? [{ key: 'members', label: 'Membres', icon: <Users size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: 'Réglages', icon: <Settings size={16} /> }] : []),
     ...(canManage ? [{ key: 'trash', label: 'Corbeille', icon: <Trash2 size={16} /> }] : []),
@@ -165,6 +168,7 @@ export default function ProjectPage() {
       {tab === 'assets' && (
         <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />
       )}
+      {tab === 'playlists' && <PlaylistsTab projectId={projectId} />}
       {tab === 'members' && canManage && <MembersTab projectId={projectId} />}
       {tab === 'settings' && canManage && (
         <ProjectSettingsTab

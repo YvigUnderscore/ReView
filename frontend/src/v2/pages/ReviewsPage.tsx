@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Clapperboard, FolderOpen, Trash2 } from 'lucide-react';
+import { Clapperboard, FolderOpen, ListVideo, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -11,7 +11,9 @@ import { useMultiSelect } from '../lib/useMultiSelect';
 import { bulkDelete } from '../lib/bulkApi';
 import type { MediaKind } from '../types/api';
 import Shell from '../components/Shell';
+import AddToPlaylistDialog from '../components/AddToPlaylistDialog';
 import ViewToggle from '../components/ViewToggle';
+import { useAuth } from '../stores/useAuth';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer } from '../components/EntityCard';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -45,6 +47,10 @@ export default function ReviewsPage() {
   const [status, setStatus] = useState('');
   const [decision, setDecision] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // « Ajouter à la playlist » (Phase 33) : mediaIds ciblés (carte seule ou sélection).
+  const [playlistTarget, setPlaylistTarget] = useState<number[] | null>(null);
+  const role = useAuth((s) => s.user?.role);
+  const canPlaylist = role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST';
 
   const params = new URLSearchParams();
   if (projectId) params.set('projectId', projectId);
@@ -72,6 +78,14 @@ export default function ReviewsPage() {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     }
   };
+  // Projet commun des médias ciblés (une playlist = un projet) ; null si mixte.
+  const targetProjectId = (() => {
+    if (!playlistTarget || !data) return null;
+    const ids = new Set(playlistTarget);
+    const pids = new Set(data.items.filter((m) => ids.has(m.id)).map((m) => m.project?.id ?? 0));
+    return pids.size === 1 ? ([...pids][0] ?? null) : null;
+  })();
+
   const deleteOne = async (id: number) => {
     try {
       await bulkDelete('media', [id]);
@@ -152,6 +166,17 @@ export default function ReviewsPage() {
                     label: 'Ouvrir',
                     onClick: () => navigate(reviewPath({ id: m.id, originalName: m.name })),
                   },
+                  ...(canPlaylist
+                    ? [
+                        {
+                          icon: <ListVideo size={14} />,
+                          label: 'Ajouter à la playlist…',
+                          // Agit sur la sélection si la carte en fait partie, sinon sur la carte.
+                          onClick: () =>
+                            setPlaylistTarget(sel.count > 0 && sel.isSelected(m.id) ? sel.ids : [m.id]),
+                        },
+                      ]
+                    : []),
                   {
                     icon: <Trash2 size={14} />,
                     label: 'Supprimer',
@@ -180,6 +205,15 @@ export default function ReviewsPage() {
         label="média(s)"
         onClear={sel.clear}
         actions={[
+          ...(canPlaylist
+            ? [
+                {
+                  label: 'Ajouter à la playlist…',
+                  icon: <ListVideo size={14} />,
+                  onClick: () => setPlaylistTarget(sel.ids),
+                },
+              ]
+            : []),
           {
             label: 'Supprimer',
             icon: <Trash2 size={14} />,
@@ -187,6 +221,14 @@ export default function ReviewsPage() {
             onClick: () => setBulkDeleting(true),
           },
         ]}
+      />
+
+      <AddToPlaylistDialog
+        open={playlistTarget !== null}
+        onOpenChange={(o) => !o && setPlaylistTarget(null)}
+        projectId={targetProjectId}
+        mediaIds={playlistTarget ?? []}
+        onDone={sel.clear}
       />
 
       <ConfirmDialog

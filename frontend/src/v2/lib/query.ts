@@ -60,5 +60,7 @@ export const qk = {
   docsPage: (path: string) => ['docs', 'page', path] as const,
   reviewStatuses: ['review-statuses'] as const,
   watches: ['watches'] as const,
+  playlists: (projectId: number) => ['playlists', projectId] as const,
+  playlist: (id: number) => ['playlist', id] as const,
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
 } as const;

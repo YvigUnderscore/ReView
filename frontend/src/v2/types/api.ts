@@ -191,6 +191,34 @@ export type VersionDetail = Version & {
   media: MediaSummary[];
 };
 
+// ── Playlists de dailies (Phase 33) ──────────────────────────────────────────
+/** GET /api/playlists?projectId= — liste légère. */
+export interface PlaylistSummary {
+  id: number;
+  projectId: number;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: UserRef | null;
+  _count: { items: number };
+}
+/** Item du détail : version + premier média visible (lecture enchaînée). */
+export interface PlaylistItemEntry {
+  id: number;
+  order: number;
+  version: {
+    id: number;
+    name: string;
+    /** Localisation lisible (SQ · SH › tâche, ou asset › tâche). */
+    location: string;
+    mediaCount: number;
+    reviewStatus: Pick<ReviewStatus, 'id' | 'name' | 'color'> | null;
+  };
+  media: (Pick<Media, 'id' | 'kind' | 'originalName'> & { thumbnailUrl: string | null }) | null;
+}
+/** GET /api/playlists/:id — items ordonnés. */
+export type PlaylistDetail = Omit<PlaylistSummary, '_count'> & { items: PlaylistItemEntry[] };
+
 export interface Media {
   id: number;
   kind: MediaKind;
