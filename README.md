@@ -37,8 +37,14 @@ Board Excalidraw par projet et par asset (mood, références). Kanban par projet
 ### 🔄 Versioning & pipeline
 Hiérarchie Projet → Séquence → Shot / Asset → Tâche → Version. Brouillon avant publication, **verrou de publication** (le contenu publié est immuable — on corrige par une nouvelle version), réglages de livraison hérités (résolution, framerate, plages de frames).
 
+### 🔒 Diffusion sécurisée
+Liens de partage client durcis (mot de passe, expiration, **limite de vues**, révocation, audit des consultations) avec **page client épurée** aux couleurs du studio. **Burn-ins configurables** (shot/version/timecode/logo) incrustés au transcodage, **slates** d'identification en tête des partages, **watermark** au nom du spectateur.
+
+### 🛡️ Identité & API publique
+**SSO OIDC** (Google…), **2FA TOTP** avec codes de secours, **sessions révocables** par appareil. **Tokens d'API** personnels à scopes lecture/écriture pour scripter l'API REST, **webhooks sortants signés HMAC** (média publié, décision, commentaire), **journal d'accès aux médias**.
+
 ### 👥 Collaboration & administration
-Socket.io temps réel · Notifications · RBAC (Admin, Supervisor, Artist, Client) · Liens de partage client révocables (lecture ou commentaire) · Admin studio complet (utilisateurs, transcodage HLS, HDRI, SMTP, annonces, corbeille, audit).
+Socket.io temps réel · Notifications · RBAC (Admin, Supervisor, Artist, Client) · Admin studio complet (utilisateurs, transcodage HLS, HDRI, SMTP, annonces, corbeille, audit).
 
 ### 📚 Documentation intégrée
 Le manuel produit (dossier [`DOCUMENTATION/`](DOCUMENTATION/README.md), en anglais) est versionné avec le code et servi dans l'application sur la page `/docs`. La référence API interactive (OpenAPI/Scalar) est sur `/api/docs`.

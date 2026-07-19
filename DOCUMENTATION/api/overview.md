@@ -9,13 +9,14 @@ rendered with Scalar) is served by the backend at **`/api/docs`**
 
 ## Authentication
 
-- `POST /api/auth/login` returns a **JWT access token** (+ refresh token).
+- `POST /api/auth/login` returns a **JWT access token** (+ refresh token), bound to
+  a **revocable session** ; scripts use **personal API tokens** (`rvk_…`, read/write
+  scopes). 2FA (TOTP) and SSO (OIDC) are supported. Full reference:
+  [Authentication & API access](authentication.md).
 - Send `Authorization: Bearer <token>` on every request.
-- Access tokens expire (default 7 d) and are renewed with the refresh token
-  (default 30 d).
-- Public exceptions: the setup flow (`/api/setup`) on an empty database, and the
-  client share routes (`/api/client/*`) which authenticate with a **share link
-  token** instead of a JWT.
+- Public exceptions: the setup flow (`/api/setup`) on an empty database, the SSO
+  endpoints, and the client share routes (`/api/client/*`) which authenticate with
+  a **share link token** instead of a JWT.
 
 ## Conventions
 
