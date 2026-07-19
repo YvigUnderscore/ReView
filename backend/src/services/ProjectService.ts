@@ -1,4 +1,4 @@
-import { Role, ProjectStatus } from '@prisma/client';
+import { Role, ProjectStatus, TaskType, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
 import { softDeleteProject, restoreProject, purgeProject } from '../lib/trash';
@@ -90,6 +90,112 @@ export async function createProject(user: SessionUser, input: CreateProjectInput
     metadata: { name: input.name },
   });
   return project;
+}
+
+/**
+ * Duplique la structure d'un projet (38.A) : séquences, shots et — si `includeTasks` —
+ * les tâches rattachées aux shots (statut réinitialisé à TODO, sans assigné). Copie les
+ * réglages projet. NE copie NI médias NI versions NI assets. Sert aussi de « création
+ * depuis un template » (un projet marqué `settings.isTemplate`).
+ */
+export async function duplicateProject(
+  user: SessionUser,
+  sourceId: number,
+  name: string,
+  includeTasks: boolean,
+) {
+  const source = await prisma.project.findFirst({
+    where: { id: sourceId, deletedAt: null },
+    include: {
+      sequences: { where: { deletedAt: null } },
+      shots: {
+        where: { deletedAt: null },
+        include: includeTasks ? { tasks: true } : undefined,
+      },
+    },
+  });
+  if (!source) throw notFound('Projet source introuvable');
+
+  const slug = slugify(name);
+  if (!slug) throw badRequest('Nom de projet invalide');
+  if (await prisma.project.findUnique({ where: { studioId_slug: { studioId: source.studioId, slug } } }))
+    throw badRequest('Un projet avec ce nom existe déjà', 'SLUG_TAKEN');
+
+  // Les réglages sont copiés à l'identique, sauf le marqueur de template (le nouveau
+  // projet est un projet concret, pas un modèle).
+  const settings = { ...(source.settings as Record<string, unknown>) };
+  delete settings.isTemplate;
+
+  const created = await prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        studioId: source.studioId,
+        name,
+        slug,
+        description: source.description,
+        startFrame: source.startFrame,
+        settings: settings as Prisma.InputJsonValue,
+        memberships: { create: { userId: user.id } },
+      },
+    });
+    // Séquences : map code (unique par projet) → nouvel id, pour remapper les shots.
+    const seqIdByCode = new Map<string, number>();
+    for (const seq of source.sequences) {
+      const s = await tx.sequence.create({
+        data: {
+          projectId: project.id,
+          name: seq.name,
+          code: seq.code,
+          order: seq.order,
+          settings: seq.settings as Prisma.InputJsonValue,
+        },
+      });
+      seqIdByCode.set(seq.code, s.id);
+    }
+    const srcSeqById = new Map(source.sequences.map((s) => [s.id, s.code]));
+    for (const shot of source.shots) {
+      const newSeqId =
+        shot.sequenceId != null ? (seqIdByCode.get(srcSeqById.get(shot.sequenceId) ?? '') ?? null) : null;
+      const newShot = await tx.shot.create({
+        data: {
+          projectId: project.id,
+          sequenceId: newSeqId,
+          name: shot.name,
+          code: shot.code,
+          startFrame: shot.startFrame,
+          endFrame: shot.endFrame,
+          order: shot.order,
+          settings: shot.settings as Prisma.InputJsonValue,
+        },
+      });
+      const tasks = (
+        shot as { tasks?: { name: string; type: TaskType; order: number; checklist: unknown }[] }
+      ).tasks;
+      if (includeTasks && tasks) {
+        for (const t of tasks) {
+          await tx.task.create({
+            data: {
+              shotId: newShot.id,
+              name: t.name,
+              type: t.type,
+              order: t.order,
+              checklist: t.checklist as Prisma.InputJsonValue,
+            },
+          });
+        }
+      }
+    }
+    return project;
+  });
+
+  logAudit({
+    userId: user.id,
+    action: 'PROJECT_DUPLICATE',
+    entityType: 'Project',
+    entityId: created.id,
+    metadata: { sourceId, includeTasks },
+  });
+  return created;
 }
 
 export async function getProject(projectId: number) {

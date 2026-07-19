@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Star, FolderKanban, Trash2, FolderOpen, ArchiveRestore } from 'lucide-react';
+import { Plus, Star, FolderKanban, Trash2, FolderOpen, ArchiveRestore, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -28,6 +28,7 @@ import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
 import ProjectStatusBadge from './projects/ProjectStatusBadge';
 import ProjectsTabs from './projects/ProjectsTabs';
+import DuplicateProjectDialog from './projects/DuplicateProjectDialog';
 
 export default function ProjectsPage() {
   const role = useAuth((s) => s.user?.role);
@@ -45,6 +46,7 @@ export default function ProjectsPage() {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
+  const [duplicating, setDuplicating] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const sel = useMultiSelect(projects?.map((p) => p.id) ?? []);
@@ -216,6 +218,9 @@ export default function ProjectsPage() {
                     onClick: () => navigate(projectPath(p)),
                   },
                   favAction,
+                  ...(canManage && tab === 'active'
+                    ? [{ icon: <Copy size={14} />, label: 'Dupliquer', onClick: () => setDuplicating(p) }]
+                    : []),
                   ...manageActions,
                 ]}
               />
@@ -258,6 +263,17 @@ export default function ProjectsPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
+            invalidate();
+          }}
+        />
+      )}
+
+      {duplicating && (
+        <DuplicateProjectDialog
+          project={duplicating}
+          onClose={() => setDuplicating(null)}
+          onDone={() => {
+            setDuplicating(null);
             invalidate();
           }}
         />
