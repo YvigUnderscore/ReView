@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { X, Columns2 } from 'lucide-react';
+import { Columns2, Diff, X } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { type MediaResp } from './reviewTypes';
@@ -18,12 +18,15 @@ export default function VideoWipeOverlay({
   masterRef,
   onClose,
   onSide,
+  onDiff,
   sharedWipe,
 }: {
   compareId: number;
   masterRef: RefObject<HTMLVideoElement | null>;
   onClose: () => void;
   onSide: () => void;
+  /** Bascule vers le mode différence amplifiée (34.E). */
+  onDiff?: () => void;
   /** Position/angle hissés (répliqués en session live). */
   sharedWipe?: WipeShared;
 }) {
@@ -59,6 +62,15 @@ export default function VideoWipeOverlay({
         <button onClick={onSide} title="Vue côte à côte" className="rounded p-1 hover:bg-secondary">
           <Columns2 size={14} />
         </button>
+        {onDiff && (
+          <button
+            onClick={onDiff}
+            title="Mode différence amplifiée"
+            className="rounded p-1 hover:bg-secondary"
+          >
+            <Diff size={14} />
+          </button>
+        )}
         <button onClick={onClose} title="Fermer la comparaison" className="rounded p-1 hover:bg-secondary">
           <X size={14} />
         </button>

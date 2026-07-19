@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { X, SplitSquareHorizontal } from 'lucide-react';
+import { Diff, SplitSquareHorizontal, X } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -15,12 +15,15 @@ export default function ImageComparePane({
   compareId,
   onClose,
   onWipe,
+  onDiff,
   viewApiRef,
   onViewChange,
 }: {
   compareId: number;
   onClose: () => void;
   onWipe: () => void;
+  /** Bascule vers le mode différence amplifiée (34.E). */
+  onDiff?: () => void;
   viewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onViewChange?: ComponentProps<typeof ImageReviewViewer>['onViewChange'];
 }) {
@@ -46,6 +49,15 @@ export default function ImageComparePane({
           >
             <SplitSquareHorizontal size={13} /> Wipe
           </button>
+          {onDiff && (
+            <button
+              onClick={onDiff}
+              title="Basculer en mode différence (|A − B| amplifiée)"
+              className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
+            >
+              <Diff size={13} /> Diff
+            </button>
+          )}
           <button
             onClick={onClose}
             title="Fermer la comparaison"

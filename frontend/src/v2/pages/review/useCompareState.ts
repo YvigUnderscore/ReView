@@ -4,6 +4,9 @@ import type { WipeShared } from './useWipe';
 /** Nombre max de panes B (34.D) : 3 esclaves + le maître = grille 2×2 pleine. */
 export const MAX_COMPARE = 3;
 
+/** Modes de comparaison A/B : côte-à-côte, wipe (barre), différence amplifiée (34.E). */
+export type CompareMode = 'side' | 'wipe' | 'diff';
+
 /**
  * Comparaison hissée dans l'orchestrateur (retours 33 + 34.D) : liste des médias B
  * (1 = A/B classique côte-à-côte/wipe ; 2-3 = grille 2×2 vidéo synchronisée), mode et
@@ -11,7 +14,7 @@ export const MAX_COMPARE = 3;
  */
 export function useCompareState() {
   const [compareIds, setCompareIds] = useState<number[]>([]);
-  const [compareMode, setCompareMode] = useState<'side' | 'wipe'>('side');
+  const [compareMode, setCompareMode] = useState<CompareMode>('side');
   const [wipePos, setWipePos] = useState(0.5);
   const [wipeAngle, setWipeAngle] = useState(0);
 

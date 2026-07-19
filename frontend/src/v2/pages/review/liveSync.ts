@@ -30,8 +30,8 @@ export interface LiveSyncPayload {
   playing?: boolean;
   camera?: unknown;
   compareId?: number | null;
-  /** Mode de comparaison (côte-à-côte / wipe) + barre de wipe (retours 33). */
-  compareMode?: 'side' | 'wipe';
+  /** Mode de comparaison (côte-à-côte / wipe / diff 34.E) + barre de wipe (retours 33). */
+  compareMode?: 'side' | 'wipe' | 'diff';
   wipe?: { pos: number; angle: number };
   imageView?: ImageView;
   /** Interaction explicite (play/seek/navigation/zoom) — vaut prise de main d'un co-pilote. */

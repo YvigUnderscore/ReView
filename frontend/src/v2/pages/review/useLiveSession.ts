@@ -72,9 +72,9 @@ export function useLiveSession({
   restoreCamera: (camera: unknown) => void;
   compareId: number | null;
   onCompareChange: (id: number | null) => void;
-  /** Mode de comparaison + barre de wipe — diffusés par le driver (retours 33). */
-  compareMode: 'side' | 'wipe';
-  onCompareModeChange: (mode: 'side' | 'wipe') => void;
+  /** Mode de comparaison + barre de wipe — diffusés par le driver (retours 33, diff 34.E). */
+  compareMode: 'side' | 'wipe' | 'diff';
+  onCompareModeChange: (mode: 'side' | 'wipe' | 'diff') => void;
   wipe: { pos: number; angle: number };
   onWipeApply: (pos: number, angle: number) => void;
   imageViewApiRef: React.MutableRefObject<ImageViewApi | null>;

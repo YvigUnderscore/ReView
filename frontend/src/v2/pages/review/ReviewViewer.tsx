@@ -6,6 +6,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import { useAnnotationOverlay, useHotspotDisplay } from './useAnnotationOverlay';
 import { useImageCompareSync } from './useImageCompareSync';
+import type { CompareMode } from './useCompareState';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
@@ -15,12 +16,12 @@ import ReviewContextMenu from './ReviewContextMenu';
 import Filmstrip from './Filmstrip';
 import ImageComparePane from './ImageComparePane';
 import ImageWipeOverlay from './ImageWipeOverlay';
+import { ImageDiffOverlay } from './DiffOverlay';
 import Model3DReview from './Model3DReview';
 import SplatReview from './splat/SplatReview';
-import VideoComparePane from './VideoComparePane';
 import VideoWipeOverlay from './VideoWipeOverlay';
 import VideoPane from './VideoPane';
-import VideoTrimBar from './VideoTrimBar';
+import VideoReviewSection from './VideoReviewSection';
 
 /**
  * Zone viewer de la review : barre d'annotation + pane adapté au type de média
@@ -97,9 +98,9 @@ export default function ReviewViewer({
   onCloseCompare: () => void;
   /** Retire un seul pane de la grille (croix d'une case). */
   onRemoveCompare: (mediaId: number) => void;
-  /** Mode de comparaison hissé (répliqué en session live, retours 33). */
-  compareMode: 'side' | 'wipe';
-  onCompareModeChange: (mode: 'side' | 'wipe') => void;
+  /** Mode de comparaison hissé (répliqué en session live, retours 33 ; diff 34.E). */
+  compareMode: CompareMode;
+  onCompareModeChange: (mode: CompareMode) => void;
   /** Position/angle du wipe hissés (répliqués en session live). */
   sharedWipe?: ComponentProps<typeof VideoWipeOverlay>['sharedWipe'];
   /** Vue image partagée en session live (capture/application) + prise de main sur zoom/pan. */
@@ -111,8 +112,6 @@ export default function ReviewViewer({
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
   const compareId = compareIds[0] ?? null;
-  // Grille 2×2 (34.D) : dès 2 panes B vidéo — le wipe n'a de sens qu'en A/B simple.
-  const gridActive = kind === 'VIDEO' && compareIds.length >= 2;
   // Zoom/pan répliqué entre panes A/B image (34.D) — relais bidirectionnel.
   const imageSync = useImageCompareSync(imageViewApiRef);
   // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent.
@@ -154,80 +153,36 @@ export default function ReviewViewer({
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
 
       {kind === 'VIDEO' && src && data && (
-        <div
-          className={
-            gridActive ? 'grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3' : 'flex min-h-0 flex-1 gap-3'
-          }
-        >
-          <ReviewContextMenu
-            data={data}
-            videoRef={videoRef}
-            fps={fps}
-            canManage={canManage}
-            annotating={ann.annotating}
-            onToggleAnnotate={onToggleAnnotate}
-            hasViewed={!!ann.viewed}
-            onClearSelection={onClearSelection}
-          >
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-              <VideoPane
-                src={src}
-                mediaId={data.media.id}
-                hlsUrl={hlsUrl}
-                videoRef={videoRef}
-                programmaticSeekRef={programmaticSeekRef}
-                overlay={renderOverlay()}
-                compareOverlay={
-                  compareId != null && compareMode === 'wipe' && !gridActive ? (
-                    <VideoWipeOverlay
-                      compareId={compareId}
-                      masterRef={videoRef}
-                      onClose={closeCompare}
-                      onSide={() => onCompareModeChange('side')}
-                      sharedWipe={sharedWipe}
-                    />
-                  ) : null
-                }
-                comments={comments ?? []}
-                selectedId={selectedCommentId}
-                onSelectComment={onSelectComment}
-                onManualSeek={onManualSeek}
-                onMarker={onMarker}
-                fps={fps}
-                fpsDetected={data?.fps != null}
-                setFpsOverride={setFpsOverride}
-                startFrame={startFrame}
-                onFullscreen={onFullscreen}
-                trimRange={
-                  // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
-                  data?.trim && !data.trimProxyReady
-                    ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
-                    : null
-                }
-                timelineSprite={
-                  data.timelineSprite && data.timelineSpriteUrl
-                    ? { url: data.timelineSpriteUrl, meta: data.timelineSprite }
-                    : null
-                }
-                onLoopChange={onLoopChange}
-              />
-              {data && canEdit && (
-                <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />
-              )}
-            </div>
-          </ReviewContextMenu>
-          {/* Panes B synchronisés sur le maître : côte-à-côte (1) ou grille 2×2 (34.D). */}
-          {(compareMode === 'side' || gridActive) &&
-            compareIds.map((id) => (
-              <VideoComparePane
-                key={id}
-                compareId={id}
-                masterRef={videoRef}
-                onClose={gridActive ? () => onRemoveCompare(id) : closeCompare}
-                onWipe={gridActive ? undefined : () => onCompareModeChange('wipe')}
-              />
-            ))}
-        </div>
+        <VideoReviewSection
+          data={data}
+          src={src}
+          hlsUrl={hlsUrl}
+          videoRef={videoRef}
+          programmaticSeekRef={programmaticSeekRef}
+          overlay={renderOverlay()}
+          comments={comments ?? []}
+          selectedId={selectedCommentId}
+          onSelectComment={onSelectComment}
+          onManualSeek={onManualSeek}
+          onMarker={onMarker}
+          fps={fps}
+          setFpsOverride={setFpsOverride}
+          startFrame={startFrame}
+          onFullscreen={onFullscreen}
+          onLoopChange={onLoopChange}
+          canEdit={canEdit}
+          canManage={canManage}
+          ann={ann}
+          onToggleAnnotate={onToggleAnnotate}
+          onClearSelection={onClearSelection}
+          onSplatEditsSaved={onSplatEditsSaved}
+          compareIds={compareIds}
+          compareMode={compareMode}
+          onCompareModeChange={onCompareModeChange}
+          onRemoveCompare={onRemoveCompare}
+          closeCompare={closeCompare}
+          sharedWipe={sharedWipe}
+        />
       )}
 
       {kind === 'IMAGE' &&
@@ -240,7 +195,17 @@ export default function ReviewViewer({
             compareId={compareId}
             onClose={closeCompare}
             onSide={() => onCompareModeChange('side')}
+            onDiff={() => onCompareModeChange('diff')}
             sharedWipe={sharedWipe}
+          />
+        ) : compareId != null && compareMode === 'diff' ? (
+          // Différence amplifiée |A − B| (34.E) — remplace la visionneuse comme le wipe.
+          <ImageDiffOverlay
+            aUrl={data.url}
+            compareId={compareId}
+            onClose={closeCompare}
+            onSide={() => onCompareModeChange('side')}
+            onWipe={() => onCompareModeChange('wipe')}
           />
         ) : (
           <div className="flex min-h-0 flex-1 gap-3">
@@ -291,6 +256,7 @@ export default function ReviewViewer({
                 compareId={compareId}
                 onClose={closeCompare}
                 onWipe={() => onCompareModeChange('wipe')}
+                onDiff={() => onCompareModeChange('diff')}
                 viewApiRef={imageSync.slaveApiRef}
                 onViewChange={imageSync.onSlaveView}
               />

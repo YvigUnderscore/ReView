@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { X, SplitSquareHorizontal } from 'lucide-react';
+import { Diff, SplitSquareHorizontal, X } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
@@ -16,12 +16,14 @@ export default function VideoComparePane({
   masterRef,
   onClose,
   onWipe,
+  onDiff,
 }: {
   compareId: number;
   masterRef: RefObject<HTMLVideoElement | null>;
   onClose: () => void;
-  /** Bascule wipe — proposé seulement en A/B simple (pas en grille 34.D). */
+  /** Bascules wipe/diff — proposées seulement en A/B simple (pas en grille 34.D). */
   onWipe?: () => void;
+  onDiff?: () => void;
 }) {
   const slaveRef = useRef<HTMLVideoElement>(null);
   const [slaveReady, setSlaveReady] = useState(false);
@@ -51,6 +53,15 @@ export default function VideoComparePane({
               className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
             >
               <SplitSquareHorizontal size={13} /> Wipe
+            </button>
+          )}
+          {onDiff && (
+            <button
+              onClick={onDiff}
+              title="Basculer en mode différence (|A − B| amplifiée)"
+              className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
+            >
+              <Diff size={13} /> Diff
             </button>
           )}
           <button
