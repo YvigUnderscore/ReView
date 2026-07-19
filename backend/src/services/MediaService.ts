@@ -17,6 +17,7 @@ import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
 import { assertProjectWritable } from '../lib/projectGuard';
+import { assertProjectQuota } from '../lib/projectQuota';
 import { notifyWatchers } from './WatchService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
@@ -84,6 +85,9 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
     const used = Number(agg._sum.size ?? 0n);
     if (used + (size ?? 0) > limit) throw forbidden('Quota de stockage dépassé', 'STORAGE_LIMIT');
   }
+
+  // Quota de stockage du projet (38.D) — s'applique à tous, admin compris.
+  await assertProjectQuota(projectId, size ?? 0);
 
   const media = await prisma.mediaObject.create({
     data: {

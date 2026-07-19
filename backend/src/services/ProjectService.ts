@@ -6,6 +6,7 @@ import { firstMediaThumbKeyForProject, effectiveThumbnailUrl } from '../lib/thum
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { resolveProjectSettings } from '../lib/projectSettings';
 import { slugify } from '../lib/slug';
+import { getProjectStorageUsage } from '../lib/projectQuota';
 import { notFound, badRequest } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate, orderByFrom } from '../lib/pagination';
 
@@ -220,12 +221,52 @@ export interface UpdateProjectInput {
   status?: ProjectStatus;
   thumbnailKey?: string | null;
   startFrame?: number;
+  // Quota de stockage en octets (38.D) — null = illimité.
+  storageQuota?: number | null;
 }
 
 export async function updateProject(projectId: number, data: UpdateProjectInput) {
   if (!(await prisma.project.findFirst({ where: { id: projectId, deletedAt: null } })))
     throw notFound('Projet introuvable');
-  return prisma.project.update({ where: { id: projectId }, data });
+  const { storageQuota, ...rest } = data;
+  return prisma.project.update({
+    where: { id: projectId },
+    data: {
+      ...rest,
+      ...(storageQuota !== undefined
+        ? { storageQuota: storageQuota === null ? null : BigInt(storageQuota) }
+        : {}),
+    },
+  });
+}
+
+/** Usage/quota de stockage d'un projet (38.D) — octets consommés + quota (null = illimité). */
+export async function getProjectUsage(projectId: number) {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, deletedAt: null },
+    select: { storageQuota: true },
+  });
+  if (!project) throw notFound('Projet introuvable');
+  const usage = await getProjectStorageUsage(projectId);
+  return { usage: Number(usage), quota: project.storageQuota != null ? Number(project.storageQuota) : null };
+}
+
+/** Conso de stockage de tous les projets (38.D, admin) — pour le panel Système. */
+export async function listUsage() {
+  const projects = await prisma.project.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true, slug: true, storageQuota: true },
+    orderBy: { name: 'asc' },
+  });
+  return Promise.all(
+    projects.map(async (p) => ({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      usage: Number(await getProjectStorageUsage(p.id)),
+      quota: p.storageQuota != null ? Number(p.storageQuota) : null,
+    })),
+  );
 }
 
 export async function softDelete(user: SessionUser, projectId: number) {

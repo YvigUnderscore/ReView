@@ -40,29 +40,6 @@ router.post(
   },
 );
 
-// POST /api/projects/:projectId/duplicate — copie structure (+ tâches opt.), sans médias (38.A)
-router.post(
-  '/:projectId/duplicate',
-  validate({
-    params: projectIdParam,
-    body: z.object({
-      name: z.string().min(1).max(160),
-      includeTasks: z.boolean().optional(),
-    }),
-  }),
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  async (req, res) => {
-    const { name, includeTasks } = req.body as { name: string; includeTasks?: boolean };
-    const project = await ProjectService.duplicateProject(
-      req.user!,
-      Number(req.params.projectId),
-      name,
-      includeTasks ?? false,
-    );
-    res.status(201).json({ project });
-  },
-);
-
 // GET /api/projects/:projectId
 router.get('/:projectId', validate({ params: projectIdParam }), requireProjectAccess, async (req, res) => {
   res.json({ project: await ProjectService.getProject(Number(req.params.projectId)) });
@@ -79,6 +56,8 @@ router.patch(
       status: z.nativeEnum(ProjectStatus).optional(),
       thumbnailKey: z.string().max(512).nullable().optional(),
       startFrame: z.number().int().optional(),
+      // Quota de stockage en octets (38.D) — null = illimité.
+      storageQuota: z.number().int().min(0).nullable().optional(),
     }),
   }),
   requireRole(Role.ADMIN, Role.SUPERVISOR),

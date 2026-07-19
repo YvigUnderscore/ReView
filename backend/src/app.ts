@@ -18,6 +18,7 @@ import authOidcRoutes from './routes/auth-oidc.routes';
 import usersRoutes from './routes/users.routes';
 import studioRoutes from './routes/studio.routes';
 import projectsRoutes from './routes/projects.routes';
+import projectsExtraRoutes from './routes/projects-extra.routes';
 import mediaRoutes from './routes/media.routes';
 import mediaUploadRoutes from './routes/media-upload.routes';
 import mediaSplatRoutes from './routes/media-splat.routes';
@@ -102,6 +103,7 @@ export const createApp = (): Express => {
   app.use('/api/users', usersRoutes);
   app.use('/api/studio', studioRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
+  app.use('/api/projects', projectsExtraRoutes); // usage/quotas + duplicate (38) — avant /:id
   app.use('/api/projects', projectsRoutes);
   app.use('/api/media', mediaUploadRoutes); // multipart résumable (37.A) — avant /:id
   app.use('/api/media', mediaRoutes);
