@@ -35,14 +35,24 @@ interface RecentsState {
   push: (entry: Omit<RecentEntry, 'at'>) => void;
 }
 
+/** Retire les paramètres de session éphémères : un récent ne doit pas re-rejoindre un live (33.B). */
+const stripEphemeral = (to: string): string => {
+  const [path, search] = to.split('?');
+  if (!search) return to;
+  const params = new URLSearchParams(search);
+  params.delete('live');
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path!;
+};
+
 export const useRecents = create<RecentsState>((set) => ({
   recents: read(),
   push: (entry) =>
     set((s) => {
-      const next = [{ ...entry, at: Date.now() }, ...s.recents.filter((r) => r.key !== entry.key)].slice(
-        0,
-        MAX,
-      );
+      const next = [
+        { ...entry, to: stripEphemeral(entry.to), at: Date.now() },
+        ...s.recents.filter((r) => r.key !== entry.key),
+      ].slice(0, MAX);
       localStorage.setItem(LS_KEY, JSON.stringify(next));
       return { recents: next };
     }),
