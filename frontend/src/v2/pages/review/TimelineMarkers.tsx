@@ -67,7 +67,13 @@ export function MarkerTicks({
         return (
           <ContextMenu key={m.id}>
             <ContextMenuTrigger asChild>{tick}</ContextMenuTrigger>
-            <ContextMenuContent>
+            {/* Portalé dans le DOM mais enfant React de la barre : sans stopPropagation les
+                pointerdown des items remontent (arbre React) au onPointerDown de la barre,
+                qui seek + capture le pointer — et vole le pointerup qui déclenche l'item. */}
+            <ContextMenuContent
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <ContextMenuItem onClick={() => onEdit(m)}>
                 <Pencil size={14} /> Renommer / recolorer…
               </ContextMenuItem>
