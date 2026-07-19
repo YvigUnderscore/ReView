@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Grid3x3, Maximize, Move3d, Rotate3d } from 'lucide-react';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
@@ -6,12 +6,15 @@ import type { Model3DThreeState } from './three/useModel3DThree';
 import type { Role } from '../../types/api';
 import { useModel3DCamera } from './three/useModel3DCamera';
 import { useModel3DLighting } from './three/useModel3DLighting';
+import { useModel3DInspect } from './three/useModel3DInspect';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DAnimationsBar from './Model3DAnimationsBar';
 import Model3DTransformBar from './Model3DTransformBar';
 import LightingBar from './LightingBar';
+import InspectBar from './InspectBar';
+import ModelInfoPanel from './ModelInfoPanel';
 import CameraBar from './camera/CameraBar';
 import AnimPanel from './camera/timeline/AnimPanel';
 import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
@@ -58,6 +61,9 @@ export default function Model3DReview({
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
   // Éclairage HDRI (Phase 29) : défaut rejoué pour tous, tweak spectateur temporaire.
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
+  // Inspection (Phase 39) : modes d'affichage + fiche technique — local à la session.
+  const inspect = useModel3DInspect(model3d);
+  const [infoOpen, setInfoOpen] = useState(false);
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(model3d);
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
@@ -94,6 +100,18 @@ export default function Model3DReview({
             topLeft={showEditTools ? <Model3DTransformBar m={model3d} /> : undefined}
             topRight={
               <>
+                <InspectBar
+                  inspect={inspect}
+                  infoOpen={infoOpen}
+                  onToggleInfo={() => setInfoOpen((v) => !v)}
+                />
+                {infoOpen && (
+                  <ModelInfoPanel
+                    stats={inspect.stats}
+                    extensions={inspect.extensions}
+                    onClose={() => setInfoOpen(false)}
+                  />
+                )}
                 {model3d.layoutMode && canManage && (
                   <HudGroup>
                     <span className="text-muted-foreground">Caméra-objet</span>

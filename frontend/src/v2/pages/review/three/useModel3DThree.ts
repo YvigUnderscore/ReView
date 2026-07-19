@@ -16,12 +16,11 @@ import { useModelAnimations } from './useModelAnimations';
 import { useModelLayout } from './useModelLayout';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import { createFlyControls, type FlyControls } from '../viewer/flyControls';
-import { frameCameraToSphere, objectBoundingSphere } from '../viewer/frameCamera';
 import { useThumbnailCapture } from '../viewer/useThumbnailCapture';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
-import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
+import { useModelFraming } from './useModelFraming';
 
-interface SceneRuntime {
+export interface SceneRuntime {
   scene: ModelScene;
   mixer: THREE.AnimationMixer | null;
   clips: THREE.AnimationClip[];
@@ -58,6 +57,8 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const [roll, setRollState] = useState(0);
   const [loadError, setLoadError] = useState(false);
   const [savedTf, setSavedTf] = useState(false);
+  // Extensions glTF déclarées par le fichier chargé (fiche technique — 39.C).
+  const [extensions, setExtensions] = useState<string[]>([]);
 
   // Transformation enregistrée sur la version, surchargée par l'édition locale non sauvegardée.
   const versionQ = useQuery({
@@ -109,26 +110,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     };
   }, []);
 
-  // Cadrage F/H, unifié avec le splat : F cadre le modèle (direction de vue conservée),
-  // H rétablit la vue d'origine (face au modèle, cible au centre).
-  const frameView = useCallback(() => {
-    const rt = runtimeRef.current;
-    const THREE = threeRef.current;
-    if (!rt || !THREE) return;
-    const bounds = objectBoundingSphere(THREE, rt.scene.root);
-    if (bounds) frameCameraToSphere(rt.scene.camera, rt.scene.controls, bounds.center, bounds.radius);
-  }, []);
-  const homeView = useCallback(() => {
-    const rt = runtimeRef.current;
-    if (!rt) return;
-    const { camera, controls } = rt.scene;
-    const dist = fitDistance(rt.modelRadius, camera.fov, camera.aspect || 1);
-    if (dist <= 0) return;
-    camera.position.set(0, 0, dist);
-    controls.target.set(0, 0, 0);
-    controls.update();
-  }, []);
-  useFrameShortcuts({ active: ready, isFlying, onFrame: frameView, onHome: homeView });
+  const { frameView, homeView } = useModelFraming({ runtimeRef, threeRef, ready, isFlying });
 
   const anim = useModelAnimations(runtimeRef, actionRef);
   const { init: animInit } = anim;
@@ -166,6 +148,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       const mixer = model.animations.length ? new THREE.AnimationMixer(model.object) : null;
       const layoutCam = new THREE.PerspectiveCamera(45, 16 / 9, 0.01, 1000);
       runtimeRef.current = { scene, mixer, clips: model.animations, layoutCam, modelRadius: model.radius };
+      setExtensions(model.extensions);
       animInit(model.animations);
       // Navigation unifiée avec le splat (Phase 17) : vol clic droit + ZQSD/WASD + A/E,
       // pan sur le bouton du milieu (réglé par createFlyControls), orbite au clic gauche.
@@ -307,6 +290,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   return {
     containerRef,
     ready,
+    extensions,
     transform,
     updateTransform,
     saveTransform,

@@ -33,6 +33,8 @@ export interface LoadedModel {
   animations: THREE.AnimationClip[];
   /** Rayon englobant après normalisation (auto-cadrage). */
   radius: number;
+  /** Extensions glTF déclarées par le fichier (`extensionsUsed`) — fiche technique (39.C). */
+  extensions: string[];
 }
 
 /**
@@ -50,5 +52,7 @@ export async function loadModel(
   const { scale, position, radius } = normalizeTransform(three, box);
   object.scale.setScalar(scale);
   object.position.copy(position);
-  return { object, animations: gltf.animations ?? [], radius };
+  const json = (gltf.parser?.json ?? {}) as { extensionsUsed?: unknown };
+  const extensions = Array.isArray(json.extensionsUsed) ? (json.extensionsUsed as string[]) : [];
+  return { object, animations: gltf.animations ?? [], radius, extensions };
 }
