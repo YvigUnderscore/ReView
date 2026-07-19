@@ -100,6 +100,9 @@ export default function ClientMediaViewer({
             <video
               ref={videoRef}
               src={urlQ.data.url}
+              // Sans mode CORS, l'ORB de Chrome bloque le mp4 presigné cross-origin (MinIO)
+              // en sous-ressource no-cors — découvert en vérification navigateur.
+              crossOrigin="anonymous"
               controls
               controlsList="nodownload"
               className="max-h-[70vh] w-full"
