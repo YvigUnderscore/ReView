@@ -2,7 +2,9 @@
  * Salle de review live (33.B) — état **en mémoire** des sessions synchronisées.
  * Une session est identifiée par une clé `media:<id>` ou `playlist:<id>` ; le premier
  * arrivant devient pilote, la main se passe explicitement, le dernier départ ferme la
- * session. Le RBAC (accès projet) est vérifié par la couche socket avant tout join.
+ * session. Le pilote peut nommer des **co-pilotes** : parmi eux, le « driver » effectif
+ * (celui dont la lecture fait foi) est le dernier à avoir interagi. Le RBAC (accès
+ * projet) est vérifié par la couche socket avant tout join.
  */
 
 export interface LiveParticipant {
@@ -15,11 +17,16 @@ export interface LiveParticipant {
 export interface LiveState {
   key: string;
   pilotId: number;
+  coHostIds: number[];
+  /** Pilote ou co-pilote dont la diffusion fait foi (dernier à avoir interagi). */
+  driverId: number;
   participants: LiveParticipant[];
 }
 
 interface Session {
   pilotId: number;
+  coHostIds: Set<number>;
+  driverId: number;
   participants: Map<number, LiveParticipant>;
 }
 
@@ -38,14 +45,16 @@ export const parseLiveKey = (key: unknown): { type: 'media' | 'playlist'; id: nu
 const toState = (key: string, s: Session): LiveState => ({
   key,
   pilotId: s.pilotId,
+  coHostIds: [...s.coHostIds],
+  driverId: s.driverId,
   participants: [...s.participants.values()],
 });
 
-/** Rejoint (ou crée) la session ; le premier participant devient pilote. */
+/** Rejoint (ou crée) la session ; le premier participant devient pilote et driver. */
 export const joinLive = (key: string, participant: LiveParticipant): LiveState => {
   let s = sessions.get(key);
   if (!s) {
-    s = { pilotId: participant.id, participants: new Map() };
+    s = { pilotId: participant.id, coHostIds: new Set(), driverId: participant.id, participants: new Map() };
     sessions.set(key, s);
   }
   s.participants.set(participant.id, participant);
@@ -53,9 +62,9 @@ export const joinLive = (key: string, participant: LiveParticipant): LiveState =
 };
 
 /**
- * Quitte la session. Si le pilote part, la main passe au plus ancien participant
- * restant ; la session disparaît quand elle se vide. Renvoie le nouvel état (null
- * si la session est fermée ou si l'utilisateur n'y était pas).
+ * Quitte la session. Si le pilote part, la main passe au premier co-pilote sinon au
+ * plus ancien participant restant ; la session disparaît quand elle se vide. Renvoie
+ * le nouvel état (null si la session est fermée ou si l'utilisateur n'y était pas).
  */
 export const leaveLive = (key: string, userId: number): LiveState | null => {
   const s = sessions.get(key);
@@ -64,19 +73,61 @@ export const leaveLive = (key: string, userId: number): LiveState | null => {
     sessions.delete(key);
     return null;
   }
-  if (s.pilotId === userId) s.pilotId = s.participants.keys().next().value!;
+  s.coHostIds.delete(userId);
+  if (s.pilotId === userId)
+    s.pilotId = s.coHostIds.values().next().value ?? s.participants.keys().next().value!;
+  s.coHostIds.delete(s.pilotId);
+  if (s.driverId === userId || !s.participants.has(s.driverId)) s.driverId = s.pilotId;
   return toState(key, s);
 };
 
-/** Passage de main : seul le pilote peut donner la main à un participant présent. */
+/** Passage de main complet : seul le pilote peut donner le pilotage à un participant présent. */
 export const handoffLive = (key: string, fromUserId: number, toUserId: number): LiveState | null => {
   const s = sessions.get(key);
-  if (!s || s.pilotId !== fromUserId || !s.participants.has(toUserId)) return null;
+  if (!s || s.pilotId !== fromUserId || !s.participants.has(toUserId) || toUserId === fromUserId) return null;
   s.pilotId = toUserId;
+  s.coHostIds.delete(toUserId);
+  s.driverId = toUserId;
   return toState(key, s);
 };
 
-export const isLivePilot = (key: string, userId: number): boolean => sessions.get(key)?.pilotId === userId;
+/** Nomme/retire un co-pilote : pilote seulement, cible présente et différente du pilote. */
+export const setCoHost = (
+  key: string,
+  byUserId: number,
+  targetUserId: number,
+  isCoHost: boolean,
+): LiveState | null => {
+  const s = sessions.get(key);
+  if (!s || s.pilotId !== byUserId || !s.participants.has(targetUserId) || targetUserId === s.pilotId)
+    return null;
+  if (isCoHost) s.coHostIds.add(targetUserId);
+  else {
+    s.coHostIds.delete(targetUserId);
+    if (s.driverId === targetUserId) s.driverId = s.pilotId;
+  }
+  return toState(key, s);
+};
+
+/** Peut diffuser : pilote ou co-pilote. */
+export const canDriveLive = (key: string, userId: number): boolean => {
+  const s = sessions.get(key);
+  return !!s && (s.pilotId === userId || s.coHostIds.has(userId));
+};
+
+/** Est le driver effectif courant. */
+export const isLiveDriver = (key: string, userId: number): boolean => sessions.get(key)?.driverId === userId;
+
+/**
+ * Prend la main effective (interaction d'un pilote/co-pilote). Renvoie le nouvel état
+ * si le driver change, null sinon (déjà driver, ou non autorisé).
+ */
+export const claimDrive = (key: string, userId: number): LiveState | null => {
+  const s = sessions.get(key);
+  if (!s || s.driverId === userId || !canDriveLive(key, userId)) return null;
+  s.driverId = userId;
+  return toState(key, s);
+};
 
 export const getLiveState = (key: string): LiveState | null => {
   const s = sessions.get(key);

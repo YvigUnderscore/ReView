@@ -56,6 +56,8 @@ export default function ReviewViewer({
   onFullscreen,
   compareId,
   onCloseCompare,
+  imageViewApiRef,
+  onImageUserView,
 }: {
   data: MediaResp | null;
   error: string | null;
@@ -88,6 +90,9 @@ export default function ReviewViewer({
   onFullscreen: () => void;
   compareId: number | null;
   onCloseCompare: () => void;
+  /** Vue image partagée en session live (capture/application) + prise de main sur zoom/pan. */
+  imageViewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
+  onImageUserView?: () => void;
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
@@ -101,25 +106,17 @@ export default function ReviewViewer({
   // dès la publication (backend en 403) ; la présentation reste pilotable (canManage).
   // Comparaison A/B vidéo : côte-à-côte ou wipe (14.C).
   const [compareMode, setCompareMode] = useState<'side' | 'wipe'>('side');
-  const closeCompare = () => {
-    setCompareMode('side');
-    onCloseCompare();
-  };
+  const closeCompare = () => (setCompareMode('side'), onCloseCompare());
 
-  // Hotspot du splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en cours
-  // de placement. Le marqueur est projeté à l'écran par le viewer (useSplat).
+  // Hotspot 3D/splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en
+  // cours de placement — marqueur projeté à l'écran par le viewer concerné.
   const { showHotspot } = splat;
-  const splatHotspot = kind === 'SPLAT' ? (ann.viewed3d ?? ann.hotspot3d) : null;
-  useEffect(() => {
-    if (kind === 'SPLAT') showHotspot(splatHotspot);
-  }, [kind, splatHotspot, showHotspot]);
-
-  // Hotspot du modèle 3D (Three) : même logique que le splat — marqueur projeté par le viewer.
   const { showHotspot: showModelHotspot } = model3d;
-  const model3dHotspot = kind === 'MODEL_3D' ? (ann.viewed3d ?? ann.hotspot3d) : null;
+  const hotspot3d = kind === 'SPLAT' || kind === 'MODEL_3D' ? (ann.viewed3d ?? ann.hotspot3d) : null;
   useEffect(() => {
-    if (kind === 'MODEL_3D') showModelHotspot(model3dHotspot);
-  }, [kind, model3dHotspot, showModelHotspot]);
+    if (kind === 'SPLAT') showHotspot(hotspot3d);
+    else if (kind === 'MODEL_3D') showModelHotspot(hotspot3d);
+  }, [kind, hotspot3d, showHotspot, showModelHotspot]);
 
   // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer de
   // taille différente. Le wrapper est en pointer-events-none : en lecture on peut orbiter
@@ -274,6 +271,8 @@ export default function ReviewViewer({
                     alpha={ann.alpha}
                     info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
                     onFullscreen={onFullscreen}
+                    viewApiRef={imageViewApiRef}
+                    onUserView={onImageUserView}
                     pinned={
                       <ReviewCanvasRefs
                         mediaId={data.media.id}

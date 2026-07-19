@@ -9,7 +9,7 @@ import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { enqueueMediaJob } from './JobService';
-import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
+import { getLiveSyncHz, getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
@@ -458,6 +458,8 @@ export async function getDetail(user: SessionUser, id: number) {
     glbUrl,
     startFrame: project?.startFrame ?? 1001,
     fps: meta.fps ?? null,
+    // Fréquence de diffusion de la salle live (33.B), réglable admin par type de média.
+    liveSyncHz: await getLiveSyncHz(media.kind),
     // Éditions splat non-destructives (10.G) : JSON + masque binaire (SplatEditService).
     splatEdits: meta.splatEdits ?? null,
     splatMaskUrl,

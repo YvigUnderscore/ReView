@@ -101,6 +101,11 @@ export const SETTINGS_FIELDS: SettingField[] = [
     label: 'Rétention corbeille (jours)',
     hint: 'ex. 30 — 0 = purge auto désactivée',
   },
+  // Salle de review live (33.B) : diffusions/seconde du pilote, par type de média (1–30).
+  { key: 'live_sync_hz_video', label: 'Live : cadence vidéo (Hz)', hint: 'ex. 2' },
+  { key: 'live_sync_hz_image', label: 'Live : cadence image (Hz)', hint: 'ex. 4 — zoom/position' },
+  { key: 'live_sync_hz_3d', label: 'Live : cadence 3D (Hz)', hint: 'ex. 10 — fluidité caméra' },
+  { key: 'live_sync_hz_splat', label: 'Live : cadence splat (Hz)', hint: 'ex. 10 — caméra + focale' },
 ];
 
 const UNIT_MULT: Record<SizeUnit, number> = { Mo: 1e6, Go: 1e9 };

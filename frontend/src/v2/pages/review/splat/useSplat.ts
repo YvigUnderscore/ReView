@@ -263,13 +263,22 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     const s = sceneRef.current;
     const THREE = threeRef.current;
     if (!s || !THREE) return undefined;
-    return captureSplatCamera(THREE, s.camera, s.controls);
+    const cam = captureSplatCamera(THREE, s.camera, s.controls);
+    // DoF Spark toujours inclus (0 = net partout) : répliqué en session live et
+    // restauré avec les commentaires.
+    cam.apertureAngle = s.spark.apertureAngle;
+    cam.focalDistance = s.spark.focalDistance;
+    return cam;
   }, []);
 
   const restoreCamera = useCallback((state: unknown) => {
     const s = sceneRef.current;
     const THREE = threeRef.current;
-    if (s && THREE) restoreSplatCamera(THREE, s.camera, s.controls, state);
+    if (!s || !THREE) return;
+    restoreSplatCamera(THREE, s.camera, s.controls, state);
+    const dof = state as { apertureAngle?: number; focalDistance?: number } | null;
+    if (typeof dof?.apertureAngle === 'number') s.spark.apertureAngle = dof.apertureAngle;
+    if (typeof dof?.focalDistance === 'number') s.spark.focalDistance = dof.focalDistance;
   }, []);
 
   const raycastCenter = useCallback((): Hotspot3D | null => {

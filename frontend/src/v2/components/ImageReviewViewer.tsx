@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Expand, Info } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
 
@@ -13,6 +13,17 @@ const MAX_SCALE = 20;
 // Marge dessinable autour de l'image (50% de chaque côté) pour les annotations hors-cadre.
 const MARGIN = 0.5;
 
+/** Vue courante normalisée (session live) : zoom relatif au fit + centre en fraction d'image. */
+export interface ImageView {
+  scale: number;
+  cx: number;
+  cy: number;
+}
+export interface ImageViewApi {
+  capture: () => ImageView | null;
+  apply: (v: ImageView) => void;
+}
+
 export default function ImageReviewViewer({
   src,
   alt,
@@ -26,6 +37,8 @@ export default function ImageReviewViewer({
   info,
   pinned,
   onFullscreen,
+  viewApiRef,
+  onUserView,
 }: {
   src: string;
   alt: string;
@@ -43,6 +56,10 @@ export default function ImageReviewViewer({
   pinned?: ReactNode;
   /** Plein écran de tout le bloc review (fourni par la page) ; sinon plein écran local. */
   onFullscreen?: () => void;
+  /** API impérative de la vue (zoom/pan) — session live : capture pilote / application spectateur. */
+  viewApiRef?: React.MutableRefObject<ImageViewApi | null>;
+  /** Interaction zoom/pan locale (molette, pan, boutons) — prise de main en session live. */
+  onUserView?: () => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -79,10 +96,40 @@ export default function ImageReviewViewer({
     fit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
   };
 
+  // Vue partagée en session live : capture (pilote) / application (spectateur) — le centre
+  // est en fraction de l'image de base, indépendant de la taille de viewport de chacun.
+  useEffect(() => {
+    if (!viewApiRef) return;
+    viewApiRef.current = {
+      capture: () => {
+        const vp = viewportRef.current;
+        if (!vp || !base) return null;
+        return {
+          scale,
+          cx: (vp.clientWidth / 2 - offset.x) / (base.w * scale),
+          cy: (vp.clientHeight / 2 - offset.y) / (base.h * scale),
+        };
+      },
+      apply: (v) => {
+        const vp = viewportRef.current;
+        if (!vp || !base) return;
+        setScale(v.scale);
+        setOffset({
+          x: vp.clientWidth / 2 - v.cx * base.w * v.scale,
+          y: vp.clientHeight / 2 - v.cy * base.h * v.scale,
+        });
+      },
+    };
+    return () => {
+      viewApiRef.current = null;
+    };
+  }, [viewApiRef, base, scale, offset]);
+
   // Zoom molette centré sur le curseur
   const onWheel = (e: React.WheelEvent) => {
     if (!base) return;
     e.preventDefault();
+    onUserView?.();
     const vp = viewportRef.current!.getBoundingClientRect();
     const cx = e.clientX - vp.left,
       cy = e.clientY - vp.top;
@@ -104,6 +151,7 @@ export default function ImageReviewViewer({
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!pan.current) return;
+    onUserView?.();
     setOffset({
       x: pan.current.ox + (e.clientX - pan.current.x),
       y: pan.current.oy + (e.clientY - pan.current.y),
@@ -116,6 +164,7 @@ export default function ImageReviewViewer({
   const zoomBy = (factor: number) => {
     const vp = viewportRef.current;
     if (!vp) return;
+    onUserView?.();
     const cx = vp.clientWidth / 2,
       cy = vp.clientHeight / 2;
     const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));

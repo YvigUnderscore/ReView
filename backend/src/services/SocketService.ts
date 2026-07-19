@@ -20,7 +20,10 @@ import {
   joinLive,
   leaveLive,
   handoffLive,
-  isLivePilot,
+  setCoHost,
+  canDriveLive,
+  isLiveDriver,
+  claimDrive,
   getLiveState,
   type LiveParticipant,
 } from './LiveSessionService';
@@ -167,12 +170,24 @@ export const initSocket = (server: HttpServer): SocketServer => {
         emitLiveState(key, leaveLive(key, uid));
       });
       socket.on('live:sync', (key: string, payload: unknown) => {
-        if (!joinedLives.has(key) || !isLivePilot(key, uid)) return;
+        if (!joinedLives.has(key) || !canDriveLive(key, uid)) return;
+        // Interaction (`action: true`) d'un pilote/co-pilote → il devient le driver ;
+        // la diffusion périodique (sans action) n'est relayée que du driver courant.
+        const isAction = !!(payload as { action?: boolean } | null)?.action;
+        if (isAction) {
+          const state = claimDrive(key, uid);
+          if (state) emitLiveState(key, state);
+        } else if (!isLiveDriver(key, uid)) return;
         socket.to(`live_${key}`).emit('live:sync', { key, payload });
       });
       socket.on('live:handoff', (key: string, toUserId: number) => {
         if (!joinedLives.has(key)) return;
         const state = handoffLive(key, uid, Number(toUserId));
+        if (state) emitLiveState(key, state);
+      });
+      socket.on('live:cohost', (key: string, toUserId: number, isCoHost: boolean) => {
+        if (!joinedLives.has(key)) return;
+        const state = setCoHost(key, uid, Number(toUserId), !!isCoHost);
         if (state) emitLiveState(key, state);
       });
 

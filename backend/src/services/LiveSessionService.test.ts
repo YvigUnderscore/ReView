@@ -4,7 +4,10 @@ import {
   joinLive,
   leaveLive,
   handoffLive,
-  isLivePilot,
+  setCoHost,
+  canDriveLive,
+  isLiveDriver,
+  claimDrive,
   getLiveState,
   resetLiveSessions,
   type LiveParticipant,
@@ -33,9 +36,10 @@ describe('parseLiveKey (33.B)', () => {
 });
 
 describe('joinLive / leaveLive (33.B)', () => {
-  it('le premier arrivant devient pilote, les suivants spectateurs', () => {
+  it('le premier arrivant devient pilote ET driver, les suivants spectateurs', () => {
     const s1 = joinLive('media:1', p(10));
     expect(s1.pilotId).toBe(10);
+    expect(s1.driverId).toBe(10);
     const s2 = joinLive('media:1', p(20));
     expect(s2.pilotId).toBe(10);
     expect(s2.participants.map((x) => x.id)).toEqual([10, 20]);
@@ -47,12 +51,15 @@ describe('joinLive / leaveLive (33.B)', () => {
     expect(s.participants).toHaveLength(1);
   });
 
-  it('départ du pilote : la main passe au plus ancien participant restant', () => {
+  it('départ du pilote : la main passe au premier co-pilote sinon au plus ancien', () => {
     joinLive('media:1', p(10));
     joinLive('media:1', p(20));
     joinLive('media:1', p(30));
+    setCoHost('media:1', 10, 30, true);
     const s = leaveLive('media:1', 10);
-    expect(s?.pilotId).toBe(20);
+    expect(s?.pilotId).toBe(30);
+    expect(s?.coHostIds).toEqual([]);
+    expect(s?.driverId).toBe(30);
   });
 
   it('dernier départ : la session est fermée', () => {
@@ -74,15 +81,60 @@ describe('handoffLive (33.B)', () => {
     joinLive('media:1', p(20));
   });
 
-  it('le pilote donne la main à un participant présent', () => {
+  it('le pilote donne la main à un participant présent (driver suit)', () => {
     const s = handoffLive('media:1', 10, 20);
     expect(s?.pilotId).toBe(20);
-    expect(isLivePilot('media:1', 20)).toBe(true);
+    expect(s?.driverId).toBe(20);
   });
 
   it('refusé si l’émetteur n’est pas pilote ou si la cible est absente', () => {
     expect(handoffLive('media:1', 20, 10)).toBeNull();
     expect(handoffLive('media:1', 10, 99)).toBeNull();
-    expect(isLivePilot('media:1', 10)).toBe(true);
+    expect(getLiveState('media:1')?.pilotId).toBe(10);
+  });
+});
+
+describe('co-pilotes & driver (retours CP-HUMAIN 33)', () => {
+  beforeEach(() => {
+    joinLive('media:1', p(10));
+    joinLive('media:1', p(20));
+    joinLive('media:1', p(30));
+  });
+
+  it('seul le pilote nomme/retire un co-pilote (cible présente, pas lui-même)', () => {
+    expect(setCoHost('media:1', 20, 30, true)).toBeNull();
+    expect(setCoHost('media:1', 10, 10, true)).toBeNull();
+    expect(setCoHost('media:1', 10, 99, true)).toBeNull();
+    const s = setCoHost('media:1', 10, 20, true);
+    expect(s?.coHostIds).toEqual([20]);
+    expect(canDriveLive('media:1', 20)).toBe(true);
+    expect(canDriveLive('media:1', 30)).toBe(false);
+  });
+
+  it('claimDrive : un co-pilote qui interagit devient driver ; un spectateur non', () => {
+    setCoHost('media:1', 10, 20, true);
+    expect(claimDrive('media:1', 30)).toBeNull();
+    const s = claimDrive('media:1', 20);
+    expect(s?.driverId).toBe(20);
+    expect(isLiveDriver('media:1', 20)).toBe(true);
+    // Déjà driver → pas de nouvel état (pas de re-broadcast).
+    expect(claimDrive('media:1', 20)).toBeNull();
+    // Le pilote peut reprendre la main en interagissant.
+    expect(claimDrive('media:1', 10)?.driverId).toBe(10);
+  });
+
+  it('retirer le co-pilotage du driver → la main revient au pilote', () => {
+    setCoHost('media:1', 10, 20, true);
+    claimDrive('media:1', 20);
+    const s = setCoHost('media:1', 10, 20, false);
+    expect(s?.coHostIds).toEqual([]);
+    expect(s?.driverId).toBe(10);
+  });
+
+  it('départ du driver co-pilote → la main revient au pilote', () => {
+    setCoHost('media:1', 10, 20, true);
+    claimDrive('media:1', 20);
+    const s = leaveLive('media:1', 20);
+    expect(s?.driverId).toBe(10);
   });
 });

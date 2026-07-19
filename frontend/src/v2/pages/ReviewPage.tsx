@@ -12,6 +12,7 @@ import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
+import type { ImageViewApi } from '../components/ImageReviewViewer';
 import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
@@ -110,9 +111,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     // Brouillon local (32.C) : les formes 2D en cours survivent à un rechargement.
     initialShapes: () => (loadDraft(id)?.shapes as Shape[] | undefined) ?? [],
   });
-  useEffect(() => {
-    saveDraft(id, { shapes: ann.annot });
-  }, [ann.annot, id]);
+  useEffect(() => saveDraft(id, { shapes: ann.annot }), [ann.annot, id]);
   const glbSrc = resolveGlbSrc(data);
   const model3d = useModel3DThree(data, glbSrc);
   // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
@@ -137,10 +136,9 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const onSplatEditsSaved = useSplatThumbnail(id, splat, canEditMedia);
 
   const seek = (t: number) => {
-    if (videoRef.current) {
-      programmaticSeekRef.current = true;
-      videoRef.current.currentTime = t;
-    }
+    if (!videoRef.current) return;
+    programmaticSeekRef.current = true;
+    videoRef.current.currentTime = t;
   };
 
   // Désélectionne le commentaire courant et masque toute annotation affichée.
@@ -180,15 +178,22 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Lien profond (32.E) : `?frame=`/`?comment=` appliqué une fois à l'arrivée.
   useDeepLink({ data, comments, videoRef, programmaticSeekRef, fallbackFps: fpsOverride, selectComment });
 
-  // Salle de review live (33.B) : pilote → diffusion ; spectateur → application.
+  // Salle de review live (33.B) : driver → diffusion ; spectateurs → application
+  // (playhead, navigation, caméra 3D + DoF splat, comparaison A/B, zoom/pan image).
+  const imageViewApiRef = useRef<ImageViewApi | null>(null);
   const live = useLiveSession({
     mediaId: id,
     kind: data?.media.kind,
+    fps: data?.fps ?? fpsOverride,
+    syncHz: data?.liveSyncHz ?? 2,
     videoRef,
     programmaticSeekRef,
     captureCamera: () => (data?.media.kind === 'SPLAT' ? splat.captureCamera() : model3d.captureCamera()),
     restoreCamera: (cam) =>
       data?.media.kind === 'SPLAT' ? splat.restoreCamera(cam) : model3d.restoreCamera(cam),
+    compareId,
+    onCompareChange: setCompareId,
+    imageViewApiRef,
   });
 
   const placeHotspotCenter = () => {
@@ -321,6 +326,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onFullscreen={toggleFullscreen}
             compareId={compareId}
             onCloseCompare={() => setCompareId(null)}
+            imageViewApiRef={imageViewApiRef}
+            onImageUserView={live.claimInteraction}
           />
 
           {commentsOpen && (

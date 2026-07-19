@@ -163,6 +163,8 @@ export interface MediaResp {
   glbUrl: string | null;
   startFrame: number;
   fps: number | null;
+  /** Fréquence de diffusion de la salle live (Hz), réglable admin par type de média (33.B). */
+  liveSyncHz: number;
   /** Éditions non-destructives enregistrées pour un splat (transform + volumes) — 10.G. */
   splatEdits: SplatEdits | null;
   /** URL présignée du masque de suppression binaire (bitset), ou null. */
@@ -222,6 +224,9 @@ export interface SplatCamera {
   aspect?: number;
   /** Tilt (roll) autour de l'axe de vue, en radians (mode layout) — 0/absent = horizon droit. */
   roll?: number;
+  /** Profondeur de champ Spark (sync live + commentaires) — absents = laissés tels quels. */
+  apertureAngle?: number;
+  focalDistance?: number;
 }
 
 /** Classe de la zone média (cadre commun aux viewers vidéo/image/3D). */
