@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject } from 'react';
+import { useState, type ReactNode, type RefObject } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft,
@@ -8,6 +8,7 @@ import {
   EyeOff,
   Image as ImageIcon,
   Link2,
+  ListVideo,
   PencilLine,
   Play,
 } from 'lucide-react';
@@ -24,6 +25,8 @@ import {
 import { stepVideoFrame, type MediaResp } from './reviewTypes';
 import { captureVideoFrame, copyImageToClipboard, downloadImage, toThumbnailDataUrl } from './mediaCapture';
 import { frameLink } from './deepLink';
+import AddToPlaylistDialog from '../../components/AddToPlaylistDialog';
+import { useAuth } from '../../stores/useAuth';
 
 /**
  * Menu clic droit des reviews **image & vidéo** (le clic droit des viewers 3D/splat sert
@@ -55,6 +58,10 @@ export default function ReviewContextMenu({
   const kind = data.media.kind;
   const isVideo = kind === 'VIDEO';
   const baseName = data.media.originalName.replace(/\.[^.]+$/, '');
+  // « Ajouter à la playlist » depuis la review courante (retours CP-HUMAIN 33).
+  const [playlistOpen, setPlaylistOpen] = useState(false);
+  const role = useAuth((s) => s.user?.role);
+  const canPlaylist = role !== 'CLIENT';
 
   // Appelé depuis les handlers (jamais pendant le render — règle react-hooks/refs).
   const run = (label: string, fn: () => Promise<void>) =>
@@ -164,7 +171,23 @@ export default function ReviewContextMenu({
             )}
           </>
         )}
+        {canPlaylist && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => setPlaylistOpen(true)}>
+              <ListVideo size={14} /> Ajouter à la playlist…
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
+      {canPlaylist && (
+        <AddToPlaylistDialog
+          open={playlistOpen}
+          onOpenChange={setPlaylistOpen}
+          projectId={data.projectId}
+          mediaIds={[data.media.id]}
+        />
+      )}
     </ContextMenu>
   );
 }

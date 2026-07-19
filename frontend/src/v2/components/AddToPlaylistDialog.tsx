@@ -11,20 +11,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 
 /**
  * « Ajouter à la playlist » (Phase 33) : choisit une playlist du projet ou en crée
- * une, puis y ajoute les médias (résolus en versions côté serveur, dédupliqués).
- * Ouvert depuis le clic droit / la barre de sélection de la page Reviews.
+ * une, puis y ajoute des médias et/ou des versions (médias résolus en versions côté
+ * serveur, dédupliqués). Ouvert depuis les clics droits : cartes Reviews (+ barre de
+ * sélection), cartes de version (task/asset) et review courante.
  */
 export default function AddToPlaylistDialog({
   open,
   onOpenChange,
   projectId,
-  mediaIds,
+  mediaIds = [],
+  versionIds = [],
   onDone,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   projectId: number | null;
-  mediaIds: number[];
+  mediaIds?: number[];
+  versionIds?: number[];
   onDone?: () => void;
 }) {
   const qc = useQueryClient();
@@ -53,12 +56,16 @@ export default function AddToPlaylistDialog({
     onDone?.();
   };
 
+  const targetCount = mediaIds.length + versionIds.length;
+  const ids = {
+    ...(mediaIds.length > 0 ? { mediaIds } : {}),
+    ...(versionIds.length > 0 ? { versionIds } : {}),
+  };
+
   const addToExisting = async (p: PlaylistSummary) => {
     setBusy(true);
     try {
-      const out = await api.post<{ added: number; skipped: number }>(`/api/playlists/${p.id}/items`, {
-        mediaIds,
-      });
+      const out = await api.post<{ added: number; skipped: number }>(`/api/playlists/${p.id}/items`, ids);
       finish(out.added, out.skipped, p.name);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
@@ -75,9 +82,9 @@ export default function AddToPlaylistDialog({
       const { playlist } = await api.post<{ playlist: PlaylistSummary }>('/api/playlists', {
         projectId,
         name,
-        mediaIds,
+        ...ids,
       });
-      finish(playlist._count.items, mediaIds.length - playlist._count.items, name);
+      finish(playlist._count.items, targetCount - playlist._count.items, name);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
     } finally {
@@ -99,8 +106,8 @@ export default function AddToPlaylistDialog({
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              {mediaIds.length} média{mediaIds.length > 1 ? 's' : ''} — chaque version correspondante est
-              ajoutée en fin de playlist.
+              {targetCount} élément{targetCount > 1 ? 's' : ''} — chaque version correspondante est ajoutée en
+              fin de playlist.
             </p>
             {playlists.length > 0 && (
               <ul className="max-h-56 space-y-1 overflow-y-auto">

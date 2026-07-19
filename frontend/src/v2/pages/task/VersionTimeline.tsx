@@ -20,6 +20,7 @@ export default function VersionTimeline({
   canCreate,
   canPublish,
   contextKey,
+  projectId = null,
   emptyDescription,
   onCreateVersion,
   publishVersion,
@@ -32,6 +33,8 @@ export default function VersionTimeline({
   canCreate: boolean;
   canPublish: boolean;
   contextKey: string;
+  /** Projet porteur — active « Ajouter à la playlist » sur les cartes de version. */
+  projectId?: number | null;
   emptyDescription: string;
   onCreateVersion: () => void;
   publishVersion: (versionId: number) => void;
@@ -94,6 +97,7 @@ export default function VersionTimeline({
             view={view}
             canCreate={canCreate}
             canPublish={canPublish}
+            projectId={projectId}
             onUpload={onUploadClick}
             onPublishVersion={publishVersion}
             onDeleteVersion={setDelVersion}

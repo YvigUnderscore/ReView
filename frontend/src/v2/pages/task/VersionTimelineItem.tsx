@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, BellOff, ChevronDown, ChevronRight, ClipboardCheck, Trash2, Upload } from 'lucide-react';
+import {
+  Bell,
+  BellOff,
+  ChevronDown,
+  ChevronRight,
+  ClipboardCheck,
+  ListVideo,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
@@ -13,6 +22,7 @@ import {
 } from '../../components/ui/context-menu';
 import ReviewDecisionBadge from '../../components/ReviewDecisionBadge';
 import ReviewDecisionDialog from '../../components/ReviewDecisionDialog';
+import AddToPlaylistDialog from '../../components/AddToPlaylistDialog';
 import { timeAgo } from '../../lib/time';
 import { useAuth } from '../../stores/useAuth';
 import { useWatch } from '../../lib/useWatch';
@@ -30,6 +40,7 @@ export default function VersionTimelineItem({
   view,
   canCreate,
   canPublish,
+  projectId = null,
   onUpload,
   onPublishVersion,
   onDeleteVersion,
@@ -42,6 +53,8 @@ export default function VersionTimelineItem({
   view: ViewMode;
   canCreate: boolean;
   canPublish: boolean;
+  /** Projet porteur — active « Ajouter à la playlist » (retours CP-HUMAIN 33). */
+  projectId?: number | null;
   onUpload: (versionId: number) => void;
   onPublishVersion: (versionId: number) => void;
   onDeleteVersion: (version: VersionListItem) => void;
@@ -50,8 +63,10 @@ export default function VersionTimelineItem({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [decisionOpen, setDecisionOpen] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
   const role = useAuth((s) => s.user?.role);
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
+  const canPlaylist = projectId !== null && role !== 'CLIENT';
   // Suivi de notifications de la version (32.G).
   const watch = useWatch();
   const watching = watch.isWatching('VERSION', version.id);
@@ -167,8 +182,22 @@ export default function VersionTimelineItem({
             {watching ? <BellOff size={14} /> : <Bell size={14} />}
             {watching ? 'Ne plus suivre cette version' : 'Suivre cette version'}
           </ContextMenuItem>
+          {canPlaylist && (
+            <ContextMenuItem onClick={() => setPlaylistOpen(true)}>
+              <ListVideo size={14} /> Ajouter à la playlist…
+            </ContextMenuItem>
+          )}
         </ContextMenuContent>
       </ContextMenu>
+
+      {canPlaylist && (
+        <AddToPlaylistDialog
+          open={playlistOpen}
+          onOpenChange={setPlaylistOpen}
+          projectId={projectId}
+          versionIds={[version.id]}
+        />
+      )}
 
       <ReviewDecisionDialog
         versionId={version.id}

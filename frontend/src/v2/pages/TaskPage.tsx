@@ -118,6 +118,7 @@ export default function TaskPage() {
         canCreate={canCreate}
         canPublish={canPublish}
         contextKey={`task:${taskId}`}
+        projectId={project?.id ?? null}
         emptyDescription={
           canCreate
             ? 'Créez une première version ou déposez un média ci-dessus pour démarrer l’historique de cette tâche.'

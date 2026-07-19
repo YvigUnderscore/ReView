@@ -122,6 +122,7 @@ export default function AssetPage() {
         canCreate={canCreate}
         canPublish={canPublish}
         contextKey={`asset:${assetId}`}
+        projectId={asset?.projectId ?? null}
         emptyDescription={
           canCreate
             ? 'Créez une première version ou déposez un média pour démarrer l’historique de cet asset.'
