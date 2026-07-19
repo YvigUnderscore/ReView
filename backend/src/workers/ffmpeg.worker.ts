@@ -38,6 +38,7 @@ import {
 import { SETTING_KEYS } from '../lib/settings';
 import { env } from '../config/env';
 import { qualityEncoderArgs, bitrateEncoderArgs, type VideoEncoder } from '../lib/videoEncoder';
+import { sha256File } from '../lib/checksum';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 import { startWebhookWorker } from './webhook.worker';
 
@@ -578,6 +579,17 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
     const ext = sourceGone ? '.mp4' : extname(media.originalName) || '.bin';
     const src = join(dir, `src${ext}`);
     await storage.downloadToFile(sourceGone ? (metadata.proxyKey as string) : media.storageKey, src);
+
+    // Checksum bout-en-bout (37.B) : le sha256 annoncé par le client doit correspondre
+    // au fichier téléchargé (corruption réseau/storage → FAILED, jamais de dérivés faux).
+    if (!sourceGone && typeof metadata.contentHash === 'string') {
+      const actual = await sha256File(src);
+      if (actual !== metadata.contentHash) {
+        throw new Error(
+          `Checksum invalide media=${mediaId} (attendu ${String(metadata.contentHash).slice(0, 12)}…, reçu ${actual.slice(0, 12)}…)`,
+        );
+      }
+    }
 
     if (kind === 'convert3d') {
       // Conversion → GLB pour model-viewer (corrige l'erreur DataView sur FBX/OBJ bruts)

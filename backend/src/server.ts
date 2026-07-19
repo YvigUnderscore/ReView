@@ -4,6 +4,7 @@ import { createApp } from './app';
 import { initSocket } from './services/SocketService';
 import { storage } from './services/StorageService';
 import { purgeExpiredTrash } from './lib/trash';
+import { purgeObsoleteDerived } from './lib/derivedPurge';
 import { getNumericSetting, SETTING_KEYS } from './lib/settings';
 import { sendDailyDigests } from './services/DigestService';
 import { logger } from './lib/logger';
@@ -18,6 +19,8 @@ function scheduleTrashSweep(): void {
       const purged = await purgeExpiredTrash(days);
       if (purged > 0)
         logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
+      // Purge des dérivés obsolètes (37.H) — no-op si désactivée dans l'admin.
+      await purgeObsoleteDerived();
     } catch (err) {
       logger.error({ err }, '[Trash] échec du balayage de purge');
     }

@@ -346,6 +346,86 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(again.status).toBe(410);
   });
 
+  it('upload multipart résumable + dédup par hash (37.A/37.B)', async () => {
+    const suffix = Date.now();
+    const auth = { Authorization: `Bearer ${token}` };
+    const proj = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ name: `IT Multi ${suffix}` });
+    const shot = await request(app)
+      .post('/api/shots')
+      .set(auth)
+      .send({ projectId: proj.body.project.id, name: 'S', code: `MU${suffix}` });
+    const task = await request(app)
+      .post('/api/tasks')
+      .set(auth)
+      .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
+    const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
+
+    // GLB de 17 Mo (> seuil multipart 16 Mo) : 2 parts, pas de worker (READY au finalize).
+    const glb = Buffer.concat([Buffer.from('glTF', 'ascii'), Buffer.alloc(17 * 1024 * 1024 - 4)]);
+    const { createHash } = await import('node:crypto');
+    const hash = createHash('sha256').update(glb).digest('hex');
+    const base = {
+      versionId: ver.body.version.id,
+      filename: 'multi.glb',
+      contentType: 'model/gltf-binary',
+      kind: 'MODEL_3D',
+      size: glb.length,
+      contentHash: hash,
+    };
+
+    const init = await request(app).post('/api/media/multipart/init').set(auth).send(base);
+    expect(init.status).toBe(201);
+    const { mediaObjectId, partSize } = init.body as { mediaObjectId: number; partSize: number };
+    expect(init.body.uploadedParts).toEqual([]);
+
+    const putPart = async (n: number) => {
+      const urls = await request(app)
+        .post(`/api/media/multipart/${mediaObjectId}/parts`)
+        .set(auth)
+        .send({ partNumbers: [n] });
+      const url = urls.body.urls[0].url as string;
+      const body = glb.subarray((n - 1) * partSize, Math.min(n * partSize, glb.length));
+      const r = await fetch(url, { method: 'PUT', body });
+      expect(r.status).toBe(200);
+      return (r.headers.get('etag') ?? '').replaceAll('"', '');
+    };
+
+    // Part 1 envoyée, puis « coupure » : un nouvel init retrouve l'upload et la part reçue.
+    const etag1 = await putPart(1);
+    const resume = await request(app).post('/api/media/multipart/init').set(auth).send(base);
+    expect(resume.body.resumed).toBe(true);
+    expect(resume.body.mediaObjectId).toBe(mediaObjectId);
+    expect(resume.body.uploadedParts.map((p: { partNumber: number }) => p.partNumber)).toEqual([1]);
+
+    const etag2 = await putPart(2);
+    const complete = await request(app)
+      .post(`/api/media/multipart/${mediaObjectId}/complete`)
+      .set(auth)
+      .send({
+        parts: [
+          { partNumber: 1, etag: etag1 },
+          { partNumber: 2, etag: etag2 },
+        ],
+      });
+    expect(complete.status).toBe(200);
+    const fin = await request(app).post(`/api/media/${mediaObjectId}/finalize`).set(auth);
+    expect(fin.body.media.status).toBe('READY');
+
+    // Dédup : même contenu sur une autre version → aucun octet à transférer.
+    const ver2 = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
+    const dedup = await request(app)
+      .post('/api/media/multipart/init')
+      .set(auth)
+      .send({ ...base, versionId: ver2.body.version.id });
+    expect(dedup.status).toBe(201);
+    expect(dedup.body.deduplicated).toBe(true);
+    const fin2 = await request(app).post(`/api/media/${dedup.body.mediaObjectId}/finalize`).set(auth);
+    expect(fin2.body.media.status).toBe('READY');
+  });
+
   it('miniature média (10.G) : POST /thumbnail stocke une image et alimente thumbnailUrl', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };

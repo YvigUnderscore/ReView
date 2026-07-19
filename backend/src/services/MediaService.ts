@@ -49,6 +49,8 @@ export interface CreateUploadInput {
   contentType: string;
   kind: MediaKind;
   size?: number;
+  /** sha256 hex du fichier, calculé côté client (37.B : checksum bout-en-bout + dédup). */
+  contentHash?: string;
 }
 
 /** Crée un MediaObject (UPLOADING) et renvoie une URL présignée PUT. */
@@ -89,6 +91,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
       mimeType: contentType,
       status: MediaStatus.UPLOADING,
       uploaderId: user.id,
+      metadata: input.contentHash ? { contentHash: input.contentHash } : {},
     },
   });
   const storageKey = StorageService.mediaKey({

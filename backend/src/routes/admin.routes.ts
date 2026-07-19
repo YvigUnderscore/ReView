@@ -5,6 +5,12 @@ import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import { getPublicOidcConfig, setOidcConfig, oidcConfigSchema } from '../lib/oidcConfig';
+import {
+  getDerivedPurgeConfig,
+  setDerivedPurgeConfig,
+  derivedPurgeSchema,
+  purgeObsoleteDerived,
+} from '../lib/derivedPurge';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
@@ -55,6 +61,26 @@ router.put('/burnin', validate({ body: burninConfigSchema }), async (req, res) =
   const config = await setStudioBurninConfig(req.body);
   logAudit({ userId: req.user!.id, action: 'BURNIN_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
+});
+
+// GET/PUT /api/admin/derived-purge — purge des dérivés obsolètes (37.H) + exécution manuelle
+router.get('/derived-purge', async (_req, res) => {
+  res.json({ config: await getDerivedPurgeConfig() });
+});
+router.put('/derived-purge', validate({ body: derivedPurgeSchema }), async (req, res) => {
+  const config = await setDerivedPurgeConfig(req.body);
+  logAudit({ userId: req.user!.id, action: 'DERIVED_PURGE_CONFIG', entityType: 'Setting' });
+  res.json({ config });
+});
+router.post('/derived-purge/run', async (req, res) => {
+  const result = await purgeObsoleteDerived();
+  logAudit({
+    userId: req.user!.id,
+    action: 'DERIVED_PURGE_RUN',
+    entityType: 'Setting',
+    metadata: result,
+  });
+  res.json(result);
 });
 
 // GET /api/admin/oidc — config SSO (36.A, sans le secret)

@@ -24,6 +24,10 @@ router.post(
       contentType: z.string().min(1).max(160),
       kind: z.nativeEnum(MediaKind),
       size: z.number().int().nonnegative().optional(),
+      contentHash: z
+        .string()
+        .regex(/^[0-9a-f]{64}$/i)
+        .optional(), // sha256 client (37.B) — vérifié par le worker
     }),
   }),
   async (req, res) => {

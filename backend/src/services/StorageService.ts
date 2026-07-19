@@ -9,6 +9,12 @@ import {
   DeleteObjectsCommand,
   ListObjectsV2Command,
   PutBucketCorsCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
+  ListPartsCommand,
+  CopyObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'node:stream';
@@ -114,6 +120,96 @@ class StorageService {
   async getPresignedPutUrl(key: string, contentType: string, ttlSeconds = 900): Promise<string> {
     const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
     return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
+  }
+
+  // ── Upload résumable multipart (37.A) ─────────────────────────────────────
+
+  /** Démarre un upload multipart S3 et renvoie son UploadId. */
+  async createMultipartUpload(key: string, contentType: string): Promise<string> {
+    const res = await this.client.send(
+      new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+    );
+    return res.UploadId!;
+  }
+
+  /** URLs présignées PUT pour un lot de parts (navigateur → MinIO). */
+  async getPresignedPartUrls(
+    key: string,
+    uploadId: string,
+    partNumbers: number[],
+    ttlSeconds = 3600,
+  ): Promise<{ partNumber: number; url: string }[]> {
+    return Promise.all(
+      partNumbers.map(async (partNumber) => ({
+        partNumber,
+        url: await getSignedUrl(
+          this.publicClient,
+          new UploadPartCommand({
+            Bucket: this.bucket,
+            Key: key,
+            UploadId: uploadId,
+            PartNumber: partNumber,
+          }),
+          { expiresIn: ttlSeconds },
+        ),
+      })),
+    );
+  }
+
+  /** Parts déjà reçues (source de vérité de la reprise après coupure). */
+  async listUploadedParts(key: string, uploadId: string): Promise<{ partNumber: number; etag: string }[]> {
+    const out: { partNumber: number; etag: string }[] = [];
+    let marker: string | undefined;
+    do {
+      const res = await this.client.send(
+        new ListPartsCommand({
+          Bucket: this.bucket,
+          Key: key,
+          UploadId: uploadId,
+          PartNumberMarker: marker,
+        }),
+      );
+      for (const p of res.Parts ?? []) out.push({ partNumber: p.PartNumber!, etag: p.ETag! });
+      marker = res.IsTruncated ? res.NextPartNumberMarker : undefined;
+    } while (marker);
+    return out;
+  }
+
+  async completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    parts: { partNumber: number; etag: string }[],
+  ): Promise<void> {
+    await this.client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: parts
+            .slice()
+            .sort((a, b) => a.partNumber - b.partNumber)
+            .map((p) => ({ PartNumber: p.partNumber, ETag: p.etag })),
+        },
+      }),
+    );
+  }
+
+  async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+    await this.client.send(
+      new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId }),
+    );
+  }
+
+  /** Copie serveur → serveur (dédup 37.B : « upload instantané » d'un contenu déjà présent). */
+  async copyObject(srcKey: string, destKey: string): Promise<void> {
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        Key: destKey,
+        CopySource: `${this.bucket}/${encodeURIComponent(srcKey).replace(/%2F/g, '/')}`,
+      }),
+    );
   }
 
   /** URL présignée pour le serving direct (lecture) d'un média. */

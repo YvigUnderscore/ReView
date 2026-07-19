@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -110,6 +111,7 @@ export default function JobsTab() {
           </div>
         </Panel>
       ))}
+      <DerivedPurgePanel />
     </div>
   );
 }
@@ -118,4 +120,79 @@ function jobLabel(j: JobRow): string {
   const media = j.data.mediaObjectId ? ` #${j.data.mediaObjectId}` : '';
   const hook = j.data.webhookId ? ` → webhook ${j.data.webhookId}` : '';
   return `${j.name}${media}${hook}`;
+}
+
+interface PurgeConfig {
+  enabled: boolean;
+  keepVersions: number;
+}
+
+/** Purge des dérivés obsolètes (37.H) : config + exécution manuelle. */
+function DerivedPurgePanel() {
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: qk.admin('derived-purge'),
+    queryFn: () => api.get<{ config: PurgeConfig }>('/api/admin/derived-purge').then((d) => d.config),
+  });
+  const [draft, setDraft] = useState<PurgeConfig | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (data && !draft) setDraft(data);
+  if (!draft) return null;
+
+  const save = async (next: PurgeConfig) => {
+    setDraft(next);
+    try {
+      await api.put('/api/admin/derived-purge', next);
+      qc.invalidateQueries({ queryKey: qk.admin('derived-purge') });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
+  const run = async () => {
+    setBusy(true);
+    try {
+      const { purged } = await api.post<{ purged: number }>('/api/admin/derived-purge/run');
+      toast.success(purged > 0 ? `${purged} média(s) allégé(s) (HLS + sprite retirés)` : 'Rien à purger');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Panel title="Purge des dérivés obsolètes">
+      <p className="mb-2 text-xs text-muted-foreground">
+        Les versions au-delà des N dernières de chaque tâche/asset perdent leurs renditions HLS et leur sprite
+        (le proxy et la miniature restent : lecture toujours possible). Passage quotidien automatique quand
+        activée.
+      </p>
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="accent-primary"
+            checked={draft.enabled}
+            onChange={(e) => void save({ ...draft, enabled: e.target.checked })}
+          />
+          Activée
+        </label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          Conserver les
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={draft.keepVersions}
+            onChange={(e) => void save({ ...draft, keepVersions: Math.max(1, Number(e.target.value) || 1) })}
+            className="w-16 rounded border border-input bg-background px-2 py-1 text-sm"
+          />
+          dernières versions
+        </label>
+        <Button size="sm" variant="outline" onClick={run} disabled={busy || !draft.enabled}>
+          Purger maintenant
+        </Button>
+      </div>
+    </Panel>
+  );
 }
