@@ -26,6 +26,38 @@ export async function notify(params: {
 }
 
 /**
+ * Review live démarrée sur une playlist (dailies, Phase 33 retours) : notifie tous les
+ * membres du projet (sauf l'initiateur) — la notification (type LIVE) mène à la session.
+ */
+export async function notifyPlaylistLiveStarted(
+  playlistId: number,
+  starter: { id: number; displayName: string },
+): Promise<void> {
+  const playlist = await prisma.playlist.findUnique({
+    where: { id: playlistId },
+    select: {
+      name: true,
+      projectId: true,
+      project: { select: { memberships: { select: { userId: true } } } },
+    },
+  });
+  if (!playlist) return;
+  const targets = new Set(playlist.project.memberships.map((m) => m.userId));
+  targets.delete(starter.id);
+  await Promise.all(
+    [...targets].map((userId) =>
+      notify({
+        userId,
+        type: 'LIVE',
+        content: `${starter.displayName} a démarré une review live sur la playlist « ${playlist.name} »`,
+        projectId: playlist.projectId,
+        referenceId: playlistId,
+      }),
+    ),
+  );
+}
+
+/**
  * Envoie un message au webhook Discord du studio (si configuré et valide).
  * Tolérant aux erreurs : un échec Discord ne doit jamais casser le flux applicatif.
  */

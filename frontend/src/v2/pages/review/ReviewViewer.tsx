@@ -1,12 +1,10 @@
-import { type ComponentProps, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { type ComponentProps, useEffect } from 'react';
 import type { ReviewComment, Role } from '../../types/api';
-import { AnnotationCanvas, type Shape } from '../../components/AnnotationCanvas';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';
 import { Skeleton } from '../../components/ui/skeleton';
-import { shapesOutsideFrame } from './frameRect';
 import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
+import { useAnnotationOverlay } from './useAnnotationOverlay';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
@@ -56,6 +54,9 @@ export default function ReviewViewer({
   onFullscreen,
   compareId,
   onCloseCompare,
+  compareMode,
+  onCompareModeChange,
+  sharedWipe,
   imageViewApiRef,
   onImageUserView,
 }: {
@@ -90,6 +91,11 @@ export default function ReviewViewer({
   onFullscreen: () => void;
   compareId: number | null;
   onCloseCompare: () => void;
+  /** Mode de comparaison hissé (répliqué en session live, retours 33). */
+  compareMode: 'side' | 'wipe';
+  onCompareModeChange: (mode: 'side' | 'wipe') => void;
+  /** Position/angle du wipe hissés (répliqués en session live). */
+  sharedWipe?: ComponentProps<typeof VideoWipeOverlay>['sharedWipe'];
   /** Vue image partagée en session live (capture/application) + prise de main sur zoom/pan. */
   imageViewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onImageUserView?: () => void;
@@ -104,9 +110,8 @@ export default function ReviewViewer({
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
   // Verrou de publication (Phase 11) : les outils d'édition (canEditTransform) disparaissent
   // dès la publication (backend en 403) ; la présentation reste pilotable (canManage).
-  // Comparaison A/B vidéo : côte-à-côte ou wipe (14.C).
-  const [compareMode, setCompareMode] = useState<'side' | 'wipe'>('side');
-  const closeCompare = () => (setCompareMode('side'), onCloseCompare());
+  // Comparaison A/B : côte-à-côte ou wipe (14.C) — mode hissé (répliqué en live).
+  const closeCompare = () => (onCompareModeChange('side'), onCloseCompare());
 
   // Hotspot 3D/splat (10.G) : affiche celui du commentaire sélectionné, sinon celui en
   // cours de placement — marqueur projeté à l'écran par le viewer concerné.
@@ -118,32 +123,8 @@ export default function ReviewViewer({
     else if (kind === 'MODEL_3D') showModelHotspot(hotspot3d);
   }, [kind, hotspot3d, showHotspot, showModelHotspot]);
 
-  // Overlay d'annotation 2D ; `captureAspect` (3D) cale le dessin malgré un viewer de
-  // taille différente. Le wrapper est en pointer-events-none : en lecture on peut orbiter
-  // (le modèle reçoit les events) ; en édition la SVG les capte. Le dessin peut déborder du
-  // cadre de livraison (marge, Phase 25) — signalé une fois à l'auteur.
-  const warnedOutside = useRef(false);
-  const onShapesChange = (s: Shape[]) => {
-    ann.setShapes(s);
-    if (!warnedOutside.current && shapesOutsideFrame(s)) {
-      warnedOutside.current = true;
-      toast.info('Une annotation dépasse le cadre de livraison — elle restera visible mais hors cadre.');
-    }
-  };
-  const renderOverlay = (captureAspect?: number) =>
-    ann.annotating || ann.viewed ? (
-      <AnnotationCanvas
-        shapes={ann.viewed ?? ann.annot}
-        onChange={onShapesChange}
-        editable={ann.annotating && !ann.viewed}
-        tool={ann.tool}
-        color={ann.color}
-        width={ann.penWidth}
-        alpha={ann.alpha}
-        captureAspect={captureAspect}
-        margin={0.5}
-      />
-    ) : null;
+  // Overlay d'annotation 2D (extrait — budget 300 lignes).
+  const renderOverlay = useAnnotationOverlay(ann);
 
   // Un déplacement de la vue 3D/splat (orbite, vol, zoom) masque l'annotation du commentaire
   // sélectionné (elle n'a de sens que depuis la caméra d'origine). Vidéo : idem via seek/lecture
@@ -191,7 +172,8 @@ export default function ReviewViewer({
                       compareId={compareId}
                       masterRef={videoRef}
                       onClose={closeCompare}
-                      onSide={() => setCompareMode('side')}
+                      onSide={() => onCompareModeChange('side')}
+                      sharedWipe={sharedWipe}
                     />
                   ) : null
                 }
@@ -228,7 +210,7 @@ export default function ReviewViewer({
               compareId={compareId}
               masterRef={videoRef}
               onClose={closeCompare}
-              onWipe={() => setCompareMode('wipe')}
+              onWipe={() => onCompareModeChange('wipe')}
             />
           )}
         </div>
@@ -243,7 +225,8 @@ export default function ReviewViewer({
             aName={data.media.originalName}
             compareId={compareId}
             onClose={closeCompare}
-            onSide={() => setCompareMode('side')}
+            onSide={() => onCompareModeChange('side')}
+            sharedWipe={sharedWipe}
           />
         ) : (
           <div className="flex min-h-0 flex-1 gap-3">
@@ -292,7 +275,7 @@ export default function ReviewViewer({
               <ImageComparePane
                 compareId={compareId}
                 onClose={closeCompare}
-                onWipe={() => setCompareMode('wipe')}
+                onWipe={() => onCompareModeChange('wipe')}
               />
             )}
           </div>

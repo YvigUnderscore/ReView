@@ -1,7 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
+import { getSocket } from '../../lib/socket';
 import { qk } from './query';
-import type { Asset, Notification, Project, ReviewStatus, SequenceSummary, ShotSummary } from '../types/api';
+import type {
+  Asset,
+  LiveSessionSummary,
+  Notification,
+  Project,
+  ReviewStatus,
+  SequenceSummary,
+  ShotSummary,
+} from '../types/api';
 
 /**
  * Hooks Query partagés entre plusieurs composants (une clé = une shape).
@@ -74,5 +84,35 @@ export function useNotificationsQuery(enabled = true) {
     queryKey: qk.notifications,
     queryFn: () => api.get<NotificationsData>('/api/notifications'),
     enabled,
+  });
+}
+
+/**
+ * Sessions live en cours du projet (badges LIVE — retours 33) : bouton de la review,
+ * cartes de version. Rafraîchies par l'event socket `live:changed` (room du projet,
+ * rejointe via `join_project` par les pages concernées ou ici même).
+ */
+export function useLiveSessionsQuery(projectId: number | null) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (projectId === null) return;
+    const socket = getSocket();
+    socket.emit('join_project', projectId);
+    const onChanged = (data: { projectId: number }) => {
+      if (data.projectId === projectId) void qc.invalidateQueries({ queryKey: qk.liveSessions(projectId) });
+    };
+    socket.on('live:changed', onChanged);
+    return () => {
+      socket.off('live:changed', onChanged);
+    };
+  }, [projectId, qc]);
+  return useQuery({
+    queryKey: qk.liveSessions(projectId ?? 0),
+    queryFn: () =>
+      api
+        .get<{ sessions: LiveSessionSummary[] }>(`/api/live/sessions?projectId=${projectId}`)
+        .then((d) => d.sessions),
+    enabled: projectId !== null,
+    staleTime: 10_000,
   });
 }

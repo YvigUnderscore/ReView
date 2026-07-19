@@ -1,5 +1,6 @@
 import { forwardRef, type ComponentPropsWithoutRef, type ComponentRef } from 'react';
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 /**
@@ -63,4 +64,53 @@ const ContextMenuItem = forwardRef<
 ));
 ContextMenuItem.displayName = 'ContextMenuItem';
 
-export { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator };
+// Sous-menus (gestion des rôles live par clic droit — retours 33).
+const ContextMenuSub = ContextMenuPrimitive.Sub;
+
+const ContextMenuSubTrigger = forwardRef<
+  ComponentRef<typeof ContextMenuPrimitive.SubTrigger>,
+  ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubTrigger>
+>(({ className, children, ...props }, ref) => (
+  <ContextMenuPrimitive.SubTrigger
+    ref={ref}
+    className={cn(
+      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-none transition-colors',
+      'focus:bg-secondary data-[state=open]:bg-secondary',
+      className,
+    )}
+    {...props}
+  >
+    {children}
+    <ChevronRight size={14} className="ml-auto text-muted-foreground" />
+  </ContextMenuPrimitive.SubTrigger>
+));
+ContextMenuSubTrigger.displayName = 'ContextMenuSubTrigger';
+
+const ContextMenuSubContent = forwardRef<
+  ComponentRef<typeof ContextMenuPrimitive.SubContent>,
+  ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubContent>
+>(({ className, ...props }, ref) => (
+  <ContextMenuPrimitive.Portal>
+    <ContextMenuPrimitive.SubContent
+      ref={ref}
+      className={cn(
+        'z-50 min-w-[11rem] overflow-hidden rounded-md border border-border bg-card p-1 text-card-foreground shadow-xl outline-none',
+        'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+        className,
+      )}
+      {...props}
+    />
+  </ContextMenuPrimitive.Portal>
+));
+ContextMenuSubContent.displayName = 'ContextMenuSubContent';
+
+export {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+};

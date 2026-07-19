@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, ListVideo, Pencil, Play, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, ListVideo, Pencil, Play, Radio, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { timeAgo } from '../../lib/time';
 import { useAuth } from '../../stores/useAuth';
+import { useLiveSessionsQuery } from '../../lib/queries';
 import type { PlaylistDetail, PlaylistSummary } from '../../types/api';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import PlaylistItems from './PlaylistItems';
@@ -53,14 +54,17 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['playlists', projectId] });
   const canEdit = (p: PlaylistSummary) => canWrite && (isManager || p.createdBy?.id === userId);
+  // Sessions live en cours → badge LIVE cliquable sur la playlist (retours 33).
+  const liveQ = useLiveSessionsQuery(projectId);
+  const liveOf = (playlistId: number) => (liveQ.data ?? []).find((s) => s.playlistId === playlistId) ?? null;
 
-  const playFirst = async (p: PlaylistSummary) => {
+  const playFirst = async (p: PlaylistSummary, joinLive = false) => {
     try {
       const { playlist } = await api.get<{ playlist: PlaylistDetail }>(`/api/playlists/${p.id}`);
       const first = playlist.items.find((it) => it.media);
       const path = first ? itemPath(first, p.id) : null;
       if (!path) return toast.error('Aucun média lisible dans cette playlist');
-      navigate(path);
+      navigate(joinLive ? `${path}&live=1` : path);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Playlist inaccessible');
     }
@@ -122,22 +126,33 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
             <ContextMenu key={p.id}>
               <ContextMenuTrigger asChild>
                 <div className="rounded-lg border border-border bg-card">
-                  <button
-                    onClick={() => setOpenId((o) => (o === p.id ? null : p.id))}
-                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-                  >
-                    {openId === p.id ? (
-                      <ChevronDown size={15} className="shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => setOpenId((o) => (o === p.id ? null : p.id))}
+                      className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left"
+                    >
+                      {openId === p.id ? (
+                        <ChevronDown size={15} className="shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
+                      )}
+                      <ListVideo size={15} className="shrink-0 text-muted-foreground" />
+                      <span className="font-medium">{p.name}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {p._count.items} version{p._count.items > 1 ? 's' : ''}
+                        {p.createdBy?.name ? ` · ${p.createdBy.name}` : ''} · {timeAgo(p.updatedAt)}
+                      </span>
+                    </button>
+                    {liveOf(p.id) && (
+                      <button
+                        onClick={() => void playFirst(p, true)}
+                        title={`Review live en cours (${liveOf(p.id)!.participantCount} participant${liveOf(p.id)!.participantCount > 1 ? 's' : ''}). Cliquer pour rejoindre.`}
+                        className="mr-3 flex shrink-0 items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent2 hover:bg-accent2/20"
+                      >
+                        <Radio size={12} className="animate-pulse" /> LIVE · {liveOf(p.id)!.participantCount}
+                      </button>
                     )}
-                    <ListVideo size={15} className="shrink-0 text-muted-foreground" />
-                    <span className="font-medium">{p.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {p._count.items} version{p._count.items > 1 ? 's' : ''}
-                      {p.createdBy?.name ? ` · ${p.createdBy.name}` : ''} · {timeAgo(p.updatedAt)}
-                    </span>
-                  </button>
+                  </div>
                   {openId === p.id && (
                     <PlaylistItems playlistId={p.id} canEdit={canEdit(p)} onChanged={refresh} />
                   )}

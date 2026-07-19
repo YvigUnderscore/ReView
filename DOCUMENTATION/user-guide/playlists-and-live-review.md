@@ -58,19 +58,26 @@ playlist navigator, but it also works on a single media.
   joins the same room, subject to project access).
 - The **driver** (see roles below) drives everyone: current media (navigation
   follows automatically, including playlist prev/next), video playhead and
-  play/pause, **A/B comparison**, the **3D/splat camera including splat
-  depth-of-field**, and the **image zoom/pan**. The broadcast rate is
-  configurable per media type in *Admin → Réglages* (`Live : cadence …`,
+  play/pause, **A/B comparison including the side-by-side / wipe mode and the
+  wipe bar position and angle**, the **3D/splat camera including splat
+  depth-of-field** (followed continuously, including while the driver holds a
+  right-click fly/look-around drag), and the **image zoom/pan**. The broadcast
+  rate is configurable per media type in *Admin → Réglages* (`Live : cadence …`,
   1–30 Hz — raise the 3D/splat rates for smoother camera following).
-- **Roles**: the first participant is the **pilot** (crown). Right-clicking a
-  participant's avatar, the pilot can *Donner la main* (full pilot handoff) or
-  *Nommer co-pilote* (lightning icon). Among pilot and co-pilots, the
-  **driver** — highlighted with a ring — is simply the last one who interacted
-  (play/pause/seek, playlist navigation, camera click, image zoom/pan): the
+- **Roles**: the first participant is the **pilot** (crown). The pilot manages
+  roles by right-clicking a participant's avatar, or by **right-clicking the
+  LIVE chip** (submenus *Donner la main* / *Co-pilotes* listing every
+  participant): *Donner la main* is a full pilot handoff, *Nommer co-pilote*
+  grants the lightning icon. Among pilot and co-pilots, the **driver** —
+  highlighted with a ring — is simply the last one who interacted (play/pause/
+  seek, playlist navigation, camera click, image zoom/pan, wipe drag): the
   first to act takes the wheel.
-- If the pilot leaves, the first co-pilot (else the longest-present
+- **Refreshing keeps your role**: a page reload (F5) or a brief disconnect
+  keeps the pilot/co-pilot roles — the server waits a grace period (10 s)
+  before actually removing a disconnected participant.
+- If the pilot leaves for good, the first co-pilot (else the longest-present
   participant) inherits the session. Leaving is a click on the LIVE chip;
-  closing the tab works too.
+  closing the tab works too (after the grace period).
 - **Autoplay**: if a viewer joined without interacting with the page first,
   the browser may block sound — playback then starts muted and a *Son* button
   appears on the LIVE chip to enable audio.
@@ -78,5 +85,24 @@ playlist navigator, but it also works on a single media.
   so supervisors can dispatch approvals/retakes as the room reviews each
   version (see [Review decisions & approvals](review-approvals.md)).
 
+### Seeing that a session is running
+
+Ongoing sessions are surfaced wherever the content appears (refreshed in real
+time over the project socket room):
+
+- **Review header**: if a session already runs on the current media/playlist,
+  the antenna button becomes a pulsing **LIVE · n** badge (tooltip shows the
+  pilot) — one click joins it.
+- **Version cards** (task and asset pages) show the same clickable badge when
+  one of their media hosts a session.
+- **Playlists tab**: a playlist with a live session shows the badge; clicking
+  it opens the first playable item and joins the room.
+- **Dailies notification**: when someone starts a live session **on a
+  playlist**, every project member receives an in-app notification
+  ("X a démarré une review live sur la playlist « … »") — clicking it joins
+  the session directly.
+
 Access control is enforced server-side: joining a room re-checks project
 membership, and only sync messages from the pilot/co-pilots are relayed.
+`GET /api/live/sessions?projectId=` returns the project's ongoing sessions
+(key, media/playlist/version ids, participant count, pilot).

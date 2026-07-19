@@ -5,7 +5,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
-import { useWipe } from './useWipe';
+import { useWipe, type WipeShared } from './useWipe';
 import WipeControl from './WipeControl';
 
 /**
@@ -18,15 +18,18 @@ export default function VideoWipeOverlay({
   masterRef,
   onClose,
   onSide,
+  sharedWipe,
 }: {
   compareId: number;
   masterRef: RefObject<HTMLVideoElement | null>;
   onClose: () => void;
   onSide: () => void;
+  /** Position/angle hissés (répliqués en session live). */
+  sharedWipe?: WipeShared;
 }) {
   const slaveRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
-  const wipe = useWipe();
+  const wipe = useWipe(sharedWipe);
 
   const mediaQ = useQuery({
     queryKey: qk.media(compareId),

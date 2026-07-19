@@ -18,14 +18,28 @@ describe('modelCamera — capture/restauration de vue (V5)', () => {
     expect(q.x).toBeCloseTo(5);
   });
 
-  it('capture position + cible + fov', () => {
+  it('capture position + cible + fov (caméra orientée vers la cible, comme OrbitControls)', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     camera.position.set(1, 2, 3);
-    const controls = { target: new THREE.Vector3(4, 5, 6) } as never;
+    const target = new THREE.Vector3(4, 5, 6);
+    camera.lookAt(target);
+    const controls = { target } as never;
     const s = captureModelCamera(THREE, camera, controls);
     expect(s.position).toEqual({ x: 1, y: 2, z: 3 });
-    expect(s.target).toEqual({ x: 4, y: 5, z: 6 });
+    expect(s.target.x).toBeCloseTo(4);
+    expect(s.target.y).toBeCloseTo(5);
+    expect(s.target.z).toBeCloseTo(6);
     expect(s.fov).toBe(50);
+  });
+
+  it('vol (controls gelés) : la capture suit la rotation réelle de la caméra (live, retours 33)', () => {
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.position.set(0, 0, 5);
+    const controls = { target: new THREE.Vector3(0, 0, 0) } as never;
+    camera.quaternion.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0, 'YXZ'));
+    const s = captureModelCamera(THREE, camera, controls);
+    expect(s.target.x).toBeCloseTo(-5); // reprojetée devant la caméra (distance d'orbite 5)
+    expect(s.target.z).toBeCloseTo(5);
   });
 
   it('restaure un état position (nouveau format)', () => {

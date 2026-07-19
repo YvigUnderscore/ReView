@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Bell,
@@ -7,11 +8,14 @@ import {
   ChevronRight,
   ClipboardCheck,
   ListVideo,
+  Radio,
   Trash2,
   Upload,
 } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { reviewPath } from '../../lib/slug';
+import { useLiveSessionsQuery } from '../../lib/queries';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import {
@@ -64,7 +68,11 @@ export default function VersionTimelineItem({
   const [open, setOpen] = useState(defaultOpen);
   const [decisionOpen, setDecisionOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const navigate = useNavigate();
   const role = useAuth((s) => s.user?.role);
+  // Session live en cours sur un média de cette version → badge LIVE cliquable (retours 33).
+  const liveQ = useLiveSessionsQuery(projectId);
+  const liveSession = (liveQ.data ?? []).find((s) => s.versionId === version.id && s.mediaId != null) ?? null;
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
   const canPlaylist = projectId !== null && role !== 'CLIENT';
   // Suivi de notifications de la version (32.G).
@@ -111,6 +119,15 @@ export default function VersionTimelineItem({
                 </span>
               </button>
               <div className="flex shrink-0 items-center gap-1.5">
+                {liveSession && (
+                  <button
+                    onClick={() => navigate(`${reviewPath({ id: liveSession.mediaId! })}?live=1`)}
+                    title={`Review live en cours${liveSession.pilot ? ` — pilotée par ${liveSession.pilot.displayName}` : ''} (${liveSession.participantCount} participant${liveSession.participantCount > 1 ? 's' : ''}). Cliquer pour rejoindre.`}
+                    className="flex items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent2 hover:bg-accent2/20"
+                  >
+                    <Radio size={12} className="animate-pulse" /> LIVE · {liveSession.participantCount}
+                  </button>
+                )}
                 {canCreate && (
                   <Button size="sm" variant="outline" onClick={() => onUpload(version.id)}>
                     <Upload size={13} /> Média

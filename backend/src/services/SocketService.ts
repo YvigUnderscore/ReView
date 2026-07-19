@@ -25,8 +25,13 @@ import {
   isLiveDriver,
   claimDrive,
   getLiveState,
+  getLiveProjectId,
+  scheduleLiveLeave,
+  cancelLiveLeave,
   type LiveParticipant,
+  type LiveSessionMeta,
 } from './LiveSessionService';
+import { notifyPlaylistLiveStarted } from './NotificationService';
 
 let io: SocketServer | undefined;
 
@@ -136,10 +141,13 @@ export const initSocket = (server: HttpServer): SocketServer => {
         return playlist?.projectId ?? null;
       };
       socket.on('live:join', async (key: string) => {
+        // Reprise après F5 : annule le départ en grâce, le rôle (pilote…) est conservé.
+        cancelLiveLeave(key, uid);
         // Re-join idempotent (navigation interne) : ré-émet simplement l'état courant.
         if (joinedLives.has(key)) return emitLiveState(key, getLiveState(key));
+        const target = parseLiveKey(key);
         const projectId = await resolveLiveProject(key);
-        if (!projectId || !(await checkProjectAccess(uid, socket.user!.role, projectId))) return;
+        if (!target || !projectId || !(await checkProjectAccess(uid, socket.user!.role, projectId))) return;
         const raw = await prisma.user.findUnique({
           where: { id: uid },
           select: {
@@ -160,14 +168,32 @@ export const initSocket = (server: HttpServer): SocketServer => {
           initials: pub.initials,
           avatarUrl: pub.avatarUrl,
         };
+        // Méta résolue à la création (badges LIVE par projet) + notification dailies :
+        // un live démarré sur une playlist notifie les membres du projet (une fois).
+        const created = !getLiveState(key);
+        const meta: LiveSessionMeta =
+          target.type === 'media' ? { projectId, mediaId: target.id } : { projectId, playlistId: target.id };
+        if (created && target.type === 'media') {
+          const media = await prisma.mediaObject.findUnique({
+            where: { id: target.id },
+            select: { versionId: true },
+          });
+          if (media) meta.versionId = media.versionId;
+        }
         socket.join(`live_${key}`);
         joinedLives.add(key);
-        emitLiveState(key, joinLive(key, participant));
+        emitLiveState(key, joinLive(key, participant, meta));
+        emitToProject(projectId, 'live:changed', { projectId });
+        if (created && target.type === 'playlist')
+          void notifyPlaylistLiveStarted(target.id, { id: uid, displayName: pub.displayName });
       });
       socket.on('live:leave', (key: string) => {
         if (!joinedLives.delete(key)) return;
         socket.leave(`live_${key}`);
+        cancelLiveLeave(key, uid);
+        const pid = getLiveProjectId(key);
         emitLiveState(key, leaveLive(key, uid));
+        if (pid) emitToProject(pid, 'live:changed', { projectId: pid });
       });
       socket.on('live:sync', (key: string, payload: unknown) => {
         if (!joinedLives.has(key) || !canDriveLive(key, uid)) return;
@@ -198,7 +224,14 @@ export const initSocket = (server: HttpServer): SocketServer => {
           emitViewers(mid);
         }
         joinedReviews.clear();
-        for (const key of joinedLives) emitLiveState(key, leaveLive(key, uid));
+        // Départ live différé (grâce) : un F5 re-join avant l'échéance et garde son rôle.
+        for (const key of joinedLives) {
+          const pid = getLiveProjectId(key);
+          scheduleLiveLeave(key, uid, (state) => {
+            emitLiveState(key, state);
+            if (pid) emitToProject(pid, 'live:changed', { projectId: pid });
+          });
+        }
         joinedLives.clear();
       });
     }

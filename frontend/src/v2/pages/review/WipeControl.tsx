@@ -56,6 +56,8 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
     e.stopPropagation();
     dragging.current = { mode, pivot: [cx, cy] };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Session live : manipuler le wipe vaut prise de main (co-pilote → driver).
+    wipe.onGrab?.();
   };
   const release = () => (dragging.current = null);
 

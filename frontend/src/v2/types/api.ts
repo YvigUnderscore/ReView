@@ -219,6 +219,17 @@ export interface PlaylistItemEntry {
 /** GET /api/playlists/:id — items ordonnés. */
 export type PlaylistDetail = Omit<PlaylistSummary, '_count'> & { items: PlaylistItemEntry[] };
 
+/** GET /api/live/sessions?projectId= — session live en cours (badges LIVE, retours 33). */
+export interface LiveSessionSummary {
+  key: string;
+  projectId: number;
+  mediaId?: number;
+  playlistId?: number;
+  versionId?: number;
+  participantCount: number;
+  pilot: { id: number; displayName: string; initials: string; avatarUrl: string | null } | null;
+}
+
 export interface Media {
   id: number;
   kind: MediaKind;

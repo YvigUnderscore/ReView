@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { AtSign, Bell, CheckCheck, ListTodo, MessageSquare, Reply } from 'lucide-react';
+import { AtSign, Bell, CheckCheck, ListTodo, MessageSquare, Radio, Reply } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { getSocket } from '../../lib/socket';
 import { qk } from '../lib/query';
 import { timeAgo } from '../lib/time';
 import { useNotificationsQuery, type NotificationsData } from '../lib/queries';
+import { itemPath } from '../pages/review/playlistNav';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Skeleton } from './ui/skeleton';
-import type { Notification } from '../types/api';
+import type { Notification, PlaylistDetail } from '../types/api';
 
 /** Cible navigable d'une notification selon son type (référence = tâche ou média). */
 function linkFor(n: Notification): string | null {
@@ -24,12 +25,30 @@ function linkFor(n: Notification): string | null {
   return null;
 }
 
+/**
+ * Notification LIVE (review live sur une playlist, retours 33) : mène directement à la
+ * session — premier média lisible de la playlist avec `?playlist=&live=1`. Repli : projet.
+ */
+async function liveLinkFor(n: Notification): Promise<string | null> {
+  if (!n.referenceId) return n.projectId ? `/projects/${n.projectId}` : null;
+  try {
+    const { playlist } = await api.get<{ playlist: PlaylistDetail }>(`/api/playlists/${n.referenceId}`);
+    const first = playlist.items.find((it) => it.media);
+    const path = first ? itemPath(first, playlist.id) : null;
+    if (path) return `${path}&live=1`;
+  } catch {
+    // Playlist supprimée ou inaccessible : repli sur la page projet.
+  }
+  return n.projectId ? `/projects/${n.projectId}` : null;
+}
+
 function IconFor({ type }: { type: Notification['type'] }) {
   const cls = 'mt-0.5 shrink-0 text-muted-foreground';
   if (type === 'TASK_ASSIGNED') return <ListTodo size={16} className={cls} />;
   if (type === 'REPLY') return <Reply size={16} className={cls} />;
   if (type === 'COMMENT_ASSIGNED') return <MessageSquare size={16} className={cls} />;
   if (type === 'MENTION') return <AtSign size={16} className={cls} />;
+  if (type === 'LIVE') return <Radio size={16} className="mt-0.5 shrink-0 text-accent2" />;
   return <Bell size={16} className={cls} />;
 }
 
@@ -84,6 +103,10 @@ export default function NotificationBell() {
   const onItemClick = (n: Notification) => {
     if (!n.isRead) markRead.mutate(n.id);
     setOpen(false);
+    if (n.type === 'LIVE') {
+      void liveLinkFor(n).then((to) => to && navigate(to));
+      return;
+    }
     const to = linkFor(n);
     if (to) navigate(to);
   };

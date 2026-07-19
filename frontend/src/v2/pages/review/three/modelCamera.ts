@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { applyRoll, rollFromUp } from './cameraRoll';
+import { applyRoll, captureCameraView } from './cameraRoll';
 
 /** Vue caméra d'un modèle Three (position/cible libres) — stockée dans `Comment.cameraState`. */
 export interface ModelCameraState {
@@ -41,16 +41,8 @@ export function captureModelCamera(
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
 ): ModelCameraState {
-  const cam: ModelCameraState = {
-    position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-    target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
-    fov: camera.fov,
-    aspect: camera.aspect,
-  };
-  const forward = new three.Vector3().subVectors(controls.target, camera.position);
-  const roll = rollFromUp(three, forward, camera.up);
-  if (Math.abs(roll) > 1e-4) cam.roll = roll;
-  return cam;
+  // Pose réelle (quaternion) : suit aussi la rotation en cours de vol (live, retours 33).
+  return captureCameraView(three, camera, controls);
 }
 
 /**

@@ -50,3 +50,37 @@ export function rollFromUp(three: typeof import('three'), forward: THREE.Vector3
   const perp = new three.Vector3().crossVectors(f, base);
   return Math.atan2(perp.dot(u), base.dot(u));
 }
+
+/**
+ * Vue caméra **réellement affichée** (position/cible/roll) — lue depuis la pose de la
+ * caméra (quaternion), pas depuis `controls.target` : pendant le vol (clic droit),
+ * OrbitControls est gelé et sa cible n'est recalée qu'au relâchement — capturer la cible
+ * des controls figeait la rotation diffusée en session live (retours 33). La cible est
+ * reprojetée devant la caméra à la distance d'orbite courante ; hors vol (caméra orientée
+ * par `lookAt`), le résultat est identique à l'ancienne lecture des controls.
+ */
+export function captureCameraView(
+  three: typeof import('three'),
+  camera: THREE.PerspectiveCamera,
+  controls: { target: THREE.Vector3 },
+): {
+  position: { x: number; y: number; z: number };
+  target: { x: number; y: number; z: number };
+  fov: number;
+  aspect: number;
+  roll?: number;
+} {
+  const dist = Math.max(camera.position.distanceTo(controls.target), 1e-3);
+  const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const target = camera.position.clone().addScaledVector(forward, dist);
+  const up = new three.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+  const view: ReturnType<typeof captureCameraView> = {
+    position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+    target: { x: target.x, y: target.y, z: target.z },
+    fov: camera.fov,
+    aspect: camera.aspect,
+  };
+  const roll = rollFromUp(three, forward, up);
+  if (Math.abs(roll) > 1e-4) view.roll = roll;
+  return view;
+}

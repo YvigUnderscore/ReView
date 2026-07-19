@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   parseLiveKey,
   joinLive,
@@ -9,6 +9,10 @@ import {
   isLiveDriver,
   claimDrive,
   getLiveState,
+  getLiveProjectId,
+  listLiveSessions,
+  scheduleLiveLeave,
+  cancelLiveLeave,
   resetLiveSessions,
   type LiveParticipant,
 } from './LiveSessionService';
@@ -136,5 +140,77 @@ describe('co-pilotes & driver (retours CP-HUMAIN 33)', () => {
     claimDrive('media:1', 20);
     const s = leaveLive('media:1', 20);
     expect(s?.driverId).toBe(10);
+  });
+});
+
+describe('méta & liste des sessions par projet (retours 33 — badges LIVE)', () => {
+  it('la méta est posée à la création et conservée aux joins suivants', () => {
+    joinLive('media:1', p(10), { projectId: 7, mediaId: 1, versionId: 3 });
+    joinLive('media:1', p(20), { projectId: 99, mediaId: 1 }); // ignorée (déjà posée)
+    expect(getLiveProjectId('media:1')).toBe(7);
+    const sessions = listLiveSessions(7);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      key: 'media:1',
+      mediaId: 1,
+      versionId: 3,
+      participantCount: 2,
+    });
+    expect(sessions[0]?.pilot?.id).toBe(10);
+  });
+
+  it('ne liste que le projet demandé ; session fermée → disparaît', () => {
+    joinLive('media:1', p(10), { projectId: 7, mediaId: 1 });
+    joinLive('playlist:2', p(20), { projectId: 8, playlistId: 2 });
+    expect(listLiveSessions(7).map((s) => s.key)).toEqual(['media:1']);
+    leaveLive('media:1', 10);
+    expect(listLiveSessions(7)).toEqual([]);
+    expect(getLiveProjectId('media:1')).toBeNull();
+  });
+});
+
+describe('grâce de déconnexion (retours 33 — F5 garde le rôle de pilote)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('re-join pendant la grâce : le départ est annulé, le pilote garde la main', () => {
+    joinLive('media:1', p(10));
+    joinLive('media:1', p(20));
+    const onLeft = vi.fn();
+    scheduleLiveLeave('media:1', 10, onLeft, 5000);
+    vi.advanceTimersByTime(3000);
+    expect(cancelLiveLeave('media:1', 10)).toBe(true);
+    const s = joinLive('media:1', p(10));
+    vi.advanceTimersByTime(10_000);
+    expect(onLeft).not.toHaveBeenCalled();
+    expect(s.pilotId).toBe(10);
+    expect(getLiveState('media:1')?.pilotId).toBe(10);
+  });
+
+  it('grâce échue : le départ est appliqué et notifié (main transmise)', () => {
+    joinLive('media:1', p(10));
+    joinLive('media:1', p(20));
+    const onLeft = vi.fn();
+    scheduleLiveLeave('media:1', 10, onLeft, 5000);
+    vi.advanceTimersByTime(5000);
+    expect(onLeft).toHaveBeenCalledOnce();
+    expect(onLeft.mock.calls[0]?.[0]?.pilotId).toBe(20);
+    expect(cancelLiveLeave('media:1', 10)).toBe(false);
+  });
+
+  it('reprogrammation : un second schedule remplace le premier (un seul départ)', () => {
+    joinLive('media:1', p(10));
+    const onLeft = vi.fn();
+    scheduleLiveLeave('media:1', 10, onLeft, 5000);
+    vi.advanceTimersByTime(3000);
+    scheduleLiveLeave('media:1', 10, onLeft, 5000);
+    vi.advanceTimersByTime(4000);
+    expect(onLeft).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1000);
+    expect(onLeft).toHaveBeenCalledOnce();
   });
 });

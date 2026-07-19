@@ -62,5 +62,6 @@ export const qk = {
   watches: ['watches'] as const,
   playlists: (projectId: number) => ['playlists', projectId] as const,
   playlist: (id: number) => ['playlist', id] as const,
+  liveSessions: (projectId: number) => ['live-sessions', projectId] as const,
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
 } as const;

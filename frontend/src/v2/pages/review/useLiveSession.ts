@@ -3,36 +3,21 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSocket } from '../../../lib/socket';
 import { reviewPath } from '../../lib/slug';
 import { useAuth } from '../../stores/useAuth';
-import type { ImageView, ImageViewApi } from '../../components/ImageReviewViewer';
+import type { ImageViewApi } from '../../components/ImageReviewViewer';
+import {
+  cancelPendingLeave,
+  driverMedia,
+  schedulePendingLeave,
+  type LiveParticipant,
+  type LiveStatePayload,
+  type LiveSyncPayload,
+} from './liveSync';
 
-/** Participant d'une session live (payload socket `live:state`). */
-export interface LiveParticipant {
-  id: number;
-  displayName: string;
-  initials: string;
-  avatarUrl: string | null;
-}
-export interface LiveStatePayload {
-  key: string;
-  pilotId: number;
-  coHostIds: number[];
-  /** Pilote ou co-pilote dont la diffusion fait foi (dernier à avoir interagi). */
-  driverId: number;
-  participants: LiveParticipant[];
-}
-/** État diffusé par le driver — appliqué tel quel par les spectateurs. */
-interface LiveSyncPayload {
-  mediaId: number;
-  t?: number;
-  playing?: boolean;
-  camera?: unknown;
-  compareId?: number | null;
-  imageView?: ImageView;
-  /** Interaction explicite (play/seek/navigation/zoom) — vaut prise de main d'un co-pilote. */
-  action?: boolean;
-}
+export type { LiveParticipant, LiveStatePayload } from './liveSync';
 
 export interface LiveSession {
+  /** Clé de la session courante (`media:<id>` ou `playlist:<id>`) — badges LIVE. */
+  key: string;
   /** En session (rejointe et non quittée). */
   active: boolean;
   isPilot: boolean;
@@ -54,33 +39,6 @@ export interface LiveSession {
 }
 
 /**
- * Départs différés par clé de session : la navigation interne (média suivant d'une
- * playlist) démonte puis remonte le hook — on n'émet `live:leave` que si aucun
- * nouveau montage n'a repris la session entre-temps (sinon le pilote perdrait la main).
- */
-const pendingLeaves = new Map<string, number>();
-const cancelPendingLeave = (key: string) => {
-  const t = pendingLeaves.get(key);
-  if (t !== undefined) {
-    window.clearTimeout(t);
-    pendingLeaves.delete(key);
-  }
-};
-const schedulePendingLeave = (key: string) => {
-  cancelPendingLeave(key);
-  pendingLeaves.set(
-    key,
-    window.setTimeout(() => {
-      pendingLeaves.delete(key);
-      getSocket().emit('live:leave', key);
-    }, 1500),
-  );
-};
-
-/** Dernier média imposé par le driver — distingue navigation suivie / navigation locale. */
-let lastDriverMediaId = 0;
-
-/**
  * Salle de review live (33.B + retours CP-HUMAIN). Session identifiée par
  * `playlist:<id>` (si `?playlist=`) sinon `media:<id>`. Le **driver** (pilote ou
  * co-pilote ayant interagi en dernier) diffuse à `syncHz` : média courant,
@@ -98,6 +56,10 @@ export function useLiveSession({
   restoreCamera,
   compareId,
   onCompareChange,
+  compareMode,
+  onCompareModeChange,
+  wipe,
+  onWipeApply,
   imageViewApiRef,
 }: {
   mediaId: number;
@@ -110,6 +72,11 @@ export function useLiveSession({
   restoreCamera: (camera: unknown) => void;
   compareId: number | null;
   onCompareChange: (id: number | null) => void;
+  /** Mode de comparaison + barre de wipe — diffusés par le driver (retours 33). */
+  compareMode: 'side' | 'wipe';
+  onCompareModeChange: (mode: 'side' | 'wipe') => void;
+  wipe: { pos: number; angle: number };
+  onWipeApply: (pos: number, angle: number) => void;
   imageViewApiRef: React.MutableRefObject<ImageViewApi | null>;
 }): LiveSession {
   const navigate = useNavigate();
@@ -129,12 +96,26 @@ export function useLiveSession({
   // Application d'une sync en cours : les événements vidéo qui en découlent ne sont
   // pas des interactions locales (un co-pilote ne doit pas voler la main en suivant).
   const applyingRef = useRef(false);
-  // Refs miroir pour les callbacks socket/intervalles (pas de re-abonnement par tick).
+  // Refs miroir pour les callbacks socket/intervalles (pas de re-abonnement par tick) :
+  // recopiées après chaque render (l'effet sans dépendances court à chaque commit).
   const is3d = kind === 'MODEL_3D' || kind === 'SPLAT';
-  const applyRef = useRef({ mediaId, is3d, kind, restoreCamera, captureCamera, compareId, onCompareChange });
+  const mirror = {
+    mediaId,
+    is3d,
+    kind,
+    restoreCamera,
+    captureCamera,
+    compareId,
+    onCompareChange,
+    compareMode,
+    onCompareModeChange,
+    wipe,
+    onWipeApply,
+  };
+  const applyRef = useRef(mirror);
   useEffect(() => {
-    applyRef.current = { mediaId, is3d, kind, restoreCamera, captureCamera, compareId, onCompareChange };
-  }, [mediaId, is3d, kind, restoreCamera, captureCamera, compareId, onCompareChange]);
+    applyRef.current = mirror;
+  });
 
   const setLiveParam = useCallback(
     (on: boolean) =>
@@ -162,7 +143,14 @@ export function useLiveSession({
         payload.playing = !video.paused;
       }
       if (cur.is3d) payload.camera = cur.captureCamera();
-      if (cur.kind === 'VIDEO' || cur.kind === 'IMAGE') payload.compareId = cur.compareId;
+      if (cur.kind === 'VIDEO' || cur.kind === 'IMAGE') {
+        payload.compareId = cur.compareId;
+        // Comparaison active : le mode (côte-à-côte/wipe) et la barre suivent le driver.
+        if (cur.compareId != null) {
+          payload.compareMode = cur.compareMode;
+          if (cur.compareMode === 'wipe') payload.wipe = cur.wipe;
+        }
+      }
       if (cur.kind === 'IMAGE') {
         const view = imageViewApiRef.current?.capture();
         if (view) payload.imageView = view;
@@ -196,9 +184,11 @@ export function useLiveSession({
 
   /** Interaction locale d'un pilote/co-pilote : sync immédiate marquée `action`. */
   const claimInteraction = useCallback(() => {
-    if (!canDrive || applyingRef.current) return;
+    // Déjà driver : la diffusion périodique suffit (évite un spam d'émissions pendant
+    // un drag continu — wipe, zoom). Le claim ne sert qu'à prendre la main.
+    if (!canDrive || isDriver || applyingRef.current) return;
     getSocket().emit('live:sync', key, buildPayload(true));
-  }, [canDrive, key, buildPayload]);
+  }, [canDrive, isDriver, key, buildPayload]);
 
   const unmute = useCallback(() => {
     const video = videoRef.current;
@@ -230,7 +220,7 @@ export function useLiveSession({
 
   // Navigation locale d'un co-pilote (≠ suivi du driver) → prise de main immédiate.
   useEffect(() => {
-    if (!canDrive || isDriver || lastDriverMediaId === 0 || lastDriverMediaId === mediaId) return;
+    if (!canDrive || isDriver || driverMedia.lastId === 0 || driverMedia.lastId === mediaId) return;
     claimInteraction();
     // Volontairement dépendant du seul montage/état : une navigation = un claim.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,14 +237,14 @@ export function useLiveSession({
       applyingRef.current = true;
       try {
         if (payload.mediaId !== cur.mediaId) {
-          lastDriverMediaId = payload.mediaId;
+          driverMedia.lastId = payload.mediaId;
           const carry = new URLSearchParams();
           if (playlistId > 0) carry.set('playlist', String(playlistId));
           carry.set('live', '1');
           navigate(`${reviewPath({ id: payload.mediaId })}?${carry.toString()}`);
           return;
         }
-        lastDriverMediaId = payload.mediaId;
+        driverMedia.lastId = payload.mediaId;
         const video = videoRef.current;
         if (video && payload.t !== undefined) {
           // Recalage : à la frame près en pause (les frames doivent être alignées),
@@ -278,6 +268,10 @@ export function useLiveSession({
         if (payload.camera !== undefined && cur.is3d) cur.restoreCamera(payload.camera);
         if (payload.compareId !== undefined && payload.compareId !== cur.compareId)
           cur.onCompareChange(payload.compareId);
+        if (payload.compareMode !== undefined && payload.compareMode !== cur.compareMode)
+          cur.onCompareModeChange(payload.compareMode);
+        if (payload.wipe && (payload.wipe.pos !== cur.wipe.pos || payload.wipe.angle !== cur.wipe.angle))
+          cur.onWipeApply(payload.wipe.pos, payload.wipe.angle);
         if (payload.imageView && cur.kind === 'IMAGE') imageViewApiRef.current?.apply(payload.imageView);
       } finally {
         // Reset différé : les événements play/pause/seeked découlant de l'application
@@ -333,6 +327,7 @@ export function useLiveSession({
   }, [isDriver, key, syncHz, buildPayload]);
 
   return {
+    key,
     active,
     isPilot,
     isDriver,

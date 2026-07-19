@@ -73,7 +73,7 @@ export default function ReviewHeader({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2 text-sm">
-        <LiveControl live={live} />
+        <LiveControl live={live} projectId={data.projectId} />
         {viewers.length > 0 && (
           <div
             className="flex items-center -space-x-2"

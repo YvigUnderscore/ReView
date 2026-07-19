@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SplatCamera } from '../../reviewTypes';
-import { applyRoll, rollFromUp } from '../../three/cameraRoll';
+import { applyRoll, captureCameraView } from '../../three/cameraRoll';
 
 /**
  * Capture/restauration de la vue caméra du splat (extrait de `useSplat`, budget 300) : position,
@@ -12,16 +12,9 @@ export function captureSplatCamera(
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
 ): SplatCamera {
-  const cam: SplatCamera = {
-    position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-    target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
-    fov: camera.fov,
-    aspect: camera.aspect,
-  };
-  const forward = new three.Vector3().subVectors(controls.target, camera.position);
-  const roll = rollFromUp(three, forward, camera.up);
-  if (Math.abs(roll) > 1e-4) cam.roll = roll; // omis si horizon droit (rétro-compat)
-  return cam;
+  // Pose réelle (quaternion) : suit aussi la rotation en cours de vol (live, retours 33).
+  // Le roll reste omis si l'horizon est droit (rétro-compat des états enregistrés).
+  return captureCameraView(three, camera, controls);
 }
 
 export function restoreSplatCamera(

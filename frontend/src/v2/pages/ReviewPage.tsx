@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { mediaSlug, parseIdParam } from '../lib/slug';
@@ -17,8 +16,10 @@ import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { useAnnotations } from './review/useAnnotations';
 import { loadDraft, saveDraft } from './review/commentDraft';
+import { useCompareState } from './review/useCompareState';
 import { useDeepLink } from './review/useDeepLink';
 import { useLiveSession } from './review/useLiveSession';
+import { useMediaActions } from './review/useMediaActions';
 import { useSubmitComment } from './review/useSubmitComment';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useAutoThumbnail } from './review/useAutoThumbnail';
@@ -48,9 +49,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Commentaire actuellement affiché (carte mise en avant + annotation visible)
   const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
   const [fpsOverride, setFpsOverride] = useState(24);
-  const [reprocessing, setReprocessing] = useState(false);
-  // Comparaison A/B vidéo (backlog P2) : média B affiché côte à côte, lecture synchronisée.
-  const [compareId, setCompareId] = useState<number | null>(null);
+  // Comparaison A/B + mode + wipe hissés ici pour être répliqués en live (retours 33).
+  const compare = useCompareState();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -191,10 +191,17 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     captureCamera: () => (data?.media.kind === 'SPLAT' ? splat.captureCamera() : model3d.captureCamera()),
     restoreCamera: (cam) =>
       data?.media.kind === 'SPLAT' ? splat.restoreCamera(cam) : model3d.restoreCamera(cam),
-    compareId,
-    onCompareChange: setCompareId,
+    compareId: compare.compareId,
+    onCompareChange: compare.setCompareId,
+    compareMode: compare.compareMode,
+    onCompareModeChange: compare.setCompareMode,
+    wipe: compare.wipe,
+    onWipeApply: compare.applyWipe,
     imageViewApiRef,
   });
+
+  // Barre de wipe : état hissé + prise de main d'un co-pilote dès la poignée saisie.
+  const sharedWipe = compare.makeSharedWipe(live.claimInteraction);
 
   const placeHotspotCenter = () => {
     const h = data?.media.kind === 'SPLAT' ? splat.raycastCenter() : model3d.hotspotAtCenter();
@@ -231,36 +238,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     loadComments,
   });
 
-  const publishMedia = async () => {
-    if (!data) return;
-    try {
-      const { media } = await api.post<{ media: MediaResp['media'] }>(`/api/media/${id}/publish`);
-      // Mise à jour ciblée du cache : pas de refetch (les URLs présignées changeraient
-      // et rechargeraient le viewer) — seuls le badge et les brouillons sont concernés.
-      qc.setQueryData<MediaResp>(qk.media(id), (old) =>
-        old ? { ...old, media: { ...old.media, published: media.published } } : old,
-      );
-      qc.invalidateQueries({ queryKey: qk.drafts });
-      qc.invalidateQueries({ queryKey: ['versions'] });
-      toast.success('Média publié pour l’équipe');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur à la publication');
-    }
-  };
-
-  const reprocessMedia = async () => {
-    setReprocessing(true);
-    try {
-      await api.post(`/api/media/${id}/reprocess`);
-      await qc.invalidateQueries({ queryKey: qk.media(id) });
-      model3d.clearLoadError();
-      toast.success('Conversion relancée');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur à la relance de la conversion');
-    } finally {
-      setReprocessing(false);
-    }
-  };
+  // Publication + relance de conversion (extrait — budget 300 lignes).
+  const { reprocessing, publishMedia, reprocessMedia } = useMediaActions(id, model3d);
 
   const kind = data?.media.kind;
   const fps = data?.fps ?? fpsOverride;
@@ -284,8 +263,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onPublish={publishMedia}
             commentsOpen={commentsOpen}
             onToggleComments={() => setCommentsOpen((o) => !o)}
-            compareId={compareId}
-            onCompareChange={setCompareId}
+            compareId={compare.compareId}
+            onCompareChange={compare.setCompareId}
             live={live}
           />
         ) : !error ? (
@@ -324,8 +303,11 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onReprocess={reprocessMedia}
             onToggleAnnotate={toggleAnnotating}
             onFullscreen={toggleFullscreen}
-            compareId={compareId}
-            onCloseCompare={() => setCompareId(null)}
+            compareId={compare.compareId}
+            onCloseCompare={() => compare.setCompareId(null)}
+            compareMode={compare.compareMode}
+            onCompareModeChange={compare.setCompareMode}
+            sharedWipe={sharedWipe}
             imageViewApiRef={imageViewApiRef}
             onImageUserView={live.claimInteraction}
           />

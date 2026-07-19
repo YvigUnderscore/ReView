@@ -23,14 +23,35 @@ export interface LiveState {
   participants: LiveParticipant[];
 }
 
+/** Cible résolue au join (RBAC) — permet de lister les sessions d'un projet (badges LIVE). */
+export interface LiveSessionMeta {
+  projectId: number;
+  mediaId?: number;
+  playlistId?: number;
+  versionId?: number;
+}
+
+/** Session d'un projet vue de l'extérieur (badges sur review et cartes de version). */
+export interface LiveSessionSummary extends LiveSessionMeta {
+  key: string;
+  participantCount: number;
+  pilot: LiveParticipant | null;
+}
+
 interface Session {
   pilotId: number;
   coHostIds: Set<number>;
   driverId: number;
   participants: Map<number, LiveParticipant>;
+  meta?: LiveSessionMeta;
 }
 
 const sessions = new Map<string, Session>();
+
+/** Grâce avant le retrait effectif d'un participant déconnecté : un F5 garde son rôle. */
+export const LIVE_LEAVE_GRACE_MS = 10_000;
+const graceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const graceKey = (key: string, userId: number) => `${key}|${userId}`;
 
 /** Clé valide : `media:<id>` ou `playlist:<id>`. Renvoie sa cible ou null. */
 export const parseLiveKey = (key: unknown): { type: 'media' | 'playlist'; id: number } | null => {
@@ -51,12 +72,13 @@ const toState = (key: string, s: Session): LiveState => ({
 });
 
 /** Rejoint (ou crée) la session ; le premier participant devient pilote et driver. */
-export const joinLive = (key: string, participant: LiveParticipant): LiveState => {
+export const joinLive = (key: string, participant: LiveParticipant, meta?: LiveSessionMeta): LiveState => {
   let s = sessions.get(key);
   if (!s) {
     s = { pilotId: participant.id, coHostIds: new Set(), driverId: participant.id, participants: new Map() };
     sessions.set(key, s);
   }
+  if (meta && !s.meta) s.meta = meta;
   s.participants.set(participant.id, participant);
   return toState(key, s);
 };
@@ -134,5 +156,59 @@ export const getLiveState = (key: string): LiveState | null => {
   return s ? toState(key, s) : null;
 };
 
+/** Projet porteur de la session (résolu au join) — null si session inconnue ou sans méta. */
+export const getLiveProjectId = (key: string): number | null => sessions.get(key)?.meta?.projectId ?? null;
+
+/** Sessions live en cours d'un projet (badges LIVE : review, cartes de version, playlists). */
+export const listLiveSessions = (projectId: number): LiveSessionSummary[] => {
+  const out: LiveSessionSummary[] = [];
+  for (const [key, s] of sessions) {
+    if (s.meta?.projectId !== projectId) continue;
+    out.push({
+      key,
+      ...s.meta,
+      participantCount: s.participants.size,
+      pilot: s.participants.get(s.pilotId) ?? null,
+    });
+  }
+  return out;
+};
+
+/**
+ * Départ différé après déconnexion socket : le retrait effectif (et la perte du rôle de
+ * pilote) n'a lieu qu'après la grâce — un rechargement de page (F5) re-join avant et
+ * annule via `cancelLiveLeave`. `onLeft` reçoit l'état résultant (null si session fermée).
+ */
+export const scheduleLiveLeave = (
+  key: string,
+  userId: number,
+  onLeft: (state: LiveState | null) => void,
+  graceMs: number = LIVE_LEAVE_GRACE_MS,
+): void => {
+  cancelLiveLeave(key, userId);
+  const k = graceKey(key, userId);
+  graceTimers.set(
+    k,
+    setTimeout(() => {
+      graceTimers.delete(k);
+      onLeft(leaveLive(key, userId));
+    }, graceMs),
+  );
+};
+
+/** Annule un départ en grâce (re-join après F5). Vrai si un départ était bien programmé. */
+export const cancelLiveLeave = (key: string, userId: number): boolean => {
+  const k = graceKey(key, userId);
+  const t = graceTimers.get(k);
+  if (!t) return false;
+  clearTimeout(t);
+  graceTimers.delete(k);
+  return true;
+};
+
 /** Réinitialisation complète (tests). */
-export const resetLiveSessions = (): void => sessions.clear();
+export const resetLiveSessions = (): void => {
+  sessions.clear();
+  for (const t of graceTimers.values()) clearTimeout(t);
+  graceTimers.clear();
+};
