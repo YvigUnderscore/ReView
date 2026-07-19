@@ -15,12 +15,14 @@ import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../lib/taskStatus';
 import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
 import TaskDropzone from './task/TaskDropzone';
+import TaskChecklist from './task/TaskChecklist';
 import type { TaskDetail } from '../types/api';
 
 export default function TaskPage() {
   const { id } = useParams();
   const taskId = Number(id);
   const role = useAuth((s) => s.user?.role);
+  const userId = useAuth((s) => s.user?.id);
   const canCreate = role !== 'CLIENT';
   const canPublish = role === 'ADMIN' || role === 'SUPERVISOR';
   const enqueue = useUploadStore((s) => s.enqueue);
@@ -105,6 +107,15 @@ export default function TaskPage() {
         )}
       </div>
       {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
+
+      {task && (
+        <TaskChecklist
+          taskId={taskId}
+          items={task.checklist ?? []}
+          canToggle={canPublish || task.assignee?.id === userId}
+          canEditItems={canPublish}
+        />
+      )}
 
       {canCreate && (
         <div className="mb-4">

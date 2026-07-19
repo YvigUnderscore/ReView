@@ -1,0 +1,137 @@
+import { useState } from 'react';
+import { Upload, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { api, getToken } from '../../../lib/apiClient';
+import { Button } from '../../components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+
+interface ImportResult {
+  committed: boolean;
+  sequencesToCreate: number;
+  shotsToCreate: number;
+  tasksToCreate: number;
+  shotsSkipped: number;
+  errors: string[];
+}
+
+/**
+ * Passerelle CSV du projet (38.F/38.G) : import shots/tâches (dry-run puis commit) et export.
+ * Format : colonnes sequence, shot, name, tasks (« | »). Réservé aux gestionnaires.
+ */
+export default function ProjectCsvActions({
+  projectId,
+  onImported,
+}: {
+  projectId: number;
+  onImported: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [csv, setCsv] = useState('');
+  const [preview, setPreview] = useState<ImportResult | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const run = async (commit: boolean) => {
+    if (!csv.trim()) return;
+    setBusy(true);
+    try {
+      const res = await api.post<ImportResult>(`/api/projects/${projectId}/import-csv`, { csv, commit });
+      if (commit) {
+        toast.success(`${res.shotsToCreate} shot(s), ${res.tasksToCreate} tâche(s) importés`);
+        setOpen(false);
+        setCsv('');
+        setPreview(null);
+        onImported();
+      } else {
+        setPreview(res);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const exportCsv = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export-csv`, {
+        headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+      });
+      if (!res.ok) throw new Error('Export impossible');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `project-${projectId}-shots.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+      >
+        <Upload size={16} /> Importer CSV
+      </button>
+      <button
+        onClick={exportCsv}
+        className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+      >
+        <Download size={16} /> Exporter CSV
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importer des shots (CSV)</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Colonnes : <code>sequence, shot, name, tasks</code> (tâches séparées par « | »). Les shots
+            existants sont ignorés.
+          </p>
+          <textarea
+            className="h-40 w-full rounded border border-input bg-background p-2 font-mono text-xs"
+            placeholder={'sequence,shot,name,tasks\nSQ01,SH010,Intro,Anim|Comp'}
+            value={csv}
+            onChange={(e) => {
+              setCsv(e.target.value);
+              setPreview(null);
+            }}
+          />
+          {preview && (
+            <div className="rounded border border-border bg-secondary/40 p-2 text-xs">
+              <div>
+                À créer : {preview.sequencesToCreate} séquence(s), {preview.shotsToCreate} shot(s),{' '}
+                {preview.tasksToCreate} tâche(s). Ignorés : {preview.shotsSkipped}.
+              </div>
+              {preview.errors.length > 0 && (
+                <ul className="mt-1 list-inside list-disc text-destructive">
+                  {preview.errors.slice(0, 8).map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" size="sm" onClick={() => void run(false)} disabled={busy}>
+              Aperçu
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void run(true)}
+              disabled={busy || !preview || preview.shotsToCreate === 0}
+            >
+              Importer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

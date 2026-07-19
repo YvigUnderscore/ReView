@@ -1,4 +1,4 @@
-import { Role, TaskType, TaskStatus } from '@prisma/client';
+import { Role, TaskType, TaskStatus, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
 import { emitToProject } from './SocketService';
@@ -164,12 +164,18 @@ export async function getDetail(id: number) {
   return task;
 }
 
+export interface ChecklistItem {
+  text: string;
+  done: boolean;
+}
+
 export interface UpdateTaskInput {
   name?: string;
   type?: TaskType;
   status?: TaskStatus;
   assigneeId?: number | null;
   order?: number;
+  checklist?: ChecklistItem[];
 }
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {
@@ -178,14 +184,18 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   const manager = isGlobalManager(user.role);
   const isAssignee = task.assigneeId === user.id;
   if (!manager) {
-    // Un non-manager (artiste assigné) ne peut changer que le statut de sa propre tâche.
+    // Un non-manager (artiste assigné) ne peut changer que le statut et la checklist de sa tâche.
     const keys = Object.keys(body);
-    if (!isAssignee || keys.some((k) => k !== 'status'))
-      throw forbidden('Seul le statut de votre tâche assignée est modifiable');
+    if (!isAssignee || keys.some((k) => k !== 'status' && k !== 'checklist'))
+      throw forbidden('Seuls le statut et la checklist de votre tâche assignée sont modifiables');
   }
+  const { checklist, ...rest } = body;
   const updated = await prisma.task.update({
     where: { id },
-    data: body,
+    data: {
+      ...rest,
+      ...(checklist !== undefined ? { checklist: checklist as unknown as Prisma.InputJsonValue } : {}),
+    },
     include: { assignee: { select: { id: true, name: true } } },
   });
   await notifyAssignee(body.assigneeId, user.id, projectId, id, updated.name);

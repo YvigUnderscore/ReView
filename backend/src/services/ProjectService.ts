@@ -7,6 +7,8 @@ import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { resolveProjectSettings } from '../lib/projectSettings';
 import { slugify } from '../lib/slug';
 import { getProjectStorageUsage } from '../lib/projectQuota';
+import { assertProjectWritable } from '../lib/projectGuard';
+import { parseShotsCsv, toShotsCsv } from '../lib/projectCsv';
 import { notFound, badRequest } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate, orderByFrom } from '../lib/pagination';
 
@@ -197,6 +199,92 @@ export async function duplicateProject(
     metadata: { sourceId, includeTasks },
   });
   return created;
+}
+
+/**
+ * Import CSV de shots/tâches (38.F). `commit=false` = dry-run (aperçu + erreurs sans écrire).
+ * Crée les séquences manquantes, les shots absents (unicité code par séquence) et leurs
+ * tâches (type OTHER). Les shots déjà présents sont ignorés (non écrasés).
+ */
+export async function importCsv(user: SessionUser, projectId: number, csv: string, commit: boolean) {
+  const { rows, errors } = parseShotsCsv(csv);
+  const [existingSeqs, existingShots] = await Promise.all([
+    prisma.sequence.findMany({ where: { projectId, deletedAt: null }, select: { code: true } }),
+    prisma.shot.findMany({ where: { projectId, deletedAt: null }, select: { code: true, sequenceId: true } }),
+  ]);
+  const seqCodes = new Set(existingSeqs.map((s) => s.code));
+  const shotCodes = new Set(existingShots.map((s) => s.code));
+  const newSeqCodes = [
+    ...new Set(rows.map((r) => r.sequence).filter((c): c is string => !!c && !seqCodes.has(c))),
+  ];
+  const newRows = rows.filter((r) => !shotCodes.has(r.shot));
+  const preview = {
+    sequencesToCreate: newSeqCodes.length,
+    shotsToCreate: newRows.length,
+    tasksToCreate: newRows.reduce((n, r) => n + r.tasks.length, 0),
+    shotsSkipped: rows.length - newRows.length,
+    errors,
+  };
+  if (!commit) return { committed: false, ...preview };
+
+  await assertProjectWritable(projectId); // 38.B
+  await prisma.$transaction(async (tx) => {
+    const seqIdByCode = new Map<string, number>();
+    for (const code of newSeqCodes) {
+      const s = await tx.sequence.create({ data: { projectId, name: code, code } });
+      seqIdByCode.set(code, s.id);
+    }
+    // Séquences préexistantes utilisées par l'import.
+    for (const code of new Set(rows.map((r) => r.sequence).filter((c): c is string => !!c))) {
+      if (!seqIdByCode.has(code)) {
+        const s = await tx.sequence.findFirst({ where: { projectId, code }, select: { id: true } });
+        if (s) seqIdByCode.set(code, s.id);
+      }
+    }
+    for (const r of newRows) {
+      const shot = await tx.shot.create({
+        data: {
+          projectId,
+          sequenceId: r.sequence ? (seqIdByCode.get(r.sequence) ?? null) : null,
+          name: r.name,
+          code: r.shot,
+        },
+      });
+      for (const t of r.tasks) {
+        await tx.task.create({ data: { shotId: shot.id, name: t, type: TaskType.OTHER } });
+      }
+    }
+  });
+  logAudit({
+    userId: user.id,
+    action: 'PROJECT_IMPORT_CSV',
+    entityType: 'Project',
+    entityId: projectId,
+    metadata: preview,
+  });
+  return { committed: true, ...preview };
+}
+
+/** Export CSV des shots/tâches d'un projet (38.G), ré-importable par `importCsv`. */
+export async function exportCsv(projectId: number): Promise<string> {
+  const shots = await prisma.shot.findMany({
+    where: { projectId, deletedAt: null },
+    orderBy: [{ sequenceId: 'asc' }, { order: 'asc' }],
+    select: {
+      code: true,
+      name: true,
+      sequence: { select: { code: true } },
+      tasks: { select: { name: true }, orderBy: { order: 'asc' } },
+    },
+  });
+  return toShotsCsv(
+    shots.map((s) => ({
+      sequence: s.sequence?.code ?? null,
+      shot: s.code,
+      name: s.name,
+      tasks: s.tasks.map((t) => t.name),
+    })),
+  );
 }
 
 export async function getProject(projectId: number) {

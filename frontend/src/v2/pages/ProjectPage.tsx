@@ -33,6 +33,7 @@ import MembersTab from './project/MembersTab';
 import PlaylistsTab from './project/PlaylistsTab';
 import SharesTab from './project/SharesTab';
 import TrashTab from './project/TrashTab';
+import ProjectCsvActions from './project/ProjectCsvActions';
 import type { ProjectSettings } from './project/projectTypes';
 
 /** Page projet — orchestrateur des onglets (découpage 10.C1, sous-composants dans pages/project/). */
@@ -116,6 +117,7 @@ export default function ProjectPage() {
           <FavoriteButton type="PROJECT" entityId={projectId} size={18} />
         </div>
         <div className="flex items-center gap-2 text-sm">
+          {canManage && <ProjectCsvActions projectId={projectId} onImported={loadStructure} />}
           <Link
             to={projectPath({ id: projectId, name }, '/kanban')}
             className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"

@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({
   prisma: {
-    task: { create: vi.fn() },
+    task: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     comment: { findUnique: vi.fn() },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./NotificationService', () => ({ notify: vi.fn() }));
 
-import { createFromComment, taskNameFromComment } from './TaskService';
+import { createFromComment, taskNameFromComment, update } from './TaskService';
 import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
 import { Role } from '@prisma/client';
@@ -85,5 +85,31 @@ describe('createFromComment (32.D)', () => {
     await expect(createFromComment(supervisor, 3, 9)).rejects.toMatchObject({ statusCode: 400 });
     vi.mocked(prisma.comment.findUnique).mockResolvedValue(null as never);
     await expect(createFromComment(supervisor, 3, 99)).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe('update — checklist & droits (38.F)', () => {
+  const artist = { id: 4, role: Role.ARTIST };
+  beforeEach(() => {
+    vi.mocked(prisma.task.update).mockResolvedValue({
+      id: 1,
+      name: 'n',
+      shotId: 7,
+      assetId: null,
+    } as never);
+  });
+
+  it('l’assigné peut cocher la checklist de sa tâche', async () => {
+    vi.mocked(prisma.task.findUnique).mockResolvedValue({ assigneeId: 4 } as never);
+    await update(artist, 3, 1, { checklist: [{ text: 'a', done: true }] });
+    expect(prisma.task.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ checklist: [{ text: 'a', done: true }] }) }),
+    );
+  });
+
+  it('un non-assigné non-manager ne peut pas modifier la checklist (403)', async () => {
+    vi.mocked(prisma.task.findUnique).mockResolvedValue({ assigneeId: 99 } as never);
+    await expect(update(artist, 3, 1, { checklist: [] })).rejects.toMatchObject({ statusCode: 403 });
+    expect(prisma.task.update).not.toHaveBeenCalled();
   });
 });

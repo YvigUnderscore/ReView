@@ -93,6 +93,11 @@ router.patch(
       status: z.nativeEnum(TaskStatus).optional(),
       assigneeId: z.number().int().nullable().optional(),
       order: z.number().int().optional(),
+      // Checklist (38.F) : [{ text, done }] — cochable par l'assigné.
+      checklist: z
+        .array(z.object({ text: z.string().min(1).max(200), done: z.boolean() }))
+        .max(100)
+        .optional(),
     }),
   }),
   async (req, res) => {

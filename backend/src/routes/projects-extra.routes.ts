@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
-import { requireRole, requireProjectAccess } from '../middleware/rbac';
+import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as ProjectService from '../services/ProjectService';
 
@@ -48,6 +48,33 @@ router.get(
   requireProjectAccess,
   async (req, res) => {
     res.json(await ProjectService.getProjectUsage(Number(req.params.projectId)));
+  },
+);
+
+// POST /api/projects/:projectId/import-csv — import shots/tâches (dry-run si commit=false, 38.F).
+router.post(
+  '/:projectId/import-csv',
+  validate({
+    params: projectIdParam,
+    body: z.object({ csv: z.string().min(1).max(1_000_000), commit: z.boolean().optional() }),
+  }),
+  requireProjectManage,
+  async (req, res) => {
+    const { csv, commit } = req.body as { csv: string; commit?: boolean };
+    res.json(await ProjectService.importCsv(req.user!, Number(req.params.projectId), csv, commit ?? false));
+  },
+);
+
+// GET /api/projects/:projectId/export-csv — export shots/tâches en CSV (38.G).
+router.get(
+  '/:projectId/export-csv',
+  validate({ params: projectIdParam }),
+  requireProjectAccess,
+  async (req, res) => {
+    const csv = await ProjectService.exportCsv(Number(req.params.projectId));
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="project-${req.params.projectId}-shots.csv"`);
+    res.send(csv);
   },
 );
 
