@@ -19,6 +19,9 @@ export interface TranscodeConfig {
   audioBitrateK: number; // débit audio (kbps)
   maxHeight: number; // plafond de résolution
   ladder: TranscodeRendition[]; // échelle de qualités
+  /** Scene detection FFmpeg (34.H, opt-in : une passe d'analyse en plus par vidéo) —
+   *  pose des marqueurs de timeline « Plan n » aux coupes détectées. */
+  sceneDetection: boolean;
 }
 
 const TRANSCODE_KEY = 'transcode_config';
@@ -44,6 +47,7 @@ const FALLBACK: TranscodeConfig = {
     { height: 1080, videoBitrateK: 5000 },
     { height: 2160, videoBitrateK: 14000 },
   ],
+  sceneDetection: false,
 };
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
@@ -76,6 +80,7 @@ function sanitize(raw: unknown, base: TranscodeConfig): TranscodeConfig {
       ? clamp(Math.round(Number(o.maxHeight)), 144, 4320)
       : base.maxHeight,
     ladder: ladder.length > 0 ? ladder : base.ladder,
+    sceneDetection: typeof o.sceneDetection === 'boolean' ? o.sceneDetection : base.sceneDetection,
   };
 }
 
@@ -131,4 +136,5 @@ export const transcodeConfigSchema = z.object({
       }),
     )
     .optional(),
+  sceneDetection: z.boolean().optional(),
 });

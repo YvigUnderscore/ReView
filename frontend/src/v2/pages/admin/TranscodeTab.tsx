@@ -58,6 +58,20 @@ export default function TranscodeTab() {
         <span className="text-xs text-muted-foreground">(désactivé = proxy MP4 unique)</span>
       </label>
 
+      {/* Scene detection (34.H) : opt-in — une passe d'analyse FFmpeg en plus par vidéo. */}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="accent-primary"
+          checked={draft.sceneDetection ?? false}
+          onChange={(e) => set({ sceneDetection: e.target.checked })}
+        />
+        <span className="font-medium">Détection de plans</span>
+        <span className="text-xs text-muted-foreground">
+          (marqueurs « Plan n » posés aux coupes — une passe d’analyse en plus par vidéo)
+        </span>
+      </label>
+
       <Panel title="Encodage">
         <div className="flex flex-wrap items-end gap-3 text-xs">
           <Field label="Qualité (CRF)">

@@ -23,6 +23,7 @@ import {
   type HlsRendition,
 } from '../lib/hls';
 import { planTimelineSprite, type TimelineSpritePlan } from '../lib/timelineSprite';
+import { parseSceneTimes, sceneFrames, SCENE_THRESHOLD } from '../lib/sceneDetect';
 import { publishWorkerEvent } from '../lib/workerEvents';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
@@ -269,6 +270,44 @@ function transcodeHlsRendition(
   });
 }
 
+/**
+ * Passe de scene detection (34.H, opt-in admin) : frames retenues par `select(scene)`,
+ * listées par showinfo sur stderr. Best effort — un échec renvoie une liste vide.
+ */
+function detectScenes(input: string): Promise<number[]> {
+  return new Promise((resolve) => {
+    let err = '';
+    ffmpeg(input)
+      .outputOptions(['-vf', `select='gt(scene,${SCENE_THRESHOLD})',showinfo`, '-an', '-f', 'null'])
+      .output('/dev/null')
+      .on('stderr', (line: string) => {
+        err += line + '\n';
+      })
+      .on('end', () => resolve(parseSceneTimes(err)))
+      .on('error', () => resolve([]))
+      .run();
+  });
+}
+
+/** Pose les marqueurs « Plan n » (remplace les précédents marqueurs auto du média). */
+async function writeSceneMarkers(mediaId: number, frames: number[]): Promise<void> {
+  await prisma.timelineMarker.deleteMany({
+    where: { mediaObjectId: mediaId, authorId: null, name: { startsWith: 'Plan ' } },
+  });
+  if (frames.length === 0) return;
+  await prisma.timelineMarker.createMany({
+    // La coupe i ouvre le plan i+2 (le plan 1 commence à la frame 0, sans marqueur).
+    data: frames.map((frame, i) => ({
+      mediaObjectId: mediaId,
+      frame,
+      name: `Plan ${i + 2}`,
+      color: '#64748b',
+      authorId: null,
+    })),
+  });
+  await publishWorkerEvent({ type: 'markers', mediaId });
+}
+
 type HlsRenditionMeta = { height: number; width: number; videoBitrateK: number };
 
 /**
@@ -407,6 +446,17 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
           },
         );
         metadata.hls = { renditions };
+      }
+
+      // Scene detection (34.H, opt-in admin) : marqueurs auto « Plan n » aux coupes —
+      // best effort, après l'ouverture de la lecture (READY déjà posé par la 1re rendition).
+      if (tcfg.sceneDetection) {
+        try {
+          const fps = typeof metadata.fps === 'number' ? metadata.fps : 24;
+          await writeSceneMarkers(mediaId, sceneFrames(await detectScenes(src), fps));
+        } catch (err) {
+          logger.warn({ err }, `[ffmpeg.worker] scene detection échouée media=${mediaId}`);
+        }
       }
 
       // Sprite de timeline (vignette ~toutes les 3 s, un seul JPEG) — best effort :

@@ -51,6 +51,8 @@ export interface TranscodeConfig {
   audioBitrateK: number;
   maxHeight: number;
   ladder: TranscodeRendition[];
+  /** Scene detection (34.H) : marqueurs « Plan n » posés aux coupes (opt-in). */
+  sceneDetection?: boolean;
 }
 
 /** GET /api/studio/smtp — config SMTP (jamais le mot de passe). */

@@ -55,6 +55,11 @@ export const initSocket = (server: HttpServer): SocketServer => {
   // Événements du worker FFmpeg (34.F, redis pub/sub) : échelle HLS progressive —
   // la review recharge son master (nouvelles qualités), le projet rafraîchit ses cartes.
   subscribeWorkerEvents((e) => {
+    if (e.type === 'markers') {
+      // Scene detection (34.H) : marqueurs « Plan n » posés → la review recharge sa liste.
+      emitToReview(e.mediaId, 'markers:changed', { mediaId: e.mediaId });
+      return;
+    }
     emitToReview(e.mediaId, 'hls:changed', e);
     if (e.projectId != null)
       emitToProject(e.projectId, 'media:update', {

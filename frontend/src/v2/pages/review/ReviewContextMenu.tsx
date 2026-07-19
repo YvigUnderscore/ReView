@@ -9,6 +9,7 @@ import {
   EyeOff,
   Grid3x3,
   Image as ImageIcon,
+  LayoutGrid,
   Link2,
   ListVideo,
   PencilLine,
@@ -30,6 +31,7 @@ import {
 import { useGuides, type GuideKey } from '../../stores/useGuides';
 import { stepVideoFrame, type MediaResp } from './reviewTypes';
 import { captureVideoFrame, copyImageToClipboard, downloadImage, toThumbnailDataUrl } from './mediaCapture';
+import { buildContactSheet } from './contactSheet';
 import { frameLink } from './deepLink';
 import AddToPlaylistDialog from '../../components/AddToPlaylistDialog';
 import { useAuth } from '../../stores/useAuth';
@@ -158,6 +160,25 @@ export default function ReviewContextMenu({
             >
               <Download size={14} /> Télécharger la frame
             </ContextMenuItem>
+            {/* Planche contact (34.H) : PNG composé depuis le sprite de timeline. */}
+            {data.timelineSprite && data.timelineSpriteUrl && (
+              <ContextMenuItem
+                onSelect={() =>
+                  run('Planche contact téléchargée', async () =>
+                    downloadImage(
+                      await buildContactSheet(
+                        data.timelineSpriteUrl!,
+                        data.timelineSprite!,
+                        data.media.originalName,
+                      ),
+                      `${baseName}-planche-contact.png`,
+                    ),
+                  )
+                }
+              >
+                <LayoutGrid size={14} /> Exporter la planche contact
+              </ContextMenuItem>
+            )}
             {/* Lien profond (32.E) : URL ouvrant la review à la frame courante. */}
             <ContextMenuItem
               onSelect={() =>

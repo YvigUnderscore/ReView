@@ -15,6 +15,13 @@ describe('workerEvents — canal worker → serveur (34.F)', () => {
     expect(decodeWorkerEvent(encodeWorkerEvent(evt))).toEqual(evt);
   });
 
+  it('décode les événements markers (scene detection 34.H)', () => {
+    expect(decodeWorkerEvent(encodeWorkerEvent({ type: 'markers', mediaId: 9 }))).toEqual({
+      type: 'markers',
+      mediaId: 9,
+    });
+  });
+
   it('ignore les messages corrompus ou inconnus', () => {
     expect(decodeWorkerEvent('pas du json')).toBeNull();
     expect(decodeWorkerEvent('{"type":"autre"}')).toBeNull();
