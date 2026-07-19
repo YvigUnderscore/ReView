@@ -1,6 +1,6 @@
 # Video review
 
-> Updated: 2026-07-18
+> Updated: 2026-07-19
 
 Open any video media from a project, task or the Reviews page to enter the video
 review. The player is frame-accurate and streams adaptive HLS.
@@ -10,23 +10,76 @@ review. The player is frame-accurate and streams adaptive HLS.
 - Play/pause, **frame-by-frame stepping** (arrow keys) and scrubbing on the
   timeline. Scrubbing is smooth: seeks are coalesced so fast drags never leave the
   player in an inconsistent state.
+- **J / K / L**: reverse shuttle, pause, forward play. Pressing `J` or `L`
+  repeatedly stacks speed (×2/×4/×8); the current speed is displayed as a chip on
+  the viewer (`◀ ×2`, `▶ ×4`) whenever playback is not normal ×1.
 - The current **frame number** is displayed and used to anchor annotations and
   comments; frame ranges come from the pipeline settings (shot frame ranges,
   framerate).
-- **Quality selector**: adaptive by default; you can pin a rendition (e.g. 1080p) —
-  the player locks the manifest to that rendition, with a spinner while switching.
+- **Hover thumbnails**: moving the cursor along the timeline shows the filmstrip
+  thumbnail for that instant (generated at transcode time).
+- **Quality selector**: playback starts locked on the best available rendition;
+  you can pin any rendition (e.g. 1080p). While a video is still transcoding, you
+  can already play the first ready rendition — higher qualities appear in the
+  selector automatically as they finish (no reload needed).
+
+## Loop (I/O points)
+
+- `I` / `O` set the loop in/out points at the current time; `Shift+I` / `Shift+O`
+  clear them.
+- The **Loop I/O chip** in the transport toggles looping **without removing the
+  points**; the small `×` next to it clears them. Setting a new point re-enables
+  the loop.
+- Looping only applies **during playback** — manual navigation (pause, stepping,
+  scrubbing) can freely go past the out point.
+- When a loop is active while you send a comment, the comment carries the
+  **in→out range**: its drawings stay visible during the whole range at playback,
+  and the range shows as a colored segment (author color) with handles on the
+  timeline. Click a segment to select the comment.
+
+## Timeline markers
+
+Named, colored markers shared with the whole team (persisted per media):
+
+- **Right-click the timeline** → "Add a marker here…" (name + color palette).
+- Hover a marker tick to see its name and author; click it to seek.
+- Right-click a tick → rename / recolor / delete (author or supervisor+).
+- Markers also appear as **clickable separators in the comments panel**, splitting
+  the thread into sections by timeline position.
+- With **scene detection** enabled (admin, transcoding settings), "Shot n" markers
+  are placed automatically at detected cuts.
 
 ## Comparison
 
-- **A/B compare**: load another version of the same task side by side and switch
-  instantly.
-- **Wipe**: split-screen slider over two versions for pixel-accurate comparison.
+Use the **Compare…** selector in the header (checkbox list of the other versions):
+
+- **1 version checked — A/B compare**: side-by-side pane synchronized with the
+  master player (muted slave), with **Wipe** (rotatable split bar) and **Diff**
+  modes.
+- **2–3 versions checked — 2×2 grid**: up to four versions on screen, all slaves
+  synchronized to the master transport (play/pause/seek/speed, drift-corrected).
+  Each pane has its own close button; wipe/diff are only available in simple A/B.
+- **Diff mode**: client-side |A − B| difference, GPU-composited. Click the `×n`
+  chip to cycle amplification (×1→×16) and the flame icon for a false-color
+  heatmap (blue = small difference, red = large).
+- In a **live session**, the driver's comparison (selected version, side/wipe/diff
+  mode and the wipe bar position) is replicated to all viewers.
 
 ## Frame & guides
 
 The viewer fills the available space; a **letterbox guide** shows the delivery
 aspect ratio resolved from the pipeline settings. Annotations are anchored to the
 **delivery frame**, so they stay in place whatever the window size.
+
+**Composition guides** (right-click → "Composition guides"): rule of thirds,
+center cross, action safe (90 %) and title safe (80 %) overlays. The preference is
+local to your browser.
+
+## Contact sheet
+
+Right-click the viewer → **"Export contact sheet"** downloads a PNG grid of the
+timeline thumbnails with a timecode under each tile — handy for shot breakdowns
+and quick reviews outside the tool.
 
 ## Fullscreen
 
@@ -41,7 +94,8 @@ Two fullscreen modes:
 ## Annotations & comments
 
 Draw on any frame with the annotation tools; annotations are timestamped and appear
-as markers on the timeline. See
+as markers on the timeline. With an I/O loop active, the annotation covers the
+whole range (see above). See
 [Annotations & comments](annotations-and-comments.md).
 
 ## Trim
