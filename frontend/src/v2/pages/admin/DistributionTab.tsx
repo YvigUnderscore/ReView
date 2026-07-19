@@ -6,6 +6,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
+import BurninPanel from './BurninPanel';
 
 interface WatermarkConfig {
   internal: boolean;
@@ -22,6 +23,7 @@ export default function DistributionTab() {
     <div className="max-w-2xl space-y-4">
       <LogoPanel />
       <WatermarkPanel />
+      <BurninPanel />
     </div>
   );
 }

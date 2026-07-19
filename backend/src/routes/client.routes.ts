@@ -118,7 +118,9 @@ router.post(
   },
 );
 
-// GET /api/client/:token/media/:id/url — URL présignée d'un média publié (session requise)
+// GET /api/client/:token/media/:id/url — URL présignée d'un média publié (session requise).
+// Vidéo : sert le dérivé client (slate en tête, 35.A) s'il existe — `slateSec` permet au
+// front de décaler les timestamps de commentaires (le slate n'existe pas côté review interne).
 router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req, res) => {
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
@@ -126,7 +128,12 @@ router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req
     where: { id, ...publishedMediaWhere(share.projectId) },
   });
   if (!media) throw notFound('Média introuvable ou non publié');
-  res.json({ url: await storage.getPresignedGetUrl(mediaSourceKey(media)) });
+  const meta = (media.metadata ?? {}) as { clientProxyKey?: string; slateSec?: number };
+  const clientKey = typeof meta.clientProxyKey === 'string' ? meta.clientProxyKey : null;
+  res.json({
+    url: await storage.getPresignedGetUrl(clientKey ?? mediaSourceKey(media)),
+    slateSec: clientKey && typeof meta.slateSec === 'number' ? meta.slateSec : 0,
+  });
 });
 
 // GET /api/client/:token/media/:id/comments — commentaires visibles client (session requise)

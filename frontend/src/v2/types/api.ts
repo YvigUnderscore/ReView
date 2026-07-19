@@ -333,6 +333,8 @@ export interface PipelineOverride {
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
+  /** Override burn-ins partiel du projet (35.A) — voir types/share.ts. */
+  burnin?: Partial<import('./share').BurninConfig>;
 }
 
 // Types du partage client (35.C/35.D) — module séparé pour le budget de lignes.

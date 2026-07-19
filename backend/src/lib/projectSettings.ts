@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { prisma } from './prisma';
+import { burninConfigSchema, type BurninConfig } from './burnin';
 
 /**
  * Réglages projet : départements + nomenclature + pipeline (résolution/framerate).
@@ -41,6 +42,8 @@ export interface PipelineSettings {
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
+  /** Override partiel des burn-ins (35.A) — résolu champ par champ sur le template studio. */
+  burnin?: Partial<BurninConfig>;
 }
 
 export const STUDIO_DEFAULTS_KEY = 'project_defaults';
@@ -97,7 +100,22 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   };
   const resolution = sanitizeResolution(o.resolution, base.resolution);
   const framerate = Number.isFinite(o.framerate) ? clampFps(Number(o.framerate)) : base.framerate;
-  return { departments, nomenclature, resolution, framerate };
+  // Burn-ins : override PARTIEL conservé tel quel (clés connues, types vérifiés) — la
+  // résolution effective (fusion avec le template studio) est faite par lib/burnin.
+  const burnin = sanitizeBurninOverride(o.burnin) ?? base.burnin;
+  return { departments, nomenclature, resolution, framerate, ...(burnin ? { burnin } : {}) };
+}
+
+/** Filtre un override burn-in partiel (clés/types connus uniquement), undefined si vide. */
+function sanitizeBurninOverride(raw: unknown): Partial<BurninConfig> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  const out: Partial<BurninConfig> = {};
+  for (const k of ['enabled', 'showShot', 'showVersion', 'showTimecode', 'showLogo', 'slate'] as const) {
+    if (typeof o[k] === 'boolean') out[k] = o[k];
+  }
+  if (typeof o.customText === 'string') out.customText = o.customText.slice(0, 120);
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /**
@@ -167,6 +185,7 @@ export const projectSettingsSchema = z.object({
     .optional(),
   resolution: resolutionSchema.optional(),
   framerate: z.number().min(FPS_MIN).max(FPS_MAX).optional(),
+  burnin: burninConfigSchema.optional(),
 });
 
 /** Défauts studio (Setting.project_defaults), fusionnés avec le repli interne. */

@@ -26,6 +26,16 @@ import { planTimelineSprite, type TimelineSpritePlan } from '../lib/timelineSpri
 import { parseSceneTimes, sceneFrames, SCENE_THRESHOLD } from '../lib/sceneDetect';
 import { publishWorkerEvent } from '../lib/workerEvents';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
+import {
+  buildBurninFilters,
+  buildSlateFilters,
+  buildSlateLines,
+  resolveBurninConfig,
+  type BurninConfig,
+  type BurninContext,
+  type SlateInfo,
+} from '../lib/burnin';
+import { SETTING_KEYS } from '../lib/settings';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 
 /**
@@ -129,7 +139,9 @@ async function convertToGlb(input: string, output: string, ext: string): Promise
 }
 
 /** Sonde un fichier média et renvoie durée / dimensions / fps. */
-function probe(path: string): Promise<{ duration?: number; width?: number; height?: number; fps?: number }> {
+function probe(
+  path: string,
+): Promise<{ duration?: number; width?: number; height?: number; fps?: number; hasAudio?: boolean }> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(path, (err, data) => {
       if (err) return reject(err);
@@ -144,6 +156,7 @@ function probe(path: string): Promise<{ duration?: number; width?: number; heigh
         width: stream?.width,
         height: stream?.height,
         fps,
+        hasAudio: data.streams.some((s) => s.codec_type === 'audio'),
       });
     });
   });
@@ -186,16 +199,54 @@ function makeTimelineSprite(input: string, output: string, plan: TimelineSpriteP
   });
 }
 
+/** Burn-ins résolus pour un média : config effective + contexte + logo local éventuel. */
+interface BurninJob {
+  cfg: BurninConfig;
+  ctx: BurninContext;
+  logoPath: string | null;
+  slateInfo: SlateInfo | null;
+}
+
+/**
+ * Applique la chaîne vidéo (scale + burn-ins éventuels) à une commande fluent-ffmpeg.
+ * Sans logo : simple `-vf`. Avec logo : `filter_complex` à deux entrées (le logo est
+ * ajouté comme input et incrusté en bas droite), sortie mappée `[vout]` + audio optionnel.
+ */
+function applyVideoChain(
+  cmd: ffmpeg.FfmpegCommand,
+  scale: string,
+  burnin: BurninJob | null,
+  outHeight: number,
+): string[] {
+  const extra = burnin ? buildBurninFilters(burnin.cfg, burnin.ctx, outHeight) : [];
+  const chain = [scale, ...extra].join(',');
+  if (!burnin?.logoPath || !burnin.cfg.enabled || !burnin.cfg.showLogo) {
+    return ['-vf', chain];
+  }
+  const m = Math.max(8, Math.round(outHeight / 60));
+  const logoH = Math.max(24, Math.round(outHeight / 10));
+  cmd.input(burnin.logoPath);
+  cmd.complexFilter(
+    `[0:v]${chain}[base];[1:v]scale=-1:${logoH}[lg];` +
+      `[base][lg]overlay=main_w-overlay_w-${m}:main_h-overlay_h-${m}[vout]`,
+  );
+  return ['-map', '[vout]', '-map', '0:a?'];
+}
+
 /** Transcode une vidéo en proxy MP4 web (h264 + aac, faststart), avec fenêtre de trim en option. */
 function transcodeProxy(
   input: string,
   output: string,
   window?: { startSec: number; durationSec: number },
+  burnin?: BurninJob | null,
+  srcHeight?: number,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const cmd = ffmpeg(input);
     // Trim non-destructif (10.G-V10) : seek + durée, ré-encodage → coupe précise à la frame.
     if (window) cmd.setStartTime(window.startSec).setDuration(window.durationSec);
+    const proxyHeight = Math.min(1080, srcHeight && srcHeight > 0 ? srcHeight : 1080);
+    const mapping = applyVideoChain(cmd, 'scale=-2:min(1080\\,ih)', burnin ?? null, proxyHeight);
     cmd
       .outputOptions([
         '-c:v libx264',
@@ -204,8 +255,8 @@ function transcodeProxy(
         '-pix_fmt yuv420p',
         '-c:a aac',
         '-movflags +faststart',
-        '-vf scale=-2:min(1080\\,ih)',
       ])
+      .outputOptions(mapping)
       .output(output)
       .on('end', () => resolve())
       .on('error', reject)
@@ -227,13 +278,15 @@ function transcodeHlsRendition(
   videoBitrateK: number,
   cfg: Pick<TranscodeConfig, 'preset' | 'audioBitrateK'>,
   fps?: number,
+  burnin?: BurninJob | null,
 ): Promise<void> {
   const gop = hlsGopSize(fps);
   return new Promise((resolve, reject) => {
-    ffmpeg(input)
+    const cmd = ffmpeg(input);
+    const mapping = applyVideoChain(cmd, `scale=-2:${height}`, burnin ?? null, height);
+    cmd
+      .outputOptions(mapping)
       .outputOptions([
-        '-vf',
-        `scale=-2:${height}`,
         '-c:v',
         'libx264',
         '-preset',
@@ -308,6 +361,140 @@ async function writeSceneMarkers(mediaId: number, frames: number[]): Promise<voi
   await publishWorkerEvent({ type: 'markers', mediaId });
 }
 
+/** Durée du slate d'identification en tête du dérivé client (35.A). */
+const SLATE_SEC = 3;
+
+/**
+ * Résout la config burn-in effective du projet du média + le contexte d'incrustation
+ * (shot/version) et télécharge le logo studio si nécessaire. `null` si tout est inactif.
+ */
+async function loadBurninSetup(
+  mediaId: number,
+  versionId: number,
+  originalName: string,
+  dir: string,
+): Promise<BurninJob | null> {
+  const projSel = { select: { name: true, settings: true } };
+  const version = await prisma.version.findUnique({
+    where: { id: versionId },
+    select: {
+      name: true,
+      author: { select: { name: true } },
+      task: {
+        select: {
+          shot: {
+            select: { code: true, sequence: { select: { code: true } }, project: projSel },
+          },
+          asset: { select: { name: true, project: projSel } },
+        },
+      },
+      asset: { select: { name: true, project: projSel } },
+    },
+  });
+  if (!version) return null;
+  const shot = version.task?.shot ?? null;
+  const asset = version.task?.asset ?? version.asset ?? null;
+  const project = shot?.project ?? asset?.project ?? null;
+  const cfg = await resolveBurninConfig(project?.settings ?? null);
+  if (!cfg.enabled && !cfg.slate) return null;
+
+  const shotLabel = shot
+    ? shot.sequence
+      ? `${shot.sequence.code} · ${shot.code}`
+      : shot.code
+    : (asset?.name ?? null);
+  const ctx: BurninContext = { shotLabel, versionLabel: version.name, fps: null };
+
+  let logoPath: string | null = null;
+  if (cfg.enabled && cfg.showLogo) {
+    const logo = await prisma.setting.findUnique({ where: { key: SETTING_KEYS.STUDIO_LOGO } });
+    if (logo?.value) {
+      try {
+        logoPath = join(dir, `logo${extname(logo.value) || '.png'}`);
+        await storage.downloadToFile(logo.value, logoPath);
+      } catch (err) {
+        logger.warn({ err }, `[ffmpeg.worker] logo burn-in indisponible media=${mediaId}`);
+        logoPath = null;
+      }
+    }
+  }
+
+  let slateInfo: SlateInfo | null = null;
+  if (cfg.slate) {
+    const studio = await prisma.studio.findFirst({ select: { name: true } });
+    slateInfo = {
+      studioName: studio?.name ?? 'ReView',
+      projectName: project?.name ?? null,
+      shotLabel,
+      versionLabel: version.name,
+      authorName: version.author?.name ?? null,
+      fileName: originalName,
+      date: new Date().toISOString().slice(0, 10),
+    };
+  }
+  return { cfg, ctx, logoPath, slateInfo };
+}
+
+/** Rend l'image du slate (fond sombre + lignes centrées) aux dimensions du proxy. */
+function makeSlateImage(output: string, width: number, height: number, lines: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(`color=c=0x0b0f14:s=${width}x${height}`)
+      .inputFormat('lavfi')
+      .outputOptions(['-vf', buildSlateFilters(lines, height).join(','), '-frames:v', '1'])
+      .output(output)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .run();
+  });
+}
+
+/**
+ * Dérivé client (35.A) : slate de `SLATE_SEC` s concaténé en tête du proxy — servi
+ * uniquement par les partages clients (le proxy de review reste intact : un slate en
+ * tête décalerait toutes les annotations frame-par-frame).
+ */
+function buildClientDerivative(
+  slatePng: string,
+  proxyPath: string,
+  output: string,
+  opts: { width: number; height: number; fps: number; hasAudio: boolean },
+): Promise<void> {
+  const { width, height, fps, hasAudio } = opts;
+  const slateV = `[0:v]fps=${fps},scale=${width}:${height},setsar=1,format=yuv420p[sv]`;
+  return new Promise((resolve, reject) => {
+    const cmd = ffmpeg()
+      .input(slatePng)
+      .inputOptions(['-loop 1', `-t ${SLATE_SEC}`]);
+    if (hasAudio) {
+      cmd
+        .input('anullsrc=r=48000:cl=stereo')
+        .inputFormat('lavfi')
+        .inputOptions([`-t ${SLATE_SEC}`])
+        .input(proxyPath)
+        .complexFilter(`${slateV};[2:v]setsar=1[pv];[sv][1:a][pv][2:a]concat=n=2:v=1:a=1[v][a]`)
+        .outputOptions(['-map', '[v]', '-map', '[a]', '-c:a', 'aac']);
+    } else {
+      cmd
+        .input(proxyPath)
+        .complexFilter(`${slateV};[1:v]setsar=1[pv];[sv][pv]concat=n=2:v=1:a=0[v]`)
+        .outputOptions(['-map', '[v]']);
+    }
+    cmd
+      .outputOptions([
+        '-c:v libx264',
+        '-preset veryfast',
+        '-crf 23',
+        '-pix_fmt yuv420p',
+        '-movflags +faststart',
+      ])
+      .output(output)
+      .on('end', () => resolve())
+      .on('error', reject)
+      .run();
+  });
+}
+
 type HlsRenditionMeta = { height: number; width: number; videoBitrateK: number };
 
 /**
@@ -326,6 +513,7 @@ async function buildHls(
   srcHeight: number,
   srcFps?: number,
   onRendition?: (renditions: HlsRenditionMeta[], building: boolean) => Promise<void>,
+  burnin?: BurninJob | null,
 ): Promise<HlsRenditionMeta[]> {
   const hlsDir = join(dir, 'hls');
   await mkdir(hlsDir, { recursive: true });
@@ -335,7 +523,7 @@ async function buildHls(
   const todo = selectRenditions(cfg, srcHeight);
   for (const [i, r] of todo.entries()) {
     const name = renditionName(r.height);
-    await transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg, srcFps);
+    await transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg, srcFps, burnin);
     const width =
       srcWidth > 0 && srcHeight > 0
         ? Math.round(((srcWidth / srcHeight) * r.height) / 2) * 2
@@ -393,8 +581,22 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       // Sonde + proxy + miniature pour la vidéo
       Object.assign(metadata, await probe(src));
 
+      // Burn-ins configurables (35.A) : config effective du projet + contexte shot/version.
+      // Best effort — un échec de résolution ne condamne pas le transcodage.
+      const burnin = await loadBurninSetup(mediaId, media.versionId, media.originalName, dir).catch((err) => {
+        logger.warn({ err }, `[ffmpeg.worker] burn-ins non résolus media=${mediaId}`);
+        return null;
+      });
+      if (burnin) burnin.ctx.fps = typeof metadata.fps === 'number' ? metadata.fps : null;
+
       const proxyPath = join(dir, 'proxy.mp4');
-      await transcodeProxy(src, proxyPath);
+      await transcodeProxy(
+        src,
+        proxyPath,
+        undefined,
+        burnin,
+        typeof metadata.height === 'number' ? metadata.height : undefined,
+      );
       const proxyKey = `derived/${mediaId}/proxy.mp4`;
       await storage.uploadFile(proxyKey, proxyPath, 'video/mp4');
       metadata.proxyKey = proxyKey;
@@ -444,8 +646,34 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
               building,
             });
           },
+          burnin,
         );
         metadata.hls = { renditions };
+      }
+
+      // Slate + dérivé client (35.A, best effort) : slate d'identification concaténé en
+      // tête du proxy → `derived/{id}/client.mp4`, servi uniquement par les partages.
+      if (burnin?.slateInfo) {
+        try {
+          const p = await probe(proxyPath);
+          if (p.width && p.height) {
+            const slatePng = join(dir, 'slate.png');
+            await makeSlateImage(slatePng, p.width, p.height, buildSlateLines(burnin.slateInfo));
+            const clientPath = join(dir, 'client.mp4');
+            await buildClientDerivative(slatePng, proxyPath, clientPath, {
+              width: p.width,
+              height: p.height,
+              fps: Math.min(Math.max(Math.round(p.fps ?? 24), 1), 240),
+              hasAudio: p.hasAudio === true,
+            });
+            const clientKey = `derived/${mediaId}/client.mp4`;
+            await storage.uploadFile(clientKey, clientPath, 'video/mp4');
+            metadata.clientProxyKey = clientKey;
+            metadata.slateSec = SLATE_SEC;
+          }
+        } catch (err) {
+          logger.warn({ err }, `[ffmpeg.worker] slate/dérivé client échoué media=${mediaId}`);
+        }
       }
 
       // Scene detection (34.H, opt-in admin) : marqueurs auto « Plan n » aux coupes —

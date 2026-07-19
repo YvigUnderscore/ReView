@@ -45,3 +45,13 @@ export interface ClientComment {
   author: { id: number; name: string | null } | null;
   createdAt: string;
 }
+/** GET /api/admin/burnin — template studio des burn-ins/slates (35.A). */
+export interface BurninConfig {
+  enabled: boolean;
+  showShot: boolean;
+  showVersion: boolean;
+  showTimecode: boolean;
+  showLogo: boolean;
+  customText: string;
+  slate: boolean;
+}

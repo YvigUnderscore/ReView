@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { SkeletonRows } from './ui/skeleton';
+import ProjectBurninSection from './ProjectBurninSection';
 import type { Department, Nomenclature, ProjectSettings } from '../types/api';
 
 /**
@@ -248,6 +249,14 @@ export default function ProjectSettingsTab({
           </div>
         )}
       </section>
+
+      {/* Burn-ins (35.A) : override du template studio, enregistré avec les réglages. */}
+      {draft && (
+        <ProjectBurninSection
+          value={draft.burnin}
+          onChange={(burnin) => setDraft((d) => d && { ...d, burnin })}
+        />
+      )}
 
       <button
         onClick={saveSettings}

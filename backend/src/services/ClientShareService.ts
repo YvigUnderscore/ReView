@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { AppError, notFound, unauthorized } from '../lib/errors';
+import { SETTING_KEYS } from '../lib/settings';
 
 /**
  * Accès public par lien de partage (35.C/35.D) — logique commune aux routes `/api/client`.
@@ -11,7 +12,7 @@ import { AppError, notFound, unauthorized } from '../lib/errors';
  * sous-routes exigent cette session, la limite de vues ne peut donc pas être contournée.
  */
 
-export const STUDIO_LOGO_KEY = 'studio_logo_key';
+export const STUDIO_LOGO_KEY = SETTING_KEYS.STUDIO_LOGO;
 
 /** Médias visibles côté client : publiés, READY, version publiée, dans le projet partagé. */
 export const publishedMediaWhere = (projectId: number) => ({

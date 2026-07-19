@@ -15,6 +15,8 @@ export const SETTING_KEYS = {
   LIVE_SYNC_HZ_IMAGE: 'live_sync_hz_image',
   LIVE_SYNC_HZ_3D: 'live_sync_hz_3d',
   LIVE_SYNC_HZ_SPLAT: 'live_sync_hz_splat',
+  // Logo studio (35.D) : clé MinIO — page client, burn-ins worker.
+  STUDIO_LOGO: 'studio_logo_key',
 } as const;
 
 const DEFAULTS: Record<string, number> = {

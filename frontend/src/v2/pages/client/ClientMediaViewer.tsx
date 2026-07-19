@@ -37,10 +37,13 @@ export default function ClientMediaViewer({
 
   const urlQ = useQuery({
     queryKey: ['client-share', token, 'media', media.id, 'url'],
-    queryFn: () => clientApi.get<{ url: string }>(token, `/media/${media.id}/url`),
+    queryFn: () => clientApi.get<{ url: string; slateSec?: number }>(token, `/media/${media.id}/url`),
     enabled: playable,
     staleTime: 5 * 60 * 1000,
   });
+  // Slate en tête du dérivé client (35.A) : les timestamps de commentaires restent exprimés
+  // dans le référentiel du média (sans slate) — on décale à l'envoi et au seek.
+  const slateSec = urlQ.data?.slateSec ?? 0;
   const commentsQ = useQuery({
     queryKey: ['client-share', token, 'media', media.id, 'comments'],
     queryFn: () => clientApi.get<{ comments: ClientComment[] }>(token, `/media/${media.id}/comments`),
@@ -57,7 +60,10 @@ export default function ClientMediaViewer({
     setBusy(true);
     try {
       localStorage.setItem('client-guest-name', guestName.trim());
-      const timestamp = media.kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
+      const timestamp =
+        media.kind === 'VIDEO' && videoRef.current
+          ? Math.max(0, videoRef.current.currentTime - slateSec)
+          : undefined;
       await clientApi.post(token, `/media/${media.id}/comments`, {
         guestName: guestName.trim(),
         content: content.trim(),
@@ -75,7 +81,7 @@ export default function ClientMediaViewer({
 
   const seek = (sec: number) => {
     if (videoRef.current) {
-      videoRef.current.currentTime = sec;
+      videoRef.current.currentTime = sec + slateSec;
       videoRef.current.play().catch(() => undefined);
     }
   };

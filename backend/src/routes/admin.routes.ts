@@ -10,6 +10,7 @@ import {
   projectSettingsSchema,
 } from '../lib/projectSettings';
 import { getTranscodeConfig, setTranscodeConfig, transcodeConfigSchema } from '../lib/transcodeConfig';
+import { getStudioBurninConfig, setStudioBurninConfig, burninConfigSchema } from '../lib/burnin';
 import * as AdminService from '../services/AdminService';
 
 const router = Router();
@@ -36,6 +37,18 @@ router.get('/transcode', async (_req, res) => {
 router.put('/transcode', validate({ body: transcodeConfigSchema }), async (req, res) => {
   const config = await setTranscodeConfig(req.body);
   logAudit({ userId: req.user!.id, action: 'TRANSCODE_CONFIG_UPDATE', entityType: 'Setting' });
+  res.json({ config });
+});
+
+// GET /api/admin/burnin — template studio des burn-ins/slates (35.A)
+router.get('/burnin', async (_req, res) => {
+  res.json({ config: await getStudioBurninConfig() });
+});
+
+// PUT /api/admin/burnin — enregistre le template (appliqué aux prochains transcodages)
+router.put('/burnin', validate({ body: burninConfigSchema }), async (req, res) => {
+  const config = await setStudioBurninConfig(req.body);
+  logAudit({ userId: req.user!.id, action: 'BURNIN_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
 });
 
