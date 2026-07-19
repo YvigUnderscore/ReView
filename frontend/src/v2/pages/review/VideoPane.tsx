@@ -10,6 +10,7 @@ import { useVideoFullscreen } from './useVideoFullscreen';
 import { usePlaybackSpeed, useVideoBuffering } from './videoPaneHooks';
 import type { TimelineSpriteMeta } from './timelineSprite';
 import { RangeAnnotationsOverlay } from './RangeAnnotations';
+import CompositionGuides from './CompositionGuides';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
 
@@ -257,6 +258,8 @@ export default function VideoPane({
           />
           {/* Annotations sur plage in→out (34.A) : visibles pendant toute la plage. */}
           <RangeAnnotationsOverlay comments={comments} currentFrame={currentFrame} selectedId={selectedId} />
+          {/* Guides de composition (34.G) : tiers / croix / safe areas, via clic droit. */}
+          <CompositionGuides />
           {overlay}
         </div>
         {/* Vitesse de lecture (34.C) : visible dès qu'on n'est pas en lecture normale ×1. */}

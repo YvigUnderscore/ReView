@@ -1,11 +1,13 @@
 import { useState, type ReactNode, type RefObject } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
   Download,
   EyeOff,
+  Grid3x3,
   Image as ImageIcon,
   Link2,
   ListVideo,
@@ -20,8 +22,12 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '../../components/ui/context-menu';
+import { useGuides, type GuideKey } from '../../stores/useGuides';
 import { stepVideoFrame, type MediaResp } from './reviewTypes';
 import { captureVideoFrame, copyImageToClipboard, downloadImage, toThumbnailDataUrl } from './mediaCapture';
 import { frameLink } from './deepLink';
@@ -57,6 +63,15 @@ export default function ReviewContextMenu({
   const qc = useQueryClient();
   const kind = data.media.kind;
   const isVideo = kind === 'VIDEO';
+  // Guides de composition (34.G) — préférence locale, appliquée au viewer vidéo.
+  const guides = useGuides((s) => s.guides);
+  const toggleGuide = useGuides((s) => s.toggle);
+  const guideItems: Array<{ key: GuideKey; label: string }> = [
+    { key: 'thirds', label: 'Règle des tiers' },
+    { key: 'center', label: 'Croix centrale' },
+    { key: 'actionSafe', label: 'Action safe (90 %)' },
+    { key: 'titleSafe', label: 'Title safe (80 %)' },
+  ];
   const baseName = data.media.originalName.replace(/\.[^.]+$/, '');
   // « Ajouter à la playlist » depuis la review courante (retours CP-HUMAIN 33).
   const [playlistOpen, setPlaylistOpen] = useState(false);
@@ -116,6 +131,20 @@ export default function ReviewContextMenu({
             <ContextMenuItem onSelect={() => stepVideoFrame(videoRef.current, fps, 1)}>
               <ChevronRight size={14} /> Frame suivante
             </ContextMenuItem>
+            {/* Guides de composition (34.G) : tiers / croix / safe areas. */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                <Grid3x3 size={14} /> Guides de composition
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                {guideItems.map((g) => (
+                  <ContextMenuItem key={g.key} onClick={() => toggleGuide(g.key)}>
+                    <Check size={14} className={guides[g.key] ? 'opacity-100' : 'opacity-0'} />
+                    {g.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
             <ContextMenuSeparator />
             <ContextMenuItem
               onSelect={() => run('Frame copiée', async () => copyImageToClipboard(frameDataUrl()))}
