@@ -11,29 +11,7 @@ router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-/**
- * POST /api/media/upload-url — crée un MediaObject (UPLOADING) + URL présignée PUT
- * pour uploader directement dans MinIO (non-bloquant, sans toucher le FS serveur).
- */
-router.post(
-  '/upload-url',
-  validate({
-    body: z.object({
-      versionId: z.number().int(),
-      filename: z.string().min(1).max(255),
-      contentType: z.string().min(1).max(160),
-      kind: z.nativeEnum(MediaKind),
-      size: z.number().int().nonnegative().optional(),
-      contentHash: z
-        .string()
-        .regex(/^[0-9a-f]{64}$/i)
-        .optional(), // sha256 client (37.B) — vérifié par le worker
-    }),
-  }),
-  async (req, res) => {
-    res.status(201).json(await MediaService.createUpload(req.user!, req.body));
-  },
-);
+// POST /api/media/upload-url (PUT présigné simple) : déplacé dans media-upload.routes.ts (37.A).
 
 /**
  * POST /api/media/:id/finalize — appelé après le PUT : lit l'en-tête depuis MinIO,

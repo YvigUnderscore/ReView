@@ -4,6 +4,7 @@ import { MediaKind } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as MediaUploadService from '../services/MediaUploadService';
+import * as MediaService from '../services/MediaService';
 
 /**
  * Upload résumable multipart (37.A/37.B) — monté sous /api/media AVANT media.routes
@@ -18,6 +19,27 @@ const sha256 = z
   .string()
   .regex(/^[0-9a-f]{64}$/i)
   .transform((s) => s.toLowerCase());
+
+/**
+ * POST /api/media/upload-url — upload simple (PUT présigné) pour les petits fichiers :
+ * crée un MediaObject (UPLOADING) + URL présignée, sans toucher le FS serveur.
+ */
+router.post(
+  '/upload-url',
+  validate({
+    body: z.object({
+      versionId: z.number().int(),
+      filename: z.string().min(1).max(255),
+      contentType: z.string().min(1).max(160),
+      kind: z.nativeEnum(MediaKind),
+      size: z.number().int().nonnegative().optional(),
+      contentHash: sha256.optional(), // sha256 client (37.B) — vérifié par le worker
+    }),
+  }),
+  async (req, res) => {
+    res.status(201).json(await MediaService.createUpload(req.user!, req.body));
+  },
+);
 
 // POST /api/media/multipart/init — crée (ou retrouve) l'upload ; dédup par hash
 router.post(
