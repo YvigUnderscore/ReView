@@ -52,6 +52,10 @@ const baseEnvSchema = z.object({
   // Clé de chiffrement des secrets stockés (SMTP…). Optionnelle : à défaut, dérivée de
   // JWT_SECRET (SHA-256). En prod, JWT_SECRET est déjà durci (guard ci-dessous).
   APP_ENCRYPTION_KEY: z.string().optional(),
+  // 37.G : jeton d'accès à GET /metrics (vide = endpoint réservé au réseau interne).
+  METRICS_TOKEN: z.string().optional(),
+  // 37.D : encodeur vidéo du worker (h264_nvenc si GPU NVIDIA exposé au conteneur).
+  VIDEO_ENCODER: z.enum(['libx264', 'h264_nvenc']).default('libx264'),
   // Heure locale (0-23) d'envoi du digest quotidien.
   DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
   // URL publique de l'app (liens dans les emails) ; sans elle, liens omis.

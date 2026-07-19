@@ -12,6 +12,8 @@ import authRoutes from './routes/auth.routes';
 import authSecurityRoutes from './routes/auth-security.routes';
 import webhooksRoutes from './routes/webhooks.routes';
 import auth2faRoutes from './routes/auth-2fa.routes';
+import jobsRoutes from './routes/jobs.routes';
+import { httpMetrics, registry, startQueueMetrics } from './lib/metrics';
 import authOidcRoutes from './routes/auth-oidc.routes';
 import usersRoutes from './routes/users.routes';
 import studioRoutes from './routes/studio.routes';
@@ -63,6 +65,25 @@ export const createApp = (): Express => {
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
+  // Métriques Prometheus (37.G) : histogramme HTTP + gauges BullMQ.
+  app.use(httpMetrics);
+  startQueueMetrics();
+  app.get('/metrics', async (req, res) => {
+    // Jeton optionnel : sans METRICS_TOKEN, l'endpoint est à réserver au réseau interne
+    // (le nginx frontal ne l'expose pas). Avec, exiger ?token= ou Bearer.
+    if (env.METRICS_TOKEN) {
+      const provided =
+        (typeof req.query.token === 'string' ? req.query.token : undefined) ??
+        req.headers.authorization?.split(' ')[1];
+      if (provided !== env.METRICS_TOKEN) {
+        res.status(401).end();
+        return;
+      }
+    }
+    res.setHeader('Content-Type', registry.contentType);
+    res.end(await registry.metrics());
+  });
+
   // Rate limit global
   app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 5000 }));
 
@@ -103,6 +124,7 @@ export const createApp = (): Express => {
   app.use('/api/share', shareLimiter, shareRoutes);
   app.use('/api/client', shareLimiter, clientRoutes);
   app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
+  app.use('/api/admin/jobs', jobsRoutes); // dashboard BullMQ (37.C)
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/favorites', favoritesRoutes);

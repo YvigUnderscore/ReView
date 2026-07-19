@@ -6,6 +6,7 @@ import {
   Eye,
   Fingerprint,
   KeyRound,
+  ListChecks,
   FolderCog,
   History,
   LayoutDashboard,
@@ -32,6 +33,7 @@ import DistributionTab from './admin/DistributionTab';
 import ApiWebhooksTab from './admin/ApiWebhooksTab';
 import MediaAccessTab from './admin/MediaAccessTab';
 import IdentityTab from './admin/IdentityTab';
+import JobsTab from './admin/JobsTab';
 import ReviewStatusTab from './admin/ReviewStatusTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
@@ -94,6 +96,7 @@ const SECTIONS = [
     icon: KeyRound,
     Component: ApiWebhooksTab,
   },
+  { key: 'jobs', group: 'Maintenance', label: 'Jobs', icon: ListChecks, Component: JobsTab },
   { key: 'trash', group: 'Maintenance', label: 'Corbeille', icon: Trash2, Component: TrashTab },
   { key: 'audit', group: 'Maintenance', label: 'Audit', icon: History, Component: AuditTab },
   {

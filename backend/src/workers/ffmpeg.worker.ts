@@ -36,6 +36,8 @@ import {
   type SlateInfo,
 } from '../lib/burnin';
 import { SETTING_KEYS } from '../lib/settings';
+import { env } from '../config/env';
+import { qualityEncoderArgs, bitrateEncoderArgs, type VideoEncoder } from '../lib/videoEncoder';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 import { startWebhookWorker } from './webhook.worker';
 
@@ -235,12 +237,27 @@ function applyVideoChain(
 }
 
 /** Transcode une vidéo en proxy MP4 web (h264 + aac, faststart), avec fenêtre de trim en option. */
+/**
+ * Exécute un encodage avec l'encodeur configuré (37.D) ; si NVENC échoue (pas de GPU,
+ * drivers absents), retombe automatiquement sur libx264.
+ */
+async function withEncoderFallback(run: (encoder: VideoEncoder) => Promise<void>): Promise<void> {
+  try {
+    await run(env.VIDEO_ENCODER);
+  } catch (err) {
+    if (env.VIDEO_ENCODER === 'libx264') throw err;
+    logger.warn({ err }, `[ffmpeg.worker] ${env.VIDEO_ENCODER} indisponible — repli libx264`);
+    await run('libx264');
+  }
+}
+
 function transcodeProxy(
   input: string,
   output: string,
   window?: { startSec: number; durationSec: number },
   burnin?: BurninJob | null,
   srcHeight?: number,
+  encoder: VideoEncoder = 'libx264',
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const cmd = ffmpeg(input);
@@ -250,9 +267,7 @@ function transcodeProxy(
     const mapping = applyVideoChain(cmd, 'scale=-2:min(1080\\,ih)', burnin ?? null, proxyHeight);
     cmd
       .outputOptions([
-        '-c:v libx264',
-        '-preset veryfast',
-        '-crf 23',
+        ...qualityEncoderArgs(encoder, 23, 'veryfast'),
         '-pix_fmt yuv420p',
         '-c:a aac',
         '-movflags +faststart',
@@ -280,6 +295,7 @@ function transcodeHlsRendition(
   cfg: Pick<TranscodeConfig, 'preset' | 'audioBitrateK'>,
   fps?: number,
   burnin?: BurninJob | null,
+  encoder: VideoEncoder = 'libx264',
 ): Promise<void> {
   const gop = hlsGopSize(fps);
   return new Promise((resolve, reject) => {
@@ -287,11 +303,8 @@ function transcodeHlsRendition(
     const mapping = applyVideoChain(cmd, `scale=-2:${height}`, burnin ?? null, height);
     cmd
       .outputOptions(mapping)
+      .outputOptions(bitrateEncoderArgs(encoder, cfg.preset))
       .outputOptions([
-        '-c:v',
-        'libx264',
-        '-preset',
-        cfg.preset,
         '-b:v',
         `${videoBitrateK}k`,
         '-maxrate',
@@ -302,8 +315,6 @@ function transcodeHlsRendition(
         String(gop),
         '-keyint_min',
         String(gop),
-        '-sc_threshold',
-        '0',
         '-pix_fmt',
         'yuv420p',
         '-c:a',
@@ -460,6 +471,7 @@ function buildClientDerivative(
   proxyPath: string,
   output: string,
   opts: { width: number; height: number; fps: number; hasAudio: boolean },
+  encoder: VideoEncoder = 'libx264',
 ): Promise<void> {
   const { width, height, fps, hasAudio } = opts;
   const slateV = `[0:v]fps=${fps},scale=${width}:${height},setsar=1,format=yuv420p[sv]`;
@@ -483,9 +495,7 @@ function buildClientDerivative(
     }
     cmd
       .outputOptions([
-        '-c:v libx264',
-        '-preset veryfast',
-        '-crf 23',
+        ...qualityEncoderArgs(encoder, 23, 'veryfast'),
         '-pix_fmt yuv420p',
         '-movflags +faststart',
       ])
@@ -524,7 +534,9 @@ async function buildHls(
   const todo = selectRenditions(cfg, srcHeight);
   for (const [i, r] of todo.entries()) {
     const name = renditionName(r.height);
-    await transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg, srcFps, burnin);
+    await withEncoderFallback((encoder) =>
+      transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg, srcFps, burnin, encoder),
+    );
     const width =
       srcWidth > 0 && srcHeight > 0
         ? Math.round(((srcWidth / srcHeight) * r.height) / 2) * 2
@@ -591,12 +603,15 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       if (burnin) burnin.ctx.fps = typeof metadata.fps === 'number' ? metadata.fps : null;
 
       const proxyPath = join(dir, 'proxy.mp4');
-      await transcodeProxy(
-        src,
-        proxyPath,
-        undefined,
-        burnin,
-        typeof metadata.height === 'number' ? metadata.height : undefined,
+      await withEncoderFallback((encoder) =>
+        transcodeProxy(
+          src,
+          proxyPath,
+          undefined,
+          burnin,
+          typeof metadata.height === 'number' ? metadata.height : undefined,
+          encoder,
+        ),
       );
       const proxyKey = `derived/${mediaId}/proxy.mp4`;
       await storage.uploadFile(proxyKey, proxyPath, 'video/mp4');
@@ -657,16 +672,26 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       if (burnin?.slateInfo) {
         try {
           const p = await probe(proxyPath);
-          if (p.width && p.height) {
+          const pw = p.width ?? 0;
+          const ph = p.height ?? 0;
+          if (pw > 0 && ph > 0) {
             const slatePng = join(dir, 'slate.png');
-            await makeSlateImage(slatePng, p.width, p.height, buildSlateLines(burnin.slateInfo));
+            await makeSlateImage(slatePng, pw, ph, buildSlateLines(burnin.slateInfo));
             const clientPath = join(dir, 'client.mp4');
-            await buildClientDerivative(slatePng, proxyPath, clientPath, {
-              width: p.width,
-              height: p.height,
-              fps: Math.min(Math.max(Math.round(p.fps ?? 24), 1), 240),
-              hasAudio: p.hasAudio === true,
-            });
+            await withEncoderFallback((encoder) =>
+              buildClientDerivative(
+                slatePng,
+                proxyPath,
+                clientPath,
+                {
+                  width: pw,
+                  height: ph,
+                  fps: Math.min(Math.max(Math.round(p.fps ?? 24), 1), 240),
+                  hasAudio: p.hasAudio === true,
+                },
+                encoder,
+              ),
+            );
             const clientKey = `derived/${mediaId}/client.mp4`;
             await storage.uploadFile(clientKey, clientPath, 'video/mp4');
             metadata.clientProxyKey = clientKey;
@@ -732,7 +757,9 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       const startSec = trim.inFrame / fps;
       const durationSec = Math.max((trim.outFrame - trim.inFrame) / fps, 1 / fps);
       const trimPath = join(dir, 'proxy-trim.mp4');
-      await transcodeProxy(src, trimPath, { startSec, durationSec });
+      await withEncoderFallback((encoder) =>
+        transcodeProxy(src, trimPath, { startSec, durationSec }, null, undefined, encoder),
+      );
       const trimProxyKey = `derived/${mediaId}/proxy-trim.mp4`;
       await storage.uploadFile(trimProxyKey, trimPath, 'video/mp4');
       // Relit le metadata au moment de l'écriture (le trim a pu être modifié/effacé pendant
