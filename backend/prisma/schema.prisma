@@ -144,6 +144,11 @@ model User {
   storageUsed  BigInt   @default(0)
   storageLimit BigInt?
   preferences  Json     @default("{}")
+  // 2FA TOTP (36.A) : secret chiffré (AES-GCM, lib/crypto), null tant que non configuré ;
+  // enabledAt null = enrôlement en cours ; backupCodes = hashs sha256 (consommés un par un).
+  totpSecret    String?
+  totpEnabledAt DateTime?
+  backupCodes   String[] @default([])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -168,6 +173,73 @@ model User {
   reviewDecisions  ReviewDecision[]    @relation("DecisionAuthor")
   playlists        Playlist[]          @relation("PlaylistAuthor")
   timelineMarkers  TimelineMarker[]    @relation("TimelineMarkerAuthor")
+  sessions         UserSession[]
+  apiTokens        ApiToken[]
+  mediaAccesses    MediaAccessLog[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identité & API publique (Phase 36)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Session de connexion (36.B) : un login = une session ; le sid est embarqué dans les
+// JWT access+refresh — révoquer la session invalide les deux (cache 30 s côté middleware).
+model UserSession {
+  id         String    @id // sid : 16 octets aléatoires en hex
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime // aligné sur la durée du refresh token
+  revokedAt  DateTime?
+
+  @@index([userId])
+}
+
+// Token d'API personnel (36.C) : `rvk_<40hex>`, stocké hashé (sha256), scopes read/write.
+model ApiToken {
+  id         Int       @id @default(autoincrement())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  name       String
+  tokenHash  String    @unique
+  scopes     String[]  @default(["read"])
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Journal d'accès aux médias (36.E) : qui a visionné quoi/quand (compte OU lien de partage).
+model MediaAccessLog {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId        Int?
+  shareLinkId   Int? // accès anonyme via partage client (pas de FK : le lien peut être purgé)
+  ip            String?
+  createdAt     DateTime    @default(now())
+
+  @@index([mediaObjectId, createdAt])
+  @@index([createdAt])
+}
+
+// Webhook sortant (36.D) : secret chiffré (AES-GCM), events filtrés, signé HMAC-SHA256.
+model Webhook {
+  id             Int       @id @default(autoincrement())
+  url            String
+  secret         String // chiffré via lib/crypto
+  events         String[] // media.published | review.decision | comment.created
+  active         Boolean   @default(true)
+  lastStatus     Int?
+  lastError      String?
+  lastDeliveryAt DateTime?
+  createdAt      DateTime  @default(now())
 }
 
 model PasswordReset {
@@ -429,6 +501,7 @@ model MediaObject {
   comments        Comment[]
   references      ReviewReference[]
   timelineMarkers TimelineMarker[]
+  accessLogs      MediaAccessLog[]
 }
 
 // Marqueurs de timeline nommés/colorés, partagés entre spectateurs (Phase 34.C) :

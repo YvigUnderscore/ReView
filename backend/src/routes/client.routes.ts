@@ -19,6 +19,7 @@ import { getWatermarkConfig } from '../lib/watermarkConfig';
 import { sanitizeHtml } from '../lib/sanitize';
 import { emitToProject } from '../services/SocketService';
 import { logAudit } from '../services/AuditService';
+import { logMediaAccess } from '../lib/mediaAccess';
 import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
 
 /**
@@ -128,6 +129,7 @@ router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req
     where: { id, ...publishedMediaWhere(share.projectId) },
   });
   if (!media) throw notFound('Média introuvable ou non publié');
+  logMediaAccess({ mediaObjectId: id, shareLinkId: share.id, ip: req.ip }); // 36.E
   const meta = (media.metadata ?? {}) as { clientProxyKey?: string; slateSec?: number };
   const clientKey = typeof meta.clientProxyKey === 'string' ? meta.clientProxyKey : null;
   res.json({

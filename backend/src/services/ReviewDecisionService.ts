@@ -4,6 +4,7 @@ import { logAudit } from './AuditService';
 import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
 import { emitToProject } from './SocketService';
+import { emitWebhookEvent } from './WebhookService';
 import { badRequest, conflict, notFound } from '../lib/errors';
 
 /**
@@ -145,6 +146,17 @@ export async function decide(
     content: `Décision « ${status.name} » sur la version ${version.name}`,
     referenceId: firstMedia?.id ?? null,
     exclude: [user.id, ...(version.authorId ? [version.authorId] : [])],
+  });
+  // Webhooks sortants (36.D).
+  emitWebhookEvent('review.decision', {
+    versionId,
+    versionName: version.name,
+    projectId,
+    status: status.name,
+    isApproval: status.isApproval,
+    isRetake: status.isRetake,
+    comment: comment ?? null,
+    decidedBy: user.id,
   });
   return decision;
 }

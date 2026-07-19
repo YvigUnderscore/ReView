@@ -9,6 +9,8 @@ import { httpLogger } from './middleware/httpLogger';
 
 import setupRoutes from './routes/setup.routes';
 import authRoutes from './routes/auth.routes';
+import authSecurityRoutes from './routes/auth-security.routes';
+import webhooksRoutes from './routes/webhooks.routes';
 import usersRoutes from './routes/users.routes';
 import studioRoutes from './routes/studio.routes';
 import projectsRoutes from './routes/projects.routes';
@@ -70,6 +72,7 @@ export const createApp = (): Express => {
   // Routes par domaine
   app.use('/api/setup', setupRoutes);
   app.use('/api/auth', authRoutes);
+  app.use('/api/auth', authSecurityRoutes); // sessions + tokens API (36.B/36.C)
   app.use('/api/users', usersRoutes);
   app.use('/api/studio', studioRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
@@ -95,6 +98,7 @@ export const createApp = (): Express => {
   });
   app.use('/api/share', shareLimiter, shareRoutes);
   app.use('/api/client', shareLimiter, clientRoutes);
+  app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/favorites', favoritesRoutes);

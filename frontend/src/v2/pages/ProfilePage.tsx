@@ -6,6 +6,8 @@ import { qk } from '../lib/query';
 import { useAuth, type AuthUser } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
+import SessionsSection from './profile/SessionsSection';
+import ApiTokensSection from './profile/ApiTokensSection';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -181,6 +183,10 @@ export default function ProfilePage() {
           <h2 className="text-sm font-semibold">Notifications</h2>
           <DigestToggle />
         </section>
+
+        {/* Sécurité du compte (36.B/36.C) : sessions actives + tokens d'API. */}
+        <SessionsSection />
+        <ApiTokensSection />
       </div>
     </Shell>
   );

@@ -67,4 +67,6 @@ export const qk = {
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
   shareLinks: (projectId: number) => ['share-links', projectId] as const,
   watermarkConfig: ['watermark-config'] as const,
+  authSessions: ['auth-sessions'] as const,
+  apiTokens: ['api-tokens'] as const,
 } as const;

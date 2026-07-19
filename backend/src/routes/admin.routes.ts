@@ -1,5 +1,9 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { Role } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { notFound } from '../lib/errors';
+import { paginationQuery, readPagination } from '../lib/pagination';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
@@ -50,6 +54,81 @@ router.put('/burnin', validate({ body: burninConfigSchema }), async (req, res) =
   const config = await setStudioBurninConfig(req.body);
   logAudit({ userId: req.user!.id, action: 'BURNIN_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
+});
+
+// GET /api/admin/api-tokens — tous les tokens d'API du studio (36.C, jamais le secret)
+router.get('/api-tokens', async (_req, res) => {
+  const tokens = await prisma.apiToken.findMany({
+    where: { revokedAt: null },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      scopes: true,
+      lastUsedAt: true,
+      expiresAt: true,
+      createdAt: true,
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+  res.json({ tokens });
+});
+
+// DELETE /api/admin/api-tokens/:id — révocation par un admin (n'importe quel compte)
+router.delete(
+  '/api-tokens/:id',
+  validate({ params: z.object({ id: z.coerce.number().int() }) }),
+  async (req, res) => {
+    const r = await prisma.apiToken.updateMany({
+      where: { id: Number(req.params.id), revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    if (r.count === 0) throw notFound('Token introuvable');
+    logAudit({
+      userId: req.user!.id,
+      action: 'API_TOKEN_REVOKE',
+      entityType: 'ApiToken',
+      entityId: Number(req.params.id),
+      metadata: { byAdmin: true },
+    });
+    res.status(204).end();
+  },
+);
+
+// GET /api/admin/media-access — journal d'accès aux médias (36.E), paginé, récent d'abord
+router.get('/media-access', validate({ query: paginationQuery }), async (req, res) => {
+  const { page, pageSize } = readPagination(req.query);
+  const [rows, total] = await Promise.all([
+    prisma.mediaAccessLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        createdAt: true,
+        ip: true,
+        shareLinkId: true,
+        media: { select: { id: true, originalName: true, kind: true } },
+        user: { select: { id: true, name: true, email: true } },
+      },
+    }),
+    prisma.mediaAccessLog.count(),
+  ]);
+  // Labels des liens de partage (pas de FK : le lien peut avoir été purgé).
+  const shareIds = [...new Set(rows.map((r) => r.shareLinkId).filter((v): v is number => v != null))];
+  const links = shareIds.length
+    ? await prisma.shareLink.findMany({ where: { id: { in: shareIds } }, select: { id: true, label: true } })
+    : [];
+  const labelOf = new Map(links.map((l) => [l.id, l.label]));
+  res.json({
+    items: rows.map((r) => ({
+      ...r,
+      shareLabel: r.shareLinkId != null ? (labelOf.get(r.shareLinkId) ?? 'Lien supprimé') : null,
+    })),
+    total,
+    page,
+    pageSize,
+  });
 });
 
 // GET /api/admin/dashboard — métriques studio (compat. ascendante, vue compacte)

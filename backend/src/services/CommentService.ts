@@ -7,6 +7,7 @@ import { toPublicUser } from '../lib/userView';
 import { storage } from './StorageService';
 import * as ReviewReferenceService from './ReviewReferenceService';
 import { notifyWatchers } from './WatchService';
+import { emitWebhookEvent } from './WebhookService';
 import { badRequest, forbidden } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 
@@ -189,6 +190,15 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
   });
   const enriched = await enrichComment(asRawComment(comment));
   emitToProject(projectId, 'comment:new', enriched);
+  // Webhooks sortants (36.D).
+  emitWebhookEvent('comment.created', {
+    commentId: comment.id,
+    mediaObjectId: body.mediaObjectId,
+    projectId,
+    authorId: user.id,
+    parentId: body.parentId ?? null,
+    timestamp: body.timestamp ?? null,
+  });
 
   // Mentions @user (32.B) : notification ciblée des membres cités.
   const mentioned = await notifyMentions(user.id, projectId, body.mediaObjectId, comment.content);

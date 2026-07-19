@@ -8,6 +8,7 @@ import { redisConnectionOptions } from '../lib/redis';
 export const QUEUE_NAMES = {
   MEDIA: 'media-processing',
   STORAGE_CLEANUP: 'storage-cleanup',
+  WEBHOOKS: 'webhooks',
 } as const;
 
 export interface MediaJobData {
@@ -53,3 +54,22 @@ export const storageCleanupQueue = new Queue<StorageCleanupJobData, void, string
 
 export const enqueueStorageCleanup = (data: StorageCleanupJobData) =>
   storageCleanupQueue.add('cleanup', data);
+
+/** Livraison de webhook (36.D) : un job par webhook abonné, retries automatiques. */
+export interface WebhookJobData {
+  webhookId: number;
+  event: string;
+  payload: Record<string, unknown>;
+}
+
+export const webhookQueue = new Queue<WebhookJobData, void, string>(QUEUE_NAMES.WEBHOOKS, {
+  connection: redisConnectionOptions,
+  defaultJobOptions: {
+    attempts: 5,
+    backoff: { type: 'exponential', delay: 10_000 },
+    removeOnComplete: 200,
+    removeOnFail: 500,
+  },
+});
+
+export const enqueueWebhookDelivery = (data: WebhookJobData) => webhookQueue.add(data.event, data);

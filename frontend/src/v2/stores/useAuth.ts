@@ -40,6 +40,8 @@ export const useAuth = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    // Révoque la session serveur (36.B) — best effort, avant de jeter le token local.
+    void api.post('/api/auth/logout').catch(() => undefined);
     localStorage.removeItem('token');
     set({ user: null });
   },

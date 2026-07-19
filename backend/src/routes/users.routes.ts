@@ -5,6 +5,8 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as UserService from '../services/UserService';
+import { revokeAllSessions } from '../lib/sessions';
+import { logAudit } from '../services/AuditService';
 
 const router = Router();
 router.use(authenticate);
@@ -147,6 +149,19 @@ router.patch(
     res.json({ user: await UserService.updateUser(req.user!.id, Number(req.params.id), req.body) });
   },
 );
+
+// DELETE /api/users/:id/sessions — révoque TOUTES les sessions d'un compte (admin, 36.B)
+router.delete('/:id/sessions', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
+  const count = await revokeAllSessions(Number(req.params.id));
+  logAudit({
+    userId: req.user!.id,
+    action: 'SESSION_REVOKE_ALL',
+    entityType: 'User',
+    entityId: Number(req.params.id),
+    metadata: { count },
+  });
+  res.json({ revoked: count });
+});
 
 // DELETE /api/users/:id (admin)
 router.delete('/:id', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {

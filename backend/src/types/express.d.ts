@@ -9,6 +9,10 @@ declare global {
         email: string;
         role: Role;
       };
+      /** Session de connexion (36.B) — présent quand le JWT porte un sid. */
+      sessionId?: string;
+      /** Authentification par token d'API (36.C) — scopes effectifs. */
+      apiToken?: { id: number; scopes: string[] };
     }
   }
 }

@@ -2,7 +2,8 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { signAccessToken, signRefreshToken, verifyToken } from '../lib/jwt';
+import { signAccessToken, signRefreshToken, signTwoFaToken, verifyToken } from '../lib/jwt';
+import { createSession, isSessionActive, touchSession } from '../lib/sessions';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import { rateLimit } from '../middleware/rateLimit';
@@ -64,14 +65,20 @@ router.post(
   },
 );
 
-// POST /api/auth/login
+// POST /api/auth/login — crée une session révocable (36.B) ; si 2FA actif, renvoie un
+// jeton intermédiaire à échanger contre les tokens via /api/auth/2fa/verify (36.A).
 router.post('/login', authLimiter, validate({ body: credentialsSchema }), async (req, res) => {
   const { email, password } = req.body as { email: string; password: string };
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !(await bcrypt.compare(password, user.password))) {
     throw unauthorized('Identifiants invalides', 'BAD_CREDENTIALS');
   }
-  const payload = { id: user.id, email: user.email, role: user.role };
+  if (user.totpEnabledAt) {
+    res.json({ requires2fa: true, tmpToken: signTwoFaToken(user.id) });
+    return;
+  }
+  const sid = await createSession(user.id, req);
+  const payload = { id: user.id, email: user.email, role: user.role, sid };
   res.json({
     token: signAccessToken(payload),
     refreshToken: signRefreshToken(payload),
@@ -79,14 +86,22 @@ router.post('/login', authLimiter, validate({ body: credentialsSchema }), async 
   });
 });
 
-// POST /api/auth/refresh
+// POST /api/auth/refresh — exige une session active ; les refresh legacy (sans sid)
+// se voient attribuer une session au passage (migration transparente).
 router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) }), async (req, res) => {
   const { refreshToken } = req.body as { refreshToken: string };
   const payload = verifyToken(refreshToken);
   if (!payload || payload.kind !== 'refresh') throw unauthorized('Refresh token invalide');
   const user = await prisma.user.findUnique({ where: { id: payload.id } });
   if (!user) throw unauthorized('Utilisateur introuvable');
-  const next = { id: user.id, email: user.email, role: user.role };
+  let sid = payload.sid;
+  if (sid) {
+    if (!(await isSessionActive(sid))) throw unauthorized('Session révoquée', 'SESSION_REVOKED');
+    await touchSession(sid);
+  } else {
+    sid = await createSession(user.id, req);
+  }
+  const next = { id: user.id, email: user.email, role: user.role, sid };
   res.json({ token: signAccessToken(next), refreshToken: signRefreshToken(next) });
 });
 

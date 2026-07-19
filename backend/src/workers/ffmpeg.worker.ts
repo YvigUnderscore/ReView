@@ -37,6 +37,7 @@ import {
 } from '../lib/burnin';
 import { SETTING_KEYS } from '../lib/settings';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
+import { startWebhookWorker } from './webhook.worker';
 
 /**
  * Worker de traitement média (FFmpeg) — BullMQ.
@@ -795,6 +796,8 @@ ffmpegWorker.on('failed', (job, err) =>
 if (require.main === module) {
   ffmpegWorker.run();
   logger.info('[ffmpeg.worker] démarré.');
-  // Même process worker : traite aussi la file de nettoyage storage (retry des orphelins).
+  // Même process worker : traite aussi la file de nettoyage storage (retry des orphelins)
+  // et la livraison des webhooks (36.D — les POST sortants ne partent pas du serveur web).
   startStorageCleanupWorker();
+  startWebhookWorker();
 }

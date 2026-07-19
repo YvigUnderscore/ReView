@@ -146,7 +146,7 @@ router.post(
  * Les éditions splat (transform/volumes/masque) vivent dans media-splat.routes.ts (10.G).
  */
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
-  res.json(await MediaService.getDetail(req.user!, Number(req.params.id)));
+  res.json(await MediaService.getDetail(req.user!, Number(req.params.id), req.ip));
 });
 
 /**

@@ -10,6 +10,8 @@ import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { enqueueMediaJob } from './JobService';
 import { getLiveSyncHz, getNumericSetting, SETTING_KEYS } from '../lib/settings';
+import { logMediaAccess } from '../lib/mediaAccess';
+import { emitWebhookEvent } from './WebhookService';
 import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
@@ -339,6 +341,15 @@ export async function publish(user: SessionUser, id: number) {
       content: `Nouveau média publié : ${media.originalName}`,
       exclude: [user.id],
     });
+    // Webhooks sortants (36.D).
+    emitWebhookEvent('media.published', {
+      mediaObjectId: id,
+      versionId: media.versionId,
+      projectId,
+      kind: media.kind,
+      originalName: media.originalName,
+      publishedBy: user.id,
+    });
   }
   return serializeMedia(updated);
 }
@@ -377,13 +388,15 @@ export function mediaSourceKey(media: { storageKey: string; metadata: unknown })
 }
 
 /** Détail complet d'un média + URLs présignées (original, miniature, proxy, glb). */
-export async function getDetail(user: SessionUser, id: number) {
+export async function getDetail(user: SessionUser, id: number, ip?: string | null) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Média introuvable');
   if (!media.published && media.uploaderId !== user.id) throw notFound('Média introuvable');
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('Accès au projet refusé');
+  // Journal d'accès (36.E) : la review charge ce détail à l'ouverture — dédup 30 min.
+  logMediaAccess({ mediaObjectId: id, userId: user.id, ip: ip ?? null });
   const meta = (media.metadata ?? {}) as {
     proxyKey?: string;
     sourceDeleted?: boolean;
