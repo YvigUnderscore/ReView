@@ -4,6 +4,7 @@ import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
 import { validateMediaHeader, getExtension, detectImage } from '../lib/fileSignatures';
 import { resolveProjectIdForVersion, resolveStorageContextForVersion } from '../lib/pipeline';
+import { resolveProjectSettingsById, checkNaming } from '../lib/projectSettings';
 import { slugifyFilename } from '../lib/slug';
 import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
 import { logAudit } from './AuditService';
@@ -89,6 +90,13 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   // Quota de stockage du projet (38.D) — s'applique à tous, admin compris.
   await assertProjectQuota(projectId, size ?? 0);
 
+  // Convention de nommage (38.C) : refus en mode reject, avertissement renvoyé en mode warn.
+  const { naming } = await resolveProjectSettingsById(projectId);
+  const namingCheck = checkNaming(filename, naming);
+  if (!namingCheck.pass && namingCheck.mode === 'reject')
+    throw badRequest('Nom de fichier non conforme à la nomenclature du projet', 'NAMING_REJECTED');
+  const namingWarning = !namingCheck.pass && namingCheck.mode === 'warn';
+
   const media = await prisma.mediaObject.create({
     data: {
       versionId,
@@ -111,7 +119,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   await prisma.mediaObject.update({ where: { id: media.id }, data: { storageKey } });
 
   const uploadUrl = await storage.getPresignedPutUrl(storageKey, contentType);
-  return { mediaObjectId: media.id, storageKey, uploadUrl };
+  return { mediaObjectId: media.id, storageKey, uploadUrl, namingWarning };
 }
 
 /** Finalise un upload : valide les magic bytes, met la taille à jour, déclenche le traitement. */

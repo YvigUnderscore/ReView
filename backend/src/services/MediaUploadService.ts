@@ -87,6 +87,7 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
           partSize: MULTIPART_PART_SIZE,
           deduplicated: true,
           uploadedParts: [],
+          namingWarning: created.namingWarning,
         };
       }
     }
@@ -104,7 +105,12 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
       } as Prisma.InputJsonValue,
     },
   });
-  return { mediaObjectId: created.mediaObjectId, partSize: MULTIPART_PART_SIZE, uploadedParts: [] };
+  return {
+    mediaObjectId: created.mediaObjectId,
+    partSize: MULTIPART_PART_SIZE,
+    uploadedParts: [],
+    namingWarning: created.namingWarning,
+  };
 }
 
 /** Charge un média multipart appartenant à l'appelant, encore en cours d'upload. */

@@ -3,6 +3,7 @@ import {
   applyPipelineOverride,
   pipelineOf,
   resolveEntitySettings,
+  checkNaming,
   type ProjectSettings,
   type PipelineSettings,
 } from './projectSettings';
@@ -10,6 +11,7 @@ import {
 const project: ProjectSettings = {
   departments: [],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
+  naming: { pattern: '', mode: 'off' },
   resolution: { width: 1920, height: 1080 },
   framerate: 24,
 };
@@ -66,5 +68,28 @@ describe('projectSettings — pipeline & héritage (Phase 18)', () => {
   it('resolveEntitySettings : shot hérite de la résolution de la séquence', () => {
     const out = resolveEntitySettings(project, { resolution: { width: 1280, height: 720 } }, {});
     expect(out).toEqual({ resolution: { width: 1280, height: 720 }, framerate: 24 });
+  });
+});
+
+describe('projectSettings — checkNaming (38.C)', () => {
+  it('passe toujours si mode off ou motif vide', () => {
+    expect(checkNaming('x.mov', { pattern: '', mode: 'reject' })).toEqual({ pass: true, mode: 'off' });
+    expect(checkNaming('x.mov', { pattern: '^SH\\d+', mode: 'off' })).toEqual({ pass: true, mode: 'off' });
+    expect(checkNaming('x.mov', undefined)).toEqual({ pass: true, mode: 'off' });
+  });
+
+  it('évalue le motif et renvoie le mode (warn/reject)', () => {
+    expect(checkNaming('SH010_v2.mov', { pattern: '^SH\\d{3}_v\\d+', mode: 'reject' })).toEqual({
+      pass: true,
+      mode: 'reject',
+    });
+    expect(checkNaming('mauvais.mov', { pattern: '^SH\\d{3}_v\\d+', mode: 'warn' })).toEqual({
+      pass: false,
+      mode: 'warn',
+    });
+  });
+
+  it('regex invalide n’entrave jamais l’upload', () => {
+    expect(checkNaming('x.mov', { pattern: '([', mode: 'reject' })).toEqual({ pass: true, mode: 'off' });
   });
 });

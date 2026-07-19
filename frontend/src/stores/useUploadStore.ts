@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import { uploadMedia, inferMediaKind } from '../lib/uploadClient';
 import { api } from '../lib/apiClient';
 import type { MediaKind } from '../v2/types/api';
@@ -66,6 +67,8 @@ export const useUploadStore = create<UploadState>((set, get) => ({
           onProgress: (pct) =>
             updateUpload(id, { progress: pct, status: pct >= 100 ? 'finalizing' : 'uploading' }),
         });
+        // Nom non conforme à la nomenclature du projet en mode « avertir » (38.C).
+        if (res.namingWarning) toast.warning(`« ${file.name} » ne respecte pas la nomenclature du projet.`);
         if (res.status === 'PROCESSING') {
           // Traitement serveur (transcodage/conversion) : on suit jusqu'à READY.
           updateUpload(id, { status: 'processing', progress: 100, mediaObjectId: res.mediaObjectId });

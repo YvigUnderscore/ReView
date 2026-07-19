@@ -1,0 +1,83 @@
+import { useState } from 'react';
+import type { NamingRule, NamingMode } from '../types/api';
+
+const MODE_LABEL: Record<NamingMode, string> = {
+  off: 'Désactivé',
+  warn: 'Avertir',
+  reject: 'Refuser',
+};
+
+/**
+ * Convention de nommage des fichiers à l'upload (38.C) : motif regex + politique
+ * (off/warn/reject) + test en direct. Édite `draft.naming` ; enregistré avec les réglages.
+ */
+export default function ProjectNamingSection({
+  value,
+  onChange,
+}: {
+  value: NamingRule;
+  onChange: (n: NamingRule) => void;
+}) {
+  const [sample, setSample] = useState('');
+
+  let match: boolean | null = null;
+  let invalid = false;
+  if (value.pattern) {
+    try {
+      match = new RegExp(value.pattern).test(sample);
+    } catch {
+      invalid = true;
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-card p-4">
+      <div className="text-sm font-medium">Convention de nommage</div>
+      <div className="mb-3 text-xs text-muted-foreground">
+        Motif (expression régulière) que doit respecter le nom des fichiers uploadés.
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+          Motif (regex)
+          <input
+            className="w-full rounded border border-input bg-background px-2 py-1.5 font-mono text-xs"
+            placeholder="^SH\d{3,}_v\d+\..+$"
+            value={value.pattern}
+            onChange={(e) => onChange({ ...value, pattern: e.target.value })}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+          Politique
+          <select
+            className="rounded border border-input bg-background px-2 py-1.5 text-xs"
+            value={value.mode}
+            onChange={(e) => onChange({ ...value, mode: e.target.value as NamingMode })}
+          >
+            {(['off', 'warn', 'reject'] as NamingMode[]).map((m) => (
+              <option key={m} value={m}>
+                {MODE_LABEL[m]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {value.pattern && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            className="w-64 rounded border border-input bg-background px-2 py-1.5 text-xs"
+            placeholder="Tester un nom de fichier…"
+            value={sample}
+            onChange={(e) => setSample(e.target.value)}
+          />
+          {invalid ? (
+            <span className="text-xs text-destructive">Regex invalide</span>
+          ) : sample ? (
+            <span className={`text-xs ${match ? 'text-success' : 'text-destructive'}`}>
+              {match ? 'Conforme' : 'Non conforme'}
+            </span>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}

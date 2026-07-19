@@ -61,6 +61,8 @@ export interface UploadResult {
   status: string;
   /** Contenu identique déjà présent : aucun octet transféré (37.B). */
   deduplicated?: boolean;
+  /** Nom non conforme à la nomenclature du projet en mode « avertir » (38.C). */
+  namingWarning?: boolean;
 }
 
 interface MultipartInit {
@@ -69,6 +71,7 @@ interface MultipartInit {
   uploadedParts: { partNumber: number; etag: string }[];
   deduplicated?: boolean;
   resumed?: boolean;
+  namingWarning?: boolean;
 }
 
 /**
@@ -91,18 +94,21 @@ export async function uploadMedia(
   const base = { versionId, filename: file.name, contentType, kind, size: file.size, contentHash };
 
   let mediaObjectId: number;
+  let namingWarning = false;
   if (file.size < MULTIPART_THRESHOLD) {
-    const created = await api.post<{ mediaObjectId: number; uploadUrl: string }>(
+    const created = await api.post<{ mediaObjectId: number; uploadUrl: string; namingWarning?: boolean }>(
       '/api/media/upload-url',
       base,
     );
     mediaObjectId = created.mediaObjectId;
+    namingWarning = created.namingWarning ?? false;
     await putWithProgress(created.uploadUrl, file, contentType, (loaded) =>
       onProgress(Math.round((loaded / file.size) * 100)),
     );
   } else {
     const init = await api.post<MultipartInit>('/api/media/multipart/init', base);
     mediaObjectId = init.mediaObjectId;
+    namingWarning = init.namingWarning ?? false;
     if (!init.deduplicated) {
       await uploadParts(file, init, onProgress);
       await api.post(`/api/media/multipart/${mediaObjectId}/complete`, {
@@ -113,7 +119,7 @@ export async function uploadMedia(
 
   onProgress(100);
   const { media } = await api.post<{ media: { status: string } }>(`/api/media/${mediaObjectId}/finalize`);
-  return { mediaObjectId, status: media.status };
+  return { mediaObjectId, status: media.status, namingWarning };
 }
 
 /** Envoie les parts manquantes (les déjà reçues comptent dans la progression). */

@@ -329,10 +329,18 @@ export interface PipelineOverride {
   resolution?: Resolution;
   framerate?: number;
 }
+export type NamingMode = 'off' | 'warn' | 'reject';
+/** Convention de nommage des fichiers à l'upload (38.C). */
+export interface NamingRule {
+  pattern: string;
+  mode: NamingMode;
+}
 /** GET /api/projects/:id/settings — aussi la shape des défauts studio (admin). */
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
+  /** Convention de nommage à l'upload (38.C). */
+  naming: NamingRule;
   /** Override burn-ins partiel du projet (35.A) — voir types/share.ts. */
   burnin?: Partial<import('./share').BurninConfig>;
 }

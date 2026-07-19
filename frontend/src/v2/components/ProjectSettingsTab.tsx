@@ -4,6 +4,7 @@ import { api } from '../../lib/apiClient';
 import { SkeletonRows } from './ui/skeleton';
 import ProjectBurninSection from './ProjectBurninSection';
 import ProjectStorageSection from './ProjectStorageSection';
+import ProjectNamingSection from './ProjectNamingSection';
 import type { Department, Nomenclature, ProjectSettings } from '../types/api';
 
 /**
@@ -250,6 +251,14 @@ export default function ProjectSettingsTab({
           </div>
         )}
       </section>
+
+      {/* Convention de nommage (38.C) : éditée dans le draft, enregistrée avec les réglages. */}
+      {draft && (
+        <ProjectNamingSection
+          value={draft.naming ?? { pattern: '', mode: 'off' }}
+          onChange={(naming) => setDraft((d) => d && { ...d, naming })}
+        />
+      )}
 
       {/* Stockage (38.D) : usage + quota du projet. */}
       <ProjectStorageSection projectId={projectId} />

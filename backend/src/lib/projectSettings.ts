@@ -39,11 +39,39 @@ export interface PipelineSettings {
   framerate: number;
 }
 
+export type NamingMode = 'off' | 'warn' | 'reject';
+
+/** Convention de nommage à l'upload (38.C) : regex + politique d'application. */
+export interface NamingRule {
+  pattern: string; // regex JS (chaîne) ; vide = pas de contrainte
+  mode: NamingMode; // off : ignoré · warn : avertit · reject : refuse l'upload
+}
+
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
+  /** Convention de nommage des fichiers à l'upload (38.C). */
+  naming: NamingRule;
   /** Override partiel des burn-ins (35.A) — résolu champ par champ sur le template studio. */
   burnin?: Partial<BurninConfig>;
+}
+
+/**
+ * Teste un nom de fichier contre la convention du projet (38.C). Une regex invalide ou un
+ * mode `off`/motif vide n'entrave jamais l'upload (`pass: true`, `mode: 'off'`).
+ */
+export function checkNaming(
+  filename: string,
+  naming: NamingRule | undefined,
+): { pass: boolean; mode: NamingMode } {
+  if (!naming || naming.mode === 'off' || !naming.pattern) return { pass: true, mode: 'off' };
+  let re: RegExp;
+  try {
+    re = new RegExp(naming.pattern);
+  } catch {
+    return { pass: true, mode: 'off' };
+  }
+  return { pass: re.test(filename), mode: naming.mode };
 }
 
 export const STUDIO_DEFAULTS_KEY = 'project_defaults';
@@ -69,6 +97,7 @@ const FALLBACK: ProjectSettings = {
     { key: 'LAYOUT', name: 'Layout' },
   ],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
+  naming: { pattern: '', mode: 'off' },
   resolution: { width: 1920, height: 1080 },
   framerate: 24,
 };
@@ -100,10 +129,19 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   };
   const resolution = sanitizeResolution(o.resolution, base.resolution);
   const framerate = Number.isFinite(o.framerate) ? clampFps(Number(o.framerate)) : base.framerate;
+  const naming = sanitizeNaming(o.naming, base.naming);
   // Burn-ins : override PARTIEL conservé tel quel (clés connues, types vérifiés) — la
   // résolution effective (fusion avec le template studio) est faite par lib/burnin.
   const burnin = sanitizeBurninOverride(o.burnin) ?? base.burnin;
-  return { departments, nomenclature, resolution, framerate, ...(burnin ? { burnin } : {}) };
+  return { departments, nomenclature, naming, resolution, framerate, ...(burnin ? { burnin } : {}) };
+}
+
+/** Nettoie la règle de nommage (pattern borné, mode dans l'ensemble autorisé). */
+function sanitizeNaming(raw: unknown, base: NamingRule): NamingRule {
+  const o = (raw ?? {}) as Partial<NamingRule>;
+  const mode: NamingMode = o.mode === 'warn' || o.mode === 'reject' || o.mode === 'off' ? o.mode : base.mode;
+  const pattern = typeof o.pattern === 'string' ? o.pattern.slice(0, 200) : base.pattern;
+  return { pattern, mode };
 }
 
 /** Filtre un override burn-in partiel (clés/types connus uniquement), undefined si vide. */
@@ -183,6 +221,7 @@ export const projectSettingsSchema = z.object({
       step: z.number().int().min(1),
     })
     .optional(),
+  naming: z.object({ pattern: z.string().max(200), mode: z.enum(['off', 'warn', 'reject']) }).optional(),
   resolution: resolutionSchema.optional(),
   framerate: z.number().min(FPS_MIN).max(FPS_MAX).optional(),
   burnin: burninConfigSchema.optional(),
@@ -214,4 +253,13 @@ export async function setStudioProjectDefaults(value: unknown): Promise<ProjectS
 export async function resolveProjectSettings(projectSettings: unknown): Promise<ProjectSettings> {
   const studio = await getStudioProjectDefaults();
   return sanitize(projectSettings, studio);
+}
+
+/** Réglages effectifs d'un projet à partir de son id (charge la colonne settings). */
+export async function resolveProjectSettingsById(projectId: number): Promise<ProjectSettings> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { settings: true },
+  });
+  return resolveProjectSettings(project?.settings ?? {});
 }
