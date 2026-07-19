@@ -458,6 +458,7 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     splatSubsetUrl,
     timelineSpriteUrl,
     project,
+    projectSettings,
     references,
   ] = await Promise.all([
     storage.getPresignedGetUrl(sourceKey),
@@ -468,6 +469,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     meta.splatSubsetKey ? storage.getPresignedGetUrl(meta.splatSubsetKey) : Promise.resolve(null),
     meta.timelineSprite?.key ? storage.getPresignedGetUrl(meta.timelineSprite.key) : Promise.resolve(null),
     prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
+    // Éclairage HDRI par défaut du projet (39.F) : rejoué si le média n'a pas le sien.
+    resolveProjectSettingsById(projectId),
     // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
     // assertMediaManage d'ici : un import croisé créerait un cycle).
     prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
@@ -505,6 +508,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     splatSubsetCount: meta.splatSubsetCount ?? 0,
     // Présentation persistée (10.G-V5) : caméra/DoF/reveal/LOD/animation, rejouée pour tous.
     splatPresentation: meta.splatPresentation ?? null,
+    // Éclairage HDRI par défaut du projet (39.F) : repli quand le média n'a pas le sien.
+    projectDefaultLighting: projectSettings.defaultLighting ?? null,
     // Trim vidéo non-destructif (10.G-V10) : bornes + proxy trimé prêt ou en cours.
     trim: meta.trim ?? null,
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),

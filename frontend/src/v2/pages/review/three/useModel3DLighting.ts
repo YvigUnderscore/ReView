@@ -11,6 +11,7 @@ import {
 } from '../reviewTypes';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { applyLighting, loadHdriEnvironment, type HdriEnvironment } from './hdriEnvironment';
+import { setGroundShadow } from './groundShadow';
 import type { Model3DThreeState } from './useModel3DThree';
 
 /** Entrée de la bibliothèque HDRI (miroir de `HdriService.listWithUrls`). */
@@ -37,7 +38,15 @@ export function useModel3DLighting(
 ) {
   const { ready, getSceneHandle } = model3d;
   const { busy, persist } = useCameraPresentation(data.media.id, onSaved);
-  const [cfg, setCfg] = useState<LightingConfig>(data.splatPresentation?.lighting ?? DEFAULT_LIGHTING);
+  // Éclairage initial : réglage propre du média, sinon défaut projet (39.F), sinon neutre.
+  // Fusion sur DEFAULT_LIGHTING pour tolérer les champs absents des enregistrements anciens.
+  const [cfg, setCfg] = useState<LightingConfig>(
+    data.splatPresentation?.lighting
+      ? { ...DEFAULT_LIGHTING, ...data.splatPresentation.lighting }
+      : data.projectDefaultLighting
+        ? { ...DEFAULT_LIGHTING, ...data.projectDefaultLighting }
+        : DEFAULT_LIGHTING,
+  );
   const envRef = useRef<HdriEnvironment | null>(null);
   const loadedIdRef = useRef<string | undefined>(undefined);
 
@@ -86,7 +95,16 @@ export function useModel3DLighting(
     };
   }, [ready, getSceneHandle, hdris, cfg]);
 
-  // Libération de l'environnement au démontage.
+  // Sol récepteur d'ombres (39.F) : plan invisible ShadowMaterial sous le modèle, piloté par
+  // `cfg.groundShadow`. Effet dédié — indépendant de l'HDRI (l'ombre ne dépend pas de son intensité).
+  useEffect(() => {
+    if (!ready) return;
+    const handle = getSceneHandle();
+    if (!handle?.renderer) return;
+    setGroundShadow(handle, cfg.groundShadow);
+  }, [ready, getSceneHandle, cfg.groundShadow]);
+
+  // Libération de l'environnement et du sol d'ombres au démontage.
   useEffect(
     () => () => {
       envRef.current?.dispose();

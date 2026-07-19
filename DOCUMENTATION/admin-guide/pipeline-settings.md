@@ -1,6 +1,6 @@
 # Pipeline settings
 
-> Updated: 2026-07-18
+> Updated: 2026-07-19
 
 ## Inherited delivery settings
 
@@ -21,6 +21,15 @@ studio-level concern (see [Transcoding](transcoding.md)).
 - New-project defaults: *Admin → Défauts projet*.
 - Project/sequence/shot overrides: on the entity's settings, for
   supervisors/admins.
+
+## Default 3D lighting
+
+A project can define a **default HDRI** for its 3D media in *Project → Settings →
+Éclairage 3D par défaut*: HDRI from the studio library, exposure, Y rotation,
+background and ground shadow. It is inherited studio → project and replayed when a
+3D medium has no lighting of its own; reviewers may still tweak it per session
+without changing the saved default. See
+[3D review](../user-guide/review-3d.md#lighting--environment).
 
 ## Effects in the app
 

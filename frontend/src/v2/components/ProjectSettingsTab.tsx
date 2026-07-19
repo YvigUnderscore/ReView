@@ -5,6 +5,7 @@ import { SkeletonRows } from './ui/skeleton';
 import ProjectBurninSection from './ProjectBurninSection';
 import ProjectStorageSection from './ProjectStorageSection';
 import ProjectNamingSection from './ProjectNamingSection';
+import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
 import type { Department, Nomenclature, ProjectSettings } from '../types/api';
 
 /**
@@ -257,6 +258,14 @@ export default function ProjectSettingsTab({
         <ProjectNamingSection
           value={draft.naming ?? { pattern: '', mode: 'off' }}
           onChange={(naming) => setDraft((d) => d && { ...d, naming })}
+        />
+      )}
+
+      {/* Éclairage 3D par défaut (39.F) : HDRI hérité par les médias 3D, enregistré avec les réglages. */}
+      {draft && (
+        <ProjectDefaultLightingSection
+          value={draft.defaultLighting}
+          onChange={(defaultLighting) => setDraft((d) => d && { ...d, defaultLighting })}
         />
       )}
 

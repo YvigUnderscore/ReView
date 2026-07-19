@@ -47,6 +47,19 @@ export interface NamingRule {
   mode: NamingMode; // off : ignoré · warn : avertit · reject : refuse l'upload
 }
 
+/**
+ * Éclairage HDRI par défaut d'un projet (39.F) — miroir de `LightingConfig` (frontend).
+ * Rejoué à l'ouverture d'un média 3D qui n'a pas d'éclairage propre (`splatPresentation.lighting`).
+ * `hdriId` référence la bibliothèque instance ; les autres champs ont des défauts neutres.
+ */
+export interface LightingDefault {
+  hdriId?: string;
+  exposure: number;
+  rotationDeg: number;
+  showBackground: boolean;
+  groundShadow: boolean;
+}
+
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
@@ -54,6 +67,8 @@ export interface ProjectSettings extends PipelineSettings {
   naming: NamingRule;
   /** Override partiel des burn-ins (35.A) — résolu champ par champ sur le template studio. */
   burnin?: Partial<BurninConfig>;
+  /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */
+  defaultLighting?: LightingDefault;
 }
 
 /**
@@ -81,6 +96,11 @@ const DIM_MIN = 1;
 const DIM_MAX = 16384;
 const FPS_MIN = 1;
 const FPS_MAX = 240;
+
+const EXPOSURE_MIN = 0;
+const EXPOSURE_MAX = 10;
+const ROTATION_MIN = -180;
+const ROTATION_MAX = 180;
 
 const clampDim = (v: number) => Math.min(Math.max(Math.round(v), DIM_MIN), DIM_MAX);
 const clampFps = (v: number) => Math.min(Math.max(v, FPS_MIN), FPS_MAX);
@@ -133,7 +153,37 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   // Burn-ins : override PARTIEL conservé tel quel (clés connues, types vérifiés) — la
   // résolution effective (fusion avec le template studio) est faite par lib/burnin.
   const burnin = sanitizeBurninOverride(o.burnin) ?? base.burnin;
-  return { departments, nomenclature, naming, resolution, framerate, ...(burnin ? { burnin } : {}) };
+  // Éclairage par défaut (39.F) : absent → hérite du socle ; présent → nettoyé/borné.
+  const defaultLighting = 'defaultLighting' in o ? sanitizeLighting(o.defaultLighting) : base.defaultLighting;
+  return {
+    departments,
+    nomenclature,
+    naming,
+    resolution,
+    framerate,
+    ...(burnin ? { burnin } : {}),
+    ...(defaultLighting ? { defaultLighting } : {}),
+  };
+}
+
+/** Nettoie l'éclairage par défaut (39.F) : bornes exposition/rotation, hdriId string, undefined si vide. */
+function sanitizeLighting(raw: unknown): LightingDefault | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Partial<LightingDefault>;
+  const hdriId = typeof o.hdriId === 'string' && o.hdriId ? o.hdriId.slice(0, 64) : undefined;
+  const exposure = Number.isFinite(o.exposure)
+    ? Math.min(Math.max(Number(o.exposure), EXPOSURE_MIN), EXPOSURE_MAX)
+    : 1;
+  const rotationDeg = Number.isFinite(o.rotationDeg)
+    ? Math.min(Math.max(Number(o.rotationDeg), ROTATION_MIN), ROTATION_MAX)
+    : 0;
+  return {
+    ...(hdriId ? { hdriId } : {}),
+    exposure,
+    rotationDeg,
+    showBackground: o.showBackground === true,
+    groundShadow: o.groundShadow === true,
+  };
 }
 
 /** Nettoie la règle de nommage (pattern borné, mode dans l'ensemble autorisé). */
@@ -225,6 +275,15 @@ export const projectSettingsSchema = z.object({
   resolution: resolutionSchema.optional(),
   framerate: z.number().min(FPS_MIN).max(FPS_MAX).optional(),
   burnin: burninConfigSchema.optional(),
+  defaultLighting: z
+    .object({
+      hdriId: z.string().max(64).optional(),
+      exposure: z.number().min(EXPOSURE_MIN).max(EXPOSURE_MAX),
+      rotationDeg: z.number().min(ROTATION_MIN).max(ROTATION_MAX),
+      showBackground: z.boolean(),
+      groundShadow: z.boolean(),
+    })
+    .optional(),
 });
 
 /** Défauts studio (Setting.project_defaults), fusionnés avec le repli interne. */

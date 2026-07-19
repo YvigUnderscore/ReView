@@ -343,6 +343,14 @@ export interface NamingRule {
   pattern: string;
   mode: NamingMode;
 }
+/** Éclairage HDRI par défaut d'un projet (39.F) — miroir de LightingConfig (review). */
+export interface LightingDefault {
+  hdriId?: string;
+  exposure: number;
+  rotationDeg: number;
+  showBackground: boolean;
+  groundShadow: boolean;
+}
 /** GET /api/projects/:id/settings — aussi la shape des défauts studio (admin). */
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
@@ -351,6 +359,8 @@ export interface ProjectSettings extends PipelineSettings {
   naming: NamingRule;
   /** Override burn-ins partiel du projet (35.A) — voir types/share.ts. */
   burnin?: Partial<import('./share').BurninConfig>;
+  /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */
+  defaultLighting?: LightingDefault;
 }
 
 // Types du partage client (35.C/35.D) — module séparé pour le budget de lignes.

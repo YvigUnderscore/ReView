@@ -162,9 +162,16 @@ export interface LightingConfig {
   rotationDeg: number;
   /** Afficher l'HDRI en fond (sinon fond transparent, éclairage seul). */
   showBackground: boolean;
+  /** Sol invisible récepteur d'ombres portées de la key light (39.F) — non destructif. */
+  groundShadow: boolean;
 }
 
-export const DEFAULT_LIGHTING: LightingConfig = { exposure: 1, rotationDeg: 0, showBackground: false };
+export const DEFAULT_LIGHTING: LightingConfig = {
+  exposure: 1,
+  rotationDeg: 0,
+  showBackground: false,
+  groundShadow: false,
+};
 
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
@@ -191,6 +198,8 @@ export interface MediaResp {
   splatSubsetCount: number;
   /** Présentation persistée (caméra/DoF/reveal/LOD/animation) — 10.G-V5, rejouée pour tous. */
   splatPresentation: SplatPresentation | null;
+  /** Éclairage HDRI par défaut du projet (39.F) : repli quand le média n'a pas le sien. */
+  projectDefaultLighting: LightingConfig | null;
   /** Trim vidéo non-destructif (10.G-V10) : bornes en frames, proxy trimé prêt ou en cours. */
   trim: { inFrame: number; outFrame: number } | null;
   trimProxyReady: boolean;

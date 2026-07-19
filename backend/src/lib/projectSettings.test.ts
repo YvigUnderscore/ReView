@@ -4,6 +4,7 @@ import {
   pipelineOf,
   resolveEntitySettings,
   checkNaming,
+  projectSettingsSchema,
   type ProjectSettings,
   type PipelineSettings,
 } from './projectSettings';
@@ -91,5 +92,35 @@ describe('projectSettings — checkNaming (38.C)', () => {
 
   it('regex invalide n’entrave jamais l’upload', () => {
     expect(checkNaming('x.mov', { pattern: '([', mode: 'reject' })).toEqual({ pass: true, mode: 'off' });
+  });
+});
+
+describe('projectSettings — defaultLighting (39.F)', () => {
+  const valid = {
+    hdriId: 'clh123',
+    exposure: 1.5,
+    rotationDeg: 45,
+    showBackground: true,
+    groundShadow: true,
+  };
+
+  it('accepte un éclairage par défaut complet', () => {
+    const parsed = projectSettingsSchema.parse({ defaultLighting: valid });
+    expect(parsed.defaultLighting).toEqual(valid);
+  });
+
+  it('accepte sans hdriId (éclairage neutre par défaut)', () => {
+    const parsed = projectSettingsSchema.parse({
+      defaultLighting: { exposure: 1, rotationDeg: 0, showBackground: false, groundShadow: false },
+    });
+    expect(parsed.defaultLighting?.hdriId).toBeUndefined();
+  });
+
+  it('rejette une exposition hors bornes', () => {
+    expect(() => projectSettingsSchema.parse({ defaultLighting: { ...valid, exposure: 99 } })).toThrow();
+  });
+
+  it('rejette une rotation hors bornes', () => {
+    expect(() => projectSettingsSchema.parse({ defaultLighting: { ...valid, rotationDeg: 400 } })).toThrow();
   });
 });

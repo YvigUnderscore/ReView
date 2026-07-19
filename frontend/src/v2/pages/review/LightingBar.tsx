@@ -62,6 +62,18 @@ export default function LightingBar({ lighting }: { lighting: Model3DLightingSta
       >
         Fond
       </button>
+      <button
+        onClick={() => setCfg({ ...cfg, groundShadow: !cfg.groundShadow })}
+        title="Sol récepteur d'ombres portées (key light)"
+        aria-pressed={cfg.groundShadow}
+        className={`rounded border border-border px-1.5 py-0.5 font-medium ${
+          cfg.groundShadow
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+        }`}
+      >
+        Ombres
+      </button>
       {save && (
         <>
           <span className="h-4 w-px bg-border" />
