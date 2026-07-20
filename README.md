@@ -20,7 +20,7 @@
 Lecture HLS adaptative multi-rendition, navigation frame-par-frame précise, comparaison A/B et wipe entre versions, plein écran immersif. Annotations vectorielles ancrées au cadre de livraison, commentaires liés à la frame exacte, guide letterbox à l'aspect de livraison.
 
 ### 🧊 Review 3D
-Viewer Three.js façon DCC : navigation orbit/fly unifiée, éclairage HDRI (bibliothèque studio), transform avec gizmo + undo/redo, caméra animée par F-curves (dopesheet + graph editor), focale en mm sur capteur 36 mm, aperçu PiP.
+Viewer Three.js façon DCC : navigation orbit/fly unifiée, éclairage HDRI (bibliothèque studio), transform avec gizmo + undo/redo, caméra animée par F-curves (dopesheet + graph editor), focale en mm sur capteur 36 mm, aperçu PiP. **Inspection** : modes d'affichage (shaded/wireframe/normales/matcap/UV), fiche technique (polycount, matériaux, UV, extensions, provenance de conversion) + inspecteur de textures, bookmarks caméra partagés, turntable, plan de coupe, comparaison **A/B 3D** caméra liée. Conversion **USD native** (matériaux & variantes préservés, convertisseur `guc` optionnel, repli assimp), **HDRI par défaut du projet** + sol récepteur d'ombres, gestion de couleur **OCIO** (display/view par projet, catalogue ACES).
 
 ### ✨ Gaussian splats
 Viewer **Spark (SparkJS)** + éditeur **non-destructif** : sélection pinceau/volumes, masquage, teinte, TRS — le fichier original n'est jamais modifié, les éditions sont rejouées à l'identique pour tous. Mise en scène (caméra, DoF) persistée par média.
@@ -79,7 +79,7 @@ L'application est disponible sur **http://localhost:3429** (API sur `:3430`). Gu
 | Backend | Node.js + Express 5 + TypeScript + Prisma + PostgreSQL |
 | Frontend | React 19 + Vite 7 + Tailwind CSS + primitives style shadcn |
 | Auth / Temps réel | JWT / Socket.io |
-| Jobs | BullMQ + Redis (worker FFmpeg : HLS multi-rendition, miniatures, conversion 3D→GLB assimp) |
+| Jobs | BullMQ + Redis (worker FFmpeg : HLS multi-rendition, miniatures, conversion 3D→GLB — USD native via `guc` optionnel, repli assimp) |
 | 3D / Splat | Three.js / Spark (SparkJS) |
 | Board | Excalidraw (MIT) |
 | Stockage | MinIO (S3-compatible), URLs présignées |
