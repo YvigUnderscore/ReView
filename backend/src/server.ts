@@ -7,7 +7,10 @@ import { purgeExpiredTrash } from './lib/trash';
 import { purgeObsoleteDerived } from './lib/derivedPurge';
 import { getNumericSetting, SETTING_KEYS } from './lib/settings';
 import { sendDailyDigests } from './services/DigestService';
+import { sendWeeklyReports } from './services/WeeklyReportService';
 import { logger } from './lib/logger';
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 const TRASH_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000; // quotidien
 
@@ -49,6 +52,28 @@ function scheduleDailyDigest(): void {
   logger.info(`[Digest] prochain envoi planifié : ${next.toLocaleString('fr-FR')}`);
 }
 
+/** Rapport hebdomadaire (43.B) : lundi à DIGEST_HOUR (heure locale), puis toutes les semaines. */
+function scheduleWeeklyReport(): void {
+  const run = async () => {
+    try {
+      await sendWeeklyReports();
+    } catch (err) {
+      logger.error({ err }, '[WeeklyReport] échec de l’envoi hebdomadaire');
+    }
+  };
+  const next = new Date();
+  next.setHours(env.DIGEST_HOUR, 0, 0, 0);
+  // Avance jusqu'au prochain lundi (getDay : 0 = dimanche, 1 = lundi).
+  do {
+    next.setDate(next.getDate() + 1);
+  } while (next.getDay() !== 1);
+  setTimeout(() => {
+    void run();
+    setInterval(run, WEEK_MS).unref();
+  }, next.getTime() - Date.now()).unref();
+  logger.info(`[WeeklyReport] prochain envoi planifié : ${next.toLocaleString('fr-FR')}`);
+}
+
 async function main(): Promise<void> {
   // S'assure que le bucket MinIO existe avant d'accepter du trafic.
   await storage.ensureBucket();
@@ -59,6 +84,7 @@ async function main(): Promise<void> {
 
   scheduleTrashSweep();
   scheduleDailyDigest();
+  scheduleWeeklyReport();
 
   server.listen(env.PORT, () => {
     logger.info(`✅ ReView 2.0 backend démarré sur le port ${env.PORT} (${env.NODE_ENV})`);

@@ -5,6 +5,8 @@
 export interface UserPreferences {
   /** Digest email quotidien (backlog P2). */
   emailDigest?: boolean;
+  /** Rapport hebdomadaire de production par email (43.B — superviseurs/admins). */
+  weeklyReport?: boolean;
   /** Dernière couleur d'annotation choisie en review. */
   annotationColor?: string;
   /** Vues kanban sauvegardées, clé = projectId (string). */
