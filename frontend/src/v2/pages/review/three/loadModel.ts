@@ -60,6 +60,8 @@ export interface LoadedModel {
   extensions: string[];
   /** Nombre de `SkinnedMesh` (rig présent → active le debug squelette 40.B). */
   skinnedCount: number;
+  /** Objet glTF chargé (parser + userData.variants + cameras) — variantes & caméras embarquées (40.C). */
+  gltf: GLTF;
 }
 
 /**
@@ -88,5 +90,5 @@ export async function loadModel(
   const skinnedCount = markDeformableMeshes(animRoot);
   const json = (gltf.parser?.json ?? {}) as { extensionsUsed?: unknown };
   const extensions = Array.isArray(json.extensionsUsed) ? (json.extensionsUsed as string[]) : [];
-  return { object, animRoot, animations: gltf.animations ?? [], radius, extensions, skinnedCount };
+  return { object, animRoot, animations: gltf.animations ?? [], radius, extensions, skinnedCount, gltf };
 }

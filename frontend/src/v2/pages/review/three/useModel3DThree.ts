@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type * as THREE from 'three';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { api } from '../../../../lib/apiClient';
 import { qk } from '../../../lib/query';
 import { DEFAULT_TRANSFORM, type Hotspot3D, type MediaResp, type Transform } from '../reviewTypes';
@@ -35,6 +36,8 @@ export interface SceneRuntime {
   animRoot: THREE.Object3D;
   /** Nombre de `SkinnedMesh` du modèle (>0 → debug squelette disponible — 40.B). */
   skinnedCount: number;
+  /** glTF chargé — variantes de matériaux & caméras embarquées (40.C). */
+  gltf: GLTF;
 }
 
 /**
@@ -115,6 +118,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       renderer: rt.scene.renderer,
       mesh: rt.scene.root,
       modelObject: rt.modelObject,
+      gltf: rt.gltf,
     };
   }, []);
 
@@ -167,6 +171,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         modelObject: model.object,
         animRoot: model.animRoot,
         skinnedCount: model.skinnedCount,
+        gltf: model.gltf,
       };
       setExtensions(model.extensions);
       animInit(model.animations);

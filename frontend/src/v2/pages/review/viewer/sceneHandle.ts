@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 
 /**
  * Poignée impérative commune vers la scène Three d'un viewer de review (Phase 17) — satisfaite
@@ -20,6 +21,8 @@ export interface ViewerSceneHandle {
   mesh?: THREE.Object3D;
   /** Objet du modèle principal chargé (3D uniquement) — cible de la comparaison A/B (39.E). */
   modelObject?: THREE.Object3D;
+  /** glTF chargé (3D uniquement) — variantes de matériaux & caméras embarquées (40.C). */
+  gltf?: GLTF;
 }
 
 /** Contrat minimal d'un viewer exposant sa scène (paramètre des hooks transverses). */

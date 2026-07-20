@@ -7,6 +7,7 @@ import type { Role } from '../../types/api';
 import { useModel3DCamera } from './three/useModel3DCamera';
 import { useModel3DLighting } from './three/useModel3DLighting';
 import { useModel3DInspect } from './three/useModel3DInspect';
+import { useModel3DVariants } from './three/useModel3DVariants';
 import { useModel3DBookmarks } from './three/useModel3DBookmarks';
 import { useTurntable } from './three/useTurntable';
 import { useSectionPlane } from './three/useSectionPlane';
@@ -18,6 +19,7 @@ import Model3DAnimationsBar from './Model3DAnimationsBar';
 import Model3DTransformBar from './Model3DTransformBar';
 import LightingBar from './LightingBar';
 import InspectBar from './InspectBar';
+import Model3DVariantsBar from './Model3DVariantsBar';
 import ModelInfoPanel from './ModelInfoPanel';
 import BookmarksBar from './BookmarksBar';
 import TurntableBar from './TurntableBar';
@@ -71,6 +73,8 @@ export default function Model3DReview({
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
   // Inspection (Phase 39) : modes d'affichage + fiche technique — local à la session.
   const inspect = useModel3DInspect(model3d);
+  // Variantes de matériaux + caméras embarquées (40.C) — local à la session.
+  const variants = useModel3DVariants(model3d);
   // Bookmarks caméra partagés (39.D) : vues nommées rejouées pour tous, raccourcis 1-9.
   const bookmarks = useModel3DBookmarks(model3d, data, canManage, onSaved);
   // Turntable + plan de coupe (39.D) : prévisualisations d'inspection session-local.
@@ -128,6 +132,7 @@ export default function Model3DReview({
                     onClose={() => setInfoOpen(false)}
                   />
                 )}
+                <Model3DVariantsBar v={variants} />
                 {model3d.layoutMode && canManage && (
                   <HudGroup>
                     <span className="text-muted-foreground">Caméra-objet</span>
