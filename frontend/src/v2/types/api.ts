@@ -373,3 +373,5 @@ export interface ProjectSettings extends PipelineSettings {
 
 // Types du partage client (35.C/35.D) — module séparé pour le budget de lignes.
 export * from './share';
+// Préférences UI par compte (42.A) — module séparé (budget de lignes).
+export * from './preferences';

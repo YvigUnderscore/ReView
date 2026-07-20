@@ -31,6 +31,8 @@ import CommandPalette from './CommandPalette';
 import NotificationBell from './NotificationBell';
 import ShortcutsHelp from './ShortcutsHelp';
 import { useGlobalShortcuts } from '../lib/shortcuts';
+import { usePreferences } from '../lib/usePreferences';
+import { resolveBindings } from '../lib/shortcutRegistry';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
@@ -103,7 +105,10 @@ export default function Shell({
   const isProjectsRoot = pathname.startsWith('/projects');
 
   const openHelp = useCallback(() => setHelpOpen(true), []);
-  useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp });
+  // Raccourcis globaux reconfigurables (42.A2) : touches résolues depuis les préférences.
+  const prefsQ = usePreferences();
+  const bindings = useMemo(() => resolveBindings(prefsQ.data?.shortcuts), [prefsQ.data?.shortcuts]);
+  useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp, bindings });
   // Temps réel : room du projet courant → invalidations de cache ciblées (10.E3)
   useSocketInvalidation(currentProjectId);
 

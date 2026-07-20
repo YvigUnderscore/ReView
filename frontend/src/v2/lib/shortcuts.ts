@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { ShortcutId } from './shortcutRegistry';
 
 /**
- * Raccourcis clavier globaux (10.A3) : séquence « g » puis touche (g p → projets,
- * g k → kanban, g b → board du projet courant) et « ? » → panneau d'aide.
+ * Raccourcis clavier globaux (10.A3, reconfigurables 42.A2) : séquence « g » puis touche
+ * (défauts g p → projets, g k → kanban, g b → board du projet courant) et « ? » → aide.
+ * Les touches actives viennent du registre résolu (`bindings`, surcharges compte incluses).
  * Inactifs dans les champs de saisie et quand un dialog est ouvert
  * (Ctrl+K vit dans CommandPalette, qui doit primer partout).
  */
@@ -17,7 +19,15 @@ export const isEditable = (el: EventTarget | null): boolean => {
   return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable;
 };
 
-export function useGlobalShortcuts({ projectId, onHelp }: { projectId: number | null; onHelp: () => void }) {
+export function useGlobalShortcuts({
+  projectId,
+  onHelp,
+  bindings,
+}: {
+  projectId: number | null;
+  onHelp: () => void;
+  bindings: Record<ShortcutId, string>;
+}) {
   const navigate = useNavigate();
   const pendingG = useRef(false);
   const timer = useRef<number | undefined>(undefined);
@@ -32,13 +42,13 @@ export function useGlobalShortcuts({ projectId, onHelp }: { projectId: number | 
       if (pendingG.current) {
         pendingG.current = false;
         window.clearTimeout(timer.current);
-        if (key === 'p') {
+        if (key === bindings['nav.projects']) {
           e.preventDefault();
           navigate('/projects');
-        } else if (key === 'k' && projectId !== null) {
+        } else if (key === bindings['nav.kanban'] && projectId !== null) {
           e.preventDefault();
           navigate(`/projects/${projectId}/kanban`);
-        } else if (key === 'b' && projectId !== null) {
+        } else if (key === bindings['nav.board'] && projectId !== null) {
           e.preventDefault();
           navigate(`/projects/${projectId}/board`);
         }
@@ -51,7 +61,7 @@ export function useGlobalShortcuts({ projectId, onHelp }: { projectId: number | 
         }, 1000);
         return;
       }
-      if (e.key === '?') {
+      if (e.key === bindings.help) {
         e.preventDefault();
         onHelp();
       }
@@ -61,5 +71,5 @@ export function useGlobalShortcuts({ projectId, onHelp }: { projectId: number | 
       document.removeEventListener('keydown', down);
       window.clearTimeout(timer.current);
     };
-  }, [navigate, projectId, onHelp]);
+  }, [navigate, projectId, onHelp, bindings]);
 }
