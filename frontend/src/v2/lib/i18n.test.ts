@@ -38,4 +38,14 @@ describe('i18n — socle de traduction', () => {
     const keys: Parameters<typeof t>[0][] = ['login.title', 'setup.title', 'setup.submit'];
     for (const k of keys) expect(t(k).length).toBeGreaterThan(0);
   });
+
+  it('traduit la navigation (42.B №88) en FR et EN', () => {
+    setLocale('fr');
+    expect(t('nav.reviews')).toBe('Reviews');
+    expect(t('nav.settings')).toBe('Paramètres');
+    setLocale('en');
+    expect(t('nav.settings')).toBe('Settings');
+    expect(t('nav.home')).toBe('Home');
+    expect(t('common.save')).toBe('Save');
+  });
 });

@@ -50,6 +50,19 @@ const fr = {
   'display.density.comfortable': 'Confortable',
   'display.density.compact': 'Compacte',
   'display.language': 'Langue',
+  'nav.home': 'Accueil',
+  'nav.projects': 'Projets',
+  'nav.reviews': 'Reviews',
+  'nav.members': 'Membres',
+  'nav.settings': 'Paramètres',
+  'nav.documents': 'Documents',
+  'nav.documentation': 'Documentation',
+  'common.save': 'Enregistrer',
+  'common.cancel': 'Annuler',
+  'common.delete': 'Supprimer',
+  'common.edit': 'Éditer',
+  'common.close': 'Fermer',
+  'common.search': 'Rechercher',
 } as const;
 
 /** L'ensemble des clés de traduction — dérivé du dictionnaire FR de référence. */
@@ -97,6 +110,19 @@ const en: Partial<Record<MessageKey, string>> = {
   'display.density.comfortable': 'Comfortable',
   'display.density.compact': 'Compact',
   'display.language': 'Language',
+  'nav.home': 'Home',
+  'nav.projects': 'Projects',
+  'nav.reviews': 'Reviews',
+  'nav.members': 'Members',
+  'nav.settings': 'Settings',
+  'nav.documents': 'Documents',
+  'nav.documentation': 'Documentation',
+  'common.save': 'Save',
+  'common.cancel': 'Cancel',
+  'common.delete': 'Delete',
+  'common.edit': 'Edit',
+  'common.close': 'Close',
+  'common.search': 'Search',
 };
 
 const LOCALES: readonly Locale[] = ['fr', 'en'];

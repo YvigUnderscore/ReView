@@ -34,6 +34,7 @@ import OnboardingTour from './OnboardingTour';
 import { useGlobalShortcuts } from '../lib/shortcuts';
 import { usePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
+import { useT } from '../lib/i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
@@ -84,6 +85,7 @@ export default function Shell({
   const [helpOpen, setHelpOpen] = useState(false);
   const favorites = useFavorites((s) => s.favorites);
   const loadFavorites = useFavorites((s) => s.load);
+  const t = useT();
 
   useEffect(() => {
     loadFavorites();
@@ -148,8 +150,8 @@ export default function Shell({
 
           <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto px-3">
             {/* Entrées fixes de la sidebar hybride (12.D) */}
-            <SideLink to="/" icon={Home} label="Accueil" active={pathname === '/'} />
-            <SideLink to="/projects" icon={FolderKanban} label="Projets" active={isProjectsRoot} />
+            <SideLink to="/" icon={Home} label={t('nav.home')} active={pathname === '/'} />
+            <SideLink to="/projects" icon={FolderKanban} label={t('nav.projects')} active={isProjectsRoot} />
 
             {/* Arbre du projet courant (replié sous Projets) */}
             {projects.length > 0 && (
@@ -174,20 +176,25 @@ export default function Shell({
               </div>
             )}
 
-            <SideLink to="/reviews" icon={Film} label="Reviews" active={pathname.startsWith('/reviews')} />
+            <SideLink
+              to="/reviews"
+              icon={Film}
+              label={t('nav.reviews')}
+              active={pathname.startsWith('/reviews')}
+            />
 
             {user?.role === 'ADMIN' && (
               <>
                 <SideLink
                   to="/admin/users"
                   icon={Users}
-                  label="Membres"
+                  label={t('nav.members')}
                   active={pathname.startsWith('/admin/users')}
                 />
                 <SideLink
                   to="/admin"
                   icon={Settings}
-                  label="Paramètres"
+                  label={t('nav.settings')}
                   active={pathname.startsWith('/admin') && !pathname.startsWith('/admin/users')}
                 />
               </>
@@ -223,13 +230,13 @@ export default function Shell({
               <SideLink
                 to="/documents"
                 icon={FileText}
-                label="Documents"
+                label={t('nav.documents')}
                 active={pathname.startsWith('/documents')}
               />
               <SideLink
                 to="/docs"
                 icon={BookText}
-                label="Documentation"
+                label={t('nav.documentation')}
                 active={pathname.startsWith('/docs')}
               />
             </div>
