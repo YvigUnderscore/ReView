@@ -6,7 +6,9 @@ import {
   type DisplayResources,
 } from './displayModes';
 import { collectModelStats, type ModelStats } from './modelStats';
+import { createSkeletonOverlay, hasSkinnedMesh } from './skeletonOverlay';
 import type { Model3DThreeState } from './useModel3DThree';
+import type * as THREE from 'three';
 
 /**
  * Inspection du modèle 3D (Phase 39, 39.C) : modes d'affichage (shaded/wireframe/normales/matcap/
@@ -18,7 +20,9 @@ import type { Model3DThreeState } from './useModel3DThree';
 export function useModel3DInspect(model3d: Model3DThreeState) {
   const { ready, getSceneHandle, extensions } = model3d;
   const [mode, setModeState] = useState<DisplayMode>('shaded');
+  const [showSkeleton, setShowSkeletonState] = useState(false);
   const resRef = useRef<DisplayResources | null>(null);
+  const skelRef = useRef<THREE.SkeletonHelper | null>(null);
 
   // Fiche technique : collectée une fois le modèle chargé (parcours lecture seule du root normalisé).
   // Mémoïsée sur `ready` — `setReady(true)` n'est émis qu'après l'affectation de la scène runtime.
@@ -26,6 +30,13 @@ export function useModel3DInspect(model3d: Model3DThreeState) {
     if (!ready) return null;
     const handle = getSceneHandle();
     return handle?.mesh ? collectModelStats(handle.mesh) : null;
+  }, [ready, getSceneHandle]);
+
+  // Présence d'un rig (SkinnedMesh) → active le toggle debug squelette (40.B).
+  const hasSkeleton = useMemo<boolean>(() => {
+    if (!ready) return false;
+    const handle = getSceneHandle();
+    return handle?.mesh ? hasSkinnedMesh(handle.mesh) : false;
   }, [ready, getSceneHandle]);
 
   // Applique le mode courant (et le ré-applique quand le modèle vient d'être chargé).
@@ -37,18 +48,38 @@ export function useModel3DInspect(model3d: Model3DThreeState) {
     applyDisplayMode(handle.mesh, mode, resRef.current);
   }, [ready, getSceneHandle, mode]);
 
-  // Libération des matériaux/textures d'override au démontage.
+  // Overlay squelette (40.B) : ajouté/retiré de la scène selon le toggle ; se met à jour tout seul
+  // dans la boucle de rendu (dans le graphe de scène) donc suit l'animation du rig.
+  useEffect(() => {
+    const handle = getSceneHandle();
+    if (!ready || !handle?.mesh) return;
+    if (showSkeleton && !skelRef.current) {
+      const helper = createSkeletonOverlay(handle.THREE, handle.mesh);
+      handle.scene.add(helper);
+      skelRef.current = helper;
+    } else if (!showSkeleton && skelRef.current) {
+      skelRef.current.removeFromParent();
+      skelRef.current.dispose();
+      skelRef.current = null;
+    }
+  }, [ready, getSceneHandle, showSkeleton]);
+
+  // Libération des matériaux/textures d'override + overlay squelette au démontage.
   useEffect(
     () => () => {
       resRef.current?.dispose();
       resRef.current = null;
+      skelRef.current?.removeFromParent();
+      skelRef.current?.dispose();
+      skelRef.current = null;
     },
     [],
   );
 
   const setMode = useCallback((m: DisplayMode) => setModeState(m), []);
+  const setShowSkeleton = useCallback((v: boolean) => setShowSkeletonState(v), []);
 
-  return { mode, setMode, stats, extensions };
+  return { mode, setMode, stats, extensions, hasSkeleton, showSkeleton, setShowSkeleton };
 }
 
 export type Model3DInspectState = ReturnType<typeof useModel3DInspect>;

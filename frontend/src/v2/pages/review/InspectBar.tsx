@@ -1,4 +1,4 @@
-import { Info } from 'lucide-react';
+import { Bone, Info } from 'lucide-react';
 import { HudGroup } from './hud/ViewerHud';
 import { DISPLAY_MODES, type DisplayMode } from './three/displayModes';
 import type { Model3DInspectState } from './three/useModel3DInspect';
@@ -54,6 +54,23 @@ export default function InspectBar({
           </button>
         ))}
       </div>
+      {inspect.hasSkeleton && (
+        <>
+          <span className="h-4 w-px bg-border" />
+          <button
+            onClick={() => inspect.setShowSkeleton(!inspect.showSkeleton)}
+            title="Afficher le squelette (os du rig) — debug skinning"
+            aria-pressed={inspect.showSkeleton}
+            className={`flex items-center justify-center rounded p-1.5 transition-colors ${
+              inspect.showSkeleton
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            }`}
+          >
+            <Bone size={14} />
+          </button>
+        </>
+      )}
       <span className="h-4 w-px bg-border" />
       <button
         onClick={onToggleInfo}
