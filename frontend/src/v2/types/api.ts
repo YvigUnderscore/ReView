@@ -75,6 +75,10 @@ export interface User {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
+  /** Profil enrichi (42.B — №89). */
+  jobTitle?: string | null;
+  bio?: string | null;
+  phone?: string | null;
   displayName?: string;
   initials?: string;
   avatarUrl?: string | null;

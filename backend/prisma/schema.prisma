@@ -137,6 +137,9 @@ model User {
   firstName    String?
   lastName     String?
   username     String?  @unique // pseudo affiché en priorité
+  jobTitle     String? // 42.B №89 — intitulé de poste (profil enrichi)
+  bio          String? // 42.B №89 — courte présentation
+  phone        String? // 42.B №89 — téléphone de contact
   avatarKey    String? // clé objet MinIO
   role         Role     @default(ARTIST)
   status       UserStatus @default(AVAILABLE) // statut manuel (dispo/absent/ne pas déranger)

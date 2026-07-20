@@ -23,6 +23,9 @@ export default function ProfilePage() {
     lastName: user?.lastName ?? '',
     username: user?.username ?? '',
     email: user?.email ?? '',
+    jobTitle: user?.jobTitle ?? '',
+    bio: user?.bio ?? '',
+    phone: user?.phone ?? '',
   });
   const [pwd, setPwd] = useState('');
   const [busy, setBusy] = useState(false);
@@ -36,6 +39,9 @@ export default function ProfilePage() {
       if (vals.firstName !== (user.firstName ?? '')) body.firstName = vals.firstName;
       if (vals.lastName !== (user.lastName ?? '')) body.lastName = vals.lastName;
       if (vals.username !== (user.username ?? '')) body.username = vals.username;
+      if (vals.jobTitle !== (user.jobTitle ?? '')) body.jobTitle = vals.jobTitle;
+      if (vals.bio !== (user.bio ?? '')) body.bio = vals.bio;
+      if (vals.phone !== (user.phone ?? '')) body.phone = vals.phone;
       if (vals.email !== user.email) body.email = vals.email;
       const { user: updated } = await api.patch<{ user: AuthUser }>('/api/users/me', body);
       setUser(updated);
@@ -160,6 +166,29 @@ export default function ProfilePage() {
               value={vals.email}
               onChange={(v) => setVals((s) => ({ ...s, email: v }))}
               type="email"
+            />
+            <Field
+              label="Fonction"
+              value={vals.jobTitle}
+              onChange={(v) => setVals((s) => ({ ...s, jobTitle: v }))}
+              placeholder="ex. Compositing artist"
+            />
+            <Field
+              label="Téléphone"
+              value={vals.phone}
+              onChange={(v) => setVals((s) => ({ ...s, phone: v }))}
+              placeholder="optionnel"
+            />
+          </div>
+          <div>
+            <Label className="mb-1 block text-xs text-muted-foreground">Présentation</Label>
+            <textarea
+              value={vals.bio}
+              onChange={(e) => setVals((s) => ({ ...s, bio: e.target.value }))}
+              maxLength={500}
+              rows={3}
+              placeholder="Quelques mots sur vous (optionnel)"
+              className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
           <Button onClick={saveProfile} disabled={busy}>

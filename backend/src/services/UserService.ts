@@ -19,6 +19,9 @@ const publicUser = {
   firstName: true,
   lastName: true,
   username: true,
+  jobTitle: true,
+  bio: true,
+  phone: true,
   role: true,
   status: true,
   lastSeenAt: true,
@@ -81,6 +84,9 @@ export interface UpdateMeInput {
   firstName?: string | null;
   lastName?: string | null;
   username?: string | null;
+  jobTitle?: string | null;
+  bio?: string | null;
+  phone?: string | null;
   email?: string;
   password?: string;
 }
@@ -91,6 +97,9 @@ export async function updateMe(userId: number, body: UpdateMeInput) {
   if (body.firstName !== undefined) data.firstName = body.firstName;
   if (body.lastName !== undefined) data.lastName = body.lastName;
   if (body.username !== undefined) data.username = body.username;
+  if (body.jobTitle !== undefined) data.jobTitle = body.jobTitle;
+  if (body.bio !== undefined) data.bio = body.bio;
+  if (body.phone !== undefined) data.phone = body.phone;
   if (body.email !== undefined) data.email = body.email;
   if (body.password !== undefined) data.password = await bcrypt.hash(body.password, 12);
   const user = await prisma.user.update({ where: { id: userId }, data, select: publicUser });

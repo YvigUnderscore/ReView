@@ -7,7 +7,7 @@ export type AuthUser = Pick<
   User,
   'id' | 'email' | 'name' | 'displayName' | 'initials' | 'avatarUrl' | 'status' | 'role'
 > &
-  Partial<Pick<User, 'firstName' | 'lastName' | 'username'>> & {
+  Partial<Pick<User, 'firstName' | 'lastName' | 'username' | 'jobTitle' | 'bio' | 'phone'>> & {
     /** 2FA TOTP active sur le compte (renvoyé par /api/auth/me, 36.A). */
     twoFaEnabled?: boolean;
   };
