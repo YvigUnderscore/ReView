@@ -19,6 +19,13 @@ import {
   type KeyRef,
 } from './channels/model';
 import { sampleAnimV2 } from './channels/hermite';
+import {
+  copyKeys,
+  loadClipboard,
+  pasteKeys,
+  persistClipboard,
+  type CurveClipboard,
+} from './channels/clipboard';
 
 /**
  * Contrôleur caméra minimal requis par le lecteur/éditeur d'animation — commun **3D et splat** :
@@ -233,6 +240,28 @@ export function useCameraAnim(controller: CameraController) {
     setSelectionState([]);
   }, [commit]);
 
+  // ── Copier/coller de clés (40.E) : presse-papier mémoire + `localStorage` (cross-média). ──
+  const clipboardRef = useRef<CurveClipboard | null>(loadClipboard());
+  const [canPaste, setCanPaste] = useState(() => loadClipboard() != null);
+
+  /** Copie les clés sélectionnées (valeur, mode, tangentes) dans le presse-papier (Ctrl+C). */
+  const copySelection = useCallback(() => {
+    const clip = copyKeys(animRef.current, selectionRef.current);
+    if (!clip) return;
+    clipboardRef.current = clip;
+    persistClipboard(clip);
+    setCanPaste(true);
+  }, []);
+
+  /** Colle le presse-papier à la tête de lecture et sélectionne les clés collées (Ctrl+V). */
+  const paste = useCallback(() => {
+    const clip = clipboardRef.current ?? loadClipboard();
+    if (!clip) return;
+    const { anim: next, selection: pasted } = pasteKeys(animRef.current, clip, timeRef.current);
+    commit(next);
+    setSelectionState(pasted);
+  }, [commit]);
+
   // Auto-key (Phase 27) : activé, tout geste caméra (drag orbite/pan, molette) pose une clé de la
   // vue courante au temps de lecture — façon DCC.
   useEffect(() => {
@@ -294,6 +323,9 @@ export function useCameraAnim(controller: CameraController) {
     insertKeyAtView,
     addKey,
     removeSelection,
+    copySelection,
+    paste,
+    canPaste,
     beginStroke,
     strokeMoveKeys,
     strokeSetTangent,

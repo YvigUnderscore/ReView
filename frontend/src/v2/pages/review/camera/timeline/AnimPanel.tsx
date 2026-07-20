@@ -74,7 +74,8 @@ export default function AnimPanel({
     return () => ro.disconnect();
   }, [open, panelSize]);
 
-  // Suppression des clés sélectionnées (Suppr) — quand l'éditeur est ouvert et éditable.
+  // Raccourcis clés (graph editor ouvert + éditable) : Suppr = supprimer, Ctrl/⌘+C = copier,
+  // Ctrl/⌘+V = coller à la tête de lecture (40.E).
   useEffect(() => {
     if (!open || !editable) return;
     const onKey = (e: KeyboardEvent) => {
@@ -82,6 +83,12 @@ export default function AnimPanel({
       if ((e.key === 'Delete' || e.key === 'Backspace') && anim.selection.length) {
         e.preventDefault();
         anim.removeSelection();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && anim.selection.length) {
+        e.preventDefault();
+        anim.copySelection();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && anim.canPaste) {
+        e.preventDefault();
+        anim.paste();
       }
     };
     window.addEventListener('keydown', onKey);

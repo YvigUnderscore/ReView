@@ -121,6 +121,15 @@ export function upsertKey(
   });
 }
 
+/** Insère/écrase une clé **complète** (mode + tangentes) au temps `key.t` d'un canal (copier/coller 40.E). */
+export function upsertFullKey(anim: CameraAnimV2, id: ChannelId, key: CurveKey): CameraAnimV2 {
+  return withChannel(anim, id, (ch) => {
+    const idx = ch.keys.findIndex((k) => k.t === key.t);
+    if (idx >= 0) ch.keys[idx] = { ...key };
+    else ch.keys.push({ ...key });
+  });
+}
+
 /** Pose complète → une clé par canal renseigné, au temps `t` (bouton « poser une clé »). */
 export function upsertPoseAt(
   anim: CameraAnimV2,
