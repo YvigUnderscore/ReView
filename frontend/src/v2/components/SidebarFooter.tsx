@@ -7,6 +7,7 @@ import type { UserStatus } from '../types/api';
 import { usePresence, lastSeenLabel } from '../stores/usePresence';
 import { useTheme } from '../stores/useTheme';
 import Avatar from './Avatar';
+import WhatsNew from './WhatsNew';
 import { STATUS_COLOR, STATUS_LABEL } from '../lib/userStatus';
 
 const STATUSES: UserStatus[] = ['AVAILABLE', 'AWAY', 'DND'];
@@ -141,6 +142,7 @@ export default function SidebarFooter() {
           >
             {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           </button>
+          <WhatsNew collapsed />
           <button
             onClick={() => {
               logout();

@@ -61,6 +61,7 @@ export const qk = {
   hdris: ['hdris'] as const,
   ocioConfigs: ['ocio', 'configs'] as const,
   ocioDisplays: (id: string) => ['ocio', 'displays', id] as const,
+  changelog: ['changelog'] as const,
   docsManifest: () => ['docs', 'manifest'] as const,
   docsPage: (path: string) => ['docs', 'page', path] as const,
   reviewStatuses: ['review-statuses'] as const,
