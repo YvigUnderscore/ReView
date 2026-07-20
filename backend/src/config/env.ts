@@ -54,6 +54,11 @@ const baseEnvSchema = z.object({
   APP_ENCRYPTION_KEY: z.string().optional(),
   // 37.G : jeton d'accès à GET /metrics (vide = endpoint réservé au réseau interne).
   METRICS_TOKEN: z.string().optional(),
+  // 42.B №66 : Web Push (VAPID). Optionnel — à défaut, une paire est générée et persistée
+  // en base (dev). `VAPID_SUBJECT` = mailto: ou URL de contact.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
   // 37.D : encodeur vidéo du worker (h264_nvenc si GPU NVIDIA exposé au conteneur).
   VIDEO_ENCODER: z.enum(['libx264', 'h264_nvenc']).default('libx264'),
   // 39.A : convertisseur USD→glTF natif (ex. `guc`) préservant matériaux & variantes.

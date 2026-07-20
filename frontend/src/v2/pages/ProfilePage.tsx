@@ -7,6 +7,7 @@ import { useAuth, type AuthUser } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
 import DisplaySettings from '../components/DisplaySettings';
+import PushToggle from './profile/PushToggle';
 import SessionsSection from './profile/SessionsSection';
 import ApiTokensSection from './profile/ApiTokensSection';
 import TwoFaSection from './profile/TwoFaSection';
@@ -215,6 +216,7 @@ export default function ProfilePage() {
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Notifications</h2>
           <DigestToggle />
+          <PushToggle />
         </section>
 
         {/* Sécurité du compte (36.A/36.B/36.C) : 2FA + sessions actives + tokens d'API. */}

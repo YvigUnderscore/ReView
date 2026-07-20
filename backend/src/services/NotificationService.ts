@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { emitToUser } from './SocketService';
+import { sendToUser } from './PushService';
 import { isValidDiscordWebhook } from '../lib/sanitize';
 import { logger } from '../lib/logger';
 
@@ -23,6 +24,9 @@ export async function notify(params: {
     },
   });
   emitToUser(params.userId, 'notification:new', notification);
+  // Web Push (42.B — №66) : notification navigateur hors-onglet (si l'utilisateur s'est abonné).
+  const url = params.projectId ? `/projects/${params.projectId}` : '/';
+  sendToUser(params.userId, { title: 'ReView', body: params.content, url });
 }
 
 /**

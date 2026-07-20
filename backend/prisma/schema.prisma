@@ -125,6 +125,19 @@ model Setting {
   value String
 }
 
+// Abonnements Web Push par navigateur (42.B — №66). Un utilisateur = plusieurs appareils.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilisateurs & accès
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,6 +189,7 @@ model User {
   reviewDecisions  ReviewDecision[]    @relation("DecisionAuthor")
   playlists        Playlist[]          @relation("PlaylistAuthor")
   timelineMarkers  TimelineMarker[]    @relation("TimelineMarkerAuthor")
+  pushSubscriptions PushSubscription[]
   sessions         UserSession[]
   apiTokens        ApiToken[]
   mediaAccesses    MediaAccessLog[]

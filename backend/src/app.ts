@@ -16,6 +16,7 @@ import jobsRoutes from './routes/jobs.routes';
 import { httpMetrics, registry, startQueueMetrics } from './lib/metrics';
 import authOidcRoutes from './routes/auth-oidc.routes';
 import usersRoutes from './routes/users.routes';
+import pushRoutes from './routes/push.routes';
 import studioRoutes from './routes/studio.routes';
 import projectsRoutes from './routes/projects.routes';
 import projectsExtraRoutes from './routes/projects-extra.routes';
@@ -102,6 +103,7 @@ export const createApp = (): Express => {
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
   app.use('/api/auth', authSecurityRoutes); // sessions + tokens API (36.B/36.C)
   app.use('/api/users', usersRoutes);
+  app.use('/api/push', pushRoutes); // Web Push (42.B №66)
   app.use('/api/studio', studioRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
   app.use('/api/studio/ocio', ocioRoutes);
