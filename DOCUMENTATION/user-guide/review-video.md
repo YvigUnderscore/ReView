@@ -103,8 +103,19 @@ whole range (see above). See
 Before publication, a video can be trimmed (in/out) from the review; the worker
 re-cuts the delivery. Trim is locked once the version is published.
 
+## Viewing modes
+
+- **Theater mode** — the *Theater* button in the review header hides the sidebar, header and
+  comments to show the media full-frame within the window. Press **Esc** to exit. This is
+  distinct from browser fullscreen (also available).
+- **Detachable player** — the *Picture-in-Picture* button pops the video out into a floating
+  window (browser-native) so you can keep watching while working elsewhere.
+- **Animated thumbnails** — hovering a video card in the Reviews list scrubs through a live
+  preview of the clip.
+
 ## Related pages
 
 - [Review image](review-image.md)
 - [Upload & publishing](upload-and-publishing.md)
+- [Personalization & everyday UX](personalization.md)
 - [Transcoding (admin)](../admin-guide/transcoding.md)

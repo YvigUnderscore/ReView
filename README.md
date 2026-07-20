@@ -46,6 +46,9 @@ Liens de partage client durcis (mot de passe, expiration, **limite de vues**, r�
 ### 👥 Collaboration & administration
 Socket.io temps réel · Notifications · RBAC (Admin, Supervisor, Artist, Client) · Admin studio complet (utilisateurs, transcodage HLS, HDRI, SMTP, annonces, corbeille, audit).
 
+### 🎨 Personnalisation & UX quotidienne
+Thème clair/sombre/**système** · **densité** d'affichage · **langue** (FR/EN) · **raccourcis reconfigurables** (cheatsheet `?`) · **favoris** en clic droit · **vues de liste sauvegardées** · mode **théâtre** & lecteur détachable (PiP) · miniatures animées au survol · **thème studio** (accent/logo au login) · notifications **Web Push** & **Slack/Discord** · changelog in-app & tour d'onboarding · formes d'annotation (polygone) & export de frame annotée.
+
 ### 📚 Documentation intégrée
 Le manuel produit (dossier [`DOCUMENTATION/`](DOCUMENTATION/README.md), en anglais) est versionné avec le code et servi dans l'application sur la page `/docs`. La référence API interactive (OpenAPI/Scalar) est sur `/api/docs`.
 

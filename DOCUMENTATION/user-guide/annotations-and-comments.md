@@ -84,6 +84,17 @@ commenting depending on how they access the project (membership or share link
 permission `VIEW` / `COMMENT`). Resolution, comment→task and client visibility
 toggles are restricted as described above.
 
+## Annotation shapes
+
+Besides freehand, rectangle, ellipse, arrow and text, a **polygon** tool is available: click to
+place each vertex, then **double-click** to close the shape.
+
+## Exporting an annotated frame
+
+When annotations are visible, the right-click menu adds **Download annotated frame** (video) and
+**Download annotated image** (image), which composite the current annotations onto the exported
+picture. The plain (un-annotated) export remains available.
+
 ## Related pages
 
 - [Review video](review-video.md), [Review image](review-image.md)
