@@ -51,6 +51,7 @@ import docsRoutes from './routes/docs.routes';
 import watchRoutes from './routes/watch.routes';
 import playlistsRoutes from './routes/playlists.routes';
 import liveRoutes from './routes/live.routes';
+import productionRoutes from './routes/production.routes';
 
 export const createApp = (): Express => {
   const app = express();
@@ -108,6 +109,7 @@ export const createApp = (): Express => {
   app.use('/api/studio/hdris', hdriRoutes);
   app.use('/api/studio/ocio', ocioRoutes);
   app.use('/api/projects', projectsExtraRoutes); // usage/quotas + duplicate (38) — avant /:id
+  app.use('/api/projects', productionRoutes); // stats & planning (Phase 43) — sous-routes /:projectId
   app.use('/api/projects', projectsRoutes);
   app.use('/api/media', mediaUploadRoutes); // multipart résumable (37.A) — avant /:id
   app.use('/api/media', mediaRoutes);

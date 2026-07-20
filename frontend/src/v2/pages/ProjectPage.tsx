@@ -13,6 +13,7 @@ import {
   PenTool,
   Settings,
   Share2,
+  BarChart3,
 } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -31,6 +32,7 @@ import SequencesTab from './project/SequencesTab';
 import AssetsTab from './project/AssetsTab';
 import MembersTab from './project/MembersTab';
 import PlaylistsTab from './project/PlaylistsTab';
+import ProductionTab from './project/ProductionTab';
 import SharesTab from './project/SharesTab';
 import TrashTab from './project/TrashTab';
 import ProjectCsvActions from './project/ProjectCsvActions';
@@ -103,6 +105,7 @@ export default function ProjectPage() {
     { key: 'sequences', label: 'Séquences', icon: <Film size={16} />, badge: sequences.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
+    { key: 'production', label: 'Production', icon: <BarChart3 size={16} /> },
     ...(canManage ? [{ key: 'members', label: 'Membres', icon: <Users size={16} /> }] : []),
     ...(canManage ? [{ key: 'shares', label: 'Partages', icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: 'Réglages', icon: <Settings size={16} /> }] : []),
@@ -174,6 +177,7 @@ export default function ProjectPage() {
         <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />
       )}
       {tab === 'playlists' && <PlaylistsTab projectId={projectId} />}
+      {tab === 'production' && <ProductionTab projectId={projectId} />}
       {tab === 'members' && canManage && <MembersTab projectId={projectId} />}
       {tab === 'shares' && canManage && <SharesTab projectId={projectId} />}
       {tab === 'settings' && canManage && (
