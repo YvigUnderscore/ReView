@@ -230,6 +230,7 @@ export default function ReviewViewer({
               onToggleAnnotate={onToggleAnnotate}
               hasViewed={!!ann.viewed}
               onClearSelection={onClearSelection}
+              annShapes={ann.viewed ?? ann.annot}
             >
               <div className={VIEWER_ZONE}>
                 <div className="absolute inset-0">

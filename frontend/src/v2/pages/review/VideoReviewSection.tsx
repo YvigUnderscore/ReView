@@ -92,6 +92,7 @@ export default function VideoReviewSection({
         onToggleAnnotate={onToggleAnnotate}
         hasViewed={!!ann.viewed}
         onClearSelection={onClearSelection}
+        annShapes={ann.viewed ?? ann.annot}
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
           <VideoPane

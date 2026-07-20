@@ -30,7 +30,14 @@ import {
 } from '../../components/ui/context-menu';
 import { useGuides, type GuideKey } from '../../stores/useGuides';
 import { stepVideoFrame, type MediaResp } from './reviewTypes';
-import { captureVideoFrame, copyImageToClipboard, downloadImage, toThumbnailDataUrl } from './mediaCapture';
+import {
+  captureVideoFrame,
+  copyImageToClipboard,
+  downloadImage,
+  toThumbnailDataUrl,
+  withAnnotations,
+} from './mediaCapture';
+import type { Shape } from '../../components/AnnotationCanvas';
 import { buildContactSheet } from './contactSheet';
 import { frameLink } from './deepLink';
 import AddToPlaylistDialog from '../../components/AddToPlaylistDialog';
@@ -51,6 +58,7 @@ export default function ReviewContextMenu({
   onToggleAnnotate,
   hasViewed,
   onClearSelection,
+  annShapes = [],
 }: {
   children: ReactNode;
   data: MediaResp;
@@ -61,6 +69,8 @@ export default function ReviewContextMenu({
   onToggleAnnotate: () => void;
   hasViewed: boolean;
   onClearSelection: () => void;
+  /** Annotations visibles (commentaire sélectionné ou brouillon) — export « annotée » (№93). */
+  annShapes?: Shape[];
 }) {
   const qc = useQueryClient();
   const kind = data.media.kind;
@@ -160,6 +170,20 @@ export default function ReviewContextMenu({
             >
               <Download size={14} /> Télécharger la frame
             </ContextMenuItem>
+            {annShapes.length > 0 && (
+              <ContextMenuItem
+                onSelect={() =>
+                  run('Frame annotée téléchargée', async () =>
+                    downloadImage(
+                      await withAnnotations(frameDataUrl(), annShapes),
+                      `${baseName}-frame-annotee.jpg`,
+                    ),
+                  )
+                }
+              >
+                <PencilLine size={14} /> Télécharger la frame annotée
+              </ContextMenuItem>
+            )}
             {/* Planche contact (34.H) : PNG composé depuis le sprite de timeline. */}
             {data.timelineSprite && data.timelineSpriteUrl && (
               <ContextMenuItem
@@ -214,6 +238,17 @@ export default function ReviewContextMenu({
             >
               <Download size={14} /> Télécharger l’image
             </ContextMenuItem>
+            {annShapes.length > 0 && (
+              <ContextMenuItem
+                onSelect={() =>
+                  run('Image annotée téléchargée', async () =>
+                    downloadImage(await withAnnotations(data.url, annShapes), `${baseName}-annotee.jpg`),
+                  )
+                }
+              >
+                <PencilLine size={14} /> Télécharger l’image annotée
+              </ContextMenuItem>
+            )}
             {canManage && (
               <ContextMenuItem onSelect={() => run('Miniature mise à jour', () => setThumbnail(data.url))}>
                 <ImageIcon size={14} /> Image → miniature
