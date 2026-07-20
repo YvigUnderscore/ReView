@@ -8,7 +8,7 @@ import { confirmReplaceAnim } from '../camera/confirmReplaceAnim';
 import { emptyAnim, hasAnimation, normalizeAnim } from '../camera/channels/model';
 import { cameraPoseFromView } from '../camera/cameraPose';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
-import { importCameraFromGltf } from './importCameraGltf';
+import { importCameraFile } from './importCameraAbc';
 import type { Model3DThreeState } from './useModel3DThree';
 
 /**
@@ -47,7 +47,7 @@ export function useModel3DCamera(
 
   const importGltf = useCallback(
     (file: File) => {
-      void importCameraFromGltf(file)
+      void importCameraFile(file)
         .then((animData) => {
           if (!animData) {
             toast.error('Aucune animation caméra dans ce fichier');

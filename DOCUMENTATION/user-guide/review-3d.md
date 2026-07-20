@@ -25,17 +25,44 @@ for walkthroughs. Framing and tilt behave consistently across 3D and splat revie
   linked camera (they share the scene), or *Voir tous* to line them up side by side.
   The models are auto-normalized so their sizes are comparable.
 
+## Animations
+
+Models that carry animation clips (skeletal rigs, morph targets, transforms) get a
+transport bar at the bottom of the HUD:
+
+- **Play / pause**, a **scrubber** to move the playhead frame by frame, and a live
+  `time / duration` readout.
+- **Speed** (0.1×–4×) and a **loop** toggle.
+- A **clip selector** when the model holds several animations; switching clips
+  **cross-fades** while playing.
+
+Skinning is reliable: rigs are normalized without their animation fighting the framing,
+and skinned/morphed meshes stay visible throughout the motion (no culling pop).
+
 ## Inspection
 
 - **Display modes** — the inspect bar (top-right HUD) switches between *shaded*,
   *wireframe*, *normals*, *matcap* and *UV checker*. The override is
   **non-destructive**: the original materials are restored when you return to shaded.
+- **Skeleton debug** — when the model has a rig, a **bone** toggle in the inspect bar
+  overlays the skeleton (drawn through the geometry) to debug skinning; it follows the
+  animation. Shown only for rigged models.
 - **Technical sheet** — polycount (triangles, vertices, meshes), materials, UV sets
   and glTF extensions used by the model. It also shows the **source format** and which
   **converter** produced the GLB (a `natif` badge marks USD converted natively, i.e.
   with UsdPreviewSurface materials and variants preserved).
 - **Texture inspector** — per-channel previews (base color, normal, roughness,
   metalness, AO, emissive) with their dimensions.
+
+## Material variants & embedded cameras
+
+When the GLB declares them (top-right HUD, shown only if present):
+
+- **Material variants** (`KHR_materials_variants`) — a dropdown switches the whole model
+  between authored looks (e.g. color options); *Défaut* restores the original materials.
+  The swap is non-destructive.
+- **Embedded cameras** — cameras authored in the file are offered as a *Vue caméra…*
+  menu; picking one moves the review camera to that viewpoint (position, look and FOV).
 
 ## Lighting & environment
 
@@ -65,6 +92,9 @@ version and locked by the publish lock.
 - A **camera object** can be placed in the scene, oriented with the gizmo, and
   animated (see [Camera animation](camera-animation.md)); a picture-in-picture
   preview shows the camera's point of view.
+- **Import a camera** — the animation editor's *Import* button reads a camera animation
+  from **glTF/GLB** (from any 3D app) or from an **Alembic** camera exported to JSON
+  samples (see [Alembic camera import](../admin-guide/3d-alembic.md)).
 
 ## HUD
 
@@ -74,5 +104,6 @@ type, no permanent slider panels.
 ## Related pages
 
 - [Camera animation](camera-animation.md)
+- [Alembic camera import (admin)](../admin-guide/3d-alembic.md)
 - [Review splat](review-splat.md)
 - [HDRI library (admin)](../admin-guide/hdri-library.md)

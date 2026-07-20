@@ -114,13 +114,13 @@ export default function AnimToolbar({
       )}
       {onImport && editable && (
         <label
-          title="Importer une animation caméra depuis un glTF (d'un logiciel 3D)"
+          title="Importer une animation caméra : glTF (d'un logiciel 3D) ou JSON d'échantillons Alembic (.abc)"
           className="flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
         >
           <Upload size={12} /> Import
           <input
             type="file"
-            accept=".gltf,.glb,model/gltf+json,model/gltf-binary"
+            accept=".gltf,.glb,.json,model/gltf+json,model/gltf-binary,application/json"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];

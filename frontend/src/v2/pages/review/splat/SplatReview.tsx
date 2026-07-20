@@ -8,7 +8,7 @@ import { frameCameraToSphere } from '../viewer/frameCamera';
 import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import { useSceneGrid } from '../viewer/useSceneGrid';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
-import { importCameraFromGltf } from '../three/importCameraGltf';
+import { importCameraFile } from '../three/importCameraAbc';
 import CameraBar from '../camera/CameraBar';
 import AnimPanel from '../camera/timeline/AnimPanel';
 import PipFrame from '../viewer/PipFrame';
@@ -101,7 +101,7 @@ export default function SplatReview({
 
   const importLayout = useCallback(
     (file: File) => {
-      void importCameraFromGltf(file)
+      void importCameraFile(file)
         .then((animData) => {
           if (!animData) {
             toast.error('Aucune animation caméra dans ce fichier');
