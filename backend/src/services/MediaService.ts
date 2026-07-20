@@ -13,6 +13,7 @@ import { enqueueMediaJob } from './JobService';
 import { getLiveSyncHz, getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { logMediaAccess } from '../lib/mediaAccess';
 import { emitWebhookEvent } from './WebhookService';
+import { notifyChat } from './ChatNotifyService';
 import { isClamavEnabled } from '../lib/clamav';
 import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
@@ -386,6 +387,8 @@ export async function publish(user: SessionUser, id: number) {
       originalName: media.originalName,
       publishedBy: user.id,
     });
+    // Messagerie d'équipe (42.B — №67).
+    notifyChat(`🎬 Nouveau média publié : ${media.originalName}`);
   }
   return serializeMedia(updated);
 }

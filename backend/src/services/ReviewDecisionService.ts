@@ -5,6 +5,7 @@ import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
 import { emitToProject } from './SocketService';
 import { emitWebhookEvent } from './WebhookService';
+import { notifyChat } from './ChatNotifyService';
 import { badRequest, conflict, notFound } from '../lib/errors';
 
 /**
@@ -158,6 +159,9 @@ export async function decide(
     comment: comment ?? null,
     decidedBy: user.id,
   });
+  // Messagerie d'équipe (42.B — №67) : signal studio-wide des décisions.
+  const emoji = status.isApproval ? '✅' : status.isRetake ? '🔁' : '🟠';
+  notifyChat(`${emoji} Décision « ${status.name} » sur la version ${version.name}`);
   return decision;
 }
 

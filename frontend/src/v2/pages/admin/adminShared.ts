@@ -106,6 +106,11 @@ export const SETTINGS_FIELDS: SettingField[] = [
   { key: 'live_sync_hz_image', label: 'Live : cadence image (Hz)', hint: 'ex. 4 — zoom/position' },
   { key: 'live_sync_hz_3d', label: 'Live : cadence 3D (Hz)', hint: 'ex. 10 — fluidité caméra' },
   { key: 'live_sync_hz_splat', label: 'Live : cadence splat (Hz)', hint: 'ex. 10 — caméra + focale' },
+  {
+    key: 'slack_webhook_url',
+    label: 'Webhook Slack (notifications)',
+    hint: 'https://hooks.slack.com/services/… — décisions & publications',
+  },
 ];
 
 const UNIT_MULT: Record<SizeUnit, number> = { Mo: 1e6, Go: 1e9 };

@@ -21,3 +21,16 @@ export const isValidDiscordWebhook = (url?: string | null): boolean => {
     return false;
   }
 };
+
+/**
+ * Valide une URL de webhook Slack entrant (anti-SSRF) : https + `hooks.slack.com` (42.B — №67).
+ */
+export const isValidSlackWebhook = (url?: string | null): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === 'hooks.slack.com';
+  } catch {
+    return false;
+  }
+};
