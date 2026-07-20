@@ -12,6 +12,7 @@ import { bulkDelete } from '../lib/bulkApi';
 import type { MediaKind } from '../types/api';
 import Shell from '../components/Shell';
 import AddToPlaylistDialog from '../components/AddToPlaylistDialog';
+import SavedViewsMenu from '../components/SavedViewsMenu';
 import ViewToggle from '../components/ViewToggle';
 import { useAuth } from '../stores/useAuth';
 import { useViewMode } from '../stores/useViewPref';
@@ -131,6 +132,16 @@ export default function ReviewsPage() {
               </option>
             ))}
           </Select>
+          <SavedViewsMenu
+            scope="reviews"
+            current={{ projectId, kind, status, decision }}
+            onApply={(f) => {
+              setProjectId(f.projectId ?? '');
+              setKind(f.kind ?? '');
+              setStatus(f.status ?? '');
+              setDecision(f.decision ?? '');
+            }}
+          />
           <ViewToggle contextKey="reviews" />
         </div>
       </div>
