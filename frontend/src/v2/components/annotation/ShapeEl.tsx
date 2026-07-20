@@ -44,6 +44,17 @@ export default function ShapeEl({
       </>
     );
   }
+  if (s.type === 'polygon') {
+    // En cours de tracé (< 3 sommets) : polyligne ouverte ; sinon polygone fermé.
+    const points = (s.pts ?? []).map((p) => p.join(',')).join(' ');
+    const El = (s.pts?.length ?? 0) >= 3 ? 'polygon' : 'polyline';
+    return (
+      <>
+        {halo && <El points={points} {...halo} />}
+        <El points={points} {...common} />
+      </>
+    );
+  }
   if (s.type === 'rect')
     return (
       <>

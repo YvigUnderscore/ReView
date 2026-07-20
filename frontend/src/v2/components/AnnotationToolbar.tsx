@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Circle, Eraser, Hand, MoveUpRight, Pencil, Redo2, Square, Type, Undo2 } from 'lucide-react';
+import { Circle, Eraser, Hand, Hexagon, MoveUpRight, Pencil, Redo2, Square, Type, Undo2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import ColorPicker from './ColorPicker';
 import { arrowHead, textFontSize } from './annotation/geometry';
@@ -10,6 +10,7 @@ const TOOL_ICONS: { id: Tool; icon: LucideIcon; title: string }[] = [
   { id: 'rect', icon: Square, title: 'Rectangle' },
   { id: 'ellipse', icon: Circle, title: 'Ellipse' },
   { id: 'arrow', icon: MoveUpRight, title: 'Flèche' },
+  { id: 'polygon', icon: Hexagon, title: 'Polygone (clic par sommet, double-clic pour fermer)' },
   { id: 'text', icon: Type, title: 'Texte' },
   { id: 'move', icon: Hand, title: 'Déplacer une forme' },
   { id: 'erase', icon: Eraser, title: 'Gomme (clic ou glisser)' },

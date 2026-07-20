@@ -91,4 +91,43 @@ describe('translateShape / normalizeRect', () => {
     const n = normalizeRect(s);
     expect(n).toMatchObject({ x: 0.3, y: 0.4, w: 0.2, h: 0.1 });
   });
+  it('translate un polygone (tous les sommets) — 42.B №90', () => {
+    const s: Shape = {
+      id: 'poly',
+      type: 'polygon',
+      color: '#fff',
+      width: 3,
+      pts: [
+        [0.1, 0.1],
+        [0.3, 0.1],
+        [0.2, 0.3],
+      ],
+    };
+    const t = translateShape(s, 0.05, 0.1);
+    expect(t.pts).toEqual([
+      [0.15000000000000002, 0.2],
+      [0.35, 0.2],
+      [0.25, 0.4],
+    ]);
+  });
+});
+
+describe('hitShape — polygone (42.B №90)', () => {
+  const poly: Shape = {
+    id: 'poly',
+    type: 'polygon',
+    color: '#fff',
+    width: 3,
+    pts: [
+      [0.2, 0.2],
+      [0.6, 0.2],
+      [0.4, 0.6],
+    ],
+  };
+  it('touche à proximité d’un sommet', () => {
+    expect(hitShape([poly], [0.21, 0.21])?.id).toBe('poly');
+  });
+  it('ne touche pas loin des sommets', () => {
+    expect(hitShape([poly], [0.9, 0.9])).toBeUndefined();
+  });
 });

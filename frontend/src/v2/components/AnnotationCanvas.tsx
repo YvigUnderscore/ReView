@@ -126,6 +126,13 @@ export function AnnotationCanvas({
       ellipseStart.current = p;
       setDraft({ ...base, type: 'ellipse', cx: p[0], cy: p[1], rx: 0, ry: 0 });
     } else if (tool === 'arrow') setDraft({ ...base, type: 'arrow', x1: p[0], y1: p[1], x2: p[0], y2: p[1] });
+    else if (tool === 'polygon')
+      // Multi-clic : chaque clic ajoute un sommet ; double-clic ferme (finishPolygon).
+      setDraft(
+        draft?.type === 'polygon'
+          ? { ...draft, pts: [...(draft.pts ?? []), p] }
+          : { ...base, type: 'polygon', pts: [p] },
+      );
   };
 
   const move = (e: React.PointerEvent) => {
@@ -164,10 +171,17 @@ export function AnnotationCanvas({
       drag.current = null;
       return;
     }
-    if (draft) {
+    // Le polygone se termine au double-clic (finishPolygon), pas au relâchement.
+    if (draft && draft.type !== 'polygon') {
       onChange?.([...shapes, normalizeRect(draft)]);
       setDraft(null);
     }
+  };
+
+  /** Ferme le polygone en cours (double-clic) : validé s'il a au moins 3 sommets. */
+  const finishPolygon = () => {
+    if (draft?.type === 'polygon' && (draft.pts?.length ?? 0) >= 3) onChange?.([...shapes, draft]);
+    setDraft(null);
   };
 
   // Valide la saisie de texte en cours (Entrée, blur ou nouveau clic). Effet hors
@@ -223,6 +237,7 @@ export function AnnotationCanvas({
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
+        onDoubleClick={finishPolygon}
         onPointerLeave={() => setHoverId(null)}
       >
         <g transform={groupTransform}>

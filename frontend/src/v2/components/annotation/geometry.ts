@@ -3,11 +3,11 @@
  * d'aspect en espace écran). Extraite d'AnnotationCanvas (budget 10.F4) — testée.
  */
 
-export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'text' | 'move' | 'erase';
+export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'polygon' | 'text' | 'move' | 'erase';
 
 export interface Shape {
   id: string;
-  type: 'path' | 'rect' | 'ellipse' | 'arrow' | 'text';
+  type: 'path' | 'rect' | 'ellipse' | 'arrow' | 'polygon' | 'text';
   color: string;
   width: number;
   alpha?: number; // opacité 0..1 (défaut 1)
@@ -90,7 +90,8 @@ export function arrowHead(
 export function hitShape(shapes: Shape[], p: [number, number]): Shape | undefined {
   const near = (a: number, b: number) => Math.abs(a - b) < 0.03;
   return [...shapes].reverse().find((s) => {
-    if (s.type === 'path') return s.pts?.some(([x, y]) => Math.hypot(x! - p[0], y! - p[1]) < 0.03);
+    if (s.type === 'path' || s.type === 'polygon')
+      return s.pts?.some(([x, y]) => Math.hypot(x! - p[0], y! - p[1]) < 0.03);
     if (s.type === 'rect')
       return (
         p[0] >= (s.x ?? 0) - 0.02 &&
@@ -125,7 +126,8 @@ export function hitShape(shapes: Shape[], p: [number, number]): Shape | undefine
 
 /** Translation d'une forme (outil déplacement). */
 export function translateShape(s: Shape, dx: number, dy: number): Shape {
-  if (s.type === 'path') return { ...s, pts: s.pts?.map(([x, y]) => [x! + dx, y! + dy]) };
+  if (s.type === 'path' || s.type === 'polygon')
+    return { ...s, pts: s.pts?.map(([x, y]) => [x! + dx, y! + dy]) };
   if (s.type === 'rect' || s.type === 'text') return { ...s, x: (s.x ?? 0) + dx, y: (s.y ?? 0) + dy };
   if (s.type === 'ellipse') return { ...s, cx: (s.cx ?? 0) + dx, cy: (s.cy ?? 0) + dy };
   return { ...s, x1: (s.x1 ?? 0) + dx, y1: (s.y1 ?? 0) + dy, x2: (s.x2 ?? 0) + dx, y2: (s.y2 ?? 0) + dy };
