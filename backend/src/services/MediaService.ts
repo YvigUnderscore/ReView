@@ -285,6 +285,11 @@ export async function listReviews(
           ? `${t.asset.name} › ${t.name}`
           : (m.version?.asset?.name ?? '');
       const project = t?.shot?.project ?? t?.asset?.project ?? m.version?.asset?.project ?? null;
+      // Sprite de miniatures pour l'aperçu animé au survol des cartes (42.A — №78, vidéo).
+      const meta = (m.metadata ?? {}) as {
+        timelineSprite?: { key: string; count: number; cols: number; rows: number };
+      };
+      const ts = m.kind === MediaKind.VIDEO ? meta.timelineSprite : undefined;
       return {
         id: m.id,
         kind: m.kind,
@@ -292,6 +297,14 @@ export async function listReviews(
         published: m.published,
         createdAt: m.createdAt,
         thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
+        hoverSprite: ts
+          ? {
+              url: await storage.getPresignedGetUrl(ts.key),
+              count: ts.count,
+              cols: ts.cols,
+              rows: ts.rows,
+            }
+          : null,
         location,
         versionName: m.version?.name ?? '',
         reviewStatus: m.version?.reviewStatus ?? null,

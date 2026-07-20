@@ -83,11 +83,55 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
       published: true,
       createdAt: new Date('2026-07-12T10:00:00Z'),
       thumbnailUrl: 'https://minio/thumbs/5.jpg',
+      hoverSprite: null,
       location: 'SQ01 · SH010 › Comp',
       versionName: 'V02',
       reviewStatus: null,
       project: { id: 7, name: 'Film' },
       uploader: 'Ana',
     });
+  });
+
+  it('expose le sprite de survol pour une vidéo qui en a un (42.A — №78)', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 6,
+        kind: 'VIDEO',
+        originalName: 'plan2.mp4',
+        published: true,
+        createdAt: new Date('2026-07-12T11:00:00Z'),
+        thumbnailKey: 'thumbs/6.jpg',
+        metadata: { timelineSprite: { key: 'sprites/6.jpg', count: 20, cols: 5, rows: 4 } },
+        uploader: null,
+        version: { name: 'V01', task: null, asset: { name: 'Hero', project: { id: 7, name: 'Film' } } },
+      },
+    ] as never);
+    count.mockResolvedValue(1 as never);
+    const { items } = await listReviews(artist, {}, page);
+    expect((items[0] as { hoverSprite: unknown }).hoverSprite).toEqual({
+      url: 'https://minio/sprites/6.jpg',
+      count: 20,
+      cols: 5,
+      rows: 4,
+    });
+  });
+
+  it('pas de sprite de survol pour une image même avec metadata (42.A — №78)', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 7,
+        kind: 'IMAGE',
+        originalName: 'ref.png',
+        published: true,
+        createdAt: new Date('2026-07-12T12:00:00Z'),
+        thumbnailKey: null,
+        metadata: { timelineSprite: { key: 'sprites/7.jpg', count: 10, cols: 5, rows: 2 } },
+        uploader: null,
+        version: { name: 'V01', task: null, asset: { name: 'Hero', project: { id: 7, name: 'Film' } } },
+      },
+    ] as never);
+    count.mockResolvedValue(1 as never);
+    const { items } = await listReviews(artist, {}, page);
+    expect((items[0] as { hoverSprite: unknown }).hoverSprite).toBeNull();
   });
 });

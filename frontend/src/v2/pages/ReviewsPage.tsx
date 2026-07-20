@@ -170,6 +170,7 @@ export default function ReviewsPage() {
                 title={m.name}
                 subtitle={[m.project?.name, m.location].filter(Boolean).join(' · ') || undefined}
                 thumbnailUrl={m.thumbnailUrl}
+                hoverSprite={m.hoverSprite}
                 selection={{ selected: sel.isSelected(m.id), onSelect: (mods) => sel.onSelect(m.id, mods) }}
                 contextActions={[
                   {

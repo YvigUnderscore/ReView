@@ -6,6 +6,7 @@ import type { ViewMode } from '../stores/useViewPref';
 import { staggerContainer, fadeInUp } from '../lib/motion';
 import type { SelectModifiers } from '../lib/useMultiSelect';
 import { useFavorites, type FavType } from '../stores/useFavorites';
+import HoverSprite, { type SpriteData } from './HoverSprite';
 import { Checkbox } from './ui/checkbox';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
 
@@ -39,6 +40,8 @@ export interface EntityCardProps {
   contextActions?: EntityItemAction[];
   /** Épinglage aux favoris (42.A3 — №71) : injecte l'action « épingler » au clic droit + étoile. */
   favorite?: { type: FavType; entityId: number };
+  /** Aperçu animé au survol (42.A — №78) : sprite de miniatures (vue cartes). */
+  hoverSprite?: SpriteData | null;
 }
 
 function Actions({ actions }: { actions?: EntityItemAction[] }) {
@@ -103,6 +106,7 @@ export default function EntityCard({
   selection,
   contextActions,
   favorite,
+  hoverSprite,
 }: EntityCardProps) {
   const highlighted = active || selection?.selected;
   const activeRing = highlighted ? 'border-primary ring-1 ring-primary' : 'border-border';
@@ -184,12 +188,13 @@ export default function EntityCard({
     <div
       className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-colors`}
     >
-      <div className="relative flex aspect-video items-center justify-center bg-secondary/40">
+      <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-secondary/40">
         {thumbnailUrl ? (
           <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <ImageIcon size={28} className="text-muted-foreground/50" />
         )}
+        {hoverSprite && hoverSprite.count > 0 && <HoverSprite sprite={hoverSprite} />}
         {selection && <SelectBox selection={selection} className="absolute left-1.5 top-1.5" />}
         <div className="absolute right-1.5 top-1.5">
           <Actions actions={actions} />
