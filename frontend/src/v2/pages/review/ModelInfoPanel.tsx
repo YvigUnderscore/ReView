@@ -57,6 +57,21 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Provenance de conversion 3D (39.A) exposée par le backend (`metadata.model`). */
+export interface ModelSource {
+  sourceFormat: string;
+  converter: string;
+  native: boolean;
+}
+
+/** Libellé lisible du convertisseur ayant produit le GLB affiché. */
+const CONVERTER_LABEL: Record<string, string> = {
+  usd: 'USD natif',
+  assimp: 'assimp',
+  gltf: 'glTF (packé)',
+  copy: 'glTF (direct)',
+};
+
 /**
  * Fiche technique du modèle 3D (Phase 39, 39.C) : géométrie (meshes/triangles/sommets), matériaux,
  * jeux d'UV, extensions glTF, et **inspecteur de textures** (aperçu par canal + dimensions). Panneau
@@ -65,10 +80,13 @@ function Row({ label, value }: { label: string; value: string }) {
 export default function ModelInfoPanel({
   stats,
   extensions,
+  source,
   onClose,
 }: {
   stats: ModelStats | null;
   extensions: string[];
+  /** Provenance de conversion (39.A) : format source + convertisseur, null si inconnue. */
+  source?: ModelSource | null;
   onClose: () => void;
 }) {
   return (
@@ -83,6 +101,28 @@ export default function ModelInfoPanel({
         <p className="px-3 py-3 text-muted-foreground">Chargement du modèle…</p>
       ) : (
         <div className="max-h-[60vh] space-y-3 overflow-y-auto px-3 py-3">
+          {source && (
+            <section className="space-y-1">
+              <Row label="Format source" value={source.sourceFormat} />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Conversion</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-right font-medium text-foreground">
+                    {CONVERTER_LABEL[source.converter] ?? source.converter}
+                  </span>
+                  {source.native && (
+                    <span
+                      title="Matériaux UsdPreviewSurface & variantes préservés"
+                      className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground"
+                    >
+                      natif
+                    </span>
+                  )}
+                </span>
+              </div>
+            </section>
+          )}
+
           <section className="space-y-1">
             <Row label="Meshes" value={fmt(stats.meshes)} />
             <Row label="Triangles" value={fmt(stats.triangles)} />

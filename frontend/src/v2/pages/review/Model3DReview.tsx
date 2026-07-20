@@ -124,6 +124,7 @@ export default function Model3DReview({
                   <ModelInfoPanel
                     stats={inspect.stats}
                     extensions={inspect.extensions}
+                    source={data.modelSource}
                     onClose={() => setInfoOpen(false)}
                   />
                 )}

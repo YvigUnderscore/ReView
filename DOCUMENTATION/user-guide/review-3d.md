@@ -1,9 +1,12 @@
 # 3D review
 
-> Updated: 2026-07-19
+> Updated: 2026-07-20
 
-3D media (GLB — other formats are converted at upload) open in a Three.js viewer
-designed to feel like a DCC viewport.
+3D media open in a Three.js viewer designed to feel like a DCC viewport. GLB is served
+directly; glTF, FBX, OBJ, COLLADA, STL and **USD** (`.usd`/`.usdc`/`.usda`/`.usdz`, plus
+zipped folders) are converted to GLB at upload. USD is converted by a dedicated native
+USD→glTF converter when the studio has enabled one — otherwise by assimp. See
+[USD & 3D conversion](../admin-guide/3d-usd.md) for setup.
 
 ## Navigation
 
@@ -28,7 +31,9 @@ for walkthroughs. Framing and tilt behave consistently across 3D and splat revie
   *wireframe*, *normals*, *matcap* and *UV checker*. The override is
   **non-destructive**: the original materials are restored when you return to shaded.
 - **Technical sheet** — polycount (triangles, vertices, meshes), materials, UV sets
-  and glTF extensions used by the model.
+  and glTF extensions used by the model. It also shows the **source format** and which
+  **converter** produced the GLB (a `natif` badge marks USD converted natively, i.e.
+  with UsdPreviewSurface materials and variants preserved).
 - **Texture inspector** — per-channel previews (base color, normal, roughness,
   metalness, AO, emissive) with their dimensions.
 

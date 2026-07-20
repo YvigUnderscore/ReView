@@ -424,6 +424,7 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     proxyKey?: string;
     sourceDeleted?: boolean;
     glbKey?: string;
+    model?: { sourceFormat: string; converter: string; native: boolean };
     fps?: number;
     width?: number;
     height?: number;
@@ -496,6 +497,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     proxyUrl,
     glbUrl,
     startFrame: project?.startFrame ?? 1001,
+    // Provenance de conversion 3D (39.A) : format source + convertisseur (fiche technique).
+    modelSource: meta.model ?? null,
     fps: meta.fps ?? null,
     // Fréquence de diffusion de la salle live (33.B), réglable admin par type de média.
     liveSyncHz: await getLiveSyncHz(media.kind),

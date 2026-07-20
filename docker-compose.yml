@@ -105,6 +105,9 @@ services:
       # 37.E : scan antivirus opt-in — pointer vers le service clamav (profil antivirus).
       CLAMAV_HOST: ${CLAMAV_HOST:-}
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      # 39.A : convertisseur USD→glTF natif (ex. `guc`, installé via --build-arg GUC_URL).
+      # Vide (défaut) = repli assimp. Voir DOCUMENTATION/admin-guide/3d-usd.md.
+      USD_GLTF_CONVERTER: ${USD_GLTF_CONVERTER:-}
     depends_on:
       postgres:
         condition: service_healthy

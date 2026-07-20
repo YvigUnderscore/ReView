@@ -191,6 +191,8 @@ export interface MediaResp {
   proxyUrl: string | null;
   glbUrl: string | null;
   startFrame: number;
+  /** Provenance de conversion 3D (39.A) : format source + convertisseur, affichés en fiche technique. */
+  modelSource: { sourceFormat: string; converter: string; native: boolean } | null;
   fps: number | null;
   /** Fréquence de diffusion de la salle live (Hz), réglable admin par type de média (33.B). */
   liveSyncHz: number;
