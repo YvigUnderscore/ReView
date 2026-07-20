@@ -30,6 +30,11 @@ export interface SceneRuntime {
   modelRadius: number;
   /** Objet du modèle principal chargé (enfant de `root`) — cible de la comparaison A/B (39.E). */
   modelObject: THREE.Object3D;
+  /** Racine glTF (cible du mixer, distincte du wrapper de normalisation — 40.A) ; hôte du
+   *  SkeletonHelper (debug squelette 40.B). */
+  animRoot: THREE.Object3D;
+  /** Nombre de `SkinnedMesh` du modèle (>0 → debug squelette disponible — 40.B). */
+  skinnedCount: number;
 }
 
 /**
@@ -115,8 +120,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
 
   const { frameView, homeView } = useModelFraming({ runtimeRef, threeRef, ready, isFlying });
 
-  const anim = useModelAnimations(runtimeRef, actionRef);
-  const { init: animInit } = anim;
+  const anim = useModelAnimations(runtimeRef, actionRef, threeRef, subscribeFrame);
+  // `init` reste privé (appelé au chargement) ; le reste du transport est exposé tel quel.
+  const { init: animInit, ...animApi } = anim;
   const layout = useModelLayout({ runtimeRef, threeRef, subscribeFrame, getDom, captureCamera });
   const { renderPip } = layout;
 
@@ -148,7 +154,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         return;
       }
       scene.root.add(model.object);
-      const mixer = model.animations.length ? new THREE.AnimationMixer(model.object) : null;
+      // Le mixer cible la racine glTF (pas le wrapper de normalisation) : une piste sur le nœud
+      // racine ne casse plus le cadrage (40.A).
+      const mixer = model.animations.length ? new THREE.AnimationMixer(model.animRoot) : null;
       const layoutCam = new THREE.PerspectiveCamera(45, 16 / 9, 0.01, 1000);
       runtimeRef.current = {
         scene,
@@ -157,6 +165,8 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         layoutCam,
         modelRadius: model.radius,
         modelObject: model.object,
+        animRoot: model.animRoot,
+        skinnedCount: model.skinnedCount,
       };
       setExtensions(model.extensions);
       animInit(model.animations);
@@ -307,12 +317,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     savedTf,
     loadError,
     clearLoadError,
-    animations: anim.animations,
-    currentAnim: anim.currentAnim,
-    playing: anim.playing,
-    playAnim: anim.playAnim,
-    pauseAnim: anim.pauseAnim,
-    selectAnim: anim.selectAnim,
+    // Transport d'animation GLB (40.A) : animations, currentAnim, playing, timeMs, durationMs,
+    // speed, loop, play, pause, selectAnim, scrub, setSpeed, setLoop.
+    ...animApi,
     hotspotAtCenter,
     showHotspot,
     captureThumbnail,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { normalizeTransform, TARGET_SIZE } from './loadModel';
+import { markDeformableMeshes, normalizeTransform, TARGET_SIZE } from './loadModel';
 
 describe('loadModel.normalizeTransform — normalisation par bbox (V1)', () => {
   it('met la plus grande dimension à TARGET_SIZE et recentre à l’origine', () => {
@@ -26,5 +26,29 @@ describe('loadModel.normalizeTransform — normalisation par bbox (V1)', () => {
   it('gère une bbox dégénérée (échelle neutre)', () => {
     const box = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0));
     expect(normalizeTransform(THREE, box).scale).toBe(1);
+  });
+});
+
+describe('loadModel.markDeformableMeshes — skinning fiable (40.A)', () => {
+  it('désactive le frustum culling des SkinnedMesh et les compte', () => {
+    const root = new THREE.Group();
+    const skinned = new THREE.SkinnedMesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
+    const plain = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
+    root.add(skinned, plain);
+    const count = markDeformableMeshes(root);
+    expect(count).toBe(1);
+    expect(skinned.frustumCulled).toBe(false);
+    // Un mesh statique conserve son culling (perf préservée).
+    expect(plain.frustumCulled).toBe(true);
+  });
+
+  it('exempte aussi les meshes à morph targets (sans les compter comme rig)', () => {
+    const root = new THREE.Group();
+    const morph = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
+    morph.morphTargetInfluences = [0, 0];
+    root.add(morph);
+    const count = markDeformableMeshes(root);
+    expect(count).toBe(0);
+    expect(morph.frustumCulled).toBe(false);
   });
 });
