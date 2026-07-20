@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Star, FolderKanban, Trash2, FolderOpen, ArchiveRestore, Copy } from 'lucide-react';
+import { Plus, FolderKanban, Trash2, FolderOpen, ArchiveRestore, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -19,7 +19,6 @@ import SelectionBar from '../components/ui/selection-bar';
 import { useMultiSelect } from '../lib/useMultiSelect';
 import { bulkDelete } from '../lib/bulkApi';
 import EditProjectModal from './projects/EditProjectModal';
-import { useFavorites } from '../stores/useFavorites';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -34,9 +33,6 @@ export default function ProjectsPage() {
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const view = useViewMode('projects');
-  const favs = useFavorites((s) => s.favorites);
-  const toggleFav = useFavorites((s) => s.toggle);
-  const isFav = (id: number) => favs.some((f) => f.type === 'PROJECT' && f.entityId === id);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [tab, setTab] = useState<'active' | 'archived'>('active');
@@ -175,17 +171,6 @@ export default function ProjectsPage() {
       ) : (
         <EntityContainer view={view}>
           {projects.map((p) => {
-            const favAction: EntityItemAction = {
-              icon: (
-                <Star
-                  size={15}
-                  fill={isFav(p.id) ? 'currentColor' : 'none'}
-                  className={isFav(p.id) ? 'text-warning' : ''}
-                />
-              ),
-              label: 'Favori',
-              onClick: () => toggleFav('PROJECT', p.id),
-            };
             const manageActions: EntityItemAction[] = !canManage
               ? []
               : tab === 'archived'
@@ -210,14 +195,14 @@ export default function ProjectsPage() {
                 thumbnailUrl={p.thumbnailUrl}
                 badge={<ProjectStatusBadge status={p.status} />}
                 selection={{ selected: sel.isSelected(p.id), onSelect: (m) => sel.onSelect(p.id, m) }}
-                actions={[favAction, ...manageActions]}
+                favorite={{ type: 'PROJECT', entityId: p.id }}
+                actions={manageActions}
                 contextActions={[
                   {
                     icon: <FolderOpen size={14} />,
                     label: 'Ouvrir',
                     onClick: () => navigate(projectPath(p)),
                   },
-                  favAction,
                   ...(canManage && tab === 'active'
                     ? [{ icon: <Copy size={14} />, label: 'Dupliquer', onClick: () => setDuplicating(p) }]
                     : []),

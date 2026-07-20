@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Image as ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Pencil, Star, Trash2 } from 'lucide-react';
 import { Children, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { ViewMode } from '../stores/useViewPref';
 import { staggerContainer, fadeInUp } from '../lib/motion';
 import type { SelectModifiers } from '../lib/useMultiSelect';
+import { useFavorites, type FavType } from '../stores/useFavorites';
 import { Checkbox } from './ui/checkbox';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
 
@@ -36,6 +37,8 @@ export interface EntityCardProps {
   selection?: EntitySelection;
   /** Actions du menu contextuel (clic droit). */
   contextActions?: EntityItemAction[];
+  /** Épinglage aux favoris (42.A3 — №71) : injecte l'action « épingler » au clic droit + étoile. */
+  favorite?: { type: FavType; entityId: number };
 }
 
 function Actions({ actions }: { actions?: EntityItemAction[] }) {
@@ -99,10 +102,29 @@ export default function EntityCard({
   actions,
   selection,
   contextActions,
+  favorite,
 }: EntityCardProps) {
   const highlighted = active || selection?.selected;
   const activeRing = highlighted ? 'border-primary ring-1 ring-primary' : 'border-border';
   const clickable = onClick ? 'cursor-pointer text-left w-full' : '';
+
+  // Favoris (42.A3) : action clic droit « épingler/retirer » + indicateur étoile.
+  const isFav = useFavorites((s) => (favorite ? s.isFav(favorite.type, favorite.entityId) : false));
+  const toggleFav = useFavorites((s) => s.toggle);
+  const favAction: EntityItemAction[] = favorite
+    ? [
+        {
+          icon: <Star size={14} fill={isFav ? 'currentColor' : 'none'} />,
+          label: isFav ? 'Retirer des favoris' : 'Épingler aux favoris',
+          onClick: () => void toggleFav(favorite.type, favorite.entityId),
+        },
+      ]
+    : [];
+  const menuActions = [...favAction, ...(contextActions ?? [])];
+  const favStar =
+    favorite && isFav ? (
+      <Star size={13} className="shrink-0 text-warning" fill="currentColor" aria-label="Favori" />
+    ) : null;
 
   const wrap = (inner: ReactNode) => {
     let node: ReactNode;
@@ -115,12 +137,12 @@ export default function EntityCard({
       );
     else node = inner;
 
-    if (!contextActions?.length) return node;
+    if (!menuActions.length) return node;
     return (
       <ContextMenu>
         <ContextMenuTrigger asChild>{node}</ContextMenuTrigger>
         <ContextMenuContent>
-          {contextActions.map((a) => (
+          {menuActions.map((a) => (
             <ContextMenuItem key={a.label} danger={a.danger} onSelect={() => a.onClick()}>
               {a.icon}
               {a.label}
@@ -145,7 +167,10 @@ export default function EntityCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{title}</div>
+          <div className="flex items-center gap-1.5">
+            {favStar}
+            <span className="truncate text-sm font-medium">{title}</span>
+          </div>
           {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         {badge}
@@ -172,7 +197,10 @@ export default function EntityCard({
       </div>
       <div className="flex items-center justify-between gap-2 p-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{title}</div>
+          <div className="flex items-center gap-1.5">
+            {favStar}
+            <span className="truncate text-sm font-medium">{title}</span>
+          </div>
           {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         {badge}

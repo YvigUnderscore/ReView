@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Bell, BellOff, Clapperboard, Plus, Star } from 'lucide-react';
+import { Bell, BellOff, Clapperboard, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
-import { useFavorites } from '../../stores/useFavorites';
 import { useWatch } from '../../lib/useWatch';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
@@ -43,11 +42,8 @@ export default function ShotsTab({
   pipeline: PipelineSettings;
 }) {
   const view = useViewMode(`shots:${projectId}`);
-  const favs = useFavorites((s) => s.favorites);
-  const toggleFav = useFavorites((s) => s.toggle);
   // Suivi de notifications par shot (32.G, clic droit).
   const watch = useWatch();
-  const isFav = (id: number) => favs.some((f) => f.type === 'SHOT' && f.entityId === id);
   const [newShot, setNewShot] = useState({ name: '', code: '', sequenceId: '' });
   const [mode, setMode] = useState<CreateMode>('simple');
   const [editing, setEditing] = useState<Shot | null>(null);
@@ -216,30 +212,17 @@ export default function ShotsTab({
           </h3>
           <EntityContainer view={view}>
             {g.list.map((shot) => {
-              const actions = [
-                {
-                  icon: (
-                    <Star
-                      size={15}
-                      fill={isFav(shot.id) ? 'currentColor' : 'none'}
-                      className={isFav(shot.id) ? 'text-warning' : ''}
-                    />
-                  ),
-                  label: 'Favori',
-                  onClick: () => toggleFav('SHOT', shot.id),
-                },
-                ...(canManage
-                  ? [
-                      { icon: EditIcon, label: 'Modifier', onClick: () => setEditing(shot) },
-                      {
-                        icon: DeleteIcon,
-                        label: 'Supprimer',
-                        danger: true,
-                        onClick: () => setDeleting(shot),
-                      },
-                    ]
-                  : []),
-              ];
+              const actions = canManage
+                ? [
+                    { icon: EditIcon, label: 'Modifier', onClick: () => setEditing(shot) },
+                    {
+                      icon: DeleteIcon,
+                      label: 'Supprimer',
+                      danger: true,
+                      onClick: () => setDeleting(shot),
+                    },
+                  ]
+                : [];
               // Suivi (32.G) : action de clic droit uniquement (UI simple).
               const watching = watch.isWatching('SHOT', shot.id);
               const watchAction = {
@@ -256,6 +239,7 @@ export default function ShotsTab({
                   title={`${shot.code} · ${shot.name}`}
                   subtitle={`${shot._count?.tasks ?? 0} tâche(s)${shot.assets?.length ? ` · ${shot.assets.length} asset(s)` : ''}`}
                   thumbnailUrl={shot.thumbnailUrl}
+                  favorite={{ type: 'SHOT', entityId: shot.id }}
                   actions={actions}
                   contextActions={[watchAction, ...actions]}
                 />
