@@ -16,6 +16,7 @@ import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
 import TaskDropzone from './task/TaskDropzone';
 import TaskChecklist from './task/TaskChecklist';
+import TaskSchedule from './task/TaskSchedule';
 import type { TaskDetail } from '../types/api';
 
 export default function TaskPage() {
@@ -107,6 +108,16 @@ export default function TaskPage() {
         )}
       </div>
       {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
+
+      {task && (
+        <TaskSchedule
+          taskId={taskId}
+          projectId={project?.id ?? null}
+          startDate={task.startDate}
+          dueDate={task.dueDate}
+          canEdit={canPublish}
+        />
+      )}
 
       {task && (
         <TaskChecklist

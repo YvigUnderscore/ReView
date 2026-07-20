@@ -93,6 +93,9 @@ router.patch(
       status: z.nativeEnum(TaskStatus).optional(),
       assigneeId: z.number().int().nullable().optional(),
       order: z.number().int().optional(),
+      // Planification (43.C) : début + échéance (superviseurs) — null pour effacer.
+      startDate: z.coerce.date().nullable().optional(),
+      dueDate: z.coerce.date().nullable().optional(),
       // Checklist (38.F) : [{ text, done }] — cochable par l'assigné.
       checklist: z
         .array(z.object({ text: z.string().min(1).max(200), done: z.boolean() }))

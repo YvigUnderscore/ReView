@@ -140,30 +140,8 @@ export type AssetRef = Pick<Asset, 'id' | 'name' | 'type'>;
 /** GET /api/assets/:id — liens N-N vers shots/séquences. */
 export type AssetDetail = AssetRef & { projectId: number; shots: ShotRef[]; sequences: SequenceRef[] };
 
-// ── Tâches ────────────────────────────────────────────────────────────────────
-export interface Task {
-  id: number;
-  name: string;
-  type: TaskType;
-  status: TaskStatus;
-}
-/** Listes (kanban, activité projet) : assigné joint. */
-export type TaskWithAssignee = Task & { assignee: UserRef | null };
-/** Élément de checklist d'une tâche (38.F). */
-export interface ChecklistItem {
-  text: string;
-  done: boolean;
-}
-/** GET /api/tasks/:id — contexte de localisation (shot/asset + projet). */
-export type TaskDetail = Task & {
-  shot?: (ShotRef & { project: ProjectRef; sequence?: SequenceRef | null }) | null;
-  asset?: (AssetRef & { project: ProjectRef }) | null;
-  /** Commentaire de review d'origine (32.D) — lien retour `?comment=`. */
-  sourceComment?: { id: number; mediaObjectId: number } | null;
-  /** Checklist (38.F) + assigné (pour les droits d'édition). */
-  checklist?: ChecklistItem[];
-  assignee?: UserRef | null;
-};
+// Tâches (Task, TaskWithAssignee, ChecklistItem, TaskDetail) — module séparé (budget de lignes).
+export * from './task';
 
 // ── Versions & médias ─────────────────────────────────────────────────────────
 /** Statut de review personnalisable du studio (Phase 31). */
@@ -375,9 +353,8 @@ export interface ProjectSettings extends PipelineSettings {
   color?: ColorSettings;
 }
 
-// Types du partage client (35.C/35.D) — module séparé pour le budget de lignes.
+// Modules séparés (budget) : partage (35), stats (43.A), planning (43.C), préférences (42.A).
 export * from './share';
-// Statistiques de review (43.A) — module séparé (budget de lignes).
 export * from './stats';
-// Préférences UI par compte (42.A) — module séparé (budget de lignes).
+export * from './schedule';
 export * from './preferences';

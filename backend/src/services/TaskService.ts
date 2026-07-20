@@ -175,6 +175,8 @@ export interface UpdateTaskInput {
   status?: TaskStatus;
   assigneeId?: number | null;
   order?: number;
+  startDate?: Date | null;
+  dueDate?: Date | null;
   checklist?: ChecklistItem[];
 }
 

@@ -33,6 +33,7 @@ export const qk = {
   projectUsage: (id: number) => ['project', id, 'usage'] as const,
   projectTrash: (id: number) => ['project', id, 'trash'] as const,
   projectStats: (id: number) => ['project', id, 'stats'] as const,
+  projectSchedule: (id: number) => ['project', id, 'schedule'] as const,
   projectMedia: (id: number, kind?: string) => ['project', id, 'media', kind ?? 'all'] as const,
   sequences: (projectId: number) => ['sequences', projectId] as const,
   sequence: (id: number) => ['sequence', id] as const,
