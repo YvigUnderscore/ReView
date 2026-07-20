@@ -114,14 +114,56 @@ export default function SettingsTab() {
 
   if (isLoading || !data) return <SkeletonRows count={5} />;
   return (
+    <div className="space-y-4">
+      <div className="space-y-2 rounded-lg border border-border p-3">
+        {SETTINGS_FIELDS.map((f) =>
+          f.bytes ? (
+            <SizeField key={f.key} field={f} stored={data[f.key] ?? ''} onSave={persist} />
+          ) : (
+            <PlainField key={f.key} field={f} stored={data[f.key] ?? ''} onSave={persist} />
+          ),
+        )}
+      </div>
+      <AccentField stored={data.studio_accent ?? ''} onSave={persist} />
+    </div>
+  );
+}
+
+/** Thème studio (42.B — №101) : couleur d'accent, appliquée à l'app + page de connexion. */
+function AccentField({
+  stored,
+  onSave,
+}: {
+  stored: string;
+  onSave: (key: string, value: string) => Promise<void>;
+}) {
+  const [value, setValue] = useState(/^#[0-9a-f]{6}$/i.test(stored) ? stored : '#00b3c4');
+  return (
     <div className="space-y-2 rounded-lg border border-border p-3">
-      {SETTINGS_FIELDS.map((f) =>
-        f.bytes ? (
-          <SizeField key={f.key} field={f} stored={data[f.key] ?? ''} onSave={persist} />
-        ) : (
-          <PlainField key={f.key} field={f} stored={data[f.key] ?? ''} onSave={persist} />
-        ),
-      )}
+      <h3 className="text-sm font-semibold">Thème studio</h3>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <label className="w-64 text-muted-foreground">Couleur d’accent</label>
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="h-8 w-12 cursor-pointer rounded border border-border bg-transparent"
+          aria-label="Couleur d’accent du studio"
+        />
+        <span className="w-24 font-mono text-xs text-muted-foreground">{value}</span>
+        <Button variant="outline" size="sm" onClick={() => onSave('studio_accent', value)}>
+          Appliquer
+        </Button>
+        {stored && (
+          <Button variant="ghost" size="sm" onClick={() => onSave('studio_accent', '')}>
+            Réinitialiser
+          </Button>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        L’accent remplace la couleur primaire de l’interface (boutons, liens, focus), page de connexion
+        incluse. Prend effet après rechargement.
+      </p>
     </div>
   );
 }

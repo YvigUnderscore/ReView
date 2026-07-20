@@ -8,6 +8,7 @@ import { api } from '../lib/apiClient';
 import { queryClient, qk } from './lib/query';
 import { useAuth } from './stores/useAuth';
 import { useTheme } from './stores/useTheme';
+import { useBranding } from './lib/branding';
 import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
 import HomePage from './pages/HomePage';
@@ -51,6 +52,8 @@ function AppRoutes() {
   const init = useAuth((s) => s.init);
   const ready = useAuth((s) => s.ready);
   const theme = useTheme((s) => s.theme);
+  // Thème studio (42.B — №101) : applique l'accent défini par l'admin, globalement.
+  useBranding();
   const { data: setup } = useQuery({
     queryKey: qk.setupStatus,
     queryFn: () => api.get<{ needsSetup: boolean }>('/api/setup/status').catch(() => ({ needsSetup: false })),

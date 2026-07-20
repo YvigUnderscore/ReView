@@ -21,6 +21,7 @@ export const queryClient = new QueryClient({
  */
 export const qk = {
   setupStatus: ['setup-status'] as const,
+  branding: ['branding'] as const,
   dashboard: ['dashboard'] as const,
   announcementsActive: ['announcements', 'active'] as const,
   reviews: (filter: string) => ['reviews', filter] as const,
