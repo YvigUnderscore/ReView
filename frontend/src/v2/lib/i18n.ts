@@ -39,6 +39,17 @@ const fr = {
   'setup.submit': 'Créer le studio',
   'setup.submitting': 'Création…',
   'setup.error.generic': 'Échec de configuration',
+  'display.title': 'Affichage',
+  'display.theme': 'Thème',
+  'display.theme.hint': 'Suivre le système ou forcer clair/sombre.',
+  'display.theme.system': 'Système',
+  'display.theme.light': 'Clair',
+  'display.theme.dark': 'Sombre',
+  'display.density': 'Densité',
+  'display.density.hint': "Compacte l'interface pour afficher plus d'éléments.",
+  'display.density.comfortable': 'Confortable',
+  'display.density.compact': 'Compacte',
+  'display.language': 'Langue',
 } as const;
 
 /** L'ensemble des clés de traduction — dérivé du dictionnaire FR de référence. */
@@ -75,6 +86,17 @@ const en: Partial<Record<MessageKey, string>> = {
   'setup.submit': 'Create studio',
   'setup.submitting': 'Creating…',
   'setup.error.generic': 'Setup failed',
+  'display.title': 'Display',
+  'display.theme': 'Theme',
+  'display.theme.hint': 'Follow the system or force light/dark.',
+  'display.theme.system': 'System',
+  'display.theme.light': 'Light',
+  'display.theme.dark': 'Dark',
+  'display.density': 'Density',
+  'display.density.hint': 'Condense the interface to show more items.',
+  'display.density.comfortable': 'Comfortable',
+  'display.density.compact': 'Compact',
+  'display.language': 'Language',
 };
 
 const LOCALES: readonly Locale[] = ['fr', 'en'];

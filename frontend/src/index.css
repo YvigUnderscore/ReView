@@ -90,6 +90,18 @@
     padding: 0;
     overflow: hidden;
   }
+  /*
+   * Densité d'affichage (42.A1 — №74) : l'échelle globale de l'UI passe par la taille de
+   * police racine. Comme tout est dimensionné en rem (espacements Tailwind inclus), réduire
+   * `font-size` sur <html> resserre l'ensemble de l'interface sans toucher chaque composant.
+   * L'attribut `data-density` est posé par stores/useDensity.ts.
+   */
+  html {
+    font-size: 16px;
+  }
+  html[data-density='compact'] {
+    font-size: 14.5px;
+  }
   body {
     @apply bg-background text-foreground;
   }

@@ -6,6 +6,7 @@ import { qk } from '../lib/query';
 import { useAuth, type AuthUser } from '../stores/useAuth';
 import Shell from '../components/Shell';
 import Avatar from '../components/Avatar';
+import DisplaySettings from '../components/DisplaySettings';
 import SessionsSection from './profile/SessionsSection';
 import ApiTokensSection from './profile/ApiTokensSection';
 import TwoFaSection from './profile/TwoFaSection';
@@ -179,6 +180,8 @@ export default function ProfilePage() {
             Changer le mot de passe
           </Button>
         </section>
+
+        <DisplaySettings />
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Notifications</h2>
