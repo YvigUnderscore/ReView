@@ -194,6 +194,7 @@ export default function SplatReview({
       containerRef={splat.containerRef}
       ready={splat.ready}
       loadError={splat.loadError}
+      progress={splat.progress}
       status={data.media.status}
       aspect={data.splatPresentation?.camera?.aspect}
       overlay={overlay}
@@ -271,6 +272,15 @@ export default function SplatReview({
                 canPresent={canPresent}
                 grid={grid}
                 onFullscreen={onFullscreen}
+                exportData={{
+                  // Éditions effectives à cuire dans l'export (41.A/C) : celles de l'éditeur en
+                  // cours d'édition, sinon celles persistées (rejouées pour tous) en lecture seule.
+                  edits: showEdit
+                    ? { transform: editor.transform, volumes: editor.volumes.serialize() }
+                    : { transform: saved?.transform ?? null, volumes: saved?.volumes ?? [] },
+                  originalName: data.media.originalName,
+                  originalUrl: data.url,
+                }}
               />
             }
             bottomLeft={

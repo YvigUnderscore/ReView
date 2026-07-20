@@ -12,12 +12,11 @@ import { createHotspotMarker } from './scene/hotspotMarker';
 import { raycastCenter as raycastCenterCore } from './scene/raycast';
 import type { PointCloud } from './scene/pointCloud';
 import { applyRenderModeToScene, type RenderMode } from './scene/renderModes';
-import { captureSplatCamera, restoreSplatCamera } from './scene/splatCameraState';
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
+import { useCameraHandles } from './scene/useCameraHandles';
 import { toThumbnail } from '../viewer/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
 import { renderPipPass, type PipRect } from '../viewer/pipWindow';
-import { applyPoseToCamera } from '../three/applyPose';
 import { applySplatTransform, parseHotspotPoint } from './scene/meshPose';
 
 /**
@@ -59,6 +58,10 @@ export interface SplatViewer {
   containerRef: React.RefObject<HTMLDivElement | null>;
   ready: boolean;
   loadError: boolean;
+  /** Progression du téléchargement réseau du fichier splat (0..1) tant qu'il arrive, puis null
+   *  une fois le fichier reçu (décodage + LOD en cours) — 41.B streaming léger. Alimente la
+   *  barre de chargement pour ouvrir vite les grosses scènes (le LOD GPU reste géré ailleurs). */
+  progress: number | null;
   captureCamera: () => SplatCamera | undefined;
   restoreCamera: (state: unknown) => void;
   /** Hotspot sur la surface au centre du viewer (raycast), sinon null si le rayon ne touche rien. */
@@ -125,6 +128,9 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   const pipRectRef = useRef<PipRect | null>(null);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  // Progression du téléchargement du fichier splat (41.B) — démarre à 0, passe à null une fois
+  // le fichier reçu (le décodage/LOD prend le relais, sans progression mesurable).
+  const [progress, setProgress] = useState<number | null>(0);
 
   useEffect(() => {
     // Pas de reset d'état ici (règle react-hooks/set-state-in-effect) : la page review
@@ -158,6 +164,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       let framed = false;
       const onReady = () => {
         if (cancelled) return;
+        setProgress(null); // fichier reçu : le décodage/LOD prend le relais (41.B)
         if (!framed) framed = frameCameraToMesh(THREE, mesh, camera, controls);
         setReady(true);
       };
@@ -166,13 +173,20 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       // elles, `SparkRenderer.enableLod` est inerte (driveLod filtre sur packedSplats.lodSplats).
       // `nonLod: true` : conserve AUSSI les splats de base (sans lui, le rendu direct — LOD
       // désengagé, notre défaut — est vide). Le LOD ne s'applique que si V7 l'engage.
+      // SOG (41.C lecture) : Spark mappe l'extension `.sog`→PCSOGSZIP mais pas `.sogs` — on
+      // normalise pour la détection de type (le conteneur zip PCSOGS reste servi tel quel).
       const mesh = new SplatMesh({
         url,
-        fileName,
+        fileName: fileName.replace(/\.sogs$/i, '.sog'),
         raycastable: true,
         lod: true,
         nonLod: true,
         onLoad: onReady,
+        // Progression réseau (41.B) : le GET présigné MinIO renvoie Content-Length → ratio réel.
+        onProgress: (e: ProgressEvent) => {
+          if (cancelled) return;
+          setProgress(e.lengthComputable && e.total > 0 ? Math.min(1, e.loaded / e.total) : null);
+        },
       });
       // Orientation à l'import (11.E) : les .ply/.spz gaussians sont généralement Y-down —
       // un groupe parent porte le flip (rotation π sur X), la transform utilisateur restant
@@ -259,27 +273,8 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     };
   }, [url, fileName]);
 
-  const captureCamera = useCallback((): SplatCamera | undefined => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (!s || !THREE) return undefined;
-    const cam = captureSplatCamera(THREE, s.camera, s.controls);
-    // DoF Spark toujours inclus (0 = net partout) : répliqué en session live et
-    // restauré avec les commentaires.
-    cam.apertureAngle = s.spark.apertureAngle;
-    cam.focalDistance = s.spark.focalDistance;
-    return cam;
-  }, []);
-
-  const restoreCamera = useCallback((state: unknown) => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (!s || !THREE) return;
-    restoreSplatCamera(THREE, s.camera, s.controls, state);
-    const dof = state as { apertureAngle?: number; focalDistance?: number } | null;
-    if (typeof dof?.apertureAngle === 'number') s.spark.apertureAngle = dof.apertureAngle;
-    if (typeof dof?.focalDistance === 'number') s.spark.focalDistance = dof.focalDistance;
-  }, []);
+  // Handles de pose caméra (capture/restauration vue libre + PiP layout) — hook dédié (budget).
+  const { captureCamera, restoreCamera, restorePipCamera } = useCameraHandles(sceneRef, threeRef);
 
   const raycastCenter = useCallback((): Hotspot3D | null => {
     const s = sceneRef.current;
@@ -331,12 +326,6 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     pipRectRef.current = rect;
   }, []);
 
-  const restorePipCamera = useCallback((state: unknown) => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (s && THREE) applyPoseToCamera(THREE, s.layoutCam, state as SplatCamera);
-  }, []);
-
   const subscribeFrame = useCallback((cb: (dt: number) => void): (() => void) => {
     frameCbs.current.add(cb);
     return () => frameCbs.current.delete(cb);
@@ -382,6 +371,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     containerRef,
     ready,
     loadError,
+    progress,
     captureCamera,
     restoreCamera,
     raycastCenter,

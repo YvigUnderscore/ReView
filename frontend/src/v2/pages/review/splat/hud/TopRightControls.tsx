@@ -1,11 +1,13 @@
-import { Gauge, Grid3x3, Maximize, Move3d, Rotate3d, Settings2 } from 'lucide-react';
+import { Download, Gauge, Grid3x3, Maximize, Move3d, Rotate3d, Settings2 } from 'lucide-react';
 import { useState } from 'react';
 import type { SplatViewer } from '../useSplat';
 import type { PresentationState } from '../presentation/usePresentation';
+import type { ExportEdits } from '../export/exportSplat';
 import { useCameraSceneRig } from '../../camera/sceneRig/useCameraSceneRig';
 import { HudGroup, HudIconButton } from '../../hud/ViewerHud';
 import StatsPanel from './StatsPanel';
 import ViewerSettingsPanel from './ViewerSettingsPanel';
+import SplatExportPanel from './SplatExportPanel';
 
 /**
  * Coin haut-droit du HUD splat : caméra-objet du mode layout (Phase 27), stats de rendu,
@@ -18,6 +20,7 @@ export default function TopRightControls({
   canPresent,
   grid,
   onFullscreen,
+  exportData,
 }: {
   splat: SplatViewer;
   pres: PresentationState;
@@ -25,9 +28,12 @@ export default function TopRightControls({
   canPresent: boolean;
   grid: { visible: boolean; toggle: () => void };
   onFullscreen: () => void;
+  /** Données d'export du splat (41.A/C) : éditions effectives + nom/URL de l'original. */
+  exportData: { edits: ExportEdits; originalName: string; originalUrl: string };
 }) {
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [cullingOff, setCullingOffState] = useState(true);
   const onCullingOff = (off: boolean) => {
     setCullingOffState(off);
@@ -77,6 +83,12 @@ export default function TopRightControls({
           onClick={() => setShowSettings((v) => !v)}
         />
         <HudIconButton
+          icon={Download}
+          hint="Exporter le splat (.spz nettoyé) ou télécharger l'original — 41.A/C"
+          active={showExport}
+          onClick={() => setShowExport((v) => !v)}
+        />
+        <HudIconButton
           icon={Grid3x3}
           hint="Grille de sol (repère d'orientation de la scène)"
           active={grid.visible}
@@ -85,6 +97,14 @@ export default function TopRightControls({
         <HudIconButton icon={Maximize} hint="Plein écran" onClick={onFullscreen} />
       </HudGroup>
       {showStats && <StatsPanel splat={splat} />}
+      {showExport && (
+        <SplatExportPanel
+          getSceneHandle={splat.getSceneHandle}
+          edits={exportData.edits}
+          originalName={exportData.originalName}
+          originalUrl={exportData.originalUrl}
+        />
+      )}
       {showSettings && (
         <ViewerSettingsPanel
           cullingOff={cullingOff}

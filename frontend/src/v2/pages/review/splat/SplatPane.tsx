@@ -12,6 +12,7 @@ export default function SplatPane({
   containerRef,
   ready,
   loadError,
+  progress,
   status,
   overlay,
   editorOverlay,
@@ -22,6 +23,8 @@ export default function SplatPane({
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
   loadError: boolean;
+  /** Progression du téléchargement réseau (0..1) ou null (décodage/LOD en cours) — 41.B. */
+  progress: number | null;
   status: string;
   overlay: ReactNode;
   /** Overlay interactif de l'éditeur (tracé de sélection) — capte le pointeur, contrairement à `overlay`. */
@@ -61,8 +64,24 @@ export default function SplatPane({
           </p>
         </div>
       ) : status === 'PROCESSING' || !ready ? (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm text-muted-foreground">Chargement du splat…</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+          {/* 41.B : barre de progression réelle pendant le téléchargement (grosses scènes) ;
+              une fois le fichier reçu (progress null), on bascule sur le décodage indéterminé. */}
+          {typeof progress === 'number' && progress < 1 ? (
+            <>
+              <span className="text-sm text-muted-foreground">
+                Téléchargement du splat… {Math.round(progress * 100)} %
+              </span>
+              <div className="h-1 w-40 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-150"
+                  style={{ width: `${Math.round(progress * 100)}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <span className="text-sm text-muted-foreground">Chargement du splat…</span>
+          )}
         </div>
       ) : null}
     </div>
