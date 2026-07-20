@@ -13,6 +13,8 @@ export interface UserPreferences {
   shortcuts?: Record<string, string>;
   /** Vues de liste sauvegardées (42.A5 — №73), clé = portée de la liste (ex. « reviews »). */
   savedViews?: Record<string, SavedView[]>;
+  /** Tour d'onboarding vu (42.B — №69) : ne plus l'afficher automatiquement. */
+  onboardingSeen?: boolean;
   [key: string]: unknown;
 }
 

@@ -30,6 +30,7 @@ import SidebarRecents from './SidebarRecents';
 import CommandPalette from './CommandPalette';
 import NotificationBell from './NotificationBell';
 import ShortcutsHelp from './ShortcutsHelp';
+import OnboardingTour from './OnboardingTour';
 import { useGlobalShortcuts } from '../lib/shortcuts';
 import { usePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
@@ -281,6 +282,7 @@ export default function Shell({
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+      <OnboardingTour />
       <UploadWidget />
       <PendingDrafts />
     </div>
