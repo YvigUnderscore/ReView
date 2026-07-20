@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Minimize2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -20,6 +21,7 @@ import { useCompareState } from './review/useCompareState';
 import { useDeepLink } from './review/useDeepLink';
 import { useLiveSession } from './review/useLiveSession';
 import { useMediaActions } from './review/useMediaActions';
+import { useReviewViewport } from './review/useReviewViewport';
 import { useSubmitComment } from './review/useSubmitComment';
 import { useTimelineMarkers } from './review/useTimelineMarkers';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
@@ -60,21 +62,11 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Drapeau : distingue un seek programmatique d'un déplacement manuel (qui désélectionne).
   const programmaticSeekRef = useRef(false);
 
-  // Plein écran **unifié** : on met tout le bloc review (en-tête + viewer + playbar +
-  // commentaires) en plein écran — pas seulement la zone viewer — pour que la barre de
-  // transport vidéo reste visible et que le panneau de commentaires soit accessible dans
-  // tous les modes (le bouton de bascule de l'en-tête est alors à l'écran).
-  const reviewRootRef = useRef<HTMLDivElement>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  useEffect(() => {
-    const onFs = () => setIsFullscreen(document.fullscreenElement === reviewRootRef.current);
-    document.addEventListener('fullscreenchange', onFs);
-    return () => document.removeEventListener('fullscreenchange', onFs);
-  }, []);
-  const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void reviewRootRef.current?.requestFullscreen?.();
-  }, []);
+  // Modes d'affichage unifiés (plein écran navigateur + théâtre in-window + PiP) : cf. hook.
+  // Le bloc review entier (en-tête + viewer + playbar + commentaires) passe en plein écran,
+  // pas seulement la zone viewer, pour garder la barre de transport et les commentaires.
+  const { reviewRootRef, isFullscreen, toggleFullscreen, theater, setTheater, togglePictureInPicture } =
+    useReviewViewport(videoRef);
 
   // staleTime Infinity : le GET régénère des URLs présignées à chaque appel — un
   // refetch en arrière-plan rechargerait le viewer en pleine lecture. Les mutations
@@ -254,6 +246,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // même query que le lecteur (cache partagé), désactivée hors vidéo (mediaId 0).
   const markersApi = useTimelineMarkers(kind === 'VIDEO' ? id : 0);
 
+  // prettier-ignore
+  const rootClass = theater ? 'fixed inset-0 z-40 bg-background p-4'
+    : isFullscreen ? 'h-screen bg-background p-4' : 'h-[calc(100vh-7rem)]';
+
   return (
     <Shell
       title={data?.media.originalName ?? 'Review'}
@@ -263,10 +259,19 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
           sur toute la review (les viewers 3D/splat utilisent le clic droit pour naviguer). */}
       <div
         ref={reviewRootRef}
-        className={`flex flex-col ${isFullscreen ? 'h-screen bg-background p-4' : 'h-[calc(100vh-7rem)]'}`}
+        className={`flex flex-col ${rootClass}`}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {data ? (
+        {theater && (
+          <button
+            onClick={() => setTheater(false)}
+            title="Quitter le mode théâtre (Échap)"
+            className="absolute right-4 top-4 z-50 rounded-md border border-border bg-card/80 p-1.5 text-muted-foreground backdrop-blur hover:bg-secondary hover:text-foreground"
+          >
+            <Minimize2 size={16} />
+          </button>
+        )}
+        {data && !theater ? (
           <ReviewHeader
             data={data}
             onPublish={publishMedia}
@@ -276,9 +281,11 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onAddCompare={compare.addCompareId}
             onRemoveCompare={compare.removeCompareId}
             onCompareChange={compare.setCompareId}
+            onToggleTheater={() => setTheater(true)}
+            onPictureInPicture={togglePictureInPicture}
             live={live}
           />
-        ) : !error ? (
+        ) : !error && !theater ? (
           <div className="mb-3 flex shrink-0 items-center gap-3">
             <Skeleton className="h-7 w-72" />
             <Skeleton className="h-7 w-44" />
@@ -325,7 +332,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
             onLoopChange={setLoop}
           />
 
-          {commentsOpen && (
+          {commentsOpen && !theater && (
             <CommentsPanel
               comments={comments}
               mediaObjectId={id}

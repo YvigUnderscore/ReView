@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardCheck, Keyboard, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import {
+  ClipboardCheck,
+  Keyboard,
+  MonitorPlay,
+  PanelRightClose,
+  PanelRightOpen,
+  PictureInPicture2,
+} from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import Avatar from '../../components/Avatar';
@@ -31,12 +38,18 @@ export default function ReviewHeader({
   onAddCompare,
   onRemoveCompare,
   onCompareChange,
+  onToggleTheater,
+  onPictureInPicture,
   live,
 }: {
   data: MediaResp;
   onPublish: () => void;
   commentsOpen: boolean;
   onToggleComments: () => void;
+  /** Mode théâtre immersif in-window (42.A — №76). */
+  onToggleTheater: () => void;
+  /** Lecteur détachable Picture-in-Picture (42.A — №75), vidéo uniquement. */
+  onPictureInPicture?: () => void;
   /** Médias B cochés (34.D) : 1 = A/B ; 2-3 = grille 2×2 (vidéo). */
   compareIds: number[];
   onAddCompare: (mediaId: number) => void;
@@ -112,6 +125,22 @@ export default function ReviewHeader({
         >
           <ClipboardCheck size={16} />
           {reviewStatus && <ReviewDecisionBadge status={reviewStatus} />}
+        </button>
+        {data.media.kind === 'VIDEO' && onPictureInPicture && (
+          <button
+            onClick={onPictureInPicture}
+            title="Lecteur détachable (Picture-in-Picture)"
+            className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <PictureInPicture2 size={16} />
+          </button>
+        )}
+        <button
+          onClick={onToggleTheater}
+          title="Mode théâtre (immersif)"
+          className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <MonitorPlay size={16} />
         </button>
         <button
           onClick={() => setShortcutsOpen(true)}
