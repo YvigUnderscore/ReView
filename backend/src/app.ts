@@ -26,6 +26,7 @@ import mediaSplatRoutes from './routes/media-splat.routes';
 import mediaVideoRoutes from './routes/media-video.routes';
 import mediaReferenceRoutes from './routes/media-reference.routes';
 import mediaMarkersRoutes from './routes/media-markers.routes';
+import mediaUsdRoutes from './routes/media-usd.routes';
 import sequencesRoutes from './routes/sequences.routes';
 import shotsRoutes from './routes/shots.routes';
 import assetsRoutes from './routes/assets.routes';
@@ -117,6 +118,7 @@ export const createApp = (): Express => {
   app.use('/api/media', mediaVideoRoutes); // trim vidéo non-destructif (10.G-V10)
   app.use('/api/media', mediaReferenceRoutes); // image de référence review 2D (Phase 24)
   app.use('/api/media', mediaMarkersRoutes); // marqueurs de timeline partagés (Phase 34.C)
+  app.use('/api/media', mediaUsdRoutes); // recomposition d'une scène USD (Phase 45.E)
   app.use('/api/sequences', sequencesRoutes);
   app.use('/api/shots', shotsRoutes);
   app.use('/api/assets', assetsRoutes);

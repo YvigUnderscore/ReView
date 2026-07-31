@@ -143,6 +143,9 @@ export type AssetDetail = AssetRef & { projectId: number; shots: ShotRef[]; sequ
 // Tâches (Task, TaskWithAssignee, ChecklistItem, TaskDetail) — module séparé (budget de lignes).
 export * from './task';
 
+// USD & provenance de conversion 3D (ModelSource, UsdModelInfo…) — module séparé (Phase 45).
+export * from './usd';
+
 // ── Versions & médias ─────────────────────────────────────────────────────────
 /** Statut de review personnalisable du studio (Phase 31). */
 export interface ReviewStatus {

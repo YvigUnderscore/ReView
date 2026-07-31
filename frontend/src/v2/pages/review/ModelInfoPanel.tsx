@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import type * as THREE from 'three';
 import type { ModelStats, TextureInfo } from './three/modelStats';
+import type { ModelSource } from '../../types/api';
+import ModelUsdSection from './ModelUsdSection';
 
 const fmt = (n: number) => n.toLocaleString('fr-FR');
 
@@ -57,15 +59,9 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Provenance de conversion 3D (39.A) exposée par le backend (`metadata.model`). */
-export interface ModelSource {
-  sourceFormat: string;
-  converter: string;
-  native: boolean;
-}
-
 /** Libellé lisible du convertisseur ayant produit le GLB affiché. */
 const CONVERTER_LABEL: Record<string, string> = {
+  blender: 'USD (Blender)',
   usd: 'USD natif',
   assimp: 'assimp',
   gltf: 'glTF (packé)',
@@ -81,12 +77,15 @@ export default function ModelInfoPanel({
   stats,
   extensions,
   source,
+  onRecompose,
   onClose,
 }: {
   stats: ModelStats | null;
   extensions: string[];
   /** Provenance de conversion (39.A) : format source + convertisseur, null si inconnue. */
   source?: ModelSource | null;
+  /** Ouvre la recomposition USD (45.F) — absent si le média est publié ou en lecture seule. */
+  onRecompose?: () => void;
   onClose: () => void;
 }) {
   return (
@@ -120,6 +119,7 @@ export default function ModelInfoPanel({
                   )}
                 </span>
               </div>
+              {source.usd && <ModelUsdSection usd={source.usd} onRecompose={onRecompose} />}
             </section>
           )}
 

@@ -2,7 +2,21 @@ import { createSHA256 } from 'hash-wasm';
 import { api, getToken } from './apiClient';
 import type { MediaKind } from '../v2/types/api';
 
-const MODEL_EXT = ['.glb', '.gltf', '.fbx', '.usdz', '.usdc', '.usda', '.obj', '.zip'];
+// `.usd` (conteneur générique, binaire ou ASCII) manquait : il n'arrivait en MODEL_3D que par
+// le repli de `inferMediaKind`, donc jamais depuis un filtre de sélecteur de fichiers (45.F).
+const MODEL_EXT = [
+  '.glb',
+  '.gltf',
+  '.fbx',
+  '.usd',
+  '.usdz',
+  '.usdc',
+  '.usda',
+  '.obj',
+  '.dae',
+  '.stl',
+  '.zip',
+];
 // Gaussian Splat (viewer Spark/SparkJS) — cf. detectSplat côté backend.
 const SPLAT_EXT = ['.ply', '.splat', '.spz', '.ksplat', '.sog', '.sogs'];
 

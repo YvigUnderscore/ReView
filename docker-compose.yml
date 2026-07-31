@@ -86,7 +86,12 @@ services:
     restart: always
 
   worker:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        # 45.D : Blender + usd-core installés dans la seule image du worker (~+1 Go).
+        # Mettre à vide pour revenir à une image légère (USD alors non converti).
+        INSTALL_USD_TOOLS: ${INSTALL_USD_TOOLS:-1}
     command: ["node", "dist/workers/ffmpeg.worker.js"]
     environment:
       NODE_ENV: production
@@ -106,8 +111,17 @@ services:
       CLAMAV_HOST: ${CLAMAV_HOST:-}
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       # 39.A : convertisseur USD→glTF natif (ex. `guc`, installé via --build-arg GUC_URL).
-      # Vide (défaut) = repli assimp. Voir DOCUMENTATION/admin-guide/3d-usd.md.
+      # Repli utilisé seulement si Blender est absent. Voir DOCUMENTATION/admin-guide/3d-usd.md.
       USD_GLTF_CONVERTER: ${USD_GLTF_CONVERTER:-}
+      # 45.D : chemins de l'outillage USD posé par INSTALL_USD_TOOLS (surchargeables).
+      USD_BLENDER_BIN: ${USD_BLENDER_BIN:-/opt/blender/blender}
+      USD_PYTHON_BIN: ${USD_PYTHON_BIN:-/opt/usdenv/bin/python3}
+      # Garde-fous de conversion : délai max d'un convertisseur externe et bornes d'extraction
+      # des archives 3D (traversée, bombes de décompression) — 45.A.
+      MODEL_CONVERT_TIMEOUT_MS: ${MODEL_CONVERT_TIMEOUT_MS:-900000}
+      ARCHIVE_MAX_ENTRIES: ${ARCHIVE_MAX_ENTRIES:-20000}
+      ARCHIVE_MAX_UNCOMPRESSED_BYTES: ${ARCHIVE_MAX_UNCOMPRESSED_BYTES:-8589934592}
+      ARCHIVE_MAX_COMPRESSION_RATIO: ${ARCHIVE_MAX_COMPRESSION_RATIO:-200}
     depends_on:
       postgres:
         condition: service_healthy

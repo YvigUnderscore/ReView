@@ -13,6 +13,14 @@ describe('inferMediaKind', () => {
     expect(inferMediaKind(f('archive.zip', 'application/zip'))).toBe('MODEL_3D');
   });
 
+  it('reconnaît toutes les déclinaisons USD (45.F)', () => {
+    // `.usd` n'était pas listé : il n'arrivait en MODEL_3D que par le repli final.
+    expect(inferMediaKind(f('scene.usd'))).toBe('MODEL_3D');
+    expect(inferMediaKind(f('asset.usda'))).toBe('MODEL_3D');
+    expect(inferMediaKind(f('asset.usdc'))).toBe('MODEL_3D');
+    expect(inferMediaKind(f('PACK.USDZ'))).toBe('MODEL_3D');
+  });
+
   it('reconnaît les Gaussian Splats par extension (viewer Spark)', () => {
     expect(inferMediaKind(f('scan.ply'))).toBe('SPLAT');
     expect(inferMediaKind(f('scene.spz'))).toBe('SPLAT');

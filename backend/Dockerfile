@@ -27,6 +27,38 @@ RUN if [ -n "$GUC_URL" ]; then \
       && rm -rf /var/lib/apt/lists/*; \
     fi
 
+# 45.D — outillage USD du worker, **opt-in** : `--build-arg INSTALL_USD_TOOLS=1`.
+#  - Blender headless : conversion USD→GLB avec OpenUSD complet (composition des références,
+#    payloads et variantes, matériaux UsdPreviewSurface, UsdSkel animé, caméras).
+#  - venv `usd-core` : runtime OpenUSD Python pour l'analyse (couche racine d'une archive,
+#    variantes/purposes, assets non résolus) — Blender n'expose pas le module `pxr`.
+# Seul le service `worker` du compose passe cet argument : l'image de l'API reste inchangée.
+# Coût quand il est activé : ~+1 Go. Sans lui, l'USD retombe sur guc/assimp (et échoue si
+# aucun des deux ne sait lire l'USD). Voir DOCUMENTATION/admin-guide/3d-usd.md.
+ARG INSTALL_USD_TOOLS=
+ARG BLENDER_VERSION=4.5.9
+ARG BLENDER_SHA256=dcdc3eca6c9825bb35a8033b689c053f3cb5a9b0cd2a61b2eac2a49436b4ad3d
+ARG USD_CORE_VERSION=26.8
+RUN if [ -n "$INSTALL_USD_TOOLS" ]; then \
+      apt-get update -y \
+      && apt-get install -y --no-install-recommends \
+           curl xz-utils python3 python3-venv \
+           libgl1 libegl1 libx11-6 libxext6 libxi6 libxxf86vm1 libxfixes3 libxrender1 \
+           libsm6 libice6 libxkbcommon0 libglib2.0-0 libgomp1 \
+      && curl -fsSL "https://download.blender.org/release/Blender${BLENDER_VERSION%.*}/blender-${BLENDER_VERSION}-linux-x64.tar.xz" \
+           -o /tmp/blender.tar.xz \
+      && echo "${BLENDER_SHA256}  /tmp/blender.tar.xz" | sha256sum -c - \
+      && mkdir -p /opt/blender \
+      && tar -xJf /tmp/blender.tar.xz -C /opt/blender --strip-components=1 \
+      && rm -f /tmp/blender.tar.xz \
+      && rm -rf /opt/blender/*/datafiles/locale /opt/blender/*/datafiles/studiolights \
+      && python3 -m venv /opt/usdenv \
+      && /opt/usdenv/bin/pip install --no-cache-dir "usd-core==${USD_CORE_VERSION}" \
+      && /opt/blender/blender --version \
+      && /opt/usdenv/bin/python3 -c "import pxr; print('usd-core prêt')" \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
+
 # Copier package.json + le schéma Prisma avant npm install :
 # le hook postinstall (prisma generate) a besoin du schéma.
 COPY package*.json ./

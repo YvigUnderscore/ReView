@@ -440,7 +440,10 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     proxyKey?: string;
     sourceDeleted?: boolean;
     glbKey?: string;
-    model?: { sourceFormat: string; converter: string; native: boolean };
+    // `usd` (45.C) : description de la scène — couche racine, variantes, assets manquants.
+    model?: { sourceFormat: string; converter: string; native: boolean; usd?: unknown };
+    // Raison d'un échec de traitement (45.C) — affichée en review plutôt qu'un `FAILED` muet.
+    processingError?: string;
     fps?: number;
     width?: number;
     height?: number;
@@ -513,8 +516,10 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     proxyUrl,
     glbUrl,
     startFrame: project?.startFrame ?? 1001,
-    // Provenance de conversion 3D (39.A) : format source + convertisseur (fiche technique).
+    // Provenance de conversion 3D (39.A, étendue 45.C avec le bloc `usd`) : fiche technique.
     modelSource: meta.model ?? null,
+    // Raison de l'échec quand le média est FAILED (45.C) : asset USD manquant, outillage absent…
+    processingError: meta.processingError ?? null,
     fps: meta.fps ?? null,
     // Fréquence de diffusion de la salle live (33.B), réglable admin par type de média.
     liveSyncHz: await getLiveSyncHz(media.kind),

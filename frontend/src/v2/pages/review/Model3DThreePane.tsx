@@ -19,6 +19,7 @@ export default function Model3DThreePane({
   pip,
   canReprocess,
   reprocessing,
+  processingError,
   onReprocess,
 }: {
   status: string;
@@ -33,6 +34,8 @@ export default function Model3DThreePane({
   pip?: ReactNode;
   canReprocess: boolean;
   reprocessing: boolean;
+  /** Raison de l'échec de traitement remontée par le worker (45.C), null si inconnue. */
+  processingError?: string | null;
   onReprocess: () => void;
 }) {
   const showError = loadError || (status !== 'PROCESSING' && status !== 'READY');
@@ -63,6 +66,13 @@ export default function Model3DThreePane({
               Modèle 3D non affichable : le fichier n’a pas pu être converti en GLB. Relancez la conversion,
               ou ré-uploadez un GLB/glTF.
             </p>
+            {/* Raison remontée par le worker (45.C) : asset USD manquant, outillage absent,
+                archive refusée… — sans elle, l'utilisateur ne sait pas quoi corriger. */}
+            {processingError && (
+              <p className="rounded border border-border bg-card/60 px-2 py-1.5 text-left font-mono text-[11px] break-words text-foreground">
+                {processingError}
+              </p>
+            )}
             {canReprocess && (
               <button
                 onClick={onReprocess}

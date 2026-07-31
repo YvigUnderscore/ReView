@@ -1,4 +1,4 @@
-import type { Media } from '../../types/api';
+import type { Media, ModelSource } from '../../types/api';
 import { normalizeAnim } from './camera/channels/model';
 import type { CameraAnimV2 } from './camera/channels/model';
 
@@ -191,8 +191,10 @@ export interface MediaResp {
   proxyUrl: string | null;
   glbUrl: string | null;
   startFrame: number;
-  /** Provenance de conversion 3D (39.A) : format source + convertisseur, affichés en fiche technique. */
-  modelSource: { sourceFormat: string; converter: string; native: boolean } | null;
+  /** Provenance de conversion 3D (39.A, bloc `usd` depuis 45.C) — affichée en fiche technique. */
+  modelSource: ModelSource | null;
+  /** Raison d'un échec de traitement (45.C) : asset USD manquant, outillage absent… */
+  processingError: string | null;
   fps: number | null;
   /** Fréquence de diffusion de la salle live (Hz), réglable admin par type de média (33.B). */
   liveSyncHz: number;

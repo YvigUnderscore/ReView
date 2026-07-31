@@ -29,6 +29,7 @@ import CameraBar from './camera/CameraBar';
 import AnimPanel from './camera/timeline/AnimPanel';
 import ViewerHud, { HudGroup, HudIconButton } from './hud/ViewerHud';
 import PipFrame from './viewer/PipFrame';
+import UsdRecomposeDialog from './UsdRecomposeDialog';
 import { DEFAULT_REVIEW_ASPECT } from './frameRect';
 
 /**
@@ -83,6 +84,10 @@ export default function Model3DReview({
   // Comparaison A/B des modèles 3D d'une version (39.E) : caméra liée (même scène).
   const compare = useModel3DCompare(model3d, data.media);
   const [infoOpen, setInfoOpen] = useState(false);
+  // Recomposition USD (45.F) : réservée aux gestionnaires, refusée après publication (verrou P11).
+  const [recomposeOpen, setRecomposeOpen] = useState(false);
+  const usd = data.modelSource?.usd ?? null;
+  const canRecompose = canManage && !data.media.published && !!usd;
   // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(model3d);
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
@@ -95,108 +100,120 @@ export default function Model3DReview({
     anim: cam.anim,
   });
   return (
-    <Model3DThreePane
-      status={data.media.status}
-      loadError={model3d.loadError}
-      containerRef={model3d.containerRef}
-      overlay={overlay}
-      aspect={data.splatPresentation?.camera?.aspect}
-      pip={
-        model3d.layoutMode ? (
-          <PipFrame
-            label="Caméra layout"
-            aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
-            onRect={model3d.setPipRect}
-          />
-        ) : undefined
-      }
-      canReprocess={role !== 'CLIENT'}
-      reprocessing={reprocessing}
-      onReprocess={onReprocess}
-      hud={
-        ready ? (
-          <ViewerHud
-            topLeft={showEditTools ? <Model3DTransformBar m={model3d} /> : undefined}
-            topRight={
-              <>
-                <InspectBar
-                  inspect={inspect}
-                  infoOpen={infoOpen}
-                  onToggleInfo={() => setInfoOpen((v) => !v)}
-                />
-                {infoOpen && (
-                  <ModelInfoPanel
-                    stats={inspect.stats}
-                    extensions={inspect.extensions}
-                    source={data.modelSource}
-                    onClose={() => setInfoOpen(false)}
+    <>
+      <Model3DThreePane
+        status={data.media.status}
+        loadError={model3d.loadError}
+        containerRef={model3d.containerRef}
+        overlay={overlay}
+        aspect={data.splatPresentation?.camera?.aspect}
+        pip={
+          model3d.layoutMode ? (
+            <PipFrame
+              label="Caméra layout"
+              aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
+              onRect={model3d.setPipRect}
+            />
+          ) : undefined
+        }
+        canReprocess={role !== 'CLIENT'}
+        reprocessing={reprocessing}
+        processingError={data.processingError}
+        onReprocess={onReprocess}
+        hud={
+          ready ? (
+            <ViewerHud
+              topLeft={showEditTools ? <Model3DTransformBar m={model3d} /> : undefined}
+              topRight={
+                <>
+                  <InspectBar
+                    inspect={inspect}
+                    infoOpen={infoOpen}
+                    onToggleInfo={() => setInfoOpen((v) => !v)}
                   />
-                )}
-                <Model3DVariantsBar v={variants} />
-                {model3d.layoutMode && canManage && (
+                  {infoOpen && (
+                    <ModelInfoPanel
+                      stats={inspect.stats}
+                      extensions={inspect.extensions}
+                      source={data.modelSource}
+                      onRecompose={canRecompose ? () => setRecomposeOpen(true) : undefined}
+                      onClose={() => setInfoOpen(false)}
+                    />
+                  )}
+                  <Model3DVariantsBar v={variants} />
+                  {model3d.layoutMode && canManage && (
+                    <HudGroup>
+                      <span className="text-muted-foreground">Caméra-objet</span>
+                      <HudIconButton
+                        icon={Move3d}
+                        hint="Déplacer la caméra-objet (pose)"
+                        active={rig.mode === 'translate'}
+                        onClick={() => rig.setMode('translate')}
+                      />
+                      <HudIconButton
+                        icon={Rotate3d}
+                        hint="Orienter la caméra-objet (regard)"
+                        active={rig.mode === 'rotate'}
+                        onClick={() => rig.setMode('rotate')}
+                      />
+                    </HudGroup>
+                  )}
+                  <TurntableBar tt={turntable} />
+                  <SectionBar sec={section} />
                   <HudGroup>
-                    <span className="text-muted-foreground">Caméra-objet</span>
                     <HudIconButton
-                      icon={Move3d}
-                      hint="Déplacer la caméra-objet (pose)"
-                      active={rig.mode === 'translate'}
-                      onClick={() => rig.setMode('translate')}
+                      icon={Grid3x3}
+                      hint="Grille de sol (repère d'orientation de la scène)"
+                      active={grid.visible}
+                      onClick={grid.toggle}
                     />
-                    <HudIconButton
-                      icon={Rotate3d}
-                      hint="Orienter la caméra-objet (regard)"
-                      active={rig.mode === 'rotate'}
-                      onClick={() => rig.setMode('rotate')}
-                    />
+                    <HudIconButton icon={Maximize} hint="Plein écran" onClick={onFullscreen} />
                   </HudGroup>
-                )}
-                <TurntableBar tt={turntable} />
-                <SectionBar sec={section} />
-                <HudGroup>
-                  <HudIconButton
-                    icon={Grid3x3}
-                    hint="Grille de sol (repère d'orientation de la scène)"
-                    active={grid.visible}
-                    onClick={grid.toggle}
+                </>
+              }
+              bottomLeft={
+                <>
+                  <Model3DAnimationsBar m={model3d} />
+                  {compare.enabled && !showEditTools && <Model3DCompareBar compare={compare} />}
+                  <BookmarksBar bm={bookmarks} />
+                  <LightingBar lighting={lighting} colorView={data.projectColor?.view} />
+                  <CameraBar
+                    fov={model3d.fov}
+                    onFov={model3d.setFov}
+                    roll={model3d.roll}
+                    onRoll={model3d.setRoll}
+                    onFrame={model3d.frameView}
+                    onHome={model3d.homeView}
+                    kf={cam.anim}
+                    layout={{
+                      active: model3d.layoutMode,
+                      onToggle: () => model3d.setLayoutMode(!model3d.layoutMode),
+                    }}
                   />
-                  <HudIconButton icon={Maximize} hint="Plein écran" onClick={onFullscreen} />
-                </HudGroup>
-              </>
-            }
-            bottomLeft={
-              <>
-                <Model3DAnimationsBar m={model3d} />
-                {compare.enabled && !showEditTools && <Model3DCompareBar compare={compare} />}
-                <BookmarksBar bm={bookmarks} />
-                <LightingBar lighting={lighting} colorView={data.projectColor?.view} />
-                <CameraBar
-                  fov={model3d.fov}
-                  onFov={model3d.setFov}
-                  roll={model3d.roll}
-                  onRoll={model3d.setRoll}
-                  onFrame={model3d.frameView}
-                  onHome={model3d.homeView}
-                  kf={cam.anim}
-                  layout={{
-                    active: model3d.layoutMode,
-                    onToggle: () => model3d.setLayoutMode(!model3d.layoutMode),
-                  }}
-                />
-                <AnimPanel
-                  anim={cam.anim}
-                  onOrbitPreset={cam.applyOrbitPreset}
-                  onSave={cam.save}
-                  onClear={cam.clear}
-                  busy={cam.busy}
-                  onAttach={cam.attach}
-                  onImport={cam.importGltf}
-                  editable={canManage}
-                />
-              </>
-            }
-          />
-        ) : undefined
-      }
-    />
+                  <AnimPanel
+                    anim={cam.anim}
+                    onOrbitPreset={cam.applyOrbitPreset}
+                    onSave={cam.save}
+                    onClear={cam.clear}
+                    busy={cam.busy}
+                    onAttach={cam.attach}
+                    onImport={cam.importGltf}
+                    editable={canManage}
+                  />
+                </>
+              }
+            />
+          ) : undefined
+        }
+      />
+      {canRecompose && usd && (
+        <UsdRecomposeDialog
+          open={recomposeOpen}
+          onOpenChange={setRecomposeOpen}
+          mediaId={data.media.id}
+          usd={usd}
+        />
+      )}
+    </>
   );
 }
