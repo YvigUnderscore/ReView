@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { basename, dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, join, relative } from 'node:path';
 import { copyFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
@@ -200,7 +200,11 @@ async function convertWithBlender(
   return parseBlenderSummary(stdout);
 }
 
-/** Construit le bloc de métadonnées USD exposé en review. */
+/**
+ * Construit le bloc de métadonnées USD exposé en review. `rootLayer` est **imposé** par
+ * l'appelant : le worker travaille sur une copie nommée `src.usdz`, ce nom technique n'aurait
+ * aucun sens en fiche technique. Pour une archive, l'appelant passe le chemin dans l'archive.
+ */
 function buildUsdInfo(
   info: UsdStageInfo | null,
   rootLayer: string,
@@ -208,7 +212,7 @@ function buildUsdInfo(
   applied: boolean,
 ): UsdModelInfo {
   return {
-    rootLayer: info?.root ?? rootLayer,
+    rootLayer,
     defaultPrim: info?.defaultPrim ?? null,
     upAxis: info?.upAxis ?? 'Y',
     metersPerUnit: info?.metersPerUnit ?? 1,
@@ -236,6 +240,8 @@ async function convertUsd(
   output: string,
   request: UsdRequest,
   workDir: string,
+  /** Nom affiché de la couche racine : nom d'origine du média, ou chemin dans l'archive. */
+  rootLabel: string,
 ): Promise<ConvertResult> {
   let info: UsdStageInfo | null = null;
   let stagePath = input;
@@ -268,7 +274,7 @@ async function convertUsd(
     }
   }
 
-  const rootLayer = basename(input);
+  const rootLayer = rootLabel;
   if (await hasBlender()) {
     const blender = await convertWithBlender(stagePath, output, info, request.purpose);
     return {
@@ -390,7 +396,10 @@ async function convertArchive(
   }
   if (isUsdModel(ext)) {
     const root = await resolveUsdRoot(files, extractDir, archiveName, chosen);
-    return convertUsd(root, output, request, dirname(input));
+    // Chemin **dans l'archive** : c'est ce qui permet à l'utilisateur de vérifier que la
+    // bonne couche a été ouverte parmi plusieurs.
+    const label = relative(extractDir, root).replace(/\\/g, '/');
+    return convertUsd(root, output, request, dirname(input), label);
   }
   await convertWithAssimp(chosen, output); // OBJ/FBX/DAE… avec ressources adjacentes
   return { converter: 'assimp' };
@@ -415,7 +424,9 @@ export async function convertToGlb(
 
   if (e === '.zip') return convertArchive(input, output, request, archiveName);
   // Un `.usdz` est un paquet USD : `pxr` et Blender l'ouvrent directement, sans extraction.
-  if (e === '.usdz' || isUsdModel(e)) return convertUsd(input, output, request, dirname(input));
+  // Un `.usdz` est un paquet USD : `pxr` et Blender l'ouvrent directement, sans extraction.
+  // La « couche racine » affichée est alors le nom du fichier uploadé.
+  if (e === '.usdz' || isUsdModel(e)) return convertUsd(input, output, request, dirname(input), archiveName);
   if (e === '.gltf') {
     await convertGltfToGlb(input, output);
     return { converter: 'gltf' };

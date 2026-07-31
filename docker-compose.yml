@@ -89,7 +89,7 @@ services:
     build:
       context: ./backend
       args:
-        # 45.D : Blender + usd-core installés dans la seule image du worker (~+1 Go).
+        # 45.D : Blender + usd-core dans la seule image du worker (1,6 Go → 3,6 Go).
         # Mettre à vide pour revenir à une image légère (USD alors non converti).
         INSTALL_USD_TOOLS: ${INSTALL_USD_TOOLS:-1}
     command: ["node", "dist/workers/ffmpeg.worker.js"]

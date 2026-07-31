@@ -33,8 +33,10 @@ RUN if [ -n "$GUC_URL" ]; then \
 #  - venv `usd-core` : runtime OpenUSD Python pour l'analyse (couche racine d'une archive,
 #    variantes/purposes, assets non résolus) — Blender n'expose pas le module `pxr`.
 # Seul le service `worker` du compose passe cet argument : l'image de l'API reste inchangée.
-# Coût quand il est activé : ~+1 Go. Sans lui, l'USD retombe sur guc/assimp (et échoue si
-# aucun des deux ne sait lire l'USD). Voir DOCUMENTATION/admin-guide/3d-usd.md.
+# Coût mesuré quand il est activé : image 1,6 Go → 3,6 Go (Blender 1,1 Go, venv usd-core
+# 234 Mo, + les bibliothèques X/GL contre lesquelles Blender est lié). Sans lui, l'USD
+# retombe sur guc/assimp (et échoue si aucun des deux ne sait lire l'USD).
+# Voir DOCUMENTATION/admin-guide/3d-usd.md.
 ARG INSTALL_USD_TOOLS=
 ARG BLENDER_VERSION=4.5.9
 ARG BLENDER_SHA256=dcdc3eca6c9825bb35a8033b689c053f3cb5a9b0cd2a61b2eac2a49436b4ad3d

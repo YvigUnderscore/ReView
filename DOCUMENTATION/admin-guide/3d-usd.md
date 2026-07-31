@@ -78,8 +78,10 @@ This installs, inside the worker image:
 - a **`usd-core` virtualenv** in `/opt/usdenv` — the OpenUSD Python runtime used for scene
   analysis (Blender does not expose the `pxr` module).
 
-Expect roughly **+1 GB** on the worker image. To opt out, build with `INSTALL_USD_TOOLS=`
-(empty): the image stays small, and USD falls back to `guc`/assimp.
+Measured cost: the worker image grows from **1.6 GB to 3.6 GB** (Blender 1.1 GB, the
+`usd-core` virtualenv 234 MB, plus the X/GL runtime libraries Blender links against). To opt
+out, build with `INSTALL_USD_TOOLS=` (empty): the image stays at its previous size, and USD
+falls back to `guc`/assimp.
 
 Verify it inside the running container:
 
