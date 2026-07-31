@@ -3,6 +3,20 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-07 — USD scenes
+
+- **USD review**: upload `.usd`, `.usdc`, `.usda`, `.usdz`, or a zipped folder holding a USD
+  scene with its textures and referenced layers. Materials, variants and animation are
+  preserved.
+- **Root layer detection**: an archive containing several USD layers no longer opens the wrong
+  one — the real root layer is found automatically and shown in the technical sheet.
+- **Missing asset report**: textures or layers absent from an archive are listed instead of
+  silently producing an untextured model.
+- **Recompose a scene**: pick another variant or another purpose (render / proxy / guide) from
+  the technical sheet to re-run the conversion. The original file is never modified.
+- **Clearer failures**: a media that could not be processed now explains why, instead of just
+  showing an error.
+
 ## 2026-07 — Everyday UX & personalization
 
 - **Display preferences**: interface density (comfortable / compact), automatic theme that

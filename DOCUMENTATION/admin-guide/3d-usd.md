@@ -1,66 +1,140 @@
 # USD & 3D conversion
 
-> Updated: 2026-07-20
+> Updated: 2026-07-31
 
-Uploaded 3D media are converted to **GLB** by the FFmpeg/asset worker so the Three.js
-viewer can display them. Routing by source format:
+Uploaded 3D media are converted to **GLB** by the asset worker so the Three.js viewer can
+display them. Routing by source format:
 
 | Source | Converter | Notes |
 |--------|-----------|-------|
 | `.glb` | copy | served as-is |
 | `.gltf` | JS packer | resolves `.bin` + relative textures, packs to GLB |
-| `.usd` / `.usdc` / `.usda` | **native USD→glTF** if enabled, else assimp | see below |
-| `.usdz` | archive → same routing on the inner USD | textures unpacked alongside |
+| `.usd` / `.usdc` / `.usda` | **Blender** (OpenUSD) | falls back to `guc`, then assimp |
+| `.usdz` | **Blender** (OpenUSD) | opened directly — the package is never unzipped by ReView |
+| `.zip` | archive → main model inside | USD archives resolve their **root layer**, see below |
 | `.fbx` `.obj` `.dae` `.stl` | assimp | |
-| `.zip` | archive → highest-priority model inside | `gltf > glb > fbx > obj > … > usd` |
 
 The converter that produced each GLB is recorded on the media and shown in the review
-**technical sheet** (source format + converter, with a `natif` badge for native USD).
+**technical sheet**, together with a USD section (root layer, up axis, unit scale,
+animation range, variants, unresolved assets).
 
-## Native USD converter (recommended for USD assets)
+## Why Blender
 
-assimp's USD support is experimental: materials and **variants** are often lost. For
-faithful USD (UsdPreviewSurface materials, variant selection preserved), enable a
-dedicated USD→glTF converter such as [`guc`](https://github.com/pablode/guc). The worker
-prefers it for USD formats and **falls back to assimp** automatically if it is absent or
-fails — so enabling it is always safe.
+Debian's `assimp` package has **no USD importer at all** (`assimp listext` lists no `usd*`
+extension), so before this was in place every USD upload failed. Blender embeds a full
+OpenUSD build and is currently the only single tool covering everything a review needs:
 
-### Enabling it
+- composition — references, payloads, sublayers and variants are resolved, not ignored;
+- `UsdPreviewSurface` materials translated to glTF PBR, textures repacked into the GLB;
+- **animation**: `UsdSkel` skeletons and skinning, transform animation, cameras;
+- up-axis (`upAxis`) and unit (`metersPerUnit`) conversion.
 
-1. **Install the binary in the worker image.** Provide the URL of a self-contained `guc`
-   release (Linux x86_64) at build time:
+`guc` remains supported as a secondary converter (materials are excellent, but geometry is
+static) and assimp as a last resort. The chain is **blender → guc → assimp**, each fallback
+automatic, so enabling or removing a converter never breaks existing media.
 
-   ```bash
-   docker compose build --build-arg GUC_URL="https://github.com/pablode/guc/releases/download/<version>/<asset>.tar.gz" worker
-   ```
+## USD archives (`.zip` with assets)
 
-   Without `GUC_URL` the image is unchanged and USD keeps going through assimp.
+A realistic USD delivery is a root layer plus payloads and textures in sub-folders. Two
+things happen at ingest:
 
-2. **Activate it at runtime.** Point the worker at the installed binary:
+1. **Root layer detection.** ReView asks OpenUSD for each layer's dependency graph; the root
+   is the layer no other layer references. Ties are broken by depth, then by a filename
+   matching the archive, then by conventional names (`scene`, `root`, `main`, `asset`…).
+   Without this, a binary payload (`.usdc`) could be opened instead of the ASCII root layer
+   (`.usda`) and only part of the scene would show up.
+2. **Unresolved asset report.** Textures or layers missing from the archive are listed in the
+   technical sheet instead of silently producing an untextured model.
 
-   ```bash
-   # .env (consumed by docker-compose)
-   USD_GLTF_CONVERTER=guc
-   ```
+Archives are validated **before** any byte is written: entries escaping the target directory,
+symbolic links, excessive entry counts, excessive uncompressed size and abnormal compression
+ratios reject the whole archive with an explicit message.
 
-   `USD_GLTF_CONVERTER` is the converter command (on `PATH`, e.g. `guc`, or an absolute
-   path). Empty (default) = assimp only. The worker invokes it as
-   `USD_GLTF_CONVERTER <input.usd> <output.glb>`.
+## Variants & purposes
 
-3. Restart the worker: `docker compose up -d worker`.
+If the scene exposes variant sets, reviewers who can manage the media see **Recompose the
+scene…** in the technical sheet. Picking another variant or another purpose
+(render / proxy / guide) re-runs the conversion.
 
-### Verifying
+The original file is never modified: the selection is authored into a small USD **overlay
+layer** that sublayers the root, and that overlay is what gets converted. The requested
+selection is stored on the media, so it survives job retries and later reprocessing.
+Recomposing is refused on a **published** media (publication lock) — publish a new version
+instead.
 
-Upload a USD asset that uses UsdPreviewSurface materials and/or variants. In the review
-technical sheet, *Conversion* should read **USD natif** with the `natif` badge, and the
-materials/textures should match the DCC. If the converter is missing or errors, the
-worker logs a warning (`convertisseur USD natif … échoué, repli assimp`) and the sheet
-shows **assimp** instead.
+## Enabling the USD toolchain
+
+The toolchain is opt-in at build time and installed **only in the worker image** (the API
+image is unchanged). `docker-compose.yml` already passes it for the `worker` service:
+
+```bash
+docker compose build worker && docker compose up -d worker
+```
+
+This installs, inside the worker image:
+
+- **Blender 4.5.9 LTS** in `/opt/blender` — downloaded from `download.blender.org` with a
+  pinned version and a verified SHA256;
+- a **`usd-core` virtualenv** in `/opt/usdenv` — the OpenUSD Python runtime used for scene
+  analysis (Blender does not expose the `pxr` module).
+
+Expect roughly **+1 GB** on the worker image. To opt out, build with `INSTALL_USD_TOOLS=`
+(empty): the image stays small, and USD falls back to `guc`/assimp.
+
+Verify it inside the running container:
+
+```bash
+docker compose exec worker /opt/blender/blender --version
+```
+
+### Settings
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `USD_BLENDER_BIN` | `/opt/blender/blender` | Blender executable |
+| `USD_PYTHON_BIN` | `/opt/usdenv/bin/python3` | Python with the `pxr` module |
+| `USD_GLTF_CONVERTER` | *(empty)* | optional `guc`-style fallback (see below) |
+| `MODEL_CONVERT_TIMEOUT_MS` | `900000` | max duration of any external converter |
+| `ARCHIVE_MAX_ENTRIES` | `20000` | archive entry-count limit |
+| `ARCHIVE_MAX_UNCOMPRESSED_BYTES` | `8589934592` | uncompressed size limit |
+| `ARCHIVE_MAX_COMPRESSION_RATIO` | `200` | compression-ratio limit (decompression bombs) |
+
+### Optional: `guc` fallback
+
+Provide a self-contained [`guc`](https://github.com/pablode/guc) release at build time and
+point the worker at it. It is only used when Blender is unavailable or fails:
+
+```bash
+docker compose build --build-arg GUC_URL="https://…/guc-linux-x86_64.tar.gz" worker
+# .env
+USD_GLTF_CONVERTER=guc
+```
+
+## Troubleshooting
+
+A media that fails conversion now shows **why** in the review, and the same message is in
+`docker compose logs worker`:
+
+| Message | Cause |
+|---------|-------|
+| `Conversion assimp échouée … ENOENT` or no USD support | USD toolchain not installed — rebuild the worker image |
+| `Archive refusée : …` | archive rejected by the safety checks (traversal, symlink, size, ratio) |
+| `Aucun fichier 3D reconnu dans l'archive` | the zip contains no supported 3D file |
+| `scene USD vide apres import` | the selected purpose has no geometry — recompose with `render` |
+| `délai dépassé` | conversion exceeded `MODEL_CONVERT_TIMEOUT_MS` |
+
+Unresolved assets do **not** fail the conversion: the model is shown and the missing
+references are listed in the technical sheet.
 
 ## Security notes
 
-- `USD_GLTF_CONVERTER` is an **admin/operator** setting (env var), never user-supplied.
-  The worker only ever passes it the downloaded source file and an output path — no shell
-  interpolation (`execFile`, not a shell).
-- The converter binary is installed by the operator from a URL they control (`GUC_URL`),
-  not fetched from user content.
+- Converter paths are **operator** settings (environment variables), never user-supplied.
+  The worker only ever passes a downloaded source file and an output path, through
+  `execFile` — no shell interpolation.
+- Blender runs with `--factory-startup`: no user preference or add-on is loaded.
+- Every conversion has a hard timeout, so a pathological scene cannot hold a worker slot.
+- Archives are validated as a whole before extraction; one dangerous entry rejects the
+  archive rather than extracting it partially.
+- Variant selections coming from the API are filtered against the variant sets actually
+  present in the scene.
+- Sources are scanned by ClamAV (when enabled) before any converter runs.

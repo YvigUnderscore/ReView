@@ -1,12 +1,23 @@
 # 3D review
 
-> Updated: 2026-07-20
+> Updated: 2026-07-31
 
 3D media open in a Three.js viewer designed to feel like a DCC viewport. GLB is served
 directly; glTF, FBX, OBJ, COLLADA, STL and **USD** (`.usd`/`.usdc`/`.usda`/`.usdz`, plus
-zipped folders) are converted to GLB at upload. USD is converted by a dedicated native
-USD→glTF converter when the studio has enabled one — otherwise by assimp. See
+zipped folders) are converted to GLB at upload. USD goes through Blender, so composition,
+`UsdPreviewSurface` materials, variants and `UsdSkel` animation are preserved. See
 [USD & 3D conversion](../admin-guide/3d-usd.md) for setup.
+
+## Uploading a USD scene
+
+- **Single file** — drop a `.usd`, `.usdc`, `.usda` or `.usdz`. A `.usdz` already carries
+  its textures, so nothing else is needed.
+- **Scene with external assets** — zip the whole folder (root layer, referenced layers,
+  textures) keeping the relative paths intact, and upload the `.zip`. ReView finds the root
+  layer on its own, even when the archive holds several `.usd*` files.
+- **Missing textures** — anything the scene references but the archive does not contain is
+  listed in the technical sheet under *Scène USD*. The model still displays; re-upload a
+  complete archive to fix the look.
 
 ## Navigation
 
@@ -51,6 +62,13 @@ and skinned/morphed meshes stay visible throughout the motion (no culling pop).
   and glTF extensions used by the model. It also shows the **source format** and which
   **converter** produced the GLB (a `natif` badge marks USD converted natively, i.e.
   with UsdPreviewSurface materials and variants preserved).
+- **USD scene** — for USD media the sheet adds a *Scène USD* section: the **root layer**
+  actually opened, up axis, unit scale, layer count, purpose, animation range, rig, the
+  **variant sets** in effect, and a warning listing **unresolved references**.
+- **Recomposing** — if you can manage the media and it is not published yet, *Recomposer la
+  scène…* at the bottom of that section re-runs the conversion with another variant
+  selection or another purpose (render / proxy / guide). The original USD file is never
+  modified. Once the media is published, recomposing is locked — publish a new version.
 - **Texture inspector** — per-channel previews (base color, normal, roughness,
   metalness, AO, emissive) with their dimensions.
 
