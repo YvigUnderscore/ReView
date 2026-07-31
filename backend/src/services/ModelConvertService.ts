@@ -1,0 +1,429 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { basename, dirname, extname, join } from 'node:path';
+import { copyFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+
+import { env } from '../config/env';
+import { logger } from '../lib/logger';
+import { isUsdModel, pickModelFile, type ModelConverter } from '../lib/modelConvert';
+import { pickUsdRootLayer } from '../lib/usdArchive';
+import { describeRejection, planExtraction, type ZipEntryInfo } from '../lib/zipSafety';
+import {
+  inspectUsdStage,
+  isUsdToolingAvailable,
+  sanitizeVariantSelection,
+  scanUsdDirectory,
+  type UsdStageInfo,
+  type UsdToolConfig,
+  type UsdVariantSelection,
+  type UsdVariantSet,
+} from '../lib/usdInspect';
+import {
+  buildBlenderArgs,
+  parseBlenderSummary,
+  summarizeBlenderError,
+  type BlenderSummary,
+  type UsdPurpose,
+} from '../lib/blenderUsd';
+
+/**
+ * Conversion des médias 3D vers GLB — seul format lu par le viewer Three.js de la review.
+ * Extrait de `workers/ffmpeg.worker.ts` en Phase 45 (45.C) : la logique métier appartient aux
+ * services, et le worker dépassait largement une taille lisible.
+ *
+ * Aiguillage : `.glb` copié tel quel, `.gltf` packé en JS, USD via Blender (OpenUSD complet),
+ * le reste via assimp. Les archives (`.zip`) sont extraites sous contrôle strict (`lib/zipSafety`)
+ * puis re-aiguillées sur leur fichier principal ; un `.usdz` est ouvert directement par les outils
+ * USD, sans extraction de notre part.
+ *
+ * Le fichier source n'est jamais modifié : tout est produit dans le répertoire temporaire du job.
+ */
+
+const execFileAsync = promisify(execFile);
+
+/** Options d'exécution communes : timeout obligatoire, sortie bornée, pas de fenêtre Windows. */
+const runOpts = () => ({
+  timeout: env.MODEL_CONVERT_TIMEOUT_MS,
+  maxBuffer: 32 * 1024 * 1024,
+  windowsHide: true as const,
+});
+
+/** Recomposition demandée par l'utilisateur (Phase 45, 45.E) — variantes + purpose USD. */
+export interface UsdRequest {
+  variants: UsdVariantSelection;
+  purpose: UsdPurpose;
+}
+
+/** Bloc `metadata.model.usd` exposé en fiche technique et consommé par la route de recomposition. */
+export interface UsdModelInfo {
+  rootLayer: string;
+  defaultPrim: string | null;
+  upAxis: 'Y' | 'Z';
+  metersPerUnit: number;
+  frameRange: [number, number] | null;
+  fps: number | null;
+  hasAnimation: boolean;
+  hasSkeleton: boolean;
+  variantSets: UsdVariantSet[];
+  purposes: string[];
+  /** Ce qui a été demandé… */
+  selection: UsdRequest;
+  /** …et si le convertisseur retenu a pu l'appliquer (seul Blender le peut). */
+  selectionApplied: boolean;
+  missingAssets: string[];
+  missingAssetsTotal: number;
+  layerCount: number;
+  primCount: number;
+}
+
+export interface ConvertResult {
+  converter: ModelConverter;
+  usd?: UsdModelInfo;
+  blender?: BlenderSummary;
+}
+
+export const DEFAULT_USD_REQUEST: UsdRequest = { variants: {}, purpose: 'render' };
+
+// ---------------------------------------------------------------------------- outillage USD
+
+/**
+ * Localise un script Python du worker. Les `.py` ne passent pas par `tsc` : ils restent dans
+ * `src/workers/usd/` (présent dans l'image, `COPY . .`) alors que le code exécuté vit dans `dist/`.
+ */
+function resolveUsdScript(name: string): string {
+  // Chemin de référence dans l'image : le worker tourne depuis `dist/`, les scripts vivent
+  // dans `src/` (copiés tels quels par le Dockerfile).
+  const packaged = join(__dirname, '..', '..', 'src', 'workers', 'usd', name);
+  const candidates = [
+    join(__dirname, '..', 'workers', 'usd', name), // dist/workers/usd (si copié un jour)
+    packaged,
+    join(process.cwd(), 'src', 'workers', 'usd', name), // dev (tsx, cwd=backend)
+  ];
+  return candidates.find((p) => existsSync(p)) ?? packaged;
+}
+
+const usdToolConfig = (): UsdToolConfig => ({
+  python: env.USD_PYTHON_BIN,
+  script: resolveUsdScript('analyze_usd.py'),
+  timeoutMs: env.MODEL_CONVERT_TIMEOUT_MS,
+});
+
+/** Sondes d'outillage mises en cache : inutile de relancer un binaire à chaque job. */
+let blenderProbe: Promise<boolean> | null = null;
+let usdToolsProbe: Promise<boolean> | null = null;
+
+export function resetToolProbes(): void {
+  blenderProbe = null;
+  usdToolsProbe = null;
+}
+
+function hasBlender(): Promise<boolean> {
+  blenderProbe ??= execFileAsync(env.USD_BLENDER_BIN, ['--version'], {
+    timeout: 60_000,
+    windowsHide: true,
+  })
+    .then(() => true)
+    .catch(() => false);
+  return blenderProbe;
+}
+
+function hasUsdTools(): Promise<boolean> {
+  usdToolsProbe ??= isUsdToolingAvailable(usdToolConfig());
+  return usdToolsProbe;
+}
+
+/** Binaire du convertisseur USD natif de repli (`guc`), ou undefined. */
+const usdConverterBin = (): string | undefined => env.USD_GLTF_CONVERTER?.trim() || undefined;
+
+/** Message d'erreur exploitable à partir d'un échec `execFile` (timeout inclus). */
+function describeExecError(err: unknown, who: string): string {
+  const e = err as { killed?: boolean; stderr?: string; stdout?: string; message?: string };
+  if (e.killed) return `${who} : délai dépassé (${Math.round(env.MODEL_CONVERT_TIMEOUT_MS / 1000)} s)`;
+  const detail = (e.stderr || e.stdout || e.message || '').toString().trim();
+  return `${who} : ${summarizeBlenderError(detail) || 'erreur inconnue'}`;
+}
+
+// ---------------------------------------------------------------------------- convertisseurs
+
+/** Vérifie que le GLB a bien été produit et n'est pas vide. */
+async function assertGlbProduced(output: string, who: string): Promise<void> {
+  const info = await stat(output).catch(() => null);
+  if (!info || info.size === 0) throw new Error(`Conversion ${who} : GLB de sortie vide ou absent`);
+}
+
+/** Convertit un .gltf (texte, buffers et textures relatifs) en .glb binaire via gltf-import-export. */
+async function convertGltfToGlb(input: string, output: string): Promise<void> {
+  const { ConvertGltfToGLB } = await import('gltf-import-export');
+  try {
+    ConvertGltfToGLB(input, output);
+  } catch (err) {
+    const e = err as { message?: string };
+    throw new Error(`Conversion glTF→GLB échouée : ${(e.message || 'erreur inconnue').slice(0, 500)}`);
+  }
+  await assertGlbProduced(output, 'glTF→GLB');
+}
+
+/** Convertit un modèle 3D (FBX/OBJ/DAE/STL…) en GLB via assimp. */
+async function convertWithAssimp(input: string, output: string): Promise<void> {
+  try {
+    await execFileAsync('assimp', ['export', input, output, '-f', 'glb2'], runOpts());
+  } catch (err) {
+    throw new Error(describeExecError(err, 'Conversion assimp échouée'));
+  }
+  await assertGlbProduced(output, 'assimp');
+}
+
+/** Convertit une scène USD via Blender headless (OpenUSD complet : composition, matériaux, anim). */
+async function convertWithBlender(
+  stagePath: string,
+  output: string,
+  info: UsdStageInfo | null,
+  purpose: UsdPurpose,
+): Promise<BlenderSummary | null> {
+  const args = buildBlenderArgs(resolveUsdScript('usd_to_glb.py'), {
+    input: stagePath,
+    output,
+    purpose,
+    frameStart: info?.hasAnimation ? info.startTimeCode : undefined,
+    frameEnd: info?.hasAnimation ? info.endTimeCode : undefined,
+    fps: info?.timeCodesPerSecond,
+    noAnimation: info ? !info.hasAnimation : false,
+  });
+  let stdout = '';
+  try {
+    ({ stdout } = await execFileAsync(env.USD_BLENDER_BIN, args, runOpts()));
+  } catch (err) {
+    throw new Error(describeExecError(err, 'Conversion USD (Blender) échouée'));
+  }
+  await assertGlbProduced(output, 'Blender');
+  return parseBlenderSummary(stdout);
+}
+
+/** Construit le bloc de métadonnées USD exposé en review. */
+function buildUsdInfo(
+  info: UsdStageInfo | null,
+  rootLayer: string,
+  request: UsdRequest,
+  applied: boolean,
+): UsdModelInfo {
+  return {
+    rootLayer: info?.root ?? rootLayer,
+    defaultPrim: info?.defaultPrim ?? null,
+    upAxis: info?.upAxis ?? 'Y',
+    metersPerUnit: info?.metersPerUnit ?? 1,
+    frameRange: info?.hasAnimation ? [info.startTimeCode, info.endTimeCode] : null,
+    fps: info?.timeCodesPerSecond ?? null,
+    hasAnimation: info?.hasAnimation ?? false,
+    hasSkeleton: info?.hasSkeleton ?? false,
+    variantSets: info?.variantSets ?? [],
+    purposes: info?.purposes ?? [],
+    selection: request,
+    selectionApplied: applied,
+    missingAssets: info?.missingAssets ?? [],
+    missingAssetsTotal: info?.missingAssetsTotal ?? 0,
+    layerCount: info?.layerCount ?? 0,
+    primCount: info?.primCount ?? 0,
+  };
+}
+
+/**
+ * Analyse une scène USD puis la convertit. L'analyse est *best effort* : sans outillage `pxr`,
+ * on convertit quand même (sans fiche technique USD ni rapport d'assets manquants).
+ */
+async function convertUsd(
+  input: string,
+  output: string,
+  request: UsdRequest,
+  workDir: string,
+): Promise<ConvertResult> {
+  let info: UsdStageInfo | null = null;
+  let stagePath = input;
+  let applied = false;
+
+  if (await hasUsdTools()) {
+    info = await inspectUsdStage(input, usdToolConfig()).catch((err) => {
+      logger.warn({ err }, '[ModelConvert] analyse USD indisponible, conversion sans fiche technique');
+      return null;
+    });
+
+    // Recomposition : on n'écrit jamais dans le fichier d'origine — la sélection de variantes
+    // passe par une couche d'overlay qui sous-couche la racine (façon USD).
+    const selection = sanitizeVariantSelection(request.variants, info?.variantSets ?? []);
+    if (info && Object.keys(selection).length > 0) {
+      const variantsFile = join(workDir, 'variants.json');
+      const overlayOut = join(dirname(input), '_review_overlay.usda');
+      await writeFile(variantsFile, JSON.stringify(selection), 'utf8');
+      const recomposed = await inspectUsdStage(input, usdToolConfig(), { variantsFile, overlayOut }).catch(
+        (err) => {
+          logger.warn({ err }, '[ModelConvert] overlay de variantes non appliqué');
+          return null;
+        },
+      );
+      if (recomposed) {
+        info = recomposed;
+        stagePath = recomposed.stagePath;
+        applied = recomposed.appliedVariants.length > 0;
+      }
+    }
+  }
+
+  const rootLayer = basename(input);
+  if (await hasBlender()) {
+    const blender = await convertWithBlender(stagePath, output, info, request.purpose);
+    return {
+      converter: 'blender',
+      usd: buildUsdInfo(info, rootLayer, request, applied),
+      ...(blender ? { blender } : {}),
+    };
+  }
+
+  // Replis : `guc` (matériaux fidèles, géométrie statique) puis assimp. Ni l'un ni l'autre
+  // n'applique variantes ou purpose — `selectionApplied` reste faux.
+  const bin = usdConverterBin();
+  if (bin) {
+    try {
+      await execFileAsync(bin, [stagePath, output], runOpts());
+      await assertGlbProduced(output, `USD natif (${bin})`);
+      return { converter: 'usd', usd: buildUsdInfo(info, rootLayer, request, false) };
+    } catch (err) {
+      logger.warn(`[ModelConvert] convertisseur USD natif (${bin}) échoué, repli assimp: ${String(err)}`);
+    }
+  }
+  await convertWithAssimp(stagePath, output);
+  return { converter: 'assimp', usd: buildUsdInfo(info, rootLayer, request, false) };
+}
+
+// ---------------------------------------------------------------------------- archives
+
+/** Parcourt récursivement un dossier et renvoie tous les chemins de fichiers. */
+async function walk(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const out: string[] = [];
+  for (const e of entries) {
+    const full = join(dir, e.name);
+    if (e.isDirectory()) out.push(...(await walk(full)));
+    else out.push(full);
+  }
+  return out;
+}
+
+/**
+ * Extrait une archive après validation **intégrale** de son catalogue : une seule entrée
+ * dangereuse (traversée, lien symbolique) ou des bornes dépassées invalident l'archive entière.
+ */
+async function extractArchive(input: string, extractDir: string): Promise<void> {
+  const { default: AdmZip } = await import('adm-zip');
+  let zip: InstanceType<typeof AdmZip>;
+  try {
+    zip = new AdmZip(input);
+  } catch (err) {
+    const e = err as { message?: string };
+    throw new Error(`Archive illisible : ${(e.message || 'erreur inconnue').slice(0, 300)}`);
+  }
+
+  const entries: ZipEntryInfo[] = zip.getEntries().map((entry) => ({
+    name: entry.entryName,
+    size: entry.header.size,
+    compressedSize: entry.header.compressedSize,
+    isDirectory: entry.isDirectory,
+    externalAttributes: entry.header.attr,
+  }));
+
+  const plan = planExtraction(entries, {
+    maxEntries: env.ARCHIVE_MAX_ENTRIES,
+    maxTotalBytes: env.ARCHIVE_MAX_UNCOMPRESSED_BYTES,
+    maxRatio: env.ARCHIVE_MAX_COMPRESSION_RATIO,
+  });
+  if (plan.rejection) throw new Error(describeRejection(plan.rejection));
+
+  try {
+    zip.extractAllTo(extractDir, true);
+  } catch (err) {
+    const e = err as { message?: string };
+    throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`);
+  }
+}
+
+/**
+ * Désigne la couche racine d'une archive USD. Avec l'analyseur, le graphe de dépendances tranche ;
+ * sans lui, on retombe sur les heuristiques de `usdArchive`.
+ */
+async function resolveUsdRoot(
+  files: string[],
+  extractDir: string,
+  archiveName: string,
+  fallback: string,
+): Promise<string> {
+  let deps;
+  if (await hasUsdTools()) {
+    deps = await scanUsdDirectory(extractDir, usdToolConfig()).catch((err) => {
+      logger.warn({ err }, '[ModelConvert] graphe de couches USD indisponible, heuristique seule');
+      return undefined;
+    });
+  }
+  return pickUsdRootLayer(files, { deps, archiveName }) ?? fallback;
+}
+
+/** Convertit une archive `.zip` : extraction contrôlée, choix du modèle principal, conversion. */
+async function convertArchive(
+  input: string,
+  output: string,
+  request: UsdRequest,
+  archiveName: string,
+): Promise<ConvertResult> {
+  const extractDir = join(dirname(input), 'unzipped');
+  await extractArchive(input, extractDir);
+
+  const files = await walk(extractDir);
+  const chosen = pickModelFile(files);
+  if (!chosen) throw new Error("Aucun fichier 3D reconnu dans l'archive (gltf/glb/fbx/obj/dae/stl/usd)");
+
+  const ext = extname(chosen).toLowerCase();
+  if (ext === '.glb') {
+    await copyFile(chosen, output);
+    return { converter: 'copy' };
+  }
+  if (ext === '.gltf') {
+    await convertGltfToGlb(chosen, output); // résout scene.bin + textures relatifs
+    return { converter: 'gltf' };
+  }
+  if (isUsdModel(ext)) {
+    const root = await resolveUsdRoot(files, extractDir, archiveName, chosen);
+    return convertUsd(root, output, request, dirname(input));
+  }
+  await convertWithAssimp(chosen, output); // OBJ/FBX/DAE… avec ressources adjacentes
+  return { converter: 'assimp' };
+}
+
+// ---------------------------------------------------------------------------- point d'entrée
+
+/**
+ * Convertit un média 3D en GLB et renvoie la provenance (convertisseur retenu, description USD).
+ * `archiveName` sert d'indice pour retrouver la couche racine d'un zip ; `request` porte la
+ * recomposition demandée (variantes/purpose), sans effet sur les formats non USD.
+ */
+export async function convertToGlb(
+  input: string,
+  output: string,
+  ext: string,
+  opts: { archiveName?: string; request?: UsdRequest } = {},
+): Promise<ConvertResult> {
+  const e = ext.toLowerCase();
+  const request = opts.request ?? DEFAULT_USD_REQUEST;
+  const archiveName = opts.archiveName ?? basename(input);
+
+  if (e === '.zip') return convertArchive(input, output, request, archiveName);
+  // Un `.usdz` est un paquet USD : `pxr` et Blender l'ouvrent directement, sans extraction.
+  if (e === '.usdz' || isUsdModel(e)) return convertUsd(input, output, request, dirname(input));
+  if (e === '.gltf') {
+    await convertGltfToGlb(input, output);
+    return { converter: 'gltf' };
+  }
+  if (e === '.glb') {
+    await copyFile(input, output);
+    return { converter: 'copy' };
+  }
+  await convertWithAssimp(input, output);
+  return { converter: 'assimp' };
+}

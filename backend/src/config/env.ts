@@ -64,6 +64,21 @@ const baseEnvSchema = z.object({
   // 39.A : convertisseur USD→glTF natif (ex. `guc`) préservant matériaux & variantes.
   // Vide = repli sur assimp (support USD expérimental). Voir backend/Dockerfile (ARG GUC_URL).
   USD_GLTF_CONVERTER: z.string().optional(),
+  // 45.D : outillage USD de l'image worker (installé par `--build-arg INSTALL_USD_TOOLS=1`).
+  // Blender = conversion USD→GLB (OpenUSD complet) ; Python = analyseur `pxr` (usd-core).
+  // Binaires absents → repli automatique guc/assimp, cf. services/ModelConvertService.
+  USD_BLENDER_BIN: z.string().default('/opt/blender/blender'),
+  USD_PYTHON_BIN: z.string().default('/opt/usdenv/bin/python3'),
+  // Garde-fou : un convertisseur bloqué immobiliserait un slot de worker indéfiniment.
+  MODEL_CONVERT_TIMEOUT_MS: z.coerce.number().int().positive().default(900_000),
+  // 45.A : bornes d'extraction des archives 3D (traversée, bombes de décompression).
+  ARCHIVE_MAX_ENTRIES: z.coerce.number().int().positive().default(20_000),
+  ARCHIVE_MAX_UNCOMPRESSED_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(8 * 1024 * 1024 * 1024),
+  ARCHIVE_MAX_COMPRESSION_RATIO: z.coerce.number().int().positive().default(200),
   // 37.E : scan antivirus opt-in (clamd INSTREAM) — vide = désactivé.
   CLAMAV_HOST: z.string().optional(),
   CLAMAV_PORT: z.coerce.number().int().default(3310),

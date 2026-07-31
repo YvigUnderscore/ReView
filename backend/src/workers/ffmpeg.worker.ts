@@ -1,12 +1,9 @@
 import { Worker } from 'bullmq';
 import ffmpeg from 'fluent-ffmpeg';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
-import { join, extname, dirname } from 'node:path';
-import { mkdtemp, rm, readdir, copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { join, extname } from 'node:path';
+import { mkdtemp, rm, readdir, mkdir, writeFile } from 'node:fs/promises';
 
-const execFileAsync = promisify(execFile);
 import { redisConnectionOptions } from '../lib/redis';
 import { QUEUE_NAMES, type MediaJobData } from '../services/JobService';
 import { prisma } from '../lib/prisma';
@@ -41,7 +38,8 @@ import { qualityEncoderArgs, bitrateEncoderArgs, type VideoEncoder } from '../li
 import { sha256File } from '../lib/checksum';
 import { isClamavEnabled, scanFile } from '../lib/clamav';
 import { logAudit } from '../services/AuditService';
-import { isUsdModel, pickModelFile, sourceFormatLabel, type ModelConverter } from '../lib/modelConvert';
+import { sourceFormatLabel } from '../lib/modelConvert';
+import { convertToGlb, DEFAULT_USD_REQUEST, type UsdRequest } from '../services/ModelConvertService';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 import { startWebhookWorker } from './webhook.worker';
 
@@ -54,128 +52,10 @@ import { startWebhookWorker } from './webhook.worker';
  *
  *  - thumbnail : miniature JPEG (redimensionnement pour l'image ; la vidéo capture au centre)
  *  - transcode : sonde (ffprobe) + proxy MP4 (h264/aac, faststart) + miniature
- *  - convert3d : conversion FBX/OBJ/USD… → GLB (assimp) pour model-viewer (9.A1)
+ *  - convert3d : conversion FBX/OBJ/USD… → GLB (cf. services/ModelConvertService, 9.A1 puis 45.C)
  *
  * Lancer en process séparé : `node dist/workers/ffmpeg.worker.js` (service `worker` du compose).
  */
-
-/** Convertit un .gltf (texte, buffers embarqués) en .glb binaire via gltf-import-export. */
-async function convertGltfToGlb(input: string, output: string): Promise<void> {
-  // Conversion pure JS (pas de binaire externe) — compatible model-viewer en sortie.
-  const { ConvertGltfToGLB } = await import('gltf-import-export');
-  try {
-    ConvertGltfToGLB(input, output);
-  } catch (err) {
-    const e = err as { message?: string };
-    throw new Error(`Conversion glTF→GLB échouée: ${(e.message || 'erreur inconnue').slice(0, 500)}`);
-  }
-  await assertGlbProduced(output, 'glTF→GLB');
-}
-
-/** Convertit un modèle 3D (FBX/OBJ/USD/DAE…) en GLB binaire via assimp. */
-async function convertWithAssimp(input: string, output: string): Promise<void> {
-  // assimp export <in> <out> -f glb2  → glTF2 binaire (.glb)
-  // On capture stderr d'assimp pour remonter une erreur exploitable en cas d'échec.
-  try {
-    await execFileAsync('assimp', ['export', input, output, '-f', 'glb2']);
-  } catch (err) {
-    const e = err as { stderr?: string; stdout?: string; message?: string };
-    const detail = (e.stderr || e.stdout || e.message || '').toString().trim().slice(0, 500);
-    throw new Error(`Conversion assimp échouée: ${detail || 'erreur inconnue'}`);
-  }
-  await assertGlbProduced(output, 'assimp');
-}
-
-/** Binaire du convertisseur USD→glTF natif (env `USD_GLTF_CONVERTER`, ex. `guc`), ou undefined. */
-function usdConverterBin(): string | undefined {
-  const bin = env.USD_GLTF_CONVERTER?.trim();
-  return bin ? bin : undefined;
-}
-
-/**
- * Convertit un modèle USD (usd/usdc/usda) en GLB (39.A). Préfère un convertisseur USD→glTF
- * **natif dédié** (`guc`) qui préserve matériaux UsdPreviewSurface & variantes ; en son absence
- * ou en cas d'échec, se rabat sur assimp (support USD expérimental). Renvoie le convertisseur
- * réellement utilisé (tracé dans `metadata.model`).
- */
-async function convertUsdToGlb(input: string, output: string): Promise<ModelConverter> {
-  const bin = usdConverterBin();
-  if (bin) {
-    try {
-      // guc <input.usd|usdc|usda> <output.glb> — sortie glTF binaire déduite de l'extension.
-      await execFileAsync(bin, [input, output]);
-      await assertGlbProduced(output, `USD natif (${bin})`);
-      return 'usd';
-    } catch (err) {
-      const e = err as { stderr?: string; message?: string };
-      const detail = (e.stderr || e.message || '').toString().trim().slice(0, 300);
-      logger.warn(`[ffmpeg.worker] convertisseur USD natif (${bin}) échoué, repli assimp: ${detail}`);
-    }
-  }
-  await convertWithAssimp(input, output);
-  return 'assimp';
-}
-
-/** Vérifie que le GLB a bien été produit et n'est pas vide. */
-async function assertGlbProduced(output: string, who: string): Promise<void> {
-  const { stat } = await import('node:fs/promises');
-  const info = await stat(output).catch(() => null);
-  if (!info || info.size === 0) throw new Error(`Conversion ${who}: GLB de sortie vide ou absent`);
-}
-
-/** Parcourt récursivement un dossier et renvoie tous les chemins de fichiers. */
-async function walk(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const out: string[] = [];
-  for (const e of entries) {
-    const full = join(dir, e.name);
-    if (e.isDirectory()) out.push(...(await walk(full)));
-    else out.push(full);
-  }
-  return out;
-}
-
-/** Convertit une archive 3D (.zip / .usdz) : extrait, trouve le modèle principal, packe en GLB. */
-async function convertArchiveToGlb(input: string, output: string): Promise<ModelConverter> {
-  const { default: AdmZip } = await import('adm-zip');
-  const extractDir = join(dirname(input), 'unzipped');
-  try {
-    new AdmZip(input).extractAllTo(extractDir, true);
-  } catch (err) {
-    const e = err as { message?: string };
-    throw new Error(`Extraction de l'archive échouée: ${(e.message || 'erreur inconnue').slice(0, 300)}`);
-  }
-  const files = await walk(extractDir);
-  // Choisit le fichier modèle de plus haute priorité (gltf > glb > fbx > obj… > usd)
-  const chosen = pickModelFile(files);
-  if (!chosen) throw new Error("Aucun fichier 3D reconnu dans l'archive (gltf/glb/fbx/obj/dae/stl/usd)");
-  const e = extname(chosen).toLowerCase();
-  if (e === '.glb') {
-    await copyFile(chosen, output);
-    return 'copy';
-  }
-  if (e === '.gltf') {
-    await convertGltfToGlb(chosen, output); // résout scene.bin + textures relatifs
-    return 'gltf';
-  }
-  // USD extrait d'un usdz : convertisseur natif si dispo (textures adjacentes résolues), sinon assimp.
-  if (isUsdModel(e)) return convertUsdToGlb(chosen, output);
-  await convertWithAssimp(chosen, output); // OBJ/FBX/DAE… avec ressources adjacentes
-  return 'assimp';
-}
-
-/** Aiguille vers le bon convertisseur selon l'extension source ; renvoie le convertisseur utilisé. */
-async function convertToGlb(input: string, output: string, ext: string): Promise<ModelConverter> {
-  const e = ext.toLowerCase();
-  if (e === '.zip' || e === '.usdz') return convertArchiveToGlb(input, output);
-  if (e === '.gltf') {
-    await convertGltfToGlb(input, output);
-    return 'gltf';
-  }
-  if (isUsdModel(e)) return convertUsdToGlb(input, output);
-  await convertWithAssimp(input, output);
-  return 'assimp';
-}
 
 /** Sonde un fichier média et renvoie durée / dimensions / fps. */
 function probe(
@@ -658,18 +538,28 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
     }
 
     if (kind === 'convert3d') {
-      // Conversion → GLB pour model-viewer (corrige l'erreur DataView sur FBX/OBJ bruts)
+      // Conversion → GLB pour le viewer Three.js (corrige l'erreur DataView sur FBX/OBJ bruts)
       const glbPath = join(dir, 'model.glb');
-      const converter = await convertToGlb(src, glbPath, ext);
+      // Recomposition USD demandée par l'utilisateur (45.E) : elle vit dans les métadonnées, donc
+      // elle survit aux retries BullMQ et aux `reprocess` ultérieurs.
+      const request = (metadata.usdRequest as UsdRequest | undefined) ?? DEFAULT_USD_REQUEST;
+      const result = await convertToGlb(src, glbPath, ext, {
+        archiveName: media.originalName,
+        request,
+      });
       const glbKey = `derived/${mediaId}/model.glb`;
       await storage.uploadFile(glbKey, glbPath, 'model/gltf-binary');
       metadata.glbKey = glbKey;
-      // Provenance de conversion (39.A) : format source + convertisseur, exposés en fiche technique.
+      // Provenance de conversion (39.A, étendue 45.C) : format source, convertisseur, et pour
+      // l'USD la description de scène (couche racine, variantes, assets manquants).
       metadata.model = {
         sourceFormat: sourceFormatLabel(ext),
-        converter,
-        native: converter === 'usd',
+        converter: result.converter,
+        native: result.converter === 'usd' || result.converter === 'blender',
+        ...(result.usd ? { usd: result.usd } : {}),
+        ...(result.blender ? { blender: result.blender } : {}),
       };
+      delete metadata.processingError;
       await prisma.mediaObject.update({
         where: { id: mediaId },
         data: { status: MediaStatus.READY, metadata: metadata as object },
@@ -880,6 +770,26 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
   }
 }
 
+/**
+ * Passe un média en échec **en conservant la raison** (45.C) : sans cela, la review n'affiche
+ * qu'un statut `FAILED` muet — insuffisant pour l'USD, où l'échec vient le plus souvent de
+ * quelque chose que l'utilisateur peut corriger (asset manquant dans le zip, outillage absent).
+ */
+async function markFailed(mediaId: number, err: unknown): Promise<void> {
+  const message = (err instanceof Error ? err.message : String(err)).trim().slice(0, 500);
+  try {
+    const media = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
+    const metadata: Record<string, unknown> = { ...((media?.metadata ?? {}) as object) };
+    metadata.processingError = message;
+    await prisma.mediaObject.update({
+      where: { id: mediaId },
+      data: { status: MediaStatus.FAILED, metadata: metadata as object },
+    });
+  } catch {
+    // La mise à jour de statut ne doit jamais masquer l'erreur d'origine (relancée par l'appelant).
+  }
+}
+
 export const ffmpegWorker = new Worker<MediaJobData>(
   QUEUE_NAMES.MEDIA,
   async (job) => {
@@ -888,10 +798,7 @@ export const ffmpegWorker = new Worker<MediaJobData>(
     } catch (err) {
       // Un trim raté ne condamne pas le média (proxy d'origine servi) ; un scan en erreur
       // (clamd injoignable) non plus — BullMQ retente, seule une détection met FAILED.
-      if (job.data.kind !== 'trim' && job.data.kind !== 'scan')
-        await prisma.mediaObject
-          .update({ where: { id: job.data.mediaObjectId }, data: { status: MediaStatus.FAILED } })
-          .catch(() => undefined);
+      if (job.data.kind !== 'trim' && job.data.kind !== 'scan') await markFailed(job.data.mediaObjectId, err);
       throw err;
     }
   },

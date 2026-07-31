@@ -47,9 +47,15 @@ describe('chooseConverter', () => {
     expect(chooseConverter('.usdc', { usdConverter: true })).toBe('usd');
     expect(chooseConverter('.usd', { usdConverter: false })).toBe('assimp');
   });
+  it('USD → Blender prioritaire sur guc et assimp (Phase 45)', () => {
+    expect(chooseConverter('.usd', { usdConverter: false, blender: true })).toBe('blender');
+    expect(chooseConverter('.usdc', { usdConverter: true, blender: true })).toBe('blender');
+    expect(chooseConverter('.usda', { usdConverter: true, blender: false })).toBe('usd');
+  });
   it('fbx/obj/dae → assimp quel que soit le convertisseur USD', () => {
     expect(chooseConverter('.fbx', { usdConverter: true })).toBe('assimp');
     expect(chooseConverter('.obj', { usdConverter: false })).toBe('assimp');
+    expect(chooseConverter('.fbx', { usdConverter: true, blender: true })).toBe('assimp');
   });
 });
 

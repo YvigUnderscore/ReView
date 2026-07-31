@@ -6,19 +6,24 @@ import { extname } from 'node:path';
  * format source, libellé de format pour la fiche technique. Le worker branche les binaires réels
  * (assimp, convertisseur USD natif type `guc`) sur ces décisions.
  *
- * USD natif : un convertisseur USD→glTF dédié (guc) préserve les matériaux UsdPreviewSurface et
- * les variantes bien mieux qu'assimp (support USD expérimental) ; il est préféré quand il est
- * disponible, avec repli automatique sur assimp (zéro régression).
+ * USD (Phase 45) : la conversion passe par Blender headless, qui embarque OpenUSD complet
+ * (composition, matériaux, animation). Le convertisseur natif `guc` reste accepté en second choix
+ * et assimp en dernier recours, chaque repli étant automatique — zéro régression.
  */
 
 /** Extensions USD non compressées (le conteneur `.usdz` est traité comme une archive). */
 export const USD_EXTENSIONS = ['.usd', '.usdc', '.usda'] as const;
 
-/** Ordre de priorité pour choisir le fichier modèle principal dans une archive (`.zip`/`.usdz`). */
+/**
+ * Ordre de priorité pour choisir le fichier modèle principal dans une archive (`.zip`/`.usdz`).
+ * Attention : ce classement ne suffit pas quand le gagnant est un fichier USD — une archive USD
+ * contient plusieurs couches et `.usdc` y devance `.usda`, ce qui désignerait un payload plutôt
+ * que la racine. L'appelant enchaîne alors sur `usdArchive.pickUsdRootLayer` (Phase 45, 45.A).
+ */
 export const MODEL_PRIORITY = ['.gltf', '.glb', '.fbx', '.obj', '.dae', '.stl', '.usdc', '.usda', '.usd'];
 
 /** Convertisseur retenu pour produire le GLB (tracé en `metadata.model.converter`). */
-export type ModelConverter = 'copy' | 'gltf' | 'usd' | 'assimp';
+export type ModelConverter = 'copy' | 'gltf' | 'blender' | 'usd' | 'assimp';
 
 /** Vrai si l'extension désigne un fichier USD non compressé (usd/usdc/usda). */
 export function isUsdModel(ext: string): boolean {
@@ -43,15 +48,25 @@ export function pickModelFile(paths: string[]): string | null {
 }
 
 /**
- * Décide du convertisseur d'un fichier selon son extension et la disponibilité d'un convertisseur
- * USD natif. `.glb` → copie directe ; `.gltf` → packer JS ; USD → convertisseur natif si présent
- * (préserve matériaux/variantes), sinon assimp ; autres (fbx/obj/dae/stl…) → assimp.
+ * Décide du convertisseur d'un fichier selon son extension et l'outillage disponible.
+ * `.glb` → copie directe ; `.gltf` → packer JS ; autres (fbx/obj/dae/stl…) → assimp.
+ *
+ * Pour l'USD, l'ordre de préférence traduit la fidélité obtenue (Phase 45) :
+ * **Blender** (OpenUSD complet : composition, matériaux, UsdSkel animé) → convertisseur natif
+ * type `guc` (matériaux fidèles mais géométrie statique) → assimp (dernier recours, sans support
+ * USD dans les paquets Debian courants : la conversion échouera avec un message explicite).
  */
-export function chooseConverter(ext: string, opts: { usdConverter: boolean }): ModelConverter {
+export function chooseConverter(
+  ext: string,
+  opts: { usdConverter: boolean; blender?: boolean },
+): ModelConverter {
   const e = ext.toLowerCase();
   if (e === '.glb') return 'copy';
   if (e === '.gltf') return 'gltf';
-  if (isUsdModel(e)) return opts.usdConverter ? 'usd' : 'assimp';
+  if (isUsdModel(e)) {
+    if (opts.blender) return 'blender';
+    return opts.usdConverter ? 'usd' : 'assimp';
+  }
   return 'assimp';
 }
 
