@@ -21,14 +21,7 @@ describe('buildBlenderArgs', () => {
 
   it('lance Blender en headless sans préférences utilisateur', () => {
     const args = buildBlenderArgs('/srv/usd_to_glb.py', base);
-    expect(args.slice(0, 6)).toEqual([
-      '-b',
-      '--factory-startup',
-      '--noaudio',
-      '--python-exit-code',
-      '1',
-      '--python',
-    ]);
+    expect(args.slice(0, 5)).toEqual(['-b', '--factory-startup', '--python-exit-code', '1', '--python']);
     // Les arguments du script arrivent après le séparateur `--`.
     expect(args.indexOf('--input')).toBeGreaterThan(args.indexOf('--'));
     expect(args).toContain('/tmp/scene.usda');

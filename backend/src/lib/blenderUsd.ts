@@ -54,15 +54,15 @@ export interface BlenderUsdOptions {
 }
 
 /**
- * Arguments complets de `blender`. `-b` (headless), `--factory-startup` (aucun addon ni
- * preference utilisateur charges) et `--noaudio` (pas de peripherique son dans un conteneur) ;
- * les arguments du script viennent apres le `--` separateur.
+ * Arguments complets de `blender` : `-b` (headless — il desactive deja le peripherique audio),
+ * `--factory-startup` (aucun addon ni preference utilisateur charges) et `--python-exit-code`
+ * (sans lui une exception du script sort en code 0 et l'echec passerait inapercu).
+ * Les arguments du script viennent apres le separateur `--`.
  */
 export function buildBlenderArgs(scriptPath: string, opts: BlenderUsdOptions): string[] {
   const args = [
     '-b',
     '--factory-startup',
-    '--noaudio',
     '--python-exit-code',
     '1',
     '--python',

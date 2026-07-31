@@ -165,6 +165,10 @@ def summarize(scene, animate):
 
 def main():
     args = parse_args(sys.argv)
+    # Blender resout les chemins relatifs a sa maniere (fichier .blend courant) : on lui
+    # passe systematiquement de l'absolu.
+    args.input = os.path.abspath(args.input)
+    args.output = os.path.abspath(args.output)
     if not os.path.exists(args.input):
         raise RuntimeError("fichier USD introuvable: %s" % args.input)
 
