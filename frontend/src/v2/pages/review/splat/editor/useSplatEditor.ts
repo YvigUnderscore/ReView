@@ -253,7 +253,7 @@ export function useSplatEditor(
   }, [splat]);
 
   // Raccourcis clavier (extraits dans un hook dédié pour tenir le budget de taille).
-  useEditorShortcuts({ enabled, splat, history, deleteSelection, frameSelection, frameHome, setTool });
+  useEditorShortcuts({ enabled, splat, history, deleteSelection, frameSelection, frameHome });
 
   // Persistance (chargement masque/ops + enregistrement/réinitialisation) — hook dédié.
   const buildEdits = useCallback(

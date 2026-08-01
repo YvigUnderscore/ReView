@@ -72,8 +72,14 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
   // ── 6) Ouvrir la review du média ─────────────────────────────────────────────
   await mediaLink.first().click();
   await expect(page).toHaveURL(/\/review\/\d+/);
-  // Le breadcrumb topbar affiche le média courant (contexte complet chargé)
-  await expect(page.locator('header')).toContainText(MEDIA_NAME);
+  // Le breadcrumb de la topbar affiche le média courant (contexte complet chargé). La review
+  // porte désormais son propre en-tête (chrome unifié) : on vise explicitement le premier.
+  await expect(page.locator('header').first()).toContainText(MEDIA_NAME);
+
+  // Chrome de review : rail d'outils à gauche (outil de navigation au repos) et dock
+  // inspecteur à droite (onglet Caméra) — les barres flottantes ont disparu.
+  await expect(page.getByRole('button', { name: 'Naviguer' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Caméra', exact: true })).toBeVisible();
 
   // ── Nettoyage : projet de test → corbeille (via l'API, hors parcours testé) ──
   await page.evaluate(async (name) => {

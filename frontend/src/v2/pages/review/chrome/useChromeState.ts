@@ -8,11 +8,13 @@ import {
   type ChromeState,
 } from './chromeState';
 import { modesFor } from './modes';
+import { DEFAULT_TOOL, toolsFor } from './tools';
 
 /**
  * État du chrome pour un média : préférences relues au montage (rail déplié, panneau ouvert,
  * commentaires visibles), mode/outil/tiroir éphémères, et les raccourcis communs aux quatre
- * viewers — touches 1 à 4 pour les modes, `Tab` pour replier le dock.
+ * viewers — touches 1 à 4 pour les modes, lettres d'outils du rail, Échap pour revenir à la
+ * navigation, `Tab` pour replier le dock.
  *
  * Toute mise à jour repasse par `reconcileChrome` : impossible de rester sur un outil qui
  * n'existe pas dans le mode courant.
@@ -59,15 +61,31 @@ export function useChromeState(kind: MediaKind) {
         update({ panel: state.panel ? null : defaultChromeState(kind).panel });
         return;
       }
+      if (e.key === 'Escape') {
+        // Échap ramène au repos : la navigation, quel que soit le mode.
+        if (state.tool !== DEFAULT_TOOL) {
+          e.preventDefault();
+          update({ tool: DEFAULT_TOOL });
+        }
+        return;
+      }
       const index = Number(e.key) - 1;
       if (Number.isInteger(index) && index >= 0 && index < modes.length) {
         e.preventDefault();
         update({ mode: modes[index]!.value });
+        return;
+      }
+      // Lettre d'outil : seul le rail arme un outil, pour que touche et bouton s'accordent.
+      const key = e.key.toUpperCase();
+      const tool = toolsFor(state.mode, kind).find((t) => t.key === key);
+      if (tool) {
+        e.preventDefault();
+        update({ tool: tool.id });
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [kind, modes, state.panel, update]);
+  }, [kind, modes, state.mode, state.panel, state.tool, update]);
 
   return { state, update };
 }
