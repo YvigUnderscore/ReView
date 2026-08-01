@@ -1,6 +1,10 @@
 # Gaussian splat review
 
-> Updated: 2026-07-20
+> Updated: 2026-08-01
+
+> All four media types share the same workspace — mode switch, tool rail, options bar,
+> inspector dock, bottom row. See **[The review workspace](review-workspace.md)** for the
+> layout, the modes and the keyboard map; this page covers what is specific to Gaussian splats.
 
 Gaussian splat media are rendered with **Spark (SparkJS)** inside the Three.js
 scene, with the same DCC-style navigation as 3D review — plus a full
@@ -45,9 +49,9 @@ depth-of-field keyframes.
 
 ## Export
 
-You can download the splat from the viewer's top-right HUD (the **download**
-button — the viewer's right-click is reserved for navigation, so export lives in
-the HUD, not a context menu). Two options:
+You can download the splat from the **Export** panel of the dock (the viewer's right-click
+is reserved for navigation, so export lives in the dock, not in a context menu). Two
+options:
 
 - **Export cleaned splat (.spz)** — generates a compact SPZ file with the
   **edits baked in**: masked/deleted splats are dropped, crop volumes are applied,

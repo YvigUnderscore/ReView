@@ -1,6 +1,6 @@
 # Annotations & comments
 
-> Updated: 2026-07-19
+> Updated: 2026-08-01
 
 Every review mode (video, image, 3D, splat) shares the same commenting system,
 with drawing annotations on 2D media and full collaboration features: threads,
@@ -72,7 +72,12 @@ resolution, mentions, reactions, voice notes, deep links and kanban hand-off.
 
 ## Annotations
 
-- Drawing tools (pen, shapes) with **color choices**, drawn as an overlay.
+- Enter the **Annotate** mode (key `2`) of the workspace: the drawing tools then fill the
+  tool rail (freehand `D`, rectangle `R`, ellipse `E`, arrow `A`, polygon `G`, text `T`,
+  move a shape `M`, eraser `X`), and the options bar carries the ink, thickness and opacity
+  of the armed tool. See [The review workspace](review-workspace.md).
+- Five ink swatches are offered directly, plus a free colour picker.
+- Drawings are an overlay on the media; they leave with the comment you send.
 - Annotations are anchored to the **delivery frame** (the letterbox guide), so they
   survive window resizes and fullscreen switches.
 - On video they are timestamped: each annotated frame is flagged on the timeline.
@@ -97,6 +102,7 @@ picture. The plain (un-annotated) export remains available.
 
 ## Related pages
 
+- [The review workspace](review-workspace.md)
 - [Review video](review-video.md), [Review image](review-image.md)
 - [Kanban & tasks](kanban-and-tasks.md) — tasks created from comments
 - [Review approvals](review-approvals.md) — decisions notify watchers

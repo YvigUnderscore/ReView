@@ -1,6 +1,10 @@
 # Video review
 
-> Updated: 2026-07-19
+> Updated: 2026-08-01
+
+> All four media types share the same workspace — mode switch, tool rail, options bar,
+> inspector dock, bottom row. See **[The review workspace](review-workspace.md)** for the
+> layout, the modes and the keyboard map; this page covers what is specific to video.
 
 Open any video media from a project, task or the Reviews page to enter the video
 review. The player is frame-accurate and streams adaptive HLS.
@@ -100,8 +104,11 @@ whole range (see above). See
 
 ## Trim
 
-Before publication, a video can be trimmed (in/out) from the review; the worker
-re-cuts the delivery. Trim is locked once the version is published.
+Before publication, a video can be trimmed from the review: switch to the **Trim** mode
+(key `4`), arm *In point* (`I`) or *Out point* (`O`) and set the bounds at the current
+frame, then save from the commit group at the right of the options bar. The worker re-cuts
+the delivery; the original is never modified. Trim is locked once the version is
+published.
 
 ## Viewing modes
 

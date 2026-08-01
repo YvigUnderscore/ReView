@@ -1,6 +1,10 @@
 # 3D review
 
-> Updated: 2026-07-31
+> Updated: 2026-08-01
+
+> All four media types share the same workspace — mode switch, tool rail, options bar,
+> inspector dock, bottom row. See **[The review workspace](review-workspace.md)** for the
+> layout, the modes and the keyboard map; this page covers what is specific to 3D models.
 
 3D media open in a Three.js viewer designed to feel like a DCC viewport. GLB is served
 directly; glTF, FBX, OBJ, COLLADA, STL and **USD** (`.usd`/`.usdc`/`.usda`/`.usdz`, plus
@@ -39,7 +43,7 @@ for walkthroughs. Framing and tilt behave consistently across 3D and splat revie
 ## Animations
 
 Models that carry animation clips (skeletal rigs, morph targets, transforms) get a
-transport bar at the bottom of the HUD:
+their own track in the bottom transport (track selector: *Camera* / *Model*):
 
 - **Play / pause**, a **scrubber** to move the playhead frame by frame, and a live
   `time / duration` readout.
@@ -52,7 +56,7 @@ and skinned/morphed meshes stay visible throughout the motion (no culling pop).
 
 ## Inspection
 
-- **Display modes** — the inspect bar (top-right HUD) switches between *shaded*,
+- **Display modes** — the *Display* panel of the dock switches between *shaded*,
   *wireframe*, *normals*, *matcap* and *UV checker*. The override is
   **non-destructive**: the original materials are restored when you return to shaded.
 - **Skeleton debug** — when the model has a rig, a **bone** toggle in the inspect bar
@@ -74,7 +78,7 @@ and skinned/morphed meshes stay visible throughout the motion (no culling pop).
 
 ## Material variants & embedded cameras
 
-When the GLB declares them (top-right HUD, shown only if present):
+When the GLB declares them (*Display* panel of the dock, shown only if present):
 
 - **Material variants** (`KHR_materials_variants`) — a dropdown switches the whole model
   between authored looks (e.g. color options); *Défaut* restores the original materials.
@@ -114,10 +118,10 @@ version and locked by the publish lock.
   from **glTF/GLB** (from any 3D app) or from an **Alembic** camera exported to JSON
   samples (see [Alembic camera import](../admin-guide/3d-alembic.md)).
 
-## HUD
+## Numeric fields
 
-Numeric values (exposure, focal…) are edited through the floating HUD — drag or
-type, no permanent slider panels.
+Numeric values (exposure, focal length, angles…) use the same drag-label field everywhere:
+drag the label horizontally to scrub (Shift ×10), or type the value. No sliders.
 
 ## Related pages
 

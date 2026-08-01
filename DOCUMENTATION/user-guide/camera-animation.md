@@ -1,6 +1,6 @@
 # Camera animation
 
-> Updated: 2026-07-20
+> Updated: 2026-08-01
 
 3D and splat reviews can carry an **animated camera** so a shot presentation plays
 identically for every viewer.
@@ -13,20 +13,22 @@ curve editor.
 
 ## Editing
 
-- **Graph editor**: keys per channel over time; edit values and tangents by hand,
-  multi-select, move/delete. Auto-key mode records changes while you move the camera;
-  the animation duration is editable.
+- **Graph editor**: opened by the *Curves* button of the transport, it docks under it —
+  it no longer floats over the scene. Keys per channel over time; edit values and tangents
+  by hand, multi-select, move/delete. Auto-key mode records changes while you move the
+  camera; the animation duration is editable from the transport.
 - **Copy / paste keys** — select keys and press **Ctrl/⌘ + C**, then **Ctrl/⌘ + V** to
   paste them at the playhead (value, tangent mode and handles are preserved). The
   clipboard also works **across media** — copy a curve on one shot, paste it on another.
-- The **camera object** is visible in the scene: place and orient it with the
-  transform gizmo (including rotation), or fly to a viewpoint and key it.
+- The **camera object** is visible in the scene: arm *Place camera* (`T`) or *Aim camera*
+  (`R`) in the **Staging** mode of the rail to move or orient it, or fly to a viewpoint and
+  key it.
 - A **picture-in-picture** preview shows the camera's exact framing (focal in mm,
   36 mm sensor, delivery aspect).
 
 ## Import
 
-The editor's **Import** button loads a camera animation from **glTF/GLB** (exported by
+The *Export* panel of the dock loads a camera animation from **glTF/GLB** (exported by
 most 3D apps) or from an **Alembic** camera converted to JSON samples — see
 [Alembic camera import](../admin-guide/3d-alembic.md). Imported keys land on the channels
 (linear) and are fully editable.

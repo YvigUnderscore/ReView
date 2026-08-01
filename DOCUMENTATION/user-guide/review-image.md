@@ -1,6 +1,10 @@
 # Image review
 
-> Updated: 2026-07-18
+> Updated: 2026-08-01
+
+> All four media types share the same workspace — mode switch, tool rail, options bar,
+> inspector dock, bottom row. See **[The review workspace](review-workspace.md)** for the
+> layout, the modes and the keyboard map; this page covers what is specific to images.
 
 Image media open in the image viewer: pan/zoom navigation, overlay annotations and
 version comparison.
