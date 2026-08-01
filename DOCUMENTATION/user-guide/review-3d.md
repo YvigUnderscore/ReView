@@ -54,6 +54,35 @@ their own track in the bottom transport (track selector: *Camera* / *Model*):
 Skinning is reliable: rigs are normalized without their animation fighting the framing,
 and skinned/morphed meshes stay visible throughout the motion (no culling pop).
 
+## Scene graph & ReView overrides
+
+USD media open with a **scene graph** in the *Scene* panel of the dock: the real prim tree of
+the scene, not just the nodes that happen to be drawn. Prims that exist but are not rendered
+(inactive variant, filtered purpose) appear greyed out; prims carrying variant sets show a
+`var` badge.
+
+- **Select** a prim by clicking it in the tree, or by clicking the object in the viewer.
+  Clicking empty space clears the selection. Dragging orbits the camera as usual — only a
+  click that does not move selects.
+- **Show / hide** a prim with the eye on its row. Hiding a prim hides its children too; a prim
+  hidden by one of its parents is shown greyed and cannot be re-shown on its own.
+- **Right-click** a prim for its variant sets, plus *Hide*, *Isolate* and *Reset this prim*.
+  Switching a variant is **instant**: every option is baked into the converted file, so nothing
+  is reconverted and it works on published media too.
+
+Everything you change is a **ReView override** — a lightweight delta ReView applies when the
+scene loads (moved here, scaled, hidden, this look). The USD file itself is never modified.
+
+Overrides live at three levels:
+
+1. **The media's override**, set before publication by someone who can manage the media
+   (*Save for everyone*). It is **frozen at publication** and replayed for every viewer.
+2. **A proposal attached to a comment**: whatever you changed travels with the comment and is
+   replayed only when that comment is selected. This is how reviewers suggest changes on a
+   published asset without altering the shared scene.
+3. **Your local exploration**, which is never saved unless you do one of the above. *Cancel*
+   returns to the saved state.
+
 ## Inspection
 
 - **Display modes** — the *Display* panel of the dock switches between *shaded*,

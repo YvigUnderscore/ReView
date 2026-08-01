@@ -1,6 +1,6 @@
 # USD & 3D conversion
 
-> Updated: 2026-07-31
+> Updated: 2026-08-01
 
 Uploaded 3D media are converted to **GLB** by the asset worker so the Three.js viewer can
 display them. Routing by source format:
@@ -49,6 +49,38 @@ things happen at ingest:
 Archives are validated **before** any byte is written: entries escaping the target directory,
 symbolic links, excessive entry counts, excessive uncompressed size and abnormal compression
 ratios reject the whole archive with an explicit message.
+
+## Baked variants & the scene graph
+
+Every option of every variant set is **baked into the converted GLB** as its own tagged
+subtree, and every node carries the USD prim path it came from. Two consequences in review:
+
+- the *Scene* panel shows the **real prim tree**, including prims that are not currently
+  rendered, and a click in the viewer resolves to a prim;
+- switching a variant is **instant** — the viewer just shows one subtree instead of another.
+  No worker job, no reconversion, and therefore it also works on **published** media.
+
+The cost is additive, not combinatorial: each option is composed with the other variant sets
+left at their current value. Two limits keep large scenes in check:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `USD_MAX_BAKED_VARIANTS` | `12` | maximum number of options baked per media |
+| `USD_VARIANT_VERTEX_BUDGET` | `8000000` | vertex count above which remaining options are skipped |
+
+Options that were skipped are reported in the conversion summary; switching to one of those
+still requires *Recompose the scene…*.
+
+## ReView overrides
+
+What reviewers change in the scene graph — visibility, transform, look, variant — is stored as
+a **ReView override**: a small delta applied when the scene loads. It is not USD, and the
+source file is never touched.
+
+- The **media override** (`PUT /api/media/:id/usd/override`) is authored before publication by
+  a manager and **frozen at publication**; it is replayed for every viewer.
+- After publication, reviewers attach their changes to a **comment** instead. The proposal is
+  replayed only when that comment is selected, so the shared scene never moves for everyone.
 
 ## Variants & purposes
 

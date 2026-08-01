@@ -3,6 +3,18 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08 — USD scene graph & overrides
+
+- **Scene graph**: USD media open with the real prim tree in the *Scene* panel, including prims
+  that are not currently rendered.
+- **Pick a mesh**: click an object in the viewer to select its prim; right-click a prim to switch
+  its variant, hide it, isolate it or reset it.
+- **Instant variants**: every option is baked into the converted file, so switching is immediate
+  and works on published media.
+- **ReView overrides**: what you change (moved, scaled, hidden, look) is saved as a light delta
+  replayed when the scene loads. Managers set the media's override before publication; after
+  publication reviewers attach their proposals to a comment, replayed only with that comment.
+
 ## 2026-07 — USD scenes
 
 - **USD review**: upload `.usd`, `.usdc`, `.usda`, `.usdz`, or a zipped folder holding a USD
