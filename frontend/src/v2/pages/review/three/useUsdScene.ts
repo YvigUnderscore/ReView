@@ -17,6 +17,7 @@ import {
 import {
   applyPlan,
   indexPrimObjects,
+  makePrimResolver,
   planOverride,
   renderedPrimPaths,
   type IndexedObject,
@@ -36,6 +37,9 @@ import {
  * le déplacer se voit immédiatement, y compris sur un asset publié.
  */
 
+/** Frames d'attente avant d'abandonner l'indexation (GLB sans `usdPath`). */
+const MAX_INDEX_FRAMES = 60;
+
 export interface UsdSceneState {
   /** Arbre de prims, vide si le média n'est pas une scène USD analysée. */
   tree: PrimNode[];
@@ -47,6 +51,8 @@ export interface UsdSceneState {
   variantDefaults: VariantSelection;
   selected: string | null;
   select: (path: string | null) => void;
+  /** Prim auquel appartient un objet de la scène — sélection au clic dans le viewer. */
+  resolvePrim: (object: THREE.Object3D) => string | null;
   setPrim: (path: string, patch: PrimEdit | null) => void;
   isolate: (path: string) => void;
   setVariant: (prim: string, set: string, option: string) => void;
@@ -104,15 +110,16 @@ export function useUsdScene(
    * Indexation du modèle chargé — relevé de l'état d'origine servant de référence à
    * l'application idempotente du delta.
    *
-   * Faite **à la première frame** où le modèle est réellement dans la scène, pas au moment où
-   * `ready` bascule : le viewer expose sa scène de façon impérative, et un calcul dérivé du
-   * rendu pouvait tomber sur un `modelObject` pas encore posé — l'index restait alors vide
-   * pour toujours, et l'override ne changeait plus rien à la vue.
+   * `ready` doit signaler la **scène Three réellement construite** (`useModel3DThree.ready`), pas
+   * « le média est affichable » : le viewer expose sa scène de façon impérative, et lire un
+   * `modelObject` pas encore posé laissait l'index vide pour toujours — le scenegraph ne pilotait
+   * alors plus rien, ni la vue, ni la sélection, ni le halo.
    */
   useEffect(() => {
     // Média sans scenegraph USD : rien à indexer, et surtout aucune attente à lancer.
     if (!ready || !primPathsKey) return;
     let frame = 0;
+    let attempts = 0;
     const paths = primPathsKey.split('|');
     const tryIndex = () => {
       const root = getSceneHandle()?.modelObject;
@@ -121,10 +128,10 @@ export function useUsdScene(
         setIndexed(next);
         return;
       }
-      // `ready` bascule **avant** que la scène impérative soit peuplée : on retente à chaque
-      // frame jusqu'à ce que le modèle soit là. Sans cette attente l'index restait vide pour
-      // toujours et le scenegraph ne pilotait plus rien. La boucle s'arrête au premier succès
-      // ou au démontage — et n'est jamais lancée hors USD.
+      // Filet de sécurité borné : `ready` garantit désormais que le modèle est posé, mais un
+      // GLB sans `usdPath` (converti avant la phase 46) n'aurait jamais d'index — on ne laisse
+      // pas tourner une boucle d'animation pour rien.
+      if ((attempts += 1) > MAX_INDEX_FRAMES) return;
       frame = requestAnimationFrame(tryIndex);
     };
     tryIndex();
@@ -139,6 +146,7 @@ export function useUsdScene(
   }, [override, variantDefaults, indexed]);
 
   const renderedPaths = useMemo(() => new Set(renderedPrimPaths(indexed)), [indexed]);
+  const resolvePrim = useMemo(() => makePrimResolver(indexed), [indexed]);
 
   /**
    * Halo de sélection : recalculé quand la sélection ou l'override change (l'objet a pu être
@@ -148,14 +156,8 @@ export function useUsdScene(
     const handle = getSceneHandle();
     if (!handle) return;
     const glow = createSelectionGlow(handle.THREE, handle.scene);
-    glow.show(
-      selected
-        ? indexed
-            .filter((i) => i.primPath === selected)
-            .map((i) => i.object)
-            .filter((o) => o.visible)
-        : [],
-    );
+    // Le halo se charge de descendre jusqu'aux meshes réellement dessinés.
+    glow.show(selected ? indexed.filter((i) => i.primPath === selected).map((i) => i.object) : []);
     return () => glow.dispose();
   }, [selected, indexed, override, getSceneHandle]);
 
@@ -204,6 +206,7 @@ export function useUsdScene(
     variantDefaults,
     selected,
     select: setSelected,
+    resolvePrim,
     setPrim,
     isolate,
     setVariant,

@@ -147,6 +147,38 @@ export function applyPlan(plans: readonly ObjectPlan<THREE.Object3D>[]): void {
   }
 }
 
+/**
+ * Vrai si l'objet est réellement dessiné. Three masque toute la descendance d'un objet invisible
+ * **sans toucher** le `visible` des enfants : masquer un prim parent laisse donc ses meshes à
+ * `visible: true`. Tout ce qui suit l'affichage (le halo de sélection) doit remonter la
+ * hiérarchie, sinon il continue de s'afficher autour d'un objet devenu invisible.
+ */
+export function isDrawn(object: THREE.Object3D): boolean {
+  for (let node: THREE.Object3D | null = object; node; node = node.parent) if (!node.visible) return false;
+  return true;
+}
+
+/**
+ * Résout un objet touché vers son prim **via l'index**, en remontant la hiérarchie.
+ *
+ * L'index est la seule table qui fasse autorité : il a déjà apparié le chemin brut du glTF à
+ * l'arbre USD (`matchPrimPath`), qui peut collapser un niveau. Lire `usdPath` directement à la
+ * sélection produirait un chemin absent de l'index — la sélection ne désignerait alors aucun
+ * objet, ni pour le halo ni pour l'arbre.
+ */
+export function makePrimResolver(
+  indexed: readonly IndexedObject<THREE.Object3D>[],
+): (object: THREE.Object3D) => string | null {
+  const byObject = new Map(indexed.map((entry) => [entry.object, entry.primPath]));
+  return (object) => {
+    for (let node: THREE.Object3D | null = object; node; node = node.parent) {
+      const path = byObject.get(node);
+      if (path !== undefined) return path;
+    }
+    return null;
+  };
+}
+
 /** Tous les chemins de prims réellement rendus — utile pour isoler ou lister la sélection. */
 export function renderedPrimPaths(indexed: readonly IndexedObject<unknown>[]): string[] {
   return [...new Set(indexed.map((i) => i.primPath))];

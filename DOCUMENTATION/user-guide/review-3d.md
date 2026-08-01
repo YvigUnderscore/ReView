@@ -62,8 +62,10 @@ the scene, not just the nodes that happen to be drawn. Prims that exist but are 
 `var` badge.
 
 - **Select** a prim by clicking it in the tree, or by clicking the object in the viewer.
-  Clicking empty space clears the selection. Dragging orbits the camera as usual — only a
-  click that does not move selects.
+  The selection is outlined in the viewer — every mesh under the selected prim, so selecting a
+  group highlights the whole branch. Clicking empty space clears the selection. Dragging orbits
+  the camera as usual — only a click that does not move selects. Objects that are not currently
+  drawn (inactive variant, hidden prim) cannot be picked and are never outlined.
 - **Show / hide** a prim with the eye on its row. Hiding a prim hides its children too; a prim
   hidden by one of its parents is shown greyed and cannot be re-shown on its own.
 - **Right-click** a prim for its variant sets, plus *Hide*, *Isolate* and *Reset this prim*.

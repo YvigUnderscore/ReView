@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { isDrawn } from './sceneOverrideApply';
 
 /**
  * Halo de sélection du viewer 3D (Phase 46) : une coque additive légèrement dilatée autour
@@ -16,7 +17,11 @@ const SHELL_SCALE = 1.04;
 export const GLOW_COLOR = 0x22d3ee;
 
 export interface SelectionGlow {
-  /** Entoure les objets donnés ; une liste vide efface le halo. */
+  /**
+   * Entoure les objets donnés **et leur descendance** ; une liste vide efface le halo.
+   * Un prim sélectionné est le plus souvent un groupe (`Xform`) : n'entourer que les objets
+   * eux-mêmes ne dessinerait rien dès qu'on sélectionne autre chose qu'une feuille.
+   */
   show(objects: readonly THREE.Object3D[]): void;
   dispose(): void;
 }
@@ -51,16 +56,20 @@ export function createSelectionGlow(three: typeof import('three'), scene: THREE.
     show(objects) {
       clear();
       for (const object of objects) {
-        const mesh = object as THREE.Mesh;
-        if (!(mesh as { isMesh?: boolean }).isMesh || !mesh.geometry) continue;
-        const shell = new three.Mesh(mesh.geometry, material);
-        shell.raycast = () => {};
-        mesh.updateWorldMatrix(true, false);
-        // La coque est posée en espace monde : elle suit l'objet sans dépendre de sa place
-        // dans la hiérarchie (et donc sans être masquée avec un parent invisible).
-        shell.matrixAutoUpdate = false;
-        shell.matrix.copy(mesh.matrixWorld).scale(new three.Vector3(SHELL_SCALE, SHELL_SCALE, SHELL_SCALE));
-        group.add(shell);
+        object.traverse((node) => {
+          const mesh = node as THREE.Mesh & { isMesh?: boolean };
+          // Un mesh que la scène ne dessine pas (option de variante inactive, prim masqué par
+          // un parent) ne doit pas être entouré : le halo trahirait un objet invisible.
+          if (!mesh.isMesh || !mesh.geometry || !isDrawn(mesh)) return;
+          const shell = new three.Mesh(mesh.geometry, material);
+          shell.raycast = () => {};
+          mesh.updateWorldMatrix(true, false);
+          // La coque est posée en espace monde : elle suit l'objet sans dépendre de sa place
+          // dans la hiérarchie (et donc sans être masquée avec un parent invisible).
+          shell.matrixAutoUpdate = false;
+          shell.matrix.copy(mesh.matrixWorld).scale(new three.Vector3(SHELL_SCALE, SHELL_SCALE, SHELL_SCALE));
+          group.add(shell);
+        });
       }
     },
     dispose() {

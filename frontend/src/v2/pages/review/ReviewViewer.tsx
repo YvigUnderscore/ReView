@@ -244,7 +244,6 @@ export default function ReviewViewer({
           onReprocess={onReprocess}
           onSaved={onSplatEditsSaved}
           overlay={renderOverlay(ann.viewedAspect ?? undefined)}
-          ready={model3dReady}
         />
       )}
 

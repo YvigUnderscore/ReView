@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { isDrawn } from './sceneOverrideApply';
 
 /**
  * Sélection d'un prim au clic dans le viewer 3D (Phase 46, 46.C).
@@ -40,17 +41,25 @@ export function primPathOf(object: THREE.Object3D | null): string | null {
   return null;
 }
 
-/** Prim touché par un rayon lancé depuis la caméra, ou `null`. */
+/**
+ * Prim touché par un rayon lancé depuis la caméra, ou `null`.
+ *
+ * `resolve` traduit l'objet touché en prim ; le viewer y branche l'index de la scène, qui a déjà
+ * apparié les chemins glTF à l'arbre USD. Le repli `primPathOf` sert hors de ce contexte.
+ */
 export function pickPrim(
   three: typeof import('three'),
   camera: THREE.Camera,
   root: THREE.Object3D,
   ndc: { x: number; y: number },
+  resolve: (object: THREE.Object3D) => string | null = primPathOf,
 ): string | null {
   const raycaster = new three.Raycaster();
   raycaster.setFromCamera(new three.Vector2(ndc.x, ndc.y), camera);
-  // `intersectObject` ignore déjà les objets invisibles : un prim masqué par l'override ou
-  // par une variante inactive n'est pas sélectionnable, ce qui est le comportement attendu.
-  const hits = raycaster.intersectObject(root, true);
-  return hits.length > 0 ? primPathOf(hits[0]!.object) : null;
+  // Le raycaster de Three **ne filtre pas** les objets invisibles. Or les options d'une variante
+  // sont toutes cuites dans le même GLB, au même endroit : sans ce filtre, l'option masquée
+  // intercepte le clic à la place de celle qu'on voit, et la sélection tombe sur un prim que
+  // personne n'affiche.
+  const hit = raycaster.intersectObject(root, true).find((h) => isDrawn(h.object));
+  return hit ? resolve(hit.object) : null;
 }

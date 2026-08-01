@@ -237,6 +237,12 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     return () => {
       cancelled = true;
       cleanup?.();
+      // `ready` doit rester **fidèle** à la présence du runtime : les hooks qui s'abonnent à la
+      // scène impérative (scenegraph USD, sélection au clic, caméra-objet) ne peuvent pas
+      // deviner que les refs viennent d'être vidées. Sans ce retour à `false`, un changement de
+      // `glbSrc` les laisserait branchés sur une scène disparue, et leur effet ne serait jamais
+      // rejoué sur la nouvelle.
+      setReady(false);
       runtimeRef.current = null;
       threeRef.current = null;
       hotspotRef.current = null;

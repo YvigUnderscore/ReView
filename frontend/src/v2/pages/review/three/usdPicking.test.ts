@@ -1,8 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { CLICK_SLOP_PX, isClickGesture, primPathOf, toNdc } from './usdPicking';
+import type * as THREE from 'three';
+import { CLICK_SLOP_PX, isClickGesture, pickPrim, primPathOf, toNdc } from './usdPicking';
 
-/** Objet Three minimal : seuls `parent` et `userData` sont lus par `primPathOf`. */
-const node = (userData: Record<string, unknown>, parent: unknown = null) => ({ userData, parent }) as never;
+/** Objet Three minimal : seuls `parent`, `visible` et `userData` sont lus ici. */
+const node = (userData: Record<string, unknown>, parent: unknown = null, visible = true) =>
+  ({ userData, parent, visible }) as never;
+
+/** Faux module Three : `pickPrim` n'utilise que `Raycaster` et `Vector2`. */
+const threeWithHits = (hits: { object: unknown }[]) =>
+  ({
+    Vector2: class {
+      constructor(
+        public x: number,
+        public y: number,
+      ) {}
+    },
+    Raycaster: class {
+      setFromCamera() {}
+      intersectObject() {
+        return hits;
+      }
+    },
+  }) as unknown as typeof import('three');
+
+const camera = {} as THREE.Camera;
+const root = node({});
 
 describe('isClickGesture', () => {
   it('accepte un pointeur quasi immobile', () => {
@@ -29,6 +51,41 @@ describe('toNdc', () => {
 
   it('reste défini sur un conteneur de taille nulle', () => {
     expect(toNdc(0, 0, { left: 0, top: 0, width: 0, height: 0 })).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('pickPrim', () => {
+  const ndc = { x: 0, y: 0 };
+
+  it('renvoie le prim de l’objet touché', () => {
+    const hit = node({ usdPath: '/World/Asset/Geo/Suzanne' });
+    expect(pickPrim(threeWithHits([{ object: hit }]), camera, root, ndc)).toBe('/World/Asset/Geo/Suzanne');
+  });
+
+  it('ignore l’option de variante masquée qui occupe la même place', () => {
+    // Les deux options sont cuites dans le même GLB : la masquée est touchée en premier par le
+    // rayon, mais elle n'est pas affichée — sélectionner un prim invisible n'a aucun sens.
+    const hidden = node({ usdPath: '/World/Asset/Geo/Cube' }, null, false);
+    const shown = node({ usdPath: '/World/Asset/Geo/Suzanne' });
+    const path = pickPrim(threeWithHits([{ object: hidden }, { object: shown }]), camera, root, ndc);
+    expect(path).toBe('/World/Asset/Geo/Suzanne');
+  });
+
+  it('ignore un objet masqué par l’un de ses parents', () => {
+    const parent = node({ usdPath: '/World/Asset' }, null, false);
+    const child = node({ usdPath: '/World/Asset/Geo' }, parent);
+    expect(pickPrim(threeWithHits([{ object: child }]), camera, root, ndc)).toBeNull();
+  });
+
+  it('renvoie null quand le rayon ne touche rien', () => {
+    expect(pickPrim(threeWithHits([]), camera, root, ndc)).toBeNull();
+  });
+
+  it('délègue la traduction en prim au résolveur fourni', () => {
+    // Le viewer y branche son index : le chemin brut du glTF peut ne pas exister côté USD.
+    const hit = node({ usdPath: '/World/Asset/Geo/Geo/Suzanne' });
+    const resolve = () => '/World/Asset/Geo';
+    expect(pickPrim(threeWithHits([{ object: hit }]), camera, root, ndc, resolve)).toBe('/World/Asset/Geo');
   });
 });
 

@@ -53,7 +53,6 @@ export default function Model3DReview({
   onReprocess,
   onSaved,
   overlay,
-  ready,
 }: {
   data: MediaResp;
   model3d: Model3DThreeState;
@@ -66,10 +65,12 @@ export default function Model3DReview({
   onReprocess: () => void;
   onSaved: (patch: SplatEditsPatch) => void;
   overlay: ReactNode;
-  /** Modèle chargé et affichable (chrome monté seulement alors). */
-  ready: boolean;
 }) {
   const qc = useQueryClient();
+  // Scène Three réellement construite (modèle chargé, runtime posé). À ne pas confondre avec
+  // « le média est affichable » : les hooks qui lisent la scène de façon impérative n'ont rien
+  // à lire tant que le GLB n'est pas chargé, et leur effet ne serait pas rejoué ensuite.
+  const ready = model3d.ready;
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
   // Éclairage HDRI : défaut rejoué pour tous, tweak spectateur temporaire.
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
@@ -93,7 +94,7 @@ export default function Model3DReview({
     [ann.viewedSceneOverride],
   );
   const scene = useUsdScene(data, model3d.getSceneHandle, ready, commentOverride, ann.setSceneOverride);
-  useUsdPicking(model3d.getSceneHandle, ready, scene.select);
+  useUsdPicking(model3d.getSceneHandle, ready, scene.select, scene.resolvePrim);
   // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
   const [recomposeOpen, setRecomposeOpen] = useState(false);
   const [savingOverride, setSavingOverride] = useState(false);
