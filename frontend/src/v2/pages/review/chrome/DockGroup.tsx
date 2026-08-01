@@ -1,6 +1,13 @@
 import type { ReactNode } from 'react';
 
 /**
+ * Gabarit des `<Select>` du dock : la primitive est dimensionnée pour les formulaires, les
+ * panneaux sont deux crans plus denses. Passé en `className` pour que `twMerge` remplace le
+ * padding et la taille de texte par défaut.
+ */
+export const DOCK_SELECT = 'w-full px-1.5 py-[0.3125rem] text-xs';
+
+/**
  * Primitives de contenu du dock inspecteur. Un panneau n'est qu'une suite de `Group`, et un
  * `Group` une suite de `Row` : libellé à gauche, contrôle à droite. Cette régularité est ce
  * qui rend les six panneaux lisibles sans les parcourir — on ne compose rien d'autre ici.

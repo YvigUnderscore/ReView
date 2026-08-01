@@ -1,0 +1,204 @@
+import { useMemo } from 'react';
+import {
+  Box,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Diamond,
+  KeyRound,
+  MessageSquarePlus,
+  Pause,
+  Play,
+  Redo2,
+  Repeat,
+  Undo2,
+  Video,
+} from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import { IconButton } from '../../../components/ui/icon-button';
+import { NumberField } from '../../../components/ui/number-field';
+import { SegmentedControl } from '../../../components/ui/segmented-control';
+import { CHANNEL_IDS } from '../camera/channels/model';
+import type { CameraAnimState } from '../camera/useCameraAnim';
+
+/** Temps de clés, tous canaux confondus, triés — sert la piste et les sauts de clé en clé. */
+function keyTimes(anim: CameraAnimState): number[] {
+  const times = new Set<number>();
+  for (const id of CHANNEL_IDS) for (const k of anim.anim.channels[id]?.keys ?? []) times.add(k.t);
+  return [...times].sort((a, b) => a - b);
+}
+
+/**
+ * Ligne du bas des viewers spatiaux : le temps. Reprend `AnimToolbar` (qui flottait avec le
+ * panneau d'animation) et lui donne une piste cliquable — clés en losanges, tête de lecture.
+ * Le tiroir « Courbes » s'ancre juste en dessous au lieu d'ouvrir une fenêtre déplaçable.
+ */
+export default function SpatialTransport({
+  anim,
+  editable,
+  track,
+  onTrack,
+  onAttach,
+  drawerOpen,
+  onDrawer,
+}: {
+  anim: CameraAnimState;
+  /** Gestionnaire pré-publication : seul à pouvoir écrire des clés. */
+  editable: boolean;
+  /** Piste éditée : animation de mise en scène ou clips du fichier. */
+  track: 'camera' | 'clip';
+  onTrack?: (track: 'camera' | 'clip') => void;
+  /** Joindre l'animation au prochain commentaire (mode layout). */
+  onAttach?: () => void;
+  drawerOpen: boolean;
+  onDrawer: () => void;
+}) {
+  const times = useMemo(() => keyTimes(anim), [anim]);
+  const span = Math.max(anim.playDuration, times[times.length - 1] ?? 0, 1);
+  const pct = (t: number) => (t / span) * 100;
+  const goToKey = (dir: -1 | 1) => {
+    const next =
+      dir === 1
+        ? times.find((t) => t > anim.timeMs + 1)
+        : [...times].reverse().find((t) => t < anim.timeMs - 1);
+    if (next !== undefined) anim.scrub(next);
+  };
+
+  return (
+    <div className="rv-transport">
+      {onTrack && (
+        <>
+          <SegmentedControl
+            label="Piste d’animation"
+            items={[
+              {
+                value: 'camera' as const,
+                label: 'Caméra',
+                icon: Video,
+                hint: 'Animation caméra de la mise en scène',
+              },
+              { value: 'clip' as const, label: 'Modèle', icon: Box, hint: 'Clips d’animation du fichier' },
+            ]}
+            value={track}
+            onChange={onTrack}
+          />
+          <span className="rv-rule" />
+        </>
+      )}
+      <IconButton
+        icon={anim.playing ? Pause : Play}
+        label={anim.playing ? 'Pause (espace)' : 'Lecture (espace)'}
+        bordered
+        active={anim.playing}
+        disabled={!anim.hasAnimation}
+        onClick={anim.playing ? anim.pause : anim.play}
+      />
+      <IconButton
+        icon={ChevronLeft}
+        label="Clé précédente (←)"
+        disabled={!times.length}
+        onClick={() => goToKey(-1)}
+      />
+      <IconButton
+        icon={ChevronRight}
+        label="Clé suivante (→)"
+        disabled={!times.length}
+        onClick={() => goToKey(1)}
+      />
+      {editable && (
+        <IconButton
+          icon={Diamond}
+          label="Poser une clé depuis la vue courante (K)"
+          bordered
+          onClick={() => anim.insertKeyAtView()}
+        />
+      )}
+
+      <div
+        className="rv-track"
+        style={{ flex: '1 1 200px', minWidth: 160 }}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          anim.scrub(Math.max(0, ((e.clientX - r.left) / r.width) * span));
+        }}
+      >
+        <span className="rv-track__rail" />
+        <span className="rv-track__fill" style={{ width: `${pct(anim.timeMs)}%` }} />
+        {times.map((t) => (
+          <button
+            key={t}
+            type="button"
+            title={`Clé à ${(t / 1000).toFixed(2)} s`}
+            aria-label={`Aller à la clé de ${(t / 1000).toFixed(2)} seconde`}
+            className={`rv-key${Math.abs(t - anim.timeMs) < span / 100 ? ' rv-key--active' : ''}`}
+            style={{ left: `${pct(t)}%` }}
+            onClick={(e) => {
+              e.stopPropagation();
+              anim.scrub(t);
+            }}
+          />
+        ))}
+        <span className="rv-track__head" style={{ left: `${pct(anim.timeMs)}%` }} />
+      </div>
+
+      <span className="font-mono text-[0.625rem]">
+        <span className="text-primary">{(anim.timeMs / 1000).toFixed(2)}</span> / {(span / 1000).toFixed(2)} s
+      </span>
+
+      {editable && (
+        <>
+          <NumberField
+            label="Durée"
+            hint="Durée de lecture (s) — 0 = automatique (dernière clé)"
+            value={Number((anim.playDuration / 1000).toFixed(2))}
+            onChange={(s) => anim.setDuration(s > 0 ? Math.round(s * 1000) : undefined)}
+            min={0}
+            max={600}
+            step={0.5}
+            unit="s"
+          />
+          <IconButton
+            icon={KeyRound}
+            label="Auto-clé : tout geste caméra pose une clé au temps de lecture"
+            bordered
+            active={anim.autoKey}
+            onClick={() => anim.setAutoKey(!anim.autoKey)}
+          />
+        </>
+      )}
+      <IconButton
+        icon={Repeat}
+        label="Lire en boucle"
+        bordered
+        active={anim.loop}
+        onClick={() => anim.setLoop(!anim.loop)}
+      />
+      {editable && (
+        <>
+          <IconButton icon={Undo2} label="Annuler" onClick={anim.undo} disabled={!anim.canUndo} />
+          <IconButton icon={Redo2} label="Rétablir" onClick={anim.redo} disabled={!anim.canRedo} />
+        </>
+      )}
+      {onAttach && anim.hasAnimation && (
+        <IconButton
+          icon={MessageSquarePlus}
+          label="Joindre cette animation au prochain commentaire"
+          bordered
+          onClick={onAttach}
+        />
+      )}
+
+      <span className="rv-rule" />
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onDrawer}
+        title="Éditeur de courbes — canaux X/Y/Z, focale, tilt"
+      >
+        {drawerOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+        Courbes
+      </Button>
+    </div>
+  );
+}

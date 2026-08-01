@@ -302,7 +302,7 @@ export default function ReviewViewer({
           canPresent={splatReady && canManage}
           paint={paint}
           onSaved={onSplatEditsSaved}
-          onFullscreen={onFullscreen}
+          role={role}
           overlay={renderOverlay()}
           ann={ann}
         />

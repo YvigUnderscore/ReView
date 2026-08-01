@@ -32,16 +32,20 @@ export default function ReviewChrome({
   comments,
   onViewAction,
   dirty,
+  hiddenTools,
   children,
 }: {
   kind: MediaKind;
   state: ChromeState;
   onState: (patch: Partial<ChromeState>) => void;
   role: Role;
-  /** Média, version, navigation — à gauche de l'en-tête. */
-  headerLeft: ReactNode;
+  /**
+   * Média, version, navigation — à gauche de l'en-tête. Absent tant que la page de review
+   * porte encore son propre en-tête : la barre du haut ne montre alors que la bascule de mode.
+   */
+  headerLeft?: ReactNode;
   /** A/B, présence, actions — à droite de l'en-tête. */
-  headerRight: ReactNode;
+  headerRight?: ReactNode;
   /** `<OptionsBar>` de l'outil actif. */
   options: ReactNode;
   /** Contenu du panneau ouvert. */
@@ -53,20 +57,29 @@ export default function ReviewChrome({
   onViewAction: (action: ViewAction['id']) => void;
   /** Éditions en attente — vient des hooks d'édition, pas de l'état du chrome. */
   dirty?: boolean;
+  /** Outils du mode que ce viewer n'implémente pas — retirés du rail. */
+  hiddenTools?: ToolId[];
   /** Le viewport, plein espace. */
   children: ReactNode;
 }) {
   const modes = modesFor(kind);
-  const tools = toolsFor(state.mode, kind);
+  // Un viewer retire du rail les outils qu'il n'implémente pas : mieux vaut un rail court
+  // qu'un bouton qui ne fait rien.
+  const tools = toolsFor(state.mode, kind).filter((t) => !hiddenTools?.includes(t.id));
   const panels = panelsFor(kind);
   const activeMode = modes.find((m) => m.value === state.mode) ?? modes[0]!;
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
   const canSwitchMode = role !== 'CLIENT';
 
   return (
-    <div className="flex h-full min-h-0 min-w-[1440px] flex-col overflow-hidden bg-background text-foreground">
+    <div
+      className={`flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground${
+        // Largeur minimale du workspace — seulement quand le chrome tient toute la page.
+        headerLeft ? ' min-w-[1440px]' : ''
+      }`}
+    >
       <header className="flex flex-shrink-0 flex-nowrap items-center gap-3 border-b border-border bg-card px-3 py-2">
-        <span className="flex min-w-0 flex-shrink-0 items-center gap-2">{headerLeft}</span>
+        {headerLeft && <span className="flex min-w-0 flex-shrink-0 items-center gap-2">{headerLeft}</span>}
         {canSwitchMode && (
           <span className="mx-auto flex items-center gap-2">
             <SegmentedControl
@@ -83,9 +96,11 @@ export default function ReviewChrome({
             />
           </span>
         )}
-        <span className={`flex flex-shrink-0 items-center gap-2${canSwitchMode ? '' : ' ml-auto'}`}>
-          {headerRight}
-        </span>
+        {headerRight && (
+          <span className={`flex flex-shrink-0 items-center gap-2${canSwitchMode ? '' : ' ml-auto'}`}>
+            {headerRight}
+          </span>
+        )}
       </header>
 
       <div className="flex min-h-0 flex-1">

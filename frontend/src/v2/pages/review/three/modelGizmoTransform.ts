@@ -1,6 +1,6 @@
 import type { SplatTransform } from '../reviewTypes';
 import type { Transform } from '../reviewTypes';
-import { quatToEulerDeg } from '../splat/hud/transformMath';
+import { quatToEulerDeg } from '../options/transformMath';
 
 /**
  * Convertit la TRS d'un mesh (lue par le gizmo, `readMeshTransform`) vers la transformation

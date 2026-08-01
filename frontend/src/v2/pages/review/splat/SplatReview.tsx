@@ -1,5 +1,6 @@
-import { useCallback, useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
+import type { Role } from '../../../types/api';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
 import type { SplatViewer } from './useSplat';
@@ -9,34 +10,38 @@ import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import { useSceneGrid } from '../viewer/useSceneGrid';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFile } from '../three/importCameraAbc';
-import CameraBar from '../camera/CameraBar';
-import AnimPanel from '../camera/timeline/AnimPanel';
+import { useCameraSceneRig } from '../camera/sceneRig/useCameraSceneRig';
 import PipFrame from '../viewer/PipFrame';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
-import CompareBar from './compare/CompareBar';
+import CompareControl from './compare/CompareControl';
 import { useSplatCompare } from './compare/useSplatCompare';
-import PaintBar from './paint/PaintBar';
 import PaintOverlay from './paint/PaintOverlay';
 import type { SplatPaintState } from './paint/useSplatPaint';
 import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
-import SplatEditorToolbar from './editor/SplatEditorToolbar';
 import { applyMaskIndices, applySavedVolumes, fetchMaskIndices } from './editor/persistence/applyEdits';
 import { applySubsetOps, fetchSubsetOps } from './editor/persistence/subsetOps';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
-import VolumesBar from './editor/volumes/VolumesBar';
-import TopRightControls from './hud/TopRightControls';
-import TransformFields from './hud/TransformFields';
-import ViewerHud from '../hud/ViewerHud';
+import ReviewChrome from '../chrome/ReviewChrome';
+import { useChromeState } from '../chrome/useChromeState';
+import { toolsFor } from '../chrome/tools';
+import SplatOptions from '../options/SplatOptions';
+import SpatialTransport from '../transport/SpatialTransport';
+import CurvesDrawer from '../transport/CurvesDrawer';
+import SplatPanels from './SplatPanels';
+import { SPLAT_HIDDEN_TOOLS, useSplatChrome } from './useSplatChrome';
 import SplatPane from './SplatPane';
 
 /**
- * Bloc splat de la review (10.G) : orchestre le viewer (SplatPane), le HUD flottant (stats,
- * réglages — 10.G-V1) et l'éditeur avant publication (toolbar + gizmos + sélection), superposés
- * au canvas façon logiciel 3D. Extrait de ReviewViewer pour garder tout le domaine splat sous
- * `splat/` — ReviewViewer ne fait que monter ce composant. L'état éditeur vit dans
- * `useSplatEditor` ; en lecture seule, la transformation enregistrée est appliquée ici.
+ * Bloc splat de la review, monté dans le chrome unifié : rail d'outils à gauche, options de
+ * l'outil armé sous l'en-tête, dock inspecteur à droite, transport de l'animation caméra en
+ * bas. Plus rien ne flotte au-dessus du nuage — seuls restent les overlays ancrés à la vue
+ * (tracés du painter, tracé de sélection, PiP de la caméra layout).
+ *
+ * L'état métier n'a pas bougé : `useSplatEditor` porte l'édition, `usePresentation` la mise
+ * en scène, `useSplatCompare` l'A/B. Le rail se contente d'armer l'outil ; `useSplatChrome`
+ * fait suivre les hooks.
  */
 export default function SplatReview({
   data,
@@ -45,7 +50,7 @@ export default function SplatReview({
   canPresent,
   paint,
   onSaved,
-  onFullscreen,
+  role,
   overlay,
   ann,
 }: {
@@ -55,11 +60,11 @@ export default function SplatReview({
   showEdit: boolean;
   /** Gestionnaire : peut persister la présentation (autorisé même publié — mise en scène). */
   canPresent: boolean;
-  /** Painter 3D (V9) — instancié par la page (les traits partent avec le commentaire). */
+  /** Painter 3D — instancié par la page (les traits partent avec le commentaire). */
   paint: SplatPaintState;
   onSaved: (patch: SplatEditsPatch) => void;
-  /** Bascule le plein écran de tout le bloc review (viewer + commentaires). */
-  onFullscreen: () => void;
+  /** Rôle du spectateur — le client ne voit pas la bascule de mode. */
+  role?: Role;
   overlay: ReactNode;
   /** Annotations (mode layout : joindre/rejouer une animation caméra dans les commentaires). */
   ann: Annotations;
@@ -76,12 +81,38 @@ export default function SplatReview({
   );
   const { applyTransform, setBaseFlip, ready, getSceneHandle } = splat;
 
-  // Grille de sol (repère d'orientation de la scène) — togglable, préférence locale.
   const grid = useSceneGrid(splat);
-  // Présentation (V5/V6) : caméra (rig + keyframes), reveal, debug color — rejouée pour tous.
   const pres = usePresentation(splat, data, onSaved);
-  // Comparaison (V8) : autres splats de la même version — switch A/B + « voir tous ».
   const compare = useSplatCompare(splat, data.media);
+  const { state, update } = useChromeState('SPLAT');
+  // Culling Spark neutralisé par défaut : rien ne disparaît en zoom fort (réglage de session).
+  const [cullingOff, setCullingOffState] = useState(true);
+  const onCullingOff = useCallback(
+    (off: boolean) => {
+      setCullingOffState(off);
+      splat.setCullingOff(off);
+    },
+    [splat],
+  );
+
+  // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo des clés.
+  const cameraRig = useCameraSceneRig({
+    getSceneHandle: splat.getSceneHandle,
+    subscribeFrame: splat.subscribeFrame,
+    ready: splat.ready,
+    active: pres.layout.layoutMode,
+    editable: canPresent,
+    anim: pres.anim,
+  });
+
+  useSplatChrome({
+    state,
+    editor,
+    paint,
+    focusPick: pres.rig.focusPick,
+    onToggleFocusPick: pres.rig.toggleFocusPick,
+    cameraRig,
+  });
 
   // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
   const { setAnim: animSetAnim, play: animPlay } = pres.anim;
@@ -189,138 +220,105 @@ export default function SplatReview({
           ? ('brush' as const)
           : null;
 
+  const activeTool =
+    toolsFor(state.mode, 'SPLAT').find((t) => t.id === state.tool) ?? toolsFor(state.mode, 'SPLAT')[0]!;
+
   return (
-    <SplatPane
-      containerRef={splat.containerRef}
-      ready={splat.ready}
-      loadError={splat.loadError}
-      progress={splat.progress}
-      status={data.media.status}
-      aspect={data.splatPresentation?.camera?.aspect}
-      overlay={overlay}
-      pip={
-        pres.layout.layoutMode && ready ? (
-          <PipFrame
-            label="Caméra layout"
-            aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
-            onRect={splat.setPipRect}
-          />
-        ) : undefined
+    <ReviewChrome
+      kind="SPLAT"
+      state={state}
+      onState={update}
+      role={role ?? 'ARTIST'}
+      hiddenTools={SPLAT_HIDDEN_TOOLS}
+      headerRight={compare.enabled ? <CompareControl compare={compare} /> : undefined}
+      dirty={showEdit ? editor.dirty : undefined}
+      onViewAction={(action) => (action === 'fit' ? frameView() : homeView())}
+      options={
+        <SplatOptions
+          tool={activeTool}
+          mode={state.mode}
+          editor={editor}
+          paint={paint}
+          presentation={
+            canPresent
+              ? { dirty: pres.anim.hasAnimation, busy: pres.busy, onSave: () => void pres.save() }
+              : undefined
+          }
+          onPlaceHotspot={() => ann.setHotspot3d(splat.raycastCenter())}
+        />
       }
-      editorOverlay={
-        paint.active && ready ? (
-          <PaintOverlay
-            color={paint.color}
-            getCanvas={() => getSceneHandle()?.dom ?? null}
-            onStroke={paint.addStroke}
-          />
-        ) : showEdit && selectTool && ready ? (
-          <SelectionOverlay
-            tool={selectTool}
-            brushRadius={editor.brushRadius}
-            getCanvas={() => getSceneHandle()?.dom ?? null}
-            onCommit={editor.selection.commitShape}
-            onBrush={(point, combine, viewport) =>
-              editor.selection.commitBrush(point, editor.brushRadius, combine, viewport)
-            }
-          />
-        ) : null
+      panel={
+        <SplatPanels
+          panel={state.panel}
+          data={data}
+          splat={splat}
+          pres={pres}
+          editor={editor}
+          showEdit={showEdit}
+          compare={compare}
+          grid={grid}
+          culling={{ off: cullingOff, onOff: onCullingOff }}
+          exportEdits={
+            // Éditions effectives à cuire dans l'export : celles de l'éditeur en cours
+            // d'édition, sinon celles persistées (rejouées pour tous) en lecture seule.
+            showEdit
+              ? { transform: editor.transform, volumes: editor.volumes.serialize() }
+              : { transform: saved?.transform ?? null, volumes: saved?.volumes ?? [] }
+          }
+          onFrame={frameView}
+          onHome={homeView}
+          onImportAnim={importLayout}
+        />
       }
-      hud={
-        ready ? (
-          <ViewerHud
-            topLeft={
-              showEdit ? (
-                <>
-                  <SplatEditorToolbar
-                    tool={editor.tool}
-                    onTool={editor.setTool}
-                    brushRadius={editor.brushRadius}
-                    onBrushRadius={editor.setBrushRadius}
-                    renderMode={editor.renderMode}
-                    onRenderMode={editor.setRenderMode}
-                    selectedCount={editor.selection.selected.size}
-                    onClearSelection={editor.selection.clear}
-                    deletedCount={editor.deletedCount}
-                    onDelete={editor.deleteSelection}
-                    canUndo={editor.history.canUndo}
-                    canRedo={editor.history.canRedo}
-                    onUndo={editor.history.undo}
-                    onRedo={editor.history.redo}
-                    baseFlip={editor.baseFlip}
-                    onToggleFlip={editor.toggleBaseFlip}
-                    dirty={editor.dirty}
-                    busy={editor.busy}
-                    onSave={() => void editor.save()}
-                    onReset={() => void editor.reset()}
-                  />
-                  <VolumesBar volumes={editor.volumes} />
-                  <TransformFields
-                    label={editor.fields.label}
-                    shape={editor.fields.shape}
-                    value={editor.fields.value}
-                    onCommit={editor.fields.commit}
-                    gizmo={editor.gizmo}
-                  />
-                </>
-              ) : undefined
-            }
-            topRight={
-              <TopRightControls
-                splat={splat}
-                pres={pres}
-                canPresent={canPresent}
-                grid={grid}
-                onFullscreen={onFullscreen}
-                exportData={{
-                  // Éditions effectives à cuire dans l'export (41.A/C) : celles de l'éditeur en
-                  // cours d'édition, sinon celles persistées (rejouées pour tous) en lecture seule.
-                  edits: showEdit
-                    ? { transform: editor.transform, volumes: editor.volumes.serialize() }
-                    : { transform: saved?.transform ?? null, volumes: saved?.volumes ?? [] },
-                  originalName: data.media.originalName,
-                  originalUrl: data.url,
-                }}
-              />
-            }
-            bottomLeft={
-              <>
-                {compare.enabled && <CompareBar compare={compare} />}
-                <PaintBar paint={paint} />
-                <CameraBar
-                  fov={pres.rig.fov}
-                  onFov={pres.rig.setFov}
-                  roll={pres.rig.roll}
-                  onRoll={pres.rig.setRoll}
-                  onFrame={frameView}
-                  onHome={homeView}
-                  kf={pres.anim}
-                  dof={{
-                    aperture: pres.rig.aperture,
-                    onAperture: pres.rig.setAperture,
-                    focusPick: pres.rig.focusPick,
-                    onToggleFocusPick: pres.rig.toggleFocusPick,
-                  }}
-                  layout={{
-                    active: pres.layout.layoutMode,
-                    onToggle: () => pres.layout.setLayoutMode(!pres.layout.layoutMode),
-                  }}
-                />
-                <AnimPanel
-                  anim={pres.anim}
-                  onOrbitPreset={pres.applyOrbitPreset}
-                  onSave={canPresent ? () => void pres.save() : undefined}
-                  onClear={canPresent ? () => void pres.clear() : undefined}
-                  busy={pres.busy}
-                  onAttach={attachLayout}
-                  onImport={importLayout}
-                  editable={canPresent}
-                />
-              </>
-            }
-          />
-        ) : null
+      transport={
+        <SpatialTransport
+          anim={pres.anim}
+          editable={canPresent}
+          track="camera"
+          onAttach={attachLayout}
+          drawerOpen={state.drawer === 'curves'}
+          onDrawer={() => update({ drawer: state.drawer === 'curves' ? null : 'curves' })}
+        />
       }
-    />
+      drawer={state.drawer === 'curves' ? <CurvesDrawer anim={pres.anim} editable={canPresent} /> : undefined}
+    >
+      <SplatPane
+        containerRef={splat.containerRef}
+        ready={splat.ready}
+        loadError={splat.loadError}
+        progress={splat.progress}
+        status={data.media.status}
+        aspect={data.splatPresentation?.camera?.aspect}
+        overlay={overlay}
+        pip={
+          pres.layout.layoutMode && ready ? (
+            <PipFrame
+              label="Caméra layout"
+              aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
+              onRect={splat.setPipRect}
+            />
+          ) : undefined
+        }
+        editorOverlay={
+          paint.active && ready ? (
+            <PaintOverlay
+              color={paint.color}
+              getCanvas={() => getSceneHandle()?.dom ?? null}
+              onStroke={paint.addStroke}
+            />
+          ) : showEdit && selectTool && ready ? (
+            <SelectionOverlay
+              tool={selectTool}
+              brushRadius={editor.brushRadius}
+              getCanvas={() => getSceneHandle()?.dom ?? null}
+              onCommit={editor.selection.commitShape}
+              onBrush={(point, combine, viewport) =>
+                editor.selection.commitBrush(point, editor.brushRadius, combine, viewport)
+              }
+            />
+          ) : null
+        }
+      />
+    </ReviewChrome>
   );
 }
