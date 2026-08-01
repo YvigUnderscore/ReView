@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../components/ui/context-menu';
 import PrimMenuItems from './panels/PrimMenuItems';
@@ -113,6 +114,20 @@ export default function Model3DReview({
   useEffect(() => {
     if (ann.sceneOverride === null && sceneDirty) revert();
   }, [ann.sceneOverride, sceneDirty, revert]);
+  // La scène d'un commentaire reste appliquée après un mouvement de vue (46.T) : Échap la
+  // relâche — même touche que le retour à l'outil de repos, même sémantique de « repos ».
+  const hasCommentScene = ann.viewedSceneOverride != null;
+  const { setViewedSceneOverride } = ann;
+  useEffect(() => {
+    if (!hasCommentScene) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) return;
+      if (e.key === 'Escape') setViewedSceneOverride(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [hasCommentScene, setViewedSceneOverride]);
   // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
   const [recomposeOpen, setRecomposeOpen] = useState(false);
   const [savingOverride, setSavingOverride] = useState(false);
@@ -239,6 +254,18 @@ export default function Model3DReview({
               reprocessing={reprocessing}
               processingError={data.processingError}
               onReprocess={onReprocess}
+              notice={
+                hasCommentScene ? (
+                  <button
+                    onClick={() => setViewedSceneOverride(null)}
+                    title="Revenir à la scène par défaut (Échap)"
+                    className="absolute top-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground shadow-lg ring-2 ring-primary/30 hover:opacity-90"
+                  >
+                    <Undo2 size={12} /> Scène du commentaire · revenir
+                    <kbd className="rounded bg-primary-foreground/20 px-1 text-[9px]">Échap</kbd>
+                  </button>
+                ) : undefined
+              }
             />
           </div>
         </ContextMenuTrigger>

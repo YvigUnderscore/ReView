@@ -7,7 +7,11 @@ import type { TransformMode } from '../viewer/gizmos/useGizmoModeShortcuts';
 import { IDENTITY_TRANSFORM } from './sceneOverride';
 import { eulerTransformFromMesh } from './modelGizmoTransform';
 import type { Model3DThreeState } from './useModel3DThree';
+import { usePrimGizmo } from './usePrimGizmo';
 import type { UsdSceneState } from './useUsdScene';
+
+/** Cible vide stable pour le gizmo par prim quand aucune scène USD n'est montée. */
+const EMPTY_TARGETS = () => [];
 
 /** Outils du rail sans implémentation dans le viewer 3D (le pinceau et la zone sont splat). */
 export const MODEL_HIDDEN_TOOLS: ToolId[] = ['paint', 'region'];
@@ -60,16 +64,16 @@ export function useModel3DChrome({
     },
   });
 
-  useTransformGizmo(m, {
+  usePrimGizmo(m, {
     enabled: mode !== 'navigate' && !!primObject,
     mode: mode === 'navigate' ? 'rotate' : mode,
     target: primObject,
-    // Pendant le drag, TransformControls déplace l'objet directement ; le delta n'est relevé
-    // qu'au lâcher, puis `applyPlan` le répercute sur tous les objets du prim.
-    onChange: () => {},
-    onCommit: () => {
-      if (!primObject || !usdScene) return;
-      const commit = usdScene.commitPrimTransform(primObject);
+    targets: usdScene?.selectedObjects ?? EMPTY_TARGETS,
+    // Pendant le drag, le proxy pilote la pose de l'objet ; le delta n'est relevé qu'au
+    // lâcher, puis `applyPlan` le répercute sur tous les objets du prim.
+    onCommit: (object) => {
+      if (!usdScene) return;
+      const commit = usdScene.commitPrimTransform(object);
       if (!commit) return;
       const { setPrim } = usdScene;
       history.push({

@@ -9,11 +9,21 @@ import type { MediaResp } from './reviewTypes';
  * Actions de gestion du média de la review (extrait de ReviewPage, budget 300) :
  * publication (verrou Phase 11) et relance de conversion 3D.
  */
-export function useMediaActions(id: number, model3d: { clearLoadError: () => void }) {
+export function useMediaActions(
+  id: number,
+  model3d: { clearLoadError: () => void },
+  /**
+   * Exécuté avant la publication (46.S) : la mise en scène non enregistrée du gestionnaire
+   * devient l'override de base — ce qu'il voit est ce que les reviewers verront par défaut.
+   * Renvoyer `false` annule la publication (le média serait figé sans la mise en scène voulue).
+   */
+  beforePublish?: () => Promise<boolean>,
+) {
   const qc = useQueryClient();
   const [reprocessing, setReprocessing] = useState(false);
 
   const publishMedia = async () => {
+    if (beforePublish && !(await beforePublish())) return;
     try {
       const { media } = await api.post<{ media: MediaResp['media'] }>(`/api/media/${id}/publish`);
       // Mise à jour ciblée du cache : pas de refetch (les URLs présignées changeraient

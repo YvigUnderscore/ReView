@@ -146,13 +146,25 @@ def usd_path_of(obj):
     return "/" + "/".join(reversed(names))
 
 
-def tag_variant_membership(objects, prim, set_name, option):
-    """Marque les objets d'un sous-arbre comme appartenant a une option de variante."""
+def tag_variant_membership(objects, prim, selections):
+    """Marque les objets d'un sous-arbre comme appartenant a des options de variantes.
+
+    `selections` est un dict set -> option, fusionne avec l'existant : un prim peut porter
+    **plusieurs** jeux (Kitchen_set : les assiettes ont modelingVariant ET shadingVariant).
+    L'ancien marquage a cle unique s'ecrasait d'un jeu a l'autre — changer un jeu laissait la
+    geometrie de base visible a cote de l'option cuite, d'ou des doublons a l'ecran (46.R).
+    Encode en chaine `set=option;set=option` : les extras glTF ne portent que des scalaires.
+    """
     count = 0
     for obj in objects:
         obj["usdVariantPrim"] = prim
-        obj["usdVariantSet"] = set_name
-        obj["usdVariantOption"] = option
+        merged = {}
+        for part in str(obj.get("usdVariants", "")).split(";"):
+            if "=" in part:
+                key, value = part.split("=", 1)
+                merged[key] = value
+        merged.update(selections)
+        obj["usdVariants"] = ";".join("%s=%s" % (k, v) for k, v in sorted(merged.items()))
         count += 1
     return count
 
@@ -181,6 +193,7 @@ def bake_variant_layers(manifest, vertex_budget, time_budget):
     import time
 
     started = time.monotonic()
+    defaults = defaults_by_prim(manifest)
     baked = []
     skipped = []
     for entry in manifest:
@@ -220,25 +233,37 @@ def bake_variant_layers(manifest, vertex_budget, time_budget):
 
         for obj in keep:
             obj["usdPath"] = usd_path_of(obj)
-        tag_variant_membership(keep, prim, set_name, option)
+        # Le sous-arbre de cette option est compose avec les AUTRES jeux du prim a leur valeur
+        # par defaut : il porte donc toutes ces appartenances, pas seulement la sienne — sinon
+        # il resterait visible quand un autre jeu du meme prim change (doublons, 46.R).
+        selections = dict(defaults.get(prim, {}))
+        selections[set_name] = option
+        tag_variant_membership(keep, prim, selections)
         baked.append({"prim": prim, "set": set_name, "option": option, "objects": len(keep)})
     return baked, skipped
 
 
-def tag_default_variants(manifest):
-    """Etiquette le sous-arbre deja present comme etant l'option **par defaut** de son jeu.
-
-    Sans cela, le viewer saurait montrer les options cuites mais pas masquer celle d'origine.
-    """
+def defaults_by_prim(manifest):
+    """Options par defaut de chaque jeu, regroupees par prim porteur."""
     defaults = {}
     for entry in manifest:
-        defaults.setdefault((entry["prim"], entry["set"]), entry["default"])
-    for (prim, set_name), option in defaults.items():
+        defaults.setdefault(entry["prim"], {}).setdefault(entry["set"], entry["default"])
+    return defaults
+
+
+def tag_default_variants(manifest):
+    """Etiquette le sous-arbre deja present comme etant l'option **par defaut** de ses jeux.
+
+    Sans cela, le viewer saurait montrer les options cuites mais pas masquer celle d'origine.
+    Tous les jeux du prim sont poses en une fois : la scene de base est composee avec chacun
+    a sa valeur par defaut.
+    """
+    for prim, selections in defaults_by_prim(manifest).items():
         # Descendance **stricte** : le prim porteur lui-meme reste hors variante, sinon le
         # masquer pour afficher une autre option masquerait aussi cette autre option, qui est
         # rebranchee sous lui.
         members = [o for o in bpy.data.objects if o.get("usdPath", "").startswith(prim + "/")]
-        tag_variant_membership(members, prim, set_name, option)
+        tag_variant_membership(members, prim, selections)
 
 
 def apply_timing(args):

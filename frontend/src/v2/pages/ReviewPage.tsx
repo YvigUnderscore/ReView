@@ -15,6 +15,7 @@ import { type Shape } from '../components/AnnotationCanvas';
 import type { ImageViewApi } from '../components/ImageReviewViewer';
 import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
+import { usePublishSceneOverride } from './review/usePublishSceneOverride';
 import { useAnnotations } from './review/useAnnotations';
 import { loadDraft, saveDraft } from './review/commentDraft';
 import { useCompareState } from './review/useCompareState';
@@ -136,9 +137,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   };
 
   // Désélectionne le commentaire courant et masque toute annotation affichée.
-  const clearSelection = () => {
+  // `keepScene` (46.T) : un mouvement de vue 3D garde la proposition de scène navigable.
+  const clearSelection = (opts?: { keepScene?: boolean }) => {
     setSelectedCommentId(null);
-    ann.clearViewed();
+    ann.clearViewed(opts);
     paint.showFromAnnotation(null);
   };
 
@@ -236,8 +238,12 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     fps: data?.fps ?? fpsOverride,
   });
 
+  // Publier fige la scène : la mise en scène 3D non enregistrée devient d'abord l'override de
+  // base (46.S) — ce que le gestionnaire voit est ce que les reviewers verront par défaut.
+  const publishSceneFirst = usePublishSceneOverride(id, data, ann);
+
   // Publication + relance de conversion (extrait — budget 300 lignes).
-  const { reprocessing, publishMedia, reprocessMedia } = useMediaActions(id, model3d);
+  const { reprocessing, publishMedia, reprocessMedia } = useMediaActions(id, model3d, publishSceneFirst);
 
   const kind = data?.media.kind;
   const fps = data?.fps ?? fpsOverride;

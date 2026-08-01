@@ -83,7 +83,7 @@ export default function ReviewViewer({
   canEdit: boolean;
   /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
   canManage: boolean;
-  onClearSelection: () => void;
+  onClearSelection: (opts?: { keepScene?: boolean }) => void;
   onSelectComment: (c: ReviewComment) => void;
   onManualSeek: () => void;
   onMarker: () => void;
@@ -143,7 +143,9 @@ export default function ReviewViewer({
   // ; image : annotations ancrées au pixel, conservées au zoom/pan.
   const clearOnViewMove = () => {
     if ((kind === 'MODEL_3D' || kind === 'SPLAT') && (selectedCommentId != null || ann.viewed))
-      onClearSelection();
+      // La proposition de scène 3D d'un commentaire reste appliquée (46.T) : on peut naviguer
+      // dans la scène modifiée ; Échap ou le bouton du viewer la relâchent.
+      onClearSelection({ keepScene: kind === 'MODEL_3D' });
   };
 
   return (

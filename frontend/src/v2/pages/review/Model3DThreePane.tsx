@@ -16,6 +16,7 @@ export default function Model3DThreePane({
   overlay,
   aspect,
   pip,
+  notice,
   canReprocess,
   reprocessing,
   processingError,
@@ -29,6 +30,8 @@ export default function Model3DThreePane({
   aspect?: number;
   /** Fenêtre PiP du mode layout (PipFrame — le rendu WebGL est dessiné dessous en scissor). */
   pip?: ReactNode;
+  /** Bandeau flottant en haut du viewer (46.T : retour à la scène par défaut). */
+  notice?: ReactNode;
   canReprocess: boolean;
   reprocessing: boolean;
   /** Raison de l'échec de traitement remontée par le worker (45.C), null si inconnue. */
@@ -48,6 +51,7 @@ export default function Model3DThreePane({
         <div ref={containerRef} className="absolute inset-0" />
         {pip}
       </ReviewFrame>
+      {notice}
 
       {status === 'PROCESSING' ? (
         <div className="absolute inset-0 flex items-center justify-center">

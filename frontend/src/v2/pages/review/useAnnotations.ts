@@ -104,17 +104,25 @@ export function useAnnotations(opts?: {
     setFuture([]);
     setHotspot3d(null);
     setCameraAnim(null);
+    // La proposition de scène est partie avec le commentaire : comme le hotspot, elle ne doit
+    // pas se rejoindre d'elle-même au commentaire suivant (46.T).
+    setSceneOverride(null);
     setStagedRefs([]);
     setAnnotating(false);
   };
 
-  /** Masque l'annotation du commentaire sélectionné. */
-  const clearViewed = () => {
+  /**
+   * Masque l'annotation du commentaire sélectionné. `keepScene` (46.T) conserve la proposition
+   * de scène 3D : un mouvement de vue efface le dessin (qui n'a de sens que depuis la caméra
+   * d'origine) mais la scène modifiée doit rester navigable — on en sort par Échap ou le
+   * bouton de retour du viewer.
+   */
+  const clearViewed = (opts?: { keepScene?: boolean }) => {
     setViewed(null);
     setViewed3d(null);
     setViewedAspect(null);
     setViewedCameraAnim(null);
-    setViewedSceneOverride(null);
+    if (!opts?.keepScene) setViewedSceneOverride(null);
   };
 
   return {

@@ -11,7 +11,7 @@ import {
   type BaseState,
   type IndexedObject,
 } from './sceneOverrideApply';
-import { emptyOverride, setPrimEdit } from './sceneOverride';
+import { emptyOverride, setPrimEdit, type SceneOverride } from './sceneOverride';
 
 const base = (over: Partial<BaseState> = {}): BaseState => ({
   position: [0, 0, 0],
@@ -82,13 +82,13 @@ describe('variantes cuites dans le GLB (46.G)', () => {
       object: 'hero',
       primPath: '/W/Asset/Geo',
       base: base(),
-      variant: { prim: '/W/Asset', set: 'modelingVariant', option: 'hero' },
+      variant: { prim: '/W/Asset', selections: { modelingVariant: 'hero' } },
     },
     {
       object: 'lo',
       primPath: '/W/Asset/Geo',
       base: base(),
-      variant: { prim: '/W/Asset', set: 'modelingVariant', option: 'lo' },
+      variant: { prim: '/W/Asset', selections: { modelingVariant: 'lo' } },
     },
     { object: 'commun', primPath: '/W/Asset', base: base() },
   ];
@@ -119,6 +119,62 @@ describe('variantes cuites dans le GLB (46.G)', () => {
 
   it('sans défaut connu, aucune option n’est retenue', () => {
     expect(planOverride(scene, null, {}).map((p) => p.visible)).toEqual([false, false, true]);
+  });
+});
+
+describe('prims à plusieurs jeux de variantes (46.R — assiettes Kitchen_set)', () => {
+  // Une assiette porte modelingVariant (PlateA/PlateB) ET shadingVariant (Clean/Dirty).
+  const prim = '/K/PlateBClean_1';
+  const defaults = { [prim]: { modelingVariant: 'PlateB', shadingVariant: 'Clean' } };
+  const scene: IndexedObject<string>[] = [
+    // Scène de base : composée avec les deux jeux à leur défaut.
+    {
+      object: 'base',
+      primPath: `${prim}/Geo`,
+      base: base(),
+      variant: { prim, selections: { modelingVariant: 'PlateB', shadingVariant: 'Clean' } },
+    },
+    // Option modeling cuite (shading resté au défaut pendant la cuisson).
+    {
+      object: 'plateA',
+      primPath: `${prim}/Geo`,
+      base: base(),
+      variant: { prim, selections: { modelingVariant: 'PlateA', shadingVariant: 'Clean' } },
+    },
+    // Option shading cuite (modeling resté au défaut).
+    {
+      object: 'dirty',
+      primPath: `${prim}/Geo`,
+      base: base(),
+      variant: { prim, selections: { modelingVariant: 'PlateB', shadingVariant: 'Dirty' } },
+    },
+  ];
+  const visible = (override: SceneOverride | null) =>
+    planOverride(scene, override, defaults)
+      .filter((p) => p.visible)
+      .map((p) => p.object);
+
+  it('au défaut, seule la scène de base est visible', () => {
+    expect(visible(null)).toEqual(['base']);
+  });
+
+  it('changer un jeu masque la base — plus de géométrie en double', () => {
+    // C'était le bug : la base ne portait qu'une appartenance (écrasée), donc elle restait
+    // affichée à côté de l'option cuite — deux assiettes à l'écran.
+    const override = setPrimEdit(emptyOverride(), prim, { variants: { modelingVariant: 'PlateA' } });
+    expect(visible(override)).toEqual(['plateA']);
+  });
+
+  it('changer l’autre jeu bascule vers son option, seule', () => {
+    const override = setPrimEdit(emptyOverride(), prim, { variants: { shadingVariant: 'Dirty' } });
+    expect(visible(override)).toEqual(['dirty']);
+  });
+
+  it('une combinaison non cuite ne montre rien plutôt qu’un mélange faux', () => {
+    const override = setPrimEdit(emptyOverride(), prim, {
+      variants: { modelingVariant: 'PlateA', shadingVariant: 'Dirty' },
+    });
+    expect(visible(override)).toEqual([]);
   });
 });
 
@@ -190,15 +246,24 @@ describe('indexPrimObjects', () => {
     expect(entry!.base).toMatchObject({ position: [1, 2, 3], scale: [1, 1, 1], visible: false });
   });
 
-  it('retient l’appartenance à une option de variante cuite', () => {
-    const child = fakeObject({
+  it('lit les appartenances multi-jeux (46.R) comme l’ancien format à jeu unique', () => {
+    const multi = fakeObject({
+      usdPath: '/K/Plate_1/Geo',
+      usdVariantPrim: '/K/Plate_1',
+      usdVariants: 'modelingVariant=PlateA;shadingVariant=Dirty',
+    });
+    const legacy = fakeObject({
       usdPath: '/W/Asset/Geo',
       usdVariantPrim: '/W/Asset',
       usdVariantSet: 'modelingVariant',
       usdVariantOption: 'lo',
     });
-    const [entry] = indexPrimObjects(asObject3D(fakeObject({}, [child])), ['/W/Asset/Geo']);
-    expect(entry!.variant).toEqual({ prim: '/W/Asset', set: 'modelingVariant', option: 'lo' });
+    const [a, b] = indexPrimObjects(asObject3D(fakeObject({}, [multi, legacy])), []);
+    expect(a!.variant).toEqual({
+      prim: '/K/Plate_1',
+      selections: { modelingVariant: 'PlateA', shadingVariant: 'Dirty' },
+    });
+    expect(b!.variant).toEqual({ prim: '/W/Asset', selections: { modelingVariant: 'lo' } });
   });
 
   it('replie sur le chemin brut quand aucun prim USD ne correspond', () => {

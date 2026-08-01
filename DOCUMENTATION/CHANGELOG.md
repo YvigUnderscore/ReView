@@ -21,6 +21,14 @@ panel. Keep entries short and user-facing (features and notable fixes, not inter
   option instead of a full scene import, so scenes with hundreds of variant sets (book colors,
   prop looks) get every option baked. Options that could not be baked are greyed out in the
   menu instead of silently doing nothing.
+- **No more duplicated geometry**: props carrying several variant sets (a plate with both a
+  modeling and a shading variant) no longer show two copies when you switch one of them.
+- **Prim gizmo on the geometry**: the move/rotate/scale gizmo now appears on the selected
+  object and pivots around its center, wherever it sits in the scene.
+- **Publish keeps your staging**: unsaved scene changes become the media's default scene when
+  you publish — what you see is what reviewers get.
+- **Navigate a comment's proposal**: selecting a comment with scene changes keeps them applied
+  while you move the camera; return to the default scene with `Esc` or the floating button.
 
 ## 2026-08 — USD scene graph & overrides
 

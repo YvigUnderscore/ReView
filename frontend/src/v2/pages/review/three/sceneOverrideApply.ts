@@ -21,12 +21,17 @@ export interface BaseState {
   visible: boolean;
 }
 
-/** Appartenance d'un objet à une option de variante cuite dans le GLB (46.G). */
+/** Appartenance d'un objet aux options de variantes cuites dans le GLB (46.G, multi-jeux 46.R). */
 export interface VariantMembership {
-  /** Prim porteur du jeu de variantes. */
+  /** Prim porteur des jeux de variantes. */
   prim: string;
-  set: string;
-  option: string;
+  /**
+   * Option requise par jeu — l'objet n'est visible que si **toutes** correspondent. Un prim
+   * peut porter plusieurs jeux (assiettes : modelingVariant ET shadingVariant) : chaque
+   * sous-arbre cuit est composé avec les autres jeux à leur valeur par défaut, et doit
+   * disparaître dès que l'un d'eux change.
+   */
+  selections: Record<string, string>;
 }
 
 /** Objet indexé : son chemin de prim résolu et son état d'origine. */
@@ -55,6 +60,23 @@ export function effectiveVariant(
   return override?.prims[prim]?.variants?.[set] ?? defaults[prim]?.[set];
 }
 
+/**
+ * Vrai si l'objet appartient aux options **retenues** de tous ses jeux de variantes (ou n'en
+ * porte aucun). C'est le prédicat unique de visibilité de variante : plan d'application,
+ * grisement de l'arbre et cibles de cadrage s'y réfèrent.
+ */
+export function variantActive<T>(
+  entry: IndexedObject<T>,
+  override: SceneOverride | null,
+  defaults: VariantSelection,
+): boolean {
+  const membership = entry.variant;
+  if (!membership) return true;
+  return Object.entries(membership.selections).every(
+    ([set, option]) => effectiveVariant(override, defaults, membership.prim, set) === option,
+  );
+}
+
 /** Ce qu'il faut écrire sur un objet pour refléter l'override. */
 export interface ObjectPlan<T> {
   object: T;
@@ -74,13 +96,13 @@ export function planOverride<T>(
   /** Options de variantes actives à la conversion — base sur laquelle l'override s'applique. */
   variantDefaults: VariantSelection = {},
 ): ObjectPlan<T>[] {
-  return indexed.map(({ object, primPath, base, variant }) => {
+  return indexed.map((entry) => {
+    const { object, primPath, base } = entry;
     const edit = override?.prims[primPath];
     const delta: PrimTransform = edit?.transform ?? IDENTITY_TRANSFORM;
-    // Variante cuite (46.G) : l'objet n'existe dans le GLB que pour une option donnée, il
-    // n'est visible que si c'est celle retenue. C'est ce qui rend la bascule instantanée.
-    const variantVisible =
-      !variant || effectiveVariant(override, variantDefaults, variant.prim, variant.set) === variant.option;
+    // Variante cuite (46.G) : l'objet n'existe dans le GLB que pour des options données, il
+    // n'est visible que si elles sont toutes retenues. C'est ce qui rend la bascule instantanée.
+    const variantVisible = variantActive(entry, override, variantDefaults);
     return {
       object,
       position: [base.position[0] + delta.t[0], base.position[1] + delta.t[1], base.position[2] + delta.t[2]],
@@ -109,6 +131,32 @@ export function captureBase(object: THREE.Object3D): BaseState {
  * appariée à l'arbre USD réel (`matchPrimPath`), les deux hiérarchies pouvant différer d'un
  * niveau. Un objet sans `usdPath` (GLB non issu d'USD) est ignoré.
  */
+/**
+ * Appartenances de variantes d'un nœud glTF. Deux encodages coexistent : `usdVariants`
+ * (`set=option;set=option`, multi-jeux — 46.R) et l'ancien couple `usdVariantSet`/
+ * `usdVariantOption` (un seul jeu) des médias convertis avant.
+ */
+function parseMembership(data: {
+  usdVariantPrim?: unknown;
+  usdVariants?: unknown;
+  usdVariantSet?: unknown;
+  usdVariantOption?: unknown;
+}): VariantMembership | undefined {
+  const prim = data.usdVariantPrim;
+  if (typeof prim !== 'string' || !prim) return undefined;
+  if (typeof data.usdVariants === 'string' && data.usdVariants) {
+    const selections: Record<string, string> = {};
+    for (const part of data.usdVariants.split(';')) {
+      const eq = part.indexOf('=');
+      if (eq > 0) selections[part.slice(0, eq)] = part.slice(eq + 1);
+    }
+    if (Object.keys(selections).length > 0) return { prim, selections };
+  }
+  if (typeof data.usdVariantSet === 'string' && typeof data.usdVariantOption === 'string')
+    return { prim, selections: { [data.usdVariantSet]: data.usdVariantOption } };
+  return undefined;
+}
+
 export function indexPrimObjects(
   root: THREE.Object3D,
   usdPaths: readonly string[],
@@ -116,17 +164,10 @@ export function indexPrimObjects(
   const indexed: IndexedObject<THREE.Object3D>[] = [];
   const paths = [...usdPaths];
   root.traverse((object) => {
-    const data = object.userData as
-      | { usdPath?: unknown; usdVariantPrim?: unknown; usdVariantSet?: unknown; usdVariantOption?: unknown }
-      | undefined;
+    const data = object.userData as Parameters<typeof parseMembership>[0] & { usdPath?: unknown };
     const raw = data?.usdPath;
     if (typeof raw !== 'string' || !raw.startsWith('/')) return;
-    const variant =
-      typeof data?.usdVariantPrim === 'string' &&
-      typeof data.usdVariantSet === 'string' &&
-      typeof data.usdVariantOption === 'string'
-        ? { prim: data.usdVariantPrim, set: data.usdVariantSet, option: data.usdVariantOption }
-        : undefined;
+    const variant = parseMembership(data);
     indexed.push({
       object,
       primPath: matchPrimPath(raw, paths) ?? raw,

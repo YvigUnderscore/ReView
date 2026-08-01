@@ -76,10 +76,14 @@ the scene, not just the nodes that happen to be drawn. Prims that exist but are 
   **instant**: every option is baked into the converted file, so nothing is reconverted and it
   works on published media too.
 - **Move / rotate / scale a prim** — select a prim, switch to the *Clean* mode and press `T`
-  (or `R` / `S`): the transform gizmo attaches to that prim instead of the whole model, and the
-  delta is written into the ReView override. Before publication a manager saves it for everyone;
-  after publication it travels with the next comment, like any other proposal. With no prim
-  selected the gizmo keeps transforming the whole model (version transform, pre-publish only).
+  (or `R` / `S`): the transform gizmo appears **on the prim's geometry** (rotation and scale
+  pivot around its center) and the delta is written into the ReView override. Before
+  publication a manager saves it for everyone; after publication it travels with the next
+  comment, like any other proposal. With no prim selected the gizmo keeps transforming the
+  whole model (version transform, pre-publish only).
+- **Publishing freezes what you see** — any unsaved scene changes (variants, moved prims,
+  visibility) are saved as the media's override automatically when you press *Publish*, and
+  replayed for every reviewer as the default scene.
 - The tree also lists geometry the analyzer cannot compose — baked variant options live in the
   scene as implicit prims, so they can be selected and isolated like any other. Rows are greyed
   when their geometry is not currently drawn (inactive variant, missing from the GLB).
@@ -95,7 +99,9 @@ Overrides live at three levels:
    (*Save for everyone*). It is **frozen at publication** and replayed for every viewer.
 2. **A proposal attached to a comment**: whatever you changed travels with the comment and is
    replayed only when that comment is selected. This is how reviewers suggest changes on a
-   published asset without altering the shared scene.
+   published asset without altering the shared scene. Moving the camera hides the comment's
+   drawing but **keeps its scene applied**, so you can inspect the proposal from any angle —
+   a small floating button (or `Esc`) returns to the default scene.
 3. **Your local exploration**, which is never saved unless you do one of the above. *Cancel*
    returns to the saved state.
 

@@ -18,12 +18,12 @@ import {
 } from './sceneOverride';
 import {
   applyPlan,
-  effectiveVariant,
   indexPrimObjects,
   makePrimResolver,
   planOverride,
   renderedPrimPaths,
   transformDeltaFrom,
+  variantActive,
   type IndexedObject,
   type VariantSelection,
 } from './sceneOverrideApply';
@@ -208,13 +208,8 @@ export function useUsdScene(
    */
   const renderedPaths = useMemo(() => {
     const shown = new Set<string>();
-    for (const entry of indexed) {
-      const active =
-        !entry.variant ||
-        effectiveVariant(override, variantDefaults, entry.variant.prim, entry.variant.set) ===
-          entry.variant.option;
-      if (active) shown.add(entry.primPath);
-    }
+    for (const entry of indexed)
+      if (variantActive(entry, override, variantDefaults)) shown.add(entry.primPath);
     return shown;
   }, [indexed, override, variantDefaults]);
 
@@ -224,13 +219,7 @@ export function useUsdScene(
   const selectedObjects = useCallback((): THREE.Object3D[] => {
     if (!selected || isHidden(override, selected)) return [];
     return indexed
-      .filter((entry) => entry.primPath === selected)
-      .filter(
-        (entry) =>
-          !entry.variant ||
-          effectiveVariant(override, variantDefaults, entry.variant.prim, entry.variant.set) ===
-            entry.variant.option,
-      )
+      .filter((entry) => entry.primPath === selected && variantActive(entry, override, variantDefaults))
       .map((entry) => entry.object);
   }, [selected, indexed, override, variantDefaults]);
 
