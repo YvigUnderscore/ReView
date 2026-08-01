@@ -92,8 +92,8 @@ export default function Model3DReview({
     () => normalizeOverride(ann.viewedSceneOverride),
     [ann.viewedSceneOverride],
   );
-  const scene = useUsdScene(data, model3d, ready, commentOverride, ann.setSceneOverride);
-  useUsdPicking(model3d, ready, scene.select);
+  const scene = useUsdScene(data, model3d.getSceneHandle, ready, commentOverride, ann.setSceneOverride);
+  useUsdPicking(model3d.getSceneHandle, ready, scene.select);
   // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
   const [recomposeOpen, setRecomposeOpen] = useState(false);
   const [savingOverride, setSavingOverride] = useState(false);

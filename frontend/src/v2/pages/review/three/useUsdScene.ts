@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type * as THREE from 'three';
 import type { MediaResp } from '../reviewTypes';
-import type { Model3DThreeState } from './useModel3DThree';
+import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { buildPrimTree, type PrimNode } from './usdScenegraph';
 import {
   emptyOverride,
@@ -69,7 +69,7 @@ function defaultsFrom(data: MediaResp | null): VariantSelection {
 
 export function useUsdScene(
   data: MediaResp | null,
-  model3d: Model3DThreeState,
+  getSceneHandle: () => ViewerSceneHandle | null,
   ready: boolean,
   /** Proposition du commentaire sélectionné, rejouée par-dessus l'override de base. */
   commentOverride: SceneOverride | null,
@@ -95,13 +95,13 @@ export function useUsdScene(
    */
   const indexed = useMemo<IndexedObject<THREE.Object3D>[]>(() => {
     if (!ready) return [];
-    const root = model3d.getSceneHandle()?.modelObject;
+    const root = getSceneHandle()?.modelObject;
     if (!root) return [];
     return indexPrimObjects(
       root,
       (usd?.prims ?? []).map((p) => p.path),
     );
-  }, [ready, model3d, usd]);
+  }, [ready, getSceneHandle, usd]);
 
   // Application : recalculée depuis l'état d'origine, donc revenir en arrière rétablit
   // exactement la scène de départ.

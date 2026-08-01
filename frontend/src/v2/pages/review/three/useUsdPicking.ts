@@ -1,35 +1,41 @@
-import { useEffect } from 'react';
-import type { Model3DThreeState } from './useModel3DThree';
+import { useEffect, useRef } from 'react';
+import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { isClickGesture, pickPrim, toNdc } from './usdPicking';
 
 /**
  * Sélection d'un prim au clic dans le viewer 3D (Phase 46, 46.C).
  *
- * Le clic gauche pilote aussi l'orbite : on n'interprète donc le geste comme une sélection
- * que si le pointeur n'a pas bougé entre l'appui et le relâchement. Un clic dans le vide
- * désélectionne, comme dans un DCC.
+ * Le clic gauche pilote aussi l'orbite : on n'interprète le geste comme une sélection que si
+ * le pointeur n'a pas bougé entre l'appui et le relâchement. Un clic dans le vide désélectionne,
+ * comme dans un DCC.
+ *
+ * La position d'appui vit dans une **ref** et non dans la portée de l'effet : le hook du viewer
+ * renvoie un objet neuf à chaque rendu, donc un rendu survenant entre l'appui et le relâchement
+ * réinstallerait les écouteurs et ferait perdre l'origine du geste — tout clic passerait alors
+ * pour un glissement. Pour la même raison, l'effet ne dépend que de `getSceneHandle`, stable.
  */
 export function useUsdPicking(
-  model3d: Model3DThreeState,
+  getSceneHandle: () => ViewerSceneHandle | null,
   ready: boolean,
   onSelect: (path: string | null) => void,
 ): void {
+  const down = useRef<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
     if (!ready) return;
-    const handle = model3d.getSceneHandle();
+    const handle = getSceneHandle();
     const dom = handle?.dom;
     const root = handle?.modelObject;
     if (!handle || !dom || !root) return;
 
-    let downX = 0;
-    let downY = 0;
     const onDown = (e: PointerEvent) => {
-      downX = e.clientX;
-      downY = e.clientY;
+      down.current = { x: e.clientX, y: e.clientY };
     };
     const onUp = (e: PointerEvent) => {
-      if (e.button !== 0) return;
-      if (!isClickGesture(e.clientX - downX, e.clientY - downY)) return;
+      const start = down.current;
+      down.current = null;
+      if (e.button !== 0 || !start) return;
+      if (!isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
       const rect = dom.getBoundingClientRect();
       onSelect(pickPrim(handle.THREE, handle.camera, root, toNdc(e.clientX, e.clientY, rect)));
     };
@@ -40,5 +46,5 @@ export function useUsdPicking(
       dom.removeEventListener('pointerdown', onDown);
       dom.removeEventListener('pointerup', onUp);
     };
-  }, [model3d, ready, onSelect]);
+  }, [getSceneHandle, ready, onSelect]);
 }
