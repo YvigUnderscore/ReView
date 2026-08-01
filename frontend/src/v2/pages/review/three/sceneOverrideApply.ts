@@ -21,12 +21,38 @@ export interface BaseState {
   visible: boolean;
 }
 
+/** Appartenance d'un objet à une option de variante cuite dans le GLB (46.G). */
+export interface VariantMembership {
+  /** Prim porteur du jeu de variantes. */
+  prim: string;
+  set: string;
+  option: string;
+}
+
 /** Objet indexé : son chemin de prim résolu et son état d'origine. */
 export interface IndexedObject<T> {
   object: T;
   /** Chemin du prim USD, ou le chemin brut du glTF si aucun prim ne correspond. */
   primPath: string;
   base: BaseState;
+  /** Renseigné si l'objet appartient à une option de variante — sinon il est toujours visible. */
+  variant?: VariantMembership;
+}
+
+/** Option active par jeu de variantes : `{ '/World/Asset': { modelingVariant: 'hero' } }`. */
+export type VariantSelection = Record<string, Record<string, string>>;
+
+/**
+ * Option retenue pour un jeu de variantes : celle de l'override si l'utilisateur en a choisi
+ * une, sinon celle qu'avait la scène à la conversion.
+ */
+export function effectiveVariant(
+  override: SceneOverride | null,
+  defaults: VariantSelection,
+  prim: string,
+  set: string,
+): string | undefined {
+  return override?.prims[prim]?.variants?.[set] ?? defaults[prim]?.[set];
 }
 
 /** Ce qu'il faut écrire sur un objet pour refléter l'override. */
@@ -45,17 +71,24 @@ export interface ObjectPlan<T> {
 export function planOverride<T>(
   indexed: readonly IndexedObject<T>[],
   override: SceneOverride | null,
+  /** Options de variantes actives à la conversion — base sur laquelle l'override s'applique. */
+  variantDefaults: VariantSelection = {},
 ): ObjectPlan<T>[] {
-  return indexed.map(({ object, primPath, base }) => {
+  return indexed.map(({ object, primPath, base, variant }) => {
     const edit = override?.prims[primPath];
     const delta: PrimTransform = edit?.transform ?? IDENTITY_TRANSFORM;
+    // Variante cuite (46.G) : l'objet n'existe dans le GLB que pour une option donnée, il
+    // n'est visible que si c'est celle retenue. C'est ce qui rend la bascule instantanée.
+    const variantVisible =
+      !variant || effectiveVariant(override, variantDefaults, variant.prim, variant.set) === variant.option;
     return {
       object,
       position: [base.position[0] + delta.t[0], base.position[1] + delta.t[1], base.position[2] + delta.t[2]],
       rotation: [base.rotation[0] + delta.r[0], base.rotation[1] + delta.r[1], base.rotation[2] + delta.r[2]],
       scale: [base.scale[0] * delta.s[0], base.scale[1] * delta.s[1], base.scale[2] * delta.s[2]],
       // `visible: false` sur un objet masque toute sa descendance : l'héritage est gratuit.
-      visible: edit?.visible ?? base.visible,
+      // Une option de variante non retenue l'emporte sur toute demande de visibilité.
+      visible: variantVisible && (edit?.visible ?? base.visible),
     };
   });
 }
@@ -83,9 +116,23 @@ export function indexPrimObjects(
   const indexed: IndexedObject<THREE.Object3D>[] = [];
   const paths = [...usdPaths];
   root.traverse((object) => {
-    const raw = (object.userData as { usdPath?: unknown } | undefined)?.usdPath;
+    const data = object.userData as
+      | { usdPath?: unknown; usdVariantPrim?: unknown; usdVariantSet?: unknown; usdVariantOption?: unknown }
+      | undefined;
+    const raw = data?.usdPath;
     if (typeof raw !== 'string' || !raw.startsWith('/')) return;
-    indexed.push({ object, primPath: matchPrimPath(raw, paths) ?? raw, base: captureBase(object) });
+    const variant =
+      typeof data?.usdVariantPrim === 'string' &&
+      typeof data.usdVariantSet === 'string' &&
+      typeof data.usdVariantOption === 'string'
+        ? { prim: data.usdVariantPrim, set: data.usdVariantSet, option: data.usdVariantOption }
+        : undefined;
+    indexed.push({
+      object,
+      primPath: matchPrimPath(raw, paths) ?? raw,
+      base: captureBase(object),
+      ...(variant ? { variant } : {}),
+    });
   });
   return indexed;
 }

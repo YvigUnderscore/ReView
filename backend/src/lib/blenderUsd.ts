@@ -36,6 +36,19 @@ export const blenderSummarySchema = z.object({
   fps: z.number().positive().default(24),
   animated: z.boolean().default(false),
   blender: z.string().default(''),
+  /** Options de variantes réellement cuites dans le GLB (46.G). */
+  variantsBaked: z
+    .array(
+      z.object({
+        prim: z.string(),
+        set: z.string(),
+        option: z.string(),
+        objects: z.number().int().nonnegative().default(0),
+      }),
+    )
+    .default([]),
+  /** Options écartées faute de budget — la bascule reste alors une reconversion. */
+  variantsSkipped: z.array(z.object({ prim: z.string(), set: z.string(), option: z.string() })).default([]),
 });
 
 export type BlenderSummary = z.infer<typeof blenderSummarySchema>;
@@ -51,6 +64,22 @@ export interface BlenderUsdOptions {
   fps?: number;
   /** Force une sortie statique (scene sans animation ou animation non souhaitee). */
   noAnimation?: boolean;
+  /** Manifeste JSON des options de variantes a cuire dans le GLB (46.G). */
+  variantLayers?: string;
+  /** Budget de sommets au-dela duquel les options restantes ne sont plus cuites. */
+  variantVertexBudget?: number;
+}
+
+/** Une option de variante a cuire : la couche a importer et le sous-arbre a en conserver. */
+export interface VariantLayerEntry {
+  /** Couche USD (overlay) selectionnant cette option. */
+  stage: string;
+  /** Prim porteur du jeu de variantes — seul son sous-arbre est conserve. */
+  prim: string;
+  set: string;
+  option: string;
+  /** Option active dans la scene de base, pour etiqueter le sous-arbre d'origine. */
+  default: string;
 }
 
 /**
@@ -82,6 +111,9 @@ export function buildBlenderArgs(scriptPath: string, opts: BlenderUsdOptions): s
   if (hasRange) args.push('--frame-start', String(opts.frameStart), '--frame-end', String(opts.frameEnd));
   if (Number.isFinite(opts.fps) && (opts.fps as number) > 0) args.push('--fps', String(opts.fps));
   if (opts.noAnimation) args.push('--no-animation');
+  if (opts.variantLayers) args.push('--variant-layers', opts.variantLayers);
+  if (Number.isFinite(opts.variantVertexBudget) && (opts.variantVertexBudget as number) > 0)
+    args.push('--variant-vertex-budget', String(opts.variantVertexBudget));
   return args;
 }
 

@@ -64,6 +64,53 @@ describe('planOverride', () => {
   });
 });
 
+describe('variantes cuites dans le GLB (46.G)', () => {
+  const defaults = { '/W/Asset': { modelingVariant: 'hero' } };
+  const scene: IndexedObject<string>[] = [
+    {
+      object: 'hero',
+      primPath: '/W/Asset/Geo',
+      base: base(),
+      variant: { prim: '/W/Asset', set: 'modelingVariant', option: 'hero' },
+    },
+    {
+      object: 'lo',
+      primPath: '/W/Asset/Geo',
+      base: base(),
+      variant: { prim: '/W/Asset', set: 'modelingVariant', option: 'lo' },
+    },
+    { object: 'commun', primPath: '/W/Asset', base: base() },
+  ];
+
+  it('seule l’option active est visible, l’autre est masquée', () => {
+    const plans = planOverride(scene, null, defaults);
+    expect(plans.map((p) => [p.object, p.visible])).toEqual([
+      ['hero', true],
+      ['lo', false],
+      ['commun', true],
+    ]);
+  });
+
+  it('changer de variante bascule la visibilité sans reconversion', () => {
+    const override = setPrimEdit(emptyOverride(), '/W/Asset', { variants: { modelingVariant: 'lo' } });
+    const plans = planOverride(scene, override, defaults);
+    expect(plans.map((p) => [p.object, p.visible])).toEqual([
+      ['hero', false],
+      ['lo', true],
+      ['commun', true],
+    ]);
+  });
+
+  it('une option non retenue reste masquée même si l’override la demande visible', () => {
+    const override = setPrimEdit(emptyOverride(), '/W/Asset/Geo', { visible: true });
+    expect(planOverride(scene, override, defaults)[1]!.visible).toBe(false);
+  });
+
+  it('sans défaut connu, aucune option n’est retenue', () => {
+    expect(planOverride(scene, null, {}).map((p) => p.visible)).toEqual([false, false, true]);
+  });
+});
+
 describe('renderedPrimPaths', () => {
   it('déduplique les chemins des objets rendus', () => {
     expect(renderedPrimPaths(indexed([['/W/A'], ['/W/A'], ['/W/B']]))).toEqual(['/W/A', '/W/B']);

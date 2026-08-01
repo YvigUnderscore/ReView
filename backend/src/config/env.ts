@@ -69,6 +69,10 @@ const baseEnvSchema = z.object({
   // Binaires absents → repli automatique guc/assimp, cf. services/ModelConvertService.
   USD_BLENDER_BIN: z.string().default('/opt/blender/blender'),
   USD_PYTHON_BIN: z.string().default('/opt/usdenv/bin/python3'),
+  // 46.G : cuisson des variantes USD dans le GLB (bascule instantanée en review). Bornes
+  // pour ne pas produire un GLB démesuré sur une scène à nombreuses variantes.
+  USD_MAX_BAKED_VARIANTS: z.coerce.number().int().nonnegative().default(12),
+  USD_VARIANT_VERTEX_BUDGET: z.coerce.number().int().positive().default(8_000_000),
   // Garde-fou : un convertisseur bloqué immobiliserait un slot de worker indéfiniment.
   MODEL_CONVERT_TIMEOUT_MS: z.coerce.number().int().positive().default(900_000),
   // 45.A : bornes d'extraction des archives 3D (traversée, bombes de décompression).

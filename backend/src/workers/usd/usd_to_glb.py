@@ -49,6 +49,8 @@ def parse_args(argv):
     parser.add_argument("--frame-end", type=float)
     parser.add_argument("--fps", type=float)
     parser.add_argument("--no-animation", action="store_true")
+    parser.add_argument("--variant-layers", help="manifeste JSON des options de variantes a cuire")
+    parser.add_argument("--variant-vertex-budget", type=int, default=8_000_000)
     return parser.parse_args(argv)
 
 
@@ -125,14 +127,101 @@ def tag_usd_paths():
     """
     tagged = 0
     for obj in bpy.data.objects:
-        names = []
-        node = obj
-        while node is not None:
-            names.append(re.sub(r"\.\d{3}$", "", node.name))
-            node = node.parent
-        obj["usdPath"] = "/" + "/".join(reversed(names))
+        obj["usdPath"] = usd_path_of(obj)
         tagged += 1
     return tagged
+
+
+def usd_path_of(obj):
+    """Chemin de prim d'un objet, reconstruit depuis sa lignee (suffixes .NNN retires)."""
+    names = []
+    node = obj
+    while node is not None:
+        names.append(re.sub(r"\.\d{3}$", "", node.name))
+        node = node.parent
+    return "/" + "/".join(reversed(names))
+
+
+def tag_variant_membership(objects, prim, set_name, option):
+    """Marque les objets d'un sous-arbre comme appartenant a une option de variante."""
+    count = 0
+    for obj in objects:
+        obj["usdVariantPrim"] = prim
+        obj["usdVariantSet"] = set_name
+        obj["usdVariantOption"] = option
+        count += 1
+    return count
+
+
+def scene_vertex_count():
+    return sum(len(o.data.vertices) for o in bpy.data.objects if o.type == "MESH" and o.data)
+
+
+def bake_variant_layers(manifest, vertex_budget):
+    """Importe une passe par option de variante et ne garde que le sous-arbre concerne.
+
+    Cuire les variantes dans le GLB est ce qui rend leur bascule **instantanee et disponible
+    apres publication** : le viewer n'a plus qu'a montrer le sous-arbre choisi et masquer les
+    autres, sans reconversion. Le cout est additif (somme des options), pas combinatoire :
+    chaque option est importee avec les autres jeux de variantes a leur valeur par defaut.
+
+    Un budget de sommets borne la casse sur les scenes lourdes : au-dela, les options
+    restantes ne sont pas cuites et le resume le signale (`variantsBaked` partiel).
+    """
+    baked = []
+    skipped = []
+    for entry in manifest:
+        prim, set_name, option = entry["prim"], entry["set"], entry["option"]
+        if scene_vertex_count() > vertex_budget:
+            skipped.append({"prim": prim, "set": set_name, "option": option})
+            continue
+
+        before = set(bpy.data.objects)
+        try:
+            bpy.ops.wm.usd_import(
+                **supported(bpy.ops.wm.usd_import, {"filepath": os.path.abspath(entry["stage"])})
+            )
+        except Exception as exc:
+            print("variante %s=%s non importee: %s" % (set_name, option, exc), file=sys.stderr)
+            continue
+        fresh = [o for o in bpy.data.objects if o not in before]
+
+        # Seul le contenu SOUS le prim porteur differe : tout le reste de cette passe est un
+        # doublon de la scene de base. On garde donc la descendance stricte et on la rebranche
+        # sur le prim d'origine — sinon, le parent de la passe etant supprime, le sous-arbre
+        # se retrouverait a la racine et perdrait les transformations de ses ancetres.
+        host = next((o for o in before if o.get("usdPath") == prim), None)
+        keep, drop = [], []
+        for obj in fresh:
+            (keep if usd_path_of(obj).startswith(prim + "/") else drop).append(obj)
+        for obj in keep:
+            if obj.parent in drop or obj.parent is None:
+                obj.parent = host
+                obj.matrix_parent_inverse.identity()
+        for obj in drop:
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+        for obj in keep:
+            obj["usdPath"] = usd_path_of(obj)
+        tag_variant_membership(keep, prim, set_name, option)
+        baked.append({"prim": prim, "set": set_name, "option": option, "objects": len(keep)})
+    return baked, skipped
+
+
+def tag_default_variants(manifest):
+    """Etiquette le sous-arbre deja present comme etant l'option **par defaut** de son jeu.
+
+    Sans cela, le viewer saurait montrer les options cuites mais pas masquer celle d'origine.
+    """
+    defaults = {}
+    for entry in manifest:
+        defaults.setdefault((entry["prim"], entry["set"]), entry["default"])
+    for (prim, set_name), option in defaults.items():
+        # Descendance **stricte** : le prim porteur lui-meme reste hors variante, sinon le
+        # masquer pour afficher une autre option masquerait aussi cette autre option, qui est
+        # rebranchee sous lui.
+        members = [o for o in bpy.data.objects if o.get("usdPath", "").startswith(prim + "/")]
+        tag_variant_membership(members, prim, set_name, option)
 
 
 def apply_timing(args):
@@ -175,7 +264,7 @@ def export_glb(path, animate):
         raise RuntimeError("export glTF refuse par Blender (%s)" % ", ".join(result))
 
 
-def summarize(scene, animate, tagged):
+def summarize(scene, animate, tagged, baked, skipped):
     objects = list(bpy.data.objects)
     return {
         "objects": len(objects),
@@ -190,6 +279,8 @@ def summarize(scene, animate, tagged):
         "animated": bool(animate and scene.frame_end > scene.frame_start),
         "blender": bpy.app.version_string,
         "usdPaths": tagged,
+        "variantsBaked": baked,
+        "variantsSkipped": skipped,
     }
 
 
@@ -206,6 +297,15 @@ def main():
     reset_scene()
     import_usd(args.input, args.purpose)
     tagged = tag_usd_paths()
+
+    baked, skipped = [], []
+    if args.variant_layers:
+        with open(args.variant_layers, "r", encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        tag_default_variants(manifest)
+        baked, skipped = bake_variant_layers(manifest, args.variant_vertex_budget)
+        # Les passes de variantes ont ajoute des objets : on re-etiquette (idempotent).
+        tagged = tag_usd_paths()
     scene = apply_timing(args)
 
     if not bpy.data.objects:
@@ -217,7 +317,7 @@ def main():
     if not os.path.exists(args.output) or os.path.getsize(args.output) == 0:
         raise RuntimeError("GLB de sortie vide ou absent")
 
-    sys.stdout.write("%s %s\n" % (MARKER, json.dumps(summarize(scene, animate, tagged))))
+    sys.stdout.write("%s %s\n" % (MARKER, json.dumps(summarize(scene, animate, tagged, baked, skipped))))
     sys.stdout.flush()
 
 

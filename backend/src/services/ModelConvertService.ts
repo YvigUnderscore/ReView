@@ -26,6 +26,7 @@ import {
   summarizeBlenderError,
   type BlenderSummary,
   type UsdPurpose,
+  type VariantLayerEntry,
 } from '../lib/blenderUsd';
 
 /**
@@ -178,13 +179,66 @@ async function convertWithAssimp(input: string, output: string): Promise<void> {
   await assertGlbProduced(output, 'assimp');
 }
 
+/**
+ * Prépare une couche d'overlay par **option de variante non sélectionnée** (46.G) : chaque
+ * option est ensuite importée par Blender et cuite dans le GLB, ce qui rend la bascule
+ * instantanée en review — et donc possible après publication, sans reconversion.
+ *
+ * Le coût est additif : chaque option est composée avec les autres jeux de variantes à leur
+ * valeur courante, on ne produit pas le produit cartésien des combinaisons.
+ */
+async function prepareVariantLayers(
+  source: string,
+  info: UsdStageInfo | null,
+  workDir: string,
+): Promise<VariantLayerEntry[]> {
+  if (!info || info.variantSets.length === 0) return [];
+  const entries: VariantLayerEntry[] = [];
+  let index = 0;
+
+  for (const set of info.variantSets) {
+    const current = set.selected || set.options[0];
+    for (const option of set.options) {
+      if (option === current) continue; // déjà présent dans la scène de base
+      if (entries.length >= env.USD_MAX_BAKED_VARIANTS) break;
+      index += 1;
+      const variantsFile = join(workDir, `variant-${index}.json`);
+      const overlayOut = join(dirname(source), `_review_variant_${index}.usda`);
+      await writeFile(variantsFile, JSON.stringify({ [set.prim]: { [set.name]: option } }), 'utf8');
+      const recomposed = await inspectUsdStage(source, usdToolConfig(), {
+        variantsFile,
+        overlayOut,
+      }).catch((err) => {
+        logger.warn({ err }, `[ModelConvert] variante ${set.name}=${option} non préparée`);
+        return null;
+      });
+      if (recomposed)
+        entries.push({
+          stage: recomposed.stagePath,
+          prim: set.prim,
+          set: set.name,
+          option,
+          default: current ?? '',
+        });
+    }
+  }
+  return entries;
+}
+
 /** Convertit une scène USD via Blender headless (OpenUSD complet : composition, matériaux, anim). */
 async function convertWithBlender(
   stagePath: string,
   output: string,
   info: UsdStageInfo | null,
   purpose: UsdPurpose,
+  variantLayers: VariantLayerEntry[],
+  workDir: string,
 ): Promise<BlenderSummary | null> {
+  let manifest: string | undefined;
+  if (variantLayers.length > 0) {
+    manifest = join(workDir, 'variant-layers.json');
+    await writeFile(manifest, JSON.stringify(variantLayers), 'utf8');
+  }
   const args = buildBlenderArgs(resolveUsdScript('usd_to_glb.py'), {
     input: stagePath,
     output,
@@ -193,6 +247,8 @@ async function convertWithBlender(
     frameEnd: info?.hasAnimation ? info.endTimeCode : undefined,
     fps: info?.timeCodesPerSecond,
     noAnimation: info ? !info.hasAnimation : false,
+    variantLayers: manifest,
+    variantVertexBudget: env.USD_VARIANT_VERTEX_BUDGET,
   });
   let stdout = '';
   try {
@@ -282,7 +338,17 @@ async function convertUsd(
 
   const rootLayer = rootLabel;
   if (await hasBlender()) {
-    const blender = await convertWithBlender(stagePath, output, info, request.purpose);
+    // Cuisson des variantes (46.G) : chaque option devient un sous-arbre du GLB, la bascule
+    // se fait ensuite cote client — instantanee et disponible apres publication.
+    const variantLayers = await prepareVariantLayers(stagePath, info, workDir);
+    const blender = await convertWithBlender(
+      stagePath,
+      output,
+      info,
+      request.purpose,
+      variantLayers,
+      workDir,
+    );
     return {
       converter: 'blender',
       usd: buildUsdInfo(info, rootLayer, request, applied),
