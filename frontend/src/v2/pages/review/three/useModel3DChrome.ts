@@ -56,6 +56,7 @@ export function useModel3DChrome({
     else if (state.tool === 'cam-aim') cameraRig.setMode('rotate');
   }, [state.tool, cameraRig]);
 
-  // `savedTf` est posé par le hook du viewer à l'enregistrement de la transformation.
-  return { history, dirty: !m.savedTf };
+  // Ce qui dit si quelque chose est en attente, c'est l'édition locale de la transformation
+  // pas encore poussée sur la version — l'enregistrement la relâche.
+  return { history, dirty: m.tfDirty };
 }

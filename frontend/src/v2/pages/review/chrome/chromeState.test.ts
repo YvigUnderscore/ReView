@@ -70,7 +70,8 @@ describe('panels', () => {
 
 describe('reconcileChrome', () => {
   const state = (patch: Partial<ChromeState>): ChromeState => ({
-    ...defaultChromeState('SPLAT'),
+    ...defaultChromeState(),
+    panel: 'camera',
     ...patch,
   });
 
@@ -129,11 +130,12 @@ describe('préférences', () => {
   });
 
   it('retombe sur les défauts si la valeur est absente, corrompue ou étrangère au média', () => {
-    const fallback = { panel: 'camera', labels: false, comments: true };
+    // Défaut : dock replié — le média passe avant les réglages tant qu'on n'a rien choisi.
+    const fallback = { panel: null, labels: false, comments: true };
     expect(readChromePrefs('SPLAT', null)).toEqual(fallback);
     expect(readChromePrefs('SPLAT', '{oops')).toEqual(fallback);
     // `light` n'existe pas dans le dock d'un splat.
-    expect(readChromePrefs('SPLAT', JSON.stringify({ panel: 'light' })).panel).toBe('camera');
+    expect(readChromePrefs('SPLAT', JSON.stringify({ panel: 'light' })).panel).toBeNull();
   });
 
   it('conserve un dock explicitement replié', () => {

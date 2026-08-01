@@ -116,7 +116,8 @@ export default function DisplayPanel({
         </Group>
       )}
 
-      {model && (model.variants || model.cameras || model.skeleton?.has) && (
+      {/* Beaucoup de fichiers n'ont ni variante ni caméra : pas de section vide dans le dock. */}
+      {model && (model.variants?.names.length || model.cameras?.names.length || model.skeleton?.has) && (
         <Group title="Variantes du fichier">
           {model.variants && model.variants.names.length > 0 && (
             <Row label="Matériaux" stack>

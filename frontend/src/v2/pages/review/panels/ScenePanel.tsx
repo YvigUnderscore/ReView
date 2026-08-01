@@ -174,78 +174,85 @@ export default function ScenePanel({
         </Group>
       )}
 
-      <Group title="Performance">
-        {perf.lod && (
-          <Row
-            label="Niveau de détail"
-            stack
-            hint="Auto active le LOD sous 15 fps ; Streaming charge les pages à la demande"
-          >
-            <SegmentedControl
+      {/* Le modèle 3D n'a ni LOD ni effet d'apparition : pas de section vide dans son dock. */}
+      {(perf.lod || perf.culling || reveal) && (
+        <Group title="Performance">
+          {perf.lod && (
+            <Row
               label="Niveau de détail"
-              items={LODS}
-              value={perf.lod.mode}
-              onChange={perf.lod.onMode}
-            />
-          </Row>
-        )}
-        {perf.culling && (
-          <Row label="Culling de bord" hint="Désactivé : rien ne disparaît en zoom fort">
-            <Switch
-              checked={!perf.culling.off}
-              onCheckedChange={(v) => perf.culling?.onOff(!v)}
-              label="Culling de bord de cadre"
-            />
-          </Row>
-        )}
-        {reveal && (
-          <>
-            <Row label="Apparition à l’ouverture">
-              <Switch
-                checked={reveal.config !== null}
-                onCheckedChange={(v) => reveal.onConfig(v ? { type: 'fade', durationMs: 2500 } : null)}
-                label="Effet d’apparition à l’ouverture"
+              stack
+              hint="Auto active le LOD sous 15 fps ; Streaming charge les pages à la demande"
+            >
+              <SegmentedControl
+                label="Niveau de détail"
+                items={LODS}
+                value={perf.lod.mode}
+                onChange={perf.lod.onMode}
               />
             </Row>
-            {reveal.config && (
-              <Row label="Effet" stack>
-                <Select
-                  value={reveal.config.type}
-                  onChange={(e) => reveal.onConfig({ ...reveal.config!, type: e.target.value as RevealType })}
-                  className={DOCK_SELECT}
-                >
-                  {REVEALS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </Select>
+          )}
+          {perf.culling && (
+            <Row label="Culling de bord" hint="Désactivé : rien ne disparaît en zoom fort">
+              <Switch
+                checked={!perf.culling.off}
+                onCheckedChange={(v) => perf.culling?.onOff(!v)}
+                label="Culling de bord de cadre"
+              />
+            </Row>
+          )}
+          {reveal && (
+            <>
+              <Row label="Apparition à l’ouverture">
+                <Switch
+                  checked={reveal.config !== null}
+                  onCheckedChange={(v) => reveal.onConfig(v ? { type: 'fade', durationMs: 2500 } : null)}
+                  label="Effet d’apparition à l’ouverture"
+                />
               </Row>
-            )}
-            {reveal.config && (
-              <Row label="Durée">
-                <span className="flex gap-1">
-                  <NumberField
-                    label="s"
-                    value={Number((reveal.config.durationMs / 1000).toFixed(1))}
-                    onChange={(s) => reveal.onConfig({ ...reveal.config!, durationMs: Math.round(s * 1000) })}
-                    min={0.2}
-                    max={10}
-                    step={0.1}
-                    pixelsPerStep={6}
-                  />
-                  <IconButton
-                    icon={RotateCcw}
-                    label="Rejouer l’apparition"
-                    bordered
-                    onClick={reveal.onReplay}
-                  />
-                </span>
-              </Row>
-            )}
-          </>
-        )}
-      </Group>
+              {reveal.config && (
+                <Row label="Effet" stack>
+                  <Select
+                    value={reveal.config.type}
+                    onChange={(e) =>
+                      reveal.onConfig({ ...reveal.config!, type: e.target.value as RevealType })
+                    }
+                    className={DOCK_SELECT}
+                  >
+                    {REVEALS.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Row>
+              )}
+              {reveal.config && (
+                <Row label="Durée">
+                  <span className="flex gap-1">
+                    <NumberField
+                      label="s"
+                      value={Number((reveal.config.durationMs / 1000).toFixed(1))}
+                      onChange={(s) =>
+                        reveal.onConfig({ ...reveal.config!, durationMs: Math.round(s * 1000) })
+                      }
+                      min={0.2}
+                      max={10}
+                      step={0.1}
+                      pixelsPerStep={6}
+                    />
+                    <IconButton
+                      icon={RotateCcw}
+                      label="Rejouer l’apparition"
+                      bordered
+                      onClick={reveal.onReplay}
+                    />
+                  </span>
+                </Row>
+              )}
+            </>
+          )}
+        </Group>
+      )}
     </>
   );
 }

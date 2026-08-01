@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import { SegmentedControl } from '../../../components/ui/segmented-control';
-import ColorPicker from '../../../components/ColorPicker';
+import { USER_COLORS } from '../../../lib/userColor';
 import OptionsBar, { CommitGroup } from '../chrome/OptionsBar';
 import type { ModeId } from '../chrome/modes';
 import type { ReviewTool } from '../chrome/tools';
@@ -12,6 +12,9 @@ import type { CompareMode } from '../useCompareState';
 import type { Annotations } from '../useAnnotations';
 
 const DRAWING = new Set(['draw', 'rect', 'ellipse', 'arrow', 'polygon', 'text']);
+
+/** Encres proposées d'emblée — cinq teintes distinctes de la palette utilisateur. */
+const INK = [USER_COLORS[6], USER_COLORS[11], USER_COLORS[2], USER_COLORS[4], USER_COLORS[8]];
 
 const COMPARE_MODES = [
   { value: 'wipe' as const, label: 'Wipe' },
@@ -77,14 +80,32 @@ export default function MediaOptions({
           {drawing && (
             <>
               <span className="rv-row__label">Encre</span>
-              <ColorPicker
-                color={ann.color}
-                alpha={ann.alpha}
-                onChange={(color, alpha) => {
-                  ann.setColor(color);
-                  ann.setAlpha(alpha);
-                }}
-              />
+              <span className="flex gap-1">
+                {INK.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    title={`Encre ${c}`}
+                    aria-label={`Encre ${c}`}
+                    aria-pressed={ann.color.toLowerCase() === c.toLowerCase()}
+                    onClick={() => ann.setColor(c)}
+                    className={`h-5 w-5 rounded-full border-2 ${
+                      ann.color.toLowerCase() === c.toLowerCase() ? 'border-foreground' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+                {/* Couleur libre : le sélecteur natif s'ouvre hors de la page, il ne recouvre
+                    jamais le média — c'est tout l'intérêt par rapport à l'ancienne palette. */}
+                <input
+                  type="color"
+                  value={ann.color}
+                  onChange={(e) => ann.setColor(e.target.value)}
+                  title="Autre couleur"
+                  aria-label="Autre couleur d’encre"
+                  className="h-5 w-5 cursor-pointer rounded-full border border-border bg-transparent p-0"
+                />
+              </span>
               <NumberField
                 label="Épaisseur"
                 value={ann.penWidth}

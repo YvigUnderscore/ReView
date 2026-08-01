@@ -29,11 +29,13 @@ export function drawerForKind(kind: MediaKind): DrawerId {
   return isSpatialKind(kind) ? 'curves' : 'strip';
 }
 
-export function defaultChromeState(kind: MediaKind): ChromeState {
+export function defaultChromeState(): ChromeState {
   return {
     mode: DEFAULT_MODE,
     tool: DEFAULT_TOOL,
-    panel: panelsFor(kind)[0]?.id ?? null,
+    // Dock replié à la première ouverture : le média passe avant les réglages. L'utilisateur
+    // l'ouvre quand il en a besoin, et sa préférence est retenue par type de média.
+    panel: null,
     labels: false,
     comments: true,
     drawer: null,
@@ -68,7 +70,7 @@ export function chromePrefsKey(kind: MediaKind): string {
 export type ChromePrefs = Pick<ChromeState, 'panel' | 'labels' | 'comments'>;
 
 export function readChromePrefs(kind: MediaKind, raw: string | null): ChromePrefs {
-  const base = defaultChromeState(kind);
+  const base = defaultChromeState();
   const fallback: ChromePrefs = { panel: base.panel, labels: base.labels, comments: base.comments };
   if (!raw) return fallback;
   try {

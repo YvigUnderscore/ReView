@@ -96,9 +96,8 @@ export default function MediaChrome({
         ) : undefined
       }
       transport={
-        <div className="rv-transport">
-          <span className="rv-optbar__hint">Lecture, zoom et timecode se règlent sous l’image.</span>
-          <span className="ml-auto" />
+        // Le lecteur porte déjà sa ligne de temps : cette barre n'ouvre que la pellicule.
+        <div className="rv-transport justify-end">
           <Button
             size="sm"
             variant="ghost"

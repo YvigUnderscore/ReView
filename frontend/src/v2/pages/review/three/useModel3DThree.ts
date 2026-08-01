@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type * as THREE from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
@@ -66,7 +66,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const [fov, setFovState] = useState(45);
   const [roll, setRollState] = useState(0);
   const [loadError, setLoadError] = useState(false);
-  const [savedTf, setSavedTf] = useState(false);
+  const queryClient = useQueryClient();
   // Extensions glTF déclarées par le fichier chargé (fiche technique — 39.C).
   const [extensions, setExtensions] = useState<string[]>([]);
 
@@ -264,12 +264,14 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     if (!versionId) return;
     try {
       await api.patch(`/api/versions/${versionId}`, { transform });
-      setSavedTf(true);
-      setTimeout(() => setSavedTf(false), 1500);
+      // La version porte cette transformation : on relâche l'édition locale et on rafraîchit.
+      await queryClient.invalidateQueries({ queryKey: qk.version(versionId) });
+      setTfEdit(null);
+      toast.success('Transformation enregistrée');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la transformation");
     }
-  }, [versionId, transform]);
+  }, [versionId, transform, queryClient]);
 
   const hotspotAtCenter = useCallback((): Hotspot3D | null => {
     const rt = runtimeRef.current;
@@ -319,7 +321,8 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     transform,
     updateTransform,
     saveTransform,
-    savedTf,
+    /** Transformation modifiée localement et pas encore enregistrée sur la version. */
+    tfDirty: tfEdit !== null,
     loadError,
     clearLoadError,
     // Transport d'animation GLB (40.A) : animations, currentAnim, playing, timeMs, durationMs,

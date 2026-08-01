@@ -8,6 +8,7 @@ import {
   type ChromeState,
 } from './chromeState';
 import { modesFor } from './modes';
+import { panelsFor } from './panels';
 import { DEFAULT_TOOL, toolsFor } from './tools';
 
 /**
@@ -20,7 +21,7 @@ import { DEFAULT_TOOL, toolsFor } from './tools';
  * n'existe pas dans le mode courant.
  */
 function initialState(kind: MediaKind): ChromeState {
-  const base = defaultChromeState(kind);
+  const base = defaultChromeState();
   if (typeof window === 'undefined') return base;
   return { ...base, ...readChromePrefs(kind, window.localStorage.getItem(chromePrefsKey(kind))) };
 }
@@ -58,7 +59,8 @@ export function useChromeState(kind: MediaKind) {
 
       if (e.key === 'Tab') {
         e.preventDefault();
-        update({ panel: state.panel ? null : defaultChromeState(kind).panel });
+        // Tab replie le dock ouvert, ou rouvre le premier panneau du média.
+        update({ panel: state.panel ? null : (panelsFor(kind)[0]?.id ?? null) });
         return;
       }
       if (e.key === 'Escape') {
