@@ -73,6 +73,8 @@ export function useUsdScene(
   ready: boolean,
   /** Proposition du commentaire sélectionné, rejouée par-dessus l'override de base. */
   commentOverride: SceneOverride | null,
+  /** Publie le delta local pour qu'il soit joint au prochain commentaire (46.D). */
+  onLocalDelta?: (delta: SceneOverride | null) => void,
 ): UsdSceneState {
   const usd = data?.modelSource?.usd ?? null;
   const [local, setLocal] = useState<SceneOverride>(emptyOverride);
@@ -110,29 +112,43 @@ export function useUsdScene(
 
   const renderedPaths = useMemo(() => new Set(renderedPrimPaths(indexed)), [indexed]);
 
+  /**
+   * Toute édition locale passe ici : elle met à jour la scène **et** publie le delta pour le
+   * prochain commentaire. Fait dans le gestionnaire d'événement, pas dans un effet.
+   */
+  const editLocal = useCallback(
+    (next: (current: SceneOverride) => SceneOverride) =>
+      setLocal((current) => {
+        const updated = next(current);
+        onLocalDelta?.(isEmptyOverride(updated) ? null : updated);
+        return updated;
+      }),
+    [onLocalDelta],
+  );
+
   const setPrim = useCallback(
-    (path: string, patch: PrimEdit | null) => setLocal((o) => setPrimEdit(o, path, patch)),
-    [],
+    (path: string, patch: PrimEdit | null) => editLocal((o) => setPrimEdit(o, path, patch)),
+    [editLocal],
   );
 
   const isolate = useCallback(
     (path: string) => {
       const paths = (usd?.prims ?? []).map((p) => p.path);
-      setLocal((o) => isolatePrim(o, path, paths));
+      editLocal((o) => isolatePrim(o, path, paths));
     },
-    [usd],
+    [usd, editLocal],
   );
 
   const setVariant = useCallback(
     (prim: string, set: string, option: string) =>
-      setLocal((o) => {
+      editLocal((o) => {
         const current = o.prims[prim]?.variants ?? {};
         return setPrimEdit(o, prim, { variants: { ...current, [set]: option } });
       }),
-    [],
+    [editLocal],
   );
 
-  const revert = useCallback(() => setLocal(emptyOverride()), []);
+  const revert = useCallback(() => editLocal(() => emptyOverride()), [editLocal]);
 
   return {
     tree,

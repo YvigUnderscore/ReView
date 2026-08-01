@@ -57,6 +57,8 @@ export default function Model3DPanels({
   section,
   grid,
   scene,
+  onSaveOverride,
+  savingOverride,
   onRecompose,
   onImportAnim,
 }: {
@@ -73,6 +75,9 @@ export default function Model3DPanels({
   grid: { visible: boolean; toggle: () => void };
   /** Scenegraph USD + override (46.C), absent si le media n'est pas une scene USD. */
   scene?: UsdSceneState;
+  /** Enregistre l'override de base — absent apres publication ou sans droits (46.D). */
+  onSaveOverride?: () => void;
+  savingOverride?: boolean;
   /** Recomposition USD — gestionnaire, média non publié, source USD présente. */
   onRecompose?: () => void;
   onImportAnim?: (file: File) => void;
@@ -159,7 +164,13 @@ export default function Model3DPanels({
         // Scenegraph USD (46.C) : l'arbre reel de la scene, au-dessus des reperes de scene.
         scenegraph={
           scene && scene.tree.length > 0 ? (
-            <ScenegraphPanel scene={scene} usd={data.modelSource?.usd ?? null} onRevert={scene.revert} />
+            <ScenegraphPanel
+              scene={scene}
+              usd={data.modelSource?.usd ?? null}
+              onRevert={scene.revert}
+              onSave={onSaveOverride}
+              saving={savingOverride}
+            />
           ) : undefined
         }
       />

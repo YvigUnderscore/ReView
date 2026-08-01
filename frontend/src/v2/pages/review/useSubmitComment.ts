@@ -61,6 +61,9 @@ export function useSubmitComment(opts: {
           loop: ann.cameraAnim.loop,
           channels: ann.cameraAnim.channels,
         });
+      // Proposition de scène 3D (46.D) : les modifications locales du reviewer voyagent avec
+      // le commentaire et ne sont rejouées qu'à sa sélection — la scène commune ne bouge pas.
+      if (ann.sceneOverride) parts.push({ type: 'scene-override', override: ann.sceneOverride });
       parts.push(...ann.annot);
       annotation = parts.length ? parts : undefined;
     } else {

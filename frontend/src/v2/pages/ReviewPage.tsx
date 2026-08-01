@@ -145,10 +145,12 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Sélection d'un commentaire : restaure ensemble seek + annotation 2D/3D + caméra (animée).
   const selectComment = (c: ReviewComment) => {
     setSelectedCommentId(c.id);
-    const { hotspot, shapes, cameraAnim } = splitAnnotationParts(c.annotation);
+    const { hotspot, shapes, cameraAnim, sceneOverride } = splitAnnotationParts(c.annotation);
     ann.setViewed3d(hotspot);
     // Mode layout : anim caméra jointe → rejouée par le viewer (3D/splat).
     ann.setViewedCameraAnim(cameraAnim);
+    // Proposition de scène 3D jointe (46.D) : rejouée pour ce commentaire seulement.
+    ann.setViewedSceneOverride(sceneOverride);
     if (shapes.length > 0) {
       ann.setAnnotating(false);
       ann.setViewed(shapes as unknown as Shape[]);

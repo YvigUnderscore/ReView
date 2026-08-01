@@ -93,10 +93,13 @@ export function splitAnnotationParts(annotation: unknown): {
   hotspot: Hotspot3D | null;
   shapes: unknown[];
   cameraAnim: SplatLayoutAnim | null;
+  /** Proposition de scène 3D jointe au commentaire (46.D) — rejouée à sa sélection. */
+  sceneOverride: unknown;
   /** Plage vidéo in→out (34.A) : l'annotation reste visible pendant toute la plage. */
   range: { inFrame: number; outFrame: number } | null;
 } {
-  if (!Array.isArray(annotation)) return { hotspot: null, shapes: [], cameraAnim: null, range: null };
+  if (!Array.isArray(annotation))
+    return { hotspot: null, shapes: [], cameraAnim: null, range: null, sceneOverride: null };
   const parts = annotation as Array<{
     type?: string;
     position?: string;
@@ -108,9 +111,15 @@ export function splitAnnotationParts(annotation: unknown): {
   const hs = parts.find((x) => x?.type === 'hotspot');
   const anim = parts.find((x) => x?.type === 'camera-anim');
   const rangePart = parts.find((x) => x?.type === 'range');
+  const scenePart = parts.find((x) => x?.type === 'scene-override') as { override?: unknown } | undefined;
   const shapes = parts.filter(
     (x) =>
-      x && x.type !== 'hotspot' && x.type !== 'splat-paint' && x.type !== 'camera-anim' && x.type !== 'range',
+      x &&
+      x.type !== 'hotspot' &&
+      x.type !== 'splat-paint' &&
+      x.type !== 'camera-anim' &&
+      x.type !== 'range' &&
+      x.type !== 'scene-override',
   );
   const range =
     rangePart &&
@@ -124,6 +133,7 @@ export function splitAnnotationParts(annotation: unknown): {
     shapes,
     cameraAnim: normalizeAnim(anim),
     range,
+    sceneOverride: scenePart?.override ?? null,
   };
 }
 

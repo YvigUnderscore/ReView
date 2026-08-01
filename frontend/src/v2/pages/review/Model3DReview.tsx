@@ -1,4 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { Model3DThreeState } from './three/useModel3DThree';
@@ -28,6 +32,7 @@ import TrackSwitch, { type TrackId } from './transport/TrackSwitch';
 import PipFrame from './viewer/PipFrame';
 import UsdRecomposeDialog from './UsdRecomposeDialog';
 import { useUsdScene } from './three/useUsdScene';
+import { normalizeOverride } from './three/sceneOverride';
 import { useUsdPicking } from './three/useUsdPicking';
 import { DEFAULT_REVIEW_ASPECT } from './frameRect';
 
@@ -64,6 +69,7 @@ export default function Model3DReview({
   /** Modèle chargé et affichable (chrome monté seulement alors). */
   ready: boolean;
 }) {
+  const qc = useQueryClient();
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
   // Éclairage HDRI : défaut rejoué pour tous, tweak spectateur temporaire.
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
@@ -80,10 +86,17 @@ export default function Model3DReview({
   const compare = useModel3DCompare(model3d, data.media);
   // Scenegraph USD + « ReView override » (46.C) : l'override de base du média est rejoué pour
   // tous, l'exploration locale du spectateur reste dans sa session.
-  const scene = useUsdScene(data, model3d, ready, null);
+  // Mémoïsé : sans cela l'override serait un objet neuf à chaque rendu et la scène serait
+  // réappliquée en boucle.
+  const commentOverride = useMemo(
+    () => normalizeOverride(ann.viewedSceneOverride),
+    [ann.viewedSceneOverride],
+  );
+  const scene = useUsdScene(data, model3d, ready, commentOverride, ann.setSceneOverride);
   useUsdPicking(model3d, ready, scene.select);
   // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
   const [recomposeOpen, setRecomposeOpen] = useState(false);
+  const [savingOverride, setSavingOverride] = useState(false);
   const usd = data.modelSource?.usd ?? null;
   const canRecompose = canManage && !data.media.published && !!usd;
   const grid = useSceneGrid(model3d);
@@ -144,6 +157,25 @@ export default function Model3DReview({
           section={section}
           grid={grid}
           scene={scene}
+          onSaveOverride={
+            canManage && !data.media.published
+              ? () => {
+                  setSavingOverride(true);
+                  api
+                    .put(`/api/media/${data.media.id}/usd/override`, { override: scene.merged })
+                    .then(() => {
+                      toast.success('Mise en scène enregistrée pour tous');
+                      void qc.invalidateQueries({ queryKey: qk.media(data.media.id) });
+                      scene.revert();
+                    })
+                    .catch((e: unknown) =>
+                      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible'),
+                    )
+                    .finally(() => setSavingOverride(false));
+                }
+              : undefined
+          }
+          savingOverride={savingOverride}
           onRecompose={canRecompose ? () => setRecomposeOpen(true) : undefined}
           onImportAnim={canManage ? cam.importGltf : undefined}
         />

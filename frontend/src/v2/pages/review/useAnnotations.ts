@@ -68,6 +68,11 @@ export function useAnnotations(opts?: {
   const [viewedAspect, setViewedAspect] = useState<number | null>(null);
   // Animation caméra du commentaire sélectionné — rejouée par le viewer.
   const [viewedCameraAnim, setViewedCameraAnim] = useState<SplatLayoutAnim | null>(null);
+  // Proposition de scène 3D du commentaire sélectionné (46.D) — jamais globale.
+  const [viewedSceneOverride, setViewedSceneOverride] = useState<unknown>(null);
+  // Modifications de scène en cours, jointes au prochain commentaire envoyé (comme le
+  // hotspot et l'animation caméra).
+  const [sceneOverride, setSceneOverride] = useState<unknown>(null);
 
   const setShapes = (next: Shape[]) => {
     setPast((p) => [...p, annot]);
@@ -109,6 +114,7 @@ export function useAnnotations(opts?: {
     setViewed3d(null);
     setViewedAspect(null);
     setViewedCameraAnim(null);
+    setViewedSceneOverride(null);
   };
 
   return {
@@ -145,6 +151,10 @@ export function useAnnotations(opts?: {
     setViewedAspect,
     viewedCameraAnim,
     setViewedCameraAnim,
+    viewedSceneOverride,
+    setViewedSceneOverride,
+    sceneOverride,
+    setSceneOverride,
     resetComposer,
     clearViewed,
   };

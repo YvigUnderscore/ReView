@@ -150,10 +150,15 @@ export default function ScenegraphPanel({
   scene,
   usd,
   onRevert,
+  onSave,
+  saving,
 }: {
   scene: UsdSceneState;
   usd: UsdModelInfo | null;
   onRevert?: () => void;
+  /** Enregistre la mise en scène pour tous — prépublish et gestionnaire uniquement. */
+  onSave?: () => void;
+  saving?: boolean;
 }) {
   // Les deux premiers niveaux ouverts : assez pour situer la scène sans noyer l'utilisateur.
   const [expanded, setExpanded] = useState<Set<string>>(
@@ -188,13 +193,31 @@ export default function ScenegraphPanel({
       {usd?.primsTruncated && (
         <p className="px-2 py-1 text-[10px] text-muted-foreground">Arbre tronqué (scène volumineuse).</p>
       )}
-      {scene.dirty && onRevert && (
-        <button
-          onClick={onRevert}
-          className="flex items-center gap-1 border-t border-border px-2 py-1 text-left text-[11px] text-primary hover:underline"
-        >
-          <RotateCcw size={11} /> Annuler mes modifications locales
-        </button>
+      {scene.dirty && (
+        <div className="flex items-center gap-3 border-t border-border px-2 py-1">
+          {onRevert && (
+            <button
+              onClick={onRevert}
+              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              <RotateCcw size={11} /> Annuler
+            </button>
+          )}
+          <span className="flex-1" />
+          {onSave ? (
+            <button
+              onClick={onSave}
+              disabled={saving}
+              className="text-[11px] text-primary hover:underline disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : 'Enregistrer pour tous'}
+            </button>
+          ) : (
+            // Après publication, la mise en scène commune est figée : les modifications ne
+            // partent plus que dans un commentaire.
+            <span className="text-[11px] text-muted-foreground">Joint au prochain commentaire</span>
+          )}
+        </div>
       )}
     </div>
   );
