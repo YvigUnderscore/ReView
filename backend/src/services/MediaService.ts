@@ -444,6 +444,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     model?: { sourceFormat: string; converter: string; native: boolean; usd?: unknown };
     // Raison d'un échec de traitement (45.C) — affichée en review plutôt qu'un `FAILED` muet.
     processingError?: string;
+    // Override de scène (46.D) : mise en scène rejouée à l'ouverture pour tous.
+    usdOverride?: unknown;
     fps?: number;
     width?: number;
     height?: number;
@@ -520,6 +522,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     modelSource: meta.model ?? null,
     // Raison de l'échec quand le média est FAILED (45.C) : asset USD manquant, outillage absent…
     processingError: meta.processingError ?? null,
+    // Override de scène (46.D) — rejoué au chargement du viewer 3D pour tous les spectateurs.
+    usdOverride: meta.usdOverride ?? null,
     fps: meta.fps ?? null,
     // Fréquence de diffusion de la salle live (33.B), réglable admin par type de média.
     liveSyncHz: await getLiveSyncHz(media.kind),

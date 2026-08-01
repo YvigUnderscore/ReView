@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
@@ -42,6 +43,7 @@ export default function ScenePanel({
   section,
   turntable,
   perf,
+  scenegraph,
 }: {
   grid: { visible: boolean; onToggle: (v: boolean) => void };
   axes?: { visible: boolean; onToggle: (v: boolean) => void };
@@ -64,6 +66,8 @@ export default function ScenePanel({
     speed: number;
     onSpeed: (s: number) => void;
   };
+  /** Arbre de prims USD (46.C) — absent pour un media sans scenegraph. */
+  scenegraph?: ReactNode;
   perf: {
     /** LOD et culling : splat uniquement. */
     lod?: { mode: LodMode; onMode: (m: LodMode) => void };
@@ -78,6 +82,8 @@ export default function ScenePanel({
   const reveal = perf.reveal;
   return (
     <>
+      {/* Scenegraph USD (46.C) en tête : c'est la structure de la scene, le reste la decore. */}
+      {scenegraph && <Group title="Scenegraph">{scenegraph}</Group>}
       <Group title="Repères">
         <Row label="Grille de sol">
           <Switch checked={grid.visible} onCheckedChange={grid.onToggle} label="Grille de sol" />

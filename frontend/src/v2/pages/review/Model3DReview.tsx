@@ -27,6 +27,8 @@ import CurvesDrawer from './transport/CurvesDrawer';
 import TrackSwitch, { type TrackId } from './transport/TrackSwitch';
 import PipFrame from './viewer/PipFrame';
 import UsdRecomposeDialog from './UsdRecomposeDialog';
+import { useUsdScene } from './three/useUsdScene';
+import { useUsdPicking } from './three/useUsdPicking';
 import { DEFAULT_REVIEW_ASPECT } from './frameRect';
 
 /**
@@ -76,6 +78,10 @@ export default function Model3DReview({
   const section = useSectionPlane(model3d);
   // Comparaison A/B des modèles 3D d'une version : caméra liée (même scène).
   const compare = useModel3DCompare(model3d, data.media);
+  // Scenegraph USD + « ReView override » (46.C) : l'override de base du média est rejoué pour
+  // tous, l'exploration locale du spectateur reste dans sa session.
+  const scene = useUsdScene(data, model3d, ready, null);
+  useUsdPicking(model3d, ready, scene.select);
   // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
   const [recomposeOpen, setRecomposeOpen] = useState(false);
   const usd = data.modelSource?.usd ?? null;
@@ -137,6 +143,7 @@ export default function Model3DReview({
           turntable={turntable}
           section={section}
           grid={grid}
+          scene={scene}
           onRecompose={canRecompose ? () => setRecomposeOpen(true) : undefined}
           onImportAnim={canManage ? cam.importGltf : undefined}
         />

@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { USD_PURPOSES } from '../lib/blenderUsd';
+import { sceneOverrideSchema, type SceneOverride } from '../lib/sceneOverride';
 import * as UsdRecomposeService from '../services/UsdRecomposeService';
+import * as UsdOverrideService from '../services/UsdOverrideService';
 
 /**
  * Recomposition d'une scène USD (Phase 45, 45.E) — sous-routeur monté sous /api/media.
@@ -45,6 +47,28 @@ router.post(
         req.user!,
         Number(req.params.id),
         req.body as UsdRecomposeService.RecomposeInput,
+      ),
+    );
+  },
+);
+
+/**
+ * PUT /api/media/:id/usd/override — override de base de la scène (46.D) : mise en scène
+ * rejouée pour tous à l'ouverture. Gestionnaire, média non publié (le service tranche).
+ * `null` efface l'override.
+ */
+router.put(
+  '/:id/usd/override',
+  validate({
+    params: idParam,
+    body: z.object({ override: sceneOverrideSchema.nullable() }),
+  }),
+  async (req, res) => {
+    res.json(
+      await UsdOverrideService.setSceneOverride(
+        req.user!,
+        Number(req.params.id),
+        (req.body as { override: SceneOverride | null }).override,
       ),
     );
   },

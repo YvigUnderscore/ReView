@@ -195,6 +195,8 @@ export interface MediaResp {
   modelSource: ModelSource | null;
   /** Raison d'un échec de traitement (45.C) : asset USD manquant, outillage absent… */
   processingError: string | null;
+  /** « ReView override » de la scène (46.D) : mise en scène rejouée à l'ouverture pour tous. */
+  usdOverride: unknown;
   fps: number | null;
   /** Fréquence de diffusion de la salle live (Hz), réglable admin par type de média (33.B). */
   liveSyncHz: number;

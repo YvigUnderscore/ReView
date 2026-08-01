@@ -8,6 +8,7 @@ import ExportPanel from '../panels/ExportPanel';
 import InfoPanel, { type InfoRow } from '../panels/InfoPanel';
 import LightingPanel from '../panels/LightingPanel';
 import ScenePanel from '../panels/ScenePanel';
+import ScenegraphPanel from '../panels/ScenegraphPanel';
 import { focalToFov, fovToFocal } from '../camera/focal';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import type { MediaResp } from '../reviewTypes';
@@ -19,6 +20,7 @@ import type { Model3DThreeState } from './useModel3DThree';
 import type { Model3DVariantsState } from './useModel3DVariants';
 import type { SectionPlaneState } from './useSectionPlane';
 import type { TurntableState } from './useTurntable';
+import type { UsdSceneState } from './useUsdScene';
 import type { CameraAnimState } from '../camera/useCameraAnim';
 
 const RAD = Math.PI / 180;
@@ -54,6 +56,7 @@ export default function Model3DPanels({
   turntable,
   section,
   grid,
+  scene,
   onRecompose,
   onImportAnim,
 }: {
@@ -68,6 +71,8 @@ export default function Model3DPanels({
   turntable: TurntableState;
   section: SectionPlaneState;
   grid: { visible: boolean; toggle: () => void };
+  /** Scenegraph USD + override (46.C), absent si le media n'est pas une scene USD. */
+  scene?: UsdSceneState;
   /** Recomposition USD — gestionnaire, média non publié, source USD présente. */
   onRecompose?: () => void;
   onImportAnim?: (file: File) => void;
@@ -151,6 +156,12 @@ export default function Model3DPanels({
           onSpeed: turntable.setSpeed,
         }}
         perf={{}}
+        // Scenegraph USD (46.C) : l'arbre reel de la scene, au-dessus des reperes de scene.
+        scenegraph={
+          scene && scene.tree.length > 0 ? (
+            <ScenegraphPanel scene={scene} usd={data.modelSource?.usd ?? null} onRevert={scene.revert} />
+          ) : undefined
+        }
       />
     );
 
