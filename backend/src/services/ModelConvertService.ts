@@ -14,6 +14,8 @@ import {
   isUsdToolingAvailable,
   sanitizeVariantSelection,
   scanUsdDirectory,
+  writeVariantOverlays,
+  type UsdOverlayRequest,
   type UsdStageInfo,
   type UsdToolConfig,
   type UsdVariantSelection,
@@ -194,6 +196,7 @@ async function prepareVariantLayers(
 ): Promise<VariantLayerEntry[]> {
   if (!info || info.variantSets.length === 0) return [];
   const entries: VariantLayerEntry[] = [];
+  const overlays: UsdOverlayRequest[] = [];
   let index = 0;
 
   for (const set of info.variantSets) {
@@ -202,25 +205,20 @@ async function prepareVariantLayers(
       if (option === current) continue; // déjà présent dans la scène de base
       if (entries.length >= env.USD_MAX_BAKED_VARIANTS) break;
       index += 1;
-      const variantsFile = join(workDir, `variant-${index}.json`);
       const overlayOut = join(dirname(source), `_review_variant_${index}.usda`);
-      await writeFile(variantsFile, JSON.stringify({ [set.prim]: { [set.name]: option } }), 'utf8');
-      const recomposed = await inspectUsdStage(source, usdToolConfig(), {
-        variantsFile,
-        overlayOut,
-      }).catch((err) => {
-        logger.warn({ err }, `[ModelConvert] variante ${set.name}=${option} non préparée`);
-        return null;
-      });
-      if (recomposed)
-        entries.push({
-          stage: recomposed.stagePath,
-          prim: set.prim,
-          set: set.name,
-          option,
-          default: current ?? '',
-        });
+      overlays.push({ out: overlayOut, variants: { [set.prim]: { [set.name]: option } } });
+      entries.push({ stage: overlayOut, prim: set.prim, set: set.name, option, default: current ?? '' });
     }
+  }
+  if (entries.length === 0) return [];
+
+  // Une seule invocation pour toutes les couches (46.P) : l'ancienne préparation composait la
+  // scène une fois par option — prohibitif dès des dizaines de jeux de variantes.
+  try {
+    await writeVariantOverlays(source, overlays, usdToolConfig(), join(workDir, 'variant-overlays.json'));
+  } catch (err) {
+    logger.warn({ err }, '[ModelConvert] couches de variantes non écrites — cuisson sautée');
+    return [];
   }
   return entries;
 }
@@ -249,6 +247,9 @@ async function convertWithBlender(
     noAnimation: info ? !info.hasAnimation : false,
     variantLayers: manifest,
     variantVertexBudget: env.USD_VARIANT_VERTEX_BUDGET,
+    // La cuisson ne doit jamais faire expirer la conversion : elle se coupe elle-même à la
+    // moitié du timeout et laisse les options restantes en `variantsSkipped` (46.P).
+    variantTimeBudget: Math.floor(env.MODEL_CONVERT_TIMEOUT_MS / 2000),
   });
   let stdout = '';
   try {

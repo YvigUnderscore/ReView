@@ -205,6 +205,37 @@ def _write_overlay(root_path, selections, overlay_out):
     return applied
 
 
+def cmd_overlays(root_path, manifest):
+    """Ecrit N couches d'overlay en une seule invocation (46.P).
+
+    `prepareVariantLayers` invoquait ce script une fois **par option a cuire**, chaque appel
+    recomposant la scene entiere — une scene de production (Kitchen_set : 200 jeux de
+    variantes) rendait la preparation prohibitive. Ici, aucune composition : la selection est
+    posee en pur Sdf (`over` + `variantSelections`), la validite des options ayant deja ete
+    etablie par l'inspection initiale.
+    """
+    from pxr import Sdf
+
+    written = 0
+    for entry in manifest:
+        out = os.path.abspath(entry["out"])
+        overlay_dir = os.path.dirname(out) or "."
+        os.makedirs(overlay_dir, exist_ok=True)
+        if os.path.exists(out):
+            os.remove(out)
+        layer = Sdf.Layer.CreateNew(out)
+        # Chemin relatif : l'overlay vit a cote de la racine, les assets restent resolus.
+        layer.subLayerPaths.append(_relative(os.path.abspath(root_path), overlay_dir))
+        for prim_path, wanted in entry["variants"].items():
+            spec = Sdf.CreatePrimInLayer(layer, prim_path)
+            spec.specifier = Sdf.SpecifierOver
+            for set_name, value in wanted.items():
+                spec.variantSelections.update({set_name: value})
+        layer.Save()
+        written += 1
+    return {"written": written}
+
+
 def cmd_inspect(input_path, selections, overlay_out):
     from pxr import Usd, UsdGeom
 
@@ -256,10 +287,11 @@ def cmd_inspect(input_path, selections, overlay_out):
 
 def main(argv):
     parser = argparse.ArgumentParser(description="Analyse USD pour ReView")
-    parser.add_argument("mode", choices=["scan", "inspect"])
+    parser.add_argument("mode", choices=["scan", "inspect", "overlays"])
     parser.add_argument("--input", required=True, help="dossier (scan) ou fichier USD/USDZ (inspect)")
     parser.add_argument("--variants-file", help="JSON {prim: {variantSet: valeur}}")
     parser.add_argument("--overlay-out", help="couche d'overlay a ecrire (selection de variantes)")
+    parser.add_argument("--manifest", help="JSON [{out, variants}] — mode overlays (46.P)")
     args = parser.parse_args(argv)
 
     if not os.path.exists(args.input):
@@ -268,6 +300,12 @@ def main(argv):
 
     if args.mode == "scan":
         payload = cmd_scan(args.input)
+    elif args.mode == "overlays":
+        if not args.manifest:
+            print("--manifest requis en mode overlays", file=sys.stderr)
+            return 2
+        with open(args.manifest, "r", encoding="utf-8") as handle:
+            payload = cmd_overlays(args.input, json.load(handle))
     else:
         selections = {}
         if args.variants_file:

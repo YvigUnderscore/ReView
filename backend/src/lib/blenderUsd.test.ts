@@ -47,6 +47,22 @@ describe('buildBlenderArgs', () => {
   it('permet de forcer une sortie statique', () => {
     expect(buildBlenderArgs('/s.py', { ...base, noAnimation: true })).toContain('--no-animation');
   });
+
+  it('transmet les budgets de cuisson des variantes quand ils sont positifs (46.P)', () => {
+    const args = buildBlenderArgs('/s.py', {
+      ...base,
+      variantLayers: '/tmp/manifest.json',
+      variantVertexBudget: 8_000_000,
+      variantTimeBudget: 450,
+    });
+    expect(args[args.indexOf('--variant-layers') + 1]).toBe('/tmp/manifest.json');
+    expect(args[args.indexOf('--variant-vertex-budget') + 1]).toBe('8000000');
+    expect(args[args.indexOf('--variant-time-budget') + 1]).toBe('450');
+    // Sans budget de temps, la cuisson n'est pas bornée artificiellement.
+    expect(buildBlenderArgs('/s.py', { ...base, variantTimeBudget: 0 })).not.toContain(
+      '--variant-time-budget',
+    );
+  });
 });
 
 describe('parseBlenderSummary', () => {

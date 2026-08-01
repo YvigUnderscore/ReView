@@ -61,10 +61,22 @@ export interface UsdModelInfo {
   primsTruncated: boolean;
 }
 
+/** Option de variante réellement cuite dans le GLB (46.G) — sa bascule est instantanée. */
+export interface UsdBakedVariant {
+  prim: string;
+  set: string;
+  option: string;
+}
+
 /** Provenance de conversion 3D (39.A) ; le bloc `usd` n'existe que pour les scènes USD (45.C). */
 export interface ModelSource {
   sourceFormat: string;
   converter: string;
   native: boolean;
   usd?: UsdModelInfo;
+  /** Résumé de conversion Blender — seule la cuisson des variantes intéresse la review (46.P). */
+  blender?: {
+    variantsBaked?: UsdBakedVariant[];
+    variantsSkipped?: UsdBakedVariant[];
+  };
 }

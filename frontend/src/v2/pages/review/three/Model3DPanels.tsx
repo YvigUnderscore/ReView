@@ -167,6 +167,7 @@ export default function Model3DPanels({
             <ScenegraphPanel
               scene={scene}
               usd={data.modelSource?.usd ?? null}
+              baked={data.modelSource?.blender?.variantsBaked ?? null}
               onRevert={scene.revert}
               onSave={onSaveOverride}
               saving={savingOverride}

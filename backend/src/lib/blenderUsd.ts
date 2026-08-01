@@ -68,6 +68,8 @@ export interface BlenderUsdOptions {
   variantLayers?: string;
   /** Budget de sommets au-dela duquel les options restantes ne sont plus cuites. */
   variantVertexBudget?: number;
+  /** Budget de temps de cuisson (secondes) — la conversion ne doit jamais expirer (46.P). */
+  variantTimeBudget?: number;
 }
 
 /** Une option de variante a cuire : la couche a importer et le sous-arbre a en conserver. */
@@ -114,6 +116,8 @@ export function buildBlenderArgs(scriptPath: string, opts: BlenderUsdOptions): s
   if (opts.variantLayers) args.push('--variant-layers', opts.variantLayers);
   if (Number.isFinite(opts.variantVertexBudget) && (opts.variantVertexBudget as number) > 0)
     args.push('--variant-vertex-budget', String(opts.variantVertexBudget));
+  if (Number.isFinite(opts.variantTimeBudget) && (opts.variantTimeBudget as number) > 0)
+    args.push('--variant-time-budget', String(opts.variantTimeBudget));
   return args;
 }
 

@@ -71,7 +71,9 @@ const baseEnvSchema = z.object({
   USD_PYTHON_BIN: z.string().default('/opt/usdenv/bin/python3'),
   // 46.G : cuisson des variantes USD dans le GLB (bascule instantanée en review). Bornes
   // pour ne pas produire un GLB démesuré sur une scène à nombreuses variantes.
-  USD_MAX_BAKED_VARIANTS: z.coerce.number().int().nonnegative().default(12),
+  // 46.P : l'import masqué au prim porteur rend la cuisson d'une option quasi gratuite — le
+  // vrai garde-fou est le budget temps (moitié du timeout de conversion), pas ce plafond.
+  USD_MAX_BAKED_VARIANTS: z.coerce.number().int().nonnegative().default(512),
   USD_VARIANT_VERTEX_BUDGET: z.coerce.number().int().positive().default(8_000_000),
   // Garde-fou : un convertisseur bloqué immobiliserait un slot de worker indéfiniment.
   MODEL_CONVERT_TIMEOUT_MS: z.coerce.number().int().positive().default(900_000),

@@ -61,15 +61,24 @@ subtree, and every node carries the USD prim path it came from. Two consequences
   No worker job, no reconversion, and therefore it also works on **published** media.
 
 The cost is additive, not combinatorial: each option is composed with the other variant sets
-left at their current value. Two limits keep large scenes in check:
+left at their current value. Each bake pass is **masked to the bearing prim's subtree**
+(`prim_path_mask`), so an option only costs its own geometry — a production scene with
+hundreds of variant sets (Pixar's Kitchen_set: 200 sets, 366 options) bakes in a few minutes.
+The overlay layers selecting each option are written in a single `usd-core` invocation (pure
+Sdf, no composition).
+
+Three limits keep pathological scenes in check:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `USD_MAX_BAKED_VARIANTS` | `12` | maximum number of options baked per media |
+| `USD_MAX_BAKED_VARIANTS` | `512` | hard cap on options baked per media |
 | `USD_VARIANT_VERTEX_BUDGET` | `8000000` | vertex count above which remaining options are skipped |
+| *(time budget)* | half of `MODEL_CONVERT_TIMEOUT_MS` | baking stops before the conversion could time out |
 
-Options that were skipped are reported in the conversion summary; switching to one of those
-still requires *Recompose the scene…*.
+Options that could not be baked are reported in the conversion summary
+(`metadata.model.blender.variantsSkipped`) and shown **greyed out** in the review's variant
+menus, with a hint to recompose. Media converted before baking existed keep their menus fully
+enabled but switching has no effect — re-upload a version to get baked variants.
 
 ## ReView overrides
 

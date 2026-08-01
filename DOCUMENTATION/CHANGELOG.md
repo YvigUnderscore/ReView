@@ -17,6 +17,10 @@ panel. Keep entries short and user-facing (features and notable fixes, not inter
   baked variant geometry — and works on large scenes.
 - **More room for the viewer**: review pages open with the main sidebar collapsed; expand it
   any time, your preference elsewhere is untouched.
+- **Shading variants work on large scenes**: variant baking now costs one small subtree per
+  option instead of a full scene import, so scenes with hundreds of variant sets (book colors,
+  prop looks) get every option baked. Options that could not be baked are greyed out in the
+  menu instead of silently doing nothing.
 
 ## 2026-08 — USD scene graph & overrides
 

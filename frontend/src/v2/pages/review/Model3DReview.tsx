@@ -244,7 +244,13 @@ export default function Model3DReview({
         </ContextMenuTrigger>
         {primMenu && (
           <ContextMenuContent>
-            <PrimMenuItems scene={scene} usd={usd} path={primMenu} onFrame={model3d.frameView} />
+            <PrimMenuItems
+              scene={scene}
+              usd={usd}
+              baked={data.modelSource?.blender?.variantsBaked ?? null}
+              path={primMenu}
+              onFrame={model3d.frameView}
+            />
           </ContextMenuContent>
         )}
       </ContextMenu>

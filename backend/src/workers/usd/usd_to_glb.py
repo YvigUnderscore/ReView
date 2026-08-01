@@ -51,6 +51,10 @@ def parse_args(argv):
     parser.add_argument("--no-animation", action="store_true")
     parser.add_argument("--variant-layers", help="manifeste JSON des options de variantes a cuire")
     parser.add_argument("--variant-vertex-budget", type=int, default=8_000_000)
+    # Budget de TEMPS de cuisson en secondes (0 = illimite) : sur une scene a beaucoup de
+    # variantes, mieux vaut livrer un GLB avec une partie des options cuites que de faire
+    # expirer le timeout du worker et perdre toute la conversion.
+    parser.add_argument("--variant-time-budget", type=float, default=0)
     return parser.parse_args(argv)
 
 
@@ -157,7 +161,7 @@ def scene_vertex_count():
     return sum(len(o.data.vertices) for o in bpy.data.objects if o.type == "MESH" and o.data)
 
 
-def bake_variant_layers(manifest, vertex_budget):
+def bake_variant_layers(manifest, vertex_budget, time_budget):
     """Importe une passe par option de variante et ne garde que le sous-arbre concerne.
 
     Cuire les variantes dans le GLB est ce qui rend leur bascule **instantanee et disponible
@@ -165,21 +169,34 @@ def bake_variant_layers(manifest, vertex_budget):
     autres, sans reconversion. Le cout est additif (somme des options), pas combinatoire :
     chaque option est importee avec les autres jeux de variantes a leur valeur par defaut.
 
-    Un budget de sommets borne la casse sur les scenes lourdes : au-dela, les options
-    restantes ne sont pas cuites et le resume le signale (`variantsBaked` partiel).
+    Chaque passe est **masquee au prim porteur** (`prim_path_mask`, 46.P) : Blender ne
+    convertit que le sous-arbre qui varie — sans le masque, chaque option reimportait la
+    scene entiere et une scene de production (200 jeux) rendait la cuisson impraticable.
+    L'importeur recree la lignee d'ancetres avec ses transformations locales, le
+    rebranchement sur le prim d'origine reste donc identique.
+
+    Deux budgets bornent la casse : sommets (poids du GLB) et temps (timeout du worker).
+    Au-dela, les options restantes ne sont pas cuites et le resume le signale.
     """
+    import time
+
+    started = time.monotonic()
     baked = []
     skipped = []
     for entry in manifest:
         prim, set_name, option = entry["prim"], entry["set"], entry["option"]
-        if scene_vertex_count() > vertex_budget:
+        over_time = time_budget > 0 and (time.monotonic() - started) > time_budget
+        if scene_vertex_count() > vertex_budget or over_time:
             skipped.append({"prim": prim, "set": set_name, "option": option})
             continue
 
         before = set(bpy.data.objects)
         try:
             bpy.ops.wm.usd_import(
-                **supported(bpy.ops.wm.usd_import, {"filepath": os.path.abspath(entry["stage"])})
+                **supported(
+                    bpy.ops.wm.usd_import,
+                    {"filepath": os.path.abspath(entry["stage"]), "prim_path_mask": prim},
+                )
             )
         except Exception as exc:
             print("variante %s=%s non importee: %s" % (set_name, option, exc), file=sys.stderr)
@@ -303,7 +320,7 @@ def main():
         with open(args.variant_layers, "r", encoding="utf-8") as handle:
             manifest = json.load(handle)
         tag_default_variants(manifest)
-        baked, skipped = bake_variant_layers(manifest, args.variant_vertex_budget)
+        baked, skipped = bake_variant_layers(manifest, args.variant_vertex_budget, args.variant_time_budget)
         # Les passes de variantes ont ajoute des objets : on re-etiquette (idempotent).
         tagged = tag_usd_paths()
     scene = apply_timing(args)

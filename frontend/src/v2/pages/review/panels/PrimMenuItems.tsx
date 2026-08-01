@@ -6,9 +6,10 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
 } from '../../../components/ui/context-menu';
-import type { UsdModelInfo } from '../../../types/api';
+import type { UsdBakedVariant, UsdModelInfo } from '../../../types/api';
 import { isHidden } from '../three/sceneOverride';
 import { isSelfOrDescendant } from '../three/usdScenegraph';
+import { variantOptionAvailable } from '../three/variantAvailability';
 import type { UsdSceneState } from '../three/useUsdScene';
 
 /**
@@ -19,11 +20,14 @@ import type { UsdSceneState } from '../three/useUsdScene';
 export default function PrimMenuItems({
   scene,
   usd,
+  baked,
   path,
   onFrame,
 }: {
   scene: UsdSceneState;
   usd: UsdModelInfo | null;
+  /** Options réellement cuites dans le GLB (46.P) — les autres sont grisées, pas mensongères. */
+  baked?: readonly UsdBakedVariant[] | null;
   path: string;
   /** Cadrer la vue sur ce prim — proposé depuis le viewer, où la caméra est le contexte. */
   onFrame?: () => void;
@@ -39,11 +43,19 @@ export default function PrimMenuItems({
         <ContextMenuSub key={`${set.prim}:${set.name}`}>
           <ContextMenuSubTrigger>Variante · {set.name}</ContextMenuSubTrigger>
           <ContextMenuSubContent>
-            {set.options.map((option) => (
-              <ContextMenuItem key={option} onSelect={() => scene.setVariant(set.prim, set.name, option)}>
-                {option}
-              </ContextMenuItem>
-            ))}
+            {set.options.map((option) => {
+              const available = variantOptionAvailable(baked, set.prim, set.name, option, set.selected);
+              return (
+                <ContextMenuItem
+                  key={option}
+                  disabled={!available}
+                  title={available ? undefined : 'Option non cuite dans la conversion — recomposer la scène'}
+                  onSelect={() => scene.setVariant(set.prim, set.name, option)}
+                >
+                  {option}
+                </ContextMenuItem>
+              );
+            })}
           </ContextMenuSubContent>
         </ContextMenuSub>
       ))}

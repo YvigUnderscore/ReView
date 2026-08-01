@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../../components/ui/context-menu';
-import type { UsdModelInfo } from '../../../types/api';
+import type { UsdBakedVariant, UsdModelInfo } from '../../../types/api';
 import type { PrimNode } from '../three/usdScenegraph';
 import { isHidden, isHiddenByAncestor } from '../three/sceneOverride';
 import type { UsdSceneState } from '../three/useUsdScene';
@@ -25,6 +25,7 @@ function PrimRow({
   depth,
   scene,
   usd,
+  baked,
   expanded,
   onToggle,
 }: {
@@ -32,6 +33,7 @@ function PrimRow({
   depth: number;
   scene: UsdSceneState;
   usd: UsdModelInfo | null;
+  baked?: readonly UsdBakedVariant[] | null;
   expanded: Set<string>;
   onToggle: (path: string) => void;
 }) {
@@ -96,7 +98,7 @@ function PrimRow({
         </ContextMenuTrigger>
 
         <ContextMenuContent>
-          <PrimMenuItems scene={scene} usd={usd} path={node.path} />
+          <PrimMenuItems scene={scene} usd={usd} baked={baked} path={node.path} />
         </ContextMenuContent>
       </ContextMenu>
 
@@ -108,6 +110,7 @@ function PrimRow({
             depth={depth + 1}
             scene={scene}
             usd={usd}
+            baked={baked}
             expanded={expanded}
             onToggle={onToggle}
           />
@@ -119,12 +122,15 @@ function PrimRow({
 export default function ScenegraphPanel({
   scene,
   usd,
+  baked,
   onRevert,
   onSave,
   saving,
 }: {
   scene: UsdSceneState;
   usd: UsdModelInfo | null;
+  /** Options de variantes cuites dans le GLB — le menu grise les autres (46.P). */
+  baked?: readonly UsdBakedVariant[] | null;
   onRevert?: () => void;
   /** Enregistre la mise en scène pour tous — prépublish et gestionnaire uniquement. */
   onSave?: () => void;
@@ -155,6 +161,7 @@ export default function ScenegraphPanel({
             depth={0}
             scene={scene}
             usd={usd}
+            baked={baked}
             expanded={expanded}
             onToggle={toggle}
           />
