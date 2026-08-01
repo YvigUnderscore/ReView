@@ -13,7 +13,7 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
-import { HudGroup } from './hud/ViewerHud';
+import './chrome/chrome.css';
 import { tcFromFrame } from './reviewTypes';
 import type { HlsLevel } from './useHlsPlayer';
 
@@ -88,7 +88,8 @@ export default function VideoTransport({
   const btn =
     'flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground';
   return (
-    <HudGroup className="w-full justify-start gap-3">
+    // Ligne de transport du chrome : mêmes styles que les viewers spatiaux.
+    <div className="rv-transport">
       <button onClick={onPlayPause} title={playing ? 'Pause (espace)' : 'Lecture (espace)'} className={btn}>
         {playing ? <Pause size={16} /> : <Play size={16} />}
       </button>
@@ -215,6 +216,6 @@ export default function VideoTransport({
           <Maximize size={16} />
         </button>
       </div>
-    </HudGroup>
+    </div>
   );
 }

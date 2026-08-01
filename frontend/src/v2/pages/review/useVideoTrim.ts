@@ -1,0 +1,92 @@
+import { useCallback, useState, type RefObject } from 'react';
+import { toast } from 'sonner';
+import { api } from '../../../lib/apiClient';
+import { tcFromFrame, type MediaResp, type SplatEditsPatch } from './reviewTypes';
+
+/**
+ * Trim vidéo non-destructif, gestionnaires : bornes IN/OUT posées à la frame courante,
+ * appliquées via PATCH `/api/media/:id/trim` — le worker FFmpeg produit un **proxy trimé**
+ * (l'original n'est jamais modifié), servi à tous au prochain chargement.
+ *
+ * Extrait de `VideoTrimBar` avec la refonte du chrome : la barre a disparu, les bornes se
+ * posent depuis les outils « Point d'entrée » / « Point de sortie » du rail.
+ */
+export function useVideoTrim({
+  data,
+  fps,
+  videoRef,
+  onSaved,
+}: {
+  data: MediaResp;
+  fps: number;
+  videoRef: RefObject<HTMLVideoElement | null>;
+  onSaved: (patch: SplatEditsPatch) => void;
+}) {
+  const [inFrame, setInFrame] = useState<number | null>(data.trim?.inFrame ?? null);
+  const [outFrame, setOutFrame] = useState<number | null>(data.trim?.outFrame ?? null);
+  const [busy, setBusy] = useState(false);
+
+  const currentFrame = () => Math.round((videoRef.current?.currentTime ?? 0) * fps);
+  const dirty = inFrame !== (data.trim?.inFrame ?? null) || outFrame !== (data.trim?.outFrame ?? null);
+  const valid = inFrame != null && outFrame != null && outFrame > inFrame;
+
+  const apply = useCallback(async () => {
+    if (!valid) {
+      toast.error('La sortie doit être après l’entrée');
+      return;
+    }
+    setBusy(true);
+    try {
+      const patch = await api.patch<SplatEditsPatch>(`/api/media/${data.media.id}/trim`, {
+        trim: { inFrame, outFrame },
+      });
+      onSaved(patch);
+      toast.success(
+        'Découpe enregistrée — proxy trimé en cours de génération (servi au prochain chargement)',
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la découpe");
+    } finally {
+      setBusy(false);
+    }
+  }, [valid, data.media.id, inFrame, outFrame, onSaved]);
+
+  const clear = useCallback(async () => {
+    setBusy(true);
+    try {
+      const patch = await api.patch<SplatEditsPatch>(`/api/media/${data.media.id}/trim`, {
+        trim: null,
+      });
+      onSaved(patch);
+      setInFrame(null);
+      setOutFrame(null);
+      toast.success('Découpe effacée — retour à la vidéo complète');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la découpe");
+    } finally {
+      setBusy(false);
+    }
+  }, [data.media.id, onSaved]);
+
+  /** Résumé affiché dans la barre d'options : bornes posées et longueur conservée. */
+  const label =
+    inFrame != null && outFrame != null
+      ? `Entrée ${tcFromFrame(inFrame, fps)} · sortie ${tcFromFrame(outFrame, fps)} — ${outFrame - inFrame} frames conservées`
+      : inFrame != null
+        ? `Entrée ${tcFromFrame(inFrame, fps)} · sortie non posée`
+        : outFrame != null
+          ? `Entrée non posée · sortie ${tcFromFrame(outFrame, fps)}`
+          : 'Aucune borne posée — la vidéo est diffusée entière.';
+
+  return {
+    inFrame,
+    outFrame,
+    dirty,
+    busy,
+    label,
+    onIn: () => setInFrame(currentFrame()),
+    onOut: () => setOutFrame(currentFrame()),
+    onApply: () => void apply(),
+    onClear: () => void clear(),
+  };
+}

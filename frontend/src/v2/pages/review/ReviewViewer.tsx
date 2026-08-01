@@ -4,9 +4,8 @@ import { useAuth } from '../../stores/useAuth';
 import { useWatermarkConfigQuery } from '../../lib/queries';
 import WatermarkOverlay from '../../components/WatermarkOverlay';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
-import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';
 import { Skeleton } from '../../components/ui/skeleton';
-import { resolveGlbSrc, VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
+import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import { useAnnotationOverlay, useHotspotDisplay } from './useAnnotationOverlay';
 import { useImageCompareSync } from './useImageCompareSync';
 import type { CompareMode } from './useCompareState';
@@ -15,16 +14,14 @@ import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
-import ReviewContextMenu from './ReviewContextMenu';
 import Filmstrip from './Filmstrip';
-import ImageComparePane from './ImageComparePane';
-import ImageWipeOverlay from './ImageWipeOverlay';
-import { ImageDiffOverlay } from './DiffOverlay';
 import Model3DReview from './Model3DReview';
 import SplatReview from './splat/SplatReview';
 import VideoWipeOverlay from './VideoWipeOverlay';
 import VideoPane from './VideoPane';
 import VideoReviewSection from './VideoReviewSection';
+import MediaChrome from './MediaChrome';
+import ImageReviewSection from './ImageReviewSection';
 
 /**
  * Zone viewer de la review : barre d'annotation + pane adapté au type de média
@@ -114,7 +111,6 @@ export default function ReviewViewer({
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
-  const compareId = compareIds[0] ?? null;
   // Zoom/pan répliqué entre panes A/B image (34.D) — relais bidirectionnel.
   const imageSync = useImageCompareSync(imageViewApiRef);
   // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent.
@@ -165,117 +161,76 @@ export default function ReviewViewer({
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
 
       {kind === 'VIDEO' && src && data && (
-        <VideoReviewSection
+        <MediaChrome
+          kind="VIDEO"
           data={data}
-          src={src}
-          hlsUrl={hlsUrl}
-          videoRef={videoRef}
-          programmaticSeekRef={programmaticSeekRef}
-          overlay={renderOverlay()}
-          comments={comments ?? []}
-          selectedId={selectedCommentId}
-          onSelectComment={onSelectComment}
-          onManualSeek={onManualSeek}
-          onMarker={onMarker}
           fps={fps}
-          setFpsOverride={setFpsOverride}
-          startFrame={startFrame}
-          onFullscreen={onFullscreen}
-          onLoopChange={onLoopChange}
-          canEdit={canEdit}
-          canManage={canManage}
           ann={ann}
+          role={role}
+          canEdit={canEdit}
+          videoRef={videoRef}
+          onSaved={onSplatEditsSaved}
+          compare={{
+            mode: compareMode,
+            onMode: onCompareModeChange,
+            ids: compareIds,
+            onClear: closeCompare,
+          }}
+        >
+          <VideoReviewSection
+            data={data}
+            src={src}
+            hlsUrl={hlsUrl}
+            videoRef={videoRef}
+            programmaticSeekRef={programmaticSeekRef}
+            overlay={renderOverlay()}
+            comments={comments ?? []}
+            selectedId={selectedCommentId}
+            onSelectComment={onSelectComment}
+            onManualSeek={onManualSeek}
+            onMarker={onMarker}
+            fps={fps}
+            setFpsOverride={setFpsOverride}
+            startFrame={startFrame}
+            onFullscreen={onFullscreen}
+            onLoopChange={onLoopChange}
+            canManage={canManage}
+            ann={ann}
+            onToggleAnnotate={onToggleAnnotate}
+            onClearSelection={onClearSelection}
+            compareIds={compareIds}
+            compareMode={compareMode}
+            onCompareModeChange={onCompareModeChange}
+            onRemoveCompare={onRemoveCompare}
+            closeCompare={closeCompare}
+            sharedWipe={sharedWipe}
+          />
+        </MediaChrome>
+      )}
+
+      {kind === 'IMAGE' && data?.url && (
+        <ImageReviewSection
+          data={data}
+          fps={fps}
+          ann={ann}
+          role={role}
+          canManage={canManage}
+          selectedCommentId={selectedCommentId}
+          videoRef={videoRef}
+          imageSync={imageSync}
+          imageViewApiRef={imageViewApiRef}
+          onImageUserView={onImageUserView}
+          onFullscreen={onFullscreen}
           onToggleAnnotate={onToggleAnnotate}
           onClearSelection={onClearSelection}
-          onSplatEditsSaved={onSplatEditsSaved}
+          onSaved={onSplatEditsSaved}
           compareIds={compareIds}
           compareMode={compareMode}
           onCompareModeChange={onCompareModeChange}
-          onRemoveCompare={onRemoveCompare}
           closeCompare={closeCompare}
           sharedWipe={sharedWipe}
         />
       )}
-
-      {kind === 'IMAGE' &&
-        data?.url &&
-        (compareId != null && compareMode === 'wipe' ? (
-          // Comparaison image en mode wipe : superposition à barre rotative (zoom suspendu).
-          <ImageWipeOverlay
-            aUrl={data.url}
-            aName={data.media.originalName}
-            compareId={compareId}
-            onClose={closeCompare}
-            onSide={() => onCompareModeChange('side')}
-            onDiff={() => onCompareModeChange('diff')}
-            sharedWipe={sharedWipe}
-          />
-        ) : compareId != null && compareMode === 'diff' ? (
-          // Différence amplifiée |A − B| (34.E) — remplace la visionneuse comme le wipe.
-          <ImageDiffOverlay
-            aUrl={data.url}
-            compareId={compareId}
-            onClose={closeCompare}
-            onSide={() => onCompareModeChange('side')}
-            onWipe={() => onCompareModeChange('wipe')}
-          />
-        ) : (
-          <div className="flex min-h-0 flex-1 gap-3">
-            <ReviewContextMenu
-              data={data}
-              videoRef={videoRef}
-              fps={fps}
-              canManage={canManage}
-              annotating={ann.annotating}
-              onToggleAnnotate={onToggleAnnotate}
-              hasViewed={!!ann.viewed}
-              onClearSelection={onClearSelection}
-              annShapes={ann.viewed ?? ann.annot}
-            >
-              <div className={VIEWER_ZONE}>
-                <div className="absolute inset-0">
-                  <ImageReviewViewer
-                    src={data.url}
-                    alt={data.media.originalName}
-                    shapes={ann.viewed ?? ann.annot}
-                    onChange={ann.setShapes}
-                    editable={ann.annotating && !ann.viewed}
-                    tool={ann.tool}
-                    color={ann.color}
-                    width={ann.penWidth}
-                    alpha={ann.alpha}
-                    info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
-                    onFullscreen={onFullscreen}
-                    viewApiRef={imageViewApiRef}
-                    onUserView={onImageUserView}
-                    onViewChange={compareId != null ? imageSync.onMasterView : undefined}
-                    pinned={
-                      <ReviewCanvasRefs
-                        mediaId={data.media.id}
-                        references={data.references ?? []}
-                        selectedCommentId={selectedCommentId}
-                        canManage={canManage}
-                        ann={ann}
-                      />
-                    }
-                  />
-                </div>
-                <ReviewCanvasRefsControls ann={ann} annotating={ann.annotating} />
-              </div>
-            </ReviewContextMenu>
-            {/* Comparaison A/B image côte à côte — zoom/pan répliqué (34.D). */}
-            {compareId != null && compareMode === 'side' && (
-              <ImageComparePane
-                compareId={compareId}
-                onClose={closeCompare}
-                onWipe={() => onCompareModeChange('wipe')}
-                onDiff={() => onCompareModeChange('diff')}
-                viewApiRef={imageSync.slaveApiRef}
-                onViewChange={imageSync.onSlaveView}
-              />
-            )}
-          </div>
-        ))}
 
       {kind === 'MODEL_3D' && data && (
         <Model3DReview

@@ -1,12 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
 import { ImagePlus, PencilLine, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
@@ -52,7 +44,6 @@ export default function CommentsPanel({
   onSubmit,
   annotating,
   onToggleAnnotate,
-  annotationTools,
 }: {
   comments: ReviewComment[] | null;
   mediaObjectId: number;
@@ -80,7 +71,6 @@ export default function CommentsPanel({
   annotating?: boolean;
   onToggleAnnotate?: () => void;
   /** Barre d'outils d'annotation, affichée sous le composer quand le mode est actif. */
-  annotationTools?: ReactNode;
 }) {
   // Brouillon local (32.C) : le texte en cours survit à un rechargement/navigation.
   const [content, setContent] = useState(() => loadDraft(mediaObjectId)?.content ?? '');
@@ -284,10 +274,6 @@ export default function CommentsPanel({
             {sending ? 'Envoi…' : 'Envoyer'}
           </button>
         </div>
-        {/* Barre d'outils d'annotation sous l'espace commentaire (activée par « Annoter »). */}
-        {annotating && annotationTools && (
-          <div className="mt-2 border-t border-border pt-2">{annotationTools}</div>
-        )}
       </form>
     </ResizablePanel>
   );

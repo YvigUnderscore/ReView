@@ -14,7 +14,6 @@ export default function Model3DThreePane({
   loadError,
   containerRef,
   overlay,
-  hud,
   aspect,
   pip,
   canReprocess,
@@ -26,8 +25,6 @@ export default function Model3DThreePane({
   loadError: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   overlay: ReactNode;
-  /** HUD flottant unifié (ViewerHud), superposé au canvas façon logiciel 3D (Phase 17). */
-  hud?: ReactNode;
   /** Aspect du cadre de review fixe (issu de la présentation persistée) — défaut 16:9. */
   aspect?: number;
   /** Fenêtre PiP du mode layout (PipFrame — le rendu WebGL est dessiné dessous en scissor). */
@@ -49,7 +46,6 @@ export default function Model3DThreePane({
       >
         {/* Conteneur de la scène Three.js (rempli par useModel3DThree) — toujours monté */}
         <div ref={containerRef} className="absolute inset-0" />
-        {hud}
         {pip}
       </ReviewFrame>
 

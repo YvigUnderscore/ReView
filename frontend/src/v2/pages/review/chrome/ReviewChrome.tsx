@@ -54,7 +54,11 @@ export default function ReviewChrome({
   /** Tiroir ancré sous le transport (courbes ou pellicule). */
   drawer?: ReactNode;
   comments?: ReactNode;
-  onViewAction: (action: ViewAction['id']) => void;
+  /**
+   * Cadrer / vue d'origine. Absent quand le viewer ne les implémente pas : le rail n'affiche
+   * alors pas ces deux boutons plutôt que d'en proposer d'inertes.
+   */
+  onViewAction?: (action: ViewAction['id']) => void;
   /** Éditions en attente — vient des hooks d'édition, pas de l'état du chrome. */
   dirty?: boolean;
   /** Outils du mode que ce viewer n'implémente pas — retirés du rail. */
@@ -106,10 +110,10 @@ export default function ReviewChrome({
       <div className="flex min-h-0 flex-1">
         <ToolRail
           tools={tools}
-          actions={viewActionsFor(kind)}
+          actions={onViewAction ? viewActionsFor(kind) : []}
           tool={state.tool}
           onTool={(tool: ToolId) => onState({ tool })}
-          onAction={onViewAction}
+          onAction={(action) => onViewAction?.(action)}
           labels={state.labels}
           onLabels={() => onState({ labels: !state.labels })}
         />

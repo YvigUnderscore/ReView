@@ -1,6 +1,6 @@
 import { type ComponentProps, type ReactNode } from 'react';
 import type { ReviewComment } from '../../types/api';
-import type { MediaResp, SplatEditsPatch } from './reviewTypes';
+import type { MediaResp } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { CompareMode } from './useCompareState';
 import ReviewContextMenu from './ReviewContextMenu';
@@ -8,7 +8,6 @@ import VideoComparePane from './VideoComparePane';
 import VideoWipeOverlay from './VideoWipeOverlay';
 import { VideoDiffOverlay } from './DiffOverlay';
 import VideoPane from './VideoPane';
-import VideoTrimBar from './VideoTrimBar';
 
 /**
  * Branche **vidéo** du viewer de review (extrait de ReviewViewer, budget 300) : lecteur
@@ -32,12 +31,10 @@ export default function VideoReviewSection({
   startFrame,
   onFullscreen,
   onLoopChange,
-  canEdit,
   canManage,
   ann,
   onToggleAnnotate,
   onClearSelection,
-  onSplatEditsSaved,
   compareIds,
   compareMode,
   onCompareModeChange,
@@ -61,12 +58,10 @@ export default function VideoReviewSection({
   startFrame: number;
   onFullscreen: () => void;
   onLoopChange?: ComponentProps<typeof VideoPane>['onLoopChange'];
-  canEdit: boolean;
   canManage: boolean;
   ann: ReturnType<typeof useAnnotations>;
   onToggleAnnotate: () => void;
   onClearSelection: () => void;
-  onSplatEditsSaved: (patch: SplatEditsPatch) => void;
   compareIds: number[];
   compareMode: CompareMode;
   onCompareModeChange: (mode: CompareMode) => void;
@@ -145,7 +140,6 @@ export default function VideoReviewSection({
             }
             onLoopChange={onLoopChange}
           />
-          {canEdit && <VideoTrimBar data={data} fps={fps} videoRef={videoRef} onSaved={onSplatEditsSaved} />}
         </div>
       </ReviewContextMenu>
       {/* Panes B synchronisés sur le maître : côte-à-côte (1) ou grille 2×2 (34.D). */}
