@@ -274,7 +274,6 @@ export default function SplatReview({
         <SpatialTransport
           anim={pres.anim}
           editable={canPresent}
-          track="camera"
           onAttach={attachLayout}
           drawerOpen={state.drawer === 'curves'}
           onDrawer={() => update({ drawer: state.drawer === 'curves' ? null : 'curves' })}

@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import {
-  Box,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -13,21 +12,11 @@ import {
   Redo2,
   Repeat,
   Undo2,
-  Video,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
-import { CHANNEL_IDS } from '../camera/channels/model';
 import type { CameraAnimState } from '../camera/useCameraAnim';
-
-/** Temps de clés, tous canaux confondus, triés — sert la piste et les sauts de clé en clé. */
-function keyTimes(anim: CameraAnimState): number[] {
-  const times = new Set<number>();
-  for (const id of CHANNEL_IDS) for (const k of anim.anim.channels[id]?.keys ?? []) times.add(k.t);
-  return [...times].sort((a, b) => a - b);
-}
 
 /**
  * Ligne du bas des viewers spatiaux : le temps. Reprend `AnimToolbar` (qui flottait avec le
@@ -37,8 +26,7 @@ function keyTimes(anim: CameraAnimState): number[] {
 export default function SpatialTransport({
   anim,
   editable,
-  track,
-  onTrack,
+  trackSwitch,
   onAttach,
   drawerOpen,
   onDrawer,
@@ -46,15 +34,15 @@ export default function SpatialTransport({
   anim: CameraAnimState;
   /** Gestionnaire pré-publication : seul à pouvoir écrire des clés. */
   editable: boolean;
-  /** Piste éditée : animation de mise en scène ou clips du fichier. */
-  track: 'camera' | 'clip';
-  onTrack?: (track: 'camera' | 'clip') => void;
+  /** Sélecteur de piste, quand le média porte aussi des clips d'animation. */
+  trackSwitch?: ReactNode;
   /** Joindre l'animation au prochain commentaire (mode layout). */
   onAttach?: () => void;
   drawerOpen: boolean;
   onDrawer: () => void;
 }) {
-  const times = useMemo(() => keyTimes(anim), [anim]);
+  // `keyTimes` fusionne déjà les clés de tous les canaux, triées.
+  const times = anim.keyTimes;
   const span = Math.max(anim.playDuration, times[times.length - 1] ?? 0, 1);
   const pct = (t: number) => (t / span) * 100;
   const goToKey = (dir: -1 | 1) => {
@@ -67,25 +55,7 @@ export default function SpatialTransport({
 
   return (
     <div className="rv-transport">
-      {onTrack && (
-        <>
-          <SegmentedControl
-            label="Piste d’animation"
-            items={[
-              {
-                value: 'camera' as const,
-                label: 'Caméra',
-                icon: Video,
-                hint: 'Animation caméra de la mise en scène',
-              },
-              { value: 'clip' as const, label: 'Modèle', icon: Box, hint: 'Clips d’animation du fichier' },
-            ]}
-            value={track}
-            onChange={onTrack}
-          />
-          <span className="rv-rule" />
-        </>
-      )}
+      {trackSwitch}
       <IconButton
         icon={anim.playing ? Pause : Play}
         label={anim.playing ? 'Pause (espace)' : 'Lecture (espace)'}
