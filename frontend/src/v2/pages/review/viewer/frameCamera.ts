@@ -40,3 +40,16 @@ export function objectBoundingSphere(
   if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return null;
   return { center: sphere.center, radius: sphere.radius };
 }
+
+/** Sphère englobante monde de plusieurs objets — cadrage `F` d'un prim multi-meshes (46.I). */
+export function objectsBoundingSphere(
+  three: typeof import('three'),
+  objects: readonly THREE.Object3D[],
+): { center: THREE.Vector3; radius: number } | null {
+  const box = new three.Box3();
+  for (const object of objects) box.expandByObject(object);
+  if (box.isEmpty()) return null;
+  const sphere = box.getBoundingSphere(new three.Sphere());
+  if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return null;
+  return { center: sphere.center, radius: sphere.radius };
+}

@@ -81,6 +81,18 @@ export default function Shell({
   const { data } = useProjectsQuery();
   const projects = useMemo(() => (data ?? []).slice(0, 8), [data]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
+  // Page de review (46.O) : la sidebar démarre repliée pour laisser le viewer occuper l'espace.
+  // La dépliér reste possible — choix de session, la préférence globale n'est pas touchée.
+  const onReview = pathname.startsWith('/review/');
+  const [reviewExpanded, setReviewExpanded] = useState(false);
+  const [wasReview, setWasReview] = useState(onReview);
+  if (wasReview !== onReview) {
+    // Ajusté pendant le rendu (même pattern que useChromeState) : retour à l'état replié à
+    // chaque entrée en review, sans effet ni rendu intermédiaire.
+    setWasReview(onReview);
+    setReviewExpanded(false);
+  }
+  const sidebarHidden = onReview ? !reviewExpanded : collapsed;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const favorites = useFavorites((s) => s.favorites);
@@ -91,11 +103,17 @@ export default function Shell({
     loadFavorites();
   }, [loadFavorites]);
 
-  const toggleCollapse = () =>
+  const toggleCollapse = () => {
+    // En review, la bascule ne vaut que pour la visite : la préférence globale reste intacte.
+    if (onReview) {
+      setReviewExpanded((v) => !v);
+      return;
+    }
     setCollapsed((c) => {
       localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1');
       return !c;
     });
+  };
 
   // Projet courant pour la sidebar contextuelle : depuis la route (/projects/:id…)
   // ou, sur les pages d'entité (/tasks, /assets, /review), depuis le contexte
@@ -117,8 +135,8 @@ export default function Shell({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      {/* Sidebar (repliable pour gagner de la place) */}
-      {!collapsed && (
+      {/* Sidebar (repliable pour gagner de la place ; repliée d'office en review — 46.O) */}
+      {!sidebarHidden && (
         <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-card/40">
           <div className="flex items-center justify-between px-4 py-4">
             {/* Logo bannière (masque alpha teinté par le thème — blanc sur sombre, encre sur clair). */}
@@ -249,7 +267,7 @@ export default function Shell({
       {/* Colonne principale */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
-          {collapsed && (
+          {sidebarHidden && (
             <button
               onClick={toggleCollapse}
               title="Déplier la barre"

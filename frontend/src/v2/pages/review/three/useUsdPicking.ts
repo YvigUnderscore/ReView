@@ -29,12 +29,21 @@ export function useUsdPicking(
   onSelect: (path: string | null) => void,
   /** Traduit l'objet touché en prim — l'index de la scène, seule table faisant autorité. */
   resolve: (object: THREE.Object3D) => string | null,
+  /**
+   * Clic droit **immobile** sur un prim (46.M) : le prim est sélectionné puis ce rappel est
+   * invoqué, et l'événement remonte jusqu'au `ContextMenu` qui enveloppe le viewer. Un clic
+   * droit glissé reste un vol ; dans le vide, rien ne s'ouvre — l'événement est arrêté.
+   */
+  onContext?: (path: string) => void,
 ): void {
   const down = useRef<{ x: number; y: number } | null>(null);
+  const downRight = useRef<{ x: number; y: number } | null>(null);
   const resolveRef = useRef(resolve);
+  const onContextRef = useRef(onContext);
   useEffect(() => {
     resolveRef.current = resolve;
-  }, [resolve]);
+    onContextRef.current = onContext;
+  }, [resolve, onContext]);
 
   useEffect(() => {
     if (!ready) return;
@@ -43,24 +52,53 @@ export function useUsdPicking(
     const root = handle?.modelObject;
     if (!handle || !dom || !root) return;
 
+    const pickAt = (clientX: number, clientY: number) => {
+      const rect = dom.getBoundingClientRect();
+      return pickPrim(handle.THREE, handle.camera, root, toNdc(clientX, clientY, rect), resolveRef.current);
+    };
+
     const onDown = (e: PointerEvent) => {
-      down.current = { x: e.clientX, y: e.clientY };
+      if (e.button === 2) downRight.current = { x: e.clientX, y: e.clientY };
+      else down.current = { x: e.clientX, y: e.clientY };
     };
     const onUp = (e: PointerEvent) => {
       const start = down.current;
       down.current = null;
       if (e.button !== 0 || !start) return;
       if (!isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
-      const rect = dom.getBoundingClientRect();
-      const ndc = toNdc(e.clientX, e.clientY, rect);
-      onSelect(pickPrim(handle.THREE, handle.camera, root, ndc, resolveRef.current));
+      onSelect(pickAt(e.clientX, e.clientY));
+    };
+    const onCtx = (e: MouseEvent) => {
+      const start = downRight.current;
+      downRight.current = null;
+      e.stopPropagation();
+      // Glissement = vol ; vide = rien : le menu ne s'ouvre jamais sans objet visé.
+      if (!start || !isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
+      const path = pickAt(e.clientX, e.clientY);
+      if (!path) return;
+      onSelect(path);
+      onContextRef.current?.(path);
+      // `flyControls` a déjà `preventDefault()` l'événement sur le canvas (menu natif), et le
+      // ContextMenu enveloppant ignore un événement déjà consommé. On relance donc un événement
+      // **neuf** un cran au-dessus du canvas : il remonte jusqu'au menu sans repasser par les
+      // écouteurs de vol ni par celui-ci.
+      dom.parentElement?.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
     };
 
     dom.addEventListener('pointerdown', onDown);
     dom.addEventListener('pointerup', onUp);
+    dom.addEventListener('contextmenu', onCtx);
     return () => {
       dom.removeEventListener('pointerdown', onDown);
       dom.removeEventListener('pointerup', onUp);
+      dom.removeEventListener('contextmenu', onCtx);
     };
   }, [getSceneHandle, ready, onSelect]);
 }

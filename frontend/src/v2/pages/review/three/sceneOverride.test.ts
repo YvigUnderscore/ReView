@@ -171,4 +171,23 @@ describe('isolatePrim', () => {
     expect(isHidden(o, '/W/B')).toBe(false);
     expect(isHidden(o, '/W/A')).toBe(true);
   });
+
+  it('n’écrit qu’une entrée par frère de la lignée — jamais une par prim masqué', () => {
+    // Scène riche : masquer chaque prim individuellement dépassait MAX_OVERRIDE_PRIMS et la
+    // troncature laissait la moitié de la scène visible (constaté sur Kitchen_set).
+    const big = ['/W', '/W/A', '/W/A/Geo', '/W/B'];
+    for (let i = 0; i < 800; i++) big.push(`/W/B/prop${i}`);
+    const o = isolatePrim(emptyOverride(), '/W/A/Geo', big);
+    // Une seule entrée : `/W/B` masqué ; ses 800 enfants héritent sans être stockés.
+    expect(Object.keys(o.prims)).toEqual(['/W/B']);
+    expect(isHidden(o, '/W/B/prop42')).toBe(true);
+    expect(isHidden(o, '/W/A/Geo')).toBe(false);
+  });
+
+  it('masque les prims de premier niveau hors lignée', () => {
+    const o = isolatePrim(emptyOverride(), '/W/A', ['/W', '/W/A', '/Other', '/Other/Geo']);
+    expect(isHidden(o, '/Other')).toBe(true);
+    expect(isHidden(o, '/Other/Geo')).toBe(true);
+    expect(isHidden(o, '/W')).toBe(false);
+  });
 });

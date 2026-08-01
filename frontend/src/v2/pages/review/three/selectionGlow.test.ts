@@ -54,6 +54,30 @@ describe('createSelectionGlow — halo de sélection (46)', () => {
     expect(shellsOf(scene)).toBe(-1);
   });
 
+  it('reste aligné sur une géométrie excentrée (transformations cuites dans les sommets)', () => {
+    const scene = new THREE.Scene();
+    // Blender cuit souvent la position dans les sommets : géométrie loin de l'origine locale.
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    geometry.translate(10, 0, 0);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
+    scene.add(mesh);
+    const glow = createSelectionGlow(THREE, scene);
+    glow.show([mesh]);
+
+    const shell = scene.children.find((o) => o.name === 'review-selection-glow')!.children[0] as THREE.Mesh;
+    // Le centre de la géométrie doit rester exactement au même point monde : la dilatation se
+    // fait autour de lui, pas autour de l'origine (qui décalerait le halo de 4 % de la distance).
+    const center = geometry.boundingSphere!.center.clone();
+    const viaShell = center.clone().applyMatrix4(shell.matrix);
+    const viaMesh = center.clone().applyMatrix4(mesh.matrixWorld);
+    expect(viaShell.distanceTo(viaMesh)).toBeLessThan(1e-6);
+    // Et un point du bord est bien dilaté de SHELL_SCALE autour de ce centre.
+    const edge = center.clone().add(new THREE.Vector3(0.5, 0, 0));
+    const shellEdge = edge.clone().applyMatrix4(shell.matrix);
+    expect(shellEdge.x - viaShell.x).toBeCloseTo(0.5 * 1.04, 5);
+    glow.dispose();
+  });
+
   it('reste hors du raycast : c’est un repère d’interface', () => {
     const { scene, group } = makeScene();
     const glow = createSelectionGlow(THREE, scene);

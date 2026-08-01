@@ -66,11 +66,25 @@ the scene, not just the nodes that happen to be drawn. Prims that exist but are 
   group highlights the whole branch. Clicking empty space clears the selection. Dragging orbits
   the camera as usual — only a click that does not move selects. Objects that are not currently
   drawn (inactive variant, hidden prim) cannot be picked and are never outlined.
+- **Frame the selection** — with a prim selected, `F` flies the camera to it (keeping the
+  current view direction) and frames it; without a selection, `F` frames the whole model.
 - **Show / hide** a prim with the eye on its row. Hiding a prim hides its children too; a prim
   hidden by one of its parents is shown greyed and cannot be re-shown on its own.
-- **Right-click** a prim for its variant sets, plus *Hide*, *Isolate* and *Reset this prim*.
-  Switching a variant is **instant**: every option is baked into the converted file, so nothing
-  is reconverted and it works on published media too.
+- **Right-click** a prim — in the tree **or directly on the object in the viewer** (a still
+  right-click; dragging stays fly navigation) — for its variant sets (including sets carried by
+  an ancestor), plus *Frame*, *Hide*, *Isolate* and *Reset this prim*. Switching a variant is
+  **instant**: every option is baked into the converted file, so nothing is reconverted and it
+  works on published media too.
+- **Move / rotate / scale a prim** — select a prim, switch to the *Clean* mode and press `T`
+  (or `R` / `S`): the transform gizmo attaches to that prim instead of the whole model, and the
+  delta is written into the ReView override. Before publication a manager saves it for everyone;
+  after publication it travels with the next comment, like any other proposal. With no prim
+  selected the gizmo keeps transforming the whole model (version transform, pre-publish only).
+- The tree also lists geometry the analyzer cannot compose — baked variant options live in the
+  scene as implicit prims, so they can be selected and isolated like any other. Rows are greyed
+  when their geometry is not currently drawn (inactive variant, missing from the GLB).
+- Local exploration (isolation, visibility, moved prims) belongs to the media you are viewing:
+  switching to another asset of the version resets it.
 
 Everything you change is a **ReView override** — a lightweight delta ReView applies when the
 scene loads (moved here, scaled, hidden, this look). The USD file itself is never modified.

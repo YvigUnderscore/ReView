@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildPrimTree,
+  buildRenderedPrimTree,
   isSelfOrDescendant,
   leafName,
   matchPrimPath,
@@ -105,5 +106,37 @@ describe('matchPrimPath', () => {
 
   it('départage par le préfixe commun le plus long', () => {
     expect(matchPrimPath('/A/B/Mesh', ['/A/B/C/Mesh', '/Z/Mesh'])).toBe('/A/B/C/Mesh');
+  });
+});
+
+describe('buildRenderedPrimTree', () => {
+  it('ajoute des prims implicites pour la géométrie que l’analyseur ne compose pas', () => {
+    // L'analyseur compose UNE option par jeu de variantes : la géométrie de l'option `lo`,
+    // cuite dans le GLB (46.G), n'existe pas dans sa liste. Sans prim implicite, elle était
+    // insélectionnable et l'isolement retombait sur le parent connu le plus proche.
+    const tree = buildRenderedPrimTree(
+      [prim('/World'), prim('/World/Asset'), prim('/World/Asset/Geo')],
+      ['/World/Asset/Geo', '/World/Asset/Geo/Geo/Cube'],
+    );
+    expect(flatten(tree)).toEqual([
+      '/World',
+      '/World/Asset',
+      '/World/Asset/Geo',
+      '/World/Asset/Geo/Geo',
+      '/World/Asset/Geo/Geo/Cube',
+    ]);
+  });
+
+  it('ne duplique pas les prims déjà connus et écarte les artefacts _materials', () => {
+    const tree = buildRenderedPrimTree(
+      [prim('/World'), prim('/World/Asset')],
+      ['/World/Asset', '/World/Asset/_materials'],
+    );
+    expect(flatten(tree)).toEqual(['/World', '/World/Asset']);
+  });
+
+  it('sans chemin rendu, rend l’arbre de l’analyseur tel quel', () => {
+    const tree = buildRenderedPrimTree([prim('/World'), prim('/World/Asset')], []);
+    expect(flatten(tree)).toEqual(['/World', '/World/Asset']);
   });
 });

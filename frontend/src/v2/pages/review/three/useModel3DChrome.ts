@@ -4,8 +4,10 @@ import type { ToolId } from '../chrome/tools';
 import { useEditHistory } from '../splat/editor/operations/history';
 import { useTransformGizmo } from '../viewer/gizmos/useTransformGizmo';
 import type { TransformMode } from '../viewer/gizmos/useGizmoModeShortcuts';
+import { IDENTITY_TRANSFORM } from './sceneOverride';
 import { eulerTransformFromMesh } from './modelGizmoTransform';
 import type { Model3DThreeState } from './useModel3DThree';
+import type { UsdSceneState } from './useUsdScene';
 
 /** Outils du rail sans implémentation dans le viewer 3D (le pinceau et la zone sont splat). */
 export const MODEL_HIDDEN_TOOLS: ToolId[] = ['paint', 'region'];
@@ -26,17 +28,25 @@ export function useModel3DChrome({
   state,
   m,
   cameraRig,
+  usdScene,
 }: {
   state: ChromeState;
   m: Model3DThreeState;
   cameraRig?: { mode: 'translate' | 'rotate'; setMode: (mode: 'translate' | 'rotate') => void };
+  /** Scène USD : un prim sélectionné détourne le gizmo TRS vers ce prim (46.N). */
+  usdScene?: UsdSceneState;
 }) {
   const history = useEditHistory();
   const { updateTransform } = m;
   const mode: TransformMode = GIZMO_MODE[state.tool] ?? 'navigate';
 
+  // Un prim USD sélectionné prend le gizmo : le delta est écrit dans l'override ReView (pas
+  // dans la transformation de version), donc enregistrable pour tous avant publication et
+  // joignable à un commentaire après. Sans sélection, le gizmo transforme le modèle entier.
+  const primObject = usdScene?.selectedObject ?? null;
+
   useTransformGizmo(m, {
-    enabled: mode !== 'navigate',
+    enabled: mode !== 'navigate' && !primObject,
     mode: mode === 'navigate' ? 'rotate' : mode,
     onChange: (trs) => updateTransform(eulerTransformFromMesh(trs)),
     onCommit: (before, after) => {
@@ -46,6 +56,26 @@ export function useModel3DChrome({
         label: 'Transformer le modèle',
         undo: () => updateTransform(b),
         redo: () => updateTransform(a),
+      });
+    },
+  });
+
+  useTransformGizmo(m, {
+    enabled: mode !== 'navigate' && !!primObject,
+    mode: mode === 'navigate' ? 'rotate' : mode,
+    target: primObject,
+    // Pendant le drag, TransformControls déplace l'objet directement ; le delta n'est relevé
+    // qu'au lâcher, puis `applyPlan` le répercute sur tous les objets du prim.
+    onChange: () => {},
+    onCommit: () => {
+      if (!primObject || !usdScene) return;
+      const commit = usdScene.commitPrimTransform(primObject);
+      if (!commit) return;
+      const { setPrim } = usdScene;
+      history.push({
+        label: 'Transformer le prim',
+        undo: () => setPrim(commit.path, { transform: commit.before ?? IDENTITY_TRANSFORM }),
+        redo: () => setPrim(commit.path, { transform: commit.after }),
       });
     },
   });

@@ -66,8 +66,19 @@ export function createSelectionGlow(three: typeof import('three'), scene: THREE.
           mesh.updateWorldMatrix(true, false);
           // La coque est posée en espace monde : elle suit l'objet sans dépendre de sa place
           // dans la hiérarchie (et donc sans être masquée avec un parent invisible).
+          //
+          // La dilatation se fait autour du **centre de la géométrie**, pas de l'origine locale :
+          // Blender cuit souvent les transformations dans les sommets (origine restée au centre
+          // du monde), et dilater autour de l'origine décalerait le halo d'autant plus que
+          // l'objet est loin d'elle.
+          if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
+          const c = mesh.geometry.boundingSphere?.center ?? new three.Vector3();
           shell.matrixAutoUpdate = false;
-          shell.matrix.copy(mesh.matrixWorld).scale(new three.Vector3(SHELL_SCALE, SHELL_SCALE, SHELL_SCALE));
+          shell.matrix
+            .copy(mesh.matrixWorld)
+            .multiply(new three.Matrix4().makeTranslation(c.x, c.y, c.z))
+            .multiply(new three.Matrix4().makeScale(SHELL_SCALE, SHELL_SCALE, SHELL_SCALE))
+            .multiply(new three.Matrix4().makeTranslation(-c.x, -c.y, -c.z));
           group.add(shell);
         });
       }

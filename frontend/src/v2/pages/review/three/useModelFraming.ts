@@ -1,13 +1,15 @@
-import { useCallback, type RefObject } from 'react';
+import { useCallback, useRef, type RefObject } from 'react';
+import type * as THREE from 'three';
 import { fitDistance } from './sceneConfig';
-import { frameCameraToSphere, objectBoundingSphere } from '../viewer/frameCamera';
+import { frameCameraToSphere, objectBoundingSphere, objectsBoundingSphere } from '../viewer/frameCamera';
 import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import type { SceneRuntime } from './useModel3DThree';
 
 /**
  * Cadrage F/H du viewer 3D (unifié avec le splat) — extrait de `useModel3DThree` (39.C, budget de
- * lignes) : `F` cadre le modèle en conservant la direction de vue, `H` rétablit la vue d'origine
- * (face au modèle, cible au centre). Les raccourcis sont désactivés en vol.
+ * lignes) : `F` cadre la **sélection** (prim USD sélectionné, via `frameTargetRef`) ou le modèle
+ * entier, en conservant la direction de vue ; `H` rétablit la vue d'origine (face au modèle,
+ * cible au centre). Les raccourcis sont désactivés en vol.
  */
 export function useModelFraming(params: {
   runtimeRef: RefObject<SceneRuntime | null>;
@@ -17,13 +19,22 @@ export function useModelFraming(params: {
 }) {
   const { runtimeRef, threeRef, ready, isFlying } = params;
 
+  // Cible de cadrage `F` (46.I) : fournisseur enregistré par la review (objets du prim USD
+  // sélectionné) — vide ou absent = cadrer le modèle entier, comportement historique.
+  const frameTargetRef = useRef<(() => THREE.Object3D[]) | null>(null);
+  const setFrameTarget = useCallback((provider: (() => THREE.Object3D[]) | null) => {
+    frameTargetRef.current = provider;
+  }, []);
+
   const frameView = useCallback(() => {
     const rt = runtimeRef.current;
     const THREE = threeRef.current;
     if (!rt || !THREE) return;
-    const bounds = objectBoundingSphere(THREE, rt.scene.root);
+    const targets = frameTargetRef.current?.() ?? [];
+    const bounds =
+      targets.length > 0 ? objectsBoundingSphere(THREE, targets) : objectBoundingSphere(THREE, rt.scene.root);
     if (bounds) frameCameraToSphere(rt.scene.camera, rt.scene.controls, bounds.center, bounds.radius);
-  }, [runtimeRef, threeRef]);
+  }, [runtimeRef, threeRef, frameTargetRef]);
 
   const homeView = useCallback(() => {
     const rt = runtimeRef.current;
@@ -38,5 +49,5 @@ export function useModelFraming(params: {
 
   useFrameShortcuts({ active: ready, isFlying, onFrame: frameView, onHome: homeView });
 
-  return { frameView, homeView };
+  return { frameView, homeView, setFrameTarget };
 }

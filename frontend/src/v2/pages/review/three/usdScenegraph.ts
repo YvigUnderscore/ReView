@@ -97,6 +97,25 @@ export function buildPrimTree(prims: UsdPrim[]): PrimNode[] {
 }
 
 /**
+ * Arbre complet de la scène **telle qu'elle est réellement chargée** : les prims de l'analyseur,
+ * plus des prims implicites pour les chemins rendus qu'il ne connaît pas. L'analyseur compose la
+ * scène avec **une seule** option par jeu de variantes — la géométrie des autres options, cuite
+ * dans le GLB (46.G), n'existe pas dans son arbre. Sans ces prims implicites, la sélectionner ou
+ * l'isoler était impossible : l'isolement retombait sur le parent connu le plus proche.
+ * Les artefacts d'export Blender (`_materials`) sont tenus hors de l'arbre.
+ */
+export function buildRenderedPrimTree(prims: UsdPrim[], renderedPaths: Iterable<string>): PrimNode[] {
+  const known = new Set(prims.map((p) => p.path));
+  const ghosts: UsdPrim[] = [];
+  for (const path of renderedPaths) {
+    if (known.has(path) || leafName(path) === '_materials') continue;
+    known.add(path);
+    ghosts.push(implicitPrim(path));
+  }
+  return buildPrimTree([...prims, ...ghosts]);
+}
+
+/**
  * Apparie un chemin reconstruit côté glTF au prim USD correspondant. Égalité stricte d'abord ;
  * sinon, parmi les prims de **même nom de feuille**, celui qui partage le plus long préfixe —
  * ce qui absorbe un niveau collapsé ou inséré. Renvoie `null` si rien ne correspond ou si le

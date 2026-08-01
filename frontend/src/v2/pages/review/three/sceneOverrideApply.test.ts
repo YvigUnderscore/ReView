@@ -7,6 +7,7 @@ import {
   makePrimResolver,
   planOverride,
   renderedPrimPaths,
+  transformDeltaFrom,
   type BaseState,
   type IndexedObject,
 } from './sceneOverrideApply';
@@ -234,6 +235,49 @@ describe('makePrimResolver', () => {
 
   it('renvoie null pour un objet hors de la scène USD', () => {
     expect(makePrimResolver([])(asObject3D(fakeObject({})))).toBeNull();
+  });
+});
+
+describe('transformDeltaFrom', () => {
+  it('est l’inverse exact de planOverride : base + delta redonne la pose manipulée', () => {
+    const origin = base({ position: [1, 0, 0], rotation: [0, 0.5, 0], scale: [2, 2, 2] });
+    const pose = {
+      position: { x: 3, y: 1, z: 0 },
+      rotation: { x: 0, y: 1.5, z: 0 },
+      scale: { x: 4, y: 2, z: 2 },
+    };
+    const delta = transformDeltaFrom(origin, pose);
+    expect(delta.t).toEqual([2, 1, 0]);
+    expect(delta.r[1]).toBeCloseTo(1);
+    expect(delta.s).toEqual([2, 1, 1]);
+    // Round-trip par planOverride : l'objet revient exactement à la pose du gizmo.
+    const override = setPrimEdit(emptyOverride(), '/W/A', { transform: delta });
+    const plan = planOverride(
+      [{ object: 'o', primPath: '/W/A', base: origin }] as IndexedObject<string>[],
+      override,
+    )[0]!;
+    expect(plan.position).toEqual([3, 1, 0]);
+    expect(plan.rotation[1]).toBeCloseTo(1.5);
+    expect(plan.scale).toEqual([4, 2, 2]);
+  });
+
+  it('pose inchangée → delta identité (donc rien à stocker)', () => {
+    const origin = base({ position: [5, 5, 5] });
+    const delta = transformDeltaFrom(origin, {
+      position: { x: 5, y: 5, z: 5 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    });
+    expect(delta).toEqual({ t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1] });
+  });
+
+  it('ne produit pas de NaN sur une base d’échelle nulle', () => {
+    const delta = transformDeltaFrom(base({ scale: [0, 1, 1] }), {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 2, y: 2, z: 2 },
+    });
+    expect(delta.s).toEqual([1, 2, 2]);
   });
 });
 

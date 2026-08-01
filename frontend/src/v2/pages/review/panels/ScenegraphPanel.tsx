@@ -1,19 +1,11 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Eye, EyeOff, RotateCcw } from 'lucide-react';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from '../../../components/ui/context-menu';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../../components/ui/context-menu';
 import type { UsdModelInfo } from '../../../types/api';
 import type { PrimNode } from '../three/usdScenegraph';
 import { isHidden, isHiddenByAncestor } from '../three/sceneOverride';
 import type { UsdSceneState } from '../three/useUsdScene';
+import PrimMenuItems from './PrimMenuItems';
 
 /**
  * Scenegraph USD du dock (Phase 46, 46.C/46.E) : l'arbre réel de la scène, sélection
@@ -104,29 +96,7 @@ function PrimRow({
         </ContextMenuTrigger>
 
         <ContextMenuContent>
-          {sets.map((set) => (
-            <ContextMenuSub key={set.name}>
-              <ContextMenuSubTrigger>Variante · {set.name}</ContextMenuSubTrigger>
-              <ContextMenuSubContent>
-                {set.options.map((option) => (
-                  <ContextMenuItem
-                    key={option}
-                    onSelect={() => scene.setVariant(node.path, set.name, option)}
-                  >
-                    {option}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-          ))}
-          {sets.length > 0 && <ContextMenuSeparator />}
-          <ContextMenuItem onSelect={() => scene.setPrim(node.path, { visible: hidden ? undefined : false })}>
-            {hidden ? 'Afficher' : 'Masquer'}
-          </ContextMenuItem>
-          <ContextMenuItem onSelect={() => scene.isolate(node.path)}>Isoler</ContextMenuItem>
-          <ContextMenuItem onSelect={() => scene.setPrim(node.path, null)}>
-            Réinitialiser ce prim
-          </ContextMenuItem>
+          <PrimMenuItems scene={scene} usd={usd} path={node.path} />
         </ContextMenuContent>
       </ContextMenu>
 

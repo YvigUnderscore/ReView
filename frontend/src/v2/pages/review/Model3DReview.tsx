@@ -1,6 +1,8 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../components/ui/context-menu';
+import PrimMenuItems from './panels/PrimMenuItems';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
@@ -94,7 +96,23 @@ export default function Model3DReview({
     [ann.viewedSceneOverride],
   );
   const scene = useUsdScene(data, model3d.getSceneHandle, ready, commentOverride, ann.setSceneOverride);
-  useUsdPicking(model3d.getSceneHandle, ready, scene.select, scene.resolvePrim);
+  // Clic droit immobile sur un objet (46.M) : le prim visé alimente le menu qui enveloppe le pane.
+  const [primMenu, setPrimMenu] = useState<string | null>(null);
+  useUsdPicking(model3d.getSceneHandle, ready, scene.select, scene.resolvePrim, setPrimMenu);
+  // `F` cadre le prim sélectionné (46.I) — le viewer garde son cadrage global sans sélection.
+  const { setFrameTarget } = model3d;
+  useEffect(() => {
+    setFrameTarget(scene.selectedObjects);
+    return () => setFrameTarget(null);
+  }, [setFrameTarget, scene.selectedObjects]);
+  // L'envoi d'un commentaire emporte la proposition (le composer est vidé) : l'exploration
+  // locale repart à zéro — comme le hotspot posé. Sans cela, le pied du scenegraph promettrait
+  // un delta que le prochain commentaire ne porterait plus. Le commentaire fraîchement créé,
+  // une fois sélectionné, rejoue exactement ce qui vient d'être proposé.
+  const { revert, dirty: sceneDirty } = scene;
+  useEffect(() => {
+    if (ann.sceneOverride === null && sceneDirty) revert();
+  }, [ann.sceneOverride, sceneDirty, revert]);
   // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
   const [recomposeOpen, setRecomposeOpen] = useState(false);
   const [savingOverride, setSavingOverride] = useState(false);
@@ -114,7 +132,7 @@ export default function Model3DReview({
   });
 
   const { state, update } = useChromeState('MODEL_3D');
-  const { history, dirty } = useModel3DChrome({ state, m: model3d, cameraRig: rig });
+  const { history, dirty } = useModel3DChrome({ state, m: model3d, cameraRig: rig, usdScene: scene });
 
   const tools = toolsFor(state.mode, 'MODEL_3D');
   const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0]!;
@@ -197,26 +215,39 @@ export default function Model3DReview({
       }
       drawer={state.drawer === 'curves' ? <CurvesDrawer anim={cam.anim} editable={canManage} /> : undefined}
     >
-      <Model3DThreePane
-        status={data.media.status}
-        loadError={model3d.loadError}
-        containerRef={model3d.containerRef}
-        overlay={overlay}
-        aspect={data.splatPresentation?.camera?.aspect}
-        pip={
-          model3d.layoutMode ? (
-            <PipFrame
-              label="Caméra layout"
-              aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
-              onRect={model3d.setPipRect}
+      {/* Clic droit immobile sur un objet → actions du prim visé (46.M). `useUsdPicking` arrête
+          l'événement (vol, clic dans le vide) pour que le menu ne s'ouvre jamais à vide. */}
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="contents">
+            <Model3DThreePane
+              status={data.media.status}
+              loadError={model3d.loadError}
+              containerRef={model3d.containerRef}
+              overlay={overlay}
+              aspect={data.splatPresentation?.camera?.aspect}
+              pip={
+                model3d.layoutMode ? (
+                  <PipFrame
+                    label="Caméra layout"
+                    aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
+                    onRect={model3d.setPipRect}
+                  />
+                ) : undefined
+              }
+              canReprocess={role !== 'CLIENT'}
+              reprocessing={reprocessing}
+              processingError={data.processingError}
+              onReprocess={onReprocess}
             />
-          ) : undefined
-        }
-        canReprocess={role !== 'CLIENT'}
-        reprocessing={reprocessing}
-        processingError={data.processingError}
-        onReprocess={onReprocess}
-      />
+          </div>
+        </ContextMenuTrigger>
+        {primMenu && (
+          <ContextMenuContent>
+            <PrimMenuItems scene={scene} usd={usd} path={primMenu} onFrame={model3d.frameView} />
+          </ContextMenuContent>
+        )}
+      </ContextMenu>
       {canRecompose && usd && (
         <UsdRecomposeDialog
           open={recomposeOpen}

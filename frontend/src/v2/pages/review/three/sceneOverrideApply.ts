@@ -159,6 +159,41 @@ export function isDrawn(object: THREE.Object3D): boolean {
 }
 
 /**
+ * Delta d'override correspondant à la pose **courante** d'un objet par rapport à son état
+ * d'origine (46.N — gizmo TRS par prim). Inverse exact de `planOverride` : translation et
+ * rotation par différence, échelle par rapport — réappliquer le delta depuis la base redonne
+ * la pose manipulée au gizmo près.
+ */
+export function transformDeltaFrom(
+  base: BaseState,
+  object: {
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
+  },
+): PrimTransform {
+  // Une base d'échelle nulle est dégénérée (objet aplati) : rapport 1 pour ne pas produire NaN.
+  const ratio = (value: number, b: number) => (Math.abs(b) < 1e-12 ? 1 : value / b);
+  return {
+    t: [
+      object.position.x - base.position[0],
+      object.position.y - base.position[1],
+      object.position.z - base.position[2],
+    ],
+    r: [
+      object.rotation.x - base.rotation[0],
+      object.rotation.y - base.rotation[1],
+      object.rotation.z - base.rotation[2],
+    ],
+    s: [
+      ratio(object.scale.x, base.scale[0]),
+      ratio(object.scale.y, base.scale[1]),
+      ratio(object.scale.z, base.scale[2]),
+    ],
+  };
+}
+
+/**
  * Résout un objet touché vers son prim **via l'index**, en remontant la hiérarchie.
  *
  * L'index est la seule table qui fasse autorité : il a déjà apparié le chemin brut du glTF à

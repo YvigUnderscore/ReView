@@ -3,6 +3,21 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08 — USD scene graph, per-prim gizmo & review layout
+
+- **Selection outline fixed**: the highlight now hugs the selected object wherever it sits in
+  the scene (it used to drift on assets far from the origin).
+- **`F` frames the selection**: with a prim selected, the camera flies to it and frames it.
+- **Right-click an object in the viewer** for its settings — variants (including those carried
+  by a parent), frame, hide, isolate, reset. A right-click drag is still fly navigation.
+- **Move / rotate / scale a prim**: with a prim selected, the transform gizmo (`T`/`R`/`S` in
+  *Clean* mode) edits that prim; the delta is saved in the ReView override and replayed for
+  everyone once published, or attached to a comment after publication.
+- **Exact isolation**: *Isolate* now hides exactly the siblings of the selected prim — including
+  baked variant geometry — and works on large scenes.
+- **More room for the viewer**: review pages open with the main sidebar collapsed; expand it
+  any time, your preference elsewhere is untouched.
+
 ## 2026-08 — USD scene graph & overrides
 
 - **Scene graph**: USD media open with the real prim tree in the *Scene* panel, including prims

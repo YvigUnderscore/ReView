@@ -2,24 +2,28 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type * as THREE from 'three';
 import type { MediaResp } from '../reviewTypes';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
-import { buildPrimTree, type PrimNode } from './usdScenegraph';
+import { buildRenderedPrimTree, type PrimNode } from './usdScenegraph';
 import { createSelectionGlow } from './selectionGlow';
 import {
   emptyOverride,
   isEmptyOverride,
+  isHidden,
   isolatePrim,
   mergeOverrides,
   normalizeOverride,
   setPrimEdit,
   type PrimEdit,
+  type PrimTransform,
   type SceneOverride,
 } from './sceneOverride';
 import {
   applyPlan,
+  effectiveVariant,
   indexPrimObjects,
   makePrimResolver,
   planOverride,
   renderedPrimPaths,
+  transformDeltaFrom,
   type IndexedObject,
   type VariantSelection,
 } from './sceneOverrideApply';
@@ -53,6 +57,17 @@ export interface UsdSceneState {
   select: (path: string | null) => void;
   /** Prim auquel appartient un objet de la scène — sélection au clic dans le viewer. */
   resolvePrim: (object: THREE.Object3D) => string | null;
+  /** Objets affichés du prim sélectionné — cadrage `F` sur la sélection (46.I). */
+  selectedObjects: () => THREE.Object3D[];
+  /** Objet représentatif du prim sélectionné — cible du gizmo TRS par prim (46.N). */
+  selectedObject: THREE.Object3D | null;
+  /**
+   * Fin de drag du gizmo : la pose courante de l'objet devient le delta d'override du prim.
+   * Renvoie de quoi construire l'annulation (delta local avant/après), ou null hors index.
+   */
+  commitPrimTransform: (
+    object: THREE.Object3D,
+  ) => { path: string; before: PrimTransform | null; after: PrimTransform } | null;
   setPrim: (path: string, patch: PrimEdit | null) => void;
   isolate: (path: string) => void;
   setVariant: (prim: string, set: string, option: string) => void;
@@ -86,8 +101,27 @@ export function useUsdScene(
   const usd = data?.modelSource?.usd ?? null;
   const [local, setLocal] = useState<SceneOverride>(emptyOverride);
   const [selected, setSelected] = useState<string | null>(null);
+  const [indexed, setIndexed] = useState<IndexedObject<THREE.Object3D>[]>([]);
 
-  const tree = useMemo(() => buildPrimTree(usd?.prims ?? []), [usd]);
+  /**
+   * Changement de média (autre asset de la version) : l'exploration locale — isolement,
+   * visibilités, sélection — appartient à la scène qu'on quittait et ne doit pas suivre (46.K).
+   * Ajusté pendant le rendu (pattern `useChromeState`), pas dans un effet.
+   */
+  const mediaId = data?.media.id ?? null;
+  const [lastMediaId, setLastMediaId] = useState(mediaId);
+  if (lastMediaId !== mediaId) {
+    setLastMediaId(mediaId);
+    setLocal(emptyOverride());
+    setSelected(null);
+    setIndexed([]);
+  }
+  // Le delta en attente de commentaire est lui aussi abandonné avec la scène qui le portait.
+  useEffect(() => {
+    onLocalDelta?.(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- déclenché par le média, pas par l'identité du callback
+  }, [mediaId]);
+
   const variantDefaults = useMemo(() => defaultsFrom(data), [data]);
   const base = useMemo(() => normalizeOverride(data?.usdOverride), [data?.usdOverride]);
 
@@ -104,7 +138,6 @@ export function useUsdScene(
   // sur son identité re-capturerait comme « état d'origine » des transformations déjà
   // modifiées par l'override, qui se cumuleraient alors à chaque rafraîchissement.
   const primPathsKey = useMemo(() => (usd?.prims ?? []).map((p) => p.path).join('|'), [usd]);
-  const [indexed, setIndexed] = useState<IndexedObject<THREE.Object3D>[]>([]);
 
   /**
    * Indexation du modèle chargé — relevé de l'état d'origine servant de référence à
@@ -145,22 +178,6 @@ export function useUsdScene(
     applyPlan(planOverride(indexed, override, variantDefaults));
   }, [override, variantDefaults, indexed]);
 
-  const renderedPaths = useMemo(() => new Set(renderedPrimPaths(indexed)), [indexed]);
-  const resolvePrim = useMemo(() => makePrimResolver(indexed), [indexed]);
-
-  /**
-   * Halo de sélection : recalculé quand la sélection ou l'override change (l'objet a pu être
-   * déplacé ou masqué). Les objets d'un prim masqué ne reçoivent pas de halo.
-   */
-  useEffect(() => {
-    const handle = getSceneHandle();
-    if (!handle) return;
-    const glow = createSelectionGlow(handle.THREE, handle.scene);
-    // Le halo se charge de descendre jusqu'aux meshes réellement dessinés.
-    glow.show(selected ? indexed.filter((i) => i.primPath === selected).map((i) => i.object) : []);
-    return () => glow.dispose();
-  }, [selected, indexed, override, getSceneHandle]);
-
   /**
    * Toute édition locale passe ici : elle met à jour la scène **et** publie le delta pour le
    * prochain commentaire. Fait dans le gestionnaire d'événement, pas dans un effet.
@@ -175,6 +192,80 @@ export function useUsdScene(
     [onLocalDelta],
   );
 
+  /** Tous les chemins présents dans le GLB, options de variantes comprises. */
+  const loadedPaths = useMemo(() => renderedPrimPaths(indexed), [indexed]);
+
+  /**
+   * L'arbre couvre la scène **réellement chargée** : prims de l'analyseur + prims implicites
+   * pour la géométrie des variantes cuites (46.G), que l'analyseur ne compose pas. Sans eux,
+   * cette géométrie était insélectionnable dans l'arbre et l'isolement retombait sur le parent.
+   */
+  const tree = useMemo(() => buildRenderedPrimTree(usd?.prims ?? [], loadedPaths), [usd, loadedPaths]);
+
+  /**
+   * Chemins réellement affichés compte tenu des variantes retenues : les rangées d'une option
+   * inactive sont grisées, comme les prims que l'analyseur connaît mais que le GLB n'a pas.
+   */
+  const renderedPaths = useMemo(() => {
+    const shown = new Set<string>();
+    for (const entry of indexed) {
+      const active =
+        !entry.variant ||
+        effectiveVariant(override, variantDefaults, entry.variant.prim, entry.variant.set) ===
+          entry.variant.option;
+      if (active) shown.add(entry.primPath);
+    }
+    return shown;
+  }, [indexed, override, variantDefaults]);
+
+  const resolvePrim = useMemo(() => makePrimResolver(indexed), [indexed]);
+
+  /** Objets affichés du prim sélectionné — cadrage `F` (46.I) et gizmo TRS (46.N). */
+  const selectedObjects = useCallback((): THREE.Object3D[] => {
+    if (!selected || isHidden(override, selected)) return [];
+    return indexed
+      .filter((entry) => entry.primPath === selected)
+      .filter(
+        (entry) =>
+          !entry.variant ||
+          effectiveVariant(override, variantDefaults, entry.variant.prim, entry.variant.set) ===
+            entry.variant.option,
+      )
+      .map((entry) => entry.object);
+  }, [selected, indexed, override, variantDefaults]);
+
+  const selectedObject = useMemo(() => selectedObjects()[0] ?? null, [selectedObjects]);
+
+  /**
+   * Fin de drag du gizmo par prim (46.N) : la pose de l'objet manipulé, comparée à son état
+   * d'origine, devient le delta d'override du prim — que `applyPlan` répercute alors sur tous
+   * les objets du prim, pas seulement celui qui portait le gizmo.
+   */
+  const commitPrimTransform = useCallback(
+    (object: THREE.Object3D) => {
+      const entry = indexed.find((e) => e.object === object);
+      if (!entry) return null;
+      const before = local.prims[entry.primPath]?.transform ?? null;
+      const after = transformDeltaFrom(entry.base, object);
+      editLocal((o) => setPrimEdit(o, entry.primPath, { transform: after }));
+      return { path: entry.primPath, before, after };
+    },
+    [indexed, local, editLocal],
+  );
+
+  /**
+   * Halo de sélection : recalculé quand la sélection ou l'override change (l'objet a pu être
+   * déplacé ou masqué). Les objets d'un prim masqué ne reçoivent pas de halo.
+   */
+  useEffect(() => {
+    const handle = getSceneHandle();
+    if (!handle) return;
+    const glow = createSelectionGlow(handle.THREE, handle.scene);
+    // Le halo se charge de descendre jusqu'aux meshes réellement dessinés.
+    glow.show(selected ? indexed.filter((i) => i.primPath === selected).map((i) => i.object) : []);
+    return () => glow.dispose();
+  }, [selected, indexed, override, getSceneHandle]);
+
   const setPrim = useCallback(
     (path: string, patch: PrimEdit | null) => editLocal((o) => setPrimEdit(o, path, patch)),
     [editLocal],
@@ -182,10 +273,13 @@ export function useUsdScene(
 
   const isolate = useCallback(
     (path: string) => {
-      const paths = (usd?.prims ?? []).map((p) => p.path);
+      // L'isolement couvre **tout** ce qui est chargé, pas seulement les prims composés par
+      // l'analyseur : sans les chemins propres au GLB (variantes cuites, niveaux insérés par
+      // Blender), ces objets échappaient au masquage et l'isolement semblait viser le parent.
+      const paths = [...new Set([...(usd?.prims ?? []).map((p) => p.path), ...loadedPaths])];
       editLocal((o) => isolatePrim(o, path, paths));
     },
-    [usd, editLocal],
+    [usd, loadedPaths, editLocal],
   );
 
   const setVariant = useCallback(
@@ -207,6 +301,9 @@ export function useUsdScene(
     selected,
     select: setSelected,
     resolvePrim,
+    selectedObjects,
+    selectedObject,
+    commitPrimTransform,
     setPrim,
     isolate,
     setVariant,

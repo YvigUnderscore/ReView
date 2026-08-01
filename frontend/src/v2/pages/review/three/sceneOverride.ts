@@ -175,16 +175,33 @@ export function isHidden(override: SceneOverride, path: string): boolean {
 /**
  * Isole un prim : masque ses frères à chaque niveau, en gardant visibles sa lignée d'ancêtres
  * et toute sa descendance. Rendu classique d'un scenegraph de DCC.
+ *
+ * Seuls les **frères directs de la lignée** reçoivent `visible: false` — l'héritage de
+ * visibilité masque leur descendance gratuitement. Écrire une entrée par prim masqué, comme
+ * avant, dépassait la borne `MAX_OVERRIDE_PRIMS` sur une scène riche (Kitchen_set : des
+ * milliers de prims) : la troncature silencieuse laissait la moitié de la scène visible.
  */
 export function isolatePrim(
   override: SceneOverride,
   path: string,
   allPaths: readonly string[],
 ): SceneOverride {
+  const lineage = new Set<string>();
+  for (let p: string | null = path; p; p = parentPath(p)) lineage.add(p);
+
   let next = override;
   for (const candidate of allPaths) {
-    const related = isSelfOrDescendant(path, candidate) || isSelfOrDescendant(candidate, path);
-    next = setPrimEdit(next, candidate, related ? { visible: undefined } : { visible: false });
+    // La lignée et la descendance du prim redeviennent visibles (annule un masquage antérieur).
+    if (isSelfOrDescendant(path, candidate) || isSelfOrDescendant(candidate, path)) {
+      next = setPrimEdit(next, candidate, { visible: undefined });
+      continue;
+    }
+    // Frère direct d'un maillon de la lignée (ou prim de premier niveau hors lignée) : masqué,
+    // et tout son sous-arbre avec lui par héritage.
+    const parent = parentPath(candidate);
+    const sibling =
+      parent === null ? !lineage.has(candidate) : lineage.has(parent) && !lineage.has(candidate);
+    if (sibling) next = setPrimEdit(next, candidate, { visible: false });
   }
   return next;
 }

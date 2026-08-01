@@ -122,7 +122,8 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     };
   }, []);
 
-  const { frameView, homeView } = useModelFraming({ runtimeRef, threeRef, ready, isFlying });
+  // `setFrameTarget` (46.I) : la review y branche le prim sélectionné pour que `F` le cadre.
+  const { frameView, homeView, setFrameTarget } = useModelFraming({ runtimeRef, threeRef, ready, isFlying });
 
   const anim = useModelAnimations(runtimeRef, actionRef, threeRef, subscribeFrame);
   // `init` reste privé (appelé au chargement) ; le reste du transport est exposé tel quel.
@@ -345,6 +346,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     isFlying,
     frameView,
     homeView,
+    setFrameTarget,
     fov,
     setFov,
     roll,
