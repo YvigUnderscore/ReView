@@ -1,0 +1,89 @@
+import type { MediaKind } from '../../../types/api';
+import { DEFAULT_MODE, isSpatialKind, modesFor, type ModeId } from './modes';
+import { panelsFor, type PanelId } from './panels';
+import { DEFAULT_TOOL, toolsFor, type ToolId } from './tools';
+
+/**
+ * État du chrome de review — une seule source par workspace, découpée par domaine. Les hooks
+ * métier (annotations, caméra, splat…) gardent leur état ; on ne décrit ici que ce qui pilote
+ * les cinq emplacements du chrome.
+ *
+ * `labels`, `panel` et `comments` sont des **préférences** : persistées par utilisateur et par
+ * type de média. `mode`, `tool` et `drawer` sont éphémères et repartent à leur défaut.
+ */
+export type DrawerId = 'strip' | 'curves';
+
+export interface ChromeState {
+  mode: ModeId;
+  tool: ToolId;
+  /** `null` = dock replié sur sa bande d'onglets. */
+  panel: PanelId | null;
+  /** Rail déplié : libellés et raccourcis visibles à côté des icônes. */
+  labels: boolean;
+  comments: boolean;
+  drawer: DrawerId | null;
+}
+
+/** Le tiroir ancré sous le transport : courbes d'animation en 3D, pellicule en vidéo/image. */
+export function drawerForKind(kind: MediaKind): DrawerId {
+  return isSpatialKind(kind) ? 'curves' : 'strip';
+}
+
+export function defaultChromeState(kind: MediaKind): ChromeState {
+  return {
+    mode: DEFAULT_MODE,
+    tool: DEFAULT_TOOL,
+    panel: panelsFor(kind)[0]?.id ?? null,
+    labels: false,
+    comments: true,
+    drawer: null,
+  };
+}
+
+/**
+ * Ramène un état à ce qui existe réellement pour ce média et ce mode : outil inconnu du mode
+ * → `nav`, panneau absent du dock → premier panneau, tiroir d'une autre famille → fermé.
+ * Appelé au changement de mode comme au changement de média ; retourne l'objet d'origine
+ * quand rien ne bouge, pour ne pas déclencher de rendu inutile.
+ */
+export function reconcileChrome(state: ChromeState, kind: MediaKind): ChromeState {
+  const mode = modesFor(kind).some((m) => m.value === state.mode) ? state.mode : DEFAULT_MODE;
+  const tool = toolsFor(mode, kind).some((t) => t.id === state.tool) ? state.tool : DEFAULT_TOOL;
+  const panels = panelsFor(kind);
+  const panel =
+    state.panel === null || panels.some((p) => p.id === state.panel) ? state.panel : (panels[0]?.id ?? null);
+  const drawer = state.drawer === drawerForKind(kind) ? state.drawer : null;
+
+  if (mode === state.mode && tool === state.tool && panel === state.panel && drawer === state.drawer)
+    return state;
+  return { ...state, mode, tool, panel, drawer };
+}
+
+/** Clé de persistance des préférences — une par type de média. */
+export function chromePrefsKey(kind: MediaKind): string {
+  return `review.chrome.${kind}`;
+}
+
+/** Sous-ensemble persisté de l'état : les préférences, jamais le mode ni l'outil courants. */
+export type ChromePrefs = Pick<ChromeState, 'panel' | 'labels' | 'comments'>;
+
+export function readChromePrefs(kind: MediaKind, raw: string | null): ChromePrefs {
+  const base = defaultChromeState(kind);
+  const fallback: ChromePrefs = { panel: base.panel, labels: base.labels, comments: base.comments };
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ChromePrefs>;
+    const known = panelsFor(kind);
+    return {
+      panel:
+        parsed.panel === null || known.some((p) => p.id === parsed.panel)
+          ? (parsed.panel ?? null)
+          : fallback.panel,
+      labels: typeof parsed.labels === 'boolean' ? parsed.labels : fallback.labels,
+      comments: typeof parsed.comments === 'boolean' ? parsed.comments : fallback.comments,
+    };
+  } catch {
+    // Préférence corrompue (édition manuelle, ancien format) : on repart des défauts.
+    return fallback;
+  }
+}

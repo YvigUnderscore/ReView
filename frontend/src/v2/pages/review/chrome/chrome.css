@@ -1,0 +1,323 @@
+/*
+ * Chrome de review — les quatre emplacements fixes partagés par les quatre types de média :
+ * rail d'outils (gauche), barre d'options (sous l'en-tête), dock inspecteur (droite),
+ * ligne de transport (bas). Ces surfaces sont réutilisées à l'identique par la vidéo,
+ * l'image, le modèle 3D et le splat : des classes nommées y restent plus lisibles qu'une
+ * répétition d'utilitaires Tailwind. Tout le reste du chrome est en Tailwind.
+ *
+ * Toutes les couleurs sont des tokens de `src/index.css` ; les longueurs sont en rem sur la
+ * base de 16 px (`2.75rem` = 44 px). `box-sizing: border-box` vient du preflight Tailwind.
+ */
+
+/* ---- Rail d'outils : outils exclusifs du mode, puis les actions de vue ---- */
+.rv-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  width: 2.75rem;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  padding: 0.375rem;
+}
+.rv-rail--labels {
+  width: 10.5rem;
+}
+.rv-rail__title {
+  padding: 0.25rem 0.5rem;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+.rv-rail__sep {
+  height: 1px;
+  background: hsl(var(--border));
+  margin: 0.375rem 0.25rem;
+}
+.rv-railbtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 2.25rem;
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition-colors);
+}
+.rv-rail--labels .rv-railbtn {
+  justify-content: flex-start;
+  padding: 0 0.5rem;
+}
+.rv-railbtn:hover {
+  background: hsl(var(--secondary) / 0.6);
+  color: hsl(var(--foreground));
+}
+.rv-railbtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
+}
+.rv-railbtn--active {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+}
+.rv-railbtn--active:hover {
+  background: hsl(var(--primary) / 0.22);
+  color: hsl(var(--primary));
+}
+.rv-railbtn__key {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+
+/* ---- Barre d'options : paramètres de l'outil actif, groupe de validation épinglé ---- */
+.rv-optbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  min-height: 2.5rem;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--card) / 0.5);
+  padding: 0.25rem 0.625rem;
+  font-size: var(--text-xs);
+}
+.rv-optbar__scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rv-optbar__scroll::-webkit-scrollbar {
+  display: none;
+}
+.rv-optbar__scroll > * {
+  flex-shrink: 0;
+}
+.rv-optbar__commit {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  border-left: 1px solid hsl(var(--border));
+  padding-left: 0.5rem;
+}
+.rv-optbar__name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+  font-weight: var(--weight-semibold);
+  color: hsl(var(--foreground));
+}
+.rv-optbar__hint {
+  white-space: nowrap;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ---- Dock inspecteur : onglets verticaux + un panneau à la fois ---- */
+.rv-dock {
+  display: flex;
+  min-height: 0;
+  flex-shrink: 0;
+  border-left: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+.rv-dock__tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  width: 2.75rem;
+  padding: 0.375rem;
+  order: 2;
+  border-left: 1px solid hsl(var(--border));
+}
+.rv-dock__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 17.5rem;
+  order: 1;
+}
+.rv-dock__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.4375rem 0.5rem 0.4375rem 0.75rem;
+}
+.rv-dock__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.rv-dock__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  padding: 0.75rem;
+}
+
+/* ---- Primitives de panneau : groupe titré, ligne libellé/contrôle ---- */
+.rv-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.rv-group__title {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: hsl(var(--muted-foreground));
+}
+.rv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.75rem;
+  font-size: var(--text-xs);
+}
+.rv-row__label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  color: hsl(var(--muted-foreground));
+}
+.rv-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.375rem;
+}
+
+/* ---- Transport : le temps (vidéo, animation) ou le zoom (image) ---- */
+.rv-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-top: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  padding: 0.375rem 0.625rem;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.rv-transport > * {
+  flex-shrink: 0;
+}
+.rv-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.rv-track__rail {
+  position: absolute;
+  inset-inline: 0;
+  height: 0.375rem;
+  border-radius: var(--radius-pill);
+  background: hsl(var(--secondary));
+}
+.rv-track__fill {
+  position: absolute;
+  left: 0;
+  height: 0.375rem;
+  border-radius: var(--radius-pill);
+  background: hsl(var(--primary) / 0.35);
+}
+.rv-track__head {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 1.5rem;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: hsl(var(--primary));
+}
+.rv-key {
+  position: absolute;
+  top: 50%;
+  height: 0.5rem;
+  width: 0.5rem;
+  margin: -0.25rem 0 0 -0.25rem;
+  border: none;
+  padding: 0;
+  background: hsl(var(--warning));
+  cursor: pointer;
+  transform: rotate(45deg);
+}
+.rv-key--active {
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--card));
+}
+
+/* ---- Petits éléments partagés (séparateur, pastille, lecture chiffrée, raccourci) ---- */
+.rv-rule {
+  width: 1px;
+  height: 1.125rem;
+  flex-shrink: 0;
+  background: hsl(var(--border));
+}
+.rv-dot {
+  height: 0.375rem;
+  width: 0.375rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+.rv-readout {
+  border-radius: var(--radius-xs);
+  background: hsl(var(--background) / 0.6);
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: hsl(var(--muted-foreground));
+  backdrop-filter: var(--overlay-blur);
+}
+.rv-readout b {
+  color: hsl(var(--foreground));
+  font-weight: var(--weight-medium);
+}
+.rv-kbd {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-xs);
+  background: hsl(var(--secondary) / 0.6);
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+}

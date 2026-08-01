@@ -1,9 +1,11 @@
 /**
- * Logique pure du champ numérique « drag-label » du HUD (Phase 17, `HudNumber`) : valeur ajustée
- * en glissant horizontalement (pattern DCC/Blender), bornée et arrondie au pas. Testable sans DOM.
+ * Logique pure du champ numérique « drag-label » (`NumberField`) : valeur ajustée en glissant
+ * horizontalement sur le libellé (pattern DCC/Blender), bornée et arrondie au pas. Testable
+ * sans DOM. Écrite en Phase 17 pour le HUD, promue avec la primitive lors de la refonte du
+ * chrome de review — les maths n'ont pas bougé.
  */
 
-export interface HudNumberSpec {
+export interface NumberFieldSpec {
   min: number;
   max: number;
   /** Pas d'arrondi de la valeur (ex. 1 pour des degrés entiers, 0.001 pour une ouverture). */
@@ -22,7 +24,7 @@ export function snapToStep(value: number, step: number): number {
 }
 
 /** Borne puis arrondit une valeur selon la spec. */
-export function clampValue(value: number, spec: HudNumberSpec): number {
+export function clampValue(value: number, spec: NumberFieldSpec): number {
   return Math.min(spec.max, Math.max(spec.min, snapToStep(value, spec.step)));
 }
 
@@ -30,7 +32,7 @@ export function clampValue(value: number, spec: HudNumberSpec): number {
  * Valeur après un glissement de `dxPx` pixels depuis `start` : chaque `pixelsPerStep` pixels
  * vaut un `step` (Maj = ×10 via `fine=false`, Ctrl = pas fin ×0.1 via `fine=true` côté appelant).
  */
-export function dragValue(start: number, dxPx: number, spec: HudNumberSpec, multiplier = 1): number {
+export function dragValue(start: number, dxPx: number, spec: NumberFieldSpec, multiplier = 1): number {
   const perStep = spec.pixelsPerStep ?? 4;
   const delta = (dxPx / perStep) * spec.step * multiplier;
   return clampValue(start + delta, spec);

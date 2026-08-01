@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampValue, dragValue, formatValue, parseInput, snapToStep } from './hudNumberMath';
+import { clampValue, dragValue, formatValue, parseInput, snapToStep } from './number-field.math';
 
 describe('snapToStep', () => {
   it('arrondit au multiple du pas et nettoie le bruit flottant', () => {

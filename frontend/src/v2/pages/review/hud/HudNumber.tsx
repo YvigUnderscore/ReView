@@ -1,5 +1,11 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { clampValue, dragValue, formatValue, parseInput, type HudNumberSpec } from './hudNumberMath';
+import {
+  clampValue,
+  dragValue,
+  formatValue,
+  parseInput,
+  type NumberFieldSpec,
+} from '../../../components/ui/number-field.math';
 
 /**
  * Champ numérique « drag-label » du HUD (Phase 17) — remplace les sliders : glisser
@@ -28,7 +34,7 @@ export default function HudNumber({
   pixelsPerStep?: number;
   unit?: string;
 }) {
-  const spec: HudNumberSpec = { min, max, step, pixelsPerStep };
+  const spec: NumberFieldSpec = { min, max, step, pixelsPerStep };
   const [editing, setEditing] = useState(false);
   const drag = useRef<{ pointerId: number; startX: number; startValue: number; moved: boolean } | null>(null);
 

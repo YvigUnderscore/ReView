@@ -32,6 +32,9 @@ AGENTS.md
 # Docs internes (audit, rapports — non nécessaires à l'app)
 /docs/
 
+# Références de design (bundle de handoff) — ne pas versionner
+design_handoff_review_chrome/
+
 # Playwright (10.F3)
 frontend/test-results/
 frontend/playwright-report/
