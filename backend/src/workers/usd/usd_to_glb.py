@@ -21,6 +21,7 @@ permet au worker de retrouver le resume sans ambiguite).
 
 import json
 import os
+import re
 import sys
 
 import bpy  # fourni par Blender
@@ -107,6 +108,33 @@ def import_usd(path, purpose):
         raise RuntimeError("import USD refuse par Blender (%s)" % ", ".join(result))
 
 
+def tag_usd_paths():
+    """Inscrit sur chaque objet le chemin du prim USD dont il provient (Phase 46, 46.A).
+
+    L'importeur USD de Blender n'expose pas ce chemin, mais il **reproduit fidelement la
+    hierarchie** des prims dans celle des objets : `World > Asset > Geo > Suzanne` vient de
+    `/World/Asset/Geo/Suzanne`. On la remonte donc parent par parent.
+
+    Blender desambiguise les noms en collision avec un suffixe `.001` : il faut le retirer,
+    sinon le chemin reconstruit ne correspondrait a aucun prim. C'est fait juste apres
+    l'import, avant toute autre manipulation de la scene.
+
+    Le chemin part ensuite dans les `extras` du noeud glTF (`export_extras`), ce qui donne au
+    viewer la correspondance noeud rendu -> prim USD : sans elle, ni scenegraph ni override
+    par prim ne sont possibles.
+    """
+    tagged = 0
+    for obj in bpy.data.objects:
+        names = []
+        node = obj
+        while node is not None:
+            names.append(re.sub(r"\.\d{3}$", "", node.name))
+            node = node.parent
+        obj["usdPath"] = "/" + "/".join(reversed(names))
+        tagged += 1
+    return tagged
+
+
 def apply_timing(args):
     scene = bpy.context.scene
     if args.fps and args.fps > 0:
@@ -132,7 +160,8 @@ def export_glb(path, animate):
         "export_cameras": True,
         "export_lights": True,
         "export_yup": True,
-        "export_extras": False,
+        # Phase 46 : porte `usdPath` jusqu'au noeud glTF (correspondance prim <-> objet rendu).
+        "export_extras": True,
         "export_skins": True,
         "export_morph": True,
         "export_image_format": "AUTO",
@@ -146,7 +175,7 @@ def export_glb(path, animate):
         raise RuntimeError("export glTF refuse par Blender (%s)" % ", ".join(result))
 
 
-def summarize(scene, animate):
+def summarize(scene, animate, tagged):
     objects = list(bpy.data.objects)
     return {
         "objects": len(objects),
@@ -160,6 +189,7 @@ def summarize(scene, animate):
         "fps": scene.render.fps / scene.render.fps_base if scene.render.fps_base else scene.render.fps,
         "animated": bool(animate and scene.frame_end > scene.frame_start),
         "blender": bpy.app.version_string,
+        "usdPaths": tagged,
     }
 
 
@@ -175,6 +205,7 @@ def main():
     ensure_gltf_exporter()
     reset_scene()
     import_usd(args.input, args.purpose)
+    tagged = tag_usd_paths()
     scene = apply_timing(args)
 
     if not bpy.data.objects:
@@ -186,7 +217,7 @@ def main():
     if not os.path.exists(args.output) or os.path.getsize(args.output) == 0:
         raise RuntimeError("GLB de sortie vide ou absent")
 
-    sys.stdout.write("%s %s\n" % (MARKER, json.dumps(summarize(scene, animate))))
+    sys.stdout.write("%s %s\n" % (MARKER, json.dumps(summarize(scene, animate, tagged))))
     sys.stdout.flush()
 
 

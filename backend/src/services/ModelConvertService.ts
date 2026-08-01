@@ -17,6 +17,7 @@ import {
   type UsdStageInfo,
   type UsdToolConfig,
   type UsdVariantSelection,
+  type UsdPrim,
   type UsdVariantSet,
 } from '../lib/usdInspect';
 import {
@@ -75,6 +76,9 @@ export interface UsdModelInfo {
   missingAssetsTotal: number;
   layerCount: number;
   primCount: number;
+  /** Scenegraph (46.A) : arbre de prims à plat, y compris les prims non rendus. */
+  prims: UsdPrim[];
+  primsTruncated: boolean;
 }
 
 export interface ConvertResult {
@@ -228,6 +232,8 @@ function buildUsdInfo(
     missingAssetsTotal: info?.missingAssetsTotal ?? 0,
     layerCount: info?.layerCount ?? 0,
     primCount: info?.primCount ?? 0,
+    prims: info?.prims ?? [],
+    primsTruncated: info?.primsTruncated ?? false,
   };
 }
 

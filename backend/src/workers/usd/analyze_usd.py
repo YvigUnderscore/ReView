@@ -34,6 +34,9 @@ USD_EXTENSIONS = (".usd", ".usda", ".usdc")
 MAX_PRIMS_SCANNED = 200000
 MAX_VARIANT_SETS = 200
 MAX_MISSING_REPORTED = 50
+# Scenegraph (46.A) : au-dela, l'arbre est tronque — une scene de production peut porter
+# des millions de prims, la review n'en affiche jamais autant.
+MAX_PRIMS_REPORTED = 5000
 
 
 def _posix(path):
@@ -124,6 +127,43 @@ def _purposes_and_counts(stage):
     return sorted(purposes), prim_count, has_skel
 
 
+def _prim_tree(stage):
+    """Arbre des prims a plat (Phase 46, 46.A) — structure du scenegraph affiche en review.
+
+    A plat plutot qu'imbrique : la validation Zod et le transport sont plus simples, et le
+    front reconstruit la hierarchie a partir des chemins. Contient aussi les prims **non
+    rendus** (variante inactive, purpose filtre) : c'est justement l'interet d'un vrai
+    scenegraph par rapport a l'arbre des noeuds glTF.
+    """
+    from pxr import UsdGeom
+
+    prims = []
+    for prim in stage.TraverseAll():
+        if len(prims) >= MAX_PRIMS_REPORTED:
+            break
+        path = str(prim.GetPath())
+        if path == "/":
+            continue
+        purpose = ""
+        imageable = UsdGeom.Imageable(prim)
+        if imageable:
+            value = imageable.GetPurposeAttr().Get()
+            purpose = str(value) if value else ""
+        prims.append(
+            {
+                "path": path,
+                "name": prim.GetName(),
+                "type": str(prim.GetTypeName() or ""),
+                "kind": str(prim.GetMetadata("kind") or ""),
+                "purpose": purpose,
+                "variantSets": list(prim.GetVariantSets().GetNames()),
+                "active": bool(prim.IsActive()),
+                "instanceable": bool(prim.IsInstanceable()),
+            }
+        )
+    return prims
+
+
 def _apply_variant_selections(stage, selections):
     """Applique {prim: {variantSet: valeur}} sur la cible d'edition courante."""
     applied = []
@@ -186,6 +226,7 @@ def cmd_inspect(input_path, selections, overlay_out):
 
     base_dir = os.path.dirname(os.path.abspath(input_path)) or "."
     purposes, prim_count, has_skel = _purposes_and_counts(stage)
+    prim_tree = _prim_tree(stage)
     start = stage.GetStartTimeCode()
     end = stage.GetEndTimeCode()
     default_prim = stage.GetDefaultPrim()
@@ -208,6 +249,8 @@ def cmd_inspect(input_path, selections, overlay_out):
         "missingAssetsTotal": len(unresolved),
         "layerCount": len(_layers),
         "primCount": prim_count,
+        "prims": prim_tree,
+        "primsTruncated": len(prim_tree) >= MAX_PRIMS_REPORTED,
     }
 
 

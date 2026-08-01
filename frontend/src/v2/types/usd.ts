@@ -17,6 +17,21 @@ export interface UsdVariantSet {
 /** Sélection de variantes : `{ "/World/Asset": { "modelingVariant": "hero" } }`. */
 export type UsdVariantSelection = Record<string, Record<string, string>>;
 
+/** Prim de la scène USD (45/46) — brique du scenegraph affiché en review. */
+export interface UsdPrim {
+  /** Chemin USD absolu, ex. `/World/Asset/Geo`. Identifiant stable d'un prim. */
+  path: string;
+  name: string;
+  /** Type de schéma USD (`Xform`, `Mesh`, `Material`, `Scope`…), vide si non typé. */
+  type: string;
+  kind: string;
+  purpose: string;
+  /** Noms des jeux de variantes portés par ce prim (badge dans l'arbre). */
+  variantSets: string[];
+  active: boolean;
+  instanceable: boolean;
+}
+
 /** Description de la scène USD relevée à la conversion (fiche technique + recomposition). */
 export interface UsdModelInfo {
   /** Couche racine réellement ouverte — utile quand l'archive en contenait plusieurs. */
@@ -40,6 +55,10 @@ export interface UsdModelInfo {
   missingAssetsTotal: number;
   layerCount: number;
   primCount: number;
+  /** Scenegraph à plat (46.A) : inclut les prims **non rendus** (variante inactive, purpose filtré). */
+  prims: UsdPrim[];
+  /** Vrai si la scène dépasse la borne de prims rapportés — l'arbre affiché est partiel. */
+  primsTruncated: boolean;
 }
 
 /** Provenance de conversion 3D (39.A) ; le bloc `usd` n'existe que pour les scènes USD (45.C). */

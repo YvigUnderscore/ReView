@@ -22,6 +22,8 @@ const usd = (over: Partial<UsdModelInfo> = {}): UsdModelInfo => ({
   missingAssetsTotal: 0,
   layerCount: 2,
   primCount: 10,
+  prims: [],
+  primsTruncated: false,
   ...over,
 });
 
