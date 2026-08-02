@@ -7,6 +7,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Dialog } from './dialog';
 import { wrapIndex } from './lightbox.helpers';
 import { cn } from '../../lib/utils';
+import { useT } from '../../i18n';
 
 export interface LightboxImage {
   src: string;
@@ -32,6 +33,7 @@ interface LightboxProps {
  * les commentaires et la review image.
  */
 export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: LightboxProps) {
+  const t = useT();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
@@ -100,7 +102,7 @@ export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: L
           onKeyDown={onKeyDown}
           className="fixed inset-0 z-50 flex items-center justify-center outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0"
         >
-          <DialogPrimitive.Title className="sr-only">Aperçu image</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t('comments.imagePreview')}</DialogPrimitive.Title>
 
           <div
             className="flex h-full w-full items-center justify-center overflow-hidden"
@@ -142,7 +144,7 @@ export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: L
             <ToolButton title="Zoom +" onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}>
               <ZoomIn size={18} />
             </ToolButton>
-            <ToolButton title="Réinitialiser" onClick={reset}>
+            <ToolButton title={t('common.reset')} onClick={reset}>
               <Maximize2 size={18} />
             </ToolButton>
             <ToolButton title="Fermer" onClick={() => onOpenChange(false)}>

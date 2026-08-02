@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { api, getToken } from '../../../lib/apiClient';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { useT } from '../../i18n';
 
 interface ImportResult {
   committed: boolean;
@@ -28,6 +29,7 @@ export default function ProjectCsvActions({
   projectId: number;
   onImported: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [csv, setCsv] = useState('');
   const [preview, setPreview] = useState<ImportResult | null>(null);
@@ -90,7 +92,7 @@ export default function ProjectCsvActions({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Importer des shots (CSV)</DialogTitle>
+            <DialogTitle>{t('shots.import')}</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
             Colonnes : <code>sequence, shot, name, tasks</code> (tâches séparées par « | »). Les shots

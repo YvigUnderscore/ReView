@@ -5,9 +5,11 @@ import { Link } from 'react-router-dom';
 import { Activity, Film, GitBranch } from 'lucide-react';
 import { timeAgo } from '../../lib/time';
 import type { DashboardActivityItem } from './homeTypes';
+import { useT } from '../../i18n';
 
 /** Flux d'activité cross-projets : nouvelles versions et médias publiés. */
 export default function ActivityFeed({ items }: { items: DashboardActivityItem[] }) {
+  const t = useT();
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -37,7 +39,7 @@ export default function ActivityFeed({ items }: { items: DashboardActivityItem[]
                     )}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {it.type === 'media' ? 'Média publié' : 'Nouvelle version'}
+                    {it.type === 'media' ? t('task.published') : 'Nouvelle version'}
                     {it.author && ` par ${it.author}`} · {timeAgo(it.at)}
                   </span>
                 </span>

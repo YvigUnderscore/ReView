@@ -9,6 +9,7 @@ import {
   type CommentAttachment,
 } from '../../../lib/commentAttachments';
 import { Lightbox } from '../ui/lightbox';
+import { useT } from '../../i18n';
 
 /**
  * Pièces jointes d'un commentaire : 2 vignettes image max + tuile « +x images » (toutes
@@ -22,6 +23,7 @@ export default function CommentAttachmentList({
   /** Empêche un clic interne de sélectionner la carte du commentaire. */
   stop: (e: React.MouseEvent) => void;
 }) {
+  const t = useT();
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const imageAtts = attachments.filter((a) => !!a.url && isImageAttachment(a.contentType));
 
@@ -51,7 +53,7 @@ export default function CommentAttachmentList({
             stop(e);
             setLightboxIdx(2);
           }}
-          title="Voir toutes les images"
+          title={t('board.seeAllImages')}
           className="flex h-20 w-20 flex-col items-center justify-center rounded border border-border bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <span className="text-sm font-semibold">+{imageAtts.length - 2}</span>

@@ -9,6 +9,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Checkbox } from '../../components/ui/checkbox';
 import type { ChecklistItem } from '../../types/api';
+import { useT } from '../../i18n';
 
 /**
  * Checklist d'une tâche (38.F) : cochable par l'assigné ou un manager, items ajoutables/
@@ -25,6 +26,7 @@ export default function TaskChecklist({
   canToggle: boolean;
   canEditItems: boolean;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const [adding, setAdding] = useState('');
 
@@ -81,7 +83,7 @@ export default function TaskChecklist({
         <form onSubmit={add} className="mt-2 flex gap-2">
           <input
             className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
-            placeholder="Ajouter un élément…"
+            placeholder={t('kanban.addItem')}
             value={adding}
             onChange={(e) => setAdding(e.target.value)}
           />

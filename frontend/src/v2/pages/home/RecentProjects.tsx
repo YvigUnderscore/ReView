@@ -5,9 +5,11 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, FolderKanban } from 'lucide-react';
 import { useProjectsQuery } from '../../lib/queries';
 import { projectPath } from '../../lib/slug';
+import { useT } from '../../i18n';
 
 /** Projets récents (tri serveur updatedAt desc) — colonne latérale de l'Accueil. */
 export default function RecentProjects() {
+  const t = useT();
   const { data } = useProjectsQuery();
   const projects = (data ?? []).slice(0, 5);
   return (
@@ -21,7 +23,7 @@ export default function RecentProjects() {
         </Link>
       </div>
       {projects.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">Aucun projet accessible.</p>
+        <p className="py-4 text-center text-sm text-muted-foreground">{t('home.noProject')}</p>
       ) : (
         <div className="space-y-1">
           {projects.map((p) => (

@@ -43,7 +43,7 @@ export default function OverviewTab() {
           to="/admin/users"
         />
         <Metric label="Projets" value={stats.pipeline.projects} to="/admin/projects" />
-        <Metric label="Séquences" value={stats.pipeline.sequences} to="/admin/projects" />
+        <Metric label={t('sequences.title')} value={stats.pipeline.sequences} to="/admin/projects" />
         <Metric label="Shots" value={stats.pipeline.shots} to="/admin/projects" />
         <Metric label="Assets" value={stats.pipeline.assets} to="/admin/projects" />
         <Metric label="Versions" value={stats.pipeline.versions} to="/admin/versions" />

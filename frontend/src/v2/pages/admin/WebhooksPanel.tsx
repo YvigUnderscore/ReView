@@ -11,6 +11,10 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Panel } from './AdminPrimitives';
+import { useT, type MessageKey } from '../../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 
 interface WebhookRow {
   id: number;
@@ -23,14 +27,15 @@ interface WebhookRow {
   createdAt: string;
 }
 
-const EVENTS = [
-  { key: 'media.published', label: 'Média publié' },
-  { key: 'review.decision', label: 'Décision de review' },
-  { key: 'comment.created', label: 'Commentaire créé' },
+const eventRows = (t: Tr) => [
+  { key: 'media.published', label: t('task.published') },
+  { key: 'review.decision', label: t('decision.title') },
+  { key: 'comment.created', label: t('comments.created') },
 ];
 
 /** Webhooks sortants (36.D) : POST JSON signés HMAC vers vos outils (Slack relais, CI…). */
 export default function WebhooksPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const hooksQ = useQuery({
     queryKey: qk.admin('webhooks'),
@@ -54,7 +59,7 @@ export default function WebhooksPanel() {
       setSecret(d.secret);
       setUrl('');
       invalidate();
-      toast.success('Webhook créé — copiez le secret HMAC maintenant');
+      toast.success(t('webhooks.created'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
@@ -73,7 +78,7 @@ export default function WebhooksPanel() {
   const remove = async (h: WebhookRow) => {
     try {
       await api.del(`/api/admin/webhooks/${h.id}`);
-      toast.success('Webhook supprimé');
+      toast.success(t('webhooks.deleted'));
       invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -82,7 +87,7 @@ export default function WebhooksPanel() {
   const test = async (h: WebhookRow) => {
     try {
       await api.post(`/api/admin/webhooks/${h.id}/test`);
-      toast.success('Livraison de test en file — vérifiez le dernier statut dans ~10 s');
+      toast.success(t('webhooks.testQueued'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     }
@@ -102,7 +107,7 @@ export default function WebhooksPanel() {
           maxLength={500}
         />
         <div className="flex flex-wrap items-center gap-3">
-          {EVENTS.map((ev) => (
+          {eventRows(t).map((ev) => (
             <label key={ev.key} className="flex items-center gap-1.5 text-xs">
               <input
                 type="checkbox"
@@ -129,7 +134,7 @@ export default function WebhooksPanel() {
             size="sm"
             onClick={async () => {
               await navigator.clipboard.writeText(secret);
-              toast.success('Secret copié — il ne sera plus jamais affiché');
+              toast.success(t('webhooks.secretCopied'));
             }}
           >
             <Copy size={14} />
@@ -168,7 +173,7 @@ export default function WebhooksPanel() {
               />
               actif
             </label>
-            <Button variant="ghost" size="sm" title="Livraison de test" onClick={() => test(h)}>
+            <Button variant="ghost" size="sm" title={t('webhooks.testDelivery')} onClick={() => test(h)}>
               <Send size={14} />
             </Button>
             <Button variant="ghost" size="sm" title="Supprimer" onClick={() => remove(h)}>
@@ -176,7 +181,7 @@ export default function WebhooksPanel() {
             </Button>
           </div>
         ))}
-        {hooks.length === 0 && <p className="text-xs text-muted-foreground">Aucun webhook configuré.</p>}
+        {hooks.length === 0 && <p className="text-xs text-muted-foreground">{t('webhooks.empty')}</p>}
       </div>
     </Panel>
   );

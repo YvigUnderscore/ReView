@@ -10,6 +10,7 @@ import { reviewPath } from '../../lib/slug';
 import ProjectActivity from '../../components/ProjectActivity';
 import { Skeleton } from '../../components/ui/skeleton';
 import type { MediaRef } from '../../types/api';
+import { useT } from '../../i18n';
 
 type RecentMedia = MediaRef & { thumbnailUrl: string | null };
 
@@ -43,6 +44,7 @@ export default function OverviewTab({
   counts: { sequences: number; shots: number; assets: number };
   onGo: (k: string) => void;
 }) {
+  const t = useT();
   const { data, isError } = useQuery({
     queryKey: qk.projectMedia(projectId),
     queryFn: () =>
@@ -54,7 +56,7 @@ export default function OverviewTab({
     <div>
       <p className="mb-4 text-sm text-muted-foreground">Tableau de bord du projet « {name} ».</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatCard label="Séquences" value={counts.sequences} onClick={() => onGo('sequences')} />
+        <StatCard label={t('sequences.title')} value={counts.sequences} onClick={() => onGo('sequences')} />
         <StatCard label="Shots" value={counts.shots} onClick={() => onGo('shots')} />
         <StatCard label="Assets" value={counts.assets} onClick={() => onGo('assets')} />
       </div>

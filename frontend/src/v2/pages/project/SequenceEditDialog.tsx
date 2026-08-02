@@ -11,6 +11,7 @@ import PipelineFields from './PipelineFields';
 import { formFromOverride, overrideFromForm } from './pipelineForm';
 import type { PipelineSettings } from '../../types/api';
 import type { Sequence } from './projectTypes';
+import { useT } from '../../i18n';
 
 /** Modal d'édition d'une séquence : code, nom, override pipeline (résolution/cadence). */
 export default function SequenceEditDialog({
@@ -24,6 +25,7 @@ export default function SequenceEditDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [vals, setVals] = useState({ code: sequence.code, name: sequence.name });
   const [pipe, setPipe] = useState(() => formFromOverride(sequence.settings, pipeline));
   const [busy, setBusy] = useState(false);
@@ -38,7 +40,7 @@ export default function SequenceEditDialog({
         name: vals.name,
         settings: overrideFromForm(pipe, pipeline),
       });
-      toast.success('Séquence modifiée');
+      toast.success(t('sequences.updated'));
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -55,7 +57,7 @@ export default function SequenceEditDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Modifier la séquence</DialogTitle>
+          <DialogTitle>{t('sequences.edit')}</DialogTitle>
         </DialogHeader>
         {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
         <div className="space-y-2">

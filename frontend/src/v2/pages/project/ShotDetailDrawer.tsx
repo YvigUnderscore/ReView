@@ -13,6 +13,7 @@ import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '../../c
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
 import { ASSET_TYPES, TASK_TYPES, type AssetRef, type Shot, type Task } from './projectTypes';
+import { useT } from '../../i18n';
 
 /**
  * Détail d'un shot en drawer latéral (10.C1) : miniature, tâches (avec accès
@@ -66,6 +67,7 @@ export default function ShotDetailDrawer({
 }
 
 function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }) {
+  const tr = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data, isError } = useQuery({
@@ -99,7 +101,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
           return;
         }
       }
-      toast.info('Aucun média à reviewer dans cette tâche');
+      toast.info(tr('task.noMediaToReview'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
     }
@@ -128,7 +130,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
                 </span>
                 <button
                   onClick={() => openReview(t.id)}
-                  title="Ouvrir la review du dernier média"
+                  title={tr('home.openLastReview')}
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-primary"
                 >
                   <Play size={14} />
@@ -136,7 +138,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
               </li>
             ))
           ) : (
-            <li className="px-2 py-1 text-xs text-muted-foreground">Aucune tâche pour l’instant.</li>
+            <li className="px-2 py-1 text-xs text-muted-foreground">{tr('task.noTaskYet')}</li>
           )}
         </ul>
       )}
@@ -178,6 +180,7 @@ function ShotAssets({
   canManage: boolean;
   reload: () => Promise<void>;
 }) {
+  const tr = useT();
   const qc = useQueryClient();
   const shotQ = useQuery({
     queryKey: qk.shot(shotId),
@@ -199,7 +202,7 @@ function ShotAssets({
   const linkExisting = async () => {
     if (!pick) return;
     await api.post(`/api/shots/${shotId}/assets`, { assetId: Number(pick) });
-    toast.success('Asset rattaché au shot');
+    toast.success(tr('asset.attached'));
     setPick('');
     await refresh();
   };
@@ -213,7 +216,7 @@ function ShotAssets({
   };
   const detach = async (assetId: number) => {
     await api.del(`/api/shots/${shotId}/assets/${assetId}`);
-    toast.success('Asset détaché');
+    toast.success(tr('asset.detached'));
     await refresh();
   };
 
@@ -229,9 +232,7 @@ function ShotAssets({
         <SkeletonRows count={1} />
       ) : (
         <div className="flex flex-wrap gap-1.5">
-          {assets.length === 0 && (
-            <span className="text-xs text-muted-foreground">Aucun asset rattaché.</span>
-          )}
+          {assets.length === 0 && <span className="text-xs text-muted-foreground">{tr('asset.none')}</span>}
           {assets.map((a) => (
             <span
               key={a.id}
@@ -243,7 +244,7 @@ function ShotAssets({
               {canManage && (
                 <button
                   onClick={() => detach(a.id)}
-                  title="Détacher"
+                  title={tr('asset.detach')}
                   className="text-muted-foreground hover:text-destructive"
                 >
                   ×
@@ -260,7 +261,7 @@ function ShotAssets({
             value={pick}
             onChange={(e) => setPick(e.target.value)}
           >
-            <option value="">Rattacher un asset existant…</option>
+            <option value="">{tr('asset.attach')}</option>
             {available.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} · {a.type}
@@ -284,7 +285,7 @@ function ShotAssets({
             <div className="flex items-center gap-1">
               <input
                 className="w-40 rounded border border-input bg-background px-2 py-1 text-xs"
-                placeholder="Nom de l'asset"
+                placeholder={tr('assets.name')}
                 value={creating.name}
                 onChange={(e) => setCreating((c) => ({ ...c, name: e.target.value }))}
               />

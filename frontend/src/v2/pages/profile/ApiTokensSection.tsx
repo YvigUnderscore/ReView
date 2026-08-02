@@ -27,6 +27,7 @@ const fmt = (iso: string) =>
 
 /** Tokens d'API personnels (36.C) : création (secret montré une fois), liste, révocation. */
 export default function ApiTokensSection() {
+  const t = useT();
   const tr = useT();
   const qc = useQueryClient();
   const tokensQ = useQuery({
@@ -86,7 +87,7 @@ export default function ApiTokensSection() {
         />
         <Select value={scope} onChange={(e) => setScope(e.target.value as 'read' | 'write')}>
           <option value="read">Lecture</option>
-          <option value="write">Lecture + écriture</option>
+          <option value="write">{t('tokens.readWrite')}</option>
         </Select>
         <Button type="submit" size="sm" disabled={busy || !name.trim()}>
           <Plus size={14} className="mr-1" /> Créer
@@ -100,7 +101,7 @@ export default function ApiTokensSection() {
             size="sm"
             onClick={async () => {
               await navigator.clipboard.writeText(secret);
-              toast.success('Token copié — il ne sera plus jamais affiché');
+              toast.success(t('tokens.copied'));
             }}
           >
             <Copy size={14} />

@@ -94,9 +94,9 @@ export default function AssetAssignDialog({
       }),
     );
     const orphans = shots.filter((s) => s.sequenceId === null).sort(byCode);
-    if (orphans.length) list.push({ seq: { id: -1, code: 'Sans séquence', name: '' }, shots: orphans });
+    if (orphans.length) list.push({ seq: { id: -1, code: t('shots.noSequence'), name: '' }, shots: orphans });
     return list.filter((g) => g.shots.length > 0);
-  }, [shots, sequences]);
+  }, [shots, sequences, t]);
 
   const seqById = useMemo(() => new Map(sequences.map((s) => [s.id, s])), [sequences]);
 

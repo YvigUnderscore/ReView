@@ -4,6 +4,7 @@
 import { Input } from '../../components/ui/input';
 import type { PipelineSettings } from '../../types/api';
 import type { PipelineForm } from './pipelineForm';
+import { useT } from '../../i18n';
 
 /**
  * Champs de réglage pipeline (résolution + cadence) avec bascule hériter/personnaliser.
@@ -21,6 +22,7 @@ export default function PipelineFields({
   onChange: (f: PipelineForm) => void;
   idPrefix?: string;
 }) {
+  const t = useT();
   const set = (patch: Partial<PipelineForm>) => onChange({ ...form, ...patch });
 
   return (
@@ -32,7 +34,7 @@ export default function PipelineFields({
           checked={form.custom}
           onChange={(e) => set({ custom: e.target.checked })}
         />
-        <span className="font-medium">Personnaliser résolution &amp; cadence</span>
+        <span className="font-medium">{t('pipeline.customise')}</span>
       </label>
 
       {form.custom ? (

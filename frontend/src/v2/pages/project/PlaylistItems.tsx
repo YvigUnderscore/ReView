@@ -11,6 +11,7 @@ import { itemPath } from '../review/playlistNav';
 import type { PlaylistDetail, PlaylistItemEntry } from '../../types/api';
 import ReviewDecisionBadge from '../../components/ReviewDecisionBadge';
 import { Skeleton } from '../../components/ui/skeleton';
+import { useT } from '../../i18n';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -28,6 +29,7 @@ export default function PlaylistItems({
   canEdit: boolean;
   onChanged: () => void;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const detailQ = useQuery({
@@ -58,7 +60,7 @@ export default function PlaylistItems({
   const removeItem = async (item: PlaylistItemEntry) => {
     try {
       await api.del(`/api/playlists/${playlistId}/items/${item.id}`);
-      toast.success('Version retirée de la playlist');
+      toast.success(t('playlist.removed'));
       refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
@@ -77,9 +79,7 @@ export default function PlaylistItems({
           <ContextMenu key={it.id}>
             <ContextMenuTrigger asChild>
               <li
-                onClick={() =>
-                  path ? navigate(path) : toast.error('Aucun média lisible pour cette version')
-                }
+                onClick={() => (path ? navigate(path) : toast.error(t('task.noPlayableMedia')))}
                 className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-3 py-1.5 text-sm last:border-b-0 hover:bg-secondary/50"
               >
                 <span className="w-5 shrink-0 text-right font-mono text-xs text-muted-foreground">

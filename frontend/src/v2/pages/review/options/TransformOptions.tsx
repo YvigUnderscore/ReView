@@ -120,7 +120,7 @@ export default function TransformOptions({
 
       <span className="rv-rule" />
       <NumberField
-        label="Pas"
+        label={t('pipeline.step')}
         hint="Accrochage — 0 = libre"
         value={snapValue(
           tool === 'translate' ? s.translationSnap : tool === 'rotate' ? s.rotationSnapDeg : s.scaleSnap,

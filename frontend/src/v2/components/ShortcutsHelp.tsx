@@ -144,7 +144,7 @@ function NavShortcuts() {
       <p className="mb-2 text-[11px] text-muted-foreground">{t('shortcuts.hint')}</p>
       <ul className="space-y-1.5">
         <li className="flex items-center justify-between gap-4 text-sm">
-          <span className="text-muted-foreground">Recherche globale (palette de commandes)</span>
+          <span className="text-muted-foreground">{t('shortcuts.search')}</span>
           <Keys keys={['Ctrl', 'K']} />
         </li>
         {GLOBAL_SHORTCUTS.map((def) => {

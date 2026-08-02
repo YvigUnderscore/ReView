@@ -6,9 +6,11 @@ import { toast } from 'sonner';
 import { Bell, BellOff } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { pushSupported, currentSubscription, enablePush, disablePush } from '../../lib/webpush';
+import { useT } from '../../i18n';
 
 /** Bascule des notifications Web Push du navigateur courant (42.B — №66). */
 export default function PushToggle() {
+  const t = useT();
   const supported = pushSupported();
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -18,9 +20,7 @@ export default function PushToggle() {
   }, [supported]);
 
   if (!supported) {
-    return (
-      <p className="text-xs text-muted-foreground">Notifications push non supportées par ce navigateur.</p>
-    );
+    return <p className="text-xs text-muted-foreground">{t('push.unsupported')}</p>;
   }
 
   const toggle = async () => {
@@ -29,11 +29,11 @@ export default function PushToggle() {
       if (enabled) {
         await disablePush();
         setEnabled(false);
-        toast.success('Notifications push désactivées');
+        toast.success(t('push.disabled'));
       } else {
         await enablePush();
         setEnabled(true);
-        toast.success('Notifications push activées');
+        toast.success(t('push.enabled'));
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
@@ -46,7 +46,7 @@ export default function PushToggle() {
     <div className="flex items-center justify-between gap-3">
       <div>
         <div className="text-sm">Notifications push (navigateur)</div>
-        <div className="text-xs text-muted-foreground">Recevoir les alertes même hors de l’onglet.</div>
+        <div className="text-xs text-muted-foreground">{t('push.hint')}</div>
       </div>
       <Button variant={enabled ? 'secondary' : 'default'} size="sm" onClick={toggle} disabled={busy}>
         {enabled ? <BellOff size={14} /> : <Bell size={14} />}

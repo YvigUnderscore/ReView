@@ -13,6 +13,7 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { useTheme } from '../stores/useTheme';
 import { parseIdParam } from '../lib/slug';
 import type { MediaRef } from '../types/api';
+import { useT } from '../i18n';
 
 /**
  * Board mood/reference (Excalidraw, MIT) — un board par Projet et un par Asset (9.B).
@@ -42,6 +43,7 @@ const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
 });
 
 export default function BoardPage({ scope }: { scope: Scope }) {
+  const t = useT();
   const { id } = useParams();
   const theme = useTheme((s) => s.theme);
   const targetId = parseIdParam(id);
@@ -115,7 +117,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
   if (!initial)
     return (
       <Shell title="Board">
-        <p className="text-sm text-muted-foreground">Chargement du board…</p>
+        <p className="text-sm text-muted-foreground">{t('board.loading')}</p>
       </Shell>
     );
 
@@ -150,7 +152,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
             className="custom-scrollbar w-44 shrink-0 space-y-2 overflow-auto rounded-lg border border-border bg-card p-2"
             style={{ height: '78vh' }}
           >
-            <div className="text-xs font-medium text-muted-foreground">Images publiées</div>
+            <div className="text-xs font-medium text-muted-foreground">{t('board.publishedImages')}</div>
             {library.map((m) => (
               <button
                 key={m.id}

@@ -107,7 +107,7 @@ export default function ProjectPage() {
   const tabs = [
     { key: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard size={16} /> },
     { key: 'shots', label: 'Shots', icon: <Clapperboard size={16} />, badge: shots.length },
-    { key: 'sequences', label: 'Séquences', icon: <Film size={16} />, badge: sequences.length },
+    { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     { key: 'production', label: 'Production', icon: <BarChart3 size={16} /> },

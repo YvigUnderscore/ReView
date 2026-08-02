@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { useT } from '../../i18n';
 
 /**
  * Duplication de la structure d'un projet (38.A) : séquences/shots (+ tâches optionnelles),
@@ -24,6 +25,7 @@ export default function DuplicateProjectDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState(`${project.name} (copie)`);
   const [includeTasks, setIncludeTasks] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +55,10 @@ export default function DuplicateProjectDialog({
       <DialogContent>
         <form onSubmit={submit} className="space-y-3">
           <DialogHeader>
-            <DialogTitle>Dupliquer le projet</DialogTitle>
+            <DialogTitle>{t('projects.duplicate')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-1">
-            <Label>Nom du nouveau projet</Label>
+            <Label>{t('projects.newName')}</Label>
             <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <label className="flex items-center gap-2 text-sm">

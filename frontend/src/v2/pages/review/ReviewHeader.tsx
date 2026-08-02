@@ -125,7 +125,7 @@ export default function ReviewHeader({
         )}
         <button
           onClick={() => setDecisionOpen(true)}
-          title={canDecide ? 'Décision de review' : 'Historique des décisions'}
+          title={canDecide ? t('decision.title') : 'Historique des décisions'}
           className="flex items-center gap-1.5 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <ClipboardCheck size={16} />

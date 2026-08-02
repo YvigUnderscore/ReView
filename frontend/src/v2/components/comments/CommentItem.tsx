@@ -10,6 +10,7 @@ import CommentReactions from './CommentReactions';
 import CommentAttachmentList from './CommentAttachmentList';
 import { highlightMentions } from './mentions';
 import type { ReviewComment } from '../../types/api';
+import { useT } from '../../i18n';
 
 export interface CommentItemProps {
   comment: ReviewComment;
@@ -37,6 +38,7 @@ export default function CommentItem({
   onSelect,
   isReply = false,
 }: CommentItemProps) {
+  const t = useT();
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
@@ -114,7 +116,9 @@ export default function CommentItem({
             {c.author?.displayName ?? c.author?.name ?? c.guestName ?? 'Anonyme'}
           </span>
           <span className="text-[10px] text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
-          {c.isEdited && <span className="text-[10px] italic text-muted-foreground">modifié</span>}
+          {c.isEdited && (
+            <span className="text-[10px] italic text-muted-foreground">{t('common.modified')}</span>
+          )}
           {c.isResolved && (
             <span
               title={
@@ -137,7 +141,7 @@ export default function CommentItem({
           )}
           {c.cameraState != null && (
             <span
-              title="Vue caméra enregistrée"
+              title={t('review.cameraViewSaved')}
               className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
             >
               <Camera size={11} />
@@ -223,7 +227,7 @@ export default function CommentItem({
                 stop(e);
                 startEdit();
               }}
-              title="Éditer"
+              title={t('common.edit')}
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <Pencil size={12} />

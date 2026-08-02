@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TASK_STATUS_BAR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
 import type { ScheduleTask } from '../../types/api';
+import { useT } from '../../i18n';
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const dayKey = (d: Date) =>
@@ -14,6 +15,7 @@ const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 
 /** Calendrier mensuel des échéances (43.C — №125), lecture seule. Placement par `dueDate`. */
 export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
+  const t = useT();
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
 
   // Regroupe les tâches ayant une échéance par jour (clé locale YYYY-MM-DD).
@@ -61,7 +63,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
           <button
             onClick={() => shift(-1)}
             className="rounded-md border border-border p-1 hover:bg-secondary/60"
-            aria-label="Mois précédent"
+            aria-label={t('stats.prevMonth')}
           >
             <ChevronLeft size={16} />
           </button>

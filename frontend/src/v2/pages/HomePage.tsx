@@ -15,12 +15,14 @@ import ActivityFeed from './home/ActivityFeed';
 import StatsRow from './home/StatsRow';
 import RecentProjects from './home/RecentProjects';
 import type { DashboardData } from './home/homeTypes';
+import { useT } from '../i18n';
 
 /**
  * Page Accueil (racine « / », 12.B) : dernières reviews commentées, mes tâches,
  * projets récents, flux d'activité et stats — bornés à mes projets (GET /api/dashboard).
  */
 export default function HomePage() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const { data, error } = useQuery({
     queryKey: qk.dashboard,
@@ -34,7 +36,7 @@ export default function HomePage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6">
           <h1 className="text-xl font-semibold">{firstName ? `Bonjour ${firstName}` : 'Accueil'}</h1>
-          <p className="text-sm text-muted-foreground">Ce qui a bougé sur vos projets.</p>
+          <p className="text-sm text-muted-foreground">{t('home.whatMoved')}</p>
         </div>
         {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
         <AnnouncementBanner />

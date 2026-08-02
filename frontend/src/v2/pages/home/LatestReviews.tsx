@@ -7,6 +7,7 @@ import { timeAgo } from '../../lib/time';
 import { reviewPath } from '../../lib/slug';
 import { MEDIA_KIND_ICON } from '../task/taskTypes';
 import type { DashboardReview } from './homeTypes';
+import { useT } from '../../i18n';
 
 /** Timecode mm:ss du commentaire (temps vidéo en secondes). */
 function tc(s: number): string {
@@ -50,6 +51,7 @@ function CommentLine({ review }: { review: DashboardReview }) {
 
 /** Hero « Dernières reviews » : dernier média commenté en grand + reviews récentes. */
 export default function LatestReviews({ reviews }: { reviews: DashboardReview[] }) {
+  const t = useT();
   const [hero, ...rest] = reviews;
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -81,7 +83,7 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
           </Link>
           <div className="space-y-2">
             {rest.length === 0 && (
-              <p className="px-1 py-2 text-xs text-muted-foreground">Pas d'autre review récente.</p>
+              <p className="px-1 py-2 text-xs text-muted-foreground">{t('home.noRecentReview')}</p>
             )}
             {rest.map((r) => (
               <Link

@@ -62,8 +62,8 @@ export default function SelectionBar({
               ))}
               <button
                 onClick={onClear}
-                title="Annuler la sélection"
-                aria-label="Annuler la sélection"
+                title={t('common.clearSelection')}
+                aria-label={t('common.clearSelection')}
                 className="ml-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 <X size={16} />

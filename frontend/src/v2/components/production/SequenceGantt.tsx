@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TASK_STATUS_BAR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
 import type { ScheduleTask } from '../../types/api';
+import { useT } from '../../i18n';
 
 const DAY = 86_400_000;
 const fmt = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
@@ -34,6 +35,7 @@ interface Group {
 
 /** Gantt léger par séquence (43.C — №128), lecture seule. Groupé par séquence, « Sans séquence » en fin. */
 export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
+  const t = useT();
   // « Maintenant » capturé une fois (rendu pur) pour le repère du jour.
   const [now] = useState(() => Date.now());
   const { groups, min, span, ticks } = useMemo(() => {
@@ -48,7 +50,7 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
     const byKey = new Map<string, Group>();
     for (const b of bars) {
       const key = b.task.sequenceCode ?? '￿'; // tri : sans séquence en dernier
-      const label = b.task.sequenceCode ?? 'Sans séquence';
+      const label = b.task.sequenceCode ?? t('shots.noSequence');
       const g = byKey.get(key);
       if (g) g.bars.push(b);
       else byKey.set(key, { key, label, bars: [b] });
@@ -58,14 +60,14 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
 
     const ticks = Array.from({ length: 5 }, (_, i) => min + (span * i) / 4);
     return { groups, min, span, ticks };
-  }, [tasks]);
+  }, [tasks, t]);
 
   const todayLeft = groups.length && now >= min && now <= min + span ? ((now - min) / span) * 100 : null;
 
   if (groups.length === 0) {
     return (
       <section className="rounded-lg border border-border bg-card p-4">
-        <p className="text-xs text-muted-foreground">Aucune tâche datée à afficher.</p>
+        <p className="text-xs text-muted-foreground">{t('stats.noDatedTask')}</p>
       </section>
     );
   }

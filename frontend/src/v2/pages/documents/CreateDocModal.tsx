@@ -9,6 +9,7 @@ import type { ProjectRef } from '../../types/api';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { SCOPE_LABEL, type Doc, type DocKind, type DocScope } from './docTypes';
+import { useT } from '../../i18n';
 
 interface EntityLite {
   id: number;
@@ -28,6 +29,7 @@ export default function CreateDocModal({
   onClose: () => void;
   onCreated: (d: Doc) => void;
 }) {
+  const t = useT();
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<DocKind>('RICH');
   const [scope, setScope] = useState<DocScope>(defaultProjectId ? 'PROJECT' : 'GLOBAL');
@@ -81,7 +83,7 @@ export default function CreateDocModal({
         body.content = '';
       }
       const { document } = await api.post<{ document: Doc }>('/api/documents', body);
-      toast.success('Document créé');
+      toast.success(t('documents.created'));
       onCreated(document);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Smile } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import type { ReviewComment } from '../../types/api';
+import { useT } from '../../i18n';
 
 const EMOJIS = ['👍', '❤️', '😂', '🎉', '👀', '🔥', '✅', '❓'];
 
@@ -20,6 +21,7 @@ export default function CommentReactions({
   reload: () => void;
   stop: (e: React.MouseEvent) => void;
 }) {
+  const t = useT();
   const [emojiOpen, setEmojiOpen] = useState(false);
 
   const react = async (emoji: string) => {
@@ -65,7 +67,7 @@ export default function CommentReactions({
             stop(e);
             setEmojiOpen((o) => !o);
           }}
-          title="Réagir"
+          title={t('comments.react')}
           className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <Smile size={15} />

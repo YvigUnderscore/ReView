@@ -135,7 +135,7 @@ export default function VersionsTab() {
               <th className="px-3 py-2">Publication</th>
               <th className="px-3 py-2">{t('trash.group.media')}</th>
               <th className="px-3 py-2">Auteur</th>
-              <th className="px-3 py-2">Créée</th>
+              <th className="px-3 py-2">{t('stats.created')}</th>
             </tr>
           </thead>
           <tbody>

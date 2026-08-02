@@ -25,6 +25,7 @@ const kindIcon: Record<MediaKind, React.ReactNode> = {
  * commentaire uniquement — zéro navigation vers l'app.
  */
 export default function ClientSharePage() {
+  const t = useT();
   const { token = '' } = useParams();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<ClientMedia | null>(null);
@@ -103,7 +104,7 @@ export default function ClientSharePage() {
         ) : (
           <>
             {media.length === 0 && (
-              <p className="m-auto text-sm text-muted-foreground">Aucun média publié pour le moment.</p>
+              <p className="m-auto text-sm text-muted-foreground">{t('client.noPublished')}</p>
             )}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {media.map((m) => (

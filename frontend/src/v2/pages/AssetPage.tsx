@@ -17,8 +17,10 @@ import { Button } from '../components/ui/button';
 import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
 import type { AssetDetail } from '../types/api';
+import { useT } from '../i18n';
 
 export default function AssetPage() {
+  const t = useT();
   const { id } = useParams();
   const assetId = Number(id);
   const role = useAuth((s) => s.user?.role);
@@ -79,7 +81,7 @@ export default function AssetPage() {
             Assigné à&nbsp;:
           </span>
           {asset.sequences.length === 0 && asset.shots.length === 0 && (
-            <span className="text-xs text-muted-foreground">Aucune séquence/shot</span>
+            <span className="text-xs text-muted-foreground">{t('asset.noSequenceShot')}</span>
           )}
           {asset.sequences.map((s) => (
             <span

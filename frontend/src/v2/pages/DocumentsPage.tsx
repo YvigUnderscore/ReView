@@ -111,7 +111,7 @@ export default function DocumentsPage() {
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         {/* Liste */}
         <div className="space-y-1.5">
-          {docs.length === 0 && <p className="text-sm text-muted-foreground">Aucun document.</p>}
+          {docs.length === 0 && <p className="text-sm text-muted-foreground">{t('docs.empty')}</p>}
           {docs.map((d) => (
             <button
               key={d.id}
@@ -138,7 +138,7 @@ export default function DocumentsPage() {
         {/* Détail / éditeur */}
         <div className="rounded-lg border border-border bg-card p-4">
           {!selected ? (
-            <p className="text-sm text-muted-foreground">Sélectionnez un document ou créez-en un.</p>
+            <p className="text-sm text-muted-foreground">{t('docs.pick')}</p>
           ) : (
             <div>
               <div className="mb-3 flex items-start justify-between gap-3">

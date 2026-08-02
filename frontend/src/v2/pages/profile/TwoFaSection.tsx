@@ -9,12 +9,14 @@ import { api } from '../../../lib/apiClient';
 import { useAuth, type AuthUser } from '../../stores/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { useT } from '../../i18n';
 
 /**
  * 2FA TOTP (36.A) : enrôlement (QR + code), codes de secours affichés une fois,
  * désactivation par mot de passe. L'état vient de /api/auth/me (twoFaEnabled).
  */
 export default function TwoFaSection() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const [qr, setQr] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export default function TwoFaSection() {
       setManualSecret(null);
       setCode('');
       if (user) setUser({ ...user, twoFaEnabled: true } as AuthUser);
-      toast.success('2FA activée — conservez vos codes de secours');
+      toast.success(t('twofa.enabled'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Code incorrect');
     } finally {
@@ -66,7 +68,7 @@ export default function TwoFaSection() {
       setPassword('');
       setBackupCodes(null);
       if (user) setUser({ ...user, twoFaEnabled: false } as AuthUser);
-      toast.success('2FA désactivée');
+      toast.success(t('twofa.disabled'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
@@ -126,7 +128,7 @@ export default function TwoFaSection() {
               <Input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="Code à 6 chiffres"
+                placeholder={t('twofa.code')}
                 autoComplete="one-time-code"
                 required
               />
@@ -144,7 +146,7 @@ export default function TwoFaSection() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mot de passe (pour désactiver)"
+            placeholder={t('twofa.passwordToDisable')}
             className="flex-1"
             required
           />

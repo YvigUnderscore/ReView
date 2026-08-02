@@ -3,7 +3,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Minimize2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -36,6 +35,7 @@ import ReviewViewer from './review/ReviewViewer';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
 import { useSplat } from './review/splat/useSplat';
 import CommentsPanel from './review/CommentsPanel';
+import TheaterExitButton from './review/TheaterExitButton';
 
 /** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
 export default function ReviewPage() {
@@ -272,15 +272,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
         className={`flex flex-col ${rootClass}`}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {theater && (
-          <button
-            onClick={() => setTheater(false)}
-            title="Quitter le mode théâtre (Échap)"
-            className="absolute right-4 top-4 z-50 rounded-md border border-border bg-card/80 p-1.5 text-muted-foreground backdrop-blur hover:bg-secondary hover:text-foreground"
-          >
-            <Minimize2 size={16} />
-          </button>
-        )}
+        {theater && <TheaterExitButton onExit={() => setTheater(false)} />}
         {data && !theater ? (
           <ReviewHeader
             data={data}

@@ -11,6 +11,7 @@ import { Label } from '../../components/ui/label';
 import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { useT } from '../../i18n';
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'Actif',
@@ -30,6 +31,7 @@ export default function EditProjectModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? '');
   const [status, setStatus] = useState(project.status);
@@ -39,7 +41,7 @@ export default function EditProjectModal({
     e.preventDefault();
     try {
       await api.patch(`/api/projects/${project.id}`, { name, description: description || null, status });
-      toast.success('Projet mis à jour');
+      toast.success(t('projects.updated'));
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -56,7 +58,7 @@ export default function EditProjectModal({
       <DialogContent>
         <form onSubmit={save} className="space-y-3">
           <DialogHeader>
-            <DialogTitle>Éditer le projet</DialogTitle>
+            <DialogTitle>{t('projects.edit')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-1">
             <Label>Nom</Label>

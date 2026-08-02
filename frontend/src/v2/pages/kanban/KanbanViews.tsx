@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { Select } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
 import { removeView, upsertView, type KanbanFilterState, type KanbanViewsPref } from './kanbanTypes';
+import { useT } from '../../i18n';
 
 /**
  * Vues kanban sauvegardées (backlog P2 10.G) : filtres nommés persistés par
@@ -24,6 +25,7 @@ export default function KanbanViews({
   filter: KanbanFilterState;
   onApply: (f: KanbanFilterState) => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const [selected, setSelected] = useState('');
   const [naming, setNaming] = useState(false);
@@ -108,7 +110,7 @@ export default function KanbanViews({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && setNaming(false)}
-            placeholder="Nom de la vue"
+            placeholder={t('savedViews.name')}
             className="h-8 w-40"
           />
           <button
@@ -122,7 +124,7 @@ export default function KanbanViews({
       ) : (
         <button
           onClick={() => setNaming(true)}
-          title="Enregistrer les filtres actuels comme vue"
+          title={t('savedViews.saveCurrent')}
           className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <BookmarkPlus size={14} />

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { CalendarDays } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { useT } from '../../i18n';
 
 /** Valeur ISO → `YYYY-MM-DD` pour un <input type="date"> (chaîne vide si absente). */
 const toInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
@@ -28,6 +29,7 @@ export default function TaskSchedule({
   dueDate: string | null | undefined;
   canEdit: boolean;
 }) {
+  const t = useT();
   const qc = useQueryClient();
 
   const save = async (field: 'startDate' | 'dueDate', value: string) => {
@@ -37,7 +39,7 @@ export default function TaskSchedule({
       });
       qc.invalidateQueries({ queryKey: qk.task(taskId) });
       if (projectId) qc.invalidateQueries({ queryKey: qk.projectSchedule(projectId) });
-      toast.success('Planning mis à jour');
+      toast.success(t('task.scheduleUpdated'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
     }

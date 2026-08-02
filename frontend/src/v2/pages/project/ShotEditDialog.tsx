@@ -55,7 +55,7 @@ export default function ShotEditDialog({
         endFrame: vals.endFrame ? Number(vals.endFrame) : null,
         settings: overrideFromForm(pipe, inherited),
       });
-      toast.success('Shot modifié');
+      toast.success(t('shots.updated'));
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur');
@@ -72,7 +72,7 @@ export default function ShotEditDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Modifier le shot</DialogTitle>
+          <DialogTitle>{t('shots.edit')}</DialogTitle>
         </DialogHeader>
         {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
         <div className="space-y-2">
@@ -95,7 +95,7 @@ export default function ShotEditDialog({
             value={vals.sequenceId}
             onChange={(e) => setVals((v) => ({ ...v, sequenceId: e.target.value }))}
           >
-            <option value="">Sans séquence</option>
+            <option value="">{t('shots.noSequence')}</option>
             {sequences.map((sq) => (
               <option key={sq.id} value={sq.id}>
                 {sq.code} · {sq.name}

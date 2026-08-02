@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Square } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from '../../i18n';
 
 /** mm:ss d'une durée en secondes. */
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -13,6 +14,7 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '
  * fichier au composer comme pièce jointe audio — lue inline dans le fil.
  */
 export default function VoiceRecorderButton({ onRecorded }: { onRecorded: (file: File) => void }) {
+  const t = useT();
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -56,7 +58,7 @@ export default function VoiceRecorderButton({ onRecorded }: { onRecorded: (file:
       setElapsed(0);
       setRecording(true);
     } catch {
-      toast.error('Micro indisponible (permission refusée ?)');
+      toast.error(t('comments.micUnavailable'));
     }
   };
 

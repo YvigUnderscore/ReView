@@ -4,14 +4,18 @@
 import { Link } from 'react-router-dom';
 import { Clock, MessageSquareWarning, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { ProjectStats, SequenceConvergence, ShotStatStatus } from '../../types/api';
+import { useT, type MessageKey } from '../../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 
 /** Métadonnées d'affichage par statut de shot (tokens de thème uniquement). */
-const STATUS_META: Record<ShotStatStatus, { label: string; bar: string }> = {
-  approved: { label: 'Approuvé', bar: 'bg-success' },
-  inReview: { label: 'En review', bar: 'bg-info' },
+const statusMeta = (t: Tr): Record<ShotStatStatus, { label: string; bar: string }> => ({
+  approved: { label: t('decision.approved'), bar: 'bg-success' },
+  inReview: { label: t('home.mediaInReview'), bar: 'bg-info' },
   retake: { label: 'Retake', bar: 'bg-accent2' },
-  notStarted: { label: 'Non démarré', bar: 'bg-muted-foreground/40' },
-};
+  notStarted: { label: t('stats.notStarted'), bar: 'bg-muted-foreground/40' },
+});
 const SEGMENTS: ShotStatStatus[] = ['approved', 'inReview', 'retake', 'notStarted'];
 
 function Kpi({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
@@ -28,6 +32,7 @@ function Kpi({ label, value, icon }: { label: string; value: string; icon?: Reac
 
 /** Barre de convergence empilée d'une séquence (approuvé / review / retake / non démarré). */
 function ConvergenceRow({ seq }: { seq: SequenceConvergence }) {
+  const t = useT();
   const counts: Record<ShotStatStatus, number> = {
     approved: seq.approved,
     inReview: seq.inReview,
@@ -50,9 +55,9 @@ function ConvergenceRow({ seq }: { seq: SequenceConvergence }) {
         {SEGMENTS.filter((s) => counts[s] > 0).map((s) => (
           <div
             key={s}
-            className={`${STATUS_META[s].bar} transition-all`}
+            className={`${statusMeta(t)[s].bar} transition-all`}
             style={{ width: `${(counts[s] / seq.total) * 100}%` }}
-            title={`${STATUS_META[s].label} : ${counts[s]}`}
+            title={`${statusMeta(t)[s].label} : ${counts[s]}`}
           />
         ))}
       </div>
@@ -61,6 +66,7 @@ function ConvergenceRow({ seq }: { seq: SequenceConvergence }) {
 }
 
 export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectStats; projectId: number }) {
+  const tr = useT();
   const t = stats.totals;
   const shotHref = (shotId: number) => `/projects/${projectId}?tab=shots&shot=${shotId}`;
 
@@ -81,7 +87,7 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
           icon={<MessageSquareWarning size={13} className="text-warning" />}
         />
         <Kpi
-          label="Délai moyen"
+          label={tr('stats.avgDelay')}
           value={t.avgReviewDays === null ? '—' : `${t.avgReviewDays} j`}
           icon={<Clock size={13} className="text-info" />}
         />
@@ -91,14 +97,14 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
           icon={<RefreshCw size={13} className="text-accent2" />}
         />
         <Kpi label="Notes / version" value={String(t.avgNotesPerVersion)} />
-        <Kpi label="Décisions" value={String(t.decisions)} />
+        <Kpi label={tr('stats.decisions')} value={String(t.decisions)} />
       </div>
 
       {/* Convergence par séquence */}
       <section className="rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-3 text-sm font-semibold">Convergence par séquence</h3>
+        <h3 className="mb-3 text-sm font-semibold">{tr('stats.convergence')}</h3>
         {stats.sequences.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aucune séquence avec des shots.</p>
+          <p className="text-xs text-muted-foreground">{tr('stats.noSequenceWithShots')}</p>
         ) : (
           <div className="space-y-3">
             {stats.sequences.map((seq) => (
@@ -107,8 +113,8 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
             <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[11px] text-muted-foreground">
               {SEGMENTS.map((s) => (
                 <span key={s} className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${STATUS_META[s].bar}`} />
-                  {STATUS_META[s].label}
+                  <span className={`h-2 w-2 rounded-full ${statusMeta(tr)[s].bar}`} />
+                  {statusMeta(tr)[s].label}
                 </span>
               ))}
             </div>
@@ -118,9 +124,9 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
 
       {/* Shots les plus coûteux */}
       <section className="rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-3 text-sm font-semibold">Shots à surveiller</h3>
+        <h3 className="mb-3 text-sm font-semibold">{tr('home.shotsToWatch')}</h3>
         {stats.slowestShots.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aucune donnée de review pour l'instant.</p>
+          <p className="text-xs text-muted-foreground">{tr('stats.empty')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -130,7 +136,7 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
                   <th className="pb-2 text-right font-medium">Versions</th>
                   <th className="pb-2 text-right font-medium">Retakes</th>
                   <th className="pb-2 text-right font-medium">Notes</th>
-                  <th className="pb-2 text-right font-medium">Délai</th>
+                  <th className="pb-2 text-right font-medium">{tr('stats.delay')}</th>
                 </tr>
               </thead>
               <tbody>

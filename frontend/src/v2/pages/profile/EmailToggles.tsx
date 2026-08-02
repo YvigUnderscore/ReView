@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
+import { useT } from '../../i18n';
 
 /** Case à cocher générique branchée sur une clé booléenne de `preferences`. */
 function PrefCheckbox({
@@ -49,6 +50,7 @@ function PrefCheckbox({
 
 /** Abonnement au digest quotidien par email (préférence `emailDigest`, backlog P2). */
 export function DigestToggle() {
+  const t = useT();
   const prefsQ = useQuery({
     queryKey: qk.preferences,
     queryFn: () =>
@@ -59,7 +61,7 @@ export function DigestToggle() {
   return (
     <PrefCheckbox
       prefKey="emailDigest"
-      label="Recevoir chaque matin un résumé par email de l’activité de mes projets"
+      label={t('email.digest')}
       onLabel="Digest quotidien activé"
       offLabel="Digest quotidien désactivé"
       enabled={prefsQ.data?.emailDigest === true}
@@ -70,6 +72,7 @@ export function DigestToggle() {
 
 /** Rapport hebdomadaire de production (43.B — `weeklyReport`) : superviseurs/admins. */
 export function WeeklyReportToggle() {
+  const t = useT();
   const role = useAuth((s) => s.user?.role);
   const canReceive = role === 'ADMIN' || role === 'SUPERVISOR';
   const prefsQ = useQuery({
@@ -84,7 +87,7 @@ export function WeeklyReportToggle() {
   return (
     <PrefCheckbox
       prefKey="weeklyReport"
-      label="Recevoir chaque lundi le rapport hebdomadaire de production (tous les projets)"
+      label={t('email.weekly')}
       onLabel="Rapport hebdomadaire activé"
       offLabel="Rapport hebdomadaire désactivé"
       enabled={prefsQ.data?.weeklyReport === true}

@@ -79,7 +79,9 @@ export default function ProjectHierarchy({
             {seq.shots.map((shot) => (
               <ShotRow key={shot.id} shot={shot} />
             ))}
-            {seq.shots.length === 0 && <p className="pl-6 text-xs text-muted-foreground">Aucun shot.</p>}
+            {seq.shots.length === 0 && (
+              <p className="pl-6 text-xs text-muted-foreground">{t('sequences.noShot')}</p>
+            )}
           </div>
         ))}
         {noSequence.length > 0 && (

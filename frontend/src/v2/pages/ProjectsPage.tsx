@@ -183,7 +183,7 @@ export default function ProjectsPage() {
                     },
                   ]
                 : [
-                    { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
+                    { icon: EditIcon, label: t('common.edit'), onClick: () => setEditing(p) },
                     {
                       icon: DeleteIcon,
                       label: t('common.delete'),

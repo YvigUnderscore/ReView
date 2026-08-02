@@ -91,7 +91,7 @@ export default function ProjectDefaultsTab() {
               onChange={(e) => setNom('shotPrefix', e.target.value)}
             />
           </DefField>
-          <DefField label="Pas">
+          <DefField label={t('pipeline.step')}>
             <Input
               type="number"
               min={1}
@@ -113,7 +113,7 @@ export default function ProjectDefaultsTab() {
         </div>
       </Panel>
 
-      <Panel title="Format &amp; cadence par défaut">
+      <Panel title={t('defaults.formatRate')}>
         <div className="flex flex-wrap items-end gap-3">
           <DefField label="Largeur (px)">
             <Input

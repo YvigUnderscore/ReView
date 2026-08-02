@@ -12,6 +12,7 @@ import { useFavorites, type FavType } from '../stores/useFavorites';
 import HoverSprite, { type SpriteData } from './HoverSprite';
 import { Checkbox } from './ui/checkbox';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
+import { useT } from '../i18n';
 
 export interface EntityItemAction {
   icon: ReactNode;
@@ -74,6 +75,7 @@ function Actions({ actions }: { actions?: EntityItemAction[] }) {
 
 /** Case de sélection : capte les modificateurs (Shift/Ctrl) et neutralise la navigation. */
 function SelectBox({ selection, className }: { selection: EntitySelection; className?: string }) {
+  const t = useT();
   return (
     <div
       className={`${className ?? ''} ${
@@ -89,7 +91,7 @@ function SelectBox({ selection, className }: { selection: EntitySelection; class
         checked={selection.selected}
         onCheckedChange={() => {}}
         tabIndex={-1}
-        aria-label="Sélectionner"
+        aria-label={t('common.select')}
       />
     </div>
   );

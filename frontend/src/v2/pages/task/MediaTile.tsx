@@ -13,6 +13,7 @@ import { reviewPath } from '../../lib/slug';
 import { MEDIA_KIND_ICON } from './taskTypes';
 import type { MediaSummary } from '../../types/api';
 import type { ViewMode } from '../../stores/useViewPref';
+import { useT } from '../../i18n';
 
 /** Miniature d'un média (vraie vignette ou icône selon le type). */
 function MediaThumb({ media, size }: { media: MediaSummary; size: number }) {
@@ -39,13 +40,14 @@ function ThumbEditButton({
   versionId: number;
   small?: boolean;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const pick = async (file: File) => {
     try {
       await api.post(`/api/media/${mediaId}/thumbnail`, { dataUrl: await fileToThumbnailDataUrl(file) });
       await qc.invalidateQueries({ queryKey: qk.version(versionId) });
-      toast.success('Miniature mise à jour');
+      toast.success(t('task.thumbUpdated'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Miniature non enregistrée');
     }
@@ -54,7 +56,7 @@ function ThumbEditButton({
     <>
       <button
         onClick={() => fileRef.current?.click()}
-        title="Modifier la miniature"
+        title={t('task.editThumb')}
         className={
           small
             ? 'rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground'

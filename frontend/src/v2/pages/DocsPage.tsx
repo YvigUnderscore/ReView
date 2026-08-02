@@ -9,6 +9,7 @@ import { qk } from '../lib/query';
 import Shell from '../components/Shell';
 import { filterSections, type DocsManifest } from './docs/docsManifest';
 import { renderDocHtml } from './docs/docsRender';
+import { useT } from '../i18n';
 
 /**
  * Documentation produit (/docs) : rendu du dossier DOCUMENTATION/ du repo,
@@ -23,6 +24,7 @@ const fetchText = async (url: string): Promise<string> => {
 };
 
 export default function DocsPage() {
+  const t = useT();
   const [params, setParams] = useSearchParams();
   const page = params.get('p') ?? 'README.md';
   const [query, setQuery] = useState('');
@@ -74,7 +76,7 @@ export default function DocsPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filtrer les pages…"
+              placeholder={t('docs.filter')}
               className="w-full rounded-md border border-border bg-secondary py-1.5 pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
             />
           </div>
@@ -109,7 +111,7 @@ export default function DocsPage() {
             </div>
           ))}
           {query.trim() && sections.length === 0 && !manifestQ.isError && (
-            <p className="px-1 text-sm text-muted-foreground">Aucune page ne correspond.</p>
+            <p className="px-1 text-sm text-muted-foreground">{t('docs.noMatch')}</p>
           )}
         </aside>
 

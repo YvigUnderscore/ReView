@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import type { ClientComment, ClientMedia } from '../../types/api';
+import { useT } from '../../i18n';
 
 const fmtTime = (sec: number) => {
   const m = Math.floor(sec / 60);
@@ -34,6 +35,7 @@ export default function ClientMediaViewer({
   watermarkOpacity: number;
   onBack: () => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const playable = media.kind === 'VIDEO' || media.kind === 'IMAGE';
@@ -73,7 +75,7 @@ export default function ClientMediaViewer({
         ...(timestamp !== undefined ? { timestamp } : {}),
       });
       setContent('');
-      toast.success('Commentaire envoyé');
+      toast.success(t('comments.sent'));
       qc.invalidateQueries({ queryKey: ['client-share', token, 'media', media.id, 'comments'] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -134,9 +136,7 @@ export default function ClientMediaViewer({
       <aside className="flex w-full flex-col rounded-lg border border-border bg-card lg:w-80">
         <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Commentaires</h2>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-          {comments.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aucun commentaire pour le moment.</p>
-          )}
+          {comments.length === 0 && <p className="text-sm text-muted-foreground">{t('comments.empty')}</p>}
           {comments.map((c) => (
             <div key={c.id} className="rounded-md bg-secondary/40 p-2.5 text-sm">
               <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">

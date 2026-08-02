@@ -225,7 +225,7 @@ export default function ReviewContextMenu({
             </ContextMenuItem>
             {canManage && (
               <ContextMenuItem
-                onSelect={() => run('Miniature mise à jour', async () => setThumbnail(frameDataUrl()))}
+                onSelect={() => run(t('task.thumbUpdated'), async () => setThumbnail(frameDataUrl()))}
               >
                 <ImageIcon size={14} /> Frame courante → miniature
               </ContextMenuItem>
@@ -255,7 +255,7 @@ export default function ReviewContextMenu({
               </ContextMenuItem>
             )}
             {canManage && (
-              <ContextMenuItem onSelect={() => run('Miniature mise à jour', () => setThumbnail(data.url))}>
+              <ContextMenuItem onSelect={() => run(t('task.thumbUpdated'), () => setThumbnail(data.url))}>
                 <ImageIcon size={14} /> Image → miniature
               </ContextMenuItem>
             )}

@@ -26,6 +26,7 @@ import AssetPage from './pages/AssetPage';
 import ProfilePage from './pages/ProfilePage';
 import DocumentsPage from './pages/DocumentsPage';
 import DocsPage from './pages/DocsPage';
+import { useT } from './i18n';
 
 // Board (Excalidraw) chargé en lazy pour code-splitter sa lourde dépendance
 const BoardPage = lazy(() => import('./pages/BoardPage'));
@@ -52,6 +53,7 @@ export default function App() {
 }
 
 function AppRoutes() {
+  const t = useT();
   const init = useAuth((s) => s.init);
   const ready = useAuth((s) => s.ready);
   const theme = useTheme((s) => s.theme);
@@ -165,7 +167,7 @@ function AppRoutes() {
               element={
                 <Protected>
                   <Suspense
-                    fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}
+                    fallback={<div className="p-6 text-sm text-muted-foreground">{t('board.loading')}</div>}
                   >
                     <BoardPage scope="project" />
                   </Suspense>
@@ -177,7 +179,7 @@ function AppRoutes() {
               element={
                 <Protected>
                   <Suspense
-                    fallback={<div className="p-6 text-sm text-muted-foreground">Chargement du board…</div>}
+                    fallback={<div className="p-6 text-sm text-muted-foreground">{t('board.loading')}</div>}
                   >
                     <BoardPage scope="asset" />
                   </Suspense>

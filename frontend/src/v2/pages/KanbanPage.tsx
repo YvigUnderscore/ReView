@@ -27,10 +27,12 @@ import { KanbanCardBody } from './kanban/KanbanCard';
 import KanbanFilters from './kanban/KanbanFilters';
 import KanbanViews from './kanban/KanbanViews';
 import { parseIdParam } from '../lib/slug';
+import { useT } from '../i18n';
 
 const EMPTY_FILTER: KanbanFilterState = { assignee: '', type: '', sequence: '' };
 
 export default function KanbanPage() {
+  const t = useT();
   const { id } = useParams();
   const projectId = parseIdParam(id);
   const { sequences, tasks, isLoading, loadError, move } = useKanbanBoard(projectId);
@@ -87,7 +89,7 @@ export default function KanbanPage() {
       {!isLoading && tasks.length === 0 ? (
         <EmptyState
           icon={KanbanSquare}
-          title="Aucune tâche pour l'instant"
+          title={t('task.noTaskYet')}
           description="Créez des shots et des tâches depuis le projet pour les suivre ici. Glissez une carte d'une colonne à l'autre pour changer son statut."
         />
       ) : (

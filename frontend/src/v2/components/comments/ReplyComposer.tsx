@@ -13,6 +13,7 @@ import {
 import { useImagePaste } from '../../lib/useImagePaste';
 import { useMentions } from './useMentions';
 import MentionMenu from './MentionMenu';
+import { useT } from '../../i18n';
 
 /** Zone de réponse à un commentaire (texte + images jointes, paste CTRL+V, 8 max). */
 export default function ReplyComposer({
@@ -26,6 +27,7 @@ export default function ReplyComposer({
   onSent: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -70,7 +72,7 @@ export default function ReplyComposer({
           onKeyDown={(e) => mentions.onKeyDown(e)}
           onPaste={onPasteImage}
           rows={2}
-          placeholder="Votre réponse… (@ pour mentionner)"
+          placeholder={t('comments.reply.placeholder')}
           className="w-full resize-none bg-transparent text-sm focus:outline-none"
         />
       </div>
@@ -101,7 +103,7 @@ export default function ReplyComposer({
           />
           <button
             onClick={() => fileRef.current?.click()}
-            title="Joindre une image"
+            title={t('comments.attachImage')}
             className="rounded p-1 text-muted-foreground hover:bg-secondary"
           >
             <ImagePlus size={15} />

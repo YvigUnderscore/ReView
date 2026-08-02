@@ -11,6 +11,7 @@ import type { PlaylistSummary } from '../types/api';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { useT } from '../i18n';
 
 /**
  * « Ajouter à la playlist » (Phase 33) : choisit une playlist du projet ou en crée
@@ -33,6 +34,7 @@ export default function AddToPlaylistDialog({
   versionIds?: number[];
   onDone?: () => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -99,7 +101,7 @@ export default function AddToPlaylistDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ajouter à la playlist</DialogTitle>
+          <DialogTitle>{t('reviews.addToPlaylistShort')}</DialogTitle>
         </DialogHeader>
         {projectId === null ? (
           <p className="text-sm text-muted-foreground">

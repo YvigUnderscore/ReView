@@ -11,6 +11,7 @@ import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
 import VersionTimelineItem from './VersionTimelineItem';
 import type { MediaSummary, VersionListItem } from '../../types/api';
+import { useT } from '../../i18n';
 
 /**
  * Timeline de versions partagée par TaskPage et AssetPage (Phase 20) : liste dépliable
@@ -45,6 +46,7 @@ export default function VersionTimeline({
   removeVersion: (versionId: number) => void;
   removeMedia: (versionId: number, mediaId: number) => void;
 }) {
+  const t = useT();
   const enqueue = useUploadStore((s) => s.enqueue);
   const view = useViewMode(`versions:${contextKey}`);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -76,7 +78,7 @@ export default function VersionTimeline({
     return (
       <EmptyState
         icon={Layers}
-        title="Aucune version"
+        title={t('task.noVersion')}
         description={emptyDescription}
         action={canCreate ? 'Créer une version' : undefined}
         onAction={canCreate ? onCreateVersion : undefined}
@@ -112,11 +114,11 @@ export default function VersionTimeline({
 
       <ConfirmDialog
         open={!!delVersion}
-        title="Supprimer la version ?"
+        title={t('version.delete.title')}
         message={
           <>La version « {delVersion?.name} » et ses médias seront déplacés dans la corbeille du projet.</>
         }
-        confirmLabel="Mettre à la corbeille"
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={() => {
           if (delVersion) removeVersion(delVersion.id);
@@ -126,9 +128,9 @@ export default function VersionTimeline({
       />
       <ConfirmDialog
         open={!!delMedia}
-        title="Supprimer le média ?"
+        title={t('media.delete.title')}
         message={<>« {delMedia?.media.originalName} » sera déplacé dans la corbeille du projet.</>}
-        confirmLabel="Mettre à la corbeille"
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={() => {
           if (delMedia) removeMedia(delMedia.versionId, delMedia.media.id);
