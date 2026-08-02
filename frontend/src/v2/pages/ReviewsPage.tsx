@@ -28,6 +28,7 @@ import { Select } from '../components/ui/select';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
 import { MEDIA_KIND_LABEL, type ReviewItem } from './reviews/reviewsTypes';
+import { useT } from '../i18n';
 
 interface Page<T> {
   items: T[];
@@ -41,6 +42,7 @@ const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT
  * brouillons, filtrables par projet/type/statut, tri récent, vignettes → /review/:id.
  */
 export default function ReviewsPage() {
+  const t = useT();
   const view = useViewMode('reviews');
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -79,7 +81,7 @@ export default function ReviewsPage() {
       setBulkDeleting(false);
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   // Projet commun des médias ciblés (une playlist = un projet) ; null si mixte.
@@ -93,10 +95,10 @@ export default function ReviewsPage() {
   const deleteOne = async (id: number) => {
     try {
       await bulkDelete('media', [id]);
-      toast.success('Média déplacé dans la corbeille');
+      toast.success(t('reviews.trashed'));
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -106,7 +108,7 @@ export default function ReviewsPage() {
         <h1 className="text-xl font-semibold">Reviews</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="text-xs">
-            <option value="">Tous les projets</option>
+            <option value="">{t('reviews.filter.allProjects')}</option>
             {(projects ?? []).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -114,7 +116,7 @@ export default function ReviewsPage() {
             ))}
           </Select>
           <Select value={kind} onChange={(e) => setKind(e.target.value)} className="text-xs">
-            <option value="">Tous les types</option>
+            <option value="">{t('reviews.filter.allTypes')}</option>
             {KIND_OPTIONS.map((k) => (
               <option key={k} value={k}>
                 {MEDIA_KIND_LABEL[k]}
@@ -122,13 +124,13 @@ export default function ReviewsPage() {
             ))}
           </Select>
           <Select value={status} onChange={(e) => setStatus(e.target.value)} className="text-xs">
-            <option value="">Publiés + mes brouillons</option>
-            <option value="published">Publiés</option>
-            <option value="draft">Mes brouillons</option>
+            <option value="">{t('reviews.filter.publishedAndDrafts')}</option>
+            <option value="published">{t('reviews.filter.published')}</option>
+            <option value="draft">{t('reviews.filter.myDrafts')}</option>
           </Select>
           <Select value={decision} onChange={(e) => setDecision(e.target.value)} className="text-xs">
-            <option value="">Toutes décisions</option>
-            <option value="none">Sans décision</option>
+            <option value="">{t('reviews.filter.allDecisions')}</option>
+            <option value="none">{t('reviews.filter.noDecision')}</option>
             {(reviewStatuses ?? []).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -156,14 +158,12 @@ export default function ReviewsPage() {
       ) : data.items.length === 0 ? (
         <EmptyState
           icon={Clapperboard}
-          title="Aucune review"
-          description="Aucun média ne correspond à ces filtres. Publiez un média depuis une tâche pour lancer une review."
+          title={t('reviews.empty.title')}
+          description={t('reviews.empty.description')}
         />
       ) : (
         <>
-          <p className="mb-3 text-xs text-muted-foreground">
-            {data.total} média{data.total > 1 ? 's' : ''}
-          </p>
+          <p className="mb-3 text-xs text-muted-foreground">{t('reviews.count', { count: data.total })}</p>
           <EntityContainer view={view}>
             {data.items.map((m) => (
               <EntityCard
@@ -178,14 +178,14 @@ export default function ReviewsPage() {
                 contextActions={[
                   {
                     icon: <FolderOpen size={14} />,
-                    label: 'Ouvrir',
+                    label: t('common.open'),
                     onClick: () => navigate(reviewPath({ id: m.id, originalName: m.name })),
                   },
                   ...(canPlaylist
                     ? [
                         {
                           icon: <ListVideo size={14} />,
-                          label: 'Ajouter à la playlist…',
+                          label: t('reviews.addToPlaylist'),
                           // Agit sur la sélection si la carte en fait partie, sinon sur la carte.
                           onClick: () =>
                             setPlaylistTarget(sel.count > 0 && sel.isSelected(m.id) ? sel.ids : [m.id]),
@@ -194,7 +194,7 @@ export default function ReviewsPage() {
                     : []),
                   {
                     icon: <Trash2 size={14} />,
-                    label: 'Supprimer',
+                    label: t('common.delete'),
                     danger: true,
                     onClick: () => deleteOne(m.id),
                   },
@@ -204,7 +204,7 @@ export default function ReviewsPage() {
                     {m.published ? (
                       <Badge variant="info">{MEDIA_KIND_LABEL[m.kind]}</Badge>
                     ) : (
-                      <Badge variant="warning">Brouillon</Badge>
+                      <Badge variant="warning">{t('reviews.draft')}</Badge>
                     )}
                     {m.reviewStatus && <ReviewDecisionBadge status={m.reviewStatus} />}
                   </span>
@@ -217,20 +217,20 @@ export default function ReviewsPage() {
 
       <SelectionBar
         count={sel.count}
-        label="média(s)"
+        label={t('reviews.countLabel', { count: sel.count })}
         onClear={sel.clear}
         actions={[
           ...(canPlaylist
             ? [
                 {
-                  label: 'Ajouter à la playlist…',
+                  label: t('reviews.addToPlaylist'),
                   icon: <ListVideo size={14} />,
                   onClick: () => setPlaylistTarget(sel.ids),
                 },
               ]
             : []),
           {
-            label: 'Supprimer',
+            label: t('common.delete'),
             icon: <Trash2 size={14} />,
             danger: true,
             onClick: () => setBulkDeleting(true),
@@ -248,9 +248,9 @@ export default function ReviewsPage() {
 
       <ConfirmDialog
         open={bulkDeleting}
-        title="Supprimer les médias ?"
-        message={<>{sel.count} média(s) seront déplacés dans la corbeille.</>}
-        confirmLabel="Mettre à la corbeille"
+        title={t('reviews.deleteMany.title')}
+        message={t('reviews.deleteMany.message', { count: sel.count })}
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmBulkDelete}
         onCancel={() => setBulkDeleting(false)}

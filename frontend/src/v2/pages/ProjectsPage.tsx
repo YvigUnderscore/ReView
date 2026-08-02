@@ -31,8 +31,10 @@ import EmptyState from '../components/ui/empty-state';
 import ProjectStatusBadge from './projects/ProjectStatusBadge';
 import ProjectsTabs from './projects/ProjectsTabs';
 import DuplicateProjectDialog from './projects/DuplicateProjectDialog';
+import { useT } from '../i18n';
 
 export default function ProjectsPage() {
+  const t = useT();
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const view = useViewMode('projects');
@@ -61,7 +63,7 @@ export default function ProjectsPage() {
       toast.success(`Projet « ${p.name} » désarchivé`);
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -73,7 +75,7 @@ export default function ProjectsPage() {
       setBulkDeleting(false);
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -87,7 +89,7 @@ export default function ProjectsPage() {
       setCreating(false);
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -95,11 +97,11 @@ export default function ProjectsPage() {
     if (!deleting) return;
     try {
       await api.del(`/api/projects/${deleting.id}`);
-      toast.success('Projet déplacé dans la corbeille');
+      toast.success(t('projects.trashed'));
       setDeleting(null);
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -125,13 +127,13 @@ export default function ProjectsPage() {
         <DialogContent>
           <form onSubmit={create} className="space-y-3">
             <DialogHeader>
-              <DialogTitle>Nouveau projet</DialogTitle>
+              <DialogTitle>{t('projects.new')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-1">
-              <Label>Nom du projet</Label>
+              <Label>{t('projects.name')}</Label>
               <Input
                 autoFocus
-                placeholder="Mon projet"
+                placeholder={t('projects.name.placeholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -139,10 +141,10 @@ export default function ProjectsPage() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" size="sm" onClick={() => setCreating(false)}>
-                Annuler
+                {t('common.cancel')}
               </Button>
               <Button type="submit" size="sm">
-                Créer
+                {t('common.create')}
               </Button>
             </DialogFooter>
           </form>
@@ -155,19 +157,15 @@ export default function ProjectsPage() {
         tab === 'archived' ? (
           <EmptyState
             icon={FolderKanban}
-            title="Aucun projet archivé"
-            description="Les projets que vous archivez (via Éditer → statut « Archivé ») apparaîtront ici, en lecture seule."
+            title={t('projects.empty.archived.title')}
+            description={t('projects.empty.archived.description')}
           />
         ) : (
           <EmptyState
             icon={FolderKanban}
-            title="Aucun projet pour l'instant"
-            description={
-              canManage
-                ? 'Créez votre premier projet avec le bouton « + Créer » pour organiser vos séquences, shots et assets.'
-                : 'Vous n’êtes membre d’aucun projet. Demandez à un superviseur de vous ajouter.'
-            }
-            action={canManage ? 'Créer un projet' : undefined}
+            title={t('projects.empty.title')}
+            description={canManage ? t('projects.empty.canManage') : t('projects.empty.member')}
+            action={canManage ? t('projects.empty.action') : undefined}
             onAction={() => setCreating(true)}
           />
         )
@@ -180,13 +178,18 @@ export default function ProjectsPage() {
                 ? [
                     {
                       icon: <ArchiveRestore size={15} />,
-                      label: 'Désarchiver',
+                      label: t('projects.unarchive'),
                       onClick: () => restore(p),
                     },
                   ]
                 : [
                     { icon: EditIcon, label: 'Éditer', onClick: () => setEditing(p) },
-                    { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(p) },
+                    {
+                      icon: DeleteIcon,
+                      label: t('common.delete'),
+                      danger: true,
+                      onClick: () => setDeleting(p),
+                    },
                   ];
             return (
               <EntityCard
@@ -203,11 +206,17 @@ export default function ProjectsPage() {
                 contextActions={[
                   {
                     icon: <FolderOpen size={14} />,
-                    label: 'Ouvrir',
+                    label: t('common.open'),
                     onClick: () => navigate(projectPath(p)),
                   },
                   ...(canManage && tab === 'active'
-                    ? [{ icon: <Copy size={14} />, label: 'Dupliquer', onClick: () => setDuplicating(p) }]
+                    ? [
+                        {
+                          icon: <Copy size={14} />,
+                          label: t('common.duplicate'),
+                          onClick: () => setDuplicating(p),
+                        },
+                      ]
                     : []),
                   ...manageActions,
                 ]}
@@ -220,11 +229,11 @@ export default function ProjectsPage() {
       {canManage && tab === 'active' && (
         <SelectionBar
           count={sel.count}
-          label="projet(s)"
+          label={t('projects.countLabel', { count: sel.count })}
           onClear={sel.clear}
           actions={[
             {
-              label: 'Supprimer',
+              label: t('common.delete'),
               icon: <Trash2 size={14} />,
               danger: true,
               onClick: () => setBulkDeleting(true),
@@ -235,11 +244,9 @@ export default function ProjectsPage() {
 
       <ConfirmDialog
         open={bulkDeleting}
-        title="Supprimer les projets ?"
-        message={
-          <>{sel.count} projet(s) seront déplacés dans la corbeille. Restaurables depuis l'administration.</>
-        }
-        confirmLabel="Mettre à la corbeille"
+        title={t('projects.deleteMany.title')}
+        message={t('projects.deleteMany.message', { count: sel.count })}
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmBulkDelete}
         onCancel={() => setBulkDeleting(false)}
@@ -269,14 +276,9 @@ export default function ProjectsPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Supprimer le projet ?"
-        message={
-          <>
-            Le projet « {deleting?.name} » sera déplacé dans la corbeille. Vous pourrez le restaurer depuis
-            l'administration.
-          </>
-        }
-        confirmLabel="Mettre à la corbeille"
+        title={t('projects.delete.title')}
+        message={t('projects.delete.message', { name: deleting?.name ?? '' })}
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

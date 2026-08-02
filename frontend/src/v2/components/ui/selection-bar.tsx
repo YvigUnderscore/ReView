@@ -5,6 +5,7 @@ import { type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Button } from './button';
+import { useT } from '../../i18n';
 
 export interface SelectionAction {
   label: string;
@@ -22,13 +23,15 @@ export default function SelectionBar({
   count,
   actions,
   onClear,
-  label = 'sélectionné(s)',
+  label,
 }: {
   count: number;
   actions: SelectionAction[];
   onClear: () => void;
+  /** Nom accordé au nombre, sans le nombre : la barre compose « 3 » + « projets ». */
   label?: string;
 }) {
+  const t = useT();
   const reduce = useReducedMotion();
   return (
     <AnimatePresence>
@@ -42,7 +45,7 @@ export default function SelectionBar({
         >
           <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-card/95 py-2 pl-4 pr-2 shadow-2xl backdrop-blur">
             <span className="text-sm font-medium">
-              <span className="text-primary">{count}</span> {label}
+              <span className="text-primary">{count}</span> {label ?? t('common.selected')}
             </span>
             <div className="h-5 w-px bg-border" />
             <div className="flex items-center gap-1">

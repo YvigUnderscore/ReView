@@ -14,8 +14,10 @@ import RichTextEditor from '../components/RichTextEditor';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CreateDocModal from './documents/CreateDocModal';
 import { SCOPE_LABEL, type Doc } from './documents/docTypes';
+import { useT } from '../i18n';
 
 export default function DocumentsPage() {
+  const t = useT();
   const role = useAuth((s) => s.user?.role);
   const canEdit = role !== 'CLIENT';
   const qc = useQueryClient();
@@ -59,7 +61,7 @@ export default function DocumentsPage() {
       setEditing(false);
       invalidateDocs();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
+      setError(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
   const confirmDelete = async () => {
@@ -70,7 +72,7 @@ export default function DocumentsPage() {
       setDeleting(null);
       invalidateDocs();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
+      setError(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
@@ -87,7 +89,7 @@ export default function DocumentsPage() {
             }}
             className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
           >
-            <option value="">Documents globaux</option>
+            <option value="">{t('documents.global')}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -195,19 +197,20 @@ export default function DocumentsPage() {
                     className="h-[70vh] w-full rounded border border-border"
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground">PDF indisponible.</p>
+                  <p className="text-sm text-muted-foreground">{t('documents.pdfUnavailable')}</p>
                 )
               ) : editing ? (
                 <RichTextEditor
                   value={draftContent}
                   onChange={setDraftContent}
-                  placeholder="Rédigez la documentation…"
+                  placeholder={t('documents.editor.placeholder')}
                 />
               ) : (
                 <div
                   className="prose-doc max-w-none text-sm"
                   dangerouslySetInnerHTML={{
-                    __html: selected.content ?? '<p class="text-muted-foreground">Document vide.</p>',
+                    __html:
+                      selected.content ?? `<p class="text-muted-foreground">${t('documents.empty')}</p>`,
                   }}
                 />
               )}
@@ -230,9 +233,9 @@ export default function DocumentsPage() {
       )}
       <ConfirmDialog
         open={!!deleting}
-        title="Supprimer le document ?"
-        message={<>« {deleting?.title} » sera définitivement supprimé.</>}
-        confirmLabel="Supprimer"
+        title={t('documents.delete.title')}
+        message={t('documents.delete.message', { title: deleting?.title ?? '' })}
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

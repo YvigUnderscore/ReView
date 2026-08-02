@@ -16,8 +16,10 @@ import TwoFaSection from './profile/TwoFaSection';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { useT } from '../i18n';
 
 export default function ProfilePage() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -48,9 +50,9 @@ export default function ProfilePage() {
       if (vals.email !== user.email) body.email = vals.email;
       const { user: updated } = await api.patch<{ user: AuthUser }>('/api/users/me', body);
       setUser(updated);
-      toast.success('Profil mis à jour');
+      toast.success(t('profile.updated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -58,7 +60,7 @@ export default function ProfilePage() {
 
   const savePassword = async () => {
     if (pwd.length < 8) {
-      toast.error('8 caractères minimum (lettres + chiffres).');
+      toast.error(t('profile.password.tooShort'));
       return;
     }
     setBusy(true);
@@ -66,9 +68,9 @@ export default function ProfilePage() {
       const { user: updated } = await api.patch<{ user: AuthUser }>('/api/users/me', { password: pwd });
       setUser(updated);
       setPwd('');
-      toast.success('Mot de passe modifié');
+      toast.success(t('profile.password.updated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -79,7 +81,7 @@ export default function ProfilePage() {
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
     if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
-      toast.error('Format image invalide (png/jpg/webp).');
+      toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setBusy(true);
@@ -88,12 +90,12 @@ export default function ProfilePage() {
         contentType: file.type,
       });
       const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error('Échec de l’upload');
+      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
       const { user: updated } = await api.put<{ user: AuthUser }>('/api/users/me/avatar', { key });
       setUser(updated);
-      toast.success('Avatar mis à jour');
+      toast.success(t('profile.avatar.updated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -105,7 +107,7 @@ export default function ProfilePage() {
       const { user: updated } = await api.put<{ user: AuthUser }>('/api/users/me/avatar', { key: null });
       setUser(updated);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -114,7 +116,7 @@ export default function ProfilePage() {
   return (
     <Shell>
       <div className="mx-auto max-w-2xl space-y-6">
-        <h1 className="text-xl font-semibold">Mon profil</h1>
+        <h1 className="text-xl font-semibold">{t('profile.title')}</h1>
 
         <section className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
           <Avatar
@@ -133,90 +135,90 @@ export default function ProfilePage() {
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={() => fileRef.current?.click()} disabled={busy}>
-                Changer l’avatar
+                {t('profile.avatar.change')}
               </Button>
               {user.avatarUrl && (
                 <Button size="sm" variant="outline" onClick={removeAvatar} disabled={busy}>
-                  Retirer
+                  {t('profile.avatar.remove')}
                 </Button>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">PNG, JPG ou WebP.</p>
+            <p className="text-xs text-muted-foreground">{t('profile.avatar.formats')}</p>
           </div>
         </section>
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">Identité</h2>
+          <h2 className="text-sm font-semibold">{t('profile.identity')}</h2>
           <div className="grid grid-cols-2 gap-3">
             <Field
-              label="Prénom"
+              label={t('profile.firstName')}
               value={vals.firstName}
               onChange={(v) => setVals((s) => ({ ...s, firstName: v }))}
             />
             <Field
-              label="Nom"
+              label={t('profile.lastName')}
               value={vals.lastName}
               onChange={(v) => setVals((s) => ({ ...s, lastName: v }))}
             />
             <Field
-              label="Pseudo"
+              label={t('profile.username')}
               value={vals.username}
               onChange={(v) => setVals((s) => ({ ...s, username: v }))}
-              placeholder="affiché en priorité"
+              placeholder={t('profile.username.placeholder')}
             />
             <Field
-              label="Email"
+              label={t('login.email')}
               value={vals.email}
               onChange={(v) => setVals((s) => ({ ...s, email: v }))}
               type="email"
             />
             <Field
-              label="Fonction"
+              label={t('profile.jobTitle')}
               value={vals.jobTitle}
               onChange={(v) => setVals((s) => ({ ...s, jobTitle: v }))}
-              placeholder="ex. Compositing artist"
+              placeholder={t('profile.jobTitle.placeholder')}
             />
             <Field
-              label="Téléphone"
+              label={t('profile.phone')}
               value={vals.phone}
               onChange={(v) => setVals((s) => ({ ...s, phone: v }))}
-              placeholder="optionnel"
+              placeholder={t('profile.phone.placeholder')}
             />
           </div>
           <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Présentation</Label>
+            <Label className="mb-1 block text-xs text-muted-foreground">{t('profile.bio')}</Label>
             <textarea
               value={vals.bio}
               onChange={(e) => setVals((s) => ({ ...s, bio: e.target.value }))}
               maxLength={500}
               rows={3}
-              placeholder="Quelques mots sur vous (optionnel)"
+              placeholder={t('profile.bio.placeholder')}
               className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
           <Button onClick={saveProfile} disabled={busy}>
-            Enregistrer
+            {t('common.save')}
           </Button>
         </section>
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">Mot de passe</h2>
+          <h2 className="text-sm font-semibold">{t('profile.password.section')}</h2>
           <Field
-            label="Nouveau mot de passe"
+            label={t('profile.password.new')}
             value={pwd}
             onChange={setPwd}
             type="password"
-            placeholder="8 caractères min., lettres + chiffres"
+            placeholder={t('profile.password.placeholder')}
           />
           <Button onClick={savePassword} disabled={busy || !pwd}>
-            Changer le mot de passe
+            {t('profile.password.submit')}
           </Button>
         </section>
 
         <DisplaySettings />
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">Notifications</h2>
+          <h2 className="text-sm font-semibold">{t('profile.notifications')}</h2>
           <DigestToggle />
           <WeeklyReportToggle />
           <PushToggle />
