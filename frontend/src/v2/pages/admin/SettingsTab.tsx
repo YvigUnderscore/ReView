@@ -48,10 +48,10 @@ function SizeField({
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <label className="w-64 text-muted-foreground">{field.label}</label>
+      <label className="w-64 text-muted-foreground">{t(field.labelKey)}</label>
       <Input
         className="w-24 py-1 text-xs"
-        placeholder={field.hint}
+        placeholder={t(field.hintKey)}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />
@@ -89,10 +89,10 @@ function PlainField({
   };
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <label className="w-64 text-muted-foreground">{field.label}</label>
+      <label className="w-64 text-muted-foreground">{t(field.labelKey)}</label>
       <Input
         className="flex-1 py-1 text-xs"
-        placeholder={field.hint}
+        placeholder={t(field.hintKey)}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />

@@ -41,7 +41,7 @@ export default function ActivityTab() {
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
         {items.map((a) => {
           const link = auditEntityLink(a.entityType, a.entityId);
-          const label = auditActionLabel(a.action);
+          const label = auditActionLabel(a.action, t);
           return (
             <li key={a.id} className="flex items-center gap-3 bg-card px-3 py-2 text-sm">
               <Avatar

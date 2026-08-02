@@ -124,10 +124,10 @@ export function ActivityPanel({ activity }: { activity: AdminUserActivity[] }) {
               <span className="min-w-0 truncate">
                 {link ? (
                   <Link to={link} className="text-foreground hover:underline">
-                    {auditActionLabel(a.action)}
+                    {auditActionLabel(a.action, t)}
                   </Link>
                 ) : (
-                  <span className="text-foreground">{auditActionLabel(a.action)}</span>
+                  <span className="text-foreground">{auditActionLabel(a.action, t)}</span>
                 )}
                 {a.entityType ? ` · ${a.entityType} ${a.entityId ?? ''}` : ''}
               </span>

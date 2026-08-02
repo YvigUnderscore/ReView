@@ -2,40 +2,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { StorageAgg } from '../../types/api';
+import type { MessageKey } from '../../i18n';
 
 /** Helpers purs de la page admin Stockage (libellés, pourcentages) — testés. */
 
-/** Libellés français des catégories racines du bucket. */
-export const CATEGORY_LABELS: Record<string, string> = {
-  originals: 'Originaux (projects/)',
-  derived: 'Dérivés (derived/)',
-  studio: 'Bibliothèques studio (studio/)',
-  avatars: 'Avatars (avatars/)',
-  branding: 'Identité visuelle (branding/)',
-  documents: 'Documents (documents/)',
-  comments: 'Pièces jointes commentaires (comments/)',
-  quarantine: 'Quarantaine antivirus (quarantine/)',
-  other: 'Autres objets',
+/** Clés de libellé des catégories racines du bucket. */
+export const CATEGORY_LABELS: Record<string, MessageKey> = {
+  originals: 'storage.cat.originals',
+  derived: 'storage.cat.derived',
+  studio: 'storage.cat.studio',
+  avatars: 'storage.cat.avatars',
+  branding: 'storage.cat.branding',
+  documents: 'storage.cat.documents',
+  comments: 'storage.cat.comments',
+  quarantine: 'storage.cat.quarantine',
+  other: 'storage.cat.other',
 };
 
-/** Libellés français des sous-types de dérivés (worker FFmpeg & éditeurs). */
-export const DERIVED_LABELS: Record<string, string> = {
-  hls: 'Renditions HLS (streaming vidéo)',
-  thumbnails: 'Miniatures',
-  glb: 'GLB convertis (3D / USD)',
-  proxies: 'Proxies vidéo',
-  client: 'MP4 clients (burn-ins)',
-  sprites: 'Sprites de timeline',
-  references: 'Images de référence (review 2D)',
-  'splat-edits': 'Éditions splat (masques/TRS)',
-  other: 'Autres dérivés',
+/** Clés de libellé des sous-types de dérivés (worker FFmpeg & éditeurs). */
+export const DERIVED_LABELS: Record<string, MessageKey> = {
+  hls: 'storage.d.hls',
+  thumbnails: 'storage.d.thumbnails',
+  glb: 'storage.d.glb',
+  proxies: 'storage.d.proxies',
+  client: 'storage.d.client',
+  sprites: 'storage.d.sprites',
+  references: 'storage.d.references',
+  'splat-edits': 'storage.d.splatEdits',
+  other: 'storage.d.other',
 };
 
-/** Libellés des bibliothèques studio. */
-export const STUDIO_LABELS: Record<string, string> = {
-  hdris: 'HDRI (éclairage 3D)',
-  ocio: 'Configs OCIO (couleur)',
-  other: 'Autres',
+/** Clés de libellé des bibliothèques studio. */
+export const STUDIO_LABELS: Record<string, MessageKey> = {
+  hdris: 'storage.s.hdris',
+  ocio: 'storage.s.ocio',
+  other: 'storage.s.other',
 };
 
 /** Pourcentage entier (0–100) d'une part sur un total (0 si total nul). */
@@ -47,13 +48,13 @@ export function pctOf(part: number, total: number): number {
 /** Entrées d'un agrégat triées par poids décroissant, avec libellé et pourcentage. */
 export function sortedEntries(
   agg: Record<string, StorageAgg>,
-  labels: Record<string, string>,
+  labels: Record<string, MessageKey>,
   total: number,
-): { key: string; label: string; count: number; bytes: number; pct: number }[] {
+): { key: string; labelKey: MessageKey | null; count: number; bytes: number; pct: number }[] {
   return Object.entries(agg)
     .map(([key, v]) => ({
       key,
-      label: labels[key] ?? key,
+      labelKey: labels[key] ?? null,
       count: v.count,
       bytes: v.bytes,
       pct: pctOf(v.bytes, total),

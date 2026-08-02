@@ -2,92 +2,92 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Panel } from './AdminPrimitives';
-import { useT } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
 
 /**
  * Cartographie statique des conventions de clés MinIO : où vit chaque type de fichier.
  * Source de vérité : StorageService (conventions de clés) et le worker FFmpeg (dérivés).
  */
-const MAP: { type: string; path: string; note: string }[] = [
+const MAP: { typeKey: MessageKey; path: string; noteKey: MessageKey }[] = [
   {
-    type: 'Fichier uploadé (original)',
-    path: 'projects/{projet}/{séquence-shot|asset}/{version}/{idMédia}/{fichier}',
-    note: 'Source de vérité, jamais modifiée. Chemin lisible par slugs hiérarchiques.',
+    typeKey: 'storage.k.original',
+    path: 'projects/{project}/{sequence-shot|asset}/{version}/{mediaId}/{file}',
+    noteKey: 'storage.k.original.note',
   },
   {
-    type: 'Renditions HLS (vidéo)',
-    path: 'derived/{idMédia}/hls/master.m3u8 + {hauteur}p_*.ts',
-    note: 'Streaming adaptatif généré par le worker FFmpeg au transcodage.',
+    typeKey: 'storage.k.hls',
+    path: 'derived/{mediaId}/hls/master.m3u8 + {height}p_*.ts',
+    noteKey: 'storage.k.hls.note',
   },
   {
-    type: 'Miniature',
-    path: 'derived/{idMédia}/thumbnail.jpg|webp',
-    note: 'Vignette des listes et du kanban.',
+    typeKey: 'storage.k.thumb',
+    path: 'derived/{mediaId}/thumbnail.jpg|webp',
+    noteKey: 'storage.k.thumb.note',
   },
   {
-    type: 'Proxy vidéo',
-    path: 'derived/{idMédia}/proxy.mp4 (+ proxy-trim.mp4 si trim)',
-    note: 'Lecture rapide et re-transcodages sans retoucher l’original.',
+    typeKey: 'storage.k.proxy',
+    path: 'derived/{mediaId}/proxy.mp4 (+ proxy-trim.mp4 si trim)',
+    noteKey: 'storage.k.proxy.note',
   },
   {
-    type: 'MP4 client (burn-ins)',
-    path: 'derived/{idMédia}/client.mp4',
-    note: 'Servi uniquement par les partages clients (watermark/slate).',
+    typeKey: 'storage.k.client',
+    path: 'derived/{mediaId}/client.mp4',
+    noteKey: 'storage.k.client.note',
   },
   {
-    type: 'Sprite de timeline',
-    path: 'derived/{idMédia}/timeline-sprite.jpg',
-    note: 'Aperçus au survol de la timeline vidéo.',
+    typeKey: 'storage.k.sprite',
+    path: 'derived/{mediaId}/timeline-sprite.jpg',
+    noteKey: 'storage.k.sprite.note',
   },
   {
-    type: 'GLB converti (3D / USD)',
-    path: 'derived/{idMédia}/model.glb',
-    note: 'Conversion FBX/OBJ/USD → GLB pour le viewer 3D.',
+    typeKey: 'storage.k.glb',
+    path: 'derived/{mediaId}/model.glb',
+    noteKey: 'storage.k.glb.note',
   },
   {
-    type: 'Éditions splat',
-    path: 'derived/{idMédia}/splat-mask.bin + splat-subset.bin',
-    note: 'Masque et transformations non-destructifs, rejoués pour tous.',
+    typeKey: 'storage.k.splat',
+    path: 'derived/{mediaId}/splat-mask.bin + splat-subset.bin',
+    noteKey: 'storage.k.splat.note',
   },
   {
-    type: 'Image de référence (review 2D)',
-    path: 'derived/{idMédia}/reference-{uuid}.{ext}',
-    note: 'Références épinglées au canvas de la review image.',
+    typeKey: 'storage.k.ref',
+    path: 'derived/{mediaId}/reference-{uuid}.{ext}',
+    noteKey: 'storage.k.ref.note',
   },
   {
-    type: 'HDRI studio',
+    typeKey: 'storage.k.hdri',
     path: 'studio/hdris/{uuid}.{exr|hdr}',
-    note: 'Bibliothèque d’éclairage 3D/splat (admin > 3D & Splat).',
+    noteKey: 'storage.k.hdri.note',
   },
   {
-    type: 'Config OCIO',
+    typeKey: 'storage.k.ocio',
     path: 'studio/ocio/{uuid}.ocio',
-    note: 'Gestion de couleur (admin > Couleur).',
+    noteKey: 'storage.k.ocio.note',
   },
   {
-    type: 'Avatar utilisateur',
-    path: 'avatars/{idUtilisateur}.{ext}',
-    note: 'Photo de profil.',
+    typeKey: 'storage.k.avatar',
+    path: 'avatars/{userId}.{ext}',
+    noteKey: 'storage.k.avatar.note',
   },
   {
-    type: 'Logo du studio',
-    path: 'branding/logo-{horodatage}.{ext}',
-    note: 'Identité visuelle (admin > Réglages).',
+    typeKey: 'storage.k.logo',
+    path: 'branding/logo-{timestamp}.{ext}',
+    noteKey: 'storage.k.logo.note',
   },
   {
-    type: 'Document PDF',
-    path: 'documents/{horodatage}-{fichier}',
-    note: 'Page Documents (globale ou par projet).',
+    typeKey: 'storage.k.doc',
+    path: 'documents/{timestamp}-{file}',
+    noteKey: 'storage.k.doc.note',
   },
   {
-    type: 'Pièce jointe de commentaire',
-    path: 'comments/attachments/{idUtilisateur}/{horodatage}-{fichier}',
-    note: 'Images, PDF, zips et notes vocales des fils de review.',
+    typeKey: 'storage.k.attachment',
+    path: 'comments/attachments/{userId}/{timestamp}-{file}',
+    noteKey: 'storage.k.attachment.note',
   },
   {
-    type: 'Fichier en quarantaine',
-    path: 'quarantine/{idMédia}/{fichier}',
-    note: 'Upload détecté infecté (ClamAV), isolé de la diffusion.',
+    typeKey: 'storage.k.quarantine',
+    path: 'quarantine/{mediaId}/{file}',
+    noteKey: 'storage.k.quarantine.note',
   },
 ];
 
@@ -107,11 +107,11 @@ export default function StorageMap() {
           <tbody>
             {MAP.map((r) => (
               <tr key={r.path} className="border-t border-border align-top">
-                <td className="py-1.5 pr-3 font-medium">{r.type}</td>
+                <td className="py-1.5 pr-3 font-medium">{t(r.typeKey)}</td>
                 <td className="py-1.5 pr-3">
                   <code className="rounded bg-secondary px-1 py-0.5 text-xs">{r.path}</code>
                 </td>
-                <td className="py-1.5 text-xs text-muted-foreground">{r.note}</td>
+                <td className="py-1.5 text-xs text-muted-foreground">{t(r.noteKey)}</td>
               </tr>
             ))}
           </tbody>

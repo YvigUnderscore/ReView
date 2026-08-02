@@ -13,7 +13,7 @@ import { fmtBytes, fmtDateTime } from './adminShared';
 import { CATEGORY_LABELS, DERIVED_LABELS, STUDIO_LABELS, sortedEntries } from './adminStorage';
 import StorageMap from './StorageMap';
 import type { AdminStorageReport, StorageAgg } from '../../types/api';
-import { useT } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
 
 function AggBars({
   agg,
@@ -21,7 +21,7 @@ function AggBars({
   total,
 }: {
   agg: Record<string, StorageAgg>;
-  labels: Record<string, string>;
+  labels: Record<string, MessageKey>;
   total: number;
 }) {
   const t = useT();
@@ -32,7 +32,7 @@ function AggBars({
       {entries.map((e) => (
         <div key={e.key}>
           <div className="mb-0.5 flex items-center justify-between text-xs">
-            <span className="min-w-0 truncate">{e.label}</span>
+            <span className="min-w-0 truncate">{e.labelKey ? t(e.labelKey) : e.key}</span>
             <span className="shrink-0 text-muted-foreground">
               {e.count} obj. · {fmtBytes(e.bytes)} ({e.pct}%)
             </span>
