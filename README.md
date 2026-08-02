@@ -12,7 +12,7 @@
     <img src="https://img.shields.io/discord/1330663471017398292?color=5865F2&label=Discord&logo=discord&logoColor=white" alt="Discord Server" />
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/badge/licence-MIT-blue" alt="Licence MIT" />
+    <img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue" alt="Licence AGPL-3.0-or-later" />
   </a>
 </p>
 
@@ -186,14 +186,39 @@ Conventions, structure du code et suite de validation : [DOCUMENTATION/developme
 
 ## 🙏 Remerciements & licences
 
-- **[React](https://react.dev/)** (MIT) · **[Vite](https://vitejs.dev/)** (MIT) · **[Node.js](https://nodejs.org/)** (MIT)
-- **[Express](https://expressjs.com/)** (MIT) · **[Prisma](https://www.prisma.io/)** (Apache-2.0) · **[Zod](https://zod.dev/)** (MIT)
-- **[TailwindCSS](https://tailwindcss.com/)** (MIT) · **[shadcn/ui](https://ui.shadcn.com/)** (MIT) · **[Lucide React](https://lucide.dev/)** (ISC) · **[Framer Motion](https://www.framer.com/motion/)** (MIT)
-- **[FFmpeg](https://ffmpeg.org/)** (LGPL/GPL) · **[Blender](https://www.blender.org/)** (GPL) · **[OpenUSD](https://openusd.org/)** (TOST)
-- **[Three.js](https://threejs.org/)** (MIT) · **[Spark](https://sparkjs.dev/)** (MIT) · **[Excalidraw](https://excalidraw.com/)** (MIT)
-- **[Socket.IO](https://socket.io/)** (MIT) · **[BullMQ](https://bullmq.io/)** (MIT) · **[MinIO](https://min.io/)** (AGPL-3.0)
-- **[Bcrypt.js](https://github.com/dcodeIO/bcrypt.js)** (MIT) · **[JsonWebToken](https://github.com/auth0/node-jsonwebtoken)** (MIT) · **[Helmet](https://helmetjs.github.io/)** (MIT) · **[marked](https://marked.js.org/)** (MIT)
+ReView tient debout sur le travail d'autres : **[React](https://react.dev/)**,
+**[Vite](https://vitejs.dev/)**, **[Node.js](https://nodejs.org/)**,
+**[Express](https://expressjs.com/)**, **[Prisma](https://www.prisma.io/)**,
+**[TailwindCSS](https://tailwindcss.com/)**, **[Three.js](https://threejs.org/)**,
+**[Spark](https://sparkjs.dev/)**, **[Excalidraw](https://excalidraw.com/)**,
+**[Socket.IO](https://socket.io/)**, **[BullMQ](https://bullmq.io/)**,
+**[MinIO](https://min.io/)**, **[FFmpeg](https://ffmpeg.org/)**,
+**[Blender](https://www.blender.org/)**, **[OpenUSD](https://openusd.org/)** — et 594
+paquets de plus.
+
+La liste exhaustive, avec le texte de licence de chacun, est dans
+**[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)** (généré par
+`node scripts/generate-notices.mjs`, jamais à la main).
 
 ## 📄 Licence
 
-Ce projet est sous licence [MIT](LICENSE).
+ReView est un **logiciel libre sous [AGPL-3.0-or-later](LICENSE)**.
+
+Vous pouvez l'installer, le modifier, le vendre et bâtir votre activité dessus. La seule
+contrepartie : si vous en proposez une **version modifiée** à d'autres — y compris
+simplement en l'hébergeant pour vos clients — vous devez leur en fournir les sources
+(article 13). Concrètement, publiez votre fork et renseignez son URL dans
+**Admin → Réglages → « Code source (AGPL §13) »**. Une instance non modifiée n'a rien à faire.
+
+Vos médias, projets et données ne sont jamais concernés : la licence porte sur le logiciel.
+
+- **[Licence commerciale](COMMERCIAL-LICENSE.md)** — pour les studios qui ne peuvent pas
+  accepter les obligations de l'AGPL.
+- **[Contribuer](CONTRIBUTING.md)** · **[CLA](CLA.md)** — les contributions passent par un
+  accord de licence, c'est ce qui rend la double licence possible.
+- **[Documentation de licence](DOCUMENTATION/development/licensing.md)** — obligations
+  détaillées, compatibilité des dépendances, redistribution des images Docker.
+
+> Jusqu'au 2 août 2026, ReView était distribué sous licence MIT. Une licence accordée ne se
+> révoque pas : **les versions publiées avant cette date restent disponibles sous MIT**. Le
+> changement ne vaut que pour la suite.

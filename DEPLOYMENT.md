@@ -85,3 +85,19 @@ Puis ouvrir `https://review.mystudio.com` → assistant de configuration (studio
   renforcé par IP.
 - Les secrets ne sont jamais commités : `.env` est gitignoré.
 - Sauvegarder régulièrement le volume Postgres et le bucket MinIO.
+
+## Licence — obligations de l'exploitant
+
+ReView est sous **AGPL-3.0-or-later**. Deux points à traiter avant la mise en production :
+
+- **Instance modifiée** : l'article 13 impose d'offrir vos sources à tous ceux qui
+  utilisent l'instance à distance, invités des liens de partage compris. Publiez votre
+  dépôt puis renseignez son URL dans **Admin → Réglages → « Code source (AGPL §13) »** :
+  elle alimente les liens « Code source » de la page de connexion, des pages client et de
+  **Admin → Système**. Sans modification du code, il n'y a rien à faire.
+- **Images Docker republiées** : l'image backend embarque ffmpeg (GPL-2.0-or-later) et,
+  avec `INSTALL_USD_TOOLS=1`, Blender (GPL-2.0-or-later). Les rediffuser oblige à
+  transmettre l'offre de source correspondante — pointer les sources amont Debian et
+  Blender suffit tant que vous ne les avez pas modifiées.
+
+Détail complet : `DOCUMENTATION/development/licensing.md`.

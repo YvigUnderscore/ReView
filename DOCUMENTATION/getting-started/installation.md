@@ -59,8 +59,19 @@ Database migrations are applied by Prisma on backend startup. The frontend image
 embeds the product documentation (`DOCUMENTATION/` → `/docs` page), so rebuilding the
 frontend refreshes the in-app docs as well.
 
+## License obligations
+
+ReView is AGPL-3.0-or-later. Running it unmodified requires nothing from you. If you
+**modify** it, section 13 obliges you to offer your sources to everyone who uses the
+instance over the network: publish your fork and set its URL in **Admin → Settings →
+"Code source (AGPL §13)"**. Republishing the Docker images also redistributes FFmpeg and,
+when built with `INSTALL_USD_TOOLS=1`, Blender — both GPL-2.0-or-later.
+
+See [Licensing](../development/licensing.md) for the details.
+
 ## Related pages
 
 - [Docker stack](docker-stack.md) — what each service does
 - [First run](first-run.md) — setup page, seed accounts
 - [Architecture](../infrastructure/architecture.md)
+- [Licensing](../development/licensing.md) — AGPL obligations, third-party notices
