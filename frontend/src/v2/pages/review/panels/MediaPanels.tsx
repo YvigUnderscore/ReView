@@ -80,9 +80,7 @@ export default function MediaPanels({
           <span className="font-mono text-xs">{fps} fps</span>
         </Row>
         <span className="rv-optbar__hint whitespace-normal">
-          {kind === 'VIDEO'
-            ? 'Lecture, son, boucle et qualité de flux se règlent dans la ligne de transport, sous l’image.'
-            : 'Zoom, rotation et miroir se règlent dans la ligne de transport, sous l’image.'}
+          {kind === 'VIDEO' ? t('panels.videoTransportHint') : t('panels.imageTransportHint')}
         </span>
       </Group>
     );
@@ -94,7 +92,7 @@ export default function MediaPanels({
           <Badge variant="secondary">{data.projectColor?.display ?? 'sRGB'}</Badge>
         </Row>
         <Row label="View">
-          <Badge variant="secondary">{data.projectColor?.view ?? 'Aucune'}</Badge>
+          <Badge variant="secondary">{data.projectColor?.view ?? t('common.none')}</Badge>
         </Row>
         <span className="rv-optbar__hint whitespace-normal">{t('review.projectOcio')}</span>
       </Group>
@@ -148,7 +146,7 @@ export default function MediaPanels({
             {onExportFrame && (
               <Button size="sm" variant="outline" onClick={onExportFrame}>
                 <Camera size={13} />
-                {kind === 'VIDEO' ? 'Frame courante (PNG)' : 'Vue affichée (PNG)'}
+                {kind === 'VIDEO' ? 'Frame courante (PNG)' : t('panels.viewPng')}
               </Button>
             )}
             {onContactSheet && (

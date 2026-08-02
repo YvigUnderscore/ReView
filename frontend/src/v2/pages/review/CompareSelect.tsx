@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/pop
 import type { VersionDetail, VersionListItem } from '../../types/api';
 import { findCompareMedia } from './reviewTypes';
 import { MAX_COMPARE } from './useCompareState';
+import { useT } from '../../i18n';
 
 /**
  * Sélecteur de comparaison (vidéo **et image**) : coche d'autres versions de la même
@@ -38,6 +39,7 @@ export default function CompareSelect({
   /** Remplacement exclusif (image) — garde la sémantique A/B simple. */
   onSet: (mediaId: number | null) => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   // Version cochée → média B résolu (nécessaire pour décocher et refléter l'état).
   const [vidToMedia, setVidToMedia] = useState<Record<number, number>>({});
@@ -107,9 +109,7 @@ export default function CompareSelect({
   return (
     <Popover>
       <PopoverTrigger
-        title={
-          multi ? 'Comparer avec d’autres versions (2-3 = grille 2×2)' : 'Comparer avec une autre version'
-        }
+        title={multi ? t('compare.otherVersions') : t('compare.otherVersion')}
         className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary"
       >
         {compareIds.length >= 2 ? <LayoutGrid size={13} /> : <Columns2 size={13} />}

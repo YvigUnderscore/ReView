@@ -78,7 +78,7 @@ export default function ReviewDecisionDialog({
       ]);
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Décision non enregistrée');
+      toast.error(e instanceof Error ? e.message : t('decision.notSaved'));
     } finally {
       setSaving(false);
     }
@@ -95,7 +95,7 @@ export default function ReviewDecisionDialog({
                 {t('decision.current')} <ReviewDecisionBadge status={current} />
               </>
             ) : (
-              'Aucune décision posée sur cette version.'
+              t('decision.none')
             )}
           </DialogDescription>
         </DialogHeader>

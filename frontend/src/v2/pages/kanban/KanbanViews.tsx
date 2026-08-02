@@ -44,7 +44,7 @@ export default function KanbanViews({
   const mutation = useMutation({
     mutationFn: (next: KanbanViewsPref) => api.patch('/api/users/me/preferences', { kanbanViews: next }),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.preferences }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Erreur d’enregistrement de la vue'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : t('savedViews.saveFailed')),
   });
 
   const saveCurrent = () => {

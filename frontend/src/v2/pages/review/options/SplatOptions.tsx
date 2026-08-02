@@ -138,7 +138,7 @@ export default function SplatOptions({
           <span className="rv-optbar__hint">
             {paint.pendingCount > 0
               ? `${paint.pendingCount} trait${paint.pendingCount > 1 ? 's' : ''} partiront avec le commentaire.`
-              : 'Les traits partent avec le commentaire.'}
+              : t('draw.strokesGoWithComment')}
           </span>
         </>
       )}

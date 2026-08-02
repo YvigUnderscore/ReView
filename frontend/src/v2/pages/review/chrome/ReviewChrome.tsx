@@ -148,10 +148,13 @@ export default function ReviewChrome({
         <span>{t(activeMode.hintKey)}</span>
         <span className="ml-auto flex items-center gap-2">
           <span>
-            {state.labels ? 'Libellés visibles' : 'Rail en icônes'} · dock {state.panel ? 'ouvert' : 'replié'}
+            {state.labels ? t('review.labelsVisible') : t('review.iconRail')} · dock{' '}
+            {state.panel ? t('review.dockOpen') : t('review.dockCollapsed')}
           </span>
           {dirty !== undefined && (
-            <Badge variant={dirty ? 'warning' : 'success'}>{dirty ? 'Non enregistré' : 'Enregistré'}</Badge>
+            <Badge variant={dirty ? 'warning' : 'success'}>
+              {dirty ? t('common.notSaved') : t('common.saved')}
+            </Badge>
           )}
         </span>
       </footer>

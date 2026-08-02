@@ -104,7 +104,7 @@ export default function PlaylistItems({
             <ContextMenuContent>
               {path && (
                 <ContextMenuItem onClick={() => navigate(path)}>
-                  <Play size={14} /> Ouvrir en review
+                  <Play size={14} /> {t('playlist.openInReview')}
                 </ContextMenuItem>
               )}
               {canEdit && (

@@ -54,7 +54,7 @@ export default function TaskDropzone({
             {t('task.toVersion')} <strong className="text-foreground">{latestVersionName}</strong>
           </>
         ) : (
-          'en créant une première version'
+          t('task.dropFirstVersion')
         )}
       </span>
       <input

@@ -51,7 +51,7 @@ export default function BatchGenerator({
 
   const submit = async () => {
     if (items.length === 0) {
-      setError('Aucun élément à générer.');
+      setError(t('batch.nothing'));
       return;
     }
     setBusy(true);

@@ -70,7 +70,7 @@ function DiffHud({
       </button>
       <button
         onClick={onHeatmap}
-        title={heatmap ? 'Différence en niveaux réels' : 'Différence en fausses couleurs (heatmap)'}
+        title={heatmap ? t('diff.real') : t('diff.heatmap')}
         className={`rounded p-1 hover:bg-secondary ${heatmap ? 'text-primary' : 'text-muted-foreground'}`}
       >
         <Flame size={14} />

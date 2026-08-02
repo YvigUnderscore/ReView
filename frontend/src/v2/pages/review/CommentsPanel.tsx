@@ -207,17 +207,9 @@ export default function CommentsPanel({
             {(hints.references ?? 0) > 1 ? 's' : ''}
           </p>
         )}
-        {hints.hotspot && (
-          <p className="mb-1.5 text-[11px] text-primary">📍 Hotspot joint (centre du viewer)</p>
-        )}
-        {hints.range && (
-          <p className="mb-1.5 text-[11px] text-primary">
-            ⏱ Plage I→O jointe — l’annotation restera visible sur toute la plage
-          </p>
-        )}
-        {hints.camera && (
-          <p className="mb-1.5 text-[11px] text-primary">📷 La vue caméra actuelle sera enregistrée</p>
-        )}
+        {hints.hotspot && <p className="mb-1.5 text-[11px] text-primary">{t('review.hotspotAttached')}</p>}
+        {hints.range && <p className="mb-1.5 text-[11px] text-primary">{t('review.rangeAttached')}</p>}
+        {hints.camera && <p className="mb-1.5 text-[11px] text-primary">{t('review.camViewSaved')}</p>}
         <div className="relative">
           <MentionMenu mentions={mentions} />
           <Textarea
@@ -270,7 +262,7 @@ export default function CommentsPanel({
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                 }`}
               >
-                <PencilLine size={15} /> Annoter
+                <PencilLine size={15} /> {t('mode.annotate')}
               </button>
             )}
           </div>

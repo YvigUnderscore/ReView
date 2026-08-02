@@ -48,9 +48,7 @@ export default function ClientSharePage() {
     return (
       <ClientFrame studio={null}>
         <p className="text-center text-sm text-muted-foreground">
-          {err instanceof ClientApiError && err.status === 410
-            ? 'La limite de vues de ce lien est atteinte. Demandez un nouveau lien au studio.'
-            : 'Ce lien de partage est invalide, expiré ou révoqué.'}
+          {err instanceof ClientApiError && err.status === 410 ? t('share.viewLimit') : t('share.invalid')}
         </p>
       </ClientFrame>
     );

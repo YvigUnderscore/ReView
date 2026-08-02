@@ -3,22 +3,22 @@
 
 import { Link } from 'react-router-dom';
 import { ListTodo } from 'lucide-react';
-import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
+import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '../../lib/taskStatus';
 import type { DashboardTask } from './homeTypes';
 import { useT } from '../../i18n';
 
 /** Mes tâches assignées (non approuvées), triées par urgence côté serveur. */
 export default function MyTasksCard({ tasks }: { tasks: DashboardTask[] }) {
-  const t = useT();
+  const tr = useT();
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('home.myTasks')}
+        {tr('home.myTasks')}
       </h2>
       {tasks.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
           <ListTodo size={24} />
-          {t('home.noAssignedTask')}
+          {tr('home.noAssignedTask')}
         </div>
       ) : (
         <div className="space-y-1">
@@ -31,7 +31,7 @@ export default function MyTasksCard({ tasks }: { tasks: DashboardTask[] }) {
               <span
                 className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${TASK_STATUS_COLOR[t.status]}`}
               >
-                {TASK_STATUS_LABEL[t.status]}
+                {tr(TASK_STATUS_LABEL_KEY[t.status]!)}
               </span>
               <span className="truncate font-medium">{t.name}</span>
               {t.location && (

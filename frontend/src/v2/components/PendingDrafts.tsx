@@ -105,7 +105,7 @@ export default function PendingDrafts() {
                     onClick={() => setOpen(false)}
                     className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 hover:bg-secondary/60"
                   >
-                    <Eye size={11} /> Voir
+                    <Eye size={11} /> {t('common.view')}
                   </Link>
                   <button
                     disabled={busy === d.id}

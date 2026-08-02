@@ -45,7 +45,7 @@ export default function RichTextEditor({
     onChange(ref.current?.innerHTML ?? '');
   };
   const addLink = () => {
-    const url = window.prompt('URL du lien :');
+    const url = window.prompt(t('link.url'));
     if (url) exec('createLink', url);
   };
 

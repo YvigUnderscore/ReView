@@ -164,7 +164,7 @@ export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations
       ann.addStagedRef(await fileToImageDataUrl(file));
       toast.success(t('review.ref.attached'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Lecture du fichier impossible');
+      toast.error(e instanceof Error ? e.message : t('file.readFailed'));
     }
   };
   // Ré-abonné à chaque render (`ann` change d'identité) : coût négligeable, handler frais.

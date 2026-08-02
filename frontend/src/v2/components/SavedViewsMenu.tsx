@@ -91,7 +91,7 @@ export default function SavedViewsMenu({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && doSave()}
-            placeholder={hasFilters ? 'Nommer la vue actuelle…' : 'Filtrez d’abord la liste'}
+            placeholder={hasFilters ? t('savedViews.nameCurrent') : t('savedViews.filterFirst')}
             disabled={!hasFilters}
             className="h-8 text-xs"
           />

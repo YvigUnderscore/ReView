@@ -50,7 +50,7 @@ export default function TransformOptions({
   const t = useT();
   const s = gizmo.settings;
   const rotationDeg = quatToEulerDeg(value.quaternion);
-  const scaleLabel = shape === 'box' ? 'Demi-ext.' : shape === 'sphere' ? 'Demi-axes' : 'Échelle';
+  const scaleLabel = shape === 'box' ? 'Demi-ext.' : shape === 'sphere' ? 'Demi-axes' : t('tool.scale');
 
   const setVec = (key: 'position' | 'scale', index: number) => (v: number) => {
     const next: [number, number, number] = [...value[key]];

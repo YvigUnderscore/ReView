@@ -127,7 +127,7 @@ export default function ReviewHeader({
         )}
         <button
           onClick={() => setDecisionOpen(true)}
-          title={canDecide ? t('decision.title') : 'Historique des décisions'}
+          title={canDecide ? t('decision.title') : t('header.decisionHistory')}
           className="flex items-center gap-1.5 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <ClipboardCheck size={16} />
@@ -158,7 +158,7 @@ export default function ReviewHeader({
         </button>
         <button
           onClick={onToggleComments}
-          title={commentsOpen ? 'Masquer les commentaires' : 'Afficher les commentaires'}
+          title={commentsOpen ? t('header.hideComments') : t('header.showComments')}
           className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           {commentsOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}

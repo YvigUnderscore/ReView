@@ -173,7 +173,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
                       <Pencil size={14} /> Renommer…
                     </ContextMenuItem>
                     <ContextMenuItem danger onClick={() => setDeleting(p)}>
-                      <Trash2 size={14} /> Supprimer…
+                      <Trash2 size={14} /> {t('common.deleteEllipsis')}
                     </ContextMenuItem>
                   </>
                 )}

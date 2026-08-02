@@ -99,7 +99,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
           ))}
         </select>
         <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground">
-          <Plus size={14} /> Ajouter
+          <Plus size={14} /> {t('common.add')}
         </button>
       </form>
       <div className="space-y-1.5">

@@ -26,7 +26,7 @@ export default function Model3DCompareBar({ compare }: { compare: Model3DCompare
       value: 'all',
       label: t('review.compare.showAll'),
       icon: Columns3,
-      hint: 'Afficher tous les modèles de la version côte à côte',
+      hint: t('compare.allModels'),
       disabled: compare.busy,
     },
   ];

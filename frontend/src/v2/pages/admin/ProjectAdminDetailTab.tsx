@@ -67,7 +67,9 @@ export default function ProjectAdminDetailTab() {
         <Metric
           label={t('storage.title')}
           value={fmtBytes(project.usage)}
-          sub={project.quota != null ? `quota ${fmtBytes(project.quota)} (${pct ?? 0}%)` : 'sans quota'}
+          sub={
+            project.quota != null ? `quota ${fmtBytes(project.quota)} (${pct ?? 0}%)` : t('common.noQuota')
+          }
         />
         <Metric label="Versions" value={stats.versions} to={`/admin/versions?projectId=${project.id}`} />
         <Metric label={t('trash.group.media')} value={stats.media} sub={fmtBytes(stats.mediaBytes)} />

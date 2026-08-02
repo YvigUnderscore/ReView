@@ -47,7 +47,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
     return (
       <button
         onClick={live.join}
-        title="Rejoindre la session live (synchronise lecture et navigation avec les autres participants)"
+        title={t('live.join')}
         className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
       >
         <Radio size={16} />
@@ -133,7 +133,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
           title="La lecture a démarré en sourdine (le navigateur bloque le son sans interaction) — cliquer pour l'activer"
           className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground"
         >
-          <Volume2 size={12} /> Son
+          <Volume2 size={12} /> {t('live.sound')}
         </button>
       )}
       <div className="flex items-center -space-x-1.5">
@@ -141,7 +141,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
           const pilot = p.id === live.pilotId;
           const coHost = live.coHostIds.includes(p.id);
           const driver = p.id === live.driverId;
-          const roleLabel = pilot ? 'pilote la session' : coHost ? 'co-pilote' : 'spectateur';
+          const roleLabel = pilot ? t('live.driving') : coHost ? 'co-pilote' : 'spectateur';
           const avatar = (
             <span
               title={`${p.displayName}${p.id === selfId ? ' (vous)' : ''} — ${roleLabel}${driver ? ' (main active)' : ''}`}
@@ -186,7 +186,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
                   }}
                 >
                   <Zap size={14} />
-                  {coHost ? 'Retirer le co-pilotage' : 'Nommer co-pilote'}
+                  {coHost ? t('live.removeCopilot') : 'Nommer co-pilote'}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { TaskStatus } from '../types/api';
+import type { MessageKey } from '../i18n';
 
 /**
- * Statuts de tâche — source unique des libellés FR et couleurs.
+ * Statuts de tâche — source unique des clés de libellé et des couleurs.
  * Ne jamais redéclarer ces mappings dans une page : importer d'ici.
  */
 export const TASK_STATUSES = [
@@ -16,13 +17,13 @@ export const TASK_STATUSES = [
   'APPROVED',
 ] as const satisfies readonly TaskStatus[];
 
-export const TASK_STATUS_LABEL: Record<string, string> = {
-  TODO: 'À faire',
-  IN_PROGRESS: 'En cours',
-  PENDING_REVIEW: 'À review',
-  RETAKE: 'Retake',
-  REJECTED: 'Rejeté',
-  APPROVED: 'Approuvé',
+export const TASK_STATUS_LABEL_KEY: Record<string, MessageKey> = {
+  TODO: 'task.status.todo',
+  IN_PROGRESS: 'task.status.inProgress',
+  PENDING_REVIEW: 'task.status.toReview',
+  RETAKE: 'task.status.retake',
+  REJECTED: 'task.status.rejected',
+  APPROVED: 'task.status.approved',
 };
 
 export const TASK_STATUS_COLOR: Record<string, string> = {

@@ -121,7 +121,7 @@ export default function WebhooksPanel() {
             </label>
           ))}
           <Button type="submit" size="sm" disabled={busy || !url.trim() || events.length === 0}>
-            <Plus size={14} className="mr-1" /> Ajouter
+            <Plus size={14} className="mr-1" /> {t('common.add')}
           </Button>
         </div>
       </form>

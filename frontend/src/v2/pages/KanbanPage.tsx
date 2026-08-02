@@ -18,7 +18,7 @@ import { KanbanSquare } from 'lucide-react';
 import Shell from '../components/Shell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import EmptyState from '../components/ui/empty-state';
-import { TASK_STATUSES, TASK_STATUS_LABEL } from '../lib/taskStatus';
+import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from '../lib/taskStatus';
 import type { TaskStatus, UserRef } from '../types/api';
 import { useKanbanBoard } from './kanban/useKanbanBoard';
 import type { KanbanFilterState } from './kanban/kanbanTypes';
@@ -105,7 +105,7 @@ export default function KanbanPage() {
               <KanbanColumn
                 key={key}
                 id={key}
-                label={TASK_STATUS_LABEL[key]!}
+                label={t(TASK_STATUS_LABEL_KEY[key]!)}
                 tasks={filtered.filter((t) => t.status === key)}
               />
             ))}

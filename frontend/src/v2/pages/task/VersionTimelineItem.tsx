@@ -197,12 +197,12 @@ export default function VersionTimelineItem({
         <ContextMenuContent>
           <ContextMenuItem onClick={() => setDecisionOpen(true)}>
             <ClipboardCheck size={14} />
-            {canDecide ? 'Décision de review…' : 'Historique des décisions…'}
+            {canDecide ? t('version.decisionEllipsis') : t('version.historyEllipsis')}
           </ContextMenuItem>
           {/* Suivi (32.G) : notifications sur commentaires/publications/décisions. */}
           <ContextMenuItem onClick={() => watch.toggle('VERSION', version.id)}>
             {watching ? <BellOff size={14} /> : <Bell size={14} />}
-            {watching ? 'Ne plus suivre cette version' : 'Suivre cette version'}
+            {watching ? t('watch.unfollowVersion') : t('watch.followVersion')}
           </ContextMenuItem>
           {canPlaylist && (
             <ContextMenuItem onClick={() => setPlaylistOpen(true)}>

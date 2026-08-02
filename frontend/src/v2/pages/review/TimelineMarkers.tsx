@@ -129,7 +129,7 @@ export function MarkerDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {editing ? 'Modifier le marqueur' : `Marqueur à la frame ${startFrame + (editing ? 0 : frame)}`}
+            {editing ? tr('marker.edit') : `Marqueur à la frame ${startFrame + (editing ? 0 : frame)}`}
           </DialogTitle>
         </DialogHeader>
         <Input
@@ -155,7 +155,7 @@ export function MarkerDialog({
             {tr('common.undo')}
           </Button>
           <Button onClick={() => void submit()} disabled={!name.trim()}>
-            {editing ? 'Modifier' : 'Ajouter'}
+            {editing ? tr('common.edit') : tr('common.add')}
           </Button>
         </DialogFooter>
       </DialogContent>

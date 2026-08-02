@@ -14,15 +14,17 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../lib/taskStatus';
+import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '../lib/taskStatus';
 import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
 import TaskDropzone from './task/TaskDropzone';
 import TaskChecklist from './task/TaskChecklist';
 import TaskSchedule from './task/TaskSchedule';
 import type { TaskDetail } from '../types/api';
+import { useT } from '../i18n';
 
 export default function TaskPage() {
+  const t = useT();
   const { id } = useParams();
   const taskId = Number(id);
   const role = useAuth((s) => s.user?.role);
@@ -56,7 +58,7 @@ export default function TaskPage() {
   const project = task?.shot?.project ?? task?.asset?.project;
 
   return (
-    <Shell title={task?.name ?? 'Tâche'} breadcrumb={<EntityBreadcrumb entity="task" id={taskId} />}>
+    <Shell title={task?.name ?? t('entity.task')} breadcrumb={<EntityBreadcrumb entity="task" id={taskId} />}>
       {/* Localisation (projet › shot/asset) */}
       <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
         {project && (
@@ -91,7 +93,7 @@ export default function TaskPage() {
           {task && <Badge variant="secondary">{task.type}</Badge>}
           {task && (
             <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[task.status] ?? ''}`}>
-              {TASK_STATUS_LABEL[task.status] ?? task.status}
+              {TASK_STATUS_LABEL_KEY[task.status] ? t(TASK_STATUS_LABEL_KEY[task.status]!) : task.status}
             </span>
           )}
           {/* Lien retour (32.D) : la review s'ouvre sur le commentaire d'origine. */}
@@ -106,7 +108,7 @@ export default function TaskPage() {
         </div>
         {canCreate && (
           <Button size="sm" onClick={() => createVersion()}>
-            + Nouvelle version
+            {t('version.newPlus')}
           </Button>
         )}
       </div>
@@ -144,11 +146,7 @@ export default function TaskPage() {
         canPublish={canPublish}
         contextKey={`task:${taskId}`}
         projectId={project?.id ?? null}
-        emptyDescription={
-          canCreate
-            ? 'Créez une première version ou déposez un média ci-dessus pour démarrer l’historique de cette tâche.'
-            : 'Aucune version publiée pour cette tâche.'
-        }
+        emptyDescription={canCreate ? t('version.emptyTask') : t('version.noneTask')}
         onCreateVersion={() => void createVersion()}
         publishVersion={publishVersion}
         publishMedia={publishMedia}
@@ -159,11 +157,7 @@ export default function TaskPage() {
       {canCreate && (
         <FullPageDropzone
           onDrop={onDropFiles}
-          label={
-            versions[0]
-              ? `Déposez pour ajouter à ${versions[0].name}`
-              : 'Déposez pour créer une première version'
-          }
+          label={versions[0] ? `Déposez pour ajouter à ${versions[0].name}` : t('version.dropAsset')}
         />
       )}
     </Shell>

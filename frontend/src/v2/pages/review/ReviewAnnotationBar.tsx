@@ -38,7 +38,7 @@ export default function ReviewAnnotationBar({
         title={t('review.annotation.hide')}
         className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1.5 text-sm shadow-lg backdrop-blur hover:bg-secondary"
       >
-        <EyeOff size={14} /> Masquer l’annotation
+        <EyeOff size={14} /> {t('ctx.hideAnnotation')}
       </button>
     </div>
   );

@@ -76,7 +76,7 @@ export default function ToolRail({
   const t = useT();
   return (
     <div className={`rv-rail${labels ? ' rv-rail--labels' : ''}`}>
-      {labels && <span className="rv-rail__title">Outils</span>}
+      {labels && <span className="rv-rail__title">{t('rail.tools')}</span>}
       {tools.map((item) => (
         <RailButton
           key={item.id}
@@ -102,7 +102,7 @@ export default function ToolRail({
       ))}
       <RailButton
         icon={labels ? ChevronsLeft : ChevronsRight}
-        label={labels ? 'Masquer les libellés des outils' : 'Afficher les libellés des outils'}
+        label={labels ? t('rail.hideLabels') : t('rail.showLabels')}
         text="Réduire"
         labels={labels}
         onClick={onLabels}

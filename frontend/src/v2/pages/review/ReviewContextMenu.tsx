@@ -103,7 +103,7 @@ export default function ReviewContextMenu({
 
   const frameDataUrl = () => {
     const v = videoRef.current;
-    if (!v) throw new Error('Lecteur vidéo indisponible');
+    if (!v) throw new Error(t('video.playerUnavailable'));
     return captureVideoFrame(v);
   };
 
@@ -121,11 +121,11 @@ export default function ReviewContextMenu({
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onSelect={onToggleAnnotate}>
-          <PencilLine size={14} /> {annotating ? "Terminer l'annotation" : 'Annoter'}
+          <PencilLine size={14} /> {annotating ? "Terminer l'annotation" : t('mode.annotate')}
         </ContextMenuItem>
         {hasViewed && (
           <ContextMenuItem onSelect={onClearSelection}>
-            <EyeOff size={14} /> Masquer l’annotation
+            <EyeOff size={14} /> {t('ctx.hideAnnotation')}
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />
@@ -164,13 +164,15 @@ export default function ReviewContextMenu({
             </ContextMenuSub>
             <ContextMenuSeparator />
             <ContextMenuItem
-              onSelect={() => run('Frame copiée', async () => copyImageToClipboard(frameDataUrl()))}
+              onSelect={() => run(t('ctx.frameCopied'), async () => copyImageToClipboard(frameDataUrl()))}
             >
               <Copy size={14} /> {t('review.copyFrame')}
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() =>
-                run('Frame téléchargée', async () => downloadImage(frameDataUrl(), `${baseName}-frame.jpg`))
+                run(t('ctx.frameDownloaded'), async () =>
+                  downloadImage(frameDataUrl(), `${baseName}-frame.jpg`),
+                )
               }
             >
               <Download size={14} /> {t('review.downloadFrame')}
@@ -178,7 +180,7 @@ export default function ReviewContextMenu({
             {annShapes.length > 0 && (
               <ContextMenuItem
                 onSelect={() =>
-                  run('Frame annotée téléchargée', async () =>
+                  run(t('ctx.frameAnnotatedDownloaded'), async () =>
                     downloadImage(
                       await withAnnotations(frameDataUrl(), annShapes),
                       `${baseName}-frame-annotee.jpg`,
@@ -193,7 +195,7 @@ export default function ReviewContextMenu({
             {data.timelineSprite && data.timelineSpriteUrl && (
               <ContextMenuItem
                 onSelect={() =>
-                  run('Planche contact téléchargée', async () =>
+                  run(t('ctx.contactSheetDownloaded'), async () =>
                     downloadImage(
                       await buildContactSheet(
                         data.timelineSpriteUrl!,
@@ -213,7 +215,7 @@ export default function ReviewContextMenu({
               onSelect={() =>
                 run(t('comments.linkCopied'), async () => {
                   const v = videoRef.current;
-                  if (!v) throw new Error('Lecteur vidéo indisponible');
+                  if (!v) throw new Error(t('video.playerUnavailable'));
                   const frame = data.startFrame + Math.round(v.currentTime * fps);
                   await navigator.clipboard.writeText(
                     frameLink(window.location.origin, window.location.pathname, frame),
@@ -233,12 +235,12 @@ export default function ReviewContextMenu({
           </>
         ) : (
           <>
-            <ContextMenuItem onSelect={() => run('Image copiée', () => copyImageToClipboard(data.url))}>
-              <Copy size={14} /> Copier l’image
+            <ContextMenuItem onSelect={() => run(t('ctx.imageCopied'), () => copyImageToClipboard(data.url))}>
+              <Copy size={14} /> {t('ctx.copyImage')}
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() =>
-                run('Image téléchargée', () => downloadImage(data.url, data.media.originalName))
+                run(t('ctx.imageDownloaded'), () => downloadImage(data.url, data.media.originalName))
               }
             >
               <Download size={14} /> {t('review.downloadImage')}
@@ -246,7 +248,7 @@ export default function ReviewContextMenu({
             {annShapes.length > 0 && (
               <ContextMenuItem
                 onSelect={() =>
-                  run('Image annotée téléchargée', async () =>
+                  run(t('ctx.imageAnnotatedDownloaded'), async () =>
                     downloadImage(await withAnnotations(data.url, annShapes), `${baseName}-annotee.jpg`),
                   )
                 }

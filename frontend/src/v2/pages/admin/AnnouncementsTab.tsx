@@ -82,7 +82,7 @@ export default function AnnouncementsTab() {
             <div className="flex shrink-0 gap-1">
               <button
                 onClick={() => setEditing(a)}
-                title="Modifier"
+                title={t('common.edit')}
                 className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 <Pencil size={15} />

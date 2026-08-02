@@ -3,6 +3,7 @@
 
 import { Star } from 'lucide-react';
 import { useFavorites, type FavType } from '../stores/useFavorites';
+import { useT } from '../i18n';
 
 /** Bouton étoile pour (dé)favoriser une entité (projet/séquence/shot/asset). */
 export default function FavoriteButton({
@@ -16,6 +17,7 @@ export default function FavoriteButton({
   size?: number;
   className?: string;
 }) {
+  const t = useT();
   const isFav = useFavorites((s) => s.isFav(type, entityId));
   const toggle = useFavorites((s) => s.toggle);
   return (
@@ -25,8 +27,8 @@ export default function FavoriteButton({
         e.stopPropagation();
         toggle(type, entityId);
       }}
-      title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-      aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      title={isFav ? t('favorites.remove') : t('favorites.add')}
+      aria-label={isFav ? t('favorites.remove') : t('favorites.add')}
       className={`rounded p-1 transition-colors hover:bg-secondary ${isFav ? 'text-warning' : 'text-muted-foreground hover:text-foreground'} ${className}`}
     >
       <Star size={size} fill={isFav ? 'currentColor' : 'none'} />

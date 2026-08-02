@@ -147,11 +147,7 @@ export default function AssetsTab({
           compact
           icon={Box}
           title={t('assets.empty.title')}
-          description={
-            canManage
-              ? 'Créez vos assets réutilisables avec « + Créer » (personnages, décors, props…).'
-              : t('assets.empty.description')
-          }
+          description={canManage ? t('assets.emptyHint') : t('assets.empty.description')}
           action={canManage ? t('assets.empty.action') : undefined}
           onAction={() => setCreating(true)}
         />

@@ -49,7 +49,7 @@ function ThumbEditButton({
       await qc.invalidateQueries({ queryKey: qk.version(versionId) });
       toast.success(t('task.thumbUpdated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Miniature non enregistrée');
+      toast.error(e instanceof Error ? e.message : t('media.thumbFailed'));
     }
   };
   return (

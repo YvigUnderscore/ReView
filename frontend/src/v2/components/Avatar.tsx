@@ -4,6 +4,7 @@
 import type { UserStatus } from '../types/api';
 import { STATUS_COLOR } from '../lib/userStatus';
 import { userColor as colorFor } from '../lib/userColor';
+import { useT } from '../i18n';
 
 /**
  * Avatar utilisateur : image uploadée si disponible, sinon pastille à initiales
@@ -24,6 +25,7 @@ export default function Avatar({
   status?: UserStatus;
   online?: boolean;
 }) {
+  const t = useT();
   const dot = size >= 28 ? Math.round(size * 0.3) : 9;
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
@@ -44,7 +46,7 @@ export default function Avatar({
       )}
       {(status || online !== undefined) && (
         <span
-          title={online ? 'En ligne' : 'Hors ligne'}
+          title={online ? t('presence.online') : t('presence.offline')}
           className="absolute bottom-0 right-0 rounded-full border-2 border-card"
           style={{
             width: dot,

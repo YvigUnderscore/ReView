@@ -73,9 +73,7 @@ export default function OverviewTab({
             ))}
           </div>
         ) : media.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Aucun média publié pour l’instant — ils apparaîtront ici dès la première publication.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('overview.noPublished')}</p>
         ) : (
           <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">
             {media.map((m) => (

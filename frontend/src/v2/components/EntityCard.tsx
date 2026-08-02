@@ -113,6 +113,7 @@ export default function EntityCard({
   favorite,
   hoverSprite,
 }: EntityCardProps) {
+  const t = useT();
   const highlighted = active || selection?.selected;
   const activeRing = highlighted ? 'border-primary ring-1 ring-primary' : 'border-border';
   const clickable = onClick ? 'cursor-pointer text-left w-full' : '';
@@ -124,7 +125,7 @@ export default function EntityCard({
     ? [
         {
           icon: <Star size={14} fill={isFav ? 'currentColor' : 'none'} />,
-          label: isFav ? 'Retirer des favoris' : 'Épingler aux favoris',
+          label: isFav ? t('favorites.remove') : t('favorites.pin'),
           onClick: () => void toggleFav(favorite.type, favorite.entityId),
         },
       ]

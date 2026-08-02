@@ -140,7 +140,7 @@ export default function NotificationBell() {
             disabled={unread === 0 || markAll.isPending}
             className="flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <CheckCheck size={14} /> Tout marquer lu
+            <CheckCheck size={14} /> {t('notif.markAllRead')}
           </button>
         </div>
         <div className="custom-scrollbar max-h-96 overflow-y-auto py-1">

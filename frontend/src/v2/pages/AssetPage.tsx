@@ -117,7 +117,7 @@ export default function AssetPage() {
       )}
       {canCreate && (
         <Button className="mb-4" onClick={() => void createVersion()}>
-          + Nouvelle version
+          {t('version.newPlus')}
         </Button>
       )}
 
@@ -128,11 +128,7 @@ export default function AssetPage() {
         canPublish={canPublish}
         contextKey={`asset:${assetId}`}
         projectId={asset?.projectId ?? null}
-        emptyDescription={
-          canCreate
-            ? 'Créez une première version ou déposez un média pour démarrer l’historique de cet asset.'
-            : 'Aucune version publiée pour cet asset.'
-        }
+        emptyDescription={canCreate ? t('version.emptyAsset') : t('version.noneAsset')}
         onCreateVersion={() => void createVersion()}
         publishVersion={publishVersion}
         publishMedia={publishMedia}
@@ -143,11 +139,7 @@ export default function AssetPage() {
       {canCreate && (
         <FullPageDropzone
           onDrop={onDropFiles}
-          label={
-            versions[0]
-              ? `Déposez pour ajouter à ${versions[0].name}`
-              : 'Déposez pour créer une première version'
-          }
+          label={versions[0] ? `Déposez pour ajouter à ${versions[0].name}` : t('version.dropAsset')}
         />
       )}
     </Shell>

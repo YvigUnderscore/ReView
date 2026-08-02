@@ -101,7 +101,7 @@ export default function DocumentsPage() {
               onClick={() => setCreating(true)}
               className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
             >
-              <Plus size={15} /> Nouveau document
+              <Plus size={15} /> {t('doc.new')}
             </button>
           )}
         </div>
@@ -166,7 +166,7 @@ export default function DocumentsPage() {
                           onClick={() => setEditing(true)}
                           className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-secondary/60"
                         >
-                          Modifier
+                          {t('common.edit')}
                         </button>
                       ))}
                     <button

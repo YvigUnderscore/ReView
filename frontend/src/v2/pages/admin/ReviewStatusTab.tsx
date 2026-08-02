@@ -78,7 +78,7 @@ export default function ReviewStatusTab() {
           <div key={s.id} className="flex items-center gap-3 px-3 py-2">
             <ReviewDecisionBadge status={s} title={s.name} />
             <span className="flex-1 truncate text-xs text-muted-foreground">
-              {[s.isDefault && 'défaut', s.isApproval && 'approbation', s.isRetake && 'retake']
+              {[s.isDefault && t('common.default'), s.isApproval && 'approbation', s.isRetake && 'retake']
                 .filter(Boolean)
                 .join(' · ')}
             </span>
@@ -100,7 +100,7 @@ export default function ReviewStatusTab() {
             </button>
             <button
               onClick={() => setEditing(s)}
-              title="Modifier"
+              title={t('common.edit')}
               className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <Pencil size={13} />

@@ -71,7 +71,7 @@ export default function VoiceRecorderButton({ onRecorded }: { onRecorded: (file:
     <button
       type="button"
       onClick={() => (recording ? stop() : void start())}
-      title={recording ? 'Terminer la note vocale' : 'Enregistrer une note vocale'}
+      title={recording ? t('voice.stop') : t('voice.start')}
       className={`flex items-center gap-1 rounded-md p-1.5 text-xs ${
         recording
           ? 'bg-destructive/15 text-destructive'

@@ -23,7 +23,7 @@ function statusLabel(u: UploadItem, t: Tr): string {
     case 'done':
       return t('project.status.completed');
     case 'error':
-      return 'Échec';
+      return t('common.failed');
   }
 }
 
@@ -40,7 +40,7 @@ export default function UploadWidget() {
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-sm font-medium">Transferts ({uploads.length})</span>
         <button onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">
-          Nettoyer
+          {t('mode.clean')}
         </button>
       </div>
       <ul className="max-h-64 space-y-2 overflow-auto p-2">

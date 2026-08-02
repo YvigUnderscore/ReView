@@ -64,7 +64,7 @@ export default function ReviewComments({
           action: { label: t('common.open'), onClick: () => navigate(`/tasks/${task.id}`) },
         }),
       )
-      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Création impossible'));
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : t('version.createFailed')));
 
   const renderComment = (c: ReviewComment) => (
     <ContextMenu key={c.id}>

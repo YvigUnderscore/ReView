@@ -43,7 +43,7 @@ export default function MultiRowCreate({
     // Garde les lignes dont au moins le premier champ est rempli
     const filled = rows.filter((r) => (r[fields[0].key] ?? '').trim().length > 0);
     if (filled.length === 0) {
-      setError('Renseignez au moins une ligne.');
+      setError(t('multirow.atLeastOne'));
       return;
     }
     setBusy(true);

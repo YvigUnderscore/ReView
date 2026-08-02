@@ -297,7 +297,7 @@ export default function VideoTimeline({
         <ContextMenuTrigger asChild>{bar}</ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onClick={() => setMarkerDialog({ frame: ctxFrame.current, editing: null })}>
-            <Bookmark size={14} /> Ajouter un marqueur ici…
+            <Bookmark size={14} /> {t('video.addMarkerHere')}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

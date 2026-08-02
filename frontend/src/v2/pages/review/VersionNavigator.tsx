@@ -94,7 +94,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
           <button
             disabled={!prev}
             onClick={() => prev && navigate(reviewPath(prev))}
-            title={prev ? `Média précédent : ${prev.originalName}` : 'Premier média de la version'}
+            title={prev ? `Média précédent : ${prev.originalName}` : t('nav.firstMedia')}
             className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <ChevronLeft size={14} />
@@ -105,7 +105,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
           <button
             disabled={!next}
             onClick={() => next && navigate(reviewPath(next))}
-            title={next ? `Média suivant : ${next.originalName}` : 'Dernier média de la version'}
+            title={next ? `Média suivant : ${next.originalName}` : t('nav.lastMedia')}
             className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <ChevronRight size={14} />

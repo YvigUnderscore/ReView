@@ -4,19 +4,23 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { TASK_STATUS_BAR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
+import { TASK_STATUS_BAR, TASK_STATUS_LABEL_KEY } from '../../lib/taskStatus';
 import type { ScheduleTask } from '../../types/api';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
 
-const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+/** Abréviations de jours issues d'ICU — la semaine commence lundi (2026-01-05). */
+function weekdays(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(Date.UTC(2026, 0, 5 + i))));
+}
 const dayKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 
 /** Calendrier mensuel des échéances (43.C — №125), lecture seule. Placement par `dueDate`. */
 export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
-  const t = useT();
+  const tr = useT();
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
 
   // Regroupe les tâches ayant une échéance par jour (clé locale YYYY-MM-DD).
@@ -64,7 +68,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
           <button
             onClick={() => shift(-1)}
             className="rounded-md border border-border p-1 hover:bg-secondary/60"
-            aria-label={t('stats.prevMonth')}
+            aria-label={tr('stats.prevMonth')}
           >
             <ChevronLeft size={16} />
           </button>
@@ -77,7 +81,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
           <button
             onClick={() => shift(1)}
             className="rounded-md border border-border p-1 hover:bg-secondary/60"
-            aria-label={t('common.nextMonth')}
+            aria-label={tr('common.nextMonth')}
           >
             <ChevronRight size={16} />
           </button>
@@ -85,7 +89,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
       </div>
 
       <div className="grid grid-cols-7 gap-1">
-        {WEEKDAYS.map((w) => (
+        {weekdays(intlLocale()).map((w) => (
           <div key={w} className="pb-1 text-center text-[11px] font-medium text-muted-foreground">
             {w}
           </div>
@@ -117,7 +121,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
                   <Link
                     key={t.id}
                     to={`/tasks/${t.id}`}
-                    title={`${t.location} · ${t.name} — ${TASK_STATUS_LABEL[t.status] ?? t.status}`}
+                    title={`${t.location} · ${t.name} — ${TASK_STATUS_LABEL_KEY[t.status] ? tr(TASK_STATUS_LABEL_KEY[t.status]!) : t.status}`}
                     className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] hover:bg-secondary/60"
                   >
                     <span

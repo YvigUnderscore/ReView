@@ -60,15 +60,15 @@ export default function CreateDocModal({
     try {
       const body: Record<string, unknown> = { title, kind, scope };
       if (scope !== 'GLOBAL') {
-        if (!projectId) throw new Error('Choisissez un projet');
+        if (!projectId) throw new Error(t('doc.chooseProject'));
         body.projectId = Number(projectId);
       }
       if (scope === 'SEQUENCE' || scope === 'SHOT' || scope === 'ASSET') {
-        if (!scopeId) throw new Error('Choisissez l’entité à documenter');
+        if (!scopeId) throw new Error(t('doc.chooseEntity'));
         body.scopeId = Number(scopeId);
       }
       if (kind === 'PDF') {
-        if (!file) throw new Error('Sélectionnez un PDF');
+        if (!file) throw new Error(t('doc.selectPdf'));
         const { url, key } = await api.post<{ url: string; key: string }>('/api/documents/pdf/presign', {
           filename: file.name,
         });
@@ -77,7 +77,7 @@ export default function CreateDocModal({
           body: file,
           headers: { 'Content-Type': 'application/pdf' },
         });
-        if (!put.ok) throw new Error('Échec de l’upload PDF');
+        if (!put.ok) throw new Error(t('doc.pdfUploadFailed'));
         body.fileKey = key;
       } else {
         body.content = '';
@@ -101,7 +101,7 @@ export default function CreateDocModal({
       <DialogContent>
         <form onSubmit={submit} className="space-y-3">
           <DialogHeader>
-            <DialogTitle>Nouveau document</DialogTitle>
+            <DialogTitle>{t('doc.new')}</DialogTitle>
           </DialogHeader>
           <input
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

@@ -35,12 +35,13 @@ function Thumb({ review, large = false }: { review: DashboardReview; large?: boo
 }
 
 function CommentLine({ review }: { review: DashboardReview }) {
+  const t = useT();
   const c = review.lastComment;
   return (
     <p className="flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground">
       <MessageSquare size={12} className="shrink-0 translate-y-px" />
       <span className="truncate">
-        <span className="font-medium text-foreground">{c.author ?? 'Invité'}</span>
+        <span className="font-medium text-foreground">{c.author ?? t('common.guest')}</span>
         {c.timestamp != null && <span className="ml-1 text-primary">@ {tc(c.timestamp)}</span>}
         <span className="ml-1">« {c.content} »</span>
       </span>

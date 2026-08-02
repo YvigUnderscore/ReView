@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TASK_STATUS_BAR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
+import { TASK_STATUS_BAR, TASK_STATUS_LABEL_KEY } from '../../lib/taskStatus';
 import type { ScheduleTask } from '../../types/api';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
@@ -118,7 +118,7 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
                     <Link
                       to={`/tasks/${b.task.id}`}
                       style={pos(b)}
-                      title={`${TASK_STATUS_LABEL[b.task.status] ?? b.task.status} · ${fmt(b.start)} → ${fmt(b.end)}`}
+                      title={`${TASK_STATUS_LABEL_KEY[b.task.status] ? t(TASK_STATUS_LABEL_KEY[b.task.status]!) : b.task.status} · ${fmt(b.start)} → ${fmt(b.end)}`}
                       className={`absolute top-0.5 h-4 rounded ${TASK_STATUS_BAR[b.task.status] ?? 'bg-muted-foreground/40'} opacity-90 hover:opacity-100`}
                     />
                   </div>

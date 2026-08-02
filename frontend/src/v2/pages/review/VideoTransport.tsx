@@ -108,7 +108,7 @@ export default function VideoTransport({
       </div>
       <button
         onClick={onToggleLoopAll}
-        title={loopAll ? 'Lecture en boucle activée — cliquer pour désactiver' : 'Lire en boucle'}
+        title={loopAll ? t('video.loopOn') : 'Lire en boucle'}
         className={
           loopAll
             ? 'flex h-7 w-7 items-center justify-center rounded bg-primary/15 text-primary hover:bg-primary/25'
@@ -128,11 +128,7 @@ export default function VideoTransport({
         <span className="flex h-7 items-center overflow-hidden rounded border border-border">
           <button
             onClick={onToggleLoopEnabled}
-            title={
-              loopEnabled
-                ? 'Boucle entre les points I/O active — cliquer pour la suspendre (les points restent posés)'
-                : 'Boucle I/O suspendue — cliquer pour reboucler entre les points I/O'
-            }
+            title={loopEnabled ? t('video.loopIoOn') : t('video.loopIoOff')}
             className={`flex h-full items-center gap-1 px-2 ${
               loopEnabled
                 ? 'bg-primary/15 text-primary hover:bg-primary/25'
@@ -169,11 +165,7 @@ export default function VideoTransport({
             média n'a pas de renditions (transcodé avant le HLS adaptatif). */}
         <label
           className="flex items-center gap-1 text-muted-foreground"
-          title={
-            quality?.active
-              ? 'Qualité de lecture (défaut : la plus haute)'
-              : 'Pas de renditions HLS pour ce média — lecture du proxy original'
-          }
+          title={quality?.active ? t('video.quality') : t('video.noHls')}
         >
           {quality?.switching ? (
             <Loader2 size={13} className="animate-spin text-primary" />
@@ -197,7 +189,7 @@ export default function VideoTransport({
             )}
           </select>
         </label>
-        <button onClick={onToggleMute} title={muted ? 'Réactiver le son' : 'Couper le son'} className={btn}>
+        <button onClick={onToggleMute} title={muted ? t('video.unmute') : t('video.mute')} className={btn}>
           {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>
         <input
@@ -212,7 +204,7 @@ export default function VideoTransport({
         />
         <button
           onClick={onFullscreenVideo}
-          title={videoOnlyFs ? 'Quitter le plein écran vidéo' : 'Plein écran vidéo seule (sans commentaires)'}
+          title={videoOnlyFs ? t('video.exitFullscreen') : t('video.fullscreen')}
           className={btn}
         >
           {videoOnlyFs ? <Minimize size={16} /> : <Expand size={16} />}

@@ -214,11 +214,11 @@ export default function CommentItem({
                 stop(e);
                 void toggleResolved();
               }}
-              title={c.isResolved ? 'Rouvrir' : 'Marquer comme résolu'}
+              title={c.isResolved ? 'Rouvrir' : t('comment.markResolved')}
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               {c.isResolved ? <RotateCcw size={12} /> : <CheckCircle2 size={13} />}
-              {!c.isResolved && 'Résoudre'}
+              {!c.isResolved && t('comment.resolve')}
             </button>
           )}
           {canEdit && !editing && (

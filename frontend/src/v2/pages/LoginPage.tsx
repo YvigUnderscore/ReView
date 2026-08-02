@@ -55,13 +55,13 @@ export default function LoginPage() {
     if (sso) {
       void ssoLogin(sso, params.get('refresh') ?? undefined)
         .then(() => navigate('/'))
-        .catch(() => setError('Connexion SSO échouée'));
+        .catch(() => setError(t('login.ssoFailed')));
     } else if (tfa) {
       setTmpToken(tfa);
     } else if (ssoerr) {
       setError(ssoerr);
     }
-  }, [navigate, ssoLogin]);
+  }, [navigate, ssoLogin, t]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +132,7 @@ export default function LoginPage() {
               setError(null);
             }}
           >
-            ← Revenir à la connexion
+            {t('login.backToLogin')}
           </button>
         </form>
       </AuthLayout>

@@ -266,7 +266,7 @@ export default function VideoPane({
         {(buffering || hls.switching) && (
           <div className="pointer-events-none absolute bottom-3 left-3 z-30 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur">
             <Loader2 size={13} className="animate-spin" />
-            {hls.switching ? 'Changement de qualité…' : t('common.loading')}
+            {hls.switching ? t('video.qualitySwitch') : t('common.loading')}
           </div>
         )}
         {compareOverlay}

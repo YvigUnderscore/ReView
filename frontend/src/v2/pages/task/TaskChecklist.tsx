@@ -88,7 +88,7 @@ export default function TaskChecklist({
             onChange={(e) => setAdding(e.target.value)}
           />
           <button className="flex items-center gap-1 rounded bg-secondary px-2 py-1 text-xs">
-            <Plus size={12} /> Ajouter
+            <Plus size={12} /> {t('common.add')}
           </button>
         </form>
       )}

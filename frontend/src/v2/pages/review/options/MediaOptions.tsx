@@ -135,9 +135,7 @@ export default function MediaOptions({
             </>
           )}
           {(id === 'shape-move' || id === 'erase') && (
-            <span className="rv-optbar__hint">
-              Cliquer une forme du tracé en cours. Les tracés déjà envoyés ne sont plus modifiables.
-            </span>
+            <span className="rv-optbar__hint">{t('draw.pickShape')}</span>
           )}
           <span className="rv-rule" />
           <IconButton
@@ -156,7 +154,7 @@ export default function MediaOptions({
           />
           <IconButton
             icon={Eraser}
-            label="Tout effacer"
+            label={t('draw.clearAll')}
             bordered
             onClick={ann.clear}
             disabled={ann.annot.length === 0}
@@ -164,7 +162,7 @@ export default function MediaOptions({
           <span className="rv-optbar__hint">
             {ann.annot.length > 0
               ? `${ann.annot.length} forme${ann.annot.length > 1 ? 's' : ''} jointe${ann.annot.length > 1 ? 's' : ''} au commentaire.`
-              : 'Le tracé part avec le commentaire.'}
+              : t('draw.goesWithComment')}
           </span>
         </>
       )}
@@ -194,7 +192,7 @@ export default function MediaOptions({
           </Button>
           <Button size="sm" variant="outline" onClick={trim.onOut}>
             <LogOut size={13} />
-            Sortie ici
+            {t('video.outHere')}
           </Button>
           <IconButton
             icon={X}
@@ -208,9 +206,7 @@ export default function MediaOptions({
 
       {id === 'range' && (
         <>
-          <span className="rv-optbar__hint">
-            Poser les bornes de boucle sur la timeline : le commentaire couvrira toute la plage.
-          </span>
+          <span className="rv-optbar__hint">{t('video.loopHint')}</span>
           <span className="rv-rule" />
           <Badge variant="secondary">{t('review.rangeAttached')}</Badge>
         </>

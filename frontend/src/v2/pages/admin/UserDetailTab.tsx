@@ -113,7 +113,7 @@ export default function UserDetailTab() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-            <Pencil size={14} /> Modifier
+            <Pencil size={14} /> {t('common.edit')}
           </Button>
           {user.id !== meId && (
             <Button variant="outline" size="sm" onClick={() => setDeleting(true)}>
@@ -127,7 +127,7 @@ export default function UserDetailTab() {
         <Metric
           label={t('storage.title')}
           value={fmtBytes(user.storageUsed)}
-          sub={user.storageLimit ? `quota ${fmtBytes(user.storageLimit)}` : 'sans quota'}
+          sub={user.storageLimit ? `quota ${fmtBytes(user.storageLimit)}` : t('common.noQuota')}
         />
         <Metric label={t('userDetail.uploadedMedia')} value={counts.media} />
         <Metric label={t('userDetail.createdVersions')} value={counts.versions} />

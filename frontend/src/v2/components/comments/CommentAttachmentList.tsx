@@ -89,7 +89,7 @@ export default function CommentAttachmentList({
               className="inline-flex max-w-[14rem] items-center gap-1 rounded border border-border bg-secondary/50 px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <Paperclip size={12} className="shrink-0" />
-              <span className="truncate">{a.name ?? 'Pièce jointe'}</span>
+              <span className="truncate">{a.name ?? t('comment.attachment')}</span>
             </a>
           ),
       )}

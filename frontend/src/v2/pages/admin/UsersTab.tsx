@@ -125,7 +125,7 @@ export default function UsersTab() {
                   <div className="flex justify-end gap-1">
                     <button
                       onClick={() => setEditing(u)}
-                      title="Modifier"
+                      title={t('common.edit')}
                       className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
                     >
                       <Pencil size={15} />

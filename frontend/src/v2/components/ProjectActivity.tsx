@@ -9,7 +9,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import {
   TASK_STATUSES as STATUS,
-  TASK_STATUS_LABEL as STATUS_LABEL,
+  TASK_STATUS_LABEL_KEY as STATUS_LABEL,
   TASK_STATUS_COLOR as STATUS_COLOR,
   TASK_STATUS_BAR as STATUS_BAR,
   TASK_STATUS_PRIORITY as PRIORITY,

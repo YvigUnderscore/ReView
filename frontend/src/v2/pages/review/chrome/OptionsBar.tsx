@@ -83,7 +83,7 @@ export function CommitGroup({
         size="sm"
         disabled={!dirty || saving}
         onClick={onSave}
-        title={dirty ? hint : 'Tout est enregistré'}
+        title={dirty ? hint : t('common.allSaved')}
       >
         {dirty ? <span className="rv-dot" /> : <Check size={13} />}
         {label}

@@ -80,7 +80,7 @@ export default function VersionTimeline({
         icon={Layers}
         title={t('task.noVersion')}
         description={emptyDescription}
-        action={canCreate ? 'Créer une version' : undefined}
+        action={canCreate ? t('version.create') : undefined}
         onAction={canCreate ? onCreateVersion : undefined}
       />
     );

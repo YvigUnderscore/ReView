@@ -81,7 +81,7 @@ export default function PrimMenuItems({
         </ContextMenuItem>
       )}
       <ContextMenuItem onSelect={() => scene.setPrim(path, { visible: hidden ? undefined : false })}>
-        {hidden ? 'Afficher' : 'Masquer'}
+        {hidden ? t('common.show') : t('common.hide')}
       </ContextMenuItem>
       <ContextMenuItem onSelect={() => scene.isolate(path)}>Isoler</ContextMenuItem>
       <ContextMenuItem onSelect={() => scene.setPrim(path, null)}>{t('review.prim.reset')}</ContextMenuItem>

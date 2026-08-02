@@ -41,6 +41,7 @@ function PrimRow({
   expanded: Set<string>;
   onToggle: (path: string) => void;
 }) {
+  const t = useT();
   const open = expanded.has(node.path);
   const hidden = isHidden(scene.override, node.path);
   const byAncestor = isHiddenByAncestor(scene.override, node.path);
@@ -93,7 +94,7 @@ function PrimRow({
               }}
               // Masqué par un ancêtre : le rétablir ici n'aurait aucun effet visible.
               disabled={byAncestor}
-              title={byAncestor ? 'Masqué par un parent' : hidden ? 'Afficher' : 'Masquer'}
+              title={byAncestor ? 'Masqué par un parent' : hidden ? t('common.show') : t('common.hide')}
               className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-40"
             >
               {hidden ? <EyeOff size={12} /> : <Eye size={12} />}

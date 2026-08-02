@@ -110,7 +110,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
       ]);
       ex.updateScene({ elements: [...ex.getSceneElements(), ...els] });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Insertion échouée');
+      setError(e instanceof Error ? e.message : t('board.insertFailed'));
     }
   };
 
@@ -136,7 +136,9 @@ export default function BoardPage({ scope }: { scope: Scope }) {
           >
             {t('board.mediaLibrary')}
           </button>
-          <span className="text-xs text-muted-foreground">{saved ? '✓ enregistré' : '… enregistrement'}</span>
+          <span className="text-xs text-muted-foreground">
+            {saved ? t('board.saved') : '… enregistrement'}
+          </span>
         </div>
         <Link
           to={scope === 'project' ? `/projects/${targetId}` : `/assets/${targetId}`}

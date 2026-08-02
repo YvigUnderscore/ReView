@@ -55,10 +55,10 @@ export default function CommentsTab() {
   const toggleResolved = async (c: AdminCommentRow) => {
     try {
       await api.patch(`/api/comments/${c.id}`, { isResolved: !c.isResolved });
-      toast.success(c.isResolved ? 'Commentaire rouvert' : 'Commentaire résolu');
+      toast.success(c.isResolved ? 'Commentaire rouvert' : t('comment.resolved'));
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Mise à jour impossible');
+      toast.error(e instanceof Error ? e.message : t('comment.updateFailed'));
     }
   };
   const confirmDelete = async () => {

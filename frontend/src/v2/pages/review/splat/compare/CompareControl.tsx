@@ -26,7 +26,7 @@ export default function CompareControl({ compare }: { compare: SplatCompareState
       value: 'all',
       label: t('review.compare.showAll'),
       icon: Columns3,
-      hint: 'Afficher tous les splats de la version côte à côte',
+      hint: t('compare.allSplats'),
       disabled: compare.busy,
     },
   ];

@@ -29,7 +29,7 @@ const staticGroups = (
   t: (key: MessageKey) => string,
 ): { title: string; shortcuts: { keys: string[]; label: string }[] }[] => [
   {
-    title: 'Review vidéo',
+    title: t('shortcuts.videoReview'),
     shortcuts: [
       { keys: ['Espace'], label: t('shortcuts.playPause') },
       { keys: ['←', '→'], label: t('shortcuts.frameStep') },
@@ -42,7 +42,7 @@ const staticGroups = (
     ],
   },
   {
-    title: 'Review (tous types)',
+    title: t('shortcuts.allTypes'),
     shortcuts: [
       { keys: [t('common.escKey')], label: t('review.annotation.hide') },
       { keys: ['Ctrl', 'V'], label: t('shortcuts.pasteReference') },
@@ -54,12 +54,12 @@ const staticGroups = (
     shortcuts: [
       {
         keys: ['Clic droit', 'ZQSD'],
-        label: 'Vol type Unreal — A/E : descendre/monter, molette : vitesse, Maj : accélérer',
+        label: t('shortcuts.splatFly'),
       },
       { keys: ['T', 'R', 'S'], label: t('shortcuts.gizmos') },
       {
         keys: ['B', 'L', 'P'],
-        label: 'Sélection rectangle / lasso / pinceau de surface (Maj ajoute, Alt retire)',
+        label: t('shortcuts.splatSelect'),
       },
       { keys: ['F'], label: t('shortcuts.frameSelection') },
       { keys: ['H'], label: "Vue d'origine" },

@@ -9,6 +9,7 @@ import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import type { PlaylistDetail, PlaylistItemEntry } from '../../types/api';
 import { carryParams, findPlayableNeighbor } from './playlistNav';
+import { useT } from '../../i18n';
 
 /**
  * Lecture enchaînée d'une playlist (33.A) : actif quand la review est ouverte avec
@@ -16,6 +17,7 @@ import { carryParams, findPlayableNeighbor } from './playlistNav';
  * premier média visible des versions voisines, en conservant le contexte d'URL.
  */
 export default function PlaylistNavigator({ versionId }: { versionId: number }) {
+  const t = useT();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const playlistId = Number(searchParams.get('playlist')) || 0;
@@ -48,7 +50,7 @@ export default function PlaylistNavigator({ versionId }: { versionId: number }) 
         disabled={!prev}
         onClick={() => go(prev)}
         title={
-          prev ? `Précédent : ${prev.version.location || prev.media?.originalName}` : 'Début de playlist'
+          prev ? `Précédent : ${prev.version.location || prev.media?.originalName}` : t('playlist.start')
         }
         className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
       >

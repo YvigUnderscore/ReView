@@ -11,7 +11,7 @@ import { qk } from '../../lib/query';
 import { useAssetsQuery } from '../../lib/queries';
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '../../components/ui/sheet';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import { TASK_STATUS_COLOR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
+import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '../../lib/taskStatus';
 import { ASSET_TYPES, TASK_TYPES, type AssetRef, type Shot, type Task } from './projectTypes';
 import { useT } from '../../i18n';
 
@@ -86,7 +86,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
       setTask({ name: '', type: 'ANIMATION' });
       qc.invalidateQueries({ queryKey: qk.tasks(shotId) });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur à la création de la tâche');
+      toast.error(err instanceof Error ? err.message : tr('shot.taskFailed'));
     }
   };
 
@@ -126,7 +126,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
                   {t.name} <span className="text-xs text-muted-foreground">({t.type})</span>
                 </Link>
                 <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[t.status] ?? ''}`}>
-                  {TASK_STATUS_LABEL[t.status] ?? t.status}
+                  {TASK_STATUS_LABEL_KEY[t.status] ? tr(TASK_STATUS_LABEL_KEY[t.status]!) : t.status}
                 </span>
                 <button
                   onClick={() => openReview(t.id)}
@@ -146,7 +146,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
         <form onSubmit={submit} className="mt-2 flex gap-2">
           <input
             className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
-            placeholder="Nouvelle tâche…"
+            placeholder={tr('shot.newTaskPlaceholder')}
             value={task.name}
             onChange={(e) => setTask((s) => ({ ...s, name: e.target.value }))}
           />
@@ -161,7 +161,9 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
               </option>
             ))}
           </select>
-          <button className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">+ Tâche</button>
+          <button className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
+            {tr('shot.newTask')}
+          </button>
         </form>
       )}
     </section>
@@ -279,7 +281,7 @@ function ShotAssets({
             onClick={() => setShowCreate((s) => !s)}
             className="rounded border border-border px-2 py-1 text-xs hover:bg-secondary/60"
           >
-            + Créer un asset
+            {tr('shot.newAsset')}
           </button>
           {showCreate && (
             <div className="flex items-center gap-1">

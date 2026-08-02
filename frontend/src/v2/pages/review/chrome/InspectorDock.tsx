@@ -34,7 +34,7 @@ export default function InspectorDock({
           <RailButton
             key={p.id}
             icon={p.icon}
-            label={p.label}
+            label={t(p.labelKey)}
             active={panel === p.id}
             onClick={() => onPanel(panel === p.id ? null : p.id)}
           />
@@ -44,7 +44,7 @@ export default function InspectorDock({
         <div className="rv-dock__body">
           <div className="rv-dock__head">
             <OpenIcon size={15} className="text-primary" />
-            <h3 className="rv-dock__title">{open.label}</h3>
+            <h3 className="rv-dock__title">{t(open.labelKey)}</h3>
             <span className="ml-auto">
               <IconButton
                 icon={PanelRightClose}
