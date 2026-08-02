@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Button } from './ui/button';
+import { useT } from '../i18n';
 
 /**
  * Dialogue de confirmation modal réutilisable (suppression, purge…).
@@ -20,8 +21,8 @@ export default function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Confirmer',
-  cancelLabel = 'Annuler',
+  confirmLabel,
+  cancelLabel,
   danger = false,
   onConfirm,
   onCancel,
@@ -35,6 +36,7 @@ export default function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   return (
     <Dialog
       open={open}
@@ -49,10 +51,10 @@ export default function ConfirmDialog({
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onCancel}>
-            {cancelLabel}
+            {cancelLabel ?? t('common.cancel')}
           </Button>
           <Button variant={danger ? 'destructive' : 'default'} size="sm" onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t('common.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

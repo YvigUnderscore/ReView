@@ -149,7 +149,7 @@ export default function Shell({
         <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-card/40">
           <div className="flex items-center justify-between px-4 py-4">
             {/* Logo bannière (masque alpha teinté par le thème — blanc sur sombre, encre sur clair). */}
-            <Link to="/" title="Accueil" aria-label="ReView — Accueil">
+            <Link to="/" title={t('nav.home')} aria-label={t('shell.home')}>
               <span
                 role="img"
                 aria-label="ReView"
@@ -168,7 +168,7 @@ export default function Shell({
             </Link>
             <button
               onClick={toggleCollapse}
-              title="Replier la barre"
+              title={t('shell.collapse')}
               className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <PanelLeftClose size={18} />
@@ -233,7 +233,7 @@ export default function Shell({
                 <Star size={13} className="text-warning" /> Favoris
               </div>
               {favorites.length === 0 ? (
-                <p className="px-3 py-1 text-xs text-muted-foreground">Aucun favori.</p>
+                <p className="px-3 py-1 text-xs text-muted-foreground">{t('shell.favorites.empty')}</p>
               ) : (
                 <div className="space-y-0.5">
                   {favorites.map((f) => (
@@ -279,7 +279,7 @@ export default function Shell({
           {sidebarHidden && (
             <button
               onClick={toggleCollapse}
-              title="Déplier la barre"
+              title={t('shell.expand')}
               className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <PanelLeftOpen size={18} />
@@ -292,11 +292,11 @@ export default function Shell({
               Bouton stylé en champ — évite la boucle de refocus au retour de la palette. */}
           <button
             onClick={() => setPaletteOpen(true)}
-            title="Recherche globale (Ctrl+K)"
+            title={t('shell.search')}
             className="ml-auto flex w-full max-w-xs items-center gap-2 rounded-md border border-input bg-secondary/40 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
             <Search size={15} className="shrink-0" />
-            <span className="flex-1 text-left">Rechercher…</span>
+            <span className="flex-1 text-left">{t('shell.search.placeholder')}</span>
             <kbd className="shrink-0 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">
               Ctrl K
             </kbd>

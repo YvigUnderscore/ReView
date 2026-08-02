@@ -6,6 +6,7 @@ import { Command, Clapperboard, Keyboard, Sparkles, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { usePreferences, useUpdatePreferences } from '../lib/usePreferences';
+import { useT, type MessageKey } from '../i18n';
 
 /**
  * Tour d'onboarding (42.B — №69) : présenté une fois au premier accès (préférence compte
@@ -14,39 +15,20 @@ import { usePreferences, useUpdatePreferences } from '../lib/usePreferences';
  */
 interface Step {
   icon: ReactNode;
-  title: string;
-  body: string;
+  /** Racine des clés de l'étape : `<id>.title` et `<id>.body`. */
+  id: 'welcome' | 'keyboard' | 'review' | 'personalise' | 'help';
 }
 
 const STEPS: Step[] = [
-  {
-    icon: <Sparkles size={20} />,
-    title: 'Bienvenue sur ReView',
-    body: 'Votre espace de review collaborative : vidéo, image, 3D et splats, avec annotations horodatées, boards et kanban.',
-  },
-  {
-    icon: <Command size={20} />,
-    title: 'Tout au clavier',
-    body: 'Ctrl+K ouvre la palette de commandes pour naviguer partout. « g » puis p/k/b saute aux projets, kanban ou board.',
-  },
-  {
-    icon: <Clapperboard size={20} />,
-    title: 'Reviewer un média',
-    body: 'Ouvrez un média pour annoter image par image, comparer des versions (A/B), et laisser des commentaires ancrés à la frame.',
-  },
-  {
-    icon: <Star size={20} />,
-    title: 'Personnalisez',
-    body: 'Épinglez vos projets en clic droit, enregistrez des vues de liste, et ajustez thème, densité et langue dans votre profil.',
-  },
-  {
-    icon: <Keyboard size={20} />,
-    title: 'Besoin d’aide ?',
-    body: 'Appuyez sur « ? » pour la liste des raccourcis (reconfigurables), et retrouvez le guide complet dans Documentation.',
-  },
+  { icon: <Sparkles size={20} />, id: 'welcome' },
+  { icon: <Command size={20} />, id: 'keyboard' },
+  { icon: <Clapperboard size={20} />, id: 'review' },
+  { icon: <Star size={20} />, id: 'personalise' },
+  { icon: <Keyboard size={20} />, id: 'help' },
 ];
 
 export default function OnboardingTour() {
+  const t = useT();
   const prefsQ = usePreferences();
   const update = useUpdatePreferences();
   const [step, setStep] = useState(0);
@@ -71,10 +53,10 @@ export default function OnboardingTour() {
             <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
               {s.icon}
             </span>
-            {s.title}
+            {t(`onboarding.${s.id}.title` as MessageKey)}
           </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">{s.body}</p>
+        <p className="text-sm text-muted-foreground">{t(`onboarding.${s.id}.body` as MessageKey)}</p>
         <div className="mt-2 flex items-center justify-center gap-1.5">
           {STEPS.map((_, i) => (
             <span
@@ -87,16 +69,16 @@ export default function OnboardingTour() {
         </div>
         <div className="mt-3 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={finish}>
-            Passer
+            {t('common.skip')}
           </Button>
           <div className="flex gap-2">
             {step > 0 && (
               <Button variant="outline" size="sm" onClick={() => setStep((n) => n - 1)}>
-                Précédent
+                {t('common.previous')}
               </Button>
             )}
             <Button size="sm" onClick={() => (last ? finish() : setStep((n) => n + 1))}>
-              {last ? 'Commencer' : 'Suivant'}
+              {last ? t('onboarding.start') : t('common.next')}
             </Button>
           </div>
         </div>

@@ -19,6 +19,7 @@ import {
   CommandGroup,
   CommandItem,
 } from './ui/command';
+import { useT } from '../i18n';
 
 /**
  * Palette de commandes globale (10.A2) : Ctrl/Cmd+K → recherche multi-entités
@@ -43,6 +44,7 @@ export default function CommandPalette({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const ctxProjectId = useProjectContext((s) => s.projectId);
   const [q, setQ] = useState('');
@@ -91,40 +93,36 @@ export default function CommandPalette({
         onOpenChange(o);
         if (!o) setQ('');
       }}
-      title="Recherche globale"
+      title={t('palette.title')}
     >
       <Command shouldFilter={false}>
-        <CommandInput
-          value={q}
-          onValueChange={setQ}
-          placeholder="Rechercher un projet, shot, asset, tâche…"
-        />
+        <CommandInput value={q} onValueChange={setQ} placeholder={t('palette.placeholder')} />
         <CommandList>
-          {hasQuery && !hasResults && <CommandEmpty>Aucun résultat.</CommandEmpty>}
+          {hasQuery && !hasResults && <CommandEmpty>{t('palette.empty')}</CommandEmpty>}
 
           {!hasQuery && (
-            <CommandGroup heading="Aller à">
+            <CommandGroup heading={t('palette.group.goto')}>
               <CommandItem value="nav-projects" onSelect={() => go('/')}>
-                <FolderKanban size={15} className="text-muted-foreground" /> Projets
+                <FolderKanban size={15} className="text-muted-foreground" /> {t('nav.projects')}
               </CommandItem>
               {ctxProjectId !== null && (
                 <>
                   <CommandItem value="nav-kanban" onSelect={() => go(`/projects/${ctxProjectId}/kanban`)}>
-                    <KanbanSquare size={15} className="text-muted-foreground" /> Kanban du projet courant
+                    <KanbanSquare size={15} className="text-muted-foreground" /> {t('palette.goto.kanban')}
                   </CommandItem>
                   <CommandItem value="nav-board" onSelect={() => go(`/projects/${ctxProjectId}/board`)}>
-                    <PenTool size={15} className="text-muted-foreground" /> Board du projet courant
+                    <PenTool size={15} className="text-muted-foreground" /> {t('palette.goto.board')}
                   </CommandItem>
                 </>
               )}
               <CommandItem value="nav-docs" onSelect={() => go('/docs')}>
-                <BookText size={15} className="text-muted-foreground" /> Documentation
+                <BookText size={15} className="text-muted-foreground" /> {t('nav.documentation')}
               </CommandItem>
             </CommandGroup>
           )}
 
           {results.projects.length > 0 && (
-            <CommandGroup heading="Projets">
+            <CommandGroup heading={t('nav.projects')}>
               {results.projects.map((p) => (
                 <CommandItem key={p.id} value={`project-${p.id}`} onSelect={() => go(projectPath(p))}>
                   <FolderKanban size={15} className="text-muted-foreground" />
@@ -175,7 +173,7 @@ export default function CommandPalette({
             </CommandGroup>
           )}
           {results.tasks.length > 0 && (
-            <CommandGroup heading="Tâches">
+            <CommandGroup heading={t('palette.group.tasks')}>
               {results.tasks.map((t) => (
                 <CommandItem key={t.id} value={`task-${t.id}`} onSelect={() => go(`/tasks/${t.id}`)}>
                   <ListTodo size={15} className="text-muted-foreground" />
