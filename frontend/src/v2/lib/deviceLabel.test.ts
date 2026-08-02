@@ -24,7 +24,7 @@ describe('deviceLabel', () => {
     );
   });
   it('repli sur inconnu', () => {
-    expect(deviceLabel(null)).toBe('Appareil inconnu');
+    expect(deviceLabel(null)).toBe('Unknown device');
     expect(deviceLabel('curl/8.0')).toBe('Navigateur');
   });
 });

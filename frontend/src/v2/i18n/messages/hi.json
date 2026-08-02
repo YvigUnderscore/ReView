@@ -1425,5 +1425,14 @@
   "settings.hint.liveVideo": "जैसे 2",
   "settings.hint.liveImage": "जैसे 4 — ज़ूम/स्थिति",
   "settings.hint.slack": "https://hooks.slack.com/services/… — निर्णय और प्रकाशन",
-  "settings.hint.sourceUrl": "https://… — बदली हुई version तैनात करने पर अनिवार्य"
+  "settings.hint.sourceUrl": "https://… — बदली हुई version तैनात करने पर अनिवार्य",
+
+  "channel.posX": "स्थिति X",
+  "channel.posY": "स्थिति Y",
+  "channel.posZ": "स्थिति Z",
+  "channel.targetX": "लक्ष्य X",
+  "channel.targetY": "लक्ष्य Y",
+  "channel.targetZ": "लक्ष्य Z",
+  "channel.focal": "फ़ोकल",
+  "channel.tilt": "Tilt"
 }

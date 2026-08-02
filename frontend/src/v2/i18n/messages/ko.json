@@ -1424,5 +1424,14 @@
   "settings.hint.liveVideo": "예: 2",
   "settings.hint.liveImage": "예: 4 — 확대/위치",
   "settings.hint.slack": "https://hooks.slack.com/services/… — 결정 및 게시",
-  "settings.hint.sourceUrl": "https://… — 수정한 판을 배포한다면 필수입니다"
+  "settings.hint.sourceUrl": "https://… — 수정한 판을 배포한다면 필수입니다",
+
+  "channel.posX": "위치 X",
+  "channel.posY": "위치 Y",
+  "channel.posZ": "위치 Z",
+  "channel.targetX": "타깃 X",
+  "channel.targetY": "타깃 Y",
+  "channel.targetZ": "타깃 Z",
+  "channel.focal": "초점 거리",
+  "channel.tilt": "Tilt"
 }

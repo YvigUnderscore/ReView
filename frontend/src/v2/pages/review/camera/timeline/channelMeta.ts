@@ -2,25 +2,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ChannelId } from '../channels/model';
+import type { MessageKey } from '../../../../i18n';
 
 /** Métadonnées d'affichage d'un canal (libellé court + token de couleur du thème). */
 export interface ChannelMeta {
   id: ChannelId;
-  label: string;
-  group: 'Position' | 'Cible' | 'Caméra';
+  labelKey: MessageKey;
+  /** Identifiant de regroupement — stable, jamais affiché tel quel. */
+  group: 'position' | 'target' | 'camera';
   /** Variable CSS de couleur (token thème) — jamais de couleur brute. */
   colorVar: string;
 }
 
 export const CHANNEL_META: readonly ChannelMeta[] = [
-  { id: 'px', label: 'Pos X', group: 'Position', colorVar: '--curve-x' },
-  { id: 'py', label: 'Pos Y', group: 'Position', colorVar: '--curve-y' },
-  { id: 'pz', label: 'Pos Z', group: 'Position', colorVar: '--curve-z' },
-  { id: 'tx', label: 'Cible X', group: 'Cible', colorVar: '--curve-x' },
-  { id: 'ty', label: 'Cible Y', group: 'Cible', colorVar: '--curve-y' },
-  { id: 'tz', label: 'Cible Z', group: 'Cible', colorVar: '--curve-z' },
-  { id: 'fov', label: 'Focale', group: 'Caméra', colorVar: '--curve-fov' },
-  { id: 'roll', label: 'Tilt', group: 'Caméra', colorVar: '--curve-roll' },
+  { id: 'px', labelKey: 'channel.posX', group: 'position', colorVar: '--curve-x' },
+  { id: 'py', labelKey: 'channel.posY', group: 'position', colorVar: '--curve-y' },
+  { id: 'pz', labelKey: 'channel.posZ', group: 'position', colorVar: '--curve-z' },
+  { id: 'tx', labelKey: 'channel.targetX', group: 'target', colorVar: '--curve-x' },
+  { id: 'ty', labelKey: 'channel.targetY', group: 'target', colorVar: '--curve-y' },
+  { id: 'tz', labelKey: 'channel.targetZ', group: 'target', colorVar: '--curve-z' },
+  { id: 'fov', labelKey: 'channel.focal', group: 'camera', colorVar: '--curve-fov' },
+  { id: 'roll', labelKey: 'channel.tilt', group: 'camera', colorVar: '--curve-roll' },
 ];
 
 /** Couleur CSS d'un canal à partir de son token (`hsl(var(--curve-x))`). */

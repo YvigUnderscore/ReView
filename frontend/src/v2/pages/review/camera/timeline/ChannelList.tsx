@@ -3,6 +3,7 @@
 
 import type { ChannelId } from '../channels/model';
 import { CHANNEL_META, channelColor } from './channelMeta';
+import { useT } from '../../../../i18n';
 
 /**
  * Liste des canaux de l'éditeur d'animation (Phase 17) : pastille de couleur (token thème) +
@@ -19,6 +20,7 @@ export default function ChannelList({
   visible: ReadonlySet<ChannelId>;
   onToggle: (id: ChannelId) => void;
 }) {
+  const t = useT();
   return (
     <div className="flex w-24 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border pr-1 text-[11px] custom-scrollbar">
       {CHANNEL_META.map((c) => {
@@ -40,7 +42,7 @@ export default function ChannelList({
                 boxShadow: `inset 0 0 0 1px ${channelColor(c.colorVar)}`,
               }}
             />
-            {c.label}
+            {t(c.labelKey)}
           </button>
         );
       })}

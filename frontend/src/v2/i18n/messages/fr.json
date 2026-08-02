@@ -1425,5 +1425,14 @@
   "settings.hint.liveVideo": "ex. 2",
   "settings.hint.liveImage": "ex. 4 — zoom/position",
   "settings.hint.slack": "https://hooks.slack.com/services/… — décisions & publications",
-  "settings.hint.sourceUrl": "https://… — obligatoire si vous déployez une version modifiée"
+  "settings.hint.sourceUrl": "https://… — obligatoire si vous déployez une version modifiée",
+
+  "channel.posX": "Pos X",
+  "channel.posY": "Pos Y",
+  "channel.posZ": "Pos Z",
+  "channel.targetX": "Cible X",
+  "channel.targetY": "Cible Y",
+  "channel.targetZ": "Cible Z",
+  "channel.focal": "Focale",
+  "channel.tilt": "Tilt"
 }

@@ -1425,5 +1425,14 @@
   "settings.hint.liveVideo": "p. ex. 2",
   "settings.hint.liveImage": "p. ex. 4 — zoom/posicion",
   "settings.hint.slack": "https://hooks.slack.com/services/… — decisions e publicacions",
-  "settings.hint.sourceUrl": "https://… — obligatòri se desplegatz una version modificada"
+  "settings.hint.sourceUrl": "https://… — obligatòri se desplegatz una version modificada",
+
+  "channel.posX": "Pos X",
+  "channel.posY": "Pos Y",
+  "channel.posZ": "Pos Z",
+  "channel.targetX": "Cibla X",
+  "channel.targetY": "Cibla Y",
+  "channel.targetZ": "Cibla Z",
+  "channel.focal": "Focala",
+  "channel.tilt": "Tilt"
 }

@@ -4,12 +4,13 @@
 import { Box, FileVideo, Image, Sparkles } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { MediaKind, VersionStatus } from '../../types/api';
+import { t } from '../../i18n';
 
 /** Libellés/couleurs de statut de version (tokenisés) pour la timeline. */
 export const VERSION_STATUS_LABEL: Record<VersionStatus, string> = {
-  DRAFT: 'Brouillon',
+  DRAFT: t('reviews.draft'),
   REVIEW: 'En review',
-  PUBLISHED: 'Publiée',
+  PUBLISHED: t('version.publishedFem'),
 };
 export const VERSION_STATUS_COLOR: Record<VersionStatus, string> = {
   DRAFT: 'bg-muted text-muted-foreground',

@@ -1424,5 +1424,14 @@
   "settings.hint.liveVideo": "例如 2",
   "settings.hint.liveImage": "例如 4 — 缩放／位置",
   "settings.hint.slack": "https://hooks.slack.com/services/… — 结论与发布",
-  "settings.hint.sourceUrl": "https://… — 若部署修改过的版本则必填"
+  "settings.hint.sourceUrl": "https://… — 若部署修改过的版本则必填",
+
+  "channel.posX": "位置 X",
+  "channel.posY": "位置 Y",
+  "channel.posZ": "位置 Z",
+  "channel.targetX": "目标 X",
+  "channel.targetY": "目标 Y",
+  "channel.targetZ": "目标 Z",
+  "channel.focal": "焦距",
+  "channel.tilt": "Tilt"
 }

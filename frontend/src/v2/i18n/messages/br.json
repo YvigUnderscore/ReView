@@ -1424,5 +1424,14 @@
   "settings.hint.liveVideo": "da sk. 2",
   "settings.hint.liveImage": "da sk. 4 — zoum/lec’hiadur",
   "settings.hint.slack": "https://hooks.slack.com/services/… — divizoù hag embannadurioù",
-  "settings.hint.sourceUrl": "https://… — ret ma tispakit ur version kemmet"
+  "settings.hint.sourceUrl": "https://… — ret ma tispakit ur version kemmet",
+
+  "channel.posX": "Lec’h X",
+  "channel.posY": "Lec’h Y",
+  "channel.posZ": "Lec’h Z",
+  "channel.targetX": "Pal X",
+  "channel.targetY": "Pal Y",
+  "channel.targetZ": "Pal Z",
+  "channel.focal": "Fokal",
+  "channel.tilt": "Tilt"
 }

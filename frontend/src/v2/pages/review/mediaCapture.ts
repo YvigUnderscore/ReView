@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { arrowHead, textFontSize, type Shape } from '../../components/annotation/geometry';
+import { t } from '../../i18n';
 
 /**
  * Capture & export côté client (menu clic droit de la review, miniatures) :
@@ -91,12 +92,12 @@ export function captureVideoFrame(video: HTMLVideoElement, quality = 0.88): stri
   const canvas = document.createElement('canvas');
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  if (!canvas.width || !canvas.height) throw new Error('Vidéo pas encore décodée');
+  if (!canvas.width || !canvas.height) throw new Error(t('capture.notDecoded'));
   canvas.getContext('2d')!.drawImage(video, 0, 0);
   try {
     return canvas.toDataURL('image/jpeg', quality);
   } catch {
-    throw new Error('Capture impossible (source vidéo non autorisée en lecture canvas)');
+    throw new Error(t('capture.failed'));
   }
 }
 

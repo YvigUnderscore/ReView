@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { api } from '../../lib/apiClient';
+import { t } from '../i18n';
 
 /**
  * Web Push côté navigateur (42.B — №66) : enregistrement du service worker, abonnement
@@ -41,11 +42,11 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
 
 /** Active les notifications push : permission → abonnement → enregistrement backend. */
 export async function enablePush(): Promise<void> {
-  if (!pushSupported()) throw new Error('Notifications push non supportées par ce navigateur');
+  if (!pushSupported()) throw new Error(t('push.unsupported'));
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') throw new Error('Permission de notification refusée');
+  if (permission !== 'granted') throw new Error(t('push.denied'));
   const { publicKey } = await api.get<{ publicKey: string | null }>('/api/push/key');
-  if (!publicKey) throw new Error('Push non configuré sur le serveur');
+  if (!publicKey) throw new Error(t('push.notConfigured'));
   const reg = await registration();
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,

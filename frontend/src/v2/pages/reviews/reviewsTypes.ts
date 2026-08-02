@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { MediaKind, ProjectRef, ReviewStatus } from '../../types/api';
+import { t } from '../../i18n';
 
 /** Sprite de miniatures (grille count = cols×rows) pour le scrub au survol (42.A — №78). */
 export interface HoverSprite {
@@ -31,8 +32,8 @@ export interface ReviewItem {
 
 /** Libellés FR des types de média (filtre + badge). */
 export const MEDIA_KIND_LABEL: Record<MediaKind, string> = {
-  VIDEO: 'Vidéo',
-  IMAGE: 'Image',
-  MODEL_3D: 'Modèle 3D',
+  VIDEO: t('entity.video'),
+  IMAGE: t('panel.image'),
+  MODEL_3D: t('entity.model3d'),
   SPLAT: 'Splat',
 };

@@ -5,6 +5,7 @@ import type { SdfVolumeData, SplatTransform } from '../../reviewTypes';
 import type { SplatSceneHandle } from '../useSplat';
 import { bakeSplats } from './bakeSplats';
 import { writeSpz } from './writeSpz';
+import { t } from '../../../../i18n';
 
 /**
  * Export splat côté client (41.A/C) — lit les splats **édités** du viewer, applique les éditions
@@ -45,7 +46,7 @@ export async function buildCleanSpz(
   edits: ExportEdits,
 ): Promise<{ bytes: Uint8Array; kept: number }> {
   const packed = handle.mesh.packedSplats;
-  if (!packed) throw new Error('Splat non chargé');
+  if (!packed) throw new Error(t('review.splat.notLoaded'));
   const baked = bakeSplats(handle.THREE, (cb) => packed.forEachSplat(cb), {
     transform: edits.transform,
     volumes: edits.volumes,

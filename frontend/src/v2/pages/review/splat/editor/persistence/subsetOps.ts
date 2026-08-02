@@ -3,6 +3,7 @@
 
 import type { SplatSceneHandle } from '../../useSplat';
 import { applySubsetDelta, snapshotSubset } from '../operations/transformSplats';
+import { t } from '../../../../../i18n';
 
 /**
  * Transformations de sous-ensembles de splats persistées (Phase 28) — encodage binaire pur
@@ -54,7 +55,7 @@ export function decodeSubsetOps(bytes: Uint8Array): SubsetOp[] {
   const ops: SubsetOp[] = [];
   let o = 8;
   for (let k = 0; k < count; k++) {
-    if (o + 16 * 8 + 4 > bytes.byteLength) throw new Error('Transformations tronquées');
+    if (o + 16 * 8 + 4 > bytes.byteLength) throw new Error(t('splat.transformTruncated'));
     const delta: number[] = [];
     for (let i = 0; i < 16; i++) {
       delta.push(view.getFloat64(o, true));
@@ -62,7 +63,7 @@ export function decodeSubsetOps(bytes: Uint8Array): SubsetOp[] {
     }
     const n = view.getUint32(o, true);
     o += 4;
-    if (o + n * 4 > bytes.byteLength) throw new Error('Transformations tronquées');
+    if (o + n * 4 > bytes.byteLength) throw new Error(t('splat.transformTruncated'));
     const indices: number[] = [];
     for (let i = 0; i < n; i++) {
       indices.push(view.getUint32(o, true));

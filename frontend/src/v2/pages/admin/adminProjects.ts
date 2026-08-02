@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { AdminProjectRow, PipelineSettings, ProjectStatus } from '../../types/api';
+import { t } from '../../i18n';
 
 /** Helpers purs des pages admin Projets — testés. */
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-  ACTIVE: 'Actif',
-  ON_HOLD: 'En pause',
-  COMPLETED: 'Terminé',
-  ARCHIVED: 'Archivé',
+  ACTIVE: t('project.status.active'),
+  ON_HOLD: t('project.status.onHold'),
+  COMPLETED: t('project.status.completed'),
+  ARCHIVED: t('project.status.archived'),
 };
 
 /** Filtre plein-texte (nom, slug) + statut. */

@@ -1424,5 +1424,14 @@
   "settings.hint.liveVideo": "例：2",
   "settings.hint.liveImage": "例：4 — ズーム／位置",
   "settings.hint.slack": "https://hooks.slack.com/services/… — 判断と公開",
-  "settings.hint.sourceUrl": "https://… — 改変した版を公開するなら必須です"
+  "settings.hint.sourceUrl": "https://… — 改変した版を公開するなら必須です",
+
+  "channel.posX": "位置 X",
+  "channel.posY": "位置 Y",
+  "channel.posZ": "位置 Z",
+  "channel.targetX": "ターゲット X",
+  "channel.targetY": "ターゲット Y",
+  "channel.targetZ": "ターゲット Z",
+  "channel.focal": "焦点距離",
+  "channel.tilt": "Tilt"
 }

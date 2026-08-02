@@ -1425,5 +1425,14 @@
   "settings.hint.liveVideo": "adib. 2",
   "settings.hint.liveImage": "adib. 4 — zooma/kokapena",
   "settings.hint.slack": "https://hooks.slack.com/services/… — erabakiak eta argitalpenak",
-  "settings.hint.sourceUrl": "https://… — nahitaezkoa aldatutako version bat hedatzen baduzu"
+  "settings.hint.sourceUrl": "https://… — nahitaezkoa aldatutako version bat hedatzen baduzu",
+
+  "channel.posX": "Kok. X",
+  "channel.posY": "Kok. Y",
+  "channel.posZ": "Kok. Z",
+  "channel.targetX": "Helburua X",
+  "channel.targetY": "Helburua Y",
+  "channel.targetZ": "Helburua Z",
+  "channel.focal": "Fokala",
+  "channel.tilt": "Tilt"
 }
