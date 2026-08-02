@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { Wand2 } from 'lucide-react';
+import { useT } from '../i18n';
 
 export interface GeneratedItem {
   code: string;
@@ -25,6 +26,7 @@ export default function BatchGenerator({
   sequences?: { id: number; code: string; name: string }[];
   onSubmit: (items: GeneratedItem[]) => Promise<void>;
 }) {
+  const t = useT();
   const [prefix, setPrefix] = useState(defaults.prefix);
   const [start, setStart] = useState(defaults.step);
   const [step, setStep] = useState(defaults.step);
@@ -70,14 +72,14 @@ export default function BatchGenerator({
       </div>
       {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="Préfixe">
+        <Field label={t('batch.prefix')}>
           <input
             className="w-20 rounded border border-input bg-background px-2 py-1.5 text-xs"
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
           />
         </Field>
-        <Field label="Départ">
+        <Field label={t('batch.start')}>
           <input
             type="number"
             className="w-20 rounded border border-input bg-background px-2 py-1.5 text-xs"
@@ -85,7 +87,7 @@ export default function BatchGenerator({
             onChange={(e) => setStart(Number(e.target.value) || 0)}
           />
         </Field>
-        <Field label="Pas">
+        <Field label={t('pipeline.step')}>
           <input
             type="number"
             min={1}
@@ -94,7 +96,7 @@ export default function BatchGenerator({
             onChange={(e) => setStep(Math.max(1, Number(e.target.value) || 1))}
           />
         </Field>
-        <Field label="Chiffres">
+        <Field label={t('pipeline.digits')}>
           <input
             type="number"
             min={1}
@@ -104,7 +106,7 @@ export default function BatchGenerator({
             onChange={(e) => setPadding(Math.min(8, Math.max(1, Number(e.target.value) || 1)))}
           />
         </Field>
-        <Field label="Nombre">
+        <Field label={t('batch.count')}>
           <input
             type="number"
             min={1}
@@ -115,13 +117,13 @@ export default function BatchGenerator({
           />
         </Field>
         {sequences && (
-          <Field label="Destination">
+          <Field label={t('batch.destination')}>
             <select
               className="w-44 rounded border border-input bg-background px-2 py-1.5 text-xs"
               value={sequenceId}
               onChange={(e) => setSequenceId(e.target.value)}
             >
-              <option value="">Sans séquence</option>
+              <option value="">{t('shots.noSequence')}</option>
               {sequences.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.code} · {s.name}

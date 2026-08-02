@@ -10,6 +10,7 @@ import { qk } from '../lib/query';
 import { reviewPath } from '../lib/slug';
 import { useUploadStore } from '../../stores/useUploadStore';
 import type { Media } from '../types/api';
+import { useT } from '../i18n';
 
 /** GET /api/media/drafts — brouillon + localisation lisible. */
 type Draft = Pick<Media, 'id' | 'originalName' | 'kind' | 'status'> & {
@@ -23,6 +24,7 @@ type Draft = Pick<Media, 'id' | 'originalName' | 'kind' | 'status'> & {
  * publiés de l'utilisateur courant ; permet de les publier ou supprimer rapidement.
  */
 export default function PendingDrafts() {
+  const t = useT();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
@@ -115,7 +117,7 @@ export default function PendingDrafts() {
                   <button
                     disabled={busy === d.id}
                     onClick={() => remove(d.id)}
-                    title="Supprimer"
+                    title={t('common.delete')}
                     className="ml-auto flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-destructive hover:bg-secondary/60 disabled:opacity-50"
                   >
                     <Trash2 size={11} />

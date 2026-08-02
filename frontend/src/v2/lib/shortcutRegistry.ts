@@ -9,11 +9,14 @@
  * Seule la **seconde** touche (leader) ou la touche seule est reconfigurable ; le leader `g`
  * reste fixe. Les surcharges sont persistées côté compte dans `preferences.shortcuts`.
  */
+import type { MessageKey } from '../i18n';
+
 export type ShortcutId = 'nav.projects' | 'nav.kanban' | 'nav.board' | 'help';
 
 export interface ShortcutDef {
   id: ShortcutId;
-  label: string;
+  /** Clé de traduction du libellé, résolue au rendu (le registre est sans état). */
+  labelKey: MessageKey;
   /** `leader-g` : `g` puis la touche ; `single` : touche seule. */
   kind: 'leader-g' | 'single';
   /** Touche par défaut (un seul caractère). */
@@ -23,22 +26,22 @@ export interface ShortcutDef {
 }
 
 export const GLOBAL_SHORTCUTS: readonly ShortcutDef[] = [
-  { id: 'nav.projects', label: 'Aller aux projets', kind: 'leader-g', defaultKey: 'p' },
+  { id: 'nav.projects', labelKey: 'shortcuts.goProjects', kind: 'leader-g', defaultKey: 'p' },
   {
     id: 'nav.kanban',
-    label: 'Kanban du projet courant',
+    labelKey: 'palette.goto.kanban',
     kind: 'leader-g',
     defaultKey: 'k',
     requiresProject: true,
   },
   {
     id: 'nav.board',
-    label: 'Board du projet courant',
+    labelKey: 'palette.goto.board',
     kind: 'leader-g',
     defaultKey: 'b',
     requiresProject: true,
   },
-  { id: 'help', label: 'Afficher les raccourcis', kind: 'single', defaultKey: '?' },
+  { id: 'help', labelKey: 'shortcuts.showHelp', kind: 'single', defaultKey: '?' },
 ];
 
 /** Une touche de surcharge valide = exactement un caractère, et jamais le leader `g`. */

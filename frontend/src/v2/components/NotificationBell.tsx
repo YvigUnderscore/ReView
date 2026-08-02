@@ -15,6 +15,7 @@ import { itemPath } from '../pages/review/playlistNav';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Skeleton } from './ui/skeleton';
 import type { Notification, PlaylistDetail } from '../types/api';
+import { useT } from '../i18n';
 
 /** Cible navigable d'une notification selon son type (référence = tâche ou média). */
 function linkFor(n: Notification): string | null {
@@ -56,6 +57,7 @@ function IconFor({ type }: { type: Notification['type'] }) {
 }
 
 export default function NotificationBell() {
+  const t = useT();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -118,7 +120,7 @@ export default function NotificationBell() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          title="Notifications"
+          title={t('notifications.title')}
           aria-label={unread > 0 ? `Notifications, ${unread} non lues` : 'Notifications'}
           className="relative flex shrink-0 items-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
         >
@@ -132,7 +134,7 @@ export default function NotificationBell() {
       </PopoverTrigger>
       <PopoverContent className="w-96 p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <span className="text-sm font-semibold">Notifications</span>
+          <span className="text-sm font-semibold">{t('notifications.title')}</span>
           <button
             onClick={() => markAll.mutate()}
             disabled={unread === 0 || markAll.isPending}
@@ -149,7 +151,7 @@ export default function NotificationBell() {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : notifications.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-muted-foreground">Aucune notification.</p>
+            <p className="px-3 py-8 text-center text-sm text-muted-foreground">{t('notifications.empty')}</p>
           ) : (
             notifications.map((n) => (
               <button

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef } from 'react';
+import { useT } from '../i18n';
 import {
   Bold,
   Italic,
@@ -27,6 +28,7 @@ export default function RichTextEditor({
   onChange: (html: string) => void;
   placeholder?: string;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
 
   // Initialise le contenu sans casser le curseur lors des frappes.
@@ -70,33 +72,33 @@ export default function RichTextEditor({
   return (
     <div className="rounded-md border border-border bg-background">
       <div className="flex flex-wrap items-center gap-0.5 border-b border-border p-1">
-        <Btn onClick={() => exec('bold')} title="Gras">
+        <Btn onClick={() => exec('bold')} title={t('editor.bold')}>
           <Bold size={15} />
         </Btn>
-        <Btn onClick={() => exec('italic')} title="Italique">
+        <Btn onClick={() => exec('italic')} title={t('editor.italic')}>
           <Italic size={15} />
         </Btn>
-        <Btn onClick={() => exec('underline')} title="Souligné">
+        <Btn onClick={() => exec('underline')} title={t('editor.underline')}>
           <Underline size={15} />
         </Btn>
         <span className="mx-1 h-5 w-px bg-border" />
-        <Btn onClick={() => exec('formatBlock', 'h2')} title="Titre">
+        <Btn onClick={() => exec('formatBlock', 'h2')} title={t('editor.heading')}>
           <Heading2 size={15} />
         </Btn>
-        <Btn onClick={() => exec('formatBlock', 'h3')} title="Sous-titre">
+        <Btn onClick={() => exec('formatBlock', 'h3')} title={t('editor.subheading')}>
           <Heading3 size={15} />
         </Btn>
-        <Btn onClick={() => exec('formatBlock', 'blockquote')} title="Citation">
+        <Btn onClick={() => exec('formatBlock', 'blockquote')} title={t('editor.quote')}>
           <Quote size={15} />
         </Btn>
         <span className="mx-1 h-5 w-px bg-border" />
-        <Btn onClick={() => exec('insertUnorderedList')} title="Liste à puces">
+        <Btn onClick={() => exec('insertUnorderedList')} title={t('editor.bulletList')}>
           <List size={15} />
         </Btn>
-        <Btn onClick={() => exec('insertOrderedList')} title="Liste numérotée">
+        <Btn onClick={() => exec('insertOrderedList')} title={t('editor.numberedList')}>
           <ListOrdered size={15} />
         </Btn>
-        <Btn onClick={addLink} title="Lien">
+        <Btn onClick={addLink} title={t('editor.link')}>
           <LinkIcon size={15} />
         </Btn>
       </div>

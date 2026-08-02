@@ -7,6 +7,7 @@ import { Info, AlertTriangle, Wrench, X } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { Announcement, AnnouncementType } from '../types/api';
+import { useT } from '../i18n';
 
 const STYLE: Record<AnnouncementType, { cls: string; Icon: typeof Info }> = {
   INFO: { cls: 'border-info/40 bg-info/10 text-info', Icon: Info },
@@ -20,6 +21,7 @@ const STYLE: Record<AnnouncementType, { cls: string; Icon: typeof Info }> = {
  * fréquence : permanent → réapparaît, 1re connexion/du jour → masquée durablement).
  */
 export default function AnnouncementBanner() {
+  const t = useT();
   const { data } = useQuery({
     queryKey: qk.announcementsActive,
     queryFn: () =>
@@ -48,7 +50,7 @@ export default function AnnouncementBanner() {
             </div>
             <button
               onClick={() => dismiss(a.id)}
-              title="Fermer"
+              title={t('common.close')}
               className="shrink-0 rounded p-1 text-muted-foreground hover:bg-black/10 hover:text-foreground"
             >
               <X size={16} />

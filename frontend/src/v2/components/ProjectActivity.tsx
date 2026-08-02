@@ -15,6 +15,7 @@ import {
   TASK_STATUS_PRIORITY as PRIORITY,
 } from '../lib/taskStatus';
 import type { Membership, TaskStatus, TaskWithAssignee } from '../types/api';
+import { useT } from '../i18n';
 
 interface RecentItem {
   type: 'version' | 'media';
@@ -36,6 +37,7 @@ interface Activity {
 }
 
 export default function ProjectActivity({ projectId, canManage }: { projectId: number; canManage: boolean }) {
+  const tr = useT();
   const qc = useQueryClient();
   const { data, error } = useQuery({
     queryKey: qk.projectActivity(projectId),
@@ -88,7 +90,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
     <div className="mt-6 space-y-4">
       {total > 0 && (
         <section className="rounded-lg border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold">Progression des tâches</h3>
+          <h3 className="mb-3 text-sm font-semibold">{tr('activity.title')}</h3>
           <div className="flex h-2.5 overflow-hidden rounded-full bg-secondary/40">
             {byStatus
               .filter((b) => b.count > 0)
@@ -124,7 +126,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
           </h3>
           {error && <p className="text-xs text-destructive">{error.message}</p>}
           {recent.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Aucune activité récente.</p>
+            <p className="text-xs text-muted-foreground">{tr('activity.empty')}</p>
           ) : (
             <ul className="space-y-1.5">
               {recent.map((r) => {
@@ -162,7 +164,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
             <Layers size={15} /> Tâches à traiter
           </h3>
           {tasks.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Aucune tâche.</p>
+            <p className="text-xs text-muted-foreground">{tr('activity.noTask')}</p>
           ) : (
             <ul className="space-y-1.5">
               {tasks.slice(0, 25).map((t) => (
@@ -192,7 +194,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                         onChange={(e) => assign(t.id, e.target.value)}
                         className="rounded border border-input bg-background px-1 py-0.5 text-[11px]"
                       >
-                        <option value="">Non assigné</option>
+                        <option value="">{tr('activity.unassigned')}</option>
                         {members.map((m) => (
                           <option key={m.user.id} value={m.user.id}>
                             {m.user.name ?? m.user.email}

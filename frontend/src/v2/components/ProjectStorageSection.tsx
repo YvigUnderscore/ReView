@@ -7,6 +7,7 @@ import { Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { SkeletonRows } from './ui/skeleton';
+import { useT } from '../i18n';
 
 interface Usage {
   usage: number;
@@ -28,6 +29,7 @@ const GB = 1024 ** 3;
  * Go (vide = illimité). Réservé aux gestionnaires (l'onglet Réglages ne s'ouvre qu'à eux).
  */
 export default function ProjectStorageSection({ projectId }: { projectId: number }) {
+  const t = useT();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: qk.projectUsage(projectId),
@@ -64,7 +66,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <div className="text-sm font-medium">Stockage</div>
+      <div className="text-sm font-medium">{t('storage.title')}</div>
       <div className="mb-3 text-xs text-muted-foreground">
         Consommation des médias du projet et quota (laisser vide = illimité).
       </div>
@@ -92,7 +94,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
                 type="number"
                 min={0}
                 step="0.5"
-                placeholder="illimité"
+                placeholder={t('storage.unlimited.placeholder')}
                 className="w-28 rounded border border-input bg-background px-2 py-1.5 text-xs"
                 value={gbValue}
                 onChange={(e) => setQuotaGb(e.target.value)}

@@ -14,6 +14,7 @@ import { Textarea } from './ui/textarea';
 import ReviewDecisionBadge from './ReviewDecisionBadge';
 import { pickPreselectedStatus, reviewStatusStyle } from './reviewDecision.helpers';
 import type { ReviewDecision, ReviewStatus } from '../types/api';
+import { useT } from '../i18n';
 
 /**
  * Décision de review d'une version (Phase 31) : pose d'un statut (SUPERVISOR+)
@@ -33,6 +34,7 @@ export default function ReviewDecisionDialog({
   onOpenChange: (open: boolean) => void;
   canDecide: boolean;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const statusesQ = useReviewStatusesQuery(open);
   const historyQ = useQuery({
@@ -67,7 +69,7 @@ export default function ReviewDecisionDialog({
         statusId,
         ...(comment.trim() ? { comment: comment.trim() } : {}),
       });
-      toast.success('Décision enregistrée');
+      toast.success(t('decision.saved'));
       await Promise.all([
         qc.invalidateQueries({ queryKey: qk.versionDecisions(versionId) }),
         qc.invalidateQueries({ queryKey: ['versions'] }),
@@ -117,7 +119,7 @@ export default function ReviewDecisionDialog({
             <Textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Commentaire (optionnel) — visible dans l'historique"
+              placeholder={t('decision.comment.placeholder')}
               rows={2}
             />
             <div className="flex justify-end">
@@ -130,7 +132,7 @@ export default function ReviewDecisionDialog({
 
         <div className="max-h-56 space-y-2 overflow-y-auto border-t border-border pt-3">
           {history.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Aucun historique.</p>
+            <p className="text-xs text-muted-foreground">{t('decision.empty')}</p>
           ) : (
             history.map((d) => (
               <div key={d.id} className="flex items-start gap-2 text-xs">

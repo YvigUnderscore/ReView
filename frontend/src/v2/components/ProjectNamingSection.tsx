@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import type { NamingRule, NamingMode } from '../types/api';
+import { useT } from '../i18n';
 
 const MODE_LABEL: Record<NamingMode, string> = {
   off: 'Désactivé',
@@ -21,6 +22,7 @@ export default function ProjectNamingSection({
   value: NamingRule;
   onChange: (n: NamingRule) => void;
 }) {
+  const t = useT();
   const [sample, setSample] = useState('');
 
   let match: boolean | null = null;
@@ -35,7 +37,7 @@ export default function ProjectNamingSection({
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <div className="text-sm font-medium">Convention de nommage</div>
+      <div className="text-sm font-medium">{t('pipeline.naming')}</div>
       <div className="mb-3 text-xs text-muted-foreground">
         Motif (expression régulière) que doit respecter le nom des fichiers uploadés.
       </div>
@@ -68,12 +70,12 @@ export default function ProjectNamingSection({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             className="w-64 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder="Tester un nom de fichier…"
+            placeholder={t('naming.test.placeholder')}
             value={sample}
             onChange={(e) => setSample(e.target.value)}
           />
           {invalid ? (
-            <span className="text-xs text-destructive">Regex invalide</span>
+            <span className="text-xs text-destructive">{t('naming.invalidRegex')}</span>
           ) : sample ? (
             <span className={`text-xs ${match ? 'text-success' : 'text-destructive'}`}>
               {match ? 'Conforme' : 'Non conforme'}

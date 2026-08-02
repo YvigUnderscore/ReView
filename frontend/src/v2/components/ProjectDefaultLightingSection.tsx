@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { LightingDefault } from '../types/api';
+import { useT } from '../i18n';
 
 /** Entrée de la bibliothèque HDRI instance (miroir de `HdriService.listWithUrls`). */
 interface HdriItem {
@@ -31,6 +32,7 @@ export default function ProjectDefaultLightingSection({
   value: LightingDefault | undefined;
   onChange: (v: LightingDefault | undefined) => void;
 }) {
+  const t = useT();
   const { data: hdris } = useQuery({
     queryKey: qk.hdris,
     queryFn: () => api.get<{ hdris: HdriItem[] }>('/api/studio/hdris').then((d) => d.hdris),
@@ -39,14 +41,14 @@ export default function ProjectDefaultLightingSection({
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-1 text-sm font-medium">Éclairage 3D par défaut</div>
+      <div className="mb-1 text-sm font-medium">{t('lighting.default.title')}</div>
       <div className="mb-3 text-xs text-muted-foreground">
         Environnement HDRI rejoué à l'ouverture des médias 3D de ce projet qui n'ont pas leur propre
         éclairage. Les spectateurs peuvent l'ajuster en session sans le modifier.
       </div>
       {!value ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">Aucun défaut : éclairage studio neutre.</p>
+          <p className="text-xs text-muted-foreground">{t('lighting.default.empty')}</p>
           <button
             onClick={() => onChange(NEUTRAL)}
             className="shrink-0 rounded border border-border px-2 py-1.5 text-xs hover:bg-secondary/60"
@@ -63,7 +65,7 @@ export default function ProjectDefaultLightingSection({
                 value={value.hdriId ?? ''}
                 onChange={(e) => set({ hdriId: e.target.value || undefined })}
               >
-                <option value="">Aucun (lumières studio)</option>
+                <option value="">{t('lighting.default.none')}</option>
                 {(hdris ?? []).map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.name}
@@ -71,7 +73,7 @@ export default function ProjectDefaultLightingSection({
                 ))}
               </select>
             </Field>
-            <Field label="Exposition">
+            <Field label={t('viewer.exposure')}>
               <input
                 type="number"
                 min={0}

@@ -12,11 +12,13 @@ import { useTheme } from '../stores/useTheme';
 import Avatar from './Avatar';
 import WhatsNew from './WhatsNew';
 import { STATUS_COLOR, STATUS_LABEL } from '../lib/userStatus';
+import { useT } from '../i18n';
 
 const STATUSES: UserStatus[] = ['AVAILABLE', 'AWAY', 'DND'];
 
 /** Pied de sidebar : profil/statut de l'utilisateur courant + présence des autres. */
 export default function SidebarFooter() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const logout = useAuth((s) => s.logout);
@@ -63,7 +65,7 @@ export default function SidebarFooter() {
         {presenceOpen && (
           <div className="custom-scrollbar mt-1 max-h-44 space-y-0.5 overflow-y-auto">
             {others.length === 0 && (
-              <p className="px-2 py-1 text-xs text-muted-foreground">Personne d’autre.</p>
+              <p className="px-2 py-1 text-xs text-muted-foreground">{t('presence.aloneHere')}</p>
             )}
             {others.map((u) => (
               <div
@@ -140,7 +142,7 @@ export default function SidebarFooter() {
           </Link>
           <button
             onClick={toggleTheme}
-            title={theme === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre'}
+            title={theme === 'dark' ? t('shell.theme.toLight') : t('shell.theme.toDark')}
             className="flex items-center justify-center rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
             {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}

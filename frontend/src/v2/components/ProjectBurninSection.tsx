@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { BurninConfig } from '../types/share';
+import { useT, type MessageKey } from '../i18n';
 
-const FLAGS: { key: keyof BurninConfig & string; label: string }[] = [
-  { key: 'enabled', label: 'Burn-ins sur les proxys (shot/version/TC)' },
-  { key: 'showShot', label: 'Code du shot' },
-  { key: 'showVersion', label: 'Nom de la version' },
-  { key: 'showTimecode', label: 'Timecode' },
-  { key: 'showLogo', label: 'Logo studio' },
-  { key: 'slate', label: 'Slate en tête des partages client' },
+// Recalculé au rendu : en constante de module, les libellés resteraient figés dans la
+// langue chargée au démarrage.
+const flags = (t: (key: MessageKey) => string): { key: keyof BurninConfig & string; label: string }[] => [
+  { key: 'enabled', label: t('burnin.onProxies') },
+  { key: 'showShot', label: t('burnin.shotCode') },
+  { key: 'showVersion', label: t('burnin.versionName') },
+  { key: 'showTimecode', label: t('burnin.timecode') },
+  { key: 'showLogo', label: t('burnin.studioLogo') },
+  { key: 'slate', label: t('burnin.slate') },
 ];
 
 /** Valeurs proposées quand on personnalise (l'override remplace le template champ par champ). */
@@ -34,9 +37,10 @@ export default function ProjectBurninSection({
   value: Partial<BurninConfig> | undefined;
   onChange: (v: Partial<BurninConfig> | undefined) => void;
 }) {
+  const t = useT();
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-1 text-sm font-medium">Burn-ins & slates</div>
+      <div className="mb-1 text-sm font-medium">{t('burnin.title')}</div>
       {!value ? (
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
@@ -52,7 +56,7 @@ export default function ProjectBurninSection({
         </div>
       ) : (
         <div className="space-y-2">
-          {FLAGS.map((f) => (
+          {flags(t).map((f) => (
             <label key={f.key} className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -64,12 +68,12 @@ export default function ProjectBurninSection({
             </label>
           ))}
           <label className="block text-sm">
-            <span className="mb-1 block text-xs text-muted-foreground">Texte libre (bas gauche)</span>
+            <span className="mb-1 block text-xs text-muted-foreground">{t('burnin.freeText')}</span>
             <input
               className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm"
               value={value.customText ?? ''}
               onChange={(e) => onChange({ ...value, customText: e.target.value })}
-              placeholder="CONFIDENTIEL — ne pas diffuser"
+              placeholder={t('burnin.freeText.placeholder')}
               maxLength={120}
             />
           </label>

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { ColorSettings } from '../types/api';
+import { useT } from '../i18n';
 
 interface OcioConfig {
   id: string;
@@ -30,6 +31,7 @@ export default function ProjectColorSection({
   value: ColorSettings | undefined;
   onChange: (v: ColorSettings | undefined) => void;
 }) {
+  const t = useT();
   const configsQ = useQuery({
     queryKey: qk.ocioConfigs,
     queryFn: () => api.get<{ configs: OcioConfig[] }>('/api/studio/ocio/configs').then((d) => d.configs),
@@ -56,7 +58,7 @@ export default function ProjectColorSection({
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-1 text-sm font-medium">Gestion de couleur (OCIO)</div>
+      <div className="mb-1 text-sm font-medium">{t('color.title')}</div>
       <div className="mb-3 text-xs text-muted-foreground">
         Config OCIO et display/view du projet. Les configs sont gérées dans Admin → Couleur (OCIO).
       </div>
@@ -66,7 +68,7 @@ export default function ProjectColorSection({
         </p>
       ) : (
         <div className="flex flex-wrap items-end gap-3">
-          <Field label="Config">
+          <Field label={t('color.config')}>
             <select
               className="w-56 rounded border border-input bg-background px-2 py-1.5 text-xs"
               value={value?.configId ?? ''}

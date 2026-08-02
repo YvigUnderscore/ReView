@@ -11,6 +11,7 @@ import ProjectNamingSection from './ProjectNamingSection';
 import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
 import ProjectColorSection from './ProjectColorSection';
 import type { Department, Nomenclature, ProjectSettings } from '../types/api';
+import { useT } from '../i18n';
 
 /**
  * Onglet « Réglages » d'un projet (admin/superviseur) :
@@ -31,6 +32,7 @@ export default function ProjectSettingsTab({
   settings: ProjectSettings | null;
   onSettingsChange: (s: ProjectSettings) => void;
 }) {
+  const t = useT();
   const [frameVal, setFrameVal] = useState(String(startFrame));
   const [savingFrame, setSavingFrame] = useState(false);
   const [draft, setDraft] = useState<ProjectSettings | null>(settings);
@@ -105,7 +107,7 @@ export default function ProjectSettingsTab({
 
       {/* Frame de départ */}
       <section className="rounded-lg border border-border bg-card p-4">
-        <div className="text-sm font-medium">Frame de départ</div>
+        <div className="text-sm font-medium">{t('pipeline.startFrame')}</div>
         <div className="mb-3 text-xs text-muted-foreground">
           Numéro de la première frame des médias vidéo de ce projet.
         </div>
@@ -128,14 +130,14 @@ export default function ProjectSettingsTab({
 
       {/* Format & cadence (résolution + fps) — défauts du projet, hérités par séquences/shots */}
       <section className="rounded-lg border border-border bg-card p-4">
-        <div className="text-sm font-medium">Format &amp; cadence</div>
+        <div className="text-sm font-medium">{t('pipeline.formatRate')}</div>
         <div className="mb-3 text-xs text-muted-foreground">
           Résolution de livraison et cadence par défaut du projet (héritées par les séquences et shots,
           override possible à leur niveau).
         </div>
         {draft ? (
           <div className="flex flex-wrap items-end gap-3">
-            <Field label="Largeur (px)">
+            <Field label={t('pipeline.width')}>
               <input
                 type="number"
                 min={1}
@@ -145,7 +147,7 @@ export default function ProjectSettingsTab({
               />
             </Field>
             <span className="pb-1.5 text-muted-foreground">×</span>
-            <Field label="Hauteur (px)">
+            <Field label={t('pipeline.height')}>
               <input
                 type="number"
                 min={1}
@@ -154,7 +156,7 @@ export default function ProjectSettingsTab({
                 onChange={(e) => setRes('height', e.target.value)}
               />
             </Field>
-            <Field label="Cadence (fps)">
+            <Field label={t('pipeline.fps')}>
               <input
                 type="number"
                 min={1}
@@ -171,27 +173,27 @@ export default function ProjectSettingsTab({
 
       {/* Nomenclature */}
       <section className="rounded-lg border border-border bg-card p-4">
-        <div className="text-sm font-medium">Nomenclature</div>
+        <div className="text-sm font-medium">{t('pipeline.naming')}</div>
         <div className="mb-3 text-xs text-muted-foreground">
           Override des défauts studio pour ce projet (préfixes, pas, nombre de chiffres).
         </div>
         {draft ? (
           <div className="flex flex-wrap items-end gap-3">
-            <Field label="Préfixe séquence">
+            <Field label={t('pipeline.prefix.sequence')}>
               <input
                 className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
                 value={draft.nomenclature.sequencePrefix}
                 onChange={(e) => setNom('sequencePrefix', e.target.value)}
               />
             </Field>
-            <Field label="Préfixe shot">
+            <Field label={t('pipeline.prefix.shot')}>
               <input
                 className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
                 value={draft.nomenclature.shotPrefix}
                 onChange={(e) => setNom('shotPrefix', e.target.value)}
               />
             </Field>
-            <Field label="Pas">
+            <Field label={t('pipeline.step')}>
               <input
                 type="number"
                 min={1}
@@ -200,7 +202,7 @@ export default function ProjectSettingsTab({
                 onChange={(e) => setNom('step', e.target.value)}
               />
             </Field>
-            <Field label="Chiffres">
+            <Field label={t('pipeline.digits')}>
               <input
                 type="number"
                 min={1}
@@ -218,7 +220,7 @@ export default function ProjectSettingsTab({
 
       {/* Départements */}
       <section className="rounded-lg border border-border bg-card p-4">
-        <div className="text-sm font-medium">Départements</div>
+        <div className="text-sm font-medium">{t('pipeline.departments')}</div>
         <div className="mb-3 text-xs text-muted-foreground">
           Liste des départements du projet (clé courte + nom affiché).
         </div>
@@ -228,19 +230,19 @@ export default function ProjectSettingsTab({
               <div key={i} className="flex items-center gap-2">
                 <input
                   className="w-32 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                  placeholder="Clé (ANIM)"
+                  placeholder={t('pipeline.dept.key.placeholder')}
                   value={dep.key}
                   onChange={(e) => setDept(i, 'key', e.target.value)}
                 />
                 <input
                   className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                  placeholder="Nom (Animation)"
+                  placeholder={t('pipeline.dept.name.placeholder')}
                   value={dep.name}
                   onChange={(e) => setDept(i, 'name', e.target.value)}
                 />
                 <button
                   onClick={() => removeDept(i)}
-                  title="Retirer"
+                  title={t('common.remove')}
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 size={14} />

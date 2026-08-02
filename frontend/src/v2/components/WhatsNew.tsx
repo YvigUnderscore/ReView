@@ -8,6 +8,7 @@ import { qk } from '../lib/query';
 import { parseChangelog } from '../lib/changelog';
 import { renderDocHtml } from '../pages/docs/docsRender';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { useT } from '../i18n';
 
 /**
  * « Nouveautés » in-app (42.B — №68) : changelog alimenté par `DOCUMENTATION/CHANGELOG.md`
@@ -17,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 const SEEN_KEY = 'review:changelog-seen';
 
 export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<string | null>(() => {
     try {
@@ -59,12 +61,12 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     <>
       <button
         onClick={openPanel}
-        title="Nouveautés"
-        aria-label="Nouveautés"
+        title={t('whatsNew.title')}
+        aria-label={t('whatsNew.title')}
         className="relative flex items-center gap-2 rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
       >
         <Sparkles size={14} />
-        {!collapsed && <span className="text-xs">Nouveautés</span>}
+        {!collapsed && <span className="text-xs">{t('whatsNew.title')}</span>}
         {hasUnseen && (
           <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent-2" aria-hidden />
         )}
@@ -72,7 +74,7 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nouveautés</DialogTitle>
+            <DialogTitle>{t('whatsNew.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
             {entries.map((e) => (

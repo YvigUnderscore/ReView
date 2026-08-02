@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, Rows3 } from 'lucide-react';
+import { useT } from '../i18n';
 
 export interface RowField {
   key: string;
@@ -27,6 +28,7 @@ export default function MultiRowCreate({
   addLabel: string;
   onSubmit: (rows: Record<string, string>[]) => Promise<void>;
 }) {
+  const t = useT();
   const emptyRow = () => Object.fromEntries(fields.map((f) => [f.key, f.options?.[0]?.value ?? '']));
   const [rows, setRows] = useState<Record<string, string>[]>([emptyRow(), emptyRow(), emptyRow()]);
   const [busy, setBusy] = useState(false);
@@ -92,7 +94,7 @@ export default function MultiRowCreate({
             <button
               type="button"
               onClick={() => removeRow(i)}
-              title="Retirer la ligne"
+              title={t('multiRow.removeRow')}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-destructive"
             >
               <Trash2 size={14} />

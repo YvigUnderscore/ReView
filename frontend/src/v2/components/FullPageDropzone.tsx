@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
+import { useT } from '../i18n';
 
 /**
  * Drop-zone plein-écran (10.C7) : un overlay apparaît dès qu'on glisse des fichiers
@@ -19,6 +20,7 @@ export default function FullPageDropzone({
   label?: string;
   enabled?: boolean;
 }) {
+  const t = useT();
   const [active, setActive] = useState(false);
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export default function FullPageDropzone({
       <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary bg-card/70 px-14 py-12 text-center">
         <UploadCloud size={42} className="text-primary" />
         <p className="text-lg font-semibold text-foreground">{label}</p>
-        <p className="text-sm text-muted-foreground">Relâchez pour lancer l’upload</p>
+        <p className="text-sm text-muted-foreground">{t('dropzone.release')}</p>
       </div>
     </div>
   );

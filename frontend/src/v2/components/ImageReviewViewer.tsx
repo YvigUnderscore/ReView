@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Expand, Info } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
+import { useT } from '../i18n';
 
 /**
  * Visionneuse d'image pour la review : zoom (molette) + pan, avec overlay
@@ -67,6 +68,7 @@ export default function ImageReviewViewer({
   /** Vue émise à chaque changement (fit inclus) — réplication A/B de la comparaison (34.D). */
   onViewChange?: (v: ImageView) => void;
 }) {
+  const t = useT();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [base, setBase] = useState<{ w: number; h: number } | null>(null);
@@ -261,11 +263,11 @@ export default function ImageReviewViewer({
       {/* Panneau infos repliable (14.D) */}
       {showInfo && (
         <div className="absolute right-3 top-3 min-w-[10rem] rounded-md border border-border bg-card/95 p-2 text-xs backdrop-blur">
-          <div className="mb-1 font-medium text-foreground">Informations</div>
+          <div className="mb-1 font-medium text-foreground">{t('imageViewer.info')}</div>
           <dl className="space-y-0.5 text-muted-foreground">
             {natural && (
               <div className="flex justify-between gap-3">
-                <dt>Résolution</dt>
+                <dt>{t('imageViewer.resolution')}</dt>
                 <dd className="tabular-nums text-foreground">
                   {natural.w} × {natural.h}
                 </dd>
@@ -273,13 +275,13 @@ export default function ImageReviewViewer({
             )}
             {info?.format && (
               <div className="flex justify-between gap-3">
-                <dt>Format</dt>
+                <dt>{t('imageViewer.format')}</dt>
                 <dd className="text-foreground">{info.format}</dd>
               </div>
             )}
             {fmtSize(info?.sizeBytes) && (
               <div className="flex justify-between gap-3">
-                <dt>Poids</dt>
+                <dt>{t('imageViewer.size')}</dt>
                 <dd className="text-foreground">{fmtSize(info?.sizeBytes)}</dd>
               </div>
             )}
@@ -289,31 +291,43 @@ export default function ImageReviewViewer({
 
       {/* Contrôles de zoom (14.D : + 100 % et infos) */}
       <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-border bg-card/90 p-1 backdrop-blur">
-        <button onClick={() => zoomBy(1 / 1.25)} title="Dézoomer" className="rounded p-1 hover:bg-muted">
+        <button
+          onClick={() => zoomBy(1 / 1.25)}
+          title={t('imageViewer.zoomOut')}
+          className="rounded p-1 hover:bg-muted"
+        >
           <ZoomOut size={16} />
         </button>
         <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
           {Math.round(scale * 100)}%
         </span>
-        <button onClick={() => zoomBy(1.25)} title="Zoomer" className="rounded p-1 hover:bg-muted">
+        <button
+          onClick={() => zoomBy(1.25)}
+          title={t('imageViewer.zoomIn')}
+          className="rounded p-1 hover:bg-muted"
+        >
           <ZoomIn size={16} />
         </button>
         <button
           onClick={oneToOne}
-          title="Taille réelle (100 %)"
+          title={t('imageViewer.actualSize')}
           className="rounded px-1.5 py-1 text-xs font-medium hover:bg-muted"
         >
           1:1
         </button>
-        <button onClick={reset} title="Ajuster" className="rounded p-1 hover:bg-muted">
+        <button onClick={reset} title={t('imageViewer.fit')} className="rounded p-1 hover:bg-muted">
           <Maximize size={16} />
         </button>
-        <button onClick={fullscreen} title="Plein écran" className="rounded p-1 hover:bg-muted">
+        <button
+          onClick={fullscreen}
+          title={t('imageViewer.fullscreen')}
+          className="rounded p-1 hover:bg-muted"
+        >
           <Expand size={16} />
         </button>
         <button
           onClick={() => setShowInfo((v) => !v)}
-          title="Informations"
+          title={t('imageViewer.info')}
           aria-pressed={showInfo}
           className={`rounded p-1 hover:bg-muted ${showInfo ? 'text-primary' : ''}`}
         >

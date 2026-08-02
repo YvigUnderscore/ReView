@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { SkeletonRows } from './ui/skeleton';
 import type { ShotSummary } from '../types/api';
+import { useT } from '../i18n';
 
 /**
  * Dialog d'assignation d'un asset à des shots et/ou séquences (N-N).
@@ -33,6 +34,7 @@ export default function AssetAssignDialog({
   onClose: () => void;
   onSaved?: () => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const shotsQ = useShotsQuery(projectId);
   const seqsQ = useSequencesQuery(projectId);
@@ -66,7 +68,7 @@ export default function AssetAssignDialog({
     setError(null);
     try {
       await api.patch(`/api/assets/${assetId}`, { shotIds: [...shotIds], sequenceIds: [...sequenceIds] });
-      toast.success('Assignations enregistrées');
+      toast.success(t('assets.assignSaved'));
       qc.invalidateQueries({ queryKey: qk.asset(assetId) });
       qc.invalidateQueries({ queryKey: ['shot'] });
       onSaved?.();
@@ -124,7 +126,7 @@ export default function AssetAssignDialog({
                 </div>
                 <div className="grid grid-cols-2 gap-1">
                   {sequences.length === 0 && (
-                    <p className="text-xs text-muted-foreground">Aucune séquence.</p>
+                    <p className="text-xs text-muted-foreground">{t('tree.noSequence')}</p>
                   )}
                   {sequences.map((s) => (
                     <label
@@ -148,7 +150,9 @@ export default function AssetAssignDialog({
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Shots
                 </div>
-                {groups.length === 0 && <p className="text-xs text-muted-foreground">Aucun shot.</p>}
+                {groups.length === 0 && (
+                  <p className="text-xs text-muted-foreground">{t('sequences.noShot')}</p>
+                )}
                 <div className="space-y-3">
                   {groups.map((g) => (
                     <div key={g.seq.id}>

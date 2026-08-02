@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { RotateCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { usePreferences, useUpdatePreferences } from '../lib/usePreferences';
+import { useT, type MessageKey } from '../i18n';
 import {
   GLOBAL_SHORTCUTS,
   isValidKey,
@@ -22,26 +23,30 @@ import {
  */
 
 // Raccourcis contextuels de review — référence non reconfigurable (gérés dans les vues).
-const STATIC_GROUPS: { title: string; shortcuts: { keys: string[]; label: string }[] }[] = [
+// Table de libellés recalculée au rendu : en constante de module, elle resterait figée
+// dans la langue chargée au démarrage.
+const staticGroups = (
+  t: (key: MessageKey) => string,
+): { title: string; shortcuts: { keys: string[]; label: string }[] }[] => [
   {
     title: 'Review vidéo',
     shortcuts: [
-      { keys: ['Espace'], label: 'Lecture / pause' },
-      { keys: ['←', '→'], label: '± 1 frame' },
-      { keys: ['Maj', '←/→'], label: '± 10 frames' },
-      { keys: ['J'], label: 'Lecture arrière (répéter : ×2, ×4, ×8)' },
-      { keys: ['K'], label: 'Pause' },
-      { keys: ['L'], label: 'Lecture avant (répéter : ×2, ×4, ×8)' },
-      { keys: ['I', 'O'], label: 'Point de boucle in / out (Maj+I/O : effacer)' },
-      { keys: ['M'], label: 'Commenter à la frame courante' },
+      { keys: ['Espace'], label: t('shortcuts.playPause') },
+      { keys: ['←', '→'], label: t('shortcuts.frameStep') },
+      { keys: ['Maj', '←/→'], label: t('shortcuts.frameStep10') },
+      { keys: ['J'], label: t('shortcuts.playBackward') },
+      { keys: ['K'], label: t('shortcuts.pause') },
+      { keys: ['L'], label: t('shortcuts.playForward') },
+      { keys: ['I', 'O'], label: t('shortcuts.loopPoints') },
+      { keys: ['M'], label: t('shortcuts.commentAtFrame') },
     ],
   },
   {
     title: 'Review (tous types)',
     shortcuts: [
       { keys: ['Échap'], label: "Masquer l'annotation affichée" },
-      { keys: ['Ctrl', 'V'], label: 'Coller une image de référence (review image)' },
-      { keys: ['Clic droit'], label: 'Menu contextuel (image/vidéo) — navigation en 3D/splat' },
+      { keys: ['Ctrl', 'V'], label: t('shortcuts.pasteReference') },
+      { keys: ['Clic droit'], label: t('shortcuts.contextMenu') },
     ],
   },
   {
@@ -51,15 +56,15 @@ const STATIC_GROUPS: { title: string; shortcuts: { keys: string[]; label: string
         keys: ['Clic droit', 'ZQSD'],
         label: 'Vol type Unreal — A/E : descendre/monter, molette : vitesse, Maj : accélérer',
       },
-      { keys: ['T', 'R', 'S'], label: 'Gizmos déplacer / tourner / échelle (éditeur)' },
+      { keys: ['T', 'R', 'S'], label: t('shortcuts.gizmos') },
       {
         keys: ['B', 'L', 'P'],
         label: 'Sélection rectangle / lasso / pinceau de surface (Maj ajoute, Alt retire)',
       },
-      { keys: ['F'], label: 'Cadrer la sélection (ou tout le splat)' },
+      { keys: ['F'], label: t('shortcuts.frameSelection') },
       { keys: ['H'], label: "Vue d'origine" },
-      { keys: ['Suppr'], label: 'Supprimer la sélection (non-destructif)' },
-      { keys: ['Ctrl', 'Z / Y'], label: 'Annuler / rétablir' },
+      { keys: ['Suppr'], label: t('shortcuts.deleteSelection') },
+      { keys: ['Ctrl', 'Z / Y'], label: t('shortcuts.undoRedo') },
     ],
   },
 ];
@@ -87,6 +92,7 @@ function displayKeys(def: ShortcutDef, key: string): string[] {
 
 /** Section « Navigation » éditable : chaque touche est reconfigurable (persistée compte). */
 function NavShortcuts() {
+  const t = useT();
   const prefsQ = usePreferences();
   const update = useUpdatePreferences();
   const shortcuts = prefsQ.data?.shortcuts;
@@ -103,26 +109,26 @@ function NavShortcuts() {
       if (e.key === 'Escape') return setCapturing(null);
       const key = e.key.toLowerCase();
       if (!isValidKey(key)) {
-        toast.error('Touche invalide (une seule touche, jamais « g »).');
+        toast.error(t('shortcuts.invalid'));
         return;
       }
       const conflict = GLOBAL_SHORTCUTS.some(
         (s) => s.id !== capturing && s.kind === def.kind && bindings[s.id] === key,
       );
       if (conflict) {
-        toast.error('Touche déjà utilisée par un autre raccourci.');
+        toast.error(t('shortcuts.taken'));
         return;
       }
       const next = { ...overrides };
       if (key === def.defaultKey) delete next[capturing];
       else next[capturing] = key;
-      update.mutate({ shortcuts: next }, { onSuccess: () => toast.success('Raccourci mis à jour') });
+      update.mutate({ shortcuts: next }, { onSuccess: () => toast.success(t('shortcuts.updated')) });
       setCapturing(null);
     };
     // Capture-phase : primer sur Radix (Échap ne ferme pas le dialog pendant la capture).
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [capturing, overrides, bindings, update]);
+  }, [capturing, overrides, bindings, update, t]);
 
   const reset = (id: ShortcutId) => {
     const next = { ...overrides };
@@ -132,8 +138,10 @@ function NavShortcuts() {
 
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Navigation</p>
-      <p className="mb-2 text-[11px] text-muted-foreground">Cliquez une touche pour la reconfigurer.</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {t('shortcuts.nav')}
+      </p>
+      <p className="mb-2 text-[11px] text-muted-foreground">{t('shortcuts.hint')}</p>
       <ul className="space-y-1.5">
         <li className="flex items-center justify-between gap-4 text-sm">
           <span className="text-muted-foreground">Recherche globale (palette de commandes)</span>
@@ -144,16 +152,16 @@ function NavShortcuts() {
           const custom = isValidKey(overrides[def.id] ?? '') && overrides[def.id] !== def.defaultKey;
           return (
             <li key={def.id} className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-muted-foreground">{def.label}</span>
+              <span className="text-muted-foreground">{t(def.labelKey)}</span>
               <span className="flex items-center gap-2">
                 {isCapturing ? (
-                  <span className="text-xs font-medium text-primary">Appuyez sur une touche…</span>
+                  <span className="text-xs font-medium text-primary">{t('shortcuts.press')}</span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setCapturing(def.id)}
                     className="rounded hover:opacity-80"
-                    title="Cliquer pour changer la touche"
+                    title={t('shortcuts.clickToChange')}
                   >
                     <Keys keys={displayKeys(def, bindings[def.id])} />
                   </button>
@@ -163,7 +171,7 @@ function NavShortcuts() {
                     type="button"
                     onClick={() => reset(def.id)}
                     className="text-muted-foreground hover:text-foreground"
-                    title="Réinitialiser au défaut"
+                    title={t('shortcuts.reset')}
                   >
                     <RotateCcw size={12} />
                   </button>
@@ -184,23 +192,24 @@ export default function ShortcutsHelp({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useT();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* max-h + scroll : la liste des raccourcis ne doit jamais déborder de l'écran. */}
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Raccourcis clavier</DialogTitle>
+          <DialogTitle>{t('shortcuts.title')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <NavShortcuts />
-          {STATIC_GROUPS.map((g) => (
+          {staticGroups(t).map((g) => (
             <div key={g.title}>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {g.title}
               </p>
               <ul className="space-y-1.5">
                 {g.shortcuts.map((s) => (
-                  <li key={s.label} className="flex items-center justify-between gap-4 text-sm">
+                  <li key={s.keys.join('+')} className="flex items-center justify-between gap-4 text-sm">
                     <span className="text-muted-foreground">{s.label}</span>
                     <Keys keys={s.keys} />
                   </li>

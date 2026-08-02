@@ -11,6 +11,7 @@ import { markerSections } from './comments/markerSections';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
 import { commentLink } from '../pages/review/deepLink';
 import type { ReviewComment, TimelineMarker } from '../types/api';
+import { useT } from '../i18n';
 
 /** Fil de commentaires de review (racines + réponses imbriquées, clic droit par carte),
  * scandé par les marqueurs de timeline en séparateurs cliquables (retours 34). */
@@ -43,6 +44,7 @@ export default function ReviewComments({
   /** Clic sur un séparateur : seek à la frame du marqueur. */
   onMarkerSeek?: (m: TimelineMarker) => void;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const canCreateTask = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
 
@@ -50,8 +52,8 @@ export default function ReviewComments({
   const copyLink = (c: ReviewComment) =>
     void navigator.clipboard
       .writeText(commentLink(window.location.origin, window.location.pathname, c.id))
-      .then(() => toast.success('Lien copié'))
-      .catch(() => toast.error('Copie impossible'));
+      .then(() => toast.success(t('comments.linkCopied')))
+      .catch(() => toast.error(t('comments.copyFailed')));
 
   // Commentaire → tâche kanban (32.D) : shot/asset et assigné repris côté backend.
   const createTask = (c: ReviewComment) =>
@@ -59,7 +61,7 @@ export default function ReviewComments({
       .post<{ task: { id: number; name: string } }>(`/api/comments/${c.id}/task`)
       .then(({ task }) =>
         toast.success(`Tâche créée : ${task.name}`, {
-          action: { label: 'Ouvrir', onClick: () => navigate(`/tasks/${task.id}`) },
+          action: { label: t('common.open'), onClick: () => navigate(`/tasks/${task.id}`) },
         }),
       )
       .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Création impossible'));
@@ -96,9 +98,7 @@ export default function ReviewComments({
 
   return (
     <div className="space-y-2">
-      {comments.length === 0 && (
-        <p className="text-sm text-muted-foreground">Aucun commentaire pour l’instant.</p>
-      )}
+      {comments.length === 0 && <p className="text-sm text-muted-foreground">{t('comments.empty')}</p>}
       {markerSections(comments, markers ?? [], fps).map((s) =>
         s.marker === null ? (
           <Fragment key="head">{s.comments.map(renderComment)}</Fragment>

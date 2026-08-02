@@ -10,6 +10,7 @@ import { qk } from '../lib/query';
 import { useSequencesQuery, useAssetsQuery } from '../lib/queries';
 import { Skeleton } from './ui/skeleton';
 import type { ShotRef } from '../types/api';
+import { useT } from '../i18n';
 
 /**
  * Arbre de navigation du projet courant dans la sidebar (10.A4) :
@@ -43,6 +44,7 @@ const rowClass =
   'flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground';
 
 export default function SidebarProjectTree({ projectId }: { projectId: number }) {
+  const t = useT();
   const [open, setOpen] = useState(() => readOpenState(projectId));
 
   // Persistance de l'état déplié/replié par projet.
@@ -87,7 +89,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
     const shots = shotsBySeq[seqId];
     if (!shots) return <Skeleton className="ml-6 my-1 h-4 w-28" />;
     if (shots.length === 0)
-      return <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">Aucun shot.</p>;
+      return <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">{t('sequences.noShot')}</p>;
     return shots.map((s) => (
       <Link
         key={s.id}
@@ -124,7 +126,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
         ) : (
           <div className="space-y-0.5">
             {sequences.length === 0 && unsequenced === 0 && (
-              <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">Aucune séquence.</p>
+              <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">{t('tree.noSequence')}</p>
             )}
             {sequences.map((sq) => (
               <div key={sq.id}>
@@ -154,7 +156,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
                   ) : (
                     <ChevronRight size={12} className="shrink-0" />
                   )}
-                  <span className="truncate italic">Hors séquence</span>
+                  <span className="truncate italic">{t('tree.outsideSequence')}</span>
                   <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/70">{unsequenced}</span>
                 </button>
                 {open.seqs.includes(NO_SEQ) && renderShots(NO_SEQ)}
@@ -175,7 +177,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
             <Skeleton className="h-4 w-24" />
           </div>
         ) : assets.length === 0 ? (
-          <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">Aucun asset.</p>
+          <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">{t('tree.noAsset')}</p>
         ) : (
           assets.map((a) => (
             <Link key={a.id} to={`/assets/${a.id}`} title={a.name} className={`${rowClass} ml-3`}>
