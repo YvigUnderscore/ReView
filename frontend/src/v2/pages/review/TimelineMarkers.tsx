@@ -14,6 +14,7 @@ import {
 } from '../../components/ui/context-menu';
 import type { TimelineMarker } from '../../types/api';
 import type { TimelineMarkersApi } from './useTimelineMarkers';
+import { useT } from '../../i18n';
 
 /** Palette proposée pour les marqueurs (34.C) — libre côté API (hex), guidée côté UI. */
 const MARKER_COLORS = ['#22d3ee', '#f472b6', '#facc15', '#4ade80', '#f87171', '#a78bfa'];
@@ -110,6 +111,7 @@ export function MarkerDialog({
   editing: TimelineMarker | null;
   api: TimelineMarkersApi;
 }) {
+  const t = useT();
   const [name, setName] = useState(editing?.name ?? '');
   const [color, setColor] = useState(editing?.color ?? MARKER_COLORS[0]!);
 
@@ -133,7 +135,7 @@ export function MarkerDialog({
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
-          placeholder="Nom du marqueur (ex. Début du plan 2)"
+          placeholder={t('review.marker.placeholder')}
           autoFocus
         />
         <div className="flex items-center gap-2">

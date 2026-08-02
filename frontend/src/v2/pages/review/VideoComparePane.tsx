@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
+import { useT } from '../../i18n';
 
 /**
  * Pane B de la comparaison vidéo (10.G + 14.C + 34.D) : vidéo esclave, muette et sans
@@ -28,6 +29,7 @@ export default function VideoComparePane({
   onWipe?: () => void;
   onDiff?: () => void;
 }) {
+  const t = useT();
   const slaveRef = useRef<HTMLVideoElement>(null);
   const [slaveReady, setSlaveReady] = useState(false);
 
@@ -52,7 +54,7 @@ export default function VideoComparePane({
           {onWipe && (
             <button
               onClick={onWipe}
-              title="Basculer en mode wipe (superposition à barre)"
+              title={t('review.compare.toWipe')}
               className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
             >
               <SplitSquareHorizontal size={13} /> Wipe
@@ -61,7 +63,7 @@ export default function VideoComparePane({
           {onDiff && (
             <button
               onClick={onDiff}
-              title="Basculer en mode différence (|A − B| amplifiée)"
+              title={t('review.compare.toDiff')}
               className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
             >
               <Diff size={13} /> Diff
@@ -69,7 +71,7 @@ export default function VideoComparePane({
           )}
           <button
             onClick={onClose}
-            title="Fermer la comparaison"
+            title={t('review.compare.close')}
             className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             <X size={14} />

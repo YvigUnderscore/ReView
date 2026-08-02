@@ -12,11 +12,15 @@ import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { LodMode } from '../splat/scene/lod';
 import type { RevealConfig } from '../splat/presentation/usePresentation';
 import type { RevealType } from '../splat/scene/effects/reveal';
+import { useT, type MessageKey } from '../../../i18n';
 
-const REVEALS: { value: RevealType; label: string }[] = [
-  { value: 'fade', label: 'Fondu' },
-  { value: 'sweep', label: 'Balayage' },
-  { value: 'dissolve', label: 'Dissolution' },
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
+
+const reveals = (t: Tr): { value: RevealType; label: string }[] => [
+  { value: 'fade', label: t('viewer.reveal.fade') },
+  { value: 'sweep', label: t('viewer.reveal.sweep') },
+  { value: 'dissolve', label: t('viewer.reveal.dissolve') },
 ];
 
 const AXES = [
@@ -25,11 +29,11 @@ const AXES = [
   { value: 'z' as const, label: 'Z' },
 ];
 
-const LODS: { value: LodMode; label: string; hint: string }[] = [
+const lods = (t: Tr): { value: LodMode; label: string; hint: string }[] => [
   { value: 'off', label: 'Off', hint: 'Aucun niveau de détail — qualité maximale' },
   { value: 'auto', label: 'Auto', hint: 'Active le LOD sous 15 fps, le relâche au-dessus de 25' },
-  { value: 'on', label: 'Forcé', hint: 'LOD toujours actif' },
-  { value: 'streaming', label: 'Flux', hint: 'Charge les pages du nuage à la demande' },
+  { value: 'on', label: t('viewer.lod.forced'), hint: 'LOD toujours actif' },
+  { value: 'streaming', label: t('viewer.lod.stream'), hint: 'Charge les pages du nuage à la demande' },
 ];
 
 export type SectionAxis = 'x' | 'y' | 'z';
@@ -82,45 +86,50 @@ export default function ScenePanel({
     };
   };
 }) {
+  const t = useT();
   const reveal = perf.reveal;
   return (
     <>
       {/* Scenegraph USD (46.C) en tête : c'est la structure de la scene, le reste la decore. */}
       {scenegraph && <Group title="Scenegraph">{scenegraph}</Group>}
-      <Group title="Repères">
-        <Row label="Grille de sol">
-          <Switch checked={grid.visible} onCheckedChange={grid.onToggle} label="Grille de sol" />
+      <Group title={t('viewer.guides.title')}>
+        <Row label={t('viewer.guides.grid')}>
+          <Switch checked={grid.visible} onCheckedChange={grid.onToggle} label={t('viewer.guides.grid')} />
         </Row>
         {axes && (
-          <Row label="Triade d’axes">
+          <Row label={t('viewer.guides.axes')}>
             <Switch
               checked={axes.visible}
               onCheckedChange={axes.onToggle}
-              label="Triade d’axes dans le coin du viewport"
+              label={t('viewer.guides.axes.hint')}
             />
           </Row>
         )}
         {guides && (
-          <Row label="Guides de composition">
+          <Row label={t('viewer.guides.composition')}>
             <Switch
               checked={guides.visible}
               onCheckedChange={guides.onToggle}
-              label="Tiers, centre, titres sûrs"
+              label={t('viewer.guides.composition.hint')}
             />
           </Row>
         )}
       </Group>
 
       {section && (
-        <Group title="Plan de coupe">
-          <Row label="Actif">
-            <Switch checked={section.active} onCheckedChange={section.onActive} label="Plan de coupe" />
+        <Group title={t('viewer.clip.title')}>
+          <Row label={t('viewer.clip.enabled')}>
+            <Switch
+              checked={section.active}
+              onCheckedChange={section.onActive}
+              label={t('viewer.clip.title')}
+            />
           </Row>
           {section.active && (
             <>
               <Row label="Axe">
                 <SegmentedControl
-                  label="Axe du plan de coupe"
+                  label={t('viewer.clip.axis')}
                   items={AXES}
                   value={section.axis}
                   onChange={section.onAxis}
@@ -137,11 +146,11 @@ export default function ScenePanel({
                   pixelsPerStep={4}
                 />
               </Row>
-              <Row label="Côté inversé">
+              <Row label={t('viewer.clip.flip')}>
                 <Switch
                   checked={section.flipped}
                   onCheckedChange={section.onFlip}
-                  label="Inverser le côté conservé"
+                  label={t('viewer.clip.flip.hint')}
                 />
               </Row>
             </>
@@ -151,24 +160,24 @@ export default function ScenePanel({
 
       {turntable && (
         <Group title="Turntable">
-          <Row label="Rotation auto">
+          <Row label={t('viewer.turntable')}>
             <Switch
               checked={turntable.active}
               onCheckedChange={turntable.onActive}
-              label="Turntable — rotation automatique de la vue"
+              label={t('viewer.turntable.hint')}
             />
           </Row>
           {turntable.active && (
             <>
               <Row label="Axe">
                 <SegmentedControl
-                  label="Axe du turntable"
+                  label={t('viewer.turntable.axis')}
                   items={AXES}
                   value={turntable.axis}
                   onChange={turntable.onAxis}
                 />
               </Row>
-              <Row label="Vitesse">
+              <Row label={t('viewer.speed')}>
                 <NumberField
                   label="°/s"
                   value={turntable.speed}
@@ -187,39 +196,35 @@ export default function ScenePanel({
       {(perf.lod || perf.culling || reveal) && (
         <Group title="Performance">
           {perf.lod && (
-            <Row
-              label="Niveau de détail"
-              stack
-              hint="Auto active le LOD sous 15 fps ; Streaming charge les pages à la demande"
-            >
+            <Row label={t('viewer.lod')} stack hint={t('viewer.lod.hint')}>
               <SegmentedControl
-                label="Niveau de détail"
-                items={LODS}
+                label={t('viewer.lod')}
+                items={lods(t)}
                 value={perf.lod.mode}
                 onChange={perf.lod.onMode}
               />
             </Row>
           )}
           {perf.culling && (
-            <Row label="Culling de bord" hint="Désactivé : rien ne disparaît en zoom fort">
+            <Row label={t('viewer.culling.short')} hint={t('viewer.culling.hint')}>
               <Switch
                 checked={!perf.culling.off}
                 onCheckedChange={(v) => perf.culling?.onOff(!v)}
-                label="Culling de bord de cadre"
+                label={t('viewer.culling')}
               />
             </Row>
           )}
           {reveal && (
             <>
-              <Row label="Apparition à l’ouverture">
+              <Row label={t('viewer.reveal')}>
                 <Switch
                   checked={reveal.config !== null}
                   onCheckedChange={(v) => reveal.onConfig(v ? { type: 'fade', durationMs: 2500 } : null)}
-                  label="Effet d’apparition à l’ouverture"
+                  label={t('viewer.reveal.hint')}
                 />
               </Row>
               {reveal.config && (
-                <Row label="Effet" stack>
+                <Row label={t('viewer.reveal.effect')} stack>
                   <Select
                     value={reveal.config.type}
                     onChange={(e) =>
@@ -227,7 +232,7 @@ export default function ScenePanel({
                     }
                     className={DOCK_SELECT}
                   >
-                    {REVEALS.map((r) => (
+                    {reveals(t).map((r) => (
                       <option key={r.value} value={r.value}>
                         {r.label}
                       </option>
@@ -236,7 +241,7 @@ export default function ScenePanel({
                 </Row>
               )}
               {reveal.config && (
-                <Row label="Durée">
+                <Row label={t('viewer.duration')}>
                   <span className="flex gap-1">
                     <NumberField
                       label="s"
@@ -251,7 +256,7 @@ export default function ScenePanel({
                     />
                     <IconButton
                       icon={RotateCcw}
-                      label="Rejouer l’apparition"
+                      label={t('viewer.reveal.replay')}
                       bordered
                       onClick={reveal.onReplay}
                     />

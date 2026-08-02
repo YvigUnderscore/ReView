@@ -6,6 +6,7 @@ import { SegmentedControl } from '../../../components/ui/segmented-control';
 import type { SplatTransform } from '../reviewTypes';
 import type { GizmoSettings, GizmoTargetKind } from '../viewer/gizmos/gizmoSettings';
 import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
+import { useT } from '../../../i18n';
 
 const AXES = ['X', 'Y', 'Z'] as const;
 
@@ -46,6 +47,7 @@ export default function TransformOptions({
     update: (patch: Partial<GizmoSettings>) => void;
   };
 }) {
+  const t = useT();
   const s = gizmo.settings;
   const rotationDeg = quatToEulerDeg(value.quaternion);
   const scaleLabel = shape === 'box' ? 'Demi-ext.' : shape === 'sphere' ? 'Demi-axes' : 'Échelle';
@@ -60,7 +62,7 @@ export default function TransformOptions({
     <>
       <span className="rv-optbar__name">{target}</span>
       <SegmentedControl
-        label="Espace de manipulation du gizmo"
+        label={t('review.gizmo.space')}
         items={SPACES}
         value={s.space}
         onChange={(space) => gizmo.update({ space })}
@@ -139,8 +141,8 @@ export default function TransformOptions({
         pixelsPerStep={6}
       />
       <NumberField
-        label="Poignées"
-        hint="Taille des poignées du gizmo pour cette cible"
+        label={t('review.gizmo.handles')}
+        hint={t('review.gizmo.handleSize')}
         value={s.size}
         onChange={(size) => gizmo.update({ size })}
         min={0.4}

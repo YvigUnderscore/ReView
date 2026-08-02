@@ -21,6 +21,7 @@ import type { SplatViewer } from './useSplat';
 import type { SplatCompareState } from './compare/useSplatCompare';
 import { buildCleanSpz, cleanExportName, downloadBytes, type ExportEdits } from './export/exportSplat';
 import { downloadAnimGltf } from '../three/exportCameraGltf';
+import { useT } from '../../../i18n';
 
 const RAD = Math.PI / 180;
 const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR');
@@ -81,6 +82,7 @@ export default function SplatPanels({
   onHome: () => void;
   onImportAnim: (file: File) => void;
 }) {
+  const t = useT();
   const [stats, setStats] = useState<SplatStats | null>(null);
   const [exporting, setExporting] = useState(false);
   const { subscribeStats } = splat;
@@ -154,7 +156,7 @@ export default function SplatPanels({
           { label: 'Images/s', value: fmt(stats.fps) },
           { label: 'Splats rendus', value: fmt(stats.activeSplats) },
           { label: 'Splats totaux', value: fmt(stats.totalSplats) },
-          { label: 'Splats masqués', value: fmt(editor.deletedCount) },
+          { label: t('review.splat.hidden'), value: fmt(editor.deletedCount) },
           { label: 'Draw calls', value: fmt(stats.calls) },
         ]
       : [{ label: 'Mesure…', value: '—' }];
@@ -173,13 +175,13 @@ export default function SplatPanels({
     return (
       <ExportPanel
         cleaned={{
-          label: '.spz nettoyé (éditions cuites)',
+          label: t('review.splat.cleanExport'),
           hint: 'Fichier .spz compact avec les éditions appliquées (masque, crop, transformation). Couleur de base (SH degré 0). L’original n’est pas modifié.',
           busy: exporting,
           onExport: () => {
             const handle = splat.getSceneHandle();
             if (!handle) {
-              toast.error('Splat non chargé');
+              toast.error(t('review.splat.notLoaded'));
               return;
             }
             setExporting(true);
@@ -208,7 +210,7 @@ export default function SplatPanels({
               Animation caméra (glTF)
             </Button>
             <label
-              title="Importer une animation caméra : glTF ou JSON d’échantillons Alembic (.abc)"
+              title={t('review.camera.import')}
               className="flex min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
             >
               <Upload size={13} />
@@ -235,7 +237,7 @@ export default function SplatPanels({
                   a.href = url;
                   a.download = `${data.media.originalName.replace(/\.[^.]+$/, '')}.jpg`;
                   a.click();
-                  toast.success('Vue capturée');
+                  toast.success(t('review.viewCaptured'));
                 });
               }}
             />

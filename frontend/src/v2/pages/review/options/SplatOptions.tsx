@@ -12,6 +12,7 @@ import type { ModeId } from '../chrome/modes';
 import type { SplatEditorState } from '../splat/editor/useSplatEditor';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import TransformOptions from './TransformOptions';
+import { useT } from '../../../i18n';
 
 /** Couleurs de trait du painter 3D — données d'annotation, pas des tokens de thème. */
 const INK = ['#ff4d4d', '#ffb020', '#3ddc68', '#38b6ff'];
@@ -40,6 +41,7 @@ export default function SplatOptions({
   presentation?: { dirty: boolean; busy: boolean; onSave: () => void };
   onPlaceHotspot: () => void;
 }) {
+  const t = useT();
   const id: ToolId = tool.id;
   const selecting = id === 'sel-rect' || id === 'sel-lasso' || id === 'sel-brush';
   const transforming = id === 'translate' || id === 'rotate' || id === 'scale';
@@ -51,7 +53,7 @@ export default function SplatOptions({
         dirty={editor.dirty}
         saving={editor.busy}
         label="Enregistrer"
-        hint="Éditions non enregistrées"
+        hint={t('review.splat.unsavedEdits')}
         onSave={() => void editor.save()}
         onUndo={editor.history.undo}
         onRedo={editor.history.redo}
@@ -63,7 +65,7 @@ export default function SplatOptions({
         dirty={presentation.dirty}
         saving={presentation.busy}
         label="Publier"
-        hint="Mise en scène non publiée"
+        hint={t('review.staging.unsaved')}
         onSave={presentation.onSave}
       />
     ) : undefined;
@@ -111,7 +113,7 @@ export default function SplatOptions({
             ))}
           </span>
           <NumberField
-            label="Épaisseur"
+            label={t('review.thickness')}
             value={paint.width}
             onChange={paint.setWidth}
             min={1}
@@ -122,14 +124,14 @@ export default function SplatOptions({
           <span className="rv-rule" />
           <IconButton
             icon={Undo2}
-            label="Annuler le dernier trait"
+            label={t('review.undoStroke')}
             bordered
             onClick={paint.undoStroke}
             disabled={paint.pendingCount === 0}
           />
           <IconButton
             icon={Eraser}
-            label="Effacer les traits non envoyés"
+            label={t('review.splat.clearStrokes')}
             bordered
             onClick={paint.clearPending}
             disabled={paint.pendingCount === 0}
@@ -168,7 +170,7 @@ export default function SplatOptions({
           </Badge>
           <IconButton
             icon={X}
-            label="Tout désélectionner"
+            label={t('review.splat.deselectAll')}
             bordered
             onClick={editor.selection.clear}
             disabled={!selectedCount}
@@ -199,7 +201,7 @@ export default function SplatOptions({
           </Button>
           <span className="rv-rule" />
           {editor.volumes.volumes.length === 0 && (
-            <span className="rv-optbar__hint">Aucun volume — creuser ou isoler une zone.</span>
+            <span className="rv-optbar__hint">{t('review.splat.noVolume')}</span>
           )}
           {editor.volumes.volumes.map((v, i) => {
             const active = editor.volumes.activeId === v.id;
@@ -238,7 +240,7 @@ export default function SplatOptions({
                 </button>
                 <IconButton
                   icon={X}
-                  label="Retirer le volume"
+                  label={t('review.splat.removeVolume')}
                   size={12}
                   className="h-5 w-5"
                   onClick={() => editor.volumes.remove(v.id)}

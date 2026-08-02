@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { EyeOff } from 'lucide-react';
 import type { useAnnotations } from './useAnnotations';
+import { useT } from '../../i18n';
 
 /**
  * Pilule flottante « Masquer l'annotation », affichée **sur le viewer** (haut, centrée)
@@ -18,6 +19,7 @@ export default function ReviewAnnotationBar({
   ann: ReturnType<typeof useAnnotations>;
   onClearSelection: () => void;
 }) {
+  const t = useT();
   const visible = !!ann.viewed;
   useEffect(() => {
     if (!visible) return;
@@ -33,7 +35,7 @@ export default function ReviewAnnotationBar({
     <div className="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2">
       <button
         onClick={onClearSelection}
-        title="Masquer l'annotation affichée (Échap)"
+        title={t('review.annotation.hide')}
         className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1.5 text-sm shadow-lg backdrop-blur hover:bg-secondary"
       >
         <EyeOff size={14} /> Masquer l’annotation

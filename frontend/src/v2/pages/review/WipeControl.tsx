@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { GripVertical, RotateCw } from 'lucide-react';
 import { wipeAngleFromPoint, wipeCenter, wipePosFromPoint } from './wipe';
 import type { useWipe } from './useWipe';
+import { useT } from '../../i18n';
 
 /**
  * Barre de wipe **visible et rotative** (comparaison A/B image & vidéo) : trait épais
@@ -13,6 +14,7 @@ import type { useWipe } from './useWipe';
  * (centre, vertical). À monter en `absolute inset-0` dans le conteneur du média.
  */
 export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe> }) {
+  const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
   // Rotation : le pivot est FIGÉ au début du drag (le centre courant de la barre) — sans
   // ça, le centre recalculé bouge avec l'angle et la rotation « part dans tous les sens ».
@@ -93,7 +95,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
           setPos(0.5);
           setAngle(0);
         }}
-        title="Déplacer le wipe (double-clic : réinitialiser)"
+        title={t('review.wipe.move')}
       >
         <GripVertical size={15} />
       </div>
@@ -104,7 +106,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
         onPointerDown={grab('rotate')}
         onPointerMove={onPointerMove}
         onPointerUp={release}
-        title="Faire pivoter la barre (aimanté à 0/45/90°)"
+        title={t('review.wipe.rotate')}
       >
         <RotateCw size={12} />
       </div>

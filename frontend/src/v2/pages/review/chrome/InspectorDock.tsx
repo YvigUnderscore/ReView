@@ -6,6 +6,7 @@ import { PanelRightClose } from 'lucide-react';
 import { IconButton } from '../../../components/ui/icon-button';
 import { RailButton } from './ToolRail';
 import type { PanelId, ReviewPanel } from './panels';
+import { useT } from '../../../i18n';
 
 /**
  * Dock inspecteur — colonne de droite. Un seul panneau ouvert à la fois ; recliquer l'onglet
@@ -23,6 +24,7 @@ export default function InspectorDock({
   onPanel: (panel: PanelId | null) => void;
   children: ReactNode;
 }) {
+  const t = useT();
   const open = panels.find((p) => p.id === panel);
   const OpenIcon = open?.icon;
   return (
@@ -46,7 +48,7 @@ export default function InspectorDock({
             <span className="ml-auto">
               <IconButton
                 icon={PanelRightClose}
-                label="Replier le dock (Tab)"
+                label={t('review.dock.collapse')}
                 onClick={() => onPanel(null)}
               />
             </span>

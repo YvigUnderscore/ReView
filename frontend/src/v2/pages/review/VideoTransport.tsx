@@ -19,6 +19,7 @@ import {
 import './chrome/chrome.css';
 import { tcFromFrame } from './reviewTypes';
 import type { HlsLevel } from './useHlsPlayer';
+import { useT } from '../../i18n';
 
 /**
  * Barre de transport custom du lecteur vidéo (14.B) — remplace `<video controls>`.
@@ -88,6 +89,7 @@ export default function VideoTransport({
     switching?: boolean;
   };
 }) {
+  const t = useT();
   const btn =
     'flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground';
   return (
@@ -97,7 +99,7 @@ export default function VideoTransport({
         {playing ? <Pause size={16} /> : <Play size={16} />}
       </button>
       <div className="flex items-center gap-0.5">
-        <button onClick={() => onStep(-1)} title="Frame précédente (←)" className={btn}>
+        <button onClick={() => onStep(-1)} title={t('review.prevFrame')} className={btn}>
           <ChevronLeft size={16} />
         </button>
         <button onClick={() => onStep(1)} title="Frame suivante (→)" className={btn}>
@@ -141,7 +143,7 @@ export default function VideoTransport({
           </button>
           <button
             onClick={onClearLoop}
-            title="Effacer les points I/O (Maj+I / Maj+O)"
+            title={t('review.clearIO')}
             className="flex h-full items-center border-l border-border px-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             <X size={12} />
@@ -215,7 +217,7 @@ export default function VideoTransport({
         >
           {videoOnlyFs ? <Minimize size={16} /> : <Expand size={16} />}
         </button>
-        <button onClick={onFullscreen} title="Plein écran avec l’espace review" className={btn}>
+        <button onClick={onFullscreen} title={t('review.fullscreen')} className={btn}>
           <Maximize size={16} />
         </button>
       </div>

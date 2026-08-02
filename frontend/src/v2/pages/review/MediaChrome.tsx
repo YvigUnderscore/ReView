@@ -16,6 +16,7 @@ import type { Annotations } from './useAnnotations';
 import type { CompareMode } from './useCompareState';
 import { IMAGE_HIDDEN_TOOLS, VIDEO_HIDDEN_TOOLS, useMediaChrome } from './useMediaChrome';
 import { useVideoTrim } from './useVideoTrim';
+import { useT } from '../../i18n';
 
 /**
  * Chrome des viewers plats (vidéo, image) : bascule de mode, rail d'outils, barre d'options,
@@ -55,6 +56,7 @@ export default function MediaChrome({
   onContactSheet?: () => void;
   children: ReactNode;
 }) {
+  const t = useT();
   const { state, update } = useChromeState(kind);
   useMediaChrome({ state, update, ann });
   const trim = useVideoTrim({ data, fps, videoRef, onSaved });
@@ -105,7 +107,7 @@ export default function MediaChrome({
             size="sm"
             variant="ghost"
             onClick={() => update({ drawer: state.drawer === 'strip' ? null : 'strip' })}
-            title="Médias de la version — cliquer une vignette pour changer de review"
+            title={t('review.mediaStrip')}
           >
             {state.drawer === 'strip' ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
             Pellicule

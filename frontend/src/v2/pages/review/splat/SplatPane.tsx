@@ -4,6 +4,7 @@
 import { type ReactNode, type RefObject } from 'react';
 import { VIEWER_ZONE } from '../reviewTypes';
 import ReviewFrame from '../ReviewFrame';
+import { useT } from '../../../i18n';
 
 /**
  * Pane Gaussian Splat de la review (viewer Spark/SparkJS) — 10.G.
@@ -36,6 +37,7 @@ export default function SplatPane({
   /** Aspect du cadre de review fixe (issu de la caméra de présentation) — défaut 16:9 (V6). */
   aspect?: number;
 }) {
+  const t = useT();
   return (
     <div className={VIEWER_ZONE} data-viewer-zone>
       {/* Viewer plein espace + guide letterbox du cadre de livraison (Phase 25) ; l'overlay
@@ -78,7 +80,7 @@ export default function SplatPane({
               </div>
             </>
           ) : (
-            <span className="text-sm text-muted-foreground">Chargement du splat…</span>
+            <span className="text-sm text-muted-foreground">{t('review.splat.loading')}</span>
           )}
         </div>
       ) : null}

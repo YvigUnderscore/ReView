@@ -14,23 +14,27 @@ import InfoPanel, { type InfoRow } from './InfoPanel';
 import ExportPanel from './ExportPanel';
 import type { MediaResp } from '../reviewTypes';
 import type { CompareMode } from '../useCompareState';
+import { useT, type MessageKey } from '../../../i18n';
 
-const COMPARE_MODES = [
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
+
+const compare_modes = (t: Tr) => [
   { value: 'wipe' as const, label: 'Wipe' },
-  { value: 'diff' as const, label: 'Diff.' },
-  { value: 'side' as const, label: 'Côte à côte' },
+  { value: 'diff' as const, label: t('review.compare.diff') },
+  { value: 'side' as const, label: t('review.compare.sideBySide') },
 ];
 
 /** Fiche technique du média, telle que l'API la renseigne. */
-function sheetRows(data: MediaResp, kind: MediaKind, fps: number): InfoRow[] {
-  const rows: InfoRow[] = [{ label: 'Fichier', value: data.media.originalName }];
+function sheetRows(t: Tr, data: MediaResp, kind: MediaKind, fps: number): InfoRow[] {
+  const rows: InfoRow[] = [{ label: t('review.file'), value: data.media.originalName }];
   if (kind === 'VIDEO') {
-    rows.push({ label: 'Cadence', value: `${fps} fps` });
-    rows.push({ label: 'Première frame', value: String(data.startFrame) });
-    if (data.hls) rows.push({ label: 'Diffusion', value: 'HLS adaptatif' });
+    rows.push({ label: t('pipeline.fps'), value: `${fps} fps` });
+    rows.push({ label: t('review.firstFrame'), value: String(data.startFrame) });
+    if (data.hls) rows.push({ label: t('review.delivery'), value: 'HLS' });
     if (data.trim)
       rows.push({
-        label: 'Découpe',
+        label: t('review.trim'),
         value: `${data.trim.inFrame} → ${data.trim.outFrame}`,
       });
   }
@@ -68,10 +72,11 @@ export default function MediaPanels({
   onExportFrame?: () => void;
   onContactSheet?: () => void;
 }) {
+  const t = useT();
   if (panel === 'playback' || panel === 'view')
     return (
       <Group title={kind === 'VIDEO' ? 'Lecture' : 'Affichage'}>
-        <Row label="Cadence" hint="Cadence de lecture — la timeline reste en frames">
+        <Row label="Cadence" hint={t('review.playbackRate')}>
           <span className="font-mono text-xs">{fps} fps</span>
         </Row>
         <span className="rv-optbar__hint whitespace-normal">
@@ -84,7 +89,7 @@ export default function MediaPanels({
 
   if (panel === 'image')
     return (
-      <Group title="Gestion de couleur">
+      <Group title={t('viewer.color.title')}>
         <Row label="Display">
           <Badge variant="secondary">{data.projectColor?.display ?? 'sRGB'}</Badge>
         </Row>
@@ -112,7 +117,7 @@ export default function MediaPanels({
                 {compare.ids.length} média{compare.ids.length > 1 ? 's' : ''}
               </Badge>
             ) : (
-              <Badge variant="muted">aucun</Badge>
+              <Badge variant="muted">{t('review.none')}</Badge>
             )}
           </Row>
           <span className="rv-optbar__hint whitespace-normal">
@@ -122,20 +127,20 @@ export default function MediaPanels({
         {compare.ids.length > 0 && (
           <Group title="Mode">
             <SegmentedControl
-              label="Mode de comparaison"
-              items={COMPARE_MODES}
+              label={t('review.compare.mode')}
+              items={compare_modes(t)}
               value={compare.mode}
               onChange={compare.onMode}
             />
-            <Row label="Comparaison active">
-              <Switch checked onCheckedChange={() => compare.onClear()} label="Fermer la comparaison" />
+            <Row label={t('review.compare.mode')}>
+              <Switch checked onCheckedChange={() => compare.onClear()} label={t('review.compare.close')} />
             </Row>
           </Group>
         )}
       </>
     );
 
-  if (panel === 'info') return <InfoPanel sheet={sheetRows(data, kind, fps)} />;
+  if (panel === 'info') return <InfoPanel sheet={sheetRows(t, data, kind, fps)} />;
 
   if (panel === 'export')
     return (

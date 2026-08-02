@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { fileToImageDataUrl, imageFilesFromClipboard } from '../../lib/useImagePaste';
 import type { Annotations } from './useAnnotations';
 import type { MediaResp, ReviewReferenceItem } from './reviewTypes';
+import { useT } from '../../i18n';
 
 const MAX_REFS = 12;
 
@@ -36,6 +37,7 @@ export default function ReviewCanvasRefs({
   canManage: boolean;
   ann: Annotations;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const rootRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{
@@ -98,7 +100,7 @@ export default function ReviewCanvasRefs({
             <button
               type="button"
               onClick={() => void removePersisted(r.id)}
-              title="Retirer la référence"
+              title={t('review.ref.remove')}
               className="pointer-events-auto absolute right-1 top-1 rounded bg-black/60 p-1 text-white hover:bg-black/80"
             >
               <Trash2 size={12} />
@@ -126,7 +128,7 @@ export default function ReviewCanvasRefs({
           <button
             type="button"
             onClick={() => ann.removeStagedRef(r.key)}
-            title="Retirer la référence"
+            title={t('review.ref.remove')}
             className="absolute right-1 top-1 rounded bg-black/60 p-1 text-white hover:bg-black/80"
           >
             <Trash2 size={12} />
@@ -150,6 +152,7 @@ export default function ReviewCanvasRefs({
  * destinés aux champs de saisie (le composer gère ses propres pièces jointes).
  */
 export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations; annotating: boolean }) {
+  const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const stage = async (file: File) => {
@@ -159,7 +162,7 @@ export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations
     }
     try {
       ann.addStagedRef(await fileToImageDataUrl(file));
-      toast.success('Image de référence jointe au prochain commentaire');
+      toast.success(t('review.ref.attached'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Lecture du fichier impossible');
     }
@@ -184,7 +187,7 @@ export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        title="Joindre une image de référence au prochain commentaire (ou coller avec Ctrl+V)"
+        title={t('review.ref.attach')}
         className={`pointer-events-auto absolute left-2 top-2 z-10 flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
           annotating || ann.stagedRefs.length > 0
             ? 'border-primary/50 bg-card/90 text-primary'

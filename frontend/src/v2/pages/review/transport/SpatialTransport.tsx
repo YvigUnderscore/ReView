@@ -20,6 +20,7 @@ import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import type { CameraAnimState } from '../camera/useCameraAnim';
+import { useT } from '../../../i18n';
 
 /**
  * Ligne du bas des viewers spatiaux : le temps. Reprend `AnimToolbar` (qui flottait avec le
@@ -44,6 +45,7 @@ export default function SpatialTransport({
   drawerOpen: boolean;
   onDrawer: () => void;
 }) {
+  const t = useT();
   // `keyTimes` fusionne déjà les clés de tous les canaux, triées.
   const times = anim.keyTimes;
   const span = Math.max(anim.playDuration, times[times.length - 1] ?? 0, 1);
@@ -69,20 +71,20 @@ export default function SpatialTransport({
       />
       <IconButton
         icon={ChevronLeft}
-        label="Clé précédente (←)"
+        label={t('review.key.prev')}
         disabled={!times.length}
         onClick={() => goToKey(-1)}
       />
       <IconButton
         icon={ChevronRight}
-        label="Clé suivante (→)"
+        label={t('review.key.next')}
         disabled={!times.length}
         onClick={() => goToKey(1)}
       />
       {editable && (
         <IconButton
           icon={Diamond}
-          label="Poser une clé depuis la vue courante (K)"
+          label={t('review.key.set')}
           bordered
           onClick={() => anim.insertKeyAtView()}
         />
@@ -122,8 +124,8 @@ export default function SpatialTransport({
       {editable && (
         <>
           <NumberField
-            label="Durée"
-            hint="Durée de lecture (s) — 0 = automatique (dernière clé)"
+            label={t('viewer.duration')}
+            hint={t('review.duration.hint')}
             value={Number((anim.playDuration / 1000).toFixed(2))}
             onChange={(s) => anim.setDuration(s > 0 ? Math.round(s * 1000) : undefined)}
             min={0}
@@ -133,7 +135,7 @@ export default function SpatialTransport({
           />
           <IconButton
             icon={KeyRound}
-            label="Auto-clé : tout geste caméra pose une clé au temps de lecture"
+            label={t('review.autoKey')}
             bordered
             active={anim.autoKey}
             onClick={() => anim.setAutoKey(!anim.autoKey)}
@@ -150,25 +152,20 @@ export default function SpatialTransport({
       {editable && (
         <>
           <IconButton icon={Undo2} label="Annuler" onClick={anim.undo} disabled={!anim.canUndo} />
-          <IconButton icon={Redo2} label="Rétablir" onClick={anim.redo} disabled={!anim.canRedo} />
+          <IconButton icon={Redo2} label={t('common.redo')} onClick={anim.redo} disabled={!anim.canRedo} />
         </>
       )}
       {onAttach && anim.hasAnimation && (
         <IconButton
           icon={MessageSquarePlus}
-          label="Joindre cette animation au prochain commentaire"
+          label={t('review.attachAnimation')}
           bordered
           onClick={onAttach}
         />
       )}
 
       <span className="rv-rule" />
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={onDrawer}
-        title="Éditeur de courbes — canaux X/Y/Z, focale, tilt"
-      >
+      <Button size="sm" variant="ghost" onClick={onDrawer} title={t('review.curveEditor')}>
         {drawerOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
         Courbes
       </Button>

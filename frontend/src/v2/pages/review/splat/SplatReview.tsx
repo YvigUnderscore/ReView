@@ -35,6 +35,7 @@ import CurvesDrawer from '../transport/CurvesDrawer';
 import SplatPanels from './SplatPanels';
 import { SPLAT_HIDDEN_TOOLS, useSplatChrome } from './useSplatChrome';
 import SplatPane from './SplatPane';
+import { useT } from '../../../i18n';
 
 /**
  * Bloc splat de la review, monté dans le chrome unifié : rail d'outils à gauche, options de
@@ -72,6 +73,7 @@ export default function SplatReview({
   /** Annotations (mode layout : joindre/rejouer une animation caméra dans les commentaires). */
   ann: Annotations;
 }) {
+  const t = useT();
   const saved = data.splatEdits;
   const editor = useSplatEditor(
     splat,
@@ -130,24 +132,24 @@ export default function SplatReview({
   const attachLayout = useCallback(() => {
     if (!pres.anim.hasAnimation) return;
     ann.setCameraAnim(pres.anim.anim);
-    toast.success('Animation caméra jointe au prochain commentaire');
-  }, [pres.anim, ann]);
+    toast.success(t('review.camera.attached'));
+  }, [pres.anim, ann, t]);
 
   const importLayout = useCallback(
     (file: File) => {
       void importCameraFile(file)
         .then((animData) => {
           if (!animData) {
-            toast.error('Aucune animation caméra dans ce fichier');
+            toast.error(t('review.camera.none'));
             return;
           }
           pres.anim.setAnim(animData);
           pres.anim.play();
-          toast.success('Animation caméra importée');
+          toast.success(t('review.camera.imported'));
         })
-        .catch(() => toast.error('Import caméra impossible'));
+        .catch(() => toast.error(t('review.camera.importFailed')));
     },
-    [pres.anim],
+    [pres.anim, t],
   );
 
   // Lecture seule : applique la transformation et le flip d'orientation enregistrés
@@ -295,7 +297,7 @@ export default function SplatReview({
         pip={
           pres.layout.layoutMode && ready ? (
             <PipFrame
-              label="Caméra layout"
+              label={t('review.layoutCamera')}
               aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
               onRect={splat.setPipRect}
             />

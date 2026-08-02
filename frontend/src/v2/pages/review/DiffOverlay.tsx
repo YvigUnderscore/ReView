@@ -9,6 +9,7 @@ import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
 import { HEATMAP_CSS_FILTER, nextGain, useDiffDraw } from './diffRender';
+import { useT } from '../../i18n';
 
 /**
  * LUT fausses couleurs (noir → bleu → vert → jaune → rouge) : luminance du diff passée
@@ -57,11 +58,12 @@ function DiffHud({
   onWipe: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <div className="absolute right-2 top-2 z-40 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 backdrop-blur">
       <button
         onClick={onGain}
-        title="Amplification de la différence — cliquer pour changer de gain"
+        title={t('review.compare.diffGain')}
         className="rounded px-1.5 py-0.5 font-mono text-xs text-primary hover:bg-secondary"
       >
         ×{gain}
@@ -76,10 +78,14 @@ function DiffHud({
       <button onClick={onWipe} title="Basculer en mode wipe" className="rounded p-1 hover:bg-secondary">
         <SplitSquareHorizontal size={14} />
       </button>
-      <button onClick={onSide} title="Vue côte à côte" className="rounded p-1 hover:bg-secondary">
+      <button
+        onClick={onSide}
+        title={t('review.compare.sideBySide')}
+        className="rounded p-1 hover:bg-secondary"
+      >
         <Columns2 size={14} />
       </button>
-      <button onClick={onClose} title="Fermer la comparaison" className="rounded p-1 hover:bg-secondary">
+      <button onClick={onClose} title={t('review.compare.close')} className="rounded p-1 hover:bg-secondary">
         <X size={14} />
       </button>
     </div>

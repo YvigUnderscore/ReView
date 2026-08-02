@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Camera, FileArchive, FileDown, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Group } from '../chrome/DockGroup';
+import { useT } from '../../../i18n';
 
 /**
  * Panneau Export du dock : le média d'abord (avec ou sans les éditions cuites), la mise en
@@ -24,9 +25,10 @@ export default function ExportPanel({
   /** Exports de mise en scène (animation caméra, capture de vue). */
   staging?: ReactNode;
 }) {
+  const t = useT();
   return (
     <>
-      <Group title="Média">
+      <Group title={t('review.export.media')}>
         {cleaned && (
           <Button
             size="sm"
@@ -45,14 +47,14 @@ export default function ExportPanel({
             download={originalName}
             target="_blank"
             rel="noopener noreferrer"
-            title="Télécharger le fichier original, sans édition"
+            title={t('review.export.original')}
           >
             <FileDown size={13} />
             Fichier original, sans édition
           </a>
         </Button>
       </Group>
-      {staging && <Group title="Mise en scène">{staging}</Group>}
+      {staging && <Group title={t('review.export.staging')}>{staging}</Group>}
       <span className="rv-optbar__hint whitespace-normal">
         Les exports reprennent les éditions enregistrées, pas la sélection en cours.
       </span>
@@ -62,10 +64,11 @@ export default function ExportPanel({
 
 /** Bouton de capture de la vue courante — partagé par les panneaux Export spatiaux. */
 export function CaptureViewButton({ onCapture }: { onCapture: () => void }) {
+  const t = useT();
   return (
-    <Button size="sm" variant="ghost" onClick={onCapture} title="Capturer la vue courante en PNG">
+    <Button size="sm" variant="ghost" onClick={onCapture} title={t('review.export.capture')}>
       <Camera size={13} />
-      Capture de la vue (PNG)
+      {t('review.export.captureShort')}
     </Button>
   );
 }

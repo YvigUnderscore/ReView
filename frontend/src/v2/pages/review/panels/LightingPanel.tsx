@@ -106,7 +106,7 @@ export default function LightingPanel({
             className="flex-1"
             disabled={busy}
             onClick={() => void save()}
-            title="Enregistrer l’éclairage par défaut — rejoué pour tous à l’ouverture"
+            title={t('review.lighting.saveDefault')}
           >
             <Save size={13} />
             Éclairage par défaut du projet

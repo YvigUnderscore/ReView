@@ -105,10 +105,7 @@ export default function CameraPanel({
           <span className="font-mono text-xs">{aspectLabel}</span>
         </Row>
         {layout && (
-          <Row
-            label={t('viewer.pip')}
-            hint="Sortir de la caméra et voir son point de vue dans une fenêtre flottante"
-          >
+          <Row label={t('viewer.pip')} hint={t('review.camera.exitToPip')}>
             <Switch checked={layout.active} onCheckedChange={layout.onToggle} label={t('viewer.pip.hint')} />
           </Row>
         )}

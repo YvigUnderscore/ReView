@@ -12,6 +12,7 @@ import { panelsFor, type PanelId } from './panels';
 import { toolsFor, viewActionsFor, type ToolId, type ViewAction } from './tools';
 import type { ChromeState } from './chromeState';
 import './chrome.css';
+import { useT } from '../../../i18n';
 
 /**
  * Conteneur du chrome de review : les cinq emplacements fixes, identiques pour les quatre
@@ -69,6 +70,7 @@ export default function ReviewChrome({
   /** Le viewport, plein espace. */
   children: ReactNode;
 }) {
+  const t = useT();
   // La bascule ne liste pas « Annoter » : l'annotation s'arme depuis l'espace commentaire.
   // Le mode reste valide — pendant l'annotation, aucun segment n'est actif et c'est le bouton
   // du composer qui joue l'indicateur ; le pied de page garde le bon rappel.
@@ -94,7 +96,7 @@ export default function ReviewChrome({
           <span className="mx-auto flex items-center gap-2">
             <SegmentedControl
               size="lg"
-              label="Mode de review"
+              label={t('review.mode')}
               items={modes.map((m) => ({
                 value: m.value,
                 label: m.label,

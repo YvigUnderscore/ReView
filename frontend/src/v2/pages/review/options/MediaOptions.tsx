@@ -13,16 +13,20 @@ import type { ModeId } from '../chrome/modes';
 import type { ReviewTool } from '../chrome/tools';
 import type { CompareMode } from '../useCompareState';
 import type { Annotations } from '../useAnnotations';
+import { useT, type MessageKey } from '../../../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 
 const DRAWING = new Set(['draw', 'rect', 'ellipse', 'arrow', 'polygon', 'text']);
 
 /** Encres proposées d'emblée — cinq teintes distinctes de la palette utilisateur. */
 const INK = [USER_COLORS[6], USER_COLORS[11], USER_COLORS[2], USER_COLORS[4], USER_COLORS[8]];
 
-const COMPARE_MODES = [
+const compare_modes = (t: Tr) => [
   { value: 'wipe' as const, label: 'Wipe' },
-  { value: 'diff' as const, label: 'Différence' },
-  { value: 'side' as const, label: 'Côte à côte' },
+  { value: 'diff' as const, label: t('review.compare.diff') },
+  { value: 'side' as const, label: t('review.compare.sideBySide') },
 ];
 
 /**
@@ -60,6 +64,7 @@ export default function MediaOptions({
     label: string;
   };
 }) {
+  const t = useT();
   const id = tool.id;
   const drawing = DRAWING.has(id);
 
@@ -69,7 +74,7 @@ export default function MediaOptions({
         dirty={trim.dirty}
         saving={trim.busy}
         label="Enregistrer"
-        hint="Découpe non enregistrée"
+        hint={t('review.trim.unsaved')}
         onSave={trim.onApply}
       />
     ) : undefined;
@@ -110,7 +115,7 @@ export default function MediaOptions({
                 />
               </span>
               <NumberField
-                label="Épaisseur"
+                label={t('review.thickness')}
                 value={ann.penWidth}
                 onChange={ann.setPenWidth}
                 min={1}
@@ -119,7 +124,7 @@ export default function MediaOptions({
                 unit="px"
               />
               <NumberField
-                label="Opacité"
+                label={t('review.opacity')}
                 value={Math.round(ann.alpha * 100)}
                 onChange={(v) => ann.setAlpha(v / 100)}
                 min={10}
@@ -137,12 +142,18 @@ export default function MediaOptions({
           <span className="rv-rule" />
           <IconButton
             icon={Undo2}
-            label="Annuler le dernier tracé"
+            label={t('review.undoStroke')}
             bordered
             onClick={ann.undo}
             disabled={!ann.canUndo}
           />
-          <IconButton icon={Redo2} label="Rétablir" bordered onClick={ann.redo} disabled={!ann.canRedo} />
+          <IconButton
+            icon={Redo2}
+            label={t('common.redo')}
+            bordered
+            onClick={ann.redo}
+            disabled={!ann.canRedo}
+          />
           <IconButton
             icon={Eraser}
             label="Tout effacer"
@@ -162,8 +173,8 @@ export default function MediaOptions({
         <>
           {compare.hasB ? (
             <SegmentedControl
-              label="Mode de comparaison"
-              items={COMPARE_MODES}
+              label={t('review.compare.mode')}
+              items={compare_modes(t)}
               value={compare.mode}
               onChange={compare.onMode}
             />
@@ -189,7 +200,7 @@ export default function MediaOptions({
           </Button>
           <IconButton
             icon={X}
-            label="Effacer le découpage"
+            label={t('review.clearTrim')}
             bordered
             onClick={trim.onClear}
             disabled={trim.inFrame == null && trim.outFrame == null}
@@ -203,7 +214,7 @@ export default function MediaOptions({
             Poser les bornes de boucle sur la timeline : le commentaire couvrira toute la plage.
           </span>
           <span className="rv-rule" />
-          <Badge variant="secondary">Plage jointe au prochain commentaire</Badge>
+          <Badge variant="secondary">{t('review.rangeAttached')}</Badge>
         </>
       )}
     </OptionsBar>

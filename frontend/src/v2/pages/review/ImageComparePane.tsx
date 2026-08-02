@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
+import { useT } from '../../i18n';
 
 /**
  * Pane B de la comparaison A/B **image** : visionneuse zoom/pan sans annotation, dont la
@@ -30,6 +31,7 @@ export default function ImageComparePane({
   viewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onViewChange?: ComponentProps<typeof ImageReviewViewer>['onViewChange'];
 }) {
+  const t = useT();
   // staleTime Infinity : même règle que la review — URLs présignées, pas de refetch.
   const mediaQ = useQuery({
     queryKey: qk.media(compareId),
@@ -47,7 +49,7 @@ export default function ImageComparePane({
         <div className="flex items-center gap-1">
           <button
             onClick={onWipe}
-            title="Basculer en mode wipe (superposition à barre)"
+            title={t('review.compare.toWipe')}
             className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
           >
             <SplitSquareHorizontal size={13} /> Wipe
@@ -55,7 +57,7 @@ export default function ImageComparePane({
           {onDiff && (
             <button
               onClick={onDiff}
-              title="Basculer en mode différence (|A − B| amplifiée)"
+              title={t('review.compare.toDiff')}
               className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
             >
               <Diff size={13} /> Diff
@@ -63,7 +65,7 @@ export default function ImageComparePane({
           )}
           <button
             onClick={onClose}
-            title="Fermer la comparaison"
+            title={t('review.compare.close')}
             className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             <X size={14} />

@@ -41,6 +41,7 @@ import { useUsdScene } from './three/useUsdScene';
 import { normalizeOverride } from './three/sceneOverride';
 import { useUsdPicking } from './three/useUsdPicking';
 import { DEFAULT_REVIEW_ASPECT } from './frameRect';
+import { useT } from '../../i18n';
 
 /**
  * Bloc modèle 3D de la review, monté dans le chrome unifié — mêmes cinq emplacements que le
@@ -72,6 +73,7 @@ export default function Model3DReview({
   onSaved: (patch: SplatEditsPatch) => void;
   overlay: ReactNode;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   // Scène Three réellement construite (modèle chargé, runtime posé). À ne pas confondre avec
   // « le média est affichable » : les hooks qui lisent la scène de façon impérative n'ont rien
@@ -209,7 +211,7 @@ export default function Model3DReview({
                   api
                     .put(`/api/media/${data.media.id}/usd/override`, { override: scene.merged })
                     .then(() => {
-                      toast.success('Mise en scène enregistrée pour tous');
+                      toast.success(t('review.staging.saved'));
                       void qc.invalidateQueries({ queryKey: qk.media(data.media.id) });
                       scene.revert();
                     })
@@ -255,7 +257,7 @@ export default function Model3DReview({
               pip={
                 model3d.layoutMode ? (
                   <PipFrame
-                    label="Caméra layout"
+                    label={t('review.layoutCamera')}
                     aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
                     onRect={model3d.setPipRect}
                   />
@@ -269,7 +271,7 @@ export default function Model3DReview({
                 hasCommentScene ? (
                   <button
                     onClick={() => setViewedSceneOverride(null)}
-                    title="Revenir à la scène par défaut (Échap)"
+                    title={t('review.resetScene')}
                     className="absolute top-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground shadow-lg ring-2 ring-primary/30 hover:opacity-90"
                   >
                     <Undo2 size={12} /> Scène du commentaire · revenir

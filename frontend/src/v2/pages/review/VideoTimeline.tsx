@@ -16,6 +16,7 @@ import { spriteIndexAt, spriteSlotCss, type TimelineSpriteMeta } from './timelin
 import { RangeSegments } from './RangeAnnotations';
 import { MarkerDialog, MarkerTicks } from './TimelineMarkers';
 import type { TimelineMarkersApi } from './useTimelineMarkers';
+import { useT } from '../../i18n';
 
 /** Timeline vidéo : scrub à la souris + miniature de survol (la vignette du sprite sous
  * le curseur, façon YouTube) + marqueurs de commentaires avec avatar de l'auteur +
@@ -51,6 +52,7 @@ export default function VideoTimeline({
   fps?: number;
   startFrame?: number;
 }) {
+  const t = useT();
   const barRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
   const [barWidth, setBarWidth] = useState(0);
@@ -149,7 +151,7 @@ export default function VideoTimeline({
         if (!scrubbing.current) setHoverX(null);
       }}
       onContextMenu={markersApi ? onBarContextMenu : undefined}
-      title="Cliquer ou glisser pour se déplacer"
+      title={t('review.timeline.scrub')}
     >
       {/* Miniature de survol : la vignette à l'instant pointé, suivant le curseur */}
       {thumb && (

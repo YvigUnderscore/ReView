@@ -9,6 +9,7 @@ import type { PrimNode } from '../three/usdScenegraph';
 import { isHidden, isHiddenByAncestor } from '../three/sceneOverride';
 import type { UsdSceneState } from '../three/useUsdScene';
 import PrimMenuItems from './PrimMenuItems';
+import { useT } from '../../../i18n';
 
 /**
  * Scenegraph USD du dock (Phase 46, 46.C/46.E) : l'arbre réel de la scène, sélection
@@ -139,6 +140,7 @@ export default function ScenegraphPanel({
   onSave?: () => void;
   saving?: boolean;
 }) {
+  const t = useT();
   // Les deux premiers niveaux ouverts : assez pour situer la scène sans noyer l'utilisateur.
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(scene.tree.flatMap((n) => [n.path, ...n.children.map((c) => c.path)])),
@@ -152,7 +154,7 @@ export default function ScenegraphPanel({
     });
 
   if (scene.tree.length === 0)
-    return <p className="p-2 text-xs text-muted-foreground">Aucun scenegraph USD pour ce média.</p>;
+    return <p className="p-2 text-xs text-muted-foreground">{t('review.scenegraph.empty')}</p>;
 
   return (
     <div className="flex max-h-[50vh] flex-col">
@@ -171,7 +173,7 @@ export default function ScenegraphPanel({
         ))}
       </div>
       {usd?.primsTruncated && (
-        <p className="px-2 py-1 text-[10px] text-muted-foreground">Arbre tronqué (scène volumineuse).</p>
+        <p className="px-2 py-1 text-[10px] text-muted-foreground">{t('review.scenegraph.truncated')}</p>
       )}
       {scene.dirty && (
         <div className="flex items-center gap-3 border-t border-border px-2 py-1">
@@ -195,7 +197,7 @@ export default function ScenegraphPanel({
           ) : (
             // Après publication, la mise en scène commune est figée : les modifications ne
             // partent plus que dans un commentaire.
-            <span className="text-[11px] text-muted-foreground">Joint au prochain commentaire</span>
+            <span className="text-[11px] text-muted-foreground">{t('review.attachedToComment')}</span>
           )}
         </div>
       )}

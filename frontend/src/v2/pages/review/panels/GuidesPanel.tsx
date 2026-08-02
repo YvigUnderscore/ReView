@@ -4,12 +4,16 @@
 import { Switch } from '../../../components/ui/switch';
 import { useGuides, type GuideKey } from '../../../stores/useGuides';
 import { Group, Row } from '../chrome/DockGroup';
+import { useT, type MessageKey } from '../../../i18n';
 
-const GUIDES: { key: GuideKey; label: string; hint: string }[] = [
-  { key: 'thirds', label: 'Tiers', hint: 'Règle des tiers' },
-  { key: 'center', label: 'Croix centrale', hint: 'Croix centrale' },
-  { key: 'actionSafe', label: 'Action safe (90 %)', hint: 'Zone d’action sûre' },
-  { key: 'titleSafe', label: 'Title safe (80 %)', hint: 'Zone de titres sûre' },
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
+
+const guideRows = (t: Tr): { key: GuideKey; label: string; hint: string }[] => [
+  { key: 'thirds', label: t('review.guides.thirds'), hint: t('review.thirds') },
+  { key: 'center', label: t('review.guides.center'), hint: t('review.guides.center') },
+  { key: 'actionSafe', label: 'Action safe (90 %)', hint: t('review.guides.actionSafe.hint') },
+  { key: 'titleSafe', label: 'Title safe (80 %)', hint: t('review.guides.titleSafe.hint') },
 ];
 
 /**
@@ -18,20 +22,19 @@ const GUIDES: { key: GuideKey; label: string; hint: string }[] = [
  * viewer — le menu contextuel est un doublon d'accès assumé, pas un emplacement concurrent.
  */
 export default function GuidesPanel() {
+  const t = useT();
   const guides = useGuides((s) => s.guides);
   const toggle = useGuides((s) => s.toggle);
   return (
     <>
-      <Group title="Composition">
-        {GUIDES.map((g) => (
+      <Group title={t('review.guides.group')}>
+        {guideRows(t).map((g) => (
           <Row key={g.key} label={g.label} hint={g.hint}>
             <Switch checked={guides[g.key]} onCheckedChange={() => toggle(g.key)} label={g.hint} />
           </Row>
         ))}
       </Group>
-      <span className="rv-optbar__hint whitespace-normal">
-        Préférence locale, aussi accessible au clic droit dans le viewer.
-      </span>
+      <span className="rv-optbar__hint whitespace-normal">{t('review.guides.localHint')}</span>
     </>
   );
 }

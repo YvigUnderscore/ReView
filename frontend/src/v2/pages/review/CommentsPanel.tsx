@@ -15,13 +15,17 @@ import { useMentions } from '../../components/comments/useMentions';
 import MentionMenu from '../../components/comments/MentionMenu';
 import VoiceRecorderButton from '../../components/comments/VoiceRecorderButton';
 import { clearDraft, loadDraft, saveDraft } from './commentDraft';
+import { useT, type MessageKey } from '../../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 
 /** Filtre de résolution du fil (32.A). */
 type ResolutionFilter = 'all' | 'open' | 'resolved';
-const FILTERS: { value: ResolutionFilter; label: string }[] = [
-  { value: 'all', label: 'Tous' },
+const filters = (t: Tr): { value: ResolutionFilter; label: string }[] => [
+  { value: 'all', label: t('comments.filter.all') },
   { value: 'open', label: 'Ouverts' },
-  { value: 'resolved', label: 'Résolus' },
+  { value: 'resolved', label: t('comments.filter.resolved') },
 ];
 
 /**
@@ -75,6 +79,7 @@ export default function CommentsPanel({
   onToggleAnnotate?: () => void;
   /** Barre d'outils d'annotation, affichée sous le composer quand le mode est actif. */
 }) {
+  const t = useT();
   // Brouillon local (32.C) : le texte en cours survit à un rechargement/navigation.
   const [content, setContent] = useState(() => loadDraft(mediaObjectId)?.content ?? '');
   const [filter, setFilter] = useState<ResolutionFilter>('all');
@@ -141,7 +146,7 @@ export default function CommentsPanel({
         </span>
         {/* Filtre ouverts/résolus (32.A) */}
         <div className="flex rounded-md border border-border p-0.5">
-          {FILTERS.map((f) => (
+          {filters(t).map((f) => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
@@ -220,7 +225,7 @@ export default function CommentsPanel({
             autoGrow
             minRows={2}
             maxRows={10}
-            placeholder="Ajouter un commentaire… (Ctrl+Entrée pour envoyer, @ pour mentionner)"
+            placeholder={t('comments.placeholder')}
             value={content}
             onChange={(e) => {
               setContent(e.target.value);
@@ -247,7 +252,7 @@ export default function CommentsPanel({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              title="Joindre une image"
+              title={t('comments.attachImage')}
               className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <ImagePlus size={16} />
@@ -258,7 +263,7 @@ export default function CommentsPanel({
               <button
                 type="button"
                 onClick={onToggleAnnotate}
-                title="Annoter le média"
+                title={t('comments.annotate')}
                 className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs ${
                   annotating
                     ? 'bg-primary/20 text-primary'

@@ -3,6 +3,7 @@
 
 import { Box, Video } from 'lucide-react';
 import { SegmentedControl } from '../../../components/ui/segmented-control';
+import { useT } from '../../../i18n';
 
 export type TrackId = 'camera' | 'clip';
 
@@ -19,6 +20,7 @@ export default function TrackSwitch({
   onTrack: (track: TrackId) => void;
   hasClips: boolean;
 }) {
+  const t = useT();
   return (
     <>
       <SegmentedControl
@@ -26,13 +28,13 @@ export default function TrackSwitch({
         items={[
           {
             value: 'camera' as const,
-            label: 'Caméra',
+            label: t('review.track.camera'),
             icon: Video,
             hint: 'Animation caméra de la mise en scène',
           },
           {
             value: 'clip' as const,
-            label: 'Modèle',
+            label: t('review.track.model'),
             icon: Box,
             hint: hasClips ? 'Clips d’animation du fichier' : 'Ce fichier ne porte aucune animation',
             disabled: !hasClips,

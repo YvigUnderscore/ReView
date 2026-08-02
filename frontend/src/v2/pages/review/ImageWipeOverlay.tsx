@@ -8,6 +8,7 @@ import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useWipe, type WipeShared } from './useWipe';
 import WipeControl from './WipeControl';
+import { useT } from '../../i18n';
 
 /**
  * Comparaison A/B **image** en mode wipe : les deux images sont superposées en
@@ -33,6 +34,7 @@ export default function ImageWipeOverlay({
   /** Position/angle hissés (répliqués en session live). */
   sharedWipe?: WipeShared;
 }) {
+  const t = useT();
   const wipe = useWipe(sharedWipe);
   const mediaQ = useQuery({
     queryKey: qk.media(compareId),
@@ -61,19 +63,27 @@ export default function ImageWipeOverlay({
         )}
         <WipeControl wipe={wipe} />
         <div className="absolute right-2 top-2 z-40 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 backdrop-blur">
-          <button onClick={onSide} title="Vue côte à côte" className="rounded p-1 hover:bg-secondary">
+          <button
+            onClick={onSide}
+            title={t('review.compare.sideBySide')}
+            className="rounded p-1 hover:bg-secondary"
+          >
             <Columns2 size={14} />
           </button>
           {onDiff && (
             <button
               onClick={onDiff}
-              title="Mode différence amplifiée"
+              title={t('review.compare.diffMode')}
               className="rounded p-1 hover:bg-secondary"
             >
               <Diff size={14} />
             </button>
           )}
-          <button onClick={onClose} title="Fermer la comparaison" className="rounded p-1 hover:bg-secondary">
+          <button
+            onClick={onClose}
+            title={t('review.compare.close')}
+            className="rounded p-1 hover:bg-secondary"
+          >
             <X size={14} />
           </button>
         </div>

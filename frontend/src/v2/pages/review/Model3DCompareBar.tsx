@@ -4,6 +4,7 @@
 import { Columns3 } from 'lucide-react';
 import { SegmentedControl } from '../../components/ui/segmented-control';
 import type { Model3DCompareState } from './three/useModel3DCompare';
+import { useT } from '../../i18n';
 
 const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…` : name);
 
@@ -13,6 +14,7 @@ const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…
  * porte plusieurs modèles, hors mode édition.
  */
 export default function Model3DCompareBar({ compare }: { compare: Model3DCompareState }) {
+  const t = useT();
   const items = [
     ...compare.models.map((m) => ({
       value: String(m.id),
@@ -22,7 +24,7 @@ export default function Model3DCompareBar({ compare }: { compare: Model3DCompare
     })),
     {
       value: 'all',
-      label: 'Voir tous',
+      label: t('review.compare.showAll'),
       icon: Columns3,
       hint: 'Afficher tous les modèles de la version côte à côte',
       disabled: compare.busy,
@@ -31,7 +33,7 @@ export default function Model3DCompareBar({ compare }: { compare: Model3DCompare
 
   return (
     <SegmentedControl
-      label="Modèle comparé"
+      label={t('review.compare.model')}
       items={items}
       value={compare.mode === 'all' ? 'all' : String(compare.activeId ?? '')}
       onChange={(v) => void (v === 'all' ? compare.viewAll() : compare.switchTo(Number(v)))}

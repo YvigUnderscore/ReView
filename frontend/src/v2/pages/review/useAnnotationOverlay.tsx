@@ -8,6 +8,7 @@ import { shapesOutsideFrame } from './frameRect';
 import type { useAnnotations } from './useAnnotations';
 import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatViewer } from './splat/useSplat';
+import { useT } from '../../i18n';
 
 /**
  * Overlay d'annotation 2D (extrait de ReviewViewer, budget 300) ; `captureAspect` (3D)
@@ -36,12 +37,13 @@ export function useHotspotDisplay(
 }
 
 export function useAnnotationOverlay(ann: ReturnType<typeof useAnnotations>) {
+  const t = useT();
   const warnedOutside = useRef(false);
   const onShapesChange = (s: Shape[]) => {
     ann.setShapes(s);
     if (!warnedOutside.current && shapesOutsideFrame(s)) {
       warnedOutside.current = true;
-      toast.info('Une annotation dépasse le cadre de livraison — elle restera visible mais hors cadre.');
+      toast.info(t('review.annotation.outOfFrame'));
     }
   };
   return (captureAspect?: number) =>

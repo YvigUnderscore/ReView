@@ -26,6 +26,7 @@ import CompareSelect from './CompareSelect';
 import LiveControl from './LiveControl';
 import { useReviewPresence } from './useReviewPresence';
 import type { LiveSession } from './useLiveSession';
+import { useT } from '../../i18n';
 
 /**
  * En-tête de la review : nom du média + badge brouillon, sélecteur de version
@@ -61,6 +62,7 @@ export default function ReviewHeader({
   onCompareChange: (mediaId: number | null) => void;
   live: LiveSession;
 }) {
+  const t = useT();
   const published = data.media.published;
   const viewers = useReviewPresence(data.media.id);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -132,7 +134,7 @@ export default function ReviewHeader({
         {data.media.kind === 'VIDEO' && onPictureInPicture && (
           <button
             onClick={onPictureInPicture}
-            title="Lecteur détachable (Picture-in-Picture)"
+            title={t('review.pip')}
             className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             <PictureInPicture2 size={16} />
@@ -140,7 +142,7 @@ export default function ReviewHeader({
         )}
         <button
           onClick={onToggleTheater}
-          title="Mode théâtre (immersif)"
+          title={t('review.theatre')}
           className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <MonitorPlay size={16} />

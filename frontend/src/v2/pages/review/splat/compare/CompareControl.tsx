@@ -4,6 +4,7 @@
 import { Columns3 } from 'lucide-react';
 import { SegmentedControl } from '../../../../components/ui/segmented-control';
 import type { SplatCompareState } from './useSplatCompare';
+import { useT } from '../../../../i18n';
 
 const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…` : name);
 
@@ -13,6 +14,7 @@ const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…
  * brute des nuages a rejoint le panneau Affichage, avec les autres réglages de rendu.
  */
 export default function CompareControl({ compare }: { compare: SplatCompareState }) {
+  const t = useT();
   const items = [
     ...compare.splats.map((m) => ({
       value: String(m.id),
@@ -22,7 +24,7 @@ export default function CompareControl({ compare }: { compare: SplatCompareState
     })),
     {
       value: 'all',
-      label: 'Voir tous',
+      label: t('review.compare.showAll'),
       icon: Columns3,
       hint: 'Afficher tous les splats de la version côte à côte',
       disabled: compare.busy,
@@ -31,7 +33,7 @@ export default function CompareControl({ compare }: { compare: SplatCompareState
 
   return (
     <SegmentedControl
-      label="Splat comparé"
+      label={t('review.compare.splat')}
       items={items}
       value={compare.mode === 'all' ? 'all' : String(compare.activeId ?? '')}
       onChange={(v) => void (v === 'all' ? compare.viewAll() : compare.switchTo(Number(v)))}

@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { clampPipRect, defaultPipRect, type PipRect } from './pipWindow';
+import { useT } from '../../../i18n';
 
 /**
  * Fenêtre flottante du PiP (mode layout, Phase 27) : cadre DOM **déplaçable** (drag sur le cadre)
@@ -21,6 +22,7 @@ export default function PipFrame({
   aspect: number;
   onRect: (rect: PipRect | null) => void;
 }) {
+  const t = useT();
   const frameRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<PipRect | null>(null);
   // Dernières props lues par les listeners (installés une seule fois).
@@ -106,7 +108,7 @@ export default function PipFrame({
     <div
       ref={frameRef}
       className="absolute cursor-move overflow-hidden rounded-md border border-primary/70 shadow-lg"
-      title="Vue de la caméra layout — glisser pour déplacer, poignée pour redimensionner"
+      title={t('review.pipFrame')}
     >
       <span className="pointer-events-none absolute right-1 top-1 rounded bg-primary/80 px-1 text-[10px] font-medium text-primary-foreground">
         {label}

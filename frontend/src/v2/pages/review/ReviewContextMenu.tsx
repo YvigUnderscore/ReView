@@ -45,6 +45,7 @@ import { buildContactSheet } from './contactSheet';
 import { frameLink } from './deepLink';
 import AddToPlaylistDialog from '../../components/AddToPlaylistDialog';
 import { useAuth } from '../../stores/useAuth';
+import { useT } from '../../i18n';
 
 /**
  * Menu clic droit des reviews **image & vidéo** (le clic droit des viewers 3D/splat sert
@@ -75,6 +76,7 @@ export default function ReviewContextMenu({
   /** Annotations visibles (commentaire sélectionné ou brouillon) — export « annotée » (№93). */
   annShapes?: Shape[];
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const kind = data.media.kind;
   const isVideo = kind === 'VIDEO';
@@ -82,7 +84,7 @@ export default function ReviewContextMenu({
   const guides = useGuides((s) => s.guides);
   const toggleGuide = useGuides((s) => s.toggle);
   const guideItems: Array<{ key: GuideKey; label: string }> = [
-    { key: 'thirds', label: 'Règle des tiers' },
+    { key: 'thirds', label: t('review.thirds') },
     { key: 'center', label: 'Croix centrale' },
     { key: 'actionSafe', label: 'Action safe (90 %)' },
     { key: 'titleSafe', label: 'Title safe (80 %)' },

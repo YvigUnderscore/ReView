@@ -11,6 +11,7 @@ import type { ReviewTool } from '../chrome/tools';
 import { DEFAULT_TRANSFORM } from '../reviewTypes';
 import type { Model3DThreeState } from '../three/useModel3DThree';
 import type { useEditHistory } from '../splat/editor/operations/history';
+import { useT } from '../../../i18n';
 
 const ROTATIONS = [
   { key: 'pitch', label: 'X°', hint: 'Rotation X (pitch)' },
@@ -43,6 +44,7 @@ export default function Model3DOptions({
   onPlaceHotspot: () => void;
   presentation?: { busy: boolean; onSave: () => void };
 }) {
+  const tr = useT();
   const t = m.transform;
   const transforming = tool.id === 'translate' || tool.id === 'rotate' || tool.id === 'scale';
 
@@ -51,7 +53,7 @@ export default function Model3DOptions({
       <CommitGroup
         dirty={dirty}
         label="Enregistrer"
-        hint="Transformation non enregistrée"
+        hint={tr('review.transform.unsaved')}
         onSave={m.saveTransform}
         onUndo={history.undo}
         onRedo={history.redo}
@@ -63,7 +65,7 @@ export default function Model3DOptions({
         dirty
         saving={presentation.busy}
         label="Publier"
-        hint="Mise en scène non publiée"
+        hint={tr('review.staging.unsaved')}
         onSave={presentation.onSave}
       />
     ) : undefined;
@@ -108,8 +110,8 @@ export default function Model3DOptions({
             />
           ))}
           <NumberField
-            label="Éch."
-            hint="Échelle uniforme"
+            label={tr('review.scale')}
+            hint={tr('review.uniformScale')}
             value={Number(t.scale.toFixed(2))}
             onChange={(scale) => m.updateTransform({ scale: Math.max(scale, 0.1) })}
             min={0.1}
@@ -120,7 +122,7 @@ export default function Model3DOptions({
           <span className="rv-rule" />
           <IconButton
             icon={RotateCcw}
-            label="Réinitialiser la transformation"
+            label={tr('review.resetTransform')}
             bordered
             onClick={() => m.updateTransform(DEFAULT_TRANSFORM)}
           />

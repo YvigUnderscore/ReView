@@ -18,6 +18,7 @@ import {
   DialogDescription,
 } from '../../components/ui/dialog';
 import { initialSelection, variantValue } from './usdDisplay';
+import { useT } from '../../i18n';
 
 /**
  * Recomposition d'une scène USD (Phase 45, 45.F) : rejouer la conversion avec une autre
@@ -44,6 +45,7 @@ export default function UsdRecomposeDialog({
   mediaId: number;
   usd: UsdModelInfo;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [purpose, setPurpose] = useState<UsdPurpose>(usd.selection.purpose);
@@ -57,7 +59,7 @@ export default function UsdRecomposeDialog({
     api
       .post(`/api/media/${mediaId}/usd/recompose`, { variants, purpose })
       .then(() => {
-        toast.success('Recomposition lancée — le média est en cours de traitement');
+        toast.success(t('review.usd.recomposeStarted'));
         void qc.invalidateQueries({ queryKey: qk.media(mediaId) });
         onOpenChange(false);
       })
@@ -69,7 +71,7 @@ export default function UsdRecomposeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Recomposer la scène USD</DialogTitle>
+          <DialogTitle>{t('review.usd.recompose')}</DialogTitle>
           <DialogDescription>
             La scène est reconvertie avec cette sélection. Le fichier USD d’origine n’est pas modifié.
           </DialogDescription>
@@ -92,7 +94,7 @@ export default function UsdRecomposeDialog({
           </label>
 
           {usd.variantSets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Cette scène n’expose aucun jeu de variantes.</p>
+            <p className="text-sm text-muted-foreground">{t('review.usd.noVariants')}</p>
           ) : (
             usd.variantSets.map((set) => (
               <label

@@ -17,6 +17,7 @@ import {
   ContextMenuTrigger,
 } from '../../components/ui/context-menu';
 import type { LiveSession } from './useLiveSession';
+import { useT } from '../../i18n';
 
 /**
  * Contrôle de la salle de review live (33.B) dans l'en-tête : rejoindre/quitter,
@@ -26,6 +27,7 @@ import type { LiveSession } from './useLiveSession';
  * sur un avatar, ou clic droit sur le chip « LIVE » (sous-menus — retours 33).
  */
 export default function LiveControl({ live, projectId }: { live: LiveSession; projectId: number }) {
+  const t = useT();
   const selfId = useAuth((s) => s.user?.id) ?? 0;
   const sessionsQ = useLiveSessionsQuery(projectId);
   const current = (sessionsQ.data ?? []).find((s) => s.key === live.key) ?? null;
@@ -62,7 +64,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
         <ContextMenuTrigger asChild>
           <button
             onClick={live.leave}
-            title="Quitter la session live (clic droit : gérer les rôles)"
+            title={t('review.live.leave')}
             className="flex items-center gap-1 rounded px-1 text-xs font-semibold text-primary"
           >
             <Radio size={14} className="animate-pulse" /> LIVE

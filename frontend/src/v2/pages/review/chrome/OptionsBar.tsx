@@ -6,6 +6,7 @@ import { Check, Redo2, Undo2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import type { ReviewTool } from './tools';
+import { useT } from '../../../i18n';
 
 /**
  * Barre d'options — une ligne sous l'en-tête, qui ne montre que les paramètres de l'outil
@@ -68,10 +69,15 @@ export function CommitGroup({
   canRedo?: boolean;
   saving?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="rv-optbar__commit">
-      {onUndo && <IconButton icon={Undo2} label="Annuler (Ctrl+Z)" onClick={onUndo} disabled={!canUndo} />}
-      {onRedo && <IconButton icon={Redo2} label="Rétablir (Ctrl+Y)" onClick={onRedo} disabled={!canRedo} />}
+      {onUndo && (
+        <IconButton icon={Undo2} label={t('review.undoShortcut')} onClick={onUndo} disabled={!canUndo} />
+      )}
+      {onRedo && (
+        <IconButton icon={Redo2} label={t('review.redoShortcut')} onClick={onRedo} disabled={!canRedo} />
+      )}
       <Button
         size="sm"
         disabled={!dirty || saving}

@@ -9,6 +9,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import type { VersionDetail, VersionListItem } from '../../types/api';
+import { useT } from '../../i18n';
 
 /**
  * Navigation de l'en-tête review (10.C2) : dropdown des versions de la tâche/asset
@@ -16,6 +17,7 @@ import type { VersionDetail, VersionListItem } from '../../types/api';
  * quitter l'écran. Autonome : résout la version du média puis la liste des versions.
  */
 export default function VersionNavigator({ versionId, mediaId }: { versionId: number; mediaId: number }) {
+  const t = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -72,7 +74,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
     <div className="flex shrink-0 items-center gap-2">
       <label
         className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
-        title="Changer de version"
+        title={t('review.changeVersion')}
       >
         <Layers size={13} />
         <select

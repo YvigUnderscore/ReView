@@ -7,6 +7,7 @@ import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import { Select } from '../../../components/ui/select';
 import type { Model3DThreeState } from '../three/useModel3DThree';
+import { useT } from '../../../i18n';
 
 const fmt = (ms: number) => (ms / 1000).toFixed(2);
 
@@ -16,6 +17,7 @@ const fmt = (ms: number) => (ms / 1000).toFixed(2);
  * clic pour se placer, tête de lecture, temps, vitesse, boucle.
  */
 export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState; trackSwitch?: ReactNode }) {
+  const t = useT();
   const duration = Math.max(m.durationMs, 1);
   const time = Math.min(m.timeMs, m.durationMs);
 
@@ -23,7 +25,7 @@ export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState
     <div className="rv-transport">
       {trackSwitch}
       {m.animations.length === 0 ? (
-        <span className="rv-optbar__hint">Ce fichier ne porte aucune animation.</span>
+        <span className="rv-optbar__hint">{t('review.clip.none')}</span>
       ) : (
         <>
           <IconButton
@@ -50,7 +52,7 @@ export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState
           </span>
           <NumberField
             label={<Gauge size={13} />}
-            hint="Vitesse de lecture de l’animation"
+            hint={t('review.clip.speed')}
             value={m.speed}
             onChange={m.setSpeed}
             min={0.1}
@@ -70,7 +72,7 @@ export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState
             <Select
               value={m.currentAnim ?? ''}
               onChange={(e) => m.selectAnim(e.target.value)}
-              title="Clip d’animation joué"
+              title={t('review.clip.playing')}
               className="px-1.5 py-1 text-xs"
             >
               {m.animations.map((a) => (

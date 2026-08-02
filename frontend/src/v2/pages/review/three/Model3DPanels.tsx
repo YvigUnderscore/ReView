@@ -25,6 +25,7 @@ import type { SectionPlaneState } from './useSectionPlane';
 import type { TurntableState } from './useTurntable';
 import type { UsdSceneState } from './useUsdScene';
 import type { CameraAnimState } from '../camera/useCameraAnim';
+import { useT } from '../../../i18n';
 
 const RAD = Math.PI / 180;
 const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR');
@@ -85,6 +86,7 @@ export default function Model3DPanels({
   onRecompose?: () => void;
   onImportAnim?: (file: File) => void;
 }) {
+  const t = useT();
   if (panel === 'camera') {
     const saved = data.splatPresentation?.bookmarks ?? [];
     return (
@@ -187,12 +189,12 @@ export default function Model3DPanels({
           { label: 'Meshes', value: fmt(s.meshes) },
           { label: 'Triangles', value: fmt(s.triangles) },
           { label: 'Sommets', value: fmt(s.vertices) },
-          { label: 'Matériaux', value: fmt(s.materials.length) },
+          { label: t('viewer.materials'), value: fmt(s.materials.length) },
         ]
       : [{ label: 'Mesure…', value: '—' }];
     const sheet: InfoRow[] = [
       { label: 'Fichier', value: data.media.originalName },
-      { label: 'Jeux d’UV', value: s?.uvSets.length ? s.uvSets.join(', ') : 'aucun' },
+      { label: 'Jeux d’UV', value: s?.uvSets.length ? s.uvSets.join(', ') : t('review.none') },
       { label: 'Extensions', value: inspect.extensions.length ? inspect.extensions.join(', ') : 'aucune' },
     ];
     if (data.modelSource?.usd)
@@ -231,7 +233,7 @@ export default function Model3DPanels({
             </Button>
             {onImportAnim && (
               <label
-                title="Importer une animation caméra : glTF ou JSON d’échantillons Alembic (.abc)"
+                title={t('review.camera.import')}
                 className="flex min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
               >
                 <Upload size={13} />
@@ -261,7 +263,7 @@ export default function Model3DPanels({
                   a.href = url;
                   a.download = `${data.media.originalName.replace(/\.[^.]+$/, '')}.jpg`;
                   a.click();
-                  toast.success('Vue capturée');
+                  toast.success(t('review.viewCaptured'));
                 });
               }}
             >
