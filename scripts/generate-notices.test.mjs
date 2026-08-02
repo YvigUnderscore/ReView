@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   declaredLicense,
+  isAllowedLicense,
   packageName,
   productionTree,
   renderNotices,
@@ -154,5 +155,48 @@ describe('renderNotices', () => {
 
   it('produit une sortie déterministe', () => {
     expect(renderNotices(sections)).toBe(renderNotices(sections));
+  });
+});
+
+describe('isAllowedLicense', () => {
+  it('accepte les licences permissives rencontrées dans l’arbre de production', () => {
+    for (const id of ['MIT', 'Apache-2.0', 'ISC', 'BSD-3-Clause', '0BSD', 'MPL-2.0', 'OFL-1.1']) {
+      expect(isAllowedLicense(id)).toBe(true);
+    }
+  });
+
+  it('exige que les deux branches d’un AND soient acceptables', () => {
+    expect(isAllowedLicense('(MIT AND Zlib)')).toBe(true);
+    expect(isAllowedLicense('(MIT AND SSPL-1.0)')).toBe(false);
+  });
+
+  it('se contente d’une branche acceptable dans un OR', () => {
+    expect(isAllowedLicense('(MPL-2.0 OR Apache-2.0)')).toBe(true);
+    expect(isAllowedLicense('(SSPL-1.0 OR MIT)')).toBe(true);
+    expect(isAllowedLicense('(SSPL-1.0 OR BUSL-1.1)')).toBe(false);
+  });
+
+  it('ignore l’exception d’un WITH et juge la licence qu’elle accompagne', () => {
+    expect(isAllowedLicense('Apache-2.0 WITH LLVM-exception')).toBe(true);
+    expect(isAllowedLicense('SSPL-1.0 WITH whatever-exception')).toBe(false);
+  });
+
+  it('refuse le source-available, le copyleft « only » et l’absence de licence', () => {
+    for (const id of ['SSPL-1.0', 'BUSL-1.1', 'Elastic-2.0', 'GPL-2.0-only', 'UNKNOWN', 'UNLICENSED']) {
+      expect(isAllowedLicense(id)).toBe(false);
+    }
+    expect(isAllowedLicense('')).toBe(false);
+    expect(isAllowedLicense(null)).toBe(false);
+  });
+
+  it('traite le suffixe + comme un « or later »', () => {
+    expect(isAllowedLicense('GPL-2.0+')).toBe(true);
+    expect(isAllowedLicense('SSPL-1.0+')).toBe(false);
+  });
+
+  it('rejette une expression mal formée plutôt que de l’accepter à moitié', () => {
+    expect(isAllowedLicense('(MIT')).toBe(false);
+    expect(isAllowedLicense('MIT)')).toBe(false);
+    expect(isAllowedLicense('MIT AND')).toBe(false);
   });
 });

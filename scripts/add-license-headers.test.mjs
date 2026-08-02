@@ -6,6 +6,7 @@ import {
   COPYRIGHT,
   LICENSE_ID,
   commentPrefix,
+  commentSuffix,
   detectEol,
   hasHeader,
   withHeader,
@@ -23,13 +24,32 @@ describe('commentPrefix', () => {
     }
   });
 
-  it('rend # pour les scripts shell', () => {
+  it('rend # pour les scripts shell et Python', () => {
     expect(commentPrefix('.sh')).toBe('#');
+    expect(commentPrefix('.py')).toBe('#');
+  });
+
+  it('rend // pour le schéma Prisma', () => {
+    expect(commentPrefix('.prisma')).toBe('//');
+  });
+
+  it('rend /* pour les feuilles de style', () => {
+    expect(commentPrefix('.css')).toBe('/*');
   });
 
   it('rend null pour un type non couvert', () => {
     expect(commentPrefix('.md')).toBeNull();
     expect(commentPrefix('.sql')).toBeNull();
+  });
+});
+
+describe('commentSuffix', () => {
+  it('ferme le commentaire de bloc des feuilles de style', () => {
+    expect(commentSuffix('.css')).toBe(' */');
+  });
+
+  it('reste vide pour les commentaires de ligne', () => {
+    for (const ext of ['.ts', '.sh', '.py', '.prisma']) expect(commentSuffix(ext)).toBe('');
   });
 });
 
@@ -76,6 +96,19 @@ describe('withHeader', () => {
     const out = withHeader(`#!/usr/bin/env bash${LF}set -e${LF}`, '.sh');
     expect(out).toBe(`#!/usr/bin/env bash${LF}# ${COPYRIGHT}${LF}# ${LICENSE_ID}${LF}${LF}set -e${LF}`);
     expect(out.startsWith('#!')).toBe(true);
+  });
+
+  it('ferme le commentaire de bloc sur une feuille de style', () => {
+    expect(withHeader(`@tailwind base;${LF}`, '.css')).toBe(
+      `/* ${COPYRIGHT} */${LF}/* ${LICENSE_ID} */${LF}${LF}@tailwind base;${LF}`,
+    );
+  });
+
+  it('glisse l’en-tête sous le shebang d’un script Python', () => {
+    const out = withHeader(`#!/usr/bin/env python3${LF}import sys${LF}`, '.py');
+    expect(out).toBe(
+      `#!/usr/bin/env python3${LF}# ${COPYRIGHT}${LF}# ${LICENSE_ID}${LF}${LF}import sys${LF}`,
+    );
   });
 
   it('ne double pas la ligne vide quand le fichier commence déjà par une', () => {

@@ -50,14 +50,22 @@ export const EXTRA_FILES = [
 /** Dossiers jamais balayés (dépendances, artefacts, code généré). */
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', 'generated', 'migrations']);
 
-const SLASH_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
-const HASH_EXT = new Set(['.sh']);
+const SLASH_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.prisma']);
+const HASH_EXT = new Set(['.sh', '.py']);
+/** Types sans commentaire de ligne : l'en-tête s'écrit en commentaires de bloc d'une ligne. */
+const BLOCK_EXT = new Set(['.css']);
 
 /** Préfixe de commentaire correspondant à l'extension, ou null si le type est ignoré. */
 export function commentPrefix(ext) {
   if (SLASH_EXT.has(ext)) return '//';
   if (HASH_EXT.has(ext)) return '#';
+  if (BLOCK_EXT.has(ext)) return '/*';
   return null;
+}
+
+/** Fermeture du commentaire — vide pour les types commentés ligne à ligne. */
+export function commentSuffix(ext) {
+  return BLOCK_EXT.has(ext) ? ' */' : '';
 }
 
 /** Vrai si l'en-tête SPDX est déjà présent dans les premières lignes. */
@@ -79,7 +87,8 @@ export function withHeader(content, ext) {
   if (!prefix || hasHeader(content)) return content;
 
   const eol = detectEol(content);
-  const header = `${prefix} ${COPYRIGHT}${eol}${prefix} ${LICENSE_ID}${eol}`;
+  const suffix = commentSuffix(ext);
+  const header = `${prefix} ${COPYRIGHT}${suffix}${eol}${prefix} ${LICENSE_ID}${suffix}${eol}`;
   const lines = content.split(eol);
 
   if (lines[0]?.startsWith('#!')) {

@@ -41,6 +41,90 @@ export const LICENSE_OVERRIDES = {
 };
 
 /**
+ * Licences acceptables pour une dépendance de production : permissives, domaine public,
+ * MPL-2.0 (compatible par sa clause 3.3) et les copyleft explicitement compatibles avec
+ * l'AGPLv3 — donc « or later » à partir de GPL-2.0, jamais les variantes « only ».
+ *
+ * Toute licence hors de cette liste (propriétaire, BSL, Elastic, Commons Clause, SSPL,
+ * GPL-2.0-only, ou paquet sans licence identifiable) fait échouer le script : la règle
+ * « toute dépendance doit être compatible AGPL » est ainsi outillée et non plus seulement
+ * écrite. Un paquet dont le champ `license` manque mais dont le fichier LICENSE tranche
+ * passe par LICENSE_OVERRIDES, après vérification à la main.
+ */
+export const ALLOWED_LICENSES = new Set([
+  '0BSD',
+  'AGPL-3.0-or-later',
+  'Apache-2.0',
+  'Artistic-2.0',
+  'BlueOak-1.0.0',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'CC0-1.0',
+  'CC-BY-4.0',
+  'GPL-2.0-or-later',
+  'GPL-3.0-or-later',
+  'ISC',
+  'LGPL-2.1-or-later',
+  'LGPL-3.0-or-later',
+  'MIT',
+  'MIT-0',
+  'MPL-2.0',
+  'OFL-1.1',
+  'Python-2.0',
+  'Unlicense',
+  'WTFPL',
+  'Zlib',
+]);
+
+/**
+ * Évalue une expression SPDX contre `ALLOWED_LICENSES` : `MIT`, `(MIT AND Zlib)`,
+ * `(MPL-2.0 OR Apache-2.0)`, `Apache-2.0 WITH LLVM-exception`.
+ *
+ * `OR` laisse le choix — une seule branche acceptable suffit. `AND` impose de respecter
+ * les deux — toutes doivent l'être. Une exception (`WITH`) ne fait que lever des
+ * obligations : seule la licence qu'elle accompagne est examinée.
+ */
+export function isAllowedLicense(expression) {
+  if (typeof expression !== 'string' || !expression.trim()) return false;
+  const tokens = expression.replace(/[()]/g, ' $& ').split(/\s+/).filter(Boolean);
+  let pos = 0;
+
+  const parseAtom = () => {
+    const token = tokens[pos++];
+    if (token === undefined) return false;
+    if (token === '(') {
+      const inner = parseOr();
+      if (tokens[pos] !== ')') return false;
+      pos++;
+      return inner;
+    }
+    if (token === ')' || token === 'AND' || token === 'OR') return false;
+    if (tokens[pos] === 'WITH') pos += 2; // l'exception nommée n'ajoute aucune obligation
+    const id = token.endsWith('+') ? `${token.slice(0, -1)}-or-later` : token;
+    return ALLOWED_LICENSES.has(id);
+  };
+  const parseAnd = () => {
+    let value = parseAtom();
+    while (tokens[pos] === 'AND') {
+      pos++;
+      value = parseAtom() && value;
+    }
+    return value;
+  };
+  const parseOr = () => {
+    let value = parseAnd();
+    while (tokens[pos] === 'OR') {
+      pos++;
+      value = parseAnd() || value;
+    }
+    return value;
+  };
+
+  const allowed = parseOr();
+  return pos === tokens.length && allowed;
+}
+
+/**
  * Rejoue la résolution npm : depuis un dossier, un paquet est cherché dans le
  * node_modules local puis en remontant les parents.
  */
@@ -240,6 +324,22 @@ async function main() {
   for (const workspace of WORKSPACES) {
     sections.push({ label: workspace.label, packages: await collectWorkspace(repoRoot, workspace) });
   }
+
+  // Garde-fou de compatibilité : une dépendance sous licence non compatible AGPL ne doit
+  // pas se contenter d'apparaître dans les notices, elle doit arrêter la validation.
+  const rejected = sections
+    .flatMap((section) => section.packages)
+    .filter((pkg) => !isAllowedLicense(pkg.license));
+  if (rejected.length) {
+    console.error(`✗ ${rejected.length} dépendance(s) sous licence non compatible AGPL-3.0 :`);
+    for (const pkg of rejected) console.error(`  ${pkg.id} — ${pkg.license}`);
+    console.error(
+      '  → remplacer la dépendance ; si la licence est mal déclarée, vérifier son fichier',
+    );
+    console.error('    LICENSE puis compléter LICENSE_OVERRIDES ou ALLOWED_LICENSES.');
+    process.exit(1);
+  }
+
   const content = renderNotices(sections);
 
   if (check) {

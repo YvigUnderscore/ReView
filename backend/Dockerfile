@@ -1,6 +1,13 @@
 # ReView 2.0 backend — Node 22 (glibc) pour compat. binaires (ffmpeg, prisma) + AWS SDK v3
 FROM node:22-slim
 
+# L'image embarque aussi des programmes tiers sous leur propre licence — FFmpeg toujours,
+# Blender et usd-core avec INSTALL_USD_TOOLS=1, tous deux GPL-2.0-or-later : qui redistribue
+# cette image doit relayer leur offre de source. Voir DOCUMENTATION/development/licensing.md.
+LABEL org.opencontainers.image.title="ReView (backend)" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.source="https://github.com/YvigUnderscore/ReView"
+
 WORKDIR /app
 
 # Dépendances système : openssl (Prisma), ffmpeg (transcode/miniatures),

@@ -50,7 +50,7 @@ export function AuthLayout({
           {children}
         </motion.div>
         {/* AGPL §13 : offre de source visible avant même toute authentification. */}
-        <SourceNotice className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap" />
+        <SourceNotice className="absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center" />
       </main>
     </div>
   );

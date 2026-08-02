@@ -67,7 +67,8 @@ const fr = {
   'common.close': 'Fermer',
   'common.search': 'Rechercher',
   // Mention AGPL §13 — offre de source aux utilisateurs distants.
-  'license.notice': 'ReView — logiciel libre sous licence AGPL-3.0.',
+  'license.notice':
+    'ReView — Copyright © 2026 Yvig Bidon. Logiciel libre sous licence AGPL-3.0, sans aucune garantie.',
   'license.source': 'Code source',
 } as const;
 
@@ -129,7 +130,8 @@ const en: Partial<Record<MessageKey, string>> = {
   'common.edit': 'Edit',
   'common.close': 'Close',
   'common.search': 'Search',
-  'license.notice': 'ReView — free software under the AGPL-3.0 license.',
+  'license.notice':
+    'ReView — Copyright © 2026 Yvig Bidon. Free software under the AGPL-3.0 license, with no warranty.',
   'license.source': 'Source code',
 };
 

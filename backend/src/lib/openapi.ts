@@ -157,6 +157,8 @@ export function buildOpenApiDocument() {
       title: 'ReView API',
       version: '2.0.0',
       description: 'API de la plateforme de review collaborative ReView (générée depuis les schémas Zod).',
+      // Le document est public : il porte la licence de l'API qu'il décrit.
+      license: { name: 'AGPL-3.0-or-later', url: 'https://www.gnu.org/licenses/agpl-3.0.html' },
     },
     servers: [{ url: '/' }],
   });

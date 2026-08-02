@@ -16,6 +16,11 @@ describe('openapi', () => {
     expect(doc.paths?.['/api/auth/login']?.post).toBeTruthy();
   });
 
+  it('déclare la licence du projet — le document est servi publiquement', () => {
+    expect(doc.info.license?.name).toBe('AGPL-3.0-or-later');
+    expect(doc.info.license?.url).toContain('gnu.org');
+  });
+
   it('expose les schémas partagés et le sécurité bearer', () => {
     expect(doc.components?.schemas?.Project).toBeTruthy();
     expect(doc.components?.schemas?.ProjectPage).toBeTruthy();

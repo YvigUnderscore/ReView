@@ -23,8 +23,11 @@ to others.
 
 ### Running ReView unmodified
 
-Nothing to do. The application already links to its source in the login screen, the client
-share pages and **Admin → System → License & source**.
+Nothing to do. Every network-facing surface already carries the notice and the link to its
+source: the login and setup screens, the client share pages, the public API explorer at
+`GET /api/docs`, and **Admin → System → License & source**. The frontend image also serves
+[`/LICENSE`](/LICENSE) and [`/THIRD-PARTY-NOTICES.md`](/THIRD-PARTY-NOTICES.md) as plain
+text, so the license travels with a deployment and not only with the repository.
 
 ### Running a modified ReView
 
@@ -56,6 +59,12 @@ If you republish those images, you also redistribute those programs and must pas
 source offers. Pointing at the upstream Debian and Blender sources is sufficient — you have
 not modified them.
 
+Both images declare `org.opencontainers.image.licenses=AGPL-3.0-or-later` and their source
+repository as OCI labels, so a registry or a scanner reads the license without unpacking
+them. The backend image keeps its dependencies' own `LICENSE` files inside `node_modules`;
+the frontend image ships the minified bundle instead, which is why `LICENSE` and
+`THIRD-PARTY-NOTICES.md` are copied next to it and served as plain text.
+
 ## Third-party dependencies
 
 [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md) lists every production dependency
@@ -66,6 +75,13 @@ license text each one ships. It is generated, never hand-written:
 node scripts/generate-notices.mjs          # regenerate
 node scripts/generate-notices.mjs --check  # fail if stale (run by validate.sh)
 ```
+
+The script does more than write the file: it **fails the build** when a production
+dependency declares a license outside the allow-list — proprietary, source-available (BSL,
+Elastic, Commons Clause, SSPL), GPL-2.0-only, or no identifiable license at all. SPDX
+expressions are evaluated properly, so `(MPL-2.0 OR Apache-2.0)` passes on either branch
+while `(MIT AND SSPL-1.0)` does not. A package whose `package.json` omits the field but
+whose `LICENSE` file is unambiguous goes through `LICENSE_OVERRIDES`, checked by hand.
 
 Every dependency is AGPL-3.0 compatible. Two points worth knowing:
 
@@ -81,7 +97,9 @@ aggregation: their licenses do not propagate, and ReView's does not reach them.
 
 ## Source file headers
 
-Every source file starts with an SPDX header:
+Every source file starts with an SPDX header — TypeScript and JavaScript, but also the
+Prisma schema, the Python USD workers, the shell scripts and the stylesheets, each in its
+own comment syntax:
 
 ```ts
 // SPDX-FileCopyrightText: 2026 Yvig Bidon

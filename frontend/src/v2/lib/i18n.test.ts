@@ -42,6 +42,19 @@ describe('i18n — socle de traduction', () => {
     for (const k of keys) expect(t(k).length).toBeGreaterThan(0);
   });
 
+  // La mention affichée sur les surfaces publiques (connexion, partage client) n'est pas
+  // décorative : la GPL/AGPL exige des « Appropriate Legal Notices » — copyright, licence,
+  // absence de garantie — que le §13 complète par l'offre du code source.
+  it.each(['fr', 'en'] as const)('porte copyright, licence et absence de garantie en %s', (locale) => {
+    setLocale(locale);
+    const notice = t('license.notice');
+    expect(notice).toContain('©');
+    expect(notice).toContain('Yvig Bidon');
+    expect(notice).toContain('AGPL-3.0');
+    expect(notice).toMatch(/sans aucune garantie|no warranty/);
+    expect(t('license.source')).toMatch(/^(Code source|Source code)$/);
+  });
+
   it('traduit la navigation (42.B №88) en FR et EN', () => {
     setLocale('fr');
     expect(t('nav.reviews')).toBe('Reviews');
