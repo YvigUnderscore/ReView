@@ -3,6 +3,12 @@
   "private": true,
   "version": "1.0.2",
   "type": "module",
+  "author": "Yvig Bidon",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YvigUnderscore/ReView.git"
+  },
   "scripts": {
     "predev": "node scripts/build-docs.mjs",
     "dev": "vite",

@@ -1,1 +1,6 @@
 *.sh text eol=lf
+# Texte de licence : conservé à l'identique de la source FSF (fins de ligne LF)
+LICENSE text eol=lf
+
+# Notices generees (comparaison exacte par validate.sh)
+THIRD-PARTY-NOTICES.md text eol=lf
