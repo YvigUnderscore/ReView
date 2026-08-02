@@ -4,7 +4,9 @@
 import { Monitor, Moon, Sun, Rows3, Rows4, type LucideIcon } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../stores/useTheme';
 import { useDensity, type Density } from '../stores/useDensity';
-import { getLocale, setLocale, useT, type Locale } from '../lib/i18n';
+import { useT } from '../i18n';
+import LanguagePicker from './LanguagePicker';
+import TranslationNotice from './TranslationNotice';
 
 /** Une option d'un contrôle segmenté. */
 type Opt<T extends string> = { value: T; label: string; icon?: LucideIcon };
@@ -76,7 +78,6 @@ export default function DisplaySettings() {
   const setMode = useTheme((s) => s.setMode);
   const density = useDensity((s) => s.density);
   const setDensity = useDensity((s) => s.setDensity);
-  const locale = getLocale();
 
   const themeOpts: readonly Opt<ThemeMode>[] = [
     { value: 'system', label: t('display.theme.system'), icon: Monitor },
@@ -87,11 +88,6 @@ export default function DisplaySettings() {
     { value: 'comfortable', label: t('display.density.comfortable'), icon: Rows3 },
     { value: 'compact', label: t('display.density.compact'), icon: Rows4 },
   ];
-  const localeOpts: readonly Opt<Locale>[] = [
-    { value: 'fr', label: 'Français' },
-    { value: 'en', label: 'English' },
-  ];
-
   return (
     <section className="space-y-4 rounded-lg border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">{t('display.title')}</h2>
@@ -106,14 +102,10 @@ export default function DisplaySettings() {
           ariaLabel={t('display.density')}
         />
       </Row>
-      <Row label={t('display.language')}>
-        <Segmented
-          value={locale}
-          options={localeOpts}
-          onChange={setLocale}
-          ariaLabel={t('display.language')}
-        />
+      <Row label={t('display.language')} hint={t('display.language.hint')}>
+        <LanguagePicker id="display-language" className="py-1 text-xs" />
       </Row>
+      <TranslationNotice />
     </section>
   );
 }

@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
-import { t, useT } from '../lib/i18n';
+import { t, useT } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';

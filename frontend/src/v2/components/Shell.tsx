@@ -37,7 +37,7 @@ import OnboardingTour from './OnboardingTour';
 import { useGlobalShortcuts } from '../lib/shortcuts';
 import { usePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
-import { useT } from '../lib/i18n';
+import { useT } from '../i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';

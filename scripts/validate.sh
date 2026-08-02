@@ -33,6 +33,13 @@ node "$ROOT/scripts/add-license-headers.mjs" --check
 step "Licence — THIRD-PARTY-NOTICES.md à jour"
 node "$ROOT/scripts/generate-notices.mjs" --check
 
+# ---------- Traductions ----------
+# Une traduction incomplète est admise (repli sur l'anglais) ; une traduction incohérente
+# ne l'est pas : variable interpolée perdue, forme plurielle absente de la langue, clé
+# orpheline, terme métier traduit. Le script chiffre aussi la couverture par langue.
+step "i18n — cohérence des catalogues de traduction"
+node "$ROOT/scripts/check-translations.mjs"
+
 # ---------- Budget de taille (10.F4) ----------
 # Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Le backend
 # n'a pas d'ESLint : on garde-fou ici la taille des routes (≤ 200 lignes ; la logique

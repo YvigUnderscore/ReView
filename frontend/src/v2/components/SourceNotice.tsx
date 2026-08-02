@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useT } from '../lib/i18n';
+import { useT } from '../i18n';
 import { useBranding } from '../lib/branding';
 
 /** Repli si le branding n'est pas encore chargé (ou si l'API est injoignable). */

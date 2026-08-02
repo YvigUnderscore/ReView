@@ -8,10 +8,17 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import '@fontsource-variable/inter'
 import App from './v2/App.tsx'
+import { initLocale } from './v2/i18n'
 import './index.css'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+const render = () =>
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
+
+// Le catalogue de la langue retenue est chargé avant le premier rendu : sinon l'écran
+// s'affiche en anglais puis bascule. `finally` — un catalogue illisible ne doit pas
+// empêcher l'application de démarrer, le repli anglais suffit.
+initLocale().finally(render)

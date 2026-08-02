@@ -4,9 +4,9 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../../lib/motion';
-import { useT } from '../../lib/i18n';
+import { useT } from '../../i18n';
 import { useBranding } from '../../lib/branding';
-import LocaleSwitch from '../../components/LocaleSwitch';
+import LanguagePicker from '../../components/LanguagePicker';
 import SourceNotice from '../../components/SourceNotice';
 
 /**
@@ -44,7 +44,7 @@ export function AuthLayout({
       </aside>
       <main className="relative flex items-center justify-center p-6">
         <div className="absolute right-4 top-4">
-          <LocaleSwitch />
+          <LanguagePicker className="py-1 text-xs" />
         </div>
         <motion.div variants={fadeInUp} initial="hidden" animate="show" className="w-full max-w-sm">
           {children}

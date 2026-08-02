@@ -1,0 +1,32 @@
+{
+  "$comment": "Vocabulaire métier que ReView ne traduit dans aucune langue. Les artistes lisent ces termes en anglais dans tous les pipelines : les traduire (« plan-séquence » pour shot, « prise de vue » pour playblast) rend l'outil moins lisible, pas plus accessible. check-translations.mjs impose que tout terme présent dans le message anglais se retrouve dans chaque traduction. La correspondance se fait sur un début de mot, insensible à la casse : « boards », « ReViewera » ou « board로 » comptent pour « board ».",
+  "terms": [
+    "ReView",
+    "VFX",
+    "review",
+    "board",
+    "kanban",
+    "shot",
+    "sequence",
+    "asset",
+    "version",
+    "annotation",
+    "playblast",
+    "dailies",
+    "playlist",
+    "timeline",
+    "frame",
+    "keyframe",
+    "splat",
+    "proxy",
+    "burn-in",
+    "watermark",
+    "wipe",
+    "HDRI",
+    "LUT",
+    "OCIO",
+    "USD",
+    "GLB",
+    "HLS"
+  ]
+}

@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { useAuth, type AuthUser } from '../stores/useAuth';
-import { useT, type MessageKey } from '../lib/i18n';
+import { useT, type MessageKey } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
