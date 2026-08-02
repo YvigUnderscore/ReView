@@ -126,7 +126,7 @@ export default function UserModal({
             </Select>
             <Input
               type="number"
-              placeholder="Quota (Go)"
+              placeholder={t('storage.quotaLabel')}
               value={form.storageLimitGo}
               onChange={(e) => setForm((f) => ({ ...f, storageLimitGo: e.target.value }))}
             />

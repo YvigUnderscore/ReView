@@ -58,7 +58,7 @@ export default function ClientSharePage() {
   if (!p) {
     return (
       <ClientFrame studio={null}>
-        <p className="text-center text-sm text-muted-foreground">Chargement…</p>
+        <p className="text-center text-sm text-muted-foreground">{t('common.loading')}</p>
       </ClientFrame>
     );
   }

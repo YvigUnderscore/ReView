@@ -5,10 +5,12 @@ import { useState } from 'react';
 import type { NamingRule, NamingMode } from '../types/api';
 import { useT } from '../i18n';
 
-const MODE_LABEL: Record<NamingMode, string> = {
-  off: 'Désactivé',
-  warn: 'Avertir',
-  reject: 'Refuser',
+import type { MessageKey } from '../i18n';
+
+const MODE_KEY: Record<NamingMode, MessageKey> = {
+  off: 'naming.policy.off',
+  warn: 'naming.policy.warn',
+  reject: 'naming.policy.reject',
 };
 
 /**
@@ -41,7 +43,7 @@ export default function ProjectNamingSection({
       <div className="mb-3 text-xs text-muted-foreground">{t('project.namingHint')}</div>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-          Motif (regex)
+          {t('naming.pattern')}
           <input
             className="w-full rounded border border-input bg-background px-2 py-1.5 font-mono text-xs"
             placeholder="^SH\d{3,}_v\d+\..+$"
@@ -50,7 +52,7 @@ export default function ProjectNamingSection({
           />
         </label>
         <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-          Politique
+          {t('naming.policy')}
           <select
             className="rounded border border-input bg-background px-2 py-1.5 text-xs"
             value={value.mode}
@@ -58,7 +60,7 @@ export default function ProjectNamingSection({
           >
             {(['off', 'warn', 'reject'] as NamingMode[]).map((m) => (
               <option key={m} value={m}>
-                {MODE_LABEL[m]}
+                {MODE_KEY[m]}
               </option>
             ))}
           </select>

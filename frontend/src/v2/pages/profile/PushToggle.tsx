@@ -45,12 +45,12 @@ export default function PushToggle() {
   return (
     <div className="flex items-center justify-between gap-3">
       <div>
-        <div className="text-sm">Notifications push (navigateur)</div>
+        <div className="text-sm">{t('push.title')}</div>
         <div className="text-xs text-muted-foreground">{t('push.hint')}</div>
       </div>
       <Button variant={enabled ? 'secondary' : 'default'} size="sm" onClick={toggle} disabled={busy}>
         {enabled ? <BellOff size={14} /> : <Bell size={14} />}
-        {enabled ? t('common.disable') : 'Activer'}
+        {enabled ? t('common.disable') : t('common.enable')}
       </Button>
     </div>
   );

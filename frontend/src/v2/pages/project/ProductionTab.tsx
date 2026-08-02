@@ -10,17 +10,19 @@ import type { ProjectStats, ProjectSchedule } from '../../types/api';
 import ReviewStatsPanel from '../../components/production/ReviewStatsPanel';
 import DeadlineCalendar from '../../components/production/DeadlineCalendar';
 import SequenceGantt from '../../components/production/SequenceGantt';
+import { useT, type MessageKey } from '../../i18n';
 
 type View = 'stats' | 'calendar' | 'gantt';
 
-const VIEWS: { key: View; label: string; icon: React.ReactNode }[] = [
-  { key: 'stats', label: 'Statistiques', icon: <BarChart3 size={15} /> },
-  { key: 'calendar', label: 'Calendrier', icon: <CalendarDays size={15} /> },
-  { key: 'gantt', label: 'Gantt', icon: <GanttChartSquare size={15} /> },
+const VIEWS: { key: View; labelKey: MessageKey; icon: React.ReactNode }[] = [
+  { key: 'stats', labelKey: 'production.stats', icon: <BarChart3 size={15} /> },
+  { key: 'calendar', labelKey: 'production.calendar', icon: <CalendarDays size={15} /> },
+  { key: 'gantt', labelKey: 'production.gantt', icon: <GanttChartSquare size={15} /> },
 ];
 
 /** Onglet « Production » de la page projet (Phase 43) — stats (43.A), calendrier & Gantt (43.C). */
 export default function ProductionTab({ projectId }: { projectId: number }) {
+  const t = useT();
   const [view, setView] = useState<View>('stats');
 
   const statsQ = useQuery({
@@ -48,22 +50,20 @@ export default function ProductionTab({ projectId }: { projectId: number }) {
             }`}
           >
             {v.icon}
-            {v.label}
+            {t(v.labelKey)}
           </button>
         ))}
       </div>
 
       {active.error && <p className="text-sm text-destructive">{active.error.message}</p>}
-      {active.isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+      {active.isLoading && <p className="text-sm text-muted-foreground">{t('common.loading')}</p>}
 
       {view === 'stats' && statsQ.data && <ReviewStatsPanel stats={statsQ.data} projectId={projectId} />}
       {view === 'calendar' && scheduleQ.data && <DeadlineCalendar tasks={scheduleQ.data.tasks} />}
       {view === 'gantt' && scheduleQ.data && <SequenceGantt tasks={scheduleQ.data.tasks} />}
 
       {(view === 'calendar' || view === 'gantt') && scheduleQ.data && scheduleQ.data.tasks.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          Aucune tâche datée. Ajoutez une échéance depuis une tâche (menu de la tâche) pour la voir ici.
-        </p>
+        <p className="text-xs text-muted-foreground">{t('calendar.empty')}</p>
       )}
     </div>
   );

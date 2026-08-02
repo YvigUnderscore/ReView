@@ -37,7 +37,7 @@ export default function ApiWebhooksTab() {
 }
 
 function ApiTokensAdminPanel() {
-  const tr = useT();
+  const t = useT();
   const qc = useQueryClient();
   const tokensQ = useQuery({
     queryKey: qk.admin('api-tokens'),
@@ -48,7 +48,7 @@ function ApiTokensAdminPanel() {
   const revoke = async (id: number) => {
     try {
       await api.del(`/api/admin/api-tokens/${id}`);
-      toast.success(tr('tokens.revoked'));
+      toast.success(t('tokens.revoked'));
       qc.invalidateQueries({ queryKey: qk.admin('api-tokens') });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -56,36 +56,36 @@ function ApiTokensAdminPanel() {
   };
 
   return (
-    <Panel title={tr('tokens.studio')}>
+    <Panel title={t('tokens.studio')}>
       <p className="mb-3 text-xs text-muted-foreground">
         Tous les tokens actifs, créés par chacun depuis sa page profil. Un token révoqué cesse immédiatement
         de fonctionner.
       </p>
       <div className="space-y-1.5">
-        {tokens.map((t) => (
+        {tokens.map((tok) => (
           <div
-            key={t.id}
+            key={tok.id}
             className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
             <KeyRound size={15} className="shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate font-medium">{t.name}</span>
-                <Badge variant={t.scopes.includes('write') ? 'warning' : 'secondary'}>
-                  {t.scopes.includes('write') ? 'écriture' : 'lecture'}
+                <span className="truncate font-medium">{tok.name}</span>
+                <Badge variant={tok.scopes.includes('write') ? 'warning' : 'secondary'}>
+                  {tok.scopes.includes('write') ? t('tokens.write') : t('tokens.read')}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {t.user.name ?? t.user.email} · créé le {fmt(t.createdAt)}
-                {t.lastUsedAt ? ` · utilisé le ${fmt(t.lastUsedAt)}` : ' · jamais utilisé'}
+                {tok.user.name ?? tok.user.email} · créé le {fmt(tok.createdAt)}
+                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ' · jamais utilisé'}
               </p>
             </div>
-            <Button variant="ghost" size="sm" title={tr('shares.revoke')} onClick={() => revoke(t.id)}>
+            <Button variant="ghost" size="sm" title={t('shares.revoke')} onClick={() => revoke(tok.id)}>
               <Trash2 size={14} className="text-destructive" />
             </Button>
           </div>
         ))}
-        {tokens.length === 0 && <p className="text-xs text-muted-foreground">{tr('tokens.empty')}</p>}
+        {tokens.length === 0 && <p className="text-xs text-muted-foreground">{t('tokens.empty')}</p>}
       </div>
     </Panel>
   );

@@ -54,13 +54,13 @@ export default function SharesTab({ projectId }: { projectId: number }) {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('shares.title')}</h2>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus size={14} className="mr-1" /> Nouveau lien
+          <Plus size={14} className="mr-1" /> {t('shares.newShort')}
         </Button>
       </div>
       {linksQ.error && <p className="mb-3 text-sm text-destructive">{linksQ.error.message}</p>}
       {links.length === 0 && !linksQ.isLoading && (
         <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Aucun lien de partage. Créez-en un pour donner accès aux médias publiés de ce projet, sans compte.
+          {t('shares.empty')}
         </p>
       )}
       <div className="space-y-1.5">
@@ -74,7 +74,7 @@ export default function SharesTab({ projectId }: { projectId: number }) {
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium">{l.label ?? t('shares.unnamed')}</span>
                 <Badge variant={l.permission === 'COMMENT' ? 'default' : 'secondary'}>
-                  {l.permission === 'COMMENT' ? 'Commentaires' : t('shares.permission.readOnly')}
+                  {l.permission === 'COMMENT' ? t('admin.tab.comments') : t('shares.permission.readOnly')}
                 </Badge>
                 {l.hasPassword && (
                   <span title={t('shares.passwordProtected')}>

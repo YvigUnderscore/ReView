@@ -12,7 +12,9 @@ export default function MyTasksCard({ tasks }: { tasks: DashboardTask[] }) {
   const t = useT();
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Mes tâches</h2>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {t('home.myTasks')}
+      </h2>
       {tasks.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
           <ListTodo size={24} />

@@ -51,7 +51,7 @@ export default function AnnouncementsTab() {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Annonces</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('admin.tab.announcements')}</h2>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus size={14} /> Nouvelle annonce
         </Button>

@@ -73,7 +73,7 @@ export default function SplatOptions({
 
   return (
     <OptionsBar tool={tool} commit={commit}>
-      {id === 'nav' && <span className="rv-optbar__hint">{tool.hint}</span>}
+      {id === 'nav' && <span className="rv-optbar__hint">{t(tool.hintKey)}</span>}
 
       {id === 'focus' && (
         <span className="rv-optbar__hint">

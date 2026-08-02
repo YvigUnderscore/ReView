@@ -26,13 +26,14 @@ export default function OptionsBar({
   commit?: ReactNode;
   children?: ReactNode;
 }) {
+  const t = useT();
   const Icon = tool.icon;
   return (
     <div className="rv-optbar">
       <div className="rv-optbar__scroll">
         <span className="rv-optbar__name">
           <Icon size={14} />
-          {tool.label}
+          {t(tool.labelKey)}
           {tool.key && <span className="rv-kbd">{tool.key}</span>}
         </span>
         <span className="rv-rule" />

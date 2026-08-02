@@ -81,7 +81,7 @@ export default function MediaOptions({
 
   return (
     <OptionsBar tool={tool} commit={commit}>
-      {(id === 'nav' || id === 'zoom') && <span className="rv-optbar__hint">{tool.hint}</span>}
+      {(id === 'nav' || id === 'zoom') && <span className="rv-optbar__hint">{t(tool.hintKey)}</span>}
 
       {(drawing || id === 'shape-move' || id === 'erase') && (
         <>

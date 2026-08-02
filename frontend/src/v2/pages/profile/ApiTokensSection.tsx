@@ -87,7 +87,7 @@ export default function ApiTokensSection() {
           className="flex-1"
         />
         <Select value={scope} onChange={(e) => setScope(e.target.value as 'read' | 'write')}>
-          <option value="read">Lecture</option>
+          <option value="read">{t('tokens.read')}</option>
           <option value="write">{t('tokens.readWrite')}</option>
         </Select>
         <Button type="submit" size="sm" disabled={busy || !name.trim()}>
@@ -110,26 +110,26 @@ export default function ApiTokensSection() {
         </div>
       )}
       <div className="space-y-1.5">
-        {tokens.map((t) => (
+        {tokens.map((tok) => (
           <div
-            key={t.id}
+            key={tok.id}
             className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
             <KeyRound size={15} className="shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate font-medium">{t.name}</span>
-                <Badge variant={t.scopes.includes('write') ? 'warning' : 'secondary'}>
-                  {t.scopes.includes('write') ? 'écriture' : 'lecture'}
+                <span className="truncate font-medium">{tok.name}</span>
+                <Badge variant={tok.scopes.includes('write') ? 'warning' : 'secondary'}>
+                  {tok.scopes.includes('write') ? t('tokens.write') : t('tokens.read')}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Créé le {fmt(t.createdAt)}
-                {t.lastUsedAt ? ` · utilisé le ${fmt(t.lastUsedAt)}` : ' · jamais utilisé'}
-                {t.expiresAt ? ` · expire le ${fmt(t.expiresAt)}` : ''}
+                Créé le {fmt(tok.createdAt)}
+                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ' · jamais utilisé'}
+                {tok.expiresAt ? ` · expire le ${fmt(tok.expiresAt)}` : ''}
               </p>
             </div>
-            <Button variant="ghost" size="sm" title={tr('shares.revoke')} onClick={() => revoke(t.id)}>
+            <Button variant="ghost" size="sm" title={tr('shares.revoke')} onClick={() => revoke(tok.id)}>
               <Trash2 size={14} className="text-destructive" />
             </Button>
           </div>

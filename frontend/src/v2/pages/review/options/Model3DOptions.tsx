@@ -72,7 +72,7 @@ export default function Model3DOptions({
 
   return (
     <OptionsBar tool={tool} commit={commit}>
-      {tool.id === 'nav' && <span className="rv-optbar__hint">{tool.hint}</span>}
+      {tool.id === 'nav' && <span className="rv-optbar__hint">{tr(tool.hintKey)}</span>}
 
       {tool.id === 'pin' && (
         <>

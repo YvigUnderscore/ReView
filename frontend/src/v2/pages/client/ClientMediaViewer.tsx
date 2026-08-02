@@ -118,7 +118,7 @@ export default function ClientMediaViewer({
           )}
           {playable && !urlQ.data && (
             <p className="p-10 text-sm text-muted-foreground">
-              {urlQ.error ? urlQ.error.message : 'Chargement…'}
+              {urlQ.error ? urlQ.error.message : t('common.loading')}
             </p>
           )}
           {!playable && (
@@ -134,7 +134,7 @@ export default function ClientMediaViewer({
       </div>
 
       <aside className="flex w-full flex-col rounded-lg border border-border bg-card lg:w-80">
-        <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Commentaires</h2>
+        <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">{t('admin.tab.comments')}</h2>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
           {comments.length === 0 && <p className="text-sm text-muted-foreground">{t('comments.empty')}</p>}
           {comments.map((c) => (

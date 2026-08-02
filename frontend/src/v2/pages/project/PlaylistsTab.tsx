@@ -121,7 +121,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
         <EmptyState
           icon={ListVideo}
           title={t('playlists.empty.title')}
-          description="Sélectionnez des médias sur la page Reviews puis « Ajouter à la playlist » (clic droit), ou créez une playlist vide ici."
+          description={t('playlists.empty.hint')}
           action={canWrite ? t('playlists.new') : undefined}
           onAction={canWrite ? () => (setCreating(true), setNameDraft('')) : undefined}
         />

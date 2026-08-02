@@ -77,7 +77,7 @@ export default function UserDetailTab() {
         to="/admin/users"
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft size={13} /> Utilisateurs
+        <ArrowLeft size={13} /> {t('admin.tab.users')}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -131,7 +131,7 @@ export default function UserDetailTab() {
         />
         <Metric label={t('userDetail.uploadedMedia')} value={counts.media} />
         <Metric label={t('userDetail.createdVersions')} value={counts.versions} />
-        <Metric label="Commentaires" value={counts.comments} />
+        <Metric label={t('admin.tab.comments')} value={counts.comments} />
         <Metric label={t('userDetail.assignedTasks')} value={counts.tasks} />
       </div>
 

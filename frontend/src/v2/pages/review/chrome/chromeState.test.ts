@@ -23,8 +23,8 @@ describe('modes', () => {
   });
 
   it('distingue Découper (vidéo) d’Ajuster (image)', () => {
-    expect(modesFor('VIDEO')[3]!.label).toBe('Découper');
-    expect(modesFor('IMAGE')[3]!.label).toBe('Ajuster');
+    expect(modesFor('VIDEO')[3]!.labelKey).toBe('mode.trim');
+    expect(modesFor('IMAGE')[3]!.labelKey).toBe('mode.adjust');
   });
 
   it('donne les mêmes modes au modèle 3D et au splat', () => {
@@ -100,7 +100,7 @@ describe('tools', () => {
 
   it('propose Cadrer et Vue d’origine en 3D, Ajuster et 1:1 à plat', () => {
     expect(viewActionsFor('SPLAT').map((a) => a.key)).toEqual(['F', 'H']);
-    expect(viewActionsFor('VIDEO')[0]!.label).toBe('Ajuster à l’écran');
+    expect(viewActionsFor('VIDEO')[0]!.labelKey).toBe('action.fitMedia');
   });
 });
 

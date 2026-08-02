@@ -16,6 +16,7 @@ import { RangeAnnotationsOverlay } from './RangeAnnotations';
 import CompositionGuides from './CompositionGuides';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
+import { useT } from '../../i18n';
 
 /**
  * Pane vidéo de la review (14.B) : lecteur **custom** (plus de `controls` natif) + overlay
@@ -73,6 +74,7 @@ export default function VideoPane({
   /** Boucle I/O remontée (34.A) : jointe comme plage in→out au prochain commentaire. */
   onLoopChange?: (loop: { in: number | null; out: number | null }) => void;
 }) {
+  const t = useT();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -264,7 +266,7 @@ export default function VideoPane({
         {(buffering || hls.switching) && (
           <div className="pointer-events-none absolute bottom-3 left-3 z-30 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur">
             <Loader2 size={13} className="animate-spin" />
-            {hls.switching ? 'Changement de qualité…' : 'Chargement…'}
+            {hls.switching ? 'Changement de qualité…' : t('common.loading')}
           </div>
         )}
         {compareOverlay}

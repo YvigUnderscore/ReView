@@ -75,7 +75,7 @@ export default function MediaPanels({
   const t = useT();
   if (panel === 'playback' || panel === 'view')
     return (
-      <Group title={kind === 'VIDEO' ? 'Lecture' : t('display.title')}>
+      <Group title={kind === 'VIDEO' ? t('tokens.read') : t('display.title')}>
         <Row label="Cadence" hint={t('review.playbackRate')}>
           <span className="font-mono text-xs">{fps} fps</span>
         </Row>

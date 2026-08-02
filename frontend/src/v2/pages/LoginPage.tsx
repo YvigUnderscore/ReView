@@ -89,7 +89,7 @@ export default function LoginPage() {
       await verify2fa(tmpToken!, code);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Code incorrect');
+      setError(err instanceof Error ? err.message : t('twofa.wrongCode'));
     } finally {
       setBusy(false);
     }

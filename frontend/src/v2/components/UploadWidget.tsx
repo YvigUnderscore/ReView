@@ -3,9 +3,10 @@
 
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useUploadStore, type UploadItem } from '../../stores/useUploadStore';
+import { useT, type Tr } from '../i18n';
 
 /** Libellé d'état lisible — le traitement serveur dépend du type de média. */
-function statusLabel(u: UploadItem): string {
+function statusLabel(u: UploadItem, t: Tr): string {
   switch (u.status) {
     case 'pending':
       return 'En attente…';
@@ -20,7 +21,7 @@ function statusLabel(u: UploadItem): string {
           ? 'Conversion 3D → GLB…'
           : 'Traitement…';
     case 'done':
-      return 'Terminé';
+      return t('project.status.completed');
     case 'error':
       return 'Échec';
   }
@@ -29,6 +30,7 @@ function statusLabel(u: UploadItem): string {
 /** Widget d'upload non-bloquant (bas-droite). Lit le store Zustand global — l'item passe
  * automatiquement en « Transcodage… » après l'envoi d'une vidéo, jusqu'à READY. */
 export default function UploadWidget() {
+  const t = useT();
   const uploads = useUploadStore((s) => s.uploads);
   const clear = useUploadStore((s) => s.clearCompleted);
   if (uploads.length === 0) return null;
@@ -51,7 +53,7 @@ export default function UploadWidget() {
                   <Loader2 size={11} className="animate-spin text-primary" />
                 )}
                 {u.status === 'done' && <CheckCircle2 size={11} className="text-success" />}
-                {statusLabel(u)}
+                {statusLabel(u, t)}
               </span>
             </div>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-muted">

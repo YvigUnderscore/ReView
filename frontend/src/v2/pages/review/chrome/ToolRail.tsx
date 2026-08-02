@@ -3,6 +3,7 @@
 
 import { ChevronsLeft, ChevronsRight, type LucideIcon } from 'lucide-react';
 import type { ReviewTool, ToolId, ViewAction } from './tools';
+import { useT } from '../../../i18n';
 
 /**
  * Rail d'outils — colonne de gauche. Il ne contient que les outils de pointage exclusifs du
@@ -72,19 +73,20 @@ export default function ToolRail({
   labels: boolean;
   onLabels: () => void;
 }) {
+  const t = useT();
   return (
     <div className={`rv-rail${labels ? ' rv-rail--labels' : ''}`}>
       {labels && <span className="rv-rail__title">Outils</span>}
-      {tools.map((t) => (
+      {tools.map((item) => (
         <RailButton
-          key={t.id}
-          icon={t.icon}
-          label={t.label}
-          shortcut={t.key}
-          hint={t.hint}
-          active={tool === t.id}
+          key={item.id}
+          icon={item.icon}
+          label={t(item.labelKey)}
+          shortcut={item.key}
+          hint={t(item.hintKey)}
+          active={tool === item.id}
           labels={labels}
-          onClick={() => onTool(t.id)}
+          onClick={() => onTool(item.id)}
         />
       ))}
       {actions.length > 0 && <div className="rv-rail__sep" />}
@@ -92,7 +94,7 @@ export default function ToolRail({
         <RailButton
           key={a.id}
           icon={a.icon}
-          label={a.label}
+          label={t(a.labelKey)}
           shortcut={a.key}
           labels={labels}
           onClick={() => onAction(a.id)}

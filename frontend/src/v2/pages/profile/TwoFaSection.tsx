@@ -54,7 +54,7 @@ export default function TwoFaSection() {
       if (user) setUser({ ...user, twoFaEnabled: true } as AuthUser);
       toast.success(t('twofa.enabled'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Code incorrect');
+      toast.error(err instanceof Error ? err.message : t('twofa.wrongCode'));
     } finally {
       setBusy(false);
     }

@@ -36,6 +36,9 @@ type Catalog = Partial<Record<MessageKey, Message>>;
 /** L'ensemble des clés de traduction — dérivé du catalogue anglais de référence. */
 export type MessageKey = keyof typeof base;
 
+/** Signature du traducteur — à passer aux helpers définis hors composant. */
+export type Tr = typeof t;
+
 /** Valeurs interpolées dans un message : `{name}` dans le catalogue. */
 export type TParams = Record<string, string | number> & { count?: number };
 

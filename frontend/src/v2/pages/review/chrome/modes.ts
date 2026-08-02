@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
+import type { MessageKey } from '../../../i18n';
 
 /**
  * Bascule de mode — l'emplacement qui décide de ce qui existe à l'écran. Les quatre types de
@@ -25,10 +26,10 @@ export type ModeId = 'explore' | 'annotate' | 'compare' | 'edit' | 'stage' | 'cl
 
 export interface ReviewMode {
   value: ModeId;
-  label: string;
+  labelKey: MessageKey;
   icon: LucideIcon;
   /** Phrase affichée en pied de page : ce que le mode autorise, et pour qui. */
-  hint: string;
+  hintKey: MessageKey;
 }
 
 /** Les médias plats (vidéo, image) et les médias spatiaux (3D, splat) n'ont pas les mêmes modes. */
@@ -38,30 +39,30 @@ export function isSpatialKind(kind: MediaKind): boolean {
 
 const ANNOTATE_SPATIAL: ReviewMode = {
   value: 'annotate',
-  label: 'Annoter',
+  labelKey: 'mode.annotate',
   icon: PencilLine,
-  hint: 'Peindre sur la surface, épingler un point, joindre la vue au commentaire.',
+  hintKey: 'mode.annotateSpatial.hint',
 };
 
 const SPATIAL_MODES: ReviewMode[] = [
   {
     value: 'explore',
-    label: 'Explorer',
+    labelKey: 'mode.explore',
     icon: Compass,
-    hint: 'Naviguer, cadrer, inspecter — aucun outil d’édition. Seul mode servi aux clients.',
+    hintKey: 'mode.explore.hint',
   },
   ANNOTATE_SPATIAL,
   {
     value: 'stage',
-    label: 'Mise en scène',
+    labelKey: 'mode.stage',
     icon: Clapperboard,
-    hint: 'Caméra, animation, vues, éclairage par défaut — rejoués pour tous les spectateurs.',
+    hintKey: 'mode.stage.hint',
   },
   {
     value: 'clean',
-    label: 'Nettoyer',
+    labelKey: 'mode.clean',
     icon: Scissors,
-    hint: 'Sélection, suppression, volumes de coupe, transformation — avant publication.',
+    hintKey: 'mode.clean.hint',
   },
 ];
 
@@ -70,34 +71,34 @@ function mediaModes(kind: MediaKind): ReviewMode[] {
   return [
     {
       value: 'explore',
-      label: 'Regarder',
+      labelKey: 'mode.watch',
       icon: video ? Play : Eye,
-      hint: 'Lire, zoomer, comparer les versions — aucun outil d’édition. Seul mode servi aux clients.',
+      hintKey: 'mode.watch.hint',
     },
     {
       value: 'annotate',
-      label: 'Annoter',
+      labelKey: 'mode.annotate',
       icon: PencilLine,
-      hint: 'Dessiner sur l’image affichée : le tracé part avec le commentaire, à la frame courante.',
+      hintKey: 'mode.annotate.hint',
     },
     {
       value: 'compare',
-      label: 'Comparer',
+      labelKey: 'mode.compare',
       icon: Columns2,
-      hint: 'Deux versions dans le même viewer : wipe, différence ou côte à côte.',
+      hintKey: 'mode.compare.hint',
     },
     video
       ? {
           value: 'edit',
-          label: 'Découper',
+          labelKey: 'mode.trim',
           icon: Scissors,
-          hint: 'Points d’entrée/sortie et plages d’annotation — avant publication.',
+          hintKey: 'mode.trim.hint',
         }
       : {
           value: 'edit',
-          label: 'Ajuster',
+          labelKey: 'mode.adjust',
           icon: SlidersHorizontal,
-          hint: 'Exposition, gamma, canaux : lecture d’inspection, jamais enregistrée dans le média.',
+          hintKey: 'mode.adjust.hint',
         },
   ];
 }

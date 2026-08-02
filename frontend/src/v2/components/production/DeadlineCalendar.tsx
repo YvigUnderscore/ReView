@@ -77,7 +77,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
           <button
             onClick={() => shift(1)}
             className="rounded-md border border-border p-1 hover:bg-secondary/60"
-            aria-label="Mois suivant"
+            aria-label={t('common.nextMonth')}
           >
             <ChevronRight size={16} />
           </button>

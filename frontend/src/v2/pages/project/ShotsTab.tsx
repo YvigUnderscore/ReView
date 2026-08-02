@@ -202,11 +202,7 @@ export default function ShotsTab({
           compact
           icon={Clapperboard}
           title={t('shots.empty.title')}
-          description={
-            canManage
-              ? 'Créez vos premiers shots avec le formulaire ci-dessus (mode Simple, Lot ou Auto).'
-              : t('shots.empty.description')
-          }
+          description={canManage ? t('shots.empty.hint') : t('shots.empty.description')}
         />
       )}
 

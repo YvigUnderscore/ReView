@@ -71,7 +71,11 @@ export default function ProjectAdminDetailTab() {
         />
         <Metric label="Versions" value={stats.versions} to={`/admin/versions?projectId=${project.id}`} />
         <Metric label={t('trash.group.media')} value={stats.media} sub={fmtBytes(stats.mediaBytes)} />
-        <Metric label="Commentaires" value={stats.comments} to={`/admin/comments?projectId=${project.id}`} />
+        <Metric
+          label={t('admin.tab.comments')}
+          value={stats.comments}
+          to={`/admin/comments?projectId=${project.id}`}
+        />
         <Metric label="Assets" value={stats.assets} />
       </div>
 

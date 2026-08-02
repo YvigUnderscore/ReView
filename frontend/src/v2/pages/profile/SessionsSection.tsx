@@ -57,7 +57,7 @@ export default function SessionsSection() {
 
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold">Sessions actives</h2>
+      <h2 className="text-sm font-semibold">{t('sessions.title')}</h2>
       {sessions.length === 0 && (
         <p className="text-xs text-muted-foreground">
           Aucune session enregistrée (les connexions antérieures à la mise à jour n'apparaissent pas —
@@ -74,7 +74,7 @@ export default function SessionsSection() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{deviceLabel(s.userAgent)}</span>
-                {s.current && <Badge>Cet appareil</Badge>}
+                {s.current && <Badge>{t('sessions.thisDevice')}</Badge>}
               </div>
               <p className="text-xs text-muted-foreground">
                 {t('sessions.line', {
@@ -87,7 +87,7 @@ export default function SessionsSection() {
             <Button
               variant="ghost"
               size="sm"
-              title={s.current ? 'Se déconnecter' : t('shares.revoke')}
+              title={s.current ? t('common.signOut') : t('shares.revoke')}
               onClick={() => revoke(s)}
             >
               <Trash2 size={14} className="text-destructive" />

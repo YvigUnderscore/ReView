@@ -73,7 +73,7 @@ function AppRoutes() {
   if (!ready || needsSetup === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
-        Chargement…
+        {t('common.loading')}
       </div>
     );
   }
@@ -93,7 +93,9 @@ function AppRoutes() {
             <Route
               path="/client/:token"
               element={
-                <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Chargement…</div>}>
+                <Suspense
+                  fallback={<div className="p-6 text-sm text-muted-foreground">{t('common.loading')}</div>}
+                >
                   <ClientSharePage />
                 </Suspense>
               }

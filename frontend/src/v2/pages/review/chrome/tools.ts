@@ -33,6 +33,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
+import type { MessageKey } from '../../../i18n';
 import { isSpatialKind, modesFor, type ModeId } from './modes';
 
 /**
@@ -74,11 +75,11 @@ export type ToolId =
 
 export interface ReviewTool {
   id: ToolId;
-  label: string;
+  labelKey: MessageKey;
   icon: LucideIcon;
   /** Raccourci clavier — repris dans l'infobulle et à droite du libellé, rail déplié. */
   key: string;
-  hint: string;
+  hintKey: MessageKey;
   /** Restreint l'outil à un type de média (les outils de sélection sont propres au splat). */
   kind?: MediaKind;
 }
@@ -87,53 +88,53 @@ export interface ReviewTool {
 export interface ViewAction {
   id: 'fit' | 'reset';
   icon: LucideIcon;
-  label: string;
+  labelKey: MessageKey;
   key: string;
 }
 
 export const DEFAULT_TOOL: ToolId = 'nav';
 
-const NAV_HINT_MEDIA = 'Glisser pour déplacer l’image · molette pour zoomer';
-const NAV_HINT_SPATIAL = 'Orbite au glisser · vol libre au clic droit · zoom à la molette';
+const NAV_HINT_MEDIA: MessageKey = 'tool.nav.hintMedia';
+const NAV_HINT_SPATIAL: MessageKey = 'tool.nav.hintSpatial';
 
-const nav = (hint: string): ReviewTool => ({
+const nav = (hintKey: MessageKey): ReviewTool => ({
   id: 'nav',
-  label: 'Naviguer',
+  labelKey: 'tool.nav',
   icon: Hand,
   key: 'V',
-  hint,
+  hintKey,
 });
 
 const ZOOM: ReviewTool = {
   id: 'zoom',
-  label: 'Zoom',
+  labelKey: 'tool.zoom',
   icon: ZoomIn,
   key: 'Z',
-  hint: 'Glisser pour zoomer, Alt pour dézoomer',
+  hintKey: 'tool.zoom.hint',
 };
 
 /** Outils de tracé du mode « Annoter » — vidéo et image. */
 export const DRAW_TOOLS: ReviewTool[] = [
-  { id: 'draw', label: 'Dessin libre', icon: Pencil, key: 'D', hint: 'Trait à main levée' },
-  { id: 'rect', label: 'Rectangle', icon: Square, key: 'R', hint: 'Encadrer une zone' },
-  { id: 'ellipse', label: 'Ellipse', icon: Circle, key: 'E', hint: 'Cercler un détail' },
-  { id: 'arrow', label: 'Flèche', icon: MoveUpRight, key: 'A', hint: 'Pointer un élément' },
+  { id: 'draw', labelKey: 'tool.draw', icon: Pencil, key: 'D', hintKey: 'tool.draw.hint' },
+  { id: 'rect', labelKey: 'tool.rect', icon: Square, key: 'R', hintKey: 'tool.rect.hint' },
+  { id: 'ellipse', labelKey: 'tool.ellipse', icon: Circle, key: 'E', hintKey: 'tool.ellipse.hint' },
+  { id: 'arrow', labelKey: 'tool.arrow', icon: MoveUpRight, key: 'A', hintKey: 'tool.arrow.hint' },
   {
     id: 'polygon',
-    label: 'Polygone',
+    labelKey: 'tool.polygon',
     icon: Hexagon,
     key: 'G',
-    hint: 'Clic par sommet, double-clic pour fermer',
+    hintKey: 'tool.polygon.hint',
   },
-  { id: 'text', label: 'Texte', icon: Type, key: 'T', hint: 'Poser une étiquette' },
+  { id: 'text', labelKey: 'tool.text', icon: Type, key: 'T', hintKey: 'tool.text.hint' },
   {
     id: 'shape-move',
-    label: 'Déplacer une forme',
+    labelKey: 'tool.shapeMove',
     icon: Move,
     key: 'M',
-    hint: 'Reprendre une forme déjà posée',
+    hintKey: 'tool.shapeMove.hint',
   },
-  { id: 'erase', label: 'Gomme', icon: Eraser, key: 'X', hint: 'Clic ou glisser pour effacer' },
+  { id: 'erase', labelKey: 'tool.erase', icon: Eraser, key: 'X', hintKey: 'tool.erase.hint' },
 ];
 
 function mediaTools(mode: ModeId, kind: MediaKind): ReviewTool[] {
@@ -144,10 +145,10 @@ function mediaTools(mode: ModeId, kind: MediaKind): ReviewTool[] {
       start,
       {
         id: 'wipe',
-        label: 'Barre de wipe',
+        labelKey: 'tool.wipe',
         icon: MoveHorizontal,
         key: 'W',
-        hint: 'Glisser la barre · clic droit pour la faire pivoter',
+        hintKey: 'tool.wipe.hint',
       },
       ZOOM,
     ];
@@ -157,34 +158,34 @@ function mediaTools(mode: ModeId, kind: MediaKind): ReviewTool[] {
           start,
           {
             id: 'in',
-            label: 'Point d’entrée',
+            labelKey: 'tool.in',
             icon: LogIn,
             key: 'I',
-            hint: 'Cale l’entrée sur la frame courante',
+            hintKey: 'tool.in.hint',
           },
           {
             id: 'out',
-            label: 'Point de sortie',
+            labelKey: 'tool.out',
             icon: LogOut,
             key: 'O',
-            hint: 'Cale la sortie sur la frame courante',
+            hintKey: 'tool.out.hint',
           },
           {
             id: 'range',
-            label: 'Plage d’annotation',
+            labelKey: 'tool.range',
             icon: Ruler,
             key: 'P',
-            hint: 'Glisser sur la timeline pour couvrir plusieurs frames',
+            hintKey: 'tool.range.hint',
           },
         ]
       : [
           start,
           {
             id: 'pick',
-            label: 'Pipette',
+            labelKey: 'tool.pick',
             icon: Pipette,
             key: 'P',
-            hint: 'Lire la valeur d’un pixel (linéaire et affichage)',
+            hintKey: 'tool.pick.hint',
           },
           ZOOM,
         ];
@@ -193,11 +194,11 @@ function mediaTools(mode: ModeId, kind: MediaKind): ReviewTool[] {
 
 const FOCUS: ReviewTool = {
   id: 'focus',
-  label: 'Mise au point',
+  labelKey: 'tool.focus',
   icon: Crosshair,
   key: 'C',
   kind: 'SPLAT',
-  hint: 'Cliquer un point du splat pour y régler la distance focale',
+  hintKey: 'tool.focus.hint',
 };
 
 const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
@@ -206,91 +207,91 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
     FOCUS,
     {
       id: 'pin',
-      label: 'Point d’intérêt',
+      labelKey: 'tool.poi',
       icon: MapPin,
       key: 'I',
-      hint: 'Poser un repère nommé, visible par tous',
+      hintKey: 'tool.poi.hint',
     },
   ],
   annotate: [
     nav(NAV_HINT_SPATIAL),
     {
       id: 'paint',
-      label: 'Pinceau 3D',
+      labelKey: 'tool.paint',
       icon: Brush,
       key: 'P',
-      hint: 'Peindre sur la surface — les traits partent avec le commentaire',
+      hintKey: 'tool.paint.hint',
     },
     {
       id: 'region',
-      label: 'Zone',
+      labelKey: 'tool.region',
       icon: SquareDashed,
       key: 'B',
-      hint: 'Encadrer une zone de l’écran pour la pièce jointe du commentaire',
+      hintKey: 'tool.region.hint',
     },
     {
       id: 'pin',
-      label: 'Épingle',
+      labelKey: 'tool.pin',
       icon: MapPin,
       key: 'I',
-      hint: 'Ancrer le commentaire à un point de la surface',
+      hintKey: 'tool.pin.hint',
     },
   ],
   stage: [
     nav(NAV_HINT_SPATIAL),
     {
       id: 'cam-move',
-      label: 'Poser la caméra',
+      labelKey: 'tool.camMove',
       icon: Move3d,
       key: 'T',
-      hint: 'Déplacer la caméra-objet dans la scène',
+      hintKey: 'tool.camMove.hint',
     },
     {
       id: 'cam-aim',
-      label: 'Orienter la caméra',
+      labelKey: 'tool.camAim',
       icon: Rotate3d,
       key: 'R',
-      hint: 'Orienter le regard de la caméra-objet',
+      hintKey: 'tool.camAim.hint',
     },
-    { ...FOCUS, hint: 'Régler la distance focale au clic' },
+    { ...FOCUS, hintKey: 'tool.focus.hintStage' },
   ],
   clean: [
     nav(NAV_HINT_SPATIAL),
     {
       id: 'sel-rect',
-      label: 'Rectangle',
+      labelKey: 'tool.selRect',
       icon: SquareDashed,
       key: 'B',
       kind: 'SPLAT',
-      hint: 'Sélection rectangle — Maj ajoute, Alt retire',
+      hintKey: 'tool.selRect.hint',
     },
     {
       id: 'sel-lasso',
-      label: 'Lasso',
+      labelKey: 'tool.selLasso',
       icon: Lasso,
       key: 'L',
       kind: 'SPLAT',
-      hint: 'Sélection lasso — Maj ajoute, Alt retire',
+      hintKey: 'tool.selLasso.hint',
     },
     {
       id: 'sel-brush',
-      label: 'Pinceau surface',
+      labelKey: 'tool.selBrush',
       icon: Brush,
       key: 'P',
       kind: 'SPLAT',
-      hint: 'Ne prend que les splats de surface — Maj ajoute, Alt retire',
+      hintKey: 'tool.selBrush.hint',
     },
     {
       id: 'volume',
-      label: 'Volume de coupe',
+      labelKey: 'tool.volume',
       icon: BoxSelect,
       key: 'O',
       kind: 'SPLAT',
-      hint: 'Boîte ou sphère : creuser ou isoler',
+      hintKey: 'tool.volume.hint',
     },
-    { id: 'translate', label: 'Déplacer', icon: Move3d, key: 'T', hint: 'Gizmo de translation' },
-    { id: 'rotate', label: 'Tourner', icon: Rotate3d, key: 'R', hint: 'Gizmo de rotation' },
-    { id: 'scale', label: 'Échelle', icon: Scale3d, key: 'S', hint: 'Gizmo d’échelle' },
+    { id: 'translate', labelKey: 'tool.translate', icon: Move3d, key: 'T', hintKey: 'tool.translate.hint' },
+    { id: 'rotate', labelKey: 'tool.rotate', icon: Rotate3d, key: 'R', hintKey: 'tool.rotate.hint' },
+    { id: 'scale', labelKey: 'tool.scale', icon: Scale3d, key: 'S', hintKey: 'tool.scale.hint' },
   ],
 };
 
@@ -314,13 +315,13 @@ export function toolSearchOrder(kind: MediaKind, current: ModeId): ModeId[] {
 }
 
 const SPATIAL_ACTIONS: ViewAction[] = [
-  { id: 'fit', icon: Frame, label: 'Cadrer la sélection ou l’objet', key: 'F' },
-  { id: 'reset', icon: Home, label: 'Vue d’origine', key: 'H' },
+  { id: 'fit', icon: Frame, labelKey: 'action.fitSpatial', key: 'F' },
+  { id: 'reset', icon: Home, labelKey: 'action.resetSpatial', key: 'H' },
 ];
 
 const MEDIA_ACTIONS: ViewAction[] = [
-  { id: 'fit', icon: Maximize2, label: 'Ajuster à l’écran', key: 'F' },
-  { id: 'reset', icon: Scan, label: 'Taille réelle 1:1', key: 'H' },
+  { id: 'fit', icon: Maximize2, labelKey: 'action.fitMedia', key: 'F' },
+  { id: 'reset', icon: Scan, labelKey: 'action.resetMedia', key: 'H' },
 ];
 
 /** Actions de vue du bas du rail, après le séparateur. */

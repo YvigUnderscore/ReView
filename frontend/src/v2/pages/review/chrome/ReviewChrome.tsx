@@ -99,9 +99,9 @@ export default function ReviewChrome({
               label={t('review.mode')}
               items={modes.map((m) => ({
                 value: m.value,
-                label: m.label,
+                label: t(m.labelKey),
                 icon: m.icon,
-                hint: `${m.label} (${modes.indexOf(m) + 1}) — ${m.hint}`,
+                hint: `${t(m.labelKey)} (${modes.indexOf(m) + 1}) — ${t(m.hintKey)}`,
               }))}
               value={state.mode}
               onChange={(mode: ModeId) => onState({ mode })}
@@ -145,7 +145,7 @@ export default function ReviewChrome({
       </div>
 
       <footer className="flex flex-shrink-0 items-center gap-2.5 border-t border-border bg-card/60 px-2.5 py-[0.3125rem] text-[0.625rem] text-muted-foreground">
-        <span>{activeMode.hint}</span>
+        <span>{t(activeMode.hintKey)}</span>
         <span className="ml-auto flex items-center gap-2">
           <span>
             {state.labels ? 'Libellés visibles' : 'Rail en icônes'} · dock {state.panel ? 'ouvert' : 'replié'}

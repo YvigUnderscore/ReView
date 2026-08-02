@@ -50,7 +50,7 @@ export default function ProjectSettingsTab({
     try {
       await api.patch(`/api/projects/${projectId}`, { startFrame: n });
       onStartFrameChange(n);
-      setMsg('Frame de départ enregistrée.');
+      setMsg(t('project.startFrameSaved'));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur');
     } finally {
@@ -70,7 +70,7 @@ export default function ProjectSettingsTab({
       );
       onSettingsChange(saved);
       setDraft(saved);
-      setMsg('Réglages enregistrés.');
+      setMsg(t('project.settingsSaved'));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur');
     } finally {
@@ -293,7 +293,7 @@ export default function ProjectSettingsTab({
         disabled={savingSettings || !draft}
         className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        <Save size={15} /> {savingSettings ? 'Enregistrement…' : 'Enregistrer les réglages'}
+        <Save size={15} /> {savingSettings ? 'Enregistrement…' : t('project.saveSettings')}
       </button>
     </div>
   );

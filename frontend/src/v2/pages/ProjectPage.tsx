@@ -112,9 +112,9 @@ export default function ProjectPage() {
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     { key: 'production', label: 'Production', icon: <BarChart3 size={16} /> },
     ...(canManage ? [{ key: 'members', label: t('nav.members'), icon: <Users size={16} /> }] : []),
-    ...(canManage ? [{ key: 'shares', label: 'Partages', icon: <Share2 size={16} /> }] : []),
+    ...(canManage ? [{ key: 'shares', label: t('project.tab.shares'), icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),
-    ...(canManage ? [{ key: 'trash', label: 'Corbeille', icon: <Trash2 size={16} /> }] : []),
+    ...(canManage ? [{ key: 'trash', label: t('admin.tab.trash'), icon: <Trash2 size={16} /> }] : []),
   ];
 
   return (

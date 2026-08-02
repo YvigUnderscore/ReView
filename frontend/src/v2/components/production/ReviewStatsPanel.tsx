@@ -77,12 +77,12 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
         <Kpi label={tr('shots.title')} value={String(t.shots)} />
         <Kpi label="Versions" value={String(t.versions)} />
         <Kpi
-          label="Taux d'approbation"
+          label={tr('stats.approvalRate')}
           value={`${t.approvalRate}%`}
           icon={<CheckCircle2 size={13} className="text-success" />}
         />
         <Kpi
-          label="Notes ouvertes"
+          label={tr('stats.openNotes')}
           value={String(t.openNotes)}
           icon={<MessageSquareWarning size={13} className="text-warning" />}
         />
@@ -92,11 +92,11 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
           icon={<Clock size={13} className="text-info" />}
         />
         <Kpi
-          label="Retakes / shot"
+          label={tr('stats.retakesPerShot')}
           value={String(t.avgRetakesPerShot)}
           icon={<RefreshCw size={13} className="text-accent2" />}
         />
-        <Kpi label="Notes / version" value={String(t.avgNotesPerVersion)} />
+        <Kpi label={tr('stats.notesPerVersion')} value={String(t.avgNotesPerVersion)} />
         <Kpi label={tr('stats.decisions')} value={String(t.decisions)} />
       </div>
 
@@ -135,7 +135,7 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
                   <th className="pb-2 font-medium">Shot</th>
                   <th className="pb-2 text-right font-medium">Versions</th>
                   <th className="pb-2 text-right font-medium">Retakes</th>
-                  <th className="pb-2 text-right font-medium">Notes</th>
+                  <th className="pb-2 text-right font-medium">{tr('stats.notes')}</th>
                   <th className="pb-2 text-right font-medium">{tr('stats.delay')}</th>
                 </tr>
               </thead>

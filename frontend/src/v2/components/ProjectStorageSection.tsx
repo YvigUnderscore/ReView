@@ -53,7 +53,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
       if (storageQuota != null && !Number.isFinite(storageQuota)) throw new Error('Quota invalide');
       await api.patch(`/api/projects/${projectId}`, { storageQuota });
       await qc.invalidateQueries({ queryKey: qk.projectUsage(projectId) });
-      setMsg('Quota enregistré.');
+      setMsg(t('project.quotaSaved'));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur');
     } finally {
@@ -87,7 +87,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
           )}
           <div className="flex items-end gap-2">
             <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-              Quota (Go)
+              {t('storage.quotaLabel')}
               <input
                 type="number"
                 min={0}
