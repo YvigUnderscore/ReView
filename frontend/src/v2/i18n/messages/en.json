@@ -959,5 +959,10 @@
   "admin.tab.trash": "Trash",
   "admin.tab.color": "Colour (OCIO)",
   "admin.topStorage": "Top storage / user",
-  "admin.onlineCount": "{count} online"
+  "admin.onlineCount": "{count} online",
+
+  "presence.available": "Available",
+  "presence.away": "Away",
+  "presence.dnd": "Do not disturb",
+  "presence.onlineCount": "Online · {count}"
 }

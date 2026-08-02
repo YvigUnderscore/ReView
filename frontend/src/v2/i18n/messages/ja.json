@@ -958,5 +958,10 @@
   "admin.tab.trash": "ゴミ箱",
   "admin.tab.color": "カラー（OCIO）",
   "admin.topStorage": "ストレージ上位／ユーザー",
-  "admin.onlineCount": "{count} 人オンライン"
+  "admin.onlineCount": "{count} 人オンライン",
+
+  "presence.available": "対応可",
+  "presence.away": "離席中",
+  "presence.dnd": "取り込み中",
+  "presence.onlineCount": "オンライン · {count}"
 }

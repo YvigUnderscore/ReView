@@ -959,5 +959,10 @@
   "admin.tab.trash": "Lixeira",
   "admin.tab.color": "Cor (OCIO)",
   "admin.topStorage": "Top armazenamento / usuário",
-  "admin.onlineCount": "{count} on-line"
+  "admin.onlineCount": "{count} on-line",
+
+  "presence.available": "Disponível",
+  "presence.away": "Ausente",
+  "presence.dnd": "Não perturbar",
+  "presence.onlineCount": "On-line · {count}"
 }

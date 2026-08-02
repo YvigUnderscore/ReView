@@ -11,7 +11,7 @@ import { usePresence, lastSeenLabel } from '../stores/usePresence';
 import { useTheme } from '../stores/useTheme';
 import Avatar from './Avatar';
 import WhatsNew from './WhatsNew';
-import { STATUS_COLOR, STATUS_LABEL } from '../lib/userStatus';
+import { STATUS_COLOR, STATUS_LABEL_KEY } from '../lib/userStatus';
 import { useT } from '../i18n';
 
 const STATUSES: UserStatus[] = ['AVAILABLE', 'AWAY', 'DND'];
@@ -55,7 +55,7 @@ export default function SidebarFooter() {
           className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/60"
         >
           <span className="flex items-center gap-1.5">
-            <Users size={14} /> En ligne · {onlineCount}
+            <Users size={14} /> {t('presence.onlineCount', { count: onlineCount })}
           </span>
           <ChevronDown
             size={14}
@@ -71,7 +71,7 @@ export default function SidebarFooter() {
               <div
                 key={u.id}
                 className="flex items-center gap-2 rounded-md px-2 py-1"
-                title={STATUS_LABEL[u.status]}
+                title={t(STATUS_LABEL_KEY[u.status])}
               >
                 <Avatar
                   seed={u.id}
@@ -114,7 +114,7 @@ export default function SidebarFooter() {
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ background: STATUS_COLOR[myStatus] }}
               />
-              {STATUS_LABEL[myStatus]}
+              {t(STATUS_LABEL_KEY[myStatus])}
               <ChevronDown size={11} />
             </button>
           </div>
@@ -128,7 +128,7 @@ export default function SidebarFooter() {
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-secondary"
               >
                 <span className="inline-block h-2 w-2 rounded-full" style={{ background: STATUS_COLOR[s] }} />
-                {STATUS_LABEL[s]}
+                {t(STATUS_LABEL_KEY[s])}
               </button>
             ))}
           </div>

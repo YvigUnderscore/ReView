@@ -958,5 +958,10 @@
   "admin.tab.trash": "回收站",
   "admin.tab.color": "色彩（OCIO）",
   "admin.topStorage": "存储占用排行 / 用户",
-  "admin.onlineCount": "{count} 人在线"
+  "admin.onlineCount": "{count} 人在线",
+
+  "presence.available": "空闲",
+  "presence.away": "离开",
+  "presence.dnd": "请勿打扰",
+  "presence.onlineCount": "在线 · {count}"
 }

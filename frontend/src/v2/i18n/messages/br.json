@@ -958,5 +958,10 @@
   "admin.tab.trash": "Pod-lastez",
   "admin.tab.color": "Liv (OCIO)",
   "admin.topStorage": "Kadaviñ uhelañ / implijer",
-  "admin.onlineCount": "{count} enlinenn"
+  "admin.onlineCount": "{count} enlinenn",
+
+  "presence.available": "Hegerz",
+  "presence.away": "Ezvezant",
+  "presence.dnd": "Chom hep trubuilhañ",
+  "presence.onlineCount": "Enlinenn · {count}"
 }

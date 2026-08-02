@@ -959,5 +959,10 @@
   "admin.tab.trash": "Escobilhièr",
   "admin.tab.color": "Color (OCIO)",
   "admin.topStorage": "Top emmagazinatge / utilizaire",
-  "admin.onlineCount": "{count} en linha"
+  "admin.onlineCount": "{count} en linha",
+
+  "presence.available": "Disponible",
+  "presence.away": "Absent",
+  "presence.dnd": "Destorbar pas",
+  "presence.onlineCount": "En linha · {count}"
 }

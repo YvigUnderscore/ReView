@@ -959,5 +959,10 @@
   "admin.tab.trash": "Corbeille",
   "admin.tab.color": "Couleur (OCIO)",
   "admin.topStorage": "Top stockage / utilisateur",
-  "admin.onlineCount": "{count} en ligne"
+  "admin.onlineCount": "{count} en ligne",
+
+  "presence.available": "Disponible",
+  "presence.away": "Absent",
+  "presence.dnd": "Ne pas déranger",
+  "presence.onlineCount": "En ligne · {count}"
 }

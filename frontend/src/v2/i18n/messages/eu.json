@@ -959,5 +959,10 @@
   "admin.tab.trash": "Zakarrontzia",
   "admin.tab.color": "Kolorea (OCIO)",
   "admin.topStorage": "Biltegiratze handiena / erabiltzailea",
-  "admin.onlineCount": "{count} linean"
+  "admin.onlineCount": "{count} linean",
+
+  "presence.available": "Eskuragarri",
+  "presence.away": "Kanpoan",
+  "presence.dnd": "Ez molestatu",
+  "presence.onlineCount": "Linean · {count}"
 }

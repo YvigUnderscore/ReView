@@ -958,5 +958,10 @@
   "admin.tab.trash": "휴지통",
   "admin.tab.color": "색상(OCIO)",
   "admin.topStorage": "저장 공간 상위 / 사용자",
-  "admin.onlineCount": "{count}명 접속 중"
+  "admin.onlineCount": "{count}명 접속 중",
+
+  "presence.available": "대화 가능",
+  "presence.away": "자리 비움",
+  "presence.dnd": "방해 금지",
+  "presence.onlineCount": "접속 중 · {count}"
 }

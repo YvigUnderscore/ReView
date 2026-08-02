@@ -959,5 +959,10 @@
   "admin.tab.trash": "Spazzatura",
   "admin.tab.color": "Culore (OCIO)",
   "admin.topStorage": "Top stucchera / utilizatore",
-  "admin.onlineCount": "{count} in linea"
+  "admin.onlineCount": "{count} in linea",
+
+  "presence.available": "Dispunibule",
+  "presence.away": "Assente",
+  "presence.dnd": "Ùn disturbà",
+  "presence.onlineCount": "In linea · {count}"
 }

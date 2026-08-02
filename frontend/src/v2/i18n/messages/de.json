@@ -959,5 +959,10 @@
   "admin.tab.trash": "Papierkorb",
   "admin.tab.color": "Farbe (OCIO)",
   "admin.topStorage": "Top-Speicher / Benutzer",
-  "admin.onlineCount": "{count} online"
+  "admin.onlineCount": "{count} online",
+
+  "presence.available": "Verfügbar",
+  "presence.away": "Abwesend",
+  "presence.dnd": "Nicht stören",
+  "presence.onlineCount": "Online · {count}"
 }

@@ -959,5 +959,10 @@
   "admin.tab.trash": "रद्दी",
   "admin.tab.color": "रंग (OCIO)",
   "admin.topStorage": "शीर्ष भंडारण / उपयोगकर्ता",
-  "admin.onlineCount": "{count} ऑनलाइन"
+  "admin.onlineCount": "{count} ऑनलाइन",
+
+  "presence.available": "उपलब्ध",
+  "presence.away": "अनुपस्थित",
+  "presence.dnd": "परेशान न करें",
+  "presence.onlineCount": "ऑनलाइन · {count}"
 }

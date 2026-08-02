@@ -959,5 +959,10 @@
   "admin.tab.trash": "Mülltonn",
   "admin.tab.color": "Farb (OCIO)",
   "admin.topStorage": "Top Spicher / Benutzer",
-  "admin.onlineCount": "{count} online"
+  "admin.onlineCount": "{count} online",
+
+  "presence.available": "Verfiegbar",
+  "presence.away": "Abwäsend",
+  "presence.dnd": "Nit störe",
+  "presence.onlineCount": "Online · {count}"
 }
