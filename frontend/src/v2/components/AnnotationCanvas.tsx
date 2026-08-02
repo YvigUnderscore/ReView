@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useRef, useState, useCallback, useEffect } from 'react';
 import ShapeEl from './annotation/ShapeEl';
 import {

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Server as SocketServer, type Socket } from 'socket.io';
 import type { Server as HttpServer } from 'node:http';
 import { verifyToken } from '../lib/jwt';

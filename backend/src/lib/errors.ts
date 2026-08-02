@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Erreur applicative avec code HTTP — captée par le middleware d'erreur global.
  */

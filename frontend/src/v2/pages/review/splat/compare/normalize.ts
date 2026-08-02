@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Normalisation de taille des splats comparés (11.H) : deux captures d'échelles brutes très
  * différentes doivent apparaître à la même taille — l'échelle du frère est le ratio des

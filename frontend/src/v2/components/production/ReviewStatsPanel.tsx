@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Link } from 'react-router-dom';
 import { Clock, MessageSquareWarning, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { ProjectStats, SequenceConvergence, ShotStatStatus } from '../../types/api';

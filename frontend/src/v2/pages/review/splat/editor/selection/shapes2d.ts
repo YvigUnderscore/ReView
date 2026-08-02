@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Géométrie 2D de la sélection de splats (10.G) — fonctions pures (testables sans WebGL).
  * Les formes sont exprimées en pixels écran ; la projection 3D→2D vit dans `screenSelect.ts`.

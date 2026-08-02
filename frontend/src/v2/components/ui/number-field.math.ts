@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Logique pure du champ numérique « drag-label » (`NumberField`) : valeur ajustée en glissant
  * horizontalement sur le libellé (pattern DCC/Blender), bornée et arrondie au pas. Testable

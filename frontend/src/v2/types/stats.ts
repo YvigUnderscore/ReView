@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Statistiques de review (43.A — GET /api/projects/:id/stats). Miroir de backend StatsService.
 
 export type ShotStatStatus = 'approved' | 'inReview' | 'retake' | 'notStarted';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { ChannelId } from '../channels/model';
 
 /** Métadonnées d'affichage d'un canal (libellé court + token de couleur du thème). */

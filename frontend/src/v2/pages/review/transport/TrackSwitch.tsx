@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Box, Video } from 'lucide-react';
 import { SegmentedControl } from '../../../components/ui/segmented-control';
 

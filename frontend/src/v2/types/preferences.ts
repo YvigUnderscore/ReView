@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Préférences UI par compte — GET/PATCH /api/users/me/preferences (merge superficiel,
  * `null` = suppression de la clé). Sac ouvert : chaque feature y ajoute sa clé.

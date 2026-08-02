@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import jwt from 'jsonwebtoken';
 import type { ShareLink } from '@prisma/client';
 import { env } from '../config/env';

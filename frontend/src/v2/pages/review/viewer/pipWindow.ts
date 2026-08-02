@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type * as THREE from 'three';
 
 /** Rectangle du PiP en pixels CSS, origine **haut-gauche** du conteneur (coords DOM). */

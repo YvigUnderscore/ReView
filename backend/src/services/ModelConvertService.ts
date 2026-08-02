@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename, dirname, extname, join, relative } from 'node:path';

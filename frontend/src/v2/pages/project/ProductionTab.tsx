@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, CalendarDays, GanttChartSquare } from 'lucide-react';

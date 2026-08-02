@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Badge } from '../../components/ui/badge';
 
 const STATUS_LABEL: Record<string, string> = {

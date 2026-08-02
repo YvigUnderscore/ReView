@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Réglages du gizmo TRS contextualisés par cible (11.G) : le splat entier et les volumes de
  * crop ne se manipulent pas pareil — espace, snaps et taille de poignées sont mémorisés

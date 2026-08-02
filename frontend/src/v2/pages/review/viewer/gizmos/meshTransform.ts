@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { SplatTransform } from '../../reviewTypes';
 
 /** Formes structurelles minimales d'un mesh Three (évite de dépendre de THREE dans les tests). */

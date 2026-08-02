@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { TaskWithAssignee } from '../../types/api';
 
 /** Tâche enrichie du contexte de son shot pour l'affichage kanban. */

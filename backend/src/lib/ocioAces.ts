@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Analyse des configs OCIO ACES publiées par l'ASWF (39.B) — dépôt
  * `AcademySoftwareFoundation/OpenColorIO-Config-ACES`. Les assets de release nomment le type de

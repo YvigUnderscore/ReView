@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Types USD (Phase 45) — description de la scène convertie et provenance de conversion 3D.
  * Module séparé de `api.ts` (budget de lignes), réexporté par lui : une entité = une définition.

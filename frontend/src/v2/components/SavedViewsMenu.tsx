@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useState } from 'react';
 import { ListFilter, Trash2, Check, Plus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';

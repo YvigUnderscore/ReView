@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { uploadMedia, inferMediaKind } from '../lib/uploadClient';

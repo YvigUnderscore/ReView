@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { MediaKind, TaskStatus, TaskType } from '../../types/api';
 
 /** Réponse de GET /api/dashboard (12.B) — shapes display-ready construites côté serveur. */

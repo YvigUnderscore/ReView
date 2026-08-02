@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { createHash, randomBytes } from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from './prisma';

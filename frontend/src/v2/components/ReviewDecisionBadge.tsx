@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { reviewStatusStyle } from './reviewDecision.helpers';
 import type { ReviewStatus } from '../types/api';
 

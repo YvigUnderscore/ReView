@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { ReactNode } from 'react';
 import { PanelRightClose } from 'lucide-react';
 import { IconButton } from '../../../components/ui/icon-button';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Crown, LogOut, Radio, Volume2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import Avatar from '../../components/Avatar';

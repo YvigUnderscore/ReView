@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { decryptSecret } from '../lib/crypto';

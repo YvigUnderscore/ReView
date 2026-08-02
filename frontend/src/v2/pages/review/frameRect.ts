@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Cadre de review à aspect fixe (Phase 15/16, V6). Le viewport 3D/splat rend dans un cadre
  * **letterboxé** d'aspect constant (issu de la caméra de présentation), et non plus étiré à la

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useCallback } from 'react';
 
 /** Types image acceptés par le backend (data URL) — tout autre type est ré-encodé en PNG. */

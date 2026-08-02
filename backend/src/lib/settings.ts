@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { prisma } from './prisma';
 
 /**
@@ -17,7 +20,34 @@ export const SETTING_KEYS = {
   LIVE_SYNC_HZ_SPLAT: 'live_sync_hz_splat',
   // Logo studio (35.D) : clé MinIO — page client, burn-ins worker.
   STUDIO_LOGO: 'studio_logo_key',
+  // Licence : URL du code source correspondant, exigée par l'AGPL §13 et affichée aux
+  // utilisateurs distants. Tout studio qui déploie une version modifiée doit y pointer
+  // SES sources, pas le dépôt amont.
+  STUDIO_SOURCE_URL: 'studio_source_url',
 } as const;
+
+/** Dépôt amont — valeur par défaut du lien « code source » (AGPL §13). */
+export const UPSTREAM_SOURCE_URL = 'https://github.com/YvigUnderscore/ReView';
+
+/**
+ * Normalise l'URL de source avant affichage : elle finit dans un `href`, et le réglage
+ * est un champ texte libre. Seuls http(s) passent ; tout le reste retombe sur l'amont.
+ */
+export function safeSourceUrl(value: string | null | undefined): string {
+  if (!value?.trim()) return UPSTREAM_SOURCE_URL;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : UPSTREAM_SOURCE_URL;
+  } catch {
+    return UPSTREAM_SOURCE_URL;
+  }
+}
+
+/** URL du code source correspondant (AGPL §13), repli sur le dépôt amont. */
+export async function getSourceUrl(): Promise<string> {
+  const row = await prisma.setting.findUnique({ where: { key: SETTING_KEYS.STUDIO_SOURCE_URL } });
+  return safeSourceUrl(row?.value);
+}
 
 const DEFAULTS: Record<string, number> = {
   [SETTING_KEYS.MAX_FILE_SIZE]: 5 * 1024 * 1024 * 1024, // 5 Go

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Types et helpers purs de la page /docs (documentation produit).
  * Le manifest est généré par frontend/scripts/build-docs.mjs à partir de DOCUMENTATION/.

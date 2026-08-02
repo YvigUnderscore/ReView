@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { AssetType, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';

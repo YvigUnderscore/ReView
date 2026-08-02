@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Conversions euler degrés ↔ quaternion (ordre XYZ intrinsèque, conventions three.js) pour les
  * champs numériques TRS (10.G-V4). Pur et sans dépendance Three — testable, et utilisable des

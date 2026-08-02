@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Link, useLocation } from 'react-router-dom';
 import { History } from 'lucide-react';
 import { useRecents } from '../stores/useRecents';

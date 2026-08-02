@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useEffect, useState } from 'react';
 import { getSocket } from '../../../lib/socket';
 import { useAuth } from '../../stores/useAuth';

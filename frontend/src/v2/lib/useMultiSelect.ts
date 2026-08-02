@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** Modificateurs de clic pertinents pour la sélection (sous-ensemble de MouseEvent). */

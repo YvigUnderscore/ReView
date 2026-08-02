@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Masque de suppression d'un splat (10.G) — encodage binaire pur (testable sans WebGL).
  * Un bitset : le bit `i` vaut 1 si le splat d'indice `i` est masqué. Stocké tel quel dans

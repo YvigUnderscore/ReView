@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { UserStatus } from '../types/api';
 
 /** Couleurs et libellés des statuts de présence utilisateur (Avatar, SidebarFooter). */

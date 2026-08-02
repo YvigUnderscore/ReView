@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Input } from '../../components/ui/input';
 import type { PipelineSettings } from '../../types/api';
 import type { PipelineForm } from './pipelineForm';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Salle de review live (33.B) — état **en mémoire** des sessions synchronisées.
  * Une session est identifiée par une clé `media:<id>` ou `playlist:<id>` ; le premier

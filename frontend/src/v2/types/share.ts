@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { MediaKind } from './api';
 
 // ── Partage client (35.C/35.D) — module séparé de api.ts pour le budget de lignes ─

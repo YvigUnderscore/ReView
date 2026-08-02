@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Link } from 'react-router-dom';
 import { Play, ListTodo, ArrowRight } from 'lucide-react';
 import { useRecents, type RecentEntry } from '../stores/useRecents';

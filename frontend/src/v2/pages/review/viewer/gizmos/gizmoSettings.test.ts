@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_GIZMO_SETTINGS, loadGizmoSettings, saveGizmoSettings } from './gizmoSettings';
 

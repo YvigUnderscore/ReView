@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Build de la documentation in-app : copie DOCUMENTATION/ (racine du repo) vers
 // public/docs/ et génère public/docs/manifest.json (sections + pages + titres).
 // Exécuté automatiquement avant `npm run dev` et `npm run build` (predev/prebuild).

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useUploadStore, type UploadItem } from '../../stores/useUploadStore';
 

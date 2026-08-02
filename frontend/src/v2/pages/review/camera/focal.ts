@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Conversion focale (mm) ↔ champ de vision (degrés) — Phase 26. Convention DCC : capteur
  * **36 mm** appliqué à l'axe du FOV piloté par le viewer. Purs, testables, inverses l'un

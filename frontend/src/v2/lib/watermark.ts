@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Watermark spectateur (35.B) : tuile SVG répétée en fond (data-URI) — bien plus léger
  * que des centaines de nœuds DOM, et insensible au zoom du média en dessous.

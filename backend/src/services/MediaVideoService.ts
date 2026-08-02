@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { MediaKind, MediaStatus, Prisma } from '@prisma/client';
 import { badRequest, notFound } from '../lib/errors';
 import { prisma } from '../lib/prisma';

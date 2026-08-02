@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import os from 'node:os';
 import { statfs } from 'node:fs/promises';
 import { prisma } from '../lib/prisma';

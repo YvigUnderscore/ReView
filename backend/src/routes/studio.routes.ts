@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
@@ -11,6 +14,7 @@ import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
 import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
+import { getSourceUrl } from '../lib/settings';
 import * as SmtpService from '../services/SmtpService';
 import { sendMail } from '../lib/mailer';
 import { mailLayout } from '../lib/mailTemplate';
@@ -19,14 +23,17 @@ const router = Router();
 
 // GET /api/studio/branding — identité visuelle **publique** (42.B — №101) : utilisée par la
 // page de connexion (pré-auth) et le bootstrap de l'app pour l'accent + le logo + le nom.
+// Porte aussi `sourceUrl` : l'AGPL §13 impose d'offrir le code source à tout utilisateur
+// distant, y compris non authentifié (connexion, partage client).
 router.get('/branding', async (_req, res) => {
-  const [studio, accent, logoKey] = await Promise.all([
+  const [studio, accent, logoKey, sourceUrl] = await Promise.all([
     prisma.studio.findFirst({ select: { name: true } }),
     prisma.setting.findUnique({ where: { key: 'studio_accent' } }),
     prisma.setting.findUnique({ where: { key: 'studio_logo_key' } }),
+    getSourceUrl(),
   ]);
   const logoUrl = logoKey?.value ? await storage.getPresignedGetUrl(logoKey.value) : null;
-  res.json({ name: studio?.name ?? null, accent: accent?.value ?? null, logoUrl });
+  res.json({ name: studio?.name ?? null, accent: accent?.value ?? null, logoUrl, sourceUrl });
 });
 
 router.use(authenticate);

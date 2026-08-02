@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { describe, it, expect, beforeEach } from 'vitest';
 import { clampSize, readStoredSize, writeStoredSize } from './resizable.helpers';
 

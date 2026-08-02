@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import type { MediaResp, SplatCamera, SplatEditsPatch, SplatPresentation } from '../reviewTypes';

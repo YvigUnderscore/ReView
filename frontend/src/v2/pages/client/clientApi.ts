@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Mini-client HTTP de la page client publique (35.D) : pas de JWT utilisateur, mais une
  * session de partage (`X-Share-Auth`, émise par le GET initial ou l'unlock) conservée en

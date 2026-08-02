@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { getLocale, setLocale, useT, type Locale } from '../lib/i18n';
 
 const LOCALE_LABEL: Record<Locale, string> = { fr: 'FR', en: 'EN' };

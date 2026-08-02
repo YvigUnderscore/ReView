@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { describe, expect, it, vi } from 'vitest';
 import type { SplatMesh } from '@sparkjsdev/spark';
 import { createDebugColor, depthGlsl } from './debugColor';

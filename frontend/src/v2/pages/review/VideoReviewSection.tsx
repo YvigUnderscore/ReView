@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { type ComponentProps, type ReactNode } from 'react';
 import type { ReviewComment } from '../../types/api';
 import type { MediaResp } from './reviewTypes';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Columns3 } from 'lucide-react';
 import { SegmentedControl } from '../../components/ui/segmented-control';
 import type { Model3DCompareState } from './three/useModel3DCompare';

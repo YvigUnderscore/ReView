@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Worker } from 'bullmq';
 import ffmpeg from 'fluent-ffmpeg';
 import { tmpdir } from 'node:os';

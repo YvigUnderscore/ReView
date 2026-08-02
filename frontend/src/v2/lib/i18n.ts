@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useSyncExternalStore } from 'react';
 
 /**
@@ -63,6 +66,9 @@ const fr = {
   'common.edit': 'Éditer',
   'common.close': 'Fermer',
   'common.search': 'Rechercher',
+  // Mention AGPL §13 — offre de source aux utilisateurs distants.
+  'license.notice': 'ReView — logiciel libre sous licence AGPL-3.0.',
+  'license.source': 'Code source',
 } as const;
 
 /** L'ensemble des clés de traduction — dérivé du dictionnaire FR de référence. */
@@ -123,6 +129,8 @@ const en: Partial<Record<MessageKey, string>> = {
   'common.edit': 'Edit',
   'common.close': 'Close',
   'common.search': 'Search',
+  'license.notice': 'ReView — free software under the AGPL-3.0 license.',
+  'license.source': 'Source code',
 };
 
 const LOCALES: readonly Locale[] = ['fr', 'en'];

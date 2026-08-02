@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import AdmZip from 'adm-zip';
 import { mkdtemp, rm, writeFile, stat } from 'node:fs/promises';

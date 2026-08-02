@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Enveloppe HTML de marque commune à tous les emails ReView (Phase 22) — DA cohérente
  * (thème bleu nuit + accent cyan/magenta). Les clients mail ne supportant pas les variables

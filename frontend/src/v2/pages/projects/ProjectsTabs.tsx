@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 export type ProjectsTab = 'active' | 'archived';
 
 /** Bascule Actifs / Archivés de la page Projets (38.B, réservée aux gestionnaires). */

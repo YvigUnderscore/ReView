@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { MediaStatus, Prisma, Role, TaskStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';

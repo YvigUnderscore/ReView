@@ -1,9 +1,13 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../../lib/motion';
 import { useT } from '../../lib/i18n';
 import { useBranding } from '../../lib/branding';
 import LocaleSwitch from '../../components/LocaleSwitch';
+import SourceNotice from '../../components/SourceNotice';
 
 /**
  * Écran d'authentification scindé (10.B7) : panneau identité à gauche (logo, tagline,
@@ -45,6 +49,8 @@ export function AuthLayout({
         <motion.div variants={fadeInUp} initial="hidden" animate="show" className="w-full max-w-sm">
           {children}
         </motion.div>
+        {/* AGPL §13 : offre de source visible avant même toute authentification. */}
+        <SourceNotice className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap" />
       </main>
     </div>
   );

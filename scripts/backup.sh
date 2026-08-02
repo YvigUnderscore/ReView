@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 #
 # Sauvegarde ReView (37.F) : dump PostgreSQL (-Fc) + archive des objets MinIO,
 # horodatés, avec rotation. À planifier (cron/Task Scheduler) sur l'hôte docker.

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Scene detection (34.H) : parsing de la sortie `showinfo` de FFmpeg — le worker lance
  * `select='gt(scene,S)',showinfo` et pose un marqueur de timeline « Plan n » à chaque

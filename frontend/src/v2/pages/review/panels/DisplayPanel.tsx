@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Circle, Grid3x3, Grip, Sparkles, Triangle } from 'lucide-react';
 import { Select } from '../../../components/ui/select';
 import { SegmentedControl } from '../../../components/ui/segmented-control';

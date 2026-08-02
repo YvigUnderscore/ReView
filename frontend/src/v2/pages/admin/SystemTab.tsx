@@ -1,7 +1,11 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import { useBranding } from '../../lib/branding';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Gauge, Panel, Row, ServiceHealth } from './AdminPrimitives';
@@ -57,6 +61,41 @@ export default function SystemTab() {
       <Panel title="Santé des services">
         <ServiceHealth services={system.services} />
       </Panel>
+      <LicensePanel />
     </div>
+  );
+}
+
+/**
+ * Licence de l'instance. L'AGPL §13 oblige à offrir le code source **correspondant** :
+ * un studio qui fait tourner une version modifiée doit renseigner ses propres sources
+ * (onglet Réglages → « Code source (AGPL §13) »), sinon le lien renvoie vers l'amont.
+ */
+function LicensePanel() {
+  const { data: branding } = useBranding();
+  return (
+    <Panel title="Licence & code source">
+      <dl className="space-y-1 text-sm">
+        <Row k="Licence" v="AGPL-3.0-or-later" />
+        <Row k="Dépendances tierces" v="THIRD-PARTY-NOTICES.md (racine du dépôt)" />
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Code source publié</dt>
+          <dd>
+            <a
+              href={branding?.sourceUrl ?? 'https://github.com/YvigUnderscore/ReView'}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-primary"
+            >
+              {branding?.sourceUrl ?? '—'}
+            </a>
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Toute personne qui utilise cette instance à distance doit pouvoir en récupérer les sources. Si vous
+        l’avez modifiée, faites pointer le réglage « Code source » vers votre dépôt.
+      </p>
+    </Panel>
   );
 }
