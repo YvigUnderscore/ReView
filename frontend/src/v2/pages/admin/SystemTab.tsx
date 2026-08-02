@@ -10,8 +10,10 @@ import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Gauge, Panel, Row, ServiceHealth } from './AdminPrimitives';
 import { fmtBytes, fmtDuration, type System } from './adminShared';
+import { useT } from '../../i18n';
 
 export default function SystemTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: system } = useQuery({
     queryKey: qk.admin('system'),
@@ -32,7 +34,7 @@ export default function SystemTab() {
         <RefreshCw size={13} /> Rafraîchir
       </Button>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Hôte">
+        <Panel title={t('common.host')}>
           <dl className="space-y-1 text-sm">
             <Row k="Plateforme" v={`${system.host.platform} (${system.host.arch})`} />
             <Row k="Node.js" v={system.host.nodeVersion} />
@@ -58,7 +60,7 @@ export default function SystemTab() {
           </div>
         </Panel>
       </div>
-      <Panel title="Santé des services">
+      <Panel title={t('overview.serviceHealth')}>
         <ServiceHealth services={system.services} />
       </Panel>
       <LicensePanel />
@@ -72,6 +74,7 @@ export default function SystemTab() {
  * (onglet Réglages → « Code source (AGPL §13) »), sinon le lien renvoie vers l'amont.
  */
 function LicensePanel() {
+  const t = useT();
   const { data: branding } = useBranding();
   return (
     <Panel title="Licence & code source">
@@ -79,7 +82,7 @@ function LicensePanel() {
         <Row k="Licence" v="AGPL-3.0-or-later" />
         <Row k="Dépendances tierces" v="THIRD-PARTY-NOTICES.md (racine du dépôt)" />
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Code source publié</dt>
+          <dt className="text-muted-foreground">{t('system.sourcePublished')}</dt>
           <dd>
             <a
               href={branding?.sourceUrl ?? 'https://github.com/YvigUnderscore/ReView'}

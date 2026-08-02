@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import { auditActionLabel, auditEntityLink, fmtDateTime } from './adminShared';
+import { useT } from '../../i18n';
 import type {
   AdminApiToken,
   AdminUserActivity,
@@ -17,6 +18,7 @@ import type {
 /** Panneaux de la fiche utilisateur admin (projets, sessions, tokens, activité). */
 
 export function MembershipsPanel({ memberships }: { memberships: AdminUserMembership[] }) {
+  const t = useT();
   return (
     <Panel title={`Projets (${memberships.length})`}>
       <div className="space-y-1.5">
@@ -35,7 +37,9 @@ export function MembershipsPanel({ memberships }: { memberships: AdminUserMember
             </span>
           </div>
         ))}
-        {memberships.length === 0 && <p className="text-xs text-muted-foreground">Membre d'aucun projet.</p>}
+        {memberships.length === 0 && (
+          <p className="text-xs text-muted-foreground">{t('userDetail.noProject')}</p>
+        )}
       </div>
     </Panel>
   );
@@ -50,6 +54,7 @@ export function SessionsPanel({
   onRevoke: (sid: string) => void;
   onRevokeAll: () => void;
 }) {
+  const t = useT();
   return (
     <Panel title={`Sessions actives (${sessions.length})`}>
       <div className="space-y-1.5">
@@ -64,14 +69,16 @@ export function SessionsPanel({
             </span>
             <button
               onClick={() => onRevoke(s.id)}
-              title="Révoquer cette session"
+              title={t('userDetail.revokeSession')}
               className="rounded p-1 text-destructive hover:bg-secondary"
             >
               <X size={14} />
             </button>
           </div>
         ))}
-        {sessions.length === 0 && <p className="text-xs text-muted-foreground">Aucune session active.</p>}
+        {sessions.length === 0 && (
+          <p className="text-xs text-muted-foreground">{t('userDetail.noSession')}</p>
+        )}
       </div>
       {sessions.length > 0 && (
         <Button variant="outline" size="sm" className="mt-3" onClick={onRevokeAll}>
@@ -83,6 +90,7 @@ export function SessionsPanel({
 }
 
 export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
+  const t = useT();
   return (
     <Panel title={`Tokens d'API (${tokens.length})`}>
       <div className="space-y-1.5">
@@ -97,7 +105,7 @@ export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
             </span>
           </div>
         ))}
-        {tokens.length === 0 && <p className="text-xs text-muted-foreground">Aucun token actif.</p>}
+        {tokens.length === 0 && <p className="text-xs text-muted-foreground">{t('tokens.empty')}</p>}
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">
         Révocation par un admin : section API &amp; Webhooks.
@@ -107,8 +115,9 @@ export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
 }
 
 export function ActivityPanel({ activity }: { activity: AdminUserActivity[] }) {
+  const t = useT();
   return (
-    <Panel title="Activité récente (audit)">
+    <Panel title={t('userDetail.recentAudit')}>
       <ul className="space-y-1 text-xs text-muted-foreground">
         {activity.map((a) => {
           const link = auditEntityLink(a.entityType, a.entityId);
@@ -128,7 +137,7 @@ export function ActivityPanel({ activity }: { activity: AdminUserActivity[] }) {
             </li>
           );
         })}
-        {activity.length === 0 && <li>Aucune action journalisée.</li>}
+        {activity.length === 0 && <li>{t('userDetail.noAudit')}</li>}
       </ul>
     </Panel>
   );

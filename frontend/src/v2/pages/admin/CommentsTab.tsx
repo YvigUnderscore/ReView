@@ -17,11 +17,13 @@ import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { fmtDateTime } from './adminShared';
 import type { AdminCommentRow, AdminProjectRow, Paginated, User } from '../../types/api';
+import { useT } from '../../i18n';
 
 const PAGE_SIZE = 50;
 
 /** Commentaires de tout le studio : recherche, filtres, modération (résolution/suppression). */
 export default function CommentsTab() {
+  const t = useT();
   const qc = useQueryClient();
   const [params] = useSearchParams();
   const [projectId, setProjectId] = useState(params.get('projectId') ?? '');
@@ -63,7 +65,7 @@ export default function CommentsTab() {
     if (!deleting) return;
     try {
       await api.del(`/api/comments/${deleting.id}`);
-      toast.success('Commentaire supprimé');
+      toast.success(t('comments.deleted'));
       setDeleting(null);
       invalidate();
     } catch (e) {
@@ -86,7 +88,7 @@ export default function CommentsTab() {
               setQ(e.target.value);
               setPage(1);
             }}
-            placeholder="Rechercher dans le contenu…"
+            placeholder={t('comments.search.placeholder')}
             className="pl-8"
           />
         </div>
@@ -97,7 +99,7 @@ export default function CommentsTab() {
             setPage(1);
           }}
         >
-          <option value="">Tous les projets</option>
+          <option value="">{t('reviews.filter.allProjects')}</option>
           {(projectsQ.data?.projects ?? []).map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -111,7 +113,7 @@ export default function CommentsTab() {
             setPage(1);
           }}
         >
-          <option value="">Tous les auteurs</option>
+          <option value="">{t('comments.filter.allAuthors')}</option>
           {(usersQ.data ?? []).map((u) => (
             <option key={u.id} value={u.id}>
               {u.displayName ?? u.name ?? u.email}
@@ -125,9 +127,9 @@ export default function CommentsTab() {
             setPage(1);
           }}
         >
-          <option value="">Résolution : tous</option>
+          <option value="">{t('comments.filter.resolution')}</option>
           <option value="false">Ouverts</option>
-          <option value="true">Résolus</option>
+          <option value="true">{t('comments.filter.resolved')}</option>
         </Select>
       </div>
       <p className="mb-2 text-xs text-muted-foreground">{total} commentaire(s) au total.</p>
@@ -143,10 +145,10 @@ export default function CommentsTab() {
                   size={22}
                 />
               ) : (
-                <Badge variant="secondary">invité</Badge>
+                <Badge variant="secondary">{t('comments.guest')}</Badge>
               )}
               <span className="font-medium">{c.author?.displayName ?? c.guestName ?? 'Anonyme'}</span>
-              {c.parentId != null && <Badge variant="secondary">réponse</Badge>}
+              {c.parentId != null && <Badge variant="secondary">{t('comments.reply')}</Badge>}
               {c.isResolved && (
                 <Badge variant="secondary">
                   <CheckCircle2 size={12} /> résolu
@@ -163,7 +165,7 @@ export default function CommentsTab() {
               </button>
               <button
                 onClick={() => setDeleting(c)}
-                title="Supprimer (modération)"
+                title={t('comments.moderate')}
                 className="rounded p-1 text-destructive hover:bg-secondary"
               >
                 <Trash2 size={14} />
@@ -204,7 +206,7 @@ export default function CommentsTab() {
       )}
       <ConfirmDialog
         open={!!deleting}
-        title="Supprimer le commentaire ?"
+        title={t('comments.delete.title')}
         message={
           <>
             Le commentaire {deleting?.replyCount ? `et ses ${deleting.replyCount} réponse(s) ` : ''}sera

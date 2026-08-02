@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
+import { useT } from '../../i18n';
 
 interface JobRow {
   id: string | null;
@@ -37,6 +38,7 @@ const QUEUE_LABELS: Record<string, string> = {
 
 /** Dashboard BullMQ (37.C) : état des files, jobs échoués (retry), purge. */
 export default function JobsTab() {
+  const t = useT();
   const qc = useQueryClient();
   const jobsQ = useQuery({
     queryKey: qk.admin('jobs'),
@@ -50,7 +52,7 @@ export default function JobsTab() {
   const retry = async (queue: string, id: string) => {
     try {
       await api.post(`/api/admin/jobs/${queue}/${id}/retry`);
-      toast.success('Job relancé');
+      toast.success(t('jobs.retried'));
       invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -78,7 +80,7 @@ export default function JobsTab() {
             </Badge>
             <Badge variant="muted">{q.counts.completed ?? 0} terminés</Badge>
             {(q.counts.failed ?? 0) > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => clean(q.key)} title="Purger les échoués">
+              <Button variant="ghost" size="sm" onClick={() => clean(q.key)} title={t('jobs.purgeFailed')}>
                 <Trash2 size={13} className="mr-1 text-destructive" /> Purger
               </Button>
             )}
@@ -110,7 +112,7 @@ export default function JobsTab() {
                 )}
               </div>
             ))}
-            {q.failed.length === 0 && <p className="text-xs text-muted-foreground">Aucun échec.</p>}
+            {q.failed.length === 0 && <p className="text-xs text-muted-foreground">{t('jobs.noFailure')}</p>}
           </div>
         </Panel>
       ))}
@@ -132,6 +134,7 @@ interface PurgeConfig {
 
 /** Purge des dérivés obsolètes (37.H) : config + exécution manuelle. */
 function DerivedPurgePanel() {
+  const t = useT();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: qk.admin('derived-purge'),
@@ -164,7 +167,7 @@ function DerivedPurgePanel() {
   };
 
   return (
-    <Panel title="Purge des dérivés obsolètes">
+    <Panel title={t('jobs.purgeDerived')}>
       <p className="mb-2 text-xs text-muted-foreground">
         Les versions au-delà des N dernières de chaque tâche/asset perdent leurs renditions HLS et leur sprite
         (le proxy et la miniature restent : lecture toujours possible). Passage quotidien automatique quand

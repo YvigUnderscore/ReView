@@ -10,6 +10,7 @@ import { Select } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ROLES } from './adminShared';
 import type { Role, User } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Création / édition d'un utilisateur (dialog). */
 export default function UserModal({
@@ -23,6 +24,7 @@ export default function UserModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const isEdit = !!user;
   const [form, setForm] = useState({
     email: user?.email ?? '',
@@ -52,11 +54,11 @@ export default function UserModal({
       if (form.storageLimitGo) body.storageLimit = Math.round(Number(form.storageLimitGo) * 1e9);
       if (isEdit) {
         await api.patch(`/api/users/${user!.id}`, body);
-        toast.success('Utilisateur modifié');
+        toast.success(t('userModal.updated'));
       } else {
         if (!form.password) throw new Error('Mot de passe requis');
         await api.post('/api/users', body);
-        toast.success('Utilisateur créé');
+        toast.success(t('userModal.created'));
       }
       onSaved();
     } catch (err) {
@@ -79,7 +81,7 @@ export default function UserModal({
           </DialogHeader>
           <div className="grid grid-cols-2 gap-2">
             <Input
-              placeholder="Prénom"
+              placeholder={t('profile.firstName')}
               value={form.firstName}
               onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
             />
@@ -90,7 +92,7 @@ export default function UserModal({
             />
           </div>
           <Input
-            placeholder="Pseudo (affiché)"
+            placeholder={t('userModal.username')}
             value={form.username}
             onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
           />

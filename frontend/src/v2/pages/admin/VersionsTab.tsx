@@ -14,6 +14,7 @@ import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { fmtDateTime } from './adminShared';
 import type { AdminProjectRow, AdminVersionRow, MediaKind, Paginated, VersionStatus } from '../../types/api';
+import { useT } from '../../i18n';
 
 const PAGE_SIZE = 50;
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
@@ -21,6 +22,7 @@ const STATUSES: VersionStatus[] = ['DRAFT', 'REVIEW', 'PUBLISHED'];
 
 /** Liste globale des versions (tous projets) : filtres, pagination, accès à la review. */
 export default function VersionsTab() {
+  const t = useT();
   const [params] = useSearchParams();
   const [projectId, setProjectId] = useState(params.get('projectId') ?? '');
   const [status, setStatus] = useState('');
@@ -63,7 +65,7 @@ export default function VersionsTab() {
               setQ(e.target.value);
               resetPage();
             }}
-            placeholder="Nom de version (V01…)"
+            placeholder={t('versions.namePlaceholder')}
             className="pl-8"
           />
         </div>
@@ -74,7 +76,7 @@ export default function VersionsTab() {
             resetPage();
           }}
         >
-          <option value="">Tous les projets</option>
+          <option value="">{t('reviews.filter.allProjects')}</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -88,7 +90,7 @@ export default function VersionsTab() {
             resetPage();
           }}
         >
-          <option value="">Tous les statuts</option>
+          <option value="">{t('projectsAdmin.allStatuses')}</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -102,9 +104,9 @@ export default function VersionsTab() {
             resetPage();
           }}
         >
-          <option value="">Publication : toutes</option>
-          <option value="true">Publiées</option>
-          <option value="false">Non publiées</option>
+          <option value="">{t('versions.publication')}</option>
+          <option value="true">{t('versions.published')}</option>
+          <option value="false">{t('versions.unpublished')}</option>
         </Select>
         <Select
           value={kind}
@@ -113,7 +115,7 @@ export default function VersionsTab() {
             resetPage();
           }}
         >
-          <option value="">Tous les médias</option>
+          <option value="">{t('versions.allMedia')}</option>
           {KINDS.map((k) => (
             <option key={k} value={k}>
               {k}
@@ -129,9 +131,9 @@ export default function VersionsTab() {
               <th className="px-3 py-2">Version</th>
               <th className="px-3 py-2">Localisation</th>
               <th className="px-3 py-2">Projet</th>
-              <th className="px-3 py-2">Décision</th>
+              <th className="px-3 py-2">{t('versions.decision')}</th>
               <th className="px-3 py-2">Publication</th>
-              <th className="px-3 py-2">Médias</th>
+              <th className="px-3 py-2">{t('trash.group.media')}</th>
               <th className="px-3 py-2">Auteur</th>
               <th className="px-3 py-2">Créée</th>
             </tr>

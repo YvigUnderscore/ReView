@@ -54,6 +54,10 @@ import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
 import TrashTab from './admin/TrashTab';
 import AuditTab from './admin/AuditTab';
+import { useT, type MessageKey } from '../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 
 /**
  * Sections d'administration — sous-routées via /admin/:section (10.C6), regroupées par
@@ -61,107 +65,133 @@ import AuditTab from './admin/AuditTab';
  * (utilisateurs, projets, versions, commentaires, stockage) ; une section peut définir un
  * composant `Detail` rendu quand l'URL porte un id (/admin/users/12, /admin/projects/3).
  */
-const SECTIONS = [
-  {
-    key: 'overview',
-    group: 'Studio',
-    label: 'Tableau de bord',
-    icon: LayoutDashboard,
-    Component: OverviewTab,
-  },
-  { key: 'activity', group: 'Studio', label: 'Activité', icon: Activity, Component: ActivityTab },
-  { key: 'identity', group: 'Studio', label: 'Identité (SSO)', icon: Fingerprint, Component: IdentityTab },
-  { key: 'system', group: 'Studio', label: 'Système', icon: Server, Component: SystemTab },
-  { key: 'settings', group: 'Studio', label: 'Réglages', icon: SettingsIcon, Component: SettingsTab },
-  {
-    key: 'defaults',
-    group: 'Studio',
-    label: 'Défauts projet',
-    icon: FolderCog,
-    Component: ProjectDefaultsTab,
-  },
-  {
-    key: 'users',
-    group: 'Contenus',
-    label: 'Utilisateurs',
-    icon: UsersIcon,
-    Component: UsersTab,
-    Detail: UserDetailTab,
-  },
-  {
-    key: 'projects',
-    group: 'Contenus',
-    label: 'Projets',
-    icon: FolderKanban,
-    Component: ProjectsAdminTab,
-    Detail: ProjectAdminDetailTab,
-  },
-  { key: 'versions', group: 'Contenus', label: 'Versions', icon: Film, Component: VersionsTab },
-  {
-    key: 'comments',
-    group: 'Contenus',
-    label: 'Commentaires',
-    icon: MessageSquare,
-    Component: CommentsTab,
-  },
-  { key: 'storage', group: 'Contenus', label: 'Stockage', icon: Database, Component: StorageTab },
-  { key: 'hdri', group: 'Contextes de review', label: '3D & Splat', icon: Box, Component: HdriTab },
-  { key: 'ocio', group: 'Contextes de review', label: 'Couleur (OCIO)', icon: Palette, Component: OcioTab },
-  { key: 'video', group: 'Contextes de review', label: 'Vidéo', icon: Video, Component: TranscodeTab },
-  {
-    key: 'distribution',
-    group: 'Contextes de review',
-    label: 'Diffusion',
-    icon: Share2,
-    Component: DistributionTab,
-  },
-  {
-    key: 'review-statuses',
-    group: 'Contextes de review',
-    label: 'Statuts',
-    icon: ClipboardCheck,
-    Component: ReviewStatusTab,
-  },
-  {
-    key: 'announcements',
-    group: 'Communications',
-    label: 'Annonces',
-    icon: Megaphone,
-    Component: AnnouncementsTab,
-  },
-  { key: 'smtp', group: 'Communications', label: 'SMTP', icon: Mail, Component: SmtpTab },
-  {
-    key: 'api',
-    group: 'Communications',
-    label: 'API & Webhooks',
-    icon: KeyRound,
-    Component: ApiWebhooksTab,
-  },
-  { key: 'jobs', group: 'Maintenance', label: 'Jobs', icon: ListChecks, Component: JobsTab },
-  { key: 'trash', group: 'Maintenance', label: 'Corbeille', icon: Trash2, Component: TrashTab },
-  { key: 'audit', group: 'Maintenance', label: 'Audit', icon: History, Component: AuditTab },
-  {
-    key: 'media-access',
-    group: 'Maintenance',
-    label: 'Accès médias',
-    icon: Eye,
-    Component: MediaAccessTab,
-  },
-] as const;
+const sections = (t: Tr) =>
+  [
+    {
+      key: 'overview',
+      group: 'Studio',
+      label: t('admin.tab.dashboard'),
+      icon: LayoutDashboard,
+      Component: OverviewTab,
+    },
+    {
+      key: 'activity',
+      group: 'Studio',
+      label: t('admin.tab.activity'),
+      icon: Activity,
+      Component: ActivityTab,
+    },
+    {
+      key: 'identity',
+      group: 'Studio',
+      label: t('admin.tab.identity'),
+      icon: Fingerprint,
+      Component: IdentityTab,
+    },
+    { key: 'system', group: 'Studio', label: t('admin.tab.system'), icon: Server, Component: SystemTab },
+    {
+      key: 'settings',
+      group: 'Studio',
+      label: t('admin.tab.settings'),
+      icon: SettingsIcon,
+      Component: SettingsTab,
+    },
+    {
+      key: 'defaults',
+      group: 'Studio',
+      label: t('admin.tab.projectDefaults'),
+      icon: FolderCog,
+      Component: ProjectDefaultsTab,
+    },
+    {
+      key: 'users',
+      group: 'Contenus',
+      label: 'Utilisateurs',
+      icon: UsersIcon,
+      Component: UsersTab,
+      Detail: UserDetailTab,
+    },
+    {
+      key: 'projects',
+      group: 'Contenus',
+      label: 'Projets',
+      icon: FolderKanban,
+      Component: ProjectsAdminTab,
+      Detail: ProjectAdminDetailTab,
+    },
+    { key: 'versions', group: 'Contenus', label: 'Versions', icon: Film, Component: VersionsTab },
+    {
+      key: 'comments',
+      group: 'Contenus',
+      label: 'Commentaires',
+      icon: MessageSquare,
+      Component: CommentsTab,
+    },
+    { key: 'storage', group: 'Contenus', label: 'Stockage', icon: Database, Component: StorageTab },
+    { key: 'hdri', group: 'Contextes de review', label: '3D & Splat', icon: Box, Component: HdriTab },
+    { key: 'ocio', group: 'Contextes de review', label: 'Couleur (OCIO)', icon: Palette, Component: OcioTab },
+    {
+      key: 'video',
+      group: 'Contextes de review',
+      label: t('admin.tab.video'),
+      icon: Video,
+      Component: TranscodeTab,
+    },
+    {
+      key: 'distribution',
+      group: 'Contextes de review',
+      label: 'Diffusion',
+      icon: Share2,
+      Component: DistributionTab,
+    },
+    {
+      key: 'review-statuses',
+      group: 'Contextes de review',
+      label: 'Statuts',
+      icon: ClipboardCheck,
+      Component: ReviewStatusTab,
+    },
+    {
+      key: 'announcements',
+      group: 'Communications',
+      label: 'Annonces',
+      icon: Megaphone,
+      Component: AnnouncementsTab,
+    },
+    { key: 'smtp', group: 'Communications', label: 'SMTP', icon: Mail, Component: SmtpTab },
+    {
+      key: 'api',
+      group: 'Communications',
+      label: 'API & Webhooks',
+      icon: KeyRound,
+      Component: ApiWebhooksTab,
+    },
+    { key: 'jobs', group: 'Maintenance', label: 'Jobs', icon: ListChecks, Component: JobsTab },
+    { key: 'trash', group: 'Maintenance', label: 'Corbeille', icon: Trash2, Component: TrashTab },
+    { key: 'audit', group: 'Maintenance', label: 'Audit', icon: History, Component: AuditTab },
+    {
+      key: 'media-access',
+      group: 'Maintenance',
+      label: t('admin.tab.mediaAccess'),
+      icon: Eye,
+      Component: MediaAccessTab,
+    },
+  ] as const;
 
 const GROUPS = ['Studio', 'Contenus', 'Contextes de review', 'Communications', 'Maintenance'] as const;
 
 export default function AdminPage() {
+  const t = useT();
   const role = useAuth((s) => s.user?.role);
   const { section, id } = useParams();
   if (role !== 'ADMIN') {
     return (
       <Shell title="Administration">
-        <p className="text-sm text-destructive">Accès réservé aux administrateurs.</p>
+        <p className="text-sm text-destructive">{t('admin.restricted')}</p>
       </Shell>
     );
   }
-  const active = SECTIONS.find((s) => s.key === section) ?? SECTIONS[0];
+  const active = sections(t).find((s) => s.key === section) ?? sections(t)[0];
   const Detail = 'Detail' in active ? active.Detail : undefined;
   const Active = id && Detail ? Detail : active.Component;
 
@@ -175,23 +205,25 @@ export default function AdminPage() {
               <div className="hidden px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 first:pt-0 md:block">
                 {group}
               </div>
-              {SECTIONS.filter((s) => s.group === group).map((s) => {
-                const Icon = s.icon;
-                const on = s.key === active.key;
-                return (
-                  <Link
-                    key={s.key}
-                    to={`/admin/${s.key}`}
-                    className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                      on
-                        ? 'bg-secondary text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-                    }`}
-                  >
-                    <Icon size={16} /> {s.label}
-                  </Link>
-                );
-              })}
+              {sections(t)
+                .filter((s) => s.group === group)
+                .map((s) => {
+                  const Icon = s.icon;
+                  const on = s.key === active.key;
+                  return (
+                    <Link
+                      key={s.key}
+                      to={`/admin/${s.key}`}
+                      className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                        on
+                          ? 'bg-secondary text-foreground'
+                          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                      }`}
+                    >
+                      <Icon size={16} /> {s.label}
+                    </Link>
+                  );
+                })}
             </div>
           ))}
         </nav>

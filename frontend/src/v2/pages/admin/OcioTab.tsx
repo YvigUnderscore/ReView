@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
+import { useT } from '../../i18n';
 
 interface OcioConfig {
   id: string;
@@ -42,6 +43,7 @@ interface OcioRelease {
  * projets choisissent ensuite leur display/view dans leurs réglages.
  */
 export default function OcioTab() {
+  const t = useT();
   const qc = useQueryClient();
   const [browse, setBrowse] = useState(false);
   const [busyAsset, setBusyAsset] = useState<string | null>(null);
@@ -105,7 +107,7 @@ export default function OcioTab() {
         ) et définissez la config par défaut du studio (ACES&nbsp;1.3 recommandé).
       </p>
 
-      <Panel title="Configs installées">
+      <Panel title={t('ocio.installed')}>
         {configsQ.data === undefined ? (
           <SkeletonRows count={2} />
         ) : configsQ.data.length === 0 ? (
@@ -158,7 +160,7 @@ export default function OcioTab() {
         ) : releasesQ.isLoading ? (
           <SkeletonRows count={3} />
         ) : releasesQ.isError ? (
-          <p className="text-sm text-destructive">Impossible de contacter GitHub. Réessayez plus tard.</p>
+          <p className="text-sm text-destructive">{t('ocio.githubUnreachable')}</p>
         ) : (
           <div className="space-y-4">
             {(releasesQ.data ?? []).map((r) => (

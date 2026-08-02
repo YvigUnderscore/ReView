@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
+import { useT } from '../../i18n';
 
 interface OidcView {
   enabled: boolean;
@@ -26,6 +27,7 @@ type Draft = OidcView & { clientSecret: string };
 
 /** Section « Identité (SSO) » (36.A) : connexion OIDC (Google par défaut). */
 export default function IdentityTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: qk.admin('oidc'),
@@ -53,7 +55,7 @@ export default function IdentityTab() {
       });
       setDraft({ ...oidc, clientSecret: '' });
       qc.invalidateQueries({ queryKey: qk.admin('oidc') });
-      toast.success('Configuration SSO enregistrée');
+      toast.success(t('sso.saved'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
@@ -76,7 +78,7 @@ export default function IdentityTab() {
               checked={draft.enabled}
               onChange={(e) => set({ enabled: e.target.checked })}
             />
-            <span className="font-medium">Activer le bouton SSO sur la page de connexion</span>
+            <span className="font-medium">{t('sso.enable')}</span>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -85,11 +87,11 @@ export default function IdentityTab() {
               checked={draft.autoProvision}
               onChange={(e) => set({ autoProvision: e.target.checked })}
             />
-            <span className="font-medium">Créer automatiquement un compte Artiste</span>
+            <span className="font-medium">{t('sso.autoCreate')}</span>
             <span className="text-xs text-muted-foreground">(email vérifié inconnu → nouveau compte)</span>
           </label>
           <Field
-            label="URL publique de l'app"
+            label={t('sso.appUrl')}
             value={draft.publicUrl}
             onChange={(v) => set({ publicUrl: v })}
             placeholder="https://review.studio.com"
@@ -114,10 +116,10 @@ export default function IdentityTab() {
             placeholder={draft.hasSecret ? '••••••••' : 'GOCSPX-…'}
           />
           <Field
-            label="Libellé du bouton"
+            label={t('sso.buttonLabel')}
             value={draft.buttonLabel}
             onChange={(v) => set({ buttonLabel: v })}
-            placeholder="Se connecter avec Google"
+            placeholder={t('sso.buttonDefault')}
           />
         </div>
         <div className="mt-3">

@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/badge';
 import { Panel } from './AdminPrimitives';
 import { pipelineLabel } from './adminProjects';
 import type { AdminHierarchySequence, AdminHierarchyShot, PipelineSettings } from '../../types/api';
+import { useT } from '../../i18n';
 
 /**
  * Hiérarchie séquences → shots d'un projet (fiche admin) : à chaque niveau, les
@@ -14,13 +15,16 @@ import type { AdminHierarchySequence, AdminHierarchyShot, PipelineSettings } fro
  */
 
 function SettingsChip({ effective, override }: { effective: PipelineSettings; override: boolean }) {
+  const t = useT();
   return (
     <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
       {pipelineLabel(effective)}
       {override ? (
         <Badge variant="secondary">override</Badge>
       ) : (
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">hérité</span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+          {t('common.inherited')}
+        </span>
       )}
     </span>
   );
@@ -53,8 +57,9 @@ export default function ProjectHierarchy({
   noSequence: AdminHierarchyShot[];
   project: PipelineSettings;
 }) {
+  const t = useT();
   return (
-    <Panel title="Hiérarchie & réglages hérités">
+    <Panel title={t('hierarchy.title')}>
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="font-medium">Projet</span>
         <SettingsChip effective={project} override={false} />
@@ -81,7 +86,9 @@ export default function ProjectHierarchy({
           <div className="py-1.5">
             <div className="flex items-center gap-2 text-sm">
               <Layers size={14} className="shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate font-medium">Shots sans séquence</span>
+              <span className="min-w-0 flex-1 truncate font-medium">
+                {t('hierarchy.shotsWithoutSequence')}
+              </span>
             </div>
             {noSequence.map((shot) => (
               <ShotRow key={shot.id} shot={shot} />
@@ -89,7 +96,7 @@ export default function ProjectHierarchy({
           </div>
         )}
         {sequences.length === 0 && noSequence.length === 0 && (
-          <p className="py-2 text-xs text-muted-foreground">Projet sans séquence ni shot.</p>
+          <p className="py-2 text-xs text-muted-foreground">{t('hierarchy.emptyProject')}</p>
         )}
       </div>
     </Panel>

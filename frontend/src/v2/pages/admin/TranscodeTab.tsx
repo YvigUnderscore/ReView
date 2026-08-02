@@ -13,11 +13,13 @@ import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
 import type { TranscodeConfig } from '../../types/api';
+import { useT } from '../../i18n';
 
 const PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow'];
 
 /** Contexte Vidéo (admin) : configuration du transcodage HLS lue par le worker (Phase 22/23). */
 export default function TranscodeTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: qk.admin('transcode'),
@@ -40,7 +42,7 @@ export default function TranscodeTab() {
       const { config } = await api.put<{ config: TranscodeConfig }>('/api/admin/transcode', draft);
       setDraft(config);
       qc.invalidateQueries({ queryKey: qk.admin('transcode') });
-      toast.success('Configuration de transcodage enregistrée');
+      toast.success(t('transcode.saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
     } finally {
@@ -69,7 +71,7 @@ export default function TranscodeTab() {
           checked={draft.sceneDetection ?? false}
           onChange={(e) => set({ sceneDetection: e.target.checked })}
         />
-        <span className="font-medium">Détection de plans</span>
+        <span className="font-medium">{t('transcode.sceneDetect')}</span>
         <span className="text-xs text-muted-foreground">
           (marqueurs « Plan n » posés aux coupes — une passe d’analyse en plus par vidéo)
         </span>
@@ -77,7 +79,7 @@ export default function TranscodeTab() {
 
       <Panel title="Encodage">
         <div className="flex flex-wrap items-end gap-3 text-xs">
-          <Field label="Qualité (CRF)">
+          <Field label={t('transcode.crf')}>
             <Input
               type="number"
               min={0}
@@ -115,7 +117,7 @@ export default function TranscodeTab() {
         </div>
       </Panel>
 
-      <Panel title="Échelle de qualités (renditions)">
+      <Panel title={t('transcode.renditions')}>
         <div className="space-y-1.5">
           {draft.ladder.map((r, i) => (
             <div key={i} className="flex items-center gap-2 text-xs">

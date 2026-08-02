@@ -19,9 +19,11 @@ import { Metric } from './AdminPrimitives';
 import { fmtBytes, fmtDateTime } from './adminShared';
 import { ActivityPanel, MembershipsPanel, SessionsPanel, TokensPanel } from './UserDetailPanels';
 import type { AdminUserDetail } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Fiche détaillée d'un compte (refonte admin) : profil, projets, sessions, activité. */
 export default function UserDetailTab() {
+  const t = useT();
   const { id } = useParams();
   const userId = Number(id);
   const qc = useQueryClient();
@@ -40,7 +42,7 @@ export default function UserDetailTab() {
   const revokeSession = async (sid: string) => {
     try {
       await api.del(`/api/admin/sessions/${sid}`);
-      toast.success('Session révoquée');
+      toast.success(t('userDetail.sessionRevoked'));
       invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Révocation impossible');
@@ -58,7 +60,7 @@ export default function UserDetailTab() {
   const confirmDelete = async () => {
     try {
       await api.del(`/api/users/${userId}`);
-      toast.success('Utilisateur supprimé');
+      toast.success(t('userDetail.userDeleted'));
       qc.invalidateQueries({ queryKey: qk.users });
       navigate('/admin/users');
     } catch (e) {
@@ -127,10 +129,10 @@ export default function UserDetailTab() {
           value={fmtBytes(user.storageUsed)}
           sub={user.storageLimit ? `quota ${fmtBytes(user.storageLimit)}` : 'sans quota'}
         />
-        <Metric label="Médias uploadés" value={counts.media} />
-        <Metric label="Versions créées" value={counts.versions} />
+        <Metric label={t('userDetail.uploadedMedia')} value={counts.media} />
+        <Metric label={t('userDetail.createdVersions')} value={counts.versions} />
         <Metric label="Commentaires" value={counts.comments} />
-        <Metric label="Tâches assignées" value={counts.tasks} />
+        <Metric label={t('userDetail.assignedTasks')} value={counts.tasks} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

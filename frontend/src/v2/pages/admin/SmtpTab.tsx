@@ -11,9 +11,11 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import type { SmtpConfig } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Configuration SMTP (admin) : champs en base, mot de passe chiffré write-only + envoi test. */
 export default function SmtpTab() {
+  const t = useT();
   const qc = useQueryClient();
   const myEmail = useAuth((s) => s.user?.email) ?? '';
   const { data, isLoading } = useQuery({
@@ -41,7 +43,7 @@ export default function SmtpTab() {
       await api.put('/api/studio/smtp', payload);
       qc.invalidateQueries({ queryKey: qk.admin('smtp') });
       setF({});
-      toast.success('Configuration SMTP enregistrée');
+      toast.success(t('smtp.saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
     } finally {
@@ -51,7 +53,7 @@ export default function SmtpTab() {
 
   const sendTest = async () => {
     const to = testTo || myEmail;
-    if (!to) return toast.error('Renseignez une adresse de destination');
+    if (!to) return toast.error(t('smtp.needRecipient'));
     setBusy(true);
     try {
       await api.post('/api/studio/smtp/test', { to });
@@ -72,7 +74,7 @@ export default function SmtpTab() {
       )}
 
       <div className="space-y-2 rounded-lg border border-border p-3">
-        <Row label="Hôte">
+        <Row label={t('common.host')}>
           <Input
             value={v.host ?? ''}
             onChange={(e) => setF((s) => ({ ...s, host: e.target.value }))}
@@ -87,7 +89,7 @@ export default function SmtpTab() {
             onChange={(e) => setF((s) => ({ ...s, port: Number(e.target.value) }))}
           />
         </Row>
-        <Row label="Connexion sécurisée (TLS)">
+        <Row label={t('smtp.secure')}>
           <input
             type="checkbox"
             className="accent-primary"
@@ -98,7 +100,7 @@ export default function SmtpTab() {
         <Row label="Utilisateur">
           <Input value={v.user ?? ''} onChange={(e) => setF((s) => ({ ...s, user: e.target.value }))} />
         </Row>
-        <Row label="Mot de passe">
+        <Row label={t('login.password')}>
           <Input
             type="password"
             value={f.password ?? ''}
@@ -106,7 +108,7 @@ export default function SmtpTab() {
             onChange={(e) => setF((s) => ({ ...s, password: e.target.value }))}
           />
         </Row>
-        <Row label="Expéditeur (From)">
+        <Row label={t('smtp.from')}>
           <Input
             value={v.from ?? ''}
             onChange={(e) => setF((s) => ({ ...s, from: e.target.value }))}

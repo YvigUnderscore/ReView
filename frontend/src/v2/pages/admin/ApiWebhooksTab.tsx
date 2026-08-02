@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import WebhooksPanel from './WebhooksPanel';
+import { useT } from '../../i18n';
 
 interface AdminTokenRow {
   id: number;
@@ -35,6 +36,7 @@ export default function ApiWebhooksTab() {
 }
 
 function ApiTokensAdminPanel() {
+  const tr = useT();
   const qc = useQueryClient();
   const tokensQ = useQuery({
     queryKey: qk.admin('api-tokens'),
@@ -45,7 +47,7 @@ function ApiTokensAdminPanel() {
   const revoke = async (id: number) => {
     try {
       await api.del(`/api/admin/api-tokens/${id}`);
-      toast.success('Token révoqué');
+      toast.success(tr('tokens.revoked'));
       qc.invalidateQueries({ queryKey: qk.admin('api-tokens') });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -53,7 +55,7 @@ function ApiTokensAdminPanel() {
   };
 
   return (
-    <Panel title="Tokens d'API du studio">
+    <Panel title={tr('tokens.studio')}>
       <p className="mb-3 text-xs text-muted-foreground">
         Tous les tokens actifs, créés par chacun depuis sa page profil. Un token révoqué cesse immédiatement
         de fonctionner.
@@ -77,12 +79,12 @@ function ApiTokensAdminPanel() {
                 {t.lastUsedAt ? ` · utilisé le ${fmt(t.lastUsedAt)}` : ' · jamais utilisé'}
               </p>
             </div>
-            <Button variant="ghost" size="sm" title="Révoquer" onClick={() => revoke(t.id)}>
+            <Button variant="ghost" size="sm" title={tr('shares.revoke')} onClick={() => revoke(t.id)}>
               <Trash2 size={14} className="text-destructive" />
             </Button>
           </div>
         ))}
-        {tokens.length === 0 && <p className="text-xs text-muted-foreground">Aucun token actif.</p>}
+        {tokens.length === 0 && <p className="text-xs text-muted-foreground">{tr('tokens.empty')}</p>}
       </div>
     </Panel>
   );

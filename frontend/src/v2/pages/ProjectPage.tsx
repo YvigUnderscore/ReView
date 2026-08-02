@@ -40,9 +40,11 @@ import SharesTab from './project/SharesTab';
 import TrashTab from './project/TrashTab';
 import ProjectCsvActions from './project/ProjectCsvActions';
 import type { ProjectSettings } from './project/projectTypes';
+import { useT } from '../i18n';
 
 /** Page projet — orchestrateur des onglets (découpage 10.C1, sous-composants dans pages/project/). */
 export default function ProjectPage() {
+  const t = useT();
   const { id } = useParams();
   const projectId = parseIdParam(id);
   const role = useAuth((s) => s.user?.role);
@@ -111,7 +113,7 @@ export default function ProjectPage() {
     { key: 'production', label: 'Production', icon: <BarChart3 size={16} /> },
     ...(canManage ? [{ key: 'members', label: 'Membres', icon: <Users size={16} /> }] : []),
     ...(canManage ? [{ key: 'shares', label: 'Partages', icon: <Share2 size={16} /> }] : []),
-    ...(canManage ? [{ key: 'settings', label: 'Réglages', icon: <Settings size={16} /> }] : []),
+    ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),
     ...(canManage ? [{ key: 'trash', label: 'Corbeille', icon: <Trash2 size={16} /> }] : []),
   ];
 

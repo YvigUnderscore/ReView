@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
+import { useT } from '../../i18n';
 
 interface TokenRow {
   id: number;
@@ -26,6 +27,7 @@ const fmt = (iso: string) =>
 
 /** Tokens d'API personnels (36.C) : création (secret montré une fois), liste, révocation. */
 export default function ApiTokensSection() {
+  const tr = useT();
   const qc = useQueryClient();
   const tokensQ = useQuery({
     queryKey: qk.apiTokens,
@@ -60,7 +62,7 @@ export default function ApiTokensSection() {
   const revoke = async (id: number) => {
     try {
       await api.del(`/api/auth/tokens/${id}`);
-      toast.success('Token révoqué');
+      toast.success(tr('tokens.revoked'));
       qc.invalidateQueries({ queryKey: qk.apiTokens });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -125,7 +127,7 @@ export default function ApiTokensSection() {
                 {t.expiresAt ? ` · expire le ${fmt(t.expiresAt)}` : ''}
               </p>
             </div>
-            <Button variant="ghost" size="sm" title="Révoquer" onClick={() => revoke(t.id)}>
+            <Button variant="ghost" size="sm" title={tr('shares.revoke')} onClick={() => revoke(t.id)}>
               <Trash2 size={14} className="text-destructive" />
             </Button>
           </div>

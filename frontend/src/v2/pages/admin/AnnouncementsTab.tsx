@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import AnnouncementForm from './AnnouncementForm';
 import type { Announcement, AnnouncementAdmin, AnnouncementType } from '../../types/api';
+import { useT } from '../../i18n';
 
 const TYPE_BADGE: Record<AnnouncementType, string> = {
   INFO: 'bg-info/15 text-info',
@@ -20,6 +21,7 @@ const TYPE_BADGE: Record<AnnouncementType, string> = {
 };
 
 export default function AnnouncementsTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: qk.admin('announcements'),
@@ -35,7 +37,7 @@ export default function AnnouncementsTab() {
     if (!deleting) return;
     try {
       await api.del(`/api/announcements/${deleting.id}`);
-      toast.success('Annonce supprimée');
+      toast.success(t('announcement.deleted'));
       setDeleting(null);
       invalidate();
     } catch (e) {

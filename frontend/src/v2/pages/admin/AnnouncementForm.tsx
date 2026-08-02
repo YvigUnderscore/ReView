@@ -11,6 +11,10 @@ import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { ROLES } from './adminShared';
 import type { Announcement, AnnouncementFrequency, AnnouncementType, Role } from '../../types/api';
+import { useT, type MessageKey } from '../../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 
 /** ISO → valeur `datetime-local` (heure locale) ; '' si absent. */
 function toLocalInput(iso: string | null): string {
@@ -22,10 +26,10 @@ function toLocalInput(iso: string | null): string {
 const fromLocalInput = (v: string): string | null => (v ? new Date(v).toISOString() : null);
 
 const TYPES: AnnouncementType[] = ['INFO', 'WARNING', 'MAINTENANCE'];
-const FREQS: { value: AnnouncementFrequency; label: string }[] = [
-  { value: 'PERMANENT', label: 'Permanent (à chaque ouverture)' },
-  { value: 'FIRST_LOGIN', label: 'Première connexion (une fois)' },
-  { value: 'FIRST_OF_DAY', label: 'Première du jour' },
+const freqs = (t: Tr): { value: AnnouncementFrequency; label: string }[] => [
+  { value: 'PERMANENT', label: t('announcement.scope.permanent') },
+  { value: 'FIRST_LOGIN', label: t('announcement.scope.firstLogin') },
+  { value: 'FIRST_OF_DAY', label: t('announcement.scope.firstDaily') },
 ];
 
 /** Création / édition d'une annonce (admin). */
@@ -38,6 +42,7 @@ export default function AnnouncementForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [f, setF] = useState({
     title: announcement?.title ?? '',
     body: announcement?.body ?? '',
@@ -54,7 +59,7 @@ export default function AnnouncementForm({
     setF((s) => ({ ...s, roles: s.roles.includes(r) ? s.roles.filter((x) => x !== r) : [...s.roles, r] }));
 
   const save = async () => {
-    if (!f.title.trim() || !f.body.trim()) return toast.error('Titre et corps requis');
+    if (!f.title.trim() || !f.body.trim()) return toast.error(t('announcement.required'));
     setBusy(true);
     const payload = {
       title: f.title,
@@ -92,7 +97,7 @@ export default function AnnouncementForm({
           <Textarea
             autoGrow
             minRows={3}
-            placeholder="Corps du message"
+            placeholder={t('announcement.body')}
             value={f.body}
             onChange={(e) => setF((s) => ({ ...s, body: e.target.value }))}
           />
@@ -112,7 +117,7 @@ export default function AnnouncementForm({
               value={f.frequency}
               onChange={(e) => setF((s) => ({ ...s, frequency: e.target.value as AnnouncementFrequency }))}
             >
-              {FREQS.map((fr) => (
+              {freqs(t).map((fr) => (
                 <option key={fr.value} value={fr.value}>
                   {fr.label}
                 </option>

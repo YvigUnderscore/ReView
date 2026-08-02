@@ -11,18 +11,23 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Panel } from './AdminPrimitives';
 import type { BurninConfig } from '../../types/share';
+import { useT, type MessageKey } from '../../i18n';
 
-const BURNIN_FLAGS: { key: keyof BurninConfig & string; label: string; hint?: string }[] = [
-  { key: 'enabled', label: 'Burn-ins sur les proxys', hint: 'shot/version/TC incrustés au transcodage' },
-  { key: 'showShot', label: 'Code du shot', hint: 'haut gauche' },
-  { key: 'showVersion', label: 'Nom de la version', hint: 'haut droite' },
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
+
+const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; hint?: string }[] => [
+  { key: 'enabled', label: t('burnin.onProxiesShort'), hint: 'shot/version/TC incrustés au transcodage' },
+  { key: 'showShot', label: t('burnin.shotCode'), hint: 'haut gauche' },
+  { key: 'showVersion', label: t('burnin.versionName'), hint: 'haut droite' },
   { key: 'showTimecode', label: 'Timecode', hint: 'bas centre' },
   { key: 'showLogo', label: 'Logo studio', hint: 'bas droite (nécessite un logo)' },
-  { key: 'slate', label: 'Slate en tête des partages', hint: 'carte d’identité de 3 s sur le dérivé client' },
+  { key: 'slate', label: t('burnin.slateShort'), hint: 'carte d’identité de 3 s sur le dérivé client' },
 ];
 
 /** Template studio des burn-ins/slates (35.A) — appliqué aux prochains transcodages. */
 export default function BurninPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: qk.admin('burnin'),
@@ -41,7 +46,7 @@ export default function BurninPanel() {
       const { config } = await api.put<{ config: BurninConfig }>('/api/admin/burnin', draft);
       setDraft(config);
       qc.invalidateQueries({ queryKey: qk.admin('burnin') });
-      toast.success('Template burn-ins enregistré');
+      toast.success(t('burnin.template.saved'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
@@ -56,7 +61,7 @@ export default function BurninPanel() {
         projet par projet dans les réglages du projet.
       </p>
       <div className="space-y-2.5">
-        {BURNIN_FLAGS.map((f) => (
+        {burninflags(t).map((f) => (
           <label key={f.key} className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -73,7 +78,7 @@ export default function BurninPanel() {
           <Input
             value={draft.customText}
             onChange={(e) => set({ customText: e.target.value })}
-            placeholder="CONFIDENTIEL — ne pas diffuser"
+            placeholder={t('burnin.freeText.placeholder')}
             maxLength={120}
           />
         </label>

@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
 import HdriPreview from './HdriPreview';
+import { useT } from '../../i18n';
 
 interface HdriItem {
   id: string;
@@ -25,6 +26,7 @@ interface HdriItem {
  * Ces environnements seront proposés à l'éclairage du viewer 3D Three.js.
  */
 export default function HdriTab() {
+  const t = useT();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -40,7 +42,7 @@ export default function HdriTab() {
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext !== 'hdr' && ext !== 'exr') {
-      toast.error('Format non supporté (utilisez .hdr ou .exr)');
+      toast.error(t('hdri.badFormat'));
       return;
     }
     setBusy(true);
@@ -56,7 +58,7 @@ export default function HdriTab() {
         storageKey,
         format: ext,
       });
-      toast.success('HDRI ajouté');
+      toast.success(t('hdri.added'));
       refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload impossible');
@@ -82,18 +84,18 @@ export default function HdriTab() {
         cartes d'environnement ; elles seront proposées dans les réglages d'éclairage de la review 3D.
       </p>
 
-      <Panel title="Ajouter un HDRI">
+      <Panel title={t('hdri.add')}>
         <input ref={fileRef} type="file" accept=".hdr,.exr" onChange={onFile} className="hidden" />
         <Button onClick={() => fileRef.current?.click()} disabled={busy}>
           <Upload size={15} /> {busy ? 'Envoi…' : 'Choisir un fichier .hdr / .exr'}
         </Button>
       </Panel>
 
-      <Panel title="Bibliothèque">
+      <Panel title={t('hdri.library')}>
         {data === undefined ? (
           <SkeletonRows count={3} />
         ) : data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucun HDRI. Ajoutez-en un ci-dessus.</p>
+          <p className="text-sm text-muted-foreground">{t('hdri.empty')}</p>
         ) : (
           <div className="space-y-1.5">
             {data.map((h) => (

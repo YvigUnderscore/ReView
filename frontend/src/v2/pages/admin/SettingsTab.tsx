@@ -12,6 +12,7 @@ import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import TranslationNotice from '../../components/TranslationNotice';
 import { BASE_LOCALE, LOCALES, isLocale, type Locale } from '../../i18n';
+import { useT } from '../../i18n';
 import {
   SETTINGS_FIELDS,
   type SettingField,
@@ -147,10 +148,11 @@ function DefaultLocaleField({
   stored: string;
   onSave: (key: string, value: string) => Promise<void>;
 }) {
+  const t = useT();
   const [value, setValue] = useState(isLocale(stored) ? stored : BASE_LOCALE);
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">
-      <h3 className="text-sm font-semibold">Langue du studio</h3>
+      <h3 className="text-sm font-semibold">{t('settings.studioLanguage')}</h3>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <label className="w-64 text-muted-foreground" htmlFor="studio-default-locale">
           Langue par défaut
@@ -188,10 +190,11 @@ function AccentField({
   stored: string;
   onSave: (key: string, value: string) => Promise<void>;
 }) {
+  const t = useT();
   const [value, setValue] = useState(/^#[0-9a-f]{6}$/i.test(stored) ? stored : '#00b3c4');
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">
-      <h3 className="text-sm font-semibold">Thème studio</h3>
+      <h3 className="text-sm font-semibold">{t('settings.studioTheme')}</h3>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <label className="w-64 text-muted-foreground">Couleur d’accent</label>
         <input
@@ -199,7 +202,7 @@ function AccentField({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="h-8 w-12 cursor-pointer rounded border border-border bg-transparent"
-          aria-label="Couleur d’accent du studio"
+          aria-label={t('settings.accentColor')}
         />
         <span className="w-24 font-mono text-xs text-muted-foreground">{value}</span>
         <Button variant="outline" size="sm" onClick={() => onSave('studio_accent', value)}>

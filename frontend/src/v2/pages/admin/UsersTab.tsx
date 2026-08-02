@@ -21,9 +21,11 @@ import UserModal from './UserModal';
 import { fmtBytes, ROLES } from './adminShared';
 import { filterUsers, sortUsers, type UserSort } from './adminUsers';
 import type { Role, User } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Liste des comptes (refonte admin) : recherche, filtre par rôle, tri, fiche détaillée. */
 export default function UsersTab() {
+  const t = useT();
   const qc = useQueryClient();
   const meId = useAuth((s) => s.user?.id) ?? 0;
   const { data: users, isLoading } = useQuery({
@@ -42,7 +44,7 @@ export default function UsersTab() {
     if (!deleting) return;
     try {
       await api.del(`/api/users/${deleting.id}`);
-      toast.success('Utilisateur supprimé');
+      toast.success(t('userDetail.userDeleted'));
       setDeleting(null);
       invalidate();
     } catch (e) {
@@ -65,7 +67,7 @@ export default function UsersTab() {
           />
         </div>
         <Select value={role} onChange={(e) => setRole(e.target.value as Role | 'ALL')}>
-          <option value="ALL">Tous les rôles</option>
+          <option value="ALL">{t('users.allRoles')}</option>
           {ROLES.map((r) => (
             <option key={r} value={r}>
               {r}
@@ -74,9 +76,9 @@ export default function UsersTab() {
         </Select>
         <Select value={sort} onChange={(e) => setSort(e.target.value as UserSort)}>
           <option value="name">Tri : nom</option>
-          <option value="role">Tri : rôle</option>
+          <option value="role">{t('users.sortRole')}</option>
           <option value="storage">Tri : stockage</option>
-          <option value="recent">Tri : plus récents</option>
+          <option value="recent">{t('users.sortRecent')}</option>
         </Select>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus size={14} /> Nouvel utilisateur
@@ -91,7 +93,7 @@ export default function UsersTab() {
             <tr>
               <th className="px-3 py-2">Utilisateur</th>
               <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Rôle</th>
+              <th className="px-3 py-2">{t('common.role')}</th>
               <th className="px-3 py-2">Stockage</th>
               <th className="px-3 py-2"></th>
             </tr>

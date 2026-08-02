@@ -13,6 +13,7 @@ import { fmtBytes, fmtDateTime } from './adminShared';
 import { CATEGORY_LABELS, DERIVED_LABELS, STUDIO_LABELS, sortedEntries } from './adminStorage';
 import StorageMap from './StorageMap';
 import type { AdminStorageReport, StorageAgg } from '../../types/api';
+import { useT } from '../../i18n';
 
 function AggBars({
   agg,
@@ -23,8 +24,9 @@ function AggBars({
   labels: Record<string, string>;
   total: number;
 }) {
+  const t = useT();
   const entries = sortedEntries(agg, labels, total);
-  if (entries.length === 0) return <p className="text-xs text-muted-foreground">Aucun objet.</p>;
+  if (entries.length === 0) return <p className="text-xs text-muted-foreground">{t('storage.noObject')}</p>;
   return (
     <div className="space-y-2">
       {entries.map((e) => (
@@ -46,6 +48,7 @@ function AggBars({
 
 /** Cartographie du stockage MinIO : occupation réelle par convention de clé + guide. */
 export default function StorageTab() {
+  const t = useT();
   const reportQ = useQuery({
     queryKey: qk.adminStorage,
     queryFn: () => api.get<AdminStorageReport>('/api/admin/storage'),
@@ -76,17 +79,17 @@ export default function StorageTab() {
           sub={`${r.categories.originals?.count ?? 0} objets`}
         />
         <Metric
-          label="Dérivés"
+          label={t('storage.derived')}
           value={fmtBytes(r.categories.derived?.bytes ?? 0)}
           sub={`${r.categories.derived?.count ?? 0} objets`}
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Répartition par emplacement">
+        <Panel title={t('storage.byLocation')}>
           <AggBars agg={r.categories} labels={CATEGORY_LABELS} total={r.totalBytes} />
         </Panel>
-        <Panel title="Détail des dérivés (derived/)">
+        <Panel title={t('storage.derivedDetail')}>
           <AggBars agg={r.derived} labels={DERIVED_LABELS} total={r.categories.derived?.bytes ?? 0} />
           {Object.keys(r.studio).length > 0 && (
             <div className="mt-4">
@@ -99,7 +102,7 @@ export default function StorageTab() {
         </Panel>
       </div>
 
-      <Panel title="Originaux par projet (projects/)">
+      <Panel title={t('storage.originalsByProject')}>
         <div className="space-y-1.5">
           {r.projects.map((p) => (
             <div key={p.slug} className="flex items-center justify-between gap-2 text-sm">
@@ -122,7 +125,9 @@ export default function StorageTab() {
               </span>
             </div>
           ))}
-          {r.projects.length === 0 && <p className="text-xs text-muted-foreground">Aucun original stocké.</p>}
+          {r.projects.length === 0 && (
+            <p className="text-xs text-muted-foreground">{t('storage.noOriginal')}</p>
+          )}
         </div>
       </Panel>
 

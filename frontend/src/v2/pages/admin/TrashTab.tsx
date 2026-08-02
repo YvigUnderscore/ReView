@@ -15,8 +15,10 @@ import { Checkbox } from '../../components/ui/checkbox';
 import SelectionBar from '../../components/ui/selection-bar';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import type { TrashProject } from './adminShared';
+import { useT } from '../../i18n';
 
 export default function TrashTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: trash, isLoading } = useQuery({
     queryKey: qk.admin('trash'),
@@ -33,7 +35,7 @@ export default function TrashTab() {
   const restore = async (id: number) => {
     try {
       await api.post(`/api/projects/${id}/restore`);
-      toast.success('Projet restauré');
+      toast.success(t('adminTrash.restored'));
       invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Restauration impossible');
@@ -43,7 +45,7 @@ export default function TrashTab() {
     if (!purge) return;
     try {
       await api.del(`/api/projects/${purge.id}/purge`);
-      toast.success('Projet supprimé définitivement');
+      toast.success(t('adminTrash.deleted'));
       setPurge(null);
       invalidate();
     } catch (e) {
@@ -75,7 +77,7 @@ export default function TrashTab() {
 
   if (isLoading) return <SkeletonRows count={3} />;
   if (!trash || trash.length === 0)
-    return <p className="text-sm text-muted-foreground">Aucun projet en corbeille.</p>;
+    return <p className="text-sm text-muted-foreground">{t('adminTrash.empty')}</p>;
   return (
     <div className="space-y-1.5">
       <label className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
@@ -99,7 +101,7 @@ export default function TrashTab() {
                 checked={sel.isSelected(p.id)}
                 onCheckedChange={() => {}}
                 tabIndex={-1}
-                aria-label="Sélectionner"
+                aria-label={t('common.select')}
               />
             </div>
             <span className="truncate">
@@ -127,7 +129,7 @@ export default function TrashTab() {
         actions={[
           { label: 'Restaurer', icon: <RotateCcw size={14} />, onClick: bulkRestoreSel },
           {
-            label: 'Supprimer définitivement',
+            label: t('common.deletePermanently'),
             icon: <Trash2 size={14} />,
             danger: true,
             onClick: () => setBulkPurging(true),
@@ -137,25 +139,25 @@ export default function TrashTab() {
 
       <ConfirmDialog
         open={bulkPurging}
-        title="Supprimer définitivement les projets ?"
+        title={t('adminTrash.deleteMany.title')}
         message={
           <>
             {sel.count} projet(s) et tous leurs médias seront supprimés de la base et du stockage.
             Irréversible.
           </>
         }
-        confirmLabel="Supprimer définitivement"
+        confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmBulkPurge}
         onCancel={() => setBulkPurging(false)}
       />
       <ConfirmDialog
         open={!!purge}
-        title="Supprimer définitivement le projet ?"
+        title={t('adminTrash.delete.title')}
         message={
           <>« {purge?.name} » et tous ses médias seront supprimés de la base et du stockage. Irréversible.</>
         }
-        confirmLabel="Supprimer définitivement"
+        confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmPurge}
         onCancel={() => setPurge(null)}

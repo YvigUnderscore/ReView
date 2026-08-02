@@ -11,8 +11,10 @@ import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { DistList, Metric, Panel, ServiceHealth } from './AdminPrimitives';
 import { fmtBytes, type Stats, type System } from './adminShared';
+import { useT } from '../../i18n';
 
 export default function OverviewTab() {
+  const t = useT();
   const statsQ = useQuery({ queryKey: qk.admin('stats'), queryFn: () => api.get<Stats>('/api/admin/stats') });
   const systemQ = useQuery({
     queryKey: qk.admin('system'),
@@ -45,19 +47,19 @@ export default function OverviewTab() {
         <Metric label="Shots" value={stats.pipeline.shots} to="/admin/projects" />
         <Metric label="Assets" value={stats.pipeline.assets} to="/admin/projects" />
         <Metric label="Versions" value={stats.pipeline.versions} to="/admin/versions" />
-        <Metric label="Médias" value={stats.media.count} to="/reviews" />
+        <Metric label={t('trash.group.media')} value={stats.media.count} to="/reviews" />
         <Metric label="Commentaires" value={stats.comments} to="/admin/comments" />
         <Metric label="Stockage" value={fmtBytes(stats.media.storageBytes)} to="/admin/storage" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Médias par type">
+        <Panel title={t('overview.mediaByType')}>
           <DistList data={stats.media.byKind} />
         </Panel>
-        <Panel title="Médias par statut">
+        <Panel title={t('overview.mediaByStatus')}>
           <DistList data={stats.media.byStatus} />
         </Panel>
-        <Panel title="Files de jobs (FFmpeg)">
+        <Panel title={t('overview.jobQueues')}>
           {stats.jobs ? (
             <>
               <DistList data={stats.jobs} />
@@ -88,11 +90,11 @@ export default function OverviewTab() {
               </div>
             ))}
             {stats.topStorageUsers.length === 0 && (
-              <p className="text-xs text-muted-foreground">Aucune donnée.</p>
+              <p className="text-xs text-muted-foreground">{t('common.noData')}</p>
             )}
           </div>
         </Panel>
-        <Panel title="Santé des services">
+        <Panel title={t('overview.serviceHealth')}>
           {system ? <ServiceHealth services={system.services} /> : <SkeletonRows count={2} />}
         </Panel>
       </div>

@@ -14,9 +14,11 @@ import { fmtBytes, fmtDateTime } from './adminShared';
 import { pipelineLabel, PROJECT_STATUS_LABELS, quotaPct } from './adminProjects';
 import ProjectHierarchy from './ProjectHierarchy';
 import type { AdminProjectDetail } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Fiche d'administration d'un projet : membres, réglages résolus, hiérarchie, stats. */
 export default function ProjectAdminDetailTab() {
+  const t = useT();
   const { id } = useParams();
   const projectId = Number(id);
   const detailQ = useQuery({
@@ -68,7 +70,7 @@ export default function ProjectAdminDetailTab() {
           sub={project.quota != null ? `quota ${fmtBytes(project.quota)} (${pct ?? 0}%)` : 'sans quota'}
         />
         <Metric label="Versions" value={stats.versions} to={`/admin/versions?projectId=${project.id}`} />
-        <Metric label="Médias" value={stats.media} sub={fmtBytes(stats.mediaBytes)} />
+        <Metric label={t('trash.group.media')} value={stats.media} sub={fmtBytes(stats.mediaBytes)} />
         <Metric label="Commentaires" value={stats.comments} to={`/admin/comments?projectId=${project.id}`} />
         <Metric label="Assets" value={stats.assets} />
       </div>
@@ -104,7 +106,7 @@ export default function ProjectAdminDetailTab() {
           </div>
         </Panel>
 
-        <Panel title="Réglages résolus (héritage studio → projet)">
+        <Panel title={t('overview.resolvedSettings')}>
           <dl className="space-y-1 text-sm">
             <Row k="Pipeline" v={pipelineLabel(settings)} />
             <Row k="Frame de départ" v={String(project.startFrame)} />

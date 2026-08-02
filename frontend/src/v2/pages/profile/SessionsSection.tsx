@@ -10,6 +10,7 @@ import { deviceLabel } from '../../lib/deviceLabel';
 import { useAuth } from '../../stores/useAuth';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { useT } from '../../i18n';
 
 interface SessionRow {
   id: string;
@@ -30,6 +31,7 @@ const fmt = (iso: string) =>
 
 /** Sessions actives du compte (36.B) : liste des appareils connectés + révocation. */
 export default function SessionsSection() {
+  const t = useT();
   const qc = useQueryClient();
   const logout = useAuth((s) => s.logout);
   const sessionsQ = useQuery({
@@ -45,7 +47,7 @@ export default function SessionsSection() {
         logout();
         return;
       }
-      toast.success('Session révoquée');
+      toast.success(t('userDetail.sessionRevoked'));
       qc.invalidateQueries({ queryKey: qk.authSessions });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
@@ -80,7 +82,7 @@ export default function SessionsSection() {
             <Button
               variant="ghost"
               size="sm"
-              title={s.current ? 'Se déconnecter' : 'Révoquer'}
+              title={s.current ? 'Se déconnecter' : t('shares.revoke')}
               onClick={() => revoke(s)}
             >
               <Trash2 size={14} className="text-destructive" />

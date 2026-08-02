@@ -14,12 +14,14 @@ import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import type { ReviewStatus } from '../../types/api';
 import ReviewStatusForm from './ReviewStatusForm';
+import { useT } from '../../i18n';
 
 /**
  * Onglet Contextes de review → Statuts (Phase 31.A) : CRUD des statuts de
  * décision personnalisables (nom, couleur, flags approbation/retake/défaut, ordre).
  */
 export default function ReviewStatusTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data, isLoading } = useReviewStatusesQuery();
   const [editing, setEditing] = useState<ReviewStatus | null>(null);
@@ -31,7 +33,7 @@ export default function ReviewStatusTab() {
     if (!deleting) return;
     try {
       await api.del(`/api/review-statuses/${deleting.id}`);
-      toast.success('Statut supprimé');
+      toast.success(t('reviewStatus.deleted'));
       setDeleting(null);
       invalidate();
     } catch (e) {
@@ -62,7 +64,7 @@ export default function ReviewStatusTab() {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Statuts de décision de review</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('reviewStatus.title')}</h2>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus size={14} /> Nouveau statut
         </Button>
@@ -113,7 +115,7 @@ export default function ReviewStatusTab() {
           </div>
         ))}
         {items.length === 0 && (
-          <p className="px-3 py-4 text-sm text-muted-foreground">Aucun statut défini.</p>
+          <p className="px-3 py-4 text-sm text-muted-foreground">{t('reviewStatus.empty')}</p>
         )}
       </div>
 
@@ -134,7 +136,7 @@ export default function ReviewStatusTab() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Supprimer ce statut ?"
+        title={t('reviewStatus.delete.title')}
         message={
           <>« {deleting?.name} » sera supprimé. Refusé s'il est utilisé par des décisions existantes.</>
         }

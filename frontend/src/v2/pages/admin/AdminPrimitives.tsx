@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { System } from './adminShared';
+import { useT } from '../../i18n';
 
 /** Petites primitives d'affichage partagées par les sections d'administration. */
 
@@ -49,8 +50,9 @@ export function Panel({ title, children }: { title: string; children: ReactNode 
 }
 
 export function DistList({ data }: { data: Record<string, number> }) {
+  const t = useT();
   const entries = Object.entries(data);
-  if (entries.length === 0) return <p className="text-xs text-muted-foreground">Aucune donnée.</p>;
+  if (entries.length === 0) return <p className="text-xs text-muted-foreground">{t('common.noData')}</p>;
   return (
     <div className="space-y-1">
       {entries.map(([k, v]) => (

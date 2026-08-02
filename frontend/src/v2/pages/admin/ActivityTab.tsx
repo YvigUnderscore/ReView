@@ -11,6 +11,7 @@ import Avatar from '../../components/Avatar';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { timeAgo } from '../../lib/time';
 import { auditActionLabel, auditEntityLink, type AuditRow } from './adminShared';
+import { useT } from '../../i18n';
 
 interface Page {
   items: AuditRow[];
@@ -21,6 +22,7 @@ interface Page {
 
 /** Flux d'activité : journal d'audit paginé, avec auteur (avatar) et liens navigables. */
 export default function ActivityTab() {
+  const t = useT();
   const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({
     queryKey: qk.admin(`activity-feed-${page}`),
@@ -49,7 +51,7 @@ export default function ActivityTab() {
                 size={28}
               />
               <div className="min-w-0 flex-1">
-                <span className="font-medium">{a.user?.displayName ?? 'Système'}</span>{' '}
+                <span className="font-medium">{a.user?.displayName ?? t('admin.tab.system')}</span>{' '}
                 <span className="text-muted-foreground">{label}</span>{' '}
                 {a.entityType &&
                   a.entityId != null &&
@@ -73,7 +75,9 @@ export default function ActivityTab() {
           );
         })}
         {items.length === 0 && (
-          <li className="bg-card px-3 py-6 text-center text-sm text-muted-foreground">Aucune activité.</li>
+          <li className="bg-card px-3 py-6 text-center text-sm text-muted-foreground">
+            {t('admin.noActivity')}
+          </li>
         )}
       </ul>
 

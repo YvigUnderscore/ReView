@@ -12,6 +12,7 @@ import PipelineFields from './PipelineFields';
 import { applyOverride, formFromOverride, overrideFromForm } from './pipelineForm';
 import type { PipelineSettings } from '../../types/api';
 import type { Sequence, Shot } from './projectTypes';
+import { useT } from '../../i18n';
 
 /** Modal d'édition d'un shot : code, nom, séquence, intervalle de frames, override pipeline. */
 export default function ShotEditDialog({
@@ -27,6 +28,7 @@ export default function ShotEditDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [vals, setVals] = useState({
     code: shot.code,
     name: shot.name,
@@ -105,7 +107,7 @@ export default function ShotEditDialog({
               Frame de début
               <Input
                 type="number"
-                placeholder="hérité"
+                placeholder={t('common.inherited')}
                 value={vals.startFrame}
                 onChange={(e) => setVals((v) => ({ ...v, startFrame: e.target.value }))}
               />
@@ -114,7 +116,7 @@ export default function ShotEditDialog({
               Frame de fin
               <Input
                 type="number"
-                placeholder="hérité"
+                placeholder={t('common.inherited')}
                 value={vals.endFrame}
                 onChange={(e) => setVals((v) => ({ ...v, endFrame: e.target.value }))}
               />

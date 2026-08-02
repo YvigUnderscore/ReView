@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import BurninPanel from './BurninPanel';
+import { useT } from '../../i18n';
 
 interface WatermarkConfig {
   internal: boolean;
@@ -32,6 +33,7 @@ export default function DistributionTab() {
 }
 
 function LogoPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -59,7 +61,7 @@ function LogoPanel() {
       if (!put.ok) throw new Error('Échec de l’upload');
       await api.put('/api/studio/settings', { key: 'studio_logo_key', value: key });
       invalidate();
-      toast.success('Logo studio mis à jour');
+      toast.success(t('distribution.logoUpdated'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
@@ -72,7 +74,7 @@ function LogoPanel() {
     try {
       await api.put('/api/studio/settings', { key: 'studio_logo_key', value: '' });
       invalidate();
-      toast.success('Logo supprimé');
+      toast.success(t('distribution.logoDeleted'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
@@ -90,7 +92,7 @@ function LogoPanel() {
           {logoQ.data?.url ? (
             <img src={logoQ.data.url} alt="Logo studio" className="max-h-full max-w-full object-contain" />
           ) : (
-            <span className="text-xs text-muted-foreground">Aucun logo</span>
+            <span className="text-xs text-muted-foreground">{t('distribution.noLogo')}</span>
           )}
         </div>
         <input
@@ -114,6 +116,7 @@ function LogoPanel() {
 }
 
 function WatermarkPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: qk.admin('watermark'),
@@ -132,7 +135,7 @@ function WatermarkPanel() {
       const { watermark } = await api.put<{ watermark: WatermarkConfig }>('/api/studio/watermark', draft);
       setDraft(watermark);
       qc.invalidateQueries({ queryKey: qk.admin('watermark') });
-      toast.success('Watermark enregistré');
+      toast.success(t('distribution.watermarkSaved'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
@@ -154,7 +157,7 @@ function WatermarkPanel() {
             checked={draft.shares}
             onChange={(e) => set({ shares: e.target.checked })}
           />
-          <span className="font-medium">Sur les partages client</span>
+          <span className="font-medium">{t('distribution.onClientShares')}</span>
           <span className="text-xs text-muted-foreground">(nom du lien + date)</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
@@ -164,11 +167,11 @@ function WatermarkPanel() {
             checked={draft.internal}
             onChange={(e) => set({ internal: e.target.checked })}
           />
-          <span className="font-medium">Dans les reviews internes</span>
+          <span className="font-medium">{t('distribution.inInternalReviews')}</span>
           <span className="text-xs text-muted-foreground">(nom du compte connecté)</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Opacité</span>
+          <span className="text-muted-foreground">{t('review.opacity')}</span>
           <input
             type="range"
             min={2}

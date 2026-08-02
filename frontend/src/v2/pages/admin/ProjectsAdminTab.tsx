@@ -14,9 +14,11 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { fmtBytes } from './adminShared';
 import { filterProjects, PROJECT_STATUS_LABELS, quotaPct } from './adminProjects';
 import type { AdminProjectRow, ProjectStatus } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Liste d'administration des projets : compteurs pipeline, stockage/quota, fiches. */
 export default function ProjectsAdminTab() {
+  const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: qk.adminProjects,
     queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
@@ -39,7 +41,7 @@ export default function ProjectsAdminTab() {
           />
         </div>
         <Select value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus | 'ALL')}>
-          <option value="ALL">Tous les statuts</option>
+          <option value="ALL">{t('projectsAdmin.allStatuses')}</option>
           {(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => (
             <option key={s} value={s}>
               {PROJECT_STATUS_LABELS[s]}
@@ -58,11 +60,11 @@ export default function ProjectsAdminTab() {
               <th className="px-3 py-2">Projet</th>
               <th className="px-3 py-2">Statut</th>
               <th className="px-3 py-2 text-right">Membres</th>
-              <th className="px-3 py-2 text-right">Séq.</th>
+              <th className="px-3 py-2 text-right">{t('projectsAdmin.seqShort')}</th>
               <th className="px-3 py-2 text-right">Shots</th>
               <th className="px-3 py-2 text-right">Assets</th>
               <th className="px-3 py-2 text-right">Versions</th>
-              <th className="px-3 py-2 text-right">Médias</th>
+              <th className="px-3 py-2 text-right">{t('trash.group.media')}</th>
               <th className="px-3 py-2">Stockage</th>
             </tr>
           </thead>

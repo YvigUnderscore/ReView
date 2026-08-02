@@ -23,6 +23,7 @@ function humanError(message: string): string {
 }
 
 export default function LoginPage() {
+  const t = useT();
   const tr = useT();
   const login = useAuth((s) => s.login);
   const verify2fa = useAuth((s) => s.verify2fa);
@@ -178,7 +179,7 @@ export default function LoginPage() {
             href="/api/auth/oidc/login"
             className="block w-full rounded-md border border-border px-4 py-2 text-center text-sm hover:bg-secondary/60"
           >
-            {ssoQ.data.label || 'Se connecter avec Google'}
+            {ssoQ.data.label || t('sso.buttonDefault')}
           </a>
         )}
       </form>

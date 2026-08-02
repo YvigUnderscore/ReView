@@ -12,6 +12,7 @@ import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
 import type { Department, Nomenclature, ProjectSettings } from '../../types/api';
+import { useT } from '../../i18n';
 
 function DefField({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -24,6 +25,7 @@ function DefField({ label, children }: { label: string; children: ReactNode }) {
 
 /** Défauts de création de projet : nomenclature + départements (overridables par projet). */
 export default function ProjectDefaultsTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: qk.admin('project-defaults'),
@@ -58,7 +60,7 @@ export default function ProjectDefaultsTab() {
       const { settings } = await api.put<{ settings: ProjectSettings }>('/api/admin/project-defaults', draft);
       setDraft(settings);
       qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
-      toast.success('Défauts enregistrés');
+      toast.success(t('defaults.saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
     } finally {
@@ -73,16 +75,16 @@ export default function ProjectDefaultsTab() {
         surcharger dans son onglet « Réglages ».
       </p>
 
-      <Panel title="Nomenclature par défaut">
+      <Panel title={t('defaults.naming')}>
         <div className="flex flex-wrap items-end gap-3">
-          <DefField label="Préfixe séquence">
+          <DefField label={t('pipeline.prefix.sequence')}>
             <Input
               className="w-24 py-1.5 text-xs"
               value={draft.nomenclature.sequencePrefix}
               onChange={(e) => setNom('sequencePrefix', e.target.value)}
             />
           </DefField>
-          <DefField label="Préfixe shot">
+          <DefField label={t('pipeline.prefix.shot')}>
             <Input
               className="w-24 py-1.5 text-xs"
               value={draft.nomenclature.shotPrefix}
@@ -144,13 +146,13 @@ export default function ProjectDefaultsTab() {
         </div>
       </Panel>
 
-      <Panel title="Départements par défaut">
+      <Panel title={t('defaults.departments')}>
         <div className="space-y-1.5">
           {draft.departments.map((dep, i) => (
             <div key={i} className="flex items-center gap-2">
               <Input
                 className="w-32 py-1.5 text-xs"
-                placeholder="Clé"
+                placeholder={t('common.key')}
                 value={dep.key}
                 onChange={(e) => setDept(i, 'key', e.target.value)}
               />

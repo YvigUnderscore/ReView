@@ -11,6 +11,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import SourceNotice from '../components/SourceNotice';
 import type { ClientMedia, ClientSharePayload, MediaKind } from '../types/api';
+import { useT } from '../i18n';
 
 const kindIcon: Record<MediaKind, React.ReactNode> = {
   VIDEO: <Film size={26} />,
@@ -164,6 +165,7 @@ function ClientFrame({
 }
 
 function PasswordGate({ token, onUnlocked }: { token: string; onUnlocked: () => void }) {
+  const t = useT();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -194,7 +196,7 @@ function PasswordGate({ token, onUnlocked }: { token: string; onUnlocked: () => 
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        placeholder="Mot de passe"
+        placeholder={t('login.password')}
         autoFocus
         required
       />

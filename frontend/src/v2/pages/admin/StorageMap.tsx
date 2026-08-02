@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Panel } from './AdminPrimitives';
+import { useT } from '../../i18n';
 
 /**
  * Cartographie statique des conventions de clés MinIO : où vit chaque type de fichier.
@@ -91,15 +92,16 @@ const MAP: { type: string; path: string; note: string }[] = [
 ];
 
 export default function StorageMap() {
+  const t = useT();
   return (
-    <Panel title="Où vit chaque fichier ? (conventions du bucket)">
+    <Panel title={t('storage.map.title')}>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-xs text-muted-foreground">
             <tr>
-              <th className="py-1.5 pr-3">Type de fichier</th>
-              <th className="py-1.5 pr-3">Emplacement (clé objet)</th>
-              <th className="py-1.5">Rôle</th>
+              <th className="py-1.5 pr-3">{t('storage.map.fileType')}</th>
+              <th className="py-1.5 pr-3">{t('storage.map.location')}</th>
+              <th className="py-1.5">{t('common.role')}</th>
             </tr>
           </thead>
           <tbody>
