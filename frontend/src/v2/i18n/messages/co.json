@@ -1523,5 +1523,21 @@
   "model3d.unnamed": "(senza nome)",
 
   "jobs.storageCleanup": "Nettera di a stucchera",
-  "jobs.webhooks": "Webhooks in escita"
+  "jobs.webhooks": "Webhooks in escita",
+
+  "model3d.transformPrim": "Trasfurmà u prim",
+  "model3d.compareUnreachable": "Mudellu di cunfrontu inaccessibile",
+  "model3d.loadFailed": "Caricamentu di i mudelli impussibile",
+  "model3d.transformSaved": "Trasfurmazione arregistrata",
+  "model3d.transformSaveFailed": "Errore à l’arregistramentu di a trasfurmazione",
+  "model3d.variantFailed": "Impussibile d’appiicà a variante di materiali",
+  "track.stageAnim": "Animazione camera di a messa in scena",
+  "track.fileClips": "Clip d’animazione di u schedariu",
+  "track.noAnim": "Stu schedariu ùn porta nisuna animazione",
+  "usd.metre": "metru",
+  "usd.centimetre": "centimetru",
+  "usd.millimetre": "millimetru",
+  "entity.videoLower": "video",
+
+  "version.emptyMedia": "Nisun media in sta version."
 }

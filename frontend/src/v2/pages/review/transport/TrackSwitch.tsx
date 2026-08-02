@@ -30,13 +30,13 @@ export default function TrackSwitch({
             value: 'camera' as const,
             label: t('review.track.camera'),
             icon: Video,
-            hint: 'Animation caméra de la mise en scène',
+            hint: t('track.stageAnim'),
           },
           {
             value: 'clip' as const,
             label: t('review.track.model'),
             icon: Box,
-            hint: hasClips ? 'Clips d’animation du fichier' : 'Ce fichier ne porte aucune animation',
+            hint: hasClips ? t('track.fileClips') : t('track.noAnim'),
             disabled: !hasClips,
           },
         ]}

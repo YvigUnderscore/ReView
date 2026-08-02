@@ -1522,5 +1522,21 @@
   "model3d.unnamed": "（名前なし）",
 
   "jobs.storageCleanup": "ストレージの整理",
-  "jobs.webhooks": "送信 webhook"
+  "jobs.webhooks": "送信 webhook",
+
+  "model3d.transformPrim": "prim をトランスフォーム",
+  "model3d.compareUnreachable": "比較用のモデルにアクセスできません",
+  "model3d.loadFailed": "モデルを読み込めません",
+  "model3d.transformSaved": "トランスフォームを保存しました",
+  "model3d.transformSaveFailed": "トランスフォームの保存でエラー",
+  "model3d.variantFailed": "マテリアルのバリアントを適用できません",
+  "track.stageAnim": "演出のカメラアニメーション",
+  "track.fileClips": "ファイルのアニメーションクリップ",
+  "track.noAnim": "このファイルにアニメーションはありません",
+  "usd.metre": "メートル",
+  "usd.centimetre": "センチメートル",
+  "usd.millimetre": "ミリメートル",
+  "entity.videoLower": "動画",
+
+  "version.emptyMedia": "この version にメディアはありません。"
 }

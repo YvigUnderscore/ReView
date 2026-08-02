@@ -32,9 +32,9 @@ const usd = (over: Partial<UsdModelInfo> = {}): UsdModelInfo => ({
 
 describe('unitLabel', () => {
   it('nomme les échelles USD courantes', () => {
-    expect(unitLabel(1)).toBe('mètre');
-    expect(unitLabel(0.01)).toBe('centimètre');
-    expect(unitLabel(0.001)).toBe('millimètre');
+    expect(unitLabel(1)).toBe('metre');
+    expect(unitLabel(0.01)).toBe('centimetre');
+    expect(unitLabel(0.001)).toBe('millimetre');
   });
   it('affiche la valeur brute pour une échelle inhabituelle', () => {
     expect(unitLabel(0.3048)).toBe('0.3048 m');

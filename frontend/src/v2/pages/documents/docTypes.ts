@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { AuthorRef } from '../../types/api';
+import { t } from '../../i18n';
 
 /** Types partagés de la documentation (page + modal de création). */
 export type DocScope = 'GLOBAL' | 'PROJECT' | 'SEQUENCE' | 'SHOT' | 'ASSET';
@@ -24,7 +25,7 @@ export interface Doc {
 export const SCOPE_LABEL: Record<DocScope, string> = {
   GLOBAL: 'Global',
   PROJECT: 'Projet',
-  SEQUENCE: 'Séquence',
+  SEQUENCE: t('entity.sequence'),
   SHOT: 'Shot',
   ASSET: 'Asset',
 };

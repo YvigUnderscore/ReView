@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 import type * as THREE from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { api } from '../../../../lib/apiClient';
@@ -23,6 +22,7 @@ import { createFlyControls, type FlyControls } from '../viewer/flyControls';
 import { useThumbnailCapture } from '../viewer/useThumbnailCapture';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { useModelFraming } from './useModelFraming';
+import { useSaveTransform } from './useSaveTransform';
 
 export interface SceneRuntime {
   scene: ModelScene;
@@ -69,7 +69,6 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const [fov, setFovState] = useState(45);
   const [roll, setRollState] = useState(0);
   const [loadError, setLoadError] = useState(false);
-  const queryClient = useQueryClient();
   // Extensions glTF déclarées par le fichier chargé (fiche technique — 39.C).
   const [extensions, setExtensions] = useState<string[]>([]);
 
@@ -270,18 +269,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     [transform],
   );
 
-  const saveTransform = useCallback(async () => {
-    if (!versionId) return;
-    try {
-      await api.patch(`/api/versions/${versionId}`, { transform });
-      // La version porte cette transformation : on relâche l'édition locale et on rafraîchit.
-      await queryClient.invalidateQueries({ queryKey: qk.version(versionId) });
-      setTfEdit(null);
-      toast.success('Transformation enregistrée');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la transformation");
-    }
-  }, [versionId, transform, queryClient]);
+  const saveTransform = useSaveTransform(versionId, transform, () => setTfEdit(null));
 
   const hotspotAtCenter = useCallback((): Hotspot3D | null => {
     const rt = runtimeRef.current;

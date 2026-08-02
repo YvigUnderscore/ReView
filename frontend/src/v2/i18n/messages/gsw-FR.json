@@ -1523,5 +1523,21 @@
   "model3d.unnamed": "(ohni Name)",
 
   "jobs.storageCleanup": "Spicherbereinigung",
-  "jobs.webhooks": "Ussgehendi Webhooks"
+  "jobs.webhooks": "Ussgehendi Webhooks",
+
+  "model3d.transformPrim": "Prim transformiere",
+  "model3d.compareUnreachable": "Verglychsmodell nit erreichbar",
+  "model3d.loadFailed": "D’Modell hän nit könne glade wärde",
+  "model3d.transformSaved": "Transformation gspichert",
+  "model3d.transformSaveFailed": "Fähler bim Spichere vu d’r Transformation",
+  "model3d.variantFailed": "D’Materialvariante het nit könne ahgwandt wärde",
+  "track.stageAnim": "Kameraanimation vu d’r Ihszenierung",
+  "track.fileClips": "Animationsclips vu d’r Datei",
+  "track.noAnim": "Die Datei het kei Animation",
+  "usd.metre": "Meter",
+  "usd.centimetre": "Zentimeter",
+  "usd.millimetre": "Millimeter",
+  "entity.videoLower": "Video",
+
+  "version.emptyMedia": "Kei Medium in därre version."
 }

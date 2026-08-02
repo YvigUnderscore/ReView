@@ -132,7 +132,7 @@ export default function CommandPalette({
             </CommandGroup>
           )}
           {results.sequences.length > 0 && (
-            <CommandGroup heading="Séquences">
+            <CommandGroup heading={t('nav.sequences')}>
               {results.sequences.map((s) => (
                 <CommandItem
                   key={s.id}

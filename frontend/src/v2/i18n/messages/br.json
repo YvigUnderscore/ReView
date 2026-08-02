@@ -1522,5 +1522,21 @@
   "model3d.unnamed": "(hep anv)",
 
   "jobs.storageCleanup": "Naetaat ar gadaviñ",
-  "jobs.webhooks": "Webhooks er-maez"
+  "jobs.webhooks": "Webhooks er-maez",
+
+  "model3d.transformPrim": "Treuzfurmiñ ar prim",
+  "model3d.compareUnreachable": "Patrom keñveriañ dihegerz",
+  "model3d.loadFailed": "N’eo ket bet gallet kargañ ar patromoù",
+  "model3d.transformSaved": "Treuzfurmadur enrollet",
+  "model3d.transformSaveFailed": "Fazi en ur enrollañ an treuzfurmadur",
+  "model3d.variantFailed": "N’eo ket bet gallet arloañ an argemmenn danvezioù",
+  "track.stageAnim": "Buhezadur kamera al lakaat war al leurenn",
+  "track.fileClips": "Klipoù buhezadur ar restr",
+  "track.noAnim": "N’eus buhezadur ebet er restr-mañ",
+  "usd.metre": "metr",
+  "usd.centimetre": "kentimetr",
+  "usd.millimetre": "milimetr",
+  "entity.videoLower": "video",
+
+  "version.emptyMedia": "Media ebet er version-mañ."
 }

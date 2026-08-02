@@ -7,6 +7,7 @@ import { applyVariant, readVariants } from './materialVariants';
 import { collectEmbeddedCameras, type EmbeddedCameraView } from './embeddedCameras';
 import { restoreModelCamera } from './modelCamera';
 import type { Model3DThreeState } from './useModel3DThree';
+import { useT } from '../../../i18n';
 
 /**
  * Variantes de matériaux + caméras embarquées du modèle 3D (Phase 40, 40.C). Lit le glTF exposé
@@ -15,6 +16,7 @@ import type { Model3DThreeState } from './useModel3DThree';
  * comme point de vue (via `restoreModelCamera`, l'infra caméra commune). Local à la session.
  */
 export function useModel3DVariants(model3d: Model3DThreeState) {
+  const t = useT();
   const { ready, getSceneHandle } = model3d;
   const [current, setCurrent] = useState(-1);
 
@@ -36,11 +38,9 @@ export function useModel3DVariants(model3d: Model3DThreeState) {
       const h = getSceneHandle();
       if (!h?.gltf || !h.mesh) return;
       setCurrent(index);
-      applyVariant(h.gltf, h.mesh, index).catch(() =>
-        toast.error('Impossible d’appliquer la variante de matériaux'),
-      );
+      applyVariant(h.gltf, h.mesh, index).catch(() => toast.error(t('model3d.variantFailed')));
     },
-    [getSceneHandle],
+    [getSceneHandle, t],
   );
 
   const goToCamera = useCallback(

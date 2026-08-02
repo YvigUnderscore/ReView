@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { UsdModelInfo, UsdVariantSelection } from '../../types/api';
+import { t } from '../../i18n';
 
 /**
  * Logique d'affichage partagée entre la section USD de la fiche technique et le dialogue de
@@ -11,9 +12,9 @@ import type { UsdModelInfo, UsdVariantSelection } from '../../types/api';
 
 /** Libellé lisible de l'échelle de scène (`metersPerUnit` USD). */
 export function unitLabel(metersPerUnit: number): string {
-  if (metersPerUnit === 1) return 'mètre';
-  if (metersPerUnit === 0.01) return 'centimètre';
-  if (metersPerUnit === 0.001) return 'millimètre';
+  if (metersPerUnit === 1) return t('usd.metre');
+  if (metersPerUnit === 0.01) return t('usd.centimetre');
+  if (metersPerUnit === 0.001) return t('usd.millimetre');
   return `${metersPerUnit} m`;
 }
 

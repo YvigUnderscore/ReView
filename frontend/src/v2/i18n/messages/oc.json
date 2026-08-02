@@ -1523,5 +1523,21 @@
   "model3d.unnamed": "(sens nom)",
 
   "jobs.storageCleanup": "Netejatge de l’emmagazinatge",
-  "jobs.webhooks": "Webhooks sortents"
+  "jobs.webhooks": "Webhooks sortents",
+
+  "model3d.transformPrim": "Transformar lo prim",
+  "model3d.compareUnreachable": "Modèl de comparason inaccessible",
+  "model3d.loadFailed": "Cargament dels modèls impossible",
+  "model3d.transformSaved": "Transformacion enregistrada",
+  "model3d.transformSaveFailed": "Error a l’enregistrament de la transformacion",
+  "model3d.variantFailed": "Impossible d’aplicar la varianta de materials",
+  "track.stageAnim": "Animacion camèra de la mesa en scèna",
+  "track.fileClips": "Clips d’animacion del fichièr",
+  "track.noAnim": "Aqueste fichièr pòrta cap d’animacion",
+  "usd.metre": "mètre",
+  "usd.centimetre": "centimètre",
+  "usd.millimetre": "millimètre",
+  "entity.videoLower": "vidèo",
+
+  "version.emptyMedia": "Cap de mèdia dins aquesta version."
 }

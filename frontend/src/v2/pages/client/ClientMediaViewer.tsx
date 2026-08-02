@@ -169,7 +169,7 @@ export default function ClientMediaViewer({
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder={media.kind === 'VIDEO' ? 'Commenter à l’image courante…' : t('client.yourComment')}
+              placeholder={media.kind === 'VIDEO' ? t('client.commentAtFrame') : t('client.yourComment')}
               rows={3}
               maxLength={10000}
               required

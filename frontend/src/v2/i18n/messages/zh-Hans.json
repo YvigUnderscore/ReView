@@ -1522,5 +1522,21 @@
   "model3d.unnamed": "（无名称）",
 
   "jobs.storageCleanup": "存储清理",
-  "jobs.webhooks": "出站 webhook"
+  "jobs.webhooks": "出站 webhook",
+
+  "model3d.transformPrim": "变换该 prim",
+  "model3d.compareUnreachable": "无法访问用于对比的模型",
+  "model3d.loadFailed": "无法加载模型",
+  "model3d.transformSaved": "变换已保存",
+  "model3d.transformSaveFailed": "保存变换出错",
+  "model3d.variantFailed": "无法应用材质变体",
+  "track.stageAnim": "场面调度的摄像机动画",
+  "track.fileClips": "文件中的动画片段",
+  "track.noAnim": "该文件不含任何动画",
+  "usd.metre": "米",
+  "usd.centimetre": "厘米",
+  "usd.millimetre": "毫米",
+  "entity.videoLower": "视频",
+
+  "version.emptyMedia": "该 version 中没有媒体。"
 }

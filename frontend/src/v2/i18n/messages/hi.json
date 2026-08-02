@@ -1523,5 +1523,21 @@
   "model3d.unnamed": "(बिना नाम)",
 
   "jobs.storageCleanup": "भंडारण सफ़ाई",
-  "jobs.webhooks": "बाहर जाने वाले webhook"
+  "jobs.webhooks": "बाहर जाने वाले webhook",
+
+  "model3d.transformPrim": "prim रूपांतरित करें",
+  "model3d.compareUnreachable": "तुलना वाला मॉडल पहुँच से बाहर",
+  "model3d.loadFailed": "मॉडल लोड नहीं हो सके",
+  "model3d.transformSaved": "रूपांतरण सहेजा गया",
+  "model3d.transformSaveFailed": "रूपांतरण सहेजने में त्रुटि",
+  "model3d.variantFailed": "सामग्री की विविधता लागू नहीं हो सकी",
+  "track.stageAnim": "मंचन का कैमरा एनिमेशन",
+  "track.fileClips": "फ़ाइल के एनिमेशन क्लिप",
+  "track.noAnim": "इस फ़ाइल में कोई एनिमेशन नहीं है",
+  "usd.metre": "मीटर",
+  "usd.centimetre": "सेंटीमीटर",
+  "usd.millimetre": "मिलीमीटर",
+  "entity.videoLower": "वीडियो",
+
+  "version.emptyMedia": "इस version में कोई मीडिया नहीं है।"
 }

@@ -74,7 +74,7 @@ function ApiTokensAdminPanel() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {tok.user.name ?? tok.user.email} · créé le {fmt(tok.createdAt)}
-                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ' · jamais utilisé'}
+                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ` · ${t('common.neverUsed')}`}
               </p>
             </div>
             <Button variant="ghost" size="sm" title={t('shares.revoke')} onClick={() => revoke(tok.id)}>

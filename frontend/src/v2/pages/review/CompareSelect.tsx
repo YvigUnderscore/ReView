@@ -87,7 +87,7 @@ export default function CompareSelect({
       const target = findCompareMedia(detail.media, mediaId, kind);
       if (!target) {
         toast.error(
-          `Aucun média ${kind === 'IMAGE' ? 'image' : 'vidéo'} à comparer dans la version ${v.name}`,
+          `Aucun média ${kind === 'IMAGE' ? 'image' : t('entity.videoLower')} à comparer dans la version ${v.name}`,
         );
         return;
       }

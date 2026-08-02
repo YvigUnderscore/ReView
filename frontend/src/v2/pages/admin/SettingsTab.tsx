@@ -167,7 +167,7 @@ function DefaultLocaleField({
         >
           {LOCALES.map((l) => (
             <option key={l.code} value={l.code}>
-              {l.native} ({l.english}){l.regional ? ' — langue régionale' : ''}
+              {l.native} ({l.english}){l.regional ? ` ${t('language.regional')}` : ''}
             </option>
           ))}
         </Select>

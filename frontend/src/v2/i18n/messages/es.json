@@ -1523,5 +1523,21 @@
   "model3d.unnamed": "(sin nombre)",
 
   "jobs.storageCleanup": "Limpieza del almacenamiento",
-  "jobs.webhooks": "Webhooks salientes"
+  "jobs.webhooks": "Webhooks salientes",
+
+  "model3d.transformPrim": "Transformar el prim",
+  "model3d.compareUnreachable": "Modelo de comparación inaccesible",
+  "model3d.loadFailed": "No se pudieron cargar los modelos",
+  "model3d.transformSaved": "Transformación guardada",
+  "model3d.transformSaveFailed": "Error al guardar la transformación",
+  "model3d.variantFailed": "No se pudo aplicar la variante de materiales",
+  "track.stageAnim": "Animación de cámara de la puesta en escena",
+  "track.fileClips": "Clips de animación del archivo",
+  "track.noAnim": "Este archivo no lleva ninguna animación",
+  "usd.metre": "metro",
+  "usd.centimetre": "centímetro",
+  "usd.millimetre": "milímetro",
+  "entity.videoLower": "vídeo",
+
+  "version.emptyMedia": "Ningún medio en esta version."
 }

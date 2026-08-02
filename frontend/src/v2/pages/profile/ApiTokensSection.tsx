@@ -125,7 +125,7 @@ export default function ApiTokensSection() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Créé le {fmt(tok.createdAt)}
-                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ' · jamais utilisé'}
+                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ` · ${t('common.neverUsed')}`}
                 {tok.expiresAt ? ` · expire le ${fmt(tok.expiresAt)}` : ''}
               </p>
             </div>

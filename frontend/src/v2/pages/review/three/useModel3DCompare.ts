@@ -12,6 +12,7 @@ import type { MediaResp } from '../reviewTypes';
 import { loadModel, TARGET_SIZE } from './loadModel';
 import { setObjectOpacity, sideBySideOffsets } from './modelCompare';
 import type { Model3DThreeState } from './useModel3DThree';
+import { useT } from '../../../i18n';
 
 const FADE_MS = 300;
 const SLIDE_MS = 400;
@@ -29,6 +30,7 @@ export function model3dSiblings(media: MediaSummary[]): MediaSummary[] {
  * destructif : les frères sont chargés bruts et libérés au démontage.
  */
 export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
+  const t = useT();
   const { getSceneHandle, subscribeFrame } = model3d;
   const versionQ = useQuery({
     queryKey: qk.version(current.versionId),
@@ -126,12 +128,12 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
         setActiveId(id);
         setMode('single');
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Modèle de comparaison inaccessible');
+        toast.error(e instanceof Error ? e.message : t('model3d.compareUnreachable'));
       } finally {
         setBusy(false);
       }
     },
-    [current.id, ensureSibling, allObjects, fade, slideX],
+    [current.id, ensureSibling, allObjects, fade, slideX, t],
   );
 
   /** « Voir tous » : charge tous les frères et les écarte côte à côte. */
@@ -150,11 +152,11 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
       });
       setMode('all');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Chargement des modèles impossible');
+      toast.error(e instanceof Error ? e.message : t('model3d.loadFailed'));
     } finally {
       setBusy(false);
     }
-  }, [models, current.id, ensureSibling, allObjects, fade, slideX]);
+  }, [models, current.id, ensureSibling, allObjects, fade, slideX, t]);
 
   // Démontage : retire et libère les frères chargés (le modèle principal appartient au viewer).
   useEffect(() => {

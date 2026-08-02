@@ -1523,5 +1523,21 @@
   "model3d.unnamed": "(ohne Namen)",
 
   "jobs.storageCleanup": "Speicherbereinigung",
-  "jobs.webhooks": "Ausgehende Webhooks"
+  "jobs.webhooks": "Ausgehende Webhooks",
+
+  "model3d.transformPrim": "Prim transformieren",
+  "model3d.compareUnreachable": "Vergleichsmodell nicht erreichbar",
+  "model3d.loadFailed": "Modelle konnten nicht geladen werden",
+  "model3d.transformSaved": "Transformation gespeichert",
+  "model3d.transformSaveFailed": "Fehler beim Speichern der Transformation",
+  "model3d.variantFailed": "Materialvariante konnte nicht angewandt werden",
+  "track.stageAnim": "Kameraanimation der Inszenierung",
+  "track.fileClips": "Animationsclips der Datei",
+  "track.noAnim": "Diese Datei trägt keine Animation",
+  "usd.metre": "Meter",
+  "usd.centimetre": "Zentimeter",
+  "usd.millimetre": "Millimeter",
+  "entity.videoLower": "Video",
+
+  "version.emptyMedia": "Kein Medium in dieser version."
 }

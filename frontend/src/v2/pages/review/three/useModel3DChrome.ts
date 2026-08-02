@@ -83,7 +83,7 @@ export function useModel3DChrome({
       if (!commit) return;
       const { setPrim } = usdScene;
       history.push({
-        label: 'Transformer le prim',
+        label: t('model3d.transformPrim'),
         undo: () => setPrim(commit.path, { transform: commit.before ?? IDENTITY_TRANSFORM }),
         redo: () => setPrim(commit.path, { transform: commit.after }),
       });

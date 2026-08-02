@@ -1523,5 +1523,21 @@
   "model3d.unnamed": "(izenik gabe)",
 
   "jobs.storageCleanup": "Biltegiratzea garbitzea",
-  "jobs.webhooks": "Irteerako webhook-ak"
+  "jobs.webhooks": "Irteerako webhook-ak",
+
+  "model3d.transformPrim": "Eraldatu prim-a",
+  "model3d.compareUnreachable": "Alderaketarako eredua eskuraezina",
+  "model3d.loadFailed": "Ezin izan dira ereduak kargatu",
+  "model3d.transformSaved": "Transformazioa gordeta",
+  "model3d.transformSaveFailed": "Errorea transformazioa gordetzean",
+  "model3d.variantFailed": "Ezin izan da materialen aldaera aplikatu",
+  "track.stageAnim": "Eszenaratzearen kamera-animazioa",
+  "track.fileClips": "Fitxategiaren animazio-klipak",
+  "track.noAnim": "Fitxategi honek ez du animaziorik",
+  "usd.metre": "metro",
+  "usd.centimetre": "zentimetro",
+  "usd.millimetre": "milimetro",
+  "entity.videoLower": "bideo",
+
+  "version.emptyMedia": "Ez dago mediarik version honetan."
 }

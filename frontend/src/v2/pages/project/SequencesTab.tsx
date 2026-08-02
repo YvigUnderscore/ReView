@@ -102,7 +102,7 @@ export default function SequencesTab({
       )}
       {canManage && mode === 'manual' && (
         <MultiRowCreate
-          addLabel="Créer les séquences"
+          addLabel="{t('sequences.create')}"
           fields={[
             {
               key: 'code',

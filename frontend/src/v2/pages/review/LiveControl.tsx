@@ -144,7 +144,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
           const roleLabel = pilot ? t('live.driving') : coHost ? 'co-pilote' : 'spectateur';
           const avatar = (
             <span
-              title={`${p.displayName}${p.id === selfId ? ' (vous)' : ''} — ${roleLabel}${driver ? ' (main active)' : ''}`}
+              title={`${p.displayName}${p.id === selfId ? ` ${t('live.you')}` : ''} — ${roleLabel}${driver ? ' (main active)' : ''}`}
               className={`relative inline-flex rounded-full ring-2 ${driver ? 'ring-primary' : 'ring-background'}`}
             >
               <Avatar seed={p.id} initials={p.initials} avatarUrl={p.avatarUrl} size={22} />

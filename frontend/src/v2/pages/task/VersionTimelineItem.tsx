@@ -166,8 +166,8 @@ export default function VersionTimelineItem({
                   </div>
                 ) : media.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    Aucun média dans cette version.
-                    {canCreate ? ' Utilisez « Média » ou déposez un fichier ci-dessus.' : ''}
+                    {t('version.emptyMedia')}
+                    {canCreate ? ` ${t('version.useMediaOrDrop')}` : ''}
                   </p>
                 ) : (
                   <div

@@ -80,7 +80,7 @@ function LicensePanel() {
     <Panel title="Licence & code source">
       <dl className="space-y-1 text-sm">
         <Row k="Licence" v="AGPL-3.0-or-later" />
-        <Row k={t('system.thirdParty')} v="THIRD-PARTY-NOTICES.md (racine du dépôt)" />
+        <Row k={t('system.thirdParty')} v="{t('system.noticesFile')}" />
         <div className="flex justify-between">
           <dt className="text-muted-foreground">{t('system.sourcePublished')}</dt>
           <dd>
