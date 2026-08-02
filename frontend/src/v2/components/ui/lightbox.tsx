@@ -147,7 +147,7 @@ export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: L
             <ToolButton title={t('common.reset')} onClick={reset}>
               <Maximize2 size={18} />
             </ToolButton>
-            <ToolButton title="Fermer" onClick={() => onOpenChange(false)}>
+            <ToolButton title={t('common.close')} onClick={() => onOpenChange(false)}>
               ✕
             </ToolButton>
           </div>

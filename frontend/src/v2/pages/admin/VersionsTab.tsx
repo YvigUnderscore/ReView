@@ -178,7 +178,7 @@ export default function VersionsTab() {
             {items.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Aucune version ne correspond aux filtres.
+                  {t('versions.noMatch')}
                 </td>
               </tr>
             )}
@@ -188,13 +188,13 @@ export default function VersionsTab() {
       {pages > 1 && (
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Précédent
+            {t('common.previous')}
           </Button>
           <span>
             Page {page} / {pages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-            Suivant
+            {t('common.next')}
           </Button>
         </div>
       )}

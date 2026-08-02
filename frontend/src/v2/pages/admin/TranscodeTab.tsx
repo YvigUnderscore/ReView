@@ -157,7 +157,7 @@ export default function TranscodeTab() {
       </Panel>
 
       <Button onClick={save} disabled={busy}>
-        <Save size={15} /> {busy ? 'Enregistrement…' : 'Enregistrer'}
+        <Save size={15} /> {busy ? 'Enregistrement…' : t('common.save')}
       </Button>
     </div>
   );

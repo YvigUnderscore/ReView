@@ -94,7 +94,7 @@ export default function StorageTab() {
           {Object.keys(r.studio).length > 0 && (
             <div className="mt-4">
               <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Bibliothèques studio
+                {t('hdri.studioLibraries')}
               </h4>
               <AggBars agg={r.studio} labels={STUDIO_LABELS} total={r.categories.studio?.bytes ?? 0} />
             </div>

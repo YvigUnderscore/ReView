@@ -191,7 +191,7 @@ function PasswordGate({ token, onUnlocked }: { token: string; onUnlocked: () => 
   return (
     <form onSubmit={submit} className="space-y-3">
       <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Lock size={14} /> Ce partage est protégé par mot de passe
+        <Lock size={14} /> {t('client.passwordProtected')}
       </p>
       <Input
         type="password"
@@ -203,7 +203,7 @@ function PasswordGate({ token, onUnlocked }: { token: string; onUnlocked: () => 
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" disabled={busy} className="w-full">
-        Accéder à la review
+        {t('client.enter')}
       </Button>
     </form>
   );

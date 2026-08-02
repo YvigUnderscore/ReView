@@ -141,7 +141,7 @@ export default function AddToPlaylistDialog({
                 placeholder="Nouvelle playlist…"
               />
               <Button size="sm" disabled={busy || !newName.trim()} onClick={() => void createAndAdd()}>
-                <Plus size={14} /> Créer
+                <Plus size={14} /> {t('common.create')}
               </Button>
             </div>
           </div>

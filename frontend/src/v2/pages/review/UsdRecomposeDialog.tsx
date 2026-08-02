@@ -18,7 +18,10 @@ import {
   DialogDescription,
 } from '../../components/ui/dialog';
 import { initialSelection, variantValue } from './usdDisplay';
-import { useT } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 
 /**
  * Recomposition d'une scène USD (Phase 45, 45.F) : rejouer la conversion avec une autre
@@ -28,8 +31,8 @@ import { useT } from '../../i18n';
  * Ouverte depuis la fiche technique, au contact des variantes qu'elle modifie.
  */
 
-const PURPOSES: { value: UsdPurpose; label: string; hint: string }[] = [
-  { value: 'render', label: 'Rendu', hint: 'Géométrie de rendu (défaut)' },
+const purposes = (t: Tr): { value: UsdPurpose; label: string; hint: string }[] => [
+  { value: 'render', label: t('viewer.render.title'), hint: 'Géométrie de rendu (défaut)' },
   { value: 'proxy', label: 'Proxy', hint: 'Géométrie allégée d’affichage' },
   { value: 'guide', label: 'Guide', hint: 'Aides de mise en scène' },
 ];
@@ -83,9 +86,9 @@ export default function UsdRecomposeDialog({
             <Select
               value={purpose}
               onChange={(e) => setPurpose(e.target.value as UsdPurpose)}
-              title={PURPOSES.find((p) => p.value === purpose)?.hint}
+              title={purposes(t).find((p) => p.value === purpose)?.hint}
             >
-              {PURPOSES.map((p) => (
+              {purposes(t).map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
@@ -121,7 +124,7 @@ export default function UsdRecomposeDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
-            Annuler
+            {t('common.undo')}
           </Button>
           <Button onClick={submit} disabled={busy}>
             {busy ? 'Lancement…' : 'Recomposer'}

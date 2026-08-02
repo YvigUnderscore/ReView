@@ -69,36 +69,42 @@ const sections = (t: Tr) =>
   [
     {
       key: 'overview',
-      group: 'Studio',
+      group: t('setup.step.studio'),
       label: t('admin.tab.dashboard'),
       icon: LayoutDashboard,
       Component: OverviewTab,
     },
     {
       key: 'activity',
-      group: 'Studio',
+      group: t('setup.step.studio'),
       label: t('admin.tab.activity'),
       icon: Activity,
       Component: ActivityTab,
     },
     {
       key: 'identity',
-      group: 'Studio',
+      group: t('setup.step.studio'),
       label: t('admin.tab.identity'),
       icon: Fingerprint,
       Component: IdentityTab,
     },
-    { key: 'system', group: 'Studio', label: t('admin.tab.system'), icon: Server, Component: SystemTab },
+    {
+      key: 'system',
+      group: t('setup.step.studio'),
+      label: t('admin.tab.system'),
+      icon: Server,
+      Component: SystemTab,
+    },
     {
       key: 'settings',
-      group: 'Studio',
+      group: t('setup.step.studio'),
       label: t('admin.tab.settings'),
       icon: SettingsIcon,
       Component: SettingsTab,
     },
     {
       key: 'defaults',
-      group: 'Studio',
+      group: t('setup.step.studio'),
       label: t('admin.tab.projectDefaults'),
       icon: FolderCog,
       Component: ProjectDefaultsTab,
@@ -114,7 +120,7 @@ const sections = (t: Tr) =>
     {
       key: 'projects',
       group: 'Contenus',
-      label: 'Projets',
+      label: t('nav.projects'),
       icon: FolderKanban,
       Component: ProjectsAdminTab,
       Detail: ProjectAdminDetailTab,
@@ -127,7 +133,7 @@ const sections = (t: Tr) =>
       icon: MessageSquare,
       Component: CommentsTab,
     },
-    { key: 'storage', group: 'Contenus', label: 'Stockage', icon: Database, Component: StorageTab },
+    { key: 'storage', group: 'Contenus', label: t('storage.title'), icon: Database, Component: StorageTab },
     { key: 'hdri', group: 'Contextes de review', label: '3D & Splat', icon: Box, Component: HdriTab },
     { key: 'ocio', group: 'Contextes de review', label: 'Couleur (OCIO)', icon: Palette, Component: OcioTab },
     {
@@ -140,7 +146,7 @@ const sections = (t: Tr) =>
     {
       key: 'distribution',
       group: 'Contextes de review',
-      label: 'Diffusion',
+      label: t('review.delivery'),
       icon: Share2,
       Component: DistributionTab,
     },
@@ -178,7 +184,14 @@ const sections = (t: Tr) =>
     },
   ] as const;
 
-const GROUPS = ['Studio', 'Contenus', 'Contextes de review', 'Communications', 'Maintenance'] as const;
+const groups = (t: Tr) =>
+  [
+    t('admin.group.studio'),
+    t('admin.group.content'),
+    t('admin.group.reviewContexts'),
+    t('admin.group.communications'),
+    t('admin.group.maintenance'),
+  ] as const;
 
 export default function AdminPage() {
   const t = useT();
@@ -200,7 +213,7 @@ export default function AdminPage() {
       <h1 className="mb-4 text-xl font-semibold">Administration</h1>
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-52 md:flex-col md:overflow-visible md:pb-0">
-          {GROUPS.map((group) => (
+          {groups(t).map((group) => (
             <div key={group} className="flex gap-1 md:flex-col">
               <div className="hidden px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 first:pt-0 md:block">
                 {group}

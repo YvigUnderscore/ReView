@@ -928,5 +928,17 @@
   "review.downloadAnnotatedImage": "Telecargar l'imatge anotat",
   "review.publish": "Publicar per l'equipa",
   "review.cameraAnimGltf": "Animacion de camera (glTF)",
-  "review.importAnimation": "Importar una animacion"
+  "review.importAnimation": "Importar una animacion",
+
+  "project.status.active": "Actiu",
+  "project.status.onHold": "En pausa",
+  "projects.tab.active": "Actius",
+  "admin.group.studio": "Estudi",
+  "admin.group.content": "Contenguts",
+  "admin.group.reviewContexts": "Contèxtes de review",
+  "admin.group.communications": "Comunicacions",
+  "admin.group.maintenance": "Mantenença",
+
+  "project.status.completed": "Acabat",
+  "project.status.archived": "Archivat"
 }

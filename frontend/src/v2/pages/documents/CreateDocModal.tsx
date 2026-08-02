@@ -105,7 +105,7 @@ export default function CreateDocModal({
           </DialogHeader>
           <input
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            placeholder="Titre"
+            placeholder={t('editor.heading')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -178,10 +178,10 @@ export default function CreateDocModal({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Annuler
+              {t('common.undo')}
             </Button>
             <Button type="submit" size="sm" disabled={busy}>
-              {busy ? 'Création…' : t('common.create')}
+              {busy ? t('setup.submitting') : t('common.create')}
             </Button>
           </DialogFooter>
         </form>

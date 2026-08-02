@@ -53,7 +53,7 @@ export default function SavedViewsMenu({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-2">
         <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Vues sauvegardées
+          {t('savedViews.title')}
         </p>
         {views.length === 0 ? (
           <p className="px-1 py-2 text-xs text-muted-foreground">{t('viewer.bookmarks.empty')}</p>

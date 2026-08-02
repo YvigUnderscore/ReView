@@ -67,9 +67,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="text-sm font-medium">{t('storage.title')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">
-        Consommation des médias du projet et quota (laisser vide = illimité).
-      </div>
+      <div className="mb-3 text-xs text-muted-foreground">{t('project.storageHint')}</div>
       {!data ? (
         <SkeletonRows count={2} />
       ) : (
@@ -105,7 +103,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
               disabled={saving}
               className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
             >
-              <Save size={14} /> {saving ? '…' : 'Enregistrer'}
+              <Save size={14} /> {saving ? '…' : t('common.save')}
             </button>
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}

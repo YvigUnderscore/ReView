@@ -106,12 +106,12 @@ export default function ProjectPage() {
 
   const tabs = [
     { key: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard size={16} /> },
-    { key: 'shots', label: 'Shots', icon: <Clapperboard size={16} />, badge: shots.length },
+    { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shots.length },
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     { key: 'production', label: 'Production', icon: <BarChart3 size={16} /> },
-    ...(canManage ? [{ key: 'members', label: 'Membres', icon: <Users size={16} /> }] : []),
+    ...(canManage ? [{ key: 'members', label: t('nav.members'), icon: <Users size={16} /> }] : []),
     ...(canManage ? [{ key: 'shares', label: 'Partages', icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),
     ...(canManage ? [{ key: 'trash', label: 'Corbeille', icon: <Trash2 size={16} /> }] : []),

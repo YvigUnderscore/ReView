@@ -37,7 +37,7 @@ export default function ProjectAdminDetailTab() {
         to="/admin/projects"
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft size={13} /> Projets
+        <ArrowLeft size={13} /> {t('nav.projects')}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -59,13 +59,13 @@ export default function ProjectAdminDetailTab() {
           to={`/projects/${project.id}`}
           className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
         >
-          Ouvrir le projet <ExternalLink size={13} />
+          {t('project.openProject')} <ExternalLink size={13} />
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Metric
-          label="Stockage"
+          label={t('storage.title')}
           value={fmtBytes(project.usage)}
           sub={project.quota != null ? `quota ${fmtBytes(project.quota)} (${pct ?? 0}%)` : 'sans quota'}
         />
@@ -99,9 +99,7 @@ export default function ProjectAdminDetailTab() {
               </div>
             ))}
             {members.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                Aucun membre explicite (admins et superviseurs ont un accès global).
-              </p>
+              <p className="text-xs text-muted-foreground">{t('project.noExplicitMember')}</p>
             )}
           </div>
         </Panel>

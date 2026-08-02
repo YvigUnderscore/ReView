@@ -92,7 +92,7 @@ export default function ReviewDecisionDialog({
           <DialogDescription>
             {current ? (
               <>
-                Décision courante : <ReviewDecisionBadge status={current} />
+                {t('decision.current')} <ReviewDecisionBadge status={current} />
               </>
             ) : (
               'Aucune décision posée sur cette version.'
@@ -124,7 +124,7 @@ export default function ReviewDecisionDialog({
             />
             <div className="flex justify-end">
               <Button size="sm" onClick={submit} disabled={saving || statusId === null}>
-                Poser la décision
+                {t('decision.set')}
               </Button>
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function ReviewDecisionDialog({
                 <ReviewDecisionBadge status={d.status} />
                 <div className="min-w-0">
                   <span className="text-muted-foreground">
-                    {d.author?.name ?? 'Système'} · {timeAgo(d.createdAt)}
+                    {d.author?.name ?? t('admin.tab.system')} · {timeAgo(d.createdAt)}
                   </span>
                   {d.comment && <p className="mt-0.5 text-foreground">{d.comment}</p>}
                 </div>

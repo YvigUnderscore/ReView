@@ -37,6 +37,7 @@ import MediaTile from './MediaTile';
 import { VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
 import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
 import type { ViewMode } from '../../stores/useViewPref';
+import { useT } from '../../i18n';
 
 /** Nœud de la timeline : une version (rail + en-tête + médias dépliables + actions).
  *  Clic droit sur la carte → décision de review (Phase 31, SUPERVISOR+). */
@@ -68,6 +69,7 @@ export default function VersionTimelineItem({
   onPublishMedia: (versionId: number, mediaId: number) => void;
   onDeleteMedia: (versionId: number, media: MediaSummary) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(defaultOpen);
   const [decisionOpen, setDecisionOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
@@ -133,7 +135,7 @@ export default function VersionTimelineItem({
                 )}
                 {canCreate && (
                   <Button size="sm" variant="outline" onClick={() => onUpload(version.id)}>
-                    <Upload size={13} /> Média
+                    <Upload size={13} /> {t('review.export.media')}
                   </Button>
                 )}
                 {canPublish && !version.published && (
@@ -204,7 +206,7 @@ export default function VersionTimelineItem({
           </ContextMenuItem>
           {canPlaylist && (
             <ContextMenuItem onClick={() => setPlaylistOpen(true)}>
-              <ListVideo size={14} /> Ajouter à la playlist…
+              <ListVideo size={14} /> {t('reviews.addToPlaylist')}
             </ContextMenuItem>
           )}
         </ContextMenuContent>

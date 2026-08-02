@@ -138,7 +138,7 @@ export default function SidebarFooter() {
             to="/profile"
             className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
-            <UserCog size={14} /> Profil
+            <UserCog size={14} /> {t('shell.profile')}
           </Link>
           <button
             onClick={toggleTheme}
@@ -155,7 +155,7 @@ export default function SidebarFooter() {
             }}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
-            <LogOut size={14} /> Quitter
+            <LogOut size={14} /> {t('shell.logout')}
           </button>
         </div>
       </div>

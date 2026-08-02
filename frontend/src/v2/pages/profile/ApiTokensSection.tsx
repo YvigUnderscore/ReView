@@ -74,8 +74,8 @@ export default function ApiTokensSection() {
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">Tokens d'API</h2>
       <p className="text-xs text-muted-foreground">
-        Pour scripts et intégrations : <code>Authorization: Bearer rvk_…</code>. Le scope « lecture »
-        n'autorise que les GET.
+        {t('tokens.intro')} <code>Authorization: Bearer rvk_…</code>. Le scope « lecture » n'autorise que les
+        GET.
       </p>
       <form onSubmit={create} className="flex gap-2">
         <Input
@@ -90,7 +90,7 @@ export default function ApiTokensSection() {
           <option value="write">{t('tokens.readWrite')}</option>
         </Select>
         <Button type="submit" size="sm" disabled={busy || !name.trim()}>
-          <Plus size={14} className="mr-1" /> Créer
+          <Plus size={14} className="mr-1" /> {t('common.create')}
         </Button>
       </form>
       {secret && (

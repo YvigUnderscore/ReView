@@ -61,7 +61,7 @@ export default function MultiRowCreate({
   return (
     <div className="mb-5 rounded-md border border-border bg-card p-3">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-        <Rows3 size={14} /> Création en lot
+        <Rows3 size={14} /> {t('batch.title')}
       </div>
       {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
       <div className="space-y-1.5">
@@ -108,7 +108,7 @@ export default function MultiRowCreate({
           onClick={addRow}
           className="flex items-center gap-1 rounded border border-border px-2 py-1.5 text-xs hover:bg-secondary/60"
         >
-          <Plus size={14} /> Ligne
+          <Plus size={14} /> {t('common.line')}
         </button>
         <button
           type="button"
@@ -116,7 +116,7 @@ export default function MultiRowCreate({
           disabled={busy}
           className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
         >
-          {busy ? 'Création…' : addLabel}
+          {busy ? t('setup.submitting') : addLabel}
         </button>
       </div>
     </div>

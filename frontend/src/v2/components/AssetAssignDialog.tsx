@@ -148,7 +148,7 @@ export default function AssetAssignDialog({
               {/* Shots regroupés par séquence */}
               <div>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Shots
+                  {t('shots.title')}
                 </div>
                 {groups.length === 0 && (
                   <p className="text-xs text-muted-foreground">{t('sequences.noShot')}</p>
@@ -191,10 +191,10 @@ export default function AssetAssignDialog({
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
           <Button variant="outline" size="sm" onClick={onClose}>
-            Annuler
+            {t('common.undo')}
           </Button>
           <Button size="sm" onClick={save} disabled={busy || loading}>
-            {busy ? 'Enregistrement…' : 'Enregistrer'}
+            {busy ? 'Enregistrement…' : t('common.save')}
           </Button>
         </div>
       </DialogContent>

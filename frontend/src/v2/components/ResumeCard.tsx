@@ -4,6 +4,7 @@
 import { Link } from 'react-router-dom';
 import { Play, ListTodo, ArrowRight } from 'lucide-react';
 import { useRecents, type RecentEntry } from '../stores/useRecents';
+import { useT } from '../i18n';
 
 /**
  * Carte « Reprendre où j'en étais » (10.A5) : en haut de ProjectsPage,
@@ -38,6 +39,7 @@ function ResumeLink({ entry, icon, kind }: { entry: RecentEntry; icon: React.Rea
 }
 
 export default function ResumeCard() {
+  const t = useT();
   const recents = useRecents((s) => s.recents);
   const lastMedia = recents.find((r) => r.type === 'media');
   const lastTask = recents.find((r) => r.type === 'task');
@@ -47,7 +49,7 @@ export default function ResumeCard() {
   return (
     <div className="mb-6">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Reprendre où j'en étais
+        {t('shell.resume')}
       </p>
       <div className="flex flex-wrap gap-3">
         {lastMedia && <ResumeLink entry={lastMedia} icon={<Play size={16} />} kind="Dernière review" />}

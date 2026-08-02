@@ -118,13 +118,13 @@ function TrashSection({
               onClick={bulkRestoreSel}
               className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs hover:bg-secondary/60"
             >
-              <RotateCcw size={12} /> Restaurer
+              <RotateCcw size={12} /> {t('common.restore')}
             </button>
             <button
               onClick={() => setBulkPurging(true)}
               className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-destructive hover:bg-secondary/60"
             >
-              <Trash2 size={12} /> Supprimer
+              <Trash2 size={12} /> {t('common.delete')}
             </button>
           </div>
         )}
@@ -157,13 +157,13 @@ function TrashSection({
                 onClick={() => restore(it.endpoint)}
                 className="rounded border border-border px-2 py-1 text-xs hover:bg-secondary/60"
               >
-                Restaurer
+                {t('common.restore')}
               </button>
               <button
                 onClick={() => setPurge(it)}
                 className="rounded px-2 py-1 text-xs text-destructive hover:bg-secondary/60"
               >
-                Supprimer définitivement
+                {t('common.deletePermanently')}
               </button>
             </div>
           </div>
@@ -228,7 +228,7 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
         />
       )}
       <TrashSection
-        title="Sequences"
+        title={t('sequences.title')}
         domain="sequences"
         items={data.sequences.map((s) => ({
           id: s.id,
@@ -238,7 +238,7 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
         onChanged={onChanged}
       />
       <TrashSection
-        title="Shots"
+        title={t('shots.title')}
         domain="shots"
         items={data.shots.map((s) => ({
           id: s.id,

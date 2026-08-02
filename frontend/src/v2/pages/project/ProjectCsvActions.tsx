@@ -124,7 +124,7 @@ export default function ProjectCsvActions({
           )}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={() => void run(false)} disabled={busy}>
-              Aperçu
+              {t('common.preview')}
             </Button>
             <Button
               type="button"

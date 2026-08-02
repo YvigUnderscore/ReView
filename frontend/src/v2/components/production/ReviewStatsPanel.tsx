@@ -74,7 +74,7 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
     <div className="space-y-6">
       {/* Indicateurs clés */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <Kpi label="Shots" value={String(t.shots)} />
+        <Kpi label={tr('shots.title')} value={String(t.shots)} />
         <Kpi label="Versions" value={String(t.versions)} />
         <Kpi
           label="Taux d'approbation"

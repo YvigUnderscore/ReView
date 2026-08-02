@@ -109,13 +109,13 @@ export default function ProjectsPage() {
     <Shell>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Projets</h1>
+          <h1 className="text-xl font-semibold">{t('nav.projects')}</h1>
           {canManage && <ProjectsTabs tab={tab} onChange={setTab} />}
         </div>
         <div className="flex items-center gap-2">
           {canManage && tab === 'active' && (
             <Button size="sm" onClick={() => setCreating(true)}>
-              <Plus size={16} /> Créer
+              <Plus size={16} /> {t('common.create')}
             </Button>
           )}
           <ViewToggle contextKey="projects" />

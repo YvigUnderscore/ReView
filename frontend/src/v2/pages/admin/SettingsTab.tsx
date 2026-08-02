@@ -32,6 +32,7 @@ function SizeField({
   stored: string;
   onSave: (key: string, value: string) => Promise<void>;
 }) {
+  const t = useT();
   const init = bytesToUnit(Number(stored) || 0);
   const [value, setValue] = useState(stored ? init.value : '');
   const [unit, setUnit] = useState<SizeUnit>(init.unit);
@@ -62,7 +63,7 @@ function SizeField({
         {stored ? `= ${fmtBytes(Number(stored))}` : ''}
       </span>
       <Button variant="outline" size="sm" onClick={save}>
-        {saved ? '✓ Enregistré' : 'Enregistrer'}
+        {saved ? '✓ Enregistré' : t('common.save')}
       </Button>
     </div>
   );
@@ -78,6 +79,7 @@ function PlainField({
   stored: string;
   onSave: (key: string, value: string) => Promise<void>;
 }) {
+  const t = useT();
   const [value, setValue] = useState(stored);
   const [saved, setSaved] = useState(false);
   const save = async () => {
@@ -95,7 +97,7 @@ function PlainField({
         onChange={(e) => setValue(e.target.value)}
       />
       <Button variant="outline" size="sm" onClick={save}>
-        {saved ? '✓ Enregistré' : 'Enregistrer'}
+        {saved ? '✓ Enregistré' : t('common.save')}
       </Button>
     </div>
   );
@@ -155,7 +157,7 @@ function DefaultLocaleField({
       <h3 className="text-sm font-semibold">{t('settings.studioLanguage')}</h3>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <label className="w-64 text-muted-foreground" htmlFor="studio-default-locale">
-          Langue par défaut
+          {t('reviewStatus.defaultLang')}
         </label>
         <Select
           id="studio-default-locale"
@@ -210,7 +212,7 @@ function AccentField({
         </Button>
         {stored && (
           <Button variant="ghost" size="sm" onClick={() => onSave('studio_accent', '')}>
-            Réinitialiser
+            {t('common.reset')}
           </Button>
         )}
       </div>

@@ -43,15 +43,13 @@ export default function ProjectBurninSection({
       <div className="mb-1 text-sm font-medium">{t('burnin.title')}</div>
       {!value ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Ce projet hérite du template studio (Admin → Diffusion).
-          </p>
+          <p className="text-xs text-muted-foreground">{t('project.burninInherit')}</p>
           <button
             type="button"
             className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-secondary/60"
             onClick={() => onChange({ ...CUSTOM_DEFAULTS })}
           >
-            Personnaliser pour ce projet
+            {t('project.burninCustom')}
           </button>
         </div>
       ) : (
@@ -82,7 +80,7 @@ export default function ProjectBurninSection({
             className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary/60"
             onClick={() => onChange(undefined)}
           >
-            Revenir au template studio
+            {t('project.burninRevert')}
           </button>
         </div>
       )}

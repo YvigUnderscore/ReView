@@ -52,7 +52,7 @@ export default function SplatOptions({
       <CommitGroup
         dirty={editor.dirty}
         saving={editor.busy}
-        label="Enregistrer"
+        label={t('common.save')}
         hint={t('review.splat.unsavedEdits')}
         onSave={() => void editor.save()}
         onUndo={editor.history.undo}
@@ -82,13 +82,11 @@ export default function SplatOptions({
 
       {id === 'pin' && (
         <>
-          <span className="rv-optbar__hint">
-            Le repère se pose au centre de la vue et part avec le commentaire.
-          </span>
+          <span className="rv-optbar__hint">{t('review.markerHint')}</span>
           <span className="rv-rule" />
           <Button size="sm" variant="outline" onClick={onPlaceHotspot}>
             <MapPin size={13} />
-            Poser au centre
+            {t('review.markerPlace')}
           </Button>
         </>
       )}
@@ -177,7 +175,7 @@ export default function SplatOptions({
           />
           <Button size="sm" variant="outline" disabled={!selectedCount} onClick={editor.deleteSelection}>
             <Trash2 size={13} />
-            Supprimer
+            {t('common.delete')}
           </Button>
           {editor.deletedCount > 0 && (
             <span className="rv-optbar__hint">
@@ -192,12 +190,12 @@ export default function SplatOptions({
           <Button size="sm" variant="outline" onClick={() => void editor.volumes.add('box')}>
             <Plus size={13} />
             <Cuboid size={13} />
-            Boîte
+            {t('review.box')}
           </Button>
           <Button size="sm" variant="outline" onClick={() => void editor.volumes.add('sphere')}>
             <Plus size={13} />
             <Circle size={13} />
-            Sphère
+            {t('review.sphere')}
           </Button>
           <span className="rv-rule" />
           {editor.volumes.volumes.length === 0 && (

@@ -49,7 +49,7 @@ function LogoPanel() {
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
     if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
-      toast.error('Format image invalide (png/jpg/webp).');
+      toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setBusy(true);
@@ -58,7 +58,7 @@ function LogoPanel() {
         contentType: file.type,
       });
       const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error('Échec de l’upload');
+      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
       await api.put('/api/studio/settings', { key: 'studio_logo_key', value: key });
       invalidate();
       toast.success(t('distribution.logoUpdated'));
@@ -83,7 +83,7 @@ function LogoPanel() {
   };
 
   return (
-    <Panel title="Logo studio">
+    <Panel title={t('burnin.studioLogo')}>
       <p className="mb-3 text-xs text-muted-foreground">
         Affiché sur la page client des liens de partage et utilisable en burn-in sur les proxys.
       </p>
@@ -103,11 +103,11 @@ function LogoPanel() {
           onChange={onFile}
         />
         <Button size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}>
-          <Upload size={14} className="mr-1" /> Téléverser
+          <Upload size={14} className="mr-1" /> {t('common.upload')}
         </Button>
         {logoQ.data?.url && (
           <Button size="sm" variant="ghost" disabled={busy} onClick={remove}>
-            <Trash2 size={14} className="mr-1 text-destructive" /> Retirer
+            <Trash2 size={14} className="mr-1 text-destructive" /> {t('common.remove')}
           </Button>
         )}
       </div>
@@ -185,7 +185,7 @@ function WatermarkPanel() {
       </div>
       <div className="mt-3">
         <Button size="sm" onClick={save} disabled={busy}>
-          <Save size={14} className="mr-1" /> Enregistrer
+          <Save size={14} className="mr-1" /> {t('common.save')}
         </Button>
       </div>
     </Panel>

@@ -85,7 +85,7 @@ export default function ReviewContextMenu({
   const toggleGuide = useGuides((s) => s.toggle);
   const guideItems: Array<{ key: GuideKey; label: string }> = [
     { key: 'thirds', label: t('review.thirds') },
-    { key: 'center', label: 'Croix centrale' },
+    { key: 'center', label: t('review.guides.center') },
     { key: 'actionSafe', label: 'Action safe (90 %)' },
     { key: 'titleSafe', label: 'Title safe (80 %)' },
   ];
@@ -140,7 +140,7 @@ export default function ReviewContextMenu({
                 else v.pause();
               }}
             >
-              <Play size={14} /> Lecture / pause
+              <Play size={14} /> {t('shortcuts.playPause')}
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => stepVideoFrame(videoRef.current, fps, -1)}>
               <ChevronLeft size={14} /> Frame précédente
@@ -151,7 +151,7 @@ export default function ReviewContextMenu({
             {/* Guides de composition (34.G) : tiers / croix / safe areas. */}
             <ContextMenuSub>
               <ContextMenuSubTrigger>
-                <Grid3x3 size={14} /> Guides de composition
+                <Grid3x3 size={14} /> {t('review.compositionGuides')}
               </ContextMenuSubTrigger>
               <ContextMenuSubContent>
                 {guideItems.map((g) => (
@@ -166,14 +166,14 @@ export default function ReviewContextMenu({
             <ContextMenuItem
               onSelect={() => run('Frame copiée', async () => copyImageToClipboard(frameDataUrl()))}
             >
-              <Copy size={14} /> Copier la frame
+              <Copy size={14} /> {t('review.copyFrame')}
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() =>
                 run('Frame téléchargée', async () => downloadImage(frameDataUrl(), `${baseName}-frame.jpg`))
               }
             >
-              <Download size={14} /> Télécharger la frame
+              <Download size={14} /> {t('review.downloadFrame')}
             </ContextMenuItem>
             {annShapes.length > 0 && (
               <ContextMenuItem
@@ -186,7 +186,7 @@ export default function ReviewContextMenu({
                   )
                 }
               >
-                <PencilLine size={14} /> Télécharger la frame annotée
+                <PencilLine size={14} /> {t('review.downloadAnnotatedFrame')}
               </ContextMenuItem>
             )}
             {/* Planche contact (34.H) : PNG composé depuis le sprite de timeline. */}
@@ -205,13 +205,13 @@ export default function ReviewContextMenu({
                   )
                 }
               >
-                <LayoutGrid size={14} /> Exporter la planche contact
+                <LayoutGrid size={14} /> {t('review.contactSheet')}
               </ContextMenuItem>
             )}
             {/* Lien profond (32.E) : URL ouvrant la review à la frame courante. */}
             <ContextMenuItem
               onSelect={() =>
-                run('Lien copié', async () => {
+                run(t('comments.linkCopied'), async () => {
                   const v = videoRef.current;
                   if (!v) throw new Error('Lecteur vidéo indisponible');
                   const frame = data.startFrame + Math.round(v.currentTime * fps);
@@ -221,7 +221,7 @@ export default function ReviewContextMenu({
                 })
               }
             >
-              <Link2 size={14} /> Copier le lien à cette frame
+              <Link2 size={14} /> {t('review.copyFrameLink')}
             </ContextMenuItem>
             {canManage && (
               <ContextMenuItem
@@ -241,7 +241,7 @@ export default function ReviewContextMenu({
                 run('Image téléchargée', () => downloadImage(data.url, data.media.originalName))
               }
             >
-              <Download size={14} /> Télécharger l’image
+              <Download size={14} /> {t('review.downloadImage')}
             </ContextMenuItem>
             {annShapes.length > 0 && (
               <ContextMenuItem
@@ -251,7 +251,7 @@ export default function ReviewContextMenu({
                   )
                 }
               >
-                <PencilLine size={14} /> Télécharger l’image annotée
+                <PencilLine size={14} /> {t('review.downloadAnnotatedImage')}
               </ContextMenuItem>
             )}
             {canManage && (
@@ -265,7 +265,7 @@ export default function ReviewContextMenu({
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => setPlaylistOpen(true)}>
-              <ListVideo size={14} /> Ajouter à la playlist…
+              <ListVideo size={14} /> {t('reviews.addToPlaylist')}
             </ContextMenuItem>
           </>
         )}

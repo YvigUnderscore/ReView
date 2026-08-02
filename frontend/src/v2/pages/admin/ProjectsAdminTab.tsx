@@ -59,13 +59,13 @@ export default function ProjectsAdminTab() {
             <tr>
               <th className="px-3 py-2">Projet</th>
               <th className="px-3 py-2">{t('common.status')}</th>
-              <th className="px-3 py-2 text-right">Membres</th>
+              <th className="px-3 py-2 text-right">{t('nav.members')}</th>
               <th className="px-3 py-2 text-right">{t('projectsAdmin.seqShort')}</th>
-              <th className="px-3 py-2 text-right">Shots</th>
+              <th className="px-3 py-2 text-right">{t('shots.title')}</th>
               <th className="px-3 py-2 text-right">Assets</th>
               <th className="px-3 py-2 text-right">Versions</th>
               <th className="px-3 py-2 text-right">{t('trash.group.media')}</th>
-              <th className="px-3 py-2">Stockage</th>
+              <th className="px-3 py-2">{t('storage.title')}</th>
             </tr>
           </thead>
           <tbody>
@@ -103,7 +103,7 @@ export default function ProjectsAdminTab() {
             {shown.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Aucun projet ne correspond aux filtres.
+                  {t('project.noMatch')}
                 </td>
               </tr>
             )}

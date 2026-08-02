@@ -151,7 +151,7 @@ export default function CommentsTab() {
               {c.parentId != null && <Badge variant="secondary">{t('comments.reply')}</Badge>}
               {c.isResolved && (
                 <Badge variant="secondary">
-                  <CheckCircle2 size={12} /> résolu
+                  <CheckCircle2 size={12} /> {t('comments.resolvedLower')}
                 </Badge>
               )}
               <span className="min-w-0 flex-1" />
@@ -187,20 +187,20 @@ export default function CommentsTab() {
         ))}
         {items.length === 0 && (
           <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Aucun commentaire ne correspond aux filtres.
+            {t('comments.noMatch')}
           </p>
         )}
       </div>
       {pages > 1 && (
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Précédent
+            {t('common.previous')}
           </Button>
           <span>
             Page {page} / {pages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-            Suivant
+            {t('common.next')}
           </Button>
         </div>
       )}
@@ -213,7 +213,7 @@ export default function CommentsTab() {
             définitivement supprimé.
           </>
         }
-        confirmLabel="Supprimer"
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

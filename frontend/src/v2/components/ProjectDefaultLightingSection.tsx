@@ -53,7 +53,7 @@ export default function ProjectDefaultLightingSection({
             onClick={() => onChange(NEUTRAL)}
             className="shrink-0 rounded border border-border px-2 py-1.5 text-xs hover:bg-secondary/60"
           >
-            Définir un défaut
+            {t('project.setDefault')}
           </button>
         </div>
       ) : (
@@ -113,13 +113,13 @@ export default function ProjectDefaultLightingSection({
                 checked={value.groundShadow}
                 onChange={(e) => set({ groundShadow: e.target.checked })}
               />
-              Sol récepteur d'ombres
+              {t('project.shadowGround')}
             </label>
             <button
               onClick={() => onChange(undefined)}
               className="ml-auto rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:text-destructive"
             >
-              Retirer le défaut
+              {t('project.removeDefault')}
             </button>
           </div>
         </div>

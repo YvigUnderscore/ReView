@@ -90,7 +90,7 @@ export default function AnnouncementForm({
         </DialogHeader>
         <div className="space-y-2">
           <Input
-            placeholder="Titre"
+            placeholder={t('editor.heading')}
             value={f.title}
             onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))}
           />
@@ -141,7 +141,7 @@ export default function AnnouncementForm({
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <label className="flex flex-col gap-1 text-muted-foreground">
-              Début
+              {t('common.start')}
               <Input
                 type="datetime-local"
                 value={f.startsAt}
@@ -149,7 +149,7 @@ export default function AnnouncementForm({
               />
             </label>
             <label className="flex flex-col gap-1 text-muted-foreground">
-              Fin
+              {t('common.end')}
               <Input
                 type="datetime-local"
                 value={f.endsAt}
@@ -169,10 +169,10 @@ export default function AnnouncementForm({
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>
-            Annuler
+            {t('common.undo')}
           </Button>
           <Button size="sm" onClick={save} disabled={busy}>
-            {busy ? 'Enregistrement…' : 'Enregistrer'}
+            {busy ? 'Enregistrement…' : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -52,7 +52,7 @@ export default function Model3DOptions({
     mode === 'clean' && canEdit ? (
       <CommitGroup
         dirty={dirty}
-        label="Enregistrer"
+        label={tr('common.save')}
         hint={tr('review.transform.unsaved')}
         onSave={m.saveTransform}
         onUndo={history.undo}
@@ -76,13 +76,11 @@ export default function Model3DOptions({
 
       {tool.id === 'pin' && (
         <>
-          <span className="rv-optbar__hint">
-            Le repère se pose au centre de la vue et part avec le commentaire.
-          </span>
+          <span className="rv-optbar__hint">{tr('review.markerHint')}</span>
           <span className="rv-rule" />
           <Button size="sm" variant="outline" onClick={onPlaceHotspot}>
             <MapPin size={13} />
-            Poser au centre
+            {tr('review.markerPlace')}
           </Button>
         </>
       )}

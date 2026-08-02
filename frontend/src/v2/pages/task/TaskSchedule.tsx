@@ -62,7 +62,7 @@ export default function TaskSchedule({
         <CalendarDays size={14} /> Planning
       </span>
       <label className="flex items-center gap-1.5">
-        Début
+        {t('common.start')}
         <input
           type="date"
           value={toInput(startDate)}

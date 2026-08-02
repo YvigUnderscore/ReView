@@ -109,7 +109,7 @@ export default function LightingPanel({
             title={t('review.lighting.saveDefault')}
           >
             <Save size={13} />
-            Éclairage par défaut du projet
+            {t('review.projectLighting')}
           </Button>
           {clear && (
             <IconButton

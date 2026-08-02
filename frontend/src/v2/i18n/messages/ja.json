@@ -927,5 +927,17 @@
   "review.downloadAnnotatedImage": "注釈付き画像をダウンロード",
   "review.publish": "チームに公開",
   "review.cameraAnimGltf": "カメラアニメーション（glTF）",
-  "review.importAnimation": "アニメーションを読み込む"
+  "review.importAnimation": "アニメーションを読み込む",
+
+  "project.status.active": "進行中",
+  "project.status.onHold": "保留",
+  "projects.tab.active": "進行中",
+  "admin.group.studio": "スタジオ",
+  "admin.group.content": "コンテンツ",
+  "admin.group.reviewContexts": "review のコンテキスト",
+  "admin.group.communications": "コミュニケーション",
+  "admin.group.maintenance": "メンテナンス",
+
+  "project.status.completed": "完了",
+  "project.status.archived": "アーカイブ済み"
 }

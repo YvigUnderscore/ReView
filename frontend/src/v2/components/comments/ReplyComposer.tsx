@@ -114,14 +114,14 @@ export default function ReplyComposer({
             onClick={onCancel}
             className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
           >
-            Annuler
+            {t('common.undo')}
           </button>
           <button
             onClick={send}
             disabled={busy}
             className="rounded bg-primary px-2.5 py-1 text-xs text-primary-foreground disabled:opacity-50"
           >
-            Répondre
+            {t('comments.reply2')}
           </button>
         </div>
       </div>

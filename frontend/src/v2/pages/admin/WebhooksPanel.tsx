@@ -96,7 +96,7 @@ export default function WebhooksPanel() {
   return (
     <Panel title="Webhooks sortants">
       <p className="mb-3 text-xs text-muted-foreground">
-        POST JSON signé (en-tête <code>X-ReView-Signature</code>, HMAC SHA-256 de <code>timestamp.corps</code>
+        {t('webhooks.postJson')} <code>X-ReView-Signature</code>, HMAC SHA-256 de <code>timestamp.corps</code>
         ). 5 tentatives avec backoff. Hôtes privés refusés.
       </p>
       <form onSubmit={create} className="mb-3 space-y-2">
@@ -176,7 +176,7 @@ export default function WebhooksPanel() {
             <Button variant="ghost" size="sm" title={t('webhooks.testDelivery')} onClick={() => test(h)}>
               <Send size={14} />
             </Button>
-            <Button variant="ghost" size="sm" title="Supprimer" onClick={() => remove(h)}>
+            <Button variant="ghost" size="sm" title={t('common.delete')} onClick={() => remove(h)}>
               <Trash2 size={14} className="text-destructive" />
             </Button>
           </div>

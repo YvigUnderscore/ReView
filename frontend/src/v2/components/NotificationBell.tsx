@@ -121,7 +121,7 @@ export default function NotificationBell() {
       <PopoverTrigger asChild>
         <button
           title={t('notifications.title')}
-          aria-label={unread > 0 ? `Notifications, ${unread} non lues` : 'Notifications'}
+          aria-label={unread > 0 ? `Notifications, ${unread} non lues` : t('notifications.title')}
           className="relative flex shrink-0 items-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
         >
           <Bell size={18} />

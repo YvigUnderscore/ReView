@@ -117,7 +117,7 @@ export default function UserDetailTab() {
           </Button>
           {user.id !== meId && (
             <Button variant="outline" size="sm" onClick={() => setDeleting(true)}>
-              <Trash2 size={14} className="text-destructive" /> Supprimer
+              <Trash2 size={14} className="text-destructive" /> {t('common.delete')}
             </Button>
           )}
         </div>
@@ -125,7 +125,7 @@ export default function UserDetailTab() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Metric
-          label="Stockage"
+          label={t('storage.title')}
           value={fmtBytes(user.storageUsed)}
           sub={user.storageLimit ? `quota ${fmtBytes(user.storageLimit)}` : 'sans quota'}
         />
@@ -158,7 +158,7 @@ export default function UserDetailTab() {
         open={deleting}
         title="Supprimer l'utilisateur ?"
         message={<>« {user.displayName ?? user.email} » sera définitivement supprimé.</>}
-        confirmLabel="Supprimer"
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(false)}

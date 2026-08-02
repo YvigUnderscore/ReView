@@ -13,12 +13,12 @@ export default function ActivityFeed({ items }: { items: DashboardActivityItem[]
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Activité récente
+        {t('home.recentActivity')}
       </h2>
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
           <Activity size={24} />
-          Rien à signaler pour l'instant.
+          {t('home.nothingToReport')}
         </div>
       ) : (
         <div className="space-y-0.5">

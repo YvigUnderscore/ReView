@@ -928,5 +928,17 @@
   "review.downloadAnnotatedImage": "S'ahgmerkt Bild runterlade",
   "review.publish": "Fer d'Equipe veröffentliche",
   "review.cameraAnimGltf": "Kameraanimation (glTF)",
-  "review.importAnimation": "E Animation importiere"
+  "review.importAnimation": "E Animation importiere",
+
+  "project.status.active": "Aktiv",
+  "project.status.onHold": "Pausiert",
+  "projects.tab.active": "Aktivi",
+  "admin.group.studio": "Studio",
+  "admin.group.content": "Ihalte",
+  "admin.group.reviewContexts": "Review-Kontext",
+  "admin.group.communications": "Kommunikation",
+  "admin.group.maintenance": "Wartung",
+
+  "project.status.completed": "Fertig",
+  "project.status.archived": "Archiviert"
 }

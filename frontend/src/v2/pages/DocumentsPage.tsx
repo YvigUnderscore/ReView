@@ -79,7 +79,7 @@ export default function DocumentsPage() {
   return (
     <Shell>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Documents</h1>
+        <h1 className="text-xl font-semibold">{t('nav.documents')}</h1>
         <div className="flex items-center gap-2">
           <select
             value={filterProject}
@@ -159,7 +159,7 @@ export default function DocumentsPage() {
                           onClick={saveEdit}
                           className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground"
                         >
-                          <Save size={13} /> Enregistrer
+                          <Save size={13} /> {t('common.save')}
                         </button>
                       ) : (
                         <button

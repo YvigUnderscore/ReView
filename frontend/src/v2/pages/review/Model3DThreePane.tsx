@@ -5,6 +5,7 @@ import { type ReactNode, type RefObject } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { VIEWER_ZONE } from './reviewTypes';
 import ReviewFrame from './ReviewFrame';
+import { useT } from '../../i18n';
 
 /**
  * Pane 3D de la review (viewer **Three.js**) : le hook `useModel3DThree` monte la scène dans
@@ -41,6 +42,7 @@ export default function Model3DThreePane({
   processingError?: string | null;
   onReprocess: () => void;
 }) {
+  const t = useT();
   const showError = loadError || (status !== 'PROCESSING' && status !== 'READY');
   return (
     <div className={VIEWER_ZONE} data-viewer-zone>
@@ -58,9 +60,7 @@ export default function Model3DThreePane({
 
       {status === 'PROCESSING' ? (
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm text-muted-foreground">
-            Conversion 3D en cours… (rechargez dans un instant)
-          </span>
+          <span className="text-sm text-muted-foreground">{t('review.converting')}</span>
         </div>
       ) : showError ? (
         <div className="absolute inset-0 flex items-center justify-center p-6">

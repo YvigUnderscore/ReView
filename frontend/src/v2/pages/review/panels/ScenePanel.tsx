@@ -127,7 +127,7 @@ export default function ScenePanel({
           </Row>
           {section.active && (
             <>
-              <Row label="Axe">
+              <Row label={t('viewer.clip.axisShort')}>
                 <SegmentedControl
                   label={t('viewer.clip.axis')}
                   items={AXES}
@@ -135,7 +135,7 @@ export default function ScenePanel({
                   onChange={section.onAxis}
                 />
               </Row>
-              <Row label="Position">
+              <Row label={t('viewer.clip.position')}>
                 <NumberField
                   label="pos"
                   value={section.position}
@@ -169,7 +169,7 @@ export default function ScenePanel({
           </Row>
           {turntable.active && (
             <>
-              <Row label="Axe">
+              <Row label={t('viewer.clip.axisShort')}>
                 <SegmentedControl
                   label={t('viewer.turntable.axis')}
                   items={AXES}

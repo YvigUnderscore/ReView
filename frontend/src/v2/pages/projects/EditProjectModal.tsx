@@ -11,14 +11,17 @@ import { Label } from '../../components/ui/label';
 import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { useT } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
 
-const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: 'Actif',
-  ON_HOLD: 'En pause',
-  COMPLETED: 'Terminé',
-  ARCHIVED: 'Archivé',
-};
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
+
+const statusLabel = (t: Tr): Record<string, string> => ({
+  ACTIVE: t('project.status.active'),
+  ON_HOLD: t('project.status.onHold'),
+  COMPLETED: t('project.status.completed'),
+  ARCHIVED: t('project.status.archived'),
+});
 const STATUS_OPTIONS: readonly ProjectStatus[] = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
 
 /** Modale d'édition d'un projet (extraite de ProjectsPage pour le budget de taille). */
@@ -77,7 +80,7 @@ export default function EditProjectModal({
             >
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
+                  {statusLabel(t)[s]}
                 </option>
               ))}
             </Select>
@@ -85,10 +88,10 @@ export default function EditProjectModal({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Annuler
+              {t('common.undo')}
             </Button>
             <Button type="submit" size="sm">
-              Enregistrer
+              {t('common.save')}
             </Button>
           </DialogFooter>
         </form>

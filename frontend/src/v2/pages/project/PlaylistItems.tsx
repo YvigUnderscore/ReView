@@ -116,7 +116,7 @@ export default function PlaylistItems({
                     <ArrowDown size={14} /> Descendre
                   </ContextMenuItem>
                   <ContextMenuItem danger onClick={() => void removeItem(it)}>
-                    <X size={14} /> Retirer de la playlist
+                    <X size={14} /> {t('playlist.remove')}
                   </ContextMenuItem>
                 </>
               )}

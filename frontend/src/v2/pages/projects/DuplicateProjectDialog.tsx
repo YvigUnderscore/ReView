@@ -63,7 +63,7 @@ export default function DuplicateProjectDialog({
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={includeTasks} onCheckedChange={(v) => setIncludeTasks(v === true)} />
-            Copier aussi les tâches des shots (statut réinitialisé)
+            {t('project.copyTasks')}
           </label>
           <p className="text-xs text-muted-foreground">
             Séquences, shots et réglages sont recréés. Les médias, versions et commentaires ne sont pas
@@ -72,10 +72,10 @@ export default function DuplicateProjectDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Annuler
+              {t('common.undo')}
             </Button>
             <Button type="submit" size="sm" disabled={busy}>
-              Dupliquer
+              {t('common.duplicate')}
             </Button>
           </DialogFooter>
         </form>

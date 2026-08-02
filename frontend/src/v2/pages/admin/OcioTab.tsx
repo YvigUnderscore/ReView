@@ -95,7 +95,7 @@ export default function OcioTab() {
   return (
     <div className="max-w-3xl space-y-6">
       <p className="text-sm text-muted-foreground">
-        Configs de gestion de couleur OCIO. Récupérez les configs ACES officielles (
+        {t('ocio.intro')}
         <a
           href="https://github.com/AcademySoftwareFoundation/OpenColorIO-Config-ACES/releases"
           target="_blank"
@@ -111,9 +111,7 @@ export default function OcioTab() {
         {configsQ.data === undefined ? (
           <SkeletonRows count={2} />
         ) : configsQ.data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aucune config installée. Parcourez les releases ACES ci-dessous.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('ocio.none')}</p>
         ) : (
           <div className="space-y-1.5">
             {configsQ.data.map((c) => (
@@ -136,7 +134,7 @@ export default function OcioTab() {
                   }`}
                 >
                   <Star size={13} className={c.isDefault ? 'fill-current' : ''} />
-                  {c.isDefault ? 'Défaut' : ''}
+                  {c.isDefault ? t('common.default') : ''}
                 </button>
                 <Button
                   size="icon"
@@ -155,7 +153,7 @@ export default function OcioTab() {
       <Panel title="Releases ACES (GitHub)">
         {!browse ? (
           <Button onClick={() => setBrowse(true)}>
-            <RefreshCw size={15} /> Parcourir les releases ACES
+            <RefreshCw size={15} /> {t('ocio.browse')}
           </Button>
         ) : releasesQ.isLoading ? (
           <SkeletonRows count={3} />
@@ -175,7 +173,7 @@ export default function OcioTab() {
                       <span className="min-w-0 flex-1 truncate text-sm">{a.label}</span>
                       {a.recommendedDefault && (
                         <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] uppercase text-primary">
-                          défaut conseillé
+                          {t('ocio.recommended')}
                         </span>
                       )}
                       <Button

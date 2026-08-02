@@ -927,5 +927,17 @@
   "review.downloadAnnotatedImage": "주석이 있는 이미지 내려받기",
   "review.publish": "팀에 게시",
   "review.cameraAnimGltf": "카메라 애니메이션(glTF)",
-  "review.importAnimation": "애니메이션 가져오기"
+  "review.importAnimation": "애니메이션 가져오기",
+
+  "project.status.active": "진행 중",
+  "project.status.onHold": "보류",
+  "projects.tab.active": "진행 중",
+  "admin.group.studio": "스튜디오",
+  "admin.group.content": "콘텐츠",
+  "admin.group.reviewContexts": "review 환경",
+  "admin.group.communications": "커뮤니케이션",
+  "admin.group.maintenance": "유지 보수",
+
+  "project.status.completed": "완료",
+  "project.status.archived": "보관됨"
 }

@@ -108,9 +108,7 @@ export default function ProjectSettingsTab({
       {/* Frame de départ */}
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="text-sm font-medium">{t('pipeline.startFrame')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">
-          Numéro de la première frame des médias vidéo de ce projet.
-        </div>
+        <div className="mb-3 text-xs text-muted-foreground">{t('project.startFrameHint')}</div>
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -123,7 +121,7 @@ export default function ProjectSettingsTab({
             disabled={savingFrame}
             className="rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
           >
-            {savingFrame ? '…' : 'Enregistrer'}
+            {savingFrame ? '…' : t('common.save')}
           </button>
         </div>
       </section>
@@ -174,9 +172,7 @@ export default function ProjectSettingsTab({
       {/* Nomenclature */}
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="text-sm font-medium">{t('pipeline.naming')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">
-          Override des défauts studio pour ce projet (préfixes, pas, nombre de chiffres).
-        </div>
+        <div className="mb-3 text-xs text-muted-foreground">{t('project.namingOverride')}</div>
         {draft ? (
           <div className="flex flex-wrap items-end gap-3">
             <Field label={t('pipeline.prefix.sequence')}>
@@ -221,9 +217,7 @@ export default function ProjectSettingsTab({
       {/* Départements */}
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="text-sm font-medium">{t('pipeline.departments')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">
-          Liste des départements du projet (clé courte + nom affiché).
-        </div>
+        <div className="mb-3 text-xs text-muted-foreground">{t('project.departmentsHint')}</div>
         {draft && (
           <div className="space-y-1.5">
             {draft.departments.map((dep, i) => (
@@ -253,7 +247,7 @@ export default function ProjectSettingsTab({
               onClick={addDept}
               className="mt-1 flex items-center gap-1 rounded border border-border px-2 py-1.5 text-xs hover:bg-secondary/60"
             >
-              <Plus size={14} /> Département
+              <Plus size={14} /> {t('common.department')}
             </button>
           </div>
         )}

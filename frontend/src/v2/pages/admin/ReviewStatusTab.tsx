@@ -66,7 +66,7 @@ export default function ReviewStatusTab() {
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('reviewStatus.title')}</h2>
         <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus size={14} /> Nouveau statut
+          <Plus size={14} /> {t('reviewStatus.new')}
         </Button>
       </div>
       <p className="mb-3 text-xs text-muted-foreground">
@@ -107,7 +107,7 @@ export default function ReviewStatusTab() {
             </button>
             <button
               onClick={() => setDeleting(s)}
-              title="Supprimer"
+              title={t('common.delete')}
               className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
             >
               <Trash2 size={13} />
@@ -140,7 +140,7 @@ export default function ReviewStatusTab() {
         message={
           <>« {deleting?.name} » sera supprimé. Refusé s'il est utilisé par des décisions existantes.</>
         }
-        confirmLabel="Supprimer"
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

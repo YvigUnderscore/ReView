@@ -89,7 +89,7 @@ export default function AnnouncementsTab() {
               </button>
               <button
                 onClick={() => setDeleting(a)}
-                title="Supprimer"
+                title={t('common.delete')}
                 className="rounded p-1 text-destructive hover:bg-secondary"
               >
                 <Trash2 size={15} />
@@ -99,7 +99,7 @@ export default function AnnouncementsTab() {
         ))}
         {items.length === 0 && (
           <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-            Aucune annonce. Créez-en une pour informer les utilisateurs à la connexion.
+            {t('announcement.empty')}
           </p>
         )}
       </div>
@@ -122,7 +122,7 @@ export default function AnnouncementsTab() {
         open={!!deleting}
         title="Supprimer l'annonce ?"
         message={<>« {deleting?.title} » sera définitivement supprimée.</>}
-        confirmLabel="Supprimer"
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

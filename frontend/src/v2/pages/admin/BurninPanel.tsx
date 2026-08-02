@@ -20,8 +20,8 @@ const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; 
   { key: 'enabled', label: t('burnin.onProxiesShort'), hint: 'shot/version/TC incrustés au transcodage' },
   { key: 'showShot', label: t('burnin.shotCode'), hint: 'haut gauche' },
   { key: 'showVersion', label: t('burnin.versionName'), hint: 'haut droite' },
-  { key: 'showTimecode', label: 'Timecode', hint: 'bas centre' },
-  { key: 'showLogo', label: 'Logo studio', hint: 'bas droite (nécessite un logo)' },
+  { key: 'showTimecode', label: t('burnin.timecode'), hint: 'bas centre' },
+  { key: 'showLogo', label: t('burnin.studioLogo'), hint: 'bas droite (nécessite un logo)' },
   { key: 'slate', label: t('burnin.slateShort'), hint: 'carte d’identité de 3 s sur le dérivé client' },
 ];
 
@@ -36,7 +36,7 @@ export default function BurninPanel() {
   const [draft, setDraft] = useState<BurninConfig | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft(data);
-  if (!draft) return <Panel title="Burn-ins & slates">…</Panel>;
+  if (!draft) return <Panel title={t('burnin.title')}>…</Panel>;
 
   const set = (patch: Partial<BurninConfig>) => setDraft((d) => d && { ...d, ...patch });
 
@@ -55,7 +55,7 @@ export default function BurninPanel() {
   };
 
   return (
-    <Panel title="Burn-ins & slates">
+    <Panel title={t('burnin.title')}>
       <p className="mb-3 text-xs text-muted-foreground">
         Incrustations FFmpeg posées au transcodage (prochains uploads/reprocess). Template studio — ajustable
         projet par projet dans les réglages du projet.
@@ -74,7 +74,7 @@ export default function BurninPanel() {
           </label>
         ))}
         <label className="block text-sm">
-          <span className="mb-1 block text-muted-foreground">Texte libre (bas gauche)</span>
+          <span className="mb-1 block text-muted-foreground">{t('burnin.freeText')}</span>
           <Input
             value={draft.customText}
             onChange={(e) => set({ customText: e.target.value })}
@@ -85,7 +85,7 @@ export default function BurninPanel() {
       </div>
       <div className="mt-3">
         <Button size="sm" onClick={save} disabled={busy}>
-          <Save size={14} className="mr-1" /> Enregistrer
+          <Save size={14} className="mr-1" /> {t('common.save')}
         </Button>
       </div>
     </Panel>

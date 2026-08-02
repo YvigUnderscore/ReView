@@ -73,7 +73,7 @@ export default function MediaOptions({
       <CommitGroup
         dirty={trim.dirty}
         saving={trim.busy}
-        label="Enregistrer"
+        label={t('common.save')}
         hint={t('review.trim.unsaved')}
         onSave={trim.onApply}
       />
@@ -179,9 +179,7 @@ export default function MediaOptions({
               onChange={compare.onMode}
             />
           ) : (
-            <span className="rv-optbar__hint">
-              Choisir une version B dans le dock Comparaison pour activer le wipe.
-            </span>
+            <span className="rv-optbar__hint">{t('review.pickB')}</span>
           )}
         </>
       )}
@@ -192,7 +190,7 @@ export default function MediaOptions({
           <span className="rv-rule" />
           <Button size="sm" variant="outline" onClick={trim.onIn}>
             <LogIn size={13} />
-            Entrée ici
+            {t('review.markerHere')}
           </Button>
           <Button size="sm" variant="outline" onClick={trim.onOut}>
             <LogOut size={13} />

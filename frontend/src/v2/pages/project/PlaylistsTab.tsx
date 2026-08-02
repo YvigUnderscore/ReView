@@ -165,7 +165,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
               </ContextMenuTrigger>
               <ContextMenuContent>
                 <ContextMenuItem onClick={() => void playFirst(p)}>
-                  <Play size={14} /> Lire la playlist
+                  <Play size={14} /> {t('playlist.play')}
                 </ContextMenuItem>
                 {canEdit(p) && (
                   <>
@@ -182,7 +182,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
           ))}
           {canWrite && (
             <Button size="sm" variant="ghost" onClick={() => (setCreating(true), setNameDraft(''))}>
-              Nouvelle playlist
+              {t('playlists.new')}
             </Button>
           )}
         </>
@@ -205,7 +205,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => (setCreating(false), setRenaming(null))}>
-              Annuler
+              {t('common.undo')}
             </Button>
             <Button onClick={() => void submitName()} disabled={!nameDraft.trim()}>
               {renaming ? t('common.rename') : t('common.create')}

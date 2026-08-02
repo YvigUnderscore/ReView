@@ -164,7 +164,7 @@ export default function SplatPanels({
       <InfoPanel
         live={live}
         sheet={[
-          { label: 'Fichier', value: data.media.originalName },
+          { label: t('review.file'), value: data.media.originalName },
           { label: t('common.status'), value: data.media.status },
         ]}
       />
@@ -207,14 +207,14 @@ export default function SplatPanels({
               onClick={() => void downloadAnimGltf(pres.anim.anim)}
             >
               <Download size={13} />
-              Animation caméra (glTF)
+              {t('review.cameraAnimGltf')}
             </Button>
             <label
               title={t('review.camera.import')}
               className="flex min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
             >
               <Upload size={13} />
-              Importer une animation
+              {t('review.importAnimation')}
               <input
                 type="file"
                 accept=".gltf,.glb,.json,model/gltf+json,model/gltf-binary,application/json"

@@ -57,14 +57,14 @@ export default function OverviewTab({
       <p className="mb-4 text-sm text-muted-foreground">Tableau de bord du projet « {name} ».</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label={t('sequences.title')} value={counts.sequences} onClick={() => onGo('sequences')} />
-        <StatCard label="Shots" value={counts.shots} onClick={() => onGo('shots')} />
+        <StatCard label={t('shots.title')} value={counts.shots} onClick={() => onGo('shots')} />
         <StatCard label="Assets" value={counts.assets} onClick={() => onGo('assets')} />
       </div>
 
       {/* Derniers médias publiés : vignettes cliquables vers la review */}
       <section className="mt-6">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Derniers médias publiés
+          {t('playlist.latestPublished')}
         </h3>
         {media === null ? (
           <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">

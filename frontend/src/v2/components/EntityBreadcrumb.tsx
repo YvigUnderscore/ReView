@@ -10,6 +10,10 @@ import { entitySlug } from '../lib/slug';
 import { trackRecent } from '../stores/useRecents';
 import { useProjectContext } from '../stores/useProjectContext';
 import type { AssetRef, MediaRef, ProjectRef, SequenceRef, ShotRef, Task, Version } from '../types/api';
+import { useT, type MessageKey } from '../i18n';
+
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type Tr = (key: MessageKey) => string;
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -43,11 +47,11 @@ interface Segment {
   to: string | null;
 }
 
-function toSegments(ctx: BreadcrumbContext, tail?: string): Segment[] {
+function toSegments(t: Tr, ctx: BreadcrumbContext, tail?: string): Segment[] {
   const pid = ctx.project.id;
   const pslug = entitySlug(ctx.project.name, pid);
   const segments: Segment[] = [
-    { label: 'Projets', to: '/projects' },
+    { label: t('nav.projects'), to: '/projects' },
     { label: ctx.project.name, to: `/projects/${pslug}` },
   ];
   if (ctx.sequence)
@@ -94,6 +98,7 @@ export default function EntityBreadcrumb({
   id: number;
   tail?: string;
 }) {
+  const t = useT();
   const { pathname, search } = useLocation();
   const { data } = useQuery({
     queryKey: qk.context(entity, id),
@@ -120,7 +125,7 @@ export default function EntityBreadcrumb({
   }, [ctx, entity, id, tail, pathname, search]);
 
   if (!ctx) return null;
-  const segments = toSegments(ctx, tail);
+  const segments = toSegments(t, ctx, tail);
   const last = segments.length - 1;
 
   return (

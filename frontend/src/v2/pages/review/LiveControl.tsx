@@ -75,7 +75,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
             <>
               <ContextMenuSub>
                 <ContextMenuSubTrigger>
-                  <Crown size={14} /> Donner la main (pilote)
+                  <Crown size={14} /> {t('live.handOver')}
                 </ContextMenuSubTrigger>
                 <ContextMenuSubContent>
                   {others.map((p) => (
@@ -123,7 +123,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
             </>
           )}
           <ContextMenuItem onClick={live.leave}>
-            <LogOut size={14} /> Quitter la session
+            <LogOut size={14} /> {t('live.leaveSession')}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -173,7 +173,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
                     toast.success(`Main passée à ${p.displayName} (pilote)`);
                   }}
                 >
-                  <Crown size={14} /> Donner la main (pilote)
+                  <Crown size={14} /> {t('live.handOver')}
                 </ContextMenuItem>
                 <ContextMenuItem
                   onClick={() => {

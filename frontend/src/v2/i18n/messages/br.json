@@ -927,5 +927,17 @@
   "review.downloadAnnotatedImage": "Pellgargañ ar skeudenn notennaouet",
   "review.publish": "Embann evit ar skipailh",
   "review.cameraAnimGltf": "Fiñvskeudenn gamera (glTF)",
-  "review.importAnimation": "Enporzhiañ ur fiñvskeudenn"
+  "review.importAnimation": "Enporzhiañ ur fiñvskeudenn",
+
+  "project.status.active": "Oberiant",
+  "project.status.onHold": "Ehanet",
+  "projects.tab.active": "Oberiant",
+  "admin.group.studio": "Studio",
+  "admin.group.content": "Danvezioù",
+  "admin.group.reviewContexts": "Kendestennoù review",
+  "admin.group.communications": "Kehentiñ",
+  "admin.group.maintenance": "Trezalc'h",
+
+  "project.status.completed": "Echu",
+  "project.status.archived": "Diellaouet"
 }

@@ -182,7 +182,7 @@ export default function ScenegraphPanel({
               onClick={onRevert}
               className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
             >
-              <RotateCcw size={11} /> Annuler
+              <RotateCcw size={11} /> {t('common.undo')}
             </button>
           )}
           <span className="flex-1" />

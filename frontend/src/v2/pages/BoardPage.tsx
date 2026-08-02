@@ -134,7 +134,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
             onClick={() => setShowLib((s) => !s)}
             className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted"
           >
-            Bibliothèque média
+            {t('board.mediaLibrary')}
           </button>
           <span className="text-xs text-muted-foreground">{saved ? '✓ enregistré' : '… enregistrement'}</span>
         </div>
@@ -170,9 +170,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
               </button>
             ))}
             {library.length === 0 && (
-              <p className="text-[11px] text-muted-foreground">
-                Aucune image publiée. Glissez-déposez directement vos fichiers sur le board.
-              </p>
+              <p className="text-[11px] text-muted-foreground">{t('board.noPublishedImage')}</p>
             )}
           </div>
         )}

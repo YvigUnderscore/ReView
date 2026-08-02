@@ -101,7 +101,7 @@ export default function AssetPage() {
           ))}
           {canManage && (
             <Button size="sm" variant="outline" className="ml-auto" onClick={() => setAssigning(true)}>
-              Gérer l'assignation
+              {t('task.manageAssignment')}
             </Button>
           )}
         </div>

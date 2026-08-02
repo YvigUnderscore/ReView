@@ -928,5 +928,17 @@
   "review.downloadAnnotatedImage": "Deskargatu oharreztatutako irudia",
   "review.publish": "Argitaratu taldearentzat",
   "review.cameraAnimGltf": "Kamera-animazioa (glTF)",
-  "review.importAnimation": "Inportatu animazio bat"
+  "review.importAnimation": "Inportatu animazio bat",
+
+  "project.status.active": "Aktibo",
+  "project.status.onHold": "Etenda",
+  "projects.tab.active": "Aktiboak",
+  "admin.group.studio": "Estudioa",
+  "admin.group.content": "Edukiak",
+  "admin.group.reviewContexts": "Review testuinguruak",
+  "admin.group.communications": "Komunikazioak",
+  "admin.group.maintenance": "Mantentzea",
+
+  "project.status.completed": "Amaituta",
+  "project.status.archived": "Artxibatuta"
 }

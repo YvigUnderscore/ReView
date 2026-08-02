@@ -181,10 +181,10 @@ function DerivedPurgePanel() {
             checked={draft.enabled}
             onChange={(e) => void save({ ...draft, enabled: e.target.checked })}
           />
-          Activée
+          {t('common.enabled')}
         </label>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          Conserver les
+          {t('versions.keep')}
           <input
             type="number"
             min={1}
@@ -193,7 +193,7 @@ function DerivedPurgePanel() {
             onChange={(e) => void save({ ...draft, keepVersions: Math.max(1, Number(e.target.value) || 1) })}
             className="w-16 rounded border border-input bg-background px-2 py-1 text-sm"
           />
-          dernières versions
+          {t('versions.lastVersions')}
         </label>
         <Button size="sm" variant="outline" onClick={run} disabled={busy || !draft.enabled}>
           Purger maintenant

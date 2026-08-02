@@ -78,7 +78,7 @@ export default function ShotEditDialog({
         <div className="space-y-2">
           <div className="flex gap-2">
             <Input
-              placeholder="Code"
+              placeholder={t('sequences.code.placeholder')}
               className="w-32"
               value={vals.code}
               onChange={(e) => setVals((v) => ({ ...v, code: e.target.value }))}
@@ -104,7 +104,7 @@ export default function ShotEditDialog({
           </Select>
           <div className="flex gap-2">
             <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-              Frame de début
+              {t('shot.startFrame')}
               <Input
                 type="number"
                 placeholder={t('common.inherited')}
@@ -113,7 +113,7 @@ export default function ShotEditDialog({
               />
             </label>
             <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-              Frame de fin
+              {t('shot.endFrame')}
               <Input
                 type="number"
                 placeholder={t('common.inherited')}
@@ -126,10 +126,10 @@ export default function ShotEditDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>
-            Annuler
+            {t('common.undo')}
           </Button>
           <Button size="sm" onClick={save} disabled={busy}>
-            {busy ? 'Enregistrement…' : 'Enregistrer'}
+            {busy ? 'Enregistrement…' : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

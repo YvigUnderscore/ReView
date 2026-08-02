@@ -98,7 +98,7 @@ export default function ClientMediaViewer({
           onClick={onBack}
           className="mb-3 flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft size={15} /> Tous les médias
+          <ArrowLeft size={15} /> {t('versions.allMedia')}
         </button>
         <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/60">
           {media.kind === 'VIDEO' && urlQ.data && (
@@ -125,7 +125,7 @@ export default function ClientMediaViewer({
             <p className="p-10 text-center text-sm text-muted-foreground">
               Aperçu non disponible pour ce type de média ({media.kind}).
               <br />
-              Contactez le studio pour une session de review.
+              {t('client.contactStudio')}
             </p>
           )}
           {watermarkText && <WatermarkOverlay text={watermarkText} opacity={watermarkOpacity} />}

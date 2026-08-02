@@ -130,7 +130,7 @@ export default function CommentItem({
               }
               className="inline-flex items-center gap-1 rounded bg-success/15 px-1.5 py-0.5 text-[11px] text-success"
             >
-              <CheckCircle2 size={10} /> Résolu
+              <CheckCircle2 size={10} /> {t('comments.resolved')}
             </span>
           )}
           {/* Badges indicateurs : la carte entière est cliquable pour tout restaurer. */}
@@ -171,14 +171,14 @@ export default function CommentItem({
                 onClick={() => setEditing(false)}
                 className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
               >
-                Annuler
+                {t('common.undo')}
               </button>
               <button
                 onClick={saveEdit}
                 disabled={!editText.trim()}
                 className="flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs text-primary-foreground disabled:opacity-50"
               >
-                <Check size={12} /> Enregistrer
+                <Check size={12} /> {t('common.save')}
               </button>
             </div>
           </div>
@@ -205,7 +205,7 @@ export default function CommentItem({
               }}
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
-              <Reply size={13} /> Répondre
+              <Reply size={13} /> {t('comments.reply2')}
             </button>
           )}
           {canResolve && (
@@ -240,13 +240,13 @@ export default function CommentItem({
                   onClick={remove}
                   className="rounded bg-destructive px-1.5 py-0.5 text-destructive-foreground"
                 >
-                  Supprimer
+                  {t('common.delete')}
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-secondary"
                 >
-                  Annuler
+                  {t('common.undo')}
                 </button>
               </span>
             ) : (
@@ -255,7 +255,7 @@ export default function CommentItem({
                   stop(e);
                   setConfirmDelete(true);
                 }}
-                title="Supprimer"
+                title={t('common.delete')}
                 className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-destructive"
               >
                 <Trash2 size={12} />

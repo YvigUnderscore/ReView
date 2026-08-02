@@ -84,7 +84,7 @@ export default function ActivityTab() {
       {maxPage > 1 && (
         <div className="mt-3 flex items-center justify-center gap-3 text-sm">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Précédent
+            {t('common.previous')}
           </Button>
           <span className="text-muted-foreground">
             Page {page} / {maxPage}
@@ -95,7 +95,7 @@ export default function ActivityTab() {
             disabled={page >= maxPage}
             onClick={() => setPage((p) => p + 1)}
           >
-            Suivant
+            {t('common.next')}
           </Button>
         </div>
       )}

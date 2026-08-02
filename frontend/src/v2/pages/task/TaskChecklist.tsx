@@ -70,7 +70,7 @@ export default function TaskChecklist({
             {canEditItems && (
               <button
                 onClick={() => removeItem(i)}
-                title="Retirer"
+                title={t('common.remove')}
                 className="ml-auto text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
               >
                 <X size={13} />

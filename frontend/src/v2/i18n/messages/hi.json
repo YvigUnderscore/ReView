@@ -928,5 +928,17 @@
   "review.downloadAnnotatedImage": "टिप्पणी सहित छवि डाउनलोड करें",
   "review.publish": "टीम के लिए प्रकाशित करें",
   "review.cameraAnimGltf": "कैमरा एनिमेशन (glTF)",
-  "review.importAnimation": "एनिमेशन आयात करें"
+  "review.importAnimation": "एनिमेशन आयात करें",
+
+  "project.status.active": "सक्रिय",
+  "project.status.onHold": "रोका गया",
+  "projects.tab.active": "सक्रिय",
+  "admin.group.studio": "स्टूडियो",
+  "admin.group.content": "सामग्री",
+  "admin.group.reviewContexts": "review संदर्भ",
+  "admin.group.communications": "संचार",
+  "admin.group.maintenance": "रखरखाव",
+
+  "project.status.completed": "पूर्ण",
+  "project.status.archived": "संग्रहित"
 }

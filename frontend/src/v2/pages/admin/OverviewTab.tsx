@@ -42,14 +42,14 @@ export default function OverviewTab() {
           sub={`${stats.users.online} en ligne`}
           to="/admin/users"
         />
-        <Metric label="Projets" value={stats.pipeline.projects} to="/admin/projects" />
+        <Metric label={t('nav.projects')} value={stats.pipeline.projects} to="/admin/projects" />
         <Metric label={t('sequences.title')} value={stats.pipeline.sequences} to="/admin/projects" />
-        <Metric label="Shots" value={stats.pipeline.shots} to="/admin/projects" />
+        <Metric label={t('shots.title')} value={stats.pipeline.shots} to="/admin/projects" />
         <Metric label="Assets" value={stats.pipeline.assets} to="/admin/projects" />
         <Metric label="Versions" value={stats.pipeline.versions} to="/admin/versions" />
         <Metric label={t('trash.group.media')} value={stats.media.count} to="/reviews" />
         <Metric label="Commentaires" value={stats.comments} to="/admin/comments" />
-        <Metric label="Stockage" value={fmtBytes(stats.media.storageBytes)} to="/admin/storage" />
+        <Metric label={t('storage.title')} value={fmtBytes(stats.media.storageBytes)} to="/admin/storage" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -65,7 +65,7 @@ export default function OverviewTab() {
               <DistList data={stats.jobs} />
               {(stats.jobs.failed ?? 0) > 0 && (
                 <Button variant="outline" size="sm" className="mt-2" onClick={retryJobs}>
-                  <RefreshCw size={13} /> Relancer les jobs en échec
+                  <RefreshCw size={13} /> {t('jobs.retryFailed')}
                 </Button>
               )}
             </>

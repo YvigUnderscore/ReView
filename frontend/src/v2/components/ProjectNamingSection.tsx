@@ -38,9 +38,7 @@ export default function ProjectNamingSection({
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="text-sm font-medium">{t('pipeline.naming')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">
-        Motif (expression régulière) que doit respecter le nom des fichiers uploadés.
-      </div>
+      <div className="mb-3 text-xs text-muted-foreground">{t('project.namingHint')}</div>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
           Motif (regex)

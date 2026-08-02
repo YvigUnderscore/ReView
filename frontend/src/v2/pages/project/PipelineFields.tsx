@@ -39,7 +39,7 @@ export default function PipelineFields({
 
       {form.custom ? (
         <div className="flex flex-wrap items-end gap-3">
-          <Field label="Largeur (px)">
+          <Field label={t('pipeline.width')}>
             <Input
               id={`${idPrefix}-w`}
               type="number"
@@ -50,7 +50,7 @@ export default function PipelineFields({
             />
           </Field>
           <span className="pb-1.5 text-muted-foreground">×</span>
-          <Field label="Hauteur (px)">
+          <Field label={t('pipeline.height')}>
             <Input
               id={`${idPrefix}-h`}
               type="number"
@@ -60,7 +60,7 @@ export default function PipelineFields({
               onChange={(e) => set({ height: e.target.value })}
             />
           </Field>
-          <Field label="Cadence (fps)">
+          <Field label={t('pipeline.fps')}>
             <Input
               id={`${idPrefix}-fps`}
               type="number"

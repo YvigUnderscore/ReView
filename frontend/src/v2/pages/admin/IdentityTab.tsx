@@ -124,7 +124,7 @@ export default function IdentityTab() {
         </div>
         <div className="mt-3">
           <Button size="sm" onClick={save} disabled={busy}>
-            <Save size={14} className="mr-1" /> Enregistrer
+            <Save size={14} className="mr-1" /> {t('common.save')}
           </Button>
         </div>
       </Panel>

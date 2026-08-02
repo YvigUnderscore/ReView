@@ -71,7 +71,7 @@ export default function SharesTab({ projectId }: { projectId: number }) {
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium">{l.label ?? t('shares.unnamed')}</span>
                 <Badge variant={l.permission === 'COMMENT' ? 'default' : 'secondary'}>
-                  {l.permission === 'COMMENT' ? 'Commentaires' : 'Lecture seule'}
+                  {l.permission === 'COMMENT' ? 'Commentaires' : t('shares.permission.readOnly')}
                 </Badge>
                 {l.hasPassword && (
                   <span title={t('shares.passwordProtected')}>
@@ -222,10 +222,10 @@ function CreateShareDialog({
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>
-              Annuler
+              {t('common.undo')}
             </Button>
             <Button type="submit" disabled={busy}>
-              Créer le lien
+              {t('shares.create')}
             </Button>
           </DialogFooter>
         </form>

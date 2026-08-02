@@ -68,7 +68,7 @@ export default function BatchGenerator({
   return (
     <div className="mb-5 rounded-md border border-border bg-card p-3">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-        <Wand2 size={14} /> Génération automatique
+        <Wand2 size={14} /> {t('batch.autoGenerate')}
       </div>
       {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
       <div className="flex flex-wrap items-end gap-3">
@@ -149,7 +149,7 @@ export default function BatchGenerator({
         disabled={busy}
         className="mt-3 flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
       >
-        {busy ? 'Création…' : `Créer ${items.length} élément(s)`}
+        {busy ? t('setup.submitting') : `Créer ${items.length} élément(s)`}
       </button>
     </div>
   );

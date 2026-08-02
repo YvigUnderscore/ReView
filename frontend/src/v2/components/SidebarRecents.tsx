@@ -4,12 +4,14 @@
 import { Link, useLocation } from 'react-router-dom';
 import { History } from 'lucide-react';
 import { useRecents } from '../stores/useRecents';
+import { useT } from '../i18n';
 
 /**
  * Section « Récents » de la sidebar (10.A4) : les dernières entités visitées
  * (localStorage via useRecents), hors page courante.
  */
 export default function SidebarRecents() {
+  const t = useT();
   const recents = useRecents((s) => s.recents);
   const { pathname, search } = useLocation();
   const here = pathname + search;
@@ -20,7 +22,7 @@ export default function SidebarRecents() {
   return (
     <div className="pt-3">
       <div className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        <History size={13} /> Récents
+        <History size={13} /> {t('shell.recents')}
       </div>
       <div className="space-y-0.5">
         {visible.map((r) => (

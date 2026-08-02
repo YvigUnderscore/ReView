@@ -193,7 +193,7 @@ export default function Model3DPanels({
         ]
       : [{ label: 'Mesure…', value: '—' }];
     const sheet: InfoRow[] = [
-      { label: 'Fichier', value: data.media.originalName },
+      { label: t('review.file'), value: data.media.originalName },
       { label: 'Jeux d’UV', value: s?.uvSets.length ? s.uvSets.join(', ') : t('review.none') },
       { label: 'Extensions', value: inspect.extensions.length ? inspect.extensions.join(', ') : 'aucune' },
     ];
@@ -229,7 +229,7 @@ export default function Model3DPanels({
               onClick={() => void downloadAnimGltf(anim.anim)}
             >
               <Download size={13} />
-              Animation caméra (glTF)
+              {t('review.cameraAnimGltf')}
             </Button>
             {onImportAnim && (
               <label
@@ -237,7 +237,7 @@ export default function Model3DPanels({
                 className="flex min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
               >
                 <Upload size={13} />
-                Importer une animation
+                {t('review.importAnimation')}
                 <input
                   type="file"
                   accept=".gltf,.glb,.json,model/gltf+json,model/gltf-binary,application/json"
@@ -268,7 +268,7 @@ export default function Model3DPanels({
               }}
             >
               <Camera size={13} />
-              Capture de la vue (PNG)
+              {t('review.export.captureShort')}
             </Button>
           </>
         }

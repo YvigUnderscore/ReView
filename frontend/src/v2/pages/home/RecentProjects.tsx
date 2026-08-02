@@ -16,10 +16,10 @@ export default function RecentProjects() {
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Projets récents
+          {t('home.recentProjects')}
         </h2>
         <Link to="/projects" className="flex items-center gap-1 text-xs text-primary hover:underline">
-          Tous les projets <ArrowRight size={12} />
+          {t('reviews.filter.allProjects')} <ArrowRight size={12} />
         </Link>
       </div>
       {projects.length === 0 ? (

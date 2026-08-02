@@ -82,7 +82,9 @@ export default function ReviewHeader({
       <div className="flex min-w-0 items-center gap-3">
         <h1 className="truncate text-lg font-semibold">{data.media.originalName}</h1>
         {!published && (
-          <span className="shrink-0 rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Brouillon</span>
+          <span className="shrink-0 rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">
+            {t('reviews.draft')}
+          </span>
         )}
         <VersionNavigator versionId={versionId} mediaId={data.media.id} />
         <PlaylistNavigator versionId={versionId} />
@@ -120,7 +122,7 @@ export default function ReviewHeader({
             onClick={onPublish}
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
           >
-            Publier pour l’équipe
+            {t('review.publish')}
           </button>
         )}
         <button

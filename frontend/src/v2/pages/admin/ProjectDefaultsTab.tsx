@@ -100,7 +100,7 @@ export default function ProjectDefaultsTab() {
               onChange={(e) => setNom('step', e.target.value)}
             />
           </DefField>
-          <DefField label="Chiffres">
+          <DefField label={t('pipeline.digits')}>
             <Input
               type="number"
               min={1}
@@ -115,7 +115,7 @@ export default function ProjectDefaultsTab() {
 
       <Panel title={t('defaults.formatRate')}>
         <div className="flex flex-wrap items-end gap-3">
-          <DefField label="Largeur (px)">
+          <DefField label={t('pipeline.width')}>
             <Input
               type="number"
               min={1}
@@ -125,7 +125,7 @@ export default function ProjectDefaultsTab() {
             />
           </DefField>
           <span className="pb-1.5 text-muted-foreground">×</span>
-          <DefField label="Hauteur (px)">
+          <DefField label={t('pipeline.height')}>
             <Input
               type="number"
               min={1}
@@ -134,7 +134,7 @@ export default function ProjectDefaultsTab() {
               onChange={(e) => setRes('height', e.target.value)}
             />
           </DefField>
-          <DefField label="Cadence (fps)">
+          <DefField label={t('pipeline.fps')}>
             <Input
               type="number"
               min={1}
@@ -182,7 +182,7 @@ export default function ProjectDefaultsTab() {
               setDraft((d) => d && { ...d, departments: [...d.departments, { key: '', name: '' }] })
             }
           >
-            <Plus size={14} /> Département
+            <Plus size={14} /> {t('common.department')}
           </Button>
         </div>
       </Panel>

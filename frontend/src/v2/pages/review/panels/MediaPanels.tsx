@@ -75,7 +75,7 @@ export default function MediaPanels({
   const t = useT();
   if (panel === 'playback' || panel === 'view')
     return (
-      <Group title={kind === 'VIDEO' ? 'Lecture' : 'Affichage'}>
+      <Group title={kind === 'VIDEO' ? 'Lecture' : t('display.title')}>
         <Row label="Cadence" hint={t('review.playbackRate')}>
           <span className="font-mono text-xs">{fps} fps</span>
         </Row>
@@ -96,9 +96,7 @@ export default function MediaPanels({
         <Row label="View">
           <Badge variant="secondary">{data.projectColor?.view ?? 'Aucune'}</Badge>
         </Row>
-        <span className="rv-optbar__hint whitespace-normal">
-          Configuration OCIO du projet — le média n’est pas modifié.
-        </span>
+        <span className="rv-optbar__hint whitespace-normal">{t('review.projectOcio')}</span>
       </Group>
     );
 
@@ -120,9 +118,7 @@ export default function MediaPanels({
               <Badge variant="muted">{t('review.none')}</Badge>
             )}
           </Row>
-          <span className="rv-optbar__hint whitespace-normal">
-            Le média comparé se choisit dans l’en-tête de la review.
-          </span>
+          <span className="rv-optbar__hint whitespace-normal">{t('review.compareInHeader')}</span>
         </Group>
         {compare.ids.length > 0 && (
           <Group title="Mode">
@@ -163,12 +159,12 @@ export default function MediaPanels({
             )}
             {kind === 'VIDEO' && data.trim && (
               <span className="rv-optbar__hint whitespace-normal">
-                <Scissors size={12} /> Un proxy trimé entrée → sortie est servi à tous.
+                <Scissors size={12} /> {t('review.trimmedProxy')}
               </span>
             )}
             {!onExportFrame && !onContactSheet && (
               <span className="rv-optbar__hint whitespace-normal">
-                <FileDown size={12} /> Seul le fichier original est exportable ici.
+                <FileDown size={12} /> {t('review.onlyOriginal')}
               </span>
             )}
           </>

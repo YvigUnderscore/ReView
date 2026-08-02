@@ -77,7 +77,7 @@ export default function PrimMenuItems({
       {sets.length > 0 && <ContextMenuSeparator />}
       {onFrame && (
         <ContextMenuItem onSelect={onFrame}>
-          <Frame size={14} /> Cadrer la vue dessus
+          <Frame size={14} /> {t('review.frameView')}
         </ContextMenuItem>
       )}
       <ContextMenuItem onSelect={() => scene.setPrim(path, { visible: hidden ? undefined : false })}>

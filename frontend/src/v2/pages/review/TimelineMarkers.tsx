@@ -151,7 +151,7 @@ export function MarkerDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Annuler
+            {t('common.undo')}
           </Button>
           <Button onClick={() => void submit()} disabled={!name.trim()}>
             {editing ? 'Modifier' : 'Ajouter'}

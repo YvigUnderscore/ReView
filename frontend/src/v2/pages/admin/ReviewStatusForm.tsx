@@ -71,22 +71,22 @@ export default function ReviewStatusForm({
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={isApproval} onCheckedChange={(v) => setIsApproval(v === true)} />
-            Statut d'approbation (version validée)
+            {t('reviewStatus.approval')}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={isRetake} onCheckedChange={(v) => setIsRetake(v === true)} />
-            Statut de retake (à refaire)
+            {t('reviewStatus.retake')}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={isDefault} onCheckedChange={(v) => setIsDefault(v === true)} />
-            Proposé par défaut
+            {t('reviewStatus.defaultOffered')}
           </label>
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={onClose}>
-              Annuler
+              {t('common.undo')}
             </Button>
             <Button size="sm" onClick={submit} disabled={saving || !name.trim()}>
-              Enregistrer
+              {t('common.save')}
             </Button>
           </div>
         </div>

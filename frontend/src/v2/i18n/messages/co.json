@@ -928,5 +928,17 @@
   "review.downloadAnnotatedImage": "Scaricà l'imagine annutata",
   "review.publish": "Pubblicà per a squadra",
   "review.cameraAnimGltf": "Animazione di camera (glTF)",
-  "review.importAnimation": "Impurtà un'animazione"
+  "review.importAnimation": "Impurtà un'animazione",
+
+  "project.status.active": "Attivu",
+  "project.status.onHold": "In pausa",
+  "projects.tab.active": "Attivi",
+  "admin.group.studio": "Studio",
+  "admin.group.content": "Cuntenuti",
+  "admin.group.reviewContexts": "Cuntesti di review",
+  "admin.group.communications": "Cumunicazioni",
+  "admin.group.maintenance": "Mantenimentu",
+
+  "project.status.completed": "Compiu",
+  "project.status.archived": "Archiviatu"
 }

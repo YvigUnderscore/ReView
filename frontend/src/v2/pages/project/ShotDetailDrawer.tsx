@@ -226,7 +226,7 @@ function ShotAssets({
   return (
     <section>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Assets du shot
+        {tr('shot.assets')}
       </h3>
       {assets === null ? (
         <SkeletonRows count={1} />
@@ -304,7 +304,7 @@ function ShotAssets({
                 onClick={createAndLink}
                 className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground"
               >
-                Créer
+                {tr('common.create')}
               </button>
             </div>
           )}

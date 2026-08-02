@@ -928,5 +928,17 @@
   "review.downloadAnnotatedImage": "Télécharger l’image annotée",
   "review.publish": "Publier pour l’équipe",
   "review.cameraAnimGltf": "Animation caméra (glTF)",
-  "review.importAnimation": "Importer une animation"
+  "review.importAnimation": "Importer une animation",
+
+  "project.status.active": "Actif",
+  "project.status.onHold": "En pause",
+  "projects.tab.active": "Actifs",
+  "admin.group.studio": "Studio",
+  "admin.group.content": "Contenus",
+  "admin.group.reviewContexts": "Contextes de review",
+  "admin.group.communications": "Communications",
+  "admin.group.maintenance": "Maintenance",
+
+  "project.status.completed": "Terminé",
+  "project.status.archived": "Archivé"
 }

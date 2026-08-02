@@ -103,9 +103,9 @@ export default function ReviewsPage() {
   };
 
   return (
-    <Shell title="Reviews">
+    <Shell title={t('nav.reviews')}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Reviews</h1>
+        <h1 className="text-xl font-semibold">{t('nav.reviews')}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="text-xs">
             <option value="">{t('reviews.filter.allProjects')}</option>

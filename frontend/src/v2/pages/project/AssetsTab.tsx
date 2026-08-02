@@ -93,7 +93,7 @@ export default function AssetsTab({
         <div className="flex items-center gap-2">
           {canManage && (
             <Button size="sm" onClick={() => setCreating(true)}>
-              <Plus size={16} /> Créer
+              <Plus size={16} /> {t('common.create')}
             </Button>
           )}
           <ViewToggle contextKey={`assets:${projectId}`} />
@@ -133,10 +133,10 @@ export default function AssetsTab({
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" size="sm" onClick={() => setCreating(false)}>
-                Annuler
+                {t('common.undo')}
               </Button>
               <Button type="submit" size="sm">
-                Créer
+                {t('common.create')}
               </Button>
             </DialogFooter>
           </form>

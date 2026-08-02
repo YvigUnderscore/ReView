@@ -31,7 +31,7 @@ export default function SystemTab() {
         size="sm"
         onClick={() => qc.invalidateQueries({ queryKey: qk.admin('system') })}
       >
-        <RefreshCw size={13} /> Rafraîchir
+        <RefreshCw size={13} /> {t('common.refresh')}
       </Button>
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title={t('common.host')}>

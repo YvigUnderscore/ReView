@@ -100,7 +100,7 @@ export default function LoginPage() {
       <AuthLayout title={tr('login.title')} subtitle={tr('login.subtitle')}>
         <div className="mb-6">
           <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <ShieldCheck size={20} className="text-primary" /> Vérification en deux étapes
+            <ShieldCheck size={20} className="text-primary" /> {t('twofa.title')}
           </h2>
           <p className="text-sm text-muted-foreground">
             Saisissez le code de votre application d'authentification (ou un code de secours).
@@ -108,7 +108,7 @@ export default function LoginPage() {
         </div>
         <form onSubmit={submitCode} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="totp">Code</Label>
+            <Label htmlFor="totp">{t('sequences.code.placeholder')}</Label>
             <Input
               id="totp"
               value={code}
@@ -121,7 +121,7 @@ export default function LoginPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={busy || !code.trim()} className="w-full">
-            Vérifier
+            {t('common.verify')}
           </Button>
           <button
             type="button"

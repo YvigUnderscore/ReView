@@ -82,7 +82,7 @@ export function SessionsPanel({
       </div>
       {sessions.length > 0 && (
         <Button variant="outline" size="sm" className="mt-3" onClick={onRevokeAll}>
-          Révoquer toutes les sessions
+          {t('sessions.revokeAll')}
         </Button>
       )}
     </Panel>

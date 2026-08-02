@@ -85,11 +85,11 @@ export default function ReviewComments({
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onSelect={() => copyLink(c)}>
-          <Link2 size={14} /> Copier le lien au commentaire
+          <Link2 size={14} /> {t('comments.copyLink')}
         </ContextMenuItem>
         {canCreateTask && (
           <ContextMenuItem onSelect={() => createTask(c)}>
-            <ListTodo size={14} /> Créer une tâche kanban
+            <ListTodo size={14} /> {t('comments.toTask')}
           </ContextMenuItem>
         )}
       </ContextMenuContent>

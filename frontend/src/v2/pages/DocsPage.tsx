@@ -65,7 +65,7 @@ export default function DocsPage() {
   };
 
   return (
-    <Shell title="Documentation">
+    <Shell title={t('nav.documentation')}>
       <div className="flex h-full min-h-0 gap-4 p-4">
         <aside className="flex w-64 shrink-0 flex-col gap-3 overflow-y-auto pr-1">
           <div className="relative">
@@ -82,7 +82,7 @@ export default function DocsPage() {
           </div>
           {manifestQ.isError && (
             <p className="text-sm text-muted-foreground">
-              Documentation indisponible — lancer <code>npm run dev</code> régénère
+              Documentation indisponible — lancer <code>npm run dev</code> {t('client.regenerates')}
               <code> public/docs</code>.
             </p>
           )}

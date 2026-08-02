@@ -117,14 +117,14 @@ export default function SmtpTab() {
         </Row>
         <div className="pt-1">
           <Button size="sm" onClick={save} disabled={busy}>
-            {busy ? 'Enregistrement…' : 'Enregistrer'}
+            {busy ? 'Enregistrement…' : t('common.save')}
           </Button>
         </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
         <label className="flex flex-1 flex-col gap-1 text-xs text-muted-foreground">
-          Envoyer un email de test à
+          {t('smtp.sendTestTo')}
           <Input
             type="email"
             value={testTo}
@@ -133,7 +133,7 @@ export default function SmtpTab() {
           />
         </label>
         <Button variant="outline" size="sm" onClick={sendTest} disabled={busy}>
-          Envoyer le test
+          {t('smtp.sendTest')}
         </Button>
       </div>
     </div>

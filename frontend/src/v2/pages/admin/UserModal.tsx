@@ -98,7 +98,7 @@ export default function UserModal({
           />
           <Input
             type="email"
-            placeholder="Email"
+            placeholder={t('login.email')}
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             required
@@ -134,10 +134,10 @@ export default function UserModal({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Annuler
+              {t('common.undo')}
             </Button>
             <Button type="submit" size="sm" disabled={busy}>
-              {isEdit ? 'Enregistrer' : t('common.create')}
+              {isEdit ? t('common.save') : t('common.create')}
             </Button>
           </DialogFooter>
         </form>

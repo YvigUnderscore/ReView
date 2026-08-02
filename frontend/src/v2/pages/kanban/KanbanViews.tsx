@@ -128,7 +128,7 @@ export default function KanbanViews({
           className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <BookmarkPlus size={14} />
-          Enregistrer la vue
+          {t('savedViews.save')}
         </button>
       )}
     </div>

@@ -928,5 +928,17 @@
   "review.downloadAnnotatedImage": "Download the annotated image",
   "review.publish": "Publish for the team",
   "review.cameraAnimGltf": "Camera animation (glTF)",
-  "review.importAnimation": "Import an animation"
+  "review.importAnimation": "Import an animation",
+
+  "project.status.active": "Active",
+  "project.status.onHold": "On hold",
+  "projects.tab.active": "Active",
+  "admin.group.studio": "Studio",
+  "admin.group.content": "Content",
+  "admin.group.reviewContexts": "Review contexts",
+  "admin.group.communications": "Communications",
+  "admin.group.maintenance": "Maintenance",
+
+  "project.status.completed": "Completed",
+  "project.status.archived": "Archived"
 }

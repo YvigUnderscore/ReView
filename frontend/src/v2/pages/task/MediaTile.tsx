@@ -96,6 +96,7 @@ export default function MediaTile({
   onPublish: (m: MediaSummary) => void;
   onDelete: (m: MediaSummary) => void;
 }) {
+  const t = useT();
   if (view === 'compact') {
     return (
       <div className="group flex items-center gap-2 rounded-md border border-border bg-card p-1.5">
@@ -124,7 +125,7 @@ export default function MediaTile({
             <ThumbEditButton mediaId={media.id} versionId={versionId} small />
             <button
               onClick={() => onDelete(media)}
-              title="Supprimer"
+              title={t('common.delete')}
               className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
             >
               <Trash2 size={12} />
@@ -141,7 +142,7 @@ export default function MediaTile({
           <MediaThumb media={media} size={22} />
           {!media.published && (
             <span className="absolute left-1 top-1 rounded bg-primary/20 px-1 text-[10px] text-primary">
-              Brouillon
+              {t('reviews.draft')}
             </span>
           )}
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
@@ -166,7 +167,7 @@ export default function MediaTile({
           <ThumbEditButton mediaId={media.id} versionId={versionId} />
           <button
             onClick={() => onDelete(media)}
-            title="Supprimer"
+            title={t('common.delete')}
             className="flex items-center justify-center px-2 py-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
           >
             <Trash2 size={12} />

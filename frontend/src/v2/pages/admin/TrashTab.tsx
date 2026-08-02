@@ -82,7 +82,7 @@ export default function TrashTab() {
     <div className="space-y-1.5">
       <label className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
         <Checkbox checked={sel.allSelected} onCheckedChange={() => sel.toggleAll()} />
-        Tout sélectionner
+        {t('common.selectAllItems')}
       </label>
       {trash.map((p) => (
         <div
@@ -113,10 +113,10 @@ export default function TrashTab() {
           </div>
           <div className="flex shrink-0 gap-2">
             <Button size="sm" variant="outline" onClick={() => restore(p.id)}>
-              Restaurer
+              {t('common.restore')}
             </Button>
             <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setPurge(p)}>
-              Supprimer définitivement
+              {t('common.deletePermanently')}
             </Button>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function TrashTab() {
         label="projet(s)"
         onClear={sel.clear}
         actions={[
-          { label: 'Restaurer', icon: <RotateCcw size={14} />, onClick: bulkRestoreSel },
+          { label: t('common.restore'), icon: <RotateCcw size={14} />, onClick: bulkRestoreSel },
           {
             label: t('common.deletePermanently'),
             icon: <Trash2 size={14} />,

@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { useT } from '../../i18n';
 
 interface AccessRow {
   id: number;
@@ -36,6 +37,7 @@ const fmt = (iso: string) =>
 
 /** Journal d'accès aux médias (36.E) : qui a visionné quoi / quand — comptes et partages. */
 export default function MediaAccessTab() {
+  const t = useT();
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const logQ = useQuery({
@@ -79,20 +81,20 @@ export default function MediaAccessTab() {
         ))}
         {items.length === 0 && (
           <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Aucun accès enregistré pour le moment.
+            {t('mediaAccess.empty')}
           </p>
         )}
       </div>
       {pages > 1 && (
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Précédent
+            {t('common.previous')}
           </Button>
           <span>
             Page {page} / {pages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-            Suivant
+            {t('common.next')}
           </Button>
         </div>
       )}

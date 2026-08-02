@@ -50,14 +50,12 @@ export default function ExportPanel({
             title={t('review.export.original')}
           >
             <FileDown size={13} />
-            Fichier original, sans édition
+            {t('review.originalFile')}
           </a>
         </Button>
       </Group>
       {staging && <Group title={t('review.export.staging')}>{staging}</Group>}
-      <span className="rv-optbar__hint whitespace-normal">
-        Les exports reprennent les éditions enregistrées, pas la sélection en cours.
-      </span>
+      <span className="rv-optbar__hint whitespace-normal">{t('review.exportsHint')}</span>
     </>
   );
 }

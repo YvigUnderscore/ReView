@@ -92,9 +92,9 @@ export default function UsersTab() {
           <thead className="bg-card text-left text-xs text-muted-foreground">
             <tr>
               <th className="px-3 py-2">Utilisateur</th>
-              <th className="px-3 py-2">Email</th>
+              <th className="px-3 py-2">{t('login.email')}</th>
               <th className="px-3 py-2">{t('common.role')}</th>
-              <th className="px-3 py-2">Stockage</th>
+              <th className="px-3 py-2">{t('storage.title')}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -133,7 +133,7 @@ export default function UsersTab() {
                     {u.id !== meId && (
                       <button
                         onClick={() => setDeleting(u)}
-                        title="Supprimer"
+                        title={t('common.delete')}
                         className="rounded p-1 text-destructive hover:bg-secondary"
                       >
                         <Trash2 size={15} />
@@ -146,7 +146,7 @@ export default function UsersTab() {
             {shown.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Aucun compte ne correspond aux filtres.
+                  {t('users.noMatch')}
                 </td>
               </tr>
             )}
@@ -179,7 +179,7 @@ export default function UsersTab() {
         open={!!deleting}
         title="Supprimer l'utilisateur ?"
         message={<>« {deleting?.displayName ?? deleting?.email} » sera définitivement supprimé.</>}
-        confirmLabel="Supprimer"
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

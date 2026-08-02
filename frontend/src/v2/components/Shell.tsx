@@ -230,7 +230,7 @@ export default function Shell({
             {/* Favoris */}
             <div className="pt-3">
               <div className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Star size={13} className="text-warning" /> Favoris
+                <Star size={13} className="text-warning" /> {t('shell.favorites')}
               </div>
               {favorites.length === 0 ? (
                 <p className="px-3 py-1 text-xs text-muted-foreground">{t('shell.favorites.empty')}</p>

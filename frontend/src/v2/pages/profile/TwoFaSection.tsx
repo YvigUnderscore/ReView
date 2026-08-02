@@ -89,9 +89,7 @@ export default function TwoFaSection() {
 
       {backupCodes && (
         <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
-          <p className="mb-2 text-xs font-medium">
-            Codes de secours — notez-les maintenant, ils ne seront plus jamais affichés :
-          </p>
+          <p className="mb-2 text-xs font-medium">{t('twofa.backupCodes')}</p>
           <div className="grid grid-cols-2 gap-1 font-mono text-xs">
             {backupCodes.map((c) => (
               <code key={c}>{c}</code>
@@ -102,11 +100,9 @@ export default function TwoFaSection() {
 
       {!enabled && !qr && (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Protégez votre compte avec une application d'authentification (TOTP).
-          </p>
+          <p className="text-xs text-muted-foreground">{t('twofa.intro')}</p>
           <Button size="sm" onClick={start} disabled={busy}>
-            Activer la 2FA
+            {t('twofa.enable')}
           </Button>
         </div>
       )}
@@ -133,7 +129,7 @@ export default function TwoFaSection() {
                 required
               />
               <Button type="submit" size="sm" disabled={busy || !code.trim()}>
-                Confirmer et activer
+                {t('twofa.confirm')}
               </Button>
             </div>
           </div>
@@ -151,7 +147,7 @@ export default function TwoFaSection() {
             required
           />
           <Button type="submit" size="sm" variant="outline" disabled={busy || !password}>
-            Désactiver
+            {t('common.disable')}
           </Button>
         </form>
       )}

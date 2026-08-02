@@ -151,7 +151,7 @@ export default function SpatialTransport({
       />
       {editable && (
         <>
-          <IconButton icon={Undo2} label="Annuler" onClick={anim.undo} disabled={!anim.canUndo} />
+          <IconButton icon={Undo2} label={t('common.undo')} onClick={anim.undo} disabled={!anim.canUndo} />
           <IconButton icon={Redo2} label={t('common.redo')} onClick={anim.redo} disabled={!anim.canRedo} />
         </>
       )}
