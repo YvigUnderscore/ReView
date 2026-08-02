@@ -90,7 +90,7 @@
       "dir": "ltr",
       "regional": true,
       "machineTranslated": true,
-      "intl": { "plural": ["br"], "format": ["fr"] }
+      "intl": { "plural": ["br"], "format": ["br", "fr"] }
     },
     {
       "code": "eu",
@@ -108,7 +108,7 @@
       "dir": "ltr",
       "regional": true,
       "machineTranslated": true,
-      "intl": { "plural": ["co", "it"], "format": ["fr"] }
+      "intl": { "plural": ["co", "it"], "format": ["co", "fr"] }
     },
     {
       "code": "gsw-FR",
@@ -126,7 +126,7 @@
       "dir": "ltr",
       "regional": true,
       "machineTranslated": true,
-      "intl": { "plural": ["oc", "ca"], "format": ["fr"] }
+      "intl": { "plural": ["oc", "ca"], "format": ["oc", "fr"] }
     }
   ]
 }

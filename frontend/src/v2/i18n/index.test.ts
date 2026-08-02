@@ -88,10 +88,18 @@ describe('résolution des étiquettes Intl', () => {
     expect(new Intl.PluralRules(pluralTag('co')).select(1)).toBe('one');
   });
 
-  it('formate les langues régionales de France aux conventions françaises', () => {
-    // ICU connaît `gsw`, mais ses conventions sont suisses (séparateur ’, francs) : un
-    // studio alsacien lit des dates et des nombres français. Idem breton, corse, occitan.
-    for (const code of ['br', 'co', 'gsw-FR', 'oc'] as const) expect(formatTag(code)).toBe('fr');
+  it('donne aux langues régionales leurs propres formats quand ICU les connaît', () => {
+    // CLDR porte les noms de mois bretons (« Eost ») et occitans (« d'agost ») : les
+    // écraser par `fr` aurait affiché un mois français au milieu d'une phrase bretonne.
+    expect(formatTag('br')).toBe('br');
+    expect(formatTag('oc')).toBe('oc');
+  });
+
+  it('replie sur le français les langues régionales absentes d’ICU', () => {
+    // `co` n'a pas de données ICU ; `gsw` en a, mais suisses (séparateur ’, ordre AAAA
+    // MMM JJ) — la Corse et l'Alsace lisent des dates françaises.
+    expect(formatTag('co')).toBe('fr');
+    expect(formatTag('gsw-FR')).toBe('fr');
   });
 
   it('laisse le basque à ses propres conventions', () => {
