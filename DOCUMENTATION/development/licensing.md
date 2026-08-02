@@ -106,9 +106,3 @@ the rights needed to keep offering ReView under a commercial license alongside t
 
 Studios that cannot accept the AGPL's obligations can buy a proprietary license instead.
 See [COMMERCIAL-LICENSE.md](../../COMMERCIAL-LICENSE.md).
-
-## Earlier releases
-
-ReView was published under the MIT license until 2026-08-02. A license already granted
-cannot be revoked, so **versions released up to that date remain available under MIT**.
-Everything from the relicensing commit onwards is AGPL-3.0-or-later.

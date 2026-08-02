@@ -34,7 +34,7 @@ external contribution is covered by the [CLA](CLA.md).
 
 ## Contact
 
-Yvig Bidon — <yvigbzh@gmail.com>
+Yvig Bidon — <contact@yvig.fr>
 Repository: <https://github.com/YvigUnderscore/ReView>
 
 Tell us how you plan to deploy ReView (number of users, hosted or on-premise, modified or
