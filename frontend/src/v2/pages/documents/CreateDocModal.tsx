@@ -181,7 +181,7 @@ export default function CreateDocModal({
               Annuler
             </Button>
             <Button type="submit" size="sm" disabled={busy}>
-              {busy ? 'Création…' : 'Créer'}
+              {busy ? 'Création…' : t('common.create')}
             </Button>
           </DialogFooter>
         </form>

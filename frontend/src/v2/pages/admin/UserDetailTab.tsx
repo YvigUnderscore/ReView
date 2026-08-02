@@ -93,7 +93,7 @@ export default function UserDetailTab() {
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">{user.displayName ?? user.email}</h2>
               <Badge variant="secondary">{user.role}</Badge>
-              {user.online && <Badge variant="secondary">en ligne</Badge>}
+              {user.online && <Badge variant="secondary">{t('shell.online')}</Badge>}
               {user.twoFactorEnabled && (
                 <Badge variant="secondary">
                   <ShieldCheck size={12} /> 2FA

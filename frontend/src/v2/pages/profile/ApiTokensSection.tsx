@@ -81,7 +81,7 @@ export default function ApiTokensSection() {
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nom (ex : script ingest)"
+          placeholder={t('tokens.namePlaceholder')}
           maxLength={80}
           className="flex-1"
         />

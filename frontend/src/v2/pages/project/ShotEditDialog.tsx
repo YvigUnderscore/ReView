@@ -84,7 +84,7 @@ export default function ShotEditDialog({
               onChange={(e) => setVals((v) => ({ ...v, code: e.target.value }))}
             />
             <Input
-              placeholder="Nom"
+              placeholder={t('common.name')}
               className="flex-1"
               value={vals.name}
               onChange={(e) => setVals((v) => ({ ...v, name: e.target.value }))}

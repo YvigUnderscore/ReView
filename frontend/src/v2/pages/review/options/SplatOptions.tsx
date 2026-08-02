@@ -221,7 +221,7 @@ export default function SplatOptions({
                     active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  <ShapeIcon size={13} /> {v.shape === 'box' ? 'Boîte' : 'Sphère'} {i + 1}
+                  <ShapeIcon size={13} /> {v.shape === 'box' ? t('review.box') : t('review.sphere')} {i + 1}
                 </button>
                 <button
                   type="button"

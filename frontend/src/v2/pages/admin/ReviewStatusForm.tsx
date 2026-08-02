@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import type { ReviewStatus } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Formulaire de création/édition d'un statut de review (Phase 31.A). */
 export default function ReviewStatusForm({
@@ -21,6 +22,7 @@ export default function ReviewStatusForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState(status?.name ?? '');
   const [color, setColor] = useState(status?.color ?? '#3498DB');
   const [isApproval, setIsApproval] = useState(status?.isApproval ?? false);
@@ -47,11 +49,11 @@ export default function ReviewStatusForm({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{status ? 'Modifier le statut' : 'Nouveau statut'}</DialogTitle>
+          <DialogTitle>{status ? 'Modifier le statut' : t('reviewStatus.new')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="rs-name">Nom</Label>
+            <Label htmlFor="rs-name">{t('common.name')}</Label>
             <Input id="rs-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
           </div>
           <div>

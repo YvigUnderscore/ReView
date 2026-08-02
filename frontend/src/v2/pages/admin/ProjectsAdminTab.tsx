@@ -36,7 +36,7 @@ export default function ProjectsAdminTab() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Rechercher (nom, slug)…"
+            placeholder={t('project.searchPlaceholder')}
             className="pl-8"
           />
         </div>
@@ -58,7 +58,7 @@ export default function ProjectsAdminTab() {
           <thead className="bg-card text-left text-xs text-muted-foreground">
             <tr>
               <th className="px-3 py-2">Projet</th>
-              <th className="px-3 py-2">Statut</th>
+              <th className="px-3 py-2">{t('common.status')}</th>
               <th className="px-3 py-2 text-right">Membres</th>
               <th className="px-3 py-2 text-right">{t('projectsAdmin.seqShort')}</th>
               <th className="px-3 py-2 text-right">Shots</th>

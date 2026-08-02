@@ -158,7 +158,7 @@ export default function ProjectDefaultsTab() {
               />
               <Input
                 className="flex-1 py-1.5 text-xs"
-                placeholder="Nom"
+                placeholder={t('common.name')}
                 value={dep.name}
                 onChange={(e) => setDept(i, 'name', e.target.value)}
               />

@@ -61,7 +61,7 @@ export default function EditProjectModal({
             <DialogTitle>{t('projects.edit')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-1">
-            <Label>Nom</Label>
+            <Label>{t('common.name')}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div className="space-y-1">
@@ -69,7 +69,7 @@ export default function EditProjectModal({
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Statut</Label>
+            <Label>{t('common.status')}</Label>
             <Select
               className="w-full"
               value={status}

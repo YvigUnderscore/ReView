@@ -86,7 +86,7 @@ export default function UserModal({
               onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
             />
             <Input
-              placeholder="Nom"
+              placeholder={t('common.name')}
               value={form.lastName}
               onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
             />
@@ -137,7 +137,7 @@ export default function UserModal({
               Annuler
             </Button>
             <Button type="submit" size="sm" disabled={busy}>
-              {isEdit ? 'Enregistrer' : 'Créer'}
+              {isEdit ? 'Enregistrer' : t('common.create')}
             </Button>
           </DialogFooter>
         </form>

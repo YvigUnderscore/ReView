@@ -62,7 +62,7 @@ export default function UsersTab() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Rechercher (nom, pseudo, email)…"
+            placeholder={t('users.searchPlaceholder')}
             className="pl-8"
           />
         </div>
@@ -75,7 +75,7 @@ export default function UsersTab() {
           ))}
         </Select>
         <Select value={sort} onChange={(e) => setSort(e.target.value as UserSort)}>
-          <option value="name">Tri : nom</option>
+          <option value="name">{t('users.sortName')}</option>
           <option value="role">{t('users.sortRole')}</option>
           <option value="storage">Tri : stockage</option>
           <option value="recent">{t('users.sortRecent')}</option>

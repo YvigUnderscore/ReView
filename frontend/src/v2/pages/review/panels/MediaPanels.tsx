@@ -40,7 +40,7 @@ function sheetRows(t: Tr, data: MediaResp, kind: MediaKind, fps: number): InfoRo
   }
   if (data.projectColor?.display) rows.push({ label: 'Display', value: data.projectColor.display });
   if (data.projectColor?.view) rows.push({ label: 'View', value: data.projectColor.view });
-  rows.push({ label: 'Statut', value: data.media.status });
+  rows.push({ label: t('common.status'), value: data.media.status });
   return rows;
 }
 

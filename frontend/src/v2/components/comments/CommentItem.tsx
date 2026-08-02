@@ -126,7 +126,7 @@ export default function CommentItem({
                   ? `Résolu par ${c.resolvedBy.displayName ?? c.resolvedBy.name ?? '?'}${
                       c.resolvedAt ? ` le ${new Date(c.resolvedAt).toLocaleString()}` : ''
                     }`
-                  : 'Résolu'
+                  : t('comments.resolved')
               }
               className="inline-flex items-center gap-1 rounded bg-success/15 px-1.5 py-0.5 text-[11px] text-success"
             >

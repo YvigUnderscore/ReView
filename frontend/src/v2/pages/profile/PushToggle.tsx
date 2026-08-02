@@ -50,7 +50,7 @@ export default function PushToggle() {
       </div>
       <Button variant={enabled ? 'secondary' : 'default'} size="sm" onClick={toggle} disabled={busy}>
         {enabled ? <BellOff size={14} /> : <Bell size={14} />}
-        {enabled ? 'Désactiver' : 'Activer'}
+        {enabled ? t('common.disable') : 'Activer'}
       </Button>
     </div>
   );

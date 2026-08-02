@@ -165,7 +165,7 @@ export default function SplatPanels({
         live={live}
         sheet={[
           { label: 'Fichier', value: data.media.originalName },
-          { label: 'Statut', value: data.media.status },
+          { label: t('common.status'), value: data.media.status },
         ]}
       />
     );
