@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <b>Plateforme de review collaborative de médias pour studios VFX & post-production</b><br>
+  <b>Collaborative media review platform for VFX &amp; post-production studios</b><br>
   Open-source · Self-hostable · Desktop-first
 </p>
 
@@ -12,167 +12,209 @@
     <img src="https://img.shields.io/discord/1330663471017398292?color=5865F2&label=Discord&logo=discord&logoColor=white" alt="Discord Server" />
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue" alt="Licence AGPL-3.0-or-later" />
+    <img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue" alt="AGPL-3.0-or-later licence" />
+  </a>
+  <a href="#-languages">
+    <img src="https://img.shields.io/badge/languages-14-22d3ee" alt="14 languages" />
   </a>
 </p>
 
 ---
 
-**ReView** est une plateforme de review collaborative conçue pour les studios VFX, équipes de post-production et créatifs. Vidéo frame-par-frame, images annotées, scènes 3D & USD, Gaussian splats, boards de référence, kanban, dailies en direct, partages clients sécurisés et administration studio — tout en un, sur votre propre infrastructure. **Une instance = un studio.**
+**ReView** is a collaborative review platform built for VFX studios, post-production teams and creatives. Frame-accurate video, annotated images, 3D & USD scenes, Gaussian splats, reference boards, kanban, live dailies, secure client shares and full studio administration — all in one place, on your own infrastructure. **One instance = one studio.**
 
-## Vue d'ensemble
+## Overview
 
-| Domaine | Ce que ReView sait faire |
-|---------|--------------------------|
-| 🎬 **Vidéo** | HLS adaptatif, frame-par-frame, A/B · wipe · diff · grille 2×2, annotations à la frame, safe areas, planche contact |
-| 🖼️ **Image** | Annotations overlay, comparaison A/B, référence, lightbox |
-| 🧊 **3D & USD** | Viewer façon DCC, USD de bout en bout (scenegraph, variantes, overrides), inspection, OCIO, caméra F-curves |
-| ✨ **Splats** | Viewer Spark, éditeur non-destructif, export SPZ, lecture SOG |
-| 💬 **Collaboration** | Threads, mentions, vocal, statuts personnalisables, dailies & salle de review live |
-| 🔒 **Diffusion** | Liens durcis, burn-ins, slates, watermark nominatif |
-| 🛡️ **Identité & API** | SSO OIDC, 2FA, tokens à scopes, webhooks HMAC, OpenAPI |
-| 🏭 **Production** | Pipeline hérité, verrou de publication, quotas, stats, calendrier, Gantt |
-| ⚙️ **Infra** | Docker, workers FFmpeg (NVENC), uploads résumables + dédup, backups, Prometheus/Grafana |
+| Area | What ReView does |
+|------|------------------|
+| 🎬 **Video** | Adaptive HLS, frame-by-frame, A/B · wipe · diff · 2×2 grid, frame-anchored annotations, safe areas, contact sheet |
+| 🖼️ **Image** | Overlay annotations, A/B comparison, reference, lightbox |
+| 🧊 **3D & USD** | DCC-style viewer, end-to-end USD (scenegraph, variants, overrides), inspection, OCIO, F-curve camera |
+| ✨ **Splats** | Spark viewer, non-destructive editor, SPZ export, SOG playback |
+| 💬 **Collaboration** | Threads, mentions, voice notes, customisable statuses, dailies & live review room |
+| 🔒 **Distribution** | Hardened links, burn-ins, slates, per-viewer watermark |
+| 🛡️ **Identity & API** | OIDC SSO, 2FA, scoped tokens, HMAC webhooks, OpenAPI |
+| 🏭 **Production** | Inherited pipeline settings, publication lock, quotas, stats, calendar, Gantt |
+| ⚙️ **Infra** | Docker, FFmpeg workers (NVENC), resumable uploads + dedup, backups, Prometheus/Grafana |
 
-## ✨ Fonctionnalités
+## ✨ Features
 
-### 🎬 Review vidéo
+### 🎬 Video review
 
-- Lecture **HLS adaptative multi-rendition**, navigation **frame-par-frame** précise, boucle in/out, marqueurs de timeline, miniatures au survol (sprite généré au transcodage).
-- Comparaison de versions : côte-à-côte synchronisé, **wipe** (barre orientable), **diff** |A − B| composité GPU (avec heatmap), **grille 2×2** jusqu'à quatre versions.
-- Annotations vectorielles ancrées au cadre de livraison (formes, polygone), **plages in→out** persistantes à la lecture, commentaires liés à la frame exacte.
-- Guide **letterbox** à l'aspect de livraison, croix centrale, **action/title safe** (90 %/80 %).
-- **Planche contact** exportable (grille PNG de la plage), export de frame annotée, trim, miniatures animées au survol des cartes, mode théâtre et lecteur détachable (PiP).
+- **Adaptive multi-rendition HLS** playback, precise **frame-by-frame** navigation, in/out looping, timeline markers, hover thumbnails (sprite generated at transcode time).
+- Version comparison: synchronised side-by-side, **wipe** (orientable bar), GPU-composited **diff** |A − B| (with heatmap), **2×2 grid** for up to four versions.
+- Vector annotations anchored to the delivery frame (shapes, polygon), persistent **in→out ranges** during playback, comments tied to the exact frame.
+- **Letterbox** guide at delivery aspect, centre cross, **action/title safe** (90 %/80 %).
+- Exportable **contact sheet** (PNG grid of the range), annotated frame export, trim, animated hover thumbnails on cards, theatre mode and detachable player (PiP).
 
-### 🖼️ Review image
+### 🖼️ Image review
 
-Annotations en overlay, comparaison A/B entre versions, image de référence, lightbox et plein écran — mêmes commentaires et décisions que la vidéo.
+Overlay annotations, A/B comparison between versions, reference image, lightbox and fullscreen — same comments and decisions as video.
 
-### 🧊 Review 3D & USD
+### 🧊 3D & USD review
 
-- Viewer **Three.js façon DCC** : navigation orbit/fly unifiée, éclairage **HDRI** (bibliothèque studio + HDRI par défaut du projet + sol récepteur d'ombres), focale en mm sur capteur 36 mm, aperçu PiP.
-- **USD de bout en bout** : conversion native `.usd`/`.usdc`/`.usda`/`.usdz` et archives `.zip` par **Blender + usd-core** (repli `guc` puis assimp) — matériaux `UsdPreviewSurface`, variantes et animation `UsdSkel` préservés.
-- **Scenegraph** : arbre de prims réel dans le panneau Scène, **sélection au clic** dans le viewer, halo de sélection, `F` cadre la sélection, menu clic droit par prim (variantes, cacher, isoler, réinitialiser).
-- **Variantes cuites** dans le fichier converti : bascule instantanée, même sur média publié.
-- **Overrides ReView** non-destructifs : TRS par prim au gizmo, visibilité, choix de variante — persistés, rejoués pour tous, ou attachés à un commentaire comme proposition de scène navigable.
-- **Inspection** : modes shaded/wireframe/normales/matcap/UV, fiche technique (polycount, matériaux, UV, provenance de conversion), inspecteur de textures, bookmarks caméra partagés, turntable, plan de coupe, comparaison **A/B 3D** à caméras liées.
-- **Animations GLB fiables** : rigs squelettiques, morph targets, sélecteur de clips, overlay de debug du squelette.
-- **Caméra animée par F-curves** (canaux Hermite) : dopesheet + graph editor éditables, import de caméra **Alembic** (.abc), mise en scène persistée par média et rejouée à l'identique pour chaque spectateur.
-- Gestion de couleur **OCIO** (display/view par projet, catalogue ACES).
+- **DCC-style Three.js viewer**: unified orbit/fly navigation, **HDRI** lighting (studio library + per-project default HDRI + shadow-catcher ground), focal length in mm on a 36 mm sensor, PiP preview.
+- **End-to-end USD**: native conversion of `.usd`/`.usdc`/`.usda`/`.usdz` and `.zip` archives via **Blender + usd-core** (falling back to `guc`, then assimp) — `UsdPreviewSurface` materials, variants and `UsdSkel` animation preserved.
+- **Scenegraph**: real prim tree in the Scene panel, **click-to-select** in the viewer, selection halo, `F` frames the selection, per-prim context menu (variants, hide, isolate, reset).
+- **Baked variants** in the converted file: instant switching, even on published media.
+- Non-destructive **ReView overrides**: per-prim TRS via gizmo, visibility, variant choice — persisted, replayed for everyone, or attached to a comment as a navigable scene proposal.
+- **Inspection**: shaded/wireframe/normals/matcap/UV modes, technical sheet (polycount, materials, UVs, conversion provenance), texture inspector, shared camera bookmarks, turntable, section plane, **3D A/B** comparison with linked cameras.
+- **Reliable GLB animation**: skeletal rigs, morph targets, clip selector, skeleton debug overlay.
+- **F-curve animated camera** (Hermite channels): editable dopesheet + graph editor, **Alembic** (.abc) camera import, staging persisted per media and replayed identically for every viewer.
+- **OCIO** colour management (per-project display/view, ACES catalogue).
 
 ### ✨ Gaussian splats
 
-- Viewer **Spark (SparkJS)** intégré à la scène Three.js — formats **PLY**, **SPZ** et lecture **SOG/SOGS** (PlayCanvas).
-- Éditeur **non-destructif** : sélection pinceau/volumes, masquage, teinte, TRS — le fichier original n'est jamais modifié, les éditions sont rejouées à l'identique pour tous.
-- **Export du splat nettoyé en SPZ**, chargement progressif des gros fichiers, mise en scène (caméra, DoF) persistée par média.
+- **Spark (SparkJS)** viewer integrated into the Three.js scene — **PLY**, **SPZ** formats and **SOG/SOGS** (PlayCanvas) playback.
+- **Non-destructive** editor: brush/volume selection, masking, tint, TRS — the original file is never modified, edits are replayed identically for everyone.
+- **Cleaned splat export to SPZ**, progressive loading of large files, staging (camera, DoF) persisted per media.
 
-### 💬 Commentaires & approbation
+### 💬 Comments & approval
 
-- **Fils de discussion** avec mentions @, résolution, réactions, **notes vocales**, brouillons locaux, liens profonds à la frame ou au commentaire, conversion commentaire → tâche kanban, suivi (watch) par shot/asset/version.
-- **Circuit d'approbation** avec statuts de review **personnalisables** par studio : décisions historisées par version, badges partout, filtres.
-- **Dailies** : playlists cross-shots à lecture enchaînée, et **salle de review live** synchronisée — un pilote diffuse lecture, navigation, comparaison et caméra 3D à toute la salle, passage de main en un clic.
+- **Discussion threads** with @ mentions, resolution, reactions, **voice notes**, local drafts, deep links to a frame or a comment, comment → kanban task conversion, watching by shot/asset/version.
+- **Approval workflow** with **customisable** per-studio review statuses: decisions recorded per version, badges everywhere, filters.
+- **Dailies**: cross-shot playlists with chained playback, and a synchronised **live review room** — a driver broadcasts playback, navigation, comparison and 3D camera to the whole room, handing over control in one click.
 
 ### 📋 Boards, kanban & documents
 
-- **Boards Excalidraw** par projet et par asset (mood, références).
-- **Kanban** par projet : tâches typées pipeline, checklists, multi-sélection et actions en masse.
-- **Documents** riches (briefs, notes de réunion) au niveau studio ou projet.
+- **Excalidraw boards** per project and per asset (mood, references).
+- Per-project **kanban**: pipeline-typed tasks, checklists, multi-select and bulk actions.
+- Rich **documents** (briefs, meeting notes) at studio or project level.
 
-### 🔒 Diffusion sécurisée
+### 🔒 Secure distribution
 
-- Liens de partage client **durcis** : mot de passe, expiration, limite de vues, révocation, audit des consultations — page client épurée aux couleurs du studio.
-- **Burn-ins configurables** (shot/version/timecode/logo) incrustés au transcodage, **slates** d'identification en tête des partages, **watermark au nom du spectateur**.
+- **Hardened** client share links: password, expiry, view limit, revocation, access audit — clean client page in the studio's colours.
+- **Configurable burn-ins** (shot/version/timecode/logo) baked in at transcode time, identification **slates** at the head of shares, **per-viewer name watermark**.
 
-### 🛡️ Identité & API publique
+### 🛡️ Identity & public API
 
-- **SSO OIDC** (Google…), **2FA TOTP** avec codes de secours, **sessions révocables** par appareil, journal d'accès aux médias.
-- **Tokens d'API personnels** à scopes lecture/écriture pour scripter l'API REST, **webhooks sortants signés HMAC** (média publié, décision, commentaire).
-- Référence API interactive (**OpenAPI/Scalar**, générée depuis les schémas Zod) servie sur `/api/docs`.
+- **OIDC SSO** (Google…), **TOTP 2FA** with backup codes, per-device **revocable sessions**, media access log.
+- **Personal API tokens** with read/write scopes for scripting the REST API, **HMAC-signed outgoing webhooks** (media published, decision, comment).
+- Interactive API reference (**OpenAPI/Scalar**, generated from the Zod schemas) served at `/api/docs`.
 
 ### 🏭 Pipeline, organisation & reporting
 
-- Hiérarchie **Projet → Séquence → Shot / Asset → Tâche → Version** ; brouillon avant publication, **verrou de publication** (le contenu publié est immuable — on corrige par une nouvelle version).
-- Réglages de livraison **hérités** studio → projet → séquence → shot (résolution, framerate, plages de frames).
-- **Templates et duplication de projet**, archivage lecture seule restaurable, **quotas de stockage**, rôles par projet, conventions de nommage, **import/export CSV** (passerelle ShotGrid/Ftrack/Kitsu).
-- **Reporting** : statistiques de review (temps par shot, notes & retakes, convergence par séquence), **calendrier des échéances**, **Gantt par séquence**, rapport hebdomadaire de production par mail.
+- **Project → Sequence → Shot / Asset → Task → Version** hierarchy; draft before publication, **publication lock** (published content is immutable — you fix it with a new version).
+- **Inherited** delivery settings, studio → project → sequence → shot (resolution, framerate, frame ranges).
+- **Project templates and duplication**, restorable read-only archiving, **storage quotas**, per-project roles, naming conventions, **CSV import/export** (ShotGrid/Ftrack/Kitsu bridge).
+- **Reporting**: review statistics (time per shot, notes & retakes, convergence per sequence), **deadline calendar**, **per-sequence Gantt**, weekly production report by email.
 
-### ⚙️ Infrastructure & exploitation
+### ⚙️ Infrastructure & operations
 
-- Stack **Docker Compose** complète : PostgreSQL, MinIO (S3, URLs présignées), Redis, backend, worker, frontend — plus Prometheus, Grafana et ClamAV en option.
-- Workers **BullMQ + FFmpeg** : HLS multi-rendition (**NVENC** en option avec repli x264), miniatures & sprites, conversion 3D → GLB, chaîne USD Blender/guc/assimp, opérations splat.
-- **Uploads résumables** par parts avec vérification d'intégrité, **déduplication** SHA-256 (upload instantané), antivirus optionnel.
-- **Sauvegarde/restauration** documentées (base + objets MinIO), métriques Prometheus + dashboard Grafana provisionné, tableau de bord des jobs in-app, corbeille et purge des fichiers dérivés, audit d'administration.
+- Complete **Docker Compose** stack: PostgreSQL, MinIO (S3, presigned URLs), Redis, backend, worker, frontend — plus optional Prometheus, Grafana and ClamAV.
+- **BullMQ + FFmpeg** workers: multi-rendition HLS (optional **NVENC** with x264 fallback), thumbnails & sprites, 3D → GLB conversion, Blender/guc/assimp USD chain, splat operations.
+- **Resumable uploads** in parts with integrity verification, SHA-256 **deduplication** (instant upload), optional antivirus.
+- Documented **backup/restore** (database + MinIO objects), Prometheus metrics + provisioned Grafana dashboard, in-app job dashboard, trash and derived-file purge, administration audit log.
 
-### 🎨 Personnalisation & UX quotidienne
+### 🎨 Personalisation & everyday UX
 
-Thème clair/sombre/système · densité d'affichage · **langue FR/EN** · raccourcis reconfigurables (cheatsheet `?`) · palette Ctrl+K & menus clic droit · favoris · vues de liste sauvegardées · reprise où on s'était arrêté · **thème studio** (accent + logo au login) · notifications **Web Push** et **Slack/Discord** · changelog in-app « Nouveautés » · tour d'onboarding · **workspace de review unifié** (modes, rail d'outils, barre d'options, dock inspecteur) commun aux quatre viewers.
+Light/dark/system theme · display density · **14 interface languages** · reconfigurable shortcuts (`?` cheatsheet) · Ctrl+K palette & right-click menus · favourites · saved list views · resume where you left off · **studio theme** (accent + logo on the login screen) · **Web Push** and **Slack/Discord** notifications · in-app "What's new" changelog · onboarding tour · **unified review workspace** (modes, tool rail, options bar, inspector dock) shared by all four viewers.
 
-### 📚 Documentation intégrée
+### 📚 Built-in documentation
 
-Le manuel produit ([`DOCUMENTATION/`](DOCUMENTATION/README.md), en anglais) est versionné avec le code et servi **dans l'application** sur la page `/docs` : guides utilisateur, guide admin, référence API et infrastructure.
+The product manual ([`DOCUMENTATION/`](DOCUMENTATION/README.md), in English) is versioned with the code and served **inside the application** at `/docs`: user guides, admin guide, API reference and infrastructure.
 
-## 🚀 Démarrage rapide
+## 🌍 Languages
+
+English is the source language: the interface, the documentation and this README are written in English first. ReView also ships thirteen more, chosen so that a studio can work in its own language — including regional languages that rarely get software written for them.
+
+| | Language | | Language |
+|---|---|---|---|
+| 🇬🇧 | English *(source)* | 🇮🇳 | हिन्दी — Hindi |
+| 🇫🇷 | Français — French | 🏴 | Brezhoneg — Breton *(regional)* |
+| 🇪🇸 | Español — Spanish | 🏴 | Euskara — Basque *(regional)* |
+| 🇩🇪 | Deutsch — German | 🏴 | Corsu — Corsican *(regional)* |
+| 🇵🇹 | Português — Portuguese | 🏴 | Elsässisch — Alsatian *(regional)* |
+| 🇨🇳 | 简体中文 — Chinese (Simplified) | 🏴 | Occitan — Occitan *(regional)* |
+| 🇰🇷 | 한국어 — Korean | | |
+| 🇯🇵 | 日本語 — Japanese | | |
+
+> ### ⚠️ These translations are machine-generated
+>
+> **Every language other than English was translated automatically, with no human proofreading.**
+> Wording may be clumsy, unidiomatic, or plainly wrong. The same warning is shown in the
+> application wherever a language is chosen — in a user's profile and in the studio settings.
+>
+> **Corrections are very welcome, and they are the only way these catalogues get better.**
+> That goes double for the regional languages ReView stands up for: Breton, Basque, Corsican,
+> Alsatian and Occitan have far fewer speakers reviewing software strings than English does,
+> and a single native speaker reading through a catalogue makes an enormous difference.
+> A correction is a one-line edit in a JSON file — no build step, no framework to learn.
+>
+> **Proposals for new languages are equally welcome.** Adding one is three steps: an entry in
+> the language registry, a code in the `Locale` union, and a `messages/<code>.json` file.
+> Untranslated keys fall back to English, so a partial catalogue is useful from its first line.
+
+Production terminology is deliberately **left in English in every language** — `shot`, `sequence`,
+`dailies`, `playblast`, `version`, `annotation`, `review`, `board`, `retake`. Artists read these
+words in English in every pipeline they touch; translating them would make the tool harder to read,
+not easier. The list is enforced by `scripts/check-translations.mjs`.
+
+How to contribute a translation, and the full conventions:
+[DOCUMENTATION/development/i18n.md](DOCUMENTATION/development/i18n.md).
+
+## 🚀 Quick start
 
 ```bash
 git clone https://github.com/YvigUnderscore/ReView.git
 cd ReView
-cp .env.example .env   # → éditer JWT_SECRET, MinIO, PostgreSQL, Redis…
+cp .env.example .env   # → edit JWT_SECRET, MinIO, PostgreSQL, Redis…
 docker compose up -d --build
 ```
 
-L'application est disponible sur **http://localhost:3429** (API sur `:3430`, Grafana optionnel sur `:3431`).
-Guides complets : [Installation](DOCUMENTATION/getting-started/installation.md) · [Stack Docker](DOCUMENTATION/getting-started/docker-stack.md) · [Déploiement production (nginx/TLS)](DEPLOYMENT.md).
+The application is available at **http://localhost:3429** (API on `:3430`, optional Grafana on `:3431`).
+Full guides: [Installation](DOCUMENTATION/getting-started/installation.md) · [Docker stack](DOCUMENTATION/getting-started/docker-stack.md) · [Production deployment (nginx/TLS)](DEPLOYMENT.md).
 
-### 🔑 Comptes & premier lancement
+### 🔑 Accounts & first launch
 
-- **Premier lancement réel** : sans seed, l'instance démarre en **mode setup** — le premier écran crée le studio et le compte administrateur. Aucun mot de passe par défaut n'existe en production.
-- **Seed de développement** (`npm run seed` dans `backend/`) :
+- **Real first launch**: with no seed, the instance starts in **setup mode** — the first screen creates the studio and the administrator account. No default password exists in production.
+- **Development seed** (`npm run seed` in `backend/`):
 
-| Compte | Email | Mot de passe |
-|--------|-------|--------------|
+| Account | Email | Password |
+|---------|-------|----------|
 | Admin | `admin@review.local` | `admin1234` |
-| Artiste | `artist@review.local` | `artist1234` |
+| Artist | `artist@review.local` | `artist1234` |
 
-> ⚠️ Réservé au développement local — ne jamais exposer une instance seedée.
+> ⚠️ Local development only — never expose a seeded instance.
 
 ## 🧱 Stack
 
-| Couche | Technologie |
-|--------|-------------|
+| Layer | Technology |
+|-------|------------|
 | Backend | Node.js + Express 5 + TypeScript + Prisma + PostgreSQL 16 |
-| Frontend | React 19 + Vite 7 + Tailwind CSS + primitives style shadcn |
-| Auth / Temps réel | JWT (+ SSO OIDC, 2FA TOTP) / Socket.io |
-| Jobs | BullMQ + Redis (workers FFmpeg : HLS multi-rendition, miniatures, conversion 3D→GLB, chaîne USD Blender + usd-core → `guc` → assimp) |
+| Frontend | React 19 + Vite 7 + Tailwind CSS + shadcn-style primitives |
+| Auth / Realtime | JWT (+ OIDC SSO, TOTP 2FA) / Socket.io |
+| Jobs | BullMQ + Redis (FFmpeg workers: multi-rendition HLS, thumbnails, 3D→GLB conversion, USD chain Blender + usd-core → `guc` → assimp) |
 | 3D / Splat | Three.js / Spark (SparkJS) |
 | Board | Excalidraw (MIT) |
-| Stockage | MinIO (S3-compatible), URLs présignées ; nginx TLS frontal en prod |
-| Observabilité | Prometheus + Grafana (optionnels), métriques `/metrics` |
+| Storage | MinIO (S3-compatible), presigned URLs; nginx TLS front in production |
+| Observability | Prometheus + Grafana (optional), `/metrics` endpoint |
 
-Détails d'architecture : [DOCUMENTATION/infrastructure/architecture.md](DOCUMENTATION/infrastructure/architecture.md).
+Architecture details: [DOCUMENTATION/infrastructure/architecture.md](DOCUMENTATION/infrastructure/architecture.md).
 
-## 📂 Structure du dépôt
+## 📂 Repository layout
 
 ```
 ReView-app/
 ├── docker-compose.yml       # postgres + minio + redis + backend + worker + frontend (+ monitoring)
-├── DEPLOYMENT.md            # déploiement production (nginx, TLS, overlay prod)
-├── DOCUMENTATION/           # doc produit/admin/API/infra (EN, servie in-app sur /docs)
-├── backend/                 # Express 5 + Prisma : routes, services, workers, tests
-├── frontend/                # React 19 + Vite : app v2 (pages, review, ui), stores, tests
-├── monitoring/              # provisioning Prometheus/Grafana
-├── nginx/                   # config reverse-proxy production
-└── scripts/                 # validate.sh (typecheck + build + lint + tests), utilitaires
+├── DEPLOYMENT.md            # production deployment (nginx, TLS, prod overlay)
+├── DOCUMENTATION/           # product/admin/API/infra docs (EN, served in-app at /docs)
+├── backend/                 # Express 5 + Prisma: routes, services, workers, tests
+├── frontend/                # React 19 + Vite: v2 app (pages, review, ui), stores, tests
+├── monitoring/              # Prometheus/Grafana provisioning
+├── nginx/                   # production reverse-proxy config
+└── scripts/                 # validate.sh (typecheck + build + lint + tests), utilities
 ```
 
-## 🧪 Développement
+## 🧪 Development
 
 ```bash
-bash scripts/validate.sh                    # typecheck + build + lint + tests unitaires
-bash scripts/validate.sh --with-integration # + tests d'intégration (stack docker requise)
-bash scripts/validate.sh --with-e2e         # + smoke Playwright
+bash scripts/validate.sh                    # typecheck + build + lint + unit tests
+bash scripts/validate.sh --with-integration # + integration tests (docker stack required)
+bash scripts/validate.sh --with-e2e         # + Playwright smoke tests
 ```
 
-Conventions, structure du code et suite de validation : [DOCUMENTATION/development/](DOCUMENTATION/development/code-structure.md).
+Conventions, code structure and the validation suite: [DOCUMENTATION/development/](DOCUMENTATION/development/code-structure.md).
 
 ## ⭐ Star History
 
@@ -184,39 +226,38 @@ Conventions, structure du code et suite de validation : [DOCUMENTATION/developme
  </picture>
 </a>
 
-## 🙏 Remerciements & licences
+## 🙏 Acknowledgements & licences
 
-ReView tient debout sur le travail d'autres : **[React](https://react.dev/)**,
+ReView stands on other people's work: **[React](https://react.dev/)**,
 **[Vite](https://vitejs.dev/)**, **[Node.js](https://nodejs.org/)**,
 **[Express](https://expressjs.com/)**, **[Prisma](https://www.prisma.io/)**,
 **[TailwindCSS](https://tailwindcss.com/)**, **[Three.js](https://threejs.org/)**,
 **[Spark](https://sparkjs.dev/)**, **[Excalidraw](https://excalidraw.com/)**,
 **[Socket.IO](https://socket.io/)**, **[BullMQ](https://bullmq.io/)**,
 **[MinIO](https://min.io/)**, **[FFmpeg](https://ffmpeg.org/)**,
-**[Blender](https://www.blender.org/)**, **[OpenUSD](https://openusd.org/)** — et 594
-paquets de plus.
+**[Blender](https://www.blender.org/)**, **[OpenUSD](https://openusd.org/)** — and 594
+more packages.
 
-La liste exhaustive, avec le texte de licence de chacun, est dans
-**[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)** (généré par
-`node scripts/generate-notices.mjs`, jamais à la main).
+The exhaustive list, with each licence text, lives in
+**[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)** (generated by
+`node scripts/generate-notices.mjs`, never by hand).
 
 ## 📄 Licence
 
-ReView est un **logiciel libre sous [AGPL-3.0-or-later](LICENSE)**.
+ReView is **free software under [AGPL-3.0-or-later](LICENSE)**.
 
-Vous pouvez l'installer et le modifier. La seule
-contrepartie : si vous en proposez une **version modifiée** à d'autres — y compris
-simplement en l'hébergeant pour vos clients — vous devez leur en fournir les sources
-(article 13). Concrètement, publiez votre fork et renseignez son URL dans
-**Admin → Réglages → « Code source (AGPL §13) »**. Une instance non modifiée n'a rien à faire.
+You may install it and modify it. The only thing asked in return: if you offer a **modified
+version** to others — including simply by hosting it for your clients — you must give them
+its sources (section 13). In practice, publish your fork and set its URL in
+**Admin → Settings → "Source code (AGPL §13)"**. An unmodified instance has nothing to do.
 
-Vos médias, projets et données ne sont jamais concernés : la licence porte sur le logiciel.
+Your media, projects and data are never covered: the licence applies to the software.
 
-- **[Licence commerciale](COMMERCIAL-LICENSE.md)** — pour les studios qui ne peuvent pas
-  accepter les obligations de l'AGPL.
-- **[Contribuer](CONTRIBUTING.md)** · **[CLA](CLA.md)** — les contributions passent par un
-  accord de licence, c'est ce qui rend la double licence possible.
-- **[Documentation de licence](DOCUMENTATION/development/licensing.md)** — obligations
-  détaillées, compatibilité des dépendances, redistribution des images Docker.
+- **[Commercial licence](COMMERCIAL-LICENSE.md)** — for studios that cannot accept the
+  obligations of the AGPL.
+- **[Contributing](CONTRIBUTING.md)** · **[CLA](CLA.md)** — contributions go through a licence
+  agreement, which is what makes the dual licence possible.
+- **[Licensing documentation](DOCUMENTATION/development/licensing.md)** — detailed obligations,
+  dependency compatibility, Docker image redistribution.
 
-> Jusqu'au 2 août 2026, ReView était distribué sous licence MIT.
+> Until 2 August 2026, ReView was distributed under the MIT licence.

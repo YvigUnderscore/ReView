@@ -18,7 +18,7 @@ documentation. It is versioned with the code and served inside the application o
 | [admin-guide/](admin-guide/) | Users & roles, pipeline settings, transcoding, HDRI library, SMTP, announcements, quotas, audit |
 | [api/](api/) | Authentication, REST conventions, per-domain reference, errors, webhooks |
 | [infrastructure/](infrastructure/) | Architecture, Docker services, MinIO, Redis/BullMQ workers, nginx/TLS, backups, security model |
-| [development/](development/) | Code structure, conventions, validation suite, testing, licensing |
+| [development/](development/) | Code structure, conventions, validation suite, testing, internationalisation, licensing |
 | [assets/](assets/) | Screenshots and GIFs referenced by the docs |
 
 ## Writing conventions

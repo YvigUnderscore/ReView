@@ -34,4 +34,5 @@ skipping, no commenting out tests to get to green.
 ## Related pages
 
 - [Conventions](conventions.md)
+- [Internationalisation](i18n.md)
 - [Installation](../getting-started/installation.md)

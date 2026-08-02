@@ -10,6 +10,8 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import TranslationNotice from '../../components/TranslationNotice';
+import { BASE_LOCALE, LOCALES, isLocale, type Locale } from '../../i18n';
 import {
   SETTINGS_FIELDS,
   type SettingField,
@@ -127,7 +129,53 @@ export default function SettingsTab() {
           ),
         )}
       </div>
+      <DefaultLocaleField stored={data.studio_default_locale ?? ''} onSave={persist} />
       <AccentField stored={data.studio_accent ?? ''} onSave={persist} />
+    </div>
+  );
+}
+
+/**
+ * Langue par défaut du studio : celle des comptes qui n'ont rien choisi, et celle des
+ * emails envoyés à ces comptes. Le sélecteur ne change pas la langue de l'admin qui le
+ * manipule — c'est un réglage d'instance, pas une préférence personnelle.
+ */
+function DefaultLocaleField({
+  stored,
+  onSave,
+}: {
+  stored: string;
+  onSave: (key: string, value: string) => Promise<void>;
+}) {
+  const [value, setValue] = useState(isLocale(stored) ? stored : BASE_LOCALE);
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-3">
+      <h3 className="text-sm font-semibold">Langue du studio</h3>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <label className="w-64 text-muted-foreground" htmlFor="studio-default-locale">
+          Langue par défaut
+        </label>
+        <Select
+          id="studio-default-locale"
+          className="py-1 text-xs"
+          value={value}
+          onChange={(e) => setValue(e.target.value as Locale)}
+        >
+          {LOCALES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.native} ({l.english}){l.regional ? ' — langue régionale' : ''}
+            </option>
+          ))}
+        </Select>
+        <Button variant="outline" size="sm" onClick={() => onSave('studio_default_locale', value)}>
+          Appliquer
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        S’applique aux comptes qui n’ont pas choisi de langue, et aux emails qui leur sont envoyés. Chacun
+        peut ensuite choisir la sienne dans son profil.
+      </p>
+      <TranslationNotice />
     </div>
   );
 }

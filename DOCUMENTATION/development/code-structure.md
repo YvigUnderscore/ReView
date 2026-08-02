@@ -43,3 +43,4 @@ ReView-app/
 
 - [Conventions](conventions.md)
 - [Validation & tests](validation-and-tests.md)
+- [Internationalisation](i18n.md)
