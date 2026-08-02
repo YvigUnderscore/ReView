@@ -175,10 +175,7 @@ function DefaultLocaleField({
           Appliquer
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        S’applique aux comptes qui n’ont pas choisi de langue, et aux emails qui leur sont envoyés. Chacun
-        peut ensuite choisir la sienne dans son profil.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('settings.localeHint')}</p>
       <TranslationNotice />
     </div>
   );
@@ -216,10 +213,7 @@ function AccentField({
           </Button>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">
-        L’accent remplace la couleur primaire de l’interface (boutons, liens, focus), page de connexion
-        incluse. Prend effet après rechargement.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('settings.accentHint')}</p>
     </div>
   );
 }

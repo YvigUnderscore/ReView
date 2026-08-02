@@ -52,7 +52,7 @@ export default function HdriTab() {
         { format: ext },
       );
       const put = await fetch(uploadUrl, { method: 'PUT', body: file });
-      if (!put.ok) throw new Error("Échec de l'upload MinIO");
+      if (!put.ok) throw new Error(t('hdri.uploadFailed'));
       await api.post('/api/studio/hdris', {
         name: file.name.replace(/\.(hdr|exr)$/i, ''),
         storageKey,
@@ -79,10 +79,7 @@ export default function HdriTab() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Environnements HDRI (.hdr / .exr) utilisés pour l'éclairage image-based du viewer 3D. Uploadez vos
-        cartes d'environnement ; elles seront proposées dans les réglages d'éclairage de la review 3D.
-      </p>
+      <p className="text-sm text-muted-foreground">{t('hdri.hint')}</p>
 
       <Panel title={t('hdri.add')}>
         <input ref={fileRef} type="file" accept=".hdr,.exr" onChange={onFile} className="hidden" />

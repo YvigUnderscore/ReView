@@ -118,8 +118,7 @@ export default function StorageMap() {
         </table>
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">
-        Un seul bucket S3/MinIO pour toute l’instance ; la suppression d’un média purge son dossier d’original
-        et son préfixe <code>derived/</code>.
+        {t('storage.map.hint')} <code>derived/</code>.
       </p>
     </Panel>
   );

@@ -62,7 +62,7 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
       {!hero ? (
         <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
           <Clapperboard size={28} />
-          Aucune review commentée pour l'instant — publiez un média et lancez la discussion.
+          {t('home.noCommentedReview')}
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">

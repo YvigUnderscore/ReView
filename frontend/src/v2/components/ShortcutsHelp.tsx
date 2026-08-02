@@ -62,7 +62,7 @@ const staticGroups = (
         label: t('shortcuts.splatSelect'),
       },
       { keys: ['F'], label: t('shortcuts.frameSelection') },
-      { keys: ['H'], label: "Vue d'origine" },
+      { keys: ['H'], label: t('action.resetSpatial') },
       { keys: ['Suppr'], label: t('shortcuts.deleteSelection') },
       { keys: ['Ctrl', 'Z / Y'], label: t('shortcuts.undoRedo') },
     ],

@@ -67,8 +67,7 @@ export default function IdentityTab() {
     <div className="max-w-2xl">
       <Panel title="SSO OIDC (Google)">
         <p className="mb-3 text-xs text-muted-foreground">
-          Connexion par fournisseur d'identité (authorization code). URL de redirection à déclarer chez le
-          fournisseur : <code>{draft.publicUrl || '<URL publique>'}/api/auth/oidc/callback</code>
+          {t('identity.hint')} <code>{draft.publicUrl || '<URL publique>'}/api/auth/oidc/callback</code>
         </p>
         <div className="space-y-2.5">
           <label className="flex items-center gap-2 text-sm">

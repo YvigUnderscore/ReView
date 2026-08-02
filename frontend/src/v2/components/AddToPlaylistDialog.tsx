@@ -104,10 +104,7 @@ export default function AddToPlaylistDialog({
           <DialogTitle>{t('reviews.addToPlaylistShort')}</DialogTitle>
         </DialogHeader>
         {projectId === null ? (
-          <p className="text-sm text-muted-foreground">
-            La sélection couvre plusieurs projets : une playlist appartient à un seul projet. Restreignez la
-            sélection (filtre projet) puis réessayez.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('playlist.multiProject')}</p>
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">

@@ -69,7 +69,7 @@ export default function SmtpTab() {
     <div className="max-w-xl space-y-4">
       {data.envOverride && (
         <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
-          La configuration d'environnement (`SMTP_*`) est active et prend le pas sur ces réglages.
+          {t('smtp.envActive')}
         </p>
       )}
 

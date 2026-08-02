@@ -65,10 +65,7 @@ export default function Model3DThreePane({
       ) : showError ? (
         <div className="absolute inset-0 flex items-center justify-center p-6">
           <div className="max-w-sm space-y-3 text-center text-sm text-muted-foreground">
-            <p>
-              Modèle 3D non affichable : le fichier n’a pas pu être converti en GLB. Relancez la conversion,
-              ou ré-uploadez un GLB/glTF.
-            </p>
+            <p>{t('model3d.unviewable')}</p>
             {/* Raison remontée par le worker (45.C) : asset USD manquant, outillage absent,
                 archive refusée… — sans elle, l'utilisateur ne sait pas quoi corriger. */}
             {processingError && (

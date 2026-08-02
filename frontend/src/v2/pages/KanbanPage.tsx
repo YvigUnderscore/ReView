@@ -87,11 +87,7 @@ export default function KanbanPage() {
       </div>
       {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
       {!isLoading && tasks.length === 0 ? (
-        <EmptyState
-          icon={KanbanSquare}
-          title={t('task.noTaskYet')}
-          description="Créez des shots et des tâches depuis le projet pour les suivre ici. Glissez une carte d'une colonne à l'autre pour changer son statut."
-        />
+        <EmptyState icon={KanbanSquare} title={t('task.noTaskYet')} description={t('kanban.emptyHint')} />
       ) : (
         <DndContext
           sensors={sensors}

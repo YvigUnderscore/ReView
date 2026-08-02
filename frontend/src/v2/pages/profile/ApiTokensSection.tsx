@@ -73,7 +73,7 @@ export default function ApiTokensSection() {
 
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold">Tokens d'API</h2>
+      <h2 className="text-sm font-semibold">{t('tokens.title')}</h2>
       <p className="text-xs text-muted-foreground">
         {t('tokens.intro')} <code>Authorization: Bearer rvk_…</code>. Le scope « lecture » n'autorise que les
         GET.

@@ -105,7 +105,7 @@ export default function ProjectPage() {
   };
 
   const tabs = [
-    { key: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard size={16} /> },
+    { key: 'overview', label: t('project.tab.overview'), icon: <LayoutDashboard size={16} /> },
     { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shots.length },
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },

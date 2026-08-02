@@ -116,7 +116,7 @@ export function useSplatPersistence(opts: {
       onClean();
       toast.success(t('splat.editsSaved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement des éditions");
+      toast.error(e instanceof Error ? e.message : t('splat.editsSaveFailed'));
     } finally {
       setBusy(false);
     }

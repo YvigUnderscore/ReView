@@ -56,10 +56,7 @@ export default function BurninPanel() {
 
   return (
     <Panel title={t('burnin.title')}>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Incrustations FFmpeg posées au transcodage (prochains uploads/reprocess). Template studio — ajustable
-        projet par projet dans les réglages du projet.
-      </p>
+      <p className="mb-3 text-xs text-muted-foreground">{t('burnin.hint2')}</p>
       <div className="space-y-2.5">
         {burninflags(t).map((f) => (
           <label key={f.key} className="flex items-center gap-2 text-sm">

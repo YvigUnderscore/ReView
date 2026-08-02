@@ -170,11 +170,7 @@ function DerivedPurgePanel() {
 
   return (
     <Panel title={t('jobs.purgeDerived')}>
-      <p className="mb-2 text-xs text-muted-foreground">
-        Les versions au-delà des N dernières de chaque tâche/asset perdent leurs renditions HLS et leur sprite
-        (le proxy et la miniature restent : lecture toujours possible). Passage quotidien automatique quand
-        activée.
-      </p>
+      <p className="mb-2 text-xs text-muted-foreground">{t('jobs.pruneHint')}</p>
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label className="flex items-center gap-2">
           <input

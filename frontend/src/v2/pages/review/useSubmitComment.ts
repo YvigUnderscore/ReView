@@ -11,6 +11,7 @@ import type { ReviewComment } from '../../types/api';
 import type { MediaResp } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
+import { useT, t as translate } from '../../i18n';
 
 /**
  * Envoi d'un commentaire de review (extrait de ReviewPage, budget 10.F4) : assemble
@@ -30,6 +31,7 @@ export function useSubmitComment(opts: {
   loop?: { in: number | null; out: number | null };
   fps?: number;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const { id, data, ann, paint, videoRef, captureCamera, loadComments, loop, fps } = opts;
 
@@ -95,7 +97,7 @@ export function useSubmitComment(opts: {
       await loadComments();
       return true;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur à l'envoi du commentaire");
+      toast.error(err instanceof Error ? err.message : t('comment.sendFailed'));
       return false;
     }
   };
@@ -113,7 +115,7 @@ async function linkStagedReferences(qc: QueryClient, id: number, ann: Annotation
         old ? { ...old, references: [...(old.references ?? []), reference] } : old,
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Une image de référence n'a pas pu être envoyée");
+      toast.error(e instanceof Error ? e.message : translate('comment.refImageFailed'));
     }
   }
 }

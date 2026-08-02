@@ -69,10 +69,7 @@ export default function ReviewStatusTab() {
           <Plus size={14} /> {t('reviewStatus.new')}
         </Button>
       </div>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Posés sur les versions par les superviseurs (clic droit sur une carte de version ou en-tête de
-        review). L'historique des décisions est conservé.
-      </p>
+      <p className="mb-3 text-xs text-muted-foreground">{t('status.hint')}</p>
       <div className="divide-y divide-border rounded-lg border border-border">
         {items.map((s, i) => (
           <div key={s.id} className="flex items-center gap-3 px-3 py-2">

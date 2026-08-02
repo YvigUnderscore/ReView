@@ -28,7 +28,7 @@ export function useCameraPresentation(mediaId: number, onSaved: (patch: SplatEdi
         onSaved({ splatPresentation });
         toast.success(t('camera.presentationSaved'));
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la présentation");
+        toast.error(e instanceof Error ? e.message : t('camera.presentationSaveFailed'));
       } finally {
         setBusy(false);
       }
@@ -43,7 +43,7 @@ export function useCameraPresentation(mediaId: number, onSaved: (patch: SplatEdi
       onSaved({ splatPresentation: null });
       toast.success(t('camera.presentationCleared'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la présentation");
+      toast.error(e instanceof Error ? e.message : t('camera.presentationClearFailed'));
     } finally {
       setBusy(false);
     }

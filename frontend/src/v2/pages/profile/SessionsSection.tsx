@@ -58,12 +58,7 @@ export default function SessionsSection() {
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">{t('sessions.title')}</h2>
-      {sessions.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          Aucune session enregistrée (les connexions antérieures à la mise à jour n'apparaissent pas —
-          reconnectez-vous pour les voir ici).
-        </p>
-      )}
+      {sessions.length === 0 && <p className="text-xs text-muted-foreground">{t('sessions.empty')}</p>}
       <div className="space-y-1.5">
         {sessions.map((s) => (
           <div

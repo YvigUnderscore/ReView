@@ -70,10 +70,7 @@ export default function ProjectDefaultsTab() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Valeurs appliquées à la création d'un projet et utilisées comme repli. Chaque projet peut les
-        surcharger dans son onglet « Réglages ».
-      </p>
+      <p className="text-sm text-muted-foreground">{t('defaults.hint')}</p>
 
       <Panel title={t('defaults.naming')}>
         <div className="flex flex-wrap items-end gap-3">

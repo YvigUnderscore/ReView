@@ -94,7 +94,7 @@ export default function WebhooksPanel() {
   };
 
   return (
-    <Panel title="Webhooks sortants">
+    <Panel title={t('jobs.webhooks')}>
       <p className="mb-3 text-xs text-muted-foreground">
         {t('webhooks.postJson')} <code>X-ReView-Signature</code>, HMAC SHA-256 de <code>timestamp.corps</code>
         {t('webhooks.hintEnd')}

@@ -58,10 +58,7 @@ export default function SplatPane({
       {/* États de repli — centrés dans toute la zone (hors letterbox) */}
       {loadError ? (
         <div className="absolute inset-0 flex items-center justify-center p-6">
-          <p className="max-w-sm text-center text-sm text-muted-foreground">
-            Splat non affichable : le fichier n’a pas pu être chargé. Vérifiez le format (.ply, .spz, .splat,
-            .ksplat, .sog) ou ré-uploadez le média.
-          </p>
+          <p className="max-w-sm text-center text-sm text-muted-foreground">{t('splat.unviewable')}</p>
         </div>
       ) : status === 'PROCESSING' || !ready ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">

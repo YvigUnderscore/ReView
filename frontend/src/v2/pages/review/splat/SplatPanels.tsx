@@ -193,7 +193,7 @@ export default function SplatPanels({
                   `Splat exporté : ${kept.toLocaleString(intlLocale())} splats, ${formatBytes(bytes.byteLength)}`,
                 );
               })
-              .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Échec de l'export"))
+              .catch((e: unknown) => toast.error(e instanceof Error ? e.message : t('splat.exportFailed')))
               .finally(() => setExporting(false));
           },
         }}

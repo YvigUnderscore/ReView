@@ -144,7 +144,7 @@ export default function UserDetailTab() {
 
       {editing && (
         <UserModal
-          title="Modifier l'utilisateur"
+          title={t('user.edit')}
           user={user}
           onClose={() => setEditing(false)}
           onSaved={() => {
@@ -156,7 +156,7 @@ export default function UserDetailTab() {
       )}
       <ConfirmDialog
         open={deleting}
-        title="Supprimer l'utilisateur ?"
+        title={t('user.deleteQ')}
         message={<>« {user.displayName ?? user.email} » sera définitivement supprimé.</>}
         confirmLabel={t('common.delete')}
         danger

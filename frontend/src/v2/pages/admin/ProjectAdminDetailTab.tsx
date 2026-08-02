@@ -123,7 +123,7 @@ export default function ProjectAdminDetailTab() {
               v={settings.departments.length ? settings.departments.map((d) => d.name).join(', ') : '—'}
             />
             <Row
-              k="Nommage à l'upload"
+              k={t('projectAdmin.naming')}
               v={
                 settings.naming.mode === 'off'
                   ? 'libre'

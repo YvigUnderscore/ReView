@@ -57,10 +57,7 @@ function ApiTokensAdminPanel() {
 
   return (
     <Panel title={t('tokens.studio')}>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Tous les tokens actifs, créés par chacun depuis sa page profil. Un token révoqué cesse immédiatement
-        de fonctionner.
-      </p>
+      <p className="mb-3 text-xs text-muted-foreground">{t('admin.tokens.hint')}</p>
       <div className="space-y-1.5">
         {tokens.map((tok) => (
           <div

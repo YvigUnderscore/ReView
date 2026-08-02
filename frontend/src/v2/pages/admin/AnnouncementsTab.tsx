@@ -120,7 +120,7 @@ export default function AnnouncementsTab() {
       )}
       <ConfirmDialog
         open={!!deleting}
-        title="Supprimer l'annonce ?"
+        title={t('admin.announce.deleteQ')}
         message={<>« {deleting?.title} » sera définitivement supprimée.</>}
         confirmLabel={t('common.delete')}
         danger

@@ -86,7 +86,7 @@ export default function AnnouncementForm({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{announcement ? "Modifier l'annonce" : t('admin.announce.new')}</DialogTitle>
+          <DialogTitle>{announcement ? t('admin.announce.edit') : t('admin.announce.new')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
           <Input

@@ -102,9 +102,7 @@ export default function LoginPage() {
           <h2 className="flex items-center gap-2 text-xl font-semibold">
             <ShieldCheck size={20} className="text-primary" /> {t('twofa.title')}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Saisissez le code de votre application d'authentification (ou un code de secours).
-          </p>
+          <p className="text-sm text-muted-foreground">{t('login.2faPrompt')}</p>
         </div>
         <form onSubmit={submitCode} className="space-y-4">
           <div className="space-y-1.5">

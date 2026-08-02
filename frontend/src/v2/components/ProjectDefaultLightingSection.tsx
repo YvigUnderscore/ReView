@@ -42,10 +42,7 @@ export default function ProjectDefaultLightingSection({
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-1 text-sm font-medium">{t('lighting.default.title')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">
-        Environnement HDRI rejoué à l'ouverture des médias 3D de ce projet qui n'ont pas leur propre
-        éclairage. Les spectateurs peuvent l'ajuster en session sans le modifier.
-      </div>
+      <div className="mb-3 text-xs text-muted-foreground">{t('lighting.hint')}</div>
       {!value ? (
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">{t('lighting.default.empty')}</p>
@@ -104,7 +101,7 @@ export default function ProjectDefaultLightingSection({
                 checked={value.showBackground}
                 onChange={(e) => set({ showBackground: e.target.checked })}
               />
-              Afficher l'HDRI en fond
+              {t('lighting.showBackground')}
             </label>
             <label className="flex items-center gap-2 text-xs">
               <input

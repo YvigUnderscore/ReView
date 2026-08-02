@@ -130,7 +130,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
       {live.needsUnmute && (
         <button
           onClick={live.unmute}
-          title="La lecture a démarré en sourdine (le navigateur bloque le son sans interaction) — cliquer pour l'activer"
+          title={t('live.muted')}
           className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground"
         >
           <Volume2 size={12} /> {t('live.sound')}

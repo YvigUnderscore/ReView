@@ -95,10 +95,7 @@ function LicensePanel() {
           </dd>
         </div>
       </dl>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Toute personne qui utilise cette instance à distance doit pouvoir en récupérer les sources. Si vous
-        l’avez modifiée, faites pointer le réglage « Code source » vers votre dépôt.
-      </p>
+      <p className="mt-3 text-xs text-muted-foreground">{t('system.agplHint')}</p>
     </Panel>
   );
 }

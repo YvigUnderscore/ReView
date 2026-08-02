@@ -109,12 +109,9 @@ export default function TwoFaSection() {
 
       {!enabled && qr && (
         <form onSubmit={enable} className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Scannez ce QR code avec votre application (Google Authenticator, 1Password…), puis saisissez le
-            code affiché.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('twofa.scan')}</p>
           <div className="flex items-start gap-4">
-            <img src={qr} alt="QR code d'enrôlement 2FA" className="rounded-md border border-border" />
+            <img src={qr} alt={t('twofa.qr')} className="rounded-md border border-border" />
             <div className="min-w-0 space-y-2">
               {manualSecret && (
                 <p className="break-all text-xs text-muted-foreground">
