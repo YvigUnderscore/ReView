@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — 协作 review 平台",
+
+  "common.anonymous": "匿名",
+
+  "digest.subject": "ReView — 你的项目动态",
+  "digest.title": "{day} 摘要",
+  "digest.greeting": "{name} 你好，以下是过去 24 小时你的项目动态：",
+  "digest.versions": "新增 version",
+  "digest.media": "已发布媒体",
+  "digest.comments": "评论",
+  "digest.by": "由 {name}",
+  "digest.commentOn": "{author} 于 {media}",
+  "digest.optOut": "你收到这封邮件，是因为你的 ReView 个人资料中启用了每日摘要。",
+
+  "weekly.subject": "ReView — 每周制作报告",
+  "weekly.title": "每周制作报告",
+  "weekly.greeting": "{name} 你好，以下是 {from} 至 {to} 的制作动态：",
+  "weekly.empty": "本周没有动态。",
+  "weekly.column.project": "项目",
+  "weekly.column.published": "已发布 version",
+  "weekly.column.approvals": "审批",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "待处理意见",
+  "weekly.optOut": "你收到这份报告，是因为你的 ReView 个人资料中启用了它（监制）。",
+
+  "smtp.test.subject": "ReView — SMTP 测试",
+  "smtp.test.title": "SMTP 测试",
+  "smtp.test.body": "这是一封从 ReView 发送的测试邮件。如果你收到了它，说明 SMTP 配置正常。"
+}

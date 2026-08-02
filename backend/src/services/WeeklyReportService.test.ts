@@ -22,24 +22,37 @@ const projects: ProjectWeekly[] = [
 ];
 
 describe('WeeklyReportService — rendu HTML', () => {
+  const weekStart = new Date('2026-07-13T07:00:00');
+  const weekEnd = new Date('2026-07-20T07:00:00');
+
   it('liste les projets, échappe le HTML et lie via APP_URL', () => {
-    const html = renderWeeklyReportHtml(
-      'Yvig',
-      projects,
-      new Date('2026-07-13T07:00:00'),
-      new Date('2026-07-20T07:00:00'),
-    );
-    expect(html).toContain('Bonjour Yvig');
+    const html = renderWeeklyReportHtml('en', 'Yvig', projects, weekStart, weekEnd);
+    expect(html).toContain('Hello Yvig');
     expect(html).toContain('Projet &lt;Démo&gt;');
     expect(html).toContain('https://review.studio/projects/7');
-    expect(html).toContain('Rapport hebdomadaire de production');
-    expect(html).toContain('Versions publiées');
-    expect(html).toContain('Notes ouvertes');
+    expect(html).toContain('Weekly production report');
+    expect(html).toContain('Published versions');
+    expect(html).toContain('Open notes');
   });
 
   it('affiche un message quand aucune activité', () => {
-    const html = renderWeeklyReportHtml('Yvig', [], new Date(), new Date());
-    expect(html).toContain('Aucune activité cette semaine');
+    const html = renderWeeklyReportHtml('en', 'Yvig', [], new Date(), new Date());
+    expect(html).toContain('No activity this week');
+  });
+
+  it('rend le rapport dans la langue du destinataire, dates comprises', () => {
+    const html = renderWeeklyReportHtml('fr', 'Yvig', projects, weekStart, weekEnd);
+    expect(html).toContain('lang="fr"');
+    expect(html).toContain('Rapport hebdomadaire de production');
+    expect(html).toContain('Versions publiées');
+    expect(html).toContain('13 juillet');
+  });
+
+  // « Retakes » est du vocabulaire de production : il reste en anglais partout.
+  it('garde « Retakes » intact dans toutes les langues', () => {
+    for (const locale of ['en', 'fr', 'ja', 'br'] as const) {
+      expect(renderWeeklyReportHtml(locale, 'Yvig', projects, weekStart, weekEnd)).toContain('Retakes');
+    }
   });
 });
 

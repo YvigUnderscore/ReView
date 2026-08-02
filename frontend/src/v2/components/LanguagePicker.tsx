@@ -13,11 +13,29 @@ import { Select } from './ui/select';
  * et l'avertissement de traduction automatique vivent dans `TranslationNotice`, à afficher
  * à côté de ce sélecteur.
  */
-export default function LanguagePicker({ id, className }: { id?: string; className?: string }) {
+export default function LanguagePicker({
+  id,
+  className,
+  onSelect,
+}: {
+  id?: string;
+  className?: string;
+  /**
+   * Appelé après la bascule. Le composant sert aussi l'écran de connexion, où aucun
+   * compte n'existe encore : c'est donc à l'appelant de décider si le choix se
+   * persiste côté serveur.
+   */
+  onSelect?: (locale: Locale) => void;
+}) {
   const t = useT();
   const locale = useLocale();
   const regional = LOCALES.filter((l) => l.regional);
   const general = LOCALES.filter((l) => !l.regional);
+
+  const choose = (code: Locale) => {
+    void setLocale(code);
+    onSelect?.(code);
+  };
 
   return (
     <Select
@@ -25,7 +43,7 @@ export default function LanguagePicker({ id, className }: { id?: string; classNa
       className={className}
       value={locale}
       aria-label={t('language.select')}
-      onChange={(e) => void setLocale(e.target.value as Locale)}
+      onChange={(e) => choose(e.target.value as Locale)}
     >
       <optgroup label={t('display.language')}>
         {general.map((l) => (

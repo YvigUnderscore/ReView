@@ -5,6 +5,7 @@ import { Monitor, Moon, Sun, Rows3, Rows4, type LucideIcon } from 'lucide-react'
 import { useTheme, type ThemeMode } from '../stores/useTheme';
 import { useDensity, type Density } from '../stores/useDensity';
 import { useT } from '../i18n';
+import { useUpdatePreferences } from '../lib/usePreferences';
 import LanguagePicker from './LanguagePicker';
 import TranslationNotice from './TranslationNotice';
 
@@ -78,6 +79,9 @@ export default function DisplaySettings() {
   const setMode = useTheme((s) => s.setMode);
   const density = useDensity((s) => s.density);
   const setDensity = useDensity((s) => s.setDensity);
+  // Thème et densité restent propres à l'appareil ; la langue suit le compte, parce que
+  // le serveur s'en sert pour les emails, qui ne se lisent pas depuis cet appareil-là.
+  const updatePrefs = useUpdatePreferences();
 
   const themeOpts: readonly Opt<ThemeMode>[] = [
     { value: 'system', label: t('display.theme.system'), icon: Monitor },
@@ -103,7 +107,11 @@ export default function DisplaySettings() {
         />
       </Row>
       <Row label={t('display.language')} hint={t('display.language.hint')}>
-        <LanguagePicker id="display-language" className="py-1 text-xs" />
+        <LanguagePicker
+          id="display-language"
+          className="py-1 text-xs"
+          onSelect={(locale) => updatePrefs.mutate({ locale })}
+        />
       </Row>
       <TranslationNotice />
     </section>

@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — 협업 review 플랫폼",
+
+  "common.anonymous": "익명",
+
+  "digest.subject": "ReView — 프로젝트 활동",
+  "digest.title": "{day} 요약",
+  "digest.greeting": "{name}님, 지난 24시간 동안의 프로젝트 활동입니다:",
+  "digest.versions": "새 version",
+  "digest.media": "게시된 미디어",
+  "digest.comments": "댓글",
+  "digest.by": "{name} 작성",
+  "digest.commentOn": "{media}에 남긴 {author}의 댓글",
+  "digest.optOut": "ReView 프로필에서 일일 요약이 켜져 있어 이 메일을 보내드립니다.",
+
+  "weekly.subject": "ReView — 주간 제작 리포트",
+  "weekly.title": "주간 제작 리포트",
+  "weekly.greeting": "{name}님, {from}부터 {to}까지의 제작 활동입니다:",
+  "weekly.empty": "이번 주 활동이 없습니다.",
+  "weekly.column.project": "프로젝트",
+  "weekly.column.published": "게시된 version",
+  "weekly.column.approvals": "승인",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "미해결 노트",
+  "weekly.optOut": "ReView 프로필에서 켜져 있어 이 리포트를 보내드립니다(슈퍼바이저).",
+
+  "smtp.test.subject": "ReView — SMTP 테스트",
+  "smtp.test.title": "SMTP 테스트",
+  "smtp.test.body": "ReView에서 보낸 테스트 메일입니다. 이 메일을 받으셨다면 SMTP 설정이 정상입니다."
+}

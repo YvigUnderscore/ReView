@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — savenn review a-stroll",
+
+  "common.anonymous": "Dizanv",
+
+  "digest.subject": "ReView — oberiantiz ho raktresoù",
+  "digest.title": "Diverradenn an {day}",
+  "digest.greeting": "Demat {name}, setu oberiantiz an 24 eurvezh diwezhañ war ho raktresoù :",
+  "digest.versions": "Versions nevez",
+  "digest.media": "Mediaoù embannet",
+  "digest.comments": "Evezhiadennoù",
+  "digest.by": "gant {name}",
+  "digest.commentOn": "{author} war {media}",
+  "digest.optOut": "Resev a rit ar postel-mañ rak gweredekaet eo an diverradenn pemdeziek en ho profil ReView.",
+
+  "weekly.subject": "ReView — danevell sizhuniek ar produadur",
+  "weekly.title": "Danevell sizhuniek ar produadur",
+  "weekly.greeting": "Demat {name}, setu oberiantiz ar produadur eus an {from} d'an {to} :",
+  "weekly.empty": "Oberiantiz ebet ar sizhun-mañ.",
+  "weekly.column.project": "Raktres",
+  "weekly.column.published": "Versions embannet",
+  "weekly.column.approvals": "Aprouadurioù",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "Notennoù digor",
+  "weekly.optOut": "Resev a rit an danevell-mañ rak gweredekaet eo en ho profil ReView (evezhierien).",
+
+  "smtp.test.subject": "ReView — prouad SMTP",
+  "smtp.test.title": "Prouad SMTP",
+  "smtp.test.body": "Ur postel prouad kaset eus ReView eo hemañ. Mard hoc'h eus e resevet, ez a en-dro ar c'hefluniañ SMTP."
+}

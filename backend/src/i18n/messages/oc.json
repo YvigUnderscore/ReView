@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — plataforma de review collaborativa",
+
+  "common.anonymous": "Anonim",
+
+  "digest.subject": "ReView — activitat de vòstres projèctes",
+  "digest.title": "Resumit del {day}",
+  "digest.greeting": "Bonjorn {name}, vaquí l'activitat de las 24 darrièras oras sus vòstres projèctes :",
+  "digest.versions": "Versions novèlas",
+  "digest.media": "Mèdias publicats",
+  "digest.comments": "Comentaris",
+  "digest.by": "per {name}",
+  "digest.commentOn": "{author} sus {media}",
+  "digest.optOut": "Recebètz aqueste corrièl perque lo resumit quotidian es activat dins vòstre perfil ReView.",
+
+  "weekly.subject": "ReView — rapòrt setmanièr de produccion",
+  "weekly.title": "Rapòrt setmanièr de produccion",
+  "weekly.greeting": "Bonjorn {name}, vaquí l'activitat de produccion del {from} al {to} :",
+  "weekly.empty": "Cap d'activitat aquesta setmana.",
+  "weekly.column.project": "Projècte",
+  "weekly.column.published": "Versions publicadas",
+  "weekly.column.approvals": "Aprovacions",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "Nòtas dubèrtas",
+  "weekly.optOut": "Recebètz aqueste rapòrt perque es activat dins vòstre perfil ReView (supervisors).",
+
+  "smtp.test.subject": "ReView — tèst SMTP",
+  "smtp.test.title": "Tèst SMTP",
+  "smtp.test.body": "Aquò es un corrièl de tèst mandat dempuèi ReView. Se lo recebètz, la configuracion SMTP fonciona."
+}

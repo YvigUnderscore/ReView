@@ -6,6 +6,8 @@ import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
 import { mailLayout, MAIL_ACCENT } from '../lib/mailTemplate';
+import { resolveUserLocale } from '../lib/settings';
+import { formatTag, t, type Locale } from '../i18n';
 import { displayName } from '../lib/userView';
 import { env } from '../config/env';
 
@@ -78,10 +80,12 @@ export async function buildWeeklyReport(since: Date): Promise<ProjectWeekly[]> {
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+const fmt = (d: Date, locale: Locale) =>
+  d.toLocaleDateString(formatTag(locale), { day: 'numeric', month: 'long' });
 
 /** HTML du rapport (pur — testé unitairement). */
 export function renderWeeklyReportHtml(
+  locale: Locale,
   userName: string,
   projects: ProjectWeekly[],
   weekStart: Date,
@@ -102,16 +106,21 @@ ${cell(p.publishedVersions)}${cell(p.approved)}${cell(p.retakes, true)}${cell(p.
     .join('');
   const table = `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0">
 <thead><tr style="color:#9ca3af;text-align:right">
-<th style="padding:6px 10px;text-align:left">Projet</th>
-<th style="padding:6px 10px">Versions publiées</th>
-<th style="padding:6px 10px">Approbations</th>
-<th style="padding:6px 10px">Retakes</th>
-<th style="padding:6px 10px">Notes ouvertes</th>
+<th style="padding:6px 10px;text-align:left">${t(locale, 'weekly.column.project')}</th>
+<th style="padding:6px 10px">${t(locale, 'weekly.column.published')}</th>
+<th style="padding:6px 10px">${t(locale, 'weekly.column.approvals')}</th>
+<th style="padding:6px 10px">${t(locale, 'weekly.column.retakes')}</th>
+<th style="padding:6px 10px">${t(locale, 'weekly.column.openNotes')}</th>
 </tr></thead><tbody>${rows}</tbody></table>`;
-  const content = `<p>Bonjour ${esc(userName)}, voici l'activité de production du ${fmt(weekStart)} au ${fmt(weekEnd)} :</p>
-${projects.length ? table : '<p>Aucune activité cette semaine.</p>'}
-<p style="color:#6b7280;font-size:12px">Vous recevez ce rapport car il est activé dans votre profil ReView (superviseurs).</p>`;
-  return mailLayout('Rapport hebdomadaire de production', content);
+  const greeting = t(locale, 'weekly.greeting', {
+    name: userName,
+    from: fmt(weekStart, locale),
+    to: fmt(weekEnd, locale),
+  });
+  const content = `<p>${esc(greeting)}</p>
+${projects.length ? table : `<p>${t(locale, 'weekly.empty')}</p>`}
+<p style="color:#6b7280;font-size:12px">${t(locale, 'weekly.optOut')}</p>`;
+  return mailLayout(locale, t(locale, 'weekly.title'), content);
 }
 
 /** Envoie le rapport hebdo aux superviseurs/admins abonnés (`preferences.weeklyReport`). */
@@ -145,8 +154,9 @@ export async function sendWeeklyReports(now = new Date()): Promise<number> {
   }
   let sent = 0;
   for (const u of optedIn) {
-    const html = renderWeeklyReportHtml(displayName(u), projects, since, now);
-    if (await sendMail(u.email, 'ReView — rapport hebdomadaire de production', html)) sent += 1;
+    const locale = await resolveUserLocale(u.preferences);
+    const html = renderWeeklyReportHtml(locale, displayName(u), projects, since, now);
+    if (await sendMail(u.email, t(locale, 'weekly.subject'), html)) sent += 1;
   }
   logger.info(`[WeeklyReport] ${sent} rapport(s) envoyé(s)`);
   return sent;

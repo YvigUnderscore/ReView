@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — kollaborativi Review-Plattform",
+
+  "common.anonymous": "Anonym",
+
+  "digest.subject": "ReView — Aktivität in dine Projekt",
+  "digest.title": "Zsammefassung vum {day}",
+  "digest.greeting": "Hallo {name}, do isch d'Aktivität vu de letschte 24 Stund in dine Projekt:",
+  "digest.versions": "Neji Versions",
+  "digest.media": "Veröffentlichti Medie",
+  "digest.comments": "Kommentar",
+  "digest.by": "vu {name}",
+  "digest.commentOn": "{author} züe {media}",
+  "digest.optOut": "Du kriegsch die E-Mail, wil d'täglichi Zsammefassung in dim ReView-Profil ahgschalte isch.",
+
+  "weekly.subject": "ReView — wechentlicher Produktionsbericht",
+  "weekly.title": "Wechentlicher Produktionsbericht",
+  "weekly.greeting": "Hallo {name}, do isch d'Produktionsaktivität vum {from} bis {to}:",
+  "weekly.empty": "Die Wuch git's kei Aktivität.",
+  "weekly.column.project": "Projekt",
+  "weekly.column.published": "Veröffentlichti Versions",
+  "weekly.column.approvals": "Freigabe",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "Offeni Notize",
+  "weekly.optOut": "Du kriegsch d'r Bericht, wil er in dim ReView-Profil ahgschalte isch (Supervisor).",
+
+  "smtp.test.subject": "ReView — SMTP-Test",
+  "smtp.test.title": "SMTP-Test",
+  "smtp.test.body": "Des isch e Test-E-Mail vu ReView. Wenn du sie kriegsch, funktioniert d'SMTP-Ihstellung."
+}

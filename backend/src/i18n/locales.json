@@ -1,0 +1,132 @@
+{
+  "$comment": "Registre des langues de ReView. Copie identique dans backend/src/i18n/locales.json (vérifiée par scripts/check-translations.mjs). Ajouter une langue = une entrée ici + un messages/<code>.json dans les deux paquets. Voir DOCUMENTATION/development/i18n.md.",
+  "base": "en",
+  "locales": [
+    {
+      "code": "en",
+      "native": "English",
+      "english": "English",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": false,
+      "intl": { "plural": ["en"], "format": ["en"] }
+    },
+    {
+      "code": "fr",
+      "native": "Français",
+      "english": "French",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["fr"], "format": ["fr"] }
+    },
+    {
+      "code": "es",
+      "native": "Español",
+      "english": "Spanish",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["es"], "format": ["es"] }
+    },
+    {
+      "code": "de",
+      "native": "Deutsch",
+      "english": "German",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["de"], "format": ["de"] }
+    },
+    {
+      "code": "pt",
+      "native": "Português",
+      "english": "Portuguese",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["pt"], "format": ["pt"] }
+    },
+    {
+      "code": "zh-Hans",
+      "native": "简体中文",
+      "english": "Chinese (Simplified)",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["zh"], "format": ["zh-Hans"] }
+    },
+    {
+      "code": "ko",
+      "native": "한국어",
+      "english": "Korean",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["ko"], "format": ["ko"] }
+    },
+    {
+      "code": "ja",
+      "native": "日本語",
+      "english": "Japanese",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["ja"], "format": ["ja"] }
+    },
+    {
+      "code": "hi",
+      "native": "हिन्दी",
+      "english": "Hindi",
+      "dir": "ltr",
+      "regional": false,
+      "machineTranslated": true,
+      "intl": { "plural": ["hi"], "format": ["hi"] }
+    },
+    {
+      "code": "br",
+      "native": "Brezhoneg",
+      "english": "Breton",
+      "dir": "ltr",
+      "regional": true,
+      "machineTranslated": true,
+      "intl": { "plural": ["br"], "format": ["fr"] }
+    },
+    {
+      "code": "eu",
+      "native": "Euskara",
+      "english": "Basque",
+      "dir": "ltr",
+      "regional": true,
+      "machineTranslated": true,
+      "intl": { "plural": ["eu"], "format": ["eu"] }
+    },
+    {
+      "code": "co",
+      "native": "Corsu",
+      "english": "Corsican",
+      "dir": "ltr",
+      "regional": true,
+      "machineTranslated": true,
+      "intl": { "plural": ["co", "it"], "format": ["fr"] }
+    },
+    {
+      "code": "gsw-FR",
+      "native": "Elsässisch",
+      "english": "Alsatian",
+      "dir": "ltr",
+      "regional": true,
+      "machineTranslated": true,
+      "intl": { "plural": ["gsw", "de"], "format": ["fr"] }
+    },
+    {
+      "code": "oc",
+      "native": "Occitan",
+      "english": "Occitan",
+      "dir": "ltr",
+      "regional": true,
+      "machineTranslated": true,
+      "intl": { "plural": ["oc", "ca"], "format": ["fr"] }
+    }
+  ]
+}

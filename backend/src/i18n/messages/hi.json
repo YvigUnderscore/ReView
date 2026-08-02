@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — सहयोगी review प्लेटफ़ॉर्म",
+
+  "common.anonymous": "अनाम",
+
+  "digest.subject": "ReView — आपके प्रोजेक्ट की गतिविधि",
+  "digest.title": "{day} का सारांश",
+  "digest.greeting": "नमस्ते {name}, पिछले 24 घंटों में आपके प्रोजेक्ट की गतिविधि:",
+  "digest.versions": "नए version",
+  "digest.media": "प्रकाशित मीडिया",
+  "digest.comments": "टिप्पणियाँ",
+  "digest.by": "{name} द्वारा",
+  "digest.commentOn": "{media} पर {author}",
+  "digest.optOut": "आपको यह ईमेल इसलिए मिला क्योंकि आपकी ReView प्रोफ़ाइल में दैनिक सारांश चालू है।",
+
+  "weekly.subject": "ReView — साप्ताहिक प्रोडक्शन रिपोर्ट",
+  "weekly.title": "साप्ताहिक प्रोडक्शन रिपोर्ट",
+  "weekly.greeting": "नमस्ते {name}, {from} से {to} तक की प्रोडक्शन गतिविधि:",
+  "weekly.empty": "इस सप्ताह कोई गतिविधि नहीं।",
+  "weekly.column.project": "प्रोजेक्ट",
+  "weekly.column.published": "प्रकाशित version",
+  "weekly.column.approvals": "स्वीकृतियाँ",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "खुले नोट्स",
+  "weekly.optOut": "आपको यह रिपोर्ट इसलिए मिली क्योंकि यह आपकी ReView प्रोफ़ाइल में चालू है (सुपरवाइज़र)।",
+
+  "smtp.test.subject": "ReView — SMTP परीक्षण",
+  "smtp.test.title": "SMTP परीक्षण",
+  "smtp.test.body": "यह ReView से भेजा गया एक परीक्षण ईमेल है। यदि यह आपको मिला, तो SMTP कॉन्फ़िगरेशन सही है।"
+}

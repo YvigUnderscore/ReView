@@ -14,7 +14,9 @@ import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
 import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
-import { getSourceUrl } from '../lib/settings';
+import { getSourceUrl, resolveUserLocale } from '../lib/settings';
+import * as UserService from '../services/UserService';
+import { t } from '../i18n';
 import * as SmtpService from '../services/SmtpService';
 import { sendMail } from '../lib/mailer';
 import { mailLayout } from '../lib/mailTemplate';
@@ -154,13 +156,12 @@ router.post(
   requireRole(Role.ADMIN),
   validate({ body: z.object({ to: z.string().email() }) }),
   async (req, res) => {
+    // L'email part dans la langue de l'admin qui déclenche le test : c'est lui qui le lit.
+    const locale = await resolveUserLocale(await UserService.getPreferences(req.user!.id));
     const ok = await sendMail(
       req.body.to,
-      'ReView — test SMTP',
-      mailLayout(
-        'Test SMTP',
-        '<p>Ceci est un email de test envoyé depuis ReView. Si vous le recevez, la configuration SMTP fonctionne.</p>',
-      ),
+      t(locale, 'smtp.test.subject'),
+      mailLayout(locale, t(locale, 'smtp.test.title'), `<p>${t(locale, 'smtp.test.body')}</p>`),
     );
     if (!ok) throw badRequest('Envoi impossible (SMTP non configuré ou erreur)', 'SMTP_SEND_FAILED');
     res.json({ sent: true });

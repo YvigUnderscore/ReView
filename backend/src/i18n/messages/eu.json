@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — lankidetzazko review plataforma",
+
+  "common.anonymous": "Anonimoa",
+
+  "digest.subject": "ReView — zure proiektuen jarduera",
+  "digest.title": "{day}(e)ko laburpena",
+  "digest.greeting": "Kaixo {name}, hona zure proiektuetako azken 24 orduetako jarduera:",
+  "digest.versions": "Versions berriak",
+  "digest.media": "Argitaratutako edukiak",
+  "digest.comments": "Iruzkinak",
+  "digest.by": "{name}(e)k egina",
+  "digest.commentOn": "{author}, {media}(e)n",
+  "digest.optOut": "Mezu hau jaso duzu zure ReView profilean eguneroko laburpena aktibatuta duzulako.",
+
+  "weekly.subject": "ReView — asteko produkzio-txostena",
+  "weekly.title": "Asteko produkzio-txostena",
+  "weekly.greeting": "Kaixo {name}, hona {from} eta {to} bitarteko produkzio-jarduera:",
+  "weekly.empty": "Aste honetan jarduerarik ez.",
+  "weekly.column.project": "Proiektua",
+  "weekly.column.published": "Argitaratutako versions",
+  "weekly.column.approvals": "Onarpenak",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "Ohar irekiak",
+  "weekly.optOut": "Txosten hau jaso duzu zure ReView profilean aktibatuta dagoelako (gainbegiraleak).",
+
+  "smtp.test.subject": "ReView — SMTP proba",
+  "smtp.test.title": "SMTP proba",
+  "smtp.test.body": "Hau ReViewetik bidalitako proba-mezu bat da. Jaso baduzu, SMTP konfigurazioak ondo funtzionatzen du."
+}

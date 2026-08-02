@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — piattaforma di review cullaburativa",
+
+  "common.anonymous": "Anonimu",
+
+  "digest.subject": "ReView — attività di i to prughjetti",
+  "digest.title": "Riassuntu di u {day}",
+  "digest.greeting": "Bonghjornu {name}, eccu l'attività di l'ultime 24 ore nant'à i to prughjetti :",
+  "digest.versions": "Versions nove",
+  "digest.media": "Media pubblicati",
+  "digest.comments": "Cummenti",
+  "digest.by": "da {name}",
+  "digest.commentOn": "{author} nant'à {media}",
+  "digest.optOut": "Ricevi st'e-mail perchè u riassuntu ghjurnalieru hè attivatu in u to prufilu ReView.",
+
+  "weekly.subject": "ReView — rapportu settimanale di pruduzzione",
+  "weekly.title": "Rapportu settimanale di pruduzzione",
+  "weekly.greeting": "Bonghjornu {name}, eccu l'attività di pruduzzione da u {from} à u {to} :",
+  "weekly.empty": "Nisuna attività sta settimana.",
+  "weekly.column.project": "Prughjettu",
+  "weekly.column.published": "Versions pubblicate",
+  "weekly.column.approvals": "Appruvazioni",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "Note aperte",
+  "weekly.optOut": "Ricevi stu rapportu perchè hè attivatu in u to prufilu ReView (supervisori).",
+
+  "smtp.test.subject": "ReView — prova SMTP",
+  "smtp.test.title": "Prova SMTP",
+  "smtp.test.body": "Quessu hè un e-mail di prova mandatu da ReView. S'è tù u ricevi, a cunfigurazione SMTP funziona."
+}

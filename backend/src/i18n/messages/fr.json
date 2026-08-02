@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — plateforme de review collaborative",
+
+  "common.anonymous": "Anonyme",
+
+  "digest.subject": "ReView — activité de vos projets",
+  "digest.title": "Digest du {day}",
+  "digest.greeting": "Bonjour {name}, voici l'activité des dernières 24 heures sur vos projets :",
+  "digest.versions": "Nouvelles versions",
+  "digest.media": "Médias publiés",
+  "digest.comments": "Commentaires",
+  "digest.by": "par {name}",
+  "digest.commentOn": "{author} sur {media}",
+  "digest.optOut": "Vous recevez cet email car le digest quotidien est activé dans votre profil ReView.",
+
+  "weekly.subject": "ReView — rapport hebdomadaire de production",
+  "weekly.title": "Rapport hebdomadaire de production",
+  "weekly.greeting": "Bonjour {name}, voici l'activité de production du {from} au {to} :",
+  "weekly.empty": "Aucune activité cette semaine.",
+  "weekly.column.project": "Projet",
+  "weekly.column.published": "Versions publiées",
+  "weekly.column.approvals": "Approbations",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "Notes ouvertes",
+  "weekly.optOut": "Vous recevez ce rapport car il est activé dans votre profil ReView (superviseurs).",
+
+  "smtp.test.subject": "ReView — test SMTP",
+  "smtp.test.title": "Test SMTP",
+  "smtp.test.body": "Ceci est un email de test envoyé depuis ReView. Si vous le recevez, la configuration SMTP fonctionne."
+}

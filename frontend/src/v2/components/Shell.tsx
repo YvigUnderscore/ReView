@@ -37,7 +37,7 @@ import OnboardingTour from './OnboardingTour';
 import { useGlobalShortcuts } from '../lib/shortcuts';
 import { usePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
-import { useT } from '../i18n';
+import { syncAccountLocale, useT } from '../i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
@@ -131,6 +131,12 @@ export default function Shell({
   const openHelp = useCallback(() => setHelpOpen(true), []);
   // Raccourcis globaux reconfigurables (42.A2) : touches résolues depuis les préférences.
   const prefsQ = usePreferences();
+  // Langue du compte : suivie sur un appareil qui n'a pas encore fait de choix explicite
+  // (nouveau poste, session invitée). Un choix local, lui, reste prioritaire.
+  const accountLocale = prefsQ.data?.locale;
+  useEffect(() => {
+    syncAccountLocale(accountLocale);
+  }, [accountLocale]);
   const bindings = useMemo(() => resolveBindings(prefsQ.data?.shortcuts), [prefsQ.data?.shortcuts]);
   useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp, bindings });
   // Temps réel : room du projet courant → invalidations de cache ciblées (10.E3)

@@ -6,10 +6,17 @@ import { mailLayout, MAIL_ACCENT } from './mailTemplate';
 
 describe('mailTemplate — enveloppe de marque (Phase 22)', () => {
   it('emballe le titre et le contenu', () => {
-    const html = mailLayout('Mon titre', '<p>Corps</p>');
+    const html = mailLayout('en', 'Mon titre', '<p>Corps</p>');
     expect(html).toContain('Mon titre');
     expect(html).toContain('<p>Corps</p>');
     expect(html).toContain('ReView'); // en-tête de marque
+  });
+
+  it('traduit le pied et annonce la langue du message', () => {
+    expect(mailLayout('en', 'T', '')).toContain('collaborative review platform');
+    const fr = mailLayout('fr', 'T', '');
+    expect(fr).toContain('plateforme de review collaborative');
+    expect(fr).toContain('lang="fr"');
   });
 
   it('expose un accent de marque non vide', () => {

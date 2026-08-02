@@ -1,0 +1,30 @@
+{
+  "mail.footer": "ReView — 共同 review プラットフォーム",
+
+  "common.anonymous": "匿名",
+
+  "digest.subject": "ReView — プロジェクトの動き",
+  "digest.title": "{day} のダイジェスト",
+  "digest.greeting": "{name} さん、過去 24 時間のプロジェクトの動きをお届けします：",
+  "digest.versions": "新しい version",
+  "digest.media": "公開されたメディア",
+  "digest.comments": "コメント",
+  "digest.by": "{name} による",
+  "digest.commentOn": "{media} への {author} のコメント",
+  "digest.optOut": "ReView のプロフィールで日次ダイジェストが有効になっているため、このメールをお送りしています。",
+
+  "weekly.subject": "ReView — 週次制作レポート",
+  "weekly.title": "週次制作レポート",
+  "weekly.greeting": "{name} さん、{from} から {to} までの制作状況をお届けします：",
+  "weekly.empty": "今週の動きはありません。",
+  "weekly.column.project": "プロジェクト",
+  "weekly.column.published": "公開された version",
+  "weekly.column.approvals": "承認",
+  "weekly.column.retakes": "Retakes",
+  "weekly.column.openNotes": "未対応の指摘",
+  "weekly.optOut": "ReView のプロフィールで有効になっているため、このレポートをお送りしています（スーパーバイザー向け）。",
+
+  "smtp.test.subject": "ReView — SMTP テスト",
+  "smtp.test.title": "SMTP テスト",
+  "smtp.test.body": "これは ReView から送信したテストメールです。届いていれば、SMTP の設定は正しく動作しています。"
+}

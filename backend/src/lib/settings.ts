@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { prisma } from './prisma';
+import { BASE_LOCALE, isLocale, localeFromPreferences, type Locale } from '../i18n';
 
 /**
  * Réglages studio configurables (table Setting). Valeurs par défaut si absentes.
@@ -24,6 +25,9 @@ export const SETTING_KEYS = {
   // utilisateurs distants. Tout studio qui déploie une version modifiée doit y pointer
   // SES sources, pas le dépôt amont.
   STUDIO_SOURCE_URL: 'studio_source_url',
+  // Langue par défaut du studio : sert aux comptes qui n'ont rien choisi, et à tout ce
+  // que le serveur rend sans navigateur en face (emails, notifications).
+  STUDIO_DEFAULT_LOCALE: 'studio_default_locale',
 } as const;
 
 /** Dépôt amont — valeur par défaut du lien « code source » (AGPL §13). */
@@ -47,6 +51,22 @@ export function safeSourceUrl(value: string | null | undefined): string {
 export async function getSourceUrl(): Promise<string> {
   const row = await prisma.setting.findUnique({ where: { key: SETTING_KEYS.STUDIO_SOURCE_URL } });
   return safeSourceUrl(row?.value);
+}
+
+/** Langue par défaut du studio (repli sur l'anglais, langue de base du produit). */
+export async function getDefaultLocale(): Promise<Locale> {
+  const row = await prisma.setting.findUnique({
+    where: { key: SETTING_KEYS.STUDIO_DEFAULT_LOCALE },
+  });
+  return isLocale(row?.value) ? row.value : BASE_LOCALE;
+}
+
+/**
+ * Langue d'un destinataire : son choix explicite, sinon le défaut du studio. Un email
+ * part toujours dans une langue décidée, jamais dans celle du serveur.
+ */
+export async function resolveUserLocale(preferences: unknown): Promise<Locale> {
+  return localeFromPreferences(preferences) ?? (await getDefaultLocale());
 }
 
 const DEFAULTS: Record<string, number> = {

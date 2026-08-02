@@ -7,6 +7,8 @@ import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
 import { mailLayout, MAIL_ACCENT } from '../lib/mailTemplate';
 import { displayName } from '../lib/userView';
+import { resolveUserLocale } from '../lib/settings';
+import { formatTag, t, type Locale } from '../i18n';
 
 /**
  * Digest email quotidien (backlog P2 10.G) : résumé des activités de la veille,
@@ -37,6 +39,7 @@ async function buildProjectDigest(
   projectId: number,
   projectName: string,
   since: Date,
+  locale: Locale,
 ): Promise<ProjectDigest | null> {
   const inProject = {
     OR: [{ task: { OR: [{ shot: { projectId } }, { asset: { projectId } }] } }, { asset: { projectId } }],
@@ -84,7 +87,7 @@ async function buildProjectDigest(
   if (versions.length === 0 && media.length === 0 && comments.length === 0) return null;
 
   const who = (u: { id: number; email: string } | null, guest?: string | null) =>
-    u ? displayName(u) : (guest ?? 'Anonyme');
+    u ? displayName(u) : (guest ?? t(locale, 'common.anonymous'));
   return {
     projectId,
     projectName,
@@ -105,14 +108,18 @@ async function buildProjectDigest(
 }
 
 /** Digest complet d'un utilisateur : un bloc par projet dont il est membre, actifs seulement. */
-export async function buildUserDigest(userId: number, since: Date): Promise<ProjectDigest[]> {
+export async function buildUserDigest(
+  userId: number,
+  since: Date,
+  locale: Locale = 'en',
+): Promise<ProjectDigest[]> {
   const memberships = await prisma.projectMembership.findMany({
     where: { userId, project: { deletedAt: null } },
     select: { project: { select: { id: true, name: true } } },
   });
   const digests: ProjectDigest[] = [];
   for (const { project } of memberships) {
-    const d = await buildProjectDigest(project.id, project.name, since);
+    const d = await buildProjectDigest(project.id, project.name, since, locale);
     if (d) digests.push(d);
   }
   return digests;
@@ -121,8 +128,17 @@ export async function buildUserDigest(userId: number, since: Date): Promise<Proj
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** HTML de l'email (pur — testé unitairement). */
-export function renderDigestHtml(userName: string, digests: ProjectDigest[], date: Date): string {
-  const day = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+export function renderDigestHtml(
+  locale: Locale,
+  userName: string,
+  digests: ProjectDigest[],
+  date: Date,
+): string {
+  const day = date.toLocaleDateString(formatTag(locale), {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
   const blocks = digests
     .map((d) => {
       const link = env.APP_URL ? `${env.APP_URL}/projects/${d.projectId}` : null;
@@ -136,24 +152,33 @@ export function renderDigestHtml(userName: string, digests: ProjectDigest[], dat
       return `<div style="margin:18px 0;padding:14px;border:1px solid #e5e5e5;border-radius:8px">
 <h2 style="margin:0 0 6px;font-size:16px">${title}</h2>
 ${list(
-  'Nouvelles versions',
-  d.versions.map((v) => `${esc(v.label)} <span style="color:#888">par ${esc(v.author)}</span>`),
+  t(locale, 'digest.versions'),
+  d.versions.map(
+    (v) =>
+      `${esc(v.label)} <span style="color:#888">${esc(t(locale, 'digest.by', { name: v.author }))}</span>`,
+  ),
 )}
 ${list(
-  'Médias publiés',
-  d.media.map((m) => `${esc(m.label)} <span style="color:#888">par ${esc(m.uploader)}</span>`),
+  t(locale, 'digest.media'),
+  d.media.map(
+    (m) =>
+      `${esc(m.label)} <span style="color:#888">${esc(t(locale, 'digest.by', { name: m.uploader }))}</span>`,
+  ),
 )}
 ${list(
-  'Commentaires',
-  d.comments.map((c) => `<strong>${esc(c.author)}</strong> sur ${esc(c.mediaName)} : « ${esc(c.excerpt)} »`),
+  t(locale, 'digest.comments'),
+  d.comments.map(
+    (c) =>
+      `${esc(t(locale, 'digest.commentOn', { author: c.author, media: c.mediaName }))} : « ${esc(c.excerpt)} »`,
+  ),
 )}
 </div>`;
     })
     .join('');
-  const content = `<p>Bonjour ${esc(userName)}, voici l'activité des dernières 24 heures sur vos projets :</p>
+  const content = `<p>${esc(t(locale, 'digest.greeting', { name: userName }))}</p>
 ${blocks}
-<p style="color:#6b7280;font-size:12px">Vous recevez cet email car le digest quotidien est activé dans votre profil ReView.</p>`;
-  return mailLayout(`Digest du ${day}`, content);
+<p style="color:#6b7280;font-size:12px">${t(locale, 'digest.optOut')}</p>`;
+  return mailLayout(locale, t(locale, 'digest.title', { day }), content);
 }
 
 /** Envoie le digest quotidien à tous les abonnés (préférence `emailDigest`). */
@@ -178,10 +203,11 @@ export async function sendDailyDigests(now = new Date()): Promise<number> {
   for (const u of users) {
     const prefs = (u.preferences ?? {}) as Record<string, unknown>;
     if (prefs.emailDigest !== true) continue;
-    const digests = await buildUserDigest(u.id, since);
+    const locale = await resolveUserLocale(prefs);
+    const digests = await buildUserDigest(u.id, since, locale);
     if (digests.length === 0) continue;
-    const html = renderDigestHtml(displayName(u), digests, now);
-    if (await sendMail(u.email, `ReView — activité de vos projets`, html)) sent += 1;
+    const html = renderDigestHtml(locale, displayName(u), digests, now);
+    if (await sendMail(u.email, t(locale, 'digest.subject'), html)) sent += 1;
   }
   logger.info(`[Digest] ${sent} email(s) envoyé(s)`);
   return sent;

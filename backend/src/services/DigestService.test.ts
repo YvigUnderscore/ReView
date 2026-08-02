@@ -33,21 +33,42 @@ describe('DigestService — rendu HTML', () => {
   };
 
   it('contient les sections, échappe le HTML et lie le projet via APP_URL', () => {
-    const html = renderDigestHtml('Yvig', [digest], new Date('2026-07-11T07:00:00'));
-    expect(html).toContain('Bonjour Yvig');
+    const html = renderDigestHtml('en', 'Yvig', [digest], new Date('2026-07-11T07:00:00'));
+    expect(html).toContain('Hello Yvig');
     expect(html).toContain('Projet &lt;Démo&gt;');
     expect(html).toContain('https://review.studio/projects/5');
-    expect(html).toContain('Nouvelles versions (1)');
-    expect(html).toContain('Médias publiés (1)');
-    expect(html).toContain('Commentaires (1)');
+    expect(html).toContain('New versions (1)');
+    expect(html).toContain('Published media (1)');
+    expect(html).toContain('Comments (1)');
     expect(html).toContain('Grace');
   });
 
   it('omet les sections vides', () => {
-    const html = renderDigestHtml('Yvig', [{ ...digest, versions: [], media: [] }], new Date());
-    expect(html).not.toContain('Nouvelles versions');
-    expect(html).not.toContain('Médias publiés');
-    expect(html).toContain('Commentaires (1)');
+    const html = renderDigestHtml('en', 'Yvig', [{ ...digest, versions: [], media: [] }], new Date());
+    expect(html).not.toContain('New versions');
+    expect(html).not.toContain('Published media');
+    expect(html).toContain('Comments (1)');
+  });
+
+  it('rend le digest dans la langue du destinataire, pied compris', () => {
+    const html = renderDigestHtml('fr', 'Yvig', [digest], new Date('2026-07-11T07:00:00'));
+    expect(html).toContain('lang="fr"');
+    expect(html).toContain('Bonjour Yvig');
+    expect(html).toContain('Nouvelles versions (1)');
+    expect(html).toContain('plateforme de review collaborative');
+  });
+
+  it('date le digest dans la langue du destinataire', () => {
+    const day = new Date('2026-07-11T07:00:00');
+    expect(renderDigestHtml('en', 'Yvig', [digest], day)).toContain('July');
+    expect(renderDigestHtml('fr', 'Yvig', [digest], day)).toContain('juillet');
+    expect(renderDigestHtml('ja', 'Yvig', [digest], day)).toContain('7月');
+  });
+
+  // Le vocabulaire métier ne se traduit pas : un artiste lit « version » dans toutes
+  // les langues, y compris là où le reste de la phrase change d'alphabet.
+  it('garde le vocabulaire métier en anglais', () => {
+    expect(renderDigestHtml('ja', 'Yvig', [digest], new Date())).toContain('新しい version');
   });
 });
 
