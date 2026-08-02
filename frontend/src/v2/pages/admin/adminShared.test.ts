@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { parseSizeToBytes, bytesToUnit } from './adminShared';
+import { parseSizeToBytes, bytesToUnit, fmtDateTime } from './adminShared';
+
+describe('adminShared — fmtDateTime', () => {
+  it('formate une date ISO en fr-FR avec année et heure', () => {
+    const out = fmtDateTime('2026-08-02T10:30:00Z');
+    expect(out).toContain('2026');
+    expect(out).toMatch(/\d{2}:\d{2}/);
+  });
+});
 
 describe('adminShared — tailles Mo/Go (Phase 21)', () => {
   it('parseSizeToBytes convertit Go et Mo', () => {

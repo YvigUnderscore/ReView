@@ -38,6 +38,7 @@ import boardsRoutes from './routes/boards.routes';
 import shareRoutes from './routes/share.routes';
 import clientRoutes from './routes/client.routes';
 import adminRoutes from './routes/admin.routes';
+import adminExplorerRoutes from './routes/admin-explorer.routes';
 import notificationsRoutes from './routes/notifications.routes';
 import favoritesRoutes from './routes/favorites.routes';
 import documentsRoutes from './routes/documents.routes';
@@ -137,6 +138,7 @@ export const createApp = (): Express => {
   app.use('/api/client', shareLimiter, clientRoutes);
   app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
   app.use('/api/admin/jobs', jobsRoutes); // dashboard BullMQ (37.C)
+  app.use('/api/admin', adminExplorerRoutes); // fiches détaillées par entité (refonte admin)
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/favorites', favoritesRoutes);

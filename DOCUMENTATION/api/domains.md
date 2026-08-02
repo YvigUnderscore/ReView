@@ -35,7 +35,7 @@ detail lives in the interactive reference at `/api/docs`.
 | `/api/share` | Share links (create/revoke, supervisor+) |
 | `/api/client` | Public client access via share token |
 | `/api/bulk` | Multi-selection bulk operations |
-| `/api/admin` | Admin: users, system, settings, transcoding, trash, audit |
+| `/api/admin` | Admin: users, system, settings, transcoding, trash, audit — plus the content explorer (`/users/:id`, `/projects`, `/projects/:id`, `/versions`, `/comments`, `/storage`, `DELETE /sessions/:sid`) |
 | `/api/docs`, `/api/openapi.json` | This API's interactive reference |
 
 ## Related pages

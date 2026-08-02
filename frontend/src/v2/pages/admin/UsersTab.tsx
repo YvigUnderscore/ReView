@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -9,12 +10,16 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import Avatar from '../../components/Avatar';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { initialsFrom } from '../../lib/initials';
 import UserModal from './UserModal';
-import { fmtBytes } from './adminShared';
-import type { User } from '../../types/api';
+import { fmtBytes, ROLES } from './adminShared';
+import { filterUsers, sortUsers, type UserSort } from './adminUsers';
+import type { Role, User } from '../../types/api';
 
+/** Liste des comptes (refonte admin) : recherche, filtre par rôle, tri, fiche détaillée. */
 export default function UsersTab() {
   const qc = useQueryClient();
   const meId = useAuth((s) => s.user?.id) ?? 0;
@@ -22,6 +27,9 @@ export default function UsersTab() {
     queryKey: qk.users,
     queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users),
   });
+  const [q, setQ] = useState('');
+  const [role, setRole] = useState<Role | 'ALL'>('ALL');
+  const [sort, setSort] = useState<UserSort>('name');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
@@ -40,14 +48,40 @@ export default function UsersTab() {
   };
 
   if (isLoading) return <SkeletonRows count={5} />;
+  const shown = sortUsers(filterUsers(users ?? [], q, role), sort);
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Comptes utilisateurs</h2>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-44 flex-1">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Rechercher (nom, pseudo, email)…"
+            className="pl-8"
+          />
+        </div>
+        <Select value={role} onChange={(e) => setRole(e.target.value as Role | 'ALL')}>
+          <option value="ALL">Tous les rôles</option>
+          {ROLES.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </Select>
+        <Select value={sort} onChange={(e) => setSort(e.target.value as UserSort)}>
+          <option value="name">Tri : nom</option>
+          <option value="role">Tri : rôle</option>
+          <option value="storage">Tri : stockage</option>
+          <option value="recent">Tri : plus récents</option>
+        </Select>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus size={14} /> Nouvel utilisateur
         </Button>
       </div>
+      <p className="mb-2 text-xs text-muted-foreground">
+        {shown.length} compte(s) — cliquer sur un nom ouvre la fiche détaillée (projets, sessions, activité).
+      </p>
       <div className="overflow-hidden rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="bg-card text-left text-xs text-muted-foreground">
@@ -60,10 +94,10 @@ export default function UsersTab() {
             </tr>
           </thead>
           <tbody>
-            {(users ?? []).map((u) => (
-              <tr key={u.id} className="border-t border-border">
+            {shown.map((u) => (
+              <tr key={u.id} className="border-t border-border hover:bg-secondary/40">
                 <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
+                  <Link to={`/admin/users/${u.id}`} className="flex items-center gap-2">
                     <Avatar
                       seed={u.id}
                       initials={u.initials ?? initialsFrom(u.displayName ?? u.name)}
@@ -71,8 +105,8 @@ export default function UsersTab() {
                       size={28}
                       online={u.online}
                     />
-                    <span className="font-medium">{u.displayName ?? u.name ?? '—'}</span>
-                  </div>
+                    <span className="font-medium hover:underline">{u.displayName ?? u.name ?? '—'}</span>
+                  </Link>
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
                 <td className="px-3 py-2">
@@ -104,6 +138,13 @@ export default function UsersTab() {
                 </td>
               </tr>
             ))}
+            {shown.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Aucun compte ne correspond aux filtres.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

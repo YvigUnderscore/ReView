@@ -198,6 +198,14 @@ function AppRoutes() {
               }
             />
             <Route
+              path="/admin/:section/:id"
+              element={
+                <Protected>
+                  <AdminPage />
+                </Protected>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <Protected>

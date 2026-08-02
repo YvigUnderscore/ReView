@@ -263,6 +263,22 @@ class StorageService {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
+  /** Itère tous les objets du bucket (clé + taille) — cartographie stockage (admin). */
+  async *iterateObjects(prefix?: string): AsyncGenerator<{ key: string; size: number }> {
+    let continuationToken: string | undefined;
+    do {
+      const list = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+      for (const o of list.Contents ?? []) yield { key: o.Key!, size: o.Size ?? 0 };
+      continuationToken = list.IsTruncated ? list.NextContinuationToken : undefined;
+    } while (continuationToken);
+  }
+
   /** Supprime tous les objets sous un préfixe (ex. tout un MediaObject ou une Version). */
   async deletePrefix(prefix: string): Promise<void> {
     let continuationToken: string | undefined;

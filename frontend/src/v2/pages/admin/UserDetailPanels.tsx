@@ -1,0 +1,132 @@
+import { Link } from 'react-router-dom';
+import { KeyRound, MonitorSmartphone, X } from 'lucide-react';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import { Panel } from './AdminPrimitives';
+import { auditActionLabel, auditEntityLink, fmtDateTime } from './adminShared';
+import type {
+  AdminApiToken,
+  AdminUserActivity,
+  AdminUserMembership,
+  AdminUserSession,
+} from '../../types/api';
+
+/** Panneaux de la fiche utilisateur admin (projets, sessions, tokens, activité). */
+
+export function MembershipsPanel({ memberships }: { memberships: AdminUserMembership[] }) {
+  return (
+    <Panel title={`Projets (${memberships.length})`}>
+      <div className="space-y-1.5">
+        {memberships.map((m) => (
+          <div key={m.id} className="flex items-center justify-between gap-2 text-sm">
+            <Link
+              to={`/admin/projects/${m.project.id}`}
+              className="min-w-0 truncate font-medium hover:underline"
+            >
+              {m.project.name}
+              {m.project.deletedAt && <span className="ml-1 text-xs text-destructive">(corbeille)</span>}
+            </Link>
+            <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              <Badge variant="secondary">{m.role ?? 'rôle global'}</Badge>
+              depuis le {fmtDateTime(m.joinedAt)}
+            </span>
+          </div>
+        ))}
+        {memberships.length === 0 && <p className="text-xs text-muted-foreground">Membre d'aucun projet.</p>}
+      </div>
+    </Panel>
+  );
+}
+
+export function SessionsPanel({
+  sessions,
+  onRevoke,
+  onRevokeAll,
+}: {
+  sessions: AdminUserSession[];
+  onRevoke: (sid: string) => void;
+  onRevokeAll: () => void;
+}) {
+  return (
+    <Panel title={`Sessions actives (${sessions.length})`}>
+      <div className="space-y-1.5">
+        {sessions.map((s) => (
+          <div key={s.id} className="flex items-center gap-2 text-sm">
+            <MonitorSmartphone size={14} className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate" title={s.userAgent ?? undefined}>
+              {s.userAgent ?? 'Client inconnu'}
+            </span>
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {s.ip ?? '—'} · vue le {fmtDateTime(s.lastSeenAt)}
+            </span>
+            <button
+              onClick={() => onRevoke(s.id)}
+              title="Révoquer cette session"
+              className="rounded p-1 text-destructive hover:bg-secondary"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+        {sessions.length === 0 && <p className="text-xs text-muted-foreground">Aucune session active.</p>}
+      </div>
+      {sessions.length > 0 && (
+        <Button variant="outline" size="sm" className="mt-3" onClick={onRevokeAll}>
+          Révoquer toutes les sessions
+        </Button>
+      )}
+    </Panel>
+  );
+}
+
+export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
+  return (
+    <Panel title={`Tokens d'API (${tokens.length})`}>
+      <div className="space-y-1.5">
+        {tokens.map((t) => (
+          <div key={t.id} className="flex items-center gap-2 text-sm">
+            <KeyRound size={14} className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate font-medium">{t.name}</span>
+            <Badge variant="secondary">{t.scopes.join(', ')}</Badge>
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {t.lastUsedAt ? `utilisé le ${fmtDateTime(t.lastUsedAt)}` : 'jamais utilisé'}
+              {t.expiresAt ? ` · expire le ${fmtDateTime(t.expiresAt)}` : ''}
+            </span>
+          </div>
+        ))}
+        {tokens.length === 0 && <p className="text-xs text-muted-foreground">Aucun token actif.</p>}
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Révocation par un admin : section API &amp; Webhooks.
+      </p>
+    </Panel>
+  );
+}
+
+export function ActivityPanel({ activity }: { activity: AdminUserActivity[] }) {
+  return (
+    <Panel title="Activité récente (audit)">
+      <ul className="space-y-1 text-xs text-muted-foreground">
+        {activity.map((a) => {
+          const link = auditEntityLink(a.entityType, a.entityId);
+          return (
+            <li key={a.id} className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate">
+                {link ? (
+                  <Link to={link} className="text-foreground hover:underline">
+                    {auditActionLabel(a.action)}
+                  </Link>
+                ) : (
+                  <span className="text-foreground">{auditActionLabel(a.action)}</span>
+                )}
+                {a.entityType ? ` · ${a.entityType} ${a.entityId ?? ''}` : ''}
+              </span>
+              <span className="shrink-0">{fmtDateTime(a.createdAt)}</span>
+            </li>
+          );
+        })}
+        {activity.length === 0 && <li>Aucune action journalisée.</li>}
+      </ul>
+    </Panel>
+  );
+}

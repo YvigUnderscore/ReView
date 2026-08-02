@@ -3,8 +3,11 @@ import {
   Activity,
   Box,
   ClipboardCheck,
+  Database,
   Eye,
+  Film,
   Fingerprint,
+  FolderKanban,
   KeyRound,
   ListChecks,
   FolderCog,
@@ -12,6 +15,7 @@ import {
   LayoutDashboard,
   Mail,
   Megaphone,
+  MessageSquare,
   Palette,
   Server,
   Share2,
@@ -26,6 +30,12 @@ import OverviewTab from './admin/OverviewTab';
 import ActivityTab from './admin/ActivityTab';
 import SystemTab from './admin/SystemTab';
 import UsersTab from './admin/UsersTab';
+import UserDetailTab from './admin/UserDetailTab';
+import ProjectsAdminTab from './admin/ProjectsAdminTab';
+import ProjectAdminDetailTab from './admin/ProjectAdminDetailTab';
+import VersionsTab from './admin/VersionsTab';
+import CommentsTab from './admin/CommentsTab';
+import StorageTab from './admin/StorageTab';
 import SettingsTab from './admin/SettingsTab';
 import ProjectDefaultsTab from './admin/ProjectDefaultsTab';
 import HdriTab from './admin/HdriTab';
@@ -44,8 +54,9 @@ import AuditTab from './admin/AuditTab';
 
 /**
  * Sections d'administration — sous-routées via /admin/:section (10.C6), regroupées par
- * domaine (Phase 22) : les **contextes** de review (3D & Splat = HDRI/éclairage, Vidéo =
- * transcodage) sont isolés des réglages généraux et des communications.
+ * domaine. Refonte admin : le groupe « Contenus » offre des pages détaillées par entité
+ * (utilisateurs, projets, versions, commentaires, stockage) ; une section peut définir un
+ * composant `Detail` rendu quand l'URL porte un id (/admin/users/12, /admin/projects/3).
  */
 const SECTIONS = [
   {
@@ -56,7 +67,6 @@ const SECTIONS = [
     Component: OverviewTab,
   },
   { key: 'activity', group: 'Studio', label: 'Activité', icon: Activity, Component: ActivityTab },
-  { key: 'users', group: 'Studio', label: 'Utilisateurs', icon: UsersIcon, Component: UsersTab },
   { key: 'identity', group: 'Studio', label: 'Identité (SSO)', icon: Fingerprint, Component: IdentityTab },
   { key: 'system', group: 'Studio', label: 'Système', icon: Server, Component: SystemTab },
   { key: 'settings', group: 'Studio', label: 'Réglages', icon: SettingsIcon, Component: SettingsTab },
@@ -67,6 +77,31 @@ const SECTIONS = [
     icon: FolderCog,
     Component: ProjectDefaultsTab,
   },
+  {
+    key: 'users',
+    group: 'Contenus',
+    label: 'Utilisateurs',
+    icon: UsersIcon,
+    Component: UsersTab,
+    Detail: UserDetailTab,
+  },
+  {
+    key: 'projects',
+    group: 'Contenus',
+    label: 'Projets',
+    icon: FolderKanban,
+    Component: ProjectsAdminTab,
+    Detail: ProjectAdminDetailTab,
+  },
+  { key: 'versions', group: 'Contenus', label: 'Versions', icon: Film, Component: VersionsTab },
+  {
+    key: 'comments',
+    group: 'Contenus',
+    label: 'Commentaires',
+    icon: MessageSquare,
+    Component: CommentsTab,
+  },
+  { key: 'storage', group: 'Contenus', label: 'Stockage', icon: Database, Component: StorageTab },
   { key: 'hdri', group: 'Contextes de review', label: '3D & Splat', icon: Box, Component: HdriTab },
   { key: 'ocio', group: 'Contextes de review', label: 'Couleur (OCIO)', icon: Palette, Component: OcioTab },
   { key: 'video', group: 'Contextes de review', label: 'Vidéo', icon: Video, Component: TranscodeTab },
@@ -111,11 +146,11 @@ const SECTIONS = [
   },
 ] as const;
 
-const GROUPS = ['Studio', 'Contextes de review', 'Communications', 'Maintenance'] as const;
+const GROUPS = ['Studio', 'Contenus', 'Contextes de review', 'Communications', 'Maintenance'] as const;
 
 export default function AdminPage() {
   const role = useAuth((s) => s.user?.role);
-  const { section } = useParams();
+  const { section, id } = useParams();
   if (role !== 'ADMIN') {
     return (
       <Shell title="Administration">
@@ -124,7 +159,8 @@ export default function AdminPage() {
     );
   }
   const active = SECTIONS.find((s) => s.key === section) ?? SECTIONS[0];
-  const Active = active.Component;
+  const Detail = 'Detail' in active ? active.Detail : undefined;
+  const Active = id && Detail ? Detail : active.Component;
 
   return (
     <Shell>

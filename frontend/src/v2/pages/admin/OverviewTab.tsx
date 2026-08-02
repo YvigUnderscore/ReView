@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
@@ -36,14 +37,14 @@ export default function OverviewTab() {
           sub={`${stats.users.online} en ligne`}
           to="/admin/users"
         />
-        <Metric label="Projets" value={stats.pipeline.projects} to="/projects" />
-        <Metric label="Séquences" value={stats.pipeline.sequences} />
-        <Metric label="Shots" value={stats.pipeline.shots} />
-        <Metric label="Assets" value={stats.pipeline.assets} />
-        <Metric label="Versions" value={stats.pipeline.versions} />
+        <Metric label="Projets" value={stats.pipeline.projects} to="/admin/projects" />
+        <Metric label="Séquences" value={stats.pipeline.sequences} to="/admin/projects" />
+        <Metric label="Shots" value={stats.pipeline.shots} to="/admin/projects" />
+        <Metric label="Assets" value={stats.pipeline.assets} to="/admin/projects" />
+        <Metric label="Versions" value={stats.pipeline.versions} to="/admin/versions" />
         <Metric label="Médias" value={stats.media.count} to="/reviews" />
-        <Metric label="Commentaires" value={stats.comments} />
-        <Metric label="Stockage" value={fmtBytes(stats.media.storageBytes)} to="/admin/users" />
+        <Metric label="Commentaires" value={stats.comments} to="/admin/comments" />
+        <Metric label="Stockage" value={fmtBytes(stats.media.storageBytes)} to="/admin/storage" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -74,7 +75,9 @@ export default function OverviewTab() {
           <div className="space-y-1.5">
             {stats.topStorageUsers.map((u) => (
               <div key={u.id} className="flex items-center justify-between text-sm">
-                <span className="truncate">{u.name}</span>
+                <Link to={`/admin/users/${u.id}`} className="truncate hover:underline">
+                  {u.name}
+                </Link>
                 <span className="text-muted-foreground">
                   {fmtBytes(u.storageUsed)}
                   {u.storageLimit ? ` / ${fmtBytes(u.storageLimit)}` : ''}

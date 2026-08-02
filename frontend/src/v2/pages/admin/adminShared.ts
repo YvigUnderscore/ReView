@@ -138,6 +138,15 @@ export const fmtBytes = (b: number) =>
     : b >= 1e6
       ? (b / 1e6).toFixed(1) + ' Mo'
       : (b / 1e3).toFixed(0) + ' Ko';
+/** Date+heure courtes localisées (listes denses de l'admin). */
+export const fmtDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 export const fmtDuration = (s: number) => {
   const d = Math.floor(s / 86400),
     h = Math.floor((s % 86400) / 3600),
