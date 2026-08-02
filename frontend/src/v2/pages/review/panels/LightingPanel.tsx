@@ -10,6 +10,7 @@ import { Select } from '../../../components/ui/select';
 import { Switch } from '../../../components/ui/switch';
 import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { Model3DLightingState } from '../three/useModel3DLighting';
+import { useT } from '../../../i18n';
 
 /**
  * Panneau Éclairage du dock — modèle 3D seulement : un splat porte sa lumière cuite. Reprend
@@ -26,24 +27,25 @@ export default function LightingPanel({
   colorDisplay?: string;
   colorView?: string;
 }) {
+  const t = useT();
   const { cfg, setCfg, hdris, busy, save, clear } = lighting;
   return (
     <>
-      <Group title="Environnement">
+      <Group title={t('viewer.env.title')}>
         <Select
           value={cfg.hdriId ?? ''}
           onChange={(e) => setCfg({ ...cfg, hdriId: e.target.value || undefined })}
-          title="Environnement HDRI (éclairage image)"
+          title={t('viewer.hdri.title')}
           className={DOCK_SELECT}
         >
-          <option value="">Aucun</option>
+          <option value="">{t('common.none')}</option>
           {hdris.map((h) => (
             <option key={h.id} value={h.id}>
               {h.name}
             </option>
           ))}
         </Select>
-        <Row label="Exposition">
+        <Row label={t('viewer.exposure')}>
           <NumberField
             label="EV"
             value={Number(cfg.exposure.toFixed(2))}
@@ -54,7 +56,7 @@ export default function LightingPanel({
             pixelsPerStep={6}
           />
         </Row>
-        <Row label="Rotation Y">
+        <Row label={t('viewer.hdri.rotation')}>
           <NumberField
             label="°"
             value={Math.round(cfg.rotationDeg)}
@@ -64,24 +66,24 @@ export default function LightingPanel({
             step={1}
           />
         </Row>
-        <Row label="HDRI en fond">
+        <Row label={t('viewer.hdri.background')}>
           <Switch
             checked={cfg.showBackground}
             onCheckedChange={(showBackground) => setCfg({ ...cfg, showBackground })}
-            label="Afficher l’HDRI en fond"
+            label={t('viewer.hdri.background.hint')}
           />
         </Row>
-        <Row label="Sol d’ombres">
+        <Row label={t('viewer.shadowGround')}>
           <Switch
             checked={cfg.groundShadow}
             onCheckedChange={(groundShadow) => setCfg({ ...cfg, groundShadow })}
-            label="Sol récepteur d’ombres portées"
+            label={t('viewer.shadowGround.hint')}
           />
         </Row>
       </Group>
 
       {(colorDisplay || colorView) && (
-        <Group title="Gestion de couleur">
+        <Group title={t('viewer.color.title')}>
           {colorDisplay && (
             <Row label="Display">
               <Badge variant="secondary">{colorDisplay}</Badge>
@@ -92,7 +94,7 @@ export default function LightingPanel({
               <Badge variant="secondary">{colorView}</Badge>
             </Row>
           )}
-          <span className="rv-optbar__hint whitespace-normal">Hérité des réglages du projet (OCIO).</span>
+          <span className="rv-optbar__hint whitespace-normal">{t('viewer.color.inherited')}</span>
         </Group>
       )}
 
@@ -112,7 +114,7 @@ export default function LightingPanel({
           {clear && (
             <IconButton
               icon={Trash2}
-              label="Effacer l’éclairage par défaut"
+              label={t('viewer.clearLighting')}
               bordered
               disabled={busy}
               onClick={() => void clear()}

@@ -7,6 +7,7 @@ import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import { Switch } from '../../../components/ui/switch';
 import { Group, Row } from '../chrome/DockGroup';
+import { useT } from '../../../i18n';
 
 /** Vue enregistrée : pose de caméra nommée, partagée avec l'équipe (3D). */
 export interface CameraBookmark {
@@ -55,18 +56,19 @@ export default function CameraPanel({
     onSave: () => void;
   };
 }) {
+  const t = useT();
   return (
     <>
-      <Group title="Objectif">
-        <Row label="Focale" hint="Focale en millimètres, capteur 36 mm">
+      <Group title={t('viewer.lens.title')}>
+        <Row label={t('viewer.focal')} hint={t('viewer.focal.hint')}>
           <NumberField label="mm" value={focalMm} onChange={onFocalMm} min={7} max={400} step={1} />
         </Row>
-        <Row label="Tilt" hint="Inclinaison autour de l’axe de vue">
+        <Row label={t('viewer.tilt')} hint={t('viewer.tilt.hint')}>
           <NumberField label="°" value={tiltDeg} onChange={onTiltDeg} min={-180} max={180} step={1} />
         </Row>
         {dof && (
           <>
-            <Row label="Ouverture" hint="Profondeur de champ — 0 = net partout">
+            <Row label={t('viewer.aperture')} hint={t('viewer.aperture.hint')}>
               <NumberField
                 label={<Aperture size={13} />}
                 value={dof.aperture}
@@ -77,18 +79,18 @@ export default function CameraPanel({
                 pixelsPerStep={6}
               />
             </Row>
-            <Row label="Mise au point au clic">
+            <Row label={t('viewer.focusClick')}>
               <Switch
                 checked={dof.focusPick}
                 onCheckedChange={dof.onToggleFocusPick}
-                label="Choisir la mise au point au clic"
+                label={t('viewer.focusClick.hint')}
               />
             </Row>
           </>
         )}
       </Group>
 
-      <Group title="Cadrage">
+      <Group title={t('viewer.framing.title')}>
         <div className="flex gap-1.5">
           <Button size="sm" variant="outline" className="flex-1" onClick={onFrame}>
             <Frame size={13} />
@@ -99,32 +101,24 @@ export default function CameraPanel({
             Origine
           </Button>
         </div>
-        <Row label="Format" hint="Aspect de livraison hérité des réglages pipeline du shot">
+        <Row label={t('viewer.format')} hint={t('viewer.format.hint')}>
           <span className="font-mono text-xs">{aspectLabel}</span>
         </Row>
         {layout && (
           <Row
-            label="Vue de la caméra (PiP)"
+            label={t('viewer.pip')}
             hint="Sortir de la caméra et voir son point de vue dans une fenêtre flottante"
           >
-            <Switch
-              checked={layout.active}
-              onCheckedChange={layout.onToggle}
-              label="Mode layout : vue de la caméra en PiP"
-            />
+            <Switch checked={layout.active} onCheckedChange={layout.onToggle} label={t('viewer.pip.hint')} />
           </Row>
         )}
       </Group>
 
       {bookmarks && (
         <Group
-          title="Vues enregistrées"
+          title={t('viewer.bookmarks.title')}
           action={
-            <IconButton
-              icon={BookmarkPlus}
-              label="Enregistrer la vue courante — partagée avec l’équipe"
-              onClick={bookmarks.onSave}
-            />
+            <IconButton icon={BookmarkPlus} label={t('viewer.bookmarks.save')} onClick={bookmarks.onSave} />
           }
         >
           <div className="flex flex-wrap gap-1">
@@ -144,7 +138,9 @@ export default function CameraPanel({
                 {v.label}
               </button>
             ))}
-            {bookmarks.items.length === 0 && <span className="rv-optbar__hint">Aucune vue enregistrée.</span>}
+            {bookmarks.items.length === 0 && (
+              <span className="rv-optbar__hint">{t('viewer.bookmarks.empty')}</span>
+            )}
           </div>
         </Group>
       )}

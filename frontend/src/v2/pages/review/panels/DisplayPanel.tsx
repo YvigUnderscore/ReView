@@ -9,23 +9,27 @@ import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { DebugColorMode } from '../splat/scene/effects/debugColor';
 import type { RenderMode } from '../splat/scene/renderModes';
 import type { DisplayMode } from '../three/displayModes';
+import { useT, type MessageKey } from '../../../i18n';
 
-const SPLAT_RENDER = [
-  { value: 'splats' as const, label: 'Splats', icon: Sparkles },
-  { value: 'ellipses' as const, label: 'Ellipses', icon: Circle },
-  { value: 'points' as const, label: 'Points', icon: Grip },
+/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+type T = (key: MessageKey) => string;
+
+const splatRender = (t: T) => [
+  { value: 'splats' as const, label: t('viewer.mode.splats'), icon: Sparkles },
+  { value: 'ellipses' as const, label: t('viewer.mode.ellipses'), icon: Circle },
+  { value: 'points' as const, label: t('viewer.mode.points'), icon: Grip },
 ];
 
-const MODEL_RENDER = [
-  { value: 'shaded' as const, label: 'Ombré', icon: Circle },
-  { value: 'wireframe' as const, label: 'Filaire', icon: Grid3x3 },
-  { value: 'normals' as const, label: 'Normales', icon: Triangle },
+const modelRender = (t: T) => [
+  { value: 'shaded' as const, label: t('viewer.mode.shaded'), icon: Circle },
+  { value: 'wireframe' as const, label: t('viewer.mode.wireframe'), icon: Grid3x3 },
+  { value: 'normals' as const, label: t('viewer.mode.normals'), icon: Triangle },
 ];
 
-const DEBUG_COLORS: { value: DebugColorMode; label: string }[] = [
-  { value: 'none', label: 'Aucune' },
-  { value: 'normal', label: 'Normales' },
-  { value: 'depth', label: 'Profondeur' },
+const debugColors = (t: T): { value: DebugColorMode; label: string }[] => [
+  { value: 'none', label: t('common.none') },
+  { value: 'normal', label: t('viewer.mode.normals') },
+  { value: 'depth', label: t('viewer.mode.depth') },
 ];
 
 /**
@@ -60,33 +64,34 @@ export default function DisplayPanel({
   debugMode?: DebugColorMode;
   onDebugMode?: (mode: DebugColorMode) => void;
 }) {
+  const t = useT();
   return (
     <>
-      <Group title="Rendu">
+      <Group title={t('viewer.render.title')}>
         {splat && (
           <SegmentedControl
-            label="Mode de rendu du nuage"
-            items={SPLAT_RENDER}
+            label={t('viewer.render.cloud')}
+            items={splatRender(t)}
             value={splat.mode}
             onChange={splat.onMode}
           />
         )}
         {model && (
           <SegmentedControl
-            label="Mode de rendu du modèle"
-            items={MODEL_RENDER}
-            value={model.mode as (typeof MODEL_RENDER)[number]['value']}
+            label={t('viewer.render.model')}
+            items={modelRender(t)}
+            value={model.mode as ReturnType<typeof modelRender>[number]['value']}
             onChange={model.onMode}
           />
         )}
         {debugMode !== undefined && onDebugMode && (
-          <Row label="Colorisation d’inspection" stack hint="Locale à votre session">
+          <Row label={t('viewer.inspectionTint')} stack hint={t('viewer.inspectionTint.hint')}>
             <Select
               value={debugMode}
               onChange={(e) => onDebugMode(e.target.value as DebugColorMode)}
               className={DOCK_SELECT}
             >
-              {DEBUG_COLORS.map((d) => (
+              {debugColors(t).map((d) => (
                 <option key={d.value} value={d.value}>
                   {d.label}
                 </option>
@@ -97,22 +102,22 @@ export default function DisplayPanel({
       </Group>
 
       {(splat || realSize) && (
-        <Group title="Nuage">
+        <Group title={t('viewer.cloud.title')}>
           {realSize && (
-            <Row label="Taille réelle" hint="Sans unification des échelles par bounding box">
+            <Row label={t('viewer.realScale')} hint={t('viewer.realScale.hint2')}>
               <Switch
                 checked={realSize.value}
                 onCheckedChange={realSize.onChange}
-                label="Afficher les splats à leur échelle brute"
+                label={t('viewer.realScale.hint')}
               />
             </Row>
           )}
           {splat && (
-            <Row label="Orientation redressée" hint="Convention Y-down redressée à l’import">
+            <Row label={t('viewer.upAxis')} hint={t('viewer.upAxis.hint2')}>
               <Switch
                 checked={splat.baseFlip}
                 onCheckedChange={splat.onBaseFlip}
-                label="Redresser l’orientation à l’import"
+                label={t('viewer.upAxis.hint')}
               />
             </Row>
           )}
@@ -121,9 +126,9 @@ export default function DisplayPanel({
 
       {/* Beaucoup de fichiers n'ont ni variante ni caméra : pas de section vide dans le dock. */}
       {model && (model.variants?.names.length || model.cameras?.names.length || model.skeleton?.has) && (
-        <Group title="Variantes du fichier">
+        <Group title={t('viewer.variants.title')}>
           {model.variants && model.variants.names.length > 0 && (
-            <Row label="Matériaux" stack>
+            <Row label={t('viewer.materials')} stack>
               <Select
                 value={model.variants.active ?? ''}
                 onChange={(e) => model.variants?.onSelect(e.target.value)}
@@ -136,7 +141,7 @@ export default function DisplayPanel({
             </Row>
           )}
           {model.cameras && model.cameras.names.length > 0 && (
-            <Row label="Caméras embarquées" stack>
+            <Row label={t('viewer.embeddedCameras')} stack>
               <Select
                 value={model.cameras.active ?? ''}
                 onChange={(e) => model.cameras?.onSelect(e.target.value)}
@@ -149,11 +154,11 @@ export default function DisplayPanel({
             </Row>
           )}
           {model.skeleton?.has && (
-            <Row label="Squelette du rig">
+            <Row label={t('viewer.skeleton')}>
               <Switch
                 checked={model.skeleton.shown}
                 onCheckedChange={model.skeleton.onShow}
-                label="Afficher le squelette (debug skinning)"
+                label={t('viewer.skeleton.hint')}
               />
             </Row>
           )}
