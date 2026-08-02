@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Types des tâches (module séparé du budget de lignes d'api.ts). Refs importées d'api.ts
 // (imports de type uniquement — le re-export `export * from './task'` côté api.ts n'induit
 // aucun cycle à l'exécution).

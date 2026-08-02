@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
@@ -13,6 +16,11 @@ export interface Branding {
   /** Couleur d'accent au format hex « #RRGGBB » (convertie en HSL à l'application). */
   accent: string | null;
   logoUrl: string | null;
+  /**
+   * Code source correspondant (AGPL §13), réglage `studio_source_url` validé côté serveur
+   * (http/https uniquement) et replié sur le dépôt amont s'il n'est pas renseigné.
+   */
+  sourceUrl: string;
 }
 
 const ACCENT_LS = 'review:accent';

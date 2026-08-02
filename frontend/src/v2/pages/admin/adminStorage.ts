@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { StorageAgg } from '../../types/api';
 
 /** Helpers purs de la page admin Stockage (libellés, pourcentages) — testés. */

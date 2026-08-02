@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Box, FileVideo, Image, Sparkles } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { MediaKind, VersionStatus } from '../../types/api';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Liens profonds de review (32.E) : `?frame=N` (frame absolue, base startFrame)
  * ouvre la review à la frame ; `?comment=ID` sélectionne le commentaire (seek +

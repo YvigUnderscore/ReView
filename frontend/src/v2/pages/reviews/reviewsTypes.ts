@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { MediaKind, ProjectRef, ReviewStatus } from '../../types/api';
 
 /** Sprite de miniatures (grille count = cols×rows) pour le scrub au survol (42.A — №78). */

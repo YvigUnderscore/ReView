@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import './lib/bigintJson';
 import express, { type Express } from 'express';
 import cors from 'cors';

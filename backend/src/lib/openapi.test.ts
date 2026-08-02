@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { describe, it, expect } from 'vitest';
 import { buildOpenApiDocument } from './openapi';
 
@@ -11,6 +14,11 @@ describe('openapi', () => {
     expect(doc.paths?.['/api/projects']?.get).toBeTruthy();
     expect(doc.paths?.['/api/projects']?.post).toBeTruthy();
     expect(doc.paths?.['/api/auth/login']?.post).toBeTruthy();
+  });
+
+  it('déclare la licence du projet — le document est servi publiquement', () => {
+    expect(doc.info.license?.name).toBe('AGPL-3.0-or-later');
+    expect(doc.info.license?.url).toContain('gnu.org');
   });
 
   it('expose les schémas partagés et le sécurité bearer', () => {

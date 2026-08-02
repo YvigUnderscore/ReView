@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { ComponentProps, RefObject } from 'react';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';

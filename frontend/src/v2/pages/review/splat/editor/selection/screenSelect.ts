@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { SplatMesh } from '@sparkjsdev/spark';
 import type { SplatSceneHandle } from '../../useSplat';
 import { combineSelection, shapePredicate, type SelectCombine, type SelectionShape } from './shapes2d';

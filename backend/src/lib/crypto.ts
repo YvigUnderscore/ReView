@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto';
 import { env } from '../config/env';
 

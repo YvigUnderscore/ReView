@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type * as THREE from 'three';
 import { visibleLocalBox } from '../../scene/visibleBounds';
 import type { SplatSceneHandle } from '../../useSplat';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Switch } from '../../../components/ui/switch';
 import { useGuides, type GuideKey } from '../../../stores/useGuides';
 import { Group, Row } from '../chrome/DockGroup';

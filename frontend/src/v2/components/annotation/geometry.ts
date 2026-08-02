@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Géométrie pure du canvas d'annotation (coordonnées normalisées 0..1, corrections
  * d'aspect en espace écran). Extraite d'AnnotationCanvas (budget 10.F4) — testée.

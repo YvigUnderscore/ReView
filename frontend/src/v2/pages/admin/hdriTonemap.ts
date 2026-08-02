@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Tonemap d'un buffer HDR linéaire (RGBA float) vers du RGBA 8 bits affichable :
  * échantillonnage nearest vers la taille cible + Reinhard (v/(1+v)) + gamma 2.2.

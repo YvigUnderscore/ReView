@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Extraction des displays/views d'une config OCIO (39.B). Les fichiers `.ocio` sont du YAML avec
  * des tags custom (`!<View> {name: …}`) que les parseurs YAML standards gèrent mal ; on scanne donc

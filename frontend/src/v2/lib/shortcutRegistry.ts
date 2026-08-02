@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Registre des raccourcis clavier **globaux** (42.A2) — source de vérité unique pour le
  * handler (`useGlobalShortcuts`) et le cheatsheet (`ShortcutsHelp`), qui dupliquaient la liste.

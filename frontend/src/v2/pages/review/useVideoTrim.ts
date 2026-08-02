@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useCallback, useState, type RefObject } from 'react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';

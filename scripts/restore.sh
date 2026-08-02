@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 #
 # Restauration ReView (37.F) depuis une sauvegarde produite par scripts/backup.sh.
 # ⚠️ ÉCRASE la base et/ou les objets MinIO courants — arrêter backend+worker avant.

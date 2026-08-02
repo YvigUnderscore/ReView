@@ -18,8 +18,17 @@ RUN npm run build
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
 
+LABEL org.opencontainers.image.title="ReView (frontend)" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.source="https://github.com/YvigUnderscore/ReView"
+
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Le bundle servi ici agrège des dépendances MIT/BSD/ISC minifiées : leurs notices doivent
+# accompagner la redistribution, et l'AGPL §13 veut que le code correspondant soit offert à
+# quiconque utilise l'instance. Les deux fichiers sont donc servis avec l'application.
+COPY LICENSE THIRD-PARTY-NOTICES.md /usr/share/nginx/html/
 
 EXPOSE 80
 

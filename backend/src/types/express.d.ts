@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { Role } from '@prisma/client';
 
 /** Augmentation du type Request d'Express pour porter l'utilisateur authentifié. */

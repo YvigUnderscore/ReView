@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { Project, Role } from '../../types/api';
 
 /** Types et helpers partagés par les sections de l'administration (10.C6). */
@@ -110,6 +113,12 @@ export const SETTINGS_FIELDS: SettingField[] = [
     key: 'slack_webhook_url',
     label: 'Webhook Slack (notifications)',
     hint: 'https://hooks.slack.com/services/… — décisions & publications',
+  },
+  // AGPL §13 : l'instance doit offrir SES sources. Vide = dépôt amont.
+  {
+    key: 'studio_source_url',
+    label: 'Code source (AGPL §13)',
+    hint: 'https://… — obligatoire si vous déployez une version modifiée',
   },
 ];
 

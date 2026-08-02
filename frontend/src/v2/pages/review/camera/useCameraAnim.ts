@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SplatCamera } from '../reviewTypes';
 import { FLY_MOVE_MAPPING } from '../viewer/flyControls';

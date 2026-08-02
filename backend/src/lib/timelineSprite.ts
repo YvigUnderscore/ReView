@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Sprite de miniatures de la timeline vidéo (une vignette ~toutes les 3 s, très légère) :
  * le worker FFmpeg tuile les captures dans UNE image JPEG (`derived/{id}/timeline-sprite.jpg`),

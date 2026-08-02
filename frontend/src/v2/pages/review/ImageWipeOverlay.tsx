@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useQuery } from '@tanstack/react-query';
 import { Columns2, Diff, X } from 'lucide-react';
 import { api } from '../../../lib/apiClient';

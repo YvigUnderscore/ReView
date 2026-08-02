@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /** Étiquette lisible d'un user-agent (36.B, liste des sessions) — heuristique volontairement simple. */
 export function deviceLabel(userAgent: string | null): string {
   if (!userAgent) return 'Appareil inconnu';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Passerelle CSV shots/tâches (38.F/38.G) — format tableur simple, compatible export→import
  * (chemin retour ShotGrid/Ftrack/Kitsu via colonnes homogènes). Parsing PUR (testé), aucune

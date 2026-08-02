@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Slugification S3-safe : minuscules, accents retirés, espaces/symboles → tirets.
  * Utilisé pour les slugs de projet et les clés MinIO lisibles.

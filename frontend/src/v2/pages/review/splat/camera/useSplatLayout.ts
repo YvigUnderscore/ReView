@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CameraController } from '../../camera/useCameraAnim';
 import type { SplatViewer } from '../useSplat';

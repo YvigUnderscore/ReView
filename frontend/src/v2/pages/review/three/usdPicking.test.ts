@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';
 import { CLICK_SLOP_PX, isClickGesture, pickPrim, primPathOf, toNdc } from './usdPicking';

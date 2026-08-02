@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { createSHA256 } from 'hash-wasm';
 import { api, getToken } from './apiClient';
 import type { MediaKind } from '../v2/types/api';

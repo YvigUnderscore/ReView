@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Monitor, Moon, Sun, Rows3, Rows4, type LucideIcon } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../stores/useTheme';
 import { useDensity, type Density } from '../stores/useDensity';

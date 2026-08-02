@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Analyse d'une scene USD pour le worker ReView (Phase 45, 45.B).
 
 Ce script est le seul endroit du pipeline qui parle reellement USD : il s'appuie sur le

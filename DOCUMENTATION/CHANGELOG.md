@@ -3,6 +3,20 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08 — ReView is now AGPL-3.0
+
+- **New license**: ReView moves from MIT to the **GNU AGPL v3 or later**. You can still run
+  it, modify it and build a business on it; what changes is that a modified version offered
+  to other people — including as a hosted service — must come with its source.
+- **Running a modified instance?** Set your repository URL in **Admin → Settings → "Code
+  source (AGPL §13)"**. It feeds the "Source code" link shown on the login screen, on client
+  share pages and in **Admin → System → License & source**.
+- **Third-party attribution**: `THIRD-PARTY-NOTICES.md` now lists all 594 redistributed
+  dependencies with their license texts.
+- **Commercial license available** for studios that cannot accept the AGPL — see
+  `COMMERCIAL-LICENSE.md`.
+- Versions published before this change **remain available under MIT**.
+
 ## 2026-08 — USD scene graph, per-prim gizmo & review layout
 
 - **Selection outline fixed**: the highlight now hugs the selected object wherever it sits in

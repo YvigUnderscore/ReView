@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { type ComponentProps } from 'react';
 import type { ReviewComment, Role } from '../../types/api';
 import { useAuth } from '../../stores/useAuth';

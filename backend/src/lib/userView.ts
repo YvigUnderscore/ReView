@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { storage } from '../services/StorageService';
 
 /** Champs d'identité bruts d'un utilisateur, tels que sélectionnés en base. */

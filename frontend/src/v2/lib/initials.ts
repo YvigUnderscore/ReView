@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /** Initiales à partir d'un nom (repli pour les avatars). Pur, testable. */
 export function initialsFrom(name: string | null | undefined): string {
   if (!name) return '?';

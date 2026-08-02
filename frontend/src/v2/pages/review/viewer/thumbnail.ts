@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Miniature du splat (10.G) — downscale du canvas WebGL en JPEG (data URL), fond sombre.
  * Fonction pure (aucune dépendance Spark/Three) → testable sans WebGL.

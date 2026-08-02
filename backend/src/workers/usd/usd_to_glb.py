@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Conversion USD -> GLB via Blender headless (Phase 45, 45.C).
 
 Invoque par le worker :

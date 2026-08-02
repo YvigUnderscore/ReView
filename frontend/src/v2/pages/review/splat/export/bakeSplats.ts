@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type * as THREE from 'three';
 import type { SdfVolumeData, SplatTransform } from '../../reviewTypes';
 import { buildCropChecks, pointCropped } from '../editor/volumes/cropPoints';

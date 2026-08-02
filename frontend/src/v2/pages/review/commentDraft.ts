@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Brouillon de commentaire persisté localement par média (32.C) : texte du composer
  * et formes d'annotation 2D en cours. Restauré au montage de la review, purgé à

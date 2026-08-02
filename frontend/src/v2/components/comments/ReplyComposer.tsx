@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { toast } from 'sonner';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Graduations « lisibles » d'un axe (Phase 27, grille du graph editor) : un pas rond (1/2/5 × 10ⁿ)
  * couvrant l'intervalle avec ~`target` divisions. Pur/testable, sans DOM.

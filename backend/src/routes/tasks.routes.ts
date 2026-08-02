@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { Role, TaskType, TaskStatus } from '@prisma/client';

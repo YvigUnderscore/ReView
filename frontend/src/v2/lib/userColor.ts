@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Couleur stable dérivée d'un identifiant utilisateur (14.F). Partagée entre les avatars,
  * la présence temps réel et la couleur d'annotation par défaut : un même utilisateur porte

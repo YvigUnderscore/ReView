@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // ReView 2.0 — Schéma PostgreSQL
 // Hiérarchie pipeline : Studio > Projet > Séquence(opt) > Shot > Task > Version > MediaObject
 //                                       > Asset(réutilisable) > Version > MediaObject

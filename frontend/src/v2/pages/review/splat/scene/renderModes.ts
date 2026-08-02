@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import { createPointCloud, type PointCloud } from './pointCloud';
 

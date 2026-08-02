@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Génération de la playlist maître HLS (Phase 23) et types associés. Pur/testable : la
  * partie ffmpeg vit dans le worker, seule la construction texte est ici.

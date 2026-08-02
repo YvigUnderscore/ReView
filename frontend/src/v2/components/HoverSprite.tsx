@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useEffect, useState } from 'react';
 
 /** Sprite de miniatures : grille `cols`×`rows`, `count` vignettes (42.A — №78). */

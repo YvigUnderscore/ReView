@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { DEFAULT_REVIEW_ASPECT, reviewFrame, type FrameRect } from './frameRect';
 

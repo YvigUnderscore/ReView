@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { Media, ModelSource } from '../../types/api';
 import { normalizeAnim } from './camera/channels/model';
 import type { CameraAnimV2 } from './camera/channels/model';

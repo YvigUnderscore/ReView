@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Encodeur vidéo du worker (37.D) : libx264 (défaut, CPU) ou h264_nvenc (GPU NVIDIA,
  * opt-in via env VIDEO_ENCODER). Helpers PURS (testés) — le worker retombe sur libx264

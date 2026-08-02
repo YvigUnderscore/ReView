@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Transformation de vue de l'éditeur de courbes (Phase 17) : mapping pur temps↔pixel (axe X,
  * commun dopesheet + graph) et valeur↔pixel (axe Y, graph editor), avec zoom/pan. Testable sans DOM.

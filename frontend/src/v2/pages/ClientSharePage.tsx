@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +9,7 @@ import { clientApi, setShareAuth, ClientApiError } from './client/clientApi';
 import ClientMediaViewer from './client/ClientMediaViewer';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import SourceNotice from '../components/SourceNotice';
 import type { ClientMedia, ClientSharePayload, MediaKind } from '../types/api';
 
 const kindIcon: Record<MediaKind, React.ReactNode> = {
@@ -125,6 +129,11 @@ export default function ClientSharePage() {
           </>
         )}
       </main>
+
+      {/* AGPL §13 : les invités interagissent à distance, l'offre de source leur est due. */}
+      <footer className="border-t border-border px-5 py-2 text-center">
+        <SourceNotice />
+      </footer>
     </div>
   );
 }
@@ -138,7 +147,7 @@ function ClientFrame({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
       <div className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-6">
         <div className="flex justify-center">
           {studio?.logoUrl ? (
@@ -149,6 +158,7 @@ function ClientFrame({
         </div>
         {children}
       </div>
+      <SourceNotice />
     </div>
   );
 }

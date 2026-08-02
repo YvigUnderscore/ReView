@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { BurninConfig } from '../types/share';
 
 const FLAGS: { key: keyof BurninConfig & string; label: string }[] = [

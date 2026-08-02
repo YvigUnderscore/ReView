@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Métriques du viewer splat (10.G-V1), sans dépendance Three/Spark : l'échantillonneur reçoit
  * un `read()` branché sur le renderer (splats actifs, draw calls…) et calcule le FPS sur une

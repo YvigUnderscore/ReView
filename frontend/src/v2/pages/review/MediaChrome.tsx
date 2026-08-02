@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { ReactNode, RefObject } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../components/ui/button';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { SplatCamera, SplatCameraKeyframe } from '../reviewTypes';
 import { applyPoseToCamera } from './applyPose';
 import { bakeToKeyframes } from '../camera/channels/hermite';

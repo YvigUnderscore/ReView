@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Petit client API v2 (fetch) avec en-tête d'auth JWT.
  * Le token est stocké dans localStorage sous la clé `token` (compat. frontend existant).

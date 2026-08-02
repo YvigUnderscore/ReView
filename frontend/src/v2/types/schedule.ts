@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Planning projet (43.C — GET /api/projects/:id/schedule). Miroir de backend ScheduleService.
 import type { TaskStatus, TaskType } from './api';
 

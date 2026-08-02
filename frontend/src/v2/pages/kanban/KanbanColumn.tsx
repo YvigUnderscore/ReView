@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useDroppable } from '@dnd-kit/core';
 import KanbanCard from './KanbanCard';
 import type { BoardTask } from './kanbanTypes';

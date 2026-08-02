@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 #
 # Suite de validation ReView — à exécuter AVANT de valider/committer du code.
 #
@@ -19,14 +22,31 @@ WITH_E2E=0
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$1"; }
 
+# ---------- Licence ----------
+# Chaque fichier source porte son en-tête SPDX (AGPL-3.0-or-later) : un fichier extrait
+# du dépôt reste ainsi rattaché à sa licence.
+step "Licence — en-têtes SPDX sur tous les fichiers source"
+node "$ROOT/scripts/add-license-headers.mjs" --check
+
+# Attribution des dépendances redistribuées (MIT/BSD/ISC/OFL exigent la conservation de
+# leurs notices). Le fichier est généré : il doit refléter l'état des lockfiles.
+step "Licence — THIRD-PARTY-NOTICES.md à jour"
+node "$ROOT/scripts/generate-notices.mjs" --check
+
 # ---------- Budget de taille (10.F4) ----------
-# Le frontend est couvert par la règle ESLint `max-lines` (300). Le backend n'a pas
-# d'ESLint : on garde-fou ici la taille des routes (≤ 200 lignes ; la logique métier
-# vit dans services/). Étend la suite, ne l'affaiblit jamais.
+# Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Le backend
+# n'a pas d'ESLint : on garde-fou ici la taille des routes (≤ 200 lignes ; la logique
+# métier vit dans services/). Étend la suite, ne l'affaiblit jamais.
+# Les deux lignes de l'en-tête SPDX ne sont pas du code : elles sortent du décompte, le
+# budget de 200 lignes réelles reste identique.
 step "Budget — taille des routes backend (≤ 200 lignes)"
 OVER_BUDGET="$(
   find "$ROOT/backend/src/routes" -name '*.ts' | while read -r f; do
     n=$(wc -l <"$f")
+    if head -1 "$f" | grep -q '^// SPDX-FileCopyrightText'; then
+      n=$((n - 2))                                             # les deux lignes SPDX
+      [ -z "$(sed -n '3p' "$f" | tr -d '\r')" ] && n=$((n - 1)) # + sa ligne de séparation
+    fi
     if [ "$n" -gt 200 ]; then printf '  %s (%s lignes)\n' "${f#"$ROOT/"}" "$n"; fi
   done
 )" || true

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { motion } from 'framer-motion';
 import { DURATION } from '../lib/motion';
 import type { ReactNode } from 'react';

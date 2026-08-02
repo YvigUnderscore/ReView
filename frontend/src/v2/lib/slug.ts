@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Slugs d'URL « parlants » (slug + id). Les routes restent résolues par l'**id**
  * (suffixe numérique) : le slug n'est que cosmétique et les anciens liens en pur-id

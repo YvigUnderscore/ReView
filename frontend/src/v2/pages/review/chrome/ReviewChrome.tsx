@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { ReactNode } from 'react';
 import type { MediaKind, Role } from '../../../types/api';
 import { Badge } from '../../../components/ui/badge';

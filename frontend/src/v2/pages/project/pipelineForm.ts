@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { PipelineOverride, PipelineSettings } from '../../types/api';
 
 /** État de formulaire d'un override pipeline (chaînes éditables + bascule hériter/personnaliser). */

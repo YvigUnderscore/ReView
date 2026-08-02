@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /** Borne une taille dans [min, max]. Pur, testable. */
 export function clampSize(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
