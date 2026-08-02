@@ -37,9 +37,9 @@ export default function OverviewTab() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         <Metric
-          label="Utilisateurs"
+          label={t('admin.tab.users')}
           value={stats.users.total}
-          sub={`${stats.users.online} en ligne`}
+          sub={t('admin.onlineCount', { count: stats.users.online })}
           to="/admin/users"
         />
         <Metric label={t('nav.projects')} value={stats.pipeline.projects} to="/admin/projects" />
@@ -48,7 +48,7 @@ export default function OverviewTab() {
         <Metric label="Assets" value={stats.pipeline.assets} to="/admin/projects" />
         <Metric label="Versions" value={stats.pipeline.versions} to="/admin/versions" />
         <Metric label={t('trash.group.media')} value={stats.media.count} to="/reviews" />
-        <Metric label="Commentaires" value={stats.comments} to="/admin/comments" />
+        <Metric label={t('admin.tab.comments')} value={stats.comments} to="/admin/comments" />
         <Metric label={t('storage.title')} value={fmtBytes(stats.media.storageBytes)} to="/admin/storage" />
       </div>
 
@@ -76,7 +76,7 @@ export default function OverviewTab() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Top stockage / utilisateur">
+        <Panel title={t('admin.topStorage')}>
           <div className="space-y-1.5">
             {stats.topStorageUsers.map((u) => (
               <div key={u.id} className="flex items-center justify-between text-sm">

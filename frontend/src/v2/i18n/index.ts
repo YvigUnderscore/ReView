@@ -3,7 +3,15 @@
 
 import { useSyncExternalStore } from 'react';
 import base from './messages/en.json';
-import { BASE_LOCALE, isLocale, localeInfo, negotiateLocale, pluralTag, type Locale } from './locales';
+import {
+  BASE_LOCALE,
+  formatTag,
+  isLocale,
+  localeInfo,
+  negotiateLocale,
+  pluralTag,
+  type Locale,
+} from './locales';
 
 export * from './locales';
 
@@ -200,6 +208,14 @@ const subscribe = (fn: () => void) => {
 export function useT(): typeof t {
   useSyncExternalStore(subscribe, getVersion, () => 0);
   return t;
+}
+
+/**
+ * Étiquette à passer aux API `Intl` pour la langue courante — les dates et les
+ * nombres suivent le choix du lecteur au lieu d'être figés sur une locale.
+ */
+export function intlLocale(): string {
+  return formatTag(current);
 }
 
 /** Langue courante, réactive. */

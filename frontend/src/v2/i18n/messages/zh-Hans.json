@@ -946,5 +946,17 @@
   "marker.delete": "删除标记",
   "usd.recomposeFrom": "从 USD 重组",
 
-  "marker.rename": "重命名 / 改颜色…"
+  "marker.rename": "重命名 / 改颜色…",
+
+  "sessions.line": "{ip} · 于 {created} 连接 · {seen} 活跃",
+  "sessions.unknownIp": "未知 IP",
+
+  "admin.tab.users": "用户",
+  "admin.tab.comments": "评论",
+  "admin.tab.statuses": "状态",
+  "admin.tab.announcements": "公告",
+  "admin.tab.trash": "回收站",
+  "admin.tab.color": "色彩（OCIO）",
+  "admin.topStorage": "存储占用排行 / 用户",
+  "admin.onlineCount": "{count} 人在线"
 }

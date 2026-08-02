@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { intlLocale } from '../../i18n';
+
 /**
  * Logique pure du champ numérique « drag-label » (`NumberField`) : valeur ajustée en glissant
  * horizontalement sur le libellé (pattern DCC/Blender), bornée et arrondie au pas. Testable
@@ -52,7 +54,10 @@ export function parseInput(text: string): number | null {
 /** Formate la valeur pour l'affichage selon le pas (pas de décimales inutiles). */
 export function formatValue(value: number, step: number): string {
   const decimals = step >= 1 ? 0 : Math.max(0, Math.ceil(-Math.log10(step)));
-  return value.toLocaleString('fr-FR', {
+  return value.toLocaleString(intlLocale(), {
+    // Pas de séparateur de milliers : `parseInput` relit ce qu'on affiche, et il ne sait
+    // pas défaire un groupement (« 1 001 » revenait NaN pour un numéro de frame).
+    useGrouping: false,
     minimumFractionDigits: 0,
     maximumFractionDigits: Math.min(decimals, 6),
   });

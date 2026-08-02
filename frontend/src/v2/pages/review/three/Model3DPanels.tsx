@@ -26,9 +26,10 @@ import type { TurntableState } from './useTurntable';
 import type { UsdSceneState } from './useUsdScene';
 import type { CameraAnimState } from '../camera/useCameraAnim';
 import { useT } from '../../../i18n';
+import { intlLocale } from '../../../i18n';
 
 const RAD = Math.PI / 180;
-const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR');
+const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
 
 /** Aspect du cadre de livraison, en texte — hérité des réglages pipeline. */
 function aspectLabel(aspect: number | undefined): string {

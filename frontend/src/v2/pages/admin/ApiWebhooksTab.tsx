@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import WebhooksPanel from './WebhooksPanel';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 interface AdminTokenRow {
   id: number;
@@ -23,7 +24,7 @@ interface AdminTokenRow {
 }
 
 const fmt = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  new Date(iso).toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 
 /** Section « API & Webhooks » (36.C/36.D) : tokens d'API du studio + webhooks sortants. */
 export default function ApiWebhooksTab() {

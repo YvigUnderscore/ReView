@@ -7,10 +7,11 @@ import { CalendarDays } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 /** Valeur ISO → `YYYY-MM-DD` pour un <input type="date"> (chaîne vide si absente). */
 const toInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
-const fmt = (iso: string) => new Date(iso).toLocaleDateString('fr-FR');
+const fmt = (iso: string) => new Date(iso).toLocaleDateString(intlLocale());
 
 /**
  * Planning d'une tâche (43.C) : début planifié + échéance. Édition réservée aux superviseurs ;

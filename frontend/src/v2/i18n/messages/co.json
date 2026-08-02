@@ -947,5 +947,17 @@
   "marker.delete": "Sguassà u marcatore",
   "usd.recomposeFrom": "Ricumpone da l'USD",
 
-  "marker.rename": "Rinuminà / ricolurà…"
+  "marker.rename": "Rinuminà / ricolurà…",
+
+  "sessions.line": "{ip} · cunnessu u {created} · attivu u {seen}",
+  "sessions.unknownIp": "IP scunnisciuta",
+
+  "admin.tab.users": "Utilizatori",
+  "admin.tab.comments": "Cummenti",
+  "admin.tab.statuses": "Statuti",
+  "admin.tab.announcements": "Annunzii",
+  "admin.tab.trash": "Spazzatura",
+  "admin.tab.color": "Culore (OCIO)",
+  "admin.topStorage": "Top stucchera / utilizatore",
+  "admin.onlineCount": "{count} in linea"
 }

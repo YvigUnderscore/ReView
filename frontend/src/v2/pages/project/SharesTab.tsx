@@ -15,9 +15,12 @@ import { Select } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import type { ShareLink } from '../../types/api';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 const fmtDate = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+  iso
+    ? new Date(iso).toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short', year: 'numeric' })
+    : null;
 
 const clientUrl = (token: string) => `${window.location.origin}/client/${token}`;
 

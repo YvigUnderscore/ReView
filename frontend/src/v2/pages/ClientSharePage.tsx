@@ -12,6 +12,7 @@ import { Input } from '../components/ui/input';
 import SourceNotice from '../components/SourceNotice';
 import type { ClientMedia, ClientSharePayload, MediaKind } from '../types/api';
 import { useT } from '../i18n';
+import { intlLocale } from '../i18n';
 
 const kindIcon: Record<MediaKind, React.ReactNode> = {
   VIDEO: <Film size={26} />,
@@ -74,7 +75,7 @@ export default function ClientSharePage() {
 
   const media = p.media ?? [];
   const watermarkText = p.watermark?.enabled
-    ? `${p.label ?? 'Partage client'} — ${p.studio.name} — ${new Date().toLocaleDateString('fr-FR')}`
+    ? `${p.label ?? 'Partage client'} — ${p.studio.name} — ${new Date().toLocaleDateString(intlLocale())}`
     : null;
 
   return (

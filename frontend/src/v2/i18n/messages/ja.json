@@ -946,5 +946,17 @@
   "marker.delete": "マーカーを削除",
   "usd.recomposeFrom": "USD から再構成",
 
-  "marker.rename": "名前・色を変更…"
+  "marker.rename": "名前・色を変更…",
+
+  "sessions.line": "{ip} · {created} に接続 · {seen} に活動",
+  "sessions.unknownIp": "不明な IP",
+
+  "admin.tab.users": "ユーザー",
+  "admin.tab.comments": "コメント",
+  "admin.tab.statuses": "ステータス",
+  "admin.tab.announcements": "お知らせ",
+  "admin.tab.trash": "ゴミ箱",
+  "admin.tab.color": "カラー（OCIO）",
+  "admin.topStorage": "ストレージ上位／ユーザー",
+  "admin.onlineCount": "{count} 人オンライン"
 }

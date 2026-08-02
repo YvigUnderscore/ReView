@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { clampValue, dragValue, formatValue, parseInput, snapToStep } from './number-field.math';
+import { setLocale } from '../../i18n';
 
 describe('snapToStep', () => {
   it('arrondit au multiple du pas et nettoie le bruit flottant', () => {
@@ -46,8 +47,18 @@ describe('parseInput', () => {
 });
 
 describe('formatValue', () => {
+  it('suit la langue et reste relisible par parseInput', async () => {
+    await setLocale('fr');
+    expect(formatValue(0.25, 0.05)).toBe('0,25');
+    // Sans groupement : un numéro de frame se relit tel qu'il s'affiche.
+    expect(parseInput(formatValue(1001, 1))).toBe(1001);
+    await setLocale('en');
+    expect(formatValue(0.25, 0.05)).toBe('0.25');
+    expect(parseInput(formatValue(1001, 1))).toBe(1001);
+  });
+
   it('affiche sans décimales inutiles selon le pas', () => {
     expect(formatValue(47, 1)).toBe('47');
-    expect(formatValue(0.25, 0.05)).toBe('0,25');
+    expect(formatValue(0.25, 0.05)).toBe('0.25');
   });
 });

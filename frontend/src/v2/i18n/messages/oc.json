@@ -947,5 +947,17 @@
   "marker.delete": "Suprimir lo marcador",
   "usd.recomposeFrom": "Recompausar dempuèi l’USD",
 
-  "marker.rename": "Tornar nomenar / recolorar…"
+  "marker.rename": "Tornar nomenar / recolorar…",
+
+  "sessions.line": "{ip} · connectat lo {created} · actiu lo {seen}",
+  "sessions.unknownIp": "IP desconeguda",
+
+  "admin.tab.users": "Utilizaires",
+  "admin.tab.comments": "Comentaris",
+  "admin.tab.statuses": "Estats",
+  "admin.tab.announcements": "Anóncias",
+  "admin.tab.trash": "Escobilhièr",
+  "admin.tab.color": "Color (OCIO)",
+  "admin.topStorage": "Top emmagazinatge / utilizaire",
+  "admin.onlineCount": "{count} en linha"
 }

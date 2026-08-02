@@ -22,9 +22,10 @@ import type { SplatCompareState } from './compare/useSplatCompare';
 import { buildCleanSpz, cleanExportName, downloadBytes, type ExportEdits } from './export/exportSplat';
 import { downloadAnimGltf } from '../three/exportCameraGltf';
 import { useT } from '../../../i18n';
+import { intlLocale } from '../../../i18n';
 
 const RAD = Math.PI / 180;
-const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR');
+const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
 
 /** Taille lisible pour le toast d'export (Ko/Mo). */
 function formatBytes(n: number): string {
@@ -189,7 +190,7 @@ export default function SplatPanels({
               .then(({ bytes, kept }) => {
                 downloadBytes(bytes, cleanExportName(data.media.originalName));
                 toast.success(
-                  `Splat exporté : ${kept.toLocaleString('fr-FR')} splats, ${formatBytes(bytes.byteLength)}`,
+                  `Splat exporté : ${kept.toLocaleString(intlLocale())} splats, ${formatBytes(bytes.byteLength)}`,
                 );
               })
               .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Échec de l'export"))

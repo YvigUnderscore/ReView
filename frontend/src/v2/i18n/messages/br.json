@@ -946,5 +946,17 @@
   "marker.delete": "Dilemel ar merker",
   "usd.recomposeFrom": "Adaozañ adalek an USD",
 
-  "marker.rename": "Adenvel / adlivañ…"
+  "marker.rename": "Adenvel / adlivañ…",
+
+  "sessions.line": "{ip} · kevreet d'an {created} · oberiant d'an {seen}",
+  "sessions.unknownIp": "IP dianav",
+
+  "admin.tab.users": "Implijerien",
+  "admin.tab.comments": "Evezhiadennoù",
+  "admin.tab.statuses": "Statudoù",
+  "admin.tab.announcements": "Kemennoù",
+  "admin.tab.trash": "Pod-lastez",
+  "admin.tab.color": "Liv (OCIO)",
+  "admin.topStorage": "Kadaviñ uhelañ / implijer",
+  "admin.onlineCount": "{count} enlinenn"
 }

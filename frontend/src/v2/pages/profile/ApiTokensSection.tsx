@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 interface TokenRow {
   id: number;
@@ -23,7 +24,7 @@ interface TokenRow {
 }
 
 const fmt = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  new Date(iso).toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 
 /** Tokens d'API personnels (36.C) : création (secret montré une fois), liste, révocation. */
 export default function ApiTokensSection() {

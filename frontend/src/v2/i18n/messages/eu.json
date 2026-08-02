@@ -947,5 +947,17 @@
   "marker.delete": "Ezabatu markatzailea",
   "usd.recomposeFrom": "Birkonposatu USDtik",
 
-  "marker.rename": "Berrizendatu / kolorez aldatu…"
+  "marker.rename": "Berrizendatu / kolorez aldatu…",
+
+  "sessions.line": "{ip} · {created}(e)an konektatua · {seen}(e)an aktibo",
+  "sessions.unknownIp": "IP ezezaguna",
+
+  "admin.tab.users": "Erabiltzaileak",
+  "admin.tab.comments": "Iruzkinak",
+  "admin.tab.statuses": "Egoerak",
+  "admin.tab.announcements": "Iragarkiak",
+  "admin.tab.trash": "Zakarrontzia",
+  "admin.tab.color": "Kolorea (OCIO)",
+  "admin.topStorage": "Biltegiratze handiena / erabiltzailea",
+  "admin.onlineCount": "{count} linean"
 }

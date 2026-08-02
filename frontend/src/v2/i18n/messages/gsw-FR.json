@@ -947,5 +947,17 @@
   "marker.delete": "D'Markierung lesche",
   "usd.recomposeFrom": "Uss em USD nej komponiere",
 
-  "marker.rename": "Umbenenne / nej ihfärbe…"
+  "marker.rename": "Umbenenne / nej ihfärbe…",
+
+  "sessions.line": "{ip} · verbunde am {created} · aktiv am {seen}",
+  "sessions.unknownIp": "Unbekannti IP",
+
+  "admin.tab.users": "Benutzer",
+  "admin.tab.comments": "Kommentar",
+  "admin.tab.statuses": "Status",
+  "admin.tab.announcements": "Ahkindigunge",
+  "admin.tab.trash": "Mülltonn",
+  "admin.tab.color": "Farb (OCIO)",
+  "admin.topStorage": "Top Spicher / Benutzer",
+  "admin.onlineCount": "{count} online"
 }

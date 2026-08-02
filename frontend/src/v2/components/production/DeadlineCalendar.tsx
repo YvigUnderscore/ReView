@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TASK_STATUS_BAR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
 import type { ScheduleTask } from '../../types/api';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const dayKey = (d: Date) =>
@@ -52,7 +53,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
   }, [month]);
 
   const todayKey = dayKey(new Date());
-  const monthLabel = month.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const monthLabel = month.toLocaleDateString(intlLocale(), { month: 'long', year: 'numeric' });
   const shift = (delta: number) => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
 
   return (

@@ -44,7 +44,7 @@ const staticGroups = (
   {
     title: 'Review (tous types)',
     shortcuts: [
-      { keys: [t('common.escKey')], label: "Masquer l'annotation affichée" },
+      { keys: [t('common.escKey')], label: t('review.annotation.hide') },
       { keys: ['Ctrl', 'V'], label: t('shortcuts.pasteReference') },
       { keys: ['Clic droit'], label: t('shortcuts.contextMenu') },
     ],

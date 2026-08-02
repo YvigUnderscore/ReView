@@ -13,6 +13,7 @@ import type { SplatEditorState } from '../splat/editor/useSplatEditor';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import TransformOptions from './TransformOptions';
 import { useT } from '../../../i18n';
+import { intlLocale } from '../../../i18n';
 
 /** Couleurs de trait du painter 3D — données d'annotation, pas des tokens de thème. */
 const INK = ['#ff4d4d', '#ffb020', '#3ddc68', '#38b6ff'];
@@ -164,7 +165,7 @@ export default function SplatOptions({
           <span className="rv-optbar__hint">Maj ajoute · Alt retire</span>
           <span className="rv-rule" />
           <Badge variant={selectedCount ? 'default' : 'muted'}>
-            {selectedCount.toLocaleString('fr-FR')} sélectionnés
+            {selectedCount.toLocaleString(intlLocale())} sélectionnés
           </Badge>
           <IconButton
             icon={X}
@@ -179,7 +180,7 @@ export default function SplatOptions({
           </Button>
           {editor.deletedCount > 0 && (
             <span className="rv-optbar__hint">
-              {editor.deletedCount.toLocaleString('fr-FR')} masqués · non destructif
+              {editor.deletedCount.toLocaleString(intlLocale())} masqués · non destructif
             </span>
           )}
         </>

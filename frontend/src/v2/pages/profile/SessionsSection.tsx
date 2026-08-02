@@ -11,6 +11,7 @@ import { useAuth } from '../../stores/useAuth';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 interface SessionRow {
   id: string;
@@ -22,7 +23,7 @@ interface SessionRow {
 }
 
 const fmt = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', {
+  new Date(iso).toLocaleString(intlLocale(), {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -76,7 +77,11 @@ export default function SessionsSection() {
                 {s.current && <Badge>Cet appareil</Badge>}
               </div>
               <p className="text-xs text-muted-foreground">
-                {s.ip ?? 'IP inconnue'} · connecté le {fmt(s.createdAt)} · actif le {fmt(s.lastSeenAt)}
+                {t('sessions.line', {
+                  ip: s.ip ?? t('sessions.unknownIp'),
+                  created: fmt(s.createdAt),
+                  seen: fmt(s.lastSeenAt),
+                })}
               </p>
             </div>
             <Button

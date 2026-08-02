@@ -947,5 +947,17 @@
   "marker.delete": "Markierung löschen",
   "usd.recomposeFrom": "Aus dem USD neu komponieren",
 
-  "marker.rename": "Umbenennen / neu einfärben…"
+  "marker.rename": "Umbenennen / neu einfärben…",
+
+  "sessions.line": "{ip} · verbunden am {created} · aktiv am {seen}",
+  "sessions.unknownIp": "Unbekannte IP",
+
+  "admin.tab.users": "Benutzer",
+  "admin.tab.comments": "Kommentare",
+  "admin.tab.statuses": "Status",
+  "admin.tab.announcements": "Ankündigungen",
+  "admin.tab.trash": "Papierkorb",
+  "admin.tab.color": "Farbe (OCIO)",
+  "admin.topStorage": "Top-Speicher / Benutzer",
+  "admin.onlineCount": "{count} online"
 }

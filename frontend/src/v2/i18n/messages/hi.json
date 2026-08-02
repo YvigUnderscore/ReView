@@ -947,5 +947,17 @@
   "marker.delete": "मार्कर हटाएँ",
   "usd.recomposeFrom": "USD से पुनः संयोजित करें",
 
-  "marker.rename": "नाम / रंग बदलें…"
+  "marker.rename": "नाम / रंग बदलें…",
+
+  "sessions.line": "{ip} · {created} को जुड़ा · {seen} को सक्रिय",
+  "sessions.unknownIp": "अज्ञात IP",
+
+  "admin.tab.users": "उपयोगकर्ता",
+  "admin.tab.comments": "टिप्पणियाँ",
+  "admin.tab.statuses": "स्थितियाँ",
+  "admin.tab.announcements": "घोषणाएँ",
+  "admin.tab.trash": "रद्दी",
+  "admin.tab.color": "रंग (OCIO)",
+  "admin.topStorage": "शीर्ष भंडारण / उपयोगकर्ता",
+  "admin.onlineCount": "{count} ऑनलाइन"
 }

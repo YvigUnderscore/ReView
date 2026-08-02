@@ -25,6 +25,7 @@ import VideoPane from './VideoPane';
 import VideoReviewSection from './VideoReviewSection';
 import MediaChrome from './MediaChrome';
 import ImageReviewSection from './ImageReviewSection';
+import { intlLocale } from '../../i18n';
 
 /**
  * Zone viewer de la review : barre d'annotation + pane adapté au type de média
@@ -138,7 +139,7 @@ export default function ReviewViewer({
   const wmQ = useWatermarkConfigQuery();
   const watermarkText =
     wmQ.data?.internal && wmUser
-      ? `${wmUser.name ?? wmUser.email} — ${new Date().toLocaleDateString('fr-FR')}`
+      ? `${wmUser.name ?? wmUser.email} — ${new Date().toLocaleDateString(intlLocale())}`
       : null;
 
   // Un déplacement de la vue 3D/splat (orbite, vol, zoom) masque l'annotation du commentaire

@@ -9,6 +9,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 interface AccessRow {
   id: number;
@@ -28,7 +29,7 @@ interface AccessPage {
 }
 
 const fmt = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', {
+  new Date(iso).toLocaleString(intlLocale(), {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

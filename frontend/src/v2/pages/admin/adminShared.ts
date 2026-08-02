@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Project, Role } from '../../types/api';
+import { intlLocale } from '../../i18n';
 
 /** Types et helpers partagés par les sections de l'administration (10.C6). */
 export interface Stats {
@@ -149,7 +150,7 @@ export const fmtBytes = (b: number) =>
       : (b / 1e3).toFixed(0) + ' Ko';
 /** Date+heure courtes localisées (listes denses de l'admin). */
 export const fmtDateTime = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', {
+  new Date(iso).toLocaleString(intlLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

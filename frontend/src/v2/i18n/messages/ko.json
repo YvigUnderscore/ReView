@@ -946,5 +946,17 @@
   "marker.delete": "마커 삭제",
   "usd.recomposeFrom": "USD에서 재구성",
 
-  "marker.rename": "이름 변경 / 색 변경…"
+  "marker.rename": "이름 변경 / 색 변경…",
+
+  "sessions.line": "{ip} · {created} 접속 · {seen} 활동",
+  "sessions.unknownIp": "알 수 없는 IP",
+
+  "admin.tab.users": "사용자",
+  "admin.tab.comments": "댓글",
+  "admin.tab.statuses": "상태",
+  "admin.tab.announcements": "공지",
+  "admin.tab.trash": "휴지통",
+  "admin.tab.color": "색상(OCIO)",
+  "admin.topStorage": "저장 공간 상위 / 사용자",
+  "admin.onlineCount": "{count}명 접속 중"
 }

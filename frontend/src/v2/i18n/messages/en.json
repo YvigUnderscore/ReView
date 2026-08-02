@@ -947,5 +947,17 @@
   "marker.delete": "Delete the marker",
   "usd.recomposeFrom": "Recompose from the USD",
 
-  "marker.rename": "Rename / recolour…"
+  "marker.rename": "Rename / recolour…",
+
+  "sessions.line": "{ip} · connected on {created} · active {seen}",
+  "sessions.unknownIp": "Unknown IP",
+
+  "admin.tab.users": "Users",
+  "admin.tab.comments": "Comments",
+  "admin.tab.statuses": "Statuses",
+  "admin.tab.announcements": "Announcements",
+  "admin.tab.trash": "Trash",
+  "admin.tab.color": "Colour (OCIO)",
+  "admin.topStorage": "Top storage / user",
+  "admin.onlineCount": "{count} online"
 }

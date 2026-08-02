@@ -947,5 +947,17 @@
   "marker.delete": "Excluir o marcador",
   "usd.recomposeFrom": "Recompor a partir do USD",
 
-  "marker.rename": "Renomear / recolorir…"
+  "marker.rename": "Renomear / recolorir…",
+
+  "sessions.line": "{ip} · conectado em {created} · ativo em {seen}",
+  "sessions.unknownIp": "IP desconhecido",
+
+  "admin.tab.users": "Usuários",
+  "admin.tab.comments": "Comentários",
+  "admin.tab.statuses": "Status",
+  "admin.tab.announcements": "Avisos",
+  "admin.tab.trash": "Lixeira",
+  "admin.tab.color": "Cor (OCIO)",
+  "admin.topStorage": "Top armazenamento / usuário",
+  "admin.onlineCount": "{count} on-line"
 }

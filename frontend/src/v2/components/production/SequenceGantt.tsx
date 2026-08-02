@@ -6,9 +6,11 @@ import { Link } from 'react-router-dom';
 import { TASK_STATUS_BAR, TASK_STATUS_LABEL } from '../../lib/taskStatus';
 import type { ScheduleTask } from '../../types/api';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 const DAY = 86_400_000;
-const fmt = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+const fmt = (ms: number) =>
+  new Date(ms).toLocaleDateString(intlLocale(), { day: '2-digit', month: '2-digit' });
 
 interface Bar {
   task: ScheduleTask;
