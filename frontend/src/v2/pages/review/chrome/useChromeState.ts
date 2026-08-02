@@ -7,9 +7,9 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { modesFor } from './modes';
+import { switcherModesFor } from './modes';
 import { panelsFor } from './panels';
-import { DEFAULT_TOOL, toolsFor } from './tools';
+import { DEFAULT_TOOL, toolSearchOrder, toolsFor } from './tools';
 
 /**
  * État du chrome pour un média : préférences relues au montage (rail déplié, panneau ouvert,
@@ -48,7 +48,7 @@ export function useChromeState(kind: MediaKind) {
     window.localStorage.setItem(chromePrefsKey(kind), JSON.stringify({ panel, labels, comments }));
   }, [kind, state]);
 
-  const modes = useMemo(() => modesFor(kind), [kind]);
+  const modes = useMemo(() => switcherModesFor(kind), [kind]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -77,12 +77,17 @@ export function useChromeState(kind: MediaKind) {
         update({ mode: modes[index]!.value });
         return;
       }
-      // Lettre d'outil : seul le rail arme un outil, pour que touche et bouton s'accordent.
+      // Lettre d'outil : le mode courant d'abord, sinon les autres modes — armer l'outil d'un
+      // autre mode y bascule (T/R/S ramènent à « Nettoyer », un outil de tracé arme
+      // l'annotation), au lieu de ne rien faire.
       const key = e.key.toUpperCase();
-      const tool = toolsFor(state.mode, kind).find((t) => t.key === key);
-      if (tool) {
-        e.preventDefault();
-        update({ tool: tool.id });
+      for (const mode of toolSearchOrder(kind, state.mode)) {
+        const tool = toolsFor(mode, kind).find((t) => t.key === key);
+        if (tool) {
+          e.preventDefault();
+          update(mode === state.mode ? { tool: tool.id } : { mode, tool: tool.id });
+          return;
+        }
       }
     };
     window.addEventListener('keydown', onKey);

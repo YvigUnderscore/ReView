@@ -7,9 +7,9 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { modesFor } from './modes';
+import { modesFor, switcherModesFor } from './modes';
 import { panelsFor } from './panels';
-import { toolsFor, viewActionsFor } from './tools';
+import { toolSearchOrder, toolsFor, viewActionsFor } from './tools';
 
 describe('modes', () => {
   it('donne quatre modes à chaque type de média', () => {
@@ -26,6 +26,51 @@ describe('modes', () => {
 
   it('donne les mêmes modes au modèle 3D et au splat', () => {
     expect(modesFor('MODEL_3D').map((m) => m.value)).toEqual(modesFor('SPLAT').map((m) => m.value));
+  });
+
+  it('la bascule ne liste pas Annoter, qui reste un mode valide', () => {
+    for (const kind of ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'] as const) {
+      expect(switcherModesFor(kind).map((m) => m.value)).not.toContain('annotate');
+      expect(switcherModesFor(kind)).toHaveLength(3);
+      // `reconcileChrome` valide contre la liste complète : l'annotation s'arme ailleurs.
+      expect(modesFor(kind).map((m) => m.value)).toContain('annotate');
+    }
+  });
+});
+
+describe('toolSearchOrder — un raccourci d’outil bascule vers le mode qui le porte', () => {
+  it('commence par le mode courant, sans doublon, et couvre tous les modes', () => {
+    const order = toolSearchOrder('VIDEO', 'compare');
+    expect(order[0]).toBe('compare');
+    expect(new Set(order).size).toBe(order.length);
+    expect([...order].sort()).toEqual(
+      modesFor('VIDEO')
+        .map((m) => m.value)
+        .sort(),
+    );
+  });
+
+  it('en spatial, Nettoyer répond avant Mise en scène : T/R/S arment les gizmos', () => {
+    const order = toolSearchOrder('MODEL_3D', 'explore');
+    expect(order[0]).toBe('explore');
+    expect(order.indexOf('clean')).toBeLessThan(order.indexOf('stage'));
+    const t = toolsFor(
+      order.find((m) => toolsFor(m, 'MODEL_3D').some((x) => x.key === 'T'))!,
+      'MODEL_3D',
+    );
+    expect(t.find((x) => x.key === 'T')!.id).toBe('translate');
+  });
+
+  it('le mode courant garde la main sur ses propres touches (caméra de Mise en scène)', () => {
+    const order = toolSearchOrder('MODEL_3D', 'stage');
+    const first = order.find((m) => toolsFor(m, 'MODEL_3D').some((x) => x.key === 'T'))!;
+    expect(toolsFor(first, 'MODEL_3D').find((x) => x.key === 'T')!.id).toBe('cam-move');
+  });
+
+  it('un outil de tracé reste joignable au clavier : D bascule en Annoter (vidéo)', () => {
+    const order = toolSearchOrder('VIDEO', 'explore');
+    const mode = order.find((m) => toolsFor(m, 'VIDEO').some((x) => x.key === 'D'))!;
+    expect(mode).toBe('annotate');
   });
 });
 

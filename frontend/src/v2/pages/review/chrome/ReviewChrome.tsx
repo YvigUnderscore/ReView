@@ -4,7 +4,7 @@ import { Badge } from '../../../components/ui/badge';
 import { SegmentedControl } from '../../../components/ui/segmented-control';
 import ToolRail from './ToolRail';
 import InspectorDock from './InspectorDock';
-import { modesFor, type ModeId } from './modes';
+import { modesFor, switcherModesFor, type ModeId } from './modes';
 import { panelsFor, type PanelId } from './panels';
 import { toolsFor, viewActionsFor, type ToolId, type ViewAction } from './tools';
 import type { ChromeState } from './chromeState';
@@ -66,12 +66,15 @@ export default function ReviewChrome({
   /** Le viewport, plein espace. */
   children: ReactNode;
 }) {
-  const modes = modesFor(kind);
+  // La bascule ne liste pas « Annoter » : l'annotation s'arme depuis l'espace commentaire.
+  // Le mode reste valide — pendant l'annotation, aucun segment n'est actif et c'est le bouton
+  // du composer qui joue l'indicateur ; le pied de page garde le bon rappel.
+  const modes = switcherModesFor(kind);
   // Un viewer retire du rail les outils qu'il n'implémente pas : mieux vaut un rail court
   // qu'un bouton qui ne fait rien.
   const tools = toolsFor(state.mode, kind).filter((t) => !hiddenTools?.includes(t.id));
   const panels = panelsFor(kind);
-  const activeMode = modes.find((m) => m.value === state.mode) ?? modes[0]!;
+  const activeMode = modesFor(kind).find((m) => m.value === state.mode) ?? modes[0]!;
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
   const canSwitchMode = role !== 'CLIENT';
 

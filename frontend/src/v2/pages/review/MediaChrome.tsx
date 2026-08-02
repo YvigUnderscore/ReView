@@ -53,7 +53,7 @@ export default function MediaChrome({
   children: ReactNode;
 }) {
   const { state, update } = useChromeState(kind);
-  useMediaChrome({ state, ann });
+  useMediaChrome({ state, update, ann });
   const trim = useVideoTrim({ data, fps, videoRef, onSaved });
 
   const tools = toolsFor(state.mode, kind);

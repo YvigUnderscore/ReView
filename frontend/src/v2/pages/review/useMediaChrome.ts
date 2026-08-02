@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Tool } from '../../components/AnnotationCanvas';
 import type { ChromeState } from './chrome/chromeState';
+import { DEFAULT_MODE } from './chrome/modes';
 import type { ToolId } from './chrome/tools';
 import type { Annotations } from './useAnnotations';
 
@@ -28,14 +29,35 @@ const ANNOTATION_TOOL: Partial<Record<ToolId, Tool>> = {
  * désarme, et l'outil choisi devient l'outil de tracé. Les tracés eux-mêmes restent gérés par
  * `useAnnotations` — seule la barre de palette disparaît, remplacée par le rail et les options.
  */
-export function useMediaChrome({ state, ann }: { state: ChromeState; ann: Annotations }) {
-  const { setTool, setAnnotating } = ann;
+export function useMediaChrome({
+  state,
+  update,
+  ann,
+}: {
+  state: ChromeState;
+  update: (patch: Partial<ChromeState>) => void;
+  ann: Annotations;
+}) {
+  const { setTool, setAnnotating, annotating } = ann;
   const annotateMode = state.mode === 'annotate';
   const tool = ANNOTATION_TOOL[state.tool];
 
   useEffect(() => {
     setAnnotating(annotateMode);
   }, [annotateMode, setAnnotating]);
+
+  // Le bouton « Annoter » du composer (et le clic droit) arment l'annotation sans passer par
+  // la bascule — le chrome suit, dans les deux sens : entrer montre les outils de tracé au
+  // rail, sortir ramène au repos. Déclenché par la **bascule** d'`annotating` seulement, pour
+  // ne pas ré-imposer le mode quand l'utilisateur en choisit un autre (ce choix désarme
+  // l'annotation via l'effet ci-dessus, pas l'inverse).
+  const wasAnnotating = useRef(annotating);
+  useEffect(() => {
+    if (annotating === wasAnnotating.current) return;
+    wasAnnotating.current = annotating;
+    if (annotating) update({ mode: 'annotate' });
+    else if (state.mode === 'annotate') update({ mode: DEFAULT_MODE });
+  }, [annotating, state.mode, update]);
 
   useEffect(() => {
     if (tool) setTool(tool);

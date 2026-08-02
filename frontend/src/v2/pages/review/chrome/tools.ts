@@ -30,7 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
-import { isSpatialKind, type ModeId } from './modes';
+import { isSpatialKind, modesFor, type ModeId } from './modes';
 
 /**
  * Rail d'outils — les outils de pointage **exclusifs** du mode actif : un seul est armé à la
@@ -295,6 +295,19 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
 export function toolsFor(mode: ModeId, kind: MediaKind): ReviewTool[] {
   const tools = isSpatialKind(kind) ? (SPATIAL_TOOLS[mode] ?? []) : mediaTools(mode, kind);
   return tools.filter((t) => !t.kind || t.kind === kind);
+}
+
+/**
+ * Ordre de recherche d'un raccourci d'outil : le mode courant d'abord, puis les autres —
+ * presser la touche d'un outil d'un autre mode **bascule** vers ce mode. En spatial, `clean`
+ * passe en tête des autres : T/R/S sont les gizmos standard des DCC et doivent répondre
+ * depuis n'importe quel mode (les outils caméra de « Mise en scène », qui partagent T/R,
+ * gardent la main quand on y est déjà).
+ */
+export function toolSearchOrder(kind: MediaKind, current: ModeId): ModeId[] {
+  const all = modesFor(kind).map((m) => m.value);
+  const others = isSpatialKind(kind) ? ['clean' as ModeId, ...all] : all;
+  return [current, ...others.filter((mode, index) => mode !== current && others.indexOf(mode) === index)];
 }
 
 const SPATIAL_ACTIONS: ViewAction[] = [

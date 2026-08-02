@@ -99,9 +99,18 @@ function mediaModes(kind: MediaKind): ReviewMode[] {
   ];
 }
 
-/** Modes disponibles pour un type de média, dans l'ordre des touches 1 à 4. */
+/** Tous les modes valides d'un type de média — y compris « Annoter », non listé en bascule. */
 export function modesFor(kind: MediaKind): ReviewMode[] {
   return isSpatialKind(kind) ? SPATIAL_MODES : mediaModes(kind);
+}
+
+/**
+ * Modes proposés par la bascule d'en-tête et les touches numériques. « Annoter » n'y figure
+ * plus : l'annotation s'arme depuis l'espace commentaire (bouton du composer, clic droit) ou
+ * par le raccourci d'un outil de tracé — le mode reste valide, simplement non listé.
+ */
+export function switcherModesFor(kind: MediaKind): ReviewMode[] {
+  return modesFor(kind).filter((m) => m.value !== 'annotate');
 }
 
 /** Mode par défaut — celui servi aux clients. */
