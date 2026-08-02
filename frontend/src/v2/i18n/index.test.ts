@@ -12,6 +12,8 @@ import {
   isLocale,
   loadCatalog,
   localeInfo,
+  localeSnapshot,
+  subscribeToLocale,
   negotiateLocale,
   pluralTag,
   setLocale,
@@ -191,6 +193,20 @@ describe('traduction', () => {
     const stats = coverage('oc');
     expect(stats).not.toBeNull();
     expect(stats!.translated).toBe(stats!.total);
+  });
+
+  // Régression : le snapshot était la langue elle-même. À l'arrivée du catalogue elle
+  // valait déjà sa nouvelle valeur, React court-circuitait le rendu et l'écran restait
+  // figé sur le repli anglais — visible en bascule vers une langue jamais chargée.
+  it('change de snapshot à chaque notification, catalogue compris', async () => {
+    await setLocale('en');
+    const seen: number[] = [];
+    const unsubscribe = subscribeToLocale(() => seen.push(localeSnapshot()));
+    await setLocale('co');
+    unsubscribe();
+    expect(seen.length).toBe(2); // bascule immédiate, puis arrivée du catalogue
+    expect(new Set(seen).size).toBe(2); // deux snapshots distincts, sinon pas de rendu
+    expect(t('common.save')).toBe('Arregistrà');
   });
 
   it('aligne l’attribut lang du document sur la langue', async () => {

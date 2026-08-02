@@ -49,9 +49,19 @@ function loaderFor(code: Locale): (() => Promise<{ default: Catalog }>) | undefi
 let current: Locale = BASE_LOCALE;
 const listeners = new Set<() => void>();
 
+/**
+ * Compteur de révision du store, et non la langue courante, parce que `useSyncExternalStore`
+ * court-circuite le rendu quand le snapshot ne change pas : à l'arrivée du catalogue la
+ * langue vaut déjà sa nouvelle valeur, et l'écran resterait figé sur le repli anglais.
+ */
+let version = 0;
+
 function emit(): void {
+  version += 1;
   listeners.forEach((fn) => fn());
 }
+
+const getVersion = () => version;
 
 function readStored(): Locale | null {
   try {
@@ -188,14 +198,21 @@ const subscribe = (fn: () => void) => {
 
 /** `t` réactif : le composant se re-rend au changement de langue et à l'arrivée du catalogue. */
 export function useT(): typeof t {
-  useSyncExternalStore(subscribe, getLocale, () => BASE_LOCALE);
+  useSyncExternalStore(subscribe, getVersion, () => 0);
   return t;
 }
 
 /** Langue courante, réactive. */
 export function useLocale(): Locale {
-  return useSyncExternalStore(subscribe, getLocale, () => BASE_LOCALE);
+  useSyncExternalStore(subscribe, getVersion, () => 0);
+  return current;
 }
+
+/**
+ * Contrat du store, exporté pour être testable : `t()` seul ne révèle pas si React a
+ * bien de quoi re-rendre — c'est le couple abonnement + snapshot qui le décide.
+ */
+export { subscribe as subscribeToLocale, getVersion as localeSnapshot };
 
 /**
  * Part des clés effectivement traduites dans une langue — alimente la mention de
