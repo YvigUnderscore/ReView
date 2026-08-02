@@ -69,6 +69,7 @@ export function useModel3DChrome({
     mode: mode === 'navigate' ? 'rotate' : mode,
     target: primObject,
     targets: usdScene?.selectedObjects ?? EMPTY_TARGETS,
+    syncKey: usdScene?.override,
     // Pendant le drag, le proxy pilote la pose de l'objet ; le delta n'est relevé qu'au
     // lâcher, puis `applyPlan` le répercute sur tous les objets du prim.
     onCommit: (object) => {

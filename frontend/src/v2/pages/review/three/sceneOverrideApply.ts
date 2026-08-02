@@ -77,6 +77,41 @@ export function variantActive<T>(
   );
 }
 
+/**
+ * Vrai si retenir `option` pour le jeu `set` du prim afficherait réellement de la géométrie,
+ * compte tenu des options retenues sur les **autres** jeux du même prim.
+ *
+ * La cuisson importe chaque option composée avec les autres jeux à leur défaut (46.G/46.R) :
+ * une combinaison de deux options non-défaut n'existe dans le GLB que si elle a été composée
+ * telle quelle — la choisir quand elle ne l'est pas fait tout disparaître (« PlateA puis
+ * dirty → l'assiette s'évanouit »). Le menu s'en sert pour griser ces combinaisons (46.U).
+ * Si aucun objet indexé ne porte ce jeu (GLB d'avant l'étiquetage), on ne sait pas : ne pas
+ * bloquer.
+ */
+export function variantOptionRenderable<T>(
+  indexed: readonly IndexedObject<T>[],
+  override: SceneOverride | null,
+  defaults: VariantSelection,
+  prim: string,
+  set: string,
+  option: string,
+): boolean {
+  let known = false;
+  for (const entry of indexed) {
+    const membership = entry.variant;
+    if (!membership || membership.prim !== prim) continue;
+    const required = membership.selections[set];
+    if (required === undefined) continue;
+    known = true;
+    if (required !== option) continue;
+    const othersMatch = Object.entries(membership.selections).every(
+      ([s, o]) => s === set || effectiveVariant(override, defaults, prim, s) === o,
+    );
+    if (othersMatch) return true;
+  }
+  return !known;
+}
+
 /** Ce qu'il faut écrire sur un objet pour refléter l'override. */
 export interface ObjectPlan<T> {
   object: T;

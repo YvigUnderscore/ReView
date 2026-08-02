@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -110,9 +110,17 @@ export default function Model3DReview({
   // locale repart à zéro — comme le hotspot posé. Sans cela, le pied du scenegraph promettrait
   // un delta que le prochain commentaire ne porterait plus. Le commentaire fraîchement créé,
   // une fois sélectionné, rejoue exactement ce qui vient d'être proposé.
+  //
+  // C'est la **transition** proposition → vide qui signe l'envoi. Réagir à l'état « pas de
+  // proposition » seul suffisait à annuler le tout premier delta du gizmo : il arrivait un
+  // rendu avant que la proposition n'atteigne le composer, et l'effet voyait « rien de joint
+  // + exploration sale » — l'objet revenait à son origine au lâcher de la souris.
   const { revert, dirty: sceneDirty } = scene;
+  const hadProposal = useRef(ann.sceneOverride != null);
   useEffect(() => {
-    if (ann.sceneOverride === null && sceneDirty) revert();
+    const has = ann.sceneOverride != null;
+    if (hadProposal.current && !has && sceneDirty) revert();
+    hadProposal.current = has;
   }, [ann.sceneOverride, sceneDirty, revert]);
   // La scène d'un commentaire reste appliquée après un mouvement de vue (46.T) : Échap la
   // relâche — même touche que le retour à l'outil de repos, même sémantique de « repos ».

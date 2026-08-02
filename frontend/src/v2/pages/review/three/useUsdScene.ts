@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { MediaResp } from '../reviewTypes';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
@@ -24,6 +24,7 @@ import {
   renderedPrimPaths,
   transformDeltaFrom,
   variantActive,
+  variantOptionRenderable,
   type IndexedObject,
   type VariantSelection,
 } from './sceneOverrideApply';
@@ -71,6 +72,12 @@ export interface UsdSceneState {
   setPrim: (path: string, patch: PrimEdit | null) => void;
   isolate: (path: string) => void;
   setVariant: (prim: string, set: string, option: string) => void;
+  /**
+   * Vrai si retenir cette option affichera de la géométrie, compte tenu des options déjà
+   * retenues sur les autres jeux du même prim — le menu grise les combinaisons non cuites
+   * au lieu de faire disparaître l'objet (46.U).
+   */
+  variantChoiceRenderable: (prim: string, set: string, option: string) => boolean;
   /** Annule l'exploration locale et revient à l'override enregistré. */
   revert: () => void;
   /** Vrai si l'exploration locale diffère de ce qui est enregistré. */
@@ -178,17 +185,27 @@ export function useUsdScene(
     applyPlan(planOverride(indexed, override, variantDefaults));
   }, [override, variantDefaults, indexed]);
 
+  // Miroir de `local` lisible dans les gestionnaires d'événements sans passer par un updater.
+  const localRef = useRef(local);
+  localRef.current = local;
+
   /**
    * Toute édition locale passe ici : elle met à jour la scène **et** publie le delta pour le
    * prochain commentaire. Fait dans le gestionnaire d'événement, pas dans un effet.
+   *
+   * Le delta est calculé **hors** de l'updater : appeler `onLocalDelta` (un setState du
+   * parent) depuis l'updater est un effet de bord que React peut rejouer pendant le rendu —
+   * les deux états partaient alors dans des rendus séparés, et l'effet de reset de
+   * `Model3DReview` voyait « pas de proposition + exploration sale » : le premier delta du
+   * gizmo était annulé à l'instant où il venait d'être commité.
    */
   const editLocal = useCallback(
-    (next: (current: SceneOverride) => SceneOverride) =>
-      setLocal((current) => {
-        const updated = next(current);
-        onLocalDelta?.(isEmptyOverride(updated) ? null : updated);
-        return updated;
-      }),
+    (next: (current: SceneOverride) => SceneOverride) => {
+      const updated = next(localRef.current);
+      localRef.current = updated;
+      setLocal(updated);
+      onLocalDelta?.(isEmptyOverride(updated) ? null : updated);
+    },
     [onLocalDelta],
   );
 
@@ -280,6 +297,12 @@ export function useUsdScene(
     [editLocal],
   );
 
+  const variantChoiceRenderable = useCallback(
+    (prim: string, set: string, option: string) =>
+      variantOptionRenderable(indexed, override, variantDefaults, prim, set, option),
+    [indexed, override, variantDefaults],
+  );
+
   const revert = useCallback(() => editLocal(() => emptyOverride()), [editLocal]);
 
   return {
@@ -296,6 +319,7 @@ export function useUsdScene(
     setPrim,
     isolate,
     setVariant,
+    variantChoiceRenderable,
     revert,
     dirty: !isEmptyOverride(local),
     localDelta: local,

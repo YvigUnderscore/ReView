@@ -8,6 +8,7 @@ import {
   planOverride,
   renderedPrimPaths,
   transformDeltaFrom,
+  variantOptionRenderable,
   type BaseState,
   type IndexedObject,
 } from './sceneOverrideApply';
@@ -175,6 +176,39 @@ describe('prims à plusieurs jeux de variantes (46.R — assiettes Kitchen_set)'
       variants: { modelingVariant: 'PlateA', shadingVariant: 'Dirty' },
     });
     expect(visible(override)).toEqual([]);
+  });
+
+  describe('variantOptionRenderable (46.U — le menu grise au lieu de faire disparaître)', () => {
+    const renderable = (override: SceneOverride | null, set: string, option: string) =>
+      variantOptionRenderable(scene, override, defaults, prim, set, option);
+
+    it('au défaut, chaque option cuite individuellement est montrable', () => {
+      expect(renderable(null, 'modelingVariant', 'PlateA')).toBe(true);
+      expect(renderable(null, 'shadingVariant', 'Dirty')).toBe(true);
+      expect(renderable(null, 'shadingVariant', 'Clean')).toBe(true);
+    });
+
+    it('PlateA retenu : Dirty devient une combinaison non cuite — grisé', () => {
+      const override = setPrimEdit(emptyOverride(), prim, { variants: { modelingVariant: 'PlateA' } });
+      expect(renderable(override, 'shadingVariant', 'Dirty')).toBe(false);
+      // Revenir au shading par défaut reste possible (le sous-arbre PlateA le porte).
+      expect(renderable(override, 'shadingVariant', 'Clean')).toBe(true);
+    });
+
+    it('Dirty retenu : PlateA grisé, retour à PlateB possible', () => {
+      const override = setPrimEdit(emptyOverride(), prim, { variants: { shadingVariant: 'Dirty' } });
+      expect(renderable(override, 'modelingVariant', 'PlateA')).toBe(false);
+      expect(renderable(override, 'modelingVariant', 'PlateB')).toBe(true);
+    });
+
+    it('une option jamais cuite n’est pas montrable', () => {
+      expect(renderable(null, 'modelingVariant', 'PlateZ')).toBe(false);
+    });
+
+    it('sans porteur connu du jeu (vieux GLB non étiqueté), ne bloque rien', () => {
+      const unlabeled = indexed([[`${prim}/Geo`]]);
+      expect(variantOptionRenderable(unlabeled, null, defaults, prim, 'shadingVariant', 'Dirty')).toBe(true);
+    });
   });
 });
 

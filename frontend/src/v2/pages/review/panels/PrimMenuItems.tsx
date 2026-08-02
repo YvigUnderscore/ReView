@@ -45,11 +45,21 @@ export default function PrimMenuItems({
           <ContextMenuSubContent>
             {set.options.map((option) => {
               const available = variantOptionAvailable(baked, set.prim, set.name, option, set.selected);
+              // Combinaison avec les options retenues des autres jeux du prim : la cuisson
+              // compose chaque option avec les défauts — deux options non-défaut ensemble
+              // n'existent pas dans le GLB, la choisir ferait disparaître l'objet (46.U).
+              const renderable = available && scene.variantChoiceRenderable(set.prim, set.name, option);
               return (
                 <ContextMenuItem
                   key={option}
-                  disabled={!available}
-                  title={available ? undefined : 'Option non cuite dans la conversion — recomposer la scène'}
+                  disabled={!renderable}
+                  title={
+                    renderable
+                      ? undefined
+                      : available
+                        ? 'Combinaison non cuite avec les variantes retenues — recomposer la scène'
+                        : 'Option non cuite dans la conversion — recomposer la scène'
+                  }
                   onSelect={() => scene.setVariant(set.prim, set.name, option)}
                 >
                   {option}

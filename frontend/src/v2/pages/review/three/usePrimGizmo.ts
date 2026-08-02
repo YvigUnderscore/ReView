@@ -26,9 +26,15 @@ export function usePrimGizmo(
     /** Objets affichés du prim : leur centre englobant est le pivot du gizmo. */
     targets: () => THREE.Object3D[];
     onCommit: (object: THREE.Object3D) => void;
+    /**
+     * Change quand l'override appliqué change (commit, annulation, revert, proposition) : le
+     * proxy est alors reposé au centre de la géométrie. Sans cela, le gizmo restait là où le
+     * dernier drag l'avait laissé — centre désaligné, axes inclinés par les rotations.
+     */
+    syncKey?: unknown;
   },
 ): void {
-  const { enabled, mode, target } = opts;
+  const { enabled, mode, target, syncKey } = opts;
   const { ready, getSceneHandle } = viewer;
   const targetsRef = useRef(opts.targets);
   targetsRef.current = opts.targets;
@@ -37,6 +43,7 @@ export function usePrimGizmo(
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const controlRef = useRef<TransformControls | null>(null);
+  const syncRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!enabled || !ready || !target) return;
@@ -64,6 +71,16 @@ export function usePrimGizmo(
       control.attach(proxy);
       const helper = control.getHelper();
       scene.add(helper);
+
+      // Repose le proxy sur la géométrie après chaque application d'override (l'objet vient
+      // de bouger sans drag) — jamais pendant un drag, où le proxy est la main de l'utilisateur.
+      syncRef.current = () => {
+        if (control.dragging) return;
+        const next = objectsBoundingSphere(T, targetsRef.current());
+        if (next) proxy.position.copy(next.center);
+        proxy.quaternion.identity();
+        proxy.scale.set(1, 1, 1);
+      };
 
       // Instantané au début du drag : pose de l'objet, pivot et repère parent — les deltas du
       // proxy sont mesurés par rapport à cet état, jamais cumulés.
@@ -144,6 +161,7 @@ export function usePrimGizmo(
         control.dispose();
         controls.enabled = true;
         controlRef.current = null;
+        syncRef.current = null;
       };
     })();
 
@@ -157,4 +175,10 @@ export function usePrimGizmo(
   useEffect(() => {
     controlRef.current?.setMode(mode);
   }, [mode]);
+
+  // L'override vient d'être réappliqué (les effets de `useUsdScene` passent avant ceux-ci) :
+  // le centre englobant a pu bouger, le proxy suit.
+  useEffect(() => {
+    syncRef.current?.();
+  }, [syncKey]);
 }
