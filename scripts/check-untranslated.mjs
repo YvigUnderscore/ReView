@@ -21,11 +21,15 @@ import { join, relative, sep } from 'node:path';
 const ROOT = 'frontend/src/v2';
 
 /**
- * Plafond de chaînes françaises tolérées. Les 18 restantes sont des faux positifs
- * structurels : piles de polices CSS, classes `--active`, identifiants `active`, et
- * fragments de code que la détection par littéral confond avec de la prose.
+ * Plafond de chaînes françaises tolérées — dette à résorber, jamais à relever.
+ *
+ * Le reliquat est presque entièrement fait de **fragments de phrase autour d'une
+ * interpolation** (« La version « », « » sera supprimée », « · créé le »), que la migration
+ * par substitution ne pouvait pas prendre : ils demandent une clé à variables, donc une
+ * réécriture du JSX. S'y ajoutent une poignée de faux positifs structurels (piles de polices
+ * CSS, classes `--active`, identifiant `active`).
  */
-const CEILING = 18;
+const CEILING = 88;
 
 // Accents typiques, ou mots-outils français qui n'existent pas tels quels en anglais.
 const FRENCH =
@@ -33,13 +37,17 @@ const FRENCH =
 
 // Ce qui ressemble à du français mais n'en est pas : identifiants, chemins, formats.
 const SKIP = /^(https?:|\/|\.|#|[A-Z_]+$|[a-z]+([A-Z][a-z]*)+$)|^\s*$/;
+// Du code, pas de la prose : la détection par bornes attrape des morceaux de TypeScript.
+const CODEY = /[=;]|=>|(const|let|return|useState|useRef|function|export|import|null|undefined)/;
 
 const stripComments = (src) =>
   src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|\s)\/\/[^\n]*/g, ' ');
 
-function* candidates(src) {
-  // Texte JSX, multi-ligne compris : entre `>` et `<`, sans accolade ni balise.
-  for (const m of src.matchAll(/>([^<>{}]+)</g)) yield m[1].split(/\s+/).join(' ').trim();
+function* candidates(src, jsx) {
+  // Texte JSX, multi-ligne compris. La borne gauche est `>` ou `}` et la borne droite
+  // `<` ou `{` : sans cela, une phrase qui suit une expression (`{icon} Titre`) échappe.
+  if (jsx)
+    for (const m of src.matchAll(/[>}]([^<>{}]+)[<{]/g)) yield m[1].split(/\s+/).join(' ').trim();
   // Littéraux de chaîne, y compris les gabarits sans interpolation.
   for (const m of src.matchAll(/'((?:[^'\\\n]|\\.)+)'|"((?:[^"\\\n]|\\.)+)"|`([^`${}]+)`/g))
     yield (m[1] ?? m[2] ?? m[3]).split(/\s+/).join(' ').trim();
@@ -59,8 +67,8 @@ function* sources(dir) {
 const findings = new Map();
 for (const file of sources(ROOT)) {
   const src = stripComments(readFileSync(file, 'utf8'));
-  for (const text of candidates(src)) {
-    if (text.length < 3 || SKIP.test(text) || !FRENCH.test(text)) continue;
+  for (const text of candidates(src, file.endsWith('.tsx'))) {
+    if (text.length < 3 || SKIP.test(text) || CODEY.test(text) || !FRENCH.test(text)) continue;
     const list = findings.get(file) ?? [];
     if (!list.includes(text)) list.push(text);
     findings.set(file, list);
