@@ -20,6 +20,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { useT } from '../../i18n';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -33,6 +34,7 @@ import {
  * lecture enchaînée via `?playlist=` sur la review.
  */
 export default function PlaylistsTab({ projectId }: { projectId: number }) {
+  const t = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const role = useAuth((s) => s.user?.role);
@@ -66,10 +68,10 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
       const { playlist } = await api.get<{ playlist: PlaylistDetail }>(`/api/playlists/${p.id}`);
       const first = playlist.items.find((it) => it.media);
       const path = first ? itemPath(first, p.id) : null;
-      if (!path) return toast.error('Aucun média lisible dans cette playlist');
+      if (!path) return toast.error(t('playlists.unreadable'));
       navigate(joinLive ? `${path}&live=1` : path);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Playlist inaccessible');
+      toast.error(e instanceof Error ? e.message : t('playlists.inaccessible'));
     }
   };
 
@@ -79,16 +81,16 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
     try {
       if (renaming) {
         await api.patch(`/api/playlists/${renaming.id}`, { name });
-        toast.success('Playlist renommée');
+        toast.success(t('playlists.renamed'));
       } else {
         await api.post('/api/playlists', { projectId, name });
-        toast.success('Playlist créée');
+        toast.success(t('playlists.created'));
       }
       setRenaming(null);
       setCreating(false);
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
@@ -96,11 +98,11 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
     if (!deleting) return;
     try {
       await api.del(`/api/playlists/${deleting.id}`);
-      toast.success('Playlist supprimée');
+      toast.success(t('playlists.deleted'));
       setDeleting(null);
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
@@ -118,9 +120,9 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
       {playlists.length === 0 ? (
         <EmptyState
           icon={ListVideo}
-          title="Aucune playlist"
+          title={t('playlists.empty.title')}
           description="Sélectionnez des médias sur la page Reviews puis « Ajouter à la playlist » (clic droit), ou créez une playlist vide ici."
-          action={canWrite ? 'Nouvelle playlist' : undefined}
+          action={canWrite ? t('playlists.new') : undefined}
           onAction={canWrite ? () => (setCreating(true), setNameDraft('')) : undefined}
         />
       ) : (
@@ -192,13 +194,13 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{renaming ? 'Renommer la playlist' : 'Nouvelle playlist'}</DialogTitle>
+            <DialogTitle>{renaming ? t('playlists.rename') : t('playlists.new')}</DialogTitle>
           </DialogHeader>
           <Input
             value={nameDraft}
             onChange={(e) => setNameDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void submitName()}
-            placeholder="Nom de la playlist (ex. Dailies lundi)"
+            placeholder={t('playlists.name.placeholder')}
             autoFocus
           />
           <DialogFooter>
@@ -206,7 +208,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
               Annuler
             </Button>
             <Button onClick={() => void submitName()} disabled={!nameDraft.trim()}>
-              {renaming ? 'Renommer' : 'Créer'}
+              {renaming ? t('common.rename') : t('common.create')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -214,11 +216,11 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Supprimer la playlist ?"
+        title={t('playlists.delete.title')}
         message={
           <>« {deleting?.name} » sera supprimée. Les versions qu’elle référence ne sont pas affectées.</>
         }
-        confirmLabel="Supprimer"
+        confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

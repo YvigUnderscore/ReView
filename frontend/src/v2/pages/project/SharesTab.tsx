@@ -14,6 +14,7 @@ import { Label } from '../../components/ui/label';
 import { Select } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import type { ShareLink } from '../../types/api';
+import { useT } from '../../i18n';
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
@@ -22,6 +23,7 @@ const clientUrl = (token: string) => `${window.location.origin}/client/${token}`
 
 /** Onglet Partages (35.C) : liens client durcis — mot de passe, expiration, limite de vues. */
 export default function SharesTab({ projectId }: { projectId: number }) {
+  const t = useT();
   const qc = useQueryClient();
   const linksQ = useQuery({
     queryKey: qk.shareLinks(projectId),
@@ -32,22 +34,22 @@ export default function SharesTab({ projectId }: { projectId: number }) {
 
   const copy = async (token: string) => {
     await navigator.clipboard.writeText(clientUrl(token));
-    toast.success('Lien copié dans le presse-papiers');
+    toast.success(t('shares.copied'));
   };
   const revoke = async (link: ShareLink) => {
     try {
       await api.del(`/api/share/${link.id}`);
-      toast.success('Lien révoqué');
+      toast.success(t('shares.revokedToast'));
       qc.invalidateQueries({ queryKey: qk.shareLinks(projectId) });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Partages client</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('shares.title')}</h2>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus size={14} className="mr-1" /> Nouveau lien
         </Button>
@@ -67,16 +69,16 @@ export default function SharesTab({ projectId }: { projectId: number }) {
             <Link2 size={15} className="shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate font-medium">{l.label ?? 'Lien sans nom'}</span>
+                <span className="truncate font-medium">{l.label ?? t('shares.unnamed')}</span>
                 <Badge variant={l.permission === 'COMMENT' ? 'default' : 'secondary'}>
                   {l.permission === 'COMMENT' ? 'Commentaires' : 'Lecture seule'}
                 </Badge>
                 {l.hasPassword && (
-                  <span title="Protégé par mot de passe">
+                  <span title={t('shares.passwordProtected')}>
                     <Lock size={13} className="text-muted-foreground" />
                   </span>
                 )}
-                {l.revoked && <Badge variant="destructive">Révoqué</Badge>}
+                {l.revoked && <Badge variant="destructive">{t('shares.revoked')}</Badge>}
               </div>
               <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -91,10 +93,10 @@ export default function SharesTab({ projectId }: { projectId: number }) {
             </div>
             {!l.revoked && (
               <>
-                <Button variant="ghost" size="sm" onClick={() => copy(l.token)} title="Copier l'URL">
+                <Button variant="ghost" size="sm" onClick={() => copy(l.token)} title={t('shares.copyUrl')}>
                   <Copy size={14} />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => revoke(l)} title="Révoquer">
+                <Button variant="ghost" size="sm" onClick={() => revoke(l)} title={t('shares.revoke')}>
                   <Trash2 size={14} className="text-destructive" />
                 </Button>
               </>
@@ -116,6 +118,7 @@ function CreateShareDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const [label, setLabel] = useState('');
   const [permission, setPermission] = useState<'VIEW' | 'COMMENT'>('VIEW');
@@ -137,7 +140,7 @@ function CreateShareDialog({
         ...(maxViews ? { maxViews: Number(maxViews) } : {}),
       });
       await navigator.clipboard.writeText(clientUrl(link.token)).catch(() => undefined);
-      toast.success('Lien créé et copié dans le presse-papiers');
+      toast.success(t('shares.created'));
       qc.invalidateQueries({ queryKey: qk.shareLinks(projectId) });
       setLabel('');
       setPassword('');
@@ -145,7 +148,7 @@ function CreateShareDialog({
       setMaxViews('');
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -155,33 +158,33 @@ function CreateShareDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nouveau lien de partage</DialogTitle>
+          <DialogTitle>{t('shares.new')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <Label htmlFor="share-label">Destinataire (affiché en filigrane)</Label>
+            <Label htmlFor="share-label">{t('shares.recipient')}</Label>
             <Input
               id="share-label"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Client X — production"
+              placeholder={t('shares.recipient.placeholder')}
               maxLength={120}
             />
           </div>
           <div>
-            <Label htmlFor="share-permission">Permission</Label>
+            <Label htmlFor="share-permission">{t('shares.permission')}</Label>
             <Select
               id="share-permission"
               value={permission}
               onChange={(e) => setPermission(e.target.value as 'VIEW' | 'COMMENT')}
             >
-              <option value="VIEW">Lecture seule</option>
-              <option value="COMMENT">Lecture + commentaires</option>
+              <option value="VIEW">{t('shares.permission.readOnly')}</option>
+              <option value="COMMENT">{t('shares.permission.comment')}</option>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="share-expires">Expiration (jours)</Label>
+              <Label htmlFor="share-expires">{t('shares.expiry')}</Label>
               <Input
                 id="share-expires"
                 type="number"
@@ -189,30 +192,30 @@ function CreateShareDialog({
                 max={3650}
                 value={expiresInDays}
                 onChange={(e) => setExpiresInDays(e.target.value)}
-                placeholder="Jamais"
+                placeholder={t('common.never')}
               />
             </div>
             <div>
-              <Label htmlFor="share-max-views">Limite de vues</Label>
+              <Label htmlFor="share-max-views">{t('shares.viewLimit')}</Label>
               <Input
                 id="share-max-views"
                 type="number"
                 min={1}
                 value={maxViews}
                 onChange={(e) => setMaxViews(e.target.value)}
-                placeholder="Illimité"
+                placeholder={t('common.unlimited')}
               />
             </div>
           </div>
           <div>
-            <Label htmlFor="share-password">Mot de passe (optionnel)</Label>
+            <Label htmlFor="share-password">{t('shares.password')}</Label>
             <Input
               id="share-password"
               type="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Aucun"
+              placeholder={t('common.none')}
               minLength={4}
               maxLength={200}
             />

@@ -19,6 +19,7 @@ import ModeSwitch, { type CreateMode } from './ModeSwitch';
 import SequenceEditDialog from './SequenceEditDialog';
 import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData } from './projectTypes';
 import type { PipelineSettings } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Onglet Séquences : création (simple / lot / auto), édition (dialog), détail en accordéon. */
 export default function SequencesTab({
@@ -40,6 +41,7 @@ export default function SequencesTab({
   nomenclature: Nomenclature;
   pipeline: PipelineSettings;
 }) {
+  const t = useT();
   const [newSeq, setNewSeq] = useState({ name: '', code: '' });
   const [mode, setMode] = useState<CreateMode>('simple');
   const [editing, setEditing] = useState<Sequence | null>(null);
@@ -58,7 +60,7 @@ export default function SequencesTab({
       setNewSeq({ name: '', code: '' });
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const createBulk = async (rows: Record<string, string>[]) => {
@@ -73,18 +75,18 @@ export default function SequencesTab({
     if (!deleting) return;
     try {
       await api.del(`/api/sequences/${deleting.id}`);
-      toast.success('Séquence déplacée dans la corbeille');
+      toast.success(t('sequences.trashed'));
       setDeleting(null);
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Séquences</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('sequences.title')}</h2>
         {canManage && <ModeSwitch mode={mode} setMode={setMode} />}
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
@@ -107,7 +109,7 @@ export default function SequencesTab({
               placeholder: `Code (${nomenclature.sequencePrefix}${'0'.repeat(nomenclature.padding)})`,
               className: 'w-32',
             },
-            { key: 'name', placeholder: 'Nom (optionnel)', className: 'flex-1' },
+            { key: 'name', placeholder: t('sequences.name.placeholder'), className: 'flex-1' },
           ]}
           onSubmit={createBulk}
         />
@@ -116,14 +118,14 @@ export default function SequencesTab({
         <form onSubmit={create} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
           <input
             className="w-28 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder="Code"
+            placeholder={t('sequences.code.placeholder')}
             value={newSeq.code}
             onChange={(e) => setNewSeq((s) => ({ ...s, code: e.target.value }))}
             required
           />
           <input
             className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder="Nom (optionnel)"
+            placeholder={t('sequences.name.placeholder')}
             value={newSeq.name}
             onChange={(e) => setNewSeq((s) => ({ ...s, name: e.target.value }))}
           />
@@ -136,11 +138,11 @@ export default function SequencesTab({
         <EmptyState
           compact
           icon={Film}
-          title="Aucune séquence"
+          title={t('sequences.empty.title')}
           description={
             canManage
               ? 'Créez vos séquences ci-dessus — elles regroupent les shots (SQ010, SQ020…).'
-              : 'Les séquences du projet apparaîtront ici.'
+              : t('sequences.empty.description')
           }
         />
       ) : (
@@ -157,14 +159,14 @@ export default function SequencesTab({
                     <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
                         onClick={() => setEditing(s)}
-                        title="Modifier"
+                        title={t('common.edit')}
                         className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
                       >
                         {EditIcon}
                       </button>
                       <button
                         onClick={() => setDeleting(s)}
-                        title="Supprimer"
+                        title={t('common.delete')}
                         className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-secondary"
                       >
                         {DeleteIcon}
@@ -192,9 +194,9 @@ export default function SequencesTab({
 
       <ConfirmDialog
         open={!!deleting}
-        title="Supprimer la séquence ?"
+        title={t('sequences.delete.title')}
         message={<>La séquence « {deleting?.code} » et ses shots seront déplacés dans la corbeille.</>}
-        confirmLabel="Mettre à la corbeille"
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
@@ -205,6 +207,7 @@ export default function SequencesTab({
 
 // Détail d'une séquence : shots + assets assignés (chargé à l'ouverture)
 function SequenceDetail({ sequenceId }: { sequenceId: number }) {
+  const t = useT();
   const { data: seqData } = useQuery({
     queryKey: qk.sequence(sequenceId),
     queryFn: () => api.get<{ sequence: SequenceDetailData }>(`/api/sequences/${sequenceId}`),
@@ -224,7 +227,7 @@ function SequenceDetail({ sequenceId }: { sequenceId: number }) {
           Shots ({data.shots.length})
         </div>
         {data.shots.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aucun shot.</p>
+          <p className="text-xs text-muted-foreground">{t('sequences.noShot')}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {data.shots.map((sh) => (
@@ -243,7 +246,7 @@ function SequenceDetail({ sequenceId }: { sequenceId: number }) {
           Assets de la séquence ({data.assets.length})
         </div>
         {data.assets.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aucun asset assigné.</p>
+          <p className="text-xs text-muted-foreground">{t('sequences.noAsset')}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {data.assets.map((a) => (

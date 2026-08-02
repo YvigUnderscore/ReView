@@ -12,17 +12,19 @@ import Avatar from '../../components/Avatar';
 import { initialsFrom } from '../../lib/initials';
 import type { Member } from './projectTypes';
 import type { Role } from '../../types/api';
+import { useT, type MessageKey } from '../../i18n';
 
 // Rôle projet : override facultatif du rôle global (38.E). '' = hérite du rôle global.
-const PROJECT_ROLES: { value: string; label: string }[] = [
-  { value: '', label: 'Rôle global' },
-  { value: 'SUPERVISOR', label: 'Superviseur (projet)' },
-  { value: 'ARTIST', label: 'Artiste' },
-  { value: 'CLIENT', label: 'Client (lecture/commentaire)' },
+const projectRoles = (t: (k: MessageKey) => string): { value: string; label: string }[] => [
+  { value: '', label: t('members.role.global') },
+  { value: 'SUPERVISOR', label: t('members.role.supervisor') },
+  { value: 'ARTIST', label: t('members.role.artist') },
+  { value: 'CLIENT', label: t('members.role.client') },
 ];
 
 /** Onglet Membres : ajout/retrait des utilisateurs du projet + rôle par projet (38.E). */
 export default function MembersTab({ projectId }: { projectId: number }) {
+  const t = useT();
   const qc = useQueryClient();
   const projQ = useQuery({
     queryKey: qk.project(projectId),
@@ -47,11 +49,11 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     if (!addUserId) return;
     try {
       await api.post(`/api/projects/${projectId}/members`, { userId: Number(addUserId) });
-      toast.success('Membre ajouté au projet');
+      toast.success(t('members.added'));
       setAddUserId('');
       invalidate();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const setRole = async (userId: number, role: string) => {
@@ -60,19 +62,19 @@ export default function MembersTab({ projectId }: { projectId: number }) {
         userId,
         role: role ? (role as Role) : undefined,
       });
-      toast.success('Rôle du membre mis à jour');
+      toast.success(t('members.roleUpdated'));
       invalidate();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const remove = async (userId: number) => {
     try {
       await api.del(`/api/projects/${projectId}/members/${userId}`);
-      toast.success('Membre retiré du projet');
+      toast.success(t('members.removed'));
       invalidate();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -81,7 +83,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
 
   return (
     <div>
-      <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Membres du projet</h2>
+      <h2 className="mb-4 text-sm font-semibold text-muted-foreground">{t('members.title')}</h2>
       {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
       <form onSubmit={add} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
         <select
@@ -89,7 +91,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
           value={addUserId}
           onChange={(e) => setAddUserId(e.target.value)}
         >
-          <option value="">Ajouter un utilisateur…</option>
+          <option value="">{t('members.add')}</option>
           {available.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name ?? u.email} ({u.email})
@@ -120,9 +122,9 @@ export default function MembersTab({ projectId }: { projectId: number }) {
                 className="rounded border border-input bg-background px-2 py-1 text-xs"
                 value={m.role ?? ''}
                 onChange={(e) => setRole(m.user.id, e.target.value)}
-                title="Rôle sur ce projet"
+                title={t('members.roleOnProject')}
               >
-                {PROJECT_ROLES.map((r) => (
+                {projectRoles(t).map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
@@ -130,7 +132,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
               </select>
               <button
                 onClick={() => remove(m.user.id)}
-                title="Retirer"
+                title={t('common.remove')}
                 className="flex h-7 w-7 items-center justify-center rounded-md text-destructive opacity-0 transition-opacity hover:bg-secondary group-hover:opacity-100"
               >
                 {DeleteIcon}
@@ -138,7 +140,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
             </div>
           </div>
         ))}
-        {members.length === 0 && <p className="text-sm text-muted-foreground">Aucun membre assigné.</p>}
+        {members.length === 0 && <p className="text-sm text-muted-foreground">{t('members.empty')}</p>}
       </div>
     </div>
   );

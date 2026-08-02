@@ -23,6 +23,7 @@ import { Label } from '../../components/ui/label';
 import { Select } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ASSET_TYPES, type Asset } from './projectTypes';
+import { useT } from '../../i18n';
 
 /** Onglet Assets réutilisables : création, cartes, assignation shots/séquences. */
 export default function AssetsTab({
@@ -36,6 +37,7 @@ export default function AssetsTab({
   canManage: boolean;
   reload: () => Promise<void>;
 }) {
+  const t = useT();
   const view = useViewMode(`assets:${projectId}`);
   const navigate = useNavigate();
   // Suivi de notifications par asset (32.G, clic droit).
@@ -56,7 +58,7 @@ export default function AssetsTab({
       setBulkDeleting(false);
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -69,25 +71,25 @@ export default function AssetsTab({
       setCreating(false);
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
       await api.del(`/api/assets/${deleting.id}`);
-      toast.success('Asset déplacé dans la corbeille');
+      toast.success(t('assets.trashed'));
       setDeleting(null);
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Assets réutilisables</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('assets.title')}</h2>
         <div className="flex items-center gap-2">
           {canManage && (
             <Button size="sm" onClick={() => setCreating(true)}>
@@ -103,20 +105,20 @@ export default function AssetsTab({
         <DialogContent>
           <form onSubmit={create} className="space-y-3">
             <DialogHeader>
-              <DialogTitle>Nouvel asset</DialogTitle>
+              <DialogTitle>{t('assets.new')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-1">
-              <Label>Nom de l'asset</Label>
+              <Label>{t('assets.name')}</Label>
               <Input
                 autoFocus
-                placeholder="Personnage, décor, prop…"
+                placeholder={t('assets.type.placeholder')}
                 value={newAsset.name}
                 onChange={(e) => setNewAsset((s) => ({ ...s, name: e.target.value }))}
                 required
               />
             </div>
             <div className="space-y-1">
-              <Label>Type</Label>
+              <Label>{t('assets.type')}</Label>
               <Select
                 className="w-full"
                 value={newAsset.type}
@@ -144,13 +146,13 @@ export default function AssetsTab({
         <EmptyState
           compact
           icon={Box}
-          title="Aucun asset"
+          title={t('assets.empty.title')}
           description={
             canManage
               ? 'Créez vos assets réutilisables avec « + Créer » (personnages, décors, props…).'
-              : 'Les assets du projet apparaîtront ici.'
+              : t('assets.empty.description')
           }
-          action={canManage ? 'Créer un asset' : undefined}
+          action={canManage ? t('assets.empty.action') : undefined}
           onAction={() => setCreating(true)}
         />
       ) : (
@@ -160,10 +162,15 @@ export default function AssetsTab({
               ? [
                   {
                     icon: <Link2 size={15} />,
-                    label: 'Assigner à des shots/séquences',
+                    label: t('assets.assign'),
                     onClick: () => setAssigning(a),
                   },
-                  { icon: DeleteIcon, label: 'Supprimer', danger: true, onClick: () => setDeleting(a) },
+                  {
+                    icon: DeleteIcon,
+                    label: t('common.delete'),
+                    danger: true,
+                    onClick: () => setDeleting(a),
+                  },
                 ]
               : [];
             return (
@@ -184,13 +191,13 @@ export default function AssetsTab({
                 contextActions={[
                   {
                     icon: <FolderOpen size={14} />,
-                    label: 'Ouvrir',
+                    label: t('common.open'),
                     onClick: () => navigate(`/assets/${a.id}`),
                   },
                   // Suivi (32.G) : notifications sur l'activité de l'asset.
                   {
                     icon: watch.isWatching('ASSET', a.id) ? <BellOff size={14} /> : <Bell size={14} />,
-                    label: watch.isWatching('ASSET', a.id) ? 'Ne plus suivre cet asset' : 'Suivre cet asset',
+                    label: watch.isWatching('ASSET', a.id) ? t('assets.unwatch') : t('assets.watch'),
                     onClick: () => watch.toggle('ASSET', a.id),
                   },
                   ...manageActions,
@@ -204,11 +211,11 @@ export default function AssetsTab({
       {canManage && (
         <SelectionBar
           count={sel.count}
-          label="asset(s)"
+          label={t('assets.countLabel', { count: sel.count })}
           onClear={sel.clear}
           actions={[
             {
-              label: 'Supprimer',
+              label: t('common.delete'),
               icon: <Trash2 size={14} />,
               danger: true,
               onClick: () => setBulkDeleting(true),
@@ -218,9 +225,9 @@ export default function AssetsTab({
       )}
       <ConfirmDialog
         open={bulkDeleting}
-        title="Supprimer les assets ?"
+        title={t('assets.deleteMany.title')}
         message={<>{sel.count} asset(s) et leurs versions/médias seront déplacés dans la corbeille.</>}
-        confirmLabel="Mettre à la corbeille"
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmBulkDelete}
         onCancel={() => setBulkDeleting(false)}
@@ -236,9 +243,9 @@ export default function AssetsTab({
       )}
       <ConfirmDialog
         open={!!deleting}
-        title="Supprimer l'asset ?"
+        title={t('assets.delete.title')}
         message={<>L'asset « {deleting?.name} » et ses versions/médias seront déplacés dans la corbeille.</>}
-        confirmLabel="Mettre à la corbeille"
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

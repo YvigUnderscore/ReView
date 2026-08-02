@@ -18,6 +18,7 @@ import ShotDetailDrawer from './ShotDetailDrawer';
 import ShotEditDialog from './ShotEditDialog';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
 import type { PipelineSettings } from '../../types/api';
+import { useT } from '../../i18n';
 
 /**
  * Onglet Shots : création (simple / lot / auto), cartes groupées par séquence,
@@ -44,6 +45,7 @@ export default function ShotsTab({
   nomenclature: Nomenclature;
   pipeline: PipelineSettings;
 }) {
+  const t = useT();
   const view = useViewMode(`shots:${projectId}`);
   // Suivi de notifications par shot (32.G, clic droit).
   const watch = useWatch();
@@ -71,7 +73,7 @@ export default function ShotsTab({
       setNewShot({ name: '', code: '', sequenceId: '' });
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const createBulk = async (rows: Record<string, string>[]) => {
@@ -90,11 +92,11 @@ export default function ShotsTab({
     if (!deleting) return;
     try {
       await api.del(`/api/shots/${deleting.id}`);
-      toast.success('Shot déplacé dans la corbeille');
+      toast.success(t('shots.trashed'));
       setDeleting(null);
       reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -109,7 +111,7 @@ export default function ShotsTab({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">Shots</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('shots.title')}</h2>
         <div className="flex items-center gap-2">
           {canManage && <ModeSwitch mode={mode} setMode={setMode} />}
           <ViewToggle contextKey={`shots:${projectId}`} />
@@ -145,13 +147,13 @@ export default function ShotsTab({
               placeholder: `Code (${nomenclature.shotPrefix}${'0'.repeat(nomenclature.padding)})`,
               className: 'w-28',
             },
-            { key: 'name', placeholder: 'Nom (optionnel)', className: 'flex-1' },
+            { key: 'name', placeholder: t('sequences.name.placeholder'), className: 'flex-1' },
             {
               key: 'sequenceId',
-              placeholder: 'Séquence',
+              placeholder: t('shots.sequence'),
               className: 'w-44',
               options: [
-                { value: '', label: 'Sans séquence' },
+                { value: '', label: t('shots.noSequence') },
                 ...sortedSequences.map((sq) => ({ value: String(sq.id), label: `${sq.code} · ${sq.name}` })),
               ],
             },
@@ -166,14 +168,14 @@ export default function ShotsTab({
         >
           <input
             className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder="Code"
+            placeholder={t('sequences.code.placeholder')}
             value={newShot.code}
             onChange={(e) => setNewShot((s) => ({ ...s, code: e.target.value }))}
             required
           />
           <input
             className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder="Nom (optionnel)"
+            placeholder={t('sequences.name.placeholder')}
             value={newShot.name}
             onChange={(e) => setNewShot((s) => ({ ...s, name: e.target.value }))}
           />
@@ -182,7 +184,7 @@ export default function ShotsTab({
             value={newShot.sequenceId}
             onChange={(e) => setNewShot((s) => ({ ...s, sequenceId: e.target.value }))}
           >
-            <option value="">Sans séquence</option>
+            <option value="">{t('shots.noSequence')}</option>
             {sortedSequences.map((sq) => (
               <option key={sq.id} value={sq.id}>
                 {sq.code} · {sq.name}
@@ -199,11 +201,11 @@ export default function ShotsTab({
         <EmptyState
           compact
           icon={Clapperboard}
-          title="Aucun shot"
+          title={t('shots.empty.title')}
           description={
             canManage
               ? 'Créez vos premiers shots avec le formulaire ci-dessus (mode Simple, Lot ou Auto).'
-              : 'Les shots du projet apparaîtront ici.'
+              : t('shots.empty.description')
           }
         />
       )}
@@ -211,16 +213,16 @@ export default function ShotsTab({
       {groups.map((g) => (
         <section key={g.seq?.id ?? 'none'} className="mb-6">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {g.seq ? `${g.seq.code} · ${g.seq.name}` : 'Sans séquence'}
+            {g.seq ? `${g.seq.code} · ${g.seq.name}` : t('shots.noSequence')}
           </h3>
           <EntityContainer view={view}>
             {g.list.map((shot) => {
               const actions = canManage
                 ? [
-                    { icon: EditIcon, label: 'Modifier', onClick: () => setEditing(shot) },
+                    { icon: EditIcon, label: t('common.edit'), onClick: () => setEditing(shot) },
                     {
                       icon: DeleteIcon,
-                      label: 'Supprimer',
+                      label: t('common.delete'),
                       danger: true,
                       onClick: () => setDeleting(shot),
                     },
@@ -230,7 +232,7 @@ export default function ShotsTab({
               const watching = watch.isWatching('SHOT', shot.id);
               const watchAction = {
                 icon: watching ? <BellOff size={14} /> : <Bell size={14} />,
-                label: watching ? 'Ne plus suivre ce shot' : 'Suivre ce shot',
+                label: watching ? t('shots.unwatch') : t('shots.watch'),
                 onClick: () => watch.toggle('SHOT', shot.id),
               };
               return (
@@ -276,9 +278,9 @@ export default function ShotsTab({
 
       <ConfirmDialog
         open={!!deleting}
-        title="Supprimer le shot ?"
+        title={t('shots.delete.title')}
         message={<>Le shot « {deleting?.code} » et ses tâches/versions seront déplacés dans la corbeille.</>}
-        confirmLabel="Mettre à la corbeille"
+        confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

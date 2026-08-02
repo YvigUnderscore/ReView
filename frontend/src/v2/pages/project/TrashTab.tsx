@@ -14,6 +14,7 @@ import EmptyState from '../../components/ui/empty-state';
 import { Checkbox } from '../../components/ui/checkbox';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import type { AssetRef, MediaRef, SequenceRef, ShotRef, Version } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** GET /api/projects/:id/trash — éléments supprimés restaurables. */
 interface TrashData {
@@ -43,6 +44,7 @@ function TrashSection({
   items: TrashItem[];
   onChanged: () => void;
 }) {
+  const t = useT();
   const sel = useMultiSelect(items.map((it) => it.id));
   const [purge, setPurge] = useState<TrashItem | null>(null);
   const [bulkPurging, setBulkPurging] = useState(false);
@@ -52,21 +54,21 @@ function TrashSection({
   const restore = async (endpoint: string) => {
     try {
       await api.post(`${endpoint}/restore`);
-      toast.success('Élément restauré');
+      toast.success(t('trash.restored'));
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const confirmPurge = async () => {
     if (!purge) return;
     try {
       await api.del(`${purge.endpoint}/purge`);
-      toast.success('Supprimé définitivement');
+      toast.success(t('trash.deleted'));
       setPurge(null);
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const bulkRestoreSel = async () => {
@@ -76,7 +78,7 @@ function TrashSection({
       sel.clear();
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const confirmBulkPurge = async () => {
@@ -87,7 +89,7 @@ function TrashSection({
       setBulkPurging(false);
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -101,7 +103,12 @@ function TrashSection({
             sel.toggleAll();
           }}
         >
-          <Checkbox checked={sel.allSelected} onCheckedChange={() => {}} tabIndex={-1} aria-label="Tout" />
+          <Checkbox
+            checked={sel.allSelected}
+            onCheckedChange={() => {}}
+            tabIndex={-1}
+            aria-label={t('common.selectAll')}
+          />
         </div>
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
         {sel.count > 0 && (
@@ -140,7 +147,7 @@ function TrashSection({
                   checked={sel.isSelected(it.id)}
                   onCheckedChange={() => {}}
                   tabIndex={-1}
-                  aria-label="Sélectionner"
+                  aria-label={t('common.select')}
                 />
               </div>
               <span className="truncate">{it.label}</span>
@@ -164,20 +171,20 @@ function TrashSection({
       </div>
       <ConfirmDialog
         open={bulkPurging}
-        title="Supprimer définitivement ?"
+        title={t('trash.delete.title')}
         message={<>{sel.count} élément(s) seront supprimés de la base et du stockage. Irréversible.</>}
-        confirmLabel="Supprimer définitivement"
+        confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmBulkPurge}
         onCancel={() => setBulkPurging(false)}
       />
       <ConfirmDialog
         open={!!purge}
-        title="Supprimer définitivement ?"
+        title={t('trash.delete.title')}
         message={
           <>« {purge?.label} » sera supprimé de la base et du stockage. Cette action est irréversible.</>
         }
-        confirmLabel="Supprimer définitivement"
+        confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmPurge}
         onCancel={() => setPurge(null)}
@@ -188,6 +195,7 @@ function TrashSection({
 
 /** Onglet Corbeille du projet : restauration / purge par type d'entité, multi-sélection incluse. */
 export default function TrashTab({ projectId, reload }: { projectId: number; reload: () => Promise<void> }) {
+  const t = useT();
   const qc = useQueryClient();
   const { data, error } = useQuery({
     queryKey: qk.projectTrash(projectId),
@@ -210,17 +218,17 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
 
   return (
     <div>
-      <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Corbeille du projet</h2>
+      <h2 className="mb-4 text-sm font-semibold text-muted-foreground">{t('trash.project.title')}</h2>
       {isEmpty && (
         <EmptyState
           compact
           icon={Trash2}
-          title="La corbeille est vide"
-          description="Les éléments supprimés du projet arrivent ici et restent restaurables."
+          title={t('trash.empty.title')}
+          description={t('trash.empty.description')}
         />
       )}
       <TrashSection
-        title="Séquences"
+        title="Sequences"
         domain="sequences"
         items={data.sequences.map((s) => ({
           id: s.id,
@@ -256,7 +264,7 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
         onChanged={onChanged}
       />
       <TrashSection
-        title="Médias"
+        title={t('trash.group.media')}
         domain="media"
         items={data.media.map((m) => ({
           id: m.id,
