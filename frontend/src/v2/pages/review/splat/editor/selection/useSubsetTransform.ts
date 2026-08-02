@@ -9,6 +9,7 @@ import type { SubsetOp } from '../persistence/subsetOps';
 import type { GizmoMode } from '../../../viewer/gizmos/useTransformGizmo';
 import type { GizmoSettings } from '../../../viewer/gizmos/gizmoSettings';
 import type { EditOp } from '../operations/history';
+import { useT } from '../../../../../i18n';
 import {
   applySubsetDelta,
   restoreSubset,
@@ -45,6 +46,7 @@ export function useSubsetTransform(
     opsRef: RefObject<SubsetOp[]>;
   },
 ): void {
+  const t = useT();
   const { enabled, mode, selected, settings, pushHistory, onChange, opsRef } = opts;
   const { ready, getSceneHandle } = splat;
   const modeRef = useRef(mode);
@@ -104,7 +106,7 @@ export function useSubsetTransform(
           const record = { delta: [...d.elements], indices: [...s.indices] };
           opsRef.current.push(record);
           cbRef.current.pushHistory({
-            label: 'Transformer la sélection',
+            label: t('splat.transformSelection'),
             undo: () => {
               restoreSubset(handle, s);
               const at = opsRef.current.indexOf(record);
@@ -154,7 +156,7 @@ export function useSubsetTransform(
       cleanup?.();
       mesh.remove(proxy);
     };
-  }, [enabled, ready, getSceneHandle, selected, opsRef]);
+  }, [enabled, ready, getSceneHandle, selected, opsRef, t]);
 
   useEffect(() => {
     controlRef.current?.setMode(mode);

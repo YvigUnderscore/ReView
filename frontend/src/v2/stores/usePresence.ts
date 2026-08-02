@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/apiClient';
 import { getSocket, emitActivity } from '../../lib/socket';
 import type { UserStatus } from '../types/api';
+import { t, intlLocale } from '../i18n';
 
 export interface PresenceUser {
   id: number;
@@ -63,14 +64,14 @@ export function usePresence() {
 
 /** Format « actif il y a X » à partir d'un timestamp ISO. */
 export function lastSeenLabel(iso: string | null, online: boolean): string {
-  if (online) return 'en ligne';
-  if (!iso) return 'jamais vu';
+  if (online) return t('shell.online');
+  if (!iso) return t('presence.neverSeen');
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return 'à l’instant';
-  if (min < 60) return `il y a ${min} min`;
+  if (min < 1) return t('presence.justNow');
+  const rel = new Intl.RelativeTimeFormat(intlLocale(), { numeric: 'auto', style: 'short' });
+  if (min < 60) return rel.format(-min, 'minute');
   const h = Math.floor(min / 60);
-  if (h < 24) return `il y a ${h} h`;
-  const d = Math.floor(h / 24);
-  return `il y a ${d} j`;
+  if (h < 24) return rel.format(-h, 'hour');
+  return rel.format(-Math.floor(h / 24), 'day');
 }

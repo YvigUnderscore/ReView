@@ -13,7 +13,7 @@ type Tr = (key: MessageKey) => string;
 const statusMeta = (t: Tr): Record<ShotStatStatus, { label: string; bar: string }> => ({
   approved: { label: t('decision.approved'), bar: 'bg-success' },
   inReview: { label: t('home.mediaInReview'), bar: 'bg-info' },
-  retake: { label: 'Retake', bar: 'bg-accent2' },
+  retake: { label: t('task.status.retake'), bar: 'bg-accent2' },
   notStarted: { label: t('stats.notStarted'), bar: 'bg-muted-foreground/40' },
 });
 const SEGMENTS: ShotStatStatus[] = ['approved', 'inReview', 'retake', 'notStarted'];

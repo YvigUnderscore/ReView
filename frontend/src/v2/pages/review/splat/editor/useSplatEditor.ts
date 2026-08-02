@@ -26,6 +26,7 @@ import { useSubsetTransform } from './selection/useSubsetTransform';
 import { useEditorShortcuts } from './useEditorShortcuts';
 import { useVolumes } from './volumes/useVolumes';
 import { useCropReflect } from './volumes/useCropReflect';
+import { useT } from '../../../../i18n';
 
 /** Outil actif de l'éditeur : navigation (défaut, aucun outil), gizmo ou sélection. */
 export type EditorTool = 'navigate' | GizmoMode | 'select-rect' | 'select-lasso' | 'brush';
@@ -48,6 +49,7 @@ export function useSplatEditor(
   onSaved: (patch: SplatEditsPatch) => void,
   enabled: boolean,
 ) {
+  const t = useT();
   const { applyTransform, setBaseFlip: applyBaseFlip, setRenderMode: applyRenderMode, ready } = splat;
   // Mode navigation par défaut (11.G) : ouvrir l'éditeur n'active aucun gizmo ni sélection.
   const [tool, setTool] = useState<EditorTool>('navigate');
@@ -167,7 +169,7 @@ export function useSplatEditor(
   /** Cible des champs numériques du HUD : volume actif sinon splat entier. */
   const fields = {
     label: activeVolumeItem
-      ? `${activeVolumeItem.shape === 'box' ? 'Boîte' : 'Sphère'} ${volumes.volumes.indexOf(activeVolumeItem) + 1}`
+      ? `${activeVolumeItem.shape === 'box' ? t('review.box') : t('review.sphere')} ${volumes.volumes.indexOf(activeVolumeItem) + 1}`
       : 'Splat',
     /** Forme de la cible (11.G) : champs contextualisés (rayon sphère / demi-extents boîte). */
     shape: activeVolumeItem?.shape ?? null,

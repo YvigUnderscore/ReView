@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from './query';
+import { useT } from '../i18n';
 
 /** Cible d'un suivi de notifications (32.G). */
 export type WatchTargetType = 'SHOT' | 'ASSET' | 'VERSION';
@@ -19,6 +20,7 @@ interface WatchRef {
  * menus clic droit) + bascule suivre/ne plus suivre avec toast.
  */
 export function useWatch() {
+  const t = useT();
   const qc = useQueryClient();
   const watchesQ = useQuery({
     queryKey: qk.watches,
@@ -32,9 +34,9 @@ export function useWatch() {
     mutationFn: (v: WatchRef & { watching: boolean }) => api.put('/api/watch', v),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: qk.watches });
-      toast.success(v.watching ? 'Suivi activé : vous serez notifié de l’activité' : 'Suivi désactivé');
+      toast.success(v.watching ? t('watch.on') : t('watch.off'));
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Impossible de modifier le suivi'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : t('watch.failed')),
   });
 
   const toggle = (targetType: WatchTargetType, targetId: number) =>

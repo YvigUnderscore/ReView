@@ -8,6 +8,7 @@ import { qk } from '../../lib/query';
 import { useSequencesQuery, useShotsQuery } from '../../lib/queries';
 import type { TaskStatus, TaskWithAssignee } from '../../types/api';
 import type { BoardTask } from './kanbanTypes';
+import { useT } from '../../i18n';
 
 /**
  * Données du board kanban : shots + séquences + tâches (fan-out par shot),
@@ -15,6 +16,7 @@ import type { BoardTask } from './kanbanTypes';
  * rollback par invalidation. Une clé = une shape (cohérent 10.E1).
  */
 export function useKanbanBoard(projectId: number) {
+  const tr = useT();
   const qc = useQueryClient();
   const shotsQ = useShotsQuery(projectId);
   const sequencesQ = useSequencesQuery(projectId);
@@ -51,7 +53,7 @@ export function useKanbanBoard(projectId: number) {
       await api.patch(`/api/tasks/${taskId}`, { status });
     } catch (e) {
       qc.invalidateQueries({ queryKey: key });
-      toast.error(e instanceof Error ? e.message : 'Déplacement impossible');
+      toast.error(e instanceof Error ? e.message : tr('kanban.moveFailed'));
     }
   };
 

@@ -62,8 +62,8 @@ export function DigestToggle() {
     <PrefCheckbox
       prefKey="emailDigest"
       label={t('email.digest')}
-      onLabel="Digest quotidien activé"
-      offLabel="Digest quotidien désactivé"
+      onLabel={t('email.digestOn')}
+      offLabel={t('email.digestOff')}
       enabled={prefsQ.data?.emailDigest === true}
       loading={prefsQ.isLoading}
     />
@@ -88,8 +88,8 @@ export function WeeklyReportToggle() {
     <PrefCheckbox
       prefKey="weeklyReport"
       label={t('email.weekly')}
-      onLabel="Rapport hebdomadaire activé"
-      offLabel="Rapport hebdomadaire désactivé"
+      onLabel={t('email.weeklyOn')}
+      offLabel={t('email.weeklyOff')}
       enabled={prefsQ.data?.weeklyReport === true}
       loading={prefsQ.isLoading}
     />

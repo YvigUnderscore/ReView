@@ -140,7 +140,7 @@ export default function ShotsTab({
       )}
       {canManage && mode === 'manual' && (
         <MultiRowCreate
-          addLabel="Créer les shots"
+          addLabel={t('shots.create')}
           fields={[
             {
               key: 'code',

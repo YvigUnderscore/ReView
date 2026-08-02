@@ -147,7 +147,7 @@ export default function CommandPalette({
             </CommandGroup>
           )}
           {results.shots.length > 0 && (
-            <CommandGroup heading="Shots">
+            <CommandGroup heading={t('shots.title')}>
               {results.shots.map((s) => (
                 <CommandItem
                   key={s.id}

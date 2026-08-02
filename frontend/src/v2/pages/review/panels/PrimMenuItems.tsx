@@ -59,11 +59,7 @@ export default function PrimMenuItems({
                   key={option}
                   disabled={!renderable}
                   title={
-                    renderable
-                      ? undefined
-                      : available
-                        ? 'Combinaison non cuite avec les variantes retenues — recomposer la scène'
-                        : 'Option non cuite dans la conversion — recomposer la scène'
+                    renderable ? undefined : available ? t('prim.notBakedCombo') : t('prim.notBakedOption')
                   }
                   onSelect={() => scene.setVariant(set.prim, set.name, option)}
                 >

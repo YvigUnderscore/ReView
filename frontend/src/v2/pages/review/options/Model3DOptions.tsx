@@ -86,9 +86,7 @@ export default function Model3DOptions({
       )}
 
       {(tool.id === 'cam-move' || tool.id === 'cam-aim') && (
-        <span className="rv-optbar__hint">
-          La caméra-objet est visible dans la scène ; sa trajectoire suit les clés du transport.
-        </span>
+        <span className="rv-optbar__hint">{tr('camera.objectHint')}</span>
       )}
 
       {transforming && (

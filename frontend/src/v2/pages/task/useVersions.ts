@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { useUploadStore } from '../../../stores/useUploadStore';
 import type { Version, VersionListItem } from '../../types/api';
+import { useT } from '../../i18n';
 
 /** Portée d'une timeline de versions : rattachée à une tâche OU à un asset. */
 export type VersionScope = { taskId: number } | { assetId: number };
@@ -17,6 +18,7 @@ export type VersionScope = { taskId: number } | { assetId: number };
  * (Phase 20). Lectures via Query ; chaque mutation invalide les clés concernées + toast.
  */
 export function useVersions(scope: VersionScope) {
+  const t = useT();
   const qc = useQueryClient();
   const uploads = useUploadStore((s) => s.uploads);
   const filter = 'taskId' in scope ? `taskId=${scope.taskId}` : `assetId=${scope.assetId}`;
@@ -46,14 +48,14 @@ export function useVersions(scope: VersionScope) {
       await invalidateVersions();
       return version;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Création impossible');
+      toast.error(e instanceof Error ? e.message : t('version.createFailed'));
       return null;
     }
   };
   const publishVersion = async (vid: number) => {
     try {
       await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' });
-      toast.success('Version publiée');
+      toast.success(t('version.published'));
       invalidateVersions();
       qc.invalidateQueries({ queryKey: qk.version(vid) });
     } catch (e) {
@@ -63,7 +65,7 @@ export function useVersions(scope: VersionScope) {
   const publishMedia = async (versionId: number, mediaId: number) => {
     try {
       await api.post(`/api/media/${mediaId}/publish`);
-      toast.success('Média publié pour l’équipe');
+      toast.success(t('media.publishedTeam'));
       qc.invalidateQueries({ queryKey: qk.version(versionId) });
       invalidateVersions();
     } catch (e) {
@@ -73,7 +75,7 @@ export function useVersions(scope: VersionScope) {
   const removeVersion = async (vid: number) => {
     try {
       await api.del(`/api/versions/${vid}`);
-      toast.success('Version déplacée dans la corbeille');
+      toast.success(t('version.trashed'));
       await invalidateVersions();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Suppression impossible');
@@ -82,7 +84,7 @@ export function useVersions(scope: VersionScope) {
   const removeMedia = async (versionId: number, mediaId: number) => {
     try {
       await api.del(`/api/media/${mediaId}`);
-      toast.success('Média déplacé dans la corbeille');
+      toast.success(t('media.trashed'));
       qc.invalidateQueries({ queryKey: qk.version(versionId) });
       invalidateVersions();
     } catch (e) {

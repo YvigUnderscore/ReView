@@ -7,6 +7,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp } from './reviewTypes';
 import { isEmptyOverride, mergeOverrides, normalizeOverride } from './three/sceneOverride';
+import { useT } from '../../i18n';
 
 /**
  * Publier fige la scène (verrou Phase 11) : la mise en scène 3D **non enregistrée** du
@@ -21,6 +22,7 @@ export function usePublishSceneOverride(
   data: MediaResp | null | undefined,
   ann: { sceneOverride: unknown; setSceneOverride: (value: unknown) => void },
 ): () => Promise<boolean> {
+  const t = useT();
   const qc = useQueryClient();
   const { sceneOverride, setSceneOverride } = ann;
 
@@ -36,7 +38,7 @@ export function usePublishSceneOverride(
       setSceneOverride(null);
       return true;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Mise en scène non enregistrée — publication annulée');
+      toast.error(e instanceof Error ? e.message : t('stage.notSavedPublishCancelled'));
       return false;
     }
   };

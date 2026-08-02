@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp } from './reviewTypes';
+import { useT } from '../../i18n';
 
 /**
  * Actions de gestion du média de la review (extrait de ReviewPage, budget 300) :
@@ -22,6 +23,7 @@ export function useMediaActions(
    */
   beforePublish?: () => Promise<boolean>,
 ) {
+  const t = useT();
   const qc = useQueryClient();
   const [reprocessing, setReprocessing] = useState(false);
 
@@ -36,9 +38,9 @@ export function useMediaActions(
       );
       qc.invalidateQueries({ queryKey: qk.drafts });
       qc.invalidateQueries({ queryKey: ['versions'] });
-      toast.success('Média publié pour l’équipe');
+      toast.success(t('media.publishedTeam'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur à la publication');
+      toast.error(e instanceof Error ? e.message : t('media.publishFailed'));
     }
   };
 
@@ -48,9 +50,9 @@ export function useMediaActions(
       await api.post(`/api/media/${id}/reprocess`);
       await qc.invalidateQueries({ queryKey: qk.media(id) });
       model3d.clearLoadError();
-      toast.success('Conversion relancée');
+      toast.success(t('media.reconvertStarted'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur à la relance de la conversion');
+      toast.error(e instanceof Error ? e.message : t('media.reconvertFailed'));
     } finally {
       setReprocessing(false);
     }

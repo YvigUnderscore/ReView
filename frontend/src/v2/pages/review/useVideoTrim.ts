@@ -5,6 +5,7 @@ import { useCallback, useState, type RefObject } from 'react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { tcFromFrame, type MediaResp, type SplatEditsPatch } from './reviewTypes';
+import { useT } from '../../i18n';
 
 /**
  * Trim vidéo non-destructif, gestionnaires : bornes IN/OUT posées à la frame courante,
@@ -25,6 +26,7 @@ export function useVideoTrim({
   videoRef: RefObject<HTMLVideoElement | null>;
   onSaved: (patch: SplatEditsPatch) => void;
 }) {
+  const t = useT();
   const [inFrame, setInFrame] = useState<number | null>(data.trim?.inFrame ?? null);
   const [outFrame, setOutFrame] = useState<number | null>(data.trim?.outFrame ?? null);
   const [busy, setBusy] = useState(false);
@@ -35,7 +37,7 @@ export function useVideoTrim({
 
   const apply = useCallback(async () => {
     if (!valid) {
-      toast.error('La sortie doit être après l’entrée');
+      toast.error(t('trim.outAfterIn'));
       return;
     }
     setBusy(true);
@@ -44,15 +46,13 @@ export function useVideoTrim({
         trim: { inFrame, outFrame },
       });
       onSaved(patch);
-      toast.success(
-        'Découpe enregistrée — proxy trimé en cours de génération (servi au prochain chargement)',
-      );
+      toast.success(t('trim.saved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement de la découpe");
+      toast.error(e instanceof Error ? e.message : t('trim.saveFailed'));
     } finally {
       setBusy(false);
     }
-  }, [valid, data.media.id, inFrame, outFrame, onSaved]);
+  }, [valid, data.media.id, inFrame, outFrame, onSaved, t]);
 
   const clear = useCallback(async () => {
     setBusy(true);
@@ -63,13 +63,13 @@ export function useVideoTrim({
       onSaved(patch);
       setInFrame(null);
       setOutFrame(null);
-      toast.success('Découpe effacée — retour à la vidéo complète');
+      toast.success(t('trim.cleared'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur à l'effacement de la découpe");
+      toast.error(e instanceof Error ? e.message : t('trim.clearFailed'));
     } finally {
       setBusy(false);
     }
-  }, [data.media.id, onSaved]);
+  }, [data.media.id, onSaved, t]);
 
   /** Résumé affiché dans la barre d'options : bornes posées et longueur conservée. */
   const label =
@@ -79,7 +79,7 @@ export function useVideoTrim({
         ? `Entrée ${tcFromFrame(inFrame, fps)} · sortie non posée`
         : outFrame != null
           ? `Entrée non posée · sortie ${tcFromFrame(outFrame, fps)}`
-          : 'Aucune borne posée — la vidéo est diffusée entière.';
+          : t('trim.none');
 
   return {
     inFrame,

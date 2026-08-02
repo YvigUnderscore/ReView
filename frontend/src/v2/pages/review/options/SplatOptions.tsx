@@ -75,11 +75,7 @@ export default function SplatOptions({
     <OptionsBar tool={tool} commit={commit}>
       {id === 'nav' && <span className="rv-optbar__hint">{t(tool.hintKey)}</span>}
 
-      {id === 'focus' && (
-        <span className="rv-optbar__hint">
-          Cliquer un point du splat pour y poser la mise au point. L’ouverture se règle dans le dock Caméra.
-        </span>
-      )}
+      {id === 'focus' && <span className="rv-optbar__hint">{t('splat.focusHintDock')}</span>}
 
       {id === 'pin' && (
         <>
@@ -144,9 +140,7 @@ export default function SplatOptions({
       )}
 
       {(id === 'cam-move' || id === 'cam-aim') && (
-        <span className="rv-optbar__hint">
-          La caméra-objet est visible dans la scène ; sa trajectoire suit les clés du transport.
-        </span>
+        <span className="rv-optbar__hint">{t('camera.objectHint')}</span>
       )}
 
       {selecting && (
@@ -215,7 +209,7 @@ export default function SplatOptions({
                 <button
                   type="button"
                   onClick={() => editor.volumes.select(v.id)}
-                  title={active ? 'Détacher le gizmo du volume' : 'Attacher le gizmo à ce volume'}
+                  title={active ? t('splat.detachGizmo') : t('splat.attachGizmo')}
                   className={`flex items-center gap-1.5 font-medium ${
                     active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
                   }`}
@@ -225,11 +219,7 @@ export default function SplatOptions({
                 <button
                   type="button"
                   onClick={() => editor.volumes.toggleMode(v.id)}
-                  title={
-                    v.mode === 'delete'
-                      ? 'Creuse (supprime l’intérieur) — basculer vers isoler'
-                      : 'Isole (garde l’intérieur) — basculer vers creuser'
-                  }
+                  title={v.mode === 'delete' ? t('splat.carveToIsolate') : t('splat.isolateToCarve')}
                   className={`flex items-center gap-1 rounded px-1 py-0.5 hover:bg-secondary ${
                     v.mode === 'delete' ? 'text-destructive' : 'text-primary'
                   }`}

@@ -30,10 +30,10 @@ const AXES = [
 ];
 
 const lods = (t: Tr): { value: LodMode; label: string; hint: string }[] => [
-  { value: 'off', label: 'Off', hint: 'Aucun niveau de détail — qualité maximale' },
-  { value: 'auto', label: 'Auto', hint: 'Active le LOD sous 15 fps, le relâche au-dessus de 25' },
+  { value: 'off', label: 'Off', hint: t('scene.lodOff') },
+  { value: 'auto', label: 'Auto', hint: t('scene.lodAuto') },
   { value: 'on', label: t('viewer.lod.forced'), hint: 'LOD toujours actif' },
-  { value: 'streaming', label: t('viewer.lod.stream'), hint: 'Charge les pages du nuage à la demande' },
+  { value: 'streaming', label: t('viewer.lod.stream'), hint: t('scene.progressive') },
 ];
 
 export type SectionAxis = 'x' | 'y' | 'z';

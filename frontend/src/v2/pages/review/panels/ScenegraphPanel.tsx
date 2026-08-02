@@ -67,7 +67,7 @@ function PrimRow({
                   onToggle(node.path);
                 }}
                 className="shrink-0 text-muted-foreground hover:text-foreground"
-                aria-label={open ? 'Replier' : 'Déplier'}
+                aria-label={open ? 'Replier' : t('scenegraph.expand')}
               >
                 {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>
@@ -94,7 +94,9 @@ function PrimRow({
               }}
               // Masqué par un ancêtre : le rétablir ici n'aurait aucun effet visible.
               disabled={byAncestor}
-              title={byAncestor ? 'Masqué par un parent' : hidden ? t('common.show') : t('common.hide')}
+              title={
+                byAncestor ? t('scenegraph.hiddenByParent') : hidden ? t('common.show') : t('common.hide')
+              }
               className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-40"
             >
               {hidden ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -193,7 +195,7 @@ export default function ScenegraphPanel({
               disabled={saving}
               className="text-[11px] text-primary hover:underline disabled:opacity-50"
             >
-              {saving ? 'Enregistrement…' : 'Enregistrer pour tous'}
+              {saving ? 'Enregistrement…' : t('scenegraph.saveForAll')}
             </button>
           ) : (
             // Après publication, la mise en scène commune est figée : les modifications ne

@@ -8,6 +8,7 @@ import { applyRoll } from '../../three/cameraRoll';
 import type { SplatViewer } from '../useSplat';
 import { normalizeAnim } from '../../camera/channels/model';
 import type { CameraAnimState } from '../../camera/useCameraAnim';
+import { useT } from '../../../../i18n';
 
 /**
  * Réglages caméra du viewer splat (10.G-V5) : focale (fov), profondeur de champ Spark
@@ -20,6 +21,7 @@ export function useCameraRig(
   presentation: SplatPresentation | null,
   anim: Pick<CameraAnimState, 'setAnim' | 'play'>,
 ) {
+  const t = useT();
   const { getSceneHandle, restoreCamera, ready } = splat;
   // États initialisés depuis la présentation persistée (le bloc splat remonte par média) —
   // le rejeu en effet n'applique qu'à la scène, sans setState (règle set-state-in-effect).
@@ -112,11 +114,11 @@ export function useCameraRig(
       const view = hits[0].point.clone().applyMatrix4(h.camera.matrixWorldInverse);
       h.spark.focalDistance = -view.z;
       setFocusPick(false);
-      toast.success('Mise au point réglée sur le point cliqué');
+      toast.success(t('splat.focusSet'));
     };
     h.dom.addEventListener('pointerdown', onDown);
     return () => h.dom.removeEventListener('pointerdown', onDown);
-  }, [focusPick, getSceneHandle]);
+  }, [focusPick, getSceneHandle, t]);
 
   const toggleFocusPick = useCallback(() => setFocusPick((v) => !v), []);
 

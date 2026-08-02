@@ -52,8 +52,8 @@ export default function ResumeCard() {
         {t('shell.resume')}
       </p>
       <div className="flex flex-wrap gap-3">
-        {lastMedia && <ResumeLink entry={lastMedia} icon={<Play size={16} />} kind="Dernière review" />}
-        {lastTask && <ResumeLink entry={lastTask} icon={<ListTodo size={16} />} kind="Dernière tâche" />}
+        {lastMedia && <ResumeLink entry={lastMedia} icon={<Play size={16} />} kind={t('home.lastReview')} />}
+        {lastTask && <ResumeLink entry={lastTask} icon={<ListTodo size={16} />} kind={t('home.lastTask')} />}
       </div>
     </div>
   );

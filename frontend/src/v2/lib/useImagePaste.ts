@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback } from 'react';
+import { t } from '../i18n';
 
 /** Types image acceptés par le backend (data URL) — tout autre type est ré-encodé en PNG. */
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
@@ -14,7 +15,7 @@ function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    r.onerror = () => reject(new Error(t('file.readFailed')));
     r.readAsDataURL(file);
   });
 }

@@ -90,7 +90,11 @@ function LogoPanel() {
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-md border border-border bg-background">
           {logoQ.data?.url ? (
-            <img src={logoQ.data.url} alt="Logo studio" className="max-h-full max-w-full object-contain" />
+            <img
+              src={logoQ.data.url}
+              alt={t('burnin.studioLogo')}
+              className="max-h-full max-w-full object-contain"
+            />
           ) : (
             <span className="text-xs text-muted-foreground">{t('distribution.noLogo')}</span>
           )}

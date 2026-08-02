@@ -12,6 +12,7 @@ import type { MediaResp } from '../../reviewTypes';
 import { visibleLocalBox } from '../scene/visibleBounds';
 import type { SplatSceneHandle, SplatViewer } from '../useSplat';
 import { normalizationFor, type SiblingNormalization } from './normalize';
+import { useT } from '../../../../i18n';
 
 /**
  * Comparaison des splats d'une même version (10.G-V8) : si la version porte plusieurs médias
@@ -66,6 +67,7 @@ function applyNormalization(mesh: SplatMesh, norm: SiblingNormalization | null, 
 }
 
 export function useSplatCompare(splat: SplatViewer, current: Media) {
+  const t = useT();
   const { getSceneHandle, subscribeFrame } = splat;
   const versionQ = useQuery({
     queryKey: qk.version(current.versionId),
@@ -166,12 +168,12 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
         setActiveId(id);
         setMode('single');
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Splat de comparaison inaccessible');
+        toast.error(e instanceof Error ? e.message : t('compare.siblingUnreachable'));
       } finally {
         setBusy(false);
       }
     },
-    [current.id, ensureSibling, allMeshes, fade, slideX],
+    [current.id, ensureSibling, allMeshes, fade, slideX, t],
   );
 
   /** « Voir tous » : charge tous les frères et les écarte côte à côte. */
@@ -201,11 +203,11 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
       });
       setMode('all');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Chargement des splats impossible');
+      toast.error(e instanceof Error ? e.message : t('compare.loadFailed'));
     } finally {
       setBusy(false);
     }
-  }, [getSceneHandle, splats, current.id, ensureSibling, fade, slideX]);
+  }, [getSceneHandle, splats, current.id, ensureSibling, fade, slideX, t]);
 
   /** Toggle « Taille réelle » (11.H) : bascule normalisation ↔ échelles brutes de tous les frères. */
   const toggleNormalized = useCallback(() => {

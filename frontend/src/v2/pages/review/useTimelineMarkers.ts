@@ -9,6 +9,7 @@ import { getSocket } from '../../../lib/socket';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import type { TimelineMarker } from '../../types/api';
+import { useT } from '../../i18n';
 
 /**
  * Marqueurs de timeline nommés/colorés partagés (34.C) : query + mutations + invalidation
@@ -26,6 +27,7 @@ export interface TimelineMarkersApi {
 }
 
 export function useTimelineMarkers(mediaId: number): TimelineMarkersApi {
+  const t = useT();
   const qc = useQueryClient();
   const userId = useAuth((s) => s.user?.id) ?? 0;
   const role = useAuth((s) => s.user?.role);
@@ -56,7 +58,7 @@ export function useTimelineMarkers(mediaId: number): TimelineMarkersApi {
       await refresh();
       toast.success(ok);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur sur le marqueur');
+      toast.error(e instanceof Error ? e.message : t('marker.error'));
     }
   };
 
@@ -65,9 +67,9 @@ export function useTimelineMarkers(mediaId: number): TimelineMarkersApi {
     canWrite,
     canManage: (m) => role === 'ADMIN' || role === 'SUPERVISOR' || m.authorId === userId,
     add: (frame, name, color) =>
-      run(() => api.post(`/api/media/${mediaId}/markers`, { frame, name, color }), 'Marqueur ajouté'),
+      run(() => api.post(`/api/media/${mediaId}/markers`, { frame, name, color }), t('marker.added')),
     rename: (m, name, color) =>
-      run(() => api.patch(`/api/media/${mediaId}/markers/${m.id}`, { name, color }), 'Marqueur modifié'),
-    remove: (m) => run(() => api.del(`/api/media/${mediaId}/markers/${m.id}`), 'Marqueur supprimé'),
+      run(() => api.patch(`/api/media/${mediaId}/markers/${m.id}`, { name, color }), t('marker.updated')),
+    remove: (m) => run(() => api.del(`/api/media/${mediaId}/markers/${m.id}`), t('marker.deleted')),
   };
 }

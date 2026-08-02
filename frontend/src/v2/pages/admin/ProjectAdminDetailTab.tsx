@@ -113,13 +113,13 @@ export default function ProjectAdminDetailTab() {
         <Panel title={t('overview.resolvedSettings')}>
           <dl className="space-y-1 text-sm">
             <Row k="Pipeline" v={pipelineLabel(settings)} />
-            <Row k="Frame de départ" v={String(project.startFrame)} />
+            <Row k={t('pipeline.startFrame')} v={String(project.startFrame)} />
             <Row
-              k="Nomenclature"
+              k={t('pipeline.naming')}
               v={`${settings.nomenclature.sequencePrefix}### / ${settings.nomenclature.shotPrefix}### (pas ${settings.nomenclature.step})`}
             />
             <Row
-              k="Départements"
+              k={t('pipeline.departments')}
               v={settings.departments.length ? settings.departments.map((d) => d.name).join(', ') : '—'}
             />
             <Row

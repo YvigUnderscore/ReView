@@ -103,7 +103,7 @@ export default function ToolRail({
       <RailButton
         icon={labels ? ChevronsLeft : ChevronsRight}
         label={labels ? t('rail.hideLabels') : t('rail.showLabels')}
-        text="Réduire"
+        text={t('common.collapse')}
         labels={labels}
         onClick={onLabels}
         className="mt-auto"

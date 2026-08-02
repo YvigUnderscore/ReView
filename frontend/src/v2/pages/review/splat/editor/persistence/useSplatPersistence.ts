@@ -9,6 +9,7 @@ import type { SplatViewer } from '../../useSplat';
 import { applyMaskIndices, fetchMaskIndices } from './applyEdits';
 import { bytesToBase64, encodeMask } from './mask';
 import { applySubsetOps, encodeSubsetOps, fetchSubsetOps, type SubsetOp } from './subsetOps';
+import { useT } from '../../../../../i18n';
 
 /**
  * Persistance des éditions du splat (extrait de `useSplatEditor`, budget de taille) :
@@ -37,6 +38,7 @@ export function useSplatPersistence(opts: {
   onSaved: (patch: SplatEditsPatch) => void;
   onClean: () => void;
 }) {
+  const t = useT();
   const { splat, mediaId, enabled, savedMaskUrl, savedSubsetUrl, deletedRef, subsetOpsRef } = opts;
   const { setDeletedCount, notifyHiddenChanged, buildEdits, afterReset, history, onSaved, onClean } = opts;
   const { ready } = splat;
@@ -72,8 +74,8 @@ export function useSplatPersistence(opts: {
         applySubsetOps(handle, ops);
         subsetOpsRef.current = ops;
       })
-      .catch(() => toast.error('Transformations de sélection illisibles'));
-  }, [enabled, ready, savedSubsetUrl, splat, subsetOpsRef]);
+      .catch(() => toast.error(t('splat.transformUnreadable')));
+  }, [enabled, ready, savedSubsetUrl, splat, subsetOpsRef, t]);
 
   /** Enregistre toutes les éditions : transform + volumes (JSON), masque et ops binaires. */
   const save = useCallback(async () => {
@@ -112,13 +114,13 @@ export function useSplatPersistence(opts: {
       }
       onSaved(patch);
       onClean();
-      toast.success('Éditions enregistrées');
+      toast.success(t('splat.editsSaved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur à l'enregistrement des éditions");
     } finally {
       setBusy(false);
     }
-  }, [mediaId, buildEdits, deletedRef, subsetOpsRef, savedMaskUrl, savedSubsetUrl, onSaved, onClean]);
+  }, [mediaId, buildEdits, deletedRef, subsetOpsRef, savedMaskUrl, savedSubsetUrl, onSaved, onClean, t]);
 
   /** Réinitialise tout : annule l'historique, purge serveur (JSON + binaires), état local à zéro. */
   const reset = useCallback(async () => {
@@ -139,13 +141,13 @@ export function useSplatPersistence(opts: {
         splatSubsetCount: 0,
       });
       onClean();
-      toast.success('Éditions réinitialisées');
+      toast.success(t('splat.editsReset'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur à la réinitialisation');
+      toast.error(e instanceof Error ? e.message : t('splat.editsResetFailed'));
     } finally {
       setBusy(false);
     }
-  }, [mediaId, history, savedMaskUrl, savedSubsetUrl, subsetOpsRef, afterReset, onSaved, onClean]);
+  }, [mediaId, history, savedMaskUrl, savedSubsetUrl, subsetOpsRef, afterReset, onSaved, onClean, t]);
 
   return { busy, save, reset };
 }

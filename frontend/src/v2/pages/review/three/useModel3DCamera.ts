@@ -13,6 +13,7 @@ import { cameraPoseFromView } from '../camera/cameraPose';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { importCameraFile } from './importCameraAbc';
 import type { Model3DThreeState } from './useModel3DThree';
+import { useT } from '../../../i18n';
 
 /**
  * Contrôleur caméra du viewer 3D Three (Phase 16/17) : lecteur keyframe (piloté par la caméra
@@ -28,6 +29,7 @@ export function useModel3DCamera(
   onSaved: (patch: SplatEditsPatch) => void,
   ann: Annotations,
 ) {
+  const t = useT();
   const anim = useCameraAnim(model3d.layoutController);
   const { busy, persist, remove } = useCameraPresentation(data.media.id, onSaved);
   const { setAnim, play } = anim;
@@ -45,24 +47,24 @@ export function useModel3DCamera(
   const attach = useCallback(() => {
     if (!hasAnimation(anim.anim)) return;
     ann.setCameraAnim(anim.anim);
-    toast.success('Animation caméra jointe au prochain commentaire');
-  }, [anim.anim, ann]);
+    toast.success(t('review.camera.attached'));
+  }, [anim.anim, ann, t]);
 
   const importGltf = useCallback(
     (file: File) => {
       void importCameraFile(file)
         .then((animData) => {
           if (!animData) {
-            toast.error('Aucune animation caméra dans ce fichier');
+            toast.error(t('review.camera.none'));
             return;
           }
           setAnim(animData);
           play();
-          toast.success('Animation caméra importée');
+          toast.success(t('review.camera.imported'));
         })
-        .catch(() => toast.error('Import caméra impossible'));
+        .catch(() => toast.error(t('review.camera.importFailed')));
     },
-    [setAnim, play],
+    [setAnim, play, t],
   );
 
   // Rejeu de la présentation persistée à l'ouverture (une fois la scène prête), pour tous.

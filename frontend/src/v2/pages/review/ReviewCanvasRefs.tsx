@@ -95,7 +95,7 @@ export default function ReviewCanvasRefs({
           className="absolute overflow-hidden rounded border border-white/20 shadow-lg"
           style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.width * 100}%` }}
         >
-          <img src={r.url} alt="Référence" className="block w-full select-none" draggable={false} />
+          <img src={r.url} alt={t('ref.title')} className="block w-full select-none" draggable={false} />
           {canManage && (
             <button
               type="button"
@@ -119,12 +119,7 @@ export default function ReviewCanvasRefs({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
         >
-          <img
-            src={r.dataUrl}
-            alt="Référence (brouillon)"
-            className="block w-full select-none"
-            draggable={false}
-          />
+          <img src={r.dataUrl} alt={t('ref.draft')} className="block w-full select-none" draggable={false} />
           <button
             type="button"
             onClick={() => ann.removeStagedRef(r.key)}
