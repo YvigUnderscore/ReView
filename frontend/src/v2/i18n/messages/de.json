@@ -940,5 +940,12 @@
   "admin.group.maintenance": "Wartung",
 
   "project.status.completed": "Abgeschlossen",
-  "project.status.archived": "Archiviert"
+  "project.status.archived": "Archiviert",
+
+  "task.dueDate": "Fällig am",
+  "task.toVersion": "zur version",
+  "marker.delete": "Markierung löschen",
+  "usd.recomposeFrom": "Aus dem USD neu komponieren",
+
+  "marker.rename": "Umbenennen / neu einfärben…"
 }

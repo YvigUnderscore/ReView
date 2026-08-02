@@ -122,7 +122,7 @@ export default function AssetAssignDialog({
               {/* Séquences entières */}
               <div>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Séquences entières
+                  {t('batch.wholeSequences')}
                 </div>
                 <div className="grid grid-cols-2 gap-1">
                   {sequences.length === 0 && (

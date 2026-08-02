@@ -939,5 +939,12 @@
   "admin.group.maintenance": "유지 보수",
 
   "project.status.completed": "완료",
-  "project.status.archived": "보관됨"
+  "project.status.archived": "보관됨",
+
+  "task.dueDate": "마감",
+  "task.toVersion": "해당 version에",
+  "marker.delete": "마커 삭제",
+  "usd.recomposeFrom": "USD에서 재구성",
+
+  "marker.rename": "이름 변경 / 색 변경…"
 }

@@ -3,6 +3,7 @@
 
 import { useRef, useState, type DragEvent } from 'react';
 import { UploadCloud } from 'lucide-react';
+import { useT } from '../../i18n';
 
 /**
  * Drop-zone d'upload visible en permanence (10.C3) : glisser-déposer ou clic.
@@ -15,6 +16,7 @@ export default function TaskDropzone({
   latestVersionName: string | null;
   onFiles: (files: File[]) => void;
 }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
 
@@ -49,7 +51,7 @@ export default function TaskDropzone({
         Glissez un fichier ici ou cliquez pour l’ajouter{' '}
         {latestVersionName ? (
           <>
-            à la version <strong className="text-foreground">{latestVersionName}</strong>
+            {t('task.toVersion')} <strong className="text-foreground">{latestVersionName}</strong>
           </>
         ) : (
           'en créant une première version'

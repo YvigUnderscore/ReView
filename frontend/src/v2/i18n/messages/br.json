@@ -939,5 +939,12 @@
   "admin.group.maintenance": "Trezalc'h",
 
   "project.status.completed": "Echu",
-  "project.status.archived": "Diellaouet"
+  "project.status.archived": "Diellaouet",
+
+  "task.dueDate": "Termen",
+  "task.toVersion": "d'ar version",
+  "marker.delete": "Dilemel ar merker",
+  "usd.recomposeFrom": "Adaozañ adalek an USD",
+
+  "marker.rename": "Adenvel / adlivañ…"
 }

@@ -940,5 +940,12 @@
   "admin.group.maintenance": "Mantenimiento",
 
   "project.status.completed": "Terminado",
-  "project.status.archived": "Archivado"
+  "project.status.archived": "Archivado",
+
+  "task.dueDate": "Fecha límite",
+  "task.toVersion": "a la version",
+  "marker.delete": "Eliminar el marcador",
+  "usd.recomposeFrom": "Recomponer desde el USD",
+
+  "marker.rename": "Renombrar / recolorear…"
 }

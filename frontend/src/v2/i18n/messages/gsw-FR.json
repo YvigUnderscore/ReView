@@ -940,5 +940,12 @@
   "admin.group.maintenance": "Wartung",
 
   "project.status.completed": "Fertig",
-  "project.status.archived": "Archiviert"
+  "project.status.archived": "Archiviert",
+
+  "task.dueDate": "Fällig",
+  "task.toVersion": "zue d'r version",
+  "marker.delete": "D'Markierung lesche",
+  "usd.recomposeFrom": "Uss em USD nej komponiere",
+
+  "marker.rename": "Umbenenne / nej ihfärbe…"
 }

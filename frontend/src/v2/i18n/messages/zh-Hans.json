@@ -939,5 +939,12 @@
   "admin.group.maintenance": "维护",
 
   "project.status.completed": "已完成",
-  "project.status.archived": "已归档"
+  "project.status.archived": "已归档",
+
+  "task.dueDate": "截止",
+  "task.toVersion": "到该 version",
+  "marker.delete": "删除标记",
+  "usd.recomposeFrom": "从 USD 重组",
+
+  "marker.rename": "重命名 / 改颜色…"
 }

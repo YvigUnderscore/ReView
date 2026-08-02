@@ -143,7 +143,7 @@ export default function ReviewContextMenu({
               <Play size={14} /> {t('shortcuts.playPause')}
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => stepVideoFrame(videoRef.current, fps, -1)}>
-              <ChevronLeft size={14} /> Frame précédente
+              <ChevronLeft size={14} /> {t('review.prevFrame')}
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => stepVideoFrame(videoRef.current, fps, 1)}>
               <ChevronRight size={14} /> Frame suivante

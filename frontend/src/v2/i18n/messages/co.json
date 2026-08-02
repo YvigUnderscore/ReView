@@ -940,5 +940,12 @@
   "admin.group.maintenance": "Mantenimentu",
 
   "project.status.completed": "Compiu",
-  "project.status.archived": "Archiviatu"
+  "project.status.archived": "Archiviatu",
+
+  "task.dueDate": "Scadenza",
+  "task.toVersion": "à a version",
+  "marker.delete": "Sguassà u marcatore",
+  "usd.recomposeFrom": "Ricumpone da l'USD",
+
+  "marker.rename": "Rinuminà / ricolurà…"
 }

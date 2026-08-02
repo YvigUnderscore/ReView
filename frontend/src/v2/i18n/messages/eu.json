@@ -940,5 +940,12 @@
   "admin.group.maintenance": "Mantentzea",
 
   "project.status.completed": "Amaituta",
-  "project.status.archived": "Artxibatuta"
+  "project.status.archived": "Artxibatuta",
+
+  "task.dueDate": "Epemuga",
+  "task.toVersion": "version-era",
+  "marker.delete": "Ezabatu markatzailea",
+  "usd.recomposeFrom": "Birkonposatu USDtik",
+
+  "marker.rename": "Berrizendatu / kolorez aldatu…"
 }

@@ -940,5 +940,12 @@
   "admin.group.maintenance": "रखरखाव",
 
   "project.status.completed": "पूर्ण",
-  "project.status.archived": "संग्रहित"
+  "project.status.archived": "संग्रहित",
+
+  "task.dueDate": "नियत तिथि",
+  "task.toVersion": "इस version में",
+  "marker.delete": "मार्कर हटाएँ",
+  "usd.recomposeFrom": "USD से पुनः संयोजित करें",
+
+  "marker.rename": "नाम / रंग बदलें…"
 }

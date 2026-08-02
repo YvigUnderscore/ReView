@@ -36,6 +36,7 @@ export function MarkerTicks({
   onSeek: (t: number) => void;
   onEdit: (m: TimelineMarker) => void;
 }) {
+  const tr = useT();
   if (duration <= 0) return null;
   return (
     <>
@@ -79,10 +80,10 @@ export function MarkerTicks({
               onClick={(e) => e.stopPropagation()}
             >
               <ContextMenuItem onClick={() => onEdit(m)}>
-                <Pencil size={14} /> Renommer / recolorer…
+                <Pencil size={14} /> {tr('marker.rename')}
               </ContextMenuItem>
               <ContextMenuItem danger onClick={() => void api.remove(m)}>
-                <Trash2 size={14} /> Supprimer le marqueur
+                <Trash2 size={14} /> {tr('marker.delete')}
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -111,7 +112,7 @@ export function MarkerDialog({
   editing: TimelineMarker | null;
   api: TimelineMarkersApi;
 }) {
-  const t = useT();
+  const tr = useT();
   const [name, setName] = useState(editing?.name ?? '');
   const [color, setColor] = useState(editing?.color ?? MARKER_COLORS[0]!);
 
@@ -135,7 +136,7 @@ export function MarkerDialog({
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
-          placeholder={t('review.marker.placeholder')}
+          placeholder={tr('review.marker.placeholder')}
           autoFocus
         />
         <div className="flex items-center gap-2">
@@ -151,7 +152,7 @@ export function MarkerDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            {t('common.undo')}
+            {tr('common.undo')}
           </Button>
           <Button onClick={() => void submit()} disabled={!name.trim()}>
             {editing ? 'Modifier' : 'Ajouter'}

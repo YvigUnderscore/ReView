@@ -107,9 +107,7 @@ export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
         ))}
         {tokens.length === 0 && <p className="text-xs text-muted-foreground">{t('tokens.empty')}</p>}
       </div>
-      <p className="mt-2 text-[11px] text-muted-foreground">
-        Révocation par un admin : section API &amp; Webhooks.
-      </p>
+      <p className="mt-2 text-[11px] text-muted-foreground">{t('sessions.adminRevoke')}</p>
     </Panel>
   );
 }

@@ -939,5 +939,12 @@
   "admin.group.maintenance": "メンテナンス",
 
   "project.status.completed": "完了",
-  "project.status.archived": "アーカイブ済み"
+  "project.status.archived": "アーカイブ済み",
+
+  "task.dueDate": "期限",
+  "task.toVersion": "この version へ",
+  "marker.delete": "マーカーを削除",
+  "usd.recomposeFrom": "USD から再構成",
+
+  "marker.rename": "名前・色を変更…"
 }

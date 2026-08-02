@@ -51,7 +51,11 @@ export default function TaskSchedule({
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <CalendarDays size={14} />
         {startDate && <span>Début : {fmt(startDate)}</span>}
-        {dueDate && <span>Échéance : {fmt(dueDate)}</span>}
+        {dueDate && (
+          <span>
+            {t('task.dueDate')} : {fmt(dueDate)}
+          </span>
+        )}
       </div>
     );
   }
@@ -71,7 +75,7 @@ export default function TaskSchedule({
         />
       </label>
       <label className="flex items-center gap-1.5">
-        Échéance
+        {t('task.dueDate')}
         <input
           type="date"
           value={toInput(dueDate)}

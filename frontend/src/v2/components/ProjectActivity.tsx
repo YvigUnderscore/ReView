@@ -122,7 +122,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
         {/* Dernières mises à jour */}
         <section className="rounded-lg border border-border bg-card p-4">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <Clock size={15} /> Dernières mises à jour
+            <Clock size={15} /> {tr('home.recentActivity')}
           </h3>
           {error && <p className="text-xs text-destructive">{error.message}</p>}
           {recent.length === 0 ? (
@@ -161,7 +161,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
         {/* Tâches à traiter (priorité par statut) + statut/assignation */}
         <section className="rounded-lg border border-border bg-card p-4">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <Layers size={15} /> Tâches à traiter
+            <Layers size={15} /> {tr('activity.title')}
           </h3>
           {tasks.length === 0 ? (
             <p className="text-xs text-muted-foreground">{tr('activity.noTask')}</p>

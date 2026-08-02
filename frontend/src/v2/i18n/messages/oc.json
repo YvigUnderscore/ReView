@@ -940,5 +940,12 @@
   "admin.group.maintenance": "Mantenença",
 
   "project.status.completed": "Acabat",
-  "project.status.archived": "Archivat"
+  "project.status.archived": "Archivat",
+
+  "task.dueDate": "Escasença",
+  "task.toVersion": "a la version",
+  "marker.delete": "Suprimir lo marcador",
+  "usd.recomposeFrom": "Recompausar dempuèi l’USD",
+
+  "marker.rename": "Tornar nomenar / recolorar…"
 }

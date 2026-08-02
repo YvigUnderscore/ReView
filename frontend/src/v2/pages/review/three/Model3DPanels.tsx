@@ -207,7 +207,7 @@ export default function Model3DPanels({
           onRecompose && (
             <Button size="sm" variant="outline" onClick={onRecompose}>
               <Layers size={13} />
-              Recomposer depuis l’USD
+              {t('usd.recomposeFrom')}
             </Button>
           )
         }
