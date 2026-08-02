@@ -204,7 +204,7 @@ La liste exhaustive, avec le texte de licence de chacun, est dans
 
 ReView est un **logiciel libre sous [AGPL-3.0-or-later](LICENSE)**.
 
-Vous pouvez l'installer, le modifier, le vendre et bâtir votre activité dessus. La seule
+Vous pouvez l'installer et le modifier. La seule
 contrepartie : si vous en proposez une **version modifiée** à d'autres — y compris
 simplement en l'hébergeant pour vos clients — vous devez leur en fournir les sources
 (article 13). Concrètement, publiez votre fork et renseignez son URL dans
@@ -219,6 +219,4 @@ Vos médias, projets et données ne sont jamais concernés : la licence porte su
 - **[Documentation de licence](DOCUMENTATION/development/licensing.md)** — obligations
   détaillées, compatibilité des dépendances, redistribution des images Docker.
 
-> Jusqu'au 2 août 2026, ReView était distribué sous licence MIT. Une licence accordée ne se
-> révoque pas : **les versions publiées avant cette date restent disponibles sous MIT**. Le
-> changement ne vaut que pour la suite.
+> Jusqu'au 2 août 2026, ReView était distribué sous licence MIT.
