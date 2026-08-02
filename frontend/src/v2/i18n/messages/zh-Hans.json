@@ -792,5 +792,7 @@
   "review.cameraViewSaved": "已保存摄像机视角",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "文档已创建"
+  "documents.created": "文档已创建",
+
+  "common.escKey": "Esc"
 }

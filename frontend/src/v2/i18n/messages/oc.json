@@ -793,5 +793,7 @@
   "review.cameraViewSaved": "Vista de camera enregistrada",
   "email.placeholder": "vos@estudi.oc",
 
-  "documents.created": "Document creat"
+  "documents.created": "Document creat",
+
+  "common.escKey": "Escap"
 }

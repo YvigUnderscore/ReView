@@ -792,5 +792,7 @@
   "review.cameraViewSaved": "카메라 뷰를 저장했습니다",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "문서를 만들었습니다"
+  "documents.created": "문서를 만들었습니다",
+
+  "common.escKey": "Esc"
 }

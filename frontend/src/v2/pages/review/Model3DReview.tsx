@@ -275,7 +275,9 @@ export default function Model3DReview({
                     className="absolute top-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground shadow-lg ring-2 ring-primary/30 hover:opacity-90"
                   >
                     <Undo2 size={12} /> Scène du commentaire · revenir
-                    <kbd className="rounded bg-primary-foreground/20 px-1 text-[9px]">Échap</kbd>
+                    <kbd className="rounded bg-primary-foreground/20 px-1 text-[9px]">
+                      {t('common.escKey')}
+                    </kbd>
                   </button>
                 ) : undefined
               }

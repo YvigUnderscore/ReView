@@ -792,5 +792,7 @@
   "review.cameraViewSaved": "カメラビューを保存しました",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "ドキュメントを作成しました"
+  "documents.created": "ドキュメントを作成しました",
+
+  "common.escKey": "Esc"
 }

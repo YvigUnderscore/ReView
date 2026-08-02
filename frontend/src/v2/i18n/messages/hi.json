@@ -793,5 +793,7 @@
   "review.cameraViewSaved": "कैमरा दृश्य सहेजा गया",
   "email.placeholder": "aap@studio.com",
 
-  "documents.created": "दस्तावेज़ बना"
+  "documents.created": "दस्तावेज़ बना",
+
+  "common.escKey": "Esc"
 }

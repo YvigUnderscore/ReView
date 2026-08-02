@@ -162,7 +162,7 @@ export default function ClientMediaViewer({
             <Input
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
-              placeholder="Votre nom"
+              placeholder={t('setup.adminName')}
               maxLength={80}
               required
             />

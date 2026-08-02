@@ -793,5 +793,7 @@
   "review.cameraViewSaved": "Vista de cámara guardada",
   "email.placeholder": "tu@estudio.com",
 
-  "documents.created": "Documento creado"
+  "documents.created": "Documento creado",
+
+  "common.escKey": "Esc"
 }

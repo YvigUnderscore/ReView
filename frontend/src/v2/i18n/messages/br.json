@@ -792,5 +792,7 @@
   "review.cameraViewSaved": "Gweladenn gamera enrollet",
   "email.placeholder": "c'hwi@studio.bzh",
 
-  "documents.created": "Teul krouet"
+  "documents.created": "Teul krouet",
+
+  "common.escKey": "Achap"
 }

@@ -793,5 +793,7 @@
   "review.cameraViewSaved": "Camera view saved",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "Document created"
+  "documents.created": "Document created",
+
+  "common.escKey": "Esc"
 }

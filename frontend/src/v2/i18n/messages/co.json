@@ -793,5 +793,7 @@
   "review.cameraViewSaved": "Vista di camera arregistrata",
   "email.placeholder": "tu@studio.corsica",
 
-  "documents.created": "Ducumentu creatu"
+  "documents.created": "Ducumentu creatu",
+
+  "common.escKey": "Esc"
 }

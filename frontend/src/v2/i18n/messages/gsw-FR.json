@@ -793,5 +793,7 @@
   "review.cameraViewSaved": "Kamera-Ahsicht gspichert",
   "email.placeholder": "du@studio.els",
 
-  "documents.created": "Dokumänt ahgleit"
+  "documents.created": "Dokumänt ahgleit",
+
+  "common.escKey": "Esc"
 }
