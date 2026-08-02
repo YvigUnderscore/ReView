@@ -1538,5 +1538,22 @@
   "usd.millimetre": "毫米",
   "entity.videoLower": "视频",
 
-  "version.emptyMedia": "该 version 中没有媒体。"
+  "version.emptyMedia": "该 version 中没有媒体。",
+
+  "playlist.added": {"other":"已把 {count} 个 version 加入「{name}」"},
+  "playlist.skipped": {"other":"（{count} 个已在其中）"},
+  "playlist.targetCount": {"other":"{count} 项 — 每个匹配的 version 都会追加到 playlist 末尾。"},
+  "csv.columns": "列：",
+
+  "calendar.today": "今天",
+  "nav.breadcrumb": "面包屑导航",
+  "comment.original": "原始评论",
+  "settings.accentColour": "强调色",
+  "ctx.finishAnnotation": "结束 annotation",
+  "capture.imageLoadFailed": "无法加载图像",
+  "draw.otherInk": "其他墨色",
+  "info.uvSets": "UV 集",
+  "track.animTrack": "动画轨道",
+
+  "sequences.created": "已创建 sequence「{code}」"
 }

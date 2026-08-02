@@ -95,8 +95,7 @@ export default function ProjectCsvActions({
             <DialogTitle>{t('shots.import')}</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
-            Colonnes : <code>sequence, shot, name, tasks</code> (tâches séparées par « | »). Les shots
-            existants sont ignorés.
+            {t('csv.columns')} <code>sequence, shot, name, tasks</code> {t('csv.taskHint')}
           </p>
           <textarea
             className="h-40 w-full rounded border border-input bg-background p-2 font-mono text-xs"

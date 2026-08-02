@@ -65,10 +65,7 @@ export default function DuplicateProjectDialog({
             <Checkbox checked={includeTasks} onCheckedChange={(v) => setIncludeTasks(v === true)} />
             {t('project.copyTasks')}
           </label>
-          <p className="text-xs text-muted-foreground">
-            Séquences, shots et réglages sont recréés. Les médias, versions et commentaires ne sont pas
-            copiés.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('project.dupHint')}</p>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>

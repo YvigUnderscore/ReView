@@ -51,8 +51,8 @@ export default function AddToPlaylistDialog({
 
   const finish = (added: number, skipped: number, name: string) => {
     toast.success(
-      `${added} version${added > 1 ? 's' : ''} ajoutée${added > 1 ? 's' : ''} à « ${name} »` +
-        (skipped > 0 ? ` (${skipped} déjà présente${skipped > 1 ? 's' : ''})` : ''),
+      t('playlist.added', { count: added, name }) +
+        (skipped > 0 ? ` ${t('playlist.skipped', { count: skipped })}` : ''),
     );
     void qc.invalidateQueries({ queryKey: ['playlists'] });
     void qc.invalidateQueries({ queryKey: ['playlist'] });
@@ -108,8 +108,7 @@ export default function AddToPlaylistDialog({
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              {targetCount} élément{targetCount > 1 ? 's' : ''} — chaque version correspondante est ajoutée en
-              fin de playlist.
+              {t('playlist.targetCount', { count: targetCount })}
             </p>
             {playlists.length > 0 && (
               <ul className="max-h-56 space-y-1 overflow-y-auto">

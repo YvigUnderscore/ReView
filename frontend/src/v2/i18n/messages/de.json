@@ -1539,5 +1539,22 @@
   "usd.millimetre": "Millimeter",
   "entity.videoLower": "Video",
 
-  "version.emptyMedia": "Kein Medium in dieser version."
+  "version.emptyMedia": "Kein Medium in dieser version.",
+
+  "playlist.added": {"one":"{count} version zu „{name}“ hinzugefügt","other":"{count} versions zu „{name}“ hinzugefügt"},
+  "playlist.skipped": {"one":"({count} schon vorhanden)","other":"({count} schon vorhanden)"},
+  "playlist.targetCount": {"one":"{count} Element — jede passende version wird ans Ende der playlist gehängt.","other":"{count} Elemente — jede passende version wird ans Ende der playlist gehängt."},
+  "csv.columns": "Spalten:",
+
+  "calendar.today": "Heute",
+  "nav.breadcrumb": "Brotkrumenpfad",
+  "comment.original": "Ursprünglicher Kommentar",
+  "settings.accentColour": "Akzentfarbe",
+  "ctx.finishAnnotation": "Annotation abschließen",
+  "capture.imageLoadFailed": "Bild konnte nicht geladen werden",
+  "draw.otherInk": "Andere Tintenfarbe",
+  "info.uvSets": "UV-Sätze",
+  "track.animTrack": "Animationsspur",
+
+  "sequences.created": "Sequence „{code}“ angelegt"
 }

@@ -5,10 +5,12 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useT } from '../../i18n';
 
 /** Fil d'Ariane : conteneur + éléments. Le dernier segment (page courante) utilise BreadcrumbPage. */
 function Breadcrumb({ className, ...props }: HTMLAttributes<HTMLElement>) {
-  return <nav aria-label="Fil d'Ariane" className={cn('min-w-0', className)} {...props} />;
+  const t = useT();
+  return <nav aria-label={t('nav.breadcrumb')} className={cn('min-w-0', className)} {...props} />;
 }
 
 function BreadcrumbList({ className, ...props }: HTMLAttributes<HTMLOListElement>) {

@@ -1539,5 +1539,22 @@
   "usd.millimetre": "millimètre",
   "entity.videoLower": "vidéo",
 
-  "version.emptyMedia": "Aucun média dans cette version."
+  "version.emptyMedia": "Aucun média dans cette version.",
+
+  "playlist.added": {"one":"{count} version ajoutée à « {name} »","other":"{count} versions ajoutées à « {name} »"},
+  "playlist.skipped": {"one":"({count} déjà présente)","other":"({count} déjà présentes)"},
+  "playlist.targetCount": {"one":"{count} élément — chaque version correspondante est ajoutée en fin de playlist.","other":"{count} éléments — chaque version correspondante est ajoutée en fin de playlist."},
+  "csv.columns": "Colonnes :",
+
+  "calendar.today": "Aujourd’hui",
+  "nav.breadcrumb": "Fil d’Ariane",
+  "comment.original": "Commentaire d’origine",
+  "settings.accentColour": "Couleur d’accent",
+  "ctx.finishAnnotation": "Terminer l’annotation",
+  "capture.imageLoadFailed": "Chargement de l’image impossible",
+  "draw.otherInk": "Autre couleur d’encre",
+  "info.uvSets": "Jeux d’UV",
+  "track.animTrack": "Piste d’animation",
+
+  "sequences.created": "Sequence « {code} » créée"
 }

@@ -1539,5 +1539,22 @@
   "usd.millimetre": "millimetre",
   "entity.videoLower": "video",
 
-  "version.emptyMedia": "No media in this version."
+  "version.emptyMedia": "No media in this version.",
+
+  "playlist.added": {"one":"{count} version added to “{name}”","other":"{count} versions added to “{name}”"},
+  "playlist.skipped": {"one":"({count} already there)","other":"({count} already there)"},
+  "playlist.targetCount": {"one":"{count} item — each matching version is appended to the playlist.","other":"{count} items — each matching version is appended to the playlist."},
+  "csv.columns": "Columns:",
+
+  "calendar.today": "Today",
+  "nav.breadcrumb": "Breadcrumb",
+  "comment.original": "Original comment",
+  "settings.accentColour": "Accent colour",
+  "ctx.finishAnnotation": "Finish the annotation",
+  "capture.imageLoadFailed": "Could not load the image",
+  "draw.otherInk": "Another ink colour",
+  "info.uvSets": "UV sets",
+  "track.animTrack": "Animation track",
+
+  "sequences.created": "Sequence “{code}” created"
 }

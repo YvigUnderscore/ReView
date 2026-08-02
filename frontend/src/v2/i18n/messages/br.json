@@ -1538,5 +1538,22 @@
   "usd.millimetre": "milimetr",
   "entity.videoLower": "video",
 
-  "version.emptyMedia": "Media ebet er version-mañ."
+  "version.emptyMedia": "Media ebet er version-mañ.",
+
+  "playlist.added": {"one":"{count} version ouzhpennet da « {name} »","two":"{count} version ouzhpennet da « {name} »","few":"{count} version ouzhpennet da « {name} »","many":"{count} version ouzhpennet da « {name} »","other":"{count} version ouzhpennet da « {name} »"},
+  "playlist.skipped": {"one":"({count} amañ dija)","two":"({count} amañ dija)","few":"({count} amañ dija)","many":"({count} amañ dija)","other":"({count} amañ dija)"},
+  "playlist.targetCount": {"one":"{count} elfenn — pep version glotus a zo ouzhpennet e fin ar playlist.","two":"{count} elfenn — pep version glotus a zo ouzhpennet e fin ar playlist.","few":"{count} elfenn — pep version glotus a zo ouzhpennet e fin ar playlist.","many":"{count} elfenn — pep version glotus a zo ouzhpennet e fin ar playlist.","other":"{count} elfenn — pep version glotus a zo ouzhpennet e fin ar playlist."},
+  "csv.columns": "Bannoù :",
+
+  "calendar.today": "Hiziv",
+  "nav.breadcrumb": "Hent merdeiñ",
+  "comment.original": "Evezhiadenn orin",
+  "settings.accentColour": "Liv pouez",
+  "ctx.finishAnnotation": "Echuiñ an annotation",
+  "capture.imageLoadFailed": "N’eo ket bet gallet kargañ ar skeudenn",
+  "draw.otherInk": "Liv huan all",
+  "info.uvSets": "Strolladoù UV",
+  "track.animTrack": "Roudenn vuhezadur",
+
+  "sequences.created": "Sequence « {code} » krouet"
 }

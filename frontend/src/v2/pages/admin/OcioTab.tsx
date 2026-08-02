@@ -104,7 +104,7 @@ export default function OcioTab() {
         >
           ASWF OpenColorIO-Config-ACES
         </a>
-        ) et définissez la config par défaut du studio (ACES&nbsp;1.3 recommandé).
+        {t('ocio.hintEnd')}
       </p>
 
       <Panel title={t('ocio.installed')}>

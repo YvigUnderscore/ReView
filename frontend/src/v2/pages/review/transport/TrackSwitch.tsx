@@ -24,7 +24,7 @@ export default function TrackSwitch({
   return (
     <>
       <SegmentedControl
-        label="Piste d’animation"
+        label={t('track.animTrack')}
         items={[
           {
             value: 'camera' as const,

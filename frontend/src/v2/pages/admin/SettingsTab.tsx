@@ -195,7 +195,7 @@ function AccentField({
     <div className="space-y-2 rounded-lg border border-border p-3">
       <h3 className="text-sm font-semibold">{t('settings.studioTheme')}</h3>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <label className="w-64 text-muted-foreground">Couleur d’accent</label>
+        <label className="w-64 text-muted-foreground">{t('settings.accentColour')}</label>
         <input
           type="color"
           value={value}

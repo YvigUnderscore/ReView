@@ -195,7 +195,7 @@ export default function Model3DPanels({
       : [{ label: 'Mesure…', value: '—' }];
     const sheet: InfoRow[] = [
       { label: t('review.file'), value: data.media.originalName },
-      { label: 'Jeux d’UV', value: s?.uvSets.length ? s.uvSets.join(', ') : t('review.none') },
+      { label: t('info.uvSets'), value: s?.uvSets.length ? s.uvSets.join(', ') : t('review.none') },
       {
         label: 'Extensions',
         value: inspect.extensions.length ? inspect.extensions.join(', ') : t('common.noneFem'),

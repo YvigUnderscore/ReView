@@ -76,7 +76,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
             onClick={() => setMonth(startOfMonth(new Date()))}
             className="rounded-md border border-border px-2 py-1 text-xs hover:bg-secondary/60"
           >
-            Aujourd'hui
+            {tr('calendar.today')}
           </button>
           <button
             onClick={() => shift(1)}

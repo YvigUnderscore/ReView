@@ -115,7 +115,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
       {/* Section Séquences → Shots */}
       <button onClick={() => setOpen((o) => ({ ...o, sequences: !o.sequences }))} className={rowClass}>
         {open.sequences ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-        <Layers size={13} /> Séquences
+        <Layers size={13} /> {t('nav.sequences')}
       </button>
       {open.sequences &&
         (sequences === null ? (

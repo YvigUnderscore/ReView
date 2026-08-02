@@ -74,7 +74,9 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
         <div className="space-y-3">
           <div className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{formatBytes(data.usage)}</span>
-            {data.quota != null ? ` / ${formatBytes(data.quota)}` : ' utilisés (illimité)'}
+            {data.quota != null
+              ? ` / ${formatBytes(data.quota)}`
+              : ` ${t('storage.usedUnlimited', { used: '' }).trim()}`}
             {pct != null && ` — ${pct}%`}
           </div>
           {data.quota != null && (

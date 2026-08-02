@@ -121,7 +121,7 @@ export default function ReviewContextMenu({
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onSelect={onToggleAnnotate}>
-          <PencilLine size={14} /> {annotating ? "Terminer l'annotation" : t('mode.annotate')}
+          <PencilLine size={14} /> {annotating ? t('ctx.finishAnnotation') : t('mode.annotate')}
         </ContextMenuItem>
         {hasViewed && (
           <ContextMenuItem onSelect={onClearSelection}>

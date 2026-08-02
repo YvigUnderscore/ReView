@@ -129,10 +129,7 @@ export default function ProjectSettingsTab({
       {/* Format & cadence (résolution + fps) — défauts du projet, hérités par séquences/shots */}
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="text-sm font-medium">{t('pipeline.formatRate')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">
-          Résolution de livraison et cadence par défaut du projet (héritées par les séquences et shots,
-          override possible à leur niveau).
-        </div>
+        <div className="mb-3 text-xs text-muted-foreground">{t('pipeline.formatHint')}</div>
         {draft ? (
           <div className="flex flex-wrap items-end gap-3">
             <Field label={t('pipeline.width')}>

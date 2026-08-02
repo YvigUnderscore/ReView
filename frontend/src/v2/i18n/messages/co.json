@@ -1539,5 +1539,22 @@
   "usd.millimetre": "millimetru",
   "entity.videoLower": "video",
 
-  "version.emptyMedia": "Nisun media in sta version."
+  "version.emptyMedia": "Nisun media in sta version.",
+
+  "playlist.added": {"one":"{count} version aghjunta à « {name} »","other":"{count} version aghjunte à « {name} »"},
+  "playlist.skipped": {"one":"({count} digià prisente)","other":"({count} digià prisenti)"},
+  "playlist.targetCount": {"one":"{count} elementu — ogni version currispundente hè aghjunta à a fine di a playlist.","other":"{count} elementi — ogni version currispundente hè aghjunta à a fine di a playlist."},
+  "csv.columns": "Culonne :",
+
+  "calendar.today": "Oghje",
+  "nav.breadcrumb": "Filu di navigazione",
+  "comment.original": "Cummentu d’origine",
+  "settings.accentColour": "Culore d’accentu",
+  "ctx.finishAnnotation": "Compie l’annotation",
+  "capture.imageLoadFailed": "Caricamentu di l’imagine impussibile",
+  "draw.otherInk": "Altru culore d’inchjostru",
+  "info.uvSets": "Inseme di UV",
+  "track.animTrack": "Traccia d’animazione",
+
+  "sequences.created": "Sequence « {code} » creata"
 }

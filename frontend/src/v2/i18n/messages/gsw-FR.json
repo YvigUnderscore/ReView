@@ -1539,5 +1539,22 @@
   "usd.millimetre": "Millimeter",
   "entity.videoLower": "Video",
 
-  "version.emptyMedia": "Kei Medium in därre version."
+  "version.emptyMedia": "Kei Medium in därre version.",
+
+  "playlist.added": {"one":"{count} version zue „{name}“ dezuegfiegt","other":"{count} versions zue „{name}“ dezuegfiegt"},
+  "playlist.skipped": {"one":"({count} scho do)","other":"({count} scho do)"},
+  "playlist.targetCount": {"one":"{count} Element — jedi passendi version wird ah s Änd vu d’r playlist ahghänkt.","other":"{count} Element — jedi passendi version wird ah s Änd vu d’r playlist ahghänkt."},
+  "csv.columns": "Spalte:",
+
+  "calendar.today": "Hit",
+  "nav.breadcrumb": "Brotkrimelpfad",
+  "comment.original": "Ursprünglicher Kommentar",
+  "settings.accentColour": "Akzäntfarb",
+  "ctx.finishAnnotation": "D’annotation abschliesse",
+  "capture.imageLoadFailed": "S Bild het nit könne glade wärde",
+  "draw.otherInk": "Anderi Tintefarb",
+  "info.uvSets": "UV-Sätz",
+  "track.animTrack": "Animationsspur",
+
+  "sequences.created": "Sequence „{code}“ ahglegt"
 }

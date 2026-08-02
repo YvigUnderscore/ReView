@@ -1539,5 +1539,22 @@
   "usd.millimetre": "millimètre",
   "entity.videoLower": "vidèo",
 
-  "version.emptyMedia": "Cap de mèdia dins aquesta version."
+  "version.emptyMedia": "Cap de mèdia dins aquesta version.",
+
+  "playlist.added": {"one":"{count} version aponduda a « {name} »","other":"{count} versions apondudas a « {name} »"},
+  "playlist.skipped": {"one":"({count} ja presenta)","other":"({count} ja presentas)"},
+  "playlist.targetCount": {"one":"{count} element — cada version correspondenta es aponduda en fin de playlist.","other":"{count} elements — cada version correspondenta es aponduda en fin de playlist."},
+  "csv.columns": "Colomnas :",
+
+  "calendar.today": "Uèi",
+  "nav.breadcrumb": "Fial d’Ariana",
+  "comment.original": "Comentari d’origina",
+  "settings.accentColour": "Color d’accent",
+  "ctx.finishAnnotation": "Acabar l’annotation",
+  "capture.imageLoadFailed": "Cargament de l’imatge impossible",
+  "draw.otherInk": "Autra color de tinta",
+  "info.uvSets": "Ensembles d’UV",
+  "track.animTrack": "Pista d’animacion",
+
+  "sequences.created": "Sequence « {code} » creada"
 }

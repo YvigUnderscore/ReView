@@ -147,10 +147,7 @@ function WatermarkPanel() {
 
   return (
     <Panel title="Watermark spectateur">
-      <p className="mb-3 text-xs text-muted-foreground">
-        Filigrane discret avec l'identité du spectateur, incrusté à l'écran par-dessus les médias (dissuasif
-        contre les fuites).
-      </p>
+      <p className="mb-3 text-xs text-muted-foreground">{t('dist.watermarkHint')}</p>
       <div className="space-y-2.5">
         <label className="flex items-center gap-2 text-sm">
           <input

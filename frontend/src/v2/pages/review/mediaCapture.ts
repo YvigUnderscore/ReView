@@ -152,7 +152,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     const img = new Image();
     if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Chargement de l’image impossible'));
+    img.onerror = () => reject(new Error(t('capture.imageLoadFailed')));
     img.src = src;
   });
 }

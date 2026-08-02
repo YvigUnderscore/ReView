@@ -110,7 +110,7 @@ export default function MediaOptions({
                   value={ann.color}
                   onChange={(e) => ann.setColor(e.target.value)}
                   title="Autre couleur"
-                  aria-label="Autre couleur d’encre"
+                  aria-label={t('draw.otherInk')}
                   className="h-5 w-5 cursor-pointer rounded-full border border-border bg-transparent p-0"
                 />
               </span>

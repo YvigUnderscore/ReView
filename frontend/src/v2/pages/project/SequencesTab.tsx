@@ -56,7 +56,7 @@ export default function SequencesTab({
     e.preventDefault();
     try {
       await api.post('/api/sequences', { projectId, code: newSeq.code, name: newSeq.name || newSeq.code });
-      toast.success(`Séquence « ${newSeq.code} » créée`);
+      toast.success(t('sequences.created', { code: newSeq.code }));
       setNewSeq({ name: '', code: '' });
       reload();
     } catch (err) {
@@ -130,7 +130,7 @@ export default function SequencesTab({
             onChange={(e) => setNewSeq((s) => ({ ...s, name: e.target.value }))}
           />
           <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground">
-            <Plus size={14} /> Séquence
+            <Plus size={14} /> {t('entity.sequence')}
           </button>
         </form>
       )}
@@ -139,11 +139,7 @@ export default function SequencesTab({
           compact
           icon={Film}
           title={t('sequences.empty.title')}
-          description={
-            canManage
-              ? 'Créez vos séquences ci-dessus — elles regroupent les shots (SQ010, SQ020…).'
-              : t('sequences.empty.description')
-          }
+          description={canManage ? t('sequences.empty.hint') : t('sequences.empty.description')}
         />
       ) : (
         <div className="space-y-1.5">

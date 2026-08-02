@@ -102,7 +102,7 @@ export default function TaskPage() {
               to={`/review/${task.sourceComment.mediaObjectId}?comment=${task.sourceComment.id}`}
               className="flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
             >
-              <MessageSquare size={12} /> Commentaire d’origine
+              <MessageSquare size={12} /> {t('comment.original')}
             </Link>
           )}
         </div>

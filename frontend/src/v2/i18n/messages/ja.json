@@ -1538,5 +1538,22 @@
   "usd.millimetre": "ミリメートル",
   "entity.videoLower": "動画",
 
-  "version.emptyMedia": "この version にメディアはありません。"
+  "version.emptyMedia": "この version にメディアはありません。",
+
+  "playlist.added": {"other":"「{name}」に version を {count} 件追加しました"},
+  "playlist.skipped": {"other":"（{count} 件はすでにありました）"},
+  "playlist.targetCount": {"other":"{count} 件 — 該当する version が playlist の末尾に追加されます。"},
+  "csv.columns": "列：",
+
+  "calendar.today": "今日",
+  "nav.breadcrumb": "パンくずリスト",
+  "comment.original": "元のコメント",
+  "settings.accentColour": "アクセントカラー",
+  "ctx.finishAnnotation": "annotation を終える",
+  "capture.imageLoadFailed": "画像を読み込めません",
+  "draw.otherInk": "別のインク色",
+  "info.uvSets": "UV セット",
+  "track.animTrack": "アニメーショントラック",
+
+  "sequences.created": "sequence「{code}」を作成しました"
 }

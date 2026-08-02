@@ -1539,5 +1539,22 @@
   "usd.millimetre": "milimetro",
   "entity.videoLower": "bideo",
 
-  "version.emptyMedia": "Ez dago mediarik version honetan."
+  "version.emptyMedia": "Ez dago mediarik version honetan.",
+
+  "playlist.added": {"one":"{count} version gehitu da «{name}»-ra","other":"{count} version gehitu dira «{name}»-ra"},
+  "playlist.skipped": {"one":"({count} lehendik zegoen)","other":"({count} lehendik zeuden)"},
+  "playlist.targetCount": {"one":"{count} elementu — bat datorren version bakoitza playlist-aren amaieran gehitzen da.","other":"{count} elementu — bat datorren version bakoitza playlist-aren amaieran gehitzen da."},
+  "csv.columns": "Zutabeak:",
+
+  "calendar.today": "Gaur",
+  "nav.breadcrumb": "Nabigazio-bidea",
+  "comment.original": "Jatorrizko iruzkina",
+  "settings.accentColour": "Azentu-kolorea",
+  "ctx.finishAnnotation": "Amaitu annotation-a",
+  "capture.imageLoadFailed": "Ezin izan da irudia kargatu",
+  "draw.otherInk": "Beste tinta-kolore bat",
+  "info.uvSets": "UV multzoak",
+  "track.animTrack": "Animazio-pista",
+
+  "sequences.created": "«{code}» sequence sortu da"
 }

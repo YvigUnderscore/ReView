@@ -1539,5 +1539,22 @@
   "usd.millimetre": "मिलीमीटर",
   "entity.videoLower": "वीडियो",
 
-  "version.emptyMedia": "इस version में कोई मीडिया नहीं है।"
+  "version.emptyMedia": "इस version में कोई मीडिया नहीं है।",
+
+  "playlist.added": {"one":"«{name}» में {count} version जोड़ी","other":"«{name}» में {count} version जोड़ीं"},
+  "playlist.skipped": {"one":"({count} पहले से मौजूद)","other":"({count} पहले से मौजूद)"},
+  "playlist.targetCount": {"one":"{count} वस्तु — हर संगत version playlist के अंत में जुड़ती है।","other":"{count} वस्तुएँ — हर संगत version playlist के अंत में जुड़ती है।"},
+  "csv.columns": "स्तंभ:",
+
+  "calendar.today": "आज",
+  "nav.breadcrumb": "पथ-सूची",
+  "comment.original": "मूल टिप्पणी",
+  "settings.accentColour": "एक्सेंट रंग",
+  "ctx.finishAnnotation": "annotation समाप्त करें",
+  "capture.imageLoadFailed": "छवि लोड नहीं हो सकी",
+  "draw.otherInk": "दूसरा स्याही रंग",
+  "info.uvSets": "UV सेट",
+  "track.animTrack": "एनिमेशन ट्रैक",
+
+  "sequences.created": "sequence «{code}» बनाई"
 }

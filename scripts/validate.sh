@@ -40,6 +40,11 @@ node "$ROOT/scripts/generate-notices.mjs" --check
 step "i18n — cohérence des catalogues de traduction"
 node "$ROOT/scripts/check-translations.mjs"
 
+# Un catalogue complet ne prouve pas que l'interface l'utilise : ce contrôle relève les
+# chaînes françaises restées en dur (cliquet — le compte ne peut que baisser).
+step "i18n — chaînes en dur dans le frontend"
+node "$ROOT/scripts/check-untranslated.mjs"
+
 # ---------- Budget de taille (10.F4) ----------
 # Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Le backend
 # n'a pas d'ESLint : on garde-fou ici la taille des routes (≤ 200 lignes ; la logique
