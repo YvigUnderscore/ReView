@@ -88,7 +88,7 @@ export default function IdentityTab() {
               onChange={(e) => set({ autoProvision: e.target.checked })}
             />
             <span className="font-medium">{t('sso.autoCreate')}</span>
-            <span className="text-xs text-muted-foreground">(email vérifié inconnu → nouveau compte)</span>
+            <span className="text-xs text-muted-foreground">{t('identity.unknownEmail')}</span>
           </label>
           <Field
             label={t('sso.appUrl')}
@@ -109,7 +109,7 @@ export default function IdentityTab() {
             placeholder="xxxxx.apps.googleusercontent.com"
           />
           <Field
-            label={`Client secret ${draft.hasSecret ? '(défini — laisser vide pour conserver)' : ''}`}
+            label={`Client secret ${draft.hasSecret ? t('identity.setKeep') : ''}`}
             value={draft.clientSecret}
             onChange={(v) => set({ clientSecret: v })}
             type="password"

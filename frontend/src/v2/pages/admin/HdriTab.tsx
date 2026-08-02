@@ -87,7 +87,7 @@ export default function HdriTab() {
       <Panel title={t('hdri.add')}>
         <input ref={fileRef} type="file" accept=".hdr,.exr" onChange={onFile} className="hidden" />
         <Button onClick={() => fileRef.current?.click()} disabled={busy}>
-          <Upload size={15} /> {busy ? 'Envoi…' : 'Choisir un fichier .hdr / .exr'}
+          <Upload size={15} /> {busy ? 'Envoi…' : t('hdri.choose')}
         </Button>
       </Panel>
 

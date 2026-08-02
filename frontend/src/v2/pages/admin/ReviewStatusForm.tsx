@@ -36,7 +36,7 @@ export default function ReviewStatusForm({
       const body = { name: name.trim(), color, isApproval, isRetake, isDefault };
       if (status) await api.patch(`/api/review-statuses/${status.id}`, body);
       else await api.post('/api/review-statuses', body);
-      toast.success(status ? 'Statut mis à jour' : 'Statut créé');
+      toast.success(status ? t('status.updated') : t('status.created'));
       onSaved();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
@@ -49,7 +49,7 @@ export default function ReviewStatusForm({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{status ? 'Modifier le statut' : t('reviewStatus.new')}</DialogTitle>
+          <DialogTitle>{status ? t('status.edit') : t('reviewStatus.new')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>

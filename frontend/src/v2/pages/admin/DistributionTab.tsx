@@ -84,9 +84,7 @@ function LogoPanel() {
 
   return (
     <Panel title={t('burnin.studioLogo')}>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Affiché sur la page client des liens de partage et utilisable en burn-in sur les proxys.
-      </p>
+      <p className="mb-3 text-xs text-muted-foreground">{t('dist.slateHint')}</p>
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-md border border-border bg-background">
           {logoQ.data?.url ? (
@@ -162,7 +160,7 @@ function WatermarkPanel() {
             onChange={(e) => set({ shares: e.target.checked })}
           />
           <span className="font-medium">{t('distribution.onClientShares')}</span>
-          <span className="text-xs text-muted-foreground">(nom du lien + date)</span>
+          <span className="text-xs text-muted-foreground">{t('dist.linkNameDate')}</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -172,7 +170,7 @@ function WatermarkPanel() {
             onChange={(e) => set({ internal: e.target.checked })}
           />
           <span className="font-medium">{t('distribution.inInternalReviews')}</span>
-          <span className="text-xs text-muted-foreground">(nom du compte connecté)</span>
+          <span className="text-xs text-muted-foreground">{t('dist.accountName')}</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">{t('review.opacity')}</span>

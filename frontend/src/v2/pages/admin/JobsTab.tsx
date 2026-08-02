@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
-import { useT } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
 
 interface JobRow {
   id: string | null;
@@ -30,10 +30,10 @@ interface QueueView {
   waiting: JobRow[];
 }
 
-const QUEUE_LABELS: Record<string, string> = {
-  media: 'Traitement médias (FFmpeg)',
-  'storage-cleanup': 'Nettoyage storage',
-  webhooks: 'Webhooks sortants',
+const QUEUE_LABEL_KEY: Record<string, MessageKey> = {
+  media: 'jobs.ffmpeg',
+  'storage-cleanup': 'jobs.storageCleanup',
+  webhooks: 'jobs.webhooks',
 };
 
 /** Dashboard BullMQ (37.C) : état des files, jobs échoués (retry), purge. */
@@ -71,7 +71,7 @@ export default function JobsTab() {
   return (
     <div className="max-w-3xl space-y-4">
       {jobsQ.data.map((q) => (
-        <Panel key={q.key} title={QUEUE_LABELS[q.key] ?? q.key}>
+        <Panel key={q.key} title={t(QUEUE_LABEL_KEY[q.key]!) ?? q.key}>
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="info">{q.counts.active ?? 0} actif(s)</Badge>
             <Badge variant="secondary">{(q.counts.waiting ?? 0) + (q.counts.delayed ?? 0)} en attente</Badge>
@@ -158,7 +158,9 @@ function DerivedPurgePanel() {
     setBusy(true);
     try {
       const { purged } = await api.post<{ purged: number }>('/api/admin/derived-purge/run');
-      toast.success(purged > 0 ? `${purged} média(s) allégé(s) (HLS + sprite retirés)` : 'Rien à purger');
+      toast.success(
+        purged > 0 ? `${purged} média(s) allégé(s) (HLS + sprite retirés)` : t('jobs.nothingToPurge'),
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {

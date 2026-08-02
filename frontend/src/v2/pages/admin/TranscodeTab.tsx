@@ -60,7 +60,7 @@ export default function TranscodeTab() {
           onChange={(e) => set({ enabled: e.target.checked })}
         />
         <span className="font-medium">Transcodage HLS adaptatif</span>
-        <span className="text-xs text-muted-foreground">(désactivé = proxy MP4 unique)</span>
+        <span className="text-xs text-muted-foreground">{t('transcode.singleProxy')}</span>
       </label>
 
       {/* Scene detection (34.H) : opt-in — une passe d'analyse FFmpeg en plus par vidéo. */}
@@ -72,9 +72,7 @@ export default function TranscodeTab() {
           onChange={(e) => set({ sceneDetection: e.target.checked })}
         />
         <span className="font-medium">{t('transcode.sceneDetect')}</span>
-        <span className="text-xs text-muted-foreground">
-          (marqueurs « Plan n » posés aux coupes — une passe d’analyse en plus par vidéo)
-        </span>
+        <span className="text-xs text-muted-foreground">{t('transcode.sceneDetect')}</span>
       </label>
 
       <Panel title="Encodage">

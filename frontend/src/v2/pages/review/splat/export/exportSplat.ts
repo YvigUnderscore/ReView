@@ -51,7 +51,7 @@ export async function buildCleanSpz(
     transform: edits.transform,
     volumes: edits.volumes,
   });
-  if (baked.length === 0) throw new Error('Aucun splat à exporter (tout est masqué ou croppé)');
+  if (baked.length === 0) throw new Error(t('splat.nothingToExport'));
   const bytes = await writeSpz(baked);
   return { bytes, kept: baked.length };
 }

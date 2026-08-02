@@ -32,9 +32,9 @@ type Tr = (key: MessageKey) => string;
  */
 
 const purposes = (t: Tr): { value: UsdPurpose; label: string; hint: string }[] => [
-  { value: 'render', label: t('viewer.render.title'), hint: 'Géométrie de rendu (défaut)' },
-  { value: 'proxy', label: 'Proxy', hint: 'Géométrie allégée d’affichage' },
-  { value: 'guide', label: 'Guide', hint: 'Aides de mise en scène' },
+  { value: 'render', label: t('viewer.render.title'), hint: t('usd.renderGeom') },
+  { value: 'proxy', label: 'Proxy', hint: t('usd.proxyGeom') },
+  { value: 'guide', label: 'Guide', hint: t('usd.guideGeom') },
 ];
 
 export default function UsdRecomposeDialog({
@@ -75,9 +75,7 @@ export default function UsdRecomposeDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('review.usd.recompose')}</DialogTitle>
-          <DialogDescription>
-            La scène est reconvertie avec cette sélection. Le fichier USD d’origine n’est pas modifié.
-          </DialogDescription>
+          <DialogDescription>{t('usd.recomposeHint')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">

@@ -90,6 +90,7 @@ export function Row({ k, v }: { k: string; v: string }) {
 }
 
 export function ServiceHealth({ services }: { services: System['services'] }) {
+  const t = useT();
   const items: [string, boolean][] = [
     ['PostgreSQL', services.database],
     ['Redis', services.redis],
@@ -102,7 +103,7 @@ export function ServiceHealth({ services }: { services: System['services'] }) {
           <span>{name}</span>
           <span className={`flex items-center gap-1.5 text-xs ${ok ? 'text-success' : 'text-destructive'}`}>
             <span className={`inline-block h-2 w-2 rounded-full ${ok ? 'bg-success' : 'bg-destructive'}`} />
-            {ok ? 'OK' : 'Hors service'}
+            {ok ? 'OK' : t('admin.outOfService')}
           </span>
         </div>
       ))}

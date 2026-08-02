@@ -37,7 +37,7 @@ export default function ReviewStatusTab() {
       setDeleting(null);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible (statut utilisé ?)');
+      toast.error(e instanceof Error ? e.message : t('status.deleteFailed'));
     }
   };
 
@@ -54,7 +54,7 @@ export default function ReviewStatusTab() {
       ]);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Réordonnancement impossible');
+      toast.error(e instanceof Error ? e.message : t('status.reorderFailed'));
     }
   };
 

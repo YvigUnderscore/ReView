@@ -188,7 +188,7 @@ export default function ProjectDefaultsTab() {
       </Panel>
 
       <Button onClick={save} disabled={busy}>
-        <Save size={15} /> {busy ? 'Enregistrement…' : 'Enregistrer les défauts'}
+        <Save size={15} /> {busy ? 'Enregistrement…' : t('defaults.save')}
       </Button>
     </div>
   );

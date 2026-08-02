@@ -196,7 +196,10 @@ export default function Model3DPanels({
     const sheet: InfoRow[] = [
       { label: t('review.file'), value: data.media.originalName },
       { label: 'Jeux d’UV', value: s?.uvSets.length ? s.uvSets.join(', ') : t('review.none') },
-      { label: 'Extensions', value: inspect.extensions.length ? inspect.extensions.join(', ') : 'aucune' },
+      {
+        label: 'Extensions',
+        value: inspect.extensions.length ? inspect.extensions.join(', ') : t('common.noneFem'),
+      },
     ];
     if (data.modelSource?.usd)
       sheet.push({ label: 'Couche racine USD', value: data.modelSource.usd.rootLayer });

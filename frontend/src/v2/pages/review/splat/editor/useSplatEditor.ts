@@ -112,17 +112,25 @@ export function useSplatEditor(
           setVolumeTrs(t);
           setDirty(true);
         };
-        historyPush({ label: 'Transformer le volume', undo: () => apply(before), redo: () => apply(after) });
+        historyPush({
+          label: t('splat.transformVolume'),
+          undo: () => apply(before),
+          redo: () => apply(after),
+        });
       } else {
         const apply = (t: SplatTransform) => {
           applyTransform(t);
           setTransform(t);
           setDirty(true);
         };
-        historyPush({ label: 'Transformer le splat', undo: () => apply(before), redo: () => apply(after) });
+        historyPush({
+          label: t('splat.transformSplat'),
+          undo: () => apply(before),
+          redo: () => apply(after),
+        });
       }
     },
-    [activeSdf, applyTransform, historyPush],
+    [activeSdf, applyTransform, historyPush, t],
   );
 
   // TRS de sous-ensemble (Phase 28) : sélection non vide + aucun volume ciblé → le gizmo agit sur

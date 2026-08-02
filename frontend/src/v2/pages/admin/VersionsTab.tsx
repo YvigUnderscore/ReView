@@ -166,7 +166,7 @@ export default function VersionsTab() {
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  <Badge variant="secondary">{v.published ? 'publiée' : v.status}</Badge>
+                  <Badge variant="secondary">{v.published ? t('version.publishedLower') : v.status}</Badge>
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {v.mediaCount > 0 ? `${v.mediaCount} · ${v.kinds.join(', ')}` : '0'}

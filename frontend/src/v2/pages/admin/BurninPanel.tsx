@@ -17,12 +17,12 @@ import { useT, type MessageKey } from '../../i18n';
 type Tr = (key: MessageKey) => string;
 
 const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; hint?: string }[] => [
-  { key: 'enabled', label: t('burnin.onProxiesShort'), hint: 'shot/version/TC incrustés au transcodage' },
+  { key: 'enabled', label: t('burnin.onProxiesShort'), hint: t('burnin.shotVersionTc') },
   { key: 'showShot', label: t('burnin.shotCode'), hint: 'haut gauche' },
   { key: 'showVersion', label: t('burnin.versionName'), hint: 'haut droite' },
   { key: 'showTimecode', label: t('burnin.timecode'), hint: 'bas centre' },
-  { key: 'showLogo', label: t('burnin.studioLogo'), hint: 'bas droite (nécessite un logo)' },
-  { key: 'slate', label: t('burnin.slateShort'), hint: 'carte d’identité de 3 s sur le dérivé client' },
+  { key: 'showLogo', label: t('burnin.studioLogo'), hint: t('burnin.bottomRight') },
+  { key: 'slate', label: t('burnin.slateShort'), hint: t('burnin.slate') },
 ];
 
 /** Template studio des burn-ins/slates (35.A) — appliqué aux prochains transcodages. */

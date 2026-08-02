@@ -125,7 +125,7 @@ export default function OcioTab() {
                 </span>
                 <button
                   onClick={() => setDefault(c.id)}
-                  title={c.isDefault ? 'Config par défaut du studio' : 'Définir par défaut'}
+                  title={c.isDefault ? t('ocio.studioDefault') : t('ocio.setDefault')}
                   aria-pressed={c.isDefault}
                   className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${
                     c.isDefault
@@ -184,7 +184,7 @@ export default function OcioTab() {
                       >
                         <Download size={14} />
                         {a.installed
-                          ? 'Installée'
+                          ? t('ocio.installed')
                           : busyAsset === a.assetName
                             ? 'Installation…'
                             : 'Installer'}

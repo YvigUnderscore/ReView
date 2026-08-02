@@ -104,7 +104,7 @@ export default function SmtpTab() {
           <Input
             type="password"
             value={f.password ?? ''}
-            placeholder={data.hasPassword ? '•••••• (inchangé)' : 'non défini'}
+            placeholder={data.hasPassword ? t('smtp.unchanged') : t('smtp.unset')}
             onChange={(e) => setF((s) => ({ ...s, password: e.target.value }))}
           />
         </Row>

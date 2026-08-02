@@ -97,7 +97,7 @@ export default function WebhooksPanel() {
     <Panel title="Webhooks sortants">
       <p className="mb-3 text-xs text-muted-foreground">
         {t('webhooks.postJson')} <code>X-ReView-Signature</code>, HMAC SHA-256 de <code>timestamp.corps</code>
-        ). 5 tentatives avec backoff. Hôtes privés refusés.
+        {t('webhooks.hintEnd')}
       </p>
       <form onSubmit={create} className="mb-3 space-y-2">
         <Input

@@ -131,9 +131,7 @@ export default function ProjectAdminDetailTab() {
               }
             />
           </dl>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Modifiables dans le projet (Réglages) ; les défauts studio sont dans Studio › Défauts projet.
-          </p>
+          <p className="mt-2 text-[11px] text-muted-foreground">{t('projectAdmin.hint')}</p>
         </Panel>
       </div>
 

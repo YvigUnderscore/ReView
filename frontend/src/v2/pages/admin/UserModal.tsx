@@ -105,9 +105,7 @@ export default function UserModal({
           />
           <Input
             type="password"
-            placeholder={
-              isEdit ? 'Nouveau mot de passe (laisser vide)' : 'Mot de passe (8+ car., lettres + chiffres)'
-            }
+            placeholder={isEdit ? t('user.newPassword') : 'Mot de passe (8+ car., lettres + chiffres)'}
             value={form.password}
             onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
             required={!isEdit}

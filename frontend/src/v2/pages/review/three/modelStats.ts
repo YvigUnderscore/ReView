@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type * as THREE from 'three';
+import { t } from '../../../i18n';
 
 /**
  * Fiche technique du modèle 3D (Phase 39, 39.C) : parcourt le sous-arbre chargé pour compter
@@ -86,7 +87,7 @@ export function collectModelStats(root: THREE.Object3D): ModelStats {
     const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
     for (const mat of mats) {
       if (!materials.has(mat))
-        materials.set(mat, { name: mat.name || '(sans nom)', type: materialType(mat) });
+        materials.set(mat, { name: mat.name || t('model3d.unnamed'), type: materialType(mat) });
       const record = mat as unknown as Record<string, THREE.Texture | undefined>;
       for (const slot of TEXTURE_SLOTS) {
         const tex = record[slot];
@@ -97,7 +98,7 @@ export function collectModelStats(root: THREE.Object3D): ModelStats {
         const image = tex.image as { width?: number; height?: number };
         textures.push({
           slot,
-          material: mat.name || '(sans nom)',
+          material: mat.name || t('model3d.unnamed'),
           name: tex.name || slot,
           width: image.width ?? 0,
           height: image.height ?? 0,

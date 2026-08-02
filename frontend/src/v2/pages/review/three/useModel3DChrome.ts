@@ -12,6 +12,7 @@ import { eulerTransformFromMesh } from './modelGizmoTransform';
 import type { Model3DThreeState } from './useModel3DThree';
 import { usePrimGizmo } from './usePrimGizmo';
 import type { UsdSceneState } from './useUsdScene';
+import { useT } from '../../../i18n';
 
 /** Cible vide stable pour le gizmo par prim quand aucune scène USD n'est montée. */
 const EMPTY_TARGETS = () => [];
@@ -43,6 +44,7 @@ export function useModel3DChrome({
   /** Scène USD : un prim sélectionné détourne le gizmo TRS vers ce prim (46.N). */
   usdScene?: UsdSceneState;
 }) {
+  const t = useT();
   const history = useEditHistory();
   const { updateTransform } = m;
   const mode: TransformMode = GIZMO_MODE[state.tool] ?? 'navigate';
@@ -60,7 +62,7 @@ export function useModel3DChrome({
       const b = eulerTransformFromMesh(before);
       const a = eulerTransformFromMesh(after);
       history.push({
-        label: 'Transformer le modèle',
+        label: t('model3d.transformModel'),
         undo: () => updateTransform(b),
         redo: () => updateTransform(a),
       });

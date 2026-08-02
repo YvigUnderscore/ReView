@@ -16,6 +16,7 @@ import { createDebugColor, type DebugColorMode, type DebugColorRuntime } from '.
 import { createReveal, type RevealRuntime, type RevealType } from '../scene/effects/reveal';
 import { applyLod, createAutoLod, type LodMode } from '../scene/lod';
 import type { SplatViewer } from '../useSplat';
+import { useT } from '../../../../i18n';
 
 export interface RevealConfig {
   type: RevealType;
@@ -33,6 +34,7 @@ export function usePresentation(
   data: MediaResp,
   onSaved: (patch: SplatEditsPatch) => void,
 ) {
+  const t = useT();
   const { ready, captureCamera, getSceneHandle, subscribeFrame, subscribeStats } = splat;
   // Mode layout (Phase 27) : hors mode, le controller est transparent (caméra principale) ;
   // en mode, le lecteur keyframe pilote la caméra layout rendue dans le PiP.
@@ -66,18 +68,14 @@ export function usePresentation(
       const was = auto.engaged;
       if (auto.step(stats.fps, 500) !== was) {
         applyLod(spark, auto.engaged, false);
-        toast.info(
-          auto.engaged
-            ? 'LOD activé automatiquement (fréquence d’images faible)'
-            : 'LOD désactivé (fréquence d’images rétablie)',
-        );
+        toast.info(auto.engaged ? t('splat.lodAuto') : t('splat.lodOff'));
       }
     });
     return () => {
       off();
       applyLod(spark, false, false);
     };
-  }, [ready, lodMode, getSceneHandle, subscribeStats]);
+  }, [ready, lodMode, getSceneHandle, subscribeStats, t]);
 
   // Lecture de l'effet de reveal (à l'ouverture et sur « Rejouer »).
   useEffect(() => {

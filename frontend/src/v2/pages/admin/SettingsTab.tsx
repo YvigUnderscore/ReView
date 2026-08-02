@@ -63,7 +63,7 @@ function SizeField({
         {stored ? `= ${fmtBytes(Number(stored))}` : ''}
       </span>
       <Button variant="outline" size="sm" onClick={save}>
-        {saved ? '✓ Enregistré' : t('common.save')}
+        {saved ? t('settings.savedTick') : t('common.save')}
       </Button>
     </div>
   );
@@ -97,7 +97,7 @@ function PlainField({
         onChange={(e) => setValue(e.target.value)}
       />
       <Button variant="outline" size="sm" onClick={save}>
-        {saved ? '✓ Enregistré' : t('common.save')}
+        {saved ? t('settings.savedTick') : t('common.save')}
       </Button>
     </div>
   );

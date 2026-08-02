@@ -177,7 +177,7 @@ export default function SplatPanels({
       <ExportPanel
         cleaned={{
           label: t('review.splat.cleanExport'),
-          hint: 'Fichier .spz compact avec les éditions appliquées (masque, crop, transformation). Couleur de base (SH degré 0). L’original n’est pas modifié.',
+          hint: t('splat.exportHint'),
           busy: exporting,
           onExport: () => {
             const handle = splat.getSceneHandle();

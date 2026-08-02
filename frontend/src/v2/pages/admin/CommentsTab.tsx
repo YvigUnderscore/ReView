@@ -158,7 +158,7 @@ export default function CommentsTab() {
               <span className="shrink-0 text-xs text-muted-foreground">{fmtDateTime(c.createdAt)}</span>
               <button
                 onClick={() => toggleResolved(c)}
-                title={c.isResolved ? 'Rouvrir' : 'Marquer résolu'}
+                title={c.isResolved ? 'Rouvrir' : t('comment.markResolvedShort')}
                 className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 {c.isResolved ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}

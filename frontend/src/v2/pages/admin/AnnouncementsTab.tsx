@@ -53,7 +53,7 @@ export default function AnnouncementsTab() {
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('admin.tab.announcements')}</h2>
         <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus size={14} /> Nouvelle annonce
+          <Plus size={14} /> {t('admin.announce.new')}
         </Button>
       </div>
 
@@ -75,8 +75,8 @@ export default function AnnouncementsTab() {
               </div>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">{a.body}</p>
               <p className="mt-0.5 text-[10px] text-muted-foreground">
-                {a.frequency} · {a.roles.length ? a.roles.join(', ') : 'tous les rôles'} · lue par{' '}
-                {a._count.reads}
+                {a.frequency} · {a.roles.length ? a.roles.join(', ') : t('admin.announce.everyRole')} · lue
+                par {a._count.reads}
               </p>
             </div>
             <div className="flex shrink-0 gap-1">

@@ -74,7 +74,7 @@ export default function AnnouncementForm({
     try {
       if (announcement) await api.patch(`/api/announcements/${announcement.id}`, payload);
       else await api.post('/api/announcements', payload);
-      toast.success(announcement ? 'Annonce modifiée' : 'Annonce créée');
+      toast.success(announcement ? t('admin.announce.updated') : t('admin.announce.created'));
       onSaved();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
@@ -86,7 +86,7 @@ export default function AnnouncementForm({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{announcement ? "Modifier l'annonce" : 'Nouvelle annonce'}</DialogTitle>
+          <DialogTitle>{announcement ? "Modifier l'annonce" : t('admin.announce.new')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
           <Input
@@ -137,7 +137,7 @@ export default function AnnouncementForm({
                 {r}
               </label>
             ))}
-            <span className="text-muted-foreground">(aucune coche = tous)</span>
+            <span className="text-muted-foreground">{t('admin.announce.allRoles')}</span>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <label className="flex flex-col gap-1 text-muted-foreground">
@@ -163,7 +163,7 @@ export default function AnnouncementForm({
                 checked={f.active}
                 onChange={(e) => setF((s) => ({ ...s, active: e.target.checked }))}
               />
-              Active
+              {t('common.active')}
             </label>
           </div>
         </div>

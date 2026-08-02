@@ -32,7 +32,7 @@ export function MembershipsPanel({ memberships }: { memberships: AdminUserMember
               {m.project.deletedAt && <span className="ml-1 text-xs text-destructive">(corbeille)</span>}
             </Link>
             <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary">{m.role ?? 'rôle global'}</Badge>
+              <Badge variant="secondary">{m.role ?? t('user.globalRole')}</Badge>
               depuis le {fmtDateTime(m.joinedAt)}
             </span>
           </div>
@@ -94,14 +94,14 @@ export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
   return (
     <Panel title={`Tokens d'API (${tokens.length})`}>
       <div className="space-y-1.5">
-        {tokens.map((t) => (
-          <div key={t.id} className="flex items-center gap-2 text-sm">
+        {tokens.map((tok) => (
+          <div key={tok.id} className="flex items-center gap-2 text-sm">
             <KeyRound size={14} className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate font-medium">{t.name}</span>
-            <Badge variant="secondary">{t.scopes.join(', ')}</Badge>
+            <span className="min-w-0 flex-1 truncate font-medium">{tok.name}</span>
+            <Badge variant="secondary">{tok.scopes.join(', ')}</Badge>
             <span className="shrink-0 text-xs text-muted-foreground">
-              {t.lastUsedAt ? `utilisé le ${fmtDateTime(t.lastUsedAt)}` : 'jamais utilisé'}
-              {t.expiresAt ? ` · expire le ${fmtDateTime(t.expiresAt)}` : ''}
+              {tok.lastUsedAt ? `utilisé le ${fmtDateTime(tok.lastUsedAt)}` : t('common.neverUsed')}
+              {tok.expiresAt ? ` · expire le ${fmtDateTime(tok.expiresAt)}` : ''}
             </span>
           </div>
         ))}

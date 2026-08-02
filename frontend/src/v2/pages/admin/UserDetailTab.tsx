@@ -45,7 +45,7 @@ export default function UserDetailTab() {
       toast.success(t('userDetail.sessionRevoked'));
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Révocation impossible');
+      toast.error(e instanceof Error ? e.message : t('user.revokeFailed'));
     }
   };
   const revokeAll = async () => {
@@ -54,7 +54,7 @@ export default function UserDetailTab() {
       toast.success(`${revoked} session(s) révoquée(s)`);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Révocation impossible');
+      toast.error(e instanceof Error ? e.message : t('user.revokeFailed'));
     }
   };
   const confirmDelete = async () => {
