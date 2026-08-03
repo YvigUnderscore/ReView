@@ -48,7 +48,7 @@ function ConvergenceRow({ seq }: { seq: SequenceConvergence }) {
           {seq.name && seq.name !== '—' && <span className="text-muted-foreground"> · {seq.name}</span>}
         </span>
         <span className="shrink-0 tabular-nums text-muted-foreground">
-          {seq.approved}/{seq.total} approuvés · {pct}%
+          {t('stats.approvedRatio', { approved: seq.approved, total: seq.total, pct })}
         </span>
       </div>
       <div className="flex h-2.5 overflow-hidden rounded-full bg-secondary/40">
@@ -134,7 +134,7 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
                 <tr className="text-left text-muted-foreground">
                   <th className="pb-2 font-medium">Shot</th>
                   <th className="pb-2 text-right font-medium">Versions</th>
-                  <th className="pb-2 text-right font-medium">Retakes</th>
+                  <th className="pb-2 text-right font-medium">{tr('stats.retakes')}</th>
                   <th className="pb-2 text-right font-medium">{tr('stats.notes')}</th>
                   <th className="pb-2 text-right font-medium">{tr('stats.delay')}</th>
                 </tr>

@@ -48,8 +48,8 @@ export default function ProjectAdminDetailTab() {
             {project.deletedAt && <Badge variant="secondary">corbeille</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">
-            {project.slug} · créé le {fmtDateTime(project.createdAt)} · modifié le{' '}
-            {fmtDateTime(project.updatedAt)}
+            {project.slug} · {t('projectAdmin.createdOn', { date: fmtDateTime(project.createdAt) })} ·{' '}
+            {t('projectAdmin.updatedOn', { date: fmtDateTime(project.updatedAt) })}
           </p>
           {project.description && (
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">{project.description}</p>
@@ -82,7 +82,7 @@ export default function ProjectAdminDetailTab() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title={`Membres (${members.length})`}>
+        <Panel title={t('members.titleCount', { count: members.length })}>
           <div className="space-y-1.5">
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-2 text-sm">
@@ -100,7 +100,7 @@ export default function ProjectAdminDetailTab() {
                 </Link>
                 <Badge variant="secondary">{m.role ?? m.user.role}</Badge>
                 <span className="shrink-0 text-xs text-muted-foreground">
-                  depuis le {fmtDateTime(m.joinedAt)}
+                  {t('userDetail.since', { date: fmtDateTime(m.joinedAt) })}
                 </span>
               </div>
             ))}
@@ -112,19 +112,19 @@ export default function ProjectAdminDetailTab() {
 
         <Panel title={t('overview.resolvedSettings')}>
           <dl className="space-y-1 text-sm">
-            <Row k="Pipeline" v={pipelineLabel(settings)} />
-            <Row k={t('pipeline.startFrame')} v={String(project.startFrame)} />
+            <Row label={t('pipeline.title')} value={pipelineLabel(settings)} />
+            <Row label={t('pipeline.startFrame')} value={String(project.startFrame)} />
             <Row
-              k={t('pipeline.naming')}
-              v={`${settings.nomenclature.sequencePrefix}### / ${settings.nomenclature.shotPrefix}### (pas ${settings.nomenclature.step})`}
+              label={t('pipeline.naming')}
+              value={`${settings.nomenclature.sequencePrefix}### / ${settings.nomenclature.shotPrefix}### (pas ${settings.nomenclature.step})`}
             />
             <Row
-              k={t('pipeline.departments')}
-              v={settings.departments.length ? settings.departments.map((d) => d.name).join(', ') : '—'}
+              label={t('pipeline.departments')}
+              value={settings.departments.length ? settings.departments.map((d) => d.name).join(', ') : '—'}
             />
             <Row
-              k={t('projectAdmin.naming')}
-              v={
+              label={t('projectAdmin.naming')}
+              value={
                 settings.naming.mode === 'off'
                   ? 'libre'
                   : `${settings.naming.mode} (${settings.naming.pattern})`

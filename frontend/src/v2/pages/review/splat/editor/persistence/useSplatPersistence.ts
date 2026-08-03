@@ -59,7 +59,7 @@ export function useSplatPersistence(opts: {
         setDeletedCount(deletedRef.current.size);
         notifyHiddenChanged(deletedRef.current);
       })
-      .catch(() => toast.error('Masque de suppression illisible'));
+      .catch(() => toast.error(t('splat.maskUnreadable')));
   }, [enabled, ready, savedMaskUrl, splat, deletedRef, setDeletedCount, notifyHiddenChanged]);
 
   // Recharge les transformations de sous-ensembles persistées (une fois) : rejouées sur les

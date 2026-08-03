@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Panel } from './AdminPrimitives';
-import { useT, type MessageKey } from '../../i18n';
+import { t, useT, type MessageKey } from '../../i18n';
 
 interface JobRow {
   id: string | null;
@@ -55,16 +55,16 @@ export default function JobsTab() {
       toast.success(t('jobs.retried'));
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const clean = async (queue: string) => {
     try {
       const { removed } = await api.post<{ removed: number }>(`/api/admin/jobs/${queue}/clean-failed`);
-      toast.success(`${removed} job(s) échoué(s) purgé(s)`);
+      toast.success(t('jobs.cleanedFailed', { count: removed }));
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -73,21 +73,23 @@ export default function JobsTab() {
       {jobsQ.data.map((q) => (
         <Panel key={q.key} title={t(QUEUE_LABEL_KEY[q.key]!) ?? q.key}>
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-            <Badge variant="info">{q.counts.active ?? 0} actif(s)</Badge>
-            <Badge variant="secondary">{(q.counts.waiting ?? 0) + (q.counts.delayed ?? 0)} en attente</Badge>
-            <Badge variant={q.counts.failed ? 'destructive' : 'muted'}>
-              {q.counts.failed ?? 0} échoué(s)
+            <Badge variant="info">{t('jobs.activeCount', { count: q.counts.active ?? 0 })}</Badge>
+            <Badge variant="secondary">
+              {t('jobs.waitingCount', { count: (q.counts.waiting ?? 0) + (q.counts.delayed ?? 0) })}
             </Badge>
-            <Badge variant="muted">{q.counts.completed ?? 0} terminés</Badge>
+            <Badge variant={q.counts.failed ? 'destructive' : 'muted'}>
+              {t('jobs.failedCount', { count: q.counts.failed ?? 0 })}
+            </Badge>
+            <Badge variant="muted">{t('jobs.completedCount', { count: q.counts.completed ?? 0 })}</Badge>
             {(q.counts.failed ?? 0) > 0 && (
               <Button variant="ghost" size="sm" onClick={() => clean(q.key)} title={t('jobs.purgeFailed')}>
-                <Trash2 size={13} className="mr-1 text-destructive" /> Purger
+                <Trash2 size={13} className="mr-1 text-destructive" /> {t('jobs.purge')}
               </Button>
             )}
           </div>
           {q.active.length + q.waiting.length > 0 && (
             <p className="mb-1 text-xs text-muted-foreground">
-              En cours : {[...q.active, ...q.waiting].map((j) => jobLabel(j)).join(' · ')}
+              {t('jobs.running', { list: [...q.active, ...q.waiting].map((j) => jobLabel(j)).join(' · ') })}
             </p>
           )}
           <div className="space-y-1">
@@ -98,7 +100,10 @@ export default function JobsTab() {
               >
                 <div className="min-w-0 flex-1">
                   <span className="font-medium">{jobLabel(j)}</span>
-                  <span className="text-muted-foreground"> · {j.attemptsMade} tentative(s)</span>
+                  <span className="text-muted-foreground">
+                    {' '}
+                    · {t('jobs.attempts', { count: j.attemptsMade })}
+                  </span>
                   {j.failedReason && (
                     <p className="truncate text-muted-foreground" title={j.failedReason}>
                       {j.failedReason}
@@ -106,7 +111,12 @@ export default function JobsTab() {
                   )}
                 </div>
                 {j.id && (
-                  <Button variant="ghost" size="sm" onClick={() => retry(q.key, j.id!)} title="Relancer">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => retry(q.key, j.id!)}
+                    title={t('jobs.retry')}
+                  >
                     <RotateCcw size={13} />
                   </Button>
                 )}
@@ -123,7 +133,7 @@ export default function JobsTab() {
 
 function jobLabel(j: JobRow): string {
   const media = j.data.mediaObjectId ? ` #${j.data.mediaObjectId}` : '';
-  const hook = j.data.webhookId ? ` → webhook ${j.data.webhookId}` : '';
+  const hook = j.data.webhookId ? ` → ${t('jobs.webhookRef', { id: String(j.data.webhookId) })}` : '';
   return `${j.name}${media}${hook}`;
 }
 
@@ -151,18 +161,16 @@ function DerivedPurgePanel() {
       await api.put('/api/admin/derived-purge', next);
       qc.invalidateQueries({ queryKey: qk.admin('derived-purge') });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const run = async () => {
     setBusy(true);
     try {
       const { purged } = await api.post<{ purged: number }>('/api/admin/derived-purge/run');
-      toast.success(
-        purged > 0 ? `${purged} média(s) allégé(s) (HLS + sprite retirés)` : t('jobs.nothingToPurge'),
-      );
+      toast.success(purged > 0 ? t('jobs.purgedDerived', { count: purged }) : t('jobs.nothingToPurge'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -194,7 +202,7 @@ function DerivedPurgePanel() {
           {t('versions.lastVersions')}
         </label>
         <Button size="sm" variant="outline" onClick={run} disabled={busy || !draft.enabled}>
-          Purger maintenant
+          {t('jobs.purgeNow')}
         </Button>
       </div>
     </Panel>

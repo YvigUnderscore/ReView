@@ -14,7 +14,7 @@ import RichTextEditor from '../components/RichTextEditor';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CreateDocModal from './documents/CreateDocModal';
 import { SCOPE_LABEL, type Doc } from './documents/docTypes';
-import { useT } from '../i18n';
+import { intlLocale, useT } from '../i18n';
 
 export default function DocumentsPage() {
   const t = useT();
@@ -185,8 +185,10 @@ export default function DocumentsPage() {
                   avatarUrl={selected.createdBy.avatarUrl}
                   size={20}
                 />
-                {selected.createdBy.displayName ?? selected.createdBy.name} · maj{' '}
-                {new Date(selected.updatedAt).toLocaleDateString()}
+                {selected.createdBy.displayName ?? selected.createdBy.name} ·{' '}
+                {t('documents.updatedOn', {
+                  date: new Date(selected.updatedAt).toLocaleDateString(intlLocale()),
+                })}
               </div>
 
               {selected.kind === 'PDF' ? (

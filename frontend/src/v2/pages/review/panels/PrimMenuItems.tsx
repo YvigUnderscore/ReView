@@ -46,7 +46,7 @@ export default function PrimMenuItems({
     <>
       {sets.map((set) => (
         <ContextMenuSub key={`${set.prim}:${set.name}`}>
-          <ContextMenuSubTrigger>Variante · {set.name}</ContextMenuSubTrigger>
+          <ContextMenuSubTrigger>{t('prim.variantNamed', { name: set.name })}</ContextMenuSubTrigger>
           <ContextMenuSubContent>
             {set.options.map((option) => {
               const available = variantOptionAvailable(baked, set.prim, set.name, option, set.selected);
@@ -79,7 +79,7 @@ export default function PrimMenuItems({
       <ContextMenuItem onSelect={() => scene.setPrim(path, { visible: hidden ? undefined : false })}>
         {hidden ? t('common.show') : t('common.hide')}
       </ContextMenuItem>
-      <ContextMenuItem onSelect={() => scene.isolate(path)}>Isoler</ContextMenuItem>
+      <ContextMenuItem onSelect={() => scene.isolate(path)}>{t('prim.isolate')}</ContextMenuItem>
       <ContextMenuItem onSelect={() => scene.setPrim(path, null)}>{t('review.prim.reset')}</ContextMenuItem>
     </>
   );

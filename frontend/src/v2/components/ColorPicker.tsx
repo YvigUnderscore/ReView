@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useRef, useState, useEffect } from 'react';
+import { useT } from '../i18n';
 
 /**
  * Sélecteur de couleur indépendant du navigateur (ne dépend pas de <input type=color>).
@@ -61,6 +62,7 @@ export default function ColorPicker({
   alpha: number;
   onChange: (color: string, alpha: number) => void;
 }) {
+  const t = useT();
   const [h, s, v] = rgbToHsv(...hexToRgb(color));
   const [hue, setHue] = useState(h);
   const svRef = useRef<HTMLDivElement>(null);
@@ -160,7 +162,7 @@ export default function ColorPicker({
           style={{ background: color, opacity: alpha }}
         />
         <span className="font-mono text-muted-foreground">
-          {color.toUpperCase()} · α{Math.round(alpha * 100)}%
+          {color.toUpperCase()} · {t('color.alpha', { pct: Math.round(alpha * 100) })}
         </span>
       </div>
     </div>

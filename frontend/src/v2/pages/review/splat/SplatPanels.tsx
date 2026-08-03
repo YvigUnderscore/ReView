@@ -190,7 +190,10 @@ export default function SplatPanels({
               .then(({ bytes, kept }) => {
                 downloadBytes(bytes, cleanExportName(data.media.originalName));
                 toast.success(
-                  `Splat exporté : ${kept.toLocaleString(intlLocale())} splats, ${formatBytes(bytes.byteLength)}`,
+                  t('splat.exported', {
+                    value: kept.toLocaleString(intlLocale()),
+                    size: formatBytes(bytes.byteLength),
+                  }),
                 );
               })
               .catch((e: unknown) => toast.error(e instanceof Error ? e.message : t('splat.exportFailed')))
@@ -231,7 +234,7 @@ export default function SplatPanels({
               onCapture={() => {
                 void splat.captureThumbnail().then((url) => {
                   if (!url) {
-                    toast.error('Capture impossible');
+                    toast.error(t('common.error.capture'));
                     return;
                   }
                   const a = document.createElement('a');

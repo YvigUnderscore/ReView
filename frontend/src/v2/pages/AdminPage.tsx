@@ -194,7 +194,7 @@ export default function AdminPage() {
   const { section, id } = useParams();
   if (role !== 'ADMIN') {
     return (
-      <Shell title="Administration">
+      <Shell title={t('nav.admin')}>
         <p className="text-sm text-destructive">{t('admin.restricted')}</p>
       </Shell>
     );
@@ -205,7 +205,7 @@ export default function AdminPage() {
 
   return (
     <Shell>
-      <h1 className="mb-4 text-xl font-semibold">Administration</h1>
+      <h1 className="mb-4 text-xl font-semibold">{t('nav.admin')}</h1>
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-52 md:flex-col md:overflow-visible md:pb-0">
           {GROUPS.map((group) => (

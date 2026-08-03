@@ -87,7 +87,10 @@ export default function CompareSelect({
       const target = findCompareMedia(detail.media, mediaId, kind);
       if (!target) {
         toast.error(
-          `Aucun média ${kind === 'IMAGE' ? 'image' : t('entity.videoLower')} à comparer dans la version ${v.name}`,
+          t('compare.noMediaToCompare', {
+            kind: kind === 'IMAGE' ? t('entity.imageLower') : t('entity.videoLower'),
+            version: v.name,
+          }),
         );
         return;
       }
@@ -95,7 +98,7 @@ export default function CompareSelect({
       if (multi) onAdd(target);
       else onSet(target);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Version inaccessible');
+      toast.error(e instanceof Error ? e.message : t('version.unreachable'));
     }
   };
 
@@ -104,7 +107,7 @@ export default function CompareSelect({
       ? 'Comparer…'
       : compareIds.length === 1
         ? `vs ${others.find((v) => checked(v.id))?.name ?? '…'}`
-        : `Grille · ${compareIds.length + 1}`;
+        : t('compare.grid', { count: compareIds.length + 1 });
 
   return (
     <Popover>
@@ -134,7 +137,7 @@ export default function CompareSelect({
         })}
         {multi && (
           <p className="px-2 pb-1 pt-1.5 text-[10px] text-muted-foreground">
-            2 versions et plus : grille 2×2 synchronisée (max {MAX_COMPARE + 1} à l’écran).
+            {t('compare.gridHint', { max: MAX_COMPARE + 1 })}
           </p>
         )}
       </PopoverContent>

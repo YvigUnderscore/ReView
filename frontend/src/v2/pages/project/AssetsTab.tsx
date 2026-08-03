@@ -53,7 +53,7 @@ export default function AssetsTab({
   const confirmBulkDelete = async () => {
     try {
       const { count } = await bulkDelete('assets', sel.ids);
-      toast.success(`${count} asset(s) déplacé(s) dans la corbeille`);
+      toast.success(t('assets.trashedCount', { count }));
       sel.clear();
       setBulkDeleting(false);
       reload();
@@ -66,7 +66,7 @@ export default function AssetsTab({
     e.preventDefault();
     try {
       await api.post('/api/assets', { projectId, ...newAsset });
-      toast.success(`Asset « ${newAsset.name} » créé`);
+      toast.success(t('assets.created', { name: newAsset.name }));
       setNewAsset({ name: '', type: 'CHARACTER' });
       setCreating(false);
       reload();
@@ -222,7 +222,7 @@ export default function AssetsTab({
       <ConfirmDialog
         open={bulkDeleting}
         title={t('assets.deleteMany.title')}
-        message={<>{sel.count} asset(s) et leurs versions/médias seront déplacés dans la corbeille.</>}
+        message={t('assets.deleteMany.message', { count: sel.count })}
         confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmBulkDelete}
@@ -240,7 +240,7 @@ export default function AssetsTab({
       <ConfirmDialog
         open={!!deleting}
         title={t('assets.delete.title')}
-        message={<>L'asset « {deleting?.name} » et ses versions/médias seront déplacés dans la corbeille.</>}
+        message={t('assets.delete.message', { name: deleting?.name ?? '' })}
         confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmDelete}

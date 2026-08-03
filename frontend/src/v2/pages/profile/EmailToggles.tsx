@@ -24,6 +24,7 @@ function PrefCheckbox({
   enabled: boolean;
   loading: boolean;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const toggle = async () => {
     try {
@@ -31,7 +32,7 @@ function PrefCheckbox({
       qc.invalidateQueries({ queryKey: qk.preferences });
       toast.success(!enabled ? onLabel : offLabel);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
   return (

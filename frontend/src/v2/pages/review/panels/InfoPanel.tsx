@@ -3,6 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { Group, ReadRow } from '../chrome/DockGroup';
+import { useT } from '../../../i18n';
 
 export interface InfoRow {
   label: string;
@@ -25,16 +26,17 @@ export default function InfoPanel({
   /** Action de bas de panneau (« Recomposer depuis l'USD »…). */
   action?: ReactNode;
 }) {
+  const t = useT();
   return (
     <>
       {live && live.length > 0 && (
-        <Group title="Rendu en direct">
+        <Group title={t('panel.liveRender')}>
           {live.map((r) => (
             <ReadRow key={r.label} label={r.label} value={r.value} />
           ))}
         </Group>
       )}
-      <Group title="Fiche technique">
+      <Group title={t('panel.techSheet')}>
         {sheet.map((r) => (
           <ReadRow key={r.label} label={r.label} value={r.value} stack />
         ))}

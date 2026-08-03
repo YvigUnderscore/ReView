@@ -20,7 +20,7 @@ import type {
 export function MembershipsPanel({ memberships }: { memberships: AdminUserMembership[] }) {
   const t = useT();
   return (
-    <Panel title={`Projets (${memberships.length})`}>
+    <Panel title={t('userDetail.projects', { count: memberships.length })}>
       <div className="space-y-1.5">
         {memberships.map((m) => (
           <div key={m.id} className="flex items-center justify-between gap-2 text-sm">
@@ -29,11 +29,13 @@ export function MembershipsPanel({ memberships }: { memberships: AdminUserMember
               className="min-w-0 truncate font-medium hover:underline"
             >
               {m.project.name}
-              {m.project.deletedAt && <span className="ml-1 text-xs text-destructive">(corbeille)</span>}
+              {m.project.deletedAt && (
+                <span className="ml-1 text-xs text-destructive">{t('common.inTrash')}</span>
+              )}
             </Link>
             <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="secondary">{m.role ?? t('user.globalRole')}</Badge>
-              depuis le {fmtDateTime(m.joinedAt)}
+              {t('userDetail.since', { date: fmtDateTime(m.joinedAt) })}
             </span>
           </div>
         ))}
@@ -56,16 +58,16 @@ export function SessionsPanel({
 }) {
   const t = useT();
   return (
-    <Panel title={`Sessions actives (${sessions.length})`}>
+    <Panel title={t('userDetail.activeSessions', { count: sessions.length })}>
       <div className="space-y-1.5">
         {sessions.map((s) => (
           <div key={s.id} className="flex items-center gap-2 text-sm">
             <MonitorSmartphone size={14} className="shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate" title={s.userAgent ?? undefined}>
-              {s.userAgent ?? 'Client inconnu'}
+              {s.userAgent ?? t('userDetail.unknownClient')}
             </span>
             <span className="shrink-0 text-xs text-muted-foreground">
-              {s.ip ?? '—'} · vue le {fmtDateTime(s.lastSeenAt)}
+              {s.ip ?? '—'} · {t('userDetail.lastSeen', { date: fmtDateTime(s.lastSeenAt) })}
             </span>
             <button
               onClick={() => onRevoke(s.id)}
@@ -92,7 +94,7 @@ export function SessionsPanel({
 export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
   const t = useT();
   return (
-    <Panel title={`Tokens d'API (${tokens.length})`}>
+    <Panel title={t('userDetail.apiTokens', { count: tokens.length })}>
       <div className="space-y-1.5">
         {tokens.map((tok) => (
           <div key={tok.id} className="flex items-center gap-2 text-sm">
@@ -100,8 +102,10 @@ export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
             <span className="min-w-0 flex-1 truncate font-medium">{tok.name}</span>
             <Badge variant="secondary">{tok.scopes.join(', ')}</Badge>
             <span className="shrink-0 text-xs text-muted-foreground">
-              {tok.lastUsedAt ? `utilisé le ${fmtDateTime(tok.lastUsedAt)}` : t('common.neverUsed')}
-              {tok.expiresAt ? ` · expire le ${fmtDateTime(tok.expiresAt)}` : ''}
+              {tok.lastUsedAt
+                ? t('tokens.usedOn', { date: fmtDateTime(tok.lastUsedAt) })
+                : t('common.neverUsed')}
+              {tok.expiresAt ? ` · ${t('tokens.expiresOn', { date: fmtDateTime(tok.expiresAt) })}` : ''}
             </span>
           </div>
         ))}

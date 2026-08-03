@@ -32,7 +32,7 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     queryKey: qk.changelog,
     queryFn: async () => {
       const res = await fetch('/docs/CHANGELOG.md');
-      if (!res.ok) throw new Error(`Changelog indisponible (${res.status})`);
+      if (!res.ok) throw new Error(t('whatsNew.unavailable', { status: res.status }));
       return res.text();
     },
     staleTime: Infinity,

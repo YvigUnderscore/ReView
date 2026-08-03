@@ -51,7 +51,7 @@ export default function UserDetailTab() {
   const revokeAll = async () => {
     try {
       const { revoked } = await api.del<{ revoked: number }>(`/api/users/${userId}/sessions`);
-      toast.success(`${revoked} session(s) révoquée(s)`);
+      toast.success(t('sessions.revokedCount', { count: revoked }));
       invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('user.revokeFailed'));
@@ -64,7 +64,7 @@ export default function UserDetailTab() {
       qc.invalidateQueries({ queryKey: qk.users });
       navigate('/admin/users');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 
@@ -106,8 +106,10 @@ export default function UserDetailTab() {
               {user.phone ? ` · ${user.phone}` : ''}
             </p>
             <p className="text-xs text-muted-foreground">
-              Inscrit le {fmtDateTime(user.createdAt)}
-              {user.lastSeenAt ? ` · dernière activité le ${fmtDateTime(user.lastSeenAt)}` : ''}
+              {t('userDetail.registeredOn', { date: fmtDateTime(user.createdAt) })}
+              {user.lastSeenAt
+                ? ` · ${t('userDetail.lastActivity', { date: fmtDateTime(user.lastSeenAt) })}`
+                : ''}
             </p>
           </div>
         </div>
@@ -157,7 +159,7 @@ export default function UserDetailTab() {
       <ConfirmDialog
         open={deleting}
         title={t('user.deleteQ')}
-        message={<>« {user.displayName ?? user.email} » sera définitivement supprimé.</>}
+        message={t('user.delete.message', { name: user.displayName ?? user.email })}
         confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}

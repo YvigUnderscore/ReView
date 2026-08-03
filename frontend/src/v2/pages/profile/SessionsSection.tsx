@@ -51,7 +51,7 @@ export default function SessionsSection() {
       toast.success(t('userDetail.sessionRevoked'));
       qc.invalidateQueries({ queryKey: qk.authSessions });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 

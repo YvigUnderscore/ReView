@@ -82,7 +82,7 @@ export default function ReviewStatusTab() {
             <button
               onClick={() => move(i, -1)}
               disabled={i === 0}
-              title="Monter"
+              title={t('common.moveUp')}
               className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
             >
               <ArrowUp size={13} />
@@ -90,7 +90,7 @@ export default function ReviewStatusTab() {
             <button
               onClick={() => move(i, 1)}
               disabled={i === items.length - 1}
-              title="Descendre"
+              title={t('common.moveDown')}
               className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
             >
               <ArrowDown size={13} />
@@ -134,9 +134,7 @@ export default function ReviewStatusTab() {
       <ConfirmDialog
         open={deleting !== null}
         title={t('reviewStatus.delete.title')}
-        message={
-          <>« {deleting?.name} » sera supprimé. Refusé s'il est utilisé par des décisions existantes.</>
-        }
+        message={t('reviewStatus.delete.message', { name: deleting?.name ?? '' })}
         confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}

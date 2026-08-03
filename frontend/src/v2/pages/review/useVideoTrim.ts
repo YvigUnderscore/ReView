@@ -74,11 +74,15 @@ export function useVideoTrim({
   /** Résumé affiché dans la barre d'options : bornes posées et longueur conservée. */
   const label =
     inFrame != null && outFrame != null
-      ? `Entrée ${tcFromFrame(inFrame, fps)} · sortie ${tcFromFrame(outFrame, fps)} — ${outFrame - inFrame} frames conservées`
+      ? t('trim.range', {
+          in: tcFromFrame(inFrame, fps),
+          out: tcFromFrame(outFrame, fps),
+          frames: outFrame - inFrame,
+        })
       : inFrame != null
-        ? `Entrée ${tcFromFrame(inFrame, fps)} · sortie non posée`
+        ? t('trim.inOnly', { in: tcFromFrame(inFrame, fps) })
         : outFrame != null
-          ? `Entrée non posée · sortie ${tcFromFrame(outFrame, fps)}`
+          ? t('trim.outOnly', { out: tcFromFrame(outFrame, fps) })
           : t('trim.none');
 
   return {

@@ -48,7 +48,7 @@ export default function TaskDropzone({
     >
       <UploadCloud size={18} className="shrink-0" />
       <span>
-        Glissez un fichier ici ou cliquez pour l’ajouter{' '}
+        {t('dropzone.hint')}{' '}
         {latestVersionName ? (
           <>
             {t('task.toVersion')} <strong className="text-foreground">{latestVersionName}</strong>

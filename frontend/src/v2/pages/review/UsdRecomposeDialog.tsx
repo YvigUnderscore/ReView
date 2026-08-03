@@ -66,7 +66,7 @@ export default function UsdRecomposeDialog({
         void qc.invalidateQueries({ queryKey: qk.media(mediaId) });
         onOpenChange(false);
       })
-      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Recomposition impossible'))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : t('common.error.recompose')))
       .finally(() => setBusy(false));
   };
 
@@ -80,7 +80,7 @@ export default function UsdRecomposeDialog({
 
         <div className="space-y-3">
           <label className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Purpose</span>
+            <span className="text-muted-foreground">{t('usd.purpose')}</span>
             <Select
               value={purpose}
               onChange={(e) => setPurpose(e.target.value as UsdPurpose)}

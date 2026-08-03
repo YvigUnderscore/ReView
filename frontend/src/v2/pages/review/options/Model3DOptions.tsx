@@ -64,7 +64,7 @@ export default function Model3DOptions({
       <CommitGroup
         dirty
         saving={presentation.busy}
-        label="Publier"
+        label={tr('common.publish')}
         hint={tr('review.staging.unsaved')}
         onSave={presentation.onSave}
       />

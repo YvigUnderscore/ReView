@@ -44,7 +44,7 @@ export default function TranscodeTab() {
       qc.invalidateQueries({ queryKey: qk.admin('transcode') });
       toast.success(t('transcode.saved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.save'));
     } finally {
       setBusy(false);
     }
@@ -59,7 +59,7 @@ export default function TranscodeTab() {
           checked={draft.enabled}
           onChange={(e) => set({ enabled: e.target.checked })}
         />
-        <span className="font-medium">Transcodage HLS adaptatif</span>
+        <span className="font-medium">{t('transcode.adaptiveHls')}</span>
         <span className="text-xs text-muted-foreground">{t('transcode.singleProxy')}</span>
       </label>
 
@@ -75,7 +75,7 @@ export default function TranscodeTab() {
         <span className="text-xs text-muted-foreground">{t('transcode.sceneDetect')}</span>
       </label>
 
-      <Panel title="Encodage">
+      <Panel title={t('transcode.encoding')}>
         <div className="flex flex-wrap items-end gap-3 text-xs">
           <Field label={t('transcode.crf')}>
             <Input
@@ -87,7 +87,7 @@ export default function TranscodeTab() {
               onChange={(e) => set({ crf: Number(e.target.value) })}
             />
           </Field>
-          <Field label="Preset x264">
+          <Field label={t('transcode.preset')}>
             <Select className="py-1.5" value={draft.preset} onChange={(e) => set({ preset: e.target.value })}>
               {PRESETS.map((p) => (
                 <option key={p} value={p}>
@@ -96,7 +96,7 @@ export default function TranscodeTab() {
               ))}
             </Select>
           </Field>
-          <Field label="Audio (kbps)">
+          <Field label={t('transcode.audioKbps')}>
             <Input
               type="number"
               className="w-24 py-1.5"
@@ -104,7 +104,7 @@ export default function TranscodeTab() {
               onChange={(e) => set({ audioBitrateK: Number(e.target.value) })}
             />
           </Field>
-          <Field label="Plafond (px)">
+          <Field label={t('transcode.maxPx')}>
             <Input
               type="number"
               className="w-24 py-1.5"
@@ -149,7 +149,7 @@ export default function TranscodeTab() {
             className="mt-1"
             onClick={() => set({ ladder: [...draft.ladder, { height: 720, videoBitrateK: 2500 }] })}
           >
-            <Plus size={14} /> Palier
+            <Plus size={14} /> {t('transcode.rendition')}
           </Button>
         </div>
       </Panel>

@@ -55,7 +55,7 @@ export default function ApiTokensSection() {
       setName('');
       qc.invalidateQueries({ queryKey: qk.apiTokens });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -67,7 +67,7 @@ export default function ApiTokensSection() {
       toast.success(tr('tokens.revoked'));
       qc.invalidateQueries({ queryKey: qk.apiTokens });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -75,8 +75,7 @@ export default function ApiTokensSection() {
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">{t('tokens.title')}</h2>
       <p className="text-xs text-muted-foreground">
-        {t('tokens.intro')} <code>Authorization: Bearer rvk_…</code>. Le scope « lecture » n'autorise que les
-        GET.
+        {t('tokens.intro')} <code>Authorization: Bearer rvk_…</code>. {t('tokens.readScopeHint')}
       </p>
       <form onSubmit={create} className="flex gap-2">
         <Input
@@ -124,9 +123,11 @@ export default function ApiTokensSection() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Créé le {fmt(tok.createdAt)}
-                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ` · ${t('common.neverUsed')}`}
-                {tok.expiresAt ? ` · expire le ${fmt(tok.expiresAt)}` : ''}
+                {t('tokens.createdOn', { date: fmt(tok.createdAt) })}
+                {tok.lastUsedAt
+                  ? ` · ${t('tokens.usedOn', { date: fmt(tok.lastUsedAt) })}`
+                  : ` · ${t('common.neverUsed')}`}
+                {tok.expiresAt ? ` · ${t('tokens.expiresOn', { date: fmt(tok.expiresAt) })}` : ''}
               </p>
             </div>
             <Button variant="ghost" size="sm" title={tr('shares.revoke')} onClick={() => revoke(tok.id)}>

@@ -99,7 +99,9 @@ export default function ReviewContextMenu({
   const run = (label: string, fn: () => Promise<void>) =>
     void fn()
       .then(() => toast.success(label))
-      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : `${label} : échec`));
+      .catch((e: unknown) =>
+        toast.error(e instanceof Error ? e.message : t('ctx.actionFailed', { action: label })),
+      );
 
   const frameDataUrl = () => {
     const v = videoRef.current;
@@ -146,7 +148,7 @@ export default function ReviewContextMenu({
               <ChevronLeft size={14} /> {t('review.prevFrame')}
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => stepVideoFrame(videoRef.current, fps, 1)}>
-              <ChevronRight size={14} /> Frame suivante
+              <ChevronRight size={14} /> {t('video.nextFrame')}
             </ContextMenuItem>
             {/* Guides de composition (34.G) : tiers / croix / safe areas. */}
             <ContextMenuSub>
@@ -229,7 +231,7 @@ export default function ReviewContextMenu({
               <ContextMenuItem
                 onSelect={() => run(t('task.thumbUpdated'), async () => setThumbnail(frameDataUrl()))}
               >
-                <ImageIcon size={14} /> Frame courante → miniature
+                <ImageIcon size={14} /> {t('ctx.frameToThumbnail')}
               </ContextMenuItem>
             )}
           </>
@@ -258,7 +260,7 @@ export default function ReviewContextMenu({
             )}
             {canManage && (
               <ContextMenuItem onSelect={() => run(t('task.thumbUpdated'), () => setThumbnail(data.url))}>
-                <ImageIcon size={14} /> Image → miniature
+                <ImageIcon size={14} /> {t('ctx.imageToThumbnail')}
               </ContextMenuItem>
             )}
           </>

@@ -41,7 +41,7 @@ export default function ProjectCsvActions({
     try {
       const res = await api.post<ImportResult>(`/api/projects/${projectId}/import-csv`, { csv, commit });
       if (commit) {
-        toast.success(`${res.shotsToCreate} shot(s), ${res.tasksToCreate} tâche(s) importés`);
+        toast.success(t('csv.imported', { shots: res.shotsToCreate, tasks: res.tasksToCreate }));
         setOpen(false);
         setCsv('');
         setPreview(null);
@@ -50,7 +50,7 @@ export default function ProjectCsvActions({
         setPreview(res);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -61,7 +61,7 @@ export default function ProjectCsvActions({
       const res = await fetch(`/api/projects/${projectId}/export-csv`, {
         headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
       });
-      if (!res.ok) throw new Error('Export impossible');
+      if (!res.ok) throw new Error(t('common.error.export'));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -70,7 +70,7 @@ export default function ProjectCsvActions({
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
@@ -80,13 +80,13 @@ export default function ProjectCsvActions({
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
       >
-        <Upload size={16} /> Importer CSV
+        <Upload size={16} /> {t('csv.import')}
       </button>
       <button
         onClick={exportCsv}
         className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
       >
-        <Download size={16} /> Exporter CSV
+        <Download size={16} /> {t('csv.export')}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -99,7 +99,7 @@ export default function ProjectCsvActions({
           </p>
           <textarea
             className="h-40 w-full rounded border border-input bg-background p-2 font-mono text-xs"
-            placeholder={'sequence,shot,name,tasks\nSQ01,SH010,Intro,Anim|Comp'}
+            placeholder={t('csv.placeholder')}
             value={csv}
             onChange={(e) => {
               setCsv(e.target.value);
@@ -109,8 +109,12 @@ export default function ProjectCsvActions({
           {preview && (
             <div className="rounded border border-border bg-secondary/40 p-2 text-xs">
               <div>
-                À créer : {preview.sequencesToCreate} séquence(s), {preview.shotsToCreate} shot(s),{' '}
-                {preview.tasksToCreate} tâche(s). Ignorés : {preview.shotsSkipped}.
+                {t('csv.preview', {
+                  sequences: preview.sequencesToCreate,
+                  shots: preview.shotsToCreate,
+                  tasks: preview.tasksToCreate,
+                  skipped: preview.shotsSkipped,
+                })}
               </div>
               {preview.errors.length > 0 && (
                 <ul className="mt-1 list-inside list-disc text-destructive">
@@ -131,7 +135,7 @@ export default function ProjectCsvActions({
               onClick={() => void run(true)}
               disabled={busy || !preview || preview.shotsToCreate === 0}
             >
-              Importer
+              {t('common.import')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -55,7 +55,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
       await qc.invalidateQueries({ queryKey: qk.projectUsage(projectId) });
       setMsg(t('project.quotaSaved'));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
+      setError(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setSaving(false);
     }

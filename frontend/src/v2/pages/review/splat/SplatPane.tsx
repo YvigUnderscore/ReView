@@ -67,7 +67,7 @@ export default function SplatPane({
           {typeof progress === 'number' && progress < 1 ? (
             <>
               <span className="text-sm text-muted-foreground">
-                Téléchargement du splat… {Math.round(progress * 100)} %
+                {t('splat.downloading', { pct: Math.round(progress * 100) })}
               </span>
               <div className="h-1 w-40 overflow-hidden rounded-full bg-secondary">
                 <div

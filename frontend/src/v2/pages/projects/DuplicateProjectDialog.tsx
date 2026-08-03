@@ -26,7 +26,7 @@ export default function DuplicateProjectDialog({
   onDone: () => void;
 }) {
   const t = useT();
-  const [name, setName] = useState(`${project.name} (copie)`);
+  const [name, setName] = useState(t('projects.copyOf', { name: project.name }));
   const [includeTasks, setIncludeTasks] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,10 +37,10 @@ export default function DuplicateProjectDialog({
     setBusy(true);
     try {
       await api.post(`/api/projects/${project.id}/duplicate`, { name, includeTasks });
-      toast.success(`Projet « ${name} » créé depuis « ${project.name} »`);
+      toast.success(t('projects.duplicated', { name, source: project.name }));
       onDone();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
       setBusy(false);
     }
   };

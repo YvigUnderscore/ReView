@@ -57,7 +57,7 @@ export default function IdentityTab() {
       qc.invalidateQueries({ queryKey: qk.admin('oidc') });
       toast.success(t('sso.saved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -65,7 +65,7 @@ export default function IdentityTab() {
 
   return (
     <div className="max-w-2xl">
-      <Panel title="SSO OIDC (Google)">
+      <Panel title={t('sso.oidcTitle')}>
         <p className="mb-3 text-xs text-muted-foreground">
           {t('identity.hint')} <code>{draft.publicUrl || '<URL publique>'}/api/auth/oidc/callback</code>
         </p>
@@ -96,19 +96,19 @@ export default function IdentityTab() {
             placeholder="https://review.studio.com"
           />
           <Field
-            label="Issuer"
+            label={t('sso.issuer')}
             value={draft.issuer}
             onChange={(v) => set({ issuer: v })}
             placeholder="https://accounts.google.com"
           />
           <Field
-            label="Client ID"
+            label={t('sso.clientId')}
             value={draft.clientId}
             onChange={(v) => set({ clientId: v })}
             placeholder="xxxxx.apps.googleusercontent.com"
           />
           <Field
-            label={`Client secret ${draft.hasSecret ? t('identity.setKeep') : ''}`}
+            label={`${t('sso.clientSecret')} ${draft.hasSecret ? t('identity.setKeep') : ''}`}
             value={draft.clientSecret}
             onChange={(v) => set({ clientSecret: v })}
             type="password"

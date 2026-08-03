@@ -61,7 +61,7 @@ export default function WebhooksPanel() {
       invalidate();
       toast.success(t('webhooks.created'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -72,7 +72,7 @@ export default function WebhooksPanel() {
       await api.patch(`/api/admin/webhooks/${h.id}`, { active: !h.active });
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const remove = async (h: WebhookRow) => {
@@ -81,7 +81,7 @@ export default function WebhooksPanel() {
       toast.success(t('webhooks.deleted'));
       invalidate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
   const test = async (h: WebhookRow) => {
@@ -89,14 +89,15 @@ export default function WebhooksPanel() {
       await api.post(`/api/admin/webhooks/${h.id}/test`);
       toast.success(t('webhooks.testQueued'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
   return (
     <Panel title={t('jobs.webhooks')}>
       <p className="mb-3 text-xs text-muted-foreground">
-        {t('webhooks.postJson')} <code>X-ReView-Signature</code>, HMAC SHA-256 de <code>timestamp.corps</code>
+        {t('webhooks.postJson')} <code>X-ReView-Signature</code>
+        {t('webhooks.hmacOf')} <code>timestamp.body</code>
         {t('webhooks.hintEnd')}
       </p>
       <form onSubmit={create} className="mb-3 space-y-2">
@@ -127,7 +128,7 @@ export default function WebhooksPanel() {
       </form>
       {secret && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2">
-          <span className="text-xs text-muted-foreground">Secret HMAC :</span>
+          <span className="text-xs text-muted-foreground">{t('webhooks.hmacSecret')}</span>
           <code className="min-w-0 flex-1 truncate text-xs">{secret}</code>
           <Button
             variant="ghost"

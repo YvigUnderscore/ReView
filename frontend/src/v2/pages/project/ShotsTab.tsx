@@ -69,7 +69,7 @@ export default function ShotsTab({
         code: newShot.code,
         sequenceId: newShot.sequenceId ? Number(newShot.sequenceId) : null,
       });
-      toast.success(`Shot « ${newShot.code} » créé`);
+      toast.success(t('shots.createdNamed', { code: newShot.code }));
       setNewShot({ name: '', code: '', sequenceId: '' });
       reload();
     } catch (err) {
@@ -85,7 +85,7 @@ export default function ShotsTab({
         sequenceId: r.sequenceId ? Number(r.sequenceId) : null,
       })),
     });
-    toast.success(`${rows.length} shot(s) créé(s)`);
+    toast.success(t('shots.created', { count: rows.length }));
     await reload();
   };
   const confirmDelete = async () => {
@@ -144,7 +144,9 @@ export default function ShotsTab({
           fields={[
             {
               key: 'code',
-              placeholder: `Code (${nomenclature.shotPrefix}${'0'.repeat(nomenclature.padding)})`,
+              placeholder: t('shots.codePlaceholder', {
+                example: `${nomenclature.shotPrefix}${'0'.repeat(nomenclature.padding)}`,
+              }),
               className: 'w-28',
             },
             { key: 'name', placeholder: t('sequences.name.placeholder'), className: 'flex-1' },
@@ -238,7 +240,10 @@ export default function ShotsTab({
                   onClick={() => onFocus(focusId === shot.id ? null : shot.id)}
                   active={focusId === shot.id}
                   title={`${shot.code} · ${shot.name}`}
-                  subtitle={`${shot._count?.tasks ?? 0} tâche(s)${shot.assets?.length ? ` · ${shot.assets.length} asset(s)` : ''}`}
+                  subtitle={
+                    t('task.count', { count: shot._count?.tasks ?? 0 }) +
+                    (shot.assets?.length ? ` · ${t('assets.count', { count: shot.assets.length })}` : '')
+                  }
                   thumbnailUrl={shot.thumbnailUrl}
                   favorite={{ type: 'SHOT', entityId: shot.id }}
                   actions={actions}
@@ -275,7 +280,7 @@ export default function ShotsTab({
       <ConfirmDialog
         open={!!deleting}
         title={t('shots.delete.title')}
-        message={<>Le shot « {deleting?.code} » et ses tâches/versions seront déplacés dans la corbeille.</>}
+        message={t('shots.delete.message', { code: deleting?.code ?? '' })}
         confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmDelete}

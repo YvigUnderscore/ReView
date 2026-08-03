@@ -129,7 +129,9 @@ export function MarkerDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {editing ? tr('marker.edit') : `Marqueur à la frame ${startFrame + (editing ? 0 : frame)}`}
+            {editing
+              ? tr('marker.edit')
+              : tr('marker.atFrame', { frame: startFrame + (editing ? 0 : frame) })}
           </DialogTitle>
         </DialogHeader>
         <Input

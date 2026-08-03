@@ -88,7 +88,7 @@ export default function ReviewDecisionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Décision de review — {versionName}</DialogTitle>
+          <DialogTitle>{t('decision.dialogTitle', { version: versionName })}</DialogTitle>
           <DialogDescription>
             {current ? (
               <>

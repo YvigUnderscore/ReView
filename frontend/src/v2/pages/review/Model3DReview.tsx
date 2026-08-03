@@ -216,7 +216,7 @@ export default function Model3DReview({
                       scene.revert();
                     })
                     .catch((e: unknown) =>
-                      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible'),
+                      toast.error(e instanceof Error ? e.message : t('common.error.save')),
                     )
                     .finally(() => setSavingOverride(false));
                 }

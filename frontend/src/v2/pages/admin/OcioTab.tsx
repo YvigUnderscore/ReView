@@ -63,11 +63,11 @@ export default function OcioTab() {
     setBusyAsset(asset.assetName);
     try {
       await api.post('/api/studio/ocio/install', { tag, assetName: asset.assetName });
-      toast.success(`« ${asset.label} » installée`);
+      toast.success(t('ocio.configInstalled', { name: asset.label }));
       refreshConfigs();
       qc.invalidateQueries({ queryKey: qk.admin('ocio-releases') });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Installation impossible');
+      toast.error(err instanceof Error ? err.message : t('common.error.install'));
     } finally {
       setBusyAsset(null);
     }
@@ -78,17 +78,17 @@ export default function OcioTab() {
       await api.put(`/api/studio/ocio/configs/${id}/default`, {});
       refreshConfigs();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Action impossible');
+      toast.error(err instanceof Error ? err.message : t('common.error.action'));
     }
   };
 
   const remove = async (id: string, name: string) => {
     try {
       await api.del(`/api/studio/ocio/configs/${id}`);
-      toast.success(`« ${name} » supprimée`);
+      toast.success(t('ocio.configDeleted', { name }));
       refreshConfigs();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Suppression impossible');
+      toast.error(err instanceof Error ? err.message : t('common.error.delete'));
     }
   };
 
@@ -102,7 +102,7 @@ export default function OcioTab() {
           rel="noopener noreferrer"
           className="text-primary hover:underline"
         >
-          ASWF OpenColorIO-Config-ACES
+          <code>ASWF OpenColorIO-Config-ACES</code>
         </a>
         {t('ocio.hintEnd')}
       </p>
@@ -150,7 +150,7 @@ export default function OcioTab() {
         )}
       </Panel>
 
-      <Panel title="Releases ACES (GitHub)">
+      <Panel title={t('ocio.acesReleases')}>
         {!browse ? (
           <Button onClick={() => setBrowse(true)}>
             <RefreshCw size={15} /> {t('ocio.browse')}

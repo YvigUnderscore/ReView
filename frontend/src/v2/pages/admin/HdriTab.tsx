@@ -61,7 +61,7 @@ export default function HdriTab() {
       toast.success(t('hdri.added'));
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload impossible');
+      toast.error(err instanceof Error ? err.message : t('common.error.upload'));
     } finally {
       setBusy(false);
     }
@@ -70,10 +70,10 @@ export default function HdriTab() {
   const remove = async (id: string, name: string) => {
     try {
       await api.del(`/api/studio/hdris/${id}`);
-      toast.success(`« ${name} » supprimé`);
+      toast.success(t('hdri.deleted', { name }));
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Suppression impossible');
+      toast.error(err instanceof Error ? err.message : t('common.error.delete'));
     }
   };
 

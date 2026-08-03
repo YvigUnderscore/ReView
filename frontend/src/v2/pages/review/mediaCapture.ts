@@ -130,7 +130,7 @@ export async function copyImageToClipboard(src: string): Promise<void> {
   canvas.height = img.height;
   canvas.getContext('2d')!.drawImage(img, 0, 0);
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
-  if (!blob) throw new Error('Encodage PNG impossible');
+  if (!blob) throw new Error(t('common.error.pngEncode'));
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 }
 

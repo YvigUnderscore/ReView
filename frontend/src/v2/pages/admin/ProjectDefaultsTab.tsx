@@ -62,7 +62,7 @@ export default function ProjectDefaultsTab() {
       qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
       toast.success(t('defaults.saved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.save'));
     } finally {
       setBusy(false);
     }

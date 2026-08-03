@@ -89,7 +89,7 @@ export default function TaskPage() {
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">{task?.name ?? `Tâche #${taskId}`}</h1>
+          <h1 className="text-xl font-semibold">{task?.name ?? t('task.fallbackName', { id: taskId })}</h1>
           {task && <Badge variant="secondary">{task.type}</Badge>}
           {task && (
             <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[task.status] ?? ''}`}>
@@ -157,7 +157,7 @@ export default function TaskPage() {
       {canCreate && (
         <FullPageDropzone
           onDrop={onDropFiles}
-          label={versions[0] ? `Déposez pour ajouter à ${versions[0].name}` : t('version.dropAsset')}
+          label={versions[0] ? t('version.dropInto', { name: versions[0].name }) : t('version.dropAsset')}
         />
       )}
     </Shell>

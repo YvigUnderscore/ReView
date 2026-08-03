@@ -38,7 +38,7 @@ export default function ReplyComposer({
 
   const addFiles = (add: File[]) => {
     if (files.length + add.length > MAX_COMMENT_ATTACHMENTS)
-      toast.warning(`${MAX_COMMENT_ATTACHMENTS} pièces jointes max par commentaire`);
+      toast.warning(t('comment.maxAttachments', { count: MAX_COMMENT_ATTACHMENTS }));
     setFiles((fs) => [...fs, ...add].slice(0, MAX_COMMENT_ATTACHMENTS));
   };
   const onPasteImage = useImagePaste(addFiles);

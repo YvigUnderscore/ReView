@@ -6,6 +6,8 @@
  * Le token est stocké dans localStorage sous la clé `token` (compat. frontend existant).
  */
 
+import { t } from '../v2/i18n';
+
 export const getToken = (): string | null => localStorage.getItem('token');
 
 const authHeaders = (): Record<string, string> => {
@@ -21,7 +23,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? `Erreur ${res.status}`);
+    throw new Error(data.error ?? t('common.error.http', { status: res.status }));
   }
   // Réponses sans corps (204 No Content, DELETE…) : pas de JSON à parser.
   if (res.status === 204 || res.headers.get('content-length') === '0') {

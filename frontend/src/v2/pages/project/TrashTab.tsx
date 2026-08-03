@@ -74,7 +74,7 @@ function TrashSection({
   const bulkRestoreSel = async () => {
     try {
       const { count } = await bulkRestore(domain, sel.ids);
-      toast.success(`${count} élément(s) restauré(s)`);
+      toast.success(t('trash.restoredCount', { count }));
       sel.clear();
       onChanged();
     } catch (err) {
@@ -84,7 +84,7 @@ function TrashSection({
   const confirmBulkPurge = async () => {
     try {
       const { count } = await bulkPurge(domain, sel.ids);
-      toast.success(`${count} élément(s) supprimé(s) définitivement`);
+      toast.success(t('trash.purged', { count }));
       sel.clear();
       setBulkPurging(false);
       onChanged();
@@ -113,7 +113,9 @@ function TrashSection({
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
         {sel.count > 0 && (
           <div className="ml-auto flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">{sel.count} sélectionné(s)</span>
+            <span className="text-xs text-muted-foreground">
+              {t('trash.selectedCount', { count: sel.count })}
+            </span>
             <button
               onClick={bulkRestoreSel}
               className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs hover:bg-secondary/60"
@@ -172,7 +174,7 @@ function TrashSection({
       <ConfirmDialog
         open={bulkPurging}
         title={t('trash.delete.title')}
-        message={<>{sel.count} élément(s) seront supprimés de la base et du stockage. Irréversible.</>}
+        message={t('trash.deleteMany.message', { count: sel.count })}
         confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmBulkPurge}
@@ -181,9 +183,7 @@ function TrashSection({
       <ConfirmDialog
         open={!!purge}
         title={t('trash.delete.title')}
-        message={
-          <>« {purge?.label} » sera supprimé de la base et du stockage. Cette action est irréversible.</>
-        }
+        message={t('trash.delete.message', { name: purge?.label ?? '' })}
         confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmPurge}

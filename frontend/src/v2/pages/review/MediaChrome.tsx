@@ -110,7 +110,7 @@ export default function MediaChrome({
             title={t('review.mediaStrip')}
           >
             {state.drawer === 'strip' ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-            Pellicule
+            {t('review.filmStrip')}
           </Button>
         </div>
       }

@@ -50,14 +50,13 @@ export default function ProjectsAdminTab() {
         </Select>
       </div>
       <p className="mb-2 text-xs text-muted-foreground">
-        {shown.length} projet(s) — la fiche détaille membres, hiérarchie et réglages hérités. Les projets
-        supprimés sont dans Maintenance › Corbeille.
+        {t('projectsAdmin.total', { count: shown.length })}
       </p>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="bg-card text-left text-xs text-muted-foreground">
             <tr>
-              <th className="px-3 py-2">Projet</th>
+              <th className="px-3 py-2">{t('common.project')}</th>
               <th className="px-3 py-2">{t('common.status')}</th>
               <th className="px-3 py-2 text-right">{t('nav.members')}</th>
               <th className="px-3 py-2 text-right">{t('projectsAdmin.seqShort')}</th>

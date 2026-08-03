@@ -70,7 +70,7 @@ export default function ProjectColorSection({
               value={value?.configId ?? ''}
               onChange={(e) => onChange({ configId: e.target.value || undefined })}
             >
-              <option value="">Défaut studio ({defaultConfig?.name ?? '—'})</option>
+              <option value="">{t('ocio.studioDefaultNamed', { name: defaultConfig?.name ?? '—' })}</option>
               {configs.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -78,7 +78,7 @@ export default function ProjectColorSection({
               ))}
             </select>
           </Field>
-          <Field label="Display">
+          <Field label={t('ocio.display')}>
             <select
               className="w-48 rounded border border-input bg-background px-2 py-1.5 text-xs disabled:opacity-50"
               value={value?.display ?? ''}
@@ -93,7 +93,7 @@ export default function ProjectColorSection({
               ))}
             </select>
           </Field>
-          <Field label="View">
+          <Field label={t('ocio.view')}>
             <select
               className="w-48 rounded border border-input bg-background px-2 py-1.5 text-xs disabled:opacity-50"
               value={value?.view ?? ''}

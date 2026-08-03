@@ -73,7 +73,7 @@ export default function AddToPlaylistDialog({
       const out = await api.post<{ added: number; skipped: number }>(`/api/playlists/${p.id}/items`, ids);
       finish(out.added, out.skipped, p.name);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -91,7 +91,7 @@ export default function AddToPlaylistDialog({
       });
       finish(playlist._count.items, targetCount - playlist._count.items, name);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }

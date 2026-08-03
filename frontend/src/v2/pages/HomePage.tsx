@@ -35,7 +35,9 @@ export default function HomePage() {
     <Shell title={t('nav.home')}>
       <div className="mx-auto max-w-6xl">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold">{firstName ? `Bonjour ${firstName}` : t('nav.home')}</h1>
+          <h1 className="text-xl font-semibold">
+            {firstName ? t('home.greeting', { name: firstName }) : t('nav.home')}
+          </h1>
           <p className="text-sm text-muted-foreground">{t('home.whatMoved')}</p>
         </div>
         {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}

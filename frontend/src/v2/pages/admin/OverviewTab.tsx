@@ -26,9 +26,9 @@ export default function OverviewTab() {
   const retryJobs = async () => {
     try {
       const { retried } = await api.post<{ retried: number }>('/api/admin/jobs/retry');
-      toast.success(`${retried} job(s) relancé(s).`);
+      toast.success(t('jobs.retriedCount', { count: retried }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Relance impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.retry'));
     }
   };
 
@@ -70,7 +70,7 @@ export default function OverviewTab() {
               )}
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">File indisponible.</p>
+            <p className="text-xs text-muted-foreground">{t('jobs.queueUnavailable')}</p>
           )}
         </Panel>
       </div>

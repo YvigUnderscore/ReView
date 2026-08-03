@@ -38,10 +38,15 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
       return (
         <button
           onClick={live.join}
-          title={`Session live en cours${current.pilot ? ` — pilotée par ${current.pilot.displayName}` : ''} (${current.participantCount} participant${current.participantCount > 1 ? 's' : ''}). Cliquer pour rejoindre.`}
+          title={
+            (current.pilot
+              ? t('live.runningWithPilot', { pilot: current.pilot.displayName })
+              : t('live.running')) +
+            ` ${t('live.participants', { count: current.participantCount })} ${t('live.clickToJoin')}`
+          }
           className="flex items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-2 py-1.5 text-xs font-semibold text-accent2 hover:bg-accent2/20"
         >
-          <Radio size={14} className="animate-pulse" /> LIVE · {current.participantCount}
+          <Radio size={14} className="animate-pulse" /> {t('live.badge')} · {current.participantCount}
         </button>
       );
     return (
@@ -83,7 +88,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
                       key={p.id}
                       onClick={() => {
                         live.handoff(p.id);
-                        toast.success(`Main passée à ${p.displayName} (pilote)`);
+                        toast.success(t('live.handedOver', { name: p.displayName }));
                       }}
                     >
                       <Avatar seed={p.id} initials={p.initials} avatarUrl={p.avatarUrl} size={18} />
@@ -106,8 +111,8 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
                           live.setCoHost(p.id, !coHost);
                           toast.success(
                             coHost
-                              ? `${p.displayName} n’est plus co-pilote`
-                              : `${p.displayName} est co-pilote — le premier qui interagit prend la main`,
+                              ? t('live.coHostRemoved', { name: p.displayName })
+                              : t('live.coHostAdded', { name: p.displayName }),
                           );
                         }}
                       >
@@ -170,7 +175,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
                 <ContextMenuItem
                   onClick={() => {
                     live.handoff(p.id);
-                    toast.success(`Main passée à ${p.displayName} (pilote)`);
+                    toast.success(t('live.handedOver', { name: p.displayName }));
                   }}
                 >
                   <Crown size={14} /> {t('live.handOver')}
@@ -180,8 +185,8 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
                     live.setCoHost(p.id, !coHost);
                     toast.success(
                       coHost
-                        ? `${p.displayName} n’est plus co-pilote`
-                        : `${p.displayName} est co-pilote — le premier qui interagit prend la main`,
+                        ? t('live.coHostRemoved', { name: p.displayName })
+                        : t('live.coHostAdded', { name: p.displayName }),
                     );
                   }}
                 >

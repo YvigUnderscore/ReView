@@ -51,7 +51,7 @@ function ApiTokensAdminPanel() {
       toast.success(t('tokens.revoked'));
       qc.invalidateQueries({ queryKey: qk.admin('api-tokens') });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -73,8 +73,10 @@ function ApiTokensAdminPanel() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {tok.user.name ?? tok.user.email} · créé le {fmt(tok.createdAt)}
-                {tok.lastUsedAt ? ` · utilisé le ${fmt(tok.lastUsedAt)}` : ` · ${t('common.neverUsed')}`}
+                {tok.user.name ?? tok.user.email} · {t('tokens.createdOn', { date: fmt(tok.createdAt) })}
+                {tok.lastUsedAt
+                  ? ` · ${t('tokens.usedOn', { date: fmt(tok.lastUsedAt) })}`
+                  : ` · ${t('common.neverUsed')}`}
               </p>
             </div>
             <Button variant="ghost" size="sm" title={t('shares.revoke')} onClick={() => revoke(tok.id)}>

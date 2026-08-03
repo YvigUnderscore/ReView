@@ -52,12 +52,12 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
       });
       const first = v.media[0];
       if (!first) {
-        toast.error(`Aucun média visible dans la version ${v.name}`);
+        toast.error(t('version.noVisibleMedia', { version: v.name }));
         return;
       }
       navigate(reviewPath(first));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Version inaccessible');
+      toast.error(e instanceof Error ? e.message : t('version.unreachable'));
     }
   };
 
@@ -84,7 +84,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
         >
           {options.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.name} · {v._count.media} média{v._count.media > 1 ? 's' : ''}
+              {v.name} · {t('reviews.count', { count: v._count.media })}
             </option>
           ))}
         </select>
@@ -94,7 +94,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
           <button
             disabled={!prev}
             onClick={() => prev && navigate(reviewPath(prev))}
-            title={prev ? `Média précédent : ${prev.originalName}` : t('nav.firstMedia')}
+            title={prev ? t('nav.previousMedia', { name: prev.originalName }) : t('nav.firstMedia')}
             className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <ChevronLeft size={14} />
@@ -105,7 +105,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
           <button
             disabled={!next}
             onClick={() => next && navigate(reviewPath(next))}
-            title={next ? `Média suivant : ${next.originalName}` : t('nav.lastMedia')}
+            title={next ? t('nav.nextMedia', { name: next.originalName }) : t('nav.lastMedia')}
             className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <ChevronRight size={14} />

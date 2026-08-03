@@ -86,7 +86,7 @@ export default function ClientSharePage() {
         )}
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{p.project?.name}</p>
-          <p className="text-xs text-muted-foreground">Review client</p>
+          <p className="text-xs text-muted-foreground">{t('client.review')}</p>
         </div>
       </header>
 
@@ -181,7 +181,7 @@ function PasswordGate({ token, onUnlocked }: { token: string; onUnlocked: () => 
       setShareAuth(token, shareAuth);
       onUnlocked();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }

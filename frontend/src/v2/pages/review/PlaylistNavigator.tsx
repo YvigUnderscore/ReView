@@ -42,7 +42,7 @@ export default function PlaylistNavigator({ versionId }: { versionId: number }) 
   return (
     <div
       className="flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground"
-      title={`Playlist « ${playlist.name} »`}
+      title={t('playlist.named', { name: playlist.name })}
     >
       <ListVideo size={13} className="shrink-0" />
       <span className="max-w-32 truncate">{playlist.name}</span>
@@ -50,7 +50,9 @@ export default function PlaylistNavigator({ versionId }: { versionId: number }) 
         disabled={!prev}
         onClick={() => go(prev)}
         title={
-          prev ? `Précédent : ${prev.version.location || prev.media?.originalName}` : t('playlist.start')
+          prev
+            ? t('playlist.previousNamed', { name: prev.version.location || prev.media?.originalName || '' })
+            : t('playlist.start')
         }
         className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
       >
@@ -60,7 +62,11 @@ export default function PlaylistNavigator({ versionId }: { versionId: number }) 
       <button
         disabled={!next}
         onClick={() => go(next)}
-        title={next ? `Suivant : ${next.version.location || next.media?.originalName}` : 'Fin de playlist'}
+        title={
+          next
+            ? t('playlist.nextNamed', { name: next.version.location || next.media?.originalName || '' })
+            : t('playlist.end')
+        }
         className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <ChevronRight size={14} />

@@ -108,7 +108,7 @@ export default function MediaTile({
             <div className="truncate text-xs text-foreground">{media.originalName}</div>
             <div className="truncate text-[10px] text-muted-foreground">
               {media.kind} · {media.status}
-              {!media.published && <span className="ml-1 text-primary">· Brouillon</span>}
+              {!media.published && <span className="ml-1 text-primary">· {t('media.draft')}</span>}
             </div>
           </div>
         </Link>
@@ -119,7 +119,7 @@ export default function MediaTile({
                 onClick={() => onPublish(media)}
                 className="rounded px-1.5 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
-                Publier
+                {t('common.publish')}
               </button>
             )}
             <ThumbEditButton mediaId={media.id} versionId={versionId} small />
@@ -137,7 +137,11 @@ export default function MediaTile({
   }
   return (
     <div className="group overflow-hidden rounded-md border border-border bg-card">
-      <Link to={reviewPath(media)} title={`Ouvrir la review : ${media.originalName}`} className="block">
+      <Link
+        to={reviewPath(media)}
+        title={t('review.openNamed', { name: media.originalName })}
+        className="block"
+      >
         <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-black/40 text-muted-foreground">
           <MediaThumb media={media} size={22} />
           {!media.published && (
@@ -161,7 +165,7 @@ export default function MediaTile({
               onClick={() => onPublish(media)}
               className="flex-1 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
-              Publier
+              {t('common.publish')}
             </button>
           )}
           <ThumbEditButton mediaId={media.id} versionId={versionId} />

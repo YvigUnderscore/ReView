@@ -3,6 +3,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import ShapeEl from './annotation/ShapeEl';
+import { useT } from '../i18n';
 import {
   ellipseFromCorners,
   hitShape,
@@ -273,6 +274,7 @@ function TextDraftInput({
   onCommit: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   return (
     <input
       // Focus différé : laisse passer l'action par défaut du clic d'origine avant de
@@ -281,7 +283,7 @@ function TextDraftInput({
         if (el) setTimeout(() => el.focus(), 0);
       }}
       value={draft.value}
-      placeholder="Texte…"
+      placeholder={t('draw.textPlaceholder')}
       onChange={(e) => onChangeValue(e.target.value)}
       onKeyDown={(e) => {
         e.stopPropagation();

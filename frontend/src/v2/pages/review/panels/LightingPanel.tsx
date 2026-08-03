@@ -85,12 +85,12 @@ export default function LightingPanel({
       {(colorDisplay || colorView) && (
         <Group title={t('viewer.color.title')}>
           {colorDisplay && (
-            <Row label="Display">
+            <Row label={t('ocio.display')}>
               <Badge variant="secondary">{colorDisplay}</Badge>
             </Row>
           )}
           {colorView && (
-            <Row label="View">
+            <Row label={t('ocio.view')}>
               <Badge variant="secondary">{colorView}</Badge>
             </Row>
           )}

@@ -75,7 +75,7 @@ function DiffHud({
       >
         <Flame size={14} />
       </button>
-      <button onClick={onWipe} title="Basculer en mode wipe" className="rounded p-1 hover:bg-secondary">
+      <button onClick={onWipe} title={t('review.compare.toWipe')} className="rounded p-1 hover:bg-secondary">
         <SplitSquareHorizontal size={14} />
       </button>
       <button

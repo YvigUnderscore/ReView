@@ -42,7 +42,7 @@ export default function TaskSchedule({
       if (projectId) qc.invalidateQueries({ queryKey: qk.projectSchedule(projectId) });
       toast.success(t('task.scheduleUpdated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
@@ -51,7 +51,7 @@ export default function TaskSchedule({
     return (
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <CalendarDays size={14} />
-        {startDate && <span>Début : {fmt(startDate)}</span>}
+        {startDate && <span>{t('task.startsOn', { date: fmt(startDate) })}</span>}
         {dueDate && (
           <span>
             {t('task.dueDate')} : {fmt(dueDate)}
@@ -64,7 +64,7 @@ export default function TaskSchedule({
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3 text-xs">
       <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
-        <CalendarDays size={14} /> Planning
+        <CalendarDays size={14} /> {t('task.schedule')}
       </span>
       <label className="flex items-center gap-1.5">
         {t('common.start')}

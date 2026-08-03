@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+import { t } from '../../../i18n';
 import type { MediaResp, SplatCamera, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { appendBookmark, removeBookmarkAt, MAX_BOOKMARKS } from './cameraBookmarks';
@@ -46,7 +47,7 @@ export function useModel3DBookmarks(
     const base: SplatPresentation = { ...(data.splatPresentation ?? {}) };
     const next = appendBookmark(base.bookmarks ?? [], camera);
     if (!next) {
-      toast.error(`Maximum ${MAX_BOOKMARKS} bookmarks`);
+      toast.error(t('camera.maxBookmarks', { count: MAX_BOOKMARKS }));
       return;
     }
     await persist({ ...base, bookmarks: next });

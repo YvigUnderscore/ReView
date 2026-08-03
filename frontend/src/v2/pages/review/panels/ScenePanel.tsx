@@ -91,7 +91,7 @@ export default function ScenePanel({
   return (
     <>
       {/* Scenegraph USD (46.C) en tête : c'est la structure de la scene, le reste la decore. */}
-      {scenegraph && <Group title="Scenegraph">{scenegraph}</Group>}
+      {scenegraph && <Group title={t('scenegraph.title')}>{scenegraph}</Group>}
       <Group title={t('viewer.guides.title')}>
         <Row label={t('viewer.guides.grid')}>
           <Switch checked={grid.visible} onCheckedChange={grid.onToggle} label={t('viewer.guides.grid')} />
@@ -159,7 +159,7 @@ export default function ScenePanel({
       )}
 
       {turntable && (
-        <Group title="Turntable">
+        <Group title={t('viewer.turntable')}>
           <Row label={t('viewer.turntable')}>
             <Switch
               checked={turntable.active}
@@ -194,7 +194,7 @@ export default function ScenePanel({
 
       {/* Le modèle 3D n'a ni LOD ni effet d'apparition : pas de section vide dans son dock. */}
       {(perf.lod || perf.culling || reveal) && (
-        <Group title="Performance">
+        <Group title={t('panel.performance')}>
           {perf.lod && (
             <Row label={t('viewer.lod')} stack hint={t('viewer.lod.hint')}>
               <SegmentedControl

@@ -44,7 +44,7 @@ export function useVersions(scope: VersionScope) {
   const createVersion = async (): Promise<Version | null> => {
     try {
       const { version } = await api.post<{ version: Version }>('/api/versions', createBody);
-      toast.success(`Version « ${version.name} » créée`);
+      toast.success(t('version.created', { name: version.name }));
       await invalidateVersions();
       return version;
     } catch (e) {
@@ -59,7 +59,7 @@ export function useVersions(scope: VersionScope) {
       invalidateVersions();
       qc.invalidateQueries({ queryKey: qk.version(vid) });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Publication impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.publish'));
     }
   };
   const publishMedia = async (versionId: number, mediaId: number) => {
@@ -69,7 +69,7 @@ export function useVersions(scope: VersionScope) {
       qc.invalidateQueries({ queryKey: qk.version(versionId) });
       invalidateVersions();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Publication impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.publish'));
     }
   };
   const removeVersion = async (vid: number) => {
@@ -78,7 +78,7 @@ export function useVersions(scope: VersionScope) {
       toast.success(t('version.trashed'));
       await invalidateVersions();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
   const removeMedia = async (versionId: number, mediaId: number) => {
@@ -88,7 +88,7 @@ export function useVersions(scope: VersionScope) {
       qc.invalidateQueries({ queryKey: qk.version(versionId) });
       invalidateVersions();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 

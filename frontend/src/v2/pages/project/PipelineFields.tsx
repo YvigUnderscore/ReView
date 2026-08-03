@@ -73,8 +73,11 @@ export default function PipelineFields({
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Hérité du parent : {inherited.resolution.width}×{inherited.resolution.height}, {inherited.framerate}{' '}
-          fps
+          {t('pipeline.inheritedFrom', {
+            width: inherited.resolution.width,
+            height: inherited.resolution.height,
+            fps: inherited.framerate,
+          })}
         </p>
       )}
     </div>

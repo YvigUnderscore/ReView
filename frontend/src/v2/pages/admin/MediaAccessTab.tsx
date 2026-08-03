@@ -52,8 +52,7 @@ export default function MediaAccessTab() {
   return (
     <div className="max-w-3xl">
       <p className="mb-3 text-xs text-muted-foreground">
-        Une ligne par consultation (dédupliquée sur 30 minutes) — reviews internes et partages clients
-        confondus. {total} accès au total.
+        {t('mediaAccess.hint')} {t('mediaAccess.total', { count: total })}
       </p>
       <div className="space-y-1">
         {items.map((r) => (
@@ -91,9 +90,7 @@ export default function MediaAccessTab() {
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             {t('common.previous')}
           </Button>
-          <span>
-            Page {page} / {pages}
-          </span>
+          <span>{t('common.pagination', { page, pages })}</span>
           <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
             {t('common.next')}
           </Button>

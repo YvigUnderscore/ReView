@@ -58,7 +58,7 @@ export default function ReviewCanvasRefs({
         old ? { ...old, references: (old.references ?? []).filter((r) => r.id !== id) } : old,
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 
@@ -132,7 +132,7 @@ export default function ReviewCanvasRefs({
             onPointerDown={onPointerDown(r.key, 'resize')}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            title="Redimensionner"
+            title={t('common.resize')}
             className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize bg-primary/70"
           />
         </div>
@@ -152,7 +152,7 @@ export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations
 
   const stage = async (file: File) => {
     if (ann.stagedRefs.length >= MAX_REFS) {
-      toast.warning(`${MAX_REFS} images de référence max`);
+      toast.warning(t('ref.maxImages', { count: MAX_REFS }));
       return;
     }
     try {
@@ -189,7 +189,7 @@ export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations
             : 'border-border bg-card/90 text-muted-foreground hover:text-foreground'
         }`}
       >
-        <ImagePlus size={14} /> Référence (Ctrl+V)
+        <ImagePlus size={14} /> {t('ref.addPaste')}
         {ann.stagedRefs.length > 0 && <span className="font-semibold">· {ann.stagedRefs.length}</span>}
       </button>
       <input

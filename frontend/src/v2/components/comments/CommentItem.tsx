@@ -10,7 +10,7 @@ import CommentReactions from './CommentReactions';
 import CommentAttachmentList from './CommentAttachmentList';
 import { highlightMentions } from './mentions';
 import type { ReviewComment } from '../../types/api';
-import { useT } from '../../i18n';
+import { intlLocale, useT } from '../../i18n';
 
 export interface CommentItemProps {
   comment: ReviewComment;
@@ -123,9 +123,10 @@ export default function CommentItem({
             <span
               title={
                 c.resolvedBy
-                  ? `Résolu par ${c.resolvedBy.displayName ?? c.resolvedBy.name ?? '?'}${
-                      c.resolvedAt ? ` le ${new Date(c.resolvedAt).toLocaleString()}` : ''
-                    }`
+                  ? t('comment.resolvedBy', {
+                      name: c.resolvedBy.displayName ?? c.resolvedBy.name ?? '?',
+                      date: c.resolvedAt ? new Date(c.resolvedAt).toLocaleString(intlLocale()) : '',
+                    })
                   : t('comments.resolved')
               }
               className="inline-flex items-center gap-1 rounded bg-success/15 px-1.5 py-0.5 text-[11px] text-success"
@@ -149,7 +150,7 @@ export default function CommentItem({
           )}
           {hasAnnotation && (
             <span
-              title="Annotation jointe"
+              title={t('comment.annotationAttached')}
               className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
             >
               <PenLine size={11} />
@@ -214,7 +215,7 @@ export default function CommentItem({
                 stop(e);
                 void toggleResolved();
               }}
-              title={c.isResolved ? 'Rouvrir' : t('comment.markResolved')}
+              title={c.isResolved ? t('comment.reopen') : t('comment.markResolved')}
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               {c.isResolved ? <RotateCcw size={12} /> : <CheckCircle2 size={13} />}

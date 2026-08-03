@@ -61,7 +61,7 @@ export default function ProjectHierarchy({
   return (
     <Panel title={t('hierarchy.title')}>
       <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-medium">Projet</span>
+        <span className="font-medium">{t('common.project')}</span>
         <SettingsChip effective={project} override={false} />
       </div>
       <div className="divide-y divide-border">

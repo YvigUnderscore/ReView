@@ -48,7 +48,7 @@ export default function UsersTab() {
       setDeleting(null);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 
@@ -77,21 +77,19 @@ export default function UsersTab() {
         <Select value={sort} onChange={(e) => setSort(e.target.value as UserSort)}>
           <option value="name">{t('users.sortName')}</option>
           <option value="role">{t('users.sortRole')}</option>
-          <option value="storage">Tri : stockage</option>
+          <option value="storage">{t('users.sortStorage')}</option>
           <option value="recent">{t('users.sortRecent')}</option>
         </Select>
         <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus size={14} /> Nouvel utilisateur
+          <Plus size={14} /> {t('users.new')}
         </Button>
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">
-        {shown.length} compte(s) — cliquer sur un nom ouvre la fiche détaillée (projets, sessions, activité).
-      </p>
+      <p className="mb-2 text-xs text-muted-foreground">{t('users.total', { count: shown.length })}</p>
       <div className="overflow-hidden rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="bg-card text-left text-xs text-muted-foreground">
             <tr>
-              <th className="px-3 py-2">Utilisateur</th>
+              <th className="px-3 py-2">{t('common.user')}</th>
               <th className="px-3 py-2">{t('login.email')}</th>
               <th className="px-3 py-2">{t('common.role')}</th>
               <th className="px-3 py-2">{t('storage.title')}</th>
@@ -156,7 +154,7 @@ export default function UsersTab() {
 
       {creating && (
         <UserModal
-          title="Nouvel utilisateur"
+          title={t('users.new')}
           onClose={() => setCreating(false)}
           onSaved={() => {
             setCreating(false);
@@ -178,7 +176,7 @@ export default function UsersTab() {
       <ConfirmDialog
         open={!!deleting}
         title={t('user.deleteQ')}
-        message={<>« {deleting?.displayName ?? deleting?.email} » sera définitivement supprimé.</>}
+        message={t('user.delete.message', { name: deleting?.displayName ?? deleting?.email ?? '' })}
         confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}

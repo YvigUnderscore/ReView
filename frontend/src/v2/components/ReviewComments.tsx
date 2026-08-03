@@ -60,7 +60,7 @@ export default function ReviewComments({
     void api
       .post<{ task: { id: number; name: string } }>(`/api/comments/${c.id}/task`)
       .then(({ task }) =>
-        toast.success(`Tâche créée : ${task.name}`, {
+        toast.success(t('task.createdNamed', { name: task.name }), {
           action: { label: t('common.open'), onClick: () => navigate(`/tasks/${task.id}`) },
         }),
       )
@@ -106,7 +106,14 @@ export default function ReviewComments({
           <div key={`marker-${s.marker.id}`} className="space-y-2">
             <button
               onClick={() => onMarkerSeek?.(s.marker!)}
-              title={`Aller à la frame ${startFrame + s.marker.frame}${s.marker.authorName ? ` — marqueur de ${s.marker.authorName}` : ''}`}
+              title={
+                s.marker.authorName
+                  ? t('marker.goToFrameBy', {
+                      frame: startFrame + s.marker.frame,
+                      name: s.marker.authorName,
+                    })
+                  : t('marker.goToFrame', { frame: startFrame + s.marker.frame })
+              }
               className="group flex w-full items-center gap-2 pt-1 text-left"
             >
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.marker.color }} />

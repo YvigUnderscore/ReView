@@ -80,11 +80,11 @@ export function Gauge({ label, pct }: { label: string; pct: number }) {
   );
 }
 
-export function Row({ k, v }: { k: string; v: string }) {
+export function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-muted-foreground">{k}</dt>
-      <dd>{v}</dd>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }

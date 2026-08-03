@@ -36,27 +36,36 @@ export default function SystemTab() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title={t('common.host')}>
           <dl className="space-y-1 text-sm">
-            <Row k="Plateforme" v={`${system.host.platform} (${system.host.arch})`} />
-            <Row k="Node.js" v={system.host.nodeVersion} />
-            <Row k="CPU" v={`${system.host.cpus} cœurs`} />
-            <Row k="Charge (1/5/15 min)" v={system.host.loadAvg.map((l) => l.toFixed(2)).join(' / ')} />
-            <Row k="Uptime machine" v={fmtDuration(system.host.uptimeSec)} />
-            <Row k="Uptime process" v={fmtDuration(system.host.processUptimeSec)} />
+            <Row label={t('system.platform')} value={`${system.host.platform} (${system.host.arch})`} />
+            <Row label="Node.js" value={system.host.nodeVersion} />
+            <Row label="CPU" value={t('system.cores', { count: system.host.cpus })} />
+            <Row
+              label={t('system.loadAvg')}
+              value={system.host.loadAvg.map((l) => l.toFixed(2)).join(' / ')}
+            />
+            <Row label={t('system.uptimeHost')} value={fmtDuration(system.host.uptimeSec)} />
+            <Row label={t('system.uptimeProcess')} value={fmtDuration(system.host.processUptimeSec)} />
           </dl>
         </Panel>
-        <Panel title="Ressources">
+        <Panel title={t('system.resources')}>
           <div className="space-y-3">
             <Gauge
-              label={`Mémoire — ${fmtBytes(system.memory.used)} / ${fmtBytes(system.memory.total)}`}
+              label={t('system.memory', {
+                used: fmtBytes(system.memory.used),
+                total: fmtBytes(system.memory.total),
+              })}
               pct={memPct}
             />
             {diskPct !== null && system.disk && (
               <Gauge
-                label={`Disque — ${fmtBytes(system.disk.total - system.disk.free)} / ${fmtBytes(system.disk.total)}`}
+                label={t('system.disk', {
+                  used: fmtBytes(system.disk.total - system.disk.free),
+                  total: fmtBytes(system.disk.total),
+                })}
                 pct={diskPct}
               />
             )}
-            <Row k="RSS process" v={fmtBytes(system.memory.processRss)} />
+            <Row label={t('system.rss')} value={fmtBytes(system.memory.processRss)} />
           </div>
         </Panel>
       </div>
@@ -77,10 +86,10 @@ function LicensePanel() {
   const t = useT();
   const { data: branding } = useBranding();
   return (
-    <Panel title="Licence & code source">
+    <Panel title={t('system.licenseTitle')}>
       <dl className="space-y-1 text-sm">
-        <Row k="Licence" v="AGPL-3.0-or-later" />
-        <Row k={t('system.thirdParty')} v="{t('system.noticesFile')}" />
+        <Row label={t('license.title')} value="AGPL-3.0-or-later" />
+        <Row label={t('system.thirdParty')} value={t('system.noticesFile')} />
         <div className="flex justify-between">
           <dt className="text-muted-foreground">{t('system.sourcePublished')}</dt>
           <dd>

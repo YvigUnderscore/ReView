@@ -52,7 +52,7 @@ export default function MultiRowCreate({
       await onSubmit(filled);
       setRows([emptyRow(), emptyRow(), emptyRow()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }

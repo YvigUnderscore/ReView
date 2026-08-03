@@ -89,9 +89,11 @@ export default function SharesTab({ projectId }: { projectId: number }) {
                   {l.viewCount}
                   {l.maxViews != null ? ` / ${l.maxViews}` : ''} vue{l.viewCount > 1 ? 's' : ''}
                 </span>
-                {l.expiresAt && <span>Expire le {fmtDate(l.expiresAt)}</span>}
-                {l.lastViewedAt && <span>Vu le {fmtDate(l.lastViewedAt)}</span>}
-                {l.createdBy?.name && <span>Créé par {l.createdBy.name}</span>}
+                {l.expiresAt && <span>{t('shares.expiresOn', { date: fmtDate(l.expiresAt) ?? '' })}</span>}
+                {l.lastViewedAt && (
+                  <span>{t('shares.viewedOn', { date: fmtDate(l.lastViewedAt) ?? '' })}</span>
+                )}
+                {l.createdBy?.name && <span>{t('shares.createdBy', { name: l.createdBy.name })}</span>}
               </div>
             </div>
             {!l.revoked && (

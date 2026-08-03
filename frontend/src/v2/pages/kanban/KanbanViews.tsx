@@ -52,7 +52,7 @@ export default function KanbanViews({
     if (!trimmed) return;
     mutation.mutate(upsertView(allViews, projectId, { name: trimmed, filter }), {
       onSuccess: () => {
-        toast.success(`Vue « ${trimmed} » enregistrée`);
+        toast.success(t('savedViews.saved', { name: trimmed }));
         setSelected(trimmed);
         setNaming(false);
         setName('');
@@ -70,7 +70,7 @@ export default function KanbanViews({
     const n = selected;
     mutation.mutate(removeView(allViews, projectId, n), {
       onSuccess: () => {
-        toast.success(`Vue « ${n} » supprimée`);
+        toast.success(t('savedViews.deleted', { name: n }));
         setSelected('');
       },
     });
@@ -80,7 +80,7 @@ export default function KanbanViews({
     <div className="flex items-center gap-2">
       {views.length > 0 && (
         <Select value={selected} onChange={(e) => apply(e.target.value)} className="py-1.5">
-          <option value="">Vues…</option>
+          <option value="">{t('savedViews.placeholder')}</option>
           {views.map((v) => (
             <option key={v.name} value={v.name}>
               {v.name}
@@ -91,7 +91,7 @@ export default function KanbanViews({
       {selected !== '' && (
         <button
           onClick={remove}
-          title={`Supprimer la vue « ${selected} »`}
+          title={t('savedViews.deleteNamed', { name: selected })}
           className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <Trash2 size={14} />

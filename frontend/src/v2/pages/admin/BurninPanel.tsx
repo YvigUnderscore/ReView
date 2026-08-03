@@ -48,7 +48,7 @@ export default function BurninPanel() {
       qc.invalidateQueries({ queryKey: qk.admin('burnin') });
       toast.success(t('burnin.template.saved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }

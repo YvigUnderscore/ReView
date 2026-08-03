@@ -69,7 +69,7 @@ export default function AssetPage() {
             Board
           </Link>
           <Link to="/projects" className="text-muted-foreground hover:text-foreground">
-            ← Projets
+            {t('nav.backToProjects')}
           </Link>
         </div>
       </div>
@@ -139,7 +139,7 @@ export default function AssetPage() {
       {canCreate && (
         <FullPageDropzone
           onDrop={onDropFiles}
-          label={versions[0] ? `Déposez pour ajouter à ${versions[0].name}` : t('version.dropAsset')}
+          label={versions[0] ? t('version.dropInto', { name: versions[0].name }) : t('version.dropAsset')}
         />
       )}
     </Shell>

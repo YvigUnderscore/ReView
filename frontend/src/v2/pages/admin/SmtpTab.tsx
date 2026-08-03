@@ -45,7 +45,7 @@ export default function SmtpTab() {
       setF({});
       toast.success(t('smtp.saved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.save'));
     } finally {
       setBusy(false);
     }
@@ -57,9 +57,9 @@ export default function SmtpTab() {
     setBusy(true);
     try {
       await api.post('/api/studio/smtp/test', { to });
-      toast.success(`Email de test envoyé à ${to}`);
+      toast.success(t('smtp.testSent', { to }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Envoi impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.send'));
     } finally {
       setBusy(false);
     }
@@ -78,10 +78,10 @@ export default function SmtpTab() {
           <Input
             value={v.host ?? ''}
             onChange={(e) => setF((s) => ({ ...s, host: e.target.value }))}
-            placeholder="smtp.exemple.com"
+            placeholder="smtp.example.com"
           />
         </Row>
-        <Row label="Port">
+        <Row label={t('smtp.port')}>
           <Input
             type="number"
             className="w-28"
@@ -97,7 +97,7 @@ export default function SmtpTab() {
             onChange={(e) => setF((s) => ({ ...s, secure: e.target.checked }))}
           />
         </Row>
-        <Row label="Utilisateur">
+        <Row label={t('common.user')}>
           <Input value={v.user ?? ''} onChange={(e) => setF((s) => ({ ...s, user: e.target.value }))} />
         </Row>
         <Row label={t('login.password')}>
@@ -112,7 +112,7 @@ export default function SmtpTab() {
           <Input
             value={v.from ?? ''}
             onChange={(e) => setF((s) => ({ ...s, from: e.target.value }))}
-            placeholder="ReView <no-reply@exemple.com>"
+            placeholder={t('smtp.fromPlaceholder')}
           />
         </Row>
         <div className="pt-1">

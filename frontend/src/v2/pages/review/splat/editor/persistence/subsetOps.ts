@@ -77,7 +77,7 @@ export function decodeSubsetOps(bytes: Uint8Array): SubsetOp[] {
 /** Télécharge et décode les transformations de sous-ensembles persistées. */
 export async function fetchSubsetOps(url: string): Promise<SubsetOp[]> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Transformations splat indisponibles (${res.status})`);
+  if (!res.ok) throw new Error(t('splat.opsUnavailable', { status: res.status }));
   return decodeSubsetOps(new Uint8Array(await res.arrayBuffer()));
 }
 

@@ -43,7 +43,7 @@ export default function SequenceEditDialog({
       toast.success(t('sequences.updated'));
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
       setBusy(false);
     }
   };

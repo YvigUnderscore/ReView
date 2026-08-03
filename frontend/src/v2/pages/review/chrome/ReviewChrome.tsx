@@ -148,7 +148,7 @@ export default function ReviewChrome({
         <span>{t(activeMode.hintKey)}</span>
         <span className="ml-auto flex items-center gap-2">
           <span>
-            {state.labels ? t('review.labelsVisible') : t('review.iconRail')} · dock{' '}
+            {state.labels ? t('review.labelsVisible') : t('review.iconRail')} · {t('review.dock')}{' '}
             {state.panel ? t('review.dockOpen') : t('review.dockCollapsed')}
           </span>
           {dirty !== undefined && (

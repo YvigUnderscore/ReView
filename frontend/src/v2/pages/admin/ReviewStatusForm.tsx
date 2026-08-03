@@ -39,7 +39,7 @@ export default function ReviewStatusForm({
       toast.success(status ? t('status.updated') : t('status.created'));
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.save'));
     } finally {
       setSaving(false);
     }
@@ -57,7 +57,7 @@ export default function ReviewStatusForm({
             <Input id="rs-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
           </div>
           <div>
-            <Label htmlFor="rs-color">Couleur</Label>
+            <Label htmlFor="rs-color">{t('common.color')}</Label>
             <div className="flex items-center gap-2">
               <input
                 id="rs-color"

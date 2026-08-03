@@ -9,7 +9,7 @@ import { qk } from '../lib/query';
 import Shell from '../components/Shell';
 import { filterSections, type DocsManifest } from './docs/docsManifest';
 import { renderDocHtml } from './docs/docsRender';
-import { useT } from '../i18n';
+import { t, useT } from '../i18n';
 
 /**
  * Documentation produit (/docs) : rendu du dossier DOCUMENTATION/ du repo,
@@ -19,7 +19,7 @@ import { useT } from '../i18n';
 
 const fetchText = async (url: string): Promise<string> => {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Documentation indisponible (${res.status})`);
+  if (!res.ok) throw new Error(t('docs.unavailable', { status: res.status }));
   return res.text();
 };
 
@@ -82,7 +82,7 @@ export default function DocsPage() {
           </div>
           {manifestQ.isError && (
             <p className="text-sm text-muted-foreground">
-              Documentation indisponible — lancer <code>npm run dev</code> {t('client.regenerates')}
+              {t('docs.buildHint')} <code>npm run dev</code> {t('client.regenerates')}
               <code> public/docs</code>.
             </p>
           )}
@@ -121,7 +121,7 @@ export default function DocsPage() {
           onClick={onContentClick}
         >
           {pageQ.isError ? (
-            <p className="text-sm text-muted-foreground">Page introuvable.</p>
+            <p className="text-sm text-muted-foreground">{t('docs.pageNotFound')}</p>
           ) : (
             <article
               className="prose-doc max-w-3xl text-sm text-card-foreground"

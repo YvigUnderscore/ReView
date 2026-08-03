@@ -67,7 +67,7 @@ function PrimRow({
                   onToggle(node.path);
                 }}
                 className="shrink-0 text-muted-foreground hover:text-foreground"
-                aria-label={open ? 'Replier' : t('scenegraph.expand')}
+                aria-label={open ? t('common.collapse') : t('scenegraph.expand')}
               >
                 {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>

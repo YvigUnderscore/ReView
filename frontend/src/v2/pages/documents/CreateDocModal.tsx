@@ -86,7 +86,7 @@ export default function CreateDocModal({
       toast.success(t('documents.created'));
       onCreated(document);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
       setBusy(false);
     }
   };
@@ -116,7 +116,7 @@ export default function CreateDocModal({
               value={kind}
               onChange={(e) => setKind(e.target.value as DocKind)}
             >
-              <option value="RICH">Texte riche</option>
+              <option value="RICH">{t('documents.richText')}</option>
               <option value="PDF">PDF</option>
             </select>
             <select
@@ -144,7 +144,7 @@ export default function CreateDocModal({
               }}
               required
             >
-              <option value="">Projet…</option>
+              <option value="">{t('documents.projectPlaceholder')}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}

@@ -35,7 +35,7 @@ export default function TaskChecklist({
       await api.patch(`/api/tasks/${taskId}`, { checklist: next });
       qc.invalidateQueries({ queryKey: qk.task(taskId) });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
@@ -55,7 +55,7 @@ export default function TaskChecklist({
   return (
     <section className="mb-4 rounded-lg border border-border bg-card p-3">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-        <ListChecks size={15} /> Checklist
+        <ListChecks size={15} /> {t('task.checklist')}
         {items.length > 0 && (
           <span className="text-xs text-muted-foreground">
             {doneCount}/{items.length}

@@ -3,6 +3,7 @@
 
 import { useRef, useState, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
+import { useT } from '../../i18n';
 import { clampValue, dragValue, formatValue, parseInput, type NumberFieldSpec } from './number-field.math';
 
 /**
@@ -44,6 +45,7 @@ export function NumberField({
   className,
   disabled,
 }: NumberFieldProps) {
+  const t = useT();
   const spec: NumberFieldSpec = { min, max, step, pixelsPerStep };
   const drag = useRef<{ pointerId: number; startX: number; startValue: number } | null>(null);
   // Pendant la frappe l'input vit sa vie (« -», « 0, », champ vide) ; on ne commet qu'à la sortie.
@@ -63,7 +65,7 @@ export function NumberField({
         disabled && 'pointer-events-none opacity-50',
         className,
       )}
-      title={hint ? `${hint} — glisser le libellé pour ajuster (Maj ×10)` : undefined}
+      title={hint ? t('numberField.dragHint', { hint }) : undefined}
     >
       <span
         className="flex touch-none select-none items-center text-muted-foreground [cursor:ew-resize]"

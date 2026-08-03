@@ -15,7 +15,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import SelectionBar from '../../components/ui/selection-bar';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import type { TrashProject } from './adminShared';
-import { useT } from '../../i18n';
+import { intlLocale, useT } from '../../i18n';
 
 export default function TrashTab() {
   const t = useT();
@@ -38,7 +38,7 @@ export default function TrashTab() {
       toast.success(t('adminTrash.restored'));
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Restauration impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.restore'));
     }
   };
   const confirmPurge = async () => {
@@ -49,29 +49,29 @@ export default function TrashTab() {
       setPurge(null);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 
   const bulkRestoreSel = async () => {
     try {
       const { count } = await bulkRestore('projects', sel.ids);
-      toast.success(`${count} projet(s) restauré(s)`);
+      toast.success(t('adminTrash.restoredCount', { count }));
       sel.clear();
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Restauration impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.restore'));
     }
   };
   const confirmBulkPurge = async () => {
     try {
       const { count } = await bulkPurge('projects', sel.ids);
-      toast.success(`${count} projet(s) supprimé(s) définitivement`);
+      toast.success(t('adminTrash.purged', { count }));
       sel.clear();
       setBulkPurging(false);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 
@@ -107,7 +107,8 @@ export default function TrashTab() {
             <span className="truncate">
               {p.name}{' '}
               <span className="text-xs text-muted-foreground">
-                · supprimé le {new Date(p.deletedAt).toLocaleDateString()}
+                ·{' '}
+                {t('adminTrash.deletedOn', { date: new Date(p.deletedAt).toLocaleDateString(intlLocale()) })}
               </span>
             </span>
           </div>
@@ -124,7 +125,7 @@ export default function TrashTab() {
 
       <SelectionBar
         count={sel.count}
-        label="projet(s)"
+        label={t('projects.countLabel', { count: sel.count })}
         onClear={sel.clear}
         actions={[
           { label: t('common.restore'), icon: <RotateCcw size={14} />, onClick: bulkRestoreSel },
@@ -140,12 +141,7 @@ export default function TrashTab() {
       <ConfirmDialog
         open={bulkPurging}
         title={t('adminTrash.deleteMany.title')}
-        message={
-          <>
-            {sel.count} projet(s) et tous leurs médias seront supprimés de la base et du stockage.
-            Irréversible.
-          </>
-        }
+        message={t('adminTrash.purgeMany.message', { count: sel.count })}
         confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmBulkPurge}
@@ -154,9 +150,7 @@ export default function TrashTab() {
       <ConfirmDialog
         open={!!purge}
         title={t('adminTrash.delete.title')}
-        message={
-          <>« {purge?.name} » et tous ses médias seront supprimés de la base et du stockage. Irréversible.</>
-        }
+        message={t('adminTrash.purge.message', { name: purge?.name ?? '' })}
         confirmLabel={t('common.deletePermanently')}
         danger
         onConfirm={confirmPurge}

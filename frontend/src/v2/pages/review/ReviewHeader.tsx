@@ -105,7 +105,7 @@ export default function ReviewHeader({
         {viewers.length > 0 && (
           <div
             className="flex items-center -space-x-2"
-            title={`En train de regarder : ${viewers.map((v) => v.displayName).join(', ')}`}
+            title={t('presence.watching', { names: viewers.map((v) => v.displayName).join(', ') })}
           >
             {viewers.slice(0, 5).map((v) => (
               <span key={v.id} className="rounded-full ring-2 ring-background">
@@ -151,7 +151,7 @@ export default function ReviewHeader({
         </button>
         <button
           onClick={() => setShortcutsOpen(true)}
-          title="Raccourcis clavier (?)"
+          title={t('shortcuts.openTitle')}
           className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <Keyboard size={16} />

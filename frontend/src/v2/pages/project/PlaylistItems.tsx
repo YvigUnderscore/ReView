@@ -53,7 +53,7 @@ export default function PlaylistItems({
       await api.patch(`/api/playlists/${playlistId}`, { itemIds: ids });
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
@@ -63,13 +63,15 @@ export default function PlaylistItems({
       toast.success(t('playlist.removed'));
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }
   };
 
   if (detailQ.isLoading) return <Skeleton className="mx-3 mb-3 h-10" />;
   if (items.length === 0)
-    return <p className="border-t border-border px-3 py-3 text-xs text-muted-foreground">Playlist vide.</p>;
+    return (
+      <p className="border-t border-border px-3 py-3 text-xs text-muted-foreground">{t('playlist.empty')}</p>
+    );
 
   return (
     <ol className="border-t border-border">
@@ -110,10 +112,10 @@ export default function PlaylistItems({
               {canEdit && (
                 <>
                   <ContextMenuItem onClick={() => void move(i, -1)}>
-                    <ArrowUp size={14} /> Monter
+                    <ArrowUp size={14} /> {t('common.moveUp')}
                   </ContextMenuItem>
                   <ContextMenuItem onClick={() => void move(i, 1)}>
-                    <ArrowDown size={14} /> Descendre
+                    <ArrowDown size={14} /> {t('common.moveDown')}
                   </ContextMenuItem>
                   <ContextMenuItem danger onClick={() => void removeItem(it)}>
                     <X size={14} /> {t('playlist.remove')}

@@ -62,7 +62,7 @@ export default function UserModal({
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
       setBusy(false);
     }
   };
@@ -105,7 +105,7 @@ export default function UserModal({
           />
           <Input
             type="password"
-            placeholder={isEdit ? t('user.newPassword') : 'Mot de passe (8+ car., lettres + chiffres)'}
+            placeholder={isEdit ? t('user.newPassword') : t('user.passwordRule')}
             value={form.password}
             onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
             required={!isEdit}

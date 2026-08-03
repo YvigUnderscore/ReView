@@ -40,7 +40,7 @@ function SizeField({
 
   const save = async () => {
     const bytes = parseSizeToBytes(value, unit);
-    if (bytes == null) return toast.error('Valeur invalide (nombre attendu)');
+    if (bytes == null) return toast.error(t('settings.invalidNumber'));
     await onSave(field.key, String(bytes));
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -104,6 +104,7 @@ function PlainField({
 }
 
 export default function SettingsTab() {
+  const t = useT();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: qk.admin('settings'),
@@ -116,7 +117,7 @@ export default function SettingsTab() {
       await api.put('/api/studio/settings', { key, value });
       qc.invalidateQueries({ queryKey: qk.admin('settings') });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.save'));
     }
   };
 
@@ -172,7 +173,7 @@ function DefaultLocaleField({
           ))}
         </Select>
         <Button variant="outline" size="sm" onClick={() => onSave('studio_default_locale', value)}>
-          Appliquer
+          {t('common.apply')}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">{t('settings.localeHint')}</p>
@@ -205,7 +206,7 @@ function AccentField({
         />
         <span className="w-24 font-mono text-xs text-muted-foreground">{value}</span>
         <Button variant="outline" size="sm" onClick={() => onSave('studio_accent', value)}>
-          Appliquer
+          {t('common.apply')}
         </Button>
         {stored && (
           <Button variant="ghost" size="sm" onClick={() => onSave('studio_accent', '')}>

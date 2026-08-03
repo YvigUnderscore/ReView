@@ -77,7 +77,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
         await api.put(base, { document: { elements, files } });
         setSaved(true);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erreur');
+        setError(e instanceof Error ? e.message : t('common.error.generic'));
       }
     }, 1200);
   };
@@ -123,7 +123,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
 
   return (
     <Shell
-      title={`Board ${scope === 'project' ? 'projet' : 'asset'} — mood/reference`}
+      title={scope === 'project' ? t('board.projectTitle') : t('board.assetTitle')}
       breadcrumb={
         <EntityBreadcrumb entity={scope === 'project' ? 'project' : 'asset'} id={targetId} tail="Board" />
       }
@@ -144,7 +144,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
           to={scope === 'project' ? `/projects/${targetId}` : `/assets/${targetId}`}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Retour
+          {t('common.back')}
         </Link>
       </div>
       {(error ?? loadError) && <p className="mb-2 text-sm text-destructive">{error ?? loadError}</p>}
@@ -159,7 +159,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
               <button
                 key={m.id}
                 onClick={() => insert(m)}
-                title={`Insérer ${m.originalName}`}
+                title={t('board.insert', { name: m.originalName })}
                 className="block w-full overflow-hidden rounded border border-border hover:border-primary"
               >
                 {m.thumbnailUrl ? (

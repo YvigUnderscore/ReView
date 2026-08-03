@@ -91,7 +91,7 @@ export default function CommentsPanel({
   }, [content, mediaObjectId]);
   const addFiles = (files: File[]) => {
     if (attachFiles.length + files.length > MAX_COMMENT_ATTACHMENTS)
-      toast.warning(`${MAX_COMMENT_ATTACHMENTS} pièces jointes max par commentaire`);
+      toast.warning(t('comment.maxAttachments', { count: MAX_COMMENT_ATTACHMENTS }));
     setAttachFiles((fs) => [...fs, ...files].slice(0, MAX_COMMENT_ATTACHMENTS));
   };
   const onPasteImage = useImagePaste(addFiles);
@@ -136,7 +136,7 @@ export default function CommentsPanel({
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm font-semibold">
         <span>
-          Commentaires{' '}
+          {t('comments.title')}{' '}
           {comments && (
             <span className="font-normal text-muted-foreground">
               · {comments.filter((c) => !c.isResolved).length} ouvert
@@ -199,12 +199,11 @@ export default function CommentsPanel({
           </div>
         )}
         {hints.annotation && (
-          <p className="mb-1.5 text-[11px] text-primary">✏️ Annotation jointe (texte optionnel)</p>
+          <p className="mb-1.5 text-[11px] text-primary">{t('comment.annotationAttachedHint')}</p>
         )}
         {(hints.references ?? 0) > 0 && (
           <p className="mb-1.5 text-[11px] text-primary">
-            🖼 {hints.references} image{(hints.references ?? 0) > 1 ? 's' : ''} de référence jointe
-            {(hints.references ?? 0) > 1 ? 's' : ''}
+            🖼 {t('comment.referencesAttached', { count: hints.references ?? 0 })}
           </p>
         )}
         {hints.hotspot && <p className="mb-1.5 text-[11px] text-primary">{t('review.hotspotAttached')}</p>}
@@ -271,7 +270,7 @@ export default function CommentsPanel({
             disabled={sending}
             className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
-            {sending ? 'Envoi…' : 'Envoyer'}
+            {sending ? t('common.sending') : t('common.send')}
           </button>
         </div>
       </form>

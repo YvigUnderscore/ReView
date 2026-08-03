@@ -63,7 +63,7 @@ export default function SpatialTransport({
       {trackSwitch}
       <IconButton
         icon={anim.playing ? Pause : Play}
-        label={anim.playing ? 'Pause (espace)' : 'Lecture (espace)'}
+        label={anim.playing ? t('video.pauseKey') : t('video.playKey')}
         bordered
         active={anim.playing}
         disabled={!anim.hasAnimation}
@@ -100,17 +100,17 @@ export default function SpatialTransport({
       >
         <span className="rv-track__rail" />
         <span className="rv-track__fill" style={{ width: `${pct(anim.timeMs)}%` }} />
-        {times.map((t) => (
+        {times.map((keyMs) => (
           <button
-            key={t}
+            key={keyMs}
             type="button"
-            title={`Clé à ${(t / 1000).toFixed(2)} s`}
-            aria-label={`Aller à la clé de ${(t / 1000).toFixed(2)} seconde`}
-            className={`rv-key${Math.abs(t - anim.timeMs) < span / 100 ? ' rv-key--active' : ''}`}
-            style={{ left: `${pct(t)}%` }}
+            title={t('channel.keyAt', { time: (keyMs / 1000).toFixed(2) })}
+            aria-label={t('channel.goToKey', { time: (keyMs / 1000).toFixed(2) })}
+            className={`rv-key${Math.abs(keyMs - anim.timeMs) < span / 100 ? ' rv-key--active' : ''}`}
+            style={{ left: `${pct(keyMs)}%` }}
             onClick={(e) => {
               e.stopPropagation();
-              anim.scrub(t);
+              anim.scrub(keyMs);
             }}
           />
         ))}
@@ -144,7 +144,7 @@ export default function SpatialTransport({
       )}
       <IconButton
         icon={Repeat}
-        label="Lire en boucle"
+        label={t('video.loopAll')}
         bordered
         active={anim.loop}
         onClick={() => anim.setLoop(!anim.loop)}
@@ -167,7 +167,7 @@ export default function SpatialTransport({
       <span className="rv-rule" />
       <Button size="sm" variant="ghost" onClick={onDrawer} title={t('review.curveEditor')}>
         {drawerOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-        Courbes
+        {t('camera.curves')}
       </Button>
     </div>
   );

@@ -11,9 +11,9 @@ describe('cameraBookmarks — logique pure (39.D)', () => {
   it('ajoute la vue avec un libellé auto-numéroté', () => {
     const out = appendBookmark([], cam(1));
     expect(out).toHaveLength(1);
-    expect(out![0]).toEqual({ camera: cam(1), label: 'Vue 1' });
+    expect(out![0]).toEqual({ camera: cam(1), label: 'View 1' });
     const out2 = appendBookmark(out!, cam(2));
-    expect(out2![1].label).toBe('Vue 2');
+    expect(out2![1].label).toBe('View 2');
   });
 
   it('ne mute pas la liste source (immutabilité)', () => {

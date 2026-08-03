@@ -77,7 +77,7 @@ export default function AnnouncementForm({
       toast.success(announcement ? t('admin.announce.updated') : t('admin.announce.created'));
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.save'));
       setBusy(false);
     }
   };
@@ -125,7 +125,7 @@ export default function AnnouncementForm({
             </Select>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="text-muted-foreground">Cible :</span>
+            <span className="text-muted-foreground">{t('announcement.target')}</span>
             {ROLES.map((r) => (
               <label key={r} className="flex items-center gap-1">
                 <input

@@ -74,7 +74,7 @@ export default function TransformOptions({
           <NumberField
             key={axis}
             label={axis}
-            hint={`Position ${axis}`}
+            hint={t('transform.positionAxis', { axis })}
             value={value.position[i]!}
             onChange={setVec('position', i)}
             min={-10000}
@@ -89,7 +89,7 @@ export default function TransformOptions({
           <NumberField
             key={axis}
             label={axis}
-            hint={`Rotation ${axis}`}
+            hint={t('transform.rotationAxis', { axis })}
             value={rotationDeg[i]!}
             onChange={(deg) => {
               const next: [number, number, number] = [...rotationDeg];
@@ -121,7 +121,7 @@ export default function TransformOptions({
       <span className="rv-rule" />
       <NumberField
         label={t('pipeline.step')}
-        hint="Accrochage — 0 = libre"
+        hint={t('transform.snapHint')}
         value={snapValue(
           tool === 'translate' ? s.translationSnap : tool === 'rotate' ? s.rotationSnapDeg : s.scaleSnap,
         )}

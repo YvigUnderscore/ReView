@@ -119,18 +119,25 @@ export default function VersionTimelineItem({
                 {version.reviewStatus && <ReviewDecisionBadge status={version.reviewStatus} />}
                 <span className="truncate text-xs text-muted-foreground">
                   {version.author?.name ? `${version.author.name} · ` : ''}
-                  {timeAgo(version.createdAt)} · {version._count.media} média
-                  {version._count.media > 1 ? 's' : ''}
+                  {timeAgo(version.createdAt)} · {t('reviews.count', { count: version._count.media })}
                 </span>
               </button>
               <div className="flex shrink-0 items-center gap-1.5">
                 {liveSession && (
                   <button
                     onClick={() => navigate(`${reviewPath({ id: liveSession.mediaId! })}?live=1`)}
-                    title={`Review live en cours${liveSession.pilot ? ` — pilotée par ${liveSession.pilot.displayName}` : ''} (${liveSession.participantCount} participant${liveSession.participantCount > 1 ? 's' : ''}). Cliquer pour rejoindre.`}
+                    title={
+                      (liveSession.pilot
+                        ? t('live.runningWithPilot', { pilot: liveSession.pilot.displayName })
+                        : t('live.running')) +
+                      ` ${t('live.participants', { count: liveSession.participantCount })} ${t(
+                        'live.clickToJoin',
+                      )}`
+                    }
                     className="flex items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent2 hover:bg-accent2/20"
                   >
-                    <Radio size={12} className="animate-pulse" /> LIVE · {liveSession.participantCount}
+                    <Radio size={12} className="animate-pulse" /> {t('live.badge')} ·{' '}
+                    {liveSession.participantCount}
                   </button>
                 )}
                 {canCreate && (
@@ -140,7 +147,7 @@ export default function VersionTimelineItem({
                 )}
                 {canPublish && !version.published && (
                   <Button size="sm" variant="outline" onClick={() => onPublishVersion(version.id)}>
-                    Publier
+                    {t('common.publish')}
                   </Button>
                 )}
                 {canCreate && (

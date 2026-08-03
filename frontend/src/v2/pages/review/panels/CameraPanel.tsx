@@ -94,11 +94,11 @@ export default function CameraPanel({
         <div className="flex gap-1.5">
           <Button size="sm" variant="outline" className="flex-1" onClick={onFrame}>
             <Frame size={13} />
-            Cadrer
+            {t('camera.frameSelection')}
           </Button>
           <Button size="sm" variant="outline" className="flex-1" onClick={onHome}>
             <Home size={13} />
-            Origine
+            {t('camera.home')}
           </Button>
         </div>
         <Row label={t('viewer.format')} hint={t('viewer.format.hint')}>
@@ -123,7 +123,7 @@ export default function CameraPanel({
               <button
                 key={v.id}
                 type="button"
-                title={`${v.label} — touche ${i + 1}`}
+                title={t('camera.bookmarkKey', { label: v.label, key: i + 1 })}
                 onClick={() => bookmarks.onGo(v.id)}
                 className={`flex min-h-[26px] items-center gap-1 rounded border px-1.5 text-[0.625rem] transition-colors ${
                   bookmarks.activeId === v.id

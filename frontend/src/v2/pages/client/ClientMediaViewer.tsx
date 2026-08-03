@@ -78,7 +78,7 @@ export default function ClientMediaViewer({
       toast.success(t('comments.sent'));
       qc.invalidateQueries({ queryKey: ['client-share', token, 'media', media.id, 'comments'] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -123,7 +123,7 @@ export default function ClientMediaViewer({
           )}
           {!playable && (
             <p className="p-10 text-center text-sm text-muted-foreground">
-              Aperçu non disponible pour ce type de média ({media.kind}).
+              {t('client.noPreview', { kind: media.kind })}
               <br />
               {t('client.contactStudio')}
             </p>
@@ -175,7 +175,7 @@ export default function ClientMediaViewer({
               required
             />
             <Button type="submit" size="sm" disabled={busy} className="w-full">
-              <Send size={13} className="mr-1" /> Envoyer
+              <Send size={13} className="mr-1" /> {t('common.send')}
             </Button>
           </form>
         )}

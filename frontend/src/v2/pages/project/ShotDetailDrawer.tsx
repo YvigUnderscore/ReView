@@ -82,7 +82,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
     if (!task.name.trim()) return;
     try {
       await api.post('/api/tasks', { shotId, ...task });
-      toast.success(`Tâche « ${task.name} » créée`);
+      toast.success(tr('task.created', { name: task.name }));
       setTask({ name: '', type: 'ANIMATION' });
       qc.invalidateQueries({ queryKey: qk.tasks(shotId) });
     } catch (err) {
@@ -103,14 +103,14 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
       }
       toast.info(tr('task.noMediaToReview'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : tr('common.error.generic'));
     }
   };
 
   return (
     <section>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Tâches {tasks && <span className="normal-case">· {tasks.length}</span>}
+        {tr('task.plural')} {tasks && <span className="normal-case">· {tasks.length}</span>}
       </h3>
       {tasks === null ? (
         <SkeletonRows count={2} />
@@ -211,7 +211,7 @@ function ShotAssets({
   const createAndLink = async () => {
     if (!creating.name.trim()) return;
     await api.post(`/api/shots/${shotId}/assets`, { name: creating.name, type: creating.type });
-    toast.success(`Asset « ${creating.name} » créé et rattaché`);
+    toast.success(tr('assets.createdAttached', { name: creating.name }));
     setCreating({ name: '', type: 'CHARACTER' });
     setShowCreate(false);
     await refresh();
@@ -275,7 +275,7 @@ function ShotAssets({
             disabled={!pick}
             className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground disabled:opacity-50"
           >
-            Rattacher
+            {tr('assets.attach')}
           </button>
           <button
             onClick={() => setShowCreate((s) => !s)}

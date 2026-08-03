@@ -81,7 +81,7 @@ export default function ProjectDefaultLightingSection({
                 onChange={(e) => set({ exposure: Number(e.target.value) || 0 })}
               />
             </Field>
-            <Field label="Rotation°">
+            <Field label={t('hdri.rotationDeg')}>
               <input
                 type="number"
                 min={-180}

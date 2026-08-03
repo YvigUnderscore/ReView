@@ -101,7 +101,7 @@ export default function Model3DPanels({
         onFrame={m.frameView}
         onHome={m.homeView}
         bookmarks={{
-          items: saved.map((b, i) => ({ id: String(i), label: b.label ?? `Vue ${i + 1}` })),
+          items: saved.map((b, i) => ({ id: String(i), label: b.label ?? t('camera.viewN', { n: i + 1 }) })),
           activeId: null,
           onGo: (id) => bookmarks.recall(Number(id)),
           onSave: () => void bookmarks.add?.(),
@@ -260,7 +260,7 @@ export default function Model3DPanels({
               onClick={() => {
                 void m.captureThumbnail().then((url) => {
                   if (!url) {
-                    toast.error('Capture impossible');
+                    toast.error(t('common.error.capture'));
                     return;
                   }
                   const a = document.createElement('a');

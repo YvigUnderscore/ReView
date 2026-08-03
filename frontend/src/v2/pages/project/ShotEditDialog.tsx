@@ -58,7 +58,7 @@ export default function ShotEditDialog({
       toast.success(t('shots.updated'));
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
       setBusy(false);
     }
   };

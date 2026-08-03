@@ -59,7 +59,7 @@ export default function BatchGenerator({
     try {
       await onSubmit(items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -149,7 +149,7 @@ export default function BatchGenerator({
         disabled={busy}
         className="mt-3 flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
       >
-        {busy ? t('setup.submitting') : `Créer ${items.length} élément(s)`}
+        {busy ? t('setup.submitting') : t('batch.createCount', { count: items.length })}
       </button>
     </div>
   );

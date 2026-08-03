@@ -68,7 +68,7 @@ export default function SequencesTab({
       projectId,
       items: rows.map((r) => ({ code: r.code, name: r.name || r.code })),
     });
-    toast.success(`${rows.length} séquence(s) créée(s)`);
+    toast.success(t('sequences.createdCount', { count: rows.length }));
     await reload();
   };
   const confirmDelete = async () => {
@@ -106,7 +106,9 @@ export default function SequencesTab({
           fields={[
             {
               key: 'code',
-              placeholder: `Code (${nomenclature.sequencePrefix}${'0'.repeat(nomenclature.padding)})`,
+              placeholder: t('sequences.codePlaceholder', {
+                example: `${nomenclature.sequencePrefix}${'0'.repeat(nomenclature.padding)}`,
+              }),
               className: 'w-32',
             },
             { key: 'name', placeholder: t('sequences.name.placeholder'), className: 'flex-1' },
@@ -191,7 +193,7 @@ export default function SequencesTab({
       <ConfirmDialog
         open={!!deleting}
         title={t('sequences.delete.title')}
-        message={<>La séquence « {deleting?.code} » et ses shots seront déplacés dans la corbeille.</>}
+        message={t('sequences.delete.message', { code: deleting?.code ?? '' })}
         confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={confirmDelete}
@@ -239,7 +241,7 @@ function SequenceDetail({ sequenceId }: { sequenceId: number }) {
       </div>
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Assets de la séquence ({data.assets.length})
+          {t('sequences.assets', { count: data.assets.length })}
         </div>
         {data.assets.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t('sequences.noAsset')}</p>

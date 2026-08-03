@@ -44,7 +44,8 @@ export default function ImageComparePane({
     <div className="flex min-w-0 flex-1 flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs">
         <span className="truncate text-muted-foreground">
-          Comparaison : <span className="text-foreground">{data?.media.originalName ?? '…'}</span>
+          {t('review.compare.label')}{' '}
+          <span className="text-foreground">{data?.media.originalName ?? '…'}</span>
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -52,7 +53,7 @@ export default function ImageComparePane({
             title={t('review.compare.toWipe')}
             className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
           >
-            <SplitSquareHorizontal size={13} /> Wipe
+            <SplitSquareHorizontal size={13} /> {t('compare.wipe')}
           </button>
           {onDiff && (
             <button
@@ -60,7 +61,7 @@ export default function ImageComparePane({
               title={t('review.compare.toDiff')}
               className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
             >
-              <Diff size={13} /> Diff
+              <Diff size={13} /> {t('review.compare.diff')}
             </button>
           )}
           <button

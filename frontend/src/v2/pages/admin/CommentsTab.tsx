@@ -55,7 +55,7 @@ export default function CommentsTab() {
   const toggleResolved = async (c: AdminCommentRow) => {
     try {
       await api.patch(`/api/comments/${c.id}`, { isResolved: !c.isResolved });
-      toast.success(c.isResolved ? 'Commentaire rouvert' : t('comment.resolved'));
+      toast.success(c.isResolved ? t('comments.reopened') : t('comment.resolved'));
       invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('comment.updateFailed'));
@@ -69,7 +69,7 @@ export default function CommentsTab() {
       setDeleting(null);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 
@@ -128,11 +128,11 @@ export default function CommentsTab() {
           }}
         >
           <option value="">{t('comments.filter.resolution')}</option>
-          <option value="false">Ouverts</option>
+          <option value="false">{t('comments.filter.open')}</option>
           <option value="true">{t('comments.filter.resolved')}</option>
         </Select>
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">{total} commentaire(s) au total.</p>
+      <p className="mb-2 text-xs text-muted-foreground">{t('comments.total', { count: total })}</p>
       <div className="space-y-1.5">
         {items.map((c) => (
           <div key={c.id} className="rounded-md border border-border bg-card px-3 py-2 text-sm">
@@ -147,7 +147,9 @@ export default function CommentsTab() {
               ) : (
                 <Badge variant="secondary">{t('comments.guest')}</Badge>
               )}
-              <span className="font-medium">{c.author?.displayName ?? c.guestName ?? 'Anonyme'}</span>
+              <span className="font-medium">
+                {c.author?.displayName ?? c.guestName ?? t('comments.anonymous')}
+              </span>
               {c.parentId != null && <Badge variant="secondary">{t('comments.reply')}</Badge>}
               {c.isResolved && (
                 <Badge variant="secondary">
@@ -158,7 +160,7 @@ export default function CommentsTab() {
               <span className="shrink-0 text-xs text-muted-foreground">{fmtDateTime(c.createdAt)}</span>
               <button
                 onClick={() => toggleResolved(c)}
-                title={c.isResolved ? 'Rouvrir' : t('comment.markResolvedShort')}
+                title={c.isResolved ? t('comment.reopen') : t('comment.markResolvedShort')}
                 className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 {c.isResolved ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}
@@ -180,8 +182,8 @@ export default function CommentsTab() {
                 <ExternalLink size={11} /> {c.media.originalName}
               </Link>
               <span>· {c.media.kind}</span>
-              {c.timestamp != null && <span>· à {c.timestamp.toFixed(2)} s</span>}
-              {c.replyCount > 0 && <span>· {c.replyCount} réponse(s)</span>}
+              {c.timestamp != null && <span>· {t('comments.atTime', { time: c.timestamp.toFixed(2) })}</span>}
+              {c.replyCount > 0 && <span>· {t('comments.replyCount', { count: c.replyCount })}</span>}
             </div>
           </div>
         ))}
@@ -196,9 +198,7 @@ export default function CommentsTab() {
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             {t('common.previous')}
           </Button>
-          <span>
-            Page {page} / {pages}
-          </span>
+          <span>{t('common.pagination', { page, pages })}</span>
           <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
             {t('common.next')}
           </Button>
@@ -208,10 +208,9 @@ export default function CommentsTab() {
         open={!!deleting}
         title={t('comments.delete.title')}
         message={
-          <>
-            Le commentaire {deleting?.replyCount ? `et ses ${deleting.replyCount} réponse(s) ` : ''}sera
-            définitivement supprimé.
-          </>
+          deleting?.replyCount
+            ? t('comments.delete.messageWithReplies', { count: deleting.replyCount })
+            : t('comments.delete.message')
         }
         confirmLabel={t('common.delete')}
         danger

@@ -95,20 +95,24 @@ export default function VideoTransport({
   return (
     // Ligne de transport du chrome : mêmes styles que les viewers spatiaux.
     <div className="rv-transport">
-      <button onClick={onPlayPause} title={playing ? 'Pause (espace)' : 'Lecture (espace)'} className={btn}>
+      <button
+        onClick={onPlayPause}
+        title={playing ? t('video.pauseKey') : t('video.playKey')}
+        className={btn}
+      >
         {playing ? <Pause size={16} /> : <Play size={16} />}
       </button>
       <div className="flex items-center gap-0.5">
         <button onClick={() => onStep(-1)} title={t('review.prevFrame')} className={btn}>
           <ChevronLeft size={16} />
         </button>
-        <button onClick={() => onStep(1)} title="Frame suivante (→)" className={btn}>
+        <button onClick={() => onStep(1)} title={t('video.nextFrameKey')} className={btn}>
           <ChevronRight size={16} />
         </button>
       </div>
       <button
         onClick={onToggleLoopAll}
-        title={loopAll ? t('video.loopOn') : 'Lire en boucle'}
+        title={loopAll ? t('video.loopOn') : t('video.loopAll')}
         className={
           loopAll
             ? 'flex h-7 w-7 items-center justify-center rounded bg-primary/15 text-primary hover:bg-primary/25'
@@ -135,7 +139,7 @@ export default function VideoTransport({
                 : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
             }`}
           >
-            <Repeat size={13} /> Boucle I/O
+            <Repeat size={13} /> {t('video.loopIo')}
           </button>
           <button
             onClick={onClearLoop}
@@ -185,7 +189,7 @@ export default function VideoTransport({
                 </option>
               ))
             ) : (
-              <option value={0}>Originale</option>
+              <option value={0}>{t('video.qualityOriginal')}</option>
             )}
           </select>
         </label>
@@ -199,7 +203,7 @@ export default function VideoTransport({
           step={0.05}
           value={muted ? 0 : volume}
           onChange={(e) => onVolume(Number(e.target.value))}
-          title="Volume"
+          title={t('video.volume')}
           className="h-1 w-20 accent-primary"
         />
         <button

@@ -60,7 +60,7 @@ export default function ProjectsPage() {
   const restore = async (p: Project) => {
     try {
       await api.patch(`/api/projects/${p.id}`, { status: 'ACTIVE' });
-      toast.success(`Projet « ${p.name} » désarchivé`);
+      toast.success(t('projects.unarchived', { name: p.name }));
       invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -70,7 +70,7 @@ export default function ProjectsPage() {
   const confirmBulkDelete = async () => {
     try {
       const { count } = await bulkDelete('projects', sel.ids);
-      toast.success(`${count} projet(s) déplacé(s) dans la corbeille`);
+      toast.success(t('projects.trashedCount', { count }));
       sel.clear();
       setBulkDeleting(false);
       invalidate();
@@ -84,7 +84,7 @@ export default function ProjectsPage() {
     if (!name.trim()) return;
     try {
       await api.post('/api/projects', { name });
-      toast.success(`Projet « ${name} » créé`);
+      toast.success(t('projects.created', { name }));
       setName('');
       setCreating(false);
       invalidate();

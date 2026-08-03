@@ -38,8 +38,8 @@ function sheetRows(t: Tr, data: MediaResp, kind: MediaKind, fps: number): InfoRo
         value: `${data.trim.inFrame} → ${data.trim.outFrame}`,
       });
   }
-  if (data.projectColor?.display) rows.push({ label: 'Display', value: data.projectColor.display });
-  if (data.projectColor?.view) rows.push({ label: 'View', value: data.projectColor.view });
+  if (data.projectColor?.display) rows.push({ label: t('ocio.display'), value: data.projectColor.display });
+  if (data.projectColor?.view) rows.push({ label: t('ocio.view'), value: data.projectColor.view });
   rows.push({ label: t('common.status'), value: data.media.status });
   return rows;
 }
@@ -76,7 +76,7 @@ export default function MediaPanels({
   if (panel === 'playback' || panel === 'view')
     return (
       <Group title={kind === 'VIDEO' ? t('tokens.read') : t('display.title')}>
-        <Row label="Cadence" hint={t('review.playbackRate')}>
+        <Row label={t('review.frameRate')} hint={t('review.playbackRate')}>
           <span className="font-mono text-xs">{fps} fps</span>
         </Row>
         <span className="rv-optbar__hint whitespace-normal">
@@ -88,10 +88,10 @@ export default function MediaPanels({
   if (panel === 'image')
     return (
       <Group title={t('viewer.color.title')}>
-        <Row label="Display">
+        <Row label={t('ocio.display')}>
           <Badge variant="secondary">{data.projectColor?.display ?? 'sRGB'}</Badge>
         </Row>
-        <Row label="View">
+        <Row label={t('ocio.view')}>
           <Badge variant="secondary">{data.projectColor?.view ?? t('common.none')}</Badge>
         </Row>
         <span className="rv-optbar__hint whitespace-normal">{t('review.projectOcio')}</span>
@@ -105,13 +105,11 @@ export default function MediaPanels({
       <>
         <Group title="Versions">
           <Row label="A">
-            <Badge variant="default">Courante</Badge>
+            <Badge variant="default">{t('version.current')}</Badge>
           </Row>
           <Row label="B">
             {compare.ids.length ? (
-              <Badge variant="secondary">
-                {compare.ids.length} média{compare.ids.length > 1 ? 's' : ''}
-              </Badge>
+              <Badge variant="secondary">{t('reviews.count', { count: compare.ids.length })}</Badge>
             ) : (
               <Badge variant="muted">{t('review.none')}</Badge>
             )}
@@ -119,7 +117,7 @@ export default function MediaPanels({
           <span className="rv-optbar__hint whitespace-normal">{t('review.compareInHeader')}</span>
         </Group>
         {compare.ids.length > 0 && (
-          <Group title="Mode">
+          <Group title={t('common.mode')}>
             <SegmentedControl
               label={t('review.compare.mode')}
               items={compare_modes(t)}
@@ -152,7 +150,7 @@ export default function MediaPanels({
             {onContactSheet && (
               <Button size="sm" variant="ghost" onClick={onContactSheet}>
                 <LayoutGrid size={13} />
-                Planche contact
+                {t('ctx.contactSheet')}
               </Button>
             )}
             {kind === 'VIDEO' && data.trim && (

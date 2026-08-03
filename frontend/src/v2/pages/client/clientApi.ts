@@ -7,6 +7,8 @@
  * sessionStorage par token.
  */
 
+import { t } from '../../i18n';
+
 const authKey = (token: string) => `share-auth:${token}`;
 
 export const getShareAuth = (token: string): string | null => sessionStorage.getItem(authKey(token));
@@ -33,7 +35,7 @@ async function request<T>(token: string, method: string, path: string, body?: un
   });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new ClientApiError(data.error ?? `Erreur ${res.status}`, res.status);
+    throw new ClientApiError(data.error ?? t('common.error.http', { status: res.status }), res.status);
   }
   return (await res.json()) as T;
 }

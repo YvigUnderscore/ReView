@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { t } from '../v2/i18n';
 import { api } from './apiClient';
 
 export interface CommentAttachment {
@@ -45,7 +46,7 @@ export async function uploadCommentAttachments(files: File[]): Promise<CommentAt
       contentType: file.type,
     });
     const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-    if (!put.ok) throw new Error(`Échec de l’upload de ${file.name}`);
+    if (!put.ok) throw new Error(t('uploads.failedFor', { name: file.name }));
     out.push({ key, name: file.name, contentType: file.type });
   }
   return out;

@@ -6,6 +6,7 @@ import { AnnotationCanvas, type Shape } from '../../components/AnnotationCanvas'
 import { userColor } from '../../lib/userColor';
 import type { ReviewComment } from '../../types/api';
 import { splitAnnotationParts } from './reviewTypes';
+import { useT } from '../../i18n';
 
 /**
  * Annotations sur plage in→out (34.A) : un commentaire posé avec une boucle I/O active
@@ -67,6 +68,7 @@ export function RangeSegments({
   selectedId: number | null;
   onSelectComment: (c: ReviewComment) => void;
 }) {
+  const t = useT();
   const ranged = useMemo(() => rangedOf(comments), [comments]);
   if (duration <= 0 || ranged.length === 0) return null;
   return (
@@ -90,7 +92,10 @@ export function RangeSegments({
               background: color,
               boxShadow: `-2px 0 0 ${color}, 2px 0 0 ${color}`, // poignées aux extrémités
             }}
-            title={`Plage annotée — ${c.author?.displayName ?? c.author?.name ?? 'Inconnu'} : ${c.content.slice(0, 60)}`}
+            title={t('comment.rangeAnnotation', {
+              name: c.author?.displayName ?? c.author?.name ?? t('common.unknown'),
+              content: c.content.slice(0, 60),
+            })}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();

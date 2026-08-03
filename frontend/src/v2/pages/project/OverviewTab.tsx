@@ -54,7 +54,7 @@ export default function OverviewTab({
 
   return (
     <div>
-      <p className="mb-4 text-sm text-muted-foreground">Tableau de bord du projet « {name} ».</p>
+      <p className="mb-4 text-sm text-muted-foreground">{t('overview.projectDashboard', { name })}</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label={t('sequences.title')} value={counts.sequences} onClick={() => onGo('sequences')} />
         <StatCard label={t('shots.title')} value={counts.shots} onClick={() => onGo('shots')} />
@@ -80,7 +80,7 @@ export default function OverviewTab({
               <Link
                 key={m.id}
                 to={reviewPath(m)}
-                title={`Ouvrir la review : ${m.originalName}`}
+                title={t('review.openNamed', { name: m.originalName })}
                 className="group overflow-hidden rounded-md border border-border bg-card transition-colors hover:border-primary"
               >
                 <div className="relative aspect-video bg-black/40">

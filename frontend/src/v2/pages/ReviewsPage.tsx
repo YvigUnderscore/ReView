@@ -76,7 +76,7 @@ export default function ReviewsPage() {
   const confirmBulkDelete = async () => {
     try {
       const { count } = await bulkDelete('media', sel.ids);
-      toast.success(`${count} média(s) déplacé(s) dans la corbeille`);
+      toast.success(t('reviews.trashed', { count }));
       sel.clear();
       setBulkDeleting(false);
       refresh();

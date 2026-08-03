@@ -151,10 +151,13 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
                     {liveOf(p.id) && (
                       <button
                         onClick={() => void playFirst(p, true)}
-                        title={`Review live en cours (${liveOf(p.id)!.participantCount} participant${liveOf(p.id)!.participantCount > 1 ? 's' : ''}). Cliquer pour rejoindre.`}
+                        title={`${t('live.running')} ${t('live.participants', {
+                          count: liveOf(p.id)!.participantCount,
+                        })} ${t('live.clickToJoin')}`}
                         className="mr-3 flex shrink-0 items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent2 hover:bg-accent2/20"
                       >
-                        <Radio size={12} className="animate-pulse" /> LIVE · {liveOf(p.id)!.participantCount}
+                        <Radio size={12} className="animate-pulse" /> {t('live.badge')} ·{' '}
+                        {liveOf(p.id)!.participantCount}
                       </button>
                     )}
                   </div>
@@ -170,7 +173,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
                 {canEdit(p) && (
                   <>
                     <ContextMenuItem onClick={() => (setRenaming(p), setNameDraft(p.name))}>
-                      <Pencil size={14} /> Renommer…
+                      <Pencil size={14} /> {t('common.renameEllipsis')}
                     </ContextMenuItem>
                     <ContextMenuItem danger onClick={() => setDeleting(p)}>
                       <Trash2 size={14} /> {t('common.deleteEllipsis')}
@@ -217,9 +220,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
       <ConfirmDialog
         open={deleting !== null}
         title={t('playlists.delete.title')}
-        message={
-          <>« {deleting?.name} » sera supprimée. Les versions qu’elle référence ne sont pas affectées.</>
-        }
+        message={t('playlists.delete.message', { name: deleting?.name ?? '' })}
         confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}

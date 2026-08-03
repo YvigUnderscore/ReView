@@ -138,10 +138,13 @@ export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: L
           )}
 
           <div className="absolute right-3 top-3 flex items-center gap-1">
-            <ToolButton title="Zoom −" onClick={() => setZoom((z) => clampZoom(z - ZOOM_STEP))}>
+            <ToolButton
+              title={t('lightbox.zoomOut')}
+              onClick={() => setZoom((z) => clampZoom(z - ZOOM_STEP))}
+            >
               <ZoomOut size={18} />
             </ToolButton>
-            <ToolButton title="Zoom +" onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}>
+            <ToolButton title={t('lightbox.zoomIn')} onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}>
               <ZoomIn size={18} />
             </ToolButton>
             <ToolButton title={t('common.reset')} onClick={reset}>

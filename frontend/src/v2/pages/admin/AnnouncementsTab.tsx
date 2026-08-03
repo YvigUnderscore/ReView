@@ -41,7 +41,7 @@ export default function AnnouncementsTab() {
       setDeleting(null);
       invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Suppression impossible');
+      toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
   };
 
@@ -75,8 +75,8 @@ export default function AnnouncementsTab() {
               </div>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">{a.body}</p>
               <p className="mt-0.5 text-[10px] text-muted-foreground">
-                {a.frequency} · {a.roles.length ? a.roles.join(', ') : t('admin.announce.everyRole')} · lue
-                par {a._count.reads}
+                {a.frequency} · {a.roles.length ? a.roles.join(', ') : t('admin.announce.everyRole')} ·{' '}
+                {t('announcement.readBy', { count: a._count.reads })}
               </p>
             </div>
             <div className="flex shrink-0 gap-1">
@@ -121,7 +121,7 @@ export default function AnnouncementsTab() {
       <ConfirmDialog
         open={!!deleting}
         title={t('admin.announce.deleteQ')}
-        message={<>« {deleting?.title} » sera définitivement supprimée.</>}
+        message={t('announcement.delete.message', { title: deleting?.title ?? '' })}
         confirmLabel={t('common.delete')}
         danger
         onConfirm={confirmDelete}

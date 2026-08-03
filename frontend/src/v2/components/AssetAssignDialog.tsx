@@ -74,7 +74,7 @@ export default function AssetAssignDialog({
       onSaved?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -109,7 +109,7 @@ export default function AssetAssignDialog({
     >
       <DialogContent className="flex max-h-[80vh] max-w-lg flex-col p-0">
         <div className="border-b border-border px-4 py-3">
-          <DialogTitle className="text-sm">Assigner « {assetName} »</DialogTitle>
+          <DialogTitle className="text-sm">{t('asset.assignTitle', { name: assetName })}</DialogTitle>
         </div>
         {(error ?? loadError?.message) && (
           <p className="px-4 pt-3 text-xs text-destructive">{error ?? loadError?.message}</p>

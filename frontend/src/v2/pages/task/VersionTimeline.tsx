@@ -115,9 +115,7 @@ export default function VersionTimeline({
       <ConfirmDialog
         open={!!delVersion}
         title={t('version.delete.title')}
-        message={
-          <>La version « {delVersion?.name} » et ses médias seront déplacés dans la corbeille du projet.</>
-        }
+        message={t('version.delete.message', { name: delVersion?.name ?? '' })}
         confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={() => {
@@ -129,7 +127,7 @@ export default function VersionTimeline({
       <ConfirmDialog
         open={!!delMedia}
         title={t('media.delete.title')}
-        message={<>« {delMedia?.media.originalName} » sera déplacé dans la corbeille du projet.</>}
+        message={t('media.delete.message', { name: delMedia?.media.originalName ?? '' })}
         confirmLabel={t('common.moveToTrash')}
         danger
         onConfirm={() => {

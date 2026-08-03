@@ -123,18 +123,18 @@ export default function VersionsTab() {
           ))}
         </Select>
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">{total} version(s) au total.</p>
+      <p className="mb-2 text-xs text-muted-foreground">{t('versions.total', { count: total })}</p>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="bg-card text-left text-xs text-muted-foreground">
             <tr>
               <th className="px-3 py-2">Version</th>
-              <th className="px-3 py-2">Localisation</th>
-              <th className="px-3 py-2">Projet</th>
+              <th className="px-3 py-2">{t('versions.location')}</th>
+              <th className="px-3 py-2">{t('common.project')}</th>
               <th className="px-3 py-2">{t('versions.decision')}</th>
-              <th className="px-3 py-2">Publication</th>
+              <th className="px-3 py-2">{t('versions.publicationCol')}</th>
               <th className="px-3 py-2">{t('trash.group.media')}</th>
-              <th className="px-3 py-2">Auteur</th>
+              <th className="px-3 py-2">{t('common.author')}</th>
               <th className="px-3 py-2">{t('stats.created')}</th>
             </tr>
           </thead>
@@ -190,9 +190,7 @@ export default function VersionsTab() {
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             {t('common.previous')}
           </Button>
-          <span>
-            Page {page} / {pages}
-          </span>
+          <span>{t('common.pagination', { page, pages })}</span>
           <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
             {t('common.next')}
           </Button>

@@ -133,7 +133,12 @@ export default function EntityCard({
   const menuActions = [...favAction, ...(contextActions ?? [])];
   const favStar =
     favorite && isFav ? (
-      <Star size={13} className="shrink-0 text-warning" fill="currentColor" aria-label="Favori" />
+      <Star
+        size={13}
+        className="shrink-0 text-warning"
+        fill="currentColor"
+        aria-label={t('favorites.pinned')}
+      />
     ) : null;
 
   const wrap = (inner: ReactNode) => {

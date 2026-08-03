@@ -34,7 +34,7 @@ export default function TwoFaSection() {
       setQr(await QRCode.toDataURL(otpauth, { margin: 1, width: 180 }));
       setManualSecret(secret);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -70,7 +70,7 @@ export default function TwoFaSection() {
       if (user) setUser({ ...user, twoFaEnabled: false } as AuthUser);
       toast.success(t('twofa.disabled'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -84,7 +84,7 @@ export default function TwoFaSection() {
         ) : (
           <ShieldOff size={15} className="text-muted-foreground" />
         )}
-        Vérification en deux étapes (2FA)
+        {t('twofa.sectionTitle')}
       </h2>
 
       {backupCodes && (
@@ -115,7 +115,7 @@ export default function TwoFaSection() {
             <div className="min-w-0 space-y-2">
               {manualSecret && (
                 <p className="break-all text-xs text-muted-foreground">
-                  Saisie manuelle : <code>{manualSecret}</code>
+                  {t('twofa.manualEntry')} <code>{manualSecret}</code>
                 </p>
               )}
               <Input

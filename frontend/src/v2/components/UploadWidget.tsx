@@ -11,7 +11,7 @@ function statusLabel(u: UploadItem, t: Tr): string {
     case 'pending':
       return 'En attente…';
     case 'uploading':
-      return `Envoi ${u.progress}%`;
+      return t('uploads.sending', { pct: u.progress });
     case 'finalizing':
       return 'Validation…';
     case 'processing':
@@ -38,7 +38,7 @@ export default function UploadWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 rounded-lg border border-border bg-card shadow-lg">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-sm font-medium">Transferts ({uploads.length})</span>
+        <span className="text-sm font-medium">{t('uploads.title', { count: uploads.length })}</span>
         <button onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">
           {t('mode.clean')}
         </button>

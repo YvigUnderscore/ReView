@@ -87,14 +87,14 @@ export default function MediaOptions({
         <>
           {drawing && (
             <>
-              <span className="rv-row__label">Encre</span>
+              <span className="rv-row__label">{t('draw.ink')}</span>
               <span className="flex gap-1">
                 {INK.map((c) => (
                   <button
                     key={c}
                     type="button"
-                    title={`Encre ${c}`}
-                    aria-label={`Encre ${c}`}
+                    title={t('draw.inkColor', { color: c })}
+                    aria-label={t('draw.inkColor', { color: c })}
                     aria-pressed={ann.color.toLowerCase() === c.toLowerCase()}
                     onClick={() => ann.setColor(c)}
                     className={`h-5 w-5 rounded-full border-2 ${
@@ -109,7 +109,7 @@ export default function MediaOptions({
                   type="color"
                   value={ann.color}
                   onChange={(e) => ann.setColor(e.target.value)}
-                  title="Autre couleur"
+                  title={t('draw.otherInk')}
                   aria-label={t('draw.otherInk')}
                   className="h-5 w-5 cursor-pointer rounded-full border border-border bg-transparent p-0"
                 />
@@ -161,7 +161,7 @@ export default function MediaOptions({
           />
           <span className="rv-optbar__hint">
             {ann.annot.length > 0
-              ? `${ann.annot.length} forme${ann.annot.length > 1 ? 's' : ''} jointe${ann.annot.length > 1 ? 's' : ''} au commentaire.`
+              ? t('draw.shapesAttached', { count: ann.annot.length })
               : t('draw.goesWithComment')}
           </span>
         </>

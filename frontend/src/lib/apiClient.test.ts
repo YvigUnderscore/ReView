@@ -56,7 +56,7 @@ describe('api', () => {
 
   it('erreur HTTP sans corps JSON : message générique avec le statut', async () => {
     mockFetch.mockResolvedValue(new Response('boom', { status: 500 }));
-    await expect(api.get('/x')).rejects.toThrow('Erreur 500');
+    await expect(api.get('/x')).rejects.toThrow('Error 500');
   });
 
   it('204 No Content : ne tente pas de parser du JSON', async () => {

@@ -65,7 +65,7 @@ export default function SplatOptions({
       <CommitGroup
         dirty={presentation.dirty}
         saving={presentation.busy}
-        label="Publier"
+        label={t('common.publish')}
         hint={t('review.staging.unsaved')}
         onSave={presentation.onSave}
       />
@@ -90,14 +90,14 @@ export default function SplatOptions({
 
       {id === 'paint' && (
         <>
-          <span className="rv-row__label">Encre</span>
+          <span className="rv-row__label">{t('draw.ink')}</span>
           <span className="flex gap-1">
             {INK.map((c) => (
               <button
                 key={c}
                 type="button"
-                title={`Encre ${c}`}
-                aria-label={`Encre ${c}`}
+                title={t('draw.inkColor', { color: c })}
+                aria-label={t('draw.inkColor', { color: c })}
                 aria-pressed={paint.color === c}
                 onClick={() => paint.setColor(c)}
                 className={`h-5 w-5 rounded-full border-2 ${
@@ -133,7 +133,7 @@ export default function SplatOptions({
           />
           <span className="rv-optbar__hint">
             {paint.pendingCount > 0
-              ? `${paint.pendingCount} trait${paint.pendingCount > 1 ? 's' : ''} partiront avec le commentaire.`
+              ? t('draw.pendingStrokes', { count: paint.pendingCount })
               : t('draw.strokesGoWithComment')}
           </span>
         </>
@@ -147,7 +147,7 @@ export default function SplatOptions({
         <>
           {id === 'sel-brush' && (
             <NumberField
-              label="Rayon"
+              label={t('splat.brushRadius')}
               value={editor.brushRadius}
               onChange={editor.setBrushRadius}
               min={8}
@@ -156,10 +156,10 @@ export default function SplatOptions({
               unit="px"
             />
           )}
-          <span className="rv-optbar__hint">Maj ajoute · Alt retire</span>
+          <span className="rv-optbar__hint">{t('splat.brushModifiers')}</span>
           <span className="rv-rule" />
           <Badge variant={selectedCount ? 'default' : 'muted'}>
-            {selectedCount.toLocaleString(intlLocale())} sélectionnés
+            {t('splat.selectedCount', { value: selectedCount.toLocaleString(intlLocale()) })}
           </Badge>
           <IconButton
             icon={X}
@@ -174,7 +174,7 @@ export default function SplatOptions({
           </Button>
           {editor.deletedCount > 0 && (
             <span className="rv-optbar__hint">
-              {editor.deletedCount.toLocaleString(intlLocale())} masqués · non destructif
+              {t('splat.maskedCount', { value: editor.deletedCount.toLocaleString(intlLocale()) })}
             </span>
           )}
         </>

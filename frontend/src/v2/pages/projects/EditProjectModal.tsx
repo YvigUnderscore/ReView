@@ -47,7 +47,7 @@ export default function EditProjectModal({
       toast.success(t('projects.updated'));
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur');
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
 
@@ -68,7 +68,7 @@ export default function EditProjectModal({
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div className="space-y-1">
-            <Label>Description</Label>
+            <Label>{t('common.description')}</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="space-y-1">

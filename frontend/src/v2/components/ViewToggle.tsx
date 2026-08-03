@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useT } from '../i18n';
 import { LayoutGrid, List } from 'lucide-react';
 import { useViewPref, type ViewMode } from '../stores/useViewPref';
 
@@ -36,6 +37,7 @@ function ModeButton({
 }
 
 export default function ViewToggle({ contextKey }: { contextKey: string }) {
+  const t = useT();
   const mode = useViewPref(
     (s) => s.modes[contextKey] ?? (localStorage.getItem('review:view:' + contextKey) as ViewMode) ?? 'cards',
   );
@@ -46,13 +48,13 @@ export default function ViewToggle({ contextKey }: { contextKey: string }) {
       <ModeButton
         active={mode === 'cards'}
         icon={<LayoutGrid size={16} />}
-        label="Vue cartes"
+        label={t('view.cards')}
         onClick={() => set(contextKey, 'cards')}
       />
       <ModeButton
         active={mode === 'compact'}
         icon={<List size={16} />}
-        label="Vue compacte"
+        label={t('view.compact')}
         onClick={() => set(contextKey, 'compact')}
       />
     </div>

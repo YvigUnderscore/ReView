@@ -63,7 +63,7 @@ function LogoPanel() {
       invalidate();
       toast.success(t('distribution.logoUpdated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -76,7 +76,7 @@ function LogoPanel() {
       invalidate();
       toast.success(t('distribution.logoDeleted'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -127,7 +127,7 @@ function WatermarkPanel() {
   const [draft, setDraft] = useState<WatermarkConfig | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft(data);
-  if (!draft) return <Panel title="Watermark spectateur">…</Panel>;
+  if (!draft) return <Panel title={t('dist.watermarkTitle')}>…</Panel>;
 
   const set = (patch: Partial<WatermarkConfig>) => setDraft((d) => d && { ...d, ...patch });
 
@@ -139,14 +139,14 @@ function WatermarkPanel() {
       qc.invalidateQueries({ queryKey: qk.admin('watermark') });
       toast.success(t('distribution.watermarkSaved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Panel title="Watermark spectateur">
+    <Panel title={t('dist.watermarkTitle')}>
       <p className="mb-3 text-xs text-muted-foreground">{t('dist.watermarkHint')}</p>
       <div className="space-y-2.5">
         <label className="flex items-center gap-2 text-sm">

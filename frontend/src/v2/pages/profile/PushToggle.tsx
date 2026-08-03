@@ -36,7 +36,7 @@ export default function PushToggle() {
         toast.success(t('push.enabled'));
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setBusy(false);
     }

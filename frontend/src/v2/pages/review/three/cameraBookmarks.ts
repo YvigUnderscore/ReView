@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { t } from '../../../i18n';
 import type { CameraBookmark, SplatCamera } from '../reviewTypes';
 
 /** Nombre maximal de bookmarks — aligné sur les raccourcis clavier 1-9. */
@@ -13,7 +14,7 @@ export const MAX_BOOKMARKS = 9;
  */
 export function appendBookmark(list: CameraBookmark[], camera: SplatCamera): CameraBookmark[] | null {
   if (list.length >= MAX_BOOKMARKS) return null;
-  return [...list, { camera, label: `Vue ${list.length + 1}` }];
+  return [...list, { camera, label: t('camera.viewN', { n: list.length + 1 }) }];
 }
 
 /** Retire le bookmark d'indice `index` (hors bornes → liste inchangée). */

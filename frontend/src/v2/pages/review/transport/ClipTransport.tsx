@@ -30,7 +30,7 @@ export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState
         <>
           <IconButton
             icon={m.playing ? Pause : Play}
-            label={m.playing ? 'Pause (espace)' : 'Lecture (espace)'}
+            label={m.playing ? t('video.pauseKey') : t('video.playKey')}
             bordered
             active={m.playing}
             onClick={m.playing ? m.pause : m.play}
@@ -63,7 +63,7 @@ export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState
           />
           <IconButton
             icon={Repeat}
-            label="Lire en boucle"
+            label={t('video.loopAll')}
             bordered
             active={m.loop}
             onClick={() => m.setLoop(!m.loop)}

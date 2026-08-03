@@ -52,7 +52,7 @@ export default function ProjectSettingsTab({
       onStartFrameChange(n);
       setMsg(t('project.startFrameSaved'));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
+      setError(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setSavingFrame(false);
     }
@@ -72,7 +72,7 @@ export default function ProjectSettingsTab({
       setDraft(saved);
       setMsg(t('project.settingsSaved'));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
+      setError(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setSavingSettings(false);
     }

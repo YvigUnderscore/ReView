@@ -34,7 +34,7 @@ function AggBars({
           <div className="mb-0.5 flex items-center justify-between text-xs">
             <span className="min-w-0 truncate">{e.labelKey ? t(e.labelKey) : e.key}</span>
             <span className="shrink-0 text-muted-foreground">
-              {e.count} obj. · {fmtBytes(e.bytes)} ({e.pct}%)
+              {t('storage.objShort', { count: e.count })} · {fmtBytes(e.bytes)} ({e.pct}%)
             </span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
@@ -63,7 +63,7 @@ export default function StorageTab() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          Scan du bucket effectué le {fmtDateTime(r.generatedAt)} — {r.totalObjects} objets.
+          {t('storage.scannedAt', { date: fmtDateTime(r.generatedAt), count: r.totalObjects })}
         </p>
         <Button variant="outline" size="sm" disabled={reportQ.isFetching} onClick={() => reportQ.refetch()}>
           <RefreshCw size={13} className={reportQ.isFetching ? 'animate-spin' : ''} /> Re-scanner
@@ -71,12 +71,12 @@ export default function StorageTab() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label="Occupation totale" value={fmtBytes(r.totalBytes)} />
-        <Metric label="Objets" value={r.totalObjects} />
+        <Metric label={t('storage.totalUsage')} value={fmtBytes(r.totalBytes)} />
+        <Metric label={t('storage.objects')} value={r.totalObjects} />
         <Metric
-          label="Originaux"
+          label={t('storage.originals')}
           value={fmtBytes(r.categories.originals?.bytes ?? 0)}
-          sub={`${r.categories.originals?.count ?? 0} objets`}
+          sub={t('storage.objectsCount', { count: r.categories.originals?.count ?? 0 })}
         />
         <Metric
           label={t('storage.derived')}
@@ -115,13 +115,13 @@ export default function StorageTab() {
                   <span className="font-medium">{p.slug}</span>
                 )}
                 <span className="ml-1 text-xs text-muted-foreground">projects/{p.slug}/</span>
-                {p.deleted && <span className="ml-1 text-xs text-destructive">(corbeille)</span>}
+                {p.deleted && <span className="ml-1 text-xs text-destructive">{t('common.inTrash')}</span>}
                 {!p.projectId && (
-                  <span className="ml-1 text-xs text-destructive">(projet inconnu — orphelin ?)</span>
+                  <span className="ml-1 text-xs text-destructive">{t('storage.orphanProject')}</span>
                 )}
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">
-                {p.objects} obj. · {fmtBytes(p.bytes)}
+                {t('storage.objShort', { count: p.objects })} · {fmtBytes(p.bytes)}
               </span>
             </div>
           ))}

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { SdfVolumeData } from '../../../reviewTypes';
+import { t } from '../../../../../i18n';
 import type { SplatSceneHandle } from '../../useSplat';
 import { hideSplats } from '../operations/deleteSplats';
 import { applyVolumeData, createVolume, type VolumeRuntime } from '../volumes/cropVolume';
@@ -32,7 +33,7 @@ export async function applySavedVolumes(
 /** Télécharge et décode le masque de suppression (bitset binaire → indices masqués). */
 export async function fetchMaskIndices(url: string): Promise<number[]> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Masque splat indisponible (${res.status})`);
+  if (!res.ok) throw new Error(t('splat.maskUnavailable', { status: res.status }));
   return decodeMask(new Uint8Array(await res.arrayBuffer()));
 }
 

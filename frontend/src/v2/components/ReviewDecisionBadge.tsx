@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { reviewStatusStyle } from './reviewDecision.helpers';
+import { useT } from '../i18n';
 import type { ReviewStatus } from '../types/api';
 
 /**
@@ -15,9 +16,10 @@ export default function ReviewDecisionBadge({
   status: Pick<ReviewStatus, 'name' | 'color'>;
   title?: string;
 }) {
+  const t = useT();
   return (
     <span
-      title={title ?? `Décision : ${status.name}`}
+      title={title ?? t('decision.badge', { status: status.name })}
       className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium"
       style={reviewStatusStyle(status.color)}
     >

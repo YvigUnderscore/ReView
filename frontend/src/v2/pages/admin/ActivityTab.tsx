@@ -86,9 +86,7 @@ export default function ActivityTab() {
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             {t('common.previous')}
           </Button>
-          <span className="text-muted-foreground">
-            Page {page} / {maxPage}
-          </span>
+          <span className="text-muted-foreground">{t('common.pagination', { page, pages: maxPage })}</span>
           <Button
             variant="outline"
             size="sm"
