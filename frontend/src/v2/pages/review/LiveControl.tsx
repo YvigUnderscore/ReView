@@ -99,7 +99,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
               </ContextMenuSub>
               <ContextMenuSub>
                 <ContextMenuSubTrigger>
-                  <Zap size={14} /> Co-pilotes
+                  <Zap size={14} /> {t('live.coHosts')}
                 </ContextMenuSubTrigger>
                 <ContextMenuSubContent>
                   {others.map((p) => {

@@ -88,7 +88,7 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
         />
         <Kpi
           label={tr('stats.avgDelay')}
-          value={t.avgReviewDays === null ? '—' : `${t.avgReviewDays} j`}
+          value={t.avgReviewDays === null ? '—' : tr('stats.days', { count: t.avgReviewDays })}
           icon={<Clock size={13} className="text-info" />}
         />
         <Kpi
@@ -156,7 +156,7 @@ export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectS
                       {s.openNotes > 0 ? <span className="text-warning">{s.openNotes}</span> : '—'}
                     </td>
                     <td className="py-1.5 text-right tabular-nums">
-                      {s.reviewDays === null ? '—' : `${s.reviewDays} j`}
+                      {s.reviewDays === null ? '—' : tr('stats.days', { count: s.reviewDays })}
                     </td>
                   </tr>
                 ))}

@@ -172,7 +172,7 @@ export default function WebhooksPanel() {
                 checked={h.active}
                 onChange={() => toggle(h)}
               />
-              actif
+              {t('common.activeLower')}
             </label>
             <Button variant="ghost" size="sm" title={t('webhooks.testDelivery')} onClick={() => test(h)}>
               <Send size={14} />

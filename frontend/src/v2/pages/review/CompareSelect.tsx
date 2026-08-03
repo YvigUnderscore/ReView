@@ -106,7 +106,7 @@ export default function CompareSelect({
     compareIds.length === 0
       ? 'Comparer…'
       : compareIds.length === 1
-        ? `vs ${others.find((v) => checked(v.id))?.name ?? '…'}`
+        ? t('compare.vs', { name: others.find((v) => checked(v.id))?.name ?? '…' })
         : t('compare.grid', { count: compareIds.length + 1 });
 
   return (

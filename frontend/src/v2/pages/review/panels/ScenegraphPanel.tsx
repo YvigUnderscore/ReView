@@ -83,7 +83,7 @@ function PrimRow({
                 title={sets.map((s) => s.name).join(', ')}
                 className="shrink-0 rounded bg-secondary px-1 text-[9px] text-secondary-foreground"
               >
-                var
+                {t('prim.variantShort')}
               </span>
             )}
             <span className="flex-1" />

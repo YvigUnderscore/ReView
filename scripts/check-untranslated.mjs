@@ -164,6 +164,10 @@ const ALLOWED = new Set(
     '%',
     '°',
     'mm',
+    'm',
+    'p',
+    'kbps',
+    'o',
     'x',
     '×',
     // touches et symboles d'interface
@@ -249,6 +253,10 @@ const isUtilityClasses = (text) => {
 
 const isIdentifierLike = (text) => SKIP.some((re) => re.test(text)) || isUtilityClasses(text);
 
+/** Même filtre, sans les deux règles qui confondraient un mot ordinaire avec un identifiant. */
+const IDENTIFIER_ONLY = [/^[a-z0-9]+([-_:][a-z0-9]+)+$/i, /^[a-z][a-zA-Z0-9]*$/];
+const PROSE_SKIP = SKIP.filter((re) => !IDENTIFIER_ONLY.some((id) => id.source === re.source));
+
 function isAllowed(text) {
   const clean = text.replace(/[\p{P}\p{S}\p{N}]/gu, ' ').trim();
   if (!clean) return true;
@@ -306,15 +314,22 @@ function scan(file) {
     file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const found = [];
-  const push = (text) => {
+  /**
+   * `prose` lève les deux règles qui ne valent que pour du code : « un seul mot en
+   * minuscules » et « kebab-case ». Un fragment détaché par une espace (`${n} objets`) ou
+   * un texte JSX (`Re-scanner`) est de la prose, quoi qu'il ressemble à un identifiant.
+   */
+  const push = (text, prose = false) => {
     const clean = text.split(/\s+/).join(' ').trim();
-    if (!clean || isIdentifierLike(clean) || isAllowed(clean)) return;
+    if (!clean || isAllowed(clean)) return;
+    if (isUtilityClasses(clean)) return;
+    if (prose ? PROSE_SKIP.some((re) => re.test(clean)) : isIdentifierLike(clean)) return;
     if (!found.includes(clean)) found.push(clean);
   };
 
   const visit = (node) => {
     if (ts.isJsxText(node)) {
-      if (!insideCode(node, src)) push(node.text);
+      if (!insideCode(node, src)) push(node.text, true);
     } else if (ts.isJsxAttribute(node) && VISIBLE_PROPS.has(node.name.getText(src))) {
       const value = literalOf(node.initializer);
       if (value) push(value);
@@ -332,8 +347,10 @@ function scan(file) {
       push(node.text);
     } else if (ts.isTemplateExpression(node) && !inTechnicalContext(node, src)) {
       // Chaque fragment séparément : `${n} job(s) purgé(s)` n'a de sens qu'en morceaux.
-      push(node.head.text);
-      for (const span of node.templateSpans) push(span.literal.text);
+      // Une espace en bord signe la prose autour de l'interpolation.
+      const detached = (t) => /^\s|\s$/.test(t);
+      push(node.head.text, detached(node.head.text));
+      for (const span of node.templateSpans) push(span.literal.text, detached(span.literal.text));
     }
     ts.forEachChild(node, visit);
   };

@@ -129,7 +129,11 @@ export default function UserDetailTab() {
         <Metric
           label={t('storage.title')}
           value={fmtBytes(user.storageUsed)}
-          sub={user.storageLimit ? `quota ${fmtBytes(user.storageLimit)}` : t('common.noQuota')}
+          sub={
+            user.storageLimit
+              ? t('storage.quotaOf', { size: fmtBytes(user.storageLimit) })
+              : t('common.noQuota')
+          }
         />
         <Metric label={t('userDetail.uploadedMedia')} value={counts.media} />
         <Metric label={t('userDetail.createdVersions')} value={counts.versions} />

@@ -69,7 +69,7 @@ export default function AnnouncementsTab() {
                 <span className={`rounded px-1.5 py-0.5 text-[10px] ${TYPE_BADGE[a.type]}`}>{a.type}</span>
                 {!a.active && (
                   <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                    inactive
+                    {t('common.inactive')}
                   </span>
                 )}
               </div>

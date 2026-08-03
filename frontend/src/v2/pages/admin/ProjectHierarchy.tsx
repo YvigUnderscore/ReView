@@ -20,7 +20,7 @@ function SettingsChip({ effective, override }: { effective: PipelineSettings; ov
     <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
       {pipelineLabel(effective)}
       {override ? (
-        <Badge variant="secondary">override</Badge>
+        <Badge variant="secondary">{t('pipeline.override')}</Badge>
       ) : (
         <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
           {t('common.inherited')}

@@ -45,7 +45,7 @@ export default function ProjectAdminDetailTab() {
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold">{project.name}</h2>
             <Badge variant="secondary">{PROJECT_STATUS_LABELS[project.status]}</Badge>
-            {project.deletedAt && <Badge variant="secondary">corbeille</Badge>}
+            {project.deletedAt && <Badge variant="secondary">{t('common.trash')}</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">
             {project.slug} · {t('projectAdmin.createdOn', { date: fmtDateTime(project.createdAt) })} ·{' '}
@@ -68,7 +68,9 @@ export default function ProjectAdminDetailTab() {
           label={t('storage.title')}
           value={fmtBytes(project.usage)}
           sub={
-            project.quota != null ? `quota ${fmtBytes(project.quota)} (${pct ?? 0}%)` : t('common.noQuota')
+            project.quota != null
+              ? t('storage.quotaUsage', { size: fmtBytes(project.quota), pct: pct ?? 0 })
+              : t('common.noQuota')
           }
         />
         <Metric label="Versions" value={stats.versions} to={`/admin/versions?projectId=${project.id}`} />

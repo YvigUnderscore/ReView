@@ -57,7 +57,7 @@ export default function CommentAttachmentList({
           className="flex h-20 w-20 flex-col items-center justify-center rounded border border-border bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <span className="text-sm font-semibold">+{imageAtts.length - 2}</span>
-          <span className="text-[10px]">images</span>
+          <span className="text-[10px]">{t('board.images')}</span>
         </button>
       )}
       {/* Notes vocales (32.F) : lecteur audio inline */}

@@ -66,7 +66,7 @@ export default function StorageTab() {
           {t('storage.scannedAt', { date: fmtDateTime(r.generatedAt), count: r.totalObjects })}
         </p>
         <Button variant="outline" size="sm" disabled={reportQ.isFetching} onClick={() => reportQ.refetch()}>
-          <RefreshCw size={13} className={reportQ.isFetching ? 'animate-spin' : ''} /> Re-scanner
+          <RefreshCw size={13} className={reportQ.isFetching ? 'animate-spin' : ''} /> {t('common.rescan')}
         </Button>
       </div>
 
@@ -81,7 +81,7 @@ export default function StorageTab() {
         <Metric
           label={t('storage.derived')}
           value={fmtBytes(r.categories.derived?.bytes ?? 0)}
-          sub={`${r.categories.derived?.count ?? 0} objets`}
+          sub={t('storage.objectsCount', { count: r.categories.derived?.count ?? 0 })}
         />
       </div>
 

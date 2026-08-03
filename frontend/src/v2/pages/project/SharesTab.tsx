@@ -87,7 +87,8 @@ export default function SharesTab({ projectId }: { projectId: number }) {
                 <span className="flex items-center gap-1">
                   <Eye size={12} />
                   {l.viewCount}
-                  {l.maxViews != null ? ` / ${l.maxViews}` : ''} vue{l.viewCount > 1 ? 's' : ''}
+                  {l.maxViews != null ? ` / ${l.maxViews}` : ''}{' '}
+                  {t('shares.viewCount', { count: l.viewCount })}
                 </span>
                 {l.expiresAt && <span>{t('shares.expiresOn', { date: fmtDate(l.expiresAt) ?? '' })}</span>}
                 {l.lastViewedAt && (

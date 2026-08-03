@@ -35,5 +35,5 @@ export function quotaPct(usage: number, quota: number | null): number | null {
 
 /** Libellé compact d'un pipeline effectif : « 1920×1080 · 24 ips ». */
 export function pipelineLabel(p: PipelineSettings): string {
-  return `${p.resolution.width}×${p.resolution.height} · ${p.framerate} ips`;
+  return `${p.resolution.width}×${p.resolution.height} · ${p.framerate} fps`;
 }

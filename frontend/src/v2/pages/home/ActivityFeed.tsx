@@ -40,7 +40,7 @@ export default function ActivityFeed({ items }: { items: DashboardActivityItem[]
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     {it.type === 'media' ? t('task.published') : t('activity.newVersion')}
-                    {it.author && ` par ${it.author}`} · {timeAgo(it.at)}
+                    {it.author && ` ${t('activity.by', { name: it.author })}`} · {timeAgo(it.at)}
                   </span>
                 </span>
               </>

@@ -86,12 +86,15 @@ for (const locale of locales) {
       written += 1;
       continue;
     }
-    // À la suite des clés de même préfixe, sinon en fin de catalogue.
+    // À la suite des clés de même préfixe, sinon en fin de catalogue. Une entrée dont la
+    // valeur s'étale sur plusieurs lignes (`"k": {` … `},`) impose de viser sa fermeture :
+    // insérer juste après l'accolade ouvrante casserait le JSON.
     const prefix = `  "${key.split('.')[0]}.`;
     let at = -1;
     lines.forEach((l, i) => {
       if (l.startsWith(prefix)) at = i;
     });
+    while (at >= 0 && !/[,}]\s*$/.test(lines[at])) at += 1;
     if (at < 0) {
       // En fin de fichier : l'ancienne dernière entrée prend sa virgule, la nouvelle non.
       at = lines.reduce((acc, l, i) => (l.startsWith('  "') || l.trim() === '},' ? i : acc), -1);

@@ -139,8 +139,8 @@ export default function CommentsPanel({
           {t('comments.title')}{' '}
           {comments && (
             <span className="font-normal text-muted-foreground">
-              · {comments.filter((c) => !c.isResolved).length} ouvert
-              {comments.filter((c) => !c.isResolved).length > 1 ? 's' : ''} / {comments.length}
+              · {t('comments.openCount', { count: comments.filter((c) => !c.isResolved).length })} /{' '}
+              {comments.length}
             </span>
           )}
         </span>

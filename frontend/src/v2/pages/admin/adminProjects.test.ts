@@ -44,7 +44,7 @@ describe('adminProjects — quotaPct', () => {
 describe('adminProjects — pipelineLabel', () => {
   it('formate résolution et framerate', () => {
     expect(pipelineLabel({ resolution: { width: 1920, height: 1080 }, framerate: 24 })).toBe(
-      '1920×1080 · 24 ips',
+      '1920×1080 · 24 fps',
     );
   });
 });

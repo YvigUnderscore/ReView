@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Project, Role } from '../../types/api';
-import { intlLocale, type MessageKey, type Tr } from '../../i18n';
+import { intlLocale, t, type MessageKey, type Tr } from '../../i18n';
 
 /** Types et helpers partagés par les sections de l'administration (10.C6). */
 export interface Stats {
@@ -150,5 +150,9 @@ export const fmtDuration = (s: number) => {
   const d = Math.floor(s / 86400),
     h = Math.floor((s % 86400) / 3600),
     m = Math.floor((s % 3600) / 60);
-  return d > 0 ? `${d}j ${h}h` : h > 0 ? `${h}h ${m}min` : `${m}min`;
+  return d > 0
+    ? `${d}${t('common.dayShort')} ${h}${t('common.hourShort')}`
+    : h > 0
+      ? `${h}${t('common.hourShort')} ${m}${t('common.minShort')}`
+      : `${m}${t('common.minShort')}`;
 };
