@@ -233,7 +233,7 @@ export function useSplatEditor(
     selection.markDirty(hidden.indices);
     splat.reflectHidden(hidden.indices, true); // reflet immédiat en mode points
     history.push({
-      label: 'Suppression de splats',
+      label: t('splat.undoDelete'),
       undo: () => {
         restoreSplats(handle, hidden);
         for (const i of hidden.indices) deleted.delete(i);
@@ -249,7 +249,7 @@ export function useSplatEditor(
         splat.reflectHidden(hidden.indices, true);
       },
     });
-  }, [splat, selection, history]);
+  }, [splat, selection, history, t]);
 
   /** F : cadre la sélection courante (sinon tout le splat) en gardant la direction de vue. */
   const frameSelection = useCallback(() => {

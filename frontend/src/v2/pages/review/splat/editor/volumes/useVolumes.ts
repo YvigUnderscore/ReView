@@ -7,6 +7,7 @@ import type { SdfVolumeData } from '../../../reviewTypes';
 import type { SplatViewer } from '../../useSplat';
 import { readMeshTransform } from '../../../viewer/gizmos/meshTransform';
 import type { EditOp } from '../operations/history';
+import { t } from '../../../../../i18n';
 import {
   applyVolumeData,
   createVolume,
@@ -79,7 +80,7 @@ export function useVolumes(
       setActive({ id, sdf: runtime.sdf });
       onChanged();
       pushHistory({
-        label: 'Ajout de volume',
+        label: t('splat.undoVolumeAdd'),
         undo: () => {
           detachVolume(runtime);
           setVolumes((v) => v.filter((x) => x.id !== id));
@@ -109,7 +110,7 @@ export function useVolumes(
       setActive((a) => (a?.id === id ? null : a));
       onChanged();
       pushHistory({
-        label: 'Retrait de volume',
+        label: t('splat.undoVolumeRemove'),
         undo: () => {
           reattachVolume(handle, runtime);
           setVolumes((v) => [...v, item]);

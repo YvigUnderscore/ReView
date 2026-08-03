@@ -94,7 +94,11 @@ for (const locale of locales) {
     lines.forEach((l, i) => {
       if (l.startsWith(prefix)) at = i;
     });
-    while (at >= 0 && !/[,}]\s*$/.test(lines[at])) at += 1;
+    // `lines[at]` peut être l'accolade ouvrante d'une valeur plurielle : on avance jusqu'à
+    // sa fermeture (` },`), sans jamais dépasser l'accolade finale du document.
+    while (at >= 0 && at < lines.length - 1 && /^\s*("[^"]+":\s*)?\{$/.test(lines[at])) {
+      while (at < lines.length - 1 && !/^\s+\}/.test(lines[at])) at += 1;
+    }
     if (at < 0) {
       // En fin de fichier : l'ancienne dernière entrée prend sa virgule, la nouvelle non.
       at = lines.reduce((acc, l, i) => (l.startsWith('  "') || l.trim() === '},' ? i : acc), -1);

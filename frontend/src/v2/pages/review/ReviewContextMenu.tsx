@@ -86,8 +86,8 @@ export default function ReviewContextMenu({
   const guideItems: Array<{ key: GuideKey; label: string }> = [
     { key: 'thirds', label: t('review.thirds') },
     { key: 'center', label: t('review.guides.center') },
-    { key: 'actionSafe', label: 'Action safe (90 %)' },
-    { key: 'titleSafe', label: 'Title safe (80 %)' },
+    { key: 'actionSafe', label: t('review.guides.actionSafe') },
+    { key: 'titleSafe', label: t('review.guides.titleSafe') },
   ];
   const baseName = data.media.originalName.replace(/\.[^.]+$/, '');
   // « Ajouter à la playlist » depuis la review courante (retours CP-HUMAIN 33).

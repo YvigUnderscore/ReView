@@ -154,13 +154,13 @@ export default function SplatPanels({
   if (panel === 'info') {
     const live: InfoRow[] = stats
       ? [
-          { label: 'Images/s', value: fmt(stats.fps) },
-          { label: 'Splats rendus', value: fmt(stats.activeSplats) },
-          { label: 'Splats totaux', value: fmt(stats.totalSplats) },
+          { label: t('stats.fps'), value: fmt(stats.fps) },
+          { label: t('splat.rendered'), value: fmt(stats.activeSplats) },
+          { label: t('splat.total'), value: fmt(stats.totalSplats) },
           { label: t('review.splat.hidden'), value: fmt(editor.deletedCount) },
-          { label: 'Draw calls', value: fmt(stats.calls) },
+          { label: t('stats.drawCalls'), value: fmt(stats.calls) },
         ]
-      : [{ label: 'Mesure…', value: '—' }];
+      : [{ label: t('stats.measuring'), value: '—' }];
     return (
       <InfoPanel
         live={live}

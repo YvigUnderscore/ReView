@@ -30,9 +30,9 @@ const AXES = [
 ];
 
 const lods = (t: Tr): { value: LodMode; label: string; hint: string }[] => [
-  { value: 'off', label: 'Off', hint: t('scene.lodOff') },
-  { value: 'auto', label: 'Auto', hint: t('scene.lodAuto') },
-  { value: 'on', label: t('viewer.lod.forced'), hint: 'LOD toujours actif' },
+  { value: 'off', label: t('common.off'), hint: t('scene.lodOff') },
+  { value: 'auto', label: t('common.auto'), hint: t('scene.lodAuto') },
+  { value: 'on', label: t('viewer.lod.forced'), hint: t('scene.lodOn') },
   { value: 'streaming', label: t('viewer.lod.stream'), hint: t('scene.progressive') },
 ];
 

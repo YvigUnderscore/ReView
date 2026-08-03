@@ -18,9 +18,9 @@ type Tr = (key: MessageKey) => string;
 
 const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; hint?: string }[] => [
   { key: 'enabled', label: t('burnin.onProxiesShort'), hint: t('burnin.shotVersionTc') },
-  { key: 'showShot', label: t('burnin.shotCode'), hint: 'haut gauche' },
-  { key: 'showVersion', label: t('burnin.versionName'), hint: 'haut droite' },
-  { key: 'showTimecode', label: t('burnin.timecode'), hint: 'bas centre' },
+  { key: 'showShot', label: t('burnin.shotCode'), hint: t('burnin.pos.topLeft') },
+  { key: 'showVersion', label: t('burnin.versionName'), hint: t('burnin.pos.topRight') },
+  { key: 'showTimecode', label: t('burnin.timecode'), hint: t('burnin.pos.bottomCentre') },
   { key: 'showLogo', label: t('burnin.studioLogo'), hint: t('burnin.bottomRight') },
   { key: 'slate', label: t('burnin.slateShort'), hint: t('burnin.slate') },
 ];

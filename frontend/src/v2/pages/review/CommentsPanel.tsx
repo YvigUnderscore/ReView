@@ -24,7 +24,7 @@ type Tr = (key: MessageKey) => string;
 type ResolutionFilter = 'all' | 'open' | 'resolved';
 const filters = (t: Tr): { value: ResolutionFilter; label: string }[] => [
   { value: 'all', label: t('comments.filter.all') },
-  { value: 'open', label: 'Ouverts' },
+  { value: 'open', label: t('comments.filter.open') },
   { value: 'resolved', label: t('comments.filter.resolved') },
 ];
 

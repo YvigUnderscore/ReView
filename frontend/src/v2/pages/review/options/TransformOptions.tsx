@@ -6,13 +6,13 @@ import { SegmentedControl } from '../../../components/ui/segmented-control';
 import type { SplatTransform } from '../reviewTypes';
 import type { GizmoSettings, GizmoTargetKind } from '../viewer/gizmos/gizmoSettings';
 import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
-import { useT } from '../../../i18n';
+import { useT, type Tr } from '../../../i18n';
 
 const AXES = ['X', 'Y', 'Z'] as const;
 
-const SPACES = [
-  { value: 'local' as const, label: 'Local' },
-  { value: 'world' as const, label: 'Monde' },
+const spaces = (t: Tr) => [
+  { value: 'local' as const, label: t('transform.local') },
+  { value: 'world' as const, label: t('transform.world') },
 ];
 
 /** Le pas d'accrochage se saisit dans le même champ que le reste — 0 vaut « libre ». */
@@ -63,7 +63,7 @@ export default function TransformOptions({
       <span className="rv-optbar__name">{target}</span>
       <SegmentedControl
         label={t('review.gizmo.space')}
-        items={SPACES}
+        items={spaces(t)}
         value={s.space}
         onChange={(space) => gizmo.update({ space })}
       />

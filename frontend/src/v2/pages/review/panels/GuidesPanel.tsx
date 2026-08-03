@@ -12,8 +12,8 @@ type Tr = (key: MessageKey) => string;
 const guideRows = (t: Tr): { key: GuideKey; label: string; hint: string }[] => [
   { key: 'thirds', label: t('review.guides.thirds'), hint: t('review.thirds') },
   { key: 'center', label: t('review.guides.center'), hint: t('review.guides.center') },
-  { key: 'actionSafe', label: 'Action safe (90 %)', hint: t('review.guides.actionSafe.hint') },
-  { key: 'titleSafe', label: 'Title safe (80 %)', hint: t('review.guides.titleSafe.hint') },
+  { key: 'actionSafe', label: t('review.guides.actionSafe'), hint: t('review.guides.actionSafe.hint') },
+  { key: 'titleSafe', label: t('review.guides.titleSafe'), hint: t('review.guides.titleSafe.hint') },
 ];
 
 /**

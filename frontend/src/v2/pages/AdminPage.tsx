@@ -168,13 +168,13 @@ const sections = (t: Tr) =>
     {
       key: 'api',
       group: 'communications',
-      label: 'API & Webhooks',
+      label: t('admin.tab.api'),
       icon: KeyRound,
       Component: ApiWebhooksTab,
     },
-    { key: 'jobs', group: 'maintenance', label: 'Jobs', icon: ListChecks, Component: JobsTab },
+    { key: 'jobs', group: 'maintenance', label: t('admin.tab.jobs'), icon: ListChecks, Component: JobsTab },
     { key: 'trash', group: 'maintenance', label: t('admin.tab.trash'), icon: Trash2, Component: TrashTab },
-    { key: 'audit', group: 'maintenance', label: 'Audit', icon: History, Component: AuditTab },
+    { key: 'audit', group: 'maintenance', label: t('admin.tab.audit'), icon: History, Component: AuditTab },
     {
       key: 'media-access',
       group: 'maintenance',

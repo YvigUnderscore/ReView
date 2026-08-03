@@ -11,13 +11,14 @@ import type { ReviewTool } from '../chrome/tools';
 import { DEFAULT_TRANSFORM } from '../reviewTypes';
 import type { Model3DThreeState } from '../three/useModel3DThree';
 import type { useEditHistory } from '../splat/editor/operations/history';
-import { useT } from '../../../i18n';
+import { useT, type Tr } from '../../../i18n';
 
-const ROTATIONS = [
-  { key: 'pitch', label: 'X°', hint: 'Rotation X (pitch)' },
-  { key: 'yaw', label: 'Y°', hint: 'Rotation Y (yaw)' },
-  { key: 'roll', label: 'Z°', hint: 'Rotation Z (roll)' },
-] as const;
+const rotations = (t: Tr) =>
+  [
+    { key: 'pitch', label: 'X°', hint: t('transform.rotationPitch') },
+    { key: 'yaw', label: 'Y°', hint: t('transform.rotationYaw') },
+    { key: 'roll', label: 'Z°', hint: t('transform.rotationRoll') },
+  ] as const;
 
 /**
  * Barre d'options du viewer 3D : les paramètres du seul outil armé. Remplace
@@ -93,7 +94,7 @@ export default function Model3DOptions({
         <>
           {/* La transformation du modèle est une rotation par angles d'Euler et une échelle
               uniforme : les trois gizmos partagent donc les mêmes champs. */}
-          {ROTATIONS.map((r) => (
+          {rotations(tr).map((r) => (
             <NumberField
               key={r.key}
               label={r.label}

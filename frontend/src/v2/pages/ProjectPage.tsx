@@ -110,7 +110,7 @@ export default function ProjectPage() {
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
-    { key: 'production', label: 'Production', icon: <BarChart3 size={16} /> },
+    { key: 'production', label: t('project.tab.production'), icon: <BarChart3 size={16} /> },
     ...(canManage ? [{ key: 'members', label: t('nav.members'), icon: <Users size={16} /> }] : []),
     ...(canManage ? [{ key: 'shares', label: t('project.tab.shares'), icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),

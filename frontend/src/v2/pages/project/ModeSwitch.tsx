@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useT } from '../../i18n';
+
 export type CreateMode = 'simple' | 'manual' | 'auto';
 
 /** Sélecteur de mode de création (simple / lot manuel / génération auto). */
@@ -11,10 +13,11 @@ export default function ModeSwitch({
   mode: CreateMode;
   setMode: (m: CreateMode) => void;
 }) {
+  const t = useT();
   const opts: { key: CreateMode; label: string }[] = [
-    { key: 'simple', label: 'Simple' },
-    { key: 'manual', label: 'Lot' },
-    { key: 'auto', label: 'Auto' },
+    { key: 'simple', label: t('batch.modeSimple') },
+    { key: 'manual', label: t('batch.modeBatch') },
+    { key: 'auto', label: t('common.auto') },
   ];
   return (
     <div className="flex overflow-hidden rounded-md border border-border text-xs">

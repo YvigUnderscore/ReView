@@ -187,22 +187,22 @@ export default function Model3DPanels({
     const s = inspect.stats;
     const live: InfoRow[] = s
       ? [
-          { label: 'Meshes', value: fmt(s.meshes) },
-          { label: 'Triangles', value: fmt(s.triangles) },
-          { label: 'Sommets', value: fmt(s.vertices) },
+          { label: t('model3d.meshes'), value: fmt(s.meshes) },
+          { label: t('model3d.triangles'), value: fmt(s.triangles) },
+          { label: t('model3d.vertices'), value: fmt(s.vertices) },
           { label: t('viewer.materials'), value: fmt(s.materials.length) },
         ]
-      : [{ label: 'Mesure…', value: '—' }];
+      : [{ label: t('stats.measuring'), value: '—' }];
     const sheet: InfoRow[] = [
       { label: t('review.file'), value: data.media.originalName },
       { label: t('info.uvSets'), value: s?.uvSets.length ? s.uvSets.join(', ') : t('review.none') },
       {
-        label: 'Extensions',
+        label: t('model3d.extensions'),
         value: inspect.extensions.length ? inspect.extensions.join(', ') : t('common.noneFem'),
       },
     ];
     if (data.modelSource?.usd)
-      sheet.push({ label: 'Couche racine USD', value: data.modelSource.usd.rootLayer });
+      sheet.push({ label: t('usd.rootLayer'), value: data.modelSource.usd.rootLayer });
     return (
       <InfoPanel
         live={live}

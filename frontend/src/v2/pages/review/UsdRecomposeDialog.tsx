@@ -34,7 +34,7 @@ type Tr = (key: MessageKey) => string;
 const purposes = (t: Tr): { value: UsdPurpose; label: string; hint: string }[] => [
   { value: 'render', label: t('viewer.render.title'), hint: t('usd.renderGeom') },
   { value: 'proxy', label: 'Proxy', hint: t('usd.proxyGeom') },
-  { value: 'guide', label: 'Guide', hint: t('usd.guideGeom') },
+  { value: 'guide', label: t('usd.purposeGuide'), hint: t('usd.guideGeom') },
 ];
 
 export default function UsdRecomposeDialog({

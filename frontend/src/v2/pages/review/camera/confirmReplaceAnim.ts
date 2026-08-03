@@ -11,6 +11,6 @@ import { t } from '../../../i18n';
 export function confirmReplaceAnim(onConfirm: () => void): void {
   toast(t('camera.replaceAnim'), {
     description: t('camera.presetOverwrites'),
-    action: { label: 'Remplacer', onClick: onConfirm },
+    action: { label: t('common.replace'), onClick: onConfirm },
   });
 }

@@ -169,6 +169,8 @@ const ALLOWED = new Set(
     'kbps',
     'o',
     'x',
+    'y',
+    'z',
     '×',
     // touches et symboles d'interface
     'Ctrl',
@@ -210,6 +212,9 @@ const ALLOWED = new Set(
     'retake',
     'review',
     'reviews',
+    'playlist',
+    'playlists',
+    'wipe',
   ].map((s) => s.toLowerCase()),
 );
 
@@ -331,6 +336,14 @@ function scan(file) {
     if (ts.isJsxText(node)) {
       if (!insideCode(node, src)) push(node.text, true);
     } else if (ts.isJsxAttribute(node) && VISIBLE_PROPS.has(node.name.getText(src))) {
+      const value = literalOf(node.initializer);
+      if (value) push(value);
+    } else if (
+      ts.isPropertyAssignment(node) &&
+      VISIBLE_PROPS.has(node.name.getText(src).replace(/['"]/g, ''))
+    ) {
+      // `const FILTERS = [{ value: 'open', label: 'Ouverts' }]` — une table de libellés est
+      // du texte d'interface, et c'est là qu'il se cache le plus souvent.
       const value = literalOf(node.initializer);
       if (value) push(value);
     } else if (ts.isCallExpression(node) && SPEAKING_CALLS.test(calleeName(node.expression))) {

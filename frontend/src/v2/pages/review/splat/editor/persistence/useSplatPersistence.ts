@@ -60,7 +60,7 @@ export function useSplatPersistence(opts: {
         notifyHiddenChanged(deletedRef.current);
       })
       .catch(() => toast.error(t('splat.maskUnreadable')));
-  }, [enabled, ready, savedMaskUrl, splat, deletedRef, setDeletedCount, notifyHiddenChanged]);
+  }, [enabled, ready, savedMaskUrl, splat, deletedRef, setDeletedCount, notifyHiddenChanged, t]);
 
   // Recharge les transformations de sous-ensembles persistées (une fois) : rejouées sur les
   // données paquées + journal initialisé, pour que les ops suivantes s'y cumulent.
