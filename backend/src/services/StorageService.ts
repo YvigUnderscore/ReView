@@ -122,10 +122,14 @@ class StorageService {
 
   /**
    * URL présignée pour l'upload direct navigateur → MinIO.
+   *
    * Le `Content-Type` vient du client : il est ramené à une valeur inoffensive
    * (cf. `lib/uploadContentType`) car les objets sont servis depuis l'origine de l'app.
-   * La signature porte le type neutralisé — le navigateur ne peut donc pas en imposer
-   * un autre au PUT sans invalider la signature.
+   * ⚠ Ce type n'est **pas** contraignant : le presigner S3 ne signe que `host`
+   * (`X-Amz-SignedHeaders=host`), le navigateur reste libre d'envoyer un autre en-tête.
+   * Le type définitif est arrêté côté serveur par `setObjectContentType` (appelé à la
+   * finalisation), et le rendu actif est de toute façon neutralisé par la CSP `sandbox`
+   * posée sur le chemin de stockage (cf. `nginx/nginx.conf`).
    */
   async getPresignedPutUrl(key: string, contentType: string, ttlSeconds = 900): Promise<string> {
     const cmd = new PutObjectCommand({
@@ -226,6 +230,28 @@ class StorageService {
         Bucket: this.bucket,
         Key: destKey,
         CopySource: `${this.bucket}/${encodeURIComponent(srcKey).replace(/%2F/g, '/')}`,
+      }),
+    );
+  }
+
+  /**
+   * Réécrit le `Content-Type` d'un objet déjà stocké, sans recopier les octets côté client
+   * (`CopyObject` sur lui-même + `MetadataDirective: REPLACE`).
+   *
+   * Indispensable pour l'upload par PUT présigné : le `ContentType` passé à la signature
+   * **ne fait pas partie des en-têtes signés** (`X-Amz-SignedHeaders=host`), le navigateur
+   * peut donc envoyer le type qu'il veut. C'est ici, côté serveur, que le type réellement
+   * stocké est arrêté. Sans objet pour l'upload multipart, dont le type est fixé par
+   * `CreateMultipartUpload` — un appel serveur, lui, autoritatif.
+   */
+  async setObjectContentType(key: string, contentType: string): Promise<void> {
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        CopySource: `${this.bucket}/${encodeURIComponent(key).replace(/%2F/g, '/')}`,
+        ContentType: safeUploadContentType(contentType),
+        MetadataDirective: 'REPLACE',
       }),
     );
   }

@@ -5,7 +5,7 @@ import { Server as SocketServer, type Socket } from 'socket.io';
 import type { Server as HttpServer } from 'node:http';
 import { verifyToken } from '../lib/jwt';
 import { isSessionActive } from '../lib/sessions';
-import { shareState } from '../lib/shareAccess';
+import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { env } from '../config/env';
@@ -107,9 +107,17 @@ export const initSocket = (server: HttpServer): SocketServer => {
     }
 
     // Sinon : token de partage client (ShareLink) — mêmes règles que les routes /api/client
-    // (révocation, expiration ET limite de vues atteinte).
+    // (révocation, expiration ET limite de vues atteinte). Un lien protégé par mot de passe
+    // exige en plus la session de partage émise après déverrouillage : le token seul est
+    // dans l'URL, l'accepter ferait du mot de passe une formalité.
     const share = await prisma.shareLink.findUnique({ where: { token } });
     if (share && shareState(share) === 'ok') {
+      if (share.passwordHash) {
+        const shareAuth = socket.handshake.query?.shareAuth;
+        if (typeof shareAuth !== 'string' || !verifyShareSession(shareAuth, share.id)) {
+          return next(new Error('Authentication error'));
+        }
+      }
       socket.shareProjectId = share.projectId;
       return next();
     }
