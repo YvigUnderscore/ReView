@@ -73,6 +73,12 @@ docker compose exec backend npx prisma migrate deploy
 
 Puis ouvrir `https://review.mystudio.com` → assistant de configuration (studio + compte admin).
 
+> ⚠️ **Terminer l'assistant immédiatement.** Tant qu'aucun studio n'existe, `POST /api/setup`
+> est ouvert : le premier venu peut créer le compte ADMIN. L'assistant se referme
+> définitivement dès la création du studio (et il est limité à 10 requêtes / 15 min / IP).
+> Pour ne prendre aucun risque, faire l'initialisation avant d'ouvrir les ports 80/443 au
+> public, ou depuis un tunnel SSH.
+
 ## 6. Vérifications
 
 - `https://review.mystudio.com/api/health` → `{"status":"ok"}`
@@ -85,6 +91,18 @@ Puis ouvrir `https://review.mystudio.com` → assistant de configuration (studio
   renforcé par IP.
 - Les secrets ne sont jamais commités : `.env` est gitignoré.
 - Sauvegarder régulièrement le volume Postgres et le bucket MinIO.
+- **L'inscription libre est fermée par défaut** (`ALLOW_SELF_REGISTRATION=false`) : les
+  comptes se créent depuis l'administration ou par provisionnement SSO. L'ouvrir expose
+  l'instance à la création de comptes par n'importe qui — et permet de réserver l'email
+  d'un collaborateur avant sa première connexion SSO.
+- **Ne jamais relancer un service de production avec `docker compose up` seul** :
+  `docker-compose.override.yml` (développement) serait auto-chargé, repassant backend et
+  worker en `NODE_ENV=development` — donc sans les garde-fous de `config/env.ts` — et
+  republiant Postgres et Redis. Toujours passer les deux fichiers :
+  `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`.
+- Postgres, Redis, MinIO et Grafana n'écoutent que sur la **boucle locale** hors production
+  (`MINIO_BIND` / `DEV_BIND` / `GRAFANA_BIND` pour exposer sciemment) ; en production, seul
+  nginx publie des ports.
 
 ## Licence — obligations de l'exploitant
 
