@@ -23,6 +23,23 @@ describe('routeLabel', () => {
     expect(__testing.seenRoutes.size).toBe(0);
   });
 
+  // Un 404 n'est pas le seul statut qu'un balayage produit : `/api/media/abc` passe la
+  // validation Zod à l'échec et répond 400. Seule une réponse ABOUTIE enrichit le catalogue.
+  it('n’enrichit le catalogue sur aucun statut d’erreur', () => {
+    for (const status of [400, 401, 403, 404, 422, 500]) {
+      expect(routeLabel(`/api/media/poison-${status}`, status)).toBe('/other');
+    }
+    expect(__testing.seenRoutes.size).toBe(0);
+  });
+
+  // Une route déjà connue garde son étiquette même en erreur : sans cela, on perdrait de vue
+  // le taux d'échec des vraies routes.
+  it('conserve l’étiquette d’une route connue lorsqu’elle échoue', () => {
+    expect(routeLabel('/api/projects', 200)).toBe('/api/projects');
+    expect(routeLabel('/api/projects', 403)).toBe('/api/projects');
+    expect(routeLabel('/api/projects', 500)).toBe('/api/projects');
+  });
+
   it('plafonne le nombre de routes distinctes', () => {
     for (let i = 0; i < __testing.MAX_ROUTE_LABELS + 500; i++) routeLabel(`/api/r${i}`, 200);
     expect(__testing.seenRoutes.size).toBeLessThanOrEqual(__testing.MAX_ROUTE_LABELS);

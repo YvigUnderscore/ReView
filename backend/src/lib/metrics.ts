@@ -49,9 +49,12 @@ export function normalizeRoute(path: string): string {
  * chemins aléatoires fait grossir le registre indéfiniment — épuisement mémoire à distance,
  * sans authentification.
  *
- * Deux garde-fous : les réponses 404 (l'outil de l'attaquant, puisqu'aucune vraie route n'en
- * renvoie) sont agrégées sous `/other` sans jamais enrichir le catalogue ; et le nombre de
- * routes distinctes est plafonné, tout dépassement retombant lui aussi sur `/other`.
+ * Le catalogue ne s'enrichit donc que sur une réponse ABOUTIE (statut < 400) : seule une
+ * vraie route en produit. Un 404 (chemin inexistant) comme un 400 (`/api/media/abc`, dont la
+ * validation rejette le paramètre) sont l'outil du balayage — ils sont agrégés sous `/other`
+ * sans jamais consommer de place. Une fois une route connue, elle garde son étiquette quel
+ * que soit son statut : les taux d'erreur des vraies routes restent donc visibles.
+ * Le nombre de routes distinctes est en outre plafonné, tout dépassement retombant sur `/other`.
  */
 const MAX_ROUTE_LABELS = 300;
 const OTHER_ROUTE = '/other';
@@ -59,9 +62,9 @@ const seenRoutes = new Set<string>();
 
 /** Étiquette de route effectivement utilisée, cardinalité bornée. */
 export function routeLabel(originalUrl: string, statusCode: number): string {
-  if (statusCode === 404) return OTHER_ROUTE;
   const route = normalizeRoute(originalUrl);
   if (seenRoutes.has(route)) return route;
+  if (statusCode >= 400) return OTHER_ROUTE;
   if (seenRoutes.size >= MAX_ROUTE_LABELS) return OTHER_ROUTE;
   seenRoutes.add(route);
   return route;

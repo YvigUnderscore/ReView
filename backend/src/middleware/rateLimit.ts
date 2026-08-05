@@ -42,10 +42,21 @@ export const rateLimit = (options: RateLimitOptions = {}) => {
     const key = keyGenerator(req).slice(0, MAX_KEY_LENGTH);
     const now = Date.now();
 
-    // Filet de sécurité : au-delà du plafond, on repart d'une table vide plutôt que de
-    // laisser la mémoire filer. Un compteur perdu autorise quelques requêtes de plus ;
-    // une table sans borne met le service à terre.
-    if (hits.size >= MAX_TRACKED_KEYS && !hits.has(key)) hits.clear();
+    // Plafond de la table. ⚠ Surtout PAS un `hits.clear()` : la clé de certains limiteurs
+    // incorpore une donnée de requête (`unlock:<ip>:<token>` pour le déverrouillage d'un
+    // partage), donc un seul client peut forger autant de clés qu'il veut. Vider la table
+    // effacerait AUSSI son propre compteur — le garde-fou mémoire deviendrait une remise à
+    // zéro du limiteur, donc un moyen de forcer le mot de passe indéfiniment.
+    // On purge donc les fenêtres expirées, et si cela ne suffit pas on refuse la clé
+    // nouvelle (échec fermé) : les compteurs déjà établis restent intacts.
+    // Le refus est immédiat, sans balayage : purger ici ferait parcourir toute la table à
+    // CHAQUE requête une fois le plafond atteint — l'attaquant transformerait le garde-fou
+    // en amplificateur quadratique. La récupération de place est laissée au balayage
+    // périodique ci-dessus.
+    if (hits.size >= MAX_TRACKED_KEYS && !hits.has(key)) {
+      res.status(429).json(message);
+      return;
+    }
     const data = hits.get(key);
 
     if (!data || now - data.startTime > windowMs) {

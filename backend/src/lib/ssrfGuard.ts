@@ -40,16 +40,83 @@ function isPrivateIPv4(ip: string): boolean {
   return false;
 }
 
-/** Adresse IPv6 hors de l'espace routable public ? (y compris IPv4 mappée) */
+/**
+ * Développe une IPv6 en ses 16 octets, ou `null` si la syntaxe est inexploitable.
+ *
+ * Indispensable : une même adresse s'écrit de plusieurs façons, et un contrôle par préfixe
+ * de chaîne n'en voit qu'une. `::1`, `0:0:0:0:0:0:0:1` et `0000:…:0001` sont la même boucle
+ * locale ; `::ffff:127.0.0.1` s'écrit aussi `0:0:0:0:0:ffff:127.0.0.1`. On normalise donc
+ * avant de décider, plutôt que de comparer des débuts de chaîne.
+ */
+export function expandIPv6(ip: string): Uint8Array | null {
+  const v = ip.toLowerCase().split('%')[0]!; // retire l'identifiant de zone (fe80::1%eth0)
+  const halves = v.split('::');
+  if (halves.length > 2) return null;
+
+  // Une IPv6 peut se terminer par une notation pointée (formes mappées/compatibles IPv4).
+  // `isTail` dit si ce fragment termine l'adresse : la partie pointée n'est légale que là.
+  const parseGroups = (part: string, isTail: boolean): number[] | null => {
+    if (!part) return [];
+    const groups: number[] = [];
+    const items = part.split(':');
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      if (item.includes('.')) {
+        if (!isTail || i !== items.length - 1) return null; // doit clore l'adresse entière
+        const octets = item.split('.').map(Number);
+        if (octets.length !== 4 || octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+        groups.push((octets[0]! << 8) | octets[1]!, (octets[2]! << 8) | octets[3]!);
+        continue;
+      }
+      if (!/^[0-9a-f]{1,4}$/.test(item)) return null;
+      groups.push(parseInt(item, 16));
+    }
+    return groups;
+  };
+
+  const head = parseGroups(halves[0]!, halves.length === 1);
+  const tail = halves.length === 2 ? parseGroups(halves[1]!, true) : [];
+  if (!head || !tail) return null;
+
+  let groups: number[];
+  if (halves.length === 2) {
+    const fill = 8 - head.length - tail.length;
+    if (fill < 0) return null;
+    groups = [...head, ...Array<number>(fill).fill(0), ...tail];
+  } else {
+    groups = head;
+  }
+  if (groups.length !== 8) return null;
+
+  const bytes = new Uint8Array(16);
+  groups.forEach((g, i) => {
+    bytes[i * 2] = (g >> 8) & 0xff;
+    bytes[i * 2 + 1] = g & 0xff;
+  });
+  return bytes;
+}
+
+/** Adresse IPv6 hors de l'espace routable public ? (formes mappées IPv4 comprises) */
 function isPrivateIPv6(ip: string): boolean {
-  const v = ip.toLowerCase().split('%')[0]!;
-  if (v === '::1' || v === '::') return true;
-  // ::ffff:127.0.0.1 — on retombe sur les règles IPv4.
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(v);
-  if (mapped) return isPrivateIPv4(mapped[1]!);
-  if (v.startsWith('fc') || v.startsWith('fd')) return true; // unique-local
-  if (v.startsWith('fe8') || v.startsWith('fe9') || v.startsWith('fea') || v.startsWith('feb')) return true; // link-local
-  if (v.startsWith('ff')) return true; // multicast
+  const b = expandIPv6(ip);
+  if (!b) return true; // syntaxe non comprise : on refuse
+
+  const isZero = (from: number, to: number) => b.slice(from, to).every((x) => x === 0);
+  const dotted = (from: number) => `${b[from]}.${b[from + 1]}.${b[from + 2]}.${b[from + 3]}`;
+
+  // ::  et  ::1  (quelle que soit l'écriture)
+  if (isZero(0, 15) && (b[15] === 0 || b[15] === 1)) return true;
+  // ::ffff:a.b.c.d — IPv4 mappée : les règles IPv4 s'appliquent.
+  if (isZero(0, 10) && b[10] === 0xff && b[11] === 0xff) return isPrivateIPv4(dotted(12));
+  // ::a.b.c.d — IPv4 compatible (obsolète mais toujours résolue).
+  if (isZero(0, 12)) return isPrivateIPv4(dotted(12));
+  // 64:ff9b::/96 — NAT64 : traduit une IPv4, on applique ses règles.
+  if (b[0] === 0x00 && b[1] === 0x64 && b[2] === 0xff && b[3] === 0x9b && isZero(4, 12))
+    return isPrivateIPv4(dotted(12));
+
+  if ((b[0]! & 0xfe) === 0xfc) return true; // fc00::/7 — unique-local
+  if (b[0] === 0xfe && (b[1]! & 0xc0) === 0x80) return true; // fe80::/10 — link-local
+  if (b[0] === 0xff) return true; // ff00::/8 — multicast
   return false;
 }
 

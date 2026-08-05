@@ -47,10 +47,30 @@ describe('rateLimit', () => {
     expect(call(mw, { params: { token: long + 'DIFFERENT' } } as Partial<Request>).passed).toBe(false);
   });
 
-  it('ne laisse pas la table de comptage croître sans fin', () => {
+  // Le remplissage de la table ne doit JAMAIS effacer un compteur déjà établi : la clé de
+  // ce limiteur incorpore une donnée de requête, un même client peut donc forger autant de
+  // clés qu'il veut. Vider la table lui rendrait ses tentatives — le garde-fou mémoire
+  // deviendrait une remise à zéro du limiteur, donc un moyen de forcer un mot de passe.
+  it('ne rend pas ses tentatives à un client qui sature la table', () => {
     const mw = rateLimit({ max: 1, windowMs: 60_000, keyGenerator: (r) => String(r.params?.token) });
-    // Bien au-delà du plafond : le middleware doit rester sain (et borné) sans jamais lever.
-    for (let i = 0; i < 120_000; i++) call(mw, { params: { token: `t${i}` } } as Partial<Request>);
-    expect(call(mw, { params: { token: 'apres-purge' } } as Partial<Request>).passed).toBe(true);
+    const victim = { params: { token: 'cible' } } as Partial<Request>;
+
+    expect(call(mw, victim).passed).toBe(true); // 1re tentative : consommée
+    expect(call(mw, victim).passed).toBe(false); // 2e : bloquée
+
+    // Saturation délibérée de la table avec des clés jetables.
+    for (let i = 0; i < 100_001; i++) call(mw, { params: { token: `t${i}` } } as Partial<Request>);
+
+    // La clé de la cible doit rester bloquée.
+    expect(call(mw, victim).passed).toBe(false);
+  });
+
+  it('reste borné en mémoire, en refusant les clés nouvelles plutôt qu’en vidant la table', () => {
+    const mw = rateLimit({ max: 5, windowMs: 60_000, keyGenerator: (r) => String(r.params?.token) });
+    for (let i = 0; i < 100_001; i++) call(mw, { params: { token: `t${i}` } } as Partial<Request>);
+    // Échec fermé : au plafond, une clé inconnue est refusée (429), pas accueillie.
+    const overflow = call(mw, { params: { token: 'nouvelle' } } as Partial<Request>);
+    expect(overflow.passed).toBe(false);
+    expect(overflow.res.statusCode).toBe(429);
   });
 });
