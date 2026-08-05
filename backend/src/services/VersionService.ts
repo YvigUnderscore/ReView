@@ -123,6 +123,12 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (!manager && !isAuthor) throw forbidden("Modification réservée à l'auteur ou un superviseur");
   if (body.status === VersionStatus.PUBLISHED && !manager)
     throw forbidden('Seul un superviseur/admin peut publier une version');
+  // …et la sortie de l'état publié est tout aussi réservée. Sans cela le verrou n'a qu'un
+  // sens : l'auteur dépublie sa version — la retirant au passage du lien de partage client,
+  // décisions de review comprises — puis la modifie librement, puisque `assertNotPublished`
+  // ne voit plus qu'un brouillon.
+  if (version.published && body.status !== undefined && body.status !== VersionStatus.PUBLISHED && !manager)
+    throw forbidden('Seul un superviseur/admin peut dépublier une version');
   // Verrou de publication (Phase 11) : la transform 3D d'une version publiée est figée.
   if (body.transform !== undefined) assertNotPublished(version);
 

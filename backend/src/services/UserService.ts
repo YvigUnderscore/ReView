@@ -9,7 +9,7 @@ import { storage, StorageService } from './StorageService';
 import { getOnlineUserIds } from './PresenceService';
 import { toPublicUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
-import { revokeAllSessions } from '../lib/sessions';
+import { revokeAllCredentials } from '../lib/sessions';
 import { badRequest, notFound } from '../lib/errors';
 
 /**
@@ -113,7 +113,7 @@ export async function updateMe(userId: number, body: UpdateMeInput, keepSessionI
   // couper les sessions ouvertes ailleurs : sinon un jeton volé survit à la reprise en
   // main du compte. La session courante est conservée pour ne pas déconnecter l'auteur.
   if (body.password !== undefined || email !== undefined) {
-    await revokeAllSessions(userId, keepSessionId);
+    await revokeAllCredentials(userId, keepSessionId);
   }
   return toPublicUser(user);
 }
@@ -213,7 +213,7 @@ export async function updateUser(actorId: number, id: number, body: AdminUpdateU
   // un rôle agit en général sur un compte compromis ou un départ : les jetons déjà émis
   // (qui portent l'ancien rôle) ne doivent pas survivre à l'opération.
   if (body.password !== undefined || email !== undefined || body.role !== undefined) {
-    await revokeAllSessions(id);
+    await revokeAllCredentials(id);
   }
   return toPublicUser(user);
 }

@@ -67,6 +67,20 @@ export async function revokeSession(sid: string, userId?: number): Promise<boole
  * `keepSessionId` épargne une session — celle de l'auteur de l'action, qui n'a pas à être
  * déconnecté pour avoir sécurisé son propre compte.
  */
+export async function revokeAllCredentials(userId: number, keepSessionId?: string): Promise<void> {
+  // Une session n'est pas le seul identifiant du compte : un token d'API `rvk_` authentifie
+  // tout aussi bien, par une table entièrement séparée. Ne révoquer que les sessions
+  // laisserait survivre le jeton qu'un attaquant s'est créé — la reprise en main du compte
+  // (changement de mot de passe, réinitialisation par un admin) serait alors illusoire.
+  await Promise.all([
+    revokeAllSessions(userId, keepSessionId),
+    prisma.apiToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+}
+
 export async function revokeAllSessions(userId: number, keepSessionId?: string): Promise<number> {
   const where = {
     userId,

@@ -402,6 +402,10 @@ export async function publish(user: SessionUser, id: number) {
   if (!media) throw notFound('Média introuvable');
   // Brouillon strictement privé : seul l'uploader voit et publie son média (404 sinon).
   if (media.uploaderId !== user.id) throw notFound('Média introuvable');
+  // Un média encore en UPLOADING n'est jamais passé par `finalize` : ni validation des
+  // magic bytes, ni normalisation du type de contenu, ni antivirus, ni contrôle de la
+  // taille réelle contre les quotas. Le publier ferait servir un contenu jamais vérifié.
+  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload non finalisé', 'NOT_FINALIZED');
   const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (projectId) {
