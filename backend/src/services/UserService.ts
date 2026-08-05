@@ -65,12 +65,17 @@ export async function listUsers() {
   return Promise.all(users.map(async (u) => ({ ...(await toPublicUser(u)), online: online.has(u.id) })));
 }
 
-/** Présence de tous les utilisateurs (tout authentifié). */
+/**
+ * Présence de tous les utilisateurs — accessible à TOUT compte authentifié, y compris un
+ * CLIENT externe. L'email est donc retiré de la réponse : `toPublicUser` recopie l'objet
+ * qu'on lui passe (`...u`), il servait ici à calculer le nom d'affichage et repartait avec.
+ * C'était l'annuaire complet du studio, adresses comprises, offert à n'importe quel invité.
+ */
 export async function listPresence() {
   const users = await prisma.user.findMany({
     select: {
       id: true,
-      email: true,
+      email: true, // nécessaire au repli displayName/initials — retiré de la sortie plus bas
       name: true,
       firstName: true,
       lastName: true,
@@ -82,7 +87,12 @@ export async function listPresence() {
     orderBy: { createdAt: 'asc' },
   });
   const online = new Set(getOnlineUserIds());
-  return Promise.all(users.map(async (u) => ({ ...(await toPublicUser(u)), online: online.has(u.id) })));
+  return Promise.all(
+    users.map(async (u) => {
+      const { email: _email, ...view } = await toPublicUser(u);
+      return { ...view, online: online.has(u.id) };
+    }),
+  );
 }
 
 export interface UpdateMeInput {

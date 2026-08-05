@@ -96,9 +96,20 @@ router.patch(
   },
 );
 
-// GET /api/studio/settings — réglages clé/valeur (admin). `smtp_config` exclu (secret chiffré).
+/**
+ * Réglages qui portent un secret et ne doivent jamais sortir de la base.
+ * La table `Setting` est un fourre-tout clé/valeur : elle mélange des quotas anodins et des
+ * secrets (config SMTP chiffrée, paire de clés VAPID dont la MOITIÉ PRIVÉE signe toutes les
+ * notifications push de l'instance). Une exclusion nommant un seul réglage laissait sortir
+ * tous ceux ajoutés depuis — c'est la liste qui doit être exhaustive, pas la mémoire.
+ */
+const SECRET_SETTING_KEYS = ['smtp_config', 'vapid_keys'];
+
+// GET /api/studio/settings — réglages clé/valeur (admin), secrets exclus.
 router.get('/settings', requireRole(Role.ADMIN), async (_req, res) => {
-  const settings = await prisma.setting.findMany({ where: { key: { not: 'smtp_config' } } });
+  const settings = await prisma.setting.findMany({
+    where: { key: { notIn: SECRET_SETTING_KEYS } },
+  });
   res.json({ settings: Object.fromEntries(settings.map((s) => [s.key, s.value])) });
 });
 
@@ -109,6 +120,11 @@ router.put(
   validate({ body: z.object({ key: z.string().min(1).max(100), value: z.string().max(2000) }) }),
   async (req, res) => {
     const { key, value } = req.body as { key: string; value: string };
+    // Les secrets ont leurs propres routes (chiffrement, génération) : les laisser passer
+    // par cet upsert générique permettrait d'écraser la config SMTP ou la paire VAPID par
+    // du texte arbitraire — et de les relire ensuite sous une clé non filtrée.
+    if (SECRET_SETTING_KEYS.includes(key))
+      throw badRequest('Ce réglage a une route dédiée', 'RESERVED_SETTING');
     const setting = await prisma.setting.upsert({
       where: { key },
       update: { value },

@@ -15,6 +15,20 @@ describe('isCatastrophicPattern', () => {
       expect(isCatastrophicPattern(p), p).toBe(true);
   });
 
+  // Une regex ne sait pas compter les parenthèses : les versions précédentes de ce contrôle
+  // exigeaient un corps de groupe sans parenthèse et laissaient donc passer l'imbrication.
+  // `((a+))+` reste exponentiel — 30 caractères suffisent à bloquer la boucle ~13 s.
+  it('repère les groupes imbriqués', () => {
+    for (const p of ['((a+))+$', '((a|b))+', '(a(b+))*$', '((x|y|xy))+', '(((a+)))+'])
+      expect(isCatastrophicPattern(p), p).toBe(true);
+  });
+
+  it('ne se laisse pas berner par les classes de caractères ni les échappements', () => {
+    // `[+*|]` et `\(` sont littéraux : rien d'ambigu ici.
+    for (const p of ['^([+*|])$', '^(\\(a\\))+$', '^([a-z])+$'])
+      expect(isCatastrophicPattern(p), p).toBe(false);
+  });
+
   it('repère les alternances quantifiées, quel que soit le nombre de branches', () => {
     for (const p of ['(a|a)*$', '(a|b|ab)*$', '(x|y|z|xy)+', '^(\\d|\\d\\d|\\d\\d\\d)*$'])
       expect(isCatastrophicPattern(p), p).toBe(true);
