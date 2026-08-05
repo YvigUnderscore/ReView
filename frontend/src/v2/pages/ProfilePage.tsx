@@ -33,6 +33,9 @@ export default function ProfilePage() {
     phone: user?.phone ?? '',
   });
   const [pwd, setPwd] = useState('');
+  // Mot de passe actuel : le serveur le réclame pour toute modification du mot de passe ou
+  // de l'email (un jeton volé ne doit pas suffire à verrouiller le compte).
+  const [currentPassword, setCurrentPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
   if (!user) return null;
@@ -47,9 +50,17 @@ export default function ProfilePage() {
       if (vals.jobTitle !== (user.jobTitle ?? '')) body.jobTitle = vals.jobTitle;
       if (vals.bio !== (user.bio ?? '')) body.bio = vals.bio;
       if (vals.phone !== (user.phone ?? '')) body.phone = vals.phone;
-      if (vals.email !== user.email) body.email = vals.email;
+      if (vals.email !== user.email) {
+        if (!currentPassword) {
+          toast.error(t('profile.password.currentRequired'));
+          return;
+        }
+        body.email = vals.email;
+        body.currentPassword = currentPassword;
+      }
       const { user: updated } = await api.patch<{ user: AuthUser }>('/api/users/me', body);
       setUser(updated);
+      setCurrentPassword('');
       toast.success(t('profile.updated'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.generic'));
@@ -63,11 +74,19 @@ export default function ProfilePage() {
       toast.error(t('profile.password.tooShort'));
       return;
     }
+    if (!currentPassword) {
+      toast.error(t('profile.password.currentRequired'));
+      return;
+    }
     setBusy(true);
     try {
-      const { user: updated } = await api.patch<{ user: AuthUser }>('/api/users/me', { password: pwd });
+      const { user: updated } = await api.patch<{ user: AuthUser }>('/api/users/me', {
+        password: pwd,
+        currentPassword,
+      });
       setUser(updated);
       setPwd('');
+      setCurrentPassword('');
       toast.success(t('profile.password.updated'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.generic'));
@@ -203,6 +222,14 @@ export default function ProfilePage() {
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">{t('profile.password.section')}</h2>
+          {/* Exigé par le serveur pour changer le mot de passe ET pour changer l'email. */}
+          <Field
+            label={t('profile.password.current')}
+            value={currentPassword}
+            onChange={setCurrentPassword}
+            type="password"
+            placeholder={t('profile.password.currentPlaceholder')}
+          />
           <Field
             label={t('profile.password.new')}
             value={pwd}
@@ -210,7 +237,7 @@ export default function ProfilePage() {
             type="password"
             placeholder={t('profile.password.placeholder')}
           />
-          <Button onClick={savePassword} disabled={busy || !pwd}>
+          <Button onClick={savePassword} disabled={busy || !pwd || !currentPassword}>
             {t('profile.password.submit')}
           </Button>
         </section>

@@ -135,6 +135,16 @@ export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
       path: ['S3_SECRET_KEY'],
       message: 'Identifiants S3/MinIO par défaut (minioadmin) interdits en production',
     });
+  // Si elle est fournie, cette clé protège tous les secrets stockés en base (mot de passe
+  // SMTP, secrets de webhooks, secret TOTP de chaque compte). Une valeur faible se
+  // retrouverait par force brute : on lui applique la même exigence qu'à JWT_SECRET.
+  // Absente, la clé dérive de JWT_SECRET — déjà durci par le contrôle ci-dessus.
+  if (val.APP_ENCRYPTION_KEY !== undefined && isWeakSecret(val.APP_ENCRYPTION_KEY))
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['APP_ENCRYPTION_KEY'],
+      message: 'APP_ENCRYPTION_KEY faible/par défaut interdit en production (≥ 32 caractères aléatoires)',
+    });
 });
 
 const parsed = envSchema.safeParse(process.env);

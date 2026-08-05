@@ -3,6 +3,11 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
+/** Longueur maximale d'une clé de comptage (IP + éventuel discriminant de requête). */
+const MAX_KEY_LENGTH = 160;
+/** Nombre maximal de clés suivies simultanément, toutes fenêtres confondues. */
+const MAX_TRACKED_KEYS = 100_000;
+
 interface RateLimitOptions {
   windowMs?: number;
   max?: number;
@@ -30,8 +35,17 @@ export const rateLimit = (options: RateLimitOptions = {}) => {
   cleanup.unref?.();
 
   return (req: Request, res: Response, next: NextFunction): void => {
-    const key = keyGenerator(req);
+    // La clé peut incorporer une donnée de requête (le token de partage, par exemple) — et
+    // certains limiteurs s'exécutent AVANT la validation Zod, la valeur est donc arbitraire
+    // et de longueur libre. On la borne, sinon chaque requête forge une entrée nouvelle et
+    // la table grossit sans fin (le balayage ne retire qu'au bout d'une fenêtre entière).
+    const key = keyGenerator(req).slice(0, MAX_KEY_LENGTH);
     const now = Date.now();
+
+    // Filet de sécurité : au-delà du plafond, on repart d'une table vide plutôt que de
+    // laisser la mémoire filer. Un compteur perdu autorise quelques requêtes de plus ;
+    // une table sans borne met le service à terre.
+    if (hits.size >= MAX_TRACKED_KEYS && !hits.has(key)) hits.clear();
     const data = hits.get(key);
 
     if (!data || now - data.startTime > windowMs) {
