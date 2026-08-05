@@ -88,14 +88,37 @@ export interface ProjectSettings extends PipelineSettings {
 }
 
 /**
- * Teste un nom de fichier contre la convention du projet (38.C). Une regex invalide ou un
- * mode `off`/motif vide n'entrave jamais l'upload (`pass: true`, `mode: 'off'`).
+ * Un motif expose-t-il au « catastrophic backtracking » ?
+ *
+ * La convention de nommage est une regex saisie par un gestionnaire de projet, puis exécutée
+ * sur le nom de CHAQUE fichier téléversé. Node n'offre aucun délai maximal sur une regex :
+ * un motif comme `(a+)+$` confronté à un nom bien choisi bloque la boucle d'événements —
+ * donc toute l'API, pour tout le studio, sur une seule requête.
+ *
+ * Heuristique volontairement grossière : un groupe qui contient déjà un quantificateur et qui
+ * est lui-même quantifié. C'est la forme des explosions exponentielles classiques
+ * (`(a+)+`, `(a*)*`, `(a|a)+`, `(a{1,3})+`) ; une convention de nommage légitime n'en a
+ * jamais besoin.
+ */
+export function isCatastrophicPattern(pattern: string): boolean {
+  // Groupe (...) dont le corps porte un quantificateur, suivi d'un quantificateur.
+  const nestedQuantifier = /\((?:[^()\\]|\\.)*[*+?}](?:[^()\\]|\\.)*\)\s*[*+]|\)\s*\{\d+,\}/;
+  // Alternance de branches identiques dans un groupe quantifié : (a|a)*
+  const quantifiedAlternation = /\((?:[^()|\\]|\\.)+\|(?:[^()|\\]|\\.)+\)\s*[*+]/;
+  return nestedQuantifier.test(pattern) || quantifiedAlternation.test(pattern);
+}
+
+/**
+ * Teste un nom de fichier contre la convention du projet (38.C). Une regex invalide, un motif
+ * dangereux, ou un mode `off`/motif vide n'entravent jamais l'upload (`pass: true`,
+ * `mode: 'off'`) — la convention est une aide à la rigueur, pas un verrou de sécurité.
  */
 export function checkNaming(
   filename: string,
   naming: NamingRule | undefined,
 ): { pass: boolean; mode: NamingMode } {
   if (!naming || naming.mode === 'off' || !naming.pattern) return { pass: true, mode: 'off' };
+  if (isCatastrophicPattern(naming.pattern)) return { pass: true, mode: 'off' };
   let re: RegExp;
   try {
     re = new RegExp(naming.pattern);
