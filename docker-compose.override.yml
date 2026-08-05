@@ -2,13 +2,17 @@
 # Expose Postgres/Redis à l'hôte pour le dev local (Prisma, scripts, tests).
 # NE PAS utiliser en production : déployer avec uniquement le fichier de base
 #   docker compose -f docker-compose.yml up -d
+# Ces deux services n'ont AUCUNE authentification réseau utile en dev (Redis n'a pas de mot
+# de passe du tout) : ils écoutent donc sur la boucle locale et non sur 0.0.0.0, où ils
+# offriraient la base et la file de jobs à tout le réseau. Poser DEV_BIND=0.0.0.0 pour
+# exposer sciemment (accès depuis une autre machine du LAN).
 services:
   postgres:
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${DEV_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
   redis:
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${DEV_BIND:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
   # En dev local, NODE_ENV=development : les garde-fous de production (secrets forts,
   # CORS strict — cf. config/env.ts) sont inactifs. La prod déploie SANS cet override.
   backend:

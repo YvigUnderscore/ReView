@@ -22,9 +22,14 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    # Boucle locale par défaut : ces ports servent au développement, et la console MinIO est
+    # une administration complète du stockage — protégée en dev par minioadmin/minioadmin.
+    # Publiée sur 0.0.0.0, elle offrait tout le bucket à quiconque partage le réseau.
+    # Poser MINIO_BIND=0.0.0.0 pour exposer sciemment (docker-compose.prod.yml, lui, retire
+    # tout port hôte : MinIO n'y est joignable qu'à travers nginx).
     ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${MINIO_BIND:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_BIND:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - miniodata:/data
     healthcheck:
