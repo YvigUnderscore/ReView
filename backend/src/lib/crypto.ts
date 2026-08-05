@@ -1,8 +1,20 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { env } from '../config/env';
+
+/**
+ * Comparaison de deux secrets en temps constant. Les chaînes sont d'abord réduites à un
+ * SHA-256 : `timingSafeEqual` exige des buffers de même longueur, et hasher évite en prime
+ * de laisser fuir la longueur du secret attendu par le temps de réponse.
+ */
+export function secretEquals(a: string | undefined | null, b: string | undefined | null): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const ha = createHash('sha256').update(a).digest();
+  const hb = createHash('sha256').update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
 
 /**
  * Chiffrement symétrique des secrets stockés en base (mot de passe SMTP…) — AES-256-GCM.

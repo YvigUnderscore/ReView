@@ -135,7 +135,7 @@ services:
     restart: always
 
   # Monitoring opt-in (37.G) : `docker compose --profile monitoring up -d`
-  # Grafana sur :3431 (admin/admin au premier login), dashboard « ReView » provisionné.
+  # Grafana sur 127.0.0.1:3431, dashboard « ReView » provisionné.
   prometheus:
     image: prom/prometheus:latest
     profiles: ["monitoring"]
@@ -147,8 +147,21 @@ services:
   grafana:
     image: grafana/grafana-oss:latest
     profiles: ["monitoring"]
+    # Boucle locale uniquement : le dashboard expose les métriques de toute l'instance et
+    # n'a pas à être joignable depuis le réseau. Accès distant = tunnel SSH ou VPN.
     ports:
-      - "${GRAFANA_PORT:-3431}:3000"
+      - "${GRAFANA_BIND:-127.0.0.1}:${GRAFANA_PORT:-3431}:3000"
+    environment:
+      # Le couple admin/admin par défaut de Grafana est un compte d'administration réel :
+      # renseigner GRAFANA_ADMIN_PASSWORD dans .env (cf. .env.example). La variable est
+      # laissée optionnelle à dessein — compose interpole TOUT le fichier, profils inactifs
+      # compris, donc un `:?` ici casserait `docker compose up` de tout le monde. La
+      # protection qui ne dépend pas de l'opérateur est l'écoute en boucle locale ci-dessus.
+      # (Repli sur `admin` — le défaut historique de Grafana — plutôt que sur une chaîne
+      # vide, qui créerait un compte admin SANS mot de passe.)
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana

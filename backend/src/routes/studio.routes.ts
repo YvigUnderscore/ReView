@@ -41,10 +41,21 @@ router.get('/branding', async (_req, res) => {
 router.use(authenticate);
 
 // GET /api/studio — infos du studio (singleton)
-router.get('/', async (_req, res) => {
-  const studio = await prisma.studio.findFirst();
+// Sélection explicite : la ligne Studio porte `discordWebhookUrl`, un secret d'intégration
+// qui permet de publier dans le Discord du studio. Un `findFirst()` nu le renvoyait à tout
+// compte authentifié, comptes CLIENT externes compris.
+router.get('/', async (req, res) => {
+  const studio = await prisma.studio.findFirst({
+    select: { id: true, name: true, slug: true, discordWebhookUrl: true, createdAt: true, updatedAt: true },
+  });
   if (!studio) throw notFound('Studio non configuré');
-  res.json({ studio });
+  const { discordWebhookUrl, ...rest } = studio;
+  // L'URL elle-même n'est utile qu'à l'admin qui la configure (PATCH ci-dessous) ; les
+  // autres n'ont besoin que de savoir si l'intégration est active.
+  res.json({
+    studio:
+      req.user?.role === Role.ADMIN ? studio : { ...rest, hasDiscordWebhook: discordWebhookUrl != null },
+  });
 });
 
 // PATCH /api/studio — config studio (admin)

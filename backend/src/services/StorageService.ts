@@ -25,6 +25,7 @@ import { pipeline } from 'node:stream/promises';
 import { createWriteStream, createReadStream } from 'node:fs';
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
+import { safeUploadContentType } from '../lib/uploadContentType';
 
 /**
  * Abstraction du stockage objet (MinIO, S3-compatible).
@@ -119,9 +120,19 @@ class StorageService {
     }
   }
 
-  /** URL présignée pour l'upload direct navigateur → MinIO. */
+  /**
+   * URL présignée pour l'upload direct navigateur → MinIO.
+   * Le `Content-Type` vient du client : il est ramené à une valeur inoffensive
+   * (cf. `lib/uploadContentType`) car les objets sont servis depuis l'origine de l'app.
+   * La signature porte le type neutralisé — le navigateur ne peut donc pas en imposer
+   * un autre au PUT sans invalider la signature.
+   */
   async getPresignedPutUrl(key: string, contentType: string, ttlSeconds = 900): Promise<string> {
-    const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
+    const cmd = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: safeUploadContentType(contentType),
+    });
     return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
   }
 
@@ -130,7 +141,11 @@ class StorageService {
   /** Démarre un upload multipart S3 et renvoie son UploadId. */
   async createMultipartUpload(key: string, contentType: string): Promise<string> {
     const res = await this.client.send(
-      new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      new CreateMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: safeUploadContentType(contentType),
+      }),
     );
     return res.UploadId!;
   }

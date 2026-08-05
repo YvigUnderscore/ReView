@@ -11,7 +11,9 @@ import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { toPublicUser, type RawUserIdentity } from '../lib/userView';
-import { badRequest, unauthorized } from '../lib/errors';
+import { normalizeEmail } from '../lib/email';
+import { env } from '../config/env';
+import { badRequest, forbidden, unauthorized } from '../lib/errors';
 
 const router = Router();
 
@@ -44,7 +46,9 @@ const publicUser = (u: UserRow) =>
     avatarKey: u.avatarKey ?? null,
   }).then((view) => ({ ...view, role: u.role, status: u.status }));
 
-// POST /api/auth/register — crée un artiste (ouvert ; restreint par invitation en 8.x)
+// POST /api/auth/register — crée un artiste. Fermé par défaut (ALLOW_SELF_REGISTRATION) :
+// sinon n'importe qui obtient un compte authentifié sur l'instance, et peut réserver
+// l'email d'un collaborateur avant sa première connexion SSO.
 router.post(
   '/register',
   authLimiter,
@@ -56,7 +60,11 @@ router.post(
     }),
   }),
   async (req, res) => {
-    const { email, password, name } = req.body as { email: string; password: string; name?: string };
+    if (!env.ALLOW_SELF_REGISTRATION) {
+      throw forbidden('Inscription libre désactivée sur cette instance', 'REGISTRATION_DISABLED');
+    }
+    const { password, name } = req.body as { password: string; name?: string };
+    const email = normalizeEmail((req.body as { email: string }).email);
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
 

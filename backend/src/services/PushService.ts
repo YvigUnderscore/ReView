@@ -66,8 +66,10 @@ export async function saveSubscription(userId: number, sub: PushJson): Promise<v
   });
 }
 
-export async function removeSubscription(endpoint: string): Promise<void> {
-  await prisma.pushSubscription.deleteMany({ where: { endpoint } });
+export async function removeSubscription(endpoint: string, userId?: number): Promise<void> {
+  await prisma.pushSubscription.deleteMany({
+    where: { endpoint, ...(userId != null ? { userId } : {}) },
+  });
 }
 
 /** Envoie une notification push à tous les appareils d'un utilisateur (sans bloquer). */

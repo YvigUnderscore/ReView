@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { signAccessToken } from '../lib/jwt';
+import { createSession } from '../lib/sessions';
+import { normalizeEmail } from '../lib/email';
 import { conflict } from '../lib/errors';
 
 const router = Router();
@@ -57,12 +59,20 @@ router.post(
     const { studio, admin } = await prisma.$transaction(async (tx) => {
       const studio = await tx.studio.create({ data: { name: studioName, slug: slugify(studioName) } });
       const admin = await tx.user.create({
-        data: { email: adminEmail, password: hash, name: adminName ?? null, role: 'ADMIN' },
+        data: {
+          email: normalizeEmail(adminEmail),
+          password: hash,
+          name: adminName ?? null,
+          role: 'ADMIN',
+        },
       });
       return { studio, admin };
     });
 
-    const token = signAccessToken({ id: admin.id, email: admin.email, role: admin.role });
+    // Session révocable (36.B) : sans `sid`, ce tout premier jeton — celui de l'ADMIN —
+    // serait le seul du système qu'aucune révocation ne pourrait invalider.
+    const sid = await createSession(admin.id, req);
+    const token = signAccessToken({ id: admin.id, email: admin.email, role: admin.role, sid });
     res.status(201).json({
       studio: { id: studio.id, name: studio.name, slug: studio.slug },
       user: { id: admin.id, email: admin.email, name: admin.name, role: admin.role },

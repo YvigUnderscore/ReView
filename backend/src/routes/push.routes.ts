@@ -35,7 +35,9 @@ router.post(
   '/unsubscribe',
   validate({ body: z.object({ endpoint: z.string().url().max(1000) }) }),
   async (req, res) => {
-    await PushService.removeSubscription(req.body.endpoint);
+    // Borné au propriétaire : l'endpoint seul suffirait sinon à désinscrire le navigateur
+    // d'un autre utilisateur (et donc à le priver de ses notifications).
+    await PushService.removeSubscription(req.body.endpoint, req.user!.id);
     res.status(204).end();
   },
 );

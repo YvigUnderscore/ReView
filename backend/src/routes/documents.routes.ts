@@ -11,7 +11,7 @@ import { validate } from '../middleware/validate';
 import { sanitizeHtml } from '../lib/sanitize';
 import { storage } from '../services/StorageService';
 import { toPublicUser } from '../lib/userView';
-import { forbidden, notFound } from '../lib/errors';
+import { badRequest, forbidden, notFound } from '../lib/errors';
 
 const router = Router();
 router.use(authenticate);
@@ -28,6 +28,26 @@ const authorSelect = {
   },
 } as const;
 const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
+
+/** Préfixe des clés produites par `POST /pdf/presign` — le seul dossier légitime ici. */
+const DOC_KEY_PREFIX = 'documents/';
+
+/**
+ * Une clé de fichier de document est-elle acceptable ?
+ *
+ * Elle est fournie par le client, puis présignée en lecture (`GET /:id`) et supprimée
+ * définitivement (`DELETE /:id`). Sans ce garde-fou, un compte quelconque déclare
+ * `fileKey: 'media/<autre projet>/source.exr'` et obtient une URL de lecture sur n'importe
+ * quel objet du bucket — puis l'efface en supprimant son propre document.
+ */
+export const isValidDocumentKey = (key: string | null | undefined): key is string =>
+  typeof key === 'string' && key.startsWith(DOC_KEY_PREFIX) && !key.includes('..');
+
+/** Variante levant une 400 — utilisée à l'écriture. */
+function assertDocumentKey(key: string): string {
+  if (!isValidDocumentKey(key)) throw badRequest('Clé de fichier invalide', 'INVALID_FILE_KEY');
+  return key;
+}
 
 // GET /api/documents?projectId=&scope=&scopeId= — liste visible
 router.get(
@@ -71,7 +91,9 @@ router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) 
   });
   if (!doc) throw notFound('Document introuvable');
   if (doc.projectId) await assertProjectAccess(req, doc.projectId);
-  const fileUrl = doc.fileKey ? await storage.getPresignedGetUrl(doc.fileKey) : null;
+  // Re-contrôle à la lecture : les lignes créées avant la validation à l'écriture peuvent
+  // porter n'importe quelle clé, et c'est ici qu'elle deviendrait une URL présignée.
+  const fileUrl = isValidDocumentKey(doc.fileKey) ? await storage.getPresignedGetUrl(doc.fileKey) : null;
   res.json({ document: { ...doc, createdBy: await toPublicUser(doc.createdBy), fileUrl } });
 });
 
@@ -106,7 +128,7 @@ router.post(
         title: body.title,
         kind: body.kind,
         content: body.kind === DocKind.RICH ? sanitizeHtml(body.content ?? '') : null,
-        fileKey: body.kind === DocKind.PDF ? (body.fileKey ?? null) : null,
+        fileKey: body.kind === DocKind.PDF && body.fileKey ? assertDocumentKey(body.fileKey) : null,
         scope: body.scope,
         projectId: body.projectId ?? null,
         scopeId: body.scopeId ?? null,
@@ -145,6 +167,10 @@ router.patch(
       projectId?: number | null;
       scopeId?: number | null;
     };
+    // Déplacement : le projet de DESTINATION doit être accessible lui aussi. Ne vérifier
+    // que le projet d'origine laisserait pousser un document dans un projet dont on n'est
+    // pas membre (et l'y rendre visible à son équipe).
+    if (body.projectId) await assertProjectAccess(req, body.projectId);
     const doc = await prisma.document.update({
       where: { id },
       data: {
@@ -167,7 +193,10 @@ router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() 
   if (!existing) throw notFound('Document introuvable');
   if (existing.createdById !== req.user!.id && !isManager(req.user!.role))
     throw forbidden('Suppression non autorisée');
-  if (existing.fileKey) await storage.deleteObject(existing.fileKey).catch(() => undefined);
+  // Idem à la suppression : ne jamais effacer un objet hors du dossier des documents,
+  // quelle que soit la clé enregistrée en base.
+  if (isValidDocumentKey(existing.fileKey))
+    await storage.deleteObject(existing.fileKey).catch(() => undefined);
   await prisma.document.delete({ where: { id } });
   res.status(204).end();
 });

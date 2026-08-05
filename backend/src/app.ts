@@ -6,6 +6,7 @@ import express, { type Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { secretEquals } from './lib/crypto';
 import { rateLimit } from './middleware/rateLimit';
 import { errorHandler } from './middleware/error';
 import { httpLogger } from './middleware/httpLogger';
@@ -85,7 +86,7 @@ export const createApp = (): Express => {
       const provided =
         (typeof req.query.token === 'string' ? req.query.token : undefined) ??
         req.headers.authorization?.split(' ')[1];
-      if (provided !== env.METRICS_TOKEN) {
+      if (!secretEquals(provided, env.METRICS_TOKEN)) {
         res.status(401).end();
         return;
       }

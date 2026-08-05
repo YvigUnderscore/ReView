@@ -22,6 +22,15 @@ const baseEnvSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET doit faire au moins 16 caractères'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+  // Inscription libre via POST /api/auth/register. Fermée par défaut : une instance
+  // atteignable depuis Internet donnerait sinon un compte authentifié à n'importe qui, et
+  // permettrait de créer par avance un compte à l'email d'un collaborateur — que le SSO
+  // rapprocherait ensuite de cet email (prise de contrôle à la première connexion OIDC).
+  // Les comptes se créent alors depuis l'administration, ou par provisionnement SSO.
+  ALLOW_SELF_REGISTRATION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   // Stockage MinIO / S3
   S3_ENDPOINT: z.string().min(1, 'S3_ENDPOINT est requis'),

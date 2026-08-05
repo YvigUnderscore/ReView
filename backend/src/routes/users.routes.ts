@@ -56,7 +56,7 @@ router.patch(
     }),
   }),
   async (req, res) => {
-    res.json({ user: await UserService.updateMe(req.user!.id, req.body) });
+    res.json({ user: await UserService.updateMe(req.user!.id, req.body, req.sessionId) });
   },
 );
 

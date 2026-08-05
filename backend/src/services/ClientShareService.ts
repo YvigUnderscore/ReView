@@ -17,13 +17,24 @@ import { SETTING_KEYS } from '../lib/settings';
 
 export const STUDIO_LOGO_KEY = SETTING_KEYS.STUDIO_LOGO;
 
-/** Médias visibles côté client : publiés, READY, version publiée, dans le projet partagé. */
+/**
+ * Médias visibles côté client : publiés, READY, version publiée, dans le projet partagé.
+ * Les filtres `deletedAt: null` sont indispensables : la corbeille est un soft-delete, et
+ * sans eux un plan mis à la corbeille reste listé — et téléchargeable — sur le lien public,
+ * alors qu'il a disparu de l'interface interne.
+ */
 export const publishedMediaWhere = (projectId: number) => ({
   status: 'READY' as const,
   published: true,
+  deletedAt: null,
   version: {
     published: true,
-    OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
+    deletedAt: null,
+    OR: [
+      { task: { shot: { projectId, deletedAt: null } } },
+      { task: { asset: { projectId, deletedAt: null } } },
+      { asset: { projectId, deletedAt: null } },
+    ],
   },
 });
 

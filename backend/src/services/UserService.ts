@@ -8,6 +8,8 @@ import { logAudit } from './AuditService';
 import { storage, StorageService } from './StorageService';
 import { getOnlineUserIds } from './PresenceService';
 import { toPublicUser } from '../lib/userView';
+import { normalizeEmail } from '../lib/email';
+import { revokeAllSessions } from '../lib/sessions';
 import { badRequest, notFound } from '../lib/errors';
 
 /**
@@ -94,8 +96,9 @@ export interface UpdateMeInput {
   password?: string;
 }
 
-export async function updateMe(userId: number, body: UpdateMeInput) {
-  await assertUniqueIdentity(body.username || undefined, body.email, userId);
+export async function updateMe(userId: number, body: UpdateMeInput, keepSessionId?: string) {
+  const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
+  await assertUniqueIdentity(body.username || undefined, email, userId);
   const data: Record<string, unknown> = {};
   if (body.firstName !== undefined) data.firstName = body.firstName;
   if (body.lastName !== undefined) data.lastName = body.lastName;
@@ -103,9 +106,15 @@ export async function updateMe(userId: number, body: UpdateMeInput) {
   if (body.jobTitle !== undefined) data.jobTitle = body.jobTitle;
   if (body.bio !== undefined) data.bio = body.bio;
   if (body.phone !== undefined) data.phone = body.phone;
-  if (body.email !== undefined) data.email = body.email;
+  if (email !== undefined) data.email = email;
   if (body.password !== undefined) data.password = await bcrypt.hash(body.password, 12);
   const user = await prisma.user.update({ where: { id: userId }, data, select: publicUser });
+  // Changer son mot de passe (ou son email, qui est l'identifiant de connexion) doit
+  // couper les sessions ouvertes ailleurs : sinon un jeton volé survit à la reprise en
+  // main du compte. La session courante est conservée pour ne pas déconnecter l'auteur.
+  if (body.password !== undefined || email !== undefined) {
+    await revokeAllSessions(userId, keepSessionId);
+  }
   return toPublicUser(user);
 }
 
@@ -143,14 +152,15 @@ export interface CreateUserInput {
 }
 
 export async function createUser(actorId: number, input: CreateUserInput) {
-  if (await prisma.user.findUnique({ where: { email: input.email } }))
+  const email = normalizeEmail(input.email);
+  if (await prisma.user.findUnique({ where: { email } }))
     throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
   if (input.username && (await prisma.user.findUnique({ where: { username: input.username } })))
     throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
   const hash = await bcrypt.hash(input.password, 12);
   const user = await prisma.user.create({
     data: {
-      email: input.email,
+      email,
       password: hash,
       name: input.name ?? null,
       firstName: input.firstName ?? null,
@@ -185,19 +195,26 @@ export interface AdminUpdateUserInput extends UpdateMeInput {
 
 export async function updateUser(actorId: number, id: number, body: AdminUpdateUserInput) {
   if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('Utilisateur introuvable');
-  await assertUniqueIdentity(body.username || undefined, body.email, id);
+  const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
+  await assertUniqueIdentity(body.username || undefined, email, id);
   const data: Record<string, unknown> = {};
   if (body.name !== undefined) data.name = body.name;
   if (body.firstName !== undefined) data.firstName = body.firstName;
   if (body.lastName !== undefined) data.lastName = body.lastName;
   if (body.username !== undefined) data.username = body.username;
-  if (body.email !== undefined) data.email = body.email;
+  if (email !== undefined) data.email = email;
   if (body.password !== undefined) data.password = await bcrypt.hash(body.password, 12);
   if (body.role !== undefined) data.role = body.role;
   if (body.storageLimit !== undefined)
     data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
   const user = await prisma.user.update({ where: { id }, data, select: publicUser });
   logAudit({ userId: actorId, action: 'USER_UPDATE', entityType: 'User', entityId: id });
+  // Un admin qui réinitialise un mot de passe, change l'email de connexion ou rétrograde
+  // un rôle agit en général sur un compte compromis ou un départ : les jetons déjà émis
+  // (qui portent l'ancien rôle) ne doivent pas survivre à l'opération.
+  if (body.password !== undefined || email !== undefined || body.role !== undefined) {
+    await revokeAllSessions(id);
+  }
   return toPublicUser(user);
 }
 

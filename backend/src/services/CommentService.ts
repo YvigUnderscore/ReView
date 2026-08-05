@@ -166,8 +166,14 @@ export interface CreateCommentInput {
 
 export async function create(user: SessionUser, projectId: number, body: CreateCommentInput) {
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
-  // Sécurité : seules les clés du dossier de pièces jointes sont acceptées.
-  const attachments = (body.attachments ?? []).filter((a) => a.key.startsWith('comments/attachments/'));
+  // Sécurité : la clé de pièce jointe est fournie par le client, elle sert ensuite à
+  // signer une URL de lecture. On n'accepte donc que le dossier que CET utilisateur a pu
+  // remplir via `presignAttachment` — le dossier global laisserait joindre (et donc lire)
+  // la pièce jointe d'un autre utilisateur, sur un autre projet.
+  const ownPrefix = `comments/attachments/${user.id}/`;
+  const attachments = (body.attachments ?? []).filter(
+    (a) => a.key.startsWith(ownPrefix) && !a.key.includes('..'),
+  );
 
   // Une réponse doit cibler un commentaire du même média.
   if (body.parentId) {

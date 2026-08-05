@@ -62,16 +62,19 @@ export async function revokeSession(sid: string, userId?: number): Promise<boole
   return r.count > 0;
 }
 
-/** Révoque toutes les sessions d'un compte (offboarding admin). */
-export async function revokeAllSessions(userId: number): Promise<number> {
-  const sessions = await prisma.userSession.findMany({
-    where: { userId, revokedAt: null },
-    select: { id: true },
-  });
-  const r = await prisma.userSession.updateMany({
-    where: { userId, revokedAt: null },
-    data: { revokedAt: new Date() },
-  });
+/**
+ * Révoque toutes les sessions d'un compte (offboarding admin, changement de mot de passe).
+ * `keepSessionId` épargne une session — celle de l'auteur de l'action, qui n'a pas à être
+ * déconnecté pour avoir sécurisé son propre compte.
+ */
+export async function revokeAllSessions(userId: number, keepSessionId?: string): Promise<number> {
+  const where = {
+    userId,
+    revokedAt: null,
+    ...(keepSessionId ? { id: { not: keepSessionId } } : {}),
+  };
+  const sessions = await prisma.userSession.findMany({ where, select: { id: true } });
+  const r = await prisma.userSession.updateMany({ where, data: { revokedAt: new Date() } });
   for (const s of sessions) cacheSet(s.id, false);
   return r.count;
 }
