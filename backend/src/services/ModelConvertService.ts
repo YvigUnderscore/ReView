@@ -49,6 +49,16 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * Taux d'expansion maximal du format DEFLATE (~1032:1). Borne *physique*, contrairement à
+ * `ARCHIVE_MAX_COMPRESSION_RATIO` qui est un réglage de politique : c'est elle qu'il faut
+ * pour estimer le pire cas d'une entrée AVANT de la décompresser.
+ */
+const DEFLATE_MAX_RATIO = 1032;
+
+/** Un fichier réellement vide tient en un bloc DEFLATE vide ; au-delà, la déclaration ment. */
+const EMPTY_ENTRY_MAX_COMPRESSED = 16;
+
 /** Options d'exécution communes : timeout obligatoire, sortie bornée, pas de fenêtre Windows. */
 const runOpts = () => ({
   timeout: env.MODEL_CONVERT_TIMEOUT_MS,
@@ -434,13 +444,25 @@ export async function extractArchive(input: string, extractDir: string): Promise
       if (!target) throw new Error(`Chemin d'entrée refusé : ${entry.entryName}`);
 
       const declared = Math.max(0, entry.header.size);
-      if (written + declared > maxTotalBytes)
+      const compressed = Math.max(0, entry.header.compressedSize);
+
+      // ⚠ L'ordre compte. `getData()` décompresse l'entrée ENTIÈRE en mémoire avant qu'on
+      // puisse mesurer quoi que ce soit : confronter la taille réelle à la déclaration ne
+      // sert à rien si la déclaration a déjà servi de laissez-passer. Une entrée annonçant
+      // zéro octet passait ainsi tous les contrôles puis se détendait sans borne.
+      // On borne donc AVANT de décompresser, sur ce que le format autorise au pire.
+      if (declared === 0 && compressed > EMPTY_ENTRY_MAX_COMPRESSED)
         throw new Error(
-          describeRejection({ code: 'TOO_LARGE', limit: maxTotalBytes, actual: written + declared }),
+          `Archive refusée : l'entrée « ${entry.entryName} » se déclare vide mais pèse ${compressed} octets compressés`,
+        );
+      const worstCase = Math.max(declared, compressed * DEFLATE_MAX_RATIO);
+      if (written + worstCase > maxTotalBytes)
+        throw new Error(
+          describeRejection({ code: 'TOO_LARGE', limit: maxTotalBytes, actual: written + worstCase }),
         );
 
       const data = entry.getData();
-      // La déclaration est un engagement : la dépasser est la signature d'une bombe.
+      // La déclaration est un engagement : s'en écarter est la signature d'une bombe.
       if (data.length !== declared)
         throw new Error(
           `Archive refusée : l'entrée « ${entry.entryName} » annonce ${declared} octets et en contient ${data.length}`,

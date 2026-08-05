@@ -103,8 +103,11 @@ export interface ProjectSettings extends PipelineSettings {
 export function isCatastrophicPattern(pattern: string): boolean {
   // Groupe (...) dont le corps porte un quantificateur, suivi d'un quantificateur.
   const nestedQuantifier = /\((?:[^()\\]|\\.)*[*+?}](?:[^()\\]|\\.)*\)\s*[*+]|\)\s*\{\d+,\}/;
-  // Alternance de branches identiques dans un groupe quantifié : (a|a)*
-  const quantifiedAlternation = /\((?:[^()|\\]|\\.)+\|(?:[^()|\\]|\\.)+\)\s*[*+]/;
+  // Groupe quantifié contenant une alternance, quel qu'en soit le nombre de branches.
+  // (a|a)* comme (a|b|ab)* explosent dès que deux branches peuvent reconnaître la même
+  // entrée ; décider lesquelles se chevauchent demanderait d'analyser le langage, alors
+  // qu'une convention de nommage n'a jamais besoin d'une alternance quantifiée.
+  const quantifiedAlternation = /\((?:[^()\\]|\\.)*\|(?:[^()\\]|\\.)*\)\s*[*+]/;
   return nestedQuantifier.test(pattern) || quantifiedAlternation.test(pattern);
 }
 

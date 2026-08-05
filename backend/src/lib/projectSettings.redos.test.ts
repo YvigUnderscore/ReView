@@ -15,8 +15,9 @@ describe('isCatastrophicPattern', () => {
       expect(isCatastrophicPattern(p), p).toBe(true);
   });
 
-  it('repère les alternances quantifiées', () => {
-    expect(isCatastrophicPattern('(a|a)*$')).toBe(true);
+  it('repère les alternances quantifiées, quel que soit le nombre de branches', () => {
+    for (const p of ['(a|a)*$', '(a|b|ab)*$', '(x|y|z|xy)+', '^(\\d|\\d\\d|\\d\\d\\d)*$'])
+      expect(isCatastrophicPattern(p), p).toBe(true);
   });
 
   it('laisse passer les conventions de nommage réalistes', () => {

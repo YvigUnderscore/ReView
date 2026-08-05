@@ -256,9 +256,21 @@ class StorageService {
     );
   }
 
-  /** URL présignée pour le serving direct (lecture) d'un média. */
-  async getPresignedGetUrl(key: string, ttlSeconds = 3600): Promise<string> {
-    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+  /**
+   * URL présignée pour le serving direct (lecture) d'un média.
+   *
+   * `contentTypeOverride` impose le `Content-Type` de la RÉPONSE, quel que soit le type
+   * stocké. Indispensable partout où l'objet n'a pas de passage serveur après l'upload
+   * (pièces jointes, avatars, logo, PDF de documentation) : le type déposé y vient du
+   * navigateur et n'est donc pas fiable. Le paramètre voyage dans la signature — le client
+   * ne peut ni le retirer ni le changer sans invalider l'URL.
+   */
+  async getPresignedGetUrl(key: string, ttlSeconds = 3600, contentTypeOverride?: string): Promise<string> {
+    const cmd = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ...(contentTypeOverride ? { ResponseContentType: safeUploadContentType(contentTypeOverride) } : {}),
+    });
     return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
   }
 

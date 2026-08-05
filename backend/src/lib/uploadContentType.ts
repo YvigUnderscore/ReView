@@ -57,6 +57,23 @@ export function safeUploadContentType(declared: string | null | undefined): stri
   return INLINE_SAFE.has(base) ? base : OPAQUE_CONTENT_TYPE;
 }
 
+/**
+ * Type d'image déduit de l'EXTENSION de la clé de stockage.
+ *
+ * Sert à imposer le `Content-Type` de la réponse pour les objets déposés par PUT présigné
+ * (logo studio, avatars) : la signature ne contraint pas l'en-tête envoyé au dépôt, le type
+ * stocké n'est donc pas fiable. La clé, elle, est construite par le serveur à partir d'un
+ * type déjà validé — c'est la seule source sûre.
+ */
+export function imageTypeFromKey(key: string): string {
+  const ext = key.slice(key.lastIndexOf('.')).toLowerCase();
+  if (ext === '.png') return 'image/png';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.gif') return 'image/gif';
+  return OPAQUE_CONTENT_TYPE;
+}
+
 /** Vrai si le type serait interprété activement par le navigateur (HTML, SVG, XML…). */
 export function isActiveContentType(declared: string | null | undefined): boolean {
   if (!declared) return false;

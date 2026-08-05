@@ -63,12 +63,16 @@ interface RawComment {
 }
 
 // Résout les pièces jointes (clés MinIO) en URLs présignées affichables.
+// Le `Content-Type` de la réponse est imposé : le type stocké vient du navigateur au moment
+// du PUT présigné (que la signature ne contraint pas), un fichier déposé en `text/html`
+// s'exécuterait donc sur l'origine de l'application au moment où quelqu'un ouvre le lien.
+// On repart du type enregistré à la création du commentaire, lui-même filtré par la route.
 async function resolveAttachments(attachments: unknown): Promise<unknown> {
   if (!Array.isArray(attachments)) return attachments ?? undefined;
   return Promise.all(
     (attachments as RawAttachment[]).map(async (a) => ({
       ...a,
-      url: a.key ? await storage.getPresignedGetUrl(a.key).catch(() => null) : null,
+      url: a.key ? await storage.getPresignedGetUrl(a.key, 3600, a.contentType).catch(() => null) : null,
     })),
   );
 }

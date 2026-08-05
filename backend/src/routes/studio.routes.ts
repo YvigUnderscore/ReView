@@ -13,6 +13,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
+import { imageTypeFromKey } from '../lib/uploadContentType';
 import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
 import { getSourceUrl, resolveUserLocale } from '../lib/settings';
 import * as UserService from '../services/UserService';
@@ -34,7 +35,9 @@ router.get('/branding', async (_req, res) => {
     prisma.setting.findUnique({ where: { key: 'studio_logo_key' } }),
     getSourceUrl(),
   ]);
-  const logoUrl = logoKey?.value ? await storage.getPresignedGetUrl(logoKey.value) : null;
+  const logoUrl = logoKey?.value
+    ? await storage.getPresignedGetUrl(logoKey.value, 3600, imageTypeFromKey(logoKey.value))
+    : null;
   res.json({ name: studio?.name ?? null, accent: accent?.value ?? null, logoUrl, sourceUrl });
 });
 
@@ -105,7 +108,11 @@ router.put(
 // GET /api/studio/logo — URL présignée du logo studio (tous les connectés)
 router.get('/logo', async (_req, res) => {
   const setting = await prisma.setting.findUnique({ where: { key: 'studio_logo_key' } });
-  res.json({ url: setting?.value ? await storage.getPresignedGetUrl(setting.value) : null });
+  res.json({
+    url: setting?.value
+      ? await storage.getPresignedGetUrl(setting.value, 3600, imageTypeFromKey(setting.value))
+      : null,
+  });
 });
 
 // GET /api/studio/watermark — config watermark (tous les connectés : les viewers en ont besoin)

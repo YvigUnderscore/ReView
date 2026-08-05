@@ -57,6 +57,33 @@ describe('extractArchive', () => {
     await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
   });
 
+  // Variante la plus vicieuse : annoncer ZÉRO. La confrontation taille réelle / déclarée
+  // arrive APRÈS getData(), qui décompresse tout en mémoire — une déclaration à zéro
+  // franchissait donc le pré-contrôle de budget et offrait une décompression sans borne.
+  // Le refus doit intervenir AVANT toute décompression.
+  it('refuse une entrée qui se déclare vide mais ne l’est pas', async () => {
+    const honest = new AdmZip();
+    honest.addFile('bomb.bin', Buffer.alloc(4 * 1024 * 1024, 0));
+    const forged = new AdmZip(honest.toBuffer());
+    forged.getEntries()[0]!.header.size = 0; // « je ne pèse rien »
+    const src = join(dir, 'zero.zip');
+    await writeFile(src, forged.toBuffer());
+
+    const dest = join(dir, 'out-zero');
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
+    await expect(readdir(dest)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('accepte un fichier réellement vide', async () => {
+    const src = await archivePath('empty.zip', (zip) => {
+      zip.addFile('vide.txt', Buffer.alloc(0));
+      zip.addFile('scene.usda', Buffer.from('#usda 1.0\n'));
+    });
+    const dest = join(dir, 'out-empty');
+    await extractArchive(src, dest);
+    expect((await readFile(join(dest, 'vide.txt'))).length).toBe(0);
+  });
+
   it('ne laisse aucune extraction partielle derrière un refus', async () => {
     const honest = new AdmZip();
     honest.addFile('ok.txt', Buffer.from('bien'));

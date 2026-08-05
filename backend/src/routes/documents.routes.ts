@@ -93,7 +93,12 @@ router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) 
   if (doc.projectId) await assertProjectAccess(req, doc.projectId);
   // Re-contrôle à la lecture : les lignes créées avant la validation à l'écriture peuvent
   // porter n'importe quelle clé, et c'est ici qu'elle deviendrait une URL présignée.
-  const fileUrl = isValidDocumentKey(doc.fileKey) ? await storage.getPresignedGetUrl(doc.fileKey) : null;
+  // Type de réponse imposé : le PDF a été déposé par un PUT présigné, dont la signature ne
+  // contraint pas le Content-Type. Sans cela un « PDF » en text/html s'exécuterait dans
+  // l'iframe de la page Documents, sur l'origine de l'application.
+  const fileUrl = isValidDocumentKey(doc.fileKey)
+    ? await storage.getPresignedGetUrl(doc.fileKey, 3600, 'application/pdf')
+    : null;
   res.json({ document: { ...doc, createdBy: await toPublicUser(doc.createdBy), fileUrl } });
 });
 

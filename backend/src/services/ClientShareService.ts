@@ -5,6 +5,7 @@ import type { Request } from 'express';
 import type { ShareLink } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
+import { imageTypeFromKey } from '../lib/uploadContentType';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { AppError, notFound, unauthorized } from '../lib/errors';
 import { SETTING_KEYS } from '../lib/settings';
@@ -81,6 +82,8 @@ export async function studioBranding(): Promise<{ name: string; logoUrl: string 
   ]);
   return {
     name: studio?.name ?? 'ReView',
-    logoUrl: logo?.value ? await storage.getPresignedGetUrl(logo.value) : null,
+    logoUrl: logo?.value
+      ? await storage.getPresignedGetUrl(logo.value, 3600, imageTypeFromKey(logo.value))
+      : null,
   };
 }
