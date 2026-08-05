@@ -3,7 +3,10 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { Role, UserStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { forbidden, unauthorized } from '../lib/errors';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
@@ -53,10 +56,34 @@ router.patch(
       phone: z.string().max(40).nullable().optional(),
       email: z.string().email().max(254).optional(),
       password: passwordSchema.optional(),
+      /** Mot de passe actuel — exigé pour modifier le mot de passe ou l'email. */
+      currentPassword: z.string().max(128).optional(),
     }),
   }),
   async (req, res) => {
-    res.json({ user: await UserService.updateMe(req.user!.id, req.body) });
+    const body = req.body as { email?: string; password?: string; currentPassword?: string };
+    const changesCredentials = body.password !== undefined || body.email !== undefined;
+
+    if (changesCredentials) {
+      // Un token d'API (36.C) est un secret d'automatisation, souvent en clair dans un CI :
+      // lui laisser changer le mot de passe et l'email de connexion en ferait un chemin de
+      // prise de contrôle complète du compte — 2FA comprise, puisqu'aucun facteur n'est
+      // redemandé. Ces deux champs restent réservés à une vraie session interactive.
+      if (req.apiToken) {
+        throw forbidden(
+          "Un token d'API ne peut pas modifier le mot de passe ni l'email",
+          'API_TOKEN_FORBIDDEN',
+        );
+      }
+      // Re-authentification : un jeton volé ne doit pas suffire à verrouiller le compte.
+      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+      if (!user) throw unauthorized();
+      if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password))) {
+        throw unauthorized('Mot de passe actuel requis', 'CURRENT_PASSWORD_REQUIRED');
+      }
+    }
+
+    res.json({ user: await UserService.updateMe(req.user!.id, req.body, req.sessionId) });
   },
 );
 

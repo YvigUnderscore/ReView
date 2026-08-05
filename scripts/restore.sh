@@ -30,7 +30,13 @@ case "$MODE" in
     else
       docker exec -i "${PROJECT}-postgres-1" sh -c 'pg_restore -U "${POSTGRES_USER:-review}" -d "${POSTGRES_DB:-review}" --clean --if-exists --no-owner' < "$FILE"
     fi
-    echo "✅ Base restaurée. Redémarrer backend+worker : docker compose up -d backend worker"
+    # ⚠ `docker compose up` seul auto-charge docker-compose.override.yml (dev) : sur un hôte
+    # de production, cela repasserait backend et worker en NODE_ENV=development — donc sans
+    # les garde-fous de config/env.ts — et republierait Postgres/Redis. On rappelle donc la
+    # commande complète de production.
+    echo "✅ Base restaurée. Redémarrer backend+worker :"
+    echo "   dev  : docker compose up -d backend worker"
+    echo "   prod : docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend worker"
     ;;
   minio)
     echo "▶ Restauration MinIO depuis $FILE (arrêt du service)…"

@@ -22,6 +22,15 @@ const baseEnvSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET doit faire au moins 16 caractères'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+  // Inscription libre via POST /api/auth/register. Fermée par défaut : une instance
+  // atteignable depuis Internet donnerait sinon un compte authentifié à n'importe qui, et
+  // permettrait de créer par avance un compte à l'email d'un collaborateur — que le SSO
+  // rapprocherait ensuite de cet email (prise de contrôle à la première connexion OIDC).
+  // Les comptes se créent alors depuis l'administration, ou par provisionnement SSO.
+  ALLOW_SELF_REGISTRATION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   // Stockage MinIO / S3
   S3_ENDPOINT: z.string().min(1, 'S3_ENDPOINT est requis'),
@@ -125,6 +134,16 @@ export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
       code: z.ZodIssueCode.custom,
       path: ['S3_SECRET_KEY'],
       message: 'Identifiants S3/MinIO par défaut (minioadmin) interdits en production',
+    });
+  // Si elle est fournie, cette clé protège tous les secrets stockés en base (mot de passe
+  // SMTP, secrets de webhooks, secret TOTP de chaque compte). Une valeur faible se
+  // retrouverait par force brute : on lui applique la même exigence qu'à JWT_SECRET.
+  // Absente, la clé dérive de JWT_SECRET — déjà durci par le contrôle ci-dessus.
+  if (val.APP_ENCRYPTION_KEY !== undefined && isWeakSecret(val.APP_ENCRYPTION_KEY))
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['APP_ENCRYPTION_KEY'],
+      message: 'APP_ENCRYPTION_KEY faible/par défaut interdit en production (≥ 32 caractères aléatoires)',
     });
 });
 

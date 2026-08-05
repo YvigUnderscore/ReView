@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { prisma } from './prisma';
 import { burninConfigSchema, type BurninConfig } from './burnin';
+import { badRequest } from './errors';
 
 /**
  * Réglages projet : départements + nomenclature + pipeline (résolution/framerate).
@@ -88,14 +89,92 @@ export interface ProjectSettings extends PipelineSettings {
 }
 
 /**
- * Teste un nom de fichier contre la convention du projet (38.C). Une regex invalide ou un
- * mode `off`/motif vide n'entrave jamais l'upload (`pass: true`, `mode: 'off'`).
+ * Un motif expose-t-il au « catastrophic backtracking » ?
+ *
+ * La convention de nommage est une regex saisie par un gestionnaire de projet, puis exécutée
+ * sur le nom de CHAQUE fichier téléversé. Node n'offre aucun délai maximal sur une regex :
+ * un motif comme `(a+)+$` confronté à un nom bien choisi bloque la boucle d'événements —
+ * donc toute l'API, pour tout le studio, sur une seule requête.
+ *
+ * Critère : un groupe QUANTIFIÉ dont le corps contient lui-même un quantificateur ou une
+ * alternance. C'est la forme des explosions exponentielles (`(a+)+`, `(a*)*`, `(a|a)+`,
+ * `(a|b|ab)*`, `(a{1,3})+`) ; une convention de nommage légitime n'en a jamais besoin.
+ *
+ * L'analyse se fait par parcours à parenthèses équilibrées, et non par une regex sur la
+ * regex : une expression régulière ne sait pas compter les parenthèses, et toute tentative
+ * précédente laissait donc passer les groupes imbriqués — `((a+))+` reste exponentiel
+ * (mesuré ici : 30 caractères = ~13 s de boucle d'événements bloquée).
+ */
+export function isCatastrophicPattern(pattern: string): boolean {
+  const starts: number[] = [];
+  let inClass = false;
+
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i]!;
+    if (c === '\\') {
+      i++; // échappement : le caractère suivant est littéral
+      continue;
+    }
+    // À l'intérieur d'une classe [...], `(`, `|` et les quantificateurs sont littéraux.
+    if (inClass) {
+      if (c === ']') inClass = false;
+      continue;
+    }
+    if (c === '[') {
+      inClass = true;
+      continue;
+    }
+    if (c === '(') {
+      starts.push(i);
+      continue;
+    }
+    if (c !== ')') continue;
+
+    const open = starts.pop();
+    if (open === undefined) continue; // parenthèse orpheline : `new RegExp` refusera
+    // Le groupe est-il quantifié ? (`*`, `+`, ou `{n,}` — `{n}` et `{n,m}` sont bornés)
+    const after = pattern.slice(i + 1);
+    const quantified = /^[*+]/.test(after) || /^\{\d+,\}/.test(after);
+    if (!quantified) continue;
+    // …et son corps contient-il de quoi produire plusieurs analyses de la même entrée ?
+    if (hasAmbiguityInside(pattern.slice(open + 1, i))) return true;
+  }
+  return false;
+}
+
+/** Le corps d'un groupe porte-t-il un quantificateur ou une alternance (hors classe) ? */
+function hasAmbiguityInside(body: string): boolean {
+  let inClass = false;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i]!;
+    if (c === '\\') {
+      i++;
+      continue;
+    }
+    if (inClass) {
+      if (c === ']') inClass = false;
+      continue;
+    }
+    if (c === '[') {
+      inClass = true;
+      continue;
+    }
+    if (c === '*' || c === '+' || c === '|' || c === '{') return true;
+  }
+  return false;
+}
+
+/**
+ * Teste un nom de fichier contre la convention du projet (38.C). Une regex invalide, un motif
+ * dangereux, ou un mode `off`/motif vide n'entravent jamais l'upload (`pass: true`,
+ * `mode: 'off'`) — la convention est une aide à la rigueur, pas un verrou de sécurité.
  */
 export function checkNaming(
   filename: string,
   naming: NamingRule | undefined,
 ): { pass: boolean; mode: NamingMode } {
   if (!naming || naming.mode === 'off' || !naming.pattern) return { pass: true, mode: 'off' };
+  if (isCatastrophicPattern(naming.pattern)) return { pass: true, mode: 'off' };
   let re: RegExp;
   try {
     re = new RegExp(naming.pattern);
@@ -225,6 +304,14 @@ function sanitizeNaming(raw: unknown, base: NamingRule): NamingRule {
   const o = (raw ?? {}) as Partial<NamingRule>;
   const mode: NamingMode = o.mode === 'warn' || o.mode === 'reject' || o.mode === 'off' ? o.mode : base.mode;
   const pattern = typeof o.pattern === 'string' ? o.pattern.slice(0, 200) : base.pattern;
+  // Refus à l'ÉCRITURE, en plus du garde-fou à l'exécution : un motif explosif n'a alors
+  // aucune chance d'atteindre le chemin d'upload, et le superviseur voit tout de suite que
+  // sa convention est refusée — au lieu de la croire active alors qu'elle est neutralisée.
+  if (pattern && isCatastrophicPattern(pattern))
+    throw badRequest(
+      'Motif de nomenclature refusé : quantificateur ou alternance imbriqués (risque de blocage du serveur)',
+      'NAMING_PATTERN_UNSAFE',
+    );
   return { pattern, mode };
 }
 

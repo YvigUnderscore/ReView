@@ -6,7 +6,7 @@ import { prisma } from '../lib/prisma';
 import { sanitizeHtml } from '../lib/sanitize';
 import { emitToProject } from './SocketService';
 import { notify, sendDiscord } from './NotificationService';
-import { toPublicUser } from '../lib/userView';
+import { toPublicUser, toPublicUserOrDeleted } from '../lib/userView';
 import { storage } from './StorageService';
 import * as ReviewReferenceService from './ReviewReferenceService';
 import { notifyWatchers } from './WatchService';
@@ -63,12 +63,16 @@ interface RawComment {
 }
 
 // Résout les pièces jointes (clés MinIO) en URLs présignées affichables.
+// Le `Content-Type` de la réponse est imposé : le type stocké vient du navigateur au moment
+// du PUT présigné (que la signature ne contraint pas), un fichier déposé en `text/html`
+// s'exécuterait donc sur l'origine de l'application au moment où quelqu'un ouvre le lien.
+// On repart du type enregistré à la création du commentaire, lui-même filtré par la route.
 async function resolveAttachments(attachments: unknown): Promise<unknown> {
   if (!Array.isArray(attachments)) return attachments ?? undefined;
   return Promise.all(
     (attachments as RawAttachment[]).map(async (a) => ({
       ...a,
-      url: a.key ? await storage.getPresignedGetUrl(a.key).catch(() => null) : null,
+      url: a.key ? await storage.getPresignedGetUrl(a.key, 3600, a.contentType).catch(() => null) : null,
     })),
   );
 }
@@ -76,7 +80,9 @@ async function resolveAttachments(attachments: unknown): Promise<unknown> {
 async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
   return {
     ...c,
-    author: await toPublicUser(c.author),
+    // L'auteur peut être `null` : la relation est en SetNull, un compte supprimé laisse
+    // ses commentaires derrière lui. Le déréférencer cassait tout le fil en 500.
+    author: await toPublicUserOrDeleted(c.author),
     resolvedBy: c.resolvedBy ? await toPublicUser(c.resolvedBy) : null,
     attachments: await resolveAttachments(c.attachments),
     replies: c.replies ? await Promise.all(c.replies.map(enrichComment)) : undefined,
@@ -166,8 +172,14 @@ export interface CreateCommentInput {
 
 export async function create(user: SessionUser, projectId: number, body: CreateCommentInput) {
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
-  // Sécurité : seules les clés du dossier de pièces jointes sont acceptées.
-  const attachments = (body.attachments ?? []).filter((a) => a.key.startsWith('comments/attachments/'));
+  // Sécurité : la clé de pièce jointe est fournie par le client, elle sert ensuite à
+  // signer une URL de lecture. On n'accepte donc que le dossier que CET utilisateur a pu
+  // remplir via `presignAttachment` — le dossier global laisserait joindre (et donc lire)
+  // la pièce jointe d'un autre utilisateur, sur un autre projet.
+  const ownPrefix = `comments/attachments/${user.id}/`;
+  const attachments = (body.attachments ?? []).filter(
+    (a) => a.key.startsWith(ownPrefix) && !a.key.includes('..'),
+  );
 
   // Une réponse doit cibler un commentaire du même média.
   if (body.parentId) {

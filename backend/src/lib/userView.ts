@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { storage } from '../services/StorageService';
+import { imageTypeFromKey } from './uploadContentType';
 
 /** Champs d'identité bruts d'un utilisateur, tels que sélectionnés en base. */
 export interface RawUserIdentity {
@@ -42,10 +43,35 @@ export function initials(u: RawUserIdentity): string {
 export async function avatarUrl(avatarKey?: string | null): Promise<string | null> {
   if (!avatarKey) return null;
   try {
-    return await storage.getPresignedGetUrl(avatarKey, 3600);
+    // Type imposé d'après l'extension : l'avatar est déposé par PUT présigné, dont la
+    // signature ne contraint pas le Content-Type envoyé. Un « avatar » en text/html
+    // s'exécuterait sur l'origine de l'app au moment où quelqu'un ouvre l'URL.
+    return await storage.getPresignedGetUrl(avatarKey, 3600, imageTypeFromKey(avatarKey));
   } catch {
     return null;
   }
+}
+
+/**
+ * Vue d'un auteur dont le compte a été supprimé.
+ *
+ * La plupart des relations d'auteur sont en `SetNull` : supprimer un compte laisse derrière
+ * lui des commentaires, décisions et marqueurs dont l'auteur vaut `null`. Les vues publiques
+ * déréférençaient cet auteur sans précaution — un seul départ suffisait à casser en 500 tous
+ * les fils de review où la personne était passée.
+ */
+export const DELETED_USER_VIEW = {
+  id: null,
+  displayName: 'Compte supprimé',
+  initials: '—',
+  avatarUrl: null,
+} as const;
+
+/** Comme `toPublicUser`, mais tolère un auteur absent (compte supprimé). */
+export async function toPublicUserOrDeleted<T extends RawUserIdentity>(
+  u: T | null | undefined,
+): Promise<unknown> {
+  return u ? toPublicUser(u) : DELETED_USER_VIEW;
 }
 
 /** Vue publique normalisée d'un utilisateur (avec displayName + avatarUrl résolu). */

@@ -4,6 +4,8 @@
 import { Server as SocketServer, type Socket } from 'socket.io';
 import type { Server as HttpServer } from 'node:http';
 import { verifyToken } from '../lib/jwt';
+import { isSessionActive } from '../lib/sessions';
+import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { env } from '../config/env';
@@ -49,7 +51,12 @@ interface AuthedSocket extends Socket {
  */
 export const initSocket = (server: HttpServer): SocketServer => {
   io = new SocketServer(server, {
-    cors: { origin: env.CORS_ORIGIN, methods: ['GET', 'POST'] },
+    // Même résolution qu'en HTTP (cf. app.ts) : une liste séparée par des virgules doit
+    // donner N origines, pas une seule chaîne qui ne matcherait jamais.
+    cors: {
+      origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
+      methods: ['GET', 'POST'],
+    },
   });
 
   // Diffusion de la liste des utilisateurs en ligne à tous les clients connectés.
@@ -76,15 +83,41 @@ export const initSocket = (server: HttpServer): SocketServer => {
     const token = socket.handshake.query?.token;
     if (typeof token !== 'string') return next(new Error('Authentication error'));
 
+    // Mêmes garanties que `middleware/auth` côté HTTP — un socket ne doit pas être une
+    // porte dérobée. Tous les jetons de l'app sont signés avec le même JWT_SECRET : seul
+    // un jeton d'accès (sans `kind`) est recevable. Accepter un `kind: '2fa'` reviendrait
+    // à contourner le second facteur, un `refresh`/`share`/`oidc` à confondre les usages.
     const payload = verifyToken(token);
     if (payload) {
-      socket.user = { id: payload.id, email: payload.email, role: payload.role };
+      if (payload.kind !== undefined || typeof payload.id !== 'number') {
+        return next(new Error('Authentication error'));
+      }
+      // Session révoquée (36.B) : la déconnexion doit aussi fermer le canal temps réel.
+      if (payload.sid && !(await isSessionActive(payload.sid))) {
+        return next(new Error('Authentication error'));
+      }
+      // Zombie-token check + rôle courant relu en base (un rôle rétrogradé prend effet).
+      const dbUser = await prisma.user.findUnique({
+        where: { id: payload.id },
+        select: { id: true, email: true, role: true },
+      });
+      if (!dbUser) return next(new Error('Authentication error'));
+      socket.user = dbUser;
       return next();
     }
 
-    // Sinon : token de partage client (ShareLink)
+    // Sinon : token de partage client (ShareLink) — mêmes règles que les routes /api/client
+    // (révocation, expiration ET limite de vues atteinte). Un lien protégé par mot de passe
+    // exige en plus la session de partage émise après déverrouillage : le token seul est
+    // dans l'URL, l'accepter ferait du mot de passe une formalité.
     const share = await prisma.shareLink.findUnique({ where: { token } });
-    if (share && !share.revoked && (!share.expiresAt || share.expiresAt > new Date())) {
+    if (share && shareState(share) === 'ok') {
+      if (share.passwordHash) {
+        const shareAuth = socket.handshake.query?.shareAuth;
+        if (typeof shareAuth !== 'string' || !verifyShareSession(shareAuth, share.id)) {
+          return next(new Error('Authentication error'));
+        }
+      }
       socket.shareProjectId = share.projectId;
       return next();
     }
@@ -256,15 +289,15 @@ export const initSocket = (server: HttpServer): SocketServer => {
         joinedLives.clear();
       });
     }
-    if (socket.shareProjectId) socket.join(`project_${socket.shareProjectId}`);
-
+    // ⚠ Un invité par lien de partage ne rejoint PAS `project_<id>` : c'est le canal
+    // interne de l'équipe. On y diffuse `comment:new` avec le commentaire enrichi —
+    // y compris ceux marqués `isVisibleToClient: false`, l'identité des auteurs et les
+    // URLs présignées des pièces jointes. La page de partage n'écoute rien sur ce canal ;
+    // l'y abonner ne servait qu'à faire fuiter la review interne en temps réel.
     socket.on('join_project', async (projectId: number) => {
       const pid = Number(projectId);
       if (!Number.isInteger(pid)) return;
-      if (socket.shareProjectId) {
-        if (pid === socket.shareProjectId) socket.join(`project_${pid}`);
-        return;
-      }
+      if (socket.shareProjectId) return;
       if (socket.user && (await checkProjectAccess(socket.user.id, socket.user.role, pid))) {
         socket.join(`project_${pid}`);
       }

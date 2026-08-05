@@ -6,6 +6,7 @@ import express, { type Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { secretEquals } from './lib/crypto';
 import { rateLimit } from './middleware/rateLimit';
 import { errorHandler } from './middleware/error';
 import { httpLogger } from './middleware/httpLogger';
@@ -85,7 +86,7 @@ export const createApp = (): Express => {
       const provided =
         (typeof req.query.token === 'string' ? req.query.token : undefined) ??
         req.headers.authorization?.split(' ')[1];
-      if (provided !== env.METRICS_TOKEN) {
+      if (!secretEquals(provided, env.METRICS_TOKEN)) {
         res.status(401).end();
         return;
       }
@@ -103,7 +104,10 @@ export const createApp = (): Express => {
   });
 
   // Routes par domaine
-  app.use('/api/setup', setupRoutes);
+  // Assistant de première installation : public par nature (il n'existe encore aucun
+  // compte), et il crée le premier ADMIN. Le plafond global de 5000/15 min ne le protège
+  // pas — on le borne étroitement, par IP. Le verrou de fond reste `studio.count() > 0`.
+  app.use('/api/setup', rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }), setupRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)

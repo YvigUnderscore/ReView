@@ -29,7 +29,10 @@ vi.mock('./StorageService', () => ({
     getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put'),
   },
 }));
-vi.mock('../lib/userView', () => ({ toPublicUser: vi.fn(async (u: unknown) => u) }));
+vi.mock('../lib/userView', () => ({
+  toPublicUser: vi.fn(async (u: unknown) => u),
+  toPublicUserOrDeleted: vi.fn(async (u: unknown) => u ?? { displayName: 'Compte supprimé' }),
+}));
 
 import { create, extractMentionTokens, update } from './CommentService';
 import { prisma } from '../lib/prisma';
@@ -97,6 +100,51 @@ describe('create — mentions (32.B)', () => {
     await create(author, 3, { mediaObjectId: 9, content: 'oui @yvig', parentId: 4 });
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 7, type: 'MENTION' }));
+  });
+});
+
+describe('create — pièces jointes : clés bornées à l’auteur', () => {
+  beforeEach(() => {
+    vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.create).mockResolvedValue({ id: 30, content: 'x', author: { id: 5 } } as never);
+  });
+
+  /** Clés effectivement persistées par le dernier `comment.create`. */
+  const persistedAttachments = () =>
+    (vi.mocked(prisma.comment.create).mock.calls.at(-1)?.[0] as { data: { attachments?: unknown } }).data
+      .attachments as { key: string }[] | undefined;
+
+  it('conserve les pièces jointes du dossier de l’auteur', async () => {
+    await create(author, 3, {
+      mediaObjectId: 9,
+      content: 'planche',
+      attachments: [{ key: `comments/attachments/${author.id}/1700-planche.png` }],
+    });
+    expect(persistedAttachments()).toHaveLength(1);
+  });
+
+  // La clé est fournie par le client et sert ensuite à signer une URL de lecture : accepter
+  // le dossier d'un autre utilisateur laisserait lire sa pièce jointe, sur un autre projet.
+  it('écarte la clé située dans le dossier d’un autre utilisateur', async () => {
+    await create(author, 3, {
+      mediaObjectId: 9,
+      content: 'exfil',
+      attachments: [{ key: `comments/attachments/${other.id}/1700-confidentiel.png` }],
+    });
+    expect(persistedAttachments()).toBeUndefined();
+  });
+
+  it('écarte toute clé hors du dossier des pièces jointes', async () => {
+    await create(author, 3, {
+      mediaObjectId: 9,
+      content: 'exfil',
+      attachments: [
+        { key: 'media/12/source.exr' },
+        { key: 'studio/logo.png' },
+        { key: `comments/attachments/${author.id}/../${other.id}/x.png` },
+      ],
+    });
+    expect(persistedAttachments()).toBeUndefined();
   });
 });
 

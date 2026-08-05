@@ -4,14 +4,14 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename, dirname, extname, join, relative } from 'node:path';
-import { copyFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
 import { isUsdModel, pickModelFile, type ModelConverter } from '../lib/modelConvert';
 import { pickUsdRootLayer } from '../lib/usdArchive';
-import { describeRejection, planExtraction, type ZipEntryInfo } from '../lib/zipSafety';
+import { describeRejection, planExtraction, resolveInside, type ZipEntryInfo } from '../lib/zipSafety';
 import {
   inspectUsdStage,
   isUsdToolingAvailable,
@@ -48,6 +48,16 @@ import {
  */
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * Taux d'expansion maximal du format DEFLATE (~1032:1). Borne *physique*, contrairement à
+ * `ARCHIVE_MAX_COMPRESSION_RATIO` qui est un réglage de politique : c'est elle qu'il faut
+ * pour estimer le pire cas d'une entrée AVANT de la décompresser.
+ */
+const DEFLATE_MAX_RATIO = 1032;
+
+/** Un fichier réellement vide tient en un bloc DEFLATE vide ; au-delà, la déclaration ment. */
+const EMPTY_ENTRY_MAX_COMPRESSED = 16;
 
 /** Options d'exécution communes : timeout obligatoire, sortie bornée, pas de fenêtre Windows. */
 const runOpts = () => ({
@@ -394,7 +404,7 @@ async function walk(dir: string): Promise<string[]> {
  * Extrait une archive après validation **intégrale** de son catalogue : une seule entrée
  * dangereuse (traversée, lien symbolique) ou des bornes dépassées invalident l'archive entière.
  */
-async function extractArchive(input: string, extractDir: string): Promise<void> {
+export async function extractArchive(input: string, extractDir: string): Promise<void> {
   const { default: AdmZip } = await import('adm-zip');
   let zip: InstanceType<typeof AdmZip>;
   try {
@@ -412,16 +422,61 @@ async function extractArchive(input: string, extractDir: string): Promise<void> 
     externalAttributes: entry.header.attr,
   }));
 
+  const maxTotalBytes = env.ARCHIVE_MAX_UNCOMPRESSED_BYTES;
   const plan = planExtraction(entries, {
     maxEntries: env.ARCHIVE_MAX_ENTRIES,
-    maxTotalBytes: env.ARCHIVE_MAX_UNCOMPRESSED_BYTES,
+    maxTotalBytes,
     maxRatio: env.ARCHIVE_MAX_COMPRESSION_RATIO,
   });
   if (plan.rejection) throw new Error(describeRejection(plan.rejection));
 
+  // `planExtraction` ne peut juger que le CATALOGUE : les tailles y sont *déclarées* par
+  // celui qui a fabriqué l'archive. Une entrée peut annoncer 1 Ko et se détendre en
+  // gigaoctets — `extractAllTo` écrirait alors les octets réels sans rien vérifier, et le
+  // plan (pourtant validé) serait jeté. On extrait donc entrée par entrée, en confrontant
+  // chaque taille réelle à sa déclaration et en tenant un budget cumulé.
+  let written = 0;
   try {
-    zip.extractAllTo(extractDir, true);
+    for (const entry of zip.getEntries()) {
+      if (entry.isDirectory) continue;
+      // Second passage par `resolveInside` : c'est la destination réellement écrite.
+      const target = resolveInside(extractDir, entry.entryName);
+      if (!target) throw new Error(`Chemin d'entrée refusé : ${entry.entryName}`);
+
+      const declared = Math.max(0, entry.header.size);
+      const compressed = Math.max(0, entry.header.compressedSize);
+
+      // ⚠ L'ordre compte. `getData()` décompresse l'entrée ENTIÈRE en mémoire avant qu'on
+      // puisse mesurer quoi que ce soit : confronter la taille réelle à la déclaration ne
+      // sert à rien si la déclaration a déjà servi de laissez-passer. Une entrée annonçant
+      // zéro octet passait ainsi tous les contrôles puis se détendait sans borne.
+      // On borne donc AVANT de décompresser, sur ce que le format autorise au pire.
+      if (declared === 0 && compressed > EMPTY_ENTRY_MAX_COMPRESSED)
+        throw new Error(
+          `Archive refusée : l'entrée « ${entry.entryName} » se déclare vide mais pèse ${compressed} octets compressés`,
+        );
+      const worstCase = Math.max(declared, compressed * DEFLATE_MAX_RATIO);
+      if (written + worstCase > maxTotalBytes)
+        throw new Error(
+          describeRejection({ code: 'TOO_LARGE', limit: maxTotalBytes, actual: written + worstCase }),
+        );
+
+      const data = entry.getData();
+      // La déclaration est un engagement : s'en écarter est la signature d'une bombe.
+      if (data.length !== declared)
+        throw new Error(
+          `Archive refusée : l'entrée « ${entry.entryName} » annonce ${declared} octets et en contient ${data.length}`,
+        );
+      written += data.length;
+      if (written > maxTotalBytes)
+        throw new Error(describeRejection({ code: 'TOO_LARGE', limit: maxTotalBytes, actual: written }));
+
+      await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, data);
+    }
   } catch (err) {
+    // Extraction partielle = scène USD silencieusement incomplète : on efface tout.
+    await rm(extractDir, { recursive: true, force: true }).catch(() => undefined);
     const e = err as { message?: string };
     throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`);
   }

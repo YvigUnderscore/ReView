@@ -13,6 +13,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
+import { imageTypeFromKey } from '../lib/uploadContentType';
 import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
 import { getSourceUrl, resolveUserLocale } from '../lib/settings';
 import * as UserService from '../services/UserService';
@@ -34,17 +35,30 @@ router.get('/branding', async (_req, res) => {
     prisma.setting.findUnique({ where: { key: 'studio_logo_key' } }),
     getSourceUrl(),
   ]);
-  const logoUrl = logoKey?.value ? await storage.getPresignedGetUrl(logoKey.value) : null;
+  const logoUrl = logoKey?.value
+    ? await storage.getPresignedGetUrl(logoKey.value, 3600, imageTypeFromKey(logoKey.value))
+    : null;
   res.json({ name: studio?.name ?? null, accent: accent?.value ?? null, logoUrl, sourceUrl });
 });
 
 router.use(authenticate);
 
 // GET /api/studio — infos du studio (singleton)
-router.get('/', async (_req, res) => {
-  const studio = await prisma.studio.findFirst();
+// Sélection explicite : la ligne Studio porte `discordWebhookUrl`, un secret d'intégration
+// qui permet de publier dans le Discord du studio. Un `findFirst()` nu le renvoyait à tout
+// compte authentifié, comptes CLIENT externes compris.
+router.get('/', async (req, res) => {
+  const studio = await prisma.studio.findFirst({
+    select: { id: true, name: true, slug: true, discordWebhookUrl: true, createdAt: true, updatedAt: true },
+  });
   if (!studio) throw notFound('Studio non configuré');
-  res.json({ studio });
+  const { discordWebhookUrl, ...rest } = studio;
+  // L'URL elle-même n'est utile qu'à l'admin qui la configure (PATCH ci-dessous) ; les
+  // autres n'ont besoin que de savoir si l'intégration est active.
+  res.json({
+    studio:
+      req.user?.role === Role.ADMIN ? studio : { ...rest, hasDiscordWebhook: discordWebhookUrl != null },
+  });
 });
 
 // PATCH /api/studio — config studio (admin)
@@ -65,13 +79,37 @@ router.patch(
     const studio = await prisma.studio.findFirst();
     if (!studio) throw notFound('Studio non configuré');
     const updated = await prisma.studio.update({ where: { id: studio.id }, data: body });
+    // Le journal d'audit est la seule trace des changements de configuration privilegies.
+    // Jamais l'URL du webhook elle-meme : un journal consultable ne doit pas devenir la
+    // nouvelle cachette du secret.
+    AuditService.logAudit({
+      userId: req.user!.id,
+      action: 'STUDIO_UPDATE',
+      entityType: 'Studio',
+      entityId: studio.id,
+      metadata: {
+        name: body.name ?? null,
+        discordWebhookChanged: body.discordWebhookUrl !== undefined,
+      },
+    });
     res.json({ studio: updated });
   },
 );
 
-// GET /api/studio/settings — réglages clé/valeur (admin). `smtp_config` exclu (secret chiffré).
+/**
+ * Réglages qui portent un secret et ne doivent jamais sortir de la base.
+ * La table `Setting` est un fourre-tout clé/valeur : elle mélange des quotas anodins et des
+ * secrets (config SMTP chiffrée, paire de clés VAPID dont la MOITIÉ PRIVÉE signe toutes les
+ * notifications push de l'instance). Une exclusion nommant un seul réglage laissait sortir
+ * tous ceux ajoutés depuis — c'est la liste qui doit être exhaustive, pas la mémoire.
+ */
+const SECRET_SETTING_KEYS = ['smtp_config', 'vapid_keys'];
+
+// GET /api/studio/settings — réglages clé/valeur (admin), secrets exclus.
 router.get('/settings', requireRole(Role.ADMIN), async (_req, res) => {
-  const settings = await prisma.setting.findMany({ where: { key: { not: 'smtp_config' } } });
+  const settings = await prisma.setting.findMany({
+    where: { key: { notIn: SECRET_SETTING_KEYS } },
+  });
   res.json({ settings: Object.fromEntries(settings.map((s) => [s.key, s.value])) });
 });
 
@@ -82,10 +120,21 @@ router.put(
   validate({ body: z.object({ key: z.string().min(1).max(100), value: z.string().max(2000) }) }),
   async (req, res) => {
     const { key, value } = req.body as { key: string; value: string };
+    // Les secrets ont leurs propres routes (chiffrement, génération) : les laisser passer
+    // par cet upsert générique permettrait d'écraser la config SMTP ou la paire VAPID par
+    // du texte arbitraire — et de les relire ensuite sous une clé non filtrée.
+    if (SECRET_SETTING_KEYS.includes(key))
+      throw badRequest('Ce réglage a une route dédiée', 'RESERVED_SETTING');
     const setting = await prisma.setting.upsert({
       where: { key },
       update: { value },
       create: { key, value },
+    });
+    AuditService.logAudit({
+      userId: req.user!.id,
+      action: 'SETTING_UPDATE',
+      entityType: 'Setting',
+      metadata: { key },
     });
     res.json({ setting });
   },
@@ -94,7 +143,11 @@ router.put(
 // GET /api/studio/logo — URL présignée du logo studio (tous les connectés)
 router.get('/logo', async (_req, res) => {
   const setting = await prisma.setting.findUnique({ where: { key: 'studio_logo_key' } });
-  res.json({ url: setting?.value ? await storage.getPresignedGetUrl(setting.value) : null });
+  res.json({
+    url: setting?.value
+      ? await storage.getPresignedGetUrl(setting.value, 3600, imageTypeFromKey(setting.value))
+      : null,
+  });
 });
 
 // GET /api/studio/watermark — config watermark (tous les connectés : les viewers en ont besoin)
@@ -147,7 +200,16 @@ router.get('/smtp', requireRole(Role.ADMIN), async (_req, res) => {
 
 // PUT /api/studio/smtp — enregistre la config (mot de passe chiffré, write-only) (admin)
 router.put('/smtp', requireRole(Role.ADMIN), validate({ body: smtpSchema }), async (req, res) => {
-  res.json({ smtp: await SmtpService.setConfig(req.body) });
+  const smtp = await SmtpService.setConfig(req.body);
+  // Le relais SMTP sortant est un pivot : qui le change peut detourner tout le courrier
+  // de l'instance. Jamais le mot de passe dans le journal, seulement le fait du changement.
+  AuditService.logAudit({
+    userId: req.user!.id,
+    action: 'SMTP_UPDATE',
+    entityType: 'Setting',
+    metadata: { host: req.body.host ?? null, passwordChanged: req.body.password !== undefined },
+  });
+  res.json({ smtp });
 });
 
 // POST /api/studio/smtp/test — envoie un email de test (admin)

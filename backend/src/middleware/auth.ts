@@ -30,8 +30,12 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     return;
   }
 
+  // Tous les jetons de l'app (access, refresh, 2fa, session de partage, état OIDC) sont
+  // signés avec le même JWT_SECRET : on filtre par liste blanche plutôt que par liste noire.
+  // Seul un jeton d'accès (aucun `kind`, portant un id numérique) authentifie une requête —
+  // un nouveau type de jeton ajouté demain est ainsi refusé par défaut.
   const payload = verifyToken(token);
-  if (!payload || payload.kind === 'refresh' || payload.kind === '2fa') {
+  if (!payload || payload.kind !== undefined || typeof payload.id !== 'number') {
     res.status(403).json({ error: 'Token invalide', code: 'TOKEN_INVALID' });
     return;
   }

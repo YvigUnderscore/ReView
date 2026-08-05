@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { decryptSecret } from '../lib/crypto';
 import { signWebhookPayload, type WebhookEvent } from '../lib/webhooks';
+import { assertPublicHttpTarget } from '../lib/ssrfGuard';
 import { enqueueWebhookDelivery } from './JobService';
 
 /**
@@ -47,9 +48,22 @@ export async function deliver(
       })
       .catch(() => undefined);
 
+  // Anti-SSRF : le worker tourne DANS le réseau interne (MinIO, Redis, Postgres y sont
+  // joignables sans authentification réseau). Une URL de webhook est saisie par un admin de
+  // l'app — ce qui ne lui donne pas pour autant la main sur ce réseau. On refuse donc les
+  // cibles privées, en résolvant le nom AVANT la requête (un nom public peut pointer vers
+  // 127.0.0.1 ou 169.254.169.254), et on ne suit aucune redirection (elle rejouerait la
+  // requête vers une cible non vérifiée).
+  const guard = await assertPublicHttpTarget(hook.url);
+  if (!guard.ok) {
+    await record(null, guard.reason);
+    throw new Error(`Webhook ${webhookId} → cible refusée : ${guard.reason}`);
+  }
+
   try {
     const res = await fetch(hook.url, {
       method: 'POST',
+      redirect: 'error',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'ReView-Webhook/1.0',

@@ -25,6 +25,7 @@ import { pipeline } from 'node:stream/promises';
 import { createWriteStream, createReadStream } from 'node:fs';
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
+import { safeUploadContentType } from '../lib/uploadContentType';
 
 /**
  * Abstraction du stockage objet (MinIO, S3-compatible).
@@ -119,9 +120,23 @@ class StorageService {
     }
   }
 
-  /** URL présignée pour l'upload direct navigateur → MinIO. */
+  /**
+   * URL présignée pour l'upload direct navigateur → MinIO.
+   *
+   * Le `Content-Type` vient du client : il est ramené à une valeur inoffensive
+   * (cf. `lib/uploadContentType`) car les objets sont servis depuis l'origine de l'app.
+   * ⚠ Ce type n'est **pas** contraignant : le presigner S3 ne signe que `host`
+   * (`X-Amz-SignedHeaders=host`), le navigateur reste libre d'envoyer un autre en-tête.
+   * Le type définitif est arrêté côté serveur par `setObjectContentType` (appelé à la
+   * finalisation), et le rendu actif est de toute façon neutralisé par la CSP `sandbox`
+   * posée sur le chemin de stockage (cf. `nginx/nginx.conf`).
+   */
   async getPresignedPutUrl(key: string, contentType: string, ttlSeconds = 900): Promise<string> {
-    const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
+    const cmd = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: safeUploadContentType(contentType),
+    });
     return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
   }
 
@@ -130,7 +145,11 @@ class StorageService {
   /** Démarre un upload multipart S3 et renvoie son UploadId. */
   async createMultipartUpload(key: string, contentType: string): Promise<string> {
     const res = await this.client.send(
-      new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      new CreateMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: safeUploadContentType(contentType),
+      }),
     );
     return res.UploadId!;
   }
@@ -215,9 +234,43 @@ class StorageService {
     );
   }
 
-  /** URL présignée pour le serving direct (lecture) d'un média. */
-  async getPresignedGetUrl(key: string, ttlSeconds = 3600): Promise<string> {
-    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+  /**
+   * Réécrit le `Content-Type` d'un objet déjà stocké, sans recopier les octets côté client
+   * (`CopyObject` sur lui-même + `MetadataDirective: REPLACE`).
+   *
+   * Indispensable pour l'upload par PUT présigné : le `ContentType` passé à la signature
+   * **ne fait pas partie des en-têtes signés** (`X-Amz-SignedHeaders=host`), le navigateur
+   * peut donc envoyer le type qu'il veut. C'est ici, côté serveur, que le type réellement
+   * stocké est arrêté. Sans objet pour l'upload multipart, dont le type est fixé par
+   * `CreateMultipartUpload` — un appel serveur, lui, autoritatif.
+   */
+  async setObjectContentType(key: string, contentType: string): Promise<void> {
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        CopySource: `${this.bucket}/${encodeURIComponent(key).replace(/%2F/g, '/')}`,
+        ContentType: safeUploadContentType(contentType),
+        MetadataDirective: 'REPLACE',
+      }),
+    );
+  }
+
+  /**
+   * URL présignée pour le serving direct (lecture) d'un média.
+   *
+   * `contentTypeOverride` impose le `Content-Type` de la RÉPONSE, quel que soit le type
+   * stocké. Indispensable partout où l'objet n'a pas de passage serveur après l'upload
+   * (pièces jointes, avatars, logo, PDF de documentation) : le type déposé y vient du
+   * navigateur et n'est donc pas fiable. Le paramètre voyage dans la signature — le client
+   * ne peut ni le retirer ni le changer sans invalider l'URL.
+   */
+  async getPresignedGetUrl(key: string, ttlSeconds = 3600, contentTypeOverride?: string): Promise<string> {
+    const cmd = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ...(contentTypeOverride ? { ResponseContentType: safeUploadContentType(contentTypeOverride) } : {}),
+    });
     return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
   }
 

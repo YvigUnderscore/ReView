@@ -11,6 +11,22 @@ import { badRequest, notFound } from '../lib/errors';
 type SessionUser = { id: number; role: Role };
 
 /**
+ * Restreint une requête `MediaObject` aux projets visibles par l'appelant.
+ * ADMIN et SUPERVISOR ont un accès global (cf. `middleware/rbac`) ; les autres passent par
+ * leur `ProjectMembership`. Le média se rattache à un projet par trois chemins possibles
+ * (tâche de shot, tâche d'asset, ou asset direct), d'où les trois branches.
+ */
+function accessibleMediaWhere(user: SessionUser): Prisma.MediaObjectWhereInput {
+  if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return {};
+  const project = { memberships: { some: { userId: user.id } } };
+  return {
+    version: {
+      OR: [{ task: { shot: { project } } }, { task: { asset: { project } } }, { asset: { project } }],
+    },
+  };
+}
+
+/**
  * Upload résumable multipart + dédup par hash de contenu (37.A/37.B).
  *
  * Reprise sans état client : `init` retrouve un upload multipart interrompu (même
@@ -53,6 +69,9 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
     }
 
     // Dédup (37.B) : même contenu déjà présent (source encore là) → copie serveur.
+    // Bornée aux projets auxquels l'appelant a accès : sans ce filtre, la recherche du
+    // jumeau balayait toute l'instance, et une empreinte connue suffisait à faire recopier
+    // les octets d'un autre projet — et à savoir qu'un contenu donné y existe.
     const twin = await prisma.mediaObject.findFirst({
       where: {
         status: MediaStatus.READY,
@@ -60,6 +79,7 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
         kind: input.kind,
         deletedAt: null,
         metadata: { path: ['contentHash'], equals: input.contentHash },
+        ...accessibleMediaWhere(user),
       },
       orderBy: { id: 'desc' },
     });

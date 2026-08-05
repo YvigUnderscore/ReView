@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { pinoHttp } from 'pino-http';
+import { stdSerializers } from 'pino';
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
 import { logger } from '../lib/logger';
+
+/** `?token=…` / `?access_token=…` dans une URL journalisée (groupe 1 = le nom + `=`). */
+const TOKEN_IN_URL = /([?&](?:token|access_token)=)[^&]*/gi;
 
 /**
  * Journalisation HTTP structurée (pino-http) : une ligne JSON par requête avec
@@ -29,5 +34,20 @@ export const httpLogger = pinoHttp({
   redact: {
     paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
     remove: true,
+  },
+  // `middleware/auth` accepte aussi un jeton en query (`?token=`), tout comme /metrics :
+  // sans ce masquage il atterrirait en clair dans `req.url`, donc dans les journaux —
+  // là où la redaction des en-têtes ne le protège pas. On enveloppe le sérialiseur
+  // standard (surtout pas de passthrough : il exposerait l'objet requête entier).
+  serializers: {
+    req(req: IncomingMessage) {
+      const serialized = stdSerializers.req(req);
+      // Garde bon marché en `includes` : `RegExp.test` sur une regex /g est capricieux
+      // (il déplace `lastIndex` d'un appel à l'autre).
+      if (typeof serialized.url === 'string' && serialized.url.includes('token=')) {
+        serialized.url = serialized.url.replace(TOKEN_IN_URL, '$1[Redacted]');
+      }
+      return serialized;
+    },
   },
 });

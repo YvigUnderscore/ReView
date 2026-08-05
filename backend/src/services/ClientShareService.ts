@@ -5,6 +5,7 @@ import type { Request } from 'express';
 import type { ShareLink } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
+import { imageTypeFromKey } from '../lib/uploadContentType';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { AppError, notFound, unauthorized } from '../lib/errors';
 import { SETTING_KEYS } from '../lib/settings';
@@ -17,13 +18,24 @@ import { SETTING_KEYS } from '../lib/settings';
 
 export const STUDIO_LOGO_KEY = SETTING_KEYS.STUDIO_LOGO;
 
-/** Médias visibles côté client : publiés, READY, version publiée, dans le projet partagé. */
+/**
+ * Médias visibles côté client : publiés, READY, version publiée, dans le projet partagé.
+ * Les filtres `deletedAt: null` sont indispensables : la corbeille est un soft-delete, et
+ * sans eux un plan mis à la corbeille reste listé — et téléchargeable — sur le lien public,
+ * alors qu'il a disparu de l'interface interne.
+ */
 export const publishedMediaWhere = (projectId: number) => ({
   status: 'READY' as const,
   published: true,
+  deletedAt: null,
   version: {
     published: true,
-    OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
+    deletedAt: null,
+    OR: [
+      { task: { shot: { projectId, deletedAt: null } } },
+      { task: { asset: { projectId, deletedAt: null } } },
+      { asset: { projectId, deletedAt: null } },
+    ],
   },
 });
 
@@ -70,6 +82,8 @@ export async function studioBranding(): Promise<{ name: string; logoUrl: string 
   ]);
   return {
     name: studio?.name ?? 'ReView',
-    logoUrl: logo?.value ? await storage.getPresignedGetUrl(logo.value) : null,
+    logoUrl: logo?.value
+      ? await storage.getPresignedGetUrl(logo.value, 3600, imageTypeFromKey(logo.value))
+      : null,
   };
 }

@@ -23,6 +23,7 @@ import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertProjectQuota } from '../lib/projectQuota';
+import { logger } from '../lib/logger';
 import { assertCanContribute } from '../lib/projectRoles';
 import { notifyWatchers } from './WatchService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
@@ -136,6 +137,11 @@ export async function finalize(user: SessionUser, id: number) {
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('Accès au projet refusé');
+  // `finalize` relance le pipeline de traitement et réécrit statut et taille : le simple
+  // accès au projet ne suffit pas. Il faut pouvoir contribuer (un CLIENT est en lecture
+  // seule) et le média ne doit pas être déjà publié (verrou Phase 11).
+  await assertCanContribute(user.id, user.role, projectId);
+  assertNotPublished(media);
 
   const stat = await storage.statObject(media.storageKey);
   const header = await storage.getObjectHeader(media.storageKey, 32);
@@ -147,6 +153,32 @@ export async function finalize(user: SessionUser, id: number) {
     await storage.deleteObject(media.storageKey).catch(() => undefined);
     throw badRequest('Type de fichier invalide (validation magic bytes échouée)', 'INVALID_FILE');
   }
+
+  // Taille RÉELLE de l'objet déposé. Les quotas n'ont été vérifiés qu'à la demande d'URL,
+  // contre une taille *déclarée* par le client : annoncer 1 octet puis en téléverser
+  // cinquante gigaoctets passait sans jamais être repris.
+  const realSize = stat.size;
+  const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);
+  if (realSize > maxFileSize) {
+    await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.FAILED } });
+    await storage.deleteObject(media.storageKey).catch(() => undefined);
+    throw badRequest('Fichier trop volumineux', 'FILE_TOO_LARGE');
+  }
+  try {
+    await assertProjectQuota(projectId, realSize);
+  } catch (err) {
+    await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.FAILED } });
+    await storage.deleteObject(media.storageKey).catch(() => undefined);
+    throw err;
+  }
+
+  // Le type stocké est arrêté ici, côté serveur : celui passé à la signature du PUT n'est
+  // pas contraignant (le presigner ne signe que `host`), le navigateur a donc pu déposer
+  // l'objet en `text/html`. Les objets étant servis depuis l'origine de l'app, on le ramène
+  // à une valeur inerte avant que le média ne devienne lisible.
+  await storage
+    .setObjectContentType(media.storageKey, stat.contentType ?? '')
+    .catch((err) => logger.warn({ err, key: media.storageKey }, '[Media] type de contenu non normalisé'));
 
   const jobKind = jobKindFor(media.kind, detected);
   const updated = await prisma.mediaObject.update({
@@ -370,6 +402,10 @@ export async function publish(user: SessionUser, id: number) {
   if (!media) throw notFound('Média introuvable');
   // Brouillon strictement privé : seul l'uploader voit et publie son média (404 sinon).
   if (media.uploaderId !== user.id) throw notFound('Média introuvable');
+  // Un média encore en UPLOADING n'est jamais passé par `finalize` : ni validation des
+  // magic bytes, ni normalisation du type de contenu, ni antivirus, ni contrôle de la
+  // taille réelle contre les quotas. Le publier ferait servir un contenu jamais vérifié.
+  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload non finalisé', 'NOT_FINALIZED');
   const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (projectId) {
