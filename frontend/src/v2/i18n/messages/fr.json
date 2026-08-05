@@ -1373,6 +1373,7 @@
   "login.2faPrompt": "Saisissez le code de votre application d’authentification (ou un code de secours).",
   "login.backToLogin": "← Revenir à la connexion",
   "login.ssoFailed": "Connexion SSO échouée",
+  "login.ssoUnsolicited": "Cette connexion n’a pas été demandée depuis ce navigateur. Recommencez depuis la page de connexion.",
   "share.viewLimit": "La limite de vues de ce lien est atteinte. Demandez un nouveau lien au studio.",
   "share.invalid": "Ce lien de partage est invalide, expiré ou révoqué.",
   "client.commentAtFrame": "Commenter à la frame courante…",

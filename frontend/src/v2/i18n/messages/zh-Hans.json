@@ -1335,6 +1335,7 @@
   "login.2faPrompt": "输入验证器应用中的验证码（或一个备用码）。",
   "login.backToLogin": "← 返回登录",
   "login.ssoFailed": "SSO 登录失败",
+  "login.ssoUnsolicited": "本次登录并非从此浏览器发起。请从登录页面重新开始。",
   "share.viewLimit": "此链接已达到查看次数上限。请向工作室索取新链接。",
   "share.invalid": "此分享链接无效、已过期或已被撤销。",
   "client.commentAtFrame": "在当前 frame 评论…",

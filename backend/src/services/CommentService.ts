@@ -6,7 +6,7 @@ import { prisma } from '../lib/prisma';
 import { sanitizeHtml } from '../lib/sanitize';
 import { emitToProject } from './SocketService';
 import { notify, sendDiscord } from './NotificationService';
-import { toPublicUser } from '../lib/userView';
+import { toPublicUser, toPublicUserOrDeleted } from '../lib/userView';
 import { storage } from './StorageService';
 import * as ReviewReferenceService from './ReviewReferenceService';
 import { notifyWatchers } from './WatchService';
@@ -80,7 +80,9 @@ async function resolveAttachments(attachments: unknown): Promise<unknown> {
 async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
   return {
     ...c,
-    author: await toPublicUser(c.author),
+    // L'auteur peut être `null` : la relation est en SetNull, un compte supprimé laisse
+    // ses commentaires derrière lui. Le déréférencer cassait tout le fil en 500.
+    author: await toPublicUserOrDeleted(c.author),
     resolvedBy: c.resolvedBy ? await toPublicUser(c.resolvedBy) : null,
     attachments: await resolveAttachments(c.attachments),
     replies: c.replies ? await Promise.all(c.replies.map(enrichComment)) : undefined,

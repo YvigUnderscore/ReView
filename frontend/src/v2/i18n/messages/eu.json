@@ -1379,6 +1379,7 @@
   "login.2faPrompt": "Idatzi zure autentifikazio-aplikazioaren kodea (edo babeseko kode bat).",
   "login.backToLogin": "← Itzuli saioa hastera",
   "login.ssoFailed": "SSO saio-hasierak huts egin du",
+  "login.ssoUnsolicited": "Saio-hasiera hau ez da nabigatzaile honetatik eskatu. Hasi berriro saioa hasteko orritik.",
   "share.viewLimit": "Esteka honek ikustaldi-muga agortu du. Eskatu esteka berri bat estudioari.",
   "share.invalid": "Partekatze-esteka hau baliogabea da, iraungita edo baliogabetuta dago.",
   "client.commentAtFrame": "Iruzkindu uneko frame-ean…",

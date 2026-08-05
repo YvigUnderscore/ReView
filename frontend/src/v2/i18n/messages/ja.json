@@ -1345,6 +1345,7 @@
   "login.2faPrompt": "認証アプリのコード（またはバックアップコード）を入力してください。",
   "login.backToLogin": "← ログインに戻る",
   "login.ssoFailed": "SSO ログインに失敗",
+  "login.ssoUnsolicited": "このログインはこのブラウザーから要求されたものではありません。ログインページからやり直してください。",
   "share.viewLimit": "このリンクは閲覧回数の上限に達しました。スタジオに新しいリンクを頼んでください。",
   "share.invalid": "この共有リンクは無効か、期限切れか、取り消されています。",
   "client.commentAtFrame": "現在の frame にコメント…",

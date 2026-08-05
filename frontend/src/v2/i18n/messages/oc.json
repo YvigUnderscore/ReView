@@ -1376,6 +1376,7 @@
   "login.2faPrompt": "Picatz lo còdi de vòstra aplicacion d’autentificacion (o un còdi de secors).",
   "login.backToLogin": "← Tornar a la connexion",
   "login.ssoFailed": "Connexion SSO fracassada",
+  "login.ssoUnsolicited": "Aquesta connexion es pas estada demandada dempuèi aqueste navegador. Tornatz començar dempuèi la pagina de connexion.",
   "share.viewLimit": "Lo limit de vistas d’aqueste ligam es atench. Demandatz un ligam novèl a l’estudi.",
   "share.invalid": "Aqueste ligam de partatge es invalid, expirat o revocat.",
   "client.commentAtFrame": "Comentar al frame corrent…",

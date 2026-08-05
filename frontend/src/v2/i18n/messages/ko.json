@@ -1345,6 +1345,7 @@
   "login.2faPrompt": "인증 앱의 코드(또는 백업 코드)를 입력하세요.",
   "login.backToLogin": "← 로그인으로 돌아가기",
   "login.ssoFailed": "SSO 로그인 실패",
+  "login.ssoUnsolicited": "이 브라우저에서 요청한 로그인이 아닙니다. 로그인 페이지에서 다시 시작하세요.",
   "share.viewLimit": "이 링크는 조회 한도에 도달했습니다. 스튜디오에 새 링크를 요청하세요.",
   "share.invalid": "이 공유 링크는 유효하지 않거나 만료 또는 취소되었습니다.",
   "client.commentAtFrame": "현재 frame에 코멘트…",

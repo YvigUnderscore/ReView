@@ -230,8 +230,21 @@ export async function updateUser(actorId: number, id: number, body: AdminUpdateU
 
 export async function deleteUser(actorId: number, id: number) {
   if (id === actorId) throw badRequest('Impossible de se supprimer soi-même');
+  // Les liens de partage sont en `SetNull` : supprimer le compte les laissait VIVANTS, et
+  // désormais sans propriétaire — un départ ne coupait donc pas les accès publics ouverts
+  // par la personne, alors que c'est précisément ce qu'on attend d'un offboarding.
+  const revoked = await prisma.shareLink.updateMany({
+    where: { createdById: id, revoked: false },
+    data: { revoked: true },
+  });
   await prisma.user.delete({ where: { id } });
-  logAudit({ userId: actorId, action: 'USER_DELETE', entityType: 'User', entityId: id });
+  logAudit({
+    userId: actorId,
+    action: 'USER_DELETE',
+    entityType: 'User',
+    entityId: id,
+    metadata: { revokedShareLinks: revoked.count },
+  });
 }
 
 // ── Préférences UI (JSON libre par utilisateur : vues kanban, etc.) ──────────

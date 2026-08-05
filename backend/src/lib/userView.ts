@@ -52,6 +52,28 @@ export async function avatarUrl(avatarKey?: string | null): Promise<string | nul
   }
 }
 
+/**
+ * Vue d'un auteur dont le compte a été supprimé.
+ *
+ * La plupart des relations d'auteur sont en `SetNull` : supprimer un compte laisse derrière
+ * lui des commentaires, décisions et marqueurs dont l'auteur vaut `null`. Les vues publiques
+ * déréférençaient cet auteur sans précaution — un seul départ suffisait à casser en 500 tous
+ * les fils de review où la personne était passée.
+ */
+export const DELETED_USER_VIEW = {
+  id: null,
+  displayName: 'Compte supprimé',
+  initials: '—',
+  avatarUrl: null,
+} as const;
+
+/** Comme `toPublicUser`, mais tolère un auteur absent (compte supprimé). */
+export async function toPublicUserOrDeleted<T extends RawUserIdentity>(
+  u: T | null | undefined,
+): Promise<unknown> {
+  return u ? toPublicUser(u) : DELETED_USER_VIEW;
+}
+
 /** Vue publique normalisée d'un utilisateur (avec displayName + avatarUrl résolu). */
 export async function toPublicUser<T extends RawUserIdentity>(
   u: T,

@@ -1376,6 +1376,7 @@
   "login.2faPrompt": "Introduce el código de tu aplicación de autenticación (o un código de respaldo).",
   "login.backToLogin": "← Volver al inicio de sesión",
   "login.ssoFailed": "Fallo del inicio de sesión SSO",
+  "login.ssoUnsolicited": "Este inicio de sesión no se solicitó desde este navegador. Vuelva a empezar desde la página de inicio de sesión.",
   "share.viewLimit": "Este enlace ha alcanzado su límite de vistas. Pide un enlace nuevo al estudio.",
   "share.invalid": "Este enlace de compartir no es válido, ha caducado o fue revocado.",
   "client.commentAtFrame": "Comentar en el frame actual…",

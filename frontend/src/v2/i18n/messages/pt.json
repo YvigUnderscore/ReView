@@ -1376,6 +1376,7 @@
   "login.2faPrompt": "Digite o código do seu aplicativo de autenticação (ou um código de reserva).",
   "login.backToLogin": "← Voltar ao login",
   "login.ssoFailed": "Falha no login SSO",
+  "login.ssoUnsolicited": "Este login não foi solicitado neste navegador. Recomece pela página de login.",
   "share.viewLimit": "Este link atingiu seu limite de visualizações. Peça um novo link ao estúdio.",
   "share.invalid": "Este link de compartilhamento é inválido, expirou ou foi revogado.",
   "client.commentAtFrame": "Comentar no frame atual…",

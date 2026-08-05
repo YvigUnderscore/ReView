@@ -1359,6 +1359,7 @@
   "login.2faPrompt": "Merkit kod hoc’h arload dilesa (pe ur c’hod eskemm).",
   "login.backToLogin": "← Distreiñ d’ar c’hevreañ",
   "login.ssoFailed": "C’hwitet eo ar c’hevreañ SSO",
+  "login.ssoUnsolicited": "N’eo ket bet goulennet ar c’hevreadur-mañ eus ar merdeer-mañ. Adkregiñ eus ar bajenn gevreañ.",
   "share.viewLimit": "Tizhet eo bevenn gweladennoù al liamm-mañ. Goulennit ul liamm nevez digant ar studio.",
   "share.invalid": "Al liamm rannañ-mañ zo direizh, diamzeret pe nullet.",
   "client.commentAtFrame": "Evezhiadenn war ar frame red…",

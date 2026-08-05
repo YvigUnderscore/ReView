@@ -1370,6 +1370,7 @@
   "login.2faPrompt": "Enter the code from your authentication app (or a backup code).",
   "login.backToLogin": "← Back to sign-in",
   "login.ssoFailed": "SSO sign-in failed",
+  "login.ssoUnsolicited": "This sign-in link was not requested from this browser. Start again from the sign-in page.",
   "share.viewLimit": "This link has reached its view limit. Ask the studio for a new link.",
   "share.invalid": "This share link is invalid, expired or revoked.",
   "client.commentAtFrame": "Comment at the current frame…",

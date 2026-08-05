@@ -13,6 +13,36 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { AuthLayout } from './auth/AuthLayout';
 
+/**
+ * Marqueur « ce navigateur a lancé le flux SSO ».
+ *
+ * Le retour OIDC arrive dans le fragment de l'URL, que n'importe qui peut fabriquer : sans
+ * ce garde-fou, `…/login#sso=<jeton de l'attaquant>` connecte silencieusement la victime
+ * sur le compte de l'attaquant (fixation de session), qui lit ensuite tout ce qu'elle y
+ * dépose. `sessionStorage` est volontaire : le marqueur est propre à l'onglet et disparaît
+ * à sa fermeture.
+ */
+const SSO_FLOW_KEY = 'sso_flow_started';
+
+const markSsoFlowStarted = () => {
+  try {
+    sessionStorage.setItem(SSO_FLOW_KEY, '1');
+  } catch {
+    /* stockage indisponible (navigation privée stricte) : le retour sera simplement refusé */
+  }
+};
+
+/** Consomme le marqueur (usage unique) et dit s'il était présent. */
+const consumeSsoFlowMarker = (): boolean => {
+  try {
+    const ok = sessionStorage.getItem(SSO_FLOW_KEY) === '1';
+    sessionStorage.removeItem(SSO_FLOW_KEY);
+    return ok;
+  } catch {
+    return false;
+  }
+};
+
 /** Traduit les erreurs techniques en messages humains. */
 function humanError(message: string): string {
   const m = message.toLowerCase();
@@ -52,6 +82,15 @@ export default function LoginPage() {
     const tfa = params.get('tfa');
     const ssoerr = params.get('ssoerr');
     window.history.replaceState(null, '', window.location.pathname);
+    // Le fragment ne prouve rien par lui-même : accepter un jeton parce qu'il est dans
+    // l'URL, c'est laisser un tiers envoyer `…/login#sso=<SON jeton>` et connecter
+    // silencieusement sa victime SUR SON COMPTE À LUI — tout ce qu'elle y dépose ensuite
+    // lui est lisible. On n'honore donc le retour que si CE navigateur a lui-même lancé le
+    // flux SSO, marqueur posé au clic et consommé ici.
+    if ((sso || tfa) && !consumeSsoFlowMarker()) {
+      setError(t('login.ssoUnsolicited'));
+      return;
+    }
     if (sso) {
       void ssoLogin(sso, params.get('refresh') ?? undefined)
         .then(() => navigate('/'))
@@ -175,6 +214,7 @@ export default function LoginPage() {
         {ssoQ.data?.enabled && (
           <a
             href="/api/auth/oidc/login"
+            onClick={markSsoFlowStarted}
             className="block w-full rounded-md border border-border px-4 py-2 text-center text-sm hover:bg-secondary/60"
           >
             {ssoQ.data.label || t('sso.buttonDefault')}

@@ -29,7 +29,10 @@ vi.mock('./StorageService', () => ({
     getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put'),
   },
 }));
-vi.mock('../lib/userView', () => ({ toPublicUser: vi.fn(async (u: unknown) => u) }));
+vi.mock('../lib/userView', () => ({
+  toPublicUser: vi.fn(async (u: unknown) => u),
+  toPublicUserOrDeleted: vi.fn(async (u: unknown) => u ?? { displayName: 'Compte supprimé' }),
+}));
 
 import { create, extractMentionTokens, update } from './CommentService';
 import { prisma } from '../lib/prisma';

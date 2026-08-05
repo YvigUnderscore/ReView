@@ -1379,6 +1379,7 @@
   "login.2faPrompt": "Geben Sie den Code aus Ihrer Authentifizierungs-App ein (oder einen Wiederherstellungscode).",
   "login.backToLogin": "← Zurück zur Anmeldung",
   "login.ssoFailed": "SSO-Anmeldung fehlgeschlagen",
+  "login.ssoUnsolicited": "Diese Anmeldung wurde nicht von diesem Browser angefordert. Bitte erneut über die Anmeldeseite starten.",
   "share.viewLimit": "Dieser Link hat sein Aufrufslimit erreicht. Bitten Sie das Studio um einen neuen Link.",
   "share.invalid": "Dieser Freigabelink ist ungültig, abgelaufen oder widerrufen.",
   "client.commentAtFrame": "Beim aktuellen frame kommentieren…",

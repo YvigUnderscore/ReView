@@ -1376,6 +1376,7 @@
   "login.2faPrompt": "Scrivi u codice di a to applicazione d’autenticazione (o un codice di succorsu).",
   "login.backToLogin": "← Torna à a cunnessione",
   "login.ssoFailed": "Cunnessione SSO fiascata",
+  "login.ssoUnsolicited": "St’accessu ùn hè statu dumandatu da stu navigatore. Ricumincià da a pagina d’accessu.",
   "share.viewLimit": "U limite di viste di stu ligame hè ghjuntu. Dumanda un novu ligame à u studio.",
   "share.invalid": "Stu ligame di spartera hè invalidu, spiratu o annullatu.",
   "client.commentAtFrame": "Cummentà à u frame currente…",
