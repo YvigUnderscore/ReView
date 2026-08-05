@@ -7,7 +7,9 @@ import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { revokeSession } from '../lib/sessions';
-import { generateApiToken, API_SCOPES } from '../lib/apiTokens';
+import { API_SCOPES } from '../lib/apiTokens';
+import { ALL_SCOPES } from '../lib/apiScopes';
+import * as ApiTokenService from '../services/ApiTokenService';
 import { logAudit } from '../services/AuditService';
 import { badRequest, notFound } from '../lib/errors';
 
@@ -50,21 +52,12 @@ router.post('/logout', async (req, res) => {
 
 // ── Tokens d'API personnels (36.C) ───────────────────────────────────────────
 
-const tokenSelect = {
-  id: true,
-  name: true,
-  scopes: true,
-  lastUsedAt: true,
-  expiresAt: true,
-  createdAt: true,
-} as const;
-
 // GET /api/auth/tokens — tokens actifs du compte (jamais le secret)
 router.get('/tokens', async (req, res) => {
   const tokens = await prisma.apiToken.findMany({
     where: { userId: req.user!.id, revokedAt: null },
     orderBy: { createdAt: 'desc' },
-    select: tokenSelect,
+    select: ApiTokenService.tokenSelect,
   });
   res.json({ tokens });
 });
@@ -75,35 +68,26 @@ router.post(
   validate({
     body: z.object({
       name: z.string().trim().min(1).max(80),
-      scopes: z.array(z.enum(API_SCOPES)).min(1).default(['read']),
+      description: z.string().trim().max(300).optional(),
+      // Scopes fins (`versions:write`…) ou hérités (`read`/`write`, développés à l'usage).
+      scopes: z.array(z.string().max(40)).min(1).default(['read']),
       expiresInDays: z.number().int().positive().max(3650).optional(),
+      // Cantonnement facultatif à un projet.
+      projectId: z.number().int().positive().optional(),
     }),
   }),
   async (req, res) => {
-    const body = req.body as { name: string; scopes: string[]; expiresInDays?: number };
     // Un token d'API ne doit pas pouvoir en fabriquer d'autres (pas d'escalade).
     if (req.apiToken) throw badRequest("Un token d'API ne peut pas créer de token");
-    const { token, tokenHash } = generateApiToken();
-    const created = await prisma.apiToken.create({
-      data: {
-        userId: req.user!.id,
-        name: body.name,
-        tokenHash,
-        scopes: body.scopes.includes('write') ? ['read', 'write'] : ['read'],
-        expiresAt: body.expiresInDays ? new Date(Date.now() + body.expiresInDays * 86_400_000) : null,
-      },
-      select: tokenSelect,
-    });
-    logAudit({
-      userId: req.user!.id,
-      action: 'API_TOKEN_CREATE',
-      entityType: 'ApiToken',
-      entityId: created.id,
-      metadata: { name: body.name, scopes: created.scopes },
-    });
-    res.status(201).json({ token, apiToken: created });
+    const body = req.body as ApiTokenService.CreateTokenInput;
+    res.status(201).json(await ApiTokenService.createPersonal(req.user!.id, body));
   },
 );
+
+// GET /api/auth/scopes — catalogue des scopes attribuables (aide à la création de token)
+router.get('/scopes', (_req, res) => {
+  res.json({ scopes: ALL_SCOPES, legacy: API_SCOPES });
+});
 
 // DELETE /api/auth/tokens/:id — révoque un de SES tokens
 router.delete(

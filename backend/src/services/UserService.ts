@@ -58,9 +58,17 @@ async function assertUniqueIdentity(
   }
 }
 
-/** Liste complète (admin/superviseur) avec état en ligne. */
+/**
+ * Liste complète (admin/superviseur) avec état en ligne.
+ * Les comptes de service (tokens machine) sont exclus : ce sont des porteurs d'écritures,
+ * pas des membres du studio — ils n'ont ni présence, ni adresse joignable.
+ */
 export async function listUsers() {
-  const users = await prisma.user.findMany({ select: publicUser, orderBy: { createdAt: 'asc' } });
+  const users = await prisma.user.findMany({
+    where: { isService: false },
+    select: publicUser,
+    orderBy: { createdAt: 'asc' },
+  });
   const online = new Set(getOnlineUserIds());
   return Promise.all(users.map(async (u) => ({ ...(await toPublicUser(u)), online: online.has(u.id) })));
 }
@@ -73,6 +81,7 @@ export async function listUsers() {
  */
 export async function listPresence() {
   const users = await prisma.user.findMany({
+    where: { isService: false },
     select: {
       id: true,
       email: true, // nécessaire au repli displayName/initials — retiré de la sortie plus bas

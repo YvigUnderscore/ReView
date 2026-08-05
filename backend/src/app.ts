@@ -58,6 +58,8 @@ import watchRoutes from './routes/watch.routes';
 import playlistsRoutes from './routes/playlists.routes';
 import liveRoutes from './routes/live.routes';
 import productionRoutes from './routes/production.routes';
+import serviceTokensRoutes from './routes/service-tokens.routes';
+import v1Routes from './routes/v1';
 
 export const createApp = (): Express => {
   const app = express();
@@ -144,6 +146,7 @@ export const createApp = (): Express => {
   app.use('/api/share', shareLimiter, shareRoutes);
   app.use('/api/client', shareLimiter, clientRoutes);
   app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
+  app.use('/api/admin/service-tokens', serviceTokensRoutes); // identités machine (API v1)
   app.use('/api/admin/jobs', jobsRoutes); // dashboard BullMQ (37.C)
   app.use('/api/admin', adminExplorerRoutes); // fiches détaillées par entité (refonte admin)
   app.use('/api/admin', adminRoutes);
@@ -158,6 +161,11 @@ export const createApp = (): Express => {
   app.use('/api/watch', watchRoutes);
   app.use('/api/playlists', playlistsRoutes); // dailies (Phase 33)
   app.use('/api/live', liveRoutes); // sessions live en cours (badges LIVE)
+  // API d'intégration v1 (DCC, Prism, bots) — contrat stable, distinct de l'API interne.
+  // Plafond propre : un daemon qui interroge le journal d'événements en boucle ne doit pas
+  // consommer le quota des utilisateurs de l'interface.
+  app.use('/api/v1', rateLimit({ windowMs: 15 * 60 * 1000, max: 10_000 }), v1Routes);
+
   // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
   app.use('/api', docsRoutes);
 

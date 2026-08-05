@@ -36,8 +36,11 @@ detail lives in the interactive reference at `/api/docs`.
 | `/api/client` | Public client access via share token |
 | `/api/bulk` | Multi-selection bulk operations |
 | `/api/admin` | Admin: users, system, settings, transcoding, trash, audit — plus the content explorer (`/users/:id`, `/projects`, `/projects/:id`, `/versions`, `/comments`, `/storage`, `DELETE /sessions/:sid`) |
+| `/api/admin/service-tokens` | Machine identities for the v1 API (admin only) |
+| `/api/v1` | Pipeline integration surface — see [v1-integration.md](v1-integration.md) |
 | `/api/docs`, `/api/openapi.json` | This API's interactive reference |
 
 ## Related pages
 
 - [API overview](overview.md)
+- [API v1 — pipeline integration](v1-integration.md)

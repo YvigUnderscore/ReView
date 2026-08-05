@@ -4,6 +4,8 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 import { paginationQuery } from './pagination';
+import { describeMounts } from './openapiRoutes';
+import { V1_BASE_PATH, V1_MOUNTS } from '../routes/v1';
 
 /**
  * Génération OpenAPI 3.0 depuis les schémas Zod (10.D6).
@@ -147,16 +149,64 @@ registry.registerPath({
   },
 });
 
+// ── API v1 (intégrations) ────────────────────────────────────────────────────
+
+registry.registerComponent('securitySchemes', 'apiToken', {
+  type: 'http',
+  scheme: 'bearer',
+  description:
+    "Token d'API `rvk_…` (personnel ou de service). Les scopes requis sont indiqués " +
+    'dans la description de chaque opération.',
+});
+
+/**
+ * Enregistre automatiquement toutes les routes de l'API v1, décrites depuis leurs propres
+ * schémas de validation. Un endpoint ajouté à un routeur v1 apparaît ici sans autre geste.
+ */
+function registerV1Paths(): void {
+  for (const route of describeMounts(V1_BASE_PATH, V1_MOUNTS)) {
+    const { method, path, schemas, scope } = route;
+    const request: Parameters<typeof registry.registerPath>[0]['request'] = {};
+    if (schemas.params) request.params = schemas.params as never;
+    if (schemas.query) request.query = schemas.query as never;
+    if (schemas.body) {
+      request.body = { content: { 'application/json': { schema: schemas.body } } };
+    }
+
+    registry.registerPath({
+      method,
+      path,
+      tags: ['API v1'],
+      summary: `${method.toUpperCase()} ${path}`,
+      description: scope ? `Scope requis : \`${scope}\`.` : undefined,
+      security: [{ bearerAuth: [] }, { apiToken: [] }],
+      request: Object.keys(request).length > 0 ? request : undefined,
+      responses: {
+        200: { description: 'Succès' },
+        400: jsonError('Requête invalide'),
+        401: jsonError('Non authentifié'),
+        403: jsonError('Rôle, scope ou cantonnement de projet insuffisant'),
+        404: jsonError('Ressource introuvable'),
+      },
+    });
+  }
+}
+
 /** Produit le document OpenAPI 3.0 (mémoïsé). */
 let cached: ReturnType<OpenApiGeneratorV3['generateDocument']> | null = null;
 export function buildOpenApiDocument() {
   if (cached) return cached;
+  registerV1Paths();
   cached = new OpenApiGeneratorV3(registry.definitions).generateDocument({
     openapi: '3.0.0',
     info: {
       title: 'ReView API',
       version: '2.0.0',
-      description: 'API de la plateforme de review collaborative ReView (générée depuis les schémas Zod).',
+      description:
+        'API de la plateforme de review collaborative ReView (générée depuis les schémas Zod).\n\n' +
+        '**`/api/v1`** est la surface d’intégration destinée aux outils (DCC, Prism, bots, ' +
+        'synchronisations) : contrat stable, adressage par chemin de pipeline, écritures ' +
+        'idempotentes et scopes explicites. **`/api`** sert l’interface web et suit le produit.',
       // Le document est public : il porte la licence de l'API qu'il décrit.
       license: { name: 'AGPL-3.0-or-later', url: 'https://www.gnu.org/licenses/agpl-3.0.html' },
     },
