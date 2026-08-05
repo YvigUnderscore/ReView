@@ -189,6 +189,8 @@ export async function sendDailyDigests(now = new Date()): Promise<number> {
   }
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const users = await prisma.user.findMany({
+    // Les comptes de service portent une adresse non routable : rien à leur envoyer.
+    where: { isService: false },
     select: {
       id: true,
       email: true,

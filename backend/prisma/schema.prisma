@@ -107,6 +107,13 @@ enum AnnouncementFrequency {
   FIRST_OF_DAY // une fois par jour et par utilisateur
 }
 
+// Nature d'un token d'API (API v1) : rattaché à une personne, ou à un compte de service
+// (ferme de rendu, bot Discord, daemon Prism) qui ne peut pas se connecter à l'interface.
+enum ApiTokenKind {
+  PERSONAL
+  SERVICE
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Studio (singleton) & configuration
 // ─────────────────────────────────────────────────────────────────────────────
@@ -158,6 +165,9 @@ model User {
   phone        String? // 42.B №89 — téléphone de contact
   avatarKey    String? // clé objet MinIO
   role         Role     @default(ARTIST)
+  // Compte de service (API v1) : porte les écritures d'un token machine pour garder des
+  // FK et un audit valides. Aucun login interactif, jamais listé dans l'annuaire.
+  isService    Boolean  @default(false)
   status       UserStatus @default(AVAILABLE) // statut manuel (dispo/absent/ne pas déranger)
   lastSeenAt   DateTime? // dernière activité connue (présence)
   storageUsed  BigInt   @default(0)
@@ -195,7 +205,9 @@ model User {
   pushSubscriptions PushSubscription[]
   sessions         UserSession[]
   apiTokens        ApiToken[]
+  createdApiTokens ApiToken[]          @relation("ApiTokenCreator")
   mediaAccesses    MediaAccessLog[]
+  apiEvents        ApiEvent[]          @relation("ApiEventActor")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -218,20 +230,62 @@ model UserSession {
   @@index([userId])
 }
 
-// Token d'API personnel (36.C) : `rvk_<40hex>`, stocké hashé (sha256), scopes read/write.
+// Token d'API (36.C, étendu API v1) : `rvk_<40hex>`, stocké hashé (sha256).
+// Les scopes sont fins (`versions:write`…) ; `read`/`write` restent acceptés et sont
+// développés à la volée (lib/apiScopes) pour ne pas invalider les tokens déjà émis.
 model ApiToken {
-  id         Int       @id @default(autoincrement())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     Int
-  name       String
-  tokenHash  String    @unique
-  scopes     String[]  @default(["read"])
-  lastUsedAt DateTime?
-  expiresAt  DateTime?
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  id          Int          @id @default(autoincrement())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  name        String
+  description String?
+  kind        ApiTokenKind @default(PERSONAL)
+  tokenHash   String       @unique
+  scopes      String[]     @default(["read"])
+  // Token cantonné à un projet (null = tous ceux auxquels le porteur a accès).
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   Int?
+  // Auteur de l'émission — pour un token de service, l'admin qui l'a créé.
+  createdBy   User?        @relation("ApiTokenCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime     @default(now())
 
   @@index([userId])
+  @@index([projectId])
+}
+
+// Journal d'événements de l'API v1 : alimente le polling `/api/v1/events` (daemon Prism,
+// bot Discord, synchro ShotGrid) et sert de trace aux webhooks sortants. Purgé par âge.
+model ApiEvent {
+  id         Int      @id @default(autoincrement())
+  event      String // ex. version.published, task.status_changed
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  Int?
+  entityType String? // version | task | comment | shot…
+  entityId   Int?
+  payload    Json     @default("{}")
+  actor      User?    @relation("ApiEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId    Int?
+  createdAt  DateTime @default(now())
+
+  @@index([id, projectId])
+  @@index([createdAt])
+  @@index([event])
+}
+
+// Idempotence des écritures v1 (en-tête `Idempotency-Key`) : un DCC qui rejoue sa requête
+// après un timeout réseau retrouve la réponse d'origine au lieu de créer un doublon.
+model IdempotencyRecord {
+  // sha256(clé client + endpoint + token) : deux tokens ne peuvent pas se marcher dessus.
+  fingerprint String   @id
+  statusCode  Int
+  response    Json
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // Journal d'accès aux médias (36.E) : qui a visionné quoi/quand (compte OU lien de partage).
@@ -314,6 +368,8 @@ model Project {
   notifications Notification[]
   board       Board?
   playlists   Playlist[]
+  apiTokens   ApiToken[]
+  apiEvents   ApiEvent[]
 
   @@unique([studioId, slug])
 }

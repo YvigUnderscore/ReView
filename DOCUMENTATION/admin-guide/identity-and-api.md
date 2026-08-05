@@ -1,6 +1,6 @@
 # Identity, API & audit
 
-> Updated: 2026-07-19
+> Updated: 2026-08-05
 
 ## SSO (OIDC) — *Admin → Studio → Identité (SSO)*
 
@@ -29,12 +29,37 @@ API tokens in *API & Webhooks*.
 ## API tokens (studio view) — *Admin → Communications → API & Webhooks*
 
 Lists every active personal token (owner, scope, last use). Revoking here is
-immediate. Scopes: `read` = GET only; `write` required for any mutation.
+immediate.
+
+**Scopes** are fine-grained: `domain:action` over `projects`, `sequences`, `shots`,
+`assets`, `tasks`, `versions`, `media`, `comments`, `playlists`, `events`,
+`webhooks`, `users` — plus `admin`. Tokens issued before this keep their `read` /
+`write` scope and are expanded on the fly, except for `webhooks:*` and `users:*`,
+which a legacy `write` never grants. `GET /api/auth/scopes` returns the catalogue.
+
+A token can be **bound to one project**: it then cannot reach any other, even if its
+owner could.
+
+## Service tokens — machine identities
+
+`POST /api/admin/service-tokens` (admin only) issues a token for a render farm, a
+pipeline daemon or a bot. It is backed by a service account that **cannot log in**
+and never appears in the directory, mail digests or presence lists — it exists so
+that writes keep an author and an audit trail. Choose its role (`SUPERVISOR`,
+`ARTIST` or `CLIENT`; never admin) and, ideally, bind it to a project.
+
+Revoking a service token leaves its account in place: past work keeps its author.
+
+See [API v1 — pipeline integration](../api/v1-integration.md).
 
 ## Outgoing webhooks — same section
 
-- Add a URL + subscribed events (`media.published`, `review.decision`,
-  `comment.created`). The **HMAC secret is shown once**.
+- Add a URL + subscribed events. The catalogue now covers the pipeline life cycle
+  (`version.published`, `task.status_changed`, `shot.created`…) beside the original
+  `media.published`, `review.decision` and `comment.created`; existing webhooks are
+  unaffected. `GET /api/v1/schema` lists them all. The **HMAC secret is shown once**.
+- A receiver that cannot be reached from outside the studio can instead **poll**
+  `/api/v1/events` — same catalogue, cursor-based.
 - Deliveries: JSON POST signed `sha256=HMAC(secret, timestamp.body)`
   (`X-ReView-Signature`), 5 attempts with exponential backoff, sent from the
   worker container. Last status/error is visible per webhook; use the **test**
@@ -53,4 +78,5 @@ timestamp. Complements the audit log (creations/revocations/2FA events…) in
 ## Related pages
 
 - [API authentication](../api/authentication.md)
+- [API v1 — pipeline integration](../api/v1-integration.md)
 - [Secure distribution](secure-distribution.md)

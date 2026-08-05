@@ -3,6 +3,21 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08 — Pipeline API for DCCs, Prism and bots
+
+- **New integration API** under `/api/v1`, meant for tools rather than the web interface:
+  publish a playblast from Maya or Blender, let Prism declare shots, feed a Discord bot.
+  It is documented at **`/api/docs`** and versioned — it will not change under your scripts.
+- **Address shots by name**, not by database id: `PROJ/SQ010/SH0100/anim` resolves to the
+  right task, whatever the case you typed. Missing sequences, shots and tasks are created
+  on the fly when you publish.
+- **Publish in two calls**: one to open the version and get an upload link, one to close it.
+  Re-running the same request after a network drop no longer creates a duplicate version.
+- **Service tokens** (Admin → Identity & API): machine identities for a render farm or a
+  bot, with fine-grained permissions and, if you want, access to a single project.
+- **Event feed**: a studio daemon behind a firewall can now poll `/api/v1/events` instead
+  of waiting for a webhook it cannot receive.
+
 ## 2026-08 — ReView is now AGPL-3.0
 
 - **New license**: ReView moves from MIT to the **GNU AGPL v3 or later**. You can still run

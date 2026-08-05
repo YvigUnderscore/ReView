@@ -8,6 +8,8 @@ import { initSocket } from './services/SocketService';
 import { storage } from './services/StorageService';
 import { purgeExpiredTrash } from './lib/trash';
 import { purgeObsoleteDerived } from './lib/derivedPurge';
+import { purgeIdempotencyRecords } from './lib/idempotency';
+import { purge as purgeApiEvents } from './services/ApiEventService';
 import { getNumericSetting, SETTING_KEYS } from './lib/settings';
 import { sendDailyDigests } from './services/DigestService';
 import { sendWeeklyReports } from './services/WeeklyReportService';
@@ -27,6 +29,12 @@ function scheduleTrashSweep(): void {
         logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
       // Purge des dérivés obsolètes (37.H) — no-op si désactivée dans l'admin.
       await purgeObsoleteDerived();
+      // API v1 : le journal d'événements et les clés d'idempotence sont des tampons, pas
+      // des archives. Sans purge, ils grossissent indéfiniment au rythme du studio.
+      const events = await purgeApiEvents();
+      const keys = await purgeIdempotencyRecords();
+      if (events > 0 || keys > 0)
+        logger.info(`[API v1] purge : ${events} événement(s), ${keys} clé(s) d'idempotence.`);
     } catch (err) {
       logger.error({ err }, '[Trash] échec du balayage de purge');
     }

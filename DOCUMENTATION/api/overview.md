@@ -1,11 +1,18 @@
 # API overview
 
-> Updated: 2026-07-18
+> Updated: 2026-08-05
 
 The backend is an Express 5 REST API under **`/api`**, with Socket.io realtime on
 `/socket.io`. An **interactive reference** (OpenAPI generated from the Zod schemas,
 rendered with Scalar) is served by the backend at **`/api/docs`**
 (spec: `/api/openapi.json`).
+
+Two surfaces share that base:
+
+- **`/api`** — what the web interface consumes. It follows the product.
+- **`/api/v1`** — the stable surface for tools (DCC, Prism, bots, third-party
+  synchronisation): pipeline-path addressing, idempotent writes, explicit scopes.
+  See [API v1 — pipeline integration](v1-integration.md).
 
 ## Authentication
 
@@ -48,5 +55,6 @@ Errors are structured JSON:
 
 ## Related pages
 
+- [API v1 — pipeline integration](v1-integration.md) — surface for DCC/pipeline tools
 - [Domains](domains.md) — route map per feature
 - [Security model](../infrastructure/security.md)

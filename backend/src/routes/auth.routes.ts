@@ -84,6 +84,9 @@ router.post('/login', authLimiter, validate({ body: credentialsSchema }), async 
   if (!user || !(await bcrypt.compare(password, user.password))) {
     throw unauthorized('Identifiants invalides', 'BAD_CREDENTIALS');
   }
+  // Un compte de service (API v1) n'existe que pour porter les écritures d'un token
+  // machine : il ne se connecte jamais, même si son mot de passe aléatoire fuitait.
+  if (user.isService) throw unauthorized('Identifiants invalides', 'BAD_CREDENTIALS');
   if (user.totpEnabledAt) {
     res.json({ requires2fa: true, tmpToken: signTwoFaToken(user.id) });
     return;

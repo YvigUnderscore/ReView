@@ -15,7 +15,7 @@ import { emitToProject } from './SocketService';
 import { enqueueMediaJob } from './JobService';
 import { getLiveSyncHz, getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { logMediaAccess } from '../lib/mediaAccess';
-import { emitWebhookEvent } from './WebhookService';
+import { publish as publishApiEvent } from './ApiEventService';
 import { notifyChat } from './ChatNotifyService';
 import { isClamavEnabled } from '../lib/clamav';
 import { hlsContentType } from '../lib/hls';
@@ -418,13 +418,19 @@ export async function publish(user: SessionUser, id: number) {
       exclude: [user.id],
     });
     // Webhooks sortants (36.D).
-    emitWebhookEvent('media.published', {
-      mediaObjectId: id,
-      versionId: media.versionId,
+    publishApiEvent('media.published', {
       projectId,
-      kind: media.kind,
-      originalName: media.originalName,
-      publishedBy: user.id,
+      entityType: 'media',
+      entityId: id,
+      actorId: user.id,
+      payload: {
+        mediaObjectId: id,
+        versionId: media.versionId,
+        projectId,
+        kind: media.kind,
+        originalName: media.originalName,
+        publishedBy: user.id,
+      },
     });
     // Messagerie d'équipe (42.B — №67).
     notifyChat(`🎬 Nouveau média publié : ${media.originalName}`);

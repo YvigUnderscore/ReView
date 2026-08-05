@@ -7,7 +7,7 @@ import { logAudit } from './AuditService';
 import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
 import { emitToProject } from './SocketService';
-import { emitWebhookEvent } from './WebhookService';
+import { publish as publishApiEvent } from './ApiEventService';
 import { notifyChat } from './ChatNotifyService';
 import { badRequest, conflict, notFound } from '../lib/errors';
 
@@ -152,15 +152,21 @@ export async function decide(
     exclude: [user.id, ...(version.authorId ? [version.authorId] : [])],
   });
   // Webhooks sortants (36.D).
-  emitWebhookEvent('review.decision', {
-    versionId,
-    versionName: version.name,
+  publishApiEvent('review.decision', {
     projectId,
-    status: status.name,
-    isApproval: status.isApproval,
-    isRetake: status.isRetake,
-    comment: comment ?? null,
-    decidedBy: user.id,
+    entityType: 'version',
+    entityId: versionId,
+    actorId: user.id,
+    payload: {
+      versionId,
+      versionName: version.name,
+      projectId,
+      status: status.name,
+      isApproval: status.isApproval,
+      isRetake: status.isRetake,
+      comment: comment ?? null,
+      decidedBy: user.id,
+    },
   });
   // Messagerie d'équipe (42.B — №67) : signal studio-wide des décisions.
   const emoji = status.isApproval ? '✅' : status.isRetake ? '🔁' : '🟠';

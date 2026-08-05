@@ -8,8 +8,39 @@ import { createHmac } from 'node:crypto';
  * signature HMAC. La persistance/livraison vit dans services/WebhookService.
  */
 
-export const WEBHOOK_EVENTS = ['media.published', 'review.decision', 'comment.created'] as const;
+/**
+ * Catalogue d'événements (API v1). Les trois premiers existaient avant les intégrations
+ * et restent inchangés : un webhook déjà configuré continue de recevoir exactement ce
+ * qu'il recevait. Les suivants couvrent le cycle de vie du pipeline, ce dont un bot
+ * Discord ou une synchronisation ShotGrid a besoin pour suivre une production.
+ */
+export const WEBHOOK_EVENTS = [
+  'media.published',
+  'review.decision',
+  'comment.created',
+  'comment.resolved',
+  'project.created',
+  'project.updated',
+  'sequence.created',
+  'shot.created',
+  'shot.updated',
+  'asset.created',
+  'task.created',
+  'task.updated',
+  'task.status_changed',
+  'task.assigned',
+  'version.created',
+  'version.published',
+  'media.uploaded',
+  'media.failed',
+] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+/** Alias public du catalogue — exposé par `/api/v1/schema` aux clients d'intégration. */
+export const API_EVENTS = WEBHOOK_EVENTS;
+
+export const isWebhookEvent = (value: string): value is WebhookEvent =>
+  (WEBHOOK_EVENTS as readonly string[]).includes(value);
 
 const PRIVATE_HOST_PATTERNS: RegExp[] = [
   /^localhost$/i,
