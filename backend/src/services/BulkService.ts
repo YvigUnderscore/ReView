@@ -174,6 +174,13 @@ export async function bulkRestore(user: SessionUser, domain: DeleteDomain, ids: 
  */
 export async function bulkPurge(user: SessionUser, domain: DeleteDomain, ids: number[]): Promise<number> {
   await assertDeleteAccess(user, domain, ids);
+  // La purge d'un projet est réservée aux ADMIN — c'est la règle de la route unitaire
+  // (`DELETE /api/projects/:projectId/purge`, requireRole(ADMIN)). `assertDeleteAccess` ne
+  // demande qu'un « gestionnaire », qui inclut SUPERVISOR : sans ce contrôle, la voie
+  // groupée rendait à un superviseur — dont l'accès projet est global — la destruction
+  // définitive et irréversible de n'importe quel projet, base et stockage compris.
+  if (domain === 'projects' && user.role !== Role.ADMIN)
+    throw forbidden('Purge définitive d’un projet réservée aux administrateurs');
   for (const id of ids) await PURGE[domain](id);
   const a = AUDIT_ACTION[domain];
   logAudit({ userId: user.id, action: a.purge, entityType: a.type, entityId: ids[0], metadata: { ids } });

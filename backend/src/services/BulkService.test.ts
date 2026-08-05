@@ -59,6 +59,7 @@ import { Role } from '@prisma/client';
 
 const admin = { id: 1, role: Role.ADMIN };
 const artist = { id: 3, role: Role.ARTIST };
+const supervisor = { id: 5, role: Role.SUPERVISOR };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -111,6 +112,22 @@ describe('BulkService.bulkPurge — corbeille admin', () => {
     expect(purgeProject).toHaveBeenCalledTimes(2);
     expect(purgeProject).toHaveBeenCalledWith(1);
     expect(purgeProject).toHaveBeenCalledWith(2);
+  });
+
+  // La route unitaire `DELETE /api/projects/:projectId/purge` est réservée aux ADMIN.
+  // La voie groupée ne demandait qu'un « gestionnaire » — donc aussi un SUPERVISOR, dont
+  // l'accès projet est global : n'importe quel projet pouvait être détruit définitivement.
+  it('refuse la purge d’un projet à un superviseur (réservée aux admins)', async () => {
+    vi.mocked(resolveProjectIdForProject).mockResolvedValue(7);
+    await expect(bulkPurge(supervisor, 'projects', [1])).rejects.toMatchObject({ statusCode: 403 });
+    expect(purgeProject).not.toHaveBeenCalled();
+  });
+
+  // La suppression douce (corbeille) reste bien ouverte au superviseur : seule la
+  // destruction irréversible est remontée au niveau admin.
+  it('laisse un superviseur mettre un projet à la corbeille', async () => {
+    vi.mocked(resolveProjectIdForProject).mockResolvedValue(7);
+    await expect(bulkDelete(supervisor, 'projects', [1])).resolves.toBe(1);
   });
 });
 

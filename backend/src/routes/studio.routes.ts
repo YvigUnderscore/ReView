@@ -79,6 +79,19 @@ router.patch(
     const studio = await prisma.studio.findFirst();
     if (!studio) throw notFound('Studio non configuré');
     const updated = await prisma.studio.update({ where: { id: studio.id }, data: body });
+    // Le journal d'audit est la seule trace des changements de configuration privilegies.
+    // Jamais l'URL du webhook elle-meme : un journal consultable ne doit pas devenir la
+    // nouvelle cachette du secret.
+    AuditService.logAudit({
+      userId: req.user!.id,
+      action: 'STUDIO_UPDATE',
+      entityType: 'Studio',
+      entityId: studio.id,
+      metadata: {
+        name: body.name ?? null,
+        discordWebhookChanged: body.discordWebhookUrl !== undefined,
+      },
+    });
     res.json({ studio: updated });
   },
 );
@@ -100,6 +113,12 @@ router.put(
       where: { key },
       update: { value },
       create: { key, value },
+    });
+    AuditService.logAudit({
+      userId: req.user!.id,
+      action: 'SETTING_UPDATE',
+      entityType: 'Setting',
+      metadata: { key },
     });
     res.json({ setting });
   },
@@ -165,7 +184,16 @@ router.get('/smtp', requireRole(Role.ADMIN), async (_req, res) => {
 
 // PUT /api/studio/smtp — enregistre la config (mot de passe chiffré, write-only) (admin)
 router.put('/smtp', requireRole(Role.ADMIN), validate({ body: smtpSchema }), async (req, res) => {
-  res.json({ smtp: await SmtpService.setConfig(req.body) });
+  const smtp = await SmtpService.setConfig(req.body);
+  // Le relais SMTP sortant est un pivot : qui le change peut detourner tout le courrier
+  // de l'instance. Jamais le mot de passe dans le journal, seulement le fait du changement.
+  AuditService.logAudit({
+    userId: req.user!.id,
+    action: 'SMTP_UPDATE',
+    entityType: 'Setting',
+    metadata: { host: req.body.host ?? null, passwordChanged: req.body.password !== undefined },
+  });
+  res.json({ smtp });
 });
 
 // POST /api/studio/smtp/test — envoie un email de test (admin)
