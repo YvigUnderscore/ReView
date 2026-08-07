@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://discord.gg/vw7h6BqcNc">
-    <img src="https://img.shields.io/discord/1330663471017398292?color=5865F2&label=Discord&logo=discord&logoColor=white" alt="Discord Server" />
+    <img src="https://img.shields.io/discord/1462953450907238614?color=5865F2&label=Discord&logo=discord&logoColor=white" alt="Discord Server" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue" alt="AGPL-3.0-or-later licence" />
