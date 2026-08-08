@@ -27,6 +27,15 @@ describe('openapi', () => {
     expect(doc.components?.securitySchemes?.bearerAuth).toBeTruthy();
   });
 
+  it('documente le champ « usd » de POST /api/v1/publish — sinon un intégrateur ne peut pas le deviner', () => {
+    const schema = doc.paths?.['/api/v1/publish']?.post?.requestBody as
+      | { content?: Record<string, { schema?: { properties?: Record<string, { description?: string }> } }> }
+      | undefined;
+    const usd = schema?.content?.['application/json']?.schema?.properties?.usd;
+    expect(usd).toBeTruthy();
+    expect(usd?.description).toMatch(/première conversion/i);
+  });
+
   it('documente la pagination sur GET /api/projects (query page/pageSize)', () => {
     const params = doc.paths?.['/api/projects']?.get?.parameters ?? [];
     const names = params.map((p) => (p as { name?: string }).name);

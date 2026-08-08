@@ -27,6 +27,7 @@ import { logger } from '../lib/logger';
 import { assertCanContribute } from '../lib/projectRoles';
 import { notifyWatchers } from './WatchService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
+import type { UsdRequest } from './ModelConvertService';
 
 /**
  * Logique métier des médias (upload présigné, finalize/validation magic bytes,
@@ -61,6 +62,12 @@ export interface CreateUploadInput {
   size?: number;
   /** sha256 hex du fichier, calculé côté client (37.B : checksum bout-en-bout + dédup). */
   contentHash?: string;
+  /**
+   * Scène USD (`MODEL_3D`) : variantes et purpose demandés par le client (45.E). Posé dans
+   * `metadata.usdRequest` — la clé que lit le worker `convert3d` et qu'écrit la
+   * recomposition — pour que la **première** conversion soit déjà la bonne.
+   */
+  usdRequest?: UsdRequest;
 }
 
 /** Crée un MediaObject (UPLOADING) et renvoie une URL présignée PUT. */
@@ -113,7 +120,10 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
       mimeType: contentType,
       status: MediaStatus.UPLOADING,
       uploaderId: user.id,
-      metadata: input.contentHash ? { contentHash: input.contentHash } : {},
+      metadata: {
+        ...(input.contentHash ? { contentHash: input.contentHash } : {}),
+        ...(input.usdRequest ? { usdRequest: input.usdRequest as unknown as Prisma.InputJsonValue } : {}),
+      },
     },
   });
   const storageKey = StorageService.mediaKey({

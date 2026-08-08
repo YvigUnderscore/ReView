@@ -8,6 +8,7 @@ import { validate } from '../../middleware/validate';
 import { requireScope, assertTokenProject } from '../../middleware/scope';
 import { assertProjectAccess } from '../../middleware/rbac';
 import { idempotency } from '../../lib/idempotency';
+import { usdRequestSchema } from '../../lib/usdRequest';
 import * as PublishFlowService from '../../services/PublishFlowService';
 import * as Resolve from '../../services/PipelineResolveService';
 import { parsePipelinePath } from '../../lib/pipelinePath';
@@ -50,6 +51,15 @@ router.post(
           endFrame: z.number().int().optional(),
         })
         .optional(),
+      // Scène USD : la sélection est connue du DCC dès la publication. La donner ici évite
+      // une conversion Blender complète refaite pour rien via `usd/recompose`.
+      usd: usdRequestSchema
+        .optional()
+        .describe(
+          'Scène USD (médias 3D) : variantes et purpose appliqués dès la première conversion. ' +
+            'Fournir la sélection ici évite un POST /api/media/{id}/usd/recompose et la ' +
+            'conversion complète qu’il referait.',
+        ),
     }),
   }),
   async (req, res) => {

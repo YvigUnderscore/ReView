@@ -1,6 +1,6 @@
 # API v1 — pipeline integration
 
-> Updated: 2026-08-05
+> Updated: 2026-08-08
 
 **`/api/v1`** is the stable surface meant for tools: DCCs (Maya, Blender, Houdini,
 Nuke), pipeline managers (Prism), bots and third-party synchronisations. It sits
@@ -145,6 +145,44 @@ than guessed; pass `kind` explicitly.
 Set `createMissing: false` to fail instead of creating structure — useful when the
 pipeline should be the only thing declaring shots.
 
+### Publishing a USD scene with a variant selection
+
+A DCC knows which variants and which purpose the scene should be shown with — it
+knew before it wrote the file. Pass that selection as `usd` and the **first**
+conversion is already the right one:
+
+```bash
+curl -X POST "$REVIEW/api/v1/publish" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "path": "PROJ/assets/hero/model",
+        "filename": "hero_model_v001.usd",
+        "usd": {
+          "variants": { "/World/Hero": { "modelingVariant": "damaged" } },
+          "purpose": "render"
+        }
+      }'
+```
+
+- `variants` — the chosen option per variant set, keyed by USD prim path. Optional,
+  defaults to `{}` (each variant set keeps the selection authored in the scene).
+  At most 64 prims; a prim path is at most 1024 characters, a variant name 200.
+- `purpose` — `render`, `proxy` or `guide`. Optional, defaults to `render`.
+
+Without it the conversion runs with the defaults, and matching the intended look
+then costs a `POST /api/media/{id}/usd/recompose` — a **full Blender conversion run
+a second time** for a selection the client already knew. The selection is stored on
+the media, so it also survives job retries and later reprocessing.
+
+Prim paths and variant names are **not** validated against the scene at this point:
+it has not been analysed yet. They are filtered at conversion time against the
+variant sets actually found, so an invented value is dropped rather than breaking
+the job. The field only applies to `MODEL_3D`; sending it with a video or an image
+is refused (`USD_NOT_3D`) rather than silently ignored.
+
+See [3D & USD](../admin-guide/3d-usd.md) for what the conversion does with it.
+
 ## Idempotency
 
 Write endpoints accept `Idempotency-Key`. The key is **reserved before** the request
@@ -205,8 +243,8 @@ presented token, and the project it is bound to.
 
 Same envelope as the rest of the API: `{ "error": "…", "code": "…" }`. Codes worth
 handling: `SCOPE_REQUIRED`, `TOKEN_PROJECT_SCOPE`, `VERSION_EXISTS`, `KIND_UNKNOWN`,
-`PATH_TOO_SHALLOW`, `IDEMPOTENCY_IN_PROGRESS`, `PROJECT_ARCHIVED`, and the
-`*_NOT_FOUND` family.
+`PATH_TOO_SHALLOW`, `USD_NOT_3D`, `IDEMPOTENCY_IN_PROGRESS`, `PROJECT_ARCHIVED`, and
+the `*_NOT_FOUND` family.
 
 Rate limit: 10 000 requests / 15 min for `/api/v1`, separate from the web quota.
 

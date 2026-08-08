@@ -12,6 +12,7 @@ import * as Ensure from './PipelineEnsureService';
 import * as Resolve from './PipelineResolveService';
 import * as VersionService from './VersionService';
 import * as ApiEventService from './ApiEventService';
+import type { UsdRequest } from './ModelConvertService';
 
 /**
  * Publication depuis un DCC en deux appels (API v1).
@@ -66,6 +67,11 @@ export interface StartPublishInput {
   createMissing?: boolean;
   /** Cadrage du shot, posé à la création seulement. */
   shot?: { name?: string; startFrame?: number; endFrame?: number };
+  /**
+   * Scène USD : variantes et purpose à convertir. Réservé à `MODEL_3D`.
+   * Sans lui, la conversion part sur les valeurs par défaut et il faut ensuite recomposer.
+   */
+  usd?: UsdRequest;
 }
 
 /** Devine un type MIME raisonnable quand le client n'en fournit pas. */
@@ -95,6 +101,11 @@ export async function start(actor: Actor, input: StartPublishInput) {
 
   const project = await Resolve.resolveProject(parsed.project);
   const kind = input.kind ?? inferMediaKind(input.filename);
+  if (input.usd && kind !== MediaKind.MODEL_3D) {
+    // Refus explicite plutôt qu'oubli silencieux : un client qui croit piloter la conversion
+    // d'un .mov doit l'apprendre tout de suite, pas en relisant les métadonnées.
+    throw badRequest("« usd » ne s'applique qu'aux médias 3D", 'USD_NOT_3D');
+  }
 
   // Cible : la tâche si le chemin en nomme une, sinon l'asset lui-même.
   const target = input.createMissing
@@ -120,6 +131,11 @@ export async function start(actor: Actor, input: StartPublishInput) {
     kind,
     size: input.size,
     contentHash: input.contentHash,
+    // La sélection n'est pas filtrée ici : à la publication, les variantSets de la scène ne
+    // sont pas encore connus (l'analyse USD n'a pas eu lieu). Ce n'est pas un trou —
+    // `ModelConvertService.convertUsd` la passe à `sanitizeVariantSelection` contre les
+    // variantSets réellement lus, donc une valeur inventée n'atteint jamais le pipeline.
+    usdRequest: input.usd,
   });
 
   if (version.created) {

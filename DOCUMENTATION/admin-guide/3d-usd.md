@@ -1,6 +1,6 @@
 # USD & 3D conversion
 
-> Updated: 2026-08-01
+> Updated: 2026-08-08
 
 Uploaded 3D media are converted to **GLB** by the asset worker so the Three.js viewer can
 display them. Routing by source format:
@@ -102,6 +102,11 @@ layer** that sublayers the root, and that overlay is what gets converted. The re
 selection is stored on the media, so it survives job retries and later reprocessing.
 Recomposing is refused on a **published** media (publication lock) — publish a new version
 instead.
+
+An integration that already knows the selection should not go through recomposition at all:
+`POST /api/v1/publish` accepts the same `variants` and `purpose` under a `usd` field, and the
+**first** conversion then runs with them. See
+[API v1 — pipeline integration](../api/v1-integration.md#publishing-a-usd-scene-with-a-variant-selection).
 
 ## Enabling the USD toolchain
 
