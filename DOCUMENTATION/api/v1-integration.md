@@ -196,7 +196,10 @@ duplicate:
 Keys are kept 24 h. They are scoped per token and per endpoint.
 
 Creation endpoints (`ensure`) are idempotent by nature: they return `201` with
-`created: true` on first call, `200` with `created: false` afterwards.
+`created: true` on first call, `200` with `created: false` afterwards. One case
+cannot converge: when the name is held by an entity sitting in the trash, the
+ensure answers `409` with a named code (`SEQUENCE_IN_TRASH`, `SHOT_IN_TRASH`,
+`ASSET_IN_TRASH`) — restore or purge the entity, then replay.
 
 ## Events
 

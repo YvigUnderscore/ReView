@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { AssetType, Role, TaskType, VersionStatus } from '@prisma/client';
+import { AssetType, Prisma, Role, TaskType, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { badRequest } from '../lib/errors';
+import { badRequest, conflict } from '../lib/errors';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute, assertProjectManage } from '../lib/projectRoles';
 import { parsePipelinePath } from '../lib/pipelinePath';
@@ -32,6 +32,23 @@ export interface EnsureOutcome<T> {
 
 const insensitive = (value: string) => ({ equals: value, mode: 'insensitive' as const });
 
+/**
+ * Rattrape une violation d'unicité survenue malgré la recherche préalable. Deux causes :
+ * une requête concurrente vient de créer l'entité (on la renvoie, `created: false`), ou le
+ * nom est retenu par une entité de la corbeille — la contrainte SQL ignore le soft-delete.
+ * Dans ce second cas on répond 409 avec un code nommé, jamais une erreur interne.
+ */
+async function recoverUniqueViolation<T>(
+  err: unknown,
+  refind: () => Promise<T | null>,
+  trashConflict: () => Error,
+): Promise<EnsureOutcome<T>> {
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== 'P2002') throw err;
+  const winner = await refind();
+  if (winner) return { entity: winner, created: false };
+  throw trashConflict();
+}
+
 /** Créer de la structure (séquence, shot, asset) engage la production : superviseur+. */
 async function assertCanCreateStructure(actor: Actor, projectId: number): Promise<void> {
   await assertProjectWritable(projectId);
@@ -51,22 +68,31 @@ export interface EnsureSequenceInput {
 }
 
 export async function ensureSequence(actor: Actor, projectId: number, input: EnsureSequenceInput) {
-  const existing = await prisma.sequence.findFirst({
-    where: { projectId, deletedAt: null, code: insensitive(input.code) },
-    select: sequenceSelect,
-  });
+  const find = () =>
+    prisma.sequence.findFirst({
+      where: { projectId, deletedAt: null, code: insensitive(input.code) },
+      select: sequenceSelect,
+    });
+  const existing = await find();
   if (existing) return { entity: existing, created: false };
 
   await assertCanCreateStructure(actor, projectId);
-  const entity = await prisma.sequence.create({
-    data: {
-      projectId,
-      code: input.code,
-      name: input.name ?? input.code,
-      order: input.order ?? 0,
-    },
-    select: sequenceSelect,
-  });
+  let entity;
+  try {
+    entity = await prisma.sequence.create({
+      data: {
+        projectId,
+        code: input.code,
+        name: input.name ?? input.code,
+        order: input.order ?? 0,
+      },
+      select: sequenceSelect,
+    });
+  } catch (err) {
+    return recoverUniqueViolation(err, find, () =>
+      conflict(`La séquence « ${input.code} » est dans la corbeille`, 'SEQUENCE_IN_TRASH'),
+    );
+  }
   emitToProject(projectId, 'sequence:update', { projectId, id: entity.id });
   return { entity, created: true };
 }
@@ -89,25 +115,34 @@ export async function ensureShot(actor: Actor, projectId: number, input: EnsureS
     sequenceId = seq.entity.id;
   }
 
-  const existing = await prisma.shot.findFirst({
-    where: { projectId, deletedAt: null, sequenceId, code: insensitive(input.code) },
-    select: shotSelect,
-  });
+  const find = () =>
+    prisma.shot.findFirst({
+      where: { projectId, deletedAt: null, sequenceId, code: insensitive(input.code) },
+      select: shotSelect,
+    });
+  const existing = await find();
   if (existing) return { entity: existing, created: false };
 
   await assertCanCreateStructure(actor, projectId);
-  const entity = await prisma.shot.create({
-    data: {
-      projectId,
-      sequenceId,
-      code: input.code,
-      name: input.name ?? input.code,
-      startFrame: input.startFrame ?? null,
-      endFrame: input.endFrame ?? null,
-      order: input.order ?? 0,
-    },
-    select: shotSelect,
-  });
+  let entity;
+  try {
+    entity = await prisma.shot.create({
+      data: {
+        projectId,
+        sequenceId,
+        code: input.code,
+        name: input.name ?? input.code,
+        startFrame: input.startFrame ?? null,
+        endFrame: input.endFrame ?? null,
+        order: input.order ?? 0,
+      },
+      select: shotSelect,
+    });
+  } catch (err) {
+    return recoverUniqueViolation(err, find, () =>
+      conflict(`Le shot « ${input.code} » est dans la corbeille`, 'SHOT_IN_TRASH'),
+    );
+  }
   emitToProject(projectId, 'shot:update', { projectId, id: entity.id });
   return { entity, created: true };
 }
@@ -119,22 +154,31 @@ export interface EnsureAssetInput {
 }
 
 export async function ensureAsset(actor: Actor, projectId: number, input: EnsureAssetInput) {
-  const existing = await prisma.asset.findFirst({
-    where: { projectId, deletedAt: null, name: insensitive(input.name) },
-    select: assetSelect,
-  });
+  const find = () =>
+    prisma.asset.findFirst({
+      where: { projectId, deletedAt: null, name: insensitive(input.name) },
+      select: assetSelect,
+    });
+  const existing = await find();
   if (existing) return { entity: existing, created: false };
 
   await assertCanCreateStructure(actor, projectId);
-  const entity = await prisma.asset.create({
-    data: {
-      projectId,
-      name: input.name,
-      type: input.type ?? AssetType.OTHER,
-      description: input.description ?? null,
-    },
-    select: assetSelect,
-  });
+  let entity;
+  try {
+    entity = await prisma.asset.create({
+      data: {
+        projectId,
+        name: input.name,
+        type: input.type ?? AssetType.OTHER,
+        description: input.description ?? null,
+      },
+      select: assetSelect,
+    });
+  } catch (err) {
+    return recoverUniqueViolation(err, find, () =>
+      conflict(`L'asset « ${input.name} » est dans la corbeille`, 'ASSET_IN_TRASH'),
+    );
+  }
   emitToProject(projectId, 'asset:update', { projectId, id: entity.id });
   return { entity, created: true };
 }
