@@ -325,7 +325,7 @@
   "viewer.format": "フォーマット",
   "viewer.tilt": "Tilt",
   "viewer.pip": "カメラビュー（PiP）",
-  "viewer.pip.hint": "レイアウトモード：カメラビューを PiP 表示",
+  "viewer.pip.hint": "layout モード：カメラビューを PiP 表示",
   "viewer.bookmarks.title": "保存したビュー",
   "viewer.bookmarks.empty": "保存されたビューはありません。",
   "viewer.bookmarks.save": "現在のビューを保存 — チームで共有されます",

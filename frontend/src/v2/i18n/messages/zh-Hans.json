@@ -321,7 +321,7 @@
   "viewer.format": "画幅",
   "viewer.tilt": "Tilt",
   "viewer.pip": "摄像机视图（PiP）",
-  "viewer.pip.hint": "布局模式：以 PiP 显示摄像机视图",
+  "viewer.pip.hint": "layout 模式：以 PiP 显示摄像机视图",
   "viewer.bookmarks.title": "已保存视角",
   "viewer.bookmarks.empty": "没有保存的视角。",
   "viewer.bookmarks.save": "保存当前视角 — 与团队共享",

@@ -79,7 +79,7 @@ const SPEAKING_CALLS = /^(toast(\.\w+)?|confirm|alert|prompt|window\.(confirm|al
 
 /** Props dont la valeur est une adresse, une classe ou un identifiant — jamais de la prose. */
 const TECHNICAL_PROPS =
-  /^(className|class|style|id|key|href|src|srcSet|to|type|name|value|htmlFor|accept|pattern|role|data-.*|aria-(hidden|controls|labelledby|describedby))$/;
+  /^(className|class|style|id|key|href|src|srcSet|to|type|name|value|htmlFor|accept|pattern|role|d|points|viewBox|data-.*|aria-(hidden|controls|labelledby|describedby))$/;
 
 /** Appels dont les arguments sont des URL, des clés de cache ou des traces. */
 const TECHNICAL_CALLS =

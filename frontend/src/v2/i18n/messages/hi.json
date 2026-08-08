@@ -340,7 +340,7 @@
   "viewer.format": "फ़ॉर्मैट",
   "viewer.tilt": "Tilt",
   "viewer.pip": "कैमरा दृश्य (PiP)",
-  "viewer.pip.hint": "लेआउट मोड: कैमरा दृश्य PiP में",
+  "viewer.pip.hint": "layout मोड: कैमरा दृश्य PiP में",
   "viewer.bookmarks.title": "सहेजे गए दृश्य",
   "viewer.bookmarks.empty": "कोई सहेजा गया दृश्य नहीं।",
   "viewer.bookmarks.save": "मौजूदा दृश्य सहेजें — टीम के साथ साझा",

@@ -325,7 +325,7 @@
   "viewer.format": "포맷",
   "viewer.tilt": "Tilt",
   "viewer.pip": "카메라 뷰(PiP)",
-  "viewer.pip.hint": "레이아웃 모드: 카메라 뷰를 PiP로 표시",
+  "viewer.pip.hint": "layout 모드: 카메라 뷰를 PiP로 표시",
   "viewer.bookmarks.title": "저장된 뷰",
   "viewer.bookmarks.empty": "저장된 뷰가 없습니다.",
   "viewer.bookmarks.save": "현재 뷰 저장 — 팀과 공유됩니다",
