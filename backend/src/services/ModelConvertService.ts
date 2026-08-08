@@ -27,6 +27,7 @@ import {
 } from '../lib/usdInspect';
 import {
   buildBlenderArgs,
+  buildVariantMask,
   parseBlenderSummary,
   summarizeBlenderError,
   type BlenderSummary,
@@ -220,7 +221,15 @@ async function prepareVariantLayers(
       index += 1;
       const overlayOut = join(dirname(source), `_review_variant_${index}.usda`);
       overlays.push({ out: overlayOut, variants: { [set.prim]: { [set.name]: option } } });
-      entries.push({ stage: overlayOut, prim: set.prim, set: set.name, option, default: current ?? '' });
+      entries.push({
+        stage: overlayOut,
+        prim: set.prim,
+        set: set.name,
+        option,
+        default: current ?? '',
+        // Sans les matériaux rangés hors du sous-arbre, l'option cuite ressort sans liaison.
+        mask: buildVariantMask(set.prim, info.materialPaths),
+      });
     }
   }
   if (entries.length === 0) return [];

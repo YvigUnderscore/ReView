@@ -190,6 +190,11 @@ def bake_variant_layers(manifest, vertex_budget, time_budget):
     L'importeur recree la lignee d'ancetres avec ses transformations locales, le
     rebranchement sur le prim d'origine reste donc identique.
 
+    Le masque est un masque de **peuplement** USD : hors masque, le prim n'existe plus sur le
+    stage, materiau lie compris. Le manifeste y ajoute donc les materiaux ranges ailleurs
+    (`buildVariantMask`), faute de quoi les objets cuits ressortaient sans materiau — donc en
+    metal blanc miroir dans le viewer, la spec glTF imposant le materiau par defaut.
+
     Deux budgets bornent la casse : sommets (poids du GLB) et temps (timeout du worker).
     Au-dela, les options restantes ne sont pas cuites et le resume le signale.
     """
@@ -211,7 +216,10 @@ def bake_variant_layers(manifest, vertex_budget, time_budget):
             bpy.ops.wm.usd_import(
                 **supported(
                     bpy.ops.wm.usd_import,
-                    {"filepath": os.path.abspath(entry["stage"]), "prim_path_mask": prim},
+                    {
+                        "filepath": os.path.abspath(entry["stage"]),
+                        "prim_path_mask": entry.get("mask") or prim,
+                    },
                 )
             )
         except Exception as exc:

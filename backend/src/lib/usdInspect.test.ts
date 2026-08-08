@@ -88,6 +88,15 @@ describe('parseUsdStageInfo', () => {
     expect(info.missingAssets).toEqual(['tex/diffuse.exr', 'tex/rough.exr']);
   });
 
+  it('remonte les chemins de matériaux, vides par défaut', () => {
+    // Ils alimentent le masque d'import des variantes cuites (46.G) : sans eux, un matériau
+    // rangé hors du sous-arbre cuit est absent du stage et l'objet ressort sans liaison.
+    expect(parseUsdStageInfo(stageJson({ materialPaths: ['/W/mtl/wood'] })).materialPaths).toEqual([
+      '/W/mtl/wood',
+    ]);
+    expect(parseUsdStageInfo(stageJson()).materialPaths).toEqual([]);
+  });
+
   it('rejette une description sans couche racine', () => {
     expect(() => parseUsdStageInfo('{"stagePath":"/tmp/x"}')).toThrow(/description de scene invalide/);
   });

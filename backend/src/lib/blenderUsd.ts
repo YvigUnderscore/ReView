@@ -85,6 +85,31 @@ export interface VariantLayerEntry {
   option: string;
   /** Option active dans la scene de base, pour etiqueter le sous-arbre d'origine. */
   default: string;
+  /** Chemins a peupler a l'import (prim porteur + materiaux ranges ailleurs), cf. `buildVariantMask`. */
+  mask?: string;
+}
+
+/**
+ * Masque d'import d'une option de variante : le prim porteur **et** les matériaux rangés hors
+ * de son sous-arbre.
+ *
+ * Blender applique `prim_path_mask` comme un masque de peuplement USD : ce qui est hors masque
+ * n'existe plus sur le stage, y compris la cible d'un `material:binding`. Un matériau de
+ * bibliothèque (`/World/mtl/…` à côté de l'asset) devient alors introuvable et l'objet cuit
+ * ressort sans matériau — donc en métal blanc miroir dans le viewer, la spec glTF imposant le
+ * matériau par défaut. Les chemins étrangers au sous-arbre sont donc ajoutés au masque ; ceux
+ * qu'il contient déjà sont inutiles, et Blender ignore un chemin absent du stage.
+ */
+export function buildVariantMask(prim: string, materialPaths: readonly string[] = []): string {
+  const outside = materialPaths.filter(
+    (path) =>
+      path.startsWith('/') &&
+      // Le masque est une liste délimitée par `,`/`;` — un chemin qui en contient la casserait.
+      !/[,;]/.test(path) &&
+      path !== prim &&
+      !path.startsWith(`${prim}/`),
+  );
+  return [prim, ...new Set(outside)].join(',');
 }
 
 /**

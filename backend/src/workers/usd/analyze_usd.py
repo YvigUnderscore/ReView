@@ -40,6 +40,9 @@ MAX_MISSING_REPORTED = 50
 # Scenegraph (46.A) : au-dela, l'arbre est tronque — une scene de production peut porter
 # des millions de prims, la review n'en affiche jamais autant.
 MAX_PRIMS_REPORTED = 5000
+# Materiaux rapportes pour la cuisson des variantes : ils servent a peupler le masque
+# d'import de Blender, pas a l'affichage — inutile d'en lister des dizaines de milliers.
+MAX_MATERIALS_REPORTED = 2000
 
 
 def _posix(path):
@@ -110,24 +113,37 @@ def _variant_sets(stage):
     return sets
 
 
-def _purposes_and_counts(stage):
+def _scan_stage(stage):
+    """Purposes, taille, squelette et chemins des materiaux — en un seul parcours.
+
+    Les chemins de materiaux ne servent pas la fiche technique mais la **cuisson des
+    variantes** : Blender masque l'import d'une option a son prim porteur, et un masque de
+    peuplement USD retire du stage tout ce qui est en dehors. Un materiau range ailleurs
+    (bibliotheque partagee `/World/mtl`) devient alors introuvable et le maillage arrive
+    sans materiau — donc en metal blanc miroir dans le viewer, la spec glTF imposant le
+    materiau par defaut. Les chemins collectes ici sont ajoutes au masque (46.G).
+    """
     from pxr import UsdGeom
 
     purposes = set()
+    materials = []
     prim_count = 0
     has_skel = False
     for prim in stage.TraverseAll():
         prim_count += 1
         if prim_count > MAX_PRIMS_SCANNED:
             break
-        if not has_skel and prim.GetTypeName() in ("SkelRoot", "Skeleton", "SkelAnimation"):
+        type_name = prim.GetTypeName()
+        if not has_skel and type_name in ("SkelRoot", "Skeleton", "SkelAnimation"):
             has_skel = True
+        if type_name == "Material" and len(materials) < MAX_MATERIALS_REPORTED:
+            materials.append(str(prim.GetPath()))
         imageable = UsdGeom.Imageable(prim)
         if imageable:
             purpose = imageable.GetPurposeAttr().Get()
             if purpose:
                 purposes.add(str(purpose))
-    return sorted(purposes), prim_count, has_skel
+    return sorted(purposes), prim_count, has_skel, materials
 
 
 def _prim_tree(stage):
@@ -259,7 +275,7 @@ def cmd_inspect(input_path, selections, overlay_out):
         _layers, unresolved = [], []
 
     base_dir = os.path.dirname(os.path.abspath(input_path)) or "."
-    purposes, prim_count, has_skel = _purposes_and_counts(stage)
+    purposes, prim_count, has_skel, material_paths = _scan_stage(stage)
     prim_tree = _prim_tree(stage)
     start = stage.GetStartTimeCode()
     end = stage.GetEndTimeCode()
@@ -279,6 +295,7 @@ def cmd_inspect(input_path, selections, overlay_out):
         "variantSets": _variant_sets(stage),
         "appliedVariants": applied_variants,
         "purposes": purposes,
+        "materialPaths": material_paths,
         "missingAssets": [_relative(p, base_dir) for p in unresolved[:MAX_MISSING_REPORTED]],
         "missingAssetsTotal": len(unresolved),
         "layerCount": len(_layers),

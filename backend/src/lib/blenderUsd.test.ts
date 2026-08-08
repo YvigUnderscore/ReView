@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import {
   BLENDER_SUMMARY_MARKER,
   buildBlenderArgs,
+  buildVariantMask,
   isUsdPurpose,
   parseBlenderSummary,
   summarizeBlenderError,
@@ -65,6 +66,40 @@ describe('buildBlenderArgs', () => {
     expect(buildBlenderArgs('/s.py', { ...base, variantTimeBudget: 0 })).not.toContain(
       '--variant-time-budget',
     );
+  });
+});
+
+describe('buildVariantMask', () => {
+  it('ajoute les matériaux rangés hors du sous-arbre cuit (46.G)', () => {
+    // Sans eux, le masque de peuplement les retire du stage : l'objet cuit perd sa liaison
+    // et le viewer lui applique le matériau glTF par défaut (métal blanc miroir).
+    const mask = buildVariantMask('/characters/crag', [
+      '/characters/crag/mtl/crag_body',
+      '/characters/DietDefaultPreview',
+    ]);
+    expect(mask.split(',')).toEqual(['/characters/crag', '/characters/DietDefaultPreview']);
+  });
+
+  it('n’ajoute rien quand la scène range ses matériaux sous le prim porteur', () => {
+    expect(buildVariantMask('/W/A', ['/W/A/mtl/wood', '/W/A'])).toBe('/W/A');
+    expect(buildVariantMask('/W/A')).toBe('/W/A');
+  });
+
+  it('ne se laisse pas confondre par un prim frère de même préfixe', () => {
+    // `/W/Asset2` n'est pas dans le sous-arbre de `/W/Asset` : il doit rester au masque.
+    expect(buildVariantMask('/W/Asset', ['/W/Asset2/mtl/wood'])).toBe('/W/Asset,/W/Asset2/mtl/wood');
+  });
+
+  it('déduplique et écarte les chemins qui casseraient la liste', () => {
+    // La liste est délimitée par `,`/`;` et Blender n'accepte que des chemins absolus.
+    const mask = buildVariantMask('/W/A', [
+      '/W/mtl/a',
+      '/W/mtl/a',
+      'relatif/mtl/b',
+      '/W/mtl/c,d',
+      '/W/mtl/e;f',
+    ]);
+    expect(mask).toBe('/W/A,/W/mtl/a');
   });
 });
 
