@@ -26,8 +26,9 @@ export function model3dSiblings(media: MediaSummary[]): MediaSummary[] {
  * Comparaison A/B des modèles 3D d'une même version (39.E, parité avec l'A/B splat) : si la version
  * porte plusieurs médias `MODEL_3D`, charge les frères dans la **même scène** (donc **caméra liée**)
  * — bascule A/B en fondu, ou **« voir tous »** côte à côte avec glissement. Les modèles sont
- * normalisés (bbox → taille cible) par `loadModel`, donc déjà à des tailles comparables. Non
- * destructif : les frères sont chargés bruts et libérés au démontage.
+ * normalisés (bbox → taille cible, bas de bbox sur `y = 0`) par `loadModel`, donc déjà à des tailles
+ * comparables et **posés sur le même sol** — l'écartement ne joue que sur X. Non destructif : les
+ * frères sont chargés bruts et libérés au démontage.
  */
 export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
   const t = useT();

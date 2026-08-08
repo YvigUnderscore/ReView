@@ -32,6 +32,8 @@ export interface SceneRuntime {
   layoutCam: THREE.PerspectiveCamera;
   /** Rayon englobant du modèle chargé — vue d'origine (H) et recadrages. */
   modelRadius: number;
+  /** Centre du modèle normalisé (posé sur `y = 0`) — cible de la vue d'origine et du turntable. */
+  modelCenter: THREE.Vector3;
   /** Objet du modèle principal chargé (enfant de `root`) — cible de la comparaison A/B (39.E). */
   modelObject: THREE.Object3D;
   /** Racine glTF (cible du mixer, distincte du wrapper de normalisation — 40.A) ; hôte du
@@ -171,6 +173,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         clips: model.animations,
         layoutCam,
         modelRadius: model.radius,
+        modelCenter: model.center,
         modelObject: model.object,
         animRoot: model.animRoot,
         skinnedCount: model.skinnedCount,
@@ -192,10 +195,13 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
           frameAspectRef.current,
         );
       resize();
-      // Cadrage initial (une fois l'aspect connu) + near/far partagés avec la caméra layout.
+      // Cadrage initial (une fois l'aspect connu) + near/far partagés avec la caméra layout. Le
+      // modèle repose sur `y = 0` : la caméra vise son centre, pas l'origine (sinon elle regarde
+      // le sol et le modèle sort par le haut du cadre).
       const dist = fitDistance(model.radius, scene.camera.fov, scene.camera.aspect || 1);
       if (dist > 0) {
-        scene.camera.position.set(0, 0, dist);
+        scene.camera.position.set(model.center.x, model.center.y, model.center.z + dist);
+        scene.controls.target.copy(model.center);
         scene.camera.near = layoutCam.near = Math.max(model.radius / 100, 0.001);
         scene.camera.far = layoutCam.far = model.radius * 100;
         scene.camera.updateProjectionMatrix();

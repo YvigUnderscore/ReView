@@ -45,8 +45,11 @@ export function useModelFraming(params: {
     const { camera, controls } = rt.scene;
     const dist = fitDistance(rt.modelRadius, camera.fov, camera.aspect || 1);
     if (dist <= 0) return;
-    camera.position.set(0, 0, dist);
-    controls.target.set(0, 0, 0);
+    // Le modèle est posé sur la grille (`y = 0`) : la cible est son centre, pas l'origine — c'est
+    // aussi l'axe autour duquel le turntable fait orbiter la caméra.
+    const { modelCenter } = rt;
+    camera.position.set(modelCenter.x, modelCenter.y, modelCenter.z + dist);
+    controls.target.copy(modelCenter);
     controls.update();
   }, [runtimeRef]);
 

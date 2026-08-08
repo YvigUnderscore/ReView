@@ -28,6 +28,10 @@ zipped folders) are converted to GLB at upload. USD goes through Blender, so com
 Unified DCC-style navigation: orbit, pan, dolly with the mouse, plus a **fly mode**
 for walkthroughs. Framing and tilt behave consistently across 3D and splat review.
 
+Every model is scaled to a common size and **stands on the floor grid**: whatever rested on
+the ground in the source scene rests on the ground here, and the default view (`H`) looks at
+the middle of the model, not at the grid.
+
 - **Camera bookmarks** — save the current view as a numbered, **shared** bookmark
   (managers only, `+ Vue`); anyone recalls it by clicking its number or pressing keys
   **1–9**. Bookmarks are persisted with the media and replayed for everyone.
@@ -38,7 +42,7 @@ for walkthroughs. Framing and tilt behave consistently across 3D and splat revie
   position and flip which side is kept. Session-only and non-destructive.
 - **A/B compare** — when a version holds several 3D models, switch between them with a
   linked camera (they share the scene), or *Voir tous* to line them up side by side.
-  The models are auto-normalized so their sizes are comparable.
+  The models are auto-normalized, so their sizes are comparable and they share the same floor.
 
 ## Animations
 

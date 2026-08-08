@@ -10,16 +10,24 @@ export const TARGET_SIZE = 2;
 export interface Normalized {
   /** Facteur d'échelle appliqué au modèle (ramène la plus grande dimension à TARGET_SIZE). */
   scale: number;
-  /** Position du modèle après mise à l'échelle pour recentrer sa bbox à l'origine. */
+  /** Position du modèle après mise à l'échelle : centré en X/Z, bas de bbox posé sur `y = 0`. */
   position: THREE.Vector3;
+  /** Centre de la bbox **après** normalisation — cible de cadrage caméra (jamais l'origine). */
+  center: THREE.Vector3;
   /** Rayon de la sphère englobante après mise à l'échelle (cadrage caméra). */
   radius: number;
 }
 
 /**
- * Normalisation d'un modèle par sa bbox (Phase 15, V1) : échelle unitaire + recentrage à
- * l'origine, pour un cadrage caméra cohérent quel que soit l'export. Pure/testable (prend une
- * `Box3` déjà calculée).
+ * Normalisation d'un modèle par sa bbox (Phase 15, V1) : échelle unitaire, centrage horizontal et
+ * **appui au sol**, pour un cadrage caméra cohérent quel que soit l'export. Pure/testable (prend
+ * une `Box3` déjà calculée).
+ *
+ * Le sol du viewer est le plan `y = 0` (grille `useSceneGrid`) : ramener le **centre** de la bbox à
+ * l'origine, comme le faisait la V1, enfonçait donc systématiquement la moitié basse du modèle sous
+ * la grille. On ramène le **bas** de la bbox à `y = 0` — ce qui reposait sur le sol dans le DCC
+ * repose sur le sol dans la review — et `center` porte le centre réel du modèle pour que le cadrage
+ * caméra vise l'objet et non le sol.
  */
 export function normalizeTransform(three: typeof import('three'), box: THREE.Box3): Normalized {
   const size = box.getSize(new three.Vector3());
@@ -27,8 +35,8 @@ export function normalizeTransform(three: typeof import('three'), box: THREE.Box
   const scale = maxDim > 0 ? TARGET_SIZE / maxDim : 1;
   const center = box.getCenter(new three.Vector3());
   const radius = box.getBoundingSphere(new three.Sphere()).radius * scale;
-  // Après mise à l'échelle, translation pour amener le centre local à l'origine.
-  return { scale, position: center.multiplyScalar(-scale), radius };
+  const position = new three.Vector3(-center.x * scale, -box.min.y * scale, -center.z * scale);
+  return { scale, position, center: new three.Vector3(0, (size.y * scale) / 2, 0), radius };
 }
 
 /**
@@ -59,6 +67,8 @@ export interface LoadedModel {
   animations: THREE.AnimationClip[];
   /** Rayon englobant après normalisation (auto-cadrage). */
   radius: number;
+  /** Centre du modèle après normalisation — cible caméra (le modèle repose sur `y = 0`). */
+  center: THREE.Vector3;
   /** Extensions glTF déclarées par le fichier (`extensionsUsed`) — fiche technique (39.C). */
   extensions: string[];
   /** Nombre de `SkinnedMesh` (rig présent → active le debug squelette 40.B). */
@@ -83,7 +93,7 @@ export async function loadModel(
   const gltf: GLTF = await loader.loadAsync(url);
   const animRoot = gltf.scene;
   const box = new three.Box3().setFromObject(animRoot);
-  const { scale, position, radius } = normalizeTransform(three, box);
+  const { scale, position, center, radius } = normalizeTransform(three, box);
   // Wrapper de normalisation : la scène glTF reste intacte (transform d'identité).
   const object = new three.Group();
   object.name = 'model-normalized';
@@ -93,5 +103,14 @@ export async function loadModel(
   const skinnedCount = markDeformableMeshes(animRoot);
   const json = (gltf.parser?.json ?? {}) as { extensionsUsed?: unknown };
   const extensions = Array.isArray(json.extensionsUsed) ? (json.extensionsUsed as string[]) : [];
-  return { object, animRoot, animations: gltf.animations ?? [], radius, extensions, skinnedCount, gltf };
+  return {
+    object,
+    animRoot,
+    animations: gltf.animations ?? [],
+    radius,
+    center,
+    extensions,
+    skinnedCount,
+    gltf,
+  };
 }

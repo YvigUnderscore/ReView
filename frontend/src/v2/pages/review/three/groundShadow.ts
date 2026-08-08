@@ -19,6 +19,10 @@ interface GroundShadowState {
  * mémorisé dans `scene.userData.__groundShadow` (reconstruit si le modèle change). `enabled=false`
  * retire le plan, coupe l'ombre de la key light et désactive le shadow map.
  *
+ * Le plan suit `box.min.y` du modèle **tel qu'il est en scène** : la normalisation posant le modèle
+ * sur `y = 0`, il coïncide avec la grille tant que la transformation utilisateur est neutre, et
+ * continue de le suivre sinon.
+ *
  * L'intensité de la key light (atténuée par l'HDRI, cf. `applyLighting`) n'affecte pas le rendu de
  * l'ombre : `ShadowMaterial` peint uniquement le masque d'ombre, d'opacité `SHADOW_OPACITY`.
  */
