@@ -14,7 +14,7 @@ dependencies are listed: build-time tooling is never redistributed.
 
 | License | Packages |
 | --- | --- |
-| MIT | 452 |
+| MIT | 453 |
 | Apache-2.0 | 62 |
 | ISC | 60 |
 | BSD-3-Clause | 10 |
@@ -27,7 +27,7 @@ dependencies are listed: build-time tooling is never redistributed.
 | MPL-2.0 | 1 |
 | OFL-1.1 | 1 |
 | Unlicense | 1 |
-| **Total** | **594** |
+| **Total** | **595** |
 
 Runtime services that ReView talks to over the network (PostgreSQL, Redis, MinIO,
 ClamAV, Prometheus, Grafana, nginx) run as separate programs in their own containers.
@@ -38,7 +38,7 @@ must pass on the corresponding source offer for those programs.
 
 ## Backend (Node.js runtime)
 
-249 packages.
+250 packages.
 
 ### @asteasolutions/zod-to-openapi@7.3.4
 
@@ -9925,6 +9925,12 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
+
+### content-type@2.0.0
+
+- License: `MIT`
+
+_No license file shipped in the package; the `MIT` declaration in its `package.json` governs._
 
 ### cookie-signature@1.2.2
 
