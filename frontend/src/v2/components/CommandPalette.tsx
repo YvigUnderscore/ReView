@@ -4,9 +4,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FolderKanban, Layers, Film, Box, ListTodo, KanbanSquare, PenTool, BookText } from 'lucide-react';
+import {
+  FolderKanban,
+  Layers,
+  Film,
+  Box,
+  ListTodo,
+  KanbanSquare,
+  PenTool,
+  BookText,
+  Clapperboard,
+} from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
+import { useReviewCommands } from '../lib/reviewCommands';
 import { projectPath } from '../lib/slug';
 import { useProjectContext } from '../stores/useProjectContext';
 import type { AssetRef, ProjectRef, SequenceRef, ShotRef, Task } from '../types/api';
@@ -84,7 +95,15 @@ export default function CommandPalette({
   const hasQuery = q.trim().length > 0;
   // Saisie vidée → on ré-affiche les actions rapides, jamais les vieux résultats
   const results = hasQuery ? (data ?? EMPTY) : EMPTY;
-  const hasResults = Object.values(results).some((list) => list.length > 0);
+
+  // Commandes contextuelles du viewer de review monté (B3) — filtrées côté client, la
+  // recherche serveur ne les connaît pas.
+  const reviewCommands = useReviewCommands((s) => s.commands);
+  const matchingReview = hasQuery
+    ? reviewCommands.filter((c) => c.label.toLowerCase().includes(q.trim().toLowerCase()))
+    : reviewCommands;
+
+  const hasResults = Object.values(results).some((list) => list.length > 0) || matchingReview.length > 0;
 
   return (
     <CommandDialog
@@ -99,6 +118,25 @@ export default function CommandPalette({
         <CommandInput value={q} onValueChange={setQ} placeholder={t('palette.placeholder')} />
         <CommandList>
           {hasQuery && !hasResults && <CommandEmpty>{t('palette.empty')}</CommandEmpty>}
+
+          {matchingReview.length > 0 && (
+            <CommandGroup heading={t('palette.group.review')}>
+              {matchingReview.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={`review-${c.id}`}
+                  onSelect={() => {
+                    onOpenChange(false);
+                    setQ('');
+                    c.run();
+                  }}
+                >
+                  <Clapperboard size={15} className="text-muted-foreground" />
+                  <span className="truncate">{c.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
           {!hasQuery && (
             <CommandGroup heading={t('palette.group.goto')}>

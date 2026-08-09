@@ -169,21 +169,29 @@ describe('préférences', () => {
   });
 
   it('relit des préférences valides', () => {
-    const raw = JSON.stringify({ panel: 'scene', labels: true, comments: false });
+    const raw = JSON.stringify({ panel: 'scene', labels: true, comments: false, drawerOpen: true, drawerH: 240 });
     expect(readChromePrefs('SPLAT', raw)).toEqual({
       panel: 'scene',
       labels: true,
       comments: false,
+      drawerOpen: true,
+      drawerH: 240,
     });
   });
 
   it('retombe sur les défauts si la valeur est absente, corrompue ou étrangère au média', () => {
     // Défaut : dock replié — le média passe avant les réglages tant qu'on n'a rien choisi.
-    const fallback = { panel: null, labels: false, comments: true };
+    const fallback = { panel: null, labels: false, comments: true, drawerOpen: false, drawerH: 168 };
     expect(readChromePrefs('SPLAT', null)).toEqual(fallback);
     expect(readChromePrefs('SPLAT', '{oops')).toEqual(fallback);
     // `light` n'existe pas dans le dock d'un splat.
     expect(readChromePrefs('SPLAT', JSON.stringify({ panel: 'light' })).panel).toBeNull();
+  });
+
+  it('borne la hauteur du tiroir et ignore une valeur invalide', () => {
+    expect(readChromePrefs('SPLAT', JSON.stringify({ drawerH: 9999 })).drawerH).toBe(480);
+    expect(readChromePrefs('SPLAT', JSON.stringify({ drawerH: 10 })).drawerH).toBe(120);
+    expect(readChromePrefs('SPLAT', JSON.stringify({ drawerH: 'big' })).drawerH).toBe(168);
   });
 
   it('conserve un dock explicitement replié', () => {

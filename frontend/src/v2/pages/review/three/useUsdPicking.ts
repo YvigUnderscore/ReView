@@ -29,7 +29,7 @@ import { isClickGesture, pickPrim, toNdc } from './usdPicking';
 export function useUsdPicking(
   getSceneHandle: () => ViewerSceneHandle | null,
   ready: boolean,
-  onSelect: (path: string | null) => void,
+  onSelect: (path: string | null, opts?: { additive?: boolean }) => void,
   /** Traduit l'objet touché en prim — l'index de la scène, seule table faisant autorité. */
   resolve: (object: THREE.Object3D) => string | null,
   /**
@@ -69,7 +69,8 @@ export function useUsdPicking(
       down.current = null;
       if (e.button !== 0 || !start) return;
       if (!isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
-      onSelect(pickAt(e.clientX, e.clientY));
+      // Ctrl/⌘+clic : ajoute ou retire le prim de la sélection (multi-sélection B1).
+      onSelect(pickAt(e.clientX, e.clientY), { additive: e.ctrlKey || e.metaKey });
     };
     const onCtx = (e: MouseEvent) => {
       const start = downRight.current;

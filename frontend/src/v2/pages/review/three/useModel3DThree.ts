@@ -352,6 +352,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     setLayoutMode: layout.setLayoutMode,
     layoutController: layout.layoutController,
     setPipRect: layout.setPipRect,
+    getActivationView: layout.getActivationView,
   };
 }
 

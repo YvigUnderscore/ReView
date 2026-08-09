@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Aperture, BookmarkPlus, Frame, Home } from 'lucide-react';
+import { Aperture, BookmarkPlus, Frame, Home, Orbit, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
@@ -43,8 +43,15 @@ export default function CameraPanel({
     focusPick: boolean;
     onToggleFocusPick: () => void;
   };
-  /** Mode layout : vue de la caméra dans une fenêtre PiP. */
-  layout?: { active: boolean; onToggle: () => void };
+  /** Mode layout : vue de la caméra dans une fenêtre PiP, preset d'animation, remise à zéro. */
+  layout?: {
+    active: boolean;
+    onToggle: () => void;
+    /** Preset orbite : un tour complet autour de la cible courante (gestionnaire). */
+    onOrbit?: () => void;
+    /** Efface la présentation persistée (confirmation en amont — gestionnaire). */
+    onClear?: () => void;
+  };
   /** Aspect du cadre de review — hérité des réglages pipeline, en lecture seule. */
   aspectLabel: string;
   onFrame: () => void;
@@ -108,6 +115,22 @@ export default function CameraPanel({
           <Row label={t('viewer.pip')} hint={t('review.camera.exitToPip')}>
             <Switch checked={layout.active} onCheckedChange={layout.onToggle} label={t('viewer.pip.hint')} />
           </Row>
+        )}
+        {(layout?.onOrbit || layout?.onClear) && (
+          <div className="flex gap-1.5">
+            {layout.onOrbit && (
+              <Button size="sm" variant="outline" className="flex-1" onClick={layout.onOrbit}>
+                <Orbit size={13} />
+                {t('camera.orbitPreset')}
+              </Button>
+            )}
+            {layout.onClear && (
+              <Button size="sm" variant="outline" className="flex-1" onClick={layout.onClear}>
+                <Trash2 size={13} />
+                {t('camera.clearPresentation')}
+              </Button>
+            )}
+          </div>
         )}
       </Group>
 

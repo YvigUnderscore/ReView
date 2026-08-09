@@ -47,6 +47,60 @@ export const panTime = (view: TimeView, deltaMs: number): TimeView => ({
   t1: view.t1 + deltaMs,
 });
 
+/** Arrondit un temps (ms) à la frame la plus proche au framerate du pipeline. */
+export function snapToFrame(ms: number, fps: number): number {
+  if (!(fps > 0)) return Math.max(0, ms);
+  const frameMs = 1000 / fps;
+  return Math.max(0, Math.round(ms / frameMs) * frameMs);
+}
+
+/** Timecode court `s:ff` (secondes:frame) — l'affichage de la règle et du transport. */
+export function timecode(ms: number, fps: number): string {
+  const safeFps = fps > 0 ? fps : 24;
+  const frames = Math.round((Math.max(0, ms) / 1000) * safeFps);
+  const whole = Math.round(safeFps);
+  const s = Math.floor(frames / whole);
+  const ff = frames % whole;
+  return `${s}:${String(ff).padStart(2, '0')}`;
+}
+
+/** Graduations de la règle temporelle : `major` étiquetées (timecode), `minor` = frames/subdivisions. */
+export interface RulerTicks {
+  major: Array<{ t: number; label: string }>;
+  minor: number[];
+}
+
+/**
+ * Graduations adaptatives de la règle : pas étiqueté ≥ ~70 px choisi en nombres ronds de frames
+ * (1/2/5/10) puis de secondes (1/2/5/10/30/60…), ticks mineurs à la frame quand elle reste
+ * lisible (≥ 6 px), sinon au cinquième du pas.
+ */
+export function rulerTicks(view: TimeView, fps: number): RulerTicks {
+  const safeFps = fps > 0 ? fps : 24;
+  const span = view.t1 - view.t0;
+  if (!(span > 0) || !(view.width > 0)) return { major: [], minor: [] };
+  const pxPerMs = view.width / span;
+  const frameMs = 1000 / safeFps;
+  const stepMs =
+    [1, 2, 5, 10].map((n) => n * frameMs).find((s) => s * pxPerMs >= 70) ??
+    ([1, 2, 5, 10, 30, 60, 120, 300, 600].map((n) => n * 1000).find((s) => s * pxPerMs >= 70) ??
+      600_000);
+  const minorStep = frameMs * pxPerMs >= 6 ? frameMs : stepMs / 5 >= 6 / pxPerMs ? stepMs / 5 : 0;
+
+  const major: RulerTicks['major'] = [];
+  const start = Math.max(0, Math.ceil(view.t0 / stepMs) * stepMs);
+  for (let t = start; t <= view.t1 && major.length < 500; t += stepMs)
+    major.push({ t, label: timecode(t, safeFps) });
+
+  const minor: number[] = [];
+  if (minorStep > 0) {
+    const m0 = Math.max(0, Math.ceil(view.t0 / minorStep) * minorStep);
+    for (let t = m0; t <= view.t1 && minor.length < 2000; t += minorStep)
+      if (Math.abs(t / stepMs - Math.round(t / stepMs)) > 1e-6) minor.push(t);
+  }
+  return { major, minor };
+}
+
 /** Bornes valeur englobant une série (avec marge de 10 %), repli symétrique si constante. */
 export function fitValueRange(values: number[]): { v0: number; v1: number } {
   if (values.length === 0) return { v0: -1, v1: 1 };

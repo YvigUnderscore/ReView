@@ -2,7 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { fitValueRange, panTime, timeToX, xToTime, valueToY, yToValue, zoomTime } from './viewTransform';
+import {
+  fitValueRange,
+  panTime,
+  rulerTicks,
+  snapToFrame,
+  timecode,
+  timeToX,
+  xToTime,
+  valueToY,
+  yToValue,
+  zoomTime,
+} from './viewTransform';
 
 describe('viewTransform — temps ↔ pixel', () => {
   const view = { t0: 0, t1: 1000, width: 200 };
@@ -34,6 +45,48 @@ describe('viewTransform — zoom/pan', () => {
     const p = panTime({ t0: 0, t1: 1000, width: 200 }, 100);
     expect(p.t0).toBe(100);
     expect(p.t1).toBe(1100);
+  });
+});
+
+describe('snapToFrame / timecode', () => {
+  it('arrondit à la frame la plus proche (24 fps)', () => {
+    const frameMs = 1000 / 24;
+    expect(snapToFrame(0, 24)).toBe(0);
+    expect(snapToFrame(frameMs * 3 + 5, 24)).toBeCloseTo(frameMs * 3, 6);
+    expect(snapToFrame(frameMs * 3.6, 24)).toBeCloseTo(frameMs * 4, 6);
+    expect(snapToFrame(-50, 24)).toBe(0);
+  });
+  it('fps invalide : borne à zéro sans snap', () => {
+    expect(snapToFrame(123, 0)).toBe(123);
+  });
+  it('timecode s:ff', () => {
+    expect(timecode(0, 24)).toBe('0:00');
+    expect(timecode(1000, 24)).toBe('1:00');
+    expect(timecode(1000 + 500, 24)).toBe('1:12');
+    expect(timecode((1000 / 24) * 30, 24)).toBe('1:06');
+  });
+});
+
+describe('rulerTicks', () => {
+  it('pas étiqueté en frames rondes quand la frame est large', () => {
+    // 2 s sur 2000 px à 24 fps : 1 frame ≈ 41,7 px → pas de 2 frames (≥ 70 px), mineurs à la frame.
+    const ticks = rulerTicks({ t0: 0, t1: 2000, width: 2000 }, 24);
+    expect(ticks.major[0]).toEqual({ t: 0, label: '0:00' });
+    const stepMs = ticks.major[1]!.t - ticks.major[0]!.t;
+    expect(stepMs).toBeCloseTo((1000 / 24) * 2, 6);
+    expect(ticks.minor.length).toBeGreaterThan(0);
+    // Les mineurs ne doublonnent pas les majeurs.
+    for (const m of ticks.minor) expect(ticks.major.some((M) => Math.abs(M.t - m) < 1e-6)).toBe(false);
+  });
+  it('pas étiqueté en secondes quand la fenêtre est large', () => {
+    // 60 s sur 600 px : 1 s = 10 px → pas de 10 s.
+    const ticks = rulerTicks({ t0: 0, t1: 60_000, width: 600 }, 24);
+    const stepMs = ticks.major[1]!.t - ticks.major[0]!.t;
+    expect(stepMs).toBe(10_000);
+  });
+  it('fenêtre vide ou largeur nulle : aucune graduation', () => {
+    expect(rulerTicks({ t0: 0, t1: 0, width: 100 }, 24)).toEqual({ major: [], minor: [] });
+    expect(rulerTicks({ t0: 0, t1: 1000, width: 0 }, 24)).toEqual({ major: [], minor: [] });
   });
 });
 

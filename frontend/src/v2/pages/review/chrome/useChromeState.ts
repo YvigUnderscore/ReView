@@ -6,6 +6,7 @@ import type { MediaKind } from '../../../types/api';
 import {
   chromePrefsKey,
   defaultChromeState,
+  drawerForKind,
   readChromePrefs,
   reconcileChrome,
   type ChromeState,
@@ -26,7 +27,8 @@ import { DEFAULT_TOOL, toolSearchOrder, toolsFor } from './tools';
 function initialState(kind: MediaKind): ChromeState {
   const base = defaultChromeState();
   if (typeof window === 'undefined') return base;
-  return { ...base, ...readChromePrefs(kind, window.localStorage.getItem(chromePrefsKey(kind))) };
+  const { drawerOpen, ...prefs } = readChromePrefs(kind, window.localStorage.getItem(chromePrefsKey(kind)));
+  return { ...base, ...prefs, drawer: drawerOpen ? drawerForKind(kind) : null };
 }
 
 export function useChromeState(kind: MediaKind) {
@@ -45,10 +47,13 @@ export function useChromeState(kind: MediaKind) {
     setState(initialState(kind));
   }
 
-  // Les trois préférences sont persistées par type de média ; le reste est éphémère.
+  // Les préférences sont persistées par type de média ; mode et outil restent éphémères.
   useEffect(() => {
-    const { panel, labels, comments } = state;
-    window.localStorage.setItem(chromePrefsKey(kind), JSON.stringify({ panel, labels, comments }));
+    const { panel, labels, comments, drawer, drawerH } = state;
+    window.localStorage.setItem(
+      chromePrefsKey(kind),
+      JSON.stringify({ panel, labels, comments, drawerOpen: drawer != null, drawerH }),
+    );
   }, [kind, state]);
 
   const modes = useMemo(() => switcherModesFor(kind), [kind]);

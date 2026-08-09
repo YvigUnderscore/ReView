@@ -25,7 +25,14 @@ export interface ChromeState {
   labels: boolean;
   comments: boolean;
   drawer: DrawerId | null;
+  /** Hauteur du tiroir (px) — redimensionnable, persistée. */
+  drawerH: number;
 }
+
+/** Bornes de la hauteur du tiroir (poignée de redimensionnement). */
+export const DRAWER_MIN_H = 120;
+export const DRAWER_MAX_H = 480;
+export const DRAWER_DEFAULT_H = 168;
 
 /** Le tiroir ancré sous le transport : courbes d'animation en 3D, pellicule en vidéo/image. */
 export function drawerForKind(kind: MediaKind): DrawerId {
@@ -42,6 +49,7 @@ export function defaultChromeState(): ChromeState {
     labels: false,
     comments: true,
     drawer: null,
+    drawerH: DRAWER_DEFAULT_H,
   };
 }
 
@@ -69,12 +77,24 @@ export function chromePrefsKey(kind: MediaKind): string {
   return `review.chrome.${kind}`;
 }
 
-/** Sous-ensemble persisté de l'état : les préférences, jamais le mode ni l'outil courants. */
-export type ChromePrefs = Pick<ChromeState, 'panel' | 'labels' | 'comments'>;
+/**
+ * Sous-ensemble persisté de l'état : les préférences, jamais le mode ni l'outil courants.
+ * Le tiroir est retenu par son état ouvert (`drawerOpen`) — l'identité du tiroir dépend du
+ * média (`drawerForKind`), pas de la préférence.
+ */
+export type ChromePrefs = Pick<ChromeState, 'panel' | 'labels' | 'comments' | 'drawerH'> & {
+  drawerOpen: boolean;
+};
 
 export function readChromePrefs(kind: MediaKind, raw: string | null): ChromePrefs {
   const base = defaultChromeState();
-  const fallback: ChromePrefs = { panel: base.panel, labels: base.labels, comments: base.comments };
+  const fallback: ChromePrefs = {
+    panel: base.panel,
+    labels: base.labels,
+    comments: base.comments,
+    drawerOpen: false,
+    drawerH: base.drawerH,
+  };
   if (!raw) return fallback;
   try {
     const parsed = JSON.parse(raw) as Partial<ChromePrefs>;
@@ -86,6 +106,11 @@ export function readChromePrefs(kind: MediaKind, raw: string | null): ChromePref
           : fallback.panel,
       labels: typeof parsed.labels === 'boolean' ? parsed.labels : fallback.labels,
       comments: typeof parsed.comments === 'boolean' ? parsed.comments : fallback.comments,
+      drawerOpen: typeof parsed.drawerOpen === 'boolean' ? parsed.drawerOpen : fallback.drawerOpen,
+      drawerH:
+        typeof parsed.drawerH === 'number' && Number.isFinite(parsed.drawerH)
+          ? Math.min(DRAWER_MAX_H, Math.max(DRAWER_MIN_H, parsed.drawerH))
+          : fallback.drawerH,
     };
   } catch {
     // Préférence corrompue (édition manuelle, ancien format) : on repart des défauts.

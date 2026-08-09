@@ -29,6 +29,16 @@ export interface PrimTransform {
   s: [number, number, number];
 }
 
+/**
+ * Clone de mise en scène (C1) : une copie du prim, purement côté override — la géométrie du
+ * GLB est dupliquée au chargement, aucune reconversion. `transform` est le delta du clone par
+ * rapport à l'état d'origine du prim source (même convention que `PrimEdit.transform`).
+ */
+export interface PrimClone {
+  id: string;
+  transform: PrimTransform;
+}
+
 /** Édition d'un prim. Chaque champ est optionnel : seul ce qui diffère est stocké. */
 export interface PrimEdit {
   /** Visibilité forcée — masque aussi la descendance (comportement `Object3D.visible`). */
@@ -36,6 +46,8 @@ export interface PrimEdit {
   transform?: PrimTransform;
   /** Look forcé sur ce prim : `{ lookVariant: 'dirty' }`. */
   variants?: Record<string, string>;
+  /** Clones de mise en scène du prim (C1) — set-dressing léger sans reconversion. */
+  clones?: PrimClone[];
 }
 
 export interface SceneOverride {
@@ -72,6 +84,7 @@ export function isEmptyEdit(edit: PrimEdit): boolean {
   if (edit.visible !== undefined) return false;
   if (edit.transform && !isIdentityTransform(edit.transform)) return false;
   if (edit.variants && Object.keys(edit.variants).length > 0) return false;
+  if (edit.clones && edit.clones.length > 0) return false;
   return true;
 }
 
@@ -116,6 +129,19 @@ export function normalizeOverride(raw: unknown): SceneOverride {
         if (typeof value === 'string' && value) variants[name] = value;
       if (Object.keys(variants).length > 0) edit.variants = variants;
     }
+    if (Array.isArray(raw.clones)) {
+      const clones: PrimClone[] = [];
+      const seen = new Set<string>();
+      for (const c of raw.clones as Array<Partial<PrimClone> | null>) {
+        if (!c || typeof c.id !== 'string' || !c.id || seen.has(c.id)) continue;
+        const ct = c.transform;
+        // L'identité est valide pour un clone : une copie posée au même endroit a un sens.
+        if (!ct || !isVec3(ct.t) || !isVec3(ct.r) || !isVec3(ct.s)) continue;
+        seen.add(c.id);
+        clones.push({ id: c.id, transform: { t: [...ct.t], r: [...ct.r], s: [...ct.s] } });
+      }
+      if (clones.length > 0) edit.clones = clones;
+    }
     if (!isEmptyEdit(edit)) result.prims[path] = edit;
   }
   return result;
@@ -135,12 +161,21 @@ export function mergeOverrides(
   if (top.purpose) merged.purpose = top.purpose;
   for (const [path, edit] of Object.entries(top.prims)) {
     const current = merged.prims[path] ?? {};
+    // Clones fusionnés par id : la proposition met à jour un clone existant ou en ajoute.
+    const clones =
+      current.clones || edit.clones
+        ? [
+            ...(current.clones ?? []).filter((c) => !(edit.clones ?? []).some((e) => e.id === c.id)),
+            ...(edit.clones ?? []),
+          ]
+        : undefined;
     merged.prims[path] = {
       ...current,
       ...edit,
       ...(current.variants || edit.variants
         ? { variants: { ...(current.variants ?? {}), ...(edit.variants ?? {}) } }
         : {}),
+      ...(clones ? { clones } : {}),
     };
   }
   return merged;
@@ -154,10 +189,59 @@ export function setPrimEdit(override: SceneOverride, path: string, patch: PrimEd
     const next = { ...(prims[path] ?? {}), ...patch };
     if (next.transform && isIdentityTransform(next.transform)) delete next.transform;
     if (next.variants && Object.keys(next.variants).length === 0) delete next.variants;
+    if (next.clones && next.clones.length === 0) delete next.clones;
     if (isEmptyEdit(next)) delete prims[path];
     else prims[path] = next;
   }
   return { ...override, prims };
+}
+
+// ── Clones de mise en scène (C1) ─────────────────────────────────────────────────────────────
+
+/** Séparateur du pseudo-chemin d'un clone : `/World/Chair#c3` désigne le clone `c3` du prim. */
+const CLONE_SEP = '#';
+
+export const isClonePath = (path: string): boolean => path.includes(CLONE_SEP);
+
+/** Pseudo-chemin d'un clone — utilisé par la sélection, le gizmo et l'arbre. */
+export const clonePath = (path: string, id: string): string => `${path}${CLONE_SEP}${id}`;
+
+/** Décompose un pseudo-chemin de clone en (prim source, id), ou null. */
+export function parseClonePath(pseudo: string): { path: string; id: string } | null {
+  const i = pseudo.indexOf(CLONE_SEP);
+  if (i <= 0 || i === pseudo.length - 1) return null;
+  return { path: pseudo.slice(0, i), id: pseudo.slice(i + 1) };
+}
+
+/** Identifiant de clone raisonnablement unique dans un override. */
+export function newCloneId(): string {
+  return `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+}
+
+export function clonesOf(override: SceneOverride, path: string): PrimClone[] {
+  return override.prims[path]?.clones ?? [];
+}
+
+/** Ajoute un clone au prim (immutable). */
+export function addClone(override: SceneOverride, path: string, clone: PrimClone): SceneOverride {
+  return setPrimEdit(override, path, { clones: [...clonesOf(override, path), clone] });
+}
+
+/** Retire un clone (immutable) — no-op si absent. */
+export function removeClone(override: SceneOverride, path: string, id: string): SceneOverride {
+  const rest = clonesOf(override, path).filter((c) => c.id !== id);
+  return setPrimEdit(override, path, { clones: rest });
+}
+
+/** Remplace le delta d'un clone (immutable). */
+export function setCloneTransform(
+  override: SceneOverride,
+  path: string,
+  id: string,
+  transform: PrimTransform,
+): SceneOverride {
+  const clones = clonesOf(override, path).map((c) => (c.id === id ? { ...c, transform } : c));
+  return setPrimEdit(override, path, { clones });
 }
 
 /**

@@ -22,6 +22,7 @@ export default function SplatPane({
   editorOverlay,
   pip,
   aspect,
+  recording,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
@@ -36,10 +37,15 @@ export default function SplatPane({
   pip?: ReactNode;
   /** Aspect du cadre de review fixe (issu de la caméra de présentation) — défaut 16:9 (V6). */
   aspect?: number;
+  /** Auto-key armé : liseré d'enregistrement sur le viewport (façon DCC). */
+  recording?: boolean;
 }) {
   const t = useT();
   return (
     <div className={VIEWER_ZONE} data-viewer-zone>
+      {recording && (
+        <div className="pointer-events-none absolute inset-0 z-20 ring-2 ring-destructive/70 ring-inset" />
+      )}
       {/* Viewer plein espace + guide letterbox du cadre de livraison (Phase 25) ; l'overlay
           d'annotation 2D est ancré au guide, la sélection éditeur reste plein cadre. */}
       <ReviewFrame

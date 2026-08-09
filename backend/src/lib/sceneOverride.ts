@@ -33,10 +33,20 @@ const translation = z.tuple([
 const positive = finite.min(0.0001).max(10_000);
 const scale3 = z.tuple([positive, positive, positive]);
 
+const transformSchema = z.object({ t: translation, r: vec3, s: scale3 });
+
+/** Clones de mise en scène (C1) : bornés par prim — le set-dressing léger, pas l'instancing. */
+const MAX_CLONES_PER_PRIM = 50;
+const cloneSchema = z.object({
+  id: z.string().min(1).max(64),
+  transform: transformSchema,
+});
+
 const primEditSchema = z.object({
   visible: z.boolean().optional(),
-  transform: z.object({ t: translation, r: vec3, s: scale3 }).optional(),
+  transform: transformSchema.optional(),
   variants: z.record(z.string().min(1).max(200), z.string().min(1).max(200)).optional(),
+  clones: z.array(cloneSchema).max(MAX_CLONES_PER_PRIM).optional(),
 });
 
 export const sceneOverrideSchema = z.object({

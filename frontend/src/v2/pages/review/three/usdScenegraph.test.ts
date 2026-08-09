@@ -5,6 +5,8 @@ import { describe, it, expect } from 'vitest';
 import {
   buildPrimTree,
   buildRenderedPrimTree,
+  filterPrimTree,
+  flattenTree,
   isSelfOrDescendant,
   leafName,
   matchPrimPath,
@@ -141,5 +143,34 @@ describe('buildRenderedPrimTree', () => {
   it('sans chemin rendu, rend l’arbre de l’analyseur tel quel', () => {
     const tree = buildRenderedPrimTree([prim('/World'), prim('/World/Asset')], []);
     expect(flatten(tree)).toEqual(['/World', '/World/Asset']);
+  });
+});
+
+describe('flattenTree / filterPrimTree', () => {
+  const tree = buildPrimTree([
+    prim('/root'),
+    prim('/root/chairA'),
+    prim('/root/chairA/seat'),
+    prim('/root/table'),
+  ]);
+
+  it('aplatit en pré-ordre (ordre d’affichage) — plage Maj+clic', () => {
+    expect(flattenTree(tree)).toEqual(['/root', '/root/chairA', '/root/chairA/seat', '/root/table']);
+  });
+
+  it('filtre en gardant les ancêtres des résultats, insensible à la casse', () => {
+    expect(flattenTree(filterPrimTree(tree, 'seat'))).toEqual([
+      '/root',
+      '/root/chairA',
+      '/root/chairA/seat',
+    ]);
+    expect(flattenTree(filterPrimTree(tree, 'CHAIR'))).toEqual([
+      '/root',
+      '/root/chairA',
+      '/root/chairA/seat',
+    ]);
+    expect(filterPrimTree(tree, 'introuvable')).toEqual([]);
+    // Requête vide : arbre inchangé (même référence).
+    expect(filterPrimTree(tree, '  ')).toBe(tree);
   });
 });

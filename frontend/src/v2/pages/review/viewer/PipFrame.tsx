@@ -11,7 +11,14 @@ import { useT } from '../../../i18n';
  * de la caméra). Le rendu WebGL est dessiné dessous en scissor : chaque changement de rect est
  * remonté via `onRect` (px CSS, origine haut-gauche du conteneur ; `null` au démontage).
  * Positionné impérativement (ref) — aucun re-render pendant le drag.
+ *
+ * Le rect est **retenu pour la session** (variable de module) : rouvrir le PiP le remet où on
+ * l'avait laissé. **Double-clic** : agrandit la vue caméra (≈ ¾ du viewport), re-double-clic la
+ * ramène à sa taille d'avant.
  */
+
+// Dernier rect utilisé (session) — partagé entre montages successifs du PiP.
+let sessionRect: PipRect | null = null;
 export default function PipFrame({
   label,
   aspect,
@@ -40,13 +47,18 @@ export default function PipFrame({
 
     const apply = (rect: PipRect) => {
       rectRef.current = rect;
+      sessionRect = rect;
       frame.style.left = `${rect.x}px`;
       frame.style.top = `${rect.y}px`;
       frame.style.width = `${rect.w}px`;
       frame.style.height = `${rect.h}px`;
       onRectRef.current(rect);
     };
-    apply(defaultPipRect(parent.clientWidth, parent.clientHeight, aspectRef.current));
+    apply(
+      sessionRect
+        ? clampPipRect(sessionRect, parent.clientWidth, parent.clientHeight, aspectRef.current)
+        : defaultPipRect(parent.clientWidth, parent.clientHeight, aspectRef.current),
+    );
 
     // Le conteneur change de taille (fenêtre, plein écran) → la fenêtre reste dans les bords.
     const ro = new ResizeObserver(() => {
@@ -90,15 +102,39 @@ export default function PipFrame({
       drag = null;
       if (frame.hasPointerCapture(e.pointerId)) frame.releasePointerCapture(e.pointerId);
     };
+    // Double-clic : agrandir la vue caméra (≈ ¾ du viewport), re-double-clic = taille d'avant.
+    let beforeMax: PipRect | null = null;
+    const onDoubleClick = (e: MouseEvent) => {
+      const r = rectRef.current;
+      if (!r) return;
+      e.preventDefault();
+      if (beforeMax) {
+        apply(clampPipRect(beforeMax, parent.clientWidth, parent.clientHeight, aspectRef.current));
+        beforeMax = null;
+        return;
+      }
+      beforeMax = r;
+      const w = parent.clientWidth * 0.75;
+      apply(
+        clampPipRect(
+          { x: (parent.clientWidth - w) / 2, y: 0, w, h: w / aspectRef.current },
+          parent.clientWidth,
+          parent.clientHeight,
+          aspectRef.current,
+        ),
+      );
+    };
     frame.addEventListener('pointerdown', onPointerDown);
     frame.addEventListener('pointermove', onPointerMove);
     frame.addEventListener('pointerup', onPointerUp);
+    frame.addEventListener('dblclick', onDoubleClick);
 
     return () => {
       ro.disconnect();
       frame.removeEventListener('pointerdown', onPointerDown);
       frame.removeEventListener('pointermove', onPointerMove);
       frame.removeEventListener('pointerup', onPointerUp);
+      frame.removeEventListener('dblclick', onDoubleClick);
       rectRef.current = null;
       onRectRef.current(null);
     };

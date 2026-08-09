@@ -153,3 +153,32 @@ export function matchPrimPath(candidate: string, usdPaths: string[]): string | n
 
   return best && !ambiguous ? best.path : null;
 }
+
+/** Chemins de l'arbre en ordre d'affichage (pré-ordre) — plage Maj+clic du scenegraph (B1). */
+export function flattenTree(tree: PrimNode[]): string[] {
+  const out: string[] = [];
+  const walk = (nodes: PrimNode[]) => {
+    for (const node of nodes) {
+      out.push(node.path);
+      walk(node.children);
+    }
+  };
+  walk(tree);
+  return out;
+}
+
+/**
+ * Filtre l'arbre sur un texte (nom ou chemin, insensible à la casse) : un nœud reste si lui ou
+ * l'un de ses descendants correspond — les ancêtres d'un résultat restent visibles pour situer
+ * le prim dans la scène (recherche du scenegraph, B2).
+ */
+export function filterPrimTree(tree: PrimNode[], query: string): PrimNode[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return tree;
+  const keep = (node: PrimNode): PrimNode | null => {
+    const children = node.children.map(keep).filter((n): n is PrimNode => n !== null);
+    const self = node.name.toLowerCase().includes(q) || node.path.toLowerCase().includes(q);
+    return self || children.length ? { ...node, children } : null;
+  };
+  return tree.map(keep).filter((n): n is PrimNode => n !== null);
+}

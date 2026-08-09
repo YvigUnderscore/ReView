@@ -7,7 +7,6 @@ import type { ToolId } from '../chrome/tools';
 import { useEditHistory } from '../splat/editor/operations/history';
 import { useTransformGizmo } from '../viewer/gizmos/useTransformGizmo';
 import type { TransformMode } from '../viewer/gizmos/useGizmoModeShortcuts';
-import { IDENTITY_TRANSFORM } from './sceneOverride';
 import { eulerTransformFromMesh } from './modelGizmoTransform';
 import type { Model3DThreeState } from './useModel3DThree';
 import { usePrimGizmo } from './usePrimGizmo';
@@ -49,13 +48,14 @@ export function useModel3DChrome({
   const { updateTransform } = m;
   const mode: TransformMode = GIZMO_MODE[state.tool] ?? 'navigate';
 
-  // Un prim USD sélectionné prend le gizmo : le delta est écrit dans l'override ReView (pas
-  // dans la transformation de version), donc enregistrable pour tous avant publication et
+  // Des prims USD sélectionnés prennent le gizmo : le delta est écrit dans l'override ReView
+  // (pas dans la transformation de version), donc enregistrable pour tous avant publication et
   // joignable à un commentaire après. Sans sélection, le gizmo transforme le modèle entier.
-  const primObject = usdScene?.selectedObject ?? null;
+  const primSelection = usdScene?.selected ?? [];
+  const hasPrims = primSelection.length > 0 && !!usdScene?.selectedObject;
 
   useTransformGizmo(m, {
-    enabled: mode !== 'navigate' && !primObject,
+    enabled: mode !== 'navigate' && !hasPrims,
     mode: mode === 'navigate' ? 'rotate' : mode,
     onChange: (trs) => updateTransform(eulerTransformFromMesh(trs)),
     onCommit: (before, after) => {
@@ -70,22 +70,27 @@ export function useModel3DChrome({
   });
 
   usePrimGizmo(m, {
-    enabled: mode !== 'navigate' && !!primObject,
+    enabled: mode !== 'navigate' && hasPrims,
     mode: mode === 'navigate' ? 'rotate' : mode,
-    target: primObject,
+    representatives: usdScene?.representatives ?? EMPTY_TARGETS,
     targets: usdScene?.selectedObjects ?? EMPTY_TARGETS,
+    selectionKey: primSelection.join('|'),
     syncKey: usdScene?.override,
-    // Pendant le drag, le proxy pilote la pose de l'objet ; le delta n'est relevé qu'au
-    // lâcher, puis `applyPlan` le répercute sur tous les objets du prim.
-    onCommit: (object) => {
+    // Pendant le drag, le proxy pilote la pose des représentants ; les deltas ne sont relevés
+    // qu'au lâcher (un seul lot), puis `applyPlan` les répercute sur tous les objets des prims.
+    onCommit: (objects) => {
       if (!usdScene) return;
-      const commit = usdScene.commitPrimTransform(object);
-      if (!commit) return;
-      const { setPrim } = usdScene;
+      const commits = usdScene.commitPrimTransforms(objects);
+      if (!commits.length) return;
+      const { applyPrimTransform } = usdScene;
       history.push({
         label: t('model3d.transformPrim'),
-        undo: () => setPrim(commit.path, { transform: commit.before ?? IDENTITY_TRANSFORM }),
-        redo: () => setPrim(commit.path, { transform: commit.after }),
+        undo: () => {
+          for (const c of commits) applyPrimTransform(c.path, c.before);
+        },
+        redo: () => {
+          for (const c of commits) applyPrimTransform(c.path, c.after);
+        },
       });
     },
   });

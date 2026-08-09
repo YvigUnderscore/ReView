@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Frame } from 'lucide-react';
+import { Copy, Frame, Trash2 } from 'lucide-react';
 import {
   ContextMenuItem,
   ContextMenuSeparator,
@@ -10,7 +10,7 @@ import {
   ContextMenuSubTrigger,
 } from '../../../components/ui/context-menu';
 import type { UsdBakedVariant, UsdModelInfo } from '../../../types/api';
-import { isHidden } from '../three/sceneOverride';
+import { isClonePath, isHidden } from '../three/sceneOverride';
 import { isSelfOrDescendant } from '../three/usdScenegraph';
 import { variantOptionAvailable } from '../three/variantAvailability';
 import type { UsdSceneState } from '../three/useUsdScene';
@@ -37,6 +37,28 @@ export default function PrimMenuItems({
   onFrame?: () => void;
 }) {
   const t = useT();
+
+  // Clone de mise en scène (C1) : ses actions propres — dupliquer encore, cadrer, supprimer.
+  // Comme masquer/isoler, c'est une exploration locale : jointe à un commentaire, ou
+  // enregistrée pour tous par le gestionnaire avant publication.
+  if (isClonePath(path)) {
+    return (
+      <>
+        <ContextMenuItem onSelect={() => scene.duplicatePrim(path)}>
+          <Copy size={14} /> {t('prim.duplicate')}
+        </ContextMenuItem>
+        {onFrame && (
+          <ContextMenuItem onSelect={onFrame}>
+            <Frame size={14} /> {t('review.frameView')}
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem onSelect={() => scene.deleteClone(path)}>
+          <Trash2 size={14} /> {t('common.delete')}
+        </ContextMenuItem>
+      </>
+    );
+  }
+
   // Les jeux de variantes du prim **et de ses ancêtres** : on clique un mesh, mais la variante
   // est portée plus haut (`/World/Asset`) — c'est là qu'elle doit être écrite pour s'appliquer.
   const sets = (usd?.variantSets ?? []).filter((v) => isSelfOrDescendant(path, v.prim));
@@ -75,6 +97,40 @@ export default function PrimMenuItems({
         <ContextMenuItem onSelect={onFrame}>
           <Frame size={14} /> {t('review.frameView')}
         </ContextMenuItem>
+      )}
+      <ContextMenuItem onSelect={() => scene.duplicatePrim(path)}>
+        <Copy size={14} /> {t('prim.duplicate')}
+      </ContextMenuItem>
+      {/* Alignement/répartition (C2) — sur la multi-sélection courante, boîtes monde. */}
+      {scene.selected.length >= 2 && scene.selected.includes(path) && (
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>{t('prim.align')}</ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {([0, 1, 2] as const).map((axis) => (
+              <ContextMenuSub key={axis}>
+                <ContextMenuSubTrigger>
+                  <code>{'XYZ'[axis]}</code>
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent>
+                  <ContextMenuItem onSelect={() => scene.alignSelected(axis, 'min')}>
+                    {t('prim.align.min')}
+                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => scene.alignSelected(axis, 'center')}>
+                    {t('prim.align.center')}
+                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => scene.alignSelected(axis, 'max')}>
+                    {t('prim.align.max')}
+                  </ContextMenuItem>
+                  {scene.selected.length >= 3 && (
+                    <ContextMenuItem onSelect={() => scene.distributeSelected(axis)}>
+                      {t('prim.distribute')}
+                    </ContextMenuItem>
+                  )}
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
       )}
       <ContextMenuItem onSelect={() => scene.setPrim(path, { visible: hidden ? undefined : false })}>
         {hidden ? t('common.show') : t('common.hide')}

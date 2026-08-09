@@ -22,6 +22,9 @@ import { useTurntable } from './three/useTurntable';
 import { useSectionPlane } from './three/useSectionPlane';
 import { useModel3DCompare } from './three/useModel3DCompare';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
+import { useCameraShortcuts } from './camera/useCameraShortcuts';
+import { confirmClearPresentation } from './camera/confirmReplaceAnim';
+import { useRegisterReviewCommands, type ReviewCommand } from '../../lib/reviewCommands';
 import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DCompareBar from './Model3DCompareBar';
@@ -157,10 +160,60 @@ export default function Model3DReview({
     active: model3d.layoutMode,
     editable: canManage,
     anim: cam.anim,
+    getBasePose: model3d.getActivationView,
   });
 
   const { state, update } = useChromeState('MODEL_3D');
+  // Mode Mise en scène = atelier caméra : entrer dans le mode active le layout (PiP +
+  // caméra-objet), en sortir le désactive. L'interrupteur du panneau Caméra reste en override.
+  const { setLayoutMode } = model3d;
+  useEffect(() => {
+    setLayoutMode(state.mode === 'stage');
+  }, [state.mode, setLayoutMode]);
+
+  // Raccourcis du transport caméra (piste caméra seulement — la piste clips a son transport).
+  useCameraShortcuts({
+    anim: cam.anim,
+    active: track === 'camera',
+    editable: canManage,
+    undoActive: state.mode === 'stage',
+    fps: data.fps ?? 24,
+  });
   const { history, dirty } = useModel3DChrome({ state, m: model3d, cameraRig: rig, usdScene: scene });
+
+  // Palette Ctrl+K (B3) : rappels via refs — `cam`/`model3d` sont des objets neufs par rendu.
+  const camRef = useRef(cam);
+  camRef.current = cam;
+  const m3dRef = useRef(model3d);
+  m3dRef.current = model3d;
+  const hasKeys = cam.anim.keyTimes.length > 0;
+  const hasPres = !!data.splatPresentation;
+  const commands = useMemo<ReviewCommand[]>(() => {
+    const cmds: ReviewCommand[] = [
+      { id: 'fit', label: t('action.fitSpatial'), run: () => m3dRef.current.frameView() },
+      { id: 'home', label: t('action.resetSpatial'), run: () => m3dRef.current.homeView() },
+    ];
+    if (hasKeys)
+      cmds.push({
+        id: 'play',
+        label: t('video.playKey'),
+        run: () => (camRef.current.anim.playing ? camRef.current.anim.pause() : camRef.current.anim.play()),
+      });
+    if (canManage) {
+      cmds.push(
+        { id: 'key', label: t('review.key.set'), run: () => camRef.current.anim.insertKeyAtView() },
+        { id: 'orbit', label: t('camera.orbitPreset'), run: () => camRef.current.applyOrbitPreset() },
+      );
+      if (hasPres)
+        cmds.push({
+          id: 'clear-pres',
+          label: t('camera.clearPresentation'),
+          run: () => confirmClearPresentation(() => void camRef.current.clear?.()),
+        });
+    }
+    return cmds;
+  }, [t, hasKeys, hasPres, canManage]);
+  useRegisterReviewCommands(commands);
 
   const tools = toolsFor(state.mode, 'MODEL_3D');
   const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0]!;
@@ -225,6 +278,10 @@ export default function Model3DReview({
           savingOverride={savingOverride}
           onRecompose={canRecompose ? () => setRecomposeOpen(true) : undefined}
           onImportAnim={canManage ? cam.importGltf : undefined}
+          onOrbit={canManage ? () => cam.applyOrbitPreset() : undefined}
+          onClearPresentation={
+            cam.clear && data.splatPresentation ? () => void cam.clear?.() : undefined
+          }
         />
       }
       transport={
@@ -234,6 +291,7 @@ export default function Model3DReview({
           <SpatialTransport
             anim={cam.anim}
             editable={canManage}
+            fps={data.fps ?? 24}
             trackSwitch={trackSwitch}
             onAttach={cam.attach}
             drawerOpen={state.drawer === 'curves'}
@@ -241,7 +299,18 @@ export default function Model3DReview({
           />
         )
       }
-      drawer={state.drawer === 'curves' ? <CurvesDrawer anim={cam.anim} editable={canManage} /> : undefined}
+      drawer={
+        state.drawer === 'curves' ? (
+          <CurvesDrawer
+            anim={cam.anim}
+            editable={canManage}
+            fps={data.fps ?? 24}
+            height={state.drawerH}
+            onHeight={(h) => update({ drawerH: h })}
+            onOrbitPreset={canManage ? () => cam.applyOrbitPreset() : undefined}
+          />
+        ) : undefined
+      }
     >
       {/* Clic droit immobile sur un objet → actions du prim visé (46.M). `useUsdPicking` arrête
           l'événement (vol, clic dans le vide) pour que le menu ne s'ouvre jamais à vide. */}
@@ -253,6 +322,7 @@ export default function Model3DReview({
               loadError={model3d.loadError}
               containerRef={model3d.containerRef}
               overlay={overlay}
+              recording={canManage && cam.anim.autoKey}
               aspect={data.splatPresentation?.camera?.aspect}
               pip={
                 model3d.layoutMode ? (

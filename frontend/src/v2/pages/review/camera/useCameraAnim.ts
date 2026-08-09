@@ -9,18 +9,24 @@ import {
   animKeyTimes,
   animPlayDuration,
   CHANNEL_IDS,
+  deleteColumn,
   deleteKeys,
   emptyAnim,
   hasAnimation as animHasAnimation,
+  moveColumn,
   moveKeysBatch,
+  poseToChannelValues,
   setAnimDuration,
+  setKeyMode,
   setKeyTangent,
   upsertKey,
   upsertPoseAt,
   type CameraAnimV2,
   type ChannelId,
   type KeyRef,
+  type TangentMode,
 } from './channels/model';
+import { evalChannel } from './channels/hermite';
 import { sampleAnimV2 } from './channels/hermite';
 import {
   copyKeys,
@@ -64,7 +70,6 @@ export function useCameraAnim(controller: CameraController) {
   const [future, setFuture] = useState<CameraAnimV2[]>([]);
 
   const timeRef = useRef(0);
-  const lastUi = useRef(0);
   const animRef = useRef(anim);
   const selectionRef = useRef(selection);
   const baseRef = useRef<SplatCamera>({ position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } });
@@ -167,11 +172,9 @@ export function useCameraAnim(controller: CameraController) {
       restoreCamera(sampleAnimV2(a, timeRef.current, baseRef.current));
       const duration = animPlayDuration(a);
       if (!a.loop && timeRef.current >= duration) setPlaying(false);
-      const now = performance.now();
-      if (now - lastUi.current > 100) {
-        lastUi.current = now;
-        setTimeMs(a.loop ? timeRef.current % Math.max(duration, 1) : timeRef.current);
-      }
+      // Playhead fluide : l'UI suit chaque frame (React 18 groupe les rendus) — le throttle à
+      // 100 ms faisait avancer la tête de lecture par saccades.
+      setTimeMs(a.loop ? timeRef.current % Math.max(duration, 1) : timeRef.current);
     });
   }, [playing, subscribeFrame, restoreCamera]);
 
@@ -232,6 +235,47 @@ export function useCameraAnim(controller: CameraController) {
   const addKey = useCallback(
     (channel: ChannelId, t: number, v: number) =>
       commit(upsertKey(animRef.current, channel, Math.max(0, t), v)),
+    [commit],
+  );
+
+  /**
+   * Pose une clé sur **un seul canal** au playhead, depuis la vue courante (ligne du dopesheet).
+   * Si la vue ne porte pas la valeur (fov/roll absents de la capture), retombe sur la valeur
+   * échantillonnée du canal — poser une clé n'altère alors pas la courbe.
+   */
+  const insertChannelKeyAtView = useCallback(
+    (channel: ChannelId, t?: number) => {
+      const time = Math.max(0, Math.round(t ?? timeRef.current));
+      const view = captureCamera();
+      const fromView = view ? poseToChannelValues(view)[channel] : undefined;
+      const v = fromView ?? evalChannel(animRef.current.channels[channel], time, 0);
+      commit(upsertKey(animRef.current, channel, time, v));
+    },
+    [captureCamera, commit],
+  );
+
+  /** Retime en direct une colonne du dopesheet (drag d'un losange de la règle). Live — appeler
+   *  `beginStroke` au début du geste pour un undo unique. */
+  const strokeMoveColumn = useCallback((fromT: number, toT: number) => {
+    const delta = Math.round(toT) - Math.round(fromT);
+    if (delta !== 0) setAnimState(moveColumn(animRef.current, Math.round(fromT), delta));
+  }, []);
+
+  /** Supprime toutes les clés d'une colonne du dopesheet (Alt+clic sur un losange). */
+  const removeColumn = useCallback(
+    (t: number) => commit(deleteColumn(animRef.current, Math.round(t))),
+    [commit],
+  );
+
+  /** Applique un mode de tangente à toutes les clés sélectionnées (segmented du graph editor). */
+  const setSelectionMode = useCallback(
+    (mode: TangentMode) => {
+      const sels = selectionRef.current;
+      if (!sels.length) return;
+      let next = animRef.current;
+      for (const s of sels) next = setKeyMode(next, s.channel, s.index, mode);
+      commit(next);
+    },
     [commit],
   );
 
@@ -325,6 +369,10 @@ export function useCameraAnim(controller: CameraController) {
     setAutoKey,
     insertKeyAtView,
     addKey,
+    insertChannelKeyAtView,
+    strokeMoveColumn,
+    removeColumn,
+    setSelectionMode,
     removeSelection,
     copySelection,
     paste,

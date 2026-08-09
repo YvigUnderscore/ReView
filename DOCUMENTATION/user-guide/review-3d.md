@@ -70,6 +70,19 @@ the scene, not just the nodes that happen to be drawn. Prims that exist but are 
   group highlights the whole branch. Clicking empty space clears the selection. Dragging orbits
   the camera as usual — only a click that does not move selects. Objects that are not currently
   drawn (inactive variant, hidden prim) cannot be picked and are never outlined.
+- **Multi-selection** — **Ctrl/⌘+click** (tree or viewer) toggles a prim in the selection,
+  **Maj+click** in the tree selects a range. The gizmo then transforms the **whole group**
+  around its common center, as one undo step.
+- **Search** the tree with the field at its top (ancestors of a match stay visible),
+  **Alt+click the eye** to isolate a prim (solo), and use the **padlock** to make a prim
+  unpickable in the viewer (the tree still selects and unlocks it).
+- **Duplicate** (right-click → *Duplicate*) creates a **staging clone** — a copy of the
+  prim's geometry handled entirely by the ReView override, no reconversion. Clones appear as
+  child rows with a `clone` badge, are selectable and movable like prims, deletable from the
+  tree or the right-click menu, and travel with comments or the saved override like any other
+  scene change (up to 50 clones per prim).
+- **Align / distribute** — with several prims selected, right-click → *Align* lines up their
+  bounding boxes on a world axis (min / center / max) or distributes their centers evenly.
 - **Frame the selection** — with a prim selected, `F` flies the camera to it (keeping the
   current view direction) and frames it; without a selection, `F` frames the whole model.
 - **Show / hide** a prim with the eye on its row. Hiding a prim hides its children too; a prim

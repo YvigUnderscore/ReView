@@ -58,6 +58,7 @@ export default function CurveCanvas({
   height,
   guideT,
   onZoom,
+  onPan,
   onScrub,
   onSelect,
   onBeginStroke,
@@ -77,6 +78,8 @@ export default function CurveCanvas({
   /** Guide de durée de lecture (ms) — trait vertical repère (Phase 27). */
   guideT?: number;
   onZoom: (pivotT: number, factor: number) => void;
+  /** Pan horizontal (Maj+molette) — décale la fenêtre temporelle en ms. */
+  onPan?: (deltaMs: number) => void;
   onScrub: (t: number) => void;
   onSelect: (sel: KeyRef[]) => void;
   onBeginStroke: () => void;
@@ -201,7 +204,13 @@ export default function CurveCanvas({
         drag.current = { kind: 'band', x0: localX(e.clientX), y0: localY(e.clientY) };
         (e.currentTarget as SVGElement).setPointerCapture(e.pointerId);
       }}
-      onWheel={(e) => onZoom(xToTime(localX(e.clientX), tv), e.deltaY < 0 ? 0.85 : 1.18)}
+      onWheel={(e) => {
+        // Maj+molette (ou molette horizontale de trackpad) = pan temporel ; sinon zoom au pivot.
+        const horiz = e.shiftKey ? e.deltaY : e.deltaX;
+        if (onPan && horiz !== 0 && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)))
+          onPan((horiz / (tv.width || 1)) * (tv.t1 - tv.t0));
+        else onZoom(xToTime(localX(e.clientX), tv), e.deltaY < 0 ? 0.85 : 1.18);
+      }}
     >
       <CurveGrid timeView={timeView} valueView={valueView} width={width} height={height} />
 

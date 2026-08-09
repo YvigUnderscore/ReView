@@ -21,6 +21,7 @@ export default function Model3DThreePane({
   aspect,
   pip,
   notice,
+  recording,
   canReprocess,
   reprocessing,
   processingError,
@@ -36,6 +37,8 @@ export default function Model3DThreePane({
   pip?: ReactNode;
   /** Bandeau flottant en haut du viewer (46.T : retour à la scène par défaut). */
   notice?: ReactNode;
+  /** Auto-key armé : liseré d'enregistrement sur le viewport (façon DCC). */
+  recording?: boolean;
   canReprocess: boolean;
   reprocessing: boolean;
   /** Raison de l'échec de traitement remontée par le worker (45.C), null si inconnue. */
@@ -46,6 +49,9 @@ export default function Model3DThreePane({
   const showError = loadError || (status !== 'PROCESSING' && status !== 'READY');
   return (
     <div className={VIEWER_ZONE} data-viewer-zone>
+      {recording && (
+        <div className="pointer-events-none absolute inset-0 z-20 ring-2 ring-destructive/70 ring-inset" />
+      )}
       {/* Viewer plein espace + guide letterbox du cadre de livraison (Phase 25) ; l'overlay
           d'annotation est ancré au guide (coordonnées normalisées alignées pour tous). */}
       <ReviewFrame

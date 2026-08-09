@@ -3,6 +3,9 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  addClone,
+  clonePath,
+  clonesOf,
   countEdits,
   emptyOverride,
   isEmptyEdit,
@@ -13,7 +16,11 @@ import {
   isolatePrim,
   mergeOverrides,
   normalizeOverride,
+  parseClonePath,
+  removeClone,
+  setCloneTransform,
   setPrimEdit,
+  IDENTITY_TRANSFORM,
   MAX_OVERRIDE_PRIMS,
   type SceneOverride,
 } from './sceneOverride';
@@ -192,5 +199,58 @@ describe('isolatePrim', () => {
     expect(isHidden(o, '/Other')).toBe(true);
     expect(isHidden(o, '/Other/Geo')).toBe(true);
     expect(isHidden(o, '/W')).toBe(false);
+  });
+});
+
+describe('clones de mise en scène (C1)', () => {
+  it('ajoute, retime et retire un clone (immutable)', () => {
+    let o = addClone(emptyOverride(), '/W/Chair', { id: 'c1', transform: IDENTITY_TRANSFORM });
+    expect(clonesOf(o, '/W/Chair')).toHaveLength(1);
+    o = setCloneTransform(o, '/W/Chair', 'c1', moved);
+    expect(clonesOf(o, '/W/Chair')[0]!.transform).toEqual(moved);
+    o = removeClone(o, '/W/Chair', 'c1');
+    // Le dernier clone retiré rend l'édition vide : le prim disparaît de l'override.
+    expect(isEmptyOverride(o)).toBe(true);
+  });
+
+  it('pseudo-chemin : composition et décomposition', () => {
+    const pseudo = clonePath('/W/Chair', 'c1');
+    expect(pseudo).toBe('/W/Chair#c1');
+    expect(parseClonePath(pseudo)).toEqual({ path: '/W/Chair', id: 'c1' });
+    expect(parseClonePath('/W/Chair')).toBeNull();
+    expect(parseClonePath('/W/Chair#')).toBeNull();
+  });
+
+  it('normalise : garde l’identité, rejette id manquant, doublon ou transform invalide', () => {
+    const raw = {
+      version: 1,
+      prims: {
+        '/W': {
+          clones: [
+            { id: 'a', transform: IDENTITY_TRANSFORM },
+            { id: 'a', transform: moved },
+            { id: '', transform: moved },
+            { id: 'b', transform: { t: [1, 2], r: [0, 0, 0], s: [1, 1, 1] } },
+            { id: 'c', transform: moved },
+          ],
+        },
+      },
+    };
+    const clean = normalizeOverride(raw);
+    expect(clonesOf(clean, '/W').map((c) => c.id)).toEqual(['a', 'c']);
+    // Une identité de clone est significative (copie posée au même endroit) : conservée.
+    expect(clonesOf(clean, '/W')[0]!.transform).toEqual(IDENTITY_TRANSFORM);
+  });
+
+  it('fusionne les clones par id (la proposition met à jour ou ajoute)', () => {
+    const base = addClone(emptyOverride(), '/W', { id: 'a', transform: IDENTITY_TRANSFORM });
+    const delta = addClone(
+      addClone(emptyOverride(), '/W', { id: 'a', transform: moved }),
+      '/W',
+      { id: 'b', transform: moved },
+    );
+    const merged = mergeOverrides(base, delta);
+    expect(clonesOf(merged, '/W').map((c) => c.id).sort()).toEqual(['a', 'b']);
+    expect(clonesOf(merged, '/W').find((c) => c.id === 'a')!.transform).toEqual(moved);
   });
 });

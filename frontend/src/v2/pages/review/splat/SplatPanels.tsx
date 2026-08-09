@@ -12,6 +12,8 @@ import ExportPanel, { CaptureViewButton } from '../panels/ExportPanel';
 import InfoPanel, { type InfoRow } from '../panels/InfoPanel';
 import ScenePanel from '../panels/ScenePanel';
 import { focalToFov, fovToFocal } from '../camera/focal';
+import { evalChannel } from '../camera/channels/hermite';
+import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import type { MediaResp } from '../reviewTypes';
 import type { SplatEditorState } from './editor/useSplatEditor';
@@ -66,6 +68,7 @@ export default function SplatPanels({
   onFrame,
   onHome,
   onImportAnim,
+  canPresent,
 }: {
   panel: PanelId | null;
   data: MediaResp;
@@ -82,6 +85,8 @@ export default function SplatPanels({
   onFrame: () => void;
   onHome: () => void;
   onImportAnim: (file: File) => void;
+  /** Gestionnaire : preset orbite et effacement de la présentation persistée. */
+  canPresent?: boolean;
 }) {
   const t = useT();
   const [stats, setStats] = useState<SplatStats | null>(null);
@@ -90,13 +95,30 @@ export default function SplatPanels({
   // Les stats ne sont mesurées que lorsque le panneau Infos est ouvert.
   useEffect(() => (panel === 'info' ? subscribeStats(setStats) : undefined), [panel, subscribeStats]);
 
-  if (panel === 'camera')
+  if (panel === 'camera') {
+    // Focale/tilt reflètent la valeur **échantillonnée** au temps courant quand le canal est
+    // animé — le panneau et l'animation ne dérivent plus en silence ; avec l'auto-key armé,
+    // les modifier pose une clé `fov`/`roll` au playhead.
+    const anim = pres.anim;
+    const fovNow = anim.anim.channels.fov
+      ? evalChannel(anim.anim.channels.fov, anim.timeMs, pres.rig.fov)
+      : pres.rig.fov;
+    const rollNow = anim.anim.channels.roll
+      ? evalChannel(anim.anim.channels.roll, anim.timeMs, pres.rig.roll)
+      : pres.rig.roll;
     return (
       <CameraPanel
-        focalMm={Math.round(fovToFocal(pres.rig.fov))}
-        onFocalMm={(mm) => pres.rig.setFov(focalToFov(Math.min(Math.max(mm, 7), 400)))}
-        tiltDeg={Math.round(pres.rig.roll / RAD)}
-        onTiltDeg={(deg) => pres.rig.setRoll(deg * RAD)}
+        focalMm={Math.round(fovToFocal(fovNow))}
+        onFocalMm={(mm) => {
+          const fov = focalToFov(Math.min(Math.max(mm, 7), 400));
+          pres.rig.setFov(fov);
+          if (anim.autoKey) anim.addKey('fov', anim.timeMs, fov);
+        }}
+        tiltDeg={Math.round(rollNow / RAD)}
+        onTiltDeg={(deg) => {
+          pres.rig.setRoll(deg * RAD);
+          if (anim.autoKey) anim.addKey('roll', anim.timeMs, deg * RAD);
+        }}
         dof={{
           aperture: pres.rig.aperture,
           onAperture: pres.rig.setAperture,
@@ -106,12 +128,18 @@ export default function SplatPanels({
         layout={{
           active: pres.layout.layoutMode,
           onToggle: () => pres.layout.setLayoutMode(!pres.layout.layoutMode),
+          onOrbit: canPresent ? () => pres.applyOrbitPreset() : undefined,
+          onClear:
+            canPresent && data.splatPresentation
+              ? () => confirmClearPresentation(() => void pres.clear())
+              : undefined,
         }}
         aspectLabel={aspectLabel(data.splatPresentation?.camera?.aspect)}
         onFrame={onFrame}
         onHome={onHome}
       />
     );
+  }
 
   if (panel === 'display')
     return (

@@ -13,6 +13,8 @@ import LightingPanel from '../panels/LightingPanel';
 import ScenePanel from '../panels/ScenePanel';
 import ScenegraphPanel from '../panels/ScenegraphPanel';
 import { focalToFov, fovToFocal } from '../camera/focal';
+import { evalChannel } from '../camera/channels/hermite';
+import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import type { MediaResp } from '../reviewTypes';
 import { downloadAnimGltf } from './exportCameraGltf';
@@ -66,6 +68,8 @@ export default function Model3DPanels({
   savingOverride,
   onRecompose,
   onImportAnim,
+  onOrbit,
+  onClearPresentation,
 }: {
   panel: PanelId | null;
   data: MediaResp;
@@ -86,17 +90,41 @@ export default function Model3DPanels({
   /** Recomposition USD — gestionnaire, média non publié, source USD présente. */
   onRecompose?: () => void;
   onImportAnim?: (file: File) => void;
+  /** Preset orbite (gestionnaire). */
+  onOrbit?: () => void;
+  /** Efface la présentation persistée (gestionnaire — confirmée ici). */
+  onClearPresentation?: () => void;
 }) {
   const t = useT();
   if (panel === 'camera') {
     const saved = data.splatPresentation?.bookmarks ?? [];
+    // Focale/tilt reflètent la valeur échantillonnée au temps courant quand le canal est animé ;
+    // avec l'auto-key armé, les modifier pose une clé `fov`/`roll` au playhead.
+    const fovNow = anim.anim.channels.fov ? evalChannel(anim.anim.channels.fov, anim.timeMs, m.fov) : m.fov;
+    const rollNow = anim.anim.channels.roll
+      ? evalChannel(anim.anim.channels.roll, anim.timeMs, m.roll)
+      : m.roll;
     return (
       <CameraPanel
-        focalMm={Math.round(fovToFocal(m.fov))}
-        onFocalMm={(mm) => m.setFov(focalToFov(Math.min(Math.max(mm, 7), 400)))}
-        tiltDeg={Math.round(m.roll / RAD)}
-        onTiltDeg={(deg) => m.setRoll(deg * RAD)}
-        layout={{ active: m.layoutMode, onToggle: () => m.setLayoutMode(!m.layoutMode) }}
+        focalMm={Math.round(fovToFocal(fovNow))}
+        onFocalMm={(mm) => {
+          const fov = focalToFov(Math.min(Math.max(mm, 7), 400));
+          m.setFov(fov);
+          if (anim.autoKey) anim.addKey('fov', anim.timeMs, fov);
+        }}
+        tiltDeg={Math.round(rollNow / RAD)}
+        onTiltDeg={(deg) => {
+          m.setRoll(deg * RAD);
+          if (anim.autoKey) anim.addKey('roll', anim.timeMs, deg * RAD);
+        }}
+        layout={{
+          active: m.layoutMode,
+          onToggle: () => m.setLayoutMode(!m.layoutMode),
+          onOrbit,
+          onClear: onClearPresentation
+            ? () => confirmClearPresentation(onClearPresentation)
+            : undefined,
+        }}
         aspectLabel={aspectLabel(data.splatPresentation?.camera?.aspect)}
         onFrame={m.frameView}
         onHome={m.homeView}

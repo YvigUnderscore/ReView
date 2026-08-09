@@ -16,10 +16,12 @@ import {
   Repeat,
   Undo2,
 } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import type { CameraAnimState } from '../camera/useCameraAnim';
+import { snapToFrame, timecode } from '../camera/timeline/viewTransform';
 import { useT } from '../../../i18n';
 
 /**
@@ -30,6 +32,7 @@ import { useT } from '../../../i18n';
 export default function SpatialTransport({
   anim,
   editable,
+  fps,
   trackSwitch,
   onAttach,
   drawerOpen,
@@ -38,6 +41,8 @@ export default function SpatialTransport({
   anim: CameraAnimState;
   /** Gestionnaire pré-publication : seul à pouvoir écrire des clés. */
   editable: boolean;
+  /** Framerate du pipeline — snap du scrub à la frame, timecode `s:ff`. */
+  fps: number;
   /** Sélecteur de piste, quand le média porte aussi des clips d'animation. */
   trackSwitch?: ReactNode;
   /** Joindre l'animation au prochain commentaire (mode layout). */
@@ -58,6 +63,14 @@ export default function SpatialTransport({
     if (next !== undefined) anim.scrub(next);
   };
 
+  // Scrub au drag sur la piste (capture du pointeur) — snap à la frame, Alt pour libérer.
+  const trackDrag = useRef(false);
+  const scrubTrack = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const raw = Math.max(0, ((e.clientX - r.left) / r.width) * span);
+    anim.scrub(e.altKey ? raw : snapToFrame(raw, fps));
+  };
+
   return (
     <div className="rv-transport">
       {trackSwitch}
@@ -66,7 +79,7 @@ export default function SpatialTransport({
         label={anim.playing ? t('video.pauseKey') : t('video.playKey')}
         bordered
         active={anim.playing}
-        disabled={!anim.hasAnimation}
+        disabled={!times.length}
         onClick={anim.playing ? anim.pause : anim.play}
       />
       <IconButton
@@ -92,10 +105,20 @@ export default function SpatialTransport({
 
       <div
         className="rv-track"
-        style={{ flex: '1 1 200px', minWidth: 160 }}
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          anim.scrub(Math.max(0, ((e.clientX - r.left) / r.width) * span));
+        style={{ flex: '1 1 200px', minWidth: 160, cursor: 'ew-resize' }}
+        onPointerDown={(e) => {
+          // Les losanges de clé gardent leur clic exact (scrub à la clé).
+          if (e.button !== 0 || (e.target as HTMLElement).closest('.rv-key')) return;
+          trackDrag.current = true;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          scrubTrack(e);
+        }}
+        onPointerMove={(e) => {
+          if (trackDrag.current) scrubTrack(e);
+        }}
+        onPointerUp={(e) => {
+          trackDrag.current = false;
+          e.currentTarget.releasePointerCapture?.(e.pointerId);
         }}
       >
         <span className="rv-track__rail" />
@@ -117,8 +140,18 @@ export default function SpatialTransport({
         <span className="rv-track__head" style={{ left: `${pct(anim.timeMs)}%` }} />
       </div>
 
-      <span className="font-mono text-[0.625rem]">
-        <span className="text-primary">{(anim.timeMs / 1000).toFixed(2)}</span> / {(span / 1000).toFixed(2)} s
+      <NumberField
+        label={t('review.time')}
+        hint={t('review.time.hint')}
+        value={Number((anim.timeMs / 1000).toFixed(3))}
+        onChange={(s) => anim.scrub(snapToFrame(Math.max(0, s) * 1000, fps))}
+        min={0}
+        max={600}
+        step={1 / (fps > 0 ? fps : 24)}
+        unit="s"
+      />
+      <span className="font-mono text-[0.625rem] text-muted-foreground">
+        <span className="text-primary">{timecode(anim.timeMs, fps)}</span> / {timecode(span, fps)}
       </span>
 
       {editable && (
@@ -138,6 +171,12 @@ export default function SpatialTransport({
             label={t('review.autoKey')}
             bordered
             active={anim.autoKey}
+            className={
+              // Enregistrement armé : état fort façon DCC — impossible de l'oublier allumé.
+              anim.autoKey
+                ? 'animate-pulse bg-destructive/20 text-destructive hover:bg-destructive/30'
+                : undefined
+            }
             onClick={() => anim.setAutoKey(!anim.autoKey)}
           />
         </>

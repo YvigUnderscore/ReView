@@ -8,12 +8,20 @@ import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { buildRenderedPrimTree, type PrimNode } from './usdScenegraph';
 import { createSelectionGlow } from './selectionGlow';
 import {
+  addClone,
+  clonePath,
+  clonesOf,
   emptyOverride,
+  IDENTITY_TRANSFORM,
   isEmptyOverride,
   isHidden,
   isolatePrim,
   mergeOverrides,
+  newCloneId,
   normalizeOverride,
+  parseClonePath,
+  removeClone,
+  setCloneTransform,
   setPrimEdit,
   type PrimEdit,
   type PrimTransform,
@@ -31,6 +39,9 @@ import {
   type IndexedObject,
   type VariantSelection,
 } from './sceneOverrideApply';
+import type { AlignAxis, AlignMode } from './alignPrims';
+import { useSceneClones } from './useSceneClones';
+import { usePrimAlign } from './usePrimAlign';
 
 /**
  * Scenegraph USD et « ReView override » du viewer 3D (Phase 46, 46.C).
@@ -57,21 +68,43 @@ export interface UsdSceneState {
   override: SceneOverride;
   /** Options de variantes actives à la conversion. */
   variantDefaults: VariantSelection;
-  selected: string | null;
-  select: (path: string | null) => void;
-  /** Prim auquel appartient un objet de la scène — sélection au clic dans le viewer. */
+  /** Multi-sélection de prims (B1) — le dernier est le **primaire** (pivot des menus). */
+  selected: string[];
+  /** Dernier prim sélectionné, ou null — l'équivalent de l'ancienne mono-sélection. */
+  primary: string | null;
+  /** Sélectionne : remplace la sélection, ou bascule l'appartenance (`additive` = Ctrl+clic). */
+  select: (path: string | null, opts?: { additive?: boolean }) => void;
+  /** Remplace la sélection entière (Maj+clic plage dans l'arbre). */
+  selectMany: (paths: string[]) => void;
+  /** Prim auquel appartient un objet de la scène — sélection au clic dans le viewer.
+   *  Renvoie null pour un prim **verrouillé** (exclu du picking). */
   resolvePrim: (object: THREE.Object3D) => string | null;
-  /** Objets affichés du prim sélectionné — cadrage `F` sur la sélection (46.I). */
+  /** Prims verrouillés : insélectionnables au clic dans le viewer (B2). */
+  locked: ReadonlySet<string>;
+  toggleLock: (path: string) => void;
+  /** Objets affichés de **tous** les prims sélectionnés — cadrage `F`, pivot du gizmo. */
   selectedObjects: () => THREE.Object3D[];
-  /** Objet représentatif du prim sélectionné — cible du gizmo TRS par prim (46.N). */
+  /** Un objet représentatif par prim sélectionné — chacun reçoit la pose du gizmo de groupe. */
+  representatives: () => THREE.Object3D[];
+  /** Objet représentatif du prim primaire — compat mono-sélection (arbitrage du gizmo). */
   selectedObject: THREE.Object3D | null;
   /**
-   * Fin de drag du gizmo : la pose courante de l'objet devient le delta d'override du prim.
-   * Renvoie de quoi construire l'annulation (delta local avant/après), ou null hors index.
+   * Fin de drag du gizmo de groupe : la pose courante de chaque représentant devient le delta
+   * d'override de son prim (ou de son clone) — un seul lot. Renvoie les deltas avant/après.
    */
-  commitPrimTransform: (
-    object: THREE.Object3D,
-  ) => { path: string; before: PrimTransform | null; after: PrimTransform } | null;
+  commitPrimTransforms: (
+    objects: readonly THREE.Object3D[],
+  ) => Array<{ path: string; before: PrimTransform | null; after: PrimTransform }>;
+  /** Écrit un delta sur un prim ou un clone (`/prim#id`) — chemin unique de l'undo du gizmo. */
+  applyPrimTransform: (path: string, transform: PrimTransform | null) => void;
+  /** Duplique un prim (ou un clone) en clone d'override, le sélectionne, renvoie son pseudo-chemin. */
+  duplicatePrim: (path: string) => string | null;
+  /** Supprime un clone désigné par son pseudo-chemin. */
+  deleteClone: (pseudo: string) => void;
+  /** Aligne la sélection sur un axe monde (min/centre/max des boîtes englobantes) — C2. */
+  alignSelected: (axis: AlignAxis, mode: AlignMode) => void;
+  /** Répartit les centres de la sélection à intervalles réguliers sur un axe — C2. */
+  distributeSelected: (axis: AlignAxis) => void;
   setPrim: (path: string, patch: PrimEdit | null) => void;
   isolate: (path: string) => void;
   setVariant: (prim: string, set: string, option: string) => void;
@@ -110,7 +143,8 @@ export function useUsdScene(
 ): UsdSceneState {
   const usd = data?.modelSource?.usd ?? null;
   const [local, setLocal] = useState<SceneOverride>(emptyOverride);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [locked, setLocked] = useState<ReadonlySet<string>>(new Set());
   const [indexed, setIndexed] = useState<IndexedObject<THREE.Object3D>[]>([]);
 
   /**
@@ -123,7 +157,8 @@ export function useUsdScene(
   if (lastMediaId !== mediaId) {
     setLastMediaId(mediaId);
     setLocal(emptyOverride());
-    setSelected(null);
+    setSelected([]);
+    setLocked(new Set());
     setIndexed([]);
   }
   // Le delta en attente de commentaire est lui aussi abandonné avec la scène qui le portait.
@@ -188,6 +223,9 @@ export function useUsdScene(
     applyPlan(planOverride(indexed, override, variantDefaults));
   }, [override, variantDefaults, indexed]);
 
+  // Clones de mise en scène (C1) : réconciliation des copies dans `useSceneClones`.
+  const cloneIndex = useSceneClones(override, indexed, variantDefaults);
+
   // Miroir de `local` lisible dans les gestionnaires d'événements sans passer par un updater.
   const localRef = useRef(local);
   localRef.current = local;
@@ -233,34 +271,164 @@ export function useUsdScene(
     return shown;
   }, [indexed, override, variantDefaults]);
 
-  const resolvePrim = useMemo(() => makePrimResolver(indexed), [indexed]);
+  /** Index complet : objets du GLB + copies des clones (sélection, gizmo, halo, cadrage). */
+  const allIndexed = useMemo(() => [...indexed, ...cloneIndex], [indexed, cloneIndex]);
 
-  /** Objets affichés du prim sélectionné — cadrage `F` (46.I) et gizmo TRS (46.N). */
-  const selectedObjects = useCallback((): THREE.Object3D[] => {
-    if (!selected || isHidden(override, selected)) return [];
-    return indexed
-      .filter((entry) => entry.primPath === selected && variantActive(entry, override, variantDefaults))
-      .map((entry) => entry.object);
-  }, [selected, indexed, override, variantDefaults]);
+  // Verrouillage (B2) : un prim verrouillé ne répond plus au picking du viewer — l'arbre, lui,
+  // reste le chemin pour le sélectionner ou le déverrouiller.
+  const baseResolver = useMemo(() => makePrimResolver(allIndexed), [allIndexed]);
+  const lockedRef = useRef(locked);
+  lockedRef.current = locked;
+  const resolvePrim = useCallback(
+    (object: THREE.Object3D) => {
+      const path = baseResolver(object);
+      return path && lockedRef.current.has(path) ? null : path;
+    },
+    [baseResolver],
+  );
+  const toggleLock = useCallback((path: string) => {
+    setLocked((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
 
-  const selectedObject = useMemo(() => selectedObjects()[0] ?? null, [selectedObjects]);
+  const primary = selected[selected.length - 1] ?? null;
+
+  const select = useCallback((path: string | null, opts?: { additive?: boolean }) => {
+    setSelected((prev) => {
+      // Ctrl+clic dans le vide : la sélection en cours ne bouge pas (comme dans un DCC).
+      if (path === null) return opts?.additive || prev.length === 0 ? prev : [];
+      if (!opts?.additive) return [path];
+      return prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path];
+    });
+  }, []);
+  const selectMany = useCallback((paths: string[]) => setSelected(paths), []);
+
+  /** Objets affichés d'un prim ou d'un clone (visibles, variante active). */
+  const objectsOf = useCallback(
+    (path: string): THREE.Object3D[] => {
+      const src = parseClonePath(path)?.path ?? path;
+      if (isHidden(override, src)) return [];
+      return allIndexed
+        .filter((entry) => entry.primPath === path && variantActive(entry, override, variantDefaults))
+        .map((entry) => entry.object);
+    },
+    [allIndexed, override, variantDefaults],
+  );
+
+  /** Objets affichés de tous les prims sélectionnés — cadrage `F` (46.I), pivot du gizmo. */
+  const selectedObjects = useCallback(
+    (): THREE.Object3D[] => selected.flatMap((path) => objectsOf(path)),
+    [selected, objectsOf],
+  );
+
+  /** Un représentant par prim sélectionné — chacun reçoit la pose du gizmo de groupe. */
+  const representatives = useCallback(
+    (): THREE.Object3D[] =>
+      selected.map((path) => objectsOf(path)[0]).filter((o): o is THREE.Object3D => !!o),
+    [selected, objectsOf],
+  );
+
+  const selectedObject = useMemo(
+    () => (primary ? (objectsOf(primary)[0] ?? null) : null),
+    [primary, objectsOf],
+  );
 
   /**
-   * Fin de drag du gizmo par prim (46.N) : la pose de l'objet manipulé, comparée à son état
-   * d'origine, devient le delta d'override du prim — que `applyPlan` répercute alors sur tous
-   * les objets du prim, pas seulement celui qui portait le gizmo.
+   * Fin de drag du gizmo de groupe (46.N, généralisé B1) : la pose de chaque représentant,
+   * comparée à son état d'origine, devient le delta d'override de son prim — le tout en **un
+   * seul lot** (`editLocal` unique → une seule publication du delta), que `applyPlan`
+   * répercute ensuite sur tous les objets de chaque prim.
    */
-  const commitPrimTransform = useCallback(
-    (object: THREE.Object3D) => {
-      const entry = indexed.find((e) => e.object === object);
-      if (!entry) return null;
-      const before = local.prims[entry.primPath]?.transform ?? null;
-      const after = transformDeltaFrom(entry.base, object);
-      editLocal((o) => setPrimEdit(o, entry.primPath, { transform: after }));
-      return { path: entry.primPath, before, after };
+  /** Écrit un delta sur un prim ou un clone (un seul chemin d'écriture pour l'undo du gizmo). */
+  const writeTransform = useCallback(
+    (o: SceneOverride, path: string, transform: PrimTransform | null): SceneOverride => {
+      const clone = parseClonePath(path);
+      if (clone) return setCloneTransform(o, clone.path, clone.id, transform ?? IDENTITY_TRANSFORM);
+      return setPrimEdit(o, path, { transform: transform ?? IDENTITY_TRANSFORM });
     },
-    [indexed, local, editLocal],
+    [],
   );
+
+  const applyPrimTransform = useCallback(
+    (path: string, transform: PrimTransform | null) => editLocal((o) => writeTransform(o, path, transform)),
+    [editLocal, writeTransform],
+  );
+
+  const commitPrimTransforms = useCallback(
+    (objects: readonly THREE.Object3D[]) => {
+      const commits: Array<{ path: string; before: PrimTransform | null; after: PrimTransform }> = [];
+      for (const object of objects) {
+        const entry = allIndexed.find((e) => e.object === object);
+        if (!entry) continue;
+        const clone = parseClonePath(entry.primPath);
+        const before = clone
+          ? (clonesOf(override, clone.path).find((c) => c.id === clone.id)?.transform ?? null)
+          : (local.prims[entry.primPath]?.transform ?? null);
+        commits.push({ path: entry.primPath, before, after: transformDeltaFrom(entry.base, object) });
+      }
+      if (commits.length)
+        editLocal((o) => commits.reduce((acc, c) => writeTransform(acc, c.path, c.after), o));
+      return commits;
+    },
+    [allIndexed, override, local, editLocal, writeTransform],
+  );
+
+  /** Duplique un prim (ou un clone) : nouveau clone décalé d'un dixième de son rayon, sélectionné. */
+  const duplicatePrim = useCallback(
+    (path: string): string | null => {
+      const clone = parseClonePath(path);
+      const srcPath = clone?.path ?? path;
+      if (clonesOf(override, srcPath).length >= 50) return null;
+      // Delta de départ : celui de l'original (clone dupliqué → son delta ; prim → son override).
+      const from = clone
+        ? clonesOf(override, srcPath).find((c) => c.id === clone.id)?.transform
+        : override.prims[srcPath]?.transform;
+      const start = from ?? IDENTITY_TRANSFORM;
+      // Décalage visible d'emblée : un dixième de l'encombrement de la géométrie source.
+      const handle = getSceneHandle();
+      let offset = 0.5;
+      if (handle) {
+        const box = new handle.THREE.Box3();
+        for (const object of objectsOf(srcPath)) box.expandByObject(object);
+        if (!box.isEmpty()) offset = Math.max((box.max.x - box.min.x) * 1.1, 0.1);
+      }
+      const id = newCloneId();
+      editLocal((o) =>
+        addClone(o, srcPath, {
+          id,
+          transform: { t: [start.t[0] + offset, start.t[1], start.t[2]], r: [...start.r], s: [...start.s] },
+        }),
+      );
+      const pseudo = clonePath(srcPath, id);
+      setSelected([pseudo]);
+      return pseudo;
+    },
+    [override, getSceneHandle, objectsOf, editLocal],
+  );
+
+  const deleteClone = useCallback(
+    (pseudo: string) => {
+      const clone = parseClonePath(pseudo);
+      if (!clone) return;
+      editLocal((o) => removeClone(o, clone.path, clone.id));
+      setSelected((prev) => prev.filter((p) => p !== pseudo));
+    },
+    [editLocal],
+  );
+
+  // Alignement / répartition (C2) — voir `usePrimAlign`.
+  const { alignSelected, distributeSelected } = usePrimAlign({
+    getSceneHandle,
+    selected,
+    objectsOf,
+    override,
+    editLocal,
+    writeTransform,
+  });
 
   /**
    * Halo de sélection : recalculé quand la sélection ou l'override change (l'objet a pu être
@@ -271,9 +439,10 @@ export function useUsdScene(
     if (!handle) return;
     const glow = createSelectionGlow(handle.THREE, handle.scene);
     // Le halo se charge de descendre jusqu'aux meshes réellement dessinés.
-    glow.show(selected ? indexed.filter((i) => i.primPath === selected).map((i) => i.object) : []);
+    const paths = new Set(selected);
+    glow.show(allIndexed.filter((i) => paths.has(i.primPath)).map((i) => i.object));
     return () => glow.dispose();
-  }, [selected, indexed, override, getSceneHandle]);
+  }, [selected, allIndexed, override, getSceneHandle]);
 
   const setPrim = useCallback(
     (path: string, patch: PrimEdit | null) => editLocal((o) => setPrimEdit(o, path, patch)),
@@ -314,11 +483,21 @@ export function useUsdScene(
     override,
     variantDefaults,
     selected,
-    select: setSelected,
+    primary,
+    select,
+    selectMany,
     resolvePrim,
+    locked,
+    toggleLock,
     selectedObjects,
+    representatives,
     selectedObject,
-    commitPrimTransform,
+    commitPrimTransforms,
+    applyPrimTransform,
+    duplicatePrim,
+    deleteClone,
+    alignSelected,
+    distributeSelected,
     setPrim,
     isolate,
     setVariant,

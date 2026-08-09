@@ -14,3 +14,11 @@ export function confirmReplaceAnim(onConfirm: () => void): void {
     action: { label: t('common.replace'), onClick: onConfirm },
   });
 }
+
+/** Avertit avant d'effacer la présentation persistée (caméra, animation, mise en scène). */
+export function confirmClearPresentation(onConfirm: () => void): void {
+  toast(t('camera.clearPresentation'), {
+    description: t('camera.clearConfirm'),
+    action: { label: t('common.delete'), onClick: onConfirm },
+  });
+}

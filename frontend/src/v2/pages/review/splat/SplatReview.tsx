@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { Role } from '../../../types/api';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
@@ -13,7 +13,11 @@ import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import { useSceneGrid } from '../viewer/useSceneGrid';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFile } from '../three/importCameraAbc';
+import { normalizeAnim } from '../camera/channels/model';
+import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
+import { useRegisterReviewCommands, type ReviewCommand } from '../../../lib/reviewCommands';
 import { useCameraSceneRig } from '../camera/sceneRig/useCameraSceneRig';
+import { useCameraShortcuts } from '../camera/useCameraShortcuts';
 import PipFrame from '../viewer/PipFrame';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import CompareControl from './compare/CompareControl';
@@ -100,6 +104,13 @@ export default function SplatReview({
     [splat],
   );
 
+  // Mode Mise en scène = atelier caméra : entrer dans le mode active le layout (PiP +
+  // caméra-objet), en sortir le désactive. L'interrupteur du panneau Caméra reste en override.
+  const { setLayoutMode } = pres.layout;
+  useEffect(() => {
+    setLayoutMode(state.mode === 'stage');
+  }, [state.mode, setLayoutMode]);
+
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo des clés.
   const cameraRig = useCameraSceneRig({
     getSceneHandle: splat.getSceneHandle,
@@ -108,6 +119,7 @@ export default function SplatReview({
     active: pres.layout.layoutMode,
     editable: canPresent,
     anim: pres.anim,
+    getBasePose: pres.layout.getActivationView,
   });
 
   useSplatChrome({
@@ -117,6 +129,15 @@ export default function SplatReview({
     focusPick: pres.rig.focusPick,
     onToggleFocusPick: pres.rig.toggleFocusPick,
     cameraRig,
+  });
+
+  // Raccourcis du transport caméra : Espace, K, ←/→, Début/Fin ; Ctrl+Z de l'anim en mode Layout.
+  useCameraShortcuts({
+    anim: pres.anim,
+    active: true,
+    editable: canPresent,
+    undoActive: state.mode === 'stage',
+    fps: data.fps ?? 24,
   });
 
   // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
@@ -216,6 +237,51 @@ export default function SplatReview({
     onHome: homeView,
   });
 
+  // Palette Ctrl+K (B3) : les actions du viewer, sans bouton de plus. Les rappels passent par
+  // une ref — l'objet `pres` est neuf à chaque rendu, il ne doit pas re-publier les commandes.
+  const presRef = useRef(pres);
+  presRef.current = pres;
+  const frameRef = useRef(frameView);
+  frameRef.current = frameView;
+  const homeRef = useRef(homeView);
+  homeRef.current = homeView;
+  const hasKeys = pres.anim.keyTimes.length > 0;
+  const hasPres = !!data.splatPresentation;
+  const commands = useMemo<ReviewCommand[]>(() => {
+    const cmds: ReviewCommand[] = [
+      { id: 'fit', label: t('action.fitSpatial'), run: () => frameRef.current() },
+      { id: 'home', label: t('action.resetSpatial'), run: () => homeRef.current() },
+    ];
+    if (hasKeys)
+      cmds.push({
+        id: 'play',
+        label: t('video.playKey'),
+        run: () => (presRef.current.anim.playing ? presRef.current.anim.pause() : presRef.current.anim.play()),
+      });
+    if (canPresent) {
+      cmds.push(
+        { id: 'key', label: t('review.key.set'), run: () => presRef.current.anim.insertKeyAtView() },
+        { id: 'orbit', label: t('camera.orbitPreset'), run: () => presRef.current.applyOrbitPreset() },
+      );
+      if (hasPres)
+        cmds.push({
+          id: 'clear-pres',
+          label: t('camera.clearPresentation'),
+          run: () => confirmClearPresentation(() => void presRef.current.clear()),
+        });
+    }
+    return cmds;
+  }, [t, hasKeys, hasPres, canPresent]);
+  useRegisterReviewCommands(commands);
+
+  // « Non enregistré » = l'animation diffère de la présentation persistée — et plus « une
+  // animation existe » (qui restait sale pour toujours, même juste après une publication).
+  const savedAnimJson = useMemo(
+    () => JSON.stringify(normalizeAnim(data.splatPresentation?.cameraAnim)),
+    [data.splatPresentation],
+  );
+  const animDirty = pres.anim.hasAnimation && JSON.stringify(pres.anim.anim) !== savedAnimJson;
+
   const selectTool =
     editor.tool === 'select-rect'
       ? ('rect' as const)
@@ -245,9 +311,7 @@ export default function SplatReview({
           editor={editor}
           paint={paint}
           presentation={
-            canPresent
-              ? { dirty: pres.anim.hasAnimation, busy: pres.busy, onSave: () => void pres.save() }
-              : undefined
+            canPresent ? { dirty: animDirty, busy: pres.busy, onSave: () => void pres.save() } : undefined
           }
           onPlaceHotspot={() => ann.setHotspot3d(splat.raycastCenter())}
         />
@@ -273,18 +337,31 @@ export default function SplatReview({
           onFrame={frameView}
           onHome={homeView}
           onImportAnim={importLayout}
+          canPresent={canPresent}
         />
       }
       transport={
         <SpatialTransport
           anim={pres.anim}
           editable={canPresent}
+          fps={data.fps ?? 24}
           onAttach={attachLayout}
           drawerOpen={state.drawer === 'curves'}
           onDrawer={() => update({ drawer: state.drawer === 'curves' ? null : 'curves' })}
         />
       }
-      drawer={state.drawer === 'curves' ? <CurvesDrawer anim={pres.anim} editable={canPresent} /> : undefined}
+      drawer={
+        state.drawer === 'curves' ? (
+          <CurvesDrawer
+            anim={pres.anim}
+            editable={canPresent}
+            fps={data.fps ?? 24}
+            height={state.drawerH}
+            onHeight={(h) => update({ drawerH: h })}
+            onOrbitPreset={canPresent ? () => pres.applyOrbitPreset() : undefined}
+          />
+        ) : undefined
+      }
     >
       <SplatPane
         containerRef={splat.containerRef}
@@ -293,6 +370,7 @@ export default function SplatReview({
         progress={splat.progress}
         status={data.media.status}
         aspect={data.splatPresentation?.camera?.aspect}
+        recording={canPresent && pres.anim.autoKey}
         overlay={overlay}
         pip={
           pres.layout.layoutMode && ready ? (

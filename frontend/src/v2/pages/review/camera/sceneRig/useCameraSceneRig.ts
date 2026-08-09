@@ -29,8 +29,10 @@ export function useCameraSceneRig(opts: {
   active: boolean;
   editable: boolean;
   anim: CameraAnimState;
+  /** Pose de repli sans clé (vue à l'activation du layout) — sinon l'origine. */
+  getBasePose?: () => typeof BASE_POSE | null;
 }) {
-  const { getSceneHandle, subscribeFrame, ready, active, editable, anim } = opts;
+  const { getSceneHandle, subscribeFrame, ready, active, editable, anim, getBasePose } = opts;
   const objRef = useRef<CameraObjectRuntime | null>(null);
   const controlRef = useRef<TransformControls | null>(null);
   const [mode, setMode] = useState<RigGizmoMode>('translate');
@@ -142,10 +144,12 @@ export function useCameraSceneRig(opts: {
     // Synchronisation par frame : la caméra-objet suit la pose animée + trajectoire à jour.
     const offFrame = subscribeFrame(() => {
       const a = animRef.current;
-      const pose = sampleAnimV2(a.anim, a.timeMs, BASE_POSE);
+      // Sans clé, la caméra-objet se pose sur la vue d'activation du layout (manipulable dès le
+      // premier contact en édition) — les canaux non clés y retombent aussi.
+      const base = getBasePose?.() ?? BASE_POSE;
+      const pose = sampleAnimV2(a.anim, a.timeMs, base);
       obj.update(pose);
-      const has = a.hasAnimation;
-      obj.setVisible(has);
+      obj.setVisible(a.hasAnimation || editable);
       // Recalcule la trajectoire seulement quand l'animation change (clé signée par temps+valeurs).
       const sig = trajSignature(a.anim);
       if (sig !== trajKeyRef.current) {
@@ -162,7 +166,7 @@ export function useCameraSceneRig(opts: {
       objRef.current = null;
       trajKeyRef.current = '';
     };
-  }, [active, ready, editable, getSceneHandle, subscribeFrame]);
+  }, [active, ready, editable, getSceneHandle, subscribeFrame, getBasePose]);
 
   // Applique le mode courant au gizmo quand il est attaché au corps (sans réinstaller le gizmo).
   useEffect(() => {
