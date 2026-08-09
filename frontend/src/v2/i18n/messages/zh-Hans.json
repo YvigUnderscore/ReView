@@ -1974,5 +1974,7 @@
   "timeline.exportDownload": "下载",
   "timeline.noMediaToComment": "该 shot 还没有媒体，无可评论。",
   "timeline.openInReview": "在 review 中打开",
-  "timeline.notFound": "未找到剪辑"
+  "timeline.pause": "暂停",
+  "timeline.fullscreen": "全屏",
+  "timeline.exitFullscreen": "退出全屏"
 }

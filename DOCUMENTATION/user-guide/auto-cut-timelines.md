@@ -32,15 +32,27 @@ than silently trimmed.
 
 ## Playing a cut
 
-*Lire* opens the first playable clip in the review player with `?timeline=<id>`.
-From there:
+The cut plays **where it is**, on the sequence or project page — no other page,
+no export, nothing to open. Under the image, a single band holds the whole cut:
+every clip in order, each as wide as it is long, sequence bands above it and a
+playhead running from one end to the other. Clicking anywhere on the band takes
+the film there.
 
-- playback **chains automatically**: when a clip ends, the next one starts;
-- placeholders are skipped during playback (they remain counted in the cut);
-- the header shows the cut name and the position (`3/12`), with previous/next
-  buttons;
-- comments, annotations and review decisions work as usual — they belong to the
-  shot's version, not to the cut.
+Playback itself has **no cut in it**. Two video players take turns: while one
+plays, the next clip is already loading in the other, and the changeover is a
+swap of visibility. Shot changes and sequence changes are therefore read on the
+band and in the label under it (`SQ020 · SH010 · v0002`), never as a black frame.
+
+- Placeholders **hold their slot** for their own duration — the cut runs for as
+  long as the band says it does.
+- Playback is bounded by the **cut's** duration, not the file's: a media longer
+  than the slot it was given is cut off rather than pushing the rest of the film.
+- The comments panel writes on the shot currently on screen, at its own
+  timecode — the same comment you would have left in its review.
+- The expand button puts the same block full screen; the page underneath does not
+  change.
+- Hovering a clip reveals a link to its review, opened with `?timeline=<id>` so
+  that player chains on to the next shot as well.
 
 ## Targeting a stage
 

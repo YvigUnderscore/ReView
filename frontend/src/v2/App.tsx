@@ -24,7 +24,6 @@ import KanbanPage from './pages/KanbanPage';
 import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
-import TimelinePlayerPage from './pages/TimelinePlayerPage';
 import ProfilePage from './pages/ProfilePage';
 import DocumentsPage from './pages/DocumentsPage';
 import DocsPage from './pages/DocsPage';
@@ -172,15 +171,6 @@ function AppRoutes() {
               element={
                 <Protected>
                   <ReviewPage />
-                </Protected>
-              }
-            />
-            {/* Lecteur de montage continu (Phase 46) — hors coquille, plein écran. */}
-            <Route
-              path="/timelines/:id/play"
-              element={
-                <Protected>
-                  <TimelinePlayerPage />
                 </Protected>
               }
             />

@@ -2033,5 +2033,7 @@
   "timeline.exportDownload": "Télécharger",
   "timeline.noMediaToComment": "Ce shot n’a pas encore de média — rien à commenter.",
   "timeline.openInReview": "Ouvrir en review",
-  "timeline.notFound": "Montage introuvable"
+  "timeline.pause": "Pause",
+  "timeline.fullscreen": "Plein écran",
+  "timeline.exitFullscreen": "Quitter le plein écran"
 }

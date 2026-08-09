@@ -64,6 +64,48 @@ export function sequenceSpans(items: readonly TimelineClip[]): SequenceSpan[] {
   return spans;
 }
 
+/**
+ * Indices des plans qui ouvrent une séquence.
+ *
+ * Même règle que `sequenceSpans` : un plan sans séquence ouvre toujours sa propre bande,
+ * sinon deux shots orphelins seraient présentés comme s'ils appartenaient au même bloc.
+ */
+export function sequenceStarts(items: readonly TimelineClip[]): number[] {
+  const starts: number[] = [];
+  items.forEach((clip, i) => {
+    if (i === 0 || clip.sequenceId === null || clip.sequenceId !== items[i - 1]!.sequenceId) starts.push(i);
+  });
+  return starts;
+}
+
+/** Place d'un plan sur la bande, en pourcentage de sa largeur. */
+export interface TrackSlot {
+  index: number;
+  leftPct: number;
+  widthPct: number;
+}
+
+/**
+ * Découpe la bande du montage : chaque plan y occupe sa durée, à la suite du précédent.
+ *
+ * C'est ce qui fait d'elle une vraie timeline et non une liste de vignettes — la largeur
+ * dit la durée. Tant qu'aucune durée n'est connue, les plans se partagent la bande à
+ * parts égales : mieux vaut une bande approximative qu'une bande vide, sur laquelle on ne
+ * pourrait même pas cliquer.
+ */
+export function trackLayout(items: readonly TimelineClip[], total: number): TrackSlot[] {
+  if (items.length === 0) return [];
+  if (!(total > 0)) {
+    const widthPct = 100 / items.length;
+    return items.map((_, index) => ({ index, leftPct: index * widthPct, widthPct }));
+  }
+  return items.map((clip, index) => ({
+    index,
+    leftPct: (clip.startTime / total) * 100,
+    widthPct: (clip.duration / total) * 100,
+  }));
+}
+
 /** Le plan lisible suivant (les cartons n'ont rien à charger), null en fin de montage. */
 export function nextPlayableIndex(items: readonly TimelineClip[], from: number): number {
   for (let i = from + 1; i < items.length; i++) if (items[i]!.mediaId !== null) return i;

@@ -2030,5 +2030,7 @@
   "timeline.exportDownload": "Download",
   "timeline.noMediaToComment": "This shot has no media yet — nothing to comment on.",
   "timeline.openInReview": "Open in review",
-  "timeline.notFound": "Cut not found"
+  "timeline.pause": "Pause",
+  "timeline.fullscreen": "Full screen",
+  "timeline.exitFullscreen": "Exit full screen"
 }

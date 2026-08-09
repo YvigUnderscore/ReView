@@ -2042,5 +2042,7 @@
   "timeline.exportDownload": "Abelade",
   "timeline.noMediaToComment": "Der shot het no kei Medium — nix zum kommentiere.",
   "timeline.openInReview": "In de review uffmache",
-  "timeline.notFound": "Schnitt nit gfunde"
+  "timeline.pause": "Pause",
+  "timeline.fullscreen": "Vollbild",
+  "timeline.exitFullscreen": "Vollbild verlo"
 }

@@ -9,6 +9,8 @@ import {
   localTimeAt,
   nextPlayableIndex,
   sequenceSpans,
+  sequenceStarts,
+  trackLayout,
 } from './timelinePlayback';
 import type { TimelineClip } from '../../types/api';
 
@@ -96,6 +98,53 @@ describe('sequenceSpans', () => {
 
   it('rend une liste vide pour un montage vide', () => {
     expect(sequenceSpans([])).toEqual([]);
+  });
+});
+
+describe('sequenceStarts', () => {
+  it('marque le premier plan de chaque séquence', () => {
+    const mixed = [
+      clip({ order: 0, startTime: 0 }),
+      clip({ order: 1, startTime: 2 }),
+      clip({ order: 2, startTime: 4, sequenceId: 2, sequenceCode: 'SQ020' }),
+    ];
+    expect(sequenceStarts(mixed)).toEqual([0, 2]);
+  });
+
+  it('donne sa frontière à chaque plan hors séquence', () => {
+    const orphans = [
+      clip({ order: 0, startTime: 0, sequenceId: null, sequenceCode: null }),
+      clip({ order: 1, startTime: 2, sequenceId: null, sequenceCode: null }),
+    ];
+    expect(sequenceStarts(orphans)).toEqual([0, 1]);
+  });
+
+  it('rend une liste vide pour un montage vide', () => {
+    expect(sequenceStarts([])).toEqual([]);
+  });
+});
+
+describe('trackLayout', () => {
+  it('donne à chaque plan la largeur de sa durée', () => {
+    expect(trackLayout(items, 6)).toEqual([
+      { index: 0, leftPct: 0, widthPct: (2 / 6) * 100 },
+      { index: 1, leftPct: (2 / 6) * 100, widthPct: (2 / 6) * 100 },
+      { index: 2, leftPct: (4 / 6) * 100, widthPct: (2 / 6) * 100 },
+    ]);
+  });
+
+  it('couvre la bande de bout en bout', () => {
+    const slots = trackLayout(items, 6);
+    const last = slots[slots.length - 1]!;
+    expect(last.leftPct + last.widthPct).toBeCloseTo(100, 6);
+  });
+
+  it('partage la bande à parts égales quand aucune durée n’est connue', () => {
+    expect(trackLayout(items, 0).map((s) => s.widthPct)).toEqual([100 / 3, 100 / 3, 100 / 3]);
+  });
+
+  it('rend une liste vide pour un montage vide', () => {
+    expect(trackLayout([], 6)).toEqual([]);
   });
 });
 

@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, Check, Clapperboard, Download, Pencil, Play, X } from 'lucide-react';
+import { Camera, Check, Clapperboard, Download, Pencil, X } from 'lucide-react';
 import { useAuth } from '../../stores/useAuth';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { formatDuration } from '../review/timelineNav';
 import { useTimelineData } from './useTimelineData';
-import TimelineStrip from './TimelineStrip';
+import TimelinePlayer from './TimelinePlayer';
 import TimelineExportButton from './TimelineExportButton';
 import { useT } from '../../i18n';
 
@@ -18,6 +17,9 @@ import { useT } from '../../i18n';
  * Elle se met à jour toute seule : le contenu est recalculé côté serveur à chaque lecture,
  * et une publication invalide la requête par socket. Personne n'a à « régénérer » quoi que
  * ce soit — c'était la demande d'origine.
+ *
+ * Le montage se regarde ici même, sur sa bande unique (Phase 46) : la carte n'est pas un
+ * raccourci vers un lecteur, elle EST le lecteur.
  */
 export default function TimelineCard({
   projectId,
@@ -27,7 +29,6 @@ export default function TimelineCard({
   sequenceId: number | null;
 }) {
   const t = useT();
-  const navigate = useNavigate();
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const { timeline, isLoading, rename, setDepartment, snapshot } = useTimelineData(projectId, sequenceId);
@@ -38,9 +39,6 @@ export default function TimelineCard({
 
   const label = timeline.name ?? t('timeline.defaultName');
   const firstPlayable = timeline.items.find((it) => it.mediaId !== null);
-  // Le montage se regarde dans son lecteur : une seule barre de temps, aucune coupure
-  // entre les plans ni entre les séquences (Phase 46).
-  const play = () => navigate(`/timelines/${timeline.id}/play`);
 
   return (
     <section className="mb-4 rounded-lg border border-border bg-card p-3">
@@ -133,17 +131,10 @@ export default function TimelineCard({
             disabled={!firstPlayable}
             icon={<Download size={13} />}
           />
-          <button
-            onClick={play}
-            disabled={!firstPlayable}
-            className="flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground disabled:opacity-40"
-          >
-            <Play size={13} /> {t('timeline.play')}
-          </button>
         </div>
       </div>
 
-      <TimelineStrip clips={timeline.items} timelineId={timeline.id} />
+      <TimelinePlayer timeline={timeline} />
     </section>
   );
 }

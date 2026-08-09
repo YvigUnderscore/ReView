@@ -2042,5 +2042,7 @@
   "timeline.exportDownload": "Scaricà",
   "timeline.noMediaToComment": "Stu shot ùn hà ancu media — nunda da cummentà.",
   "timeline.openInReview": "Apre in review",
-  "timeline.notFound": "Muntagiu micca trovu"
+  "timeline.pause": "Pausa",
+  "timeline.fullscreen": "Screnu sanu",
+  "timeline.exitFullscreen": "Esce da u screnu sanu"
 }

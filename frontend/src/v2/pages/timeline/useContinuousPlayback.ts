@@ -49,13 +49,18 @@ export interface ContinuousPlayback {
 }
 
 /**
- * Les deux éléments vidéo appartiennent à la page, qui les pose sur son JSX : un hook qui
- * renverrait ses propres refs obligerait l'appelant à les lire pendant le rendu.
+ * Les deux éléments vidéo appartiennent au composant, qui les pose sur son JSX : un hook
+ * qui renverrait ses propres refs obligerait l'appelant à les lire pendant le rendu.
+ *
+ * `startAt` est la position du montage à laquelle on entre. La lecture démarre seule :
+ * ce hook n'est monté qu'après un geste explicite (bouton de lecture, clic sur la bande),
+ * et redemander « lire » à ce moment-là ferait un aller-retour de plus pour rien.
  */
 export function useContinuousPlayback(
   items: TimelineClip[],
   videoA: RefObject<HTMLVideoElement | null>,
   videoB: RefObject<HTMLVideoElement | null>,
+  startAt = 0,
 ): ContinuousPlayback {
   const [active, setActive] = useState<'A' | 'B'>('A');
   // Ce que tiennent les deux lecteurs relève de l'état du LECTEUR, pas de celui de
@@ -132,6 +137,32 @@ export function useContinuousPlayback(
   );
 
   /**
+   * Lance la lecture à une position donnée d'un plan, quelle que soit sa nature.
+   *
+   * Un carton n'a pas d'élément vidéo à démarrer : c'est son minuteur qui tient sa durée.
+   * Passer par ce seul point d'entrée évite que l'un des trois chemins qui démarrent la
+   * lecture (amorçage, pause/reprise, déplacement) n'oublie ce cas.
+   */
+  const begin = useCallback(
+    (slot: 'A' | 'B', targetIndex: number, localStart: number) => {
+      const target = items[targetIndex];
+      if (!target) return;
+      setPlaying(true);
+      if (target.mediaId === null) {
+        placeholderStart.current = performance.now() - localStart * 1000;
+        armPlaceholderTimer(target.duration - localStart);
+        return;
+      }
+      placeholderStart.current = null;
+      clearPlaceholderTimer();
+      void elementOf(slot)
+        ?.play()
+        .catch(() => setPlaying(false));
+    },
+    [items, elementOf, armPlaceholderTimer, clearPlaceholderTimer],
+  );
+
+  /**
    * Passe au plan suivant du montage.
    *
    * « Suivant » veut dire le plan d'après dans la liste, carton compris : un trou occupe sa
@@ -196,18 +227,28 @@ export function useContinuousPlayback(
   // reste dans un effet.
   const [started, setStarted] = useState(false);
   if (!started && items.length > 0) {
-    const first = items[0]!.mediaId !== null ? 0 : nextPlayableIndex(items, -1);
-    if (first >= 0) {
-      setStarted(true);
-      setIndex(first);
-      setTime(items[first]!.startTime);
-    }
+    // On entre là où l'on a cliqué, carton compris : escamoter un trou de départ ferait
+    // commencer le film ailleurs que là où la bande le montrait.
+    const first = Math.max(0, clipIndexAt(items, startAt));
+    setStarted(true);
+    setIndex(first);
+    setTime(globalTimeOf(items[first]!, startAt - items[first]!.startTime));
   }
 
+  // Le chargement du premier plan est asynchrone : sans ce verrou, un rendu survenu avant
+  // sa résolution relancerait l'amorçage et ferait jouer deux fois le même plan.
+  const bootstrapped = useRef(false);
   useEffect(() => {
-    if (!started || buffers.current.A.clipIndex !== null) return;
-    void load('A', index).then(() => preloadNext(index, 'A'));
-  }, [started, index, load, preloadNext]);
+    if (!started || bootstrapped.current) return;
+    const target = items[index];
+    if (!target) return;
+    bootstrapped.current = true;
+    const local = localTimeAt(target, startAt);
+    void load('A', index, local).then(() => {
+      preloadNext(index, 'A');
+      begin('A', index, local);
+    });
+  }, [started, index, items, startAt, load, preloadNext, begin]);
 
   // Horloge : la vidéo pour un plan filmé, `performance.now()` pour un carton.
   useEffect(() => {
@@ -215,7 +256,16 @@ export function useContinuousPlayback(
     let raf = 0;
     const tick = () => {
       const current = items[index];
-      if (current) {
+      // C'est le PLAN courant qui dit quelle horloge suivre, jamais le tampon : le tampon
+      // sortant garde sa source pendant un carton, et s'y fier ferait comparer la position
+      // du plan précédent à la durée du trou — donc escamoter le trou aussitôt affiché.
+      if (current && current.mediaId === null) {
+        if (placeholderStart.current !== null) {
+          const elapsed = (performance.now() - placeholderStart.current) / 1000;
+          setTime(globalTimeOf(current, elapsed));
+          if (elapsed >= current.duration) swap();
+        }
+      } else if (current) {
         const el = elementOf(active);
         if (buffers.current[active].url && el) {
           // La durée qui fait foi est celle du MONTAGE, pas celle du fichier. Un média plus
@@ -223,10 +273,6 @@ export function useContinuousPlayback(
           // mentirait, et un seul plan mal sondé décalerait tout le film.
           if (el.currentTime >= current.duration) swap();
           else setTime(globalTimeOf(current, el.currentTime));
-        } else if (placeholderStart.current !== null) {
-          const elapsed = (performance.now() - placeholderStart.current) / 1000;
-          setTime(globalTimeOf(current, elapsed));
-          if (elapsed >= current.duration) swap();
         }
       }
       raf = requestAnimationFrame(tick);
@@ -249,7 +295,8 @@ export function useContinuousPlayback(
      */
     const onTimeUpdate = () => {
       const current = items[index];
-      if (current && el.currentTime >= current.duration) swap();
+      // Même règle que l'horloge : pendant un carton, cet élément n'est plus le film.
+      if (current && current.mediaId !== null && el.currentTime >= current.duration) swap();
     };
     el.addEventListener('ended', onEnded);
     el.addEventListener('timeupdate', onTimeUpdate);
@@ -260,24 +307,16 @@ export function useContinuousPlayback(
   }, [active, swap, elementOf, items, index]);
 
   const toggle = useCallback(() => {
-    const el = elementOf(active);
     if (playing) {
-      el?.pause();
+      elementOf(active)?.pause();
       placeholderStart.current = null;
       clearPlaceholderTimer();
       setPlaying(false);
       return;
     }
-    setPlaying(true);
-    if (buffers.current[active].url && el) {
-      void el.play().catch(() => setPlaying(false));
-      return;
-    }
-    // Reprise sur un carton : on repart de la position déjà écoulée.
-    const elapsed = time - (clip?.startTime ?? 0);
-    placeholderStart.current = performance.now() - elapsed * 1000;
-    if (clip) armPlaceholderTimer(clip.duration - elapsed);
-  }, [active, playing, time, clip, elementOf, armPlaceholderTimer, clearPlaceholderTimer]);
+    // Reprise là où l'on s'était arrêté, y compris au milieu d'un carton.
+    begin(active, index, time - (clip?.startTime ?? 0));
+  }, [active, index, playing, time, clip, elementOf, begin, clearPlaceholderTimer]);
 
   const goTo = useCallback(
     (targetIndex: number, localStart: number) => {
@@ -285,17 +324,15 @@ export function useContinuousPlayback(
       if (!target) return;
       setIndex(targetIndex);
       setTime(globalTimeOf(target, localStart));
-      placeholderStart.current = target.mediaId === null ? performance.now() - localStart * 1000 : null;
-      if (target.mediaId === null && playing) armPlaceholderTimer(target.duration - localStart);
-      else clearPlaceholderTimer();
+      placeholderStart.current = null;
+      clearPlaceholderTimer();
       // Le plan visé prend le tampon actif : le tampon inactif reprendra le suivant.
       void load(active, targetIndex, localStart).then(() => {
-        const el = elementOf(active);
-        if (playing && el && target.mediaId !== null) void el.play().catch(() => setPlaying(false));
+        if (playing) begin(active, targetIndex, localStart);
         preloadNext(targetIndex, active);
       });
     },
-    [items, active, load, preloadNext, playing, elementOf, armPlaceholderTimer, clearPlaceholderTimer],
+    [items, active, load, preloadNext, playing, begin, clearPlaceholderTimer],
   );
 
   const seek = useCallback(
