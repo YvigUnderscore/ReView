@@ -57,11 +57,14 @@ export default function AssetPage() {
   });
   const overview = treeQ.data ?? null;
 
-  // Drop-zone plein-écran : dépose vers la dernière version (en crée une si besoin).
+  /**
+   * Déposer crée la version suivante et l'emplit (Phase 46) : c'est le geste par défaut,
+   * celui qu'on attend en lâchant un rendu sur un asset. Pour alimenter une version
+   * existante, on la vise directement — chaque carte est sa propre cible.
+   */
   const onDropFiles = async (files: File[]) => {
-    let vid: number | null = versions[0]?.id ?? null;
-    if (vid == null) vid = (await createVersion())?.id ?? null;
-    if (vid != null) files.forEach((f) => enqueue(f, vid!));
+    const created = await createVersion();
+    if (created) files.forEach((f) => enqueue(f, created.id));
   };
 
   return (
@@ -148,6 +151,7 @@ export default function AssetPage() {
         projectId={asset?.projectId ?? null}
         emptyDescription={canCreate ? t('version.emptyAsset') : t('version.noneAsset')}
         onCreateVersion={() => void createVersion()}
+        onDropNewVersion={(files) => void onDropFiles(files)}
         publishVersion={publishVersion}
         publishMedia={publishMedia}
         removeVersion={removeVersion}

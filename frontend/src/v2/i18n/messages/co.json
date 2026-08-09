@@ -928,6 +928,7 @@
     "other": "U cummentu è e so {count} risposte saranu squassati per sempre."
   },
   "comments.openCount": { "one": "{count} apertu", "other": "{count} aperti" },
+  "comments.send": "Mandà",
   "decision.current": "Decisione attuale :",
   "decision.set": "Pone a decisione",
   "project.burninInherit": "Stu prughjettu eredita u mudellu di u studio (Amministrazione → Diffusione).",
@@ -1930,6 +1931,8 @@
   "version.dropInto": "Lascia per aghjunghje à {name}",
   "version.noVisibleMedia": "Nisun media visibule in a version {version}",
   "version.unreachable": "Version inaccessibile",
+  "version.dropNew": "Lascia i schedarii quì per creà a version dopu",
+  "version.publishAll": { "one": "Publicà ({count})", "other": "Publicà ({count})" },
 
   "playlist.added": {
     "one": "{count} version aghjunta à « {name} »",
@@ -2036,5 +2039,8 @@
   "timeline.exportHint": "Cudificà tuttu u muntagiu in un solu schedariu, per mandallu fora di l'applicazione.",
   "timeline.exportStarted": "Esportazione principiata — si face in fondu.",
   "timeline.exportRunning": "Cudificazione…",
-  "timeline.exportDownload": "Scaricà"
+  "timeline.exportDownload": "Scaricà",
+  "timeline.noMediaToComment": "Stu shot ùn hà ancu media — nunda da cummentà.",
+  "timeline.openInReview": "Apre in review",
+  "timeline.notFound": "Muntagiu micca trovu"
 }

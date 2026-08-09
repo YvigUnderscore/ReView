@@ -17,7 +17,6 @@ import { Badge } from '../components/ui/badge';
 import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '../lib/taskStatus';
 import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
-import TaskDropzone from './task/TaskDropzone';
 import TaskChecklist from './task/TaskChecklist';
 import TaskSchedule from './task/TaskSchedule';
 import type { TaskDetail } from '../types/api';
@@ -48,11 +47,13 @@ export default function TaskPage() {
     removeMedia,
   } = useVersions({ taskId });
 
-  // Drop-zone permanente : dépose vers la dernière version (en crée une si besoin).
+  /**
+   * Déposer crée la version suivante et l'emplit (Phase 46) : la zone dédiée vit désormais
+   * en tête de la liste des versions, et chaque version existante est sa propre cible.
+   */
   const onDropFiles = async (files: File[]) => {
-    let vid: number | null = versions[0]?.id ?? null;
-    if (vid == null) vid = (await createVersion())?.id ?? null;
-    if (vid != null) files.forEach((f) => enqueue(f, vid!));
+    const created = await createVersion();
+    if (created) files.forEach((f) => enqueue(f, created.id));
   };
 
   const project = task?.shot?.project ?? task?.asset?.project;
@@ -133,12 +134,6 @@ export default function TaskPage() {
         />
       )}
 
-      {canCreate && (
-        <div className="mb-4">
-          <TaskDropzone latestVersionName={versions[0]?.name ?? null} onFiles={onDropFiles} />
-        </div>
-      )}
-
       <VersionTimeline
         versions={versions}
         isLoading={isLoading}
@@ -148,6 +143,7 @@ export default function TaskPage() {
         projectId={project?.id ?? null}
         emptyDescription={canCreate ? t('version.emptyTask') : t('version.noneTask')}
         onCreateVersion={() => void createVersion()}
+        onDropNewVersion={(files) => void onDropFiles(files)}
         publishVersion={publishVersion}
         publishMedia={publishMedia}
         removeVersion={removeVersion}

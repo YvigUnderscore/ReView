@@ -106,6 +106,17 @@ router.patch(
   },
 );
 
+/**
+ * POST /api/versions/:id/publish — publie d'un geste tous les brouillons de la version
+ * (Phase 46). La version bascule publiée dès qu'il ne lui reste plus un seul brouillon.
+ */
+router.post('/:id/publish', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveVersionAccess(req, id);
+  if (req.user!.role === Role.CLIENT) throw forbidden('Les clients ne publient pas');
+  res.json(await VersionService.publishAll(req.user!, projectId, id));
+});
+
 // DELETE /api/versions/:id — corbeille (soft-delete, auteur ou superviseur+)
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);

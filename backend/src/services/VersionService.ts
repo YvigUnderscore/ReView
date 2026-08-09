@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Role, VersionStatus } from '@prisma/client';
+import { MediaStatus, Role, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
+import * as MediaService from './MediaService';
 import { softDeleteVersion, restoreVersion, purgeVersion } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
@@ -31,7 +32,7 @@ function emitVersionUpdate(
 
 /** Versions d'une Task ou d'un Asset. Comptage média aligné sur la visibilité réelle. */
 export async function list(userId: number, taskId?: number, assetId?: number) {
-  return prisma.version.findMany({
+  const versions = await prisma.version.findMany({
     where: taskId ? { taskId, deletedAt: null } : { assetId, deletedAt: null },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -41,8 +42,15 @@ export async function list(userId: number, taskId?: number, assetId?: number) {
       _count: {
         select: { media: { where: { deletedAt: null, OR: [{ published: true }, { uploaderId: userId }] } } },
       },
+      // Brouillons de l'appelant : ce sont les seuls qu'il pourra publier d'un geste, et
+      // l'interface n'a pas à proposer un bouton qui ne ferait rien (Phase 46).
+      media: {
+        where: { deletedAt: null, published: false, uploaderId: userId, status: { not: 'UPLOADING' } },
+        select: { id: true },
+      },
     },
   });
+  return versions.map(({ media, ...v }) => ({ ...v, draftCount: media.length }));
 }
 
 export interface CreateVersionInput {
@@ -146,6 +154,46 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     logAudit({ userId: user.id, action: 'VERSION_PUBLISH', entityType: 'Version', entityId: id });
   emitVersionUpdate(projectId, updated);
   return updated;
+}
+
+/**
+ * Publie d'un geste tous les brouillons d'une version (Phase 46).
+ *
+ * Publier trois fichiers un par un puis la version par-dessus faisait quatre clics pour
+ * une seule intention — « c'est prêt, montrez-le ».
+ *
+ * Chacun ne publie que ses propres dépôts, superviseur compris : un brouillon est
+ * strictement privé à son auteur, et le publier à sa place exposerait un travail qu'il n'a
+ * pas choisi de montrer. Un superviseur qui veut diffuser la version dispose du passage en
+ * PUBLISHED, qui ne dévoile aucun brouillon.
+ */
+export async function publishAll(user: SessionUser, projectId: number, id: number) {
+  const version = await prisma.version.findUnique({
+    where: { id },
+    select: { id: true, deletedAt: true },
+  });
+  if (!version || version.deletedAt) throw notFound('Version introuvable');
+
+  const drafts = await prisma.mediaObject.findMany({
+    where: {
+      versionId: id,
+      deletedAt: null,
+      published: false,
+      uploaderId: user.id,
+      // Un upload en cours n'a pas encore été validé (magic bytes, antivirus, quotas) :
+      // il sera publié à sa finalisation si la version l'est déjà.
+      status: { not: MediaStatus.UPLOADING },
+    },
+    select: { id: true },
+  });
+  for (const draft of drafts) await MediaService.publish(user, draft.id);
+
+  // Rattrape aussi une version restée en brouillon alors que tous ses médias étaient déjà
+  // publiés — cas des versions créées avant cette règle.
+  await MediaService.syncVersionPublication(id, user.id);
+  const updated = await prisma.version.findUniqueOrThrow({ where: { id } });
+  emitVersionUpdate(projectId, updated);
+  return { version: updated, publishedCount: drafts.length };
 }
 
 export async function remove(user: SessionUser, projectId: number, id: number) {

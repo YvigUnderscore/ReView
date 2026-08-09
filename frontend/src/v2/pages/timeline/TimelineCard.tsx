@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Check, Clapperboard, Download, Pencil, Play, X } from 'lucide-react';
-import { reviewPath } from '../../lib/slug';
 import { useAuth } from '../../stores/useAuth';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { formatDuration } from '../review/timelineNav';
@@ -39,12 +38,9 @@ export default function TimelineCard({
 
   const label = timeline.name ?? t('timeline.defaultName');
   const firstPlayable = timeline.items.find((it) => it.mediaId !== null);
-  const play = () => {
-    if (!firstPlayable?.mediaId) return;
-    navigate(
-      `${reviewPath({ id: firstPlayable.mediaId, originalName: firstPlayable.mediaName })}?timeline=${timeline.id}`,
-    );
-  };
+  // Le montage se regarde dans son lecteur : une seule barre de temps, aucune coupure
+  // entre les plans ni entre les séquences (Phase 46).
+  const play = () => navigate(`/timelines/${timeline.id}/play`);
 
   return (
     <section className="mb-4 rounded-lg border border-border bg-card p-3">

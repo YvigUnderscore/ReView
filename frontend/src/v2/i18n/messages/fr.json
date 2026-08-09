@@ -925,6 +925,7 @@
     "other": "Le commentaire et ses {count} réponses seront définitivement supprimés."
   },
   "comments.openCount": { "one": "{count} ouvert", "other": "{count} ouverts" },
+  "comments.send": "Envoyer",
   "decision.current": "Décision courante :",
   "decision.set": "Poser la décision",
   "project.burninInherit": "Ce projet hérite du template studio (Admin → Diffusion).",
@@ -1921,6 +1922,8 @@
   "version.dropInto": "Déposez pour ajouter à {name}",
   "version.noVisibleMedia": "Aucun média visible dans la version {version}",
   "version.unreachable": "Version inaccessible",
+  "version.dropNew": "Déposez des fichiers ici pour créer la version suivante",
+  "version.publishAll": { "one": "Publier ({count})", "other": "Publier ({count})" },
 
   "playlist.added": {
     "one": "{count} version ajoutée à « {name} »",
@@ -2027,5 +2030,8 @@
   "timeline.exportHint": "Encoder tout le montage en un seul fichier, pour l’envoyer hors de l’application.",
   "timeline.exportStarted": "Export lancé — il se fait en arrière-plan.",
   "timeline.exportRunning": "Encodage…",
-  "timeline.exportDownload": "Télécharger"
+  "timeline.exportDownload": "Télécharger",
+  "timeline.noMediaToComment": "Ce shot n’a pas encore de média — rien à commenter.",
+  "timeline.openInReview": "Ouvrir en review",
+  "timeline.notFound": "Montage introuvable"
 }

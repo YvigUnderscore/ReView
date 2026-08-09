@@ -899,6 +899,7 @@
   "comments.delete.message": "댓글이 영구적으로 삭제됩니다.",
   "comments.delete.messageWithReplies": { "other": "댓글과 답글 {count}개가 영구적으로 삭제됩니다." },
   "comments.openCount": { "other": "미해결 {count}건" },
+  "comments.send": "보내기",
   "decision.current": "현재 결정:",
   "decision.set": "결정 내리기",
   "project.burninInherit": "이 프로젝트는 스튜디오 템플릿을 상속합니다(관리 → 배포).",
@@ -1890,6 +1891,8 @@
   "version.dropInto": "여기에 놓아 {name}에 추가",
   "version.noVisibleMedia": "version {version}에 표시할 미디어가 없습니다",
   "version.unreachable": "version에 접근할 수 없습니다",
+  "version.dropNew": "여기에 파일을 놓으면 다음 version을 만듭니다",
+  "version.publishAll": { "other": "게시 ({count})" },
 
   "playlist.added": { "other": "「{name}」에 version {count}개를 추가했습니다" },
   "playlist.skipped": { "other": "({count}개는 이미 있었습니다)" },
@@ -1978,5 +1981,8 @@
   "timeline.exportHint": "편집본 전체를 하나의 파일로 인코딩하여 앱 밖으로 보냅니다.",
   "timeline.exportStarted": "내보내기를 시작했습니다. 백그라운드에서 진행됩니다.",
   "timeline.exportRunning": "인코딩 중…",
-  "timeline.exportDownload": "다운로드"
+  "timeline.exportDownload": "다운로드",
+  "timeline.noMediaToComment": "이 shot에는 아직 미디어가 없어 댓글을 달 대상이 없습니다.",
+  "timeline.openInReview": "review에서 열기",
+  "timeline.notFound": "편집본을 찾을 수 없습니다"
 }

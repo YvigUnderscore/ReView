@@ -183,6 +183,8 @@ export type VersionListItem = Version & {
   createdAt: string;
   author: UserRef | null;
   _count: { media: number };
+  /** Brouillons de l'appelant dans cette version — publiables d'un geste (Phase 46). */
+  draftCount: number;
 };
 /** GET /api/versions/:id — médias visibles inclus. */
 export type VersionDetail = Version & {

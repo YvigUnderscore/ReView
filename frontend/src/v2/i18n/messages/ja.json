@@ -899,6 +899,7 @@
   "comments.delete.message": "コメントは完全に削除されます。",
   "comments.delete.messageWithReplies": { "other": "コメントとその返信 {count} 件は完全に削除されます。" },
   "comments.openCount": { "other": "未解決 {count} 件" },
+  "comments.send": "送信",
   "decision.current": "現在の判定：",
   "decision.set": "判定を付ける",
   "project.burninInherit": "このプロジェクトはスタジオのテンプレートを継承します（管理 → 配信）。",
@@ -1890,6 +1891,8 @@
   "version.dropInto": "ドロップして {name} に追加",
   "version.noVisibleMedia": "version {version} に表示できるメディアがありません",
   "version.unreachable": "version にアクセスできません",
+  "version.dropNew": "ここにファイルをドロップすると、次の version を作成します",
+  "version.publishAll": { "other": "公開（{count}）" },
 
   "playlist.added": { "other": "「{name}」に version を {count} 件追加しました" },
   "playlist.skipped": { "other": "（{count} 件はすでにありました）" },
@@ -1978,5 +1981,8 @@
   "timeline.exportHint": "編集全体を 1 つのファイルに書き出し、アプリの外へ送ります。",
   "timeline.exportStarted": "書き出しを開始しました。バックグラウンドで進みます。",
   "timeline.exportRunning": "書き出し中…",
-  "timeline.exportDownload": "ダウンロード"
+  "timeline.exportDownload": "ダウンロード",
+  "timeline.noMediaToComment": "この shot にはまだメディアがありません。コメントする対象がありません。",
+  "timeline.openInReview": "review で開く",
+  "timeline.notFound": "編集が見つかりません"
 }

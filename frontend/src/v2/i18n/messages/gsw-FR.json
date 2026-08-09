@@ -931,6 +931,7 @@
     "other": "De Kommentar un sini {count} Antworte werde ändgültig glescht."
   },
   "comments.openCount": { "one": "{count} offe", "other": "{count} offe" },
+  "comments.send": "Schicke",
   "decision.current": "Aktuelli Entscheidung:",
   "decision.set": "D'Entscheidung fescktghalte",
   "project.burninInherit": "Des Projekt erbt d'Studio-Vorlag (Verwaltung → Ussliefrung).",
@@ -1930,6 +1931,8 @@
   "version.dropInto": "Do ablege zum zue {name} hinzuefüege",
   "version.noVisibleMedia": "Kei sichtbars Medium in dr version {version}",
   "version.unreachable": "Version nit erreichbar",
+  "version.dropNew": "Leg Dateie do ab, fer die nächscht version azlege",
+  "version.publishAll": { "one": "Veröffentliche ({count})", "other": "Veröffentliche ({count})" },
 
   "playlist.added": {
     "one": "{count} version zue „{name}“ dezuegfiegt",
@@ -2036,5 +2039,8 @@
   "timeline.exportHint": "De ganz Schnitt in ei Datei kodiere, fer's usserhalb vu de App z'schicke.",
   "timeline.exportStarted": "Export gstartet — er lauft im Hintergrund.",
   "timeline.exportRunning": "Kodiere…",
-  "timeline.exportDownload": "Abelade"
+  "timeline.exportDownload": "Abelade",
+  "timeline.noMediaToComment": "Der shot het no kei Medium — nix zum kommentiere.",
+  "timeline.openInReview": "In de review uffmache",
+  "timeline.notFound": "Schnitt nit gfunde"
 }

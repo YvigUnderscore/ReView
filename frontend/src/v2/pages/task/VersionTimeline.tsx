@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
 import VersionTimelineItem from './VersionTimelineItem';
+import NewVersionDropzone from './NewVersionDropzone';
 import type { MediaSummary, VersionListItem } from '../../types/api';
 import { useT } from '../../i18n';
 
@@ -27,6 +28,7 @@ export default function VersionTimeline({
   projectId = null,
   emptyDescription,
   onCreateVersion,
+  onDropNewVersion,
   publishVersion,
   publishMedia,
   removeVersion,
@@ -41,6 +43,8 @@ export default function VersionTimeline({
   projectId?: number | null;
   emptyDescription: string;
   onCreateVersion: () => void;
+  /** Dépôt sur la zone dédiée : crée la version suivante et y verse les fichiers. */
+  onDropNewVersion: (files: File[]) => void;
   publishVersion: (versionId: number) => void;
   publishMedia: (versionId: number, mediaId: number) => void;
   removeVersion: (versionId: number) => void;
@@ -59,10 +63,12 @@ export default function VersionTimeline({
     fileRef.current?.click();
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && target != null) enqueue(file, target);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0 && target != null) files.forEach((f) => enqueue(f, target));
     if (fileRef.current) fileRef.current.value = '';
   };
+  /** Dépôt sur une version existante : les fichiers la rejoignent (Phase 46). */
+  const dropInto = (versionId: number, files: File[]) => files.forEach((f) => enqueue(f, versionId));
 
   if (isLoading) {
     return (
@@ -76,13 +82,16 @@ export default function VersionTimeline({
 
   if (versions.length === 0) {
     return (
-      <EmptyState
-        icon={Layers}
-        title={t('task.noVersion')}
-        description={emptyDescription}
-        action={canCreate ? t('version.create') : undefined}
-        onAction={canCreate ? onCreateVersion : undefined}
-      />
+      <div className="space-y-3">
+        {canCreate && <NewVersionDropzone onFiles={onDropNewVersion} />}
+        <EmptyState
+          icon={Layers}
+          title={t('task.noVersion')}
+          description={emptyDescription}
+          action={canCreate ? t('version.create') : undefined}
+          onAction={canCreate ? onCreateVersion : undefined}
+        />
+      </div>
     );
   }
 
@@ -91,7 +100,13 @@ export default function VersionTimeline({
       <div className="mb-2 flex items-center justify-end">
         <ViewToggle contextKey={`versions:${contextKey}`} />
       </div>
-      <input ref={fileRef} type="file" className="hidden" onChange={onFile} />
+      {/* Déposer ici crée la version suivante ; déposer sur une carte alimente celle-ci. */}
+      {canCreate && (
+        <div className="mb-3">
+          <NewVersionDropzone onFiles={onDropNewVersion} />
+        </div>
+      )}
+      <input ref={fileRef} type="file" multiple className="hidden" onChange={onFile} />
       <ol className="ml-1">
         {versions.map((v, i) => (
           <VersionTimelineItem
@@ -104,6 +119,7 @@ export default function VersionTimeline({
             canPublish={canPublish}
             projectId={projectId}
             onUpload={onUploadClick}
+            onDropFiles={dropInto}
             onPublishVersion={publishVersion}
             onDeleteVersion={setDelVersion}
             onPublishMedia={publishMedia}

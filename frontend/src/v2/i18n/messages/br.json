@@ -911,6 +911,7 @@
     "other": "An evezhiadenn hag he {count} respont a vo dilamet da vat."
   },
   "comments.openCount": { "one": "{count} digor", "other": "{count} digor" },
+  "comments.send": "Kas",
   "decision.current": "Diviz red :",
   "decision.set": "Lakaat an diviz",
   "project.burninInherit": "Ar raktres-mañ a herez patrom ar studio (Merañ → Skignañ).",
@@ -1907,6 +1908,8 @@
   "version.dropInto": "Laoskit evit ouzhpennañ da {name}",
   "version.noVisibleMedia": "Media hewel ebet er version {version}",
   "version.unreachable": "Version dihegerz",
+  "version.dropNew": "Lakait restroù amañ evit krouiñ ar version da-heul",
+  "version.publishAll": { "one": "Embann ({count})", "other": "Embann ({count})" },
 
   "playlist.added": {
     "one": "{count} version ouzhpennet da « {name} »",
@@ -2025,5 +2028,8 @@
   "timeline.exportHint": "Enkodañ ar c'hempenn a-bezh en ur restr nemetañ, evit e gas er-maez eus an arload.",
   "timeline.exportStarted": "Ezporzhiadur kroget — war an drekleur emañ.",
   "timeline.exportRunning": "Enkodañ…",
-  "timeline.exportDownload": "Pellgargañ"
+  "timeline.exportDownload": "Pellgargañ",
+  "timeline.noMediaToComment": "N’en deus ket ar shot-mañ a vedia c’hoazh — netra da evezhiañ.",
+  "timeline.openInReview": "Digeriñ er review",
+  "timeline.notFound": "Kempenn diank"
 }

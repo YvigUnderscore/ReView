@@ -931,6 +931,7 @@
     "other": "Der Kommentar und seine {count} Antworten werden endgültig gelöscht."
   },
   "comments.openCount": { "one": "{count} offen", "other": "{count} offen" },
+  "comments.send": "Senden",
   "decision.current": "Aktuelle Entscheidung:",
   "decision.set": "Entscheidung festhalten",
   "project.burninInherit": "Dieses Projekt erbt die Studio-Vorlage (Admin → Auslieferung).",
@@ -1930,6 +1931,8 @@
   "version.dropInto": "Hier ablegen, um zu {name} hinzuzufügen",
   "version.noVisibleMedia": "Kein sichtbares Medium in version {version}",
   "version.unreachable": "Version nicht erreichbar",
+  "version.dropNew": "Dateien hier ablegen, um die nächste version anzulegen",
+  "version.publishAll": { "one": "Veröffentlichen ({count})", "other": "Veröffentlichen ({count})" },
 
   "playlist.added": {
     "one": "{count} version zu „{name}“ hinzugefügt",
@@ -2036,5 +2039,8 @@
   "timeline.exportHint": "Den ganzen Schnitt in eine einzige Datei kodieren, zum Versand außerhalb der Anwendung.",
   "timeline.exportStarted": "Export gestartet — er läuft im Hintergrund.",
   "timeline.exportRunning": "Kodierung…",
-  "timeline.exportDownload": "Herunterladen"
+  "timeline.exportDownload": "Herunterladen",
+  "timeline.noMediaToComment": "Dieser shot hat noch kein Medium — nichts zu kommentieren.",
+  "timeline.openInReview": "In der review öffnen",
+  "timeline.notFound": "Schnitt nicht gefunden"
 }

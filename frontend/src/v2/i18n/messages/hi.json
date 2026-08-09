@@ -925,6 +925,7 @@
     "other": "टिप्पणी और उसके {count} उत्तर स्थायी रूप से हटा दिए जाएँगे।"
   },
   "comments.openCount": { "one": "{count} खुला", "other": "{count} खुले" },
+  "comments.send": "भेजें",
   "decision.current": "मौजूदा निर्णय:",
   "decision.set": "निर्णय दर्ज करें",
   "project.burninInherit": "यह प्रोजेक्ट स्टूडियो टेम्पलेट से विरासत लेता है (एडमिन → वितरण)।",
@@ -1924,6 +1925,8 @@
   "version.dropInto": "{name} में जोड़ने के लिए छोड़ें",
   "version.noVisibleMedia": "version {version} में कोई दृश्य मीडिया नहीं",
   "version.unreachable": "version तक पहुँच नहीं",
+  "version.dropNew": "अगली version बनाने के लिए फ़ाइलें यहाँ छोड़ें",
+  "version.publishAll": { "one": "प्रकाशित करें ({count})", "other": "प्रकाशित करें ({count})" },
 
   "playlist.added": {
     "one": "«{name}» में {count} version जोड़ी",
@@ -2030,5 +2033,8 @@
   "timeline.exportHint": "पूरे संपादन को एक फ़ाइल में एन्कोड करें, ऐप के बाहर भेजने के लिए।",
   "timeline.exportStarted": "निर्यात शुरू — यह पृष्ठभूमि में चलता है।",
   "timeline.exportRunning": "एन्कोड हो रहा है…",
-  "timeline.exportDownload": "डाउनलोड"
+  "timeline.exportDownload": "डाउनलोड",
+  "timeline.noMediaToComment": "इस shot का अभी कोई मीडिया नहीं — टिप्पणी के लिए कुछ नहीं।",
+  "timeline.openInReview": "review में खोलें",
+  "timeline.notFound": "संपादन नहीं मिला"
 }

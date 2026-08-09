@@ -33,6 +33,7 @@ import AddToPlaylistDialog from '../../components/AddToPlaylistDialog';
 import { timeAgo } from '../../lib/time';
 import { useAuth } from '../../stores/useAuth';
 import { useWatch } from '../../lib/useWatch';
+import { useFileDrop } from '../../lib/useFileDrop';
 import MediaTile from './MediaTile';
 import { VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
 import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
@@ -50,6 +51,7 @@ export default function VersionTimelineItem({
   canPublish,
   projectId = null,
   onUpload,
+  onDropFiles,
   onPublishVersion,
   onDeleteVersion,
   onPublishMedia,
@@ -64,6 +66,8 @@ export default function VersionTimelineItem({
   /** Projet porteur — active « Ajouter à la playlist » (retours CP-HUMAIN 33). */
   projectId?: number | null;
   onUpload: (versionId: number) => void;
+  /** Fichiers lâchés sur la carte : ils rejoignent cette version (Phase 46). */
+  onDropFiles: (versionId: number, files: File[]) => void;
   onPublishVersion: (versionId: number) => void;
   onDeleteVersion: (version: VersionListItem) => void;
   onPublishMedia: (versionId: number, mediaId: number) => void;
@@ -71,6 +75,7 @@ export default function VersionTimelineItem({
 }) {
   const t = useT();
   const [open, setOpen] = useState(defaultOpen);
+  const { over, dropProps } = useFileDrop((files) => onDropFiles(version.id, files));
   const [decisionOpen, setDecisionOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const navigate = useNavigate();
@@ -101,7 +106,14 @@ export default function VersionTimelineItem({
 
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div className="min-w-0 flex-1 rounded-lg border border-border bg-card">
+          {/* La carte est elle-même une cible de dépôt : lâcher un fichier dessus le verse
+              dans CETTE version, là où la zone du haut en crée une nouvelle (Phase 46). */}
+          <div
+            {...(canCreate ? dropProps : {})}
+            className={`min-w-0 flex-1 rounded-lg border bg-card transition-colors ${
+              over ? 'border-primary ring-1 ring-primary/40' : 'border-border'
+            }`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
               <button
                 onClick={() => setOpen((o) => !o)}
@@ -145,9 +157,13 @@ export default function VersionTimelineItem({
                     <Upload size={13} /> {t('review.export.media')}
                   </Button>
                 )}
-                {canPublish && !version.published && (
+                {/* Publication en un geste (Phase 46) : proposée dès qu'il reste un
+                    brouillon à soi, ou à un superviseur sur une version encore privée. */}
+                {!version.published && (version.draftCount > 0 || canPublish) && (
                   <Button size="sm" variant="outline" onClick={() => onPublishVersion(version.id)}>
-                    {t('common.publish')}
+                    {version.draftCount > 0
+                      ? t('version.publishAll', { count: version.draftCount })
+                      : t('common.publish')}
                   </Button>
                 )}
                 {canCreate && (

@@ -922,6 +922,7 @@
     "other": "The comment and its {count} replies will be permanently deleted."
   },
   "comments.openCount": { "one": "{count} open", "other": "{count} open" },
+  "comments.send": "Send",
   "decision.current": "Current decision:",
   "decision.set": "Set the decision",
   "project.burninInherit": "This project inherits the studio template (Admin → Distribution).",
@@ -1918,6 +1919,8 @@
   "version.dropInto": "Drop to add to {name}",
   "version.noVisibleMedia": "No visible media in version {version}",
   "version.unreachable": "Version unreachable",
+  "version.dropNew": "Drop files here to create the next version",
+  "version.publishAll": { "one": "Publish ({count})", "other": "Publish ({count})" },
 
   "playlist.added": {
     "one": "{count} version added to “{name}”",
@@ -2024,5 +2027,8 @@
   "timeline.exportHint": "Encode the whole cut into a single file, to send outside the app.",
   "timeline.exportStarted": "Export started — it runs in the background.",
   "timeline.exportRunning": "Encoding…",
-  "timeline.exportDownload": "Download"
+  "timeline.exportDownload": "Download",
+  "timeline.noMediaToComment": "This shot has no media yet — nothing to comment on.",
+  "timeline.openInReview": "Open in review",
+  "timeline.notFound": "Cut not found"
 }

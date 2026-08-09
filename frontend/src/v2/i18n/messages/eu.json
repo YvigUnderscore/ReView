@@ -931,6 +931,7 @@
     "other": "Iruzkina eta bere {count} erantzun behin betiko ezabatuko dira."
   },
   "comments.openCount": { "one": "{count} irekita", "other": "{count} irekita" },
+  "comments.send": "Bidali",
   "decision.current": "Uneko erabakia:",
   "decision.set": "Erabakia jarri",
   "project.burninInherit": "Proiektu honek estudioaren txantiloia heredatzen du (Admin → Banaketa).",
@@ -1933,6 +1934,8 @@
   "version.dropInto": "Askatu {name}(r)i gehitzeko",
   "version.noVisibleMedia": "Ez dago euskarri ikusgairik {version} version-ean",
   "version.unreachable": "Version ez dago eskuragarri",
+  "version.dropNew": "Jaregin fitxategiak hemen hurrengo version sortzeko",
+  "version.publishAll": { "one": "Argitaratu ({count})", "other": "Argitaratu ({count})" },
 
   "playlist.added": {
     "one": "{count} version gehitu da «{name}»-ra",
@@ -2039,5 +2042,8 @@
   "timeline.exportHint": "Muntaketa osoa fitxategi bakar batean kodetu, aplikaziotik kanpo bidaltzeko.",
   "timeline.exportStarted": "Esportazioa hasita — atzeko planoan egiten da.",
   "timeline.exportRunning": "Kodetzen…",
-  "timeline.exportDownload": "Deskargatu"
+  "timeline.exportDownload": "Deskargatu",
+  "timeline.noMediaToComment": "shot honek ez du oraindik mediorik — ez dago zer iruzkindu.",
+  "timeline.openInReview": "Ireki review-an",
+  "timeline.notFound": "Ez da muntaketa aurkitu"
 }

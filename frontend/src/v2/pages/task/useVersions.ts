@@ -58,11 +58,16 @@ export function useVersions(scope: VersionScope) {
       return null;
     }
   };
+  /**
+   * Publie la version ET tous ses brouillons d'un geste (Phase 46) : c'était quatre clics
+   * pour une seule intention. La version bascule publiée dès qu'il ne lui reste plus un
+   * brouillon — le serveur s'en charge.
+   */
   const publishVersion = async (vid: number) => {
     try {
-      await api.patch(`/api/versions/${vid}`, { status: 'PUBLISHED' });
+      await api.post(`/api/versions/${vid}/publish`, {});
       toast.success(t('version.published'));
-      invalidateVersions();
+      await invalidateVersions();
       qc.invalidateQueries({ queryKey: qk.version(vid) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.publish'));

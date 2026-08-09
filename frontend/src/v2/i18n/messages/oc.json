@@ -928,6 +928,7 @@
     "other": "Lo comentari e sas {count} responsas seràn suprimits definitivament."
   },
   "comments.openCount": { "one": "{count} dobèrt", "other": "{count} dobèrts" },
+  "comments.send": "Mandar",
   "decision.current": "Decision actuala :",
   "decision.set": "Pausar la decision",
   "project.burninInherit": "Aqueste projècte eireta lo modèl estudi (Admin → Difusion).",
@@ -1930,6 +1931,8 @@
   "version.dropInto": "Depausatz per apondre a {name}",
   "version.noVisibleMedia": "Cap de mèdia visible dins la version {version}",
   "version.unreachable": "Version inaccessibla",
+  "version.dropNew": "Depausatz de fichièrs aicí per crear la version seguenta",
+  "version.publishAll": { "one": "Publicar ({count})", "other": "Publicar ({count})" },
 
   "playlist.added": {
     "one": "{count} version aponduda a « {name} »",
@@ -2036,5 +2039,8 @@
   "timeline.exportHint": "Encodar tot lo montatge dins un sol fichièr, per lo mandar fòra de l’aplicacion.",
   "timeline.exportStarted": "Exportacion lançada — se fa en rèire plan.",
   "timeline.exportRunning": "Encodatge…",
-  "timeline.exportDownload": "Telecargar"
+  "timeline.exportDownload": "Telecargar",
+  "timeline.noMediaToComment": "Aqueste shot a pas encara de mèdia — res de comentar.",
+  "timeline.openInReview": "Dobrir en review",
+  "timeline.notFound": "Montatge introbable"
 }

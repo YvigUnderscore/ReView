@@ -893,6 +893,7 @@
   "comments.delete.message": "该评论将被永久删除。",
   "comments.delete.messageWithReplies": { "other": "该评论及其 {count} 条回复将被永久删除。" },
   "comments.openCount": { "other": "{count} 条未解决" },
+  "comments.send": "发送",
   "decision.current": "当前决定：",
   "decision.set": "作出决定",
   "project.burninInherit": "该项目继承工作室模板（管理 → 分发）。",
@@ -1880,6 +1881,8 @@
   "version.dropInto": "拖放到此处以添加到 {name}",
   "version.noVisibleMedia": "version {version} 中没有可见媒体",
   "version.unreachable": "无法访问该 version",
+  "version.dropNew": "把文件拖到这里，创建下一个 version",
+  "version.publishAll": { "other": "发布（{count}）" },
 
   "playlist.added": { "other": "已把 {count} 个 version 加入「{name}」" },
   "playlist.skipped": { "other": "（{count} 个已在其中）" },
@@ -1968,5 +1971,8 @@
   "timeline.exportHint": "把整个剪辑编码为单个文件，便于发送到应用之外。",
   "timeline.exportStarted": "已开始导出，将在后台进行。",
   "timeline.exportRunning": "编码中…",
-  "timeline.exportDownload": "下载"
+  "timeline.exportDownload": "下载",
+  "timeline.noMediaToComment": "该 shot 还没有媒体，无可评论。",
+  "timeline.openInReview": "在 review 中打开",
+  "timeline.notFound": "未找到剪辑"
 }

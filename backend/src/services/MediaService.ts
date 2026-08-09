@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { MediaKind, MediaStatus, Prisma, Role } from '@prisma/client';
+import { MediaKind, MediaStatus, Prisma, Role, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
@@ -21,6 +21,7 @@ import { isClamavEnabled } from '../lib/clamav';
 import { hlsContentType } from '../lib/hls';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
+import { inheritsPublication, shouldPublishVersion } from '../lib/publishState';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertProjectQuota } from '../lib/projectQuota';
 import { logger } from '../lib/logger';
@@ -111,6 +112,14 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
     throw badRequest('Nom de fichier non conforme à la nomenclature du projet', 'NAMING_REJECTED');
   const namingWarning = !namingCheck.pass && namingCheck.mode === 'warn';
 
+  // Une version déjà publiée ne retombe pas en brouillon parce qu'on lui ajoute un rendu :
+  // le média qui la rejoint naît publié (règle symétrique de `syncVersionPublication`).
+  const parentVersion = await prisma.version.findUnique({
+    where: { id: versionId },
+    select: { published: true },
+  });
+  const bornPublished = inheritsPublication(parentVersion?.published ?? false);
+
   const media = await prisma.mediaObject.create({
     data: {
       versionId,
@@ -119,6 +128,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
       storageKey: '', // rempli juste après avec l'id
       mimeType: contentType,
       status: MediaStatus.UPLOADING,
+      published: bornPublished,
       uploaderId: user.id,
       metadata: {
         ...(input.contentHash ? { contentHash: input.contentHash } : {}),
@@ -151,7 +161,11 @@ export async function finalize(user: SessionUser, id: number) {
   // accès au projet ne suffit pas. Il faut pouvoir contribuer (un CLIENT est en lecture
   // seule) et le média ne doit pas être déjà publié (verrou Phase 11).
   await assertCanContribute(user.id, user.role, projectId);
-  assertNotPublished(media);
+  // Verrou de publication (Phase 11), nuancé depuis que les médias héritent de la
+  // publication de leur version : un média encore en UPLOADING n'a jamais été servi à
+  // personne, le finaliser est le déroulement normal de son dépôt. Le verrou garde tout
+  // son sens pour un média déjà finalisé, dont le contenu, lui, a été diffusé.
+  if (media.status !== MediaStatus.UPLOADING) assertNotPublished(media);
 
   const stat = await storage.statObject(media.storageKey);
   const header = await storage.getObjectHeader(media.storageKey, 32);
@@ -406,6 +420,36 @@ export async function listDrafts(userId: number) {
   });
 }
 
+/**
+ * Aligne l'état publié d'une version sur celui de ses médias (règles dans `lib/publishState`).
+ *
+ * Appelée après chaque publication de média. Ne dépublie jamais : retirer une version de
+ * la diffusion reste une décision de superviseur, pas l'effet de bord d'une suppression.
+ */
+export async function syncVersionPublication(versionId: number, actorId: number): Promise<boolean> {
+  const version = await prisma.version.findUnique({
+    where: { id: versionId },
+    select: {
+      published: true,
+      media: { where: { deletedAt: null }, select: { published: true, status: true } },
+    },
+  });
+  if (!version || version.published) return false;
+  if (!shouldPublishVersion(version.media)) return false;
+
+  await prisma.version.update({
+    where: { id: versionId },
+    data: { published: true, status: VersionStatus.PUBLISHED },
+  });
+  logAudit({
+    userId: actorId,
+    action: 'VERSION_PUBLISH',
+    entityType: 'Version',
+    entityId: versionId,
+  });
+  return true;
+}
+
 /** Publie un média brouillon (réservé à l'uploader). */
 export async function publish(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
@@ -417,6 +461,8 @@ export async function publish(user: SessionUser, id: number) {
   // taille réelle contre les quotas. Le publier ferait servir un contenu jamais vérifié.
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload non finalisé', 'NOT_FINALIZED');
   const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
+  // La version suit ses médias : dès qu'il ne reste plus un brouillon, elle est publiée.
+  await syncVersionPublication(media.versionId, user.id);
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (projectId) {
     emitToProject(projectId, 'media:update', { projectId, id, versionId: media.versionId });
