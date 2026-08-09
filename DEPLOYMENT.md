@@ -64,6 +64,17 @@ L'overlay prod :
 - n'expose pas la console MinIO (port 9001) — y accéder via tunnel SSH/VPN ;
 - fixe `NODE_ENV=production` (garde-fous secrets/CORS actifs).
 
+> ⚠️ **Derrière un reverse-proxy déjà en place** (Cloudflare, Nginx Proxy Manager, Traefik…),
+> il est tentant de pointer celui-ci directement sur le conteneur `frontend`. **Cela ne
+> suffit pas** : `frontend/nginx.conf` ne route que `/api/` et `/socket.io/`. Il manque la
+> route vers MinIO, et tout upload échoue par « erreur réseau » (le PUT présigné tombe sur
+> la SPA). Déployer le service `nginx` de cet overlay — au besoin en HTTP seul, sur un port
+> libre, si le TLS est terminé en amont — et faire pointer le proxy existant dessus.
+>
+> Dans ce cas, `S3_PUBLIC_ENDPOINT` doit porter le schéma **public** (`https://…`) : c'est
+> l'URL que signe le backend et que le navigateur appelle. En `http://`, les URLs présignées
+> sont rejetées par le navigateur (contenu mixte).
+
 ## 5. Initialisation
 
 ```bash
@@ -84,6 +95,12 @@ Puis ouvrir `https://review.mystudio.com` → assistant de configuration (studio
 - `https://review.mystudio.com/api/health` → `{"status":"ok"}`
 - `https://review.mystudio.com/api/docs` → documentation OpenAPI (Scalar)
 - Certificat valide (cadenas navigateur), redirection HTTP→HTTPS effective.
+- `curl -s https://review.mystudio.com/review/peu-importe | head -1` → du **HTML**, pas du
+  XML `AccessDenied`. Le bucket (`review`) et la route de review de l'application partagent
+  le même préfixe d'URL : nginx les départage sur la signature (cf. `nginx/nginx.conf`), et
+  du XML ici signifierait que les pages de review sont servies par MinIO.
+- Déposer un fichier sur un asset : l'upload doit aboutir (il valide d'un coup la route
+  MinIO, le schéma de `S3_PUBLIC_ENDPOINT` et la signature).
 
 ## Sécurité — rappels
 
