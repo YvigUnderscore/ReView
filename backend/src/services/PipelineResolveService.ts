@@ -89,13 +89,25 @@ export async function resolveAsset(projectId: number, ref: string) {
   return asset;
 }
 
-/** Tâche d'un shot XOR d'un asset, par nom (ex. `anim`, `lighting`). */
-export async function resolveTask(parent: { shotId?: number; assetId?: number }, ref: string) {
+/**
+ * Tâche d'un shot XOR d'un asset, par nom (ex. `anim`, `lighting`).
+ *
+ * `department` restreint la recherche : un pipeline nomme volontiers `main` la tâche de
+ * chaque département, et sans cette précision `modeling:main` et `lookdev:main` seraient
+ * la même tâche. Sans département, la recherche reste sur le seul nom — les chemins
+ * historiques continuent de résoudre.
+ */
+export async function resolveTask(
+  parent: { shotId?: number; assetId?: number },
+  ref: string,
+  department?: string,
+) {
   const id = asId(ref);
   const task = await prisma.task.findFirst({
     where: {
       ...(parent.shotId !== undefined ? { shotId: parent.shotId } : { assetId: parent.assetId }),
       ...(id !== null ? { id } : { name: insensitive(ref) }),
+      ...(id === null && department ? { department: insensitive(department) } : {}),
     },
     select: taskSelect,
   });
@@ -132,7 +144,7 @@ export interface ResolvedPath {
 /** Résout la branche asset d'un chemin analysé. */
 async function resolveAssetBranch(parsed: PipelinePath, out: ResolvedPath): Promise<void> {
   out.asset = await resolveAsset(out.projectId, parsed.asset!);
-  if (parsed.task) out.task = await resolveTask({ assetId: out.asset.id }, parsed.task);
+  if (parsed.task) out.task = await resolveTask({ assetId: out.asset.id }, parsed.task, parsed.department);
   if (parsed.version) {
     out.version = out.task
       ? await resolveVersion({ taskId: out.task.id }, parsed.version)
@@ -147,7 +159,8 @@ async function resolveShotBranch(parsed: PipelinePath, out: ResolvedPath): Promi
     // Sans séquence dans le chemin (branche `shots/`), on cible les shots orphelins.
     out.shot = await resolveShot(out.projectId, parsed.shot, out.sequence ? out.sequence.id : null);
   }
-  if (parsed.task && out.shot) out.task = await resolveTask({ shotId: out.shot.id }, parsed.task);
+  if (parsed.task && out.shot)
+    out.task = await resolveTask({ shotId: out.shot.id }, parsed.task, parsed.department);
   if (parsed.version && out.task) out.version = await resolveVersion({ taskId: out.task.id }, parsed.version);
 }
 

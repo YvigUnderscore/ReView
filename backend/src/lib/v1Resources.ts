@@ -59,6 +59,7 @@ export const taskSelect = {
   id: true,
   name: true,
   type: true,
+  department: true,
   status: true,
   order: true,
   startDate: true,

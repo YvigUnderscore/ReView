@@ -65,6 +65,37 @@ describe('parsePipelinePath', () => {
   });
 });
 
+describe('département dans le segment de tâche', () => {
+  it('sépare « département:tâche » sur les trois branches', () => {
+    expect(parsePipelinePath('PROJ/SQ010/SH0100/layout:main/v001')).toMatchObject({
+      task: 'main',
+      department: 'layout',
+      version: 'v001',
+      kind: 'version',
+    });
+    expect(parsePipelinePath('PROJ/shots/SH0100/anim:blocking')).toMatchObject({
+      task: 'blocking',
+      department: 'anim',
+      kind: 'task',
+    });
+    expect(parsePipelinePath('PROJ/assets/hero/modeling:main')).toMatchObject({
+      task: 'main',
+      department: 'modeling',
+      kind: 'task',
+    });
+  });
+
+  it('laisse les chemins historiques sans département', () => {
+    expect(parsePipelinePath('PROJ/SQ010/SH0100/anim/v003').department).toBeUndefined();
+  });
+
+  it('refuse un segment de tâche amputé de l’un de ses deux côtés', () => {
+    expect(() => parsePipelinePath('PROJ/SQ010/SH0100/:main')).toThrow(/malformé/i);
+    expect(() => parsePipelinePath('PROJ/SQ010/SH0100/layout:')).toThrow(/malformé/i);
+    expect(() => parsePipelinePath('PROJ/assets/hero/ : ')).toThrow(/malformé/i);
+  });
+});
+
 describe('formatPipelinePath', () => {
   it("reconstruit le chemin d'origine (aller-retour)", () => {
     for (const path of [
@@ -73,6 +104,8 @@ describe('formatPipelinePath', () => {
       'PROJ/SQ010/SH0100/anim/v003',
       'PROJ/shots/SH0100/anim',
       'PROJ/assets/hero/model/v002',
+      'PROJ/SQ010/SH0100/layout:main/v001',
+      'PROJ/assets/hero/lookdev:main',
     ]) {
       expect(formatPipelinePath(parsePipelinePath(path))).toBe(path);
     }

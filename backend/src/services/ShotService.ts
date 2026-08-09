@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';
 import { firstMediaThumbKeyForShot, effectiveThumbnailUrl } from '../lib/thumbnails';
 import { logAudit } from './AuditService';
+import { emitToProject } from './SocketService';
 import { badRequest, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
@@ -156,6 +157,8 @@ export interface UpdateShotInput {
   order?: number;
   thumbnailKey?: string | null;
   settings?: Prisma.InputJsonValue;
+  /** Omis du montage (Phase 45) : le plan reste en base, les timelines le sautent. */
+  omitted?: boolean;
 }
 
 export async function update(id: number, projectId: number, body: UpdateShotInput) {
@@ -172,7 +175,11 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
     });
     if (conflict) throw badRequest('Un shot avec ce code existe déjà dans cette séquence', 'CODE_TAKEN');
   }
-  return prisma.shot.update({ where: { id }, data: body });
+  const shot = await prisma.shot.update({ where: { id }, data: body });
+  // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
+  // montages automatiques, qui doivent se remettre à jour sans rechargement (Phase 45).
+  emitToProject(projectId, 'timeline:update', { projectId, shotId: id });
+  return shot;
 }
 
 export interface AttachAssetInput {

@@ -128,6 +128,8 @@ export interface Shot {
   thumbnailUrl?: string | null;
   /** Override pipeline (résolution/fps) hérité séquence→projet — Phase 18/19. */
   settings?: PipelineOverride;
+  /** Coupé au montage (Phase 45) : sauté par les timelines, conservé partout ailleurs. */
+  omitted?: boolean;
 }
 export type ShotRef = Pick<Shot, 'id' | 'code' | 'name'>;
 /** GET /api/shots?projectId= */
@@ -366,3 +368,4 @@ export * from './admin';
 export * from './stats';
 export * from './schedule';
 export * from './preferences';
+export * from './pipeline';

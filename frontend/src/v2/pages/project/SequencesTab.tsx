@@ -17,6 +17,7 @@ import EmptyState from '../../components/ui/empty-state';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import ModeSwitch, { type CreateMode } from './ModeSwitch';
 import SequenceEditDialog from './SequenceEditDialog';
+import TimelineCard from '../timeline/TimelineCard';
 import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData } from './projectTypes';
 import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
@@ -173,7 +174,7 @@ export default function SequencesTab({
                   )}
                 </div>
               </div>
-              {open === s.id && <SequenceDetail sequenceId={s.id} />}
+              {open === s.id && <SequenceDetail sequenceId={s.id} projectId={projectId} />}
             </div>
           ))}
         </div>
@@ -203,8 +204,8 @@ export default function SequencesTab({
   );
 }
 
-// Détail d'une séquence : shots + assets assignés (chargé à l'ouverture)
-function SequenceDetail({ sequenceId }: { sequenceId: number }) {
+// Détail d'une séquence : montage automatique, shots + assets assignés (chargé à l'ouverture)
+function SequenceDetail({ sequenceId, projectId }: { sequenceId: number; projectId: number }) {
   const t = useT();
   const { data: seqData } = useQuery({
     queryKey: qk.sequence(sequenceId),
@@ -220,6 +221,8 @@ function SequenceDetail({ sequenceId }: { sequenceId: number }) {
     );
   return (
     <div className="space-y-3 border-t border-border px-3 py-3">
+      {/* Le montage se met à jour à chaque publication : il est en tête, pas en annexe. */}
+      <TimelineCard projectId={projectId} sequenceId={sequenceId} />
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Shots ({data.shots.length})

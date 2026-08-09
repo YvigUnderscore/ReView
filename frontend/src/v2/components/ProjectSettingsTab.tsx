@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { SkeletonRows } from './ui/skeleton';
+import DepartmentsEditor from './DepartmentsEditor';
 import ProjectBurninSection from './ProjectBurninSection';
 import ProjectStorageSection from './ProjectStorageSection';
 import ProjectNamingSection from './ProjectNamingSection';
 import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
 import ProjectColorSection from './ProjectColorSection';
-import type { Department, Nomenclature, ProjectSettings } from '../types/api';
+import type { Nomenclature, ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
 
 /**
@@ -90,16 +91,6 @@ export default function ProjectSettingsTab({
           nomenclature: { ...d.nomenclature, [k]: k === 'padding' || k === 'step' ? Number(v) || 1 : v },
         },
     );
-  const setDept = (i: number, k: keyof Department, v: string) =>
-    setDraft(
-      (d) =>
-        d && { ...d, departments: d.departments.map((dep, idx) => (idx === i ? { ...dep, [k]: v } : dep)) },
-    );
-  const addDept = () =>
-    setDraft((d) => d && { ...d, departments: [...d.departments, { key: '', name: '' }] });
-  const removeDept = (i: number) =>
-    setDraft((d) => d && { ...d, departments: d.departments.filter((_, idx) => idx !== i) });
-
   return (
     <div className="max-w-2xl space-y-6">
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -216,37 +207,10 @@ export default function ProjectSettingsTab({
         <div className="text-sm font-medium">{t('pipeline.departments')}</div>
         <div className="mb-3 text-xs text-muted-foreground">{t('project.departmentsHint')}</div>
         {draft && (
-          <div className="space-y-1.5">
-            {draft.departments.map((dep, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  className="w-32 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                  placeholder={t('pipeline.dept.key.placeholder')}
-                  value={dep.key}
-                  onChange={(e) => setDept(i, 'key', e.target.value)}
-                />
-                <input
-                  className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                  placeholder={t('pipeline.dept.name.placeholder')}
-                  value={dep.name}
-                  onChange={(e) => setDept(i, 'name', e.target.value)}
-                />
-                <button
-                  onClick={() => removeDept(i)}
-                  title={t('common.remove')}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={addDept}
-              className="mt-1 flex items-center gap-1 rounded border border-border px-2 py-1.5 text-xs hover:bg-secondary/60"
-            >
-              <Plus size={14} /> {t('common.department')}
-            </button>
-          </div>
+          <DepartmentsEditor
+            value={draft.departments}
+            onChange={(departments) => setDraft((d) => d && { ...d, departments })}
+          />
         )}
       </section>
 

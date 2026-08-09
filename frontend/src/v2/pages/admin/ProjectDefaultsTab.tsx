@@ -3,15 +3,16 @@
 
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Save, Trash2 } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import DepartmentsEditor from '../../components/DepartmentsEditor';
 import { Panel } from './AdminPrimitives';
-import type { Department, Nomenclature, ProjectSettings } from '../../types/api';
+import type { Nomenclature, ProjectSettings } from '../../types/api';
 import { useT } from '../../i18n';
 
 function DefField({ label, children }: { label: string; children: ReactNode }) {
@@ -45,11 +46,6 @@ export default function ProjectDefaultsTab() {
           ...d,
           nomenclature: { ...d.nomenclature, [k]: k === 'padding' || k === 'step' ? Number(v) || 1 : v },
         },
-    );
-  const setDept = (i: number, k: keyof Department, v: string) =>
-    setDraft(
-      (d) =>
-        d && { ...d, departments: d.departments.map((dep, idx) => (idx === i ? { ...dep, [k]: v } : dep)) },
     );
   const setRes = (k: 'width' | 'height', v: string) =>
     setDraft((d) => d && { ...d, resolution: { ...d.resolution, [k]: Number(v) || 1 } });
@@ -144,44 +140,10 @@ export default function ProjectDefaultsTab() {
       </Panel>
 
       <Panel title={t('defaults.departments')}>
-        <div className="space-y-1.5">
-          {draft.departments.map((dep, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Input
-                className="w-32 py-1.5 text-xs"
-                placeholder={t('common.key')}
-                value={dep.key}
-                onChange={(e) => setDept(i, 'key', e.target.value)}
-              />
-              <Input
-                className="flex-1 py-1.5 text-xs"
-                placeholder={t('common.name')}
-                value={dep.name}
-                onChange={(e) => setDept(i, 'name', e.target.value)}
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() =>
-                  setDraft((d) => d && { ...d, departments: d.departments.filter((_, idx) => idx !== i) })
-                }
-              >
-                <Trash2 size={14} />
-              </Button>
-            </div>
-          ))}
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-1"
-            onClick={() =>
-              setDraft((d) => d && { ...d, departments: [...d.departments, { key: '', name: '' }] })
-            }
-          >
-            <Plus size={14} /> {t('common.department')}
-          </Button>
-        </div>
+        <DepartmentsEditor
+          value={draft.departments}
+          onChange={(departments) => setDraft((d) => d && { ...d, departments })}
+        />
       </Panel>
 
       <Button onClick={save} disabled={busy}>

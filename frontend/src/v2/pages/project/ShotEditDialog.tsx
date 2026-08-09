@@ -40,6 +40,7 @@ export default function ShotEditDialog({
   const seqOverride = sequences.find((s) => String(s.id) === vals.sequenceId)?.settings;
   const inherited = applyOverride(pipeline, seqOverride);
   const [pipe, setPipe] = useState(() => formFromOverride(shot.settings, inherited));
+  const [omitted, setOmitted] = useState(shot.omitted ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +55,7 @@ export default function ShotEditDialog({
         startFrame: vals.startFrame ? Number(vals.startFrame) : null,
         endFrame: vals.endFrame ? Number(vals.endFrame) : null,
         settings: overrideFromForm(pipe, inherited),
+        omitted,
       });
       toast.success(t('shots.updated'));
       onSaved();
@@ -123,6 +125,19 @@ export default function ShotEditDialog({
             </label>
           </div>
           <PipelineFields inherited={inherited} form={pipe} onChange={setPipe} idPrefix={`shot-${shot.id}`} />
+          {/* Omission (45) : le plan sort des montages sans que rien ne soit supprimé. */}
+          <label className="flex items-start gap-2 text-xs" title={t('shot.omittedHint')}>
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={omitted}
+              onChange={(e) => setOmitted(e.target.checked)}
+            />
+            <span>
+              {t('shot.omitted')}
+              <span className="block text-[10px] text-muted-foreground">{t('shot.omittedHint')}</span>
+            </span>
+          </label>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>

@@ -70,6 +70,7 @@ PROJ/SQ010                        sequence
 PROJ/SQ010/SH0100                 shot
 PROJ/SQ010/SH0100/anim            task
 PROJ/SQ010/SH0100/anim/v003       version
+PROJ/SQ010/SH0100/layout:main      task "main" of department "layout"
 PROJ/shots/SH0100                 shot with no sequence
 PROJ/assets/hero/model/v002       asset branch
 ```
@@ -77,6 +78,15 @@ PROJ/assets/hero/model/v002       asset branch
 `shots` and `assets` are reserved keywords in second position; they disambiguate
 "a sequence named X" from "a shot named X with no sequence". Resolution is
 **case-insensitive** — a DCC writes `sh0100` where production typed `SH0100`.
+
+The department is **prefixed to the task name** rather than taking a segment of
+its own: pipelines commonly name `main` the task of every department, and one
+more positional segment would make `.../modeling/main` indistinguishable from
+`.../anim/v003`. Without the prefix, the segment is read as a task name (the
+historical form), and the department is deduced from that name. The department
+takes part in a task's identity: `modeling:main` and `lookdev:main` are two
+tasks, and replaying a publish finds the right one. It also decides what "latest
+version" means — see [Pipeline settings](../admin-guide/pipeline-settings.md).
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \

@@ -54,6 +54,7 @@ router.post(
       .object({
         name: z.string().min(1).max(160),
         type: z.nativeEnum(TaskType).default(TaskType.OTHER),
+        department: z.string().min(1).max(40).nullable().optional(),
         shotId: z.number().int().optional(),
         assetId: z.number().int().optional(),
         assigneeId: z.number().int().nullable().optional(),
@@ -93,6 +94,7 @@ router.patch(
     body: z.object({
       name: z.string().min(1).max(160).optional(),
       type: z.nativeEnum(TaskType).optional(),
+      department: z.string().min(1).max(40).nullable().optional(),
       status: z.nativeEnum(TaskStatus).optional(),
       assigneeId: z.number().int().nullable().optional(),
       order: z.number().int().optional(),

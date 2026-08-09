@@ -46,6 +46,8 @@ export const qk = {
   shot: (id: number) => ['shot', id] as const,
   assets: (projectId: number) => ['assets', projectId] as const,
   asset: (id: number) => ['asset', id] as const,
+  assetTree: (id: number) => ['asset', id, 'tree'] as const,
+  assetLatest: (id: number) => ['asset', id, 'latest'] as const,
   tasks: (shotId: number) => ['tasks', shotId] as const,
   task: (id: number) => ['task', id] as const,
   /** parent = `taskId=1` ou `assetId=2` (query-string du GET /api/versions) */
@@ -79,6 +81,13 @@ export const qk = {
   watches: ['watches'] as const,
   playlists: (projectId: number) => ['playlists', projectId] as const,
   playlist: (id: number) => ['playlist', id] as const,
+  /** Montages automatiques (Phase 45) — `sequenceId` null = montage du projet entier. */
+  timelineOf: (projectId: number, sequenceId: number | null) =>
+    ['timeline', 'of', projectId, sequenceId ?? 'project'] as const,
+  timeline: (id: number) => ['timeline', id] as const,
+  timelineSnapshots: (id: number) => ['timeline', id, 'snapshots'] as const,
+  timelineExport: (id: number) => ['timeline', id, 'export'] as const,
+  timelineSnapshot: (id: number, revision: number) => ['timeline', id, 'snapshots', revision] as const,
   liveSessions: (projectId: number) => ['live-sessions', projectId] as const,
   timelineMarkers: (mediaId: number) => ['timeline-markers', mediaId] as const,
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,

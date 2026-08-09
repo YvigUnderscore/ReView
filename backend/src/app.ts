@@ -56,6 +56,7 @@ import announcementsRoutes from './routes/announcements.routes';
 import docsRoutes from './routes/docs.routes';
 import watchRoutes from './routes/watch.routes';
 import playlistsRoutes from './routes/playlists.routes';
+import timelinesRoutes from './routes/timelines.routes';
 import liveRoutes from './routes/live.routes';
 import productionRoutes from './routes/production.routes';
 import serviceTokensRoutes from './routes/service-tokens.routes';
@@ -160,6 +161,7 @@ export const createApp = (): Express => {
   app.use('/api/bulk', bulkRoutes);
   app.use('/api/watch', watchRoutes);
   app.use('/api/playlists', playlistsRoutes); // dailies (Phase 33)
+  app.use('/api/timelines', timelinesRoutes); // montages automatiques (Phase 45)
   app.use('/api/live', liveRoutes); // sessions live en cours (badges LIVE)
   // API d'intégration v1 (DCC, Prism, bots) — contrat stable, distinct de l'API interne.
   // Plafond propre : un daemon qui interroge le journal d'événements en boucle ne doit pas

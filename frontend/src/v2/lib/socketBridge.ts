@@ -72,6 +72,8 @@ export function useSocketInvalidation(projectId: number | null): void {
       if (parent) qc.invalidateQueries({ queryKey: qk.versions(parent) });
       qc.invalidateQueries({ queryKey: qk.version(e.id) });
       qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+      qc.invalidateQueries({ queryKey: ['asset'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
     };
     const onMedia = (e: MediaEvent) => {
       // Ne jamais invalider qk.media(id) : URLs présignées en staleTime Infinity
@@ -79,16 +81,25 @@ export function useSocketInvalidation(projectId: number | null): void {
       qc.invalidateQueries({ queryKey: qk.version(e.versionId) });
       qc.invalidateQueries({ queryKey: ['versions'] });
       qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+      // Publier un média fait avancer l'asset et le montage : c'est tout l'intérêt de
+      // l'auto-timeline (Phase 45), elle doit se remettre à jour sans rechargement.
+      qc.invalidateQueries({ queryKey: ['asset'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    };
+    const onTimeline = () => {
+      qc.invalidateQueries({ queryKey: ['timeline'] });
     };
     COMMENT_EVENTS.forEach((ev) => socket.on(ev, onComment));
     socket.on('task:update', onTask);
     socket.on('version:update', onVersion);
     socket.on('media:update', onMedia);
+    socket.on('timeline:update', onTimeline);
     return () => {
       COMMENT_EVENTS.forEach((ev) => socket.off(ev, onComment));
       socket.off('task:update', onTask);
       socket.off('version:update', onVersion);
       socket.off('media:update', onMedia);
+      socket.off('timeline:update', onTimeline);
     };
   }, [qc]);
 }

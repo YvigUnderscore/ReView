@@ -202,6 +202,7 @@ model User {
   reviewDecisions  ReviewDecision[]    @relation("DecisionAuthor")
   playlists        Playlist[]          @relation("PlaylistAuthor")
   timelineMarkers  TimelineMarker[]    @relation("TimelineMarkerAuthor")
+  timelineSnapshots TimelineSnapshot[] @relation("SnapshotAuthor")
   pushSubscriptions PushSubscription[]
   sessions         UserSession[]
   apiTokens        ApiToken[]
@@ -370,6 +371,7 @@ model Project {
   playlists   Playlist[]
   apiTokens   ApiToken[]
   apiEvents   ApiEvent[]
+  timelines   Timeline[]
 
   @@unique([studioId, slug])
 }
@@ -385,8 +387,9 @@ model Sequence {
   settings  Json   @default("{}")
   deletedAt DateTime?
 
-  shots  Shot[]
-  assets Asset[] @relation("AssetSequences")
+  shots     Shot[]
+  assets    Asset[]    @relation("AssetSequences")
+  timelines Timeline[]
 
   @@unique([projectId, code])
 }
@@ -405,6 +408,10 @@ model Shot {
   // Réglages pipeline propres (override résolution/fps du parent). JSON.
   settings   Json      @default("{}")
   thumbnailKey String?
+  // Omis du montage : le plan est coupé au montage éditorial mais reste en base (son
+  // travail, ses commentaires et son historique demeurent consultables). Les timelines
+  // automatiques le sautent — supprimer le shot ferait perdre tout le reste.
+  omitted    Boolean   @default(false)
   deletedAt  DateTime?
 
   tasks  Task[]
@@ -440,6 +447,12 @@ model Task {
   type       TaskType   @default(OTHER)
   status     TaskStatus @default(TODO)
   name       String
+  // Département du pipeline (clé libre : `ProjectSettings.departments[].key`). C'est lui
+  // qui porte l'ORDRE du pipe — `type` reste une énumération figée, utile aux filtres et
+  // aux statistiques, mais incapable d'accueillir le Setdress ou le Grading d'un studio.
+  // Null = tâche antérieure à la migration ou département inconnu du projet : elle est
+  // alors rangée en fin de pipe, jamais perdue.
+  department String?
   order      Int        @default(0)
   // Planification (43.C — №125/№128) : début planifié (Gantt) et échéance (calendrier + fin Gantt).
   startDate  DateTime?
@@ -524,6 +537,72 @@ model PlaylistItem {
 
   @@unique([playlistId, versionId])
   @@index([playlistId, order])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Montage automatique (Phase 45) : une timeline par séquence et une par projet, dont
+// le contenu est RECALCULÉ à chaque lecture — jamais stocké. Ne persistent ici que ce
+// qu'un humain a décidé : le nom du montage, le département visé, et les révisions
+// figées. Une timeline dont les items seraient stockés serait périmée à la publication
+// suivante, ce qui est exactement le problème qu'elle doit résoudre.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Timeline {
+  id         Int       @id @default(autoincrement())
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  Int
+  // Séquence visée, ou null pour le montage du projet entier (toutes séquences bout à bout).
+  sequence   Sequence? @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId Int?
+  // Null tant que personne ne l'a renommé : l'interface affiche alors un libellé traduit.
+  // Stocker « Montage » en base figerait le français pour les treize autres langues.
+  name       String?
+  // Département visé (clé), ou null pour « l'étape la plus avancée du pipe ».
+  department String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  snapshots TimelineSnapshot[]
+
+  // Les NULL étant distincts en SQL, l'unicité du montage de projet (sequenceId null)
+  // est garantie côté service — même parti pris que les shots sans séquence.
+  @@unique([projectId, sequenceId])
+}
+
+// Révision figée d'un montage : ce qui a été montré, tel qu'il a été montré, à une date.
+model TimelineSnapshot {
+  id          Int      @id @default(autoincrement())
+  timeline    Timeline @relation(fields: [timelineId], references: [id], onDelete: Cascade)
+  timelineId  Int
+  revision    Int
+  note        String?
+  createdBy   User?    @relation("SnapshotAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt   DateTime @default(now())
+
+  items TimelineSnapshotItem[]
+
+  @@unique([timelineId, revision])
+}
+
+// Ligne figée d'une révision. Les identifiants sont volontairement SANS clé étrangère :
+// une révision doit rester lisible quand le shot est renommé, omis ou mis à la corbeille
+// — c'est un compte rendu, pas une vue. Les libellés sont donc recopiés à la prise.
+model TimelineSnapshotItem {
+  id           Int              @id @default(autoincrement())
+  snapshot     TimelineSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  snapshotId   Int
+  order        Int
+  shotId       Int?
+  shotCode     String
+  sequenceCode String?
+  versionId    Int?
+  versionName  String?
+  mediaId      Int?
+  department   String?
+  duration     Float            @default(0) // secondes
+
+  @@index([snapshotId, order])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

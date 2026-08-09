@@ -14,9 +14,13 @@ import { firstMediaThumbKeyForAsset, effectiveThumbnailUrl } from '../lib/thumbn
 import { logAudit } from '../services/AuditService';
 import { badRequest, notFound } from '../lib/errors';
 import { paginationQuery, readPagination, pageArgs, paginate } from '../lib/pagination';
+import * as PipelineLatestService from '../services/PipelineLatestService';
+import * as AssetService from '../services/AssetService';
 
 const router = Router();
 router.use(authenticate);
+
+const idParam = z.object({ id: z.coerce.number().int() });
 
 // GET /api/assets?projectId=X — paginé (10.D1)
 router.get(
@@ -77,7 +81,7 @@ router.post(
 );
 
 // GET /api/assets/:id
-router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
+router.get('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const asset = await prisma.asset.findUnique({
     where: { id },
@@ -98,7 +102,7 @@ router.patch(
   '/:id',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({
-    params: z.object({ id: z.coerce.number().int() }),
+    params: idParam,
     body: z.object({
       name: z.string().min(1).max(160).optional(),
       type: z.nativeEnum(AssetType).optional(),
@@ -113,41 +117,46 @@ router.patch(
     const projectId = await resolveProjectIdForAsset(id);
     if (!projectId) throw notFound('Asset introuvable');
     await assertProjectAccess(req, projectId);
-    const { shotIds, sequenceIds, ...scalar } = req.body as {
-      shotIds?: number[];
-      sequenceIds?: number[];
-      [k: string]: unknown;
-    };
-    // Les shots/séquences liés doivent appartenir au même projet
-    if (shotIds && shotIds.length > 0) {
-      const ok = await prisma.shot.count({ where: { id: { in: shotIds }, projectId } });
-      if (ok !== shotIds.length) throw badRequest('Shot invalide pour ce projet', 'BAD_SHOT');
-    }
-    if (sequenceIds && sequenceIds.length > 0) {
-      const ok = await prisma.sequence.count({ where: { id: { in: sequenceIds }, projectId } });
-      if (ok !== sequenceIds.length) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
-    }
-    const asset = await prisma.asset.update({
-      where: { id },
-      data: {
-        ...scalar,
-        ...(shotIds ? { shots: { set: shotIds.map((sid) => ({ id: sid })) } } : {}),
-        ...(sequenceIds ? { sequences: { set: sequenceIds.map((sid) => ({ id: sid })) } } : {}),
-      },
-      include: {
-        shots: { where: { deletedAt: null }, select: { id: true, code: true, name: true, sequenceId: true } },
-        sequences: { where: { deletedAt: null }, select: { id: true, code: true, name: true } },
-      },
-    });
+    const asset = await AssetService.update(projectId, id, req.body as AssetService.UpdateAssetInput);
     res.json({ asset });
   },
 );
+
+/**
+ * GET /api/assets/:id/tree — l'asset vu comme un dossier (Phase 45).
+ *
+ * Départements dans l'ordre du pipe → tâches → versions → médias, plus la version qui
+ * fait foi. Jusqu'ici la page d'un asset n'affichait que les versions rattachées
+ * DIRECTEMENT à l'asset : tout ce qu'un DCC publie sous une tâche était invisible.
+ */
+router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveProjectIdForAsset(id);
+  if (!projectId) throw notFound('Asset introuvable');
+  await assertProjectAccess(req, projectId);
+  res.json(await PipelineLatestService.assetOverview(id, req.user!.id));
+});
+
+/**
+ * GET /api/assets/:id/latest — l'équivalent d'une « master version » : une adresse stable
+ * qui désigne toujours l'état le plus avancé de l'asset. Un lien collé dans une note de
+ * production reste juste trois mois plus tard, sans que personne le remette à jour.
+ */
+router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveProjectIdForAsset(id);
+  if (!projectId) throw notFound('Asset introuvable');
+  await assertProjectAccess(req, projectId);
+  const { latest } = await PipelineLatestService.assetOverview(id, req.user!.id);
+  if (!latest) throw notFound('Aucune version publiée pour cet asset', 'NO_PUBLISHED_VERSION');
+  res.json({ latest });
+});
 
 // DELETE /api/assets/:id — corbeille (soft-delete, admin/superviseur)
 router.delete(
   '/:id',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
+  validate({ params: idParam }),
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveProjectIdForAsset(id);
@@ -163,7 +172,7 @@ router.delete(
 router.post(
   '/:id/restore',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
+  validate({ params: idParam }),
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveProjectIdForAsset(id);
@@ -178,7 +187,7 @@ router.post(
 router.delete(
   '/:id/purge',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
+  validate({ params: idParam }),
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveProjectIdForAsset(id);

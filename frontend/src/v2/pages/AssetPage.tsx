@@ -16,7 +16,10 @@ import FullPageDropzone from '../components/FullPageDropzone';
 import { Button } from '../components/ui/button';
 import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
-import type { AssetDetail } from '../types/api';
+import AssetLatestCard from './asset/AssetLatestCard';
+import AssetTree from './asset/AssetTree';
+import { SkeletonRows } from '../components/ui/skeleton';
+import type { AssetDetail, AssetOverview } from '../types/api';
 import { useT } from '../i18n';
 
 export default function AssetPage() {
@@ -46,6 +49,13 @@ export default function AssetPage() {
     queryFn: () => api.get<{ asset: AssetDetail }>(`/api/assets/${assetId}`),
   });
   const asset = assetQ.data?.asset ?? null;
+  // L'arbre du pipe : c'est lui qui montre les versions publiées SOUS une tâche, que la
+  // timeline ci-dessous (versions rattachées directement à l'asset) ne voit pas.
+  const treeQ = useQuery({
+    queryKey: qk.assetTree(assetId),
+    queryFn: () => api.get<AssetOverview>(`/api/assets/${assetId}/tree`),
+  });
+  const overview = treeQ.data ?? null;
 
   // Drop-zone plein-écran : dépose vers la dernière version (en crée une si besoin).
   const onDropFiles = async (files: File[]) => {
@@ -115,11 +125,19 @@ export default function AssetPage() {
           onSaved={() => qc.invalidateQueries({ queryKey: qk.asset(assetId) })}
         />
       )}
-      {canCreate && (
-        <Button className="mb-4" onClick={() => void createVersion()}>
-          {t('version.newPlus')}
-        </Button>
-      )}
+      {overview?.latest && <AssetLatestCard assetId={assetId} latest={overview.latest} />}
+
+      <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t('asset.tree.title')}</h2>
+      {treeQ.isLoading ? <SkeletonRows count={3} /> : <AssetTree groups={overview?.groups ?? []} />}
+
+      <div className="mb-3 mt-6 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-muted-foreground">{t('asset.tree.direct')}</h2>
+        {canCreate && (
+          <Button size="sm" onClick={() => void createVersion()}>
+            {t('version.newPlus')}
+          </Button>
+        )}
+      </div>
 
       <VersionTimeline
         versions={versions}

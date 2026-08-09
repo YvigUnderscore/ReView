@@ -31,13 +31,19 @@ export function useVersions(scope: VersionScope) {
       api.get<{ versions: VersionListItem[] }>(`/api/versions?${filter}`).then((d) => d.versions),
   });
 
-  const invalidateVersions = () => qc.invalidateQueries({ queryKey: versionsKey });
+  // L'arbre d'un asset (Phase 45) dépend des versions de ses tâches : publier depuis une
+  // tâche doit rafraîchir la page de l'asset, qui n'est pas celle où l'on se trouve.
+  const invalidateVersions = async () => {
+    await qc.invalidateQueries({ queryKey: versionsKey });
+    qc.invalidateQueries({ queryKey: ['asset'] });
+  };
 
   // Un upload terminé rafraîchit la liste des versions + les médias de chaque version.
   useEffect(() => {
     if (uploads.some((u) => u.status === 'done')) {
       qc.invalidateQueries({ queryKey: qk.versions(filter) });
       qc.invalidateQueries({ queryKey: ['version'] });
+      qc.invalidateQueries({ queryKey: ['asset'] });
     }
   }, [uploads, qc, filter]);
 

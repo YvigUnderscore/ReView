@@ -10,6 +10,8 @@ export interface Task {
   id: number;
   name: string;
   type: TaskType;
+  /** Département du pipe (clé des réglages projet) — null tant qu'aucun n'est posé. */
+  department?: string | null;
   status: TaskStatus;
 }
 /** Listes (kanban, activité projet) : assigné joint. */

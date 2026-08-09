@@ -23,6 +23,7 @@ import ReviewPage from './pages/ReviewPage';
 import KanbanPage from './pages/KanbanPage';
 import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
+import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import ProfilePage from './pages/ProfilePage';
 import DocumentsPage from './pages/DocumentsPage';
 import DocsPage from './pages/DocsPage';
@@ -153,6 +154,15 @@ function AppRoutes() {
               element={
                 <Protected>
                   <AssetPage />
+                </Protected>
+              }
+            />
+            {/* Lien permanent vers l'état le plus avancé de l'asset (Phase 45). */}
+            <Route
+              path="/assets/:id/latest"
+              element={
+                <Protected>
+                  <AssetLatestRedirect />
                 </Protected>
               }
             />

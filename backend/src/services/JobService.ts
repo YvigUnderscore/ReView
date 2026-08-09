@@ -12,6 +12,7 @@ export const QUEUE_NAMES = {
   MEDIA: 'media-processing',
   STORAGE_CLEANUP: 'storage-cleanup',
   WEBHOOKS: 'webhooks',
+  TIMELINE_EXPORT: 'timeline-export',
 } as const;
 
 export interface MediaJobData {
@@ -77,3 +78,31 @@ export const webhookQueue = new Queue<WebhookJobData, void, string>(QUEUE_NAMES.
 });
 
 export const enqueueWebhookDelivery = (data: WebhookJobData) => webhookQueue.add(data.event, data);
+
+/**
+ * Export d'un montage en fichier unique (Phase 45). Un seul job à la fois par montage :
+ * l'identifiant de job est déterministe, BullMQ ignore silencieusement un doublon — deux
+ * clics sur « exporter » ne lancent pas deux encodages du même film.
+ */
+export interface TimelineExportJobData {
+  timelineId: number;
+  requestedById: number;
+}
+
+export const timelineExportQueue = new Queue<TimelineExportJobData, void, string>(
+  QUEUE_NAMES.TIMELINE_EXPORT,
+  {
+    connection: redisConnectionOptions,
+    defaultJobOptions: {
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 10_000 },
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    },
+  },
+);
+
+export const timelineExportJobId = (timelineId: number) => `timeline-${timelineId}`;
+
+export const enqueueTimelineExport = (data: TimelineExportJobData) =>
+  timelineExportQueue.add('export', data, { jobId: timelineExportJobId(data.timelineId) });

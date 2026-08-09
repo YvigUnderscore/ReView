@@ -67,6 +67,8 @@ export async function list(
 export interface CreateTaskInput {
   name: string;
   type: TaskType;
+  /** Département du pipe (clé des réglages projet) — porte l'ordre amont → aval. */
+  department?: string | null;
   shotId?: number;
   assetId?: number;
   assigneeId?: number | null;
@@ -80,6 +82,9 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
     data: {
       name: body.name,
       type: body.type,
+      // Sans département explicite, le type fait office d'étape : il porte les mêmes clés
+      // que les départements par défaut, et une tâche sans étape se range en fourre-tout.
+      department: body.department ?? (body.type === TaskType.OTHER ? null : body.type),
       shotId: body.shotId ?? null,
       assetId: body.assetId ?? null,
       assigneeId: body.assigneeId ?? null,
@@ -175,6 +180,7 @@ export interface ChecklistItem {
 export interface UpdateTaskInput {
   name?: string;
   type?: TaskType;
+  department?: string | null;
   status?: TaskStatus;
   assigneeId?: number | null;
   order?: number;

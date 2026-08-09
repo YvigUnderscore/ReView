@@ -22,6 +22,7 @@ import type { MediaResp } from './reviewTypes';
 import type { VersionDetail } from '../../types/api';
 import VersionNavigator from './VersionNavigator';
 import PlaylistNavigator from './PlaylistNavigator';
+import TimelineNavigator from './TimelineNavigator';
 import CompareSelect from './CompareSelect';
 import LiveControl from './LiveControl';
 import { useReviewPresence } from './useReviewPresence';
@@ -88,6 +89,7 @@ export default function ReviewHeader({
         )}
         <VersionNavigator versionId={versionId} mediaId={data.media.id} />
         <PlaylistNavigator versionId={versionId} />
+        <TimelineNavigator mediaId={data.media.id} />
         {(data.media.kind === 'VIDEO' || data.media.kind === 'IMAGE') && (
           <CompareSelect
             versionId={versionId}

@@ -15,12 +15,17 @@ import { badRequest } from './errors';
  *   PROJ/SQ010/SH0100                 shot
  *   PROJ/SQ010/SH0100/anim            tâche
  *   PROJ/SQ010/SH0100/anim/v003       version
+ *   PROJ/SQ010/SH0100/layout:main     tâche « main » du département « layout »
  *   PROJ/shots/SH0100[/anim[/v003]]   shot rattaché à aucune séquence
  *   PROJ/assets/hero[/model[/v003]]   asset réutilisable
  *
  * Les segments `shots` et `assets` sont des mots-clés de branche : ils lèvent l'ambiguïté
  * entre « une séquence nommée X » et « un shot nommé X sans séquence ». La résolution en
  * base (insensible à la casse, par code ou par nom) vit dans `services/PipelineResolveService`.
+ *
+ * Le département se préfixe au nom de tâche plutôt que d'occuper un segment à lui : les
+ * pipelines nomment couramment `main` la tâche de chaque département, et un chemin
+ * positionnel de plus rendrait `.../modeling/main` indistinguable de `.../anim/v003`.
  */
 
 /** Mots-clés de branche, réservés en deuxième position. */
@@ -34,6 +39,8 @@ export interface PipelinePath {
   shot?: string;
   asset?: string;
   task?: string;
+  /** Département porté par le segment de tâche (`layout:main`), absent sinon. */
+  department?: string;
   version?: string;
   /** Type de la dernière entité désignée — ce que le chemin adresse réellement. */
   kind: PipelineEntityKind;
@@ -57,14 +64,34 @@ function splitSegments(raw: string): string[] {
   return segments;
 }
 
+/**
+ * Sépare `departement:tache`. Sans deux-points, tout le segment est le nom de la tâche —
+ * c'est la forme historique, et elle doit continuer de fonctionner telle quelle.
+ */
+function splitTaskSegment(segment?: string): { task?: string; department?: string } {
+  if (!segment) return {};
+  const at = segment.indexOf(':');
+  if (at < 0) return { task: segment };
+  const department = segment.slice(0, at).trim();
+  const task = segment.slice(at + 1).trim();
+  if (!department || !task)
+    throw badRequest(
+      'Segment de tâche malformé : « département:tâche » attendu de part et d’autre du deux-points',
+      'PATH_TASK_MALFORMED',
+    );
+  return { task, department };
+}
+
 /** Branche `PROJ/assets/<asset>[/<task>[/<version>]]`. */
 function parseAssetBranch(project: string, rest: string[]): PipelinePath {
-  const [asset, task, version] = rest;
+  const [asset, taskSegment, version] = rest;
   if (!asset) throw badRequest("Chemin d'asset incomplet : nom d'asset attendu", 'PATH_INCOMPLETE');
+  const { task, department } = splitTaskSegment(taskSegment);
   return {
     project,
     asset,
     task,
+    department,
     version,
     kind: version ? 'version' : task ? 'task' : 'asset',
   };
@@ -72,12 +99,14 @@ function parseAssetBranch(project: string, rest: string[]): PipelinePath {
 
 /** Branche `PROJ/shots/<shot>[/<task>[/<version>]]` — shot sans séquence. */
 function parseLooseShotBranch(project: string, rest: string[]): PipelinePath {
-  const [shot, task, version] = rest;
+  const [shot, taskSegment, version] = rest;
   if (!shot) throw badRequest('Chemin de shot incomplet : code de shot attendu', 'PATH_INCOMPLETE');
+  const { task, department } = splitTaskSegment(taskSegment);
   return {
     project,
     shot,
     task,
+    department,
     version,
     kind: version ? 'version' : task ? 'task' : 'shot',
   };
@@ -85,12 +114,14 @@ function parseLooseShotBranch(project: string, rest: string[]): PipelinePath {
 
 /** Branche `PROJ/<sequence>[/<shot>[/<task>[/<version>]]]`. */
 function parseSequenceBranch(project: string, rest: string[]): PipelinePath {
-  const [sequence, shot, task, version] = rest;
+  const [sequence, shot, taskSegment, version] = rest;
+  const { task, department } = splitTaskSegment(taskSegment);
   return {
     project,
     sequence,
     shot,
     task,
+    department,
     version,
     kind: version ? 'version' : task ? 'task' : shot ? 'shot' : 'sequence',
   };
@@ -122,7 +153,7 @@ export function formatPipelinePath(p: PipelinePath): string {
     if (p.sequence) parts.push(p.sequence);
     if (p.shot) parts.push(p.shot);
   }
-  if (p.task) parts.push(p.task);
+  if (p.task) parts.push(p.department ? `${p.department}:${p.task}` : p.task);
   if (p.version) parts.push(p.version);
   return parts.join('/');
 }

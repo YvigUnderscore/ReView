@@ -45,6 +45,7 @@ import { sourceFormatLabel } from '../lib/modelConvert';
 import { convertToGlb, DEFAULT_USD_REQUEST, type UsdRequest } from '../services/ModelConvertService';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 import { startWebhookWorker } from './webhook.worker';
+import { startTimelineExportWorker } from './timelineExport.worker';
 
 /**
  * Worker de traitement média (FFmpeg) — BullMQ.
@@ -822,4 +823,6 @@ if (require.main === module) {
   // et la livraison des webhooks (36.D — les POST sortants ne partent pas du serveur web).
   startStorageCleanupWorker();
   startWebhookWorker();
+  // Export des montages automatiques (45) : même process, file dédiée à concurrence 1.
+  startTimelineExportWorker();
 }

@@ -22,6 +22,7 @@ import { useAnnotations } from './review/useAnnotations';
 import { loadDraft, saveDraft } from './review/commentDraft';
 import { useCompareState } from './review/useCompareState';
 import { useDeepLink } from './review/useDeepLink';
+import { useTimelineChain } from './review/useTimelineChain';
 import { useLiveSession } from './review/useLiveSession';
 import { useMediaActions } from './review/useMediaActions';
 import { useReviewViewport } from './review/useReviewViewport';
@@ -178,6 +179,9 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
 
   // Lien profond (32.E) : `?frame=`/`?comment=` appliqué une fois à l'arrivée.
   useDeepLink({ data, comments, videoRef, programmaticSeekRef, fallbackFps: fpsOverride, selectComment });
+
+  // Montage automatique (45) : avec `?timeline=`, la fin d'un plan enchaîne sur le suivant.
+  useTimelineChain(id, videoRef);
 
   // Salle de review live (33.B) : driver → diffusion ; spectateurs → application
   // (playhead, navigation, caméra 3D + DoF splat, comparaison A/B, zoom/pan image).

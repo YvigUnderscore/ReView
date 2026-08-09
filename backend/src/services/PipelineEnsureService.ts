@@ -7,6 +7,7 @@ import { badRequest, conflict } from '../lib/errors';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute, assertProjectManage } from '../lib/projectRoles';
 import { parsePipelinePath } from '../lib/pipelinePath';
+import { resolveProjectSettingsById } from '../lib/projectSettings';
 import { sequenceSelect, shotSelect, assetSelect, taskSelect, versionSelect } from '../lib/v1Resources';
 import { emitToProject } from './SocketService';
 
@@ -186,6 +187,8 @@ export async function ensureAsset(actor: Actor, projectId: number, input: Ensure
 export interface EnsureTaskInput {
   name: string;
   type?: TaskType;
+  /** Département du pipe (clé). Déduit du nom de la tâche s'il n'est pas fourni. */
+  department?: string;
 }
 
 /** Tâche rattachée à un shot XOR un asset. */
@@ -199,9 +202,16 @@ export async function ensureTask(
     throw badRequest('Fournir exactement un parent : shot OU asset');
   }
   const parentWhere = parent.shotId !== undefined ? { shotId: parent.shotId } : { assetId: parent.assetId };
+  const department = await resolveDepartmentKey(projectId, input);
 
+  // Le département fait partie de l'identité de la tâche : `modeling:main` et
+  // `lookdev:main` cohabitent, et rejouer une publication doit retrouver la bonne.
   const existing = await prisma.task.findFirst({
-    where: { ...parentWhere, name: insensitive(input.name) },
+    where: {
+      ...parentWhere,
+      name: insensitive(input.name),
+      ...(department ? { department: insensitive(department) } : {}),
+    },
     select: taskSelect,
   });
   if (existing) return { entity: existing, created: false };
@@ -212,11 +222,27 @@ export async function ensureTask(
       ...parentWhere,
       name: input.name,
       type: input.type ?? inferTaskType(input.name),
+      department,
     },
     select: taskSelect,
   });
   emitToProject(projectId, 'task:update', { projectId, id: entity.id });
   return { entity, created: true };
+}
+
+/**
+ * Clé de département d'une tâche à créer. Un département fourni par le client est retenu
+ * tel qu'il est déclaré dans le projet (casse comprise) ; sinon il est déduit du nom de la
+ * tâche, faute de quoi les publications DCC historiques rempliraient le fourre-tout
+ * « sans département » et fausseraient la notion d'étape la plus avancée.
+ */
+async function resolveDepartmentKey(projectId: number, input: EnsureTaskInput): Promise<string | null> {
+  const { departments } = await resolveProjectSettingsById(projectId);
+  const match = (needle: string) =>
+    departments.find((d) => d.key.toLowerCase() === needle.toLowerCase())?.key ?? null;
+  if (input.department) return match(input.department) ?? input.department;
+  const guessed = input.type ?? inferTaskType(input.name);
+  return guessed === TaskType.OTHER ? null : match(guessed);
 }
 
 /**
@@ -352,7 +378,13 @@ export async function ensurePath(
 
   if (parsed.task) {
     const parent = out.shotId !== undefined ? { shotId: out.shotId } : { assetId: out.assetId };
-    const task = await ensureTask(actor, projectId, parent, { name: parsed.task, ...opts.task });
+    // Le département du chemin (`layout:main`) ne cède qu'à une valeur explicitement
+    // passée en option par l'appelant.
+    const task = await ensureTask(actor, projectId, parent, {
+      name: parsed.task,
+      department: parsed.department,
+      ...opts.task,
+    });
     out.taskId = task.entity.id;
     if (task.created) created.push('task');
   }

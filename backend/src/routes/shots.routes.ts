@@ -94,7 +94,11 @@ router.patch(
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({
     params: idParam,
-    body: shotBody.partial().extend({ thumbnailKey: z.string().max(512).nullable().optional() }),
+    body: shotBody.partial().extend({
+      thumbnailKey: z.string().max(512).nullable().optional(),
+      // Omis du montage (Phase 45) : le plan est coupé au montage sans rien perdre.
+      omitted: z.boolean().optional(),
+    }),
   }),
   async (req, res) => {
     const id = Number(req.params.id);
