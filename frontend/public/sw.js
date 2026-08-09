@@ -12,8 +12,9 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || '',
-      icon: '/logo.png',
-      badge: '/logo.png',
+      icon: '/logo_192.png',
+      // Le badge est rendu en monochrome par Android : silhouette blanche sur fond transparent.
+      badge: '/logo_badge.png',
       data: { url: data.url || '/' },
     }),
   );
