@@ -154,7 +154,9 @@ export default function ReviewViewer({
 
   return (
     <section
-      className="relative flex min-w-0 flex-1 flex-col gap-2"
+      // `min-h-0` : le viewer doit pouvoir rétrécir sous la taille de son contenu, sinon
+      // ce qui est posé sous lui (la bande du montage) est repoussé hors de l'écran.
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-2"
       onPointerDownCapture={clearOnViewMove}
       onWheelCapture={clearOnViewMove}
     >

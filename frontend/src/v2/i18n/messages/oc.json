@@ -2042,7 +2042,5 @@
   "timeline.exportDownload": "Telecargar",
   "timeline.noMediaToComment": "Aqueste shot a pas encara de mèdia — res de comentar.",
   "timeline.openInReview": "Dobrir en review",
-  "timeline.pause": "Pausa",
-  "timeline.fullscreen": "Ecran complet",
-  "timeline.exitFullscreen": "Sortir de l’ecran complet"
+  "timeline.notFound": "Montatge introbable"
 }

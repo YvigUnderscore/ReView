@@ -2036,7 +2036,5 @@
   "timeline.exportDownload": "डाउनलोड",
   "timeline.noMediaToComment": "इस shot का अभी कोई मीडिया नहीं — टिप्पणी के लिए कुछ नहीं।",
   "timeline.openInReview": "review में खोलें",
-  "timeline.pause": "रोकें",
-  "timeline.fullscreen": "पूर्ण स्क्रीन",
-  "timeline.exitFullscreen": "पूर्ण स्क्रीन से बाहर"
+  "timeline.notFound": "संपादन नहीं मिला"
 }

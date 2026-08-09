@@ -30,29 +30,32 @@ Clip duration is the media's real duration. When it differs from the shot's
 declared frame range, the clip is **flagged** (amber warning triangle) rather
 than silently trimmed.
 
-## Playing a cut
+## Watching and reviewing a cut
 
-The cut plays **where it is**, on the sequence or project page — no other page,
-no export, nothing to open. Under the image, a single band holds the whole cut:
-every clip in order, each as wide as it is long, sequence bands above it and a
-playhead running from one end to the other. Clicking anywhere on the band takes
-the film there.
+*Lire* opens the cut on **its own page** (`/timelines/<id>/play`). That page is
+the ordinary review, applied to the shot currently on screen — so the cut is
+reviewed with the **same tools as any video**, not with a reduced player built
+for it:
 
-Playback itself has **no cut in it**. Two video players take turns: while one
-plays, the next clip is already loading in the other, and the changeover is a
-swap of visibility. Shot changes and sequence changes are therefore read on the
-band and in the label under it (`SQ020 · SH010 · v0002`), never as a black frame.
+- annotation on the image, comments at the frame, in→out loop with range
+  annotations, frame-by-frame stepping, JKL shuttle, playback speed, timeline
+  markers, comparison A/B (wipe, difference, side by side), live review room,
+  theatre and full screen, picture-in-picture.
 
-- Placeholders **hold their slot** for their own duration — the cut runs for as
-  long as the band says it does.
-- Playback is bounded by the **cut's** duration, not the file's: a media longer
-  than the slot it was given is cut off rather than pushing the rest of the film.
-- The comments panel writes on the shot currently on screen, at its own
-  timecode — the same comment you would have left in its review.
-- The expand button puts the same block full screen; the page underneath does not
-  change.
-- Hovering a clip reveals a link to its review, opened with `?timeline=<id>` so
-  that player chains on to the next shot as well.
+Under the player runs the **whole cut on one band**: every clip in order, each as
+wide as it is long, sequence bands above it, and a playhead crossing the film
+from end to end. Clicking anywhere on the band loads that shot in the same
+review, at that exact point — the page never changes.
+
+- The end of a clip **chains on** to the next one, which starts playing by
+  itself.
+- Placeholders are skipped while playing — a gap has nothing to show — but stay
+  on the band and can be opened, which is where you see what is missing.
+- A comment belongs to the shot's version, exactly as if it had been left from
+  that shot's own review. Nothing is attached to the cut itself.
+
+The cut card on the sequence or project page shows the same band, without the
+player: it is a map of the film, and clicking a clip enters the page there.
 
 ## Targeting a stage
 

@@ -1984,7 +1984,5 @@
   "timeline.exportDownload": "ダウンロード",
   "timeline.noMediaToComment": "この shot にはまだメディアがありません。コメントする対象がありません。",
   "timeline.openInReview": "review で開く",
-  "timeline.pause": "一時停止",
-  "timeline.fullscreen": "全画面",
-  "timeline.exitFullscreen": "全画面を終了"
+  "timeline.notFound": "編集が見つかりません"
 }

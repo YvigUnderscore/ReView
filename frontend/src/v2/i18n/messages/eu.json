@@ -2045,7 +2045,5 @@
   "timeline.exportDownload": "Deskargatu",
   "timeline.noMediaToComment": "shot honek ez du oraindik mediorik — ez dago zer iruzkindu.",
   "timeline.openInReview": "Ireki review-an",
-  "timeline.pause": "Pausatu",
-  "timeline.fullscreen": "Pantaila osoa",
-  "timeline.exitFullscreen": "Irten pantaila osotik"
+  "timeline.notFound": "Ez da muntaketa aurkitu"
 }

@@ -2042,7 +2042,5 @@
   "timeline.exportDownload": "Descarregar",
   "timeline.noMediaToComment": "Este shot ainda não tem mídia — nada a comentar.",
   "timeline.openInReview": "Abrir na review",
-  "timeline.pause": "Pausa",
-  "timeline.fullscreen": "Ecrã inteiro",
-  "timeline.exitFullscreen": "Sair do ecrã inteiro"
+  "timeline.notFound": "Montagem não encontrada"
 }

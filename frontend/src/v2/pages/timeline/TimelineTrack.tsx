@@ -29,6 +29,7 @@ export default function TimelineTrack({
   currentIndex,
   onSeek,
   timelineId,
+  linkToReview = true,
 }: {
   items: TimelineClip[];
   total: number;
@@ -36,6 +37,8 @@ export default function TimelineTrack({
   currentIndex: number;
   onSeek: (t: number) => void;
   timelineId: number;
+  /** Raccourci « ouvrir ce plan en review » au survol — inutile quand le clic y mène déjà. */
+  linkToReview?: boolean;
 }) {
   const t = useT();
   const barRef = useRef<HTMLDivElement>(null);
@@ -118,7 +121,7 @@ export default function TimelineTrack({
                   <AlertTriangle size={10} />
                 </span>
               )}
-              {clip.mediaId !== null && (
+              {clip.mediaId !== null && linkToReview && (
                 <Link
                   to={`${reviewPath({ id: clip.mediaId, originalName: clip.mediaName })}?timeline=${timelineId}`}
                   // Sans cela, ouvrir la review déplacerait aussi la tête de lecture.

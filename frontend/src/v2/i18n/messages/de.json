@@ -2042,7 +2042,5 @@
   "timeline.exportDownload": "Herunterladen",
   "timeline.noMediaToComment": "Dieser shot hat noch kein Medium — nichts zu kommentieren.",
   "timeline.openInReview": "In der review öffnen",
-  "timeline.pause": "Pause",
-  "timeline.fullscreen": "Vollbild",
-  "timeline.exitFullscreen": "Vollbild verlassen"
+  "timeline.notFound": "Schnitt nicht gefunden"
 }
