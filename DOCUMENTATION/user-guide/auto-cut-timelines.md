@@ -30,31 +30,41 @@ Clip duration is the media's real duration. When it differs from the shot's
 declared frame range, the clip is **flagged** (amber warning triangle) rather
 than silently trimmed.
 
-## Watching and reviewing a cut
+## Watching a cut
 
-*Lire* opens the cut on **its own page** (`/timelines/<id>/play`). That page is
-the ordinary review, applied to the shot currently on screen — so the cut is
-reviewed with the **same tools as any video**, not with a reduced player built
-for it:
+*Lire* opens the cut on **its own page** (`/timelines/<id>/play`), and that page
+holds nothing else: the image, **one single timeline** carrying the whole film,
+and the feedback panel.
 
-- annotation on the image, comments at the frame, in→out loop with range
-  annotations, frame-by-frame stepping, JKL shuttle, playback speed, timeline
-  markers, comparison A/B (wipe, difference, side by side), live review room,
-  theatre and full screen, picture-in-picture.
+Playback has **no cut in it**. Two video players take turns: while one plays, the
+next clip is already loading in the other, and the changeover is a swap of
+visibility. Shot changes and sequence changes are read on the timeline and in the
+label at the top (`SQ020 · SH010 · v0002`), never as a black frame — nothing
+navigates, so nothing interrupts the screening.
 
-Under the player runs the **whole cut on one band**: every clip in order, each as
-wide as it is long, sequence bands above it, and a playhead crossing the film
-from end to end. Clicking anywhere on the band loads that shot in the same
-review, at that exact point — the page never changes.
+- Placeholders **hold their slot** for their own duration: the cut runs for as
+  long as the timeline says it does, gaps included.
+- Playback is bounded by the **cut's** duration, not the file's: a media longer
+  than the slot it was given is trimmed here rather than pushing the rest of the
+  film out of sync.
+- Frame stepping, timecode and frame number are those of the **film**, at the
+  project framerate. Stepping across a cut is a step like any other.
 
-- The end of a clip **chains on** to the next one, which starts playing by
-  itself.
-- Placeholders are skipped while playing — a gap has nothing to show — but stay
-  on the band and can be opened, which is where you see what is missing.
-- A comment belongs to the shot's version, exactly as if it had been left from
-  that shot's own review. Nothing is attached to the cut itself.
+## Reviewing the cut itself
 
-The cut card on the sequence or project page shows the same band, without the
+Feedback written here belongs to the **cut**, at its position in the film: that
+is what you were watching. Comments appear as diamonds on the same single
+timeline, and drawing on the image works as in any review — the annotation is
+attached to the comment and comes back when it is reopened.
+
+Each comment nevertheless stays anchored to the shot's media and to its exact
+frame. **Right-click a comment → *Renvoyer sur la review du shot*** and it
+appears in that shot's own review, on that exact image, while remaining on the
+cut. Until then it stays with the cut: a screening produces many editing notes,
+and pouring them all into the artist's review would drown the feedback actually
+addressed to them.
+
+The cut card on the sequence or project page shows the same timeline, without the
 player: it is a map of the film, and clicking a clip enters the page there.
 
 ## Targeting a stage

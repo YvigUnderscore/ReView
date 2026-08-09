@@ -34,9 +34,10 @@ vi.mock('../lib/userView', () => ({
   toPublicUserOrDeleted: vi.fn(async (u: unknown) => u ?? { displayName: 'Compte supprimé' }),
 }));
 
-import { create, extractMentionTokens, update } from './CommentService';
+import { create, extractMentionTokens, listMontage, listThread, share, update } from './CommentService';
 import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
+import { notifyWatchers } from './WatchService';
 import { Role } from '@prisma/client';
 
 const author = { id: 5, role: Role.ARTIST };
@@ -182,5 +183,107 @@ describe('update — trace de résolution (32.A)', () => {
     expect(prisma.comment.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ isEdited: true }) }),
     );
+  });
+});
+
+describe('retours de montage (Phase 46)', () => {
+  beforeEach(() => {
+    vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.create).mockResolvedValue({
+      id: 40,
+      content: 'coupe',
+      author: { id: 5 },
+    } as never);
+  });
+
+  /** Données effectivement persistées par le dernier `comment.create`. */
+  const persisted = () =>
+    (vi.mocked(prisma.comment.create).mock.calls.at(-1)?.[0] as { data: Record<string, unknown> }).data;
+
+  it('garde les deux échelles : la frame dans le plan, la position dans le film', async () => {
+    await create(author, 3, {
+      mediaObjectId: 9,
+      content: 'coupe trop longue',
+      timestamp: 2.5,
+      timelineId: 7,
+      timelineTime: 71.5,
+    });
+    expect(persisted()).toMatchObject({
+      mediaObjectId: 9,
+      timestamp: 2.5,
+      timelineId: 7,
+      timelineTime: 71.5,
+    });
+  });
+
+  // Le retour n'est pas encore dans la review du plan : prévenir ses suiveurs les enverrait
+  // chercher quelque chose qu'ils n'y verraient pas.
+  it('ne prévient pas les suiveurs du plan tant que le retour reste sur le montage', async () => {
+    await create(author, 3, { mediaObjectId: 9, content: 'note de coupe', timelineId: 7, timelineTime: 3 });
+    expect(notifyWatchers).not.toHaveBeenCalled();
+  });
+
+  it('prévient les suiveurs pour un commentaire de review ordinaire', async () => {
+    await create(author, 3, { mediaObjectId: 9, content: 'retour classique' });
+    expect(notifyWatchers).toHaveBeenCalled();
+  });
+
+  it('le fil d’un plan masque les retours de montage non renvoyés', async () => {
+    vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.count).mockResolvedValue(0 as never);
+    await listThread(9, { page: 1, perPage: 20 });
+    const where = (vi.mocked(prisma.comment.findMany).mock.calls.at(-1)?.[0] as { where: unknown }).where;
+    expect(where).toMatchObject({
+      mediaObjectId: 9,
+      OR: [{ timelineId: null }, { sharedToShot: true }],
+    });
+  });
+
+  it('le fil du montage est ordonné sur la position dans le film', async () => {
+    vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.count).mockResolvedValue(0 as never);
+    await listMontage(7, { page: 1, perPage: 20 });
+    const args = vi.mocked(prisma.comment.findMany).mock.calls.at(-1)?.[0] as {
+      where: unknown;
+      orderBy: unknown;
+    };
+    expect(args.where).toMatchObject({ timelineId: 7, parentId: null });
+    expect(args.orderBy).toEqual([{ timelineTime: 'asc' }, { createdAt: 'asc' }]);
+  });
+
+  it('renvoyer sur la review lève le rideau sans toucher au timecode', async () => {
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue({
+      userId: author.id,
+      timelineId: 7,
+      mediaObjectId: 9,
+      sharedToShot: false,
+    } as never);
+    await share(author, 3, 1);
+    const data = (
+      vi.mocked(prisma.comment.update).mock.calls.at(-1)?.[0] as { data: Record<string, unknown> }
+    ).data;
+    expect(data).toEqual({ sharedToShot: true });
+    expect(notifyWatchers).toHaveBeenCalled();
+  });
+
+  it('refuse de renvoyer un commentaire qui n’est pas né sur un montage', async () => {
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue({
+      userId: author.id,
+      timelineId: null,
+      mediaObjectId: 9,
+      sharedToShot: false,
+    } as never);
+    await expect(share(author, 3, 1)).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('refuse le renvoi à un tiers non gestionnaire', async () => {
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue({
+      userId: author.id,
+      timelineId: 7,
+      mediaObjectId: 9,
+      sharedToShot: false,
+    } as never);
+    await expect(share(other, 3, 1)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(share(supervisor, 3, 1)).resolves.toBeTruthy();
   });
 });

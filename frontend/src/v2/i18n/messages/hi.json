@@ -2036,5 +2036,12 @@
   "timeline.exportDownload": "डाउनलोड",
   "timeline.noMediaToComment": "इस shot का अभी कोई मीडिया नहीं — टिप्पणी के लिए कुछ नहीं।",
   "timeline.openInReview": "review में खोलें",
-  "timeline.notFound": "संपादन नहीं मिला"
+  "timeline.notFound": "संपादन नहीं मिला",
+  "timeline.pause": "रोकें",
+  "timeline.fullscreen": "पूर्ण स्क्रीन",
+  "timeline.exitFullscreen": "पूर्ण स्क्रीन से बाहर",
+  "timeline.shareToShot": "shot की review पर भेजें",
+  "timeline.sharedToShot": "review पर भेजा गया",
+  "timeline.shareDone": "{shot} पर प्रतिक्रिया भेजी गई",
+  "timeline.clearAnnotation": "चित्र मिटाएँ"
 }

@@ -2045,5 +2045,12 @@
   "timeline.exportDownload": "Deskargatu",
   "timeline.noMediaToComment": "shot honek ez du oraindik mediorik — ez dago zer iruzkindu.",
   "timeline.openInReview": "Ireki review-an",
-  "timeline.notFound": "Ez da muntaketa aurkitu"
+  "timeline.notFound": "Ez da muntaketa aurkitu",
+  "timeline.pause": "Pausatu",
+  "timeline.fullscreen": "Pantaila osoa",
+  "timeline.exitFullscreen": "Irten pantaila osotik",
+  "timeline.shareToShot": "Bidali shot-aren review-ra",
+  "timeline.sharedToShot": "review-ra bidalia",
+  "timeline.shareDone": "Iruzkina {shot}-(e)ra bidali da",
+  "timeline.clearAnnotation": "Garbitu marrazkia"
 }

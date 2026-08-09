@@ -30,6 +30,9 @@ export default function TimelineTrack({
   onSeek,
   timelineId,
   linkToReview = true,
+  markers = [],
+  selectedMarkerId = null,
+  onMarkerClick,
 }: {
   items: TimelineClip[];
   total: number;
@@ -39,6 +42,10 @@ export default function TimelineTrack({
   timelineId: number;
   /** Raccourci « ouvrir ce plan en review » au survol — inutile quand le clic y mène déjà. */
   linkToReview?: boolean;
+  /** Retours posés sur le montage, à leur position dans le film (Phase 46). */
+  markers?: { id: number; time: number; label: string; shared: boolean }[];
+  selectedMarkerId?: number | null;
+  onMarkerClick?: (id: number) => void;
 }) {
   const t = useT();
   const barRef = useRef<HTMLDivElement>(null);
@@ -135,6 +142,26 @@ export default function TimelineTrack({
             </div>
           );
         })}
+        {/* Retours du montage : posés sur la même échelle que le film, donc lisibles d'un
+            coup d'œil — c'est tout l'intérêt d'une timeline unique. */}
+        {markers.map((m) => (
+          <button
+            key={m.id}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onMarkerClick?.(m.id);
+            }}
+            title={m.label}
+            style={{ left: `calc(${pct(m.time)}% - 5px)` }}
+            className={`absolute bottom-4 h-2.5 w-2.5 rotate-45 border ${
+              m.id === selectedMarkerId
+                ? 'border-foreground bg-foreground'
+                : m.shared
+                  ? 'border-primary bg-primary'
+                  : 'border-primary bg-background'
+            }`}
+          />
+        ))}
         <div
           className="pointer-events-none absolute top-0 h-16 w-0.5 bg-foreground"
           style={{ left: `${pct(time)}%` }}

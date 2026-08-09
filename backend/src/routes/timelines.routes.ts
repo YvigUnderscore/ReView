@@ -8,7 +8,9 @@ import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { notFound } from '../lib/errors';
+import { paginationQuery, readPagination } from '../lib/pagination';
 import * as TimelineService from '../services/TimelineService';
+import * as CommentService from '../services/CommentService';
 
 /**
  * Montages automatiques (Phase 45) : un par séquence, un pour le projet entier.
@@ -108,6 +110,16 @@ router.get(
     res.json(await TimelineService.getSnapshot(id, Number(req.params.revision)));
   },
 );
+
+/**
+ * GET /api/timelines/:id/comments — les retours posés sur le montage (Phase 46), dans
+ * l'ordre du film. Ils s'écrivent par `POST /api/comments` avec `timelineId`.
+ */
+router.get('/:id/comments', validate({ params: idParam, query: paginationQuery }), async (req, res) => {
+  const id = Number(req.params.id);
+  await assertTimelineAccess(req, id);
+  res.json(await CommentService.listMontage(id, readPagination(req.query)));
+});
 
 // GET /api/timelines/:id/export — un master est-il disponible ? (URL signée si oui)
 router.get('/:id/export', validate({ params: idParam }), async (req, res) => {

@@ -87,6 +87,7 @@ export const qk = {
   timeline: (id: number) => ['timeline', id] as const,
   timelineSnapshots: (id: number) => ['timeline', id, 'snapshots'] as const,
   timelineExport: (id: number) => ['timeline', id, 'export'] as const,
+  timelineComments: (id: number) => ['timeline', id, 'comments'] as const,
   timelineSnapshot: (id: number, revision: number) => ['timeline', id, 'snapshots', revision] as const,
   liveSessions: (projectId: number) => ['live-sessions', projectId] as const,
   timelineMarkers: (mediaId: number) => ['timeline-markers', mediaId] as const,

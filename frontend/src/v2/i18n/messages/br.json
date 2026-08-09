@@ -2031,5 +2031,12 @@
   "timeline.exportDownload": "Pellgargañ",
   "timeline.noMediaToComment": "N’en deus ket ar shot-mañ a vedia c’hoazh — netra da evezhiañ.",
   "timeline.openInReview": "Digeriñ er review",
-  "timeline.notFound": "Kempenn diank"
+  "timeline.notFound": "Kempenn diank",
+  "timeline.pause": "Ehan",
+  "timeline.fullscreen": "Skramm a-bezh",
+  "timeline.exitFullscreen": "Kuitaat ar skramm a-bezh",
+  "timeline.shareToShot": "Kas d’ar review eus ar shot",
+  "timeline.sharedToShot": "kaset d’ar review",
+  "timeline.shareDone": "Evezhiadenn kaset da {shot}",
+  "timeline.clearAnnotation": "Diverkañ an dresadenn"
 }

@@ -2042,5 +2042,12 @@
   "timeline.exportDownload": "Telecargar",
   "timeline.noMediaToComment": "Aqueste shot a pas encara de mèdia — res de comentar.",
   "timeline.openInReview": "Dobrir en review",
-  "timeline.notFound": "Montatge introbable"
+  "timeline.notFound": "Montatge introbable",
+  "timeline.pause": "Pausa",
+  "timeline.fullscreen": "Ecran complet",
+  "timeline.exitFullscreen": "Sortir de l’ecran complet",
+  "timeline.shareToShot": "Mandar sus la review del shot",
+  "timeline.sharedToShot": "mandat sus la review",
+  "timeline.shareDone": "Retorn mandat sus {shot}",
+  "timeline.clearAnnotation": "Escafar lo dessenh"
 }

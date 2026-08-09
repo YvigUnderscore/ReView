@@ -90,13 +90,46 @@ async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
 }
 const asRawComment = (c: unknown) => c as RawComment;
 
-/** Fil de commentaires (racines paginées + réponses imbriquées) d'un média, enrichi. */
+/**
+ * Fil de commentaires (racines paginées + réponses imbriquées) d'un média, enrichi.
+ *
+ * Les retours écrits depuis un montage restent chez lui : ils n'apparaissent ici qu'une
+ * fois renvoyés explicitement (Phase 46). Un montage se relit plan par plan et produit
+ * beaucoup de notes de coupe ; les déverser d'office dans la review de l'artiste noierait
+ * les retours qui lui sont adressés.
+ */
 export async function listThread(mediaObjectId: number, p: PaginationParams): Promise<Paginated<unknown>> {
-  const where = { mediaObjectId, parentId: null };
+  const where = {
+    mediaObjectId,
+    parentId: null,
+    OR: [{ timelineId: null }, { sharedToShot: true }],
+  };
   const [comments, total] = await Promise.all([
     prisma.comment.findMany({
       where,
       orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
+      ...pageArgs(p),
+      include: { ...commentInclude, replies: { orderBy: { createdAt: 'asc' }, include: commentInclude } },
+    }),
+    prisma.comment.count({ where }),
+  ]);
+  const items = await Promise.all(comments.map((c) => enrichComment(asRawComment(c))));
+  return paginate(items, total, p);
+}
+
+/**
+ * Fil d'un montage (Phase 46) : les retours posés sur le film, dans son ordre à lui.
+ *
+ * L'ordre est celui de `timelineTime` — la position dans le montage entier — et non celui
+ * du timecode de chaque plan : sur une seule timeline, deux retours de plans différents
+ * n'ont de sens l'un par rapport à l'autre que sur cette échelle.
+ */
+export async function listMontage(timelineId: number, p: PaginationParams): Promise<Paginated<unknown>> {
+  const where = { timelineId, parentId: null };
+  const [comments, total] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: [{ timelineTime: 'asc' }, { createdAt: 'asc' }],
       ...pageArgs(p),
       include: { ...commentInclude, replies: { orderBy: { createdAt: 'asc' }, include: commentInclude } },
     }),
@@ -168,6 +201,10 @@ export interface CreateCommentInput {
   cameraState?: unknown;
   attachments?: { key: string; name?: string; contentType?: string }[];
   parentId?: number;
+  /** Retour écrit depuis un montage : il lui appartient (Phase 46). */
+  timelineId?: number;
+  /** Position dans le montage entier (s) — `timestamp` reste la position dans le plan. */
+  timelineTime?: number;
 }
 
 export async function create(user: SessionUser, projectId: number, body: CreateCommentInput) {
@@ -202,6 +239,8 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       cameraState: (body.cameraState ?? undefined) as object | undefined,
       attachments: attachments.length > 0 ? (attachments as object) : undefined,
       parentId: body.parentId ?? null,
+      timelineId: body.timelineId ?? null,
+      timelineTime: body.timelineTime ?? null,
     },
     include: commentInclude,
   });
@@ -243,6 +282,10 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
         referenceId: body.mediaObjectId,
       });
     }
+  } else if (body.timelineId) {
+    // Retour de montage : les suiveurs du plan ne sont pas prévenus, puisque le retour
+    // n'apparaît pas encore dans leur review. C'est `share` qui les avertit.
+    void sendDiscord(`🎬 Nouveau retour sur un montage (projet #${projectId})`);
   } else {
     // Suiveurs (32.G) : nouveau commentaire racine sur la chaîne version/shot/asset.
     await notifyWatchers({
@@ -253,6 +296,43 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
     });
     void sendDiscord(`💬 Nouveau commentaire sur un média (projet #${projectId})`);
   }
+  return enriched;
+}
+
+/**
+ * Renvoie un retour de montage sur la review du plan (Phase 46).
+ *
+ * Rien n'est recopié : le commentaire est déjà ancré au média du plan et à sa position
+ * DANS ce plan (`timestamp`), calculée au moment où il a été écrit. Le partager ne fait
+ * donc que lever le rideau — il tombe sur la frame exacte, et reste sur le montage.
+ * Une copie, elle, aurait divergé dès la première correction.
+ */
+export async function share(user: SessionUser, projectId: number, id: number) {
+  await assertProjectWritable(projectId);
+  const existing = await prisma.comment.findUnique({
+    where: { id },
+    select: { userId: true, timelineId: true, mediaObjectId: true, sharedToShot: true },
+  });
+  if (!existing) return null; // signalé « introuvable » par la route
+  if (existing.timelineId === null) throw badRequest("Ce commentaire n'appartient pas à un montage");
+  if (!isManager(user.role) && existing.userId !== user.id)
+    throw forbidden("Seul l'auteur ou un superviseur peut renvoyer un retour");
+
+  const comment = await prisma.comment.update({
+    where: { id },
+    data: { sharedToShot: true },
+    include: commentInclude,
+  });
+  const enriched = await enrichComment(asRawComment(comment));
+  emitToProject(projectId, 'comment:new', enriched);
+  // Le retour entre dans la review du plan : ses suiveurs ont maintenant lieu d'être avertis.
+  if (!existing.sharedToShot)
+    await notifyWatchers({
+      mediaObjectId: existing.mediaObjectId,
+      projectId,
+      content: 'Un retour de montage a été renvoyé sur un élément suivi',
+      exclude: [user.id],
+    });
   return enriched;
 }
 

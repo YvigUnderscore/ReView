@@ -1984,5 +1984,12 @@
   "timeline.exportDownload": "ダウンロード",
   "timeline.noMediaToComment": "この shot にはまだメディアがありません。コメントする対象がありません。",
   "timeline.openInReview": "review で開く",
-  "timeline.notFound": "編集が見つかりません"
+  "timeline.notFound": "編集が見つかりません",
+  "timeline.pause": "一時停止",
+  "timeline.fullscreen": "全画面",
+  "timeline.exitFullscreen": "全画面を終了",
+  "timeline.shareToShot": "shot の review に送る",
+  "timeline.sharedToShot": "review に送信済み",
+  "timeline.shareDone": "{shot} にフィードバックを送信しました",
+  "timeline.clearAnnotation": "描画を消去"
 }

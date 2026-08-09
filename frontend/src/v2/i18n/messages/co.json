@@ -2042,5 +2042,12 @@
   "timeline.exportDownload": "Scaricà",
   "timeline.noMediaToComment": "Stu shot ùn hà ancu media — nunda da cummentà.",
   "timeline.openInReview": "Apre in review",
-  "timeline.notFound": "Muntagiu micca trovu"
+  "timeline.notFound": "Muntagiu micca trovu",
+  "timeline.pause": "Pausa",
+  "timeline.fullscreen": "Screnu sanu",
+  "timeline.exitFullscreen": "Esce da u screnu sanu",
+  "timeline.shareToShot": "Manda à a review di u shot",
+  "timeline.sharedToShot": "mandatu à a review",
+  "timeline.shareDone": "Ritornu mandatu à {shot}",
+  "timeline.clearAnnotation": "Squassà u disegnu"
 }

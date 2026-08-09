@@ -563,6 +563,8 @@ model Timeline {
   updatedAt  DateTime  @updatedAt
 
   snapshots TimelineSnapshot[]
+  // Retours posés sur le montage lui-même (Phase 46).
+  comments  Comment[]
 
   // Les NULL étant distincts en SQL, l'unicité du montage de projet (sequenceId null)
   // est garantie côté service — même parti pris que les shots sans séquence.
@@ -766,9 +768,21 @@ model Comment {
   assignee   User? @relation("CommentAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   assigneeId Int?
 
+  // Retour écrit depuis un montage (Phase 46). Le commentaire reste ancré au média du plan
+  // — donc à la bonne frame — mais n'appartient qu'au montage tant que personne ne l'a
+  // renvoyé sur la review du plan (`sharedToShot`). Sans quoi tout retour de montage
+  // arriverait sans prévenir dans la review de l'artiste.
+  timeline     Timeline? @relation(fields: [timelineId], references: [id], onDelete: Cascade)
+  timelineId   Int?
+  // Position dans le film entier (s) — ce que la seule timeline du montage affiche.
+  timelineTime Float?
+  sharedToShot Boolean @default(false)
+
   reactions  Reaction[]
   references ReviewReference[] // images de référence jointes (affichées à la sélection)
   spawnedTasks Task[] @relation("TaskSourceComment") // tâches kanban créées depuis ce commentaire (32.D)
+
+  @@index([timelineId])
 }
 
 model Reaction {

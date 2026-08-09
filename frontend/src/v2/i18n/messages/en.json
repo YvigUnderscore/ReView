@@ -2030,5 +2030,12 @@
   "timeline.exportDownload": "Download",
   "timeline.noMediaToComment": "This shot has no media yet — nothing to comment on.",
   "timeline.openInReview": "Open in review",
-  "timeline.notFound": "Cut not found"
+  "timeline.notFound": "Cut not found",
+  "timeline.pause": "Pause",
+  "timeline.fullscreen": "Full screen",
+  "timeline.exitFullscreen": "Exit full screen",
+  "timeline.shareToShot": "Send to the shot review",
+  "timeline.sharedToShot": "sent to the review",
+  "timeline.shareDone": "Feedback sent to {shot}",
+  "timeline.clearAnnotation": "Clear the drawing"
 }

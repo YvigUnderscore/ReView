@@ -2042,5 +2042,12 @@
   "timeline.exportDownload": "Descarregar",
   "timeline.noMediaToComment": "Este shot ainda não tem mídia — nada a comentar.",
   "timeline.openInReview": "Abrir na review",
-  "timeline.notFound": "Montagem não encontrada"
+  "timeline.notFound": "Montagem não encontrada",
+  "timeline.pause": "Pausa",
+  "timeline.fullscreen": "Ecrã inteiro",
+  "timeline.exitFullscreen": "Sair do ecrã inteiro",
+  "timeline.shareToShot": "Enviar para a review do shot",
+  "timeline.sharedToShot": "enviado para a review",
+  "timeline.shareDone": "Retorno enviado para {shot}",
+  "timeline.clearAnnotation": "Apagar o desenho"
 }

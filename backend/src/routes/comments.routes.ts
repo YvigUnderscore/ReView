@@ -81,6 +81,9 @@ router.post(
         .max(8)
         .optional(),
       parentId: z.number().int().optional(),
+      // Retour écrit depuis un montage (46) : il lui appartient jusqu'à un renvoi explicite.
+      timelineId: z.number().int().optional(),
+      timelineTime: z.number().nonnegative().optional(),
     }),
   }),
   async (req, res) => {
@@ -90,6 +93,15 @@ router.post(
     res.status(201).json({ comment: await CommentService.create(req.user!, projectId, req.body) });
   },
 );
+
+// POST /api/comments/:id/share — renvoie un retour de montage sur la review du plan (46)
+router.post('/:id/share', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveCommentAccess(req, id);
+  const comment = await CommentService.share(req.user!, projectId, id);
+  if (!comment) throw notFound('Commentaire introuvable');
+  res.json({ comment });
+});
 
 // PATCH /api/comments/:id — édition (auteur), résolution, visibilité client + assignation (superviseur+)
 router.patch(

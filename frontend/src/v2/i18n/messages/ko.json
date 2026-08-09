@@ -1984,5 +1984,12 @@
   "timeline.exportDownload": "다운로드",
   "timeline.noMediaToComment": "이 shot에는 아직 미디어가 없어 댓글을 달 대상이 없습니다.",
   "timeline.openInReview": "review에서 열기",
-  "timeline.notFound": "편집본을 찾을 수 없습니다"
+  "timeline.notFound": "편집본을 찾을 수 없습니다",
+  "timeline.pause": "일시정지",
+  "timeline.fullscreen": "전체 화면",
+  "timeline.exitFullscreen": "전체 화면 종료",
+  "timeline.shareToShot": "shot review로 보내기",
+  "timeline.sharedToShot": "review로 보냄",
+  "timeline.shareDone": "{shot}에 피드백을 보냈습니다",
+  "timeline.clearAnnotation": "그림 지우기"
 }
