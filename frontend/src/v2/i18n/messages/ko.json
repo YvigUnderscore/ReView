@@ -1991,5 +1991,15 @@
   "timeline.shareToShot": "shot review로 보내기",
   "timeline.sharedToShot": "review로 보냄",
   "timeline.shareDone": "{shot}에 피드백을 보냈습니다",
-  "timeline.clearAnnotation": "그림 지우기"
+  "timeline.clearAnnotation": "그림 지우기",
+  "timeline.duration": "길이",
+  "timeline.shots": "shot",
+  "timeline.gaps": "빈 자리",
+  "timeline.noGap": "빠짐 없음",
+  "timeline.name": "편집본",
+  "timeline.stage": "파이프라인 단계",
+  "timeline.departmentShown": "표시할 단계",
+  "timeline.revisionLabel": "고정된 리비전",
+  "timeline.panelNotApplicable": "편집본에는 해당하지 않습니다.",
+  "timeline.navHint": "이미지를 클릭해 재생하거나 일시정지"
 }

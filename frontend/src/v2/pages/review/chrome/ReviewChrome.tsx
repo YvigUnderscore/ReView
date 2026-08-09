@@ -7,9 +7,9 @@ import { Badge } from '../../../components/ui/badge';
 import { SegmentedControl } from '../../../components/ui/segmented-control';
 import ToolRail from './ToolRail';
 import InspectorDock from './InspectorDock';
-import { modesFor, switcherModesFor, type ModeId } from './modes';
+import { modesFor, switcherModesFor, type ModeId, type ReviewMode } from './modes';
 import { panelsFor, type PanelId } from './panels';
-import { toolsFor, viewActionsFor, type ToolId, type ViewAction } from './tools';
+import { toolsFor, viewActionsFor, type ReviewTool, type ToolId, type ViewAction } from './tools';
 import type { ChromeState } from './chromeState';
 import './chrome.css';
 import { useT } from '../../../i18n';
@@ -27,6 +27,8 @@ export default function ReviewChrome({
   state,
   onState,
   role,
+  modes: modesProp,
+  tools: toolsProp,
   headerLeft,
   headerRight,
   options,
@@ -43,6 +45,18 @@ export default function ReviewChrome({
   state: ChromeState;
   onState: (patch: Partial<ChromeState>) => void;
   role: Role;
+  /**
+   * Modes proposés par la bascule. Par défaut ceux du type de média ; le montage n'en a
+   * qu'un (regarder), la comparaison A/B et la découpe n'ayant pas de sens sur un film
+   * assemblé. En dessous de deux, la bascule disparaît plutôt que de montrer un segment
+   * unique qui ne bascule vers rien.
+   */
+  modes?: ReviewMode[];
+  /**
+   * Outils du rail. Par défaut ceux du mode et du type de média ; le montage fournit les
+   * siens, dont un outil de navigation qui ne promet ni panoramique ni zoom — il n'en a pas.
+   */
+  tools?: ReviewTool[];
   /**
    * Média, version, navigation — à gauche de l'en-tête. Absent tant que la page de review
    * porte encore son propre en-tête : la barre du haut ne montre alors que la bascule de mode.
@@ -74,14 +88,14 @@ export default function ReviewChrome({
   // La bascule ne liste pas « Annoter » : l'annotation s'arme depuis l'espace commentaire.
   // Le mode reste valide — pendant l'annotation, aucun segment n'est actif et c'est le bouton
   // du composer qui joue l'indicateur ; le pied de page garde le bon rappel.
-  const modes = switcherModesFor(kind);
+  const modes = modesProp ?? switcherModesFor(kind);
   // Un viewer retire du rail les outils qu'il n'implémente pas : mieux vaut un rail court
   // qu'un bouton qui ne fait rien.
-  const tools = toolsFor(state.mode, kind).filter((t) => !hiddenTools?.includes(t.id));
+  const tools = (toolsProp ?? toolsFor(state.mode, kind)).filter((t) => !hiddenTools?.includes(t.id));
   const panels = panelsFor(kind);
   const activeMode = modesFor(kind).find((m) => m.value === state.mode) ?? modes[0]!;
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
-  const canSwitchMode = role !== 'CLIENT';
+  const canSwitchMode = role !== 'CLIENT' && modes.length > 1;
 
   return (
     <div

@@ -1981,5 +1981,15 @@
   "timeline.shareToShot": "发送到该 shot 的 review",
   "timeline.sharedToShot": "已发送到 review",
   "timeline.shareDone": "反馈已发送到 {shot}",
-  "timeline.clearAnnotation": "清除绘制"
+  "timeline.clearAnnotation": "清除绘制",
+  "timeline.duration": "时长",
+  "timeline.shots": "shot",
+  "timeline.gaps": "空缺",
+  "timeline.noGap": "完整",
+  "timeline.name": "剪辑",
+  "timeline.stage": "流程阶段",
+  "timeline.departmentShown": "显示的阶段",
+  "timeline.revisionLabel": "已冻结版次",
+  "timeline.panelNotApplicable": "对剪辑不适用。",
+  "timeline.navHint": "点击画面播放或暂停"
 }

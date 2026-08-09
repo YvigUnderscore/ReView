@@ -2040,5 +2040,15 @@
   "timeline.shareToShot": "Renvoyer sur la review du shot",
   "timeline.sharedToShot": "renvoyé sur la review",
   "timeline.shareDone": "Retour renvoyé sur {shot}",
-  "timeline.clearAnnotation": "Effacer le dessin"
+  "timeline.clearAnnotation": "Effacer le dessin",
+  "timeline.duration": "Durée",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Trous",
+  "timeline.noGap": "Complet",
+  "timeline.name": "Montage",
+  "timeline.stage": "Étape du pipe",
+  "timeline.departmentShown": "Étape montrée",
+  "timeline.revisionLabel": "Révision figée",
+  "timeline.panelNotApplicable": "Sans objet sur un montage.",
+  "timeline.navHint": "Cliquer l’image pour lire ou mettre en pause"
 }

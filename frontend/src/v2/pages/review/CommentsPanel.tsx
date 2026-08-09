@@ -1,7 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { ImagePlus, PencilLine, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
@@ -51,6 +59,7 @@ export default function CommentsPanel({
   onSubmit,
   annotating,
   onToggleAnnotate,
+  extraActions,
 }: {
   comments: ReviewComment[] | null;
   mediaObjectId: number;
@@ -77,7 +86,8 @@ export default function CommentsPanel({
   /** Mode annotation actif (bouton « Annoter » sous le champ, Phase 24). */
   annotating?: boolean;
   onToggleAnnotate?: () => void;
-  /** Barre d'outils d'annotation, affichée sous le composer quand le mode est actif. */
+  /** Entrées de clic droit propres à l'écran (montage : renvoyer sur la review du shot). */
+  extraActions?: (comment: ReviewComment) => ReactNode;
 }) {
   const t = useT();
   // Brouillon local (32.C) : le texte en cours survit à un rechargement/navigation.
@@ -179,6 +189,7 @@ export default function CommentsPanel({
             onSelect={onSelect}
             markers={markers}
             onMarkerSeek={onMarkerSeek}
+            extraActions={extraActions}
           />
         )}
       </div>

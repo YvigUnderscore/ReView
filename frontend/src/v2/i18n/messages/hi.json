@@ -2043,5 +2043,15 @@
   "timeline.shareToShot": "shot की review पर भेजें",
   "timeline.sharedToShot": "review पर भेजा गया",
   "timeline.shareDone": "{shot} पर प्रतिक्रिया भेजी गई",
-  "timeline.clearAnnotation": "चित्र मिटाएँ"
+  "timeline.clearAnnotation": "चित्र मिटाएँ",
+  "timeline.duration": "अवधि",
+  "timeline.shots": "shot",
+  "timeline.gaps": "रिक्तियाँ",
+  "timeline.noGap": "पूर्ण",
+  "timeline.name": "संपादन",
+  "timeline.stage": "पाइपलाइन चरण",
+  "timeline.departmentShown": "दिखाया गया चरण",
+  "timeline.revisionLabel": "स्थिर संशोधन",
+  "timeline.panelNotApplicable": "संपादन पर लागू नहीं।",
+  "timeline.navHint": "चलाने या रोकने के लिए छवि पर क्लिक करें"
 }

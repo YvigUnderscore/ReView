@@ -2049,5 +2049,15 @@
   "timeline.shareToShot": "Mandar sus la review del shot",
   "timeline.sharedToShot": "mandat sus la review",
   "timeline.shareDone": "Retorn mandat sus {shot}",
-  "timeline.clearAnnotation": "Escafar lo dessenh"
+  "timeline.clearAnnotation": "Escafar lo dessenh",
+  "timeline.duration": "Durada",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Traucs",
+  "timeline.noGap": "Complet",
+  "timeline.name": "Montatge",
+  "timeline.stage": "Etapa del pipe",
+  "timeline.departmentShown": "Etapa mostrada",
+  "timeline.revisionLabel": "Revision gelada",
+  "timeline.panelNotApplicable": "Sens objècte sus un montatge.",
+  "timeline.navHint": "Clicar l’imatge per legir o metre en pausa"
 }

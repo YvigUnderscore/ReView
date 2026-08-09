@@ -2049,5 +2049,15 @@
   "timeline.shareToShot": "Manda à a review di u shot",
   "timeline.sharedToShot": "mandatu à a review",
   "timeline.shareDone": "Ritornu mandatu à {shot}",
-  "timeline.clearAnnotation": "Squassà u disegnu"
+  "timeline.clearAnnotation": "Squassà u disegnu",
+  "timeline.duration": "Durata",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Bughji",
+  "timeline.noGap": "Cumpletu",
+  "timeline.name": "Muntagiu",
+  "timeline.stage": "Tappa di u pipeline",
+  "timeline.departmentShown": "Tappa mustrata",
+  "timeline.revisionLabel": "Rivisione ghjelata",
+  "timeline.panelNotApplicable": "Ùn s’applica micca à un muntagiu.",
+  "timeline.navHint": "Cliccà l’imagine per leghje o mette in pausa"
 }

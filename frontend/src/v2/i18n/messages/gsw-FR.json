@@ -2049,5 +2049,15 @@
   "timeline.shareToShot": "Uf d’review vum shot schicke",
   "timeline.sharedToShot": "uf d’review gschickt",
   "timeline.shareDone": "Rückmeldung uf {shot} gschickt",
-  "timeline.clearAnnotation": "D’Zeichnig lösche"
+  "timeline.clearAnnotation": "D’Zeichnig lösche",
+  "timeline.duration": "Duur",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Lucke",
+  "timeline.noGap": "Komplett",
+  "timeline.name": "Schnitt",
+  "timeline.stage": "Pipeline-Schritt",
+  "timeline.departmentShown": "Gezeigte Schritt",
+  "timeline.revisionLabel": "Iigfrorni Revision",
+  "timeline.panelNotApplicable": "Fir e Schnitt nit relevant.",
+  "timeline.navHint": "Uf s Bild klicke zum abspiele oder pausiere"
 }

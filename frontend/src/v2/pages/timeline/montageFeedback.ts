@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TimelineClip } from '../../types/api';
+import type { ReviewComment, TimelineClip } from '../../types/api';
 
 /**
  * Retours posés sur un montage — analyse PURE, testée (Phase 46).
@@ -12,20 +12,21 @@ import type { TimelineClip } from '../../types/api';
  * Ce fichier tient la correspondance entre les deux.
  */
 
-export interface MontageComment {
-  id: number;
-  mediaObjectId: number | null;
-  content: string;
-  timestamp: number | null;
+/**
+ * Un retour de montage EST un commentaire de review : le fil, le clic droit et les
+ * réponses sont les mêmes composants qu'ailleurs. Seules s'ajoutent sa position dans le
+ * film et la trace de son renvoi.
+ */
+export interface MontageComment extends ReviewComment {
   timelineTime: number | null;
   sharedToShot: boolean;
-  annotation?: unknown;
-  createdAt: string;
-  author?: { name?: string | null } | null;
 }
 
 /** Le plan sur lequel tombe un retour, en clair : « SQ020 · SH010 ». */
-export function shotLabelOf(clips: readonly TimelineClip[], mediaObjectId: number | null): string {
+export function shotLabelOf(
+  clips: readonly TimelineClip[],
+  mediaObjectId: number | null | undefined,
+): string {
   const clip = clips.find((c) => c.mediaId !== null && c.mediaId === mediaObjectId);
   if (!clip) return '—';
   return clip.sequenceCode ? `${clip.sequenceCode} · ${clip.shotCode}` : clip.shotCode;

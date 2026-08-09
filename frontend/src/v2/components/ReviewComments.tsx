@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Link2, ListTodo } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ export default function ReviewComments({
   onSelect,
   markers,
   onMarkerSeek,
+  extraActions,
 }: {
   comments: ReviewComment[];
   mediaObjectId: number;
@@ -43,6 +44,12 @@ export default function ReviewComments({
   markers?: TimelineMarker[];
   /** Clic sur un séparateur : seek à la frame du marqueur. */
   onMarkerSeek?: (m: TimelineMarker) => void;
+  /**
+   * Entrées de menu propres à l'écran, posées en tête du clic droit — le montage y ajoute
+   * « renvoyer sur la review du shot ». Les actions communes restent en dessous, à leur
+   * place habituelle : un même geste ne doit pas ouvrir un menu différent selon la page.
+   */
+  extraActions?: (comment: ReviewComment) => ReactNode;
 }) {
   const t = useT();
   const navigate = useNavigate();
@@ -84,6 +91,7 @@ export default function ReviewComments({
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
+        {extraActions?.(c)}
         <ContextMenuItem onSelect={() => copyLink(c)}>
           <Link2 size={14} /> {t('comments.copyLink')}
         </ContextMenuItem>

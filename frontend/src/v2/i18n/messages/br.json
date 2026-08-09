@@ -2038,5 +2038,15 @@
   "timeline.shareToShot": "Kas d’ar review eus ar shot",
   "timeline.sharedToShot": "kaset d’ar review",
   "timeline.shareDone": "Evezhiadenn kaset da {shot}",
-  "timeline.clearAnnotation": "Diverkañ an dresadenn"
+  "timeline.clearAnnotation": "Diverkañ an dresadenn",
+  "timeline.duration": "Padelezh",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Toulloù",
+  "timeline.noGap": "Klok",
+  "timeline.name": "Kempenn",
+  "timeline.stage": "Pazenn ar chadenn",
+  "timeline.departmentShown": "Pazenn diskouezet",
+  "timeline.revisionLabel": "Adweladenn skornet",
+  "timeline.panelNotApplicable": "N’en deus ket a dalvoudegezh evit ur c’hempenn.",
+  "timeline.navHint": "Klikañ war ar skeudenn evit lenn pe ehanañ"
 }

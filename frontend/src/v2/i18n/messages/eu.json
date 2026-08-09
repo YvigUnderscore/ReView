@@ -2052,5 +2052,15 @@
   "timeline.shareToShot": "Bidali shot-aren review-ra",
   "timeline.sharedToShot": "review-ra bidalia",
   "timeline.shareDone": "Iruzkina {shot}-(e)ra bidali da",
-  "timeline.clearAnnotation": "Garbitu marrazkia"
+  "timeline.clearAnnotation": "Garbitu marrazkia",
+  "timeline.duration": "Iraupena",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Hutsuneak",
+  "timeline.noGap": "Osoa",
+  "timeline.name": "Muntaketa",
+  "timeline.stage": "Pipeline-etapa",
+  "timeline.departmentShown": "Erakutsitako etapa",
+  "timeline.revisionLabel": "Izoztutako berrikuspena",
+  "timeline.panelNotApplicable": "Ez dagokio muntaketa bati.",
+  "timeline.navHint": "Egin klik irudian erreproduzitzeko edo pausatzeko"
 }

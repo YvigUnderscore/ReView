@@ -32,9 +32,11 @@ than silently trimmed.
 
 ## Watching a cut
 
-*Lire* opens the cut on **its own page** (`/timelines/<id>/play`), and that page
-holds nothing else: the image, **one single timeline** carrying the whole film,
-and the feedback panel.
+*Lire* opens the cut on **its own page** (`/timelines/<id>/play`). That page is
+the video review page — same header, tool rail, options bar, inspector dock,
+transport and comments space — with one difference: the timeline is the **whole
+film**, on a single scale from zero to the end. Nothing else about the screen
+changes, so it reads without relearning.
 
 Playback has **no cut in it**. Two video players take turns: while one plays, the
 next clip is already loading in the other, and the changeover is a swap of
@@ -49,6 +51,11 @@ navigates, so nothing interrupts the screening.
   film out of sync.
 - Frame stepping, timecode and frame number are those of the **film**, at the
   project framerate. Stepping across a cut is a step like any other.
+- Each shot is served exactly as the review serves it — adaptive HLS through the
+  authenticated proxy when renditions exist, the web MP4 otherwise. A shot that
+  plays in its own review plays here too.
+- The film strip drawer, under the transport, shows the clips as thumbnails;
+  clicking one jumps there.
 
 ## Reviewing the cut itself
 

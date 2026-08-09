@@ -32,6 +32,12 @@ const clips = [
 
 const comment = (over: Partial<MontageComment> & { id: number }): MontageComment => ({
   mediaObjectId: 100,
+  author: null,
+  guestName: null,
+  cameraState: null,
+  annotation: null,
+  isEdited: false,
+  isResolved: false,
   content: 'à revoir',
   timestamp: 1,
   timelineTime: 1,

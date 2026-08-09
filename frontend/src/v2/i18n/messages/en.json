@@ -2037,5 +2037,15 @@
   "timeline.shareToShot": "Send to the shot review",
   "timeline.sharedToShot": "sent to the review",
   "timeline.shareDone": "Feedback sent to {shot}",
-  "timeline.clearAnnotation": "Clear the drawing"
+  "timeline.clearAnnotation": "Clear the drawing",
+  "timeline.duration": "Duration",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Gaps",
+  "timeline.noGap": "Complete",
+  "timeline.name": "Cut",
+  "timeline.stage": "Pipeline stage",
+  "timeline.departmentShown": "Stage shown",
+  "timeline.revisionLabel": "Frozen revision",
+  "timeline.panelNotApplicable": "Not applicable to a cut.",
+  "timeline.navHint": "Click the image to play or pause"
 }

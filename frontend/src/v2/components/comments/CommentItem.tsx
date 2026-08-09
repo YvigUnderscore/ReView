@@ -288,7 +288,7 @@ export default function CommentItem({
         {replying && (
           <div onClick={stop}>
             <ReplyComposer
-              mediaObjectId={mediaObjectId}
+              mediaObjectId={c.mediaObjectId ?? mediaObjectId}
               parentId={c.id}
               onSent={() => {
                 setReplying(false);

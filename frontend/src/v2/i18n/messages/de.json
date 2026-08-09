@@ -2049,5 +2049,15 @@
   "timeline.shareToShot": "An die review des shot senden",
   "timeline.sharedToShot": "an die review gesendet",
   "timeline.shareDone": "Rückmeldung an {shot} gesendet",
-  "timeline.clearAnnotation": "Zeichnung löschen"
+  "timeline.clearAnnotation": "Zeichnung löschen",
+  "timeline.duration": "Dauer",
+  "timeline.shots": "Shots",
+  "timeline.gaps": "Lücken",
+  "timeline.noGap": "Vollständig",
+  "timeline.name": "Schnitt",
+  "timeline.stage": "Pipeline-Schritt",
+  "timeline.departmentShown": "Gezeigter Schritt",
+  "timeline.revisionLabel": "Eingefrorene Revision",
+  "timeline.panelNotApplicable": "Für einen Schnitt nicht anwendbar.",
+  "timeline.navHint": "Bild anklicken, um abzuspielen oder zu pausieren"
 }

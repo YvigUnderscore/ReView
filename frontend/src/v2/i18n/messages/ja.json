@@ -1991,5 +1991,15 @@
   "timeline.shareToShot": "shot の review に送る",
   "timeline.sharedToShot": "review に送信済み",
   "timeline.shareDone": "{shot} にフィードバックを送信しました",
-  "timeline.clearAnnotation": "描画を消去"
+  "timeline.clearAnnotation": "描画を消去",
+  "timeline.duration": "長さ",
+  "timeline.shots": "shot",
+  "timeline.gaps": "抜け",
+  "timeline.noGap": "欠けなし",
+  "timeline.name": "編集",
+  "timeline.stage": "パイプラインの工程",
+  "timeline.departmentShown": "表示する工程",
+  "timeline.revisionLabel": "確定したリビジョン",
+  "timeline.panelNotApplicable": "編集には該当しません。",
+  "timeline.navHint": "画像をクリックで再生／一時停止"
 }

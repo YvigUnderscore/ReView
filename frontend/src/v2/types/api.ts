@@ -273,6 +273,8 @@ export interface ReviewReaction {
 }
 export interface ReviewComment {
   id: number;
+  /** Média porteur — une réponse vise celui du parent, pas celui affiché à l'écran. */
+  mediaObjectId?: number | null;
   content: string;
   timestamp: number | null;
   createdAt: string;

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { api } from '../../../lib/apiClient';
+import Hls from 'hls.js';
+import { api, getToken } from '../../../lib/apiClient';
 import { clipIndexAt, globalTimeOf, localTimeAt, nextPlayableIndex } from './timelinePlayback';
 import type { TimelineClip } from '../../types/api';
 
@@ -19,18 +20,63 @@ import type { TimelineClip } from '../../types/api';
  * ils font partie du montage et ne doivent pas être escamotés.
  */
 
-/** Un tampon de lecture : l'élément vidéo et le plan qu'il tient prêt. */
+/** Un tampon de lecture : l'élément vidéo, le plan qu'il tient prêt, et son flux HLS. */
 interface Buffer {
   clipIndex: number | null;
   url: string | null;
+  hls: Hls | null;
 }
 
-const EMPTY: Buffer = { clipIndex: null, url: null };
+const EMPTY: Buffer = { clipIndex: null, url: null, hls: null };
 
-/** URL de lecture d'un média : le proxy web de préférence, la source à défaut. */
-async function playbackUrl(mediaId: number): Promise<string | null> {
-  const data = await api.get<{ url: string; proxyUrl: string | null }>(`/api/media/${mediaId}`);
-  return data.proxyUrl ?? data.url ?? null;
+/**
+ * Source d'un plan — la même que celle de la review : le master HLS servi par le proxy
+ * authentifié quand des renditions existent, le MP4 web sinon.
+ *
+ * Aligner les deux n'est pas cosmétique : le montage doit lire ce que la review lit, faute
+ * de quoi un plan visible en review resterait noir dans le film sans qu'on sache pourquoi.
+ */
+async function playbackSource(
+  mediaId: number,
+): Promise<{ url: string; hls: boolean; file: string | null } | null> {
+  const data = await api.get<{ url: string; proxyUrl: string | null; hls?: unknown }>(
+    `/api/media/${mediaId}`,
+  );
+  const file = data.proxyUrl ?? data.url ?? null;
+  if (data.hls && Hls.isSupported()) return { url: `/api/media/${mediaId}/hls/master.m3u8`, hls: true, file };
+  return file ? { url: file, hls: false, file } : null;
+}
+
+/**
+ * Attache un flux HLS à un tampon — jeton injecté comme dans le lecteur de review.
+ *
+ * `onFatal` est le filet : un montage dont un plan refuse de se charger doit retomber sur
+ * le MP4 plutôt que d'afficher un rectangle noir sans explication.
+ */
+function attachHls(el: HTMLVideoElement, url: string, onFatal: () => void): Hls {
+  const hls = new Hls({
+    xhrSetup: (xhr) => {
+      const token = getToken();
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    },
+  });
+  hls.attachMedia(el);
+  hls.loadSource(url);
+  // Pas d'ABR, comme en review : la lecture est verrouillée sur la meilleure rendition.
+  hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    let best = 0;
+    hls.levels.forEach((l, i) => {
+      if (l.height > hls.levels[best]!.height) best = i;
+    });
+    hls.currentLevel = best;
+  });
+  hls.on(Hls.Events.ERROR, (_e, data) => {
+    if (!data.fatal) return;
+    console.warn('[montage] flux HLS en échec, repli sur le MP4', data.type, data.details);
+    hls.destroy();
+    onFatal();
+  });
+  return hls;
 }
 
 export interface ContinuousPlayback {
@@ -95,19 +141,44 @@ export function useContinuousPlayback(
       // Un carton n'a pas de source à résoudre, mais la préparation d'un tampon reste
       // asynchrone dans tous les cas : sans cela, l'amorçage déclencherait un rendu en
       // cascade depuis son effet.
-      const url = await (target?.mediaId != null ? playbackUrl(target.mediaId) : Promise.resolve(null));
-      buffers.current = { ...buffers.current, [slot]: { clipIndex, url } };
+      const source = await (target?.mediaId != null ? playbackSource(target.mediaId) : Promise.resolve(null));
       const el = elementOf(slot);
-      if (el && url) {
+      // Le flux précédent de ce tampon est détruit avant d'en attacher un autre : deux
+      // instances sur le même élément se disputeraient sa source.
+      buffers.current[slot].hls?.destroy();
+      let hls: Hls | null = null;
+      /** Lecture directe du MP4 — voie de repli, et voie normale sans renditions. */
+      const playFile = (url: string) => {
+        if (!el) return;
         el.src = url;
-        el.currentTime = startAt;
         // `auto` : on veut la vidéo entière en tampon, pas seulement ses métadonnées —
         // c'est ce préchargement qui rend la bascule invisible.
         el.preload = 'auto';
         el.load();
+        el.currentTime = startAt;
+      };
+      if (el && source) {
+        if (source.hls)
+          hls = attachHls(el, source.url, () => {
+            if (source.file) playFile(source.file);
+          });
+        else playFile(source.url);
+        if (source.hls) el.currentTime = startAt;
       }
+      buffers.current = { ...buffers.current, [slot]: { clipIndex, url: source?.url ?? null, hls } };
     },
     [items, elementOf],
+  );
+
+  // Un montage quitté ne doit pas laisser deux flux HLS ouverts derrière lui.
+  useEffect(
+    () => () => {
+      // Lus au démontage : `load` remplace l'objet des tampons, une capture à l'attachement
+      // ne détruirait que des flux déjà oubliés.
+      buffers.current.A.hls?.destroy();
+      buffers.current.B.hls?.destroy();
+    },
+    [],
   );
 
   /** Prépare le plan lisible suivant dans le tampon inactif. */
