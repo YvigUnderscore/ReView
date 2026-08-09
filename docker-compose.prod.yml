@@ -57,6 +57,9 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis en production}
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT requis en production}
+      # Exigée comme pour le backend : le worker partage le même schéma d'environnement,
+      # qui rejette '*' en production (il refuserait de démarrer).
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN requis en production (URL exacte du frontend, pas *)}
 
   frontend:
     ports: !reset []

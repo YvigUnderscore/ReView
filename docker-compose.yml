@@ -109,6 +109,11 @@ services:
       S3_BUCKET: ${S3_BUCKET:-review}
       S3_FORCE_PATH_STYLE: "true"
       REDIS_URL: redis://redis:6379
+      # Le worker ne sert aucune requête HTTP, mais il partage le schéma d'environnement
+      # du backend — lequel refuse CORS_ORIGIN='*' en production (config/env.ts). Sans
+      # cette ligne, le worker retombe sur le défaut '*' et refuse de démarrer : il faut
+      # donc lui passer la même valeur qu'au backend.
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
       TZ: Europe/Paris
       # 37.D : h264_nvenc si un GPU NVIDIA est exposé au conteneur (repli libx264 sinon).
       VIDEO_ENCODER: ${VIDEO_ENCODER:-libx264}
