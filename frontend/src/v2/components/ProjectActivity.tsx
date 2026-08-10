@@ -97,7 +97,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
               .map((b) => (
                 <div
                   key={b.status}
-                  title={`${STATUS_LABEL[b.status]} : ${b.count}`}
+                  title={`${tr(STATUS_LABEL[b.status]!)} : ${b.count}`}
                   className={`${STATUS_BAR[b.status] ?? 'bg-muted-foreground/40'} transition-all`}
                   style={{ width: `${(b.count / total) * 100}%` }}
                 />
@@ -111,7 +111,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                   <span
                     className={`h-2 w-2 rounded-full ${STATUS_BAR[b.status] ?? 'bg-muted-foreground/40'}`}
                   />
-                  {STATUS_LABEL[b.status]} · {b.count}
+                  {tr(STATUS_LABEL[b.status]!)} · {b.count}
                 </span>
               ))}
           </div>
@@ -185,7 +185,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                       >
                         {STATUS.map((s) => (
                           <option key={s} value={s}>
-                            {STATUS_LABEL[s]}
+                            {tr(STATUS_LABEL[s]!)}
                           </option>
                         ))}
                       </select>
@@ -205,7 +205,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                   ) : (
                     <>
                       <span className={`rounded px-1.5 py-0.5 text-[11px] ${STATUS_COLOR[t.status] ?? ''}`}>
-                        {STATUS_LABEL[t.status] ?? t.status}
+                        {STATUS_LABEL[t.status] ? tr(STATUS_LABEL[t.status]!) : t.status}
                       </span>
                       {t.assignee && (
                         <span className="text-[11px] text-muted-foreground">{t.assignee.name}</span>
