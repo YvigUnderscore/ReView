@@ -5,7 +5,7 @@ import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
-import { mailLayout, MAIL_ACCENT } from '../lib/mailTemplate';
+import { mailLayout, MAIL_ACCENT, MAIL_BORDER, MAIL_MUTED } from '../lib/mailTemplate';
 import { resolveUserLocale } from '../lib/settings';
 import { formatTag, t, type Locale } from '../i18n';
 import { displayName } from '../lib/userView';
@@ -98,14 +98,14 @@ export function renderWeeklyReportHtml(
       const link = env.APP_URL
         ? `<a href="${env.APP_URL}/projects/${p.projectId}" style="color:${MAIL_ACCENT};text-decoration:none">${esc(p.projectName)}</a>`
         : esc(p.projectName);
-      return `<tr style="border-top:1px solid #1f2937">
+      return `<tr style="border-top:1px solid ${MAIL_BORDER}">
 <td style="padding:6px 10px">${link}</td>
 ${cell(p.publishedVersions)}${cell(p.approved)}${cell(p.retakes, true)}${cell(p.openNotes, true)}
 </tr>`;
     })
     .join('');
   const table = `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0">
-<thead><tr style="color:#9ca3af;text-align:right">
+<thead><tr style="color:${MAIL_MUTED};text-align:right">
 <th style="padding:6px 10px;text-align:left">${t(locale, 'weekly.column.project')}</th>
 <th style="padding:6px 10px">${t(locale, 'weekly.column.published')}</th>
 <th style="padding:6px 10px">${t(locale, 'weekly.column.approvals')}</th>
@@ -119,7 +119,7 @@ ${cell(p.publishedVersions)}${cell(p.approved)}${cell(p.retakes, true)}${cell(p.
   });
   const content = `<p>${esc(greeting)}</p>
 ${projects.length ? table : `<p>${t(locale, 'weekly.empty')}</p>`}
-<p style="color:#6b7280;font-size:12px">${t(locale, 'weekly.optOut')}</p>`;
+<p style="color:${MAIL_MUTED};font-size:12px">${t(locale, 'weekly.optOut')}</p>`;
   return mailLayout(locale, t(locale, 'weekly.title'), content);
 }
 

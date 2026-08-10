@@ -3,10 +3,12 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { KeyRound, Mail } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
+import { SegmentedControl } from '../../components/ui/segmented-control';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ROLES } from './adminShared';
 import type { Role, User } from '../../types/api';
@@ -26,6 +28,12 @@ export default function UserModal({
 }) {
   const t = useT();
   const isEdit = !!user;
+  /**
+   * À la création, deux façons d'ouvrir un compte : envoyer une invitation (la personne
+   * choisit son mot de passe depuis le lien reçu) ou en poser un soi-même. L'invitation est
+   * le défaut — un mot de passe transmis de la main à la main n'est jamais changé ensuite.
+   */
+  const [invite, setInvite] = useState(true);
   const [form, setForm] = useState({
     email: user?.email ?? '',
     password: '',
@@ -50,15 +58,17 @@ export default function UserModal({
         username: form.username || null,
         role: form.role,
       };
-      if (form.password) body.password = form.password;
+      // En mode invitation, aucun mot de passe ne part au serveur : c'est son absence qui
+      // déclenche l'envoi du lien.
+      if (form.password && (isEdit || !invite)) body.password = form.password;
       if (form.storageLimitGo) body.storageLimit = Math.round(Number(form.storageLimitGo) * 1e9);
       if (isEdit) {
         await api.patch(`/api/users/${user!.id}`, body);
         toast.success(t('userModal.updated'));
       } else {
-        if (!form.password) throw new Error('Mot de passe requis');
+        if (!invite && !form.password) throw new Error(t('userModal.passwordRequired'));
         await api.post('/api/users', body);
-        toast.success(t('userModal.created'));
+        toast.success(invite ? t('userModal.invited') : t('userModal.created'));
       }
       onSaved();
     } catch (err) {
@@ -103,13 +113,39 @@ export default function UserModal({
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             required
           />
-          <Input
-            type="password"
-            placeholder={isEdit ? t('user.newPassword') : t('user.passwordRule')}
-            value={form.password}
-            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-            required={!isEdit}
-          />
+          {!isEdit && (
+            <div className="space-y-2 rounded-md border border-border p-3">
+              <SegmentedControl
+                label={t('userModal.accessLabel')}
+                value={invite ? 'invite' : 'password'}
+                onChange={(v) => setInvite(v === 'invite')}
+                items={[
+                  { value: 'invite', label: t('userModal.byInvitation'), icon: Mail },
+                  { value: 'password', label: t('userModal.byPassword'), icon: KeyRound },
+                ]}
+                className="w-full"
+              />
+              {invite ? (
+                <p className="text-xs text-muted-foreground">{t('userModal.inviteHint')}</p>
+              ) : (
+                <Input
+                  type="password"
+                  placeholder={t('user.passwordRule')}
+                  value={form.password}
+                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                  required
+                />
+              )}
+            </div>
+          )}
+          {isEdit && (
+            <Input
+              type="password"
+              placeholder={t('user.newPassword')}
+              value={form.password}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            />
+          )}
           <div className="grid grid-cols-2 gap-2">
             <Select
               className="w-full"

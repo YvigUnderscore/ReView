@@ -5,7 +5,7 @@ import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
-import { mailLayout, MAIL_ACCENT } from '../lib/mailTemplate';
+import { mailLayout, MAIL_ACCENT, MAIL_BORDER, MAIL_MUTED } from '../lib/mailTemplate';
 import { displayName } from '../lib/userView';
 import { resolveUserLocale } from '../lib/settings';
 import { formatTag, t, type Locale } from '../i18n';
@@ -149,20 +149,20 @@ export function renderDigestHtml(
         items.length
           ? `<p style="margin:8px 0 2px;font-weight:600">${label} (${items.length})</p><ul style="margin:2px 0 10px;padding-left:18px">${items.map((i) => `<li>${i}</li>`).join('')}</ul>`
           : '';
-      return `<div style="margin:18px 0;padding:14px;border:1px solid #e5e5e5;border-radius:8px">
-<h2 style="margin:0 0 6px;font-size:16px">${title}</h2>
+      return `<div style="margin:18px 0;padding:14px;border:1px solid ${MAIL_BORDER};border-radius:8px">
+<h2 style="margin:0 0 6px;font-size:16px;font-weight:600">${title}</h2>
 ${list(
   t(locale, 'digest.versions'),
   d.versions.map(
     (v) =>
-      `${esc(v.label)} <span style="color:#888">${esc(t(locale, 'digest.by', { name: v.author }))}</span>`,
+      `${esc(v.label)} <span style="color:${MAIL_MUTED}">${esc(t(locale, 'digest.by', { name: v.author }))}</span>`,
   ),
 )}
 ${list(
   t(locale, 'digest.media'),
   d.media.map(
     (m) =>
-      `${esc(m.label)} <span style="color:#888">${esc(t(locale, 'digest.by', { name: m.uploader }))}</span>`,
+      `${esc(m.label)} <span style="color:${MAIL_MUTED}">${esc(t(locale, 'digest.by', { name: m.uploader }))}</span>`,
   ),
 )}
 ${list(
@@ -177,7 +177,7 @@ ${list(
     .join('');
   const content = `<p>${esc(t(locale, 'digest.greeting', { name: userName }))}</p>
 ${blocks}
-<p style="color:#6b7280;font-size:12px">${t(locale, 'digest.optOut')}</p>`;
+<p style="color:${MAIL_MUTED};font-size:12px">${t(locale, 'digest.optOut')}</p>`;
   return mailLayout(locale, t(locale, 'digest.title', { day }), content);
 }
 

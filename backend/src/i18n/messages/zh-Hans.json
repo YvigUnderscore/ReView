@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — SMTP 测试",
   "smtp.test.title": "SMTP 测试",
-  "smtp.test.body": "这是一封从 ReView 发送的测试邮件。如果你收到了它，说明 SMTP 配置正常。"
+  "smtp.test.body": "这是一封从 ReView 发送的测试邮件。如果你收到了它，说明 SMTP 配置正常。",
+  "invite.subject": "您已受邀加入 ReView",
+  "invite.title": "欢迎使用 ReView",
+  "invite.greeting": "{name}，您好：",
+  "invite.intro": "我们已为您创建 ReView 账号。请设置密码以激活账号。",
+  "invite.introBy": "{inviter} 已为您创建 ReView 账号。请设置密码以激活账号。",
+  "invite.cta": "激活我的账号",
+  "invite.expiry": "此链接将在 {days} 天后失效。",
+  "invite.fallback": "如果按钮无法使用，请将以下链接粘贴到浏览器中：",
+  "invite.ignore": "如果您并未预期收到此邀请，可以忽略本邮件。"
 }

@@ -11,6 +11,7 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as UserService from '../services/UserService';
+import * as InvitationService from '../services/InvitationService';
 import { revokeAllSessions } from '../lib/sessions';
 import { logAudit } from '../services/AuditService';
 
@@ -130,14 +131,16 @@ router.put(
 
 // ── Administration des comptes ───────────────────────────────────────────────
 
-// POST /api/users — création par un admin (avec rôle)
+// POST /api/users — création par un admin (avec rôle).
+// Sans `password`, le compte part en invitation : la personne reçoit un lien par email et
+// choisit elle-même son mot de passe. Fournir les deux n'a pas de sens — on tranche.
 router.post(
   '/',
   requireRole(Role.ADMIN),
   validate({
     body: z.object({
       email: z.string().email().max(254),
-      password: passwordSchema,
+      password: passwordSchema.optional(),
       name: z.string().max(120).optional(),
       firstName: z.string().max(80).optional(),
       lastName: z.string().max(80).optional(),
@@ -149,6 +152,14 @@ router.post(
     res.status(201).json({ user: await UserService.createUser(req.user!.id, req.body) });
   },
 );
+
+// POST /api/users/:id/invite — (re)envoie l'invitation d'un compte (admin)
+router.post('/:id/invite', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  await InvitationService.sendInvitation(id, req.user!.id);
+  logAudit({ userId: req.user!.id, action: 'USER_INVITE', entityType: 'User', entityId: id });
+  res.json({ sent: true });
+});
 
 // PATCH /api/users/:id/role — changement de rôle (admin)
 router.patch(

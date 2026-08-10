@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — SMTP proba",
   "smtp.test.title": "SMTP proba",
-  "smtp.test.body": "Hau ReViewetik bidalitako proba-mezu bat da. Jaso baduzu, SMTP konfigurazioak ondo funtzionatzen du."
+  "smtp.test.body": "Hau ReViewetik bidalitako proba-mezu bat da. Jaso baduzu, SMTP konfigurazioak ondo funtzionatzen du.",
+  "invite.subject": "ReView-era gonbidatu zaituzte",
+  "invite.title": "Ongi etorri ReView-era",
+  "invite.greeting": "Kaixo {name}:",
+  "invite.intro": "ReView-en kontu bat sortu dizute. Aukeratu zure pasahitza aktibatzeko.",
+  "invite.introBy": "{inviter} erabiltzaileak kontu bat sortu dizu ReView-en. Aukeratu zure pasahitza aktibatzeko.",
+  "invite.cta": "Aktibatu nire kontua",
+  "invite.expiry": "Esteka honek {days} egun barru iraungiko du.",
+  "invite.fallback": "Botoiak funtzionatzen ez badu, itsatsi esteka hau zure nabigatzailean:",
+  "invite.ignore": "Gonbidapen hau espero ez bazenuen, mezu hau alde batera utz dezakezu."
 }

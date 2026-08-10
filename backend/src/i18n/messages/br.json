@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — prouad SMTP",
   "smtp.test.title": "Prouad SMTP",
-  "smtp.test.body": "Ur postel prouad kaset eus ReView eo hemañ. Mard hoc'h eus e resevet, ez a en-dro ar c'hefluniañ SMTP."
+  "smtp.test.body": "Ur postel prouad kaset eus ReView eo hemañ. Mard hoc'h eus e resevet, ez a en-dro ar c'hefluniañ SMTP.",
+  "invite.subject": "Pedet oc'h da ReView",
+  "invite.title": "Degemer mat war ReView",
+  "invite.greeting": "Demat {name},",
+  "invite.intro": "Ur gont zo bet krouet evidoc'h war ReView. Dibabit ho ker-tremen evit he gweredekaat.",
+  "invite.introBy": "{inviter} en deus krouet ur gont evidoc'h war ReView. Dibabit ho ker-tremen evit he gweredekaat.",
+  "invite.cta": "Gweredekaat ma c'hont",
+  "invite.expiry": "Ar liamm-mañ a vo dispredet a-benn {days} devezh.",
+  "invite.fallback": "Ma ne da ket an nozelenn en-dro, pegit al liamm-mañ e-barzh ho merdeer :",
+  "invite.ignore": "Ma ne c'hortozec'h ket ar bedadenn-mañ, e c'hallit tremen hebiou ar postel-mañ."
 }
