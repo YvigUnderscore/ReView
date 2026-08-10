@@ -9,6 +9,8 @@ import { badRequest, forbidden, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute } from '../lib/projectRoles';
+import { taskSelect, toTask } from '../lib/v1Resources';
+import * as ApiEventService from './ApiEventService';
 
 /**
  * Logique métier des tâches (liste, création XOR Shot/Asset, mise à jour avec droits
@@ -212,6 +214,53 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   await notifyAssignee(body.assigneeId, user.id, projectId, id, updated.name);
   emitTaskUpdate(projectId, updated);
   return updated;
+}
+
+export interface ApiPatchInput {
+  status?: TaskStatus;
+  assigneeId?: number | null;
+  dueDate?: Date | null;
+}
+
+/**
+ * Mise à jour d'une tâche par l'API v1 : statut, assignation, échéance — le minimum
+ * qu'un pipeline pilote depuis un DCC.
+ *
+ * Les droits sont assertés par la route (projet ouvert, contributeur) ; ce qui se joue ici
+ * est le flux d'événements. Le changement de statut se distingue d'une mise à jour
+ * quelconque : c'est lui que suivent les tableaux de production, et sans événement dédié
+ * chaque client devrait comparer les états lui-même pour le retrouver.
+ */
+export async function applyApiPatch(actorId: number, projectId: number, id: number, body: ApiPatchInput) {
+  const before = await prisma.task.findUnique({ where: { id }, select: { status: true } });
+  const task = await prisma.task.update({
+    where: { id },
+    data: {
+      ...(body.status !== undefined ? { status: body.status } : {}),
+      ...(body.assigneeId !== undefined ? { assigneeId: body.assigneeId } : {}),
+      ...(body.dueDate !== undefined ? { dueDate: body.dueDate } : {}),
+    },
+    select: taskSelect,
+  });
+
+  const view = toTask(task);
+  const event = (type: Parameters<typeof ApiEventService.publish>[0], payload: Record<string, unknown>) =>
+    ApiEventService.publish(type, {
+      projectId,
+      entityType: 'task',
+      entityId: id,
+      actorId,
+      payload,
+    });
+
+  if (body.status !== undefined && before && before.status !== body.status) {
+    event('task.status_changed', { task: view, from: before.status, to: body.status });
+  }
+  if (body.assigneeId !== undefined) {
+    event('task.assigned', { task: view, assigneeId: body.assigneeId });
+  }
+  event('task.updated', { task: view });
+  return view;
 }
 
 export async function remove(user: SessionUser, projectId: number, id: number) {

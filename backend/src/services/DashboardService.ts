@@ -78,10 +78,7 @@ export async function getDashboard(user: SessionUser) {
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
   // Tâche vivante rattachée à un projet accessible (les deux chemins de rattachement).
   const taskInAccess: Prisma.TaskWhereInput = {
-    OR: [
-      { shot: { deletedAt: null, project: access } },
-      { asset: { deletedAt: null, project: access } },
-    ],
+    OR: [{ shot: { deletedAt: null, project: access } }, { asset: { deletedAt: null, project: access } }],
   };
 
   const [

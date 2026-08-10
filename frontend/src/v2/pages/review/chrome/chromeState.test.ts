@@ -169,7 +169,13 @@ describe('préférences', () => {
   });
 
   it('relit des préférences valides', () => {
-    const raw = JSON.stringify({ panel: 'scene', labels: true, comments: false, drawerOpen: true, drawerH: 240 });
+    const raw = JSON.stringify({
+      panel: 'scene',
+      labels: true,
+      comments: false,
+      drawerOpen: true,
+      drawerH: 240,
+    });
     expect(readChromePrefs('SPLAT', raw)).toEqual({
       panel: 'scene',
       labels: true,

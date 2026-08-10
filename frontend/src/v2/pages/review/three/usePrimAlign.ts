@@ -4,8 +4,20 @@
 import { useCallback } from 'react';
 import type * as THREE from 'three';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
-import { clonesOf, IDENTITY_TRANSFORM, parseClonePath, type PrimTransform, type SceneOverride } from './sceneOverride';
-import { alignOffsets, distributeOffsets, type AlignAxis, type AlignItem, type AlignMode } from './alignPrims';
+import {
+  clonesOf,
+  IDENTITY_TRANSFORM,
+  parseClonePath,
+  type PrimTransform,
+  type SceneOverride,
+} from './sceneOverride';
+import {
+  alignOffsets,
+  distributeOffsets,
+  type AlignAxis,
+  type AlignItem,
+  type AlignMode,
+} from './alignPrims';
 
 /**
  * Alignement / répartition de la sélection de prims (C2) : boîtes englobantes monde → offsets
@@ -30,9 +42,7 @@ export function usePrimAlign(opts: {
     (path: string): PrimTransform => {
       const clone = parseClonePath(path);
       if (clone)
-        return (
-          clonesOf(override, clone.path).find((c) => c.id === clone.id)?.transform ?? IDENTITY_TRANSFORM
-        );
+        return clonesOf(override, clone.path).find((c) => c.id === clone.id)?.transform ?? IDENTITY_TRANSFORM;
       return override.prims[path]?.transform ?? IDENTITY_TRANSFORM;
     },
     [override],

@@ -18,11 +18,7 @@ export interface AlignItem {
 }
 
 const value = (item: AlignItem, axis: AlignAxis, mode: AlignMode): number =>
-  mode === 'min'
-    ? item.min[axis]
-    : mode === 'max'
-      ? item.max[axis]
-      : (item.min[axis] + item.max[axis]) / 2;
+  mode === 'min' ? item.min[axis] : mode === 'max' ? item.max[axis] : (item.min[axis] + item.max[axis]) / 2;
 
 /**
  * Offsets alignant tous les prims sur la même valeur d'axe : le min des mins, le max des maxes,

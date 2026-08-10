@@ -83,8 +83,8 @@ export function rulerTicks(view: TimeView, fps: number): RulerTicks {
   const frameMs = 1000 / safeFps;
   const stepMs =
     [1, 2, 5, 10].map((n) => n * frameMs).find((s) => s * pxPerMs >= 70) ??
-    ([1, 2, 5, 10, 30, 60, 120, 300, 600].map((n) => n * 1000).find((s) => s * pxPerMs >= 70) ??
-      600_000);
+    [1, 2, 5, 10, 30, 60, 120, 300, 600].map((n) => n * 1000).find((s) => s * pxPerMs >= 70) ??
+    600_000;
   const minorStep = frameMs * pxPerMs >= 6 ? frameMs : stepMs / 5 >= 6 / pxPerMs ? stepMs / 5 : 0;
 
   const major: RulerTicks['major'] = [];

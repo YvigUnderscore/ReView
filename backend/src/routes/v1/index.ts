@@ -5,7 +5,10 @@ import { Router, type Router as ExpressRouter } from 'express';
 import { authenticate } from '../../middleware/auth';
 import metaRoutes from './meta.routes';
 import projectsRoutes from './projects.routes';
+import projectContentRoutes from './project-content.routes';
 import entitiesRoutes from './entities.routes';
+import tasksRoutes from './tasks.routes';
+import versionsRoutes from './versions.routes';
 import publishRoutes from './publish.routes';
 import commentsRoutes from './comments.routes';
 import eventsRoutes from './events.routes';
@@ -38,9 +41,12 @@ export const V1_BASE_PATH = '/api/v1';
 export const V1_MOUNTS: { prefix: string; router: ExpressRouter }[] = [
   { prefix: '', router: metaRoutes },
   { prefix: '/projects', router: projectsRoutes },
+  { prefix: '/projects', router: projectContentRoutes },
   { prefix: '/publish', router: publishRoutes },
   { prefix: '/events', router: eventsRoutes },
   { prefix: '', router: entitiesRoutes },
+  { prefix: '', router: tasksRoutes },
+  { prefix: '', router: versionsRoutes },
   { prefix: '', router: commentsRoutes },
 ];
 

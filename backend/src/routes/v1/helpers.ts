@@ -75,3 +75,11 @@ export const requireMediaProject = (req: Request, id: number) =>
 
 /** Acteur de l'écriture, tel que les services métier l'attendent. */
 export const actorOf = (req: Request) => ({ id: req.user!.id, role: req.user!.role });
+
+/** Query de pagination et de tri commune aux collections v1 — à étendre par filtre. */
+export const listQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(100),
+  sort: z.string().max(40).optional(),
+  order: z.enum(['asc', 'desc']).default('desc'),
+});

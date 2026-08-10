@@ -256,7 +256,8 @@ export default function SplatReview({
       cmds.push({
         id: 'play',
         label: t('video.playKey'),
-        run: () => (presRef.current.anim.playing ? presRef.current.anim.pause() : presRef.current.anim.play()),
+        run: () =>
+          presRef.current.anim.playing ? presRef.current.anim.pause() : presRef.current.anim.play(),
       });
     if (canPresent) {
       cmds.push(

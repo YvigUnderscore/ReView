@@ -4,7 +4,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { clonePath, emptyOverride, isHidden, type PrimTransform, type SceneOverride } from './sceneOverride';
-import { applyPlan, planOverride, variantActive, type IndexedObject, type VariantSelection } from './sceneOverrideApply';
+import {
+  applyPlan,
+  planOverride,
+  variantActive,
+  type IndexedObject,
+  type VariantSelection,
+} from './sceneOverrideApply';
 
 /**
  * Clones de mise en scène (C1) : réconciliation des copies d'objets dans la scène Three.

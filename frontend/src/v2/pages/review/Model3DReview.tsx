@@ -279,9 +279,7 @@ export default function Model3DReview({
           onRecompose={canRecompose ? () => setRecomposeOpen(true) : undefined}
           onImportAnim={canManage ? cam.importGltf : undefined}
           onOrbit={canManage ? () => cam.applyOrbitPreset() : undefined}
-          onClearPresentation={
-            cam.clear && data.splatPresentation ? () => void cam.clear?.() : undefined
-          }
+          onClearPresentation={cam.clear && data.splatPresentation ? () => void cam.clear?.() : undefined}
         />
       }
       transport={

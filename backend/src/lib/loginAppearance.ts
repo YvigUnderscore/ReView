@@ -3,6 +3,8 @@
 
 import { z } from 'zod';
 import { prisma } from './prisma';
+import { storage } from '../services/StorageService';
+import { imageTypeFromKey } from './uploadContentType';
 
 /**
  * Habillage de la page de connexion — réglé par l'admin, appliqué avant toute
@@ -88,5 +90,10 @@ export const loginAppearanceSchema = z.object({
   tagline: z.string().max(200).optional(),
   showLogo: z.boolean().optional(),
 });
+
+/** URL présignée de l'image de fond de connexion (une heure), `null` si aucune image. */
+export function loginBgUrl(bgKey: string | null): Promise<string | null> | null {
+  return bgKey ? storage.getPresignedGetUrl(bgKey, 3600, imageTypeFromKey(bgKey)) : null;
+}
 
 export const __testing = { sanitize, FALLBACK, LOGIN_KEY };

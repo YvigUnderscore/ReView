@@ -36,12 +36,18 @@ function stubEmpty() {
   vi.mocked(prisma.project.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.mediaObject.count).mockResolvedValue(5 as never);
   // Le compteur global (5) puis la fenêtre 7 jours (1) — l'ordre des appels de getDashboard.
-  vi.mocked(prisma.mediaObject.count).mockResolvedValueOnce(5 as never).mockResolvedValueOnce(1 as never);
+  vi.mocked(prisma.mediaObject.count)
+    .mockResolvedValueOnce(5 as never)
+    .mockResolvedValueOnce(1 as never);
   vi.mocked(prisma.comment.count).mockResolvedValue(11 as never);
-  vi.mocked(prisma.comment.count).mockResolvedValueOnce(11 as never).mockResolvedValueOnce(3 as never);
+  vi.mocked(prisma.comment.count)
+    .mockResolvedValueOnce(11 as never)
+    .mockResolvedValueOnce(3 as never);
   vi.mocked(prisma.comment.groupBy).mockResolvedValue([] as never);
   // Mes retakes (1) puis verdicts attendus (4) — l'ordre des appels de getDashboard.
-  vi.mocked(prisma.task.count).mockResolvedValueOnce(1 as never).mockResolvedValueOnce(4 as never);
+  vi.mocked(prisma.task.count)
+    .mockResolvedValueOnce(1 as never)
+    .mockResolvedValueOnce(4 as never);
 }
 
 describe('DashboardService.getDashboard', () => {

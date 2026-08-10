@@ -45,7 +45,9 @@ export function hiddenWidgets(pref: HomeWidgetsPref | undefined): HomeWidgetId[]
 export function columnWidgets(col: HomeColumn, pref: HomeWidgetsPref | undefined): HomeWidgetId[] {
   const hidden = new Set(hiddenWidgets(pref));
   const defaults = ALL_WIDGET_IDS.filter((id) => HOME_WIDGETS[id].col === col);
-  const saved = (pref?.order?.[col] ?? []).filter((id): id is HomeWidgetId => isWidgetId(id) && HOME_WIDGETS[id].col === col);
+  const saved = (pref?.order?.[col] ?? []).filter(
+    (id): id is HomeWidgetId => isWidgetId(id) && HOME_WIDGETS[id].col === col,
+  );
   const ordered = [...saved, ...defaults.filter((id) => !saved.includes(id))];
   return ordered.filter((id) => !hidden.has(id));
 }

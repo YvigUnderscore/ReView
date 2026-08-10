@@ -53,7 +53,9 @@ function TaskRow({ task }: { task: DashboardTask }) {
       void qc.invalidateQueries({ queryKey: qk.dashboard });
     },
     onError: (e) =>
-      toast.error(e instanceof Error ? e.message : tr('ctx.actionFailed', { action: tr('home.changeStatus') })),
+      toast.error(
+        e instanceof Error ? e.message : tr('ctx.actionFailed', { action: tr('home.changeStatus') }),
+      ),
   });
 
   return (

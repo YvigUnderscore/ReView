@@ -215,7 +215,11 @@ function LogoPanel({
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-md border border-border bg-background">
           {draft.logoUrl ? (
-            <img src={draft.logoUrl} alt={t('sso.logoTitle')} className="max-h-full max-w-full object-contain" />
+            <img
+              src={draft.logoUrl}
+              alt={t('sso.logoTitle')}
+              className="max-h-full max-w-full object-contain"
+            />
           ) : (
             <span className="text-xs text-muted-foreground">{t('distribution.noLogo')}</span>
           )}

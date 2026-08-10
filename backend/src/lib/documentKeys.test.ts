@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { isValidDocumentKey } from './documents.routes';
+import { isValidDocumentKey } from './documentKeys';
 
 describe('isValidDocumentKey', () => {
   it('accepte les clés produites par /pdf/presign', () => {

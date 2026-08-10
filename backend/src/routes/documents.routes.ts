@@ -10,44 +10,14 @@ import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { sanitizeHtml } from '../lib/sanitize';
 import { storage } from '../services/StorageService';
-import { toPublicUser } from '../lib/userView';
-import { badRequest, forbidden, notFound } from '../lib/errors';
+import { toPublicUser, publicUserSelect, withPublicAuthors } from '../lib/userView';
+import { forbidden, notFound } from '../lib/errors';
+import { isValidDocumentKey, assertDocumentKey, documentUploadKey } from '../lib/documentKeys';
 
 const router = Router();
 router.use(authenticate);
 
-const authorSelect = {
-  select: {
-    id: true,
-    name: true,
-    email: true,
-    firstName: true,
-    lastName: true,
-    username: true,
-    avatarKey: true,
-  },
-} as const;
 const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
-
-/** Préfixe des clés produites par `POST /pdf/presign` — le seul dossier légitime ici. */
-const DOC_KEY_PREFIX = 'documents/';
-
-/**
- * Une clé de fichier de document est-elle acceptable ?
- *
- * Elle est fournie par le client, puis présignée en lecture (`GET /:id`) et supprimée
- * définitivement (`DELETE /:id`). Sans ce garde-fou, un compte quelconque déclare
- * `fileKey: 'media/<autre projet>/source.exr'` et obtient une URL de lecture sur n'importe
- * quel objet du bucket — puis l'efface en supprimant son propre document.
- */
-export const isValidDocumentKey = (key: string | null | undefined): key is string =>
-  typeof key === 'string' && key.startsWith(DOC_KEY_PREFIX) && !key.includes('..');
-
-/** Variante levant une 400 — utilisée à l'écriture. */
-function assertDocumentKey(key: string): string {
-  if (!isValidDocumentKey(key)) throw badRequest('Clé de fichier invalide', 'INVALID_FILE_KEY');
-  return key;
-}
 
 // GET /api/documents?projectId=&scope=&scopeId= — liste visible
 router.get(
@@ -69,17 +39,17 @@ router.get(
       const docs = await prisma.document.findMany({
         where: { projectId, ...(scope ? { scope } : {}), ...(scopeId !== undefined ? { scopeId } : {}) },
         orderBy: { updatedAt: 'desc' },
-        include: { createdBy: authorSelect },
+        include: { createdBy: publicUserSelect },
       });
-      return res.json({ documents: await withAuthors(docs) });
+      return res.json({ documents: await withPublicAuthors(docs) });
     }
     // Sans projet : documentation globale (visible par tous les authentifiés)
     const docs = await prisma.document.findMany({
       where: { scope: DocScope.GLOBAL },
       orderBy: { updatedAt: 'desc' },
-      include: { createdBy: authorSelect },
+      include: { createdBy: publicUserSelect },
     });
-    res.json({ documents: await withAuthors(docs) });
+    res.json({ documents: await withPublicAuthors(docs) });
   },
 );
 
@@ -87,7 +57,7 @@ router.get(
 router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
   const doc = await prisma.document.findUnique({
     where: { id: Number(req.params.id) },
-    include: { createdBy: authorSelect },
+    include: { createdBy: publicUserSelect },
   });
   if (!doc) throw notFound('Document introuvable');
   if (doc.projectId) await assertProjectAccess(req, doc.projectId);
@@ -139,7 +109,7 @@ router.post(
         scopeId: body.scopeId ?? null,
         createdById: req.user!.id,
       },
-      include: { createdBy: authorSelect },
+      include: { createdBy: publicUserSelect },
     });
     res.status(201).json({ document: { ...doc, createdBy: await toPublicUser(doc.createdBy) } });
   },
@@ -185,7 +155,7 @@ router.patch(
         ...(body.projectId !== undefined ? { projectId: body.projectId } : {}),
         ...(body.scopeId !== undefined ? { scopeId: body.scopeId } : {}),
       },
-      include: { createdBy: authorSelect },
+      include: { createdBy: publicUserSelect },
     });
     res.json({ document: { ...doc, createdBy: await toPublicUser(doc.createdBy) } });
   },
@@ -212,17 +182,9 @@ router.post(
   validate({ body: z.object({ filename: z.string().min(1).max(200) }) }),
   async (req, res) => {
     if (req.user!.role === Role.CLIENT) throw forbidden('Réservé à l’équipe');
-    const { filename } = req.body as { filename: string };
-    const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const key = `documents/${Date.now()}-${safe}`;
-    const url = await storage.getPresignedPutUrl(key, 'application/pdf', 900);
-    res.json({ url, key });
+    const key = documentUploadKey((req.body as { filename: string }).filename);
+    res.json({ url: await storage.getPresignedPutUrl(key, 'application/pdf', 900), key });
   },
 );
-
-// Helper : remplace les auteurs bruts par des vues publiques (avatar/displayName).
-async function withAuthors<T extends { createdBy: Parameters<typeof toPublicUser>[0] }>(docs: T[]) {
-  return Promise.all(docs.map(async (d) => ({ ...d, createdBy: await toPublicUser(d.createdBy) })));
-}
 
 export default router;

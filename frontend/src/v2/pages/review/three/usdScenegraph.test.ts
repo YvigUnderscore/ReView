@@ -159,11 +159,7 @@ describe('flattenTree / filterPrimTree', () => {
   });
 
   it('filtre en gardant les ancêtres des résultats, insensible à la casse', () => {
-    expect(flattenTree(filterPrimTree(tree, 'seat'))).toEqual([
-      '/root',
-      '/root/chairA',
-      '/root/chairA/seat',
-    ]);
+    expect(flattenTree(filterPrimTree(tree, 'seat'))).toEqual(['/root', '/root/chairA', '/root/chairA/seat']);
     expect(flattenTree(filterPrimTree(tree, 'CHAIR'))).toEqual([
       '/root',
       '/root/chairA',

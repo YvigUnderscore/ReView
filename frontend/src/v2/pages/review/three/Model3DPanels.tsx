@@ -121,9 +121,7 @@ export default function Model3DPanels({
           active: m.layoutMode,
           onToggle: () => m.setLayoutMode(!m.layoutMode),
           onOrbit,
-          onClear: onClearPresentation
-            ? () => confirmClearPresentation(onClearPresentation)
-            : undefined,
+          onClear: onClearPresentation ? () => confirmClearPresentation(onClearPresentation) : undefined,
         }}
         aspectLabel={aspectLabel(data.splatPresentation?.camera?.aspect)}
         onFrame={m.frameView}

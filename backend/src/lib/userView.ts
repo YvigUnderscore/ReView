@@ -96,6 +96,24 @@ export async function toPublicUser<T extends RawUserIdentity>(
   };
 }
 
+/** Champs à sélectionner pour construire une vue publique — le strict nécessaire. */
+export const publicUserSelect = {
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    firstName: true,
+    lastName: true,
+    username: true,
+    avatarKey: true,
+  },
+} as const;
+
+/** Remplace l'auteur brut de chaque ligne par sa vue publique (avatar, displayName). */
+export async function withPublicAuthors<T extends { createdBy: RawUserIdentity }>(rows: T[]) {
+  return Promise.all(rows.map(async (r) => ({ ...r, createdBy: await toPublicUser(r.createdBy) })));
+}
+
 /**
  * Vue de l'utilisateur connecté, renvoyée par toutes les routes qui ouvrent ou rejouent
  * une session (`/api/auth/login`, `/api/auth/2fa/verify`, `/api/auth/me`).

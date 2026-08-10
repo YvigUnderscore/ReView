@@ -24,6 +24,8 @@ import usersProfileRoutes from './routes/users-profile.routes';
 import pushRoutes from './routes/push.routes';
 import chatRoutes from './routes/chat.routes';
 import studioRoutes from './routes/studio.routes';
+import studioAppearanceRoutes from './routes/studio-appearance.routes';
+import studioSmtpRoutes from './routes/studio-smtp.routes';
 import projectsRoutes from './routes/projects.routes';
 import projectsExtraRoutes from './routes/projects-extra.routes';
 import mediaRoutes from './routes/media.routes';
@@ -122,6 +124,8 @@ export const createApp = (): Express => {
   app.use('/api/push', pushRoutes); // Web Push (42.B №66)
   app.use('/api/chat', chatRoutes); // messagerie interne (MP & groupes)
   app.use('/api/studio', studioRoutes);
+  app.use('/api/studio', studioAppearanceRoutes);
+  app.use('/api/studio', studioSmtpRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
   app.use('/api/studio/ocio', ocioRoutes);
   app.use('/api/projects', projectsExtraRoutes); // usage/quotas + duplicate (38) — avant /:id

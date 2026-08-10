@@ -14,15 +14,8 @@ import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
 import { imageTypeFromKey } from '../lib/uploadContentType';
-import { brandingUploadSchema, presignBrandingUpload } from '../lib/branding';
-import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
-import { getLoginAppearance, setLoginAppearance, loginAppearanceSchema } from '../lib/loginAppearance';
-import { getSourceUrl, resolveUserLocale } from '../lib/settings';
-import * as UserService from '../services/UserService';
-import { t } from '../i18n';
-import * as SmtpService from '../services/SmtpService';
-import { sendMail } from '../lib/mailer';
-import { mailLayout } from '../lib/mailTemplate';
+import { getLoginAppearance, loginBgUrl } from '../lib/loginAppearance';
+import { getSourceUrl } from '../lib/settings';
 
 const router = Router();
 
@@ -51,11 +44,6 @@ router.get('/branding', async (_req, res) => {
     login: { ...login, bgUrl: await loginBgUrl(login.bgKey) },
   });
 });
-
-/** URL présignée de l'image de fond de connexion (une heure), `null` si aucune image. */
-function loginBgUrl(bgKey: string | null): Promise<string | null> | null {
-  return bgKey ? storage.getPresignedGetUrl(bgKey, 3600, imageTypeFromKey(bgKey)) : null;
-}
 
 router.use(authenticate);
 
@@ -156,128 +144,9 @@ router.put(
   },
 );
 
-// GET /api/studio/logo — URL présignée du logo studio (tous les connectés)
-router.get('/logo', async (_req, res) => {
-  const setting = await prisma.setting.findUnique({ where: { key: 'studio_logo_key' } });
-  res.json({
-    url: setting?.value
-      ? await storage.getPresignedGetUrl(setting.value, 3600, imageTypeFromKey(setting.value))
-      : null,
-  });
-});
-
-// GET /api/studio/watermark — config watermark (tous les connectés : les viewers en ont besoin)
-router.get('/watermark', async (_req, res) => {
-  res.json({ watermark: await getWatermarkConfig() });
-});
-
-// PUT /api/studio/watermark — enregistre la config watermark (admin)
-router.put(
-  '/watermark',
-  requireRole(Role.ADMIN),
-  validate({ body: watermarkConfigSchema }),
-  async (req, res) => {
-    res.json({ watermark: await setWatermarkConfig(req.body) });
-  },
-);
-
-// POST /api/studio/logo/presign — upload du logo studio (35.D : burn-ins + page client).
-// La clé est ensuite enregistrée via PUT /settings (`studio_logo_key`).
-router.post(
-  '/logo/presign',
-  requireRole(Role.ADMIN),
-  validate({ body: brandingUploadSchema }),
-  async (req, res) => {
-    res.json(await presignBrandingUpload('logo', (req.body as { contentType: string }).contentType));
-  },
-);
-
-// GET /api/studio/login-appearance — habillage de la page de connexion (admin) : la config
-// brute (clé de l'image comprise) + l'URL présignée pour l'aperçu.
-router.get('/login-appearance', requireRole(Role.ADMIN), async (_req, res) => {
-  const login = await getLoginAppearance();
-  res.json({ login: { ...login, bgUrl: await loginBgUrl(login.bgKey) } });
-});
-
-// PUT /api/studio/login-appearance — enregistre l'habillage (admin), patch partiel.
-router.put(
-  '/login-appearance',
-  requireRole(Role.ADMIN),
-  validate({ body: loginAppearanceSchema }),
-  async (req, res) => {
-    const login = await setLoginAppearance(req.body);
-    // La page de connexion est la vitrine de l'instance : sa modification se trace comme
-    // les autres changements de configuration visibles de l'extérieur.
-    AuditService.logAudit({
-      userId: req.user!.id,
-      action: 'SETTING_UPDATE',
-      entityType: 'Setting',
-      metadata: { key: 'login_appearance' },
-    });
-    res.json({ login: { ...login, bgUrl: await loginBgUrl(login.bgKey) } });
-  },
-);
-
-// POST /api/studio/login-appearance/bg/presign — upload de l'image de fond (admin).
-// La clé retournée est ensuite enregistrée via PUT /login-appearance.
-router.post(
-  '/login-appearance/bg/presign',
-  requireRole(Role.ADMIN),
-  validate({ body: brandingUploadSchema }),
-  async (req, res) => {
-    res.json(await presignBrandingUpload('login-bg', (req.body as { contentType: string }).contentType));
-  },
-);
-
 // GET /api/studio/audit — flux d'audit paginé + auteur/avatar (admin) — { items, total, … } (10.D1)
 router.get('/audit', requireRole(Role.ADMIN), validate({ query: paginationQuery }), async (req, res) => {
   res.json(await AuditService.list(readPagination(req.query)));
 });
-
-const smtpSchema = z.object({
-  host: z.string().max(255).optional(),
-  port: z.number().int().min(1).max(65535).optional(),
-  secure: z.boolean().optional(),
-  user: z.string().max(255).optional(),
-  from: z.string().max(255).optional(),
-  password: z.string().max(255).optional(), // write-only (jamais renvoyé)
-});
-
-// GET /api/studio/smtp — config SMTP sans mot de passe (admin)
-router.get('/smtp', requireRole(Role.ADMIN), async (_req, res) => {
-  res.json({ smtp: await SmtpService.getPublicConfig() });
-});
-
-// PUT /api/studio/smtp — enregistre la config (mot de passe chiffré, write-only) (admin)
-router.put('/smtp', requireRole(Role.ADMIN), validate({ body: smtpSchema }), async (req, res) => {
-  const smtp = await SmtpService.setConfig(req.body);
-  // Le relais SMTP sortant est un pivot : qui le change peut detourner tout le courrier
-  // de l'instance. Jamais le mot de passe dans le journal, seulement le fait du changement.
-  AuditService.logAudit({
-    userId: req.user!.id,
-    action: 'SMTP_UPDATE',
-    entityType: 'Setting',
-    metadata: { host: req.body.host ?? null, passwordChanged: req.body.password !== undefined },
-  });
-  res.json({ smtp });
-});
-
-// POST /api/studio/smtp/test — envoie un email de test (admin)
-router.post(
-  '/smtp/test',
-  requireRole(Role.ADMIN),
-  validate({ body: z.object({ to: z.string().email() }) }),
-  async (req, res) => {
-    // L'email part dans la langue de l'admin qui déclenche le test : c'est lui qui le lit.
-    const locale = await resolveUserLocale(await UserService.getPreferences(req.user!.id));
-    const ok = await sendMail(
-      req.body.to,
-      t(locale, 'smtp.test.subject'),
-      mailLayout(locale, t(locale, 'smtp.test.title'), `<p>${t(locale, 'smtp.test.body')}</p>`),
-    );
-    if (!ok) throw badRequest('Envoi impossible (SMTP non configuré ou erreur)', 'SMTP_SEND_FAILED');
-    res.json({ sent: true });
-  },
-);
 
 export default router;

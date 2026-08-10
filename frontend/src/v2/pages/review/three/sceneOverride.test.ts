@@ -244,13 +244,16 @@ describe('clones de mise en scène (C1)', () => {
 
   it('fusionne les clones par id (la proposition met à jour ou ajoute)', () => {
     const base = addClone(emptyOverride(), '/W', { id: 'a', transform: IDENTITY_TRANSFORM });
-    const delta = addClone(
-      addClone(emptyOverride(), '/W', { id: 'a', transform: moved }),
-      '/W',
-      { id: 'b', transform: moved },
-    );
+    const delta = addClone(addClone(emptyOverride(), '/W', { id: 'a', transform: moved }), '/W', {
+      id: 'b',
+      transform: moved,
+    });
     const merged = mergeOverrides(base, delta);
-    expect(clonesOf(merged, '/W').map((c) => c.id).sort()).toEqual(['a', 'b']);
+    expect(
+      clonesOf(merged, '/W')
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual(['a', 'b']);
     expect(clonesOf(merged, '/W').find((c) => c.id === 'a')!.transform).toEqual(moved);
   });
 });
