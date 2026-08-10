@@ -15,6 +15,7 @@ import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
+import { getLoginAppearance, setLoginAppearance, loginAppearanceSchema } from '../lib/loginAppearance';
 import { getSourceUrl, resolveUserLocale } from '../lib/settings';
 import * as UserService from '../services/UserService';
 import { t } from '../i18n';
@@ -29,17 +30,31 @@ const router = Router();
 // Porte aussi `sourceUrl` : l'AGPL §13 impose d'offrir le code source à tout utilisateur
 // distant, y compris non authentifié (connexion, partage client).
 router.get('/branding', async (_req, res) => {
-  const [studio, accent, logoKey, sourceUrl] = await Promise.all([
+  const [studio, accent, logoKey, sourceUrl, login] = await Promise.all([
     prisma.studio.findFirst({ select: { name: true } }),
     prisma.setting.findUnique({ where: { key: 'studio_accent' } }),
     prisma.setting.findUnique({ where: { key: 'studio_logo_key' } }),
     getSourceUrl(),
+    getLoginAppearance(),
   ]);
   const logoUrl = logoKey?.value
     ? await storage.getPresignedGetUrl(logoKey.value, 3600, imageTypeFromKey(logoKey.value))
     : null;
-  res.json({ name: studio?.name ?? null, accent: accent?.value ?? null, logoUrl, sourceUrl });
+  res.json({
+    name: studio?.name ?? null,
+    accent: accent?.value ?? null,
+    logoUrl,
+    sourceUrl,
+    // La page de connexion est pré-auth : son habillage doit voyager avec le branding
+    // public, sinon l'image de fond n'apparaît qu'une fois connecté — c'est-à-dire jamais.
+    login: { ...login, bgUrl: await loginBgUrl(login.bgKey) },
+  });
 });
+
+/** URL présignée de l'image de fond de connexion (une heure), `null` si aucune image. */
+function loginBgUrl(bgKey: string | null): Promise<string | null> | null {
+  return bgKey ? storage.getPresignedGetUrl(bgKey, 3600, imageTypeFromKey(bgKey)) : null;
+}
 
 router.use(authenticate);
 
@@ -175,6 +190,46 @@ router.post(
     const contentType = (req.body as { contentType: string }).contentType;
     const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
     const key = `branding/logo-${Date.now()}${ext}`;
+    res.json({ key, url: await storage.getPresignedPutUrl(key, contentType, 900) });
+  },
+);
+
+// GET /api/studio/login-appearance — habillage de la page de connexion (admin) : la config
+// brute (clé de l'image comprise) + l'URL présignée pour l'aperçu.
+router.get('/login-appearance', requireRole(Role.ADMIN), async (_req, res) => {
+  const login = await getLoginAppearance();
+  res.json({ login: { ...login, bgUrl: await loginBgUrl(login.bgKey) } });
+});
+
+// PUT /api/studio/login-appearance — enregistre l'habillage (admin), patch partiel.
+router.put(
+  '/login-appearance',
+  requireRole(Role.ADMIN),
+  validate({ body: loginAppearanceSchema }),
+  async (req, res) => {
+    const login = await setLoginAppearance(req.body);
+    // La page de connexion est la vitrine de l'instance : sa modification se trace comme
+    // les autres changements de configuration visibles de l'extérieur.
+    AuditService.logAudit({
+      userId: req.user!.id,
+      action: 'SETTING_UPDATE',
+      entityType: 'Setting',
+      metadata: { key: 'login_appearance' },
+    });
+    res.json({ login: { ...login, bgUrl: await loginBgUrl(login.bgKey) } });
+  },
+);
+
+// POST /api/studio/login-appearance/bg/presign — upload de l'image de fond (admin).
+// La clé retournée est ensuite enregistrée via PUT /login-appearance.
+router.post(
+  '/login-appearance/bg/presign',
+  requireRole(Role.ADMIN),
+  validate({ body: z.object({ contentType: z.string().regex(/^image\/(png|jpe?g|webp)$/) }) }),
+  async (req, res) => {
+    const contentType = (req.body as { contentType: string }).contentType;
+    const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
+    const key = `branding/login-bg-${Date.now()}${ext}`;
     res.json({ key, url: await storage.getPresignedPutUrl(key, contentType, 900) });
   },
 );
