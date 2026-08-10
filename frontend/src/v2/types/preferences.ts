@@ -20,6 +20,8 @@ export interface UserPreferences {
   savedViews?: Record<string, SavedView[]>;
   /** Tour d'onboarding vu (42.B — №69) : ne plus l'afficher automatiquement. */
   onboardingSeen?: boolean;
+  /** Disposition de l'Accueil (refonte G) : blocs masqués et ordre par colonne. `null` = défaut. */
+  homeWidgets?: { hidden?: string[]; order?: Partial<Record<'top' | 'main' | 'side', string[]>> } | null;
   /**
    * Langue de l'interface, code du registre i18n. Attachée au compte et non à l'appareil :
    * le serveur en a besoin pour envoyer les emails dans la bonne langue.

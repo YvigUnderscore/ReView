@@ -74,8 +74,30 @@ export async function getDashboard(user: SessionUser) {
     status: MediaStatus.READY,
     version: versionInAccess(access),
   };
+  // Fenêtre des tendances : ce qui s'est ajouté sur les 7 derniers jours.
+  const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+  // Tâche vivante rattachée à un projet accessible (les deux chemins de rattachement).
+  const taskInAccess: Prisma.TaskWhereInput = {
+    OR: [
+      { shot: { deletedAt: null, project: access } },
+      { asset: { deletedAt: null, project: access } },
+    ],
+  };
 
-  const [lastComments, versions, media, myTasks, projectCount, mediaCount, commentCount] = await Promise.all([
+  const [
+    lastComments,
+    versions,
+    media,
+    myTasks,
+    projectCount,
+    mediaCount,
+    commentCount,
+    mediaCount7d,
+    commentCount7d,
+    myRetakes,
+    pendingReview,
+    recentProjectRows,
+  ] = await Promise.all([
     // Dernier commentaire par média (distinct après tri desc = le plus récent de chacun).
     prisma.comment.findMany({
       where: { media: mediaWhere },
@@ -133,7 +155,51 @@ export async function getDashboard(user: SessionUser) {
     prisma.project.count({ where: access }),
     prisma.mediaObject.count({ where: mediaWhere }),
     prisma.comment.count({ where: { media: mediaWhere } }),
+    // Tendances 7 jours — mêmes périmètres que les compteurs globaux.
+    prisma.mediaObject.count({ where: { ...mediaWhere, createdAt: { gte: weekAgo } } }),
+    prisma.comment.count({ where: { media: mediaWhere, createdAt: { gte: weekAgo } } }),
+    // Mes retakes/rejets : ce qui me demande une action immédiate.
+    prisma.task.count({
+      where: { assigneeId: user.id, status: { in: [TaskStatus.RETAKE, TaskStatus.REJECTED] } },
+    }),
+    // Verdicts attendus dans mon périmètre (tâches en attente de review).
+    prisma.task.count({ where: { status: TaskStatus.PENDING_REVIEW, ...taskInAccess } }),
+    // Projets récents (miroir du tri de GET /api/projects) — la progression est calculée après.
+    prisma.project.findMany({
+      where: access,
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+      select: { id: true, name: true, thumbnailKey: true },
+    }),
   ]);
+
+  // Progression des projets récents : tâches approuvées / total (deux counts par projet).
+  const recentProjects = await Promise.all(
+    recentProjectRows.map(async (p) => {
+      const inProject: Prisma.TaskWhereInput = {
+        OR: [{ shot: { deletedAt: null, projectId: p.id } }, { asset: { deletedAt: null, projectId: p.id } }],
+      };
+      const [totalTasks, approvedTasks] = await Promise.all([
+        prisma.task.count({ where: inProject }),
+        prisma.task.count({ where: { status: TaskStatus.APPROVED, ...inProject } }),
+      ]);
+      return {
+        id: p.id,
+        name: p.name,
+        thumbnailUrl: p.thumbnailKey ? await storage.getPresignedGetUrl(p.thumbnailKey) : null,
+        totalTasks,
+        approvedTasks,
+      };
+    }),
+  );
+
+  // Nombre de commentaires par média affiché en « dernières reviews ».
+  const commentCounts = await prisma.comment.groupBy({
+    by: ['mediaObjectId'],
+    where: { mediaObjectId: { in: lastComments.map((c) => c.media.id) } },
+    _count: { _all: true },
+  });
+  const countByMedia = new Map(commentCounts.map((g) => [g.mediaObjectId, g._count._all]));
 
   const latestReviews = await Promise.all(
     lastComments.map(async (c) => ({
@@ -143,6 +209,7 @@ export async function getDashboard(user: SessionUser) {
       thumbnailUrl: c.media.thumbnailKey ? await storage.getPresignedGetUrl(c.media.thumbnailKey) : null,
       location: loc(c.media.version?.task ?? null) || (c.media.version?.asset?.name ?? ''),
       versionName: c.media.version?.name ?? '',
+      commentCount: countByMedia.get(c.media.id) ?? 0,
       lastComment: {
         content: c.content,
         author: c.author?.name ?? c.guestName ?? null,
@@ -185,12 +252,22 @@ export async function getDashboard(user: SessionUser) {
       status: t.status,
       location: loc(t),
       projectId: t.shot?.projectId ?? t.asset?.projectId ?? null,
+      dueDate: t.dueDate,
     }));
 
   return {
     latestReviews,
     activity,
     myTasks: tasks,
-    stats: { projects: projectCount, publishedMedia: mediaCount, comments: commentCount },
+    recentProjects,
+    stats: {
+      projects: projectCount,
+      publishedMedia: mediaCount,
+      comments: commentCount,
+      publishedMedia7d: mediaCount7d,
+      comments7d: commentCount7d,
+      myRetakes,
+      pendingReview,
+    },
   };
 }

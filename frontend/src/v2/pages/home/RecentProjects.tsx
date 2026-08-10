@@ -3,15 +3,32 @@
 
 import { Link } from 'react-router-dom';
 import { ArrowRight, FolderKanban } from 'lucide-react';
-import { useProjectsQuery } from '../../lib/queries';
 import { projectPath } from '../../lib/slug';
+import type { DashboardProject } from './homeTypes';
 import { useT } from '../../i18n';
 
-/** Projets récents (tri serveur updatedAt desc) — colonne latérale de l'Accueil. */
-export default function RecentProjects() {
+/**
+ * Projets récents — colonne latérale de l'Accueil. Refonte G : les données viennent
+ * du dashboard (une seule requête) et chaque projet montre sa progression
+ * (tâches approuvées / total), pour que la liste dise « où on en est », pas juste « quoi ».
+ */
+
+function Progress({ p }: { p: DashboardProject }) {
+  if (p.totalTasks === 0) return null;
+  const pct = Math.round((p.approvedTasks / p.totalTasks) * 100);
+  const barColor = pct >= 80 ? 'bg-success' : pct >= 30 ? 'bg-primary' : 'bg-warning';
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      <span className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
+        <span className={`block h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+      </span>
+      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{pct} %</span>
+    </span>
+  );
+}
+
+export default function RecentProjects({ projects }: { projects: DashboardProject[] }) {
   const t = useT();
-  const { data } = useProjectsQuery();
-  const projects = (data ?? []).slice(0, 5);
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -39,7 +56,10 @@ export default function RecentProjects() {
                   <FolderKanban size={14} />
                 </span>
               )}
-              <span className="truncate text-sm font-medium group-hover:text-primary">{p.name}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium group-hover:text-primary">{p.name}</span>
+                <Progress p={p} />
+              </span>
             </Link>
           ))}
         </div>
