@@ -13,6 +13,7 @@ import { rateLimit } from '../middleware/rateLimit';
 import { toSessionUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
 import * as InvitationService from '../services/InvitationService';
+import { isPasswordLoginBlocked } from '../lib/oidcConfig';
 import { env } from '../config/env';
 import { badRequest, forbidden, unauthorized } from '../lib/errors';
 
@@ -32,6 +33,19 @@ const credentialsSchema = z.object({
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 });
 
+/**
+ * Mode « SSO seul » (studio) : le mot de passe n'est plus une porte d'entrée.
+ *
+ * Le refus vaut aussi pour l'inscription libre : un compte créé avec un mot de passe
+ * inutilisable n'est pas un compte, c'est un piège — et il réserve l'email d'un
+ * collaborateur avant sa première connexion SSO.
+ */
+async function refusePasswordAuth(): Promise<void> {
+  if (await isPasswordLoginBlocked()) {
+    throw forbidden('Connexion par mot de passe désactivée : utilisez le SSO', 'PASSWORD_LOGIN_DISABLED');
+  }
+}
+
 // POST /api/auth/register — crée un artiste. Fermé par défaut (ALLOW_SELF_REGISTRATION) :
 // sinon n'importe qui obtient un compte authentifié sur l'instance, et peut réserver
 // l'email d'un collaborateur avant sa première connexion SSO.
@@ -49,6 +63,7 @@ router.post(
     if (!env.ALLOW_SELF_REGISTRATION) {
       throw forbidden('Inscription libre désactivée sur cette instance', 'REGISTRATION_DISABLED');
     }
+    await refusePasswordAuth();
     const { password, name } = req.body as { password: string; name?: string };
     const email = normalizeEmail((req.body as { email: string }).email);
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -65,6 +80,7 @@ router.post(
 // POST /api/auth/login — crée une session révocable (36.B) ; si 2FA actif, renvoie un
 // jeton intermédiaire à échanger contre les tokens via /api/auth/2fa/verify (36.A).
 router.post('/login', authLimiter, validate({ body: credentialsSchema }), async (req, res) => {
+  await refusePasswordAuth();
   const { email, password } = req.body as { email: string; password: string };
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !(await bcrypt.compare(password, user.password))) {

@@ -1,6 +1,6 @@
 # Identity, API & audit
 
-> Updated: 2026-08-05
+> Updated: 2026-08-10
 
 ## SSO (OIDC) — *Admin → Studio → Identité (SSO)*
 
@@ -17,6 +17,33 @@ flow):
 
 Notes: the provider must return a **verified email**; accounts with 2FA still go
 through their code step after SSO. Testing requires real provider credentials.
+
+### SSO button logo
+
+Upload a PNG, JPEG or WebP in *Logo du bouton SSO*: it is shown to the left of
+the button label on the login page (SVG is refused — these files are served from
+the app's own origin). *Remove* falls back to a plain text button.
+
+### SSO only — turning off password login
+
+*Couper la connexion par mot de passe (SSO seul)* removes the email + password
+form from the login page and makes `POST /api/auth/login` (and self-registration)
+answer `403 PASSWORD_LOGIN_DISABLED`. Everyone then signs in through the
+provider; 2FA, personal API tokens and service tokens are unaffected.
+
+Two guards stand between this switch and a locked-out studio:
+
+- the setting **cannot be saved** while the SSO config is incomplete (the server
+  rejects it with `SSO_NOT_READY`);
+- if the SSO config is later emptied or disabled, **password login comes back on
+  its own** — the block only applies while SSO can actually take over.
+
+That covers a broken *configuration*, not a broken *provider*: if the identity
+provider itself becomes unreachable while the config stays valid, nobody can sign
+in. Keep a way back in: a personal API token owned by an admin account, issued
+*before* the switch, still authenticates and can `PUT /api/admin/oidc` to clear
+the flag — otherwise it takes a hand edit of the `oidc_config` setting in the
+database.
 
 ## Sessions & offboarding
 

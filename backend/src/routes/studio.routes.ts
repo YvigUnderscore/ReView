@@ -14,6 +14,7 @@ import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
 import { imageTypeFromKey } from '../lib/uploadContentType';
+import { brandingUploadSchema, presignBrandingUpload } from '../lib/branding';
 import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';
 import { getLoginAppearance, setLoginAppearance, loginAppearanceSchema } from '../lib/loginAppearance';
 import { getSourceUrl, resolveUserLocale } from '../lib/settings';
@@ -185,12 +186,9 @@ router.put(
 router.post(
   '/logo/presign',
   requireRole(Role.ADMIN),
-  validate({ body: z.object({ contentType: z.string().regex(/^image\/(png|jpe?g|webp)$/) }) }),
+  validate({ body: brandingUploadSchema }),
   async (req, res) => {
-    const contentType = (req.body as { contentType: string }).contentType;
-    const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
-    const key = `branding/logo-${Date.now()}${ext}`;
-    res.json({ key, url: await storage.getPresignedPutUrl(key, contentType, 900) });
+    res.json(await presignBrandingUpload('logo', (req.body as { contentType: string }).contentType));
   },
 );
 
@@ -225,12 +223,9 @@ router.put(
 router.post(
   '/login-appearance/bg/presign',
   requireRole(Role.ADMIN),
-  validate({ body: z.object({ contentType: z.string().regex(/^image\/(png|jpe?g|webp)$/) }) }),
+  validate({ body: brandingUploadSchema }),
   async (req, res) => {
-    const contentType = (req.body as { contentType: string }).contentType;
-    const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
-    const key = `branding/login-bg-${Date.now()}${ext}`;
-    res.json({ key, url: await storage.getPresignedPutUrl(key, contentType, 900) });
+    res.json(await presignBrandingUpload('login-bg', (req.body as { contentType: string }).contentType));
   },
 );
 

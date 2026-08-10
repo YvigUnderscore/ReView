@@ -7,7 +7,8 @@ import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
-import { getPublicOidcConfig, setOidcConfig, oidcConfigSchema } from '../lib/oidcConfig';
+import { getPublicOidcConfig, updateOidcConfig, oidcConfigSchema } from '../lib/oidcConfig';
+import { brandingUploadSchema, presignBrandingUpload } from '../lib/branding';
 import {
   getDerivedPurgeConfig,
   setDerivedPurgeConfig,
@@ -91,11 +92,17 @@ router.get('/oidc', async (_req, res) => {
   res.json({ oidc: await getPublicOidcConfig() });
 });
 
-// PUT /api/admin/oidc — enregistre la config SSO (secret write-only, chiffré)
+// PUT /api/admin/oidc — enregistre la config SSO (secret write-only, chiffré). La garde
+// « SSO seul » vit dans lib/oidcConfig : c'est elle qui empêche l'instance de se refermer.
 router.put('/oidc', validate({ body: oidcConfigSchema }), async (req, res) => {
-  await setOidcConfig(req.body);
+  await updateOidcConfig(req.body as Record<string, unknown>);
   logAudit({ userId: req.user!.id, action: 'OIDC_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ oidc: await getPublicOidcConfig() });
+});
+
+// POST /api/admin/oidc/logo/presign — logo affiché dans le bouton SSO de la page de connexion.
+router.post('/oidc/logo/presign', validate({ body: brandingUploadSchema }), async (req, res) => {
+  res.json(await presignBrandingUpload('sso', (req.body as { contentType: string }).contentType));
 });
 
 // GET /api/admin/api-tokens — tous les tokens d'API du studio (36.C, jamais le secret)
@@ -139,38 +146,7 @@ router.delete(
 
 // GET /api/admin/media-access — journal d'accès aux médias (36.E), paginé, récent d'abord
 router.get('/media-access', validate({ query: paginationQuery }), async (req, res) => {
-  const { page, pageSize } = readPagination(req.query);
-  const [rows, total] = await Promise.all([
-    prisma.mediaAccessLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        createdAt: true,
-        ip: true,
-        shareLinkId: true,
-        media: { select: { id: true, originalName: true, kind: true } },
-        user: { select: { id: true, name: true, email: true } },
-      },
-    }),
-    prisma.mediaAccessLog.count(),
-  ]);
-  // Labels des liens de partage (pas de FK : le lien peut avoir été purgé).
-  const shareIds = [...new Set(rows.map((r) => r.shareLinkId).filter((v): v is number => v != null))];
-  const links = shareIds.length
-    ? await prisma.shareLink.findMany({ where: { id: { in: shareIds } }, select: { id: true, label: true } })
-    : [];
-  const labelOf = new Map(links.map((l) => [l.id, l.label]));
-  res.json({
-    items: rows.map((r) => ({
-      ...r,
-      shareLabel: r.shareLinkId != null ? (labelOf.get(r.shareLinkId) ?? 'Lien supprimé') : null,
-    })),
-    total,
-    page,
-    pageSize,
-  });
+  res.json(await AdminService.mediaAccessLog(readPagination(req.query)));
 });
 
 // GET /api/admin/dashboard — métriques studio (compat. ascendante, vue compacte)

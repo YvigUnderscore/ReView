@@ -156,6 +156,45 @@ export async function system() {
   };
 }
 
+/**
+ * Journal d'accès aux médias (36.E), paginé, récent d'abord.
+ *
+ * Le libellé du lien de partage est rapporté après coup : il n'y a pas de FK vers
+ * `ShareLink`, un lien purgé laisserait sinon la ligne d'accès sans nom.
+ */
+export async function mediaAccessLog({ page, pageSize }: { page: number; pageSize: number }) {
+  const [rows, total] = await Promise.all([
+    prisma.mediaAccessLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        createdAt: true,
+        ip: true,
+        shareLinkId: true,
+        media: { select: { id: true, originalName: true, kind: true } },
+        user: { select: { id: true, name: true, email: true } },
+      },
+    }),
+    prisma.mediaAccessLog.count(),
+  ]);
+  const shareIds = [...new Set(rows.map((r) => r.shareLinkId).filter((v): v is number => v != null))];
+  const links = shareIds.length
+    ? await prisma.shareLink.findMany({ where: { id: { in: shareIds } }, select: { id: true, label: true } })
+    : [];
+  const labelOf = new Map(links.map((l) => [l.id, l.label]));
+  return {
+    items: rows.map((r) => ({
+      ...r,
+      shareLabel: r.shareLinkId != null ? (labelOf.get(r.shareLinkId) ?? 'Lien supprimé') : null,
+    })),
+    total,
+    page,
+    pageSize,
+  };
+}
+
 /** Projets en corbeille (globale). */
 export async function trashProjects() {
   return prisma.project.findMany({
