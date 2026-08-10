@@ -32,6 +32,7 @@ import SidebarProjectTree from './SidebarProjectTree';
 import SidebarRecents from './SidebarRecents';
 import ChatDock from './chat/ChatDock';
 import CommandPalette from './CommandPalette';
+import GlobalContextMenu from './GlobalContextMenu';
 import NotificationBell from './NotificationBell';
 import ShortcutsHelp from './ShortcutsHelp';
 import OnboardingTour from './OnboardingTour';
@@ -317,6 +318,12 @@ export default function Shell({
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+      {/* Clic droit global : bloque le menu natif et sert le menu de repli contextuel. */}
+      <GlobalContextMenu
+        onSearch={() => setPaletteOpen(true)}
+        onShortcuts={openHelp}
+        onToggleSidebar={toggleCollapse}
+      />
       <OnboardingTour />
       <UploadWidget />
       <PendingDrafts />

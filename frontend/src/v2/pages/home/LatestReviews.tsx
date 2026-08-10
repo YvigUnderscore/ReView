@@ -39,7 +39,10 @@ function CommentLine({ review }: { review: DashboardReview }) {
   const c = review.lastComment;
   return (
     <p className="flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground">
-      <MessageSquare size={12} className="shrink-0 translate-y-px" />
+      <span className="flex shrink-0 translate-y-px items-center gap-0.5">
+        <MessageSquare size={12} />
+        {review.commentCount > 1 && <span className="text-[10px] tabular-nums">{review.commentCount}</span>}
+      </span>
       <span className="truncate">
         <span className="font-medium text-foreground">{c.author ?? t('common.guest')}</span>
         {c.timestamp != null && <span className="ml-1 text-primary">@ {tc(c.timestamp)}</span>}
