@@ -734,6 +734,12 @@
   "userModal.updated": "ユーザーを更新しました",
   "userModal.created": "ユーザーを作成しました",
   "userModal.username": "ユーザー名（表示用）",
+  "userModal.accessLabel": "アカウントの開設方法",
+  "userModal.byInvitation": "招待を送る",
+  "userModal.byPassword": "パスワードを設定",
+  "userModal.inviteHint": "本人にメールが届き、自分でパスワードを設定します。パスワードを伝える必要はありません。",
+  "userModal.invited": "招待を送信しました",
+  "userModal.passwordRequired": "パスワードが必要です",
   "users.allRoles": "すべての役割",
   "users.sortRole": "並び順：役割",
   "users.sortRecent": "並び順：新しい順",
@@ -955,6 +961,10 @@
   "users.total": {
     "other": "{count} 件のアカウント — 名前をクリックすると詳細（プロジェクト、セッション、アクティビティ）が開きます。"
   },
+  "users.invitePending": "招待済み",
+  "users.invitePendingHint": "アカウントは作成済みですが未有効化です。招待リンクがまだ使われていません。",
+  "users.resendInvite": "招待を再送する",
+  "users.inviteResent": "{email} に招待を再送しました",
   "webhooks.postJson": "署名付き JSON POST（ヘッダー",
   "task.assignedTo": "担当：",
   "task.manageAssignment": "担当を管理",
@@ -2001,5 +2011,15 @@
   "timeline.departmentShown": "表示する工程",
   "timeline.revisionLabel": "確定したリビジョン",
   "timeline.panelNotApplicable": "編集には該当しません。",
-  "timeline.navHint": "画像をクリックで再生／一時停止"
+  "timeline.navHint": "画像をクリックで再生／一時停止",
+  "invite.pageTitle": "アカウントを有効化",
+  "invite.pageSubtitle": "パスワードを決めれば、スタジオへようこそ。",
+  "invite.heading": "パスワードを設定してください",
+  "invite.choosePassword": "アカウントが作成されました。ログイン用のパスワードを設定してください。",
+  "invite.byWho": "{inviter} さんがあなたを招待しました。ログイン用のパスワードを設定してください。",
+  "invite.confirmPassword": "パスワードの確認",
+  "invite.mismatch": "パスワードが一致しません",
+  "invite.submit": "アカウントを有効化する",
+  "invite.invalidTitle": "このリンクは無効です",
+  "invite.invalidBody": "招待は期限切れか、すでに使用済みです。管理者に再送を依頼してください。"
 }

@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — tèst SMTP",
   "smtp.test.title": "Tèst SMTP",
-  "smtp.test.body": "Aquò es un corrièl de tèst mandat dempuèi ReView. Se lo recebètz, la configuracion SMTP fonciona."
+  "smtp.test.body": "Aquò es un corrièl de tèst mandat dempuèi ReView. Se lo recebètz, la configuracion SMTP fonciona.",
+  "invite.subject": "Sètz convidat sus ReView",
+  "invite.title": "Benvenguda sus ReView",
+  "invite.greeting": "Bonjorn {name},",
+  "invite.intro": "Un compte es estat creat per vos sus ReView. Causissètz vòstre mot de santa Clara per l'activar.",
+  "invite.introBy": "{inviter} vos a creat un compte sus ReView. Causissètz vòstre mot de santa Clara per l'activar.",
+  "invite.cta": "Activar mon compte",
+  "invite.expiry": "Aqueste ligam expira dins {days} jorns.",
+  "invite.fallback": "Se lo boton foncciona pas, pegatz aqueste ligam dins vòstre navegador :",
+  "invite.ignore": "Se esperavatz pas aquesta convidacion, podètz ignorar aqueste messatge."
 }

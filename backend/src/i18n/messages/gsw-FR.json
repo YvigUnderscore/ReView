@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — SMTP-Test",
   "smtp.test.title": "SMTP-Test",
-  "smtp.test.body": "Des isch e Test-E-Mail vu ReView. Wenn du sie kriegsch, funktioniert d'SMTP-Ihstellung."
+  "smtp.test.body": "Des isch e Test-E-Mail vu ReView. Wenn du sie kriegsch, funktioniert d'SMTP-Ihstellung.",
+  "invite.subject": "Ìhr sìnn ìn ReView ìngelàda",
+  "invite.title": "Wìllkumm ìn ReView",
+  "invite.greeting": "Griaß di {name},",
+  "invite.intro": "Ma hàt e Konto fer Ìch ìn ReView àgleit. Wähle Sie Ìhr Passwort, fer's z'àktiviara.",
+  "invite.introBy": "{inviter} hàt e Konto fer Ìch ìn ReView àgleit. Wähle Sie Ìhr Passwort, fer's z'àktiviara.",
+  "invite.cta": "Mi Konto àktiviara",
+  "invite.expiry": "Dàs Link lauft ìn {days} Däg ab.",
+  "invite.fallback": "Wenn dr Knopf nìt geht, kläbe Sie dàs Link ìn Ìhr Browser :",
+  "invite.ignore": "Wenn Sie dìa Ìnladung nìt erwàrtet hàn, kenne Sie dìa Mail ìgnoriara."
 }

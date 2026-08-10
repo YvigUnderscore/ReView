@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Search, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -38,8 +38,21 @@ export default function UsersTab() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
+  const [resending, setResending] = useState<number | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: qk.users });
+  /** Relance : le lien précédent est périmé côté serveur, un seul lien vit à la fois. */
+  const resendInvite = async (u: User) => {
+    setResending(u.id);
+    try {
+      await api.post(`/api/users/${u.id}/invite`);
+      toast.success(t('users.inviteResent', { email: u.email }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('common.error.generic'));
+    } finally {
+      setResending(null);
+    }
+  };
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
@@ -111,7 +124,16 @@ export default function UsersTab() {
                     <span className="font-medium hover:underline">{u.displayName ?? u.name ?? '—'}</span>
                   </Link>
                 </td>
-                <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    {u.email}
+                    {u.invitePending && (
+                      <Badge variant="warning" title={t('users.invitePendingHint')}>
+                        {t('users.invitePending')}
+                      </Badge>
+                    )}
+                  </span>
+                </td>
                 <td className="px-3 py-2">
                   <Badge variant="secondary">{u.role}</Badge>
                 </td>
@@ -121,6 +143,16 @@ export default function UsersTab() {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex justify-end gap-1">
+                    {u.invitePending && (
+                      <button
+                        onClick={() => void resendInvite(u)}
+                        disabled={resending === u.id}
+                        title={t('users.resendInvite')}
+                        className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+                      >
+                        <Send size={15} />
+                      </button>
+                    )}
                     <button
                       onClick={() => setEditing(u)}
                       title={t('common.edit')}

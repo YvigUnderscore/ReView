@@ -195,6 +195,8 @@ model User {
   auditLogs        AuditLog[]
   boardChanges     BoardChange[]
   passwordResets   PasswordReset[]
+  invitation       Invitation[]        @relation("InvitationTarget")
+  sentInvitations  Invitation[]        @relation("InvitationSender")
   favorites        Favorite[]
   documents        Document[]
   announcementReads AnnouncementRead[]
@@ -325,6 +327,24 @@ model PasswordReset {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// Invitation d'un nouveau membre (Phase 47) : le compte existe déjà mais n'a pas encore de
+// mot de passe choisi — le lien reçu par email est la seule façon de l'activer.
+// Seul le SHA-256 du jeton est stocké : la base volée ne donne aucun lien utilisable, au
+// même titre qu'on ne stocke pas les mots de passe en clair.
+model Invitation {
+  id          Int       @id @default(autoincrement())
+  user        User      @relation("InvitationTarget", fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedBy   User?     @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitedById Int?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model ProjectMembership {

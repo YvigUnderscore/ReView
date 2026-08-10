@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — prueba SMTP",
   "smtp.test.title": "Prueba SMTP",
-  "smtp.test.body": "Este es un correo de prueba enviado desde ReView. Si lo recibes, la configuración SMTP funciona."
+  "smtp.test.body": "Este es un correo de prueba enviado desde ReView. Si lo recibes, la configuración SMTP funciona.",
+  "invite.subject": "Te han invitado a ReView",
+  "invite.title": "Bienvenido a ReView",
+  "invite.greeting": "Hola {name}:",
+  "invite.intro": "Se ha creado una cuenta para ti en ReView. Elige tu contraseña para activarla.",
+  "invite.introBy": "{inviter} ha creado una cuenta para ti en ReView. Elige tu contraseña para activarla.",
+  "invite.cta": "Activar mi cuenta",
+  "invite.expiry": "Este enlace caduca en {days} días.",
+  "invite.fallback": "Si el botón no funciona, pega este enlace en tu navegador:",
+  "invite.ignore": "Si no esperabas esta invitación, puedes ignorar este correo."
 }

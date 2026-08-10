@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — SMTP 테스트",
   "smtp.test.title": "SMTP 테스트",
-  "smtp.test.body": "ReView에서 보낸 테스트 메일입니다. 이 메일을 받으셨다면 SMTP 설정이 정상입니다."
+  "smtp.test.body": "ReView에서 보낸 테스트 메일입니다. 이 메일을 받으셨다면 SMTP 설정이 정상입니다.",
+  "invite.subject": "ReView에 초대되었습니다",
+  "invite.title": "ReView에 오신 것을 환영합니다",
+  "invite.greeting": "{name}님, 안녕하세요.",
+  "invite.intro": "ReView 계정이 생성되었습니다. 비밀번호를 설정하여 계정을 활성화하세요.",
+  "invite.introBy": "{inviter}님이 ReView 계정을 만들었습니다. 비밀번호를 설정하여 계정을 활성화하세요.",
+  "invite.cta": "내 계정 활성화",
+  "invite.expiry": "이 링크는 {days}일 후에 만료됩니다.",
+  "invite.fallback": "버튼이 작동하지 않으면 아래 링크를 브라우저에 붙여넣으세요.",
+  "invite.ignore": "이 초대를 예상하지 않으셨다면 이 이메일을 무시하셔도 됩니다."
 }

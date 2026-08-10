@@ -90,6 +90,8 @@ export interface User {
   storageUsed: number;
   storageLimit: number | null;
   online?: boolean;
+  /** Compte créé par invitation, lien encore valide et jamais utilisé (annuaire admin). */
+  invitePending?: boolean;
 }
 /** Référence minimale (author de version, assignee de tâche). */
 export type UserRef = Pick<User, 'id' | 'name'>;
