@@ -1302,6 +1302,7 @@
   "batch.createCount": { "one": "{count} आइटम बनाएँ", "other": "{count} आइटम बनाएँ" },
   "batch.modeSimple": "सरल",
   "batch.modeBatch": "बैच",
+  "batch.creation": "Shots/Sequences निर्माण",
   "multirow.atLeastOne": "कम से कम एक पंक्ति भरें।",
   "notif.markAllRead": "सभी पढ़ा हुआ चिह्नित करें",
   "file.readFailed": "फ़ाइल पढ़ी नहीं जा सकी",

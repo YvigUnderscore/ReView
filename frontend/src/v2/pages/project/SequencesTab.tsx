@@ -4,25 +4,23 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Film, Plus } from 'lucide-react';
+import { Film } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import FavoriteButton from '../../components/FavoriteButton';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import MultiRowCreate from '../../components/MultiRowCreate';
 import BatchGenerator from '../../components/BatchGenerator';
 import { EditIcon, DeleteIcon } from '../../components/EntityCard';
 import EmptyState from '../../components/ui/empty-state';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import ModeSwitch, { type CreateMode } from './ModeSwitch';
 import SequenceEditDialog from './SequenceEditDialog';
 import TimelineCard from '../timeline/TimelineCard';
 import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData } from './projectTypes';
 import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Onglet Séquences : création (simple / lot / auto), édition (dialog), détail en accordéon. */
+/** Onglet Séquences : création en lot (Shots/Sequences creation), édition (dialog), détail en accordéon. */
 export default function SequencesTab({
   projectId,
   sequences,
@@ -43,8 +41,6 @@ export default function SequencesTab({
   pipeline: PipelineSettings;
 }) {
   const t = useT();
-  const [newSeq, setNewSeq] = useState({ name: '', code: '' });
-  const [mode, setMode] = useState<CreateMode>('simple');
   const [editing, setEditing] = useState<Sequence | null>(null);
   // Accordéon piloté par l'URL (?seq=ID) : back/forward et partage de lien cohérents (10.A6)
   const open = focusId;
@@ -53,17 +49,6 @@ export default function SequencesTab({
 
   const sorted = sortByCode(sequences);
 
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post('/api/sequences', { projectId, code: newSeq.code, name: newSeq.name || newSeq.code });
-      toast.success(t('sequences.created', { code: newSeq.code }));
-      setNewSeq({ name: '', code: '' });
-      reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error.generic'));
-    }
-  };
   const createBulk = async (rows: Record<string, string>[]) => {
     await api.post('/api/sequences/bulk', {
       projectId,
@@ -88,10 +73,9 @@ export default function SequencesTab({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sequences.title')}</h2>
-        {canManage && <ModeSwitch mode={mode} setMode={setMode} />}
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
-      {canManage && mode === 'auto' && (
+      {canManage && (
         <BatchGenerator
           defaults={{
             prefix: nomenclature.sequencePrefix,
@@ -100,42 +84,6 @@ export default function SequencesTab({
           }}
           onSubmit={(items) => createBulk(items.map((it) => ({ code: it.code, name: it.name })))}
         />
-      )}
-      {canManage && mode === 'manual' && (
-        <MultiRowCreate
-          addLabel="{t('sequences.create')}"
-          fields={[
-            {
-              key: 'code',
-              placeholder: t('sequences.codePlaceholder', {
-                example: `${nomenclature.sequencePrefix}${'0'.repeat(nomenclature.padding)}`,
-              }),
-              className: 'w-32',
-            },
-            { key: 'name', placeholder: t('sequences.name.placeholder'), className: 'flex-1' },
-          ]}
-          onSubmit={createBulk}
-        />
-      )}
-      {canManage && mode === 'simple' && (
-        <form onSubmit={create} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
-          <input
-            className="w-28 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder={t('sequences.code.placeholder')}
-            value={newSeq.code}
-            onChange={(e) => setNewSeq((s) => ({ ...s, code: e.target.value }))}
-            required
-          />
-          <input
-            className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder={t('sequences.name.placeholder')}
-            value={newSeq.name}
-            onChange={(e) => setNewSeq((s) => ({ ...s, name: e.target.value }))}
-          />
-          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground">
-            <Plus size={14} /> {t('entity.sequence')}
-          </button>
-        </form>
       )}
       {sequences.length === 0 ? (
         <EmptyState

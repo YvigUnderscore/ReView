@@ -1308,6 +1308,7 @@
   "batch.createCount": { "one": "Sortu elementu {count}", "other": "Sortu {count} elementu" },
   "batch.modeSimple": "Sinplea",
   "batch.modeBatch": "Sorta",
+  "batch.creation": "Shots/sequences sorrera",
   "multirow.atLeastOne": "Bete gutxienez lerro bat.",
   "notif.markAllRead": "Markatu dena irakurritzat",
   "file.readFailed": "Ezin izan da fitxategia irakurri",

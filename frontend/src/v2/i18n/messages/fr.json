@@ -1302,6 +1302,7 @@
   "batch.createCount": { "one": "Créer {count} élément", "other": "Créer {count} éléments" },
   "batch.modeSimple": "Simple",
   "batch.modeBatch": "Lot",
+  "batch.creation": "Création de shots/sequences",
   "multirow.atLeastOne": "Renseignez au moins une ligne.",
   "notif.markAllRead": "Tout marquer lu",
   "file.readFailed": "Lecture du fichier impossible",

@@ -1275,6 +1275,7 @@
   "batch.createCount": { "other": "{count}개 만들기" },
   "batch.modeSimple": "단일",
   "batch.modeBatch": "일괄",
+  "batch.creation": "Shots/Sequences 생성",
   "multirow.atLeastOne": "최소 한 줄은 채우세요.",
   "notif.markAllRead": "모두 읽음으로 표시",
   "file.readFailed": "파일을 읽을 수 없습니다",

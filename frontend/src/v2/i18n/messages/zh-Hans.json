@@ -1267,6 +1267,7 @@
   "batch.createCount": { "other": "创建 {count} 项" },
   "batch.modeSimple": "单个",
   "batch.modeBatch": "批量",
+  "batch.creation": "Shots/Sequences 创建",
   "multirow.atLeastOne": "至少填写一行。",
   "notif.markAllRead": "全部标为已读",
   "file.readFailed": "无法读取文件",

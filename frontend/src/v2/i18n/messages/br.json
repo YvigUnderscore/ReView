@@ -1288,6 +1288,7 @@
   "batch.createCount": { "one": "Krouiñ {count} elfenn", "other": "Krouiñ {count} elfenn" },
   "batch.modeSimple": "Eeun",
   "batch.modeBatch": "Strollad",
+  "batch.creation": "Krouiñ shots/sequences",
   "multirow.atLeastOne": "Leugnit ul linenn da nebeutañ.",
   "notif.markAllRead": "Merkañ pep tra lennet",
   "file.readFailed": "N’eo ket bet gallet lenn ar restr",

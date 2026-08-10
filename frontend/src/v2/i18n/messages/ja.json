@@ -1275,6 +1275,7 @@
   "batch.createCount": { "other": "{count} 件を作成" },
   "batch.modeSimple": "単体",
   "batch.modeBatch": "一括",
+  "batch.creation": "Shots/Sequences の作成",
   "multirow.atLeastOne": "少なくとも 1 行を入力してください。",
   "notif.markAllRead": "すべて既読にする",
   "file.readFailed": "ファイルを読めません",
