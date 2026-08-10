@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Bell, BellOff, Clapperboard, Plus } from 'lucide-react';
+import { Bell, BellOff, Clapperboard } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
@@ -10,10 +10,8 @@ import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../../components/EntityCard';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import MultiRowCreate from '../../components/MultiRowCreate';
 import BatchGenerator from '../../components/BatchGenerator';
 import EmptyState from '../../components/ui/empty-state';
-import ModeSwitch, { type CreateMode } from './ModeSwitch';
 import ShotDetailDrawer from './ShotDetailDrawer';
 import ShotEditDialog from './ShotEditDialog';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
@@ -21,7 +19,7 @@ import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Onglet Shots : création (simple / lot / auto), cartes groupées par séquence,
+ * Onglet Shots : création en lot (Shots/Sequences creation), cartes groupées par séquence,
  * détail d'un shot en drawer latéral (10.C1) piloté par l'URL (?shot=ID).
  */
 export default function ShotsTab({
@@ -49,8 +47,6 @@ export default function ShotsTab({
   const view = useViewMode(`shots:${projectId}`);
   // Suivi de notifications par shot (32.G, clic droit).
   const watch = useWatch();
-  const [newShot, setNewShot] = useState({ name: '', code: '', sequenceId: '' });
-  const [mode, setMode] = useState<CreateMode>('simple');
   const [editing, setEditing] = useState<Shot | null>(null);
   const [deleting, setDeleting] = useState<Shot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,22 +56,6 @@ export default function ShotsTab({
 
   const sortedSequences = sortByCode(sequences);
 
-  const createShot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post('/api/shots', {
-        projectId,
-        name: newShot.name || newShot.code,
-        code: newShot.code,
-        sequenceId: newShot.sequenceId ? Number(newShot.sequenceId) : null,
-      });
-      toast.success(t('shots.createdNamed', { code: newShot.code }));
-      setNewShot({ name: '', code: '', sequenceId: '' });
-      reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error.generic'));
-    }
-  };
   const createBulk = async (rows: Record<string, string>[]) => {
     await api.post('/api/shots/bulk', {
       projectId,
@@ -113,13 +93,12 @@ export default function ShotsTab({
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('shots.title')}</h2>
         <div className="flex items-center gap-2">
-          {canManage && <ModeSwitch mode={mode} setMode={setMode} />}
           <ViewToggle contextKey={`shots:${projectId}`} />
         </div>
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
-      {canManage && mode === 'auto' && (
+      {canManage && (
         <BatchGenerator
           defaults={{
             prefix: nomenclature.shotPrefix,
@@ -138,67 +117,6 @@ export default function ShotsTab({
           }
         />
       )}
-      {canManage && mode === 'manual' && (
-        <MultiRowCreate
-          addLabel={t('shots.create')}
-          fields={[
-            {
-              key: 'code',
-              placeholder: t('shots.codePlaceholder', {
-                example: `${nomenclature.shotPrefix}${'0'.repeat(nomenclature.padding)}`,
-              }),
-              className: 'w-28',
-            },
-            { key: 'name', placeholder: t('sequences.name.placeholder'), className: 'flex-1' },
-            {
-              key: 'sequenceId',
-              placeholder: t('shots.sequence'),
-              className: 'w-44',
-              options: [
-                { value: '', label: t('shots.noSequence') },
-                ...sortedSequences.map((sq) => ({ value: String(sq.id), label: `${sq.code} · ${sq.name}` })),
-              ],
-            },
-          ]}
-          onSubmit={createBulk}
-        />
-      )}
-      {canManage && mode === 'simple' && (
-        <form
-          onSubmit={createShot}
-          className="mb-5 flex flex-wrap gap-2 rounded-md border border-border bg-card p-2"
-        >
-          <input
-            className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder={t('sequences.code.placeholder')}
-            value={newShot.code}
-            onChange={(e) => setNewShot((s) => ({ ...s, code: e.target.value }))}
-            required
-          />
-          <input
-            className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
-            placeholder={t('sequences.name.placeholder')}
-            value={newShot.name}
-            onChange={(e) => setNewShot((s) => ({ ...s, name: e.target.value }))}
-          />
-          <select
-            className="rounded border border-input bg-background px-2 py-1.5 text-xs"
-            value={newShot.sequenceId}
-            onChange={(e) => setNewShot((s) => ({ ...s, sequenceId: e.target.value }))}
-          >
-            <option value="">{t('shots.noSequence')}</option>
-            {sortedSequences.map((sq) => (
-              <option key={sq.id} value={sq.id}>
-                {sq.code} · {sq.name}
-              </option>
-            ))}
-          </select>
-          <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground">
-            <Plus size={14} /> Shot
-          </button>
-        </form>
-      )}
-
       {shots.length === 0 && (
         <EmptyState
           compact

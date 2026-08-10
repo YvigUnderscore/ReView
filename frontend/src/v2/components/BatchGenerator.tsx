@@ -68,7 +68,7 @@ export default function BatchGenerator({
   return (
     <div className="mb-5 rounded-md border border-border bg-card p-3">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-        <Wand2 size={14} /> {t('batch.autoGenerate')}
+        <Wand2 size={14} /> {t('batch.creation')}
       </div>
       {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
       <div className="flex flex-wrap items-end gap-3">

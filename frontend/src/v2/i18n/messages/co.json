@@ -1305,6 +1305,7 @@
   "batch.createCount": { "one": "Creà {count} elementu", "other": "Creà {count} elementi" },
   "batch.modeSimple": "Simplice",
   "batch.modeBatch": "Lottu",
+  "batch.creation": "Creazione di shots/sequences",
   "multirow.atLeastOne": "Riempi almenu una linea.",
   "notif.markAllRead": "Marcà tuttu cum’è lettu",
   "file.readFailed": "Lettura di u schedariu impussibile",

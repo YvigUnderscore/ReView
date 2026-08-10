@@ -1308,6 +1308,7 @@
   "batch.createCount": { "one": "{count} Element erstellen", "other": "{count} Elemente erstellen" },
   "batch.modeSimple": "Einfach",
   "batch.modeBatch": "Stapel",
+  "batch.creation": "Shots/Sequences erstellen",
   "multirow.atLeastOne": "Mindestens eine Zeile ausfüllen.",
   "notif.markAllRead": "Alle als gelesen markieren",
   "file.readFailed": "Datei konnte nicht gelesen werden",

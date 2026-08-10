@@ -1308,6 +1308,7 @@
   "batch.createCount": { "one": "{count} Element erstelle", "other": "{count} Elemänt erstelle" },
   "batch.modeSimple": "Eifach",
   "batch.modeBatch": "Stapel",
+  "batch.creation": "Shots/Sequences erschaffe",
   "multirow.atLeastOne": "Mindeschtens ei Zyle uusfille.",
   "notif.markAllRead": "Alles as gläse markiere",
   "file.readFailed": "D'Datei het nit könne gläse wärde",
