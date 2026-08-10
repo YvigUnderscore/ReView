@@ -469,7 +469,6 @@
   "review.compare.model": "비교 모델",
   "review.compare.splat": "비교 splat",
   "review.live.leave": "라이브 세션 나가기(우클릭: 역할 관리)",
-  "review.mediaStrip": "이 version의 미디어 — 썸네일을 클릭하면 review가 바뀝니다",
   "review.staging.saved": "연출을 모두에게 저장했습니다",
   "review.staging.unsaved": "연출이 게시되지 않았습니다",
   "review.layoutCamera": "layout 카메라",
@@ -1412,11 +1411,15 @@
   "review.dockCollapsed": "접힘",
   "review.compare.label": "비교:",
   "review.dock": "도크",
-  "review.filmStrip": "필름 스트립",
   "review.frameRate": "frame 레이트",
   "review.openNamed": "review 열기: {name}",
   "review.guides.actionSafe": "액션 세이프 (90 %)",
   "review.guides.titleSafe": "타이틀 세이프 (80 %)",
+  "review.versionAssets": "version 의 assets",
+  "review.versionAssetsHint": "이 version 의 assets — 섬네일을 클릭하면 review 합니다",
+  "review.prevAsset": "이전 asset",
+  "review.nextAsset": "다음 asset",
+  "review.assetViewing": "보는 중",
   "rail.tools": "도구",
   "rail.hideLabels": "도구 이름 숨기기",
   "rail.showLabels": "도구 이름 표시",
@@ -2021,5 +2024,6 @@
   "timeline.departmentShown": "표시할 단계",
   "timeline.revisionLabel": "고정된 리비전",
   "timeline.panelNotApplicable": "편집본에는 해당하지 않습니다.",
-  "timeline.navHint": "이미지를 클릭해 재생하거나 일시정지"
+  "timeline.navHint": "이미지를 클릭해 재생하거나 일시정지",
+  "timeline.shotsTrack": "timeline 의 shot — 클릭하면 해당 위치로 이동합니다"
 }

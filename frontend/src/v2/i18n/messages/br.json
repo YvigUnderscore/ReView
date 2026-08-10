@@ -476,7 +476,6 @@
   "review.compare.model": "Patrom keñveriet",
   "review.compare.splat": "Splat keñveriet",
   "review.live.leave": "Kuitaat an dalc'h war-eeun (klik dehou : merañ ar rolloù)",
-  "review.mediaStrip": "Mediaoù ar version — klikit war ur velvenn evit cheñch review",
   "review.staging.saved": "Aozadur enrollet evit an holl",
   "review.staging.unsaved": "Aozadur nann-embannet",
   "review.layoutCamera": "Kamera layout",
@@ -1426,11 +1425,15 @@
   "review.dockCollapsed": "pleget",
   "review.compare.label": "Keñveriadenn :",
   "review.dock": "dock",
-  "review.filmStrip": "Filmenn",
   "review.frameRate": "Feur frame",
   "review.openNamed": "Digeriñ ar review : {name}",
   "review.guides.actionSafe": "Action safe (90 %)",
   "review.guides.titleSafe": "Title safe (80 %)",
+  "review.versionAssets": "Assets ar version",
+  "review.versionAssetsHint": "Assets ar version-mañ — klikit war ur skeudennig evit he review",
+  "review.prevAsset": "Asset kent",
+  "review.nextAsset": "Asset da heul",
+  "review.assetViewing": "O sellet",
   "rail.tools": "Binvioù",
   "rail.hideLabels": "Kuzhat skritelloù ar binvioù",
   "rail.showLabels": "Diskouez skritelloù ar binvioù",
@@ -2068,5 +2071,6 @@
   "timeline.departmentShown": "Pazenn diskouezet",
   "timeline.revisionLabel": "Adweladenn skornet",
   "timeline.panelNotApplicable": "N’en deus ket a dalvoudegezh evit ur c’hempenn.",
-  "timeline.navHint": "Klikañ war ar skeudenn evit lenn pe ehanañ"
+  "timeline.navHint": "Klikañ war ar skeudenn evit lenn pe ehanañ",
+  "timeline.shotsTrack": "Shots an timeline — klikit evit mont da unan"
 }

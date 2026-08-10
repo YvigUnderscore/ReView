@@ -490,7 +490,6 @@
   "review.compare.model": "Verglichenes Modell",
   "review.compare.splat": "Verglichener splat",
   "review.live.leave": "Live-Sitzung verlassen (Rechtsklick: Rollen verwalten)",
-  "review.mediaStrip": "Medien der version — auf ein Vorschaubild klicken, um die Review zu wechseln",
   "review.staging.saved": "Inszenierung für alle gespeichert",
   "review.staging.unsaved": "Inszenierung nicht veröffentlicht",
   "review.layoutCamera": "Layout-Kamera",
@@ -1446,11 +1445,15 @@
   "review.dockCollapsed": "eingeklappt",
   "review.compare.label": "Vergleich:",
   "review.dock": "Dock",
-  "review.filmStrip": "Filmstreifen",
   "review.frameRate": "Frame rate",
   "review.openNamed": "Review öffnen: {name}",
   "review.guides.actionSafe": "Action safe (90 %)",
   "review.guides.titleSafe": "Title safe (80 %)",
+  "review.versionAssets": "Assets der Version",
+  "review.versionAssetsHint": "Assets dieser Version — auf ein Vorschaubild klicken, um es zu reviewen",
+  "review.prevAsset": "Vorheriges Asset",
+  "review.nextAsset": "Nächstes Asset",
+  "review.assetViewing": "Angezeigt",
   "rail.tools": "Werkzeuge",
   "rail.hideLabels": "Werkzeugbeschriftungen ausblenden",
   "rail.showLabels": "Werkzeugbeschriftungen anzeigen",
@@ -2079,5 +2082,6 @@
   "timeline.departmentShown": "Gezeigter Schritt",
   "timeline.revisionLabel": "Eingefrorene Revision",
   "timeline.panelNotApplicable": "Für einen Schnitt nicht anwendbar.",
-  "timeline.navHint": "Bild anklicken, um abzuspielen oder zu pausieren"
+  "timeline.navHint": "Bild anklicken, um abzuspielen oder zu pausieren",
+  "timeline.shotsTrack": "Shots der Timeline — zum Anspringen anklicken"
 }

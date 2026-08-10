@@ -54,7 +54,7 @@ navigates, so nothing interrupts the screening.
 - Each shot is served exactly as the review serves it — adaptive HLS through the
   authenticated proxy when renditions exist, the web MP4 otherwise. A shot that
   plays in its own review plays here too.
-- The film strip drawer, under the transport, shows the clips as thumbnails;
+- The *Shots* drawer, under the transport, shows the clips as thumbnails;
   clicking one jumps there.
 
 ## Reviewing the cut itself

@@ -465,7 +465,6 @@
   "review.compare.model": "对比模型",
   "review.compare.splat": "对比 splat",
   "review.live.leave": "退出实时会话（右键：管理角色）",
-  "review.mediaStrip": "该 version 的媒体 — 点击缩略图可切换 review",
   "review.staging.saved": "已为所有人保存这套呈现",
   "review.staging.unsaved": "呈现尚未发布",
   "review.layoutCamera": "layout 摄像机",
@@ -1402,11 +1401,15 @@
   "review.dockCollapsed": "收起",
   "review.compare.label": "对比：",
   "review.dock": "面板",
-  "review.filmStrip": "胶片条",
   "review.frameRate": "frame 率",
   "review.openNamed": "打开 review：{name}",
   "review.guides.actionSafe": "动作安全框（90 %）",
   "review.guides.titleSafe": "字幕安全框（80 %）",
+  "review.versionAssets": "version 的 assets",
+  "review.versionAssetsHint": "该 version 的 assets — 点击缩略图即可 review",
+  "review.prevAsset": "上一个 asset",
+  "review.nextAsset": "下一个 asset",
+  "review.assetViewing": "正在查看",
   "rail.tools": "工具",
   "rail.hideLabels": "隐藏工具名称",
   "rail.showLabels": "显示工具名称",
@@ -2011,5 +2014,6 @@
   "timeline.departmentShown": "显示的阶段",
   "timeline.revisionLabel": "已冻结版次",
   "timeline.panelNotApplicable": "对剪辑不适用。",
-  "timeline.navHint": "点击画面播放或暂停"
+  "timeline.navHint": "点击画面播放或暂停",
+  "timeline.shotsTrack": "timeline 的 shot — 点击可跳转"
 }

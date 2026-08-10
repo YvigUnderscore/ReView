@@ -487,7 +487,6 @@
   "review.compare.model": "Modelo comparado",
   "review.compare.splat": "Splat comparado",
   "review.live.leave": "Sair da sessão ao vivo (botão direito: gerenciar papéis)",
-  "review.mediaStrip": "Mídias da version — clique numa miniatura para trocar de review",
   "review.staging.saved": "Encenação salva para todos",
   "review.staging.unsaved": "Encenação não publicada",
   "review.layoutCamera": "Câmera layout",
@@ -1443,11 +1442,15 @@
   "review.dockCollapsed": "recolhido",
   "review.compare.label": "Comparação:",
   "review.dock": "dock",
-  "review.filmStrip": "Tira de filme",
   "review.frameRate": "Frame rate",
   "review.openNamed": "Abrir a review: {name}",
   "review.guides.actionSafe": "Action safe (90 %)",
   "review.guides.titleSafe": "Title safe (80 %)",
+  "review.versionAssets": "Assets da version",
+  "review.versionAssetsHint": "Assets desta version — clique numa miniatura para a passar em review",
+  "review.prevAsset": "Asset anterior",
+  "review.nextAsset": "Asset seguinte",
+  "review.assetViewing": "Em exibição",
   "rail.tools": "Ferramentas",
   "rail.hideLabels": "Ocultar os rótulos das ferramentas",
   "rail.showLabels": "Mostrar os rótulos das ferramentas",
@@ -2079,5 +2082,6 @@
   "timeline.departmentShown": "Etapa mostrada",
   "timeline.revisionLabel": "Revisão congelada",
   "timeline.panelNotApplicable": "Não se aplica a uma montagem.",
-  "timeline.navHint": "Clique na imagem para reproduzir ou pausar"
+  "timeline.navHint": "Clique na imagem para reproduzir ou pausar",
+  "timeline.shotsTrack": "Shots da timeline — clique para saltar para um"
 }

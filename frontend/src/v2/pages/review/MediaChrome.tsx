@@ -10,7 +10,7 @@ import { useChromeState } from './chrome/useChromeState';
 import { toolsFor } from './chrome/tools';
 import MediaOptions from './options/MediaOptions';
 import MediaPanels from './panels/MediaPanels';
-import Filmstrip from './Filmstrip';
+import VersionAssets from './VersionAssets';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { CompareMode } from './useCompareState';
@@ -20,7 +20,7 @@ import { useT } from '../../i18n';
 
 /**
  * Chrome des viewers plats (vidéo, image) : bascule de mode, rail d'outils, barre d'options,
- * dock inspecteur et tiroir « Pellicule ». Le lecteur garde sa ligne de transport ancrée sous
+ * dock inspecteur et tiroir des assets de la version. Le lecteur garde sa ligne de transport ancrée sous
  * l'image — c'est déjà l'emplacement du temps, elle n'a jamais flotté.
  */
 export default function MediaChrome({
@@ -96,7 +96,7 @@ export default function MediaChrome({
       drawer={
         state.drawer === 'strip' ? (
           <div className="flex-shrink-0 border-t border-border bg-card px-2.5 py-2">
-            <Filmstrip versionId={data.media.versionId} mediaId={data.media.id} />
+            <VersionAssets versionId={data.media.versionId} mediaId={data.media.id} />
           </div>
         ) : undefined
       }
@@ -107,10 +107,10 @@ export default function MediaChrome({
             size="sm"
             variant="ghost"
             onClick={() => update({ drawer: state.drawer === 'strip' ? null : 'strip' })}
-            title={t('review.mediaStrip')}
+            title={t('review.versionAssetsHint')}
           >
             {state.drawer === 'strip' ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-            {t('review.filmStrip')}
+            {t('review.versionAssets')}
           </Button>
         </div>
       }
