@@ -30,6 +30,7 @@ import PendingDrafts from './PendingDrafts';
 import SidebarFooter from './SidebarFooter';
 import SidebarProjectTree from './SidebarProjectTree';
 import SidebarRecents from './SidebarRecents';
+import ChatDock from './chat/ChatDock';
 import CommandPalette from './CommandPalette';
 import NotificationBell from './NotificationBell';
 import ShortcutsHelp from './ShortcutsHelp';
@@ -319,6 +320,8 @@ export default function Shell({
       <OnboardingTour />
       <UploadWidget />
       <PendingDrafts />
+      {/* Conversation ouverte : ancrée au bord de la sidebar, elle survit à la navigation. */}
+      <ChatDock sidebarHidden={sidebarHidden} />
     </div>
   );
 }

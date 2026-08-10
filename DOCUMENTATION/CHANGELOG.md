@@ -3,6 +3,16 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08 — Messaging & member profiles
+
+- **Direct messages and group threads**, in the presence panel at the bottom of the sidebar.
+  Click someone to write to them; the `+` button opens a group. The conversation window
+  follows you as you navigate, so you can answer without leaving a review.
+- **Member pages**: click a name to see who does what — job title, bio, status and the
+  projects you share. Contact details stay hidden from external client accounts.
+- **Fixed**: job title, phone and bio saved in your profile came back empty after a reload.
+  They were stored correctly, but the session did not carry them back.
+
 ## 2026-08 — Pipeline API for DCCs, Prism and bots
 
 - **New integration API** under `/api/v1`, meant for tools rather than the web interface:
