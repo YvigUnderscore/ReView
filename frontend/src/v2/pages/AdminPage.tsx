@@ -16,6 +16,7 @@ import {
   FolderCog,
   History,
   LayoutDashboard,
+  LogIn,
   Mail,
   Megaphone,
   MessageSquare,
@@ -48,6 +49,7 @@ import DistributionTab from './admin/DistributionTab';
 import ApiWebhooksTab from './admin/ApiWebhooksTab';
 import MediaAccessTab from './admin/MediaAccessTab';
 import IdentityTab from './admin/IdentityTab';
+import LoginAppearanceTab from './admin/LoginAppearanceTab';
 import JobsTab from './admin/JobsTab';
 import ReviewStatusTab from './admin/ReviewStatusTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
@@ -87,6 +89,13 @@ const sections = (t: Tr) =>
       label: t('admin.tab.identity'),
       icon: Fingerprint,
       Component: IdentityTab,
+    },
+    {
+      key: 'login-appearance',
+      group: 'studio',
+      label: t('admin.tab.loginAppearance'),
+      icon: LogIn,
+      Component: LoginAppearanceTab,
     },
     {
       key: 'system',

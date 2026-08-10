@@ -86,7 +86,8 @@ Lighting only exists for 3D models: a splat carries its own baked light.
 ## Bottom row
 
 - **Video**: the player's own timeline and transport (playback, frame stepping, loop,
-  sound, quality), plus a *Filmstrip* drawer listing the media of the version.
+  sound, quality), plus a *Version assets* drawer showing the other assets of the
+  version as thumbnails — click one to review it.
 - **Image**: zoom, rotation and mirror, plus the same drawer.
 - **3D / splat**: the animation transport — track selector (staging camera, or the clips
   carried by the file), play, key-to-key jumps, key insertion, playhead, loop — and the
