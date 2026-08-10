@@ -45,6 +45,13 @@ node "$ROOT/scripts/check-translations.mjs"
 step "i18n — chaînes en dur dans le frontend"
 node "$ROOT/scripts/check-untranslated.mjs"
 
+# La faute symétrique, que le contrôle précédent ne peut pas voir : une clé qui atteint
+# l'écran telle quelle (« task.status.todo » au lieu de « À faire »), faute d'un `t()`.
+# Une clé nue ressemble à un identifiant technique, donc le détecteur de texte en dur
+# l'écarte à raison — celui-ci interroge les types plutôt que le texte.
+step "i18n — clés de traduction affichées brutes"
+node "$ROOT/scripts/check-raw-keys.mjs"
+
 # ---------- Budget de taille (10.F4) ----------
 # Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Le backend
 # n'a pas d'ESLint : on garde-fou ici la taille des routes (≤ 200 lignes ; la logique
