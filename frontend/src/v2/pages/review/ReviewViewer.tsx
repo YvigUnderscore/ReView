@@ -17,7 +17,7 @@ import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
-import Filmstrip from './Filmstrip';
+import VersionAssets from './VersionAssets';
 import Model3DReview from './Model3DReview';
 import SplatReview from './splat/SplatReview';
 import VideoWipeOverlay from './VideoWipeOverlay';
@@ -267,8 +267,8 @@ export default function ReviewViewer({
         />
       )}
 
-      {/* Filmstrip généralisé : médias de la version courante, tous types (14.E) */}
-      {data && <Filmstrip versionId={data.media.versionId} mediaId={data.media.id} />}
+      {/* Assets de la version courante, tous types : le passage d'un livrable à l'autre. */}
+      {data && <VersionAssets versionId={data.media.versionId} mediaId={data.media.id} />}
     </section>
   );
 }

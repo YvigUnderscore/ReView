@@ -217,10 +217,10 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
                 size="sm"
                 variant="ghost"
                 onClick={() => update({ drawer: state.drawer === 'strip' ? null : 'strip' })}
-                title={t('review.mediaStrip')}
+                title={t('timeline.shotsTrack')}
               >
                 {state.drawer === 'strip' ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-                {t('review.filmStrip')}
+                {t('timeline.shots')}
               </Button>
             </div>
           }

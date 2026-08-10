@@ -490,7 +490,6 @@
   "review.compare.model": "Konparatutako modeloa",
   "review.compare.splat": "Konparatutako splata",
   "review.live.leave": "Irten zuzeneko saiotik (eskuineko klika: rolak kudeatu)",
-  "review.mediaStrip": "Version honen mediak — egin klik miniatura batean review-z aldatzeko",
   "review.staging.saved": "Eszenaratzea denentzat gorde da",
   "review.staging.unsaved": "Eszenaratzea argitaratu gabe",
   "review.layoutCamera": "Layout kamera",
@@ -1427,11 +1426,15 @@
   "review.dockCollapsed": "tolestuta",
   "review.compare.label": "Konparaketa:",
   "review.dock": "dock",
-  "review.filmStrip": "Film-zerrenda",
   "review.frameRate": "Frame-tasa",
   "review.openNamed": "Ireki review-a: {name}",
   "review.guides.actionSafe": "Action safe (% 90)",
   "review.guides.titleSafe": "Title safe (% 80)",
+  "review.versionAssets": "version honen assets-ak",
+  "review.versionAssetsHint": "version honen assets-ak — egin klik miniatura batean review egiteko",
+  "review.prevAsset": "Aurreko asset-a",
+  "review.nextAsset": "Hurrengo asset-a",
+  "review.assetViewing": "Ikusgai",
   "rail.tools": "Tresnak",
   "rail.hideLabels": "Ezkutatu tresnen etiketak",
   "rail.showLabels": "Erakutsi tresnen etiketak",
@@ -2062,5 +2065,6 @@
   "timeline.departmentShown": "Erakutsitako etapa",
   "timeline.revisionLabel": "Izoztutako berrikuspena",
   "timeline.panelNotApplicable": "Ez dagokio muntaketa bati.",
-  "timeline.navHint": "Egin klik irudian erreproduzitzeko edo pausatzeko"
+  "timeline.navHint": "Egin klik irudian erreproduzitzeko edo pausatzeko",
+  "timeline.shotsTrack": "Timeline-aren shot-ak — egin klik batera joateko"
 }

@@ -484,7 +484,6 @@
   "review.compare.model": "तुलना किया गया मॉडल",
   "review.compare.splat": "तुलना किया गया splat",
   "review.live.leave": "लाइव सत्र छोड़ें (दायाँ क्लिक: भूमिकाएँ प्रबंधित करें)",
-  "review.mediaStrip": "इस version का मीडिया — थंबनेल पर क्लिक कर review बदलें",
   "review.staging.saved": "प्रस्तुति सबके लिए सहेजी गई",
   "review.staging.unsaved": "प्रस्तुति प्रकाशित नहीं है",
   "review.layoutCamera": "layout कैमरा",
@@ -1421,11 +1420,15 @@
   "review.dockCollapsed": "सिमटा",
   "review.compare.label": "तुलना:",
   "review.dock": "डॉक",
-  "review.filmStrip": "फ़िल्म स्ट्रिप",
   "review.frameRate": "frame दर",
   "review.openNamed": "review खोलें: {name}",
   "review.guides.actionSafe": "एक्शन सेफ़ (90 %)",
   "review.guides.titleSafe": "टाइटल सेफ़ (80 %)",
+  "review.versionAssets": "version के assets",
+  "review.versionAssetsHint": "इस version के assets — review के लिए थंबनेल पर क्लिक करें",
+  "review.prevAsset": "पिछला asset",
+  "review.nextAsset": "अगला asset",
+  "review.assetViewing": "देखा जा रहा",
   "rail.tools": "उपकरण",
   "rail.hideLabels": "उपकरणों के लेबल छिपाएँ",
   "rail.showLabels": "उपकरणों के लेबल दिखाएँ",
@@ -2053,5 +2056,6 @@
   "timeline.departmentShown": "दिखाया गया चरण",
   "timeline.revisionLabel": "स्थिर संशोधन",
   "timeline.panelNotApplicable": "संपादन पर लागू नहीं।",
-  "timeline.navHint": "चलाने या रोकने के लिए छवि पर क्लिक करें"
+  "timeline.navHint": "चलाने या रोकने के लिए छवि पर क्लिक करें",
+  "timeline.shotsTrack": "timeline के shot — किसी पर जाने के लिए क्लिक करें"
 }

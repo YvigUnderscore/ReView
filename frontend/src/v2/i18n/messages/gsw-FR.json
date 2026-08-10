@@ -490,7 +490,6 @@
   "review.compare.model": "Verglichens Modell",
   "review.compare.splat": "Verglichener splat",
   "review.live.leave": "D'Live-Sitzung verlo (Rechtsklick: Rolle verwalte)",
-  "review.mediaStrip": "Medie vu d'r version — uf e Vorschaubild klicke, fer d'review z'wechsle",
   "review.staging.saved": "Ihszenierung fer alli gspichert",
   "review.staging.unsaved": "Ihszenierung nit veröffentlicht",
   "review.layoutCamera": "Layout-Kamera",
@@ -1427,11 +1426,15 @@
   "review.dockCollapsed": "ihgklappt",
   "review.compare.label": "Verglich :",
   "review.dock": "Dock",
-  "review.filmStrip": "Filmstreife",
   "review.frameRate": "Frame-Rate",
   "review.openNamed": "Review ufmache : {name}",
   "review.guides.actionSafe": "Action safe (90 %)",
   "review.guides.titleSafe": "Title safe (80 %)",
+  "review.versionAssets": "Assets vun dr Version",
+  "review.versionAssetsHint": "Assets vun dere Version — uf e Bildli klicke, fer s ze reviewe",
+  "review.prevAsset": "Vorherigs Asset",
+  "review.nextAsset": "Nächschts Asset",
+  "review.assetViewing": "Aagezeigt",
   "rail.tools": "Werkzyg",
   "rail.hideLabels": "D'Werkzygbeschriftunge ussblende",
   "rail.showLabels": "D'Werkzygbeschriftunge ahzeige",
@@ -2059,5 +2062,6 @@
   "timeline.departmentShown": "Gezeigte Schritt",
   "timeline.revisionLabel": "Iigfrorni Revision",
   "timeline.panelNotApplicable": "Fir e Schnitt nit relevant.",
-  "timeline.navHint": "Uf s Bild klicke zum abspiele oder pausiere"
+  "timeline.navHint": "Uf s Bild klicke zum abspiele oder pausiere",
+  "timeline.shotsTrack": "Shots vun dr Timeline — draufklicke fer dert ane z springe"
 }

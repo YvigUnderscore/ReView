@@ -484,7 +484,6 @@
   "review.compare.model": "Compared model",
   "review.compare.splat": "Compared splat",
   "review.live.leave": "Leave the live session (right-click: manage roles)",
-  "review.mediaStrip": "Media of the version — click a thumbnail to switch review",
   "review.staging.saved": "Staging saved for everyone",
   "review.staging.unsaved": "Staging not published",
   "review.layoutCamera": "Layout camera",
@@ -1418,11 +1417,15 @@
   "review.dockCollapsed": "collapsed",
   "review.compare.label": "Comparison:",
   "review.dock": "dock",
-  "review.filmStrip": "Film strip",
   "review.frameRate": "Frame rate",
   "review.openNamed": "Open the review: {name}",
   "review.guides.actionSafe": "Action safe (90 %)",
   "review.guides.titleSafe": "Title safe (80 %)",
+  "review.versionAssets": "Version assets",
+  "review.versionAssetsHint": "Assets of this version — click a thumbnail to review it",
+  "review.prevAsset": "Previous asset",
+  "review.nextAsset": "Next asset",
+  "review.assetViewing": "Viewing",
   "rail.tools": "Tools",
   "rail.hideLabels": "Hide the tool labels",
   "rail.showLabels": "Show the tool labels",
@@ -2047,5 +2050,6 @@
   "timeline.departmentShown": "Stage shown",
   "timeline.revisionLabel": "Frozen revision",
   "timeline.panelNotApplicable": "Not applicable to a cut.",
-  "timeline.navHint": "Click the image to play or pause"
+  "timeline.navHint": "Click the image to play or pause",
+  "timeline.shotsTrack": "Shots of the timeline — click to jump to one"
 }

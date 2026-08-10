@@ -469,7 +469,6 @@
   "review.compare.model": "比較するモデル",
   "review.compare.splat": "比較する splat",
   "review.live.leave": "ライブセッションから退出（右クリック：役割を管理）",
-  "review.mediaStrip": "この version のメディア — サムネイルをクリックすると review が切り替わります",
   "review.staging.saved": "演出を全員向けに保存しました",
   "review.staging.unsaved": "演出は未公開です",
   "review.layoutCamera": "layout カメラ",
@@ -1393,11 +1392,15 @@
   "review.dockCollapsed": "折りたたみ",
   "review.compare.label": "比較：",
   "review.dock": "ドック",
-  "review.filmStrip": "フィルムストリップ",
   "review.frameRate": "frame レート",
   "review.openNamed": "review を開く：{name}",
   "review.guides.actionSafe": "アクションセーフ（90 %）",
   "review.guides.titleSafe": "タイトルセーフ（80 %）",
+  "review.versionAssets": "version の assets",
+  "review.versionAssetsHint": "この version の assets — サムネイルをクリックして review します",
+  "review.prevAsset": "前の asset",
+  "review.nextAsset": "次の asset",
+  "review.assetViewing": "表示中",
   "rail.tools": "ツール",
   "rail.hideLabels": "ツール名を隠す",
   "rail.showLabels": "ツール名を表示",
@@ -2001,5 +2004,6 @@
   "timeline.departmentShown": "表示する工程",
   "timeline.revisionLabel": "確定したリビジョン",
   "timeline.panelNotApplicable": "編集には該当しません。",
-  "timeline.navHint": "画像をクリックで再生／一時停止"
+  "timeline.navHint": "画像をクリックで再生／一時停止",
+  "timeline.shotsTrack": "timeline の shot — クリックでその位置へ移動します"
 }
