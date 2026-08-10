@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { Role, UserStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
+import * as InvitationService from './InvitationService';
 import { storage, StorageService } from './StorageService';
 import { getOnlineUserIds } from './PresenceService';
 import { toPublicUser } from '../lib/userView';
@@ -64,13 +66,28 @@ async function assertUniqueIdentity(
  * pas des membres du studio — ils n'ont ni présence, ni adresse joignable.
  */
 export async function listUsers() {
-  const users = await prisma.user.findMany({
-    where: { isService: false },
-    select: publicUser,
-    orderBy: { createdAt: 'asc' },
-  });
+  const [users, pending] = await Promise.all([
+    prisma.user.findMany({
+      where: { isService: false },
+      select: publicUser,
+      orderBy: { createdAt: 'asc' },
+    }),
+    // Une seule requête pour toute la liste : un compte encore en attente d'activation se
+    // signale dans l'annuaire, sinon on ne sait pas distinguer « invité » de « jamais venu ».
+    prisma.invitation.findMany({
+      where: { acceptedAt: null, expiresAt: { gt: new Date() } },
+      select: { userId: true },
+    }),
+  ]);
   const online = new Set(getOnlineUserIds());
-  return Promise.all(users.map(async (u) => ({ ...(await toPublicUser(u)), online: online.has(u.id) })));
+  const invited = new Set(pending.map((i) => i.userId));
+  return Promise.all(
+    users.map(async (u) => ({
+      ...(await toPublicUser(u)),
+      online: online.has(u.id),
+      invitePending: invited.has(u.id),
+    })),
+  );
 }
 
 /**
@@ -208,7 +225,8 @@ export async function setAvatar(userId: number, key: string | null) {
 
 export interface CreateUserInput {
   email: string;
-  password: string;
+  /** Absent en mode invitation : la personne choisira le sien depuis le lien reçu. */
+  password?: string;
   name?: string;
   firstName?: string;
   lastName?: string;
@@ -216,13 +234,23 @@ export interface CreateUserInput {
   role: Role;
 }
 
+/**
+ * Crée un compte. Sans mot de passe, le compte naît inactivable autrement que par le lien
+ * d'invitation envoyé par email : son mot de passe est un aléa que personne — pas même
+ * l'administrateur qui vient de créer le compte — n'a jamais vu.
+ */
 export async function createUser(actorId: number, input: CreateUserInput) {
   const email = normalizeEmail(input.email);
   if (await prisma.user.findUnique({ where: { email } }))
     throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
   if (input.username && (await prisma.user.findUnique({ where: { username: input.username } })))
     throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
-  const hash = await bcrypt.hash(input.password, 12);
+  const byInvitation = input.password === undefined;
+  // Relais et URL publique vérifiés AVANT la création : un compte créé puis privé de son
+  // email d'activation ne serait joignable par personne, et son adresse resterait prise.
+  if (byInvitation) await InvitationService.assertCanInvite();
+
+  const hash = await bcrypt.hash(input.password ?? randomBytes(32).toString('hex'), 12);
   const user = await prisma.user.create({
     data: {
       email,
@@ -235,7 +263,23 @@ export async function createUser(actorId: number, input: CreateUserInput) {
     },
     select: publicUser,
   });
-  logAudit({ userId: actorId, action: 'USER_CREATE', entityType: 'User', entityId: user.id });
+  if (byInvitation) {
+    try {
+      await InvitationService.sendInvitation(user.id, actorId);
+    } catch (err) {
+      // Le relais a lâché entre la vérification et l'envoi : on ne laisse pas derrière nous
+      // un compte muet qui réserve l'adresse. L'administrateur retente quand c'est réparé.
+      await prisma.user.delete({ where: { id: user.id } });
+      throw err;
+    }
+  }
+  logAudit({
+    userId: actorId,
+    action: 'USER_CREATE',
+    entityType: 'User',
+    entityId: user.id,
+    metadata: { invited: byInvitation },
+  });
   return toPublicUser(user);
 }
 

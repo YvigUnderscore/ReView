@@ -13,6 +13,7 @@ import { useAuth } from './stores/useAuth';
 import { useTheme } from './stores/useTheme';
 import { useBranding } from './lib/branding';
 import LoginPage from './pages/LoginPage';
+import InvitePage from './pages/InvitePage';
 import SetupPage from './pages/SetupPage';
 import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -93,6 +94,8 @@ function AppRoutes() {
         ) : (
           <>
             <Route path="/login" element={<LoginPage />} />
+            {/* Activation d'un compte invité : publique, le jeton du lien fait foi. */}
+            <Route path="/invite/:token" element={<InvitePage />} />
             <Route
               path="/client/:token"
               element={

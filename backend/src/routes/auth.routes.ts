@@ -12,6 +12,7 @@ import { authenticate } from '../middleware/auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { toSessionUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
+import * as InvitationService from '../services/InvitationService';
 import { env } from '../config/env';
 import { badRequest, forbidden, unauthorized } from '../lib/errors';
 
@@ -103,6 +104,41 @@ router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) 
   const next = { id: user.id, email: user.email, role: user.role, sid };
   res.json({ token: signAccessToken(next), refreshToken: signRefreshToken(next) });
 });
+
+// ── Invitation d'un nouveau membre (Phase 47) ────────────────────────────────
+// Routes publiques : le porteur du lien n'a, par définition, pas encore de session.
+
+const invitationTokenParam = z.object({ token: z.string().min(20).max(128) });
+
+// GET /api/auth/invitation/:token — aperçu affiché sur la page d'activation
+router.get(
+  '/invitation/:token',
+  authLimiter,
+  validate({ params: invitationTokenParam }),
+  async (req, res) => {
+    res.json({ invitation: await InvitationService.describeInvitation(req.params.token as string) });
+  },
+);
+
+// POST /api/auth/invitation/:token — pose le mot de passe choisi et ouvre la session
+router.post(
+  '/invitation/:token',
+  authLimiter,
+  validate({ params: invitationTokenParam, body: z.object({ password: passwordSchema }) }),
+  async (req, res) => {
+    const { password } = req.body as { password: string };
+    const user = await InvitationService.acceptInvitation(req.params.token as string, password);
+    // Activer son compte vaut connexion : personne ne demande de retaper le mot de passe
+    // qu'on vient de choisir.
+    const sid = await createSession(user.id, req);
+    const payload = { id: user.id, email: user.email, role: user.role, sid };
+    res.json({
+      token: signAccessToken(payload),
+      refreshToken: signRefreshToken(payload),
+      user: await toSessionUser(user),
+    });
+  },
+);
 
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {

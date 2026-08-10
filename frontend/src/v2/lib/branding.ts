@@ -11,6 +11,36 @@ import { qk } from './query';
  * globalement (y compris la page de connexion). L'accent (couleur hex) surcharge les tokens
  * `--primary`/`--ring` ; mis en cache localStorage pour un rendu instantané (anti-flash).
  */
+/**
+ * Habillage de la page de connexion (réglé dans Admin → Page de connexion). Voyage avec le
+ * branding public : la page est pré-auth, il n'y a pas d'autre canal pour l'obtenir.
+ */
+export interface LoginAppearance {
+  layout: 'split' | 'centered';
+  bgKey: string | null;
+  /** URL présignée de l'image de fond, `null` si aucune image n'est configurée. */
+  bgUrl: string | null;
+  bgFit: 'cover' | 'contain';
+  /** Opacité du voile posé sur l'image (0 → 0.95). */
+  overlay: number;
+  /** Flou de l'image, en pixels (0 → 24). */
+  blur: number;
+  /** Accroche personnalisée ; chaîne vide = texte traduit par défaut. */
+  tagline: string;
+  showLogo: boolean;
+}
+
+export const DEFAULT_LOGIN_APPEARANCE: LoginAppearance = {
+  layout: 'split',
+  bgKey: null,
+  bgUrl: null,
+  bgFit: 'cover',
+  overlay: 0.45,
+  blur: 0,
+  tagline: '',
+  showLogo: true,
+};
+
 export interface Branding {
   name: string | null;
   /** Couleur d'accent au format hex « #RRGGBB » (convertie en HSL à l'application). */
@@ -21,6 +51,8 @@ export interface Branding {
    * (http/https uniquement) et replié sur le dépôt amont s'il n'est pas renseigné.
    */
   sourceUrl: string;
+  /** Absent des instances antérieures à ce réglage : replier sur `DEFAULT_LOGIN_APPEARANCE`. */
+  login?: LoginAppearance;
 }
 
 const ACCENT_LS = 'review:accent';

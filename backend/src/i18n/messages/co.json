@@ -26,5 +26,14 @@
 
   "smtp.test.subject": "ReView — prova SMTP",
   "smtp.test.title": "Prova SMTP",
-  "smtp.test.body": "Quessu hè un e-mail di prova mandatu da ReView. S'è tù u ricevi, a cunfigurazione SMTP funziona."
+  "smtp.test.body": "Quessu hè un e-mail di prova mandatu da ReView. S'è tù u ricevi, a cunfigurazione SMTP funziona.",
+  "invite.subject": "Site invitatu nant'à ReView",
+  "invite.title": "Benvenutu nant'à ReView",
+  "invite.greeting": "Bonghjornu {name},",
+  "invite.intro": "Un contu hè statu creatu per voi nant'à ReView. Sceglite a vostra parolla d'ordine per l'attivà.",
+  "invite.introBy": "{inviter} v'hà creatu un contu nant'à ReView. Sceglite a vostra parolla d'ordine per l'attivà.",
+  "invite.cta": "Attivà u mo contu",
+  "invite.expiry": "Stu ligame scade ind'è {days} ghjorni.",
+  "invite.fallback": "S'ellu ùn funziona micca u buttone, incullate stu ligame in u vostru navigatore :",
+  "invite.ignore": "S'ellu ùn v'aspittavate micca st'invitu, pudete ignurà stu messagiu."
 }
