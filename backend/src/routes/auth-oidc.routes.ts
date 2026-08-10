@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
 import * as oidc from 'openid-client';
 import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
-import { getOidcConfig, type OidcConfig } from '../lib/oidcConfig';
+import { getOidcConfig, getOidcLogoUrl, isOidcReady, type OidcConfig } from '../lib/oidcConfig';
 import { signAccessToken, signRefreshToken, signTwoFaToken } from '../lib/jwt';
 import { createSession } from '../lib/sessions';
 import { logAudit } from '../services/AuditService';
@@ -40,9 +40,7 @@ const redirectUri = (cfg: OidcConfig) => `${cfg.publicUrl}/api/auth/oidc/callbac
 
 async function readyConfig(): Promise<OidcConfig> {
   const cfg = await getOidcConfig();
-  if (!cfg.enabled || !cfg.clientId || !cfg.clientSecret || !cfg.publicUrl) {
-    throw notFound('SSO non configuré');
-  }
+  if (!isOidcReady(cfg)) throw notFound('SSO non configuré');
   return cfg;
 }
 
@@ -56,11 +54,19 @@ function readCookie(header: string | undefined, name: string): string | null {
   return null;
 }
 
-// GET /api/auth/oidc/status — public : le front affiche (ou non) le bouton SSO
+// GET /api/auth/oidc/status — public : le front affiche (ou non) le bouton SSO, son logo,
+// et sait s'il doit encore proposer le formulaire email + mot de passe. `passwordLogin`
+// est l'état EFFECTIF : il suit la même règle que le refus côté /api/auth/login, sans quoi
+// la page de connexion cacherait un formulaire que le serveur accepte encore (ou l'inverse).
 router.get('/status', async (_req, res) => {
   const cfg = await getOidcConfig();
-  const ready = cfg.enabled && !!cfg.clientId && !!cfg.clientSecret && !!cfg.publicUrl;
-  res.json({ enabled: ready, label: cfg.buttonLabel });
+  const ready = isOidcReady(cfg);
+  res.json({
+    enabled: ready,
+    label: cfg.buttonLabel,
+    logoUrl: ready ? await getOidcLogoUrl(cfg.logoKey) : null,
+    passwordLogin: !(cfg.passwordLoginDisabled && ready),
+  });
 });
 
 // GET /api/auth/oidc/login — redirige vers le fournisseur (state+nonce en cookie signé)

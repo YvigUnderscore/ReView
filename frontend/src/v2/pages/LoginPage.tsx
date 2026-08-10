@@ -67,12 +67,19 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Bouton SSO (36.A) — affiché seulement si l'OIDC est configuré côté studio.
+  // Bouton SSO (36.A) — affiché seulement si l'OIDC est configuré côté studio. `passwordLogin`
+  // dit si le studio accepte encore le couple email + mot de passe (mode « SSO seul »).
   const ssoQ = useQuery({
     queryKey: ['oidc-status'],
-    queryFn: () => api.get<{ enabled: boolean; label: string }>('/api/auth/oidc/status'),
+    queryFn: () =>
+      api.get<{ enabled: boolean; label: string; logoUrl: string | null; passwordLogin: boolean }>(
+        '/api/auth/oidc/status',
+      ),
     staleTime: 5 * 60 * 1000,
   });
+  // Tant que la réponse n'est pas là, on garde le formulaire : mieux vaut un champ inutile
+  // une fraction de seconde qu'une page de connexion vide si la requête échoue.
+  const passwordLogin = ssoQ.data?.passwordLogin !== false;
 
   // Retours OIDC par fragment : #sso=<access>&refresh=<r> | #tfa=<tmpToken> | #ssoerr=<msg>.
   useEffect(() => {
@@ -176,51 +183,68 @@ export default function LoginPage() {
     );
   }
 
+  const ssoButton = ssoQ.data?.enabled ? (
+    <a
+      href="/api/auth/oidc/login"
+      onClick={markSsoFlowStarted}
+      className="flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-center text-sm hover:bg-secondary/60"
+    >
+      {ssoQ.data.logoUrl && (
+        <img src={ssoQ.data.logoUrl} alt="" aria-hidden className="h-5 w-5 shrink-0 object-contain" />
+      )}
+      {ssoQ.data.label || t('sso.buttonDefault')}
+    </a>
+  ) : null;
+
   return (
     <AuthLayout title={tr('login.title')} subtitle={tr('login.subtitle')}>
       <div className="mb-6">
         <h2 className="text-xl font-semibold">{tr('login.heading')}</h2>
-        <p className="text-sm text-muted-foreground">{tr('login.lead')}</p>
+        <p className="text-sm text-muted-foreground">
+          {passwordLogin ? tr('login.lead') : tr('login.ssoOnlyLead')}
+        </p>
       </div>
-      <form onSubmit={submit} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="email">{tr('login.email')}</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder={t('email.placeholder')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
+      {passwordLogin ? (
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">{tr('login.email')}</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder={t('email.placeholder')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">{tr('login.password')}</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" disabled={busy} className="w-full">
+            {busy ? tr('login.submitting') : tr('login.submit')}
+          </Button>
+          {ssoButton}
+        </form>
+      ) : (
+        // Mode « SSO seul » : le formulaire disparaît, le serveur refusant de toute façon
+        // le couple email + mot de passe (`PASSWORD_LOGIN_DISABLED`).
+        <div className="space-y-4">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {ssoButton}
+          <p className="text-center text-xs text-muted-foreground">{t('login.ssoOnlyHint')}</p>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="password">{tr('login.password')}</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={busy} className="w-full">
-          {busy ? tr('login.submitting') : tr('login.submit')}
-        </Button>
-        {ssoQ.data?.enabled && (
-          <a
-            href="/api/auth/oidc/login"
-            onClick={markSsoFlowStarted}
-            className="block w-full rounded-md border border-border px-4 py-2 text-center text-sm hover:bg-secondary/60"
-          >
-            {ssoQ.data.label || t('sso.buttonDefault')}
-          </a>
-        )}
-      </form>
+      )}
     </AuthLayout>
   );
 }
