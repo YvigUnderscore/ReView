@@ -10,7 +10,7 @@ import { createSession, isSessionActive, touchSession } from '../lib/sessions';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import { rateLimit } from '../middleware/rateLimit';
-import { toPublicUser, type RawUserIdentity } from '../lib/userView';
+import { toSessionUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
 import { env } from '../config/env';
 import { badRequest, forbidden, unauthorized } from '../lib/errors';
@@ -30,21 +30,6 @@ const credentialsSchema = z.object({
 });
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 });
-
-type UserRow = RawUserIdentity & {
-  role: import('@prisma/client').Role;
-  status?: import('@prisma/client').UserStatus;
-};
-const publicUser = (u: UserRow) =>
-  toPublicUser({
-    id: u.id,
-    email: u.email,
-    name: u.name ?? null,
-    firstName: u.firstName ?? null,
-    lastName: u.lastName ?? null,
-    username: u.username ?? null,
-    avatarKey: u.avatarKey ?? null,
-  }).then((view) => ({ ...view, role: u.role, status: u.status }));
 
 // POST /api/auth/register — crée un artiste. Fermé par défaut (ALLOW_SELF_REGISTRATION) :
 // sinon n'importe qui obtient un compte authentifié sur l'instance, et peut réserver
@@ -72,7 +57,7 @@ router.post(
     const user = await prisma.user.create({
       data: { email, password: hash, name: name ?? null, role: 'ARTIST' },
     });
-    res.status(201).json({ user: await publicUser(user) });
+    res.status(201).json({ user: await toSessionUser(user) });
   },
 );
 
@@ -96,7 +81,7 @@ router.post('/login', authLimiter, validate({ body: credentialsSchema }), async 
   res.json({
     token: signAccessToken(payload),
     refreshToken: signRefreshToken(payload),
-    user: await publicUser(user),
+    user: await toSessionUser(user),
   });
 });
 
@@ -123,7 +108,7 @@ router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) 
 router.get('/me', authenticate, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) throw unauthorized('Utilisateur introuvable');
-  res.json({ user: { ...(await publicUser(user)), twoFaEnabled: user.totpEnabledAt != null } });
+  res.json({ user: { ...(await toSessionUser(user)), twoFaEnabled: user.totpEnabledAt != null } });
 });
 
 export default router;

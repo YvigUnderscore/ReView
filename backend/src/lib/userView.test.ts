@@ -1,8 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect } from 'vitest';
-import { displayName, initials } from './userView';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../services/StorageService', () => ({
+  storage: { getPresignedGetUrl: vi.fn() },
+  StorageService: class {},
+}));
+
+import { displayName, initials, toSessionUser } from './userView';
 
 describe('displayName', () => {
   it('priorise le pseudo', () => {
@@ -16,6 +22,37 @@ describe('displayName', () => {
   });
   it("retombe sur l'email en dernier recours", () => {
     expect(displayName({ id: 1, email: 'a@b.c' })).toBe('a@b.c');
+  });
+});
+
+describe('toSessionUser', () => {
+  // La vue de session est ce que le front rejoue à chaque rechargement : un champ absent
+  // ici disparaît de l'écran de profil, et la sauvegarde a l'air de n'avoir rien gardé.
+  it('emporte le profil enrichi (poste, bio, téléphone)', async () => {
+    const view = await toSessionUser({
+      id: 1,
+      email: 'e@x.io',
+      username: 'jdoe',
+      jobTitle: 'Compositing',
+      bio: 'Bonjour',
+      phone: '+33 6',
+      role: 'ARTIST',
+      status: 'AVAILABLE',
+    });
+    expect(view).toMatchObject({
+      displayName: 'jdoe',
+      jobTitle: 'Compositing',
+      bio: 'Bonjour',
+      phone: '+33 6',
+      role: 'ARTIST',
+    });
+  });
+
+  it('normalise les champs vides à null plutôt que de les omettre', async () => {
+    const view = await toSessionUser({ id: 1, email: 'e@x.io', role: 'ARTIST' });
+    expect(view.jobTitle).toBeNull();
+    expect(view.bio).toBeNull();
+    expect(view.phone).toBeNull();
   });
 });
 

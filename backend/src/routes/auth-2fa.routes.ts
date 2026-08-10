@@ -18,7 +18,7 @@ import {
 } from '../lib/twofa';
 import { signAccessToken, signRefreshToken, verifyTwoFaToken } from '../lib/jwt';
 import { createSession } from '../lib/sessions';
-import { toPublicUser } from '../lib/userView';
+import { toSessionUser } from '../lib/userView';
 import { logAudit } from '../services/AuditService';
 import { badRequest, unauthorized } from '../lib/errors';
 
@@ -113,19 +113,10 @@ router.post(
 
     const sid = await createSession(user.id, req);
     const payload = { id: user.id, email: user.email, role: user.role, sid };
-    const view = await toPublicUser({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      username: user.username,
-      avatarKey: user.avatarKey,
-    });
     res.json({
       token: signAccessToken(payload),
       refreshToken: signRefreshToken(payload),
-      user: { ...view, role: user.role, status: user.status },
+      user: await toSessionUser(user),
     });
   },
 );
