@@ -369,6 +369,8 @@ export interface ProjectSettings extends PipelineSettings {
 
 // Modules séparés (budget) : partage (35), stats (43.A), planning (43.C), préférences (42.A),
 // explorateur d'administration (refonte admin).
+export * from './chat';
+export * from './profile';
 export * from './share';
 export * from './admin';
 export * from './stats';

@@ -3,13 +3,14 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, UserCog, ChevronDown, Users, Sun, Moon } from 'lucide-react';
+import { LogOut, UserCog, ChevronDown, Sun, Moon } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { useAuth } from '../stores/useAuth';
 import type { UserStatus } from '../types/api';
-import { usePresence, lastSeenLabel } from '../stores/usePresence';
 import { useTheme } from '../stores/useTheme';
 import Avatar from './Avatar';
+import PresenceList from './PresenceList';
+import ConversationList from './chat/ConversationList';
 import WhatsNew from './WhatsNew';
 import { STATUS_COLOR, STATUS_LABEL_KEY } from '../lib/userStatus';
 import { useT } from '../i18n';
@@ -25,9 +26,7 @@ export default function SidebarFooter() {
   const theme = useTheme((s) => s.theme);
   const toggleTheme = useTheme((s) => s.toggle);
   const navigate = useNavigate();
-  const { users } = usePresence();
   const [statusOpen, setStatusOpen] = useState(false);
-  const [presenceOpen, setPresenceOpen] = useState(true);
 
   if (!user) return null;
 
@@ -42,56 +41,11 @@ export default function SidebarFooter() {
     }
   };
 
-  // Les autres utilisateurs (hors soi), en ligne d'abord.
-  const others = users.filter((u) => u.id !== user.id).sort((a, b) => Number(b.online) - Number(a.online));
-  const onlineCount = others.filter((u) => u.online).length;
-
   return (
     <div className="border-t border-border">
-      {/* Présence des autres utilisateurs */}
-      <div className="px-3 py-2">
-        <button
-          onClick={() => setPresenceOpen((o) => !o)}
-          className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/60"
-        >
-          <span className="flex items-center gap-1.5">
-            <Users size={14} /> {t('presence.onlineCount', { count: onlineCount })}
-          </span>
-          <ChevronDown
-            size={14}
-            className={presenceOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
-          />
-        </button>
-        {presenceOpen && (
-          <div className="custom-scrollbar mt-1 max-h-44 space-y-0.5 overflow-y-auto">
-            {others.length === 0 && (
-              <p className="px-2 py-1 text-xs text-muted-foreground">{t('presence.aloneHere')}</p>
-            )}
-            {others.map((u) => (
-              <div
-                key={u.id}
-                className="flex items-center gap-2 rounded-md px-2 py-1"
-                title={t(STATUS_LABEL_KEY[u.status])}
-              >
-                <Avatar
-                  seed={u.id}
-                  initials={u.initials}
-                  avatarUrl={u.avatarUrl}
-                  size={24}
-                  status={u.status}
-                  online={u.online}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-medium">{u.displayName}</div>
-                  <div className="truncate text-[10px] text-muted-foreground">
-                    {lastSeenLabel(u.lastSeenAt, u.online)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Qui est là (fiche + message privé au clic) puis les fils de discussion en cours. */}
+      <PresenceList />
+      <ConversationList />
 
       {/* Utilisateur courant */}
       <div className="relative border-t border-border p-3">

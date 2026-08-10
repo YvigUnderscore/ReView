@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { Role, UserStatus } from '@prisma/client';
 import { storage } from '../services/StorageService';
 import { imageTypeFromKey } from './uploadContentType';
 
@@ -13,6 +14,15 @@ export interface RawUserIdentity {
   lastName?: string | null;
   username?: string | null;
   avatarKey?: string | null;
+}
+
+/** Identité + profil enrichi (42.B №89) + rôle : ce que voit l'utilisateur de sa session. */
+export interface RawSessionUser extends RawUserIdentity {
+  jobTitle?: string | null;
+  bio?: string | null;
+  phone?: string | null;
+  role: Role;
+  status?: UserStatus;
 }
 
 /** Nom d'affichage : pseudo > nom complet legacy > prénom+nom > email. */
@@ -83,5 +93,35 @@ export async function toPublicUser<T extends RawUserIdentity>(
     displayName: displayName(u),
     initials: initials(u),
     avatarUrl: await avatarUrl(u.avatarKey),
+  };
+}
+
+/**
+ * Vue de l'utilisateur connecté, renvoyée par toutes les routes qui ouvrent ou rejouent
+ * une session (`/api/auth/login`, `/api/auth/2fa/verify`, `/api/auth/me`).
+ *
+ * Ces trois routes recopiaient chacune la liste des champs à la main, et aucune n'y avait
+ * ajouté le profil enrichi (42.B №89) : poste, bio et téléphone étaient bien enregistrés
+ * par `PATCH /api/users/me`, mais le premier rechargement de page rappelait `/me` et les
+ * effaçait du store — le formulaire les réaffichait vides, comme si la sauvegarde n'avait
+ * rien gardé. La vue est donc unique, et sert de contrat au type `AuthUser` du front.
+ */
+export async function toSessionUser(u: RawSessionUser) {
+  const view = await toPublicUser({
+    id: u.id,
+    email: u.email,
+    name: u.name ?? null,
+    firstName: u.firstName ?? null,
+    lastName: u.lastName ?? null,
+    username: u.username ?? null,
+    avatarKey: u.avatarKey ?? null,
+  });
+  return {
+    ...view,
+    jobTitle: u.jobTitle ?? null,
+    bio: u.bio ?? null,
+    phone: u.phone ?? null,
+    role: u.role,
+    status: u.status,
   };
 }

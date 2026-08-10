@@ -43,6 +43,7 @@ router.get('/presence', async (_req, res) => {
 });
 
 // ── Profil de l'utilisateur courant ──────────────────────────────────────────
+// La fiche publique d'un membre et l'avatar vivent dans `users-profile.routes`.
 
 // PATCH /api/users/me — édition de son propre profil
 router.patch(
@@ -108,24 +109,6 @@ router.patch(
   validate({ body: z.object({ status: z.nativeEnum(UserStatus) }) }),
   async (req, res) => {
     res.json({ user: await UserService.setStatus(req.user!.id, req.body.status as UserStatus) });
-  },
-);
-
-// POST /api/users/me/avatar/presign — URL présignée pour l'upload d'avatar
-router.post(
-  '/me/avatar/presign',
-  validate({ body: z.object({ contentType: z.string().regex(/^image\/(png|jpe?g|webp)$/) }) }),
-  async (req, res) => {
-    res.json(await UserService.presignAvatar(req.user!.id, req.body.contentType));
-  },
-);
-
-// PUT /api/users/me/avatar — enregistre la clé après upload réussi
-router.put(
-  '/me/avatar',
-  validate({ body: z.object({ key: z.string().max(256).nullable() }) }),
-  async (req, res) => {
-    res.json({ user: await UserService.setAvatar(req.user!.id, req.body.key) });
   },
 );
 

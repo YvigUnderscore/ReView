@@ -20,7 +20,9 @@ import jobsRoutes from './routes/jobs.routes';
 import { httpMetrics, registry, startQueueMetrics } from './lib/metrics';
 import authOidcRoutes from './routes/auth-oidc.routes';
 import usersRoutes from './routes/users.routes';
+import usersProfileRoutes from './routes/users-profile.routes';
 import pushRoutes from './routes/push.routes';
+import chatRoutes from './routes/chat.routes';
 import studioRoutes from './routes/studio.routes';
 import projectsRoutes from './routes/projects.routes';
 import projectsExtraRoutes from './routes/projects-extra.routes';
@@ -115,8 +117,10 @@ export const createApp = (): Express => {
   app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
   app.use('/api/auth', authSecurityRoutes); // sessions + tokens API (36.B/36.C)
+  app.use('/api/users', usersProfileRoutes); // fiche d'un membre + avatar — avant /:id
   app.use('/api/users', usersRoutes);
   app.use('/api/push', pushRoutes); // Web Push (42.B №66)
+  app.use('/api/chat', chatRoutes); // messagerie interne (MP & groupes)
   app.use('/api/studio', studioRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
   app.use('/api/studio/ocio', ocioRoutes);

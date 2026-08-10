@@ -153,64 +153,67 @@ model PushSubscription {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  password     String
-  name         String? // nom complet legacy (affichage de repli)
-  firstName    String?
-  lastName     String?
-  username     String?  @unique // pseudo affiché en priorité
-  jobTitle     String? // 42.B №89 — intitulé de poste (profil enrichi)
-  bio          String? // 42.B №89 — courte présentation
-  phone        String? // 42.B №89 — téléphone de contact
-  avatarKey    String? // clé objet MinIO
-  role         Role     @default(ARTIST)
+  id            Int        @id @default(autoincrement())
+  email         String     @unique
+  password      String
+  name          String? // nom complet legacy (affichage de repli)
+  firstName     String?
+  lastName      String?
+  username      String?    @unique // pseudo affiché en priorité
+  jobTitle      String? // 42.B №89 — intitulé de poste (profil enrichi)
+  bio           String? // 42.B №89 — courte présentation
+  phone         String? // 42.B №89 — téléphone de contact
+  avatarKey     String? // clé objet MinIO
+  role          Role       @default(ARTIST)
   // Compte de service (API v1) : porte les écritures d'un token machine pour garder des
   // FK et un audit valides. Aucun login interactif, jamais listé dans l'annuaire.
-  isService    Boolean  @default(false)
-  status       UserStatus @default(AVAILABLE) // statut manuel (dispo/absent/ne pas déranger)
-  lastSeenAt   DateTime? // dernière activité connue (présence)
-  storageUsed  BigInt   @default(0)
-  storageLimit BigInt?
-  preferences  Json     @default("{}")
+  isService     Boolean    @default(false)
+  status        UserStatus @default(AVAILABLE) // statut manuel (dispo/absent/ne pas déranger)
+  lastSeenAt    DateTime? // dernière activité connue (présence)
+  storageUsed   BigInt     @default(0)
+  storageLimit  BigInt?
+  preferences   Json       @default("{}")
   // 2FA TOTP (36.A) : secret chiffré (AES-GCM, lib/crypto), null tant que non configuré ;
   // enabledAt null = enrôlement en cours ; backupCodes = hashs sha256 (consommés un par un).
   totpSecret    String?
   totpEnabledAt DateTime?
-  backupCodes   String[] @default([])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  backupCodes   String[]   @default([])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  memberships      ProjectMembership[]
-  uploadedMedia    MediaObject[]       @relation("MediaUploader")
-  authoredVersions Version[]           @relation("VersionAuthor")
-  assignedTasks    Task[]              @relation("TaskAssignee")
-  comments         Comment[]           @relation("CommentAuthor")
-  assignedComments Comment[]           @relation("CommentAssignee")
-  resolvedComments Comment[]           @relation("CommentResolver")
-  watches          Watch[]
-  reactions        Reaction[]
-  notifications    Notification[]
-  createdShares    ShareLink[]         @relation("ShareCreator")
-  auditLogs        AuditLog[]
-  boardChanges     BoardChange[]
-  passwordResets   PasswordReset[]
-  invitation       Invitation[]        @relation("InvitationTarget")
-  sentInvitations  Invitation[]        @relation("InvitationSender")
-  favorites        Favorite[]
-  documents        Document[]
-  announcementReads AnnouncementRead[]
-  reviewReferences ReviewReference[]
-  reviewDecisions  ReviewDecision[]    @relation("DecisionAuthor")
-  playlists        Playlist[]          @relation("PlaylistAuthor")
-  timelineMarkers  TimelineMarker[]    @relation("TimelineMarkerAuthor")
-  timelineSnapshots TimelineSnapshot[] @relation("SnapshotAuthor")
-  pushSubscriptions PushSubscription[]
-  sessions         UserSession[]
-  apiTokens        ApiToken[]
-  createdApiTokens ApiToken[]          @relation("ApiTokenCreator")
-  mediaAccesses    MediaAccessLog[]
-  apiEvents        ApiEvent[]          @relation("ApiEventActor")
+  memberships          ProjectMembership[]
+  uploadedMedia        MediaObject[]        @relation("MediaUploader")
+  authoredVersions     Version[]            @relation("VersionAuthor")
+  assignedTasks        Task[]               @relation("TaskAssignee")
+  comments             Comment[]            @relation("CommentAuthor")
+  assignedComments     Comment[]            @relation("CommentAssignee")
+  resolvedComments     Comment[]            @relation("CommentResolver")
+  watches              Watch[]
+  reactions            Reaction[]
+  notifications        Notification[]
+  createdShares        ShareLink[]          @relation("ShareCreator")
+  auditLogs            AuditLog[]
+  boardChanges         BoardChange[]
+  passwordResets       PasswordReset[]
+  invitation           Invitation[]         @relation("InvitationTarget")
+  sentInvitations      Invitation[]         @relation("InvitationSender")
+  favorites            Favorite[]
+  documents            Document[]
+  announcementReads    AnnouncementRead[]
+  reviewReferences     ReviewReference[]
+  reviewDecisions      ReviewDecision[]     @relation("DecisionAuthor")
+  playlists            Playlist[]           @relation("PlaylistAuthor")
+  timelineMarkers      TimelineMarker[]     @relation("TimelineMarkerAuthor")
+  timelineSnapshots    TimelineSnapshot[]   @relation("SnapshotAuthor")
+  pushSubscriptions    PushSubscription[]
+  sessions             UserSession[]
+  apiTokens            ApiToken[]
+  createdApiTokens     ApiToken[]           @relation("ApiTokenCreator")
+  mediaAccesses        MediaAccessLog[]
+  apiEvents            ApiEvent[]           @relation("ApiEventActor")
+  conversations        ConversationMember[]
+  createdConversations Conversation[]       @relation("ConversationCreator")
+  chatMessages         ChatMessage[]        @relation("ChatAuthor")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -381,30 +384,30 @@ model Project {
   updatedAt    DateTime      @updatedAt
   deletedAt    DateTime?
 
-  sequences   Sequence[]
-  shots       Shot[]
-  assets      Asset[]
-  memberships ProjectMembership[]
-  shareLinks  ShareLink[]
+  sequences     Sequence[]
+  shots         Shot[]
+  assets        Asset[]
+  memberships   ProjectMembership[]
+  shareLinks    ShareLink[]
   notifications Notification[]
-  board       Board?
-  playlists   Playlist[]
-  apiTokens   ApiToken[]
-  apiEvents   ApiEvent[]
-  timelines   Timeline[]
+  board         Board?
+  playlists     Playlist[]
+  apiTokens     ApiToken[]
+  apiEvents     ApiEvent[]
+  timelines     Timeline[]
 
   @@unique([studioId, slug])
 }
 
 model Sequence {
-  id        Int    @id @default(autoincrement())
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        Int       @id @default(autoincrement())
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId Int
   name      String
   code      String
-  order     Int    @default(0)
+  order     Int       @default(0)
   // Réglages pipeline propres (override résolution/fps/frames du projet). JSON.
-  settings  Json   @default("{}")
+  settings  Json      @default("{}")
   deletedAt DateTime?
 
   shots     Shot[]
@@ -415,24 +418,24 @@ model Sequence {
 }
 
 model Shot {
-  id         Int       @id @default(autoincrement())
-  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId  Int
-  sequence   Sequence? @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
-  sequenceId Int?
-  name       String
-  code       String
-  startFrame Int?
-  endFrame   Int?
-  order      Int       @default(0)
+  id           Int       @id @default(autoincrement())
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int
+  sequence     Sequence? @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
+  sequenceId   Int?
+  name         String
+  code         String
+  startFrame   Int?
+  endFrame     Int?
+  order        Int       @default(0)
   // Réglages pipeline propres (override résolution/fps du parent). JSON.
-  settings   Json      @default("{}")
+  settings     Json      @default("{}")
   thumbnailKey String?
   // Omis du montage : le plan est coupé au montage éditorial mais reste en base (son
   // travail, ses commentaires et son historique demeurent consultables). Les timelines
   // automatiques le sautent — supprimer le shot ferait perdre tout le reste.
-  omitted    Boolean   @default(false)
-  deletedAt  DateTime?
+  omitted      Boolean   @default(false)
+  deletedAt    DateTime?
 
   tasks  Task[]
   assets Asset[] @relation("AssetShots")
@@ -444,14 +447,14 @@ model Shot {
 }
 
 model Asset {
-  id          Int       @id @default(autoincrement())
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   Int
-  name        String
-  type        AssetType @default(OTHER)
-  description String?
+  id           Int       @id @default(autoincrement())
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int
+  name         String
+  type         AssetType @default(OTHER)
+  description  String?
   thumbnailKey String?
-  deletedAt   DateTime?
+  deletedAt    DateTime?
 
   tasks     Task[]
   versions  Version[]  @relation("AssetVersions")
@@ -483,7 +486,7 @@ model Task {
   updatedAt  DateTime   @updatedAt
 
   // Une Task est rattachée à un Shot OU un Asset (réutilisable)
-  shot    Shot? @relation(fields: [shotId], references: [id], onDelete: Cascade)
+  shot    Shot?  @relation(fields: [shotId], references: [id], onDelete: Cascade)
   shotId  Int?
   asset   Asset? @relation(fields: [assetId], references: [id], onDelete: Cascade)
   assetId Int?
@@ -510,7 +513,7 @@ model Version {
   updatedAt DateTime      @updatedAt
   deletedAt DateTime?
 
-  task    Task? @relation("TaskVersions", fields: [taskId], references: [id], onDelete: Cascade)
+  task    Task?  @relation("TaskVersions", fields: [taskId], references: [id], onDelete: Cascade)
   taskId  Int?
   asset   Asset? @relation("AssetVersions", fields: [assetId], references: [id], onDelete: Cascade)
   assetId Int?
@@ -760,26 +763,26 @@ model BoardChange {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Comment {
-  id            Int      @id @default(autoincrement())
-  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
-  mediaObjectId Int
-  author        User?    @relation("CommentAuthor", fields: [userId], references: [id], onDelete: SetNull)
-  userId        Int?
-  guestName     String?
-  content       String
-  timestamp     Float? // temps vidéo (s)
-  duration      Float? // durée de la plage commentée (s)
-  annotation    Json? // dessin/annotation 2D
-  cameraState   Json? // viewpoint 3D/splat (position, target, fov…)
-  screenshotKey String? // capture annotée (MinIO)
-  attachments   Json? // pièces jointes (clés MinIO)
-  isResolved    Boolean  @default(false)
-  resolvedBy    User?    @relation("CommentResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
-  resolvedById  Int?
-  resolvedAt    DateTime?
-  isVisibleToClient Boolean @default(false)
-  isEdited      Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  id                Int         @id @default(autoincrement())
+  media             MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId     Int
+  author            User?       @relation("CommentAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  userId            Int?
+  guestName         String?
+  content           String
+  timestamp         Float? // temps vidéo (s)
+  duration          Float? // durée de la plage commentée (s)
+  annotation        Json? // dessin/annotation 2D
+  cameraState       Json? // viewpoint 3D/splat (position, target, fov…)
+  screenshotKey     String? // capture annotée (MinIO)
+  attachments       Json? // pièces jointes (clés MinIO)
+  isResolved        Boolean     @default(false)
+  resolvedBy        User?       @relation("CommentResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedById      Int?
+  resolvedAt        DateTime?
+  isVisibleToClient Boolean     @default(false)
+  isEdited          Boolean     @default(false)
+  createdAt         DateTime    @default(now())
 
   parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   parentId Int?
@@ -796,11 +799,11 @@ model Comment {
   timelineId   Int?
   // Position dans le film entier (s) — ce que la seule timeline du montage affiche.
   timelineTime Float?
-  sharedToShot Boolean @default(false)
+  sharedToShot Boolean   @default(false)
 
-  reactions  Reaction[]
-  references ReviewReference[] // images de référence jointes (affichées à la sélection)
-  spawnedTasks Task[] @relation("TaskSourceComment") // tâches kanban créées depuis ce commentaire (32.D)
+  reactions    Reaction[]
+  references   ReviewReference[] // images de référence jointes (affichées à la sélection)
+  spawnedTasks Task[]            @relation("TaskSourceComment") // tâches kanban créées depuis ce commentaire (32.D)
 
   @@index([timelineId])
 }
@@ -975,4 +978,60 @@ model AnnouncementRead {
 
   @@unique([announcementId, userId])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Messagerie interne (MP & groupes de discussion)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Fil de discussion : soit un tête-à-tête (isGroup = false, exactement deux membres),
+// soit un groupe nommé. `lastMessageAt` est dénormalisé pour trier la liste des fils
+// sans agréger les messages à chaque affichage de la sidebar.
+model Conversation {
+  id            Int      @id @default(autoincrement())
+  isGroup       Boolean  @default(false)
+  title         String? // nom du groupe (NULL pour un tête-à-tête : le nom est l'autre membre)
+  createdBy     User?    @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById   Int?
+  createdAt     DateTime @default(now())
+  lastMessageAt DateTime @default(now())
+
+  members  ConversationMember[]
+  messages ChatMessage[]
+
+  @@index([lastMessageAt])
+}
+
+// Appartenance à un fil. `lastReadAt` porte le compteur de non-lus ; `mutedAt` coupe la
+// notification sans quitter le fil.
+model ConversationMember {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime     @default(now())
+  mutedAt        DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+// Message écrit. Le corps est du texte brut (le rendu échappe côté client) ; une
+// suppression est douce (`deletedAt`) pour ne pas trouer les fils des autres membres.
+model ChatMessage {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int
+  author         User?        @relation("ChatAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId       Int?
+  body           String
+  // Message de service (arrivée/départ/renommage) : affiché en gris, sans auteur cliquable.
+  isSystem       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  editedAt       DateTime?
+  deletedAt      DateTime?
+
+  @@index([conversationId, createdAt])
 }
