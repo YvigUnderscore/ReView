@@ -104,6 +104,52 @@ export async function listPresence() {
   );
 }
 
+/**
+ * Fiche publique d'un membre du studio — lisible par tout compte authentifié.
+ *
+ * Les coordonnées (email, téléphone) ne sont servies qu'aux comptes internes : un CLIENT
+ * externe voit l'annuaire pour savoir à qui il parle en review, pas le carnet d'adresses
+ * du studio. Les projets listés sont ceux que les deux personnes partagent — l'intersection
+ * ne révèle donc rien que le lecteur ne voie déjà.
+ */
+export async function getProfile(viewerId: number, viewerRole: Role, id: number) {
+  const user = await prisma.user.findFirst({ where: { id, isService: false }, select: publicUser });
+  if (!user) throw notFound('Utilisateur introuvable');
+
+  const shared =
+    viewerId === id
+      ? []
+      : await prisma.project.findMany({
+          where: {
+            // Deux `memberships.some` ne peuvent pas cohabiter dans le même objet (le
+            // second écraserait le premier) : l'intersection passe par un AND explicite.
+            AND: [
+              { memberships: { some: { userId: id } } },
+              ...(viewerRole === Role.ADMIN || viewerRole === Role.SUPERVISOR
+                ? []
+                : [{ memberships: { some: { userId: viewerId } } }]),
+            ],
+          },
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+          take: 20,
+        });
+
+  const isInternal = viewerRole !== Role.CLIENT;
+  const view = await toPublicUser(user);
+  return {
+    ...view,
+    email: isInternal ? view.email : undefined,
+    phone: isInternal ? view.phone : undefined,
+    // Le quota de stockage est une donnée d'administration, pas un élément de fiche.
+    storageUsed: undefined,
+    storageLimit: undefined,
+    online: getOnlineUserIds().includes(id),
+    sharedProjects: shared,
+    isSelf: viewerId === id,
+  };
+}
+
 export interface UpdateMeInput {
   firstName?: string | null;
   lastName?: string | null;
