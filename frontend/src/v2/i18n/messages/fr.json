@@ -2490,5 +2490,6 @@
   "shotgrid.admin.deleted": "Site ShotGrid supprimé",
   "shotgrid.admin.updated": "Site ShotGrid mis à jour",
   "shotgrid.admin.editTitle": "Modifier « {name} »",
-  "shotgrid.admin.keepSecret": "laisser vide pour conserver l'actuel"
+  "shotgrid.admin.keepSecret": "laisser vide pour conserver l'actuel",
+  "shotgrid.log.mediaImportFailed": "Média de « {name} » non importé ({error}) — la version elle-même est en place"
 }

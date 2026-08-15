@@ -8,6 +8,7 @@ import {
   asEntityRef,
   asEntityRefs,
   attachmentName,
+  attachmentUrl,
   cutDuration,
   minutesToWorkdays,
   pickVersionMediaField,
@@ -195,5 +196,22 @@ describe('shotgridMapper — médias et libellés', () => {
   it('retrouve le nom de fichier d’une pièce jointe', () => {
     expect(attachmentName({ name: 'plan.mov' }, 'defaut')).toBe('plan.mov');
     expect(attachmentName(null, 'defaut')).toBe('defaut');
+  });
+});
+
+describe('attachmentUrl', () => {
+  it('lit l’adresse portée par le champ fichier', () => {
+    // Repli quand l'endpoint de téléchargement dédié ne répond pas.
+    expect(attachmentUrl({ name: 'v001.mov', url: 'https://s3/signed' })).toBe('https://s3/signed');
+  });
+
+  it('descend dans un attachment imbriqué', () => {
+    expect(attachmentUrl({ attachment: { url: 'https://s3/nested' } })).toBe('https://s3/nested');
+  });
+
+  it('rend null quand il n’y a rien à télécharger', () => {
+    expect(attachmentUrl({ name: 'v001.mov' })).toBeNull();
+    expect(attachmentUrl(null)).toBeNull();
+    expect(attachmentUrl('https://direct')).toBeNull();
   });
 });

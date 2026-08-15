@@ -340,11 +340,25 @@ export class ShotgridClient {
    * S3 signés à durée très courte : on les consomme immédiatement, et jamais en
    * mémoire — un master de dailies ne tient pas dans le tas d'un worker.
    */
+  /**
+   * Adresse de téléchargement d'un champ fichier.
+   *
+   * L'endpoint dédié n'est pas servi par tous les sites ni pour tous les champs : un
+   * 404 signifie « pas de contenu à cette adresse », pas « la synchronisation a
+   * échoué ». On rend alors `null` et l'appelant se rabat sur l'adresse que ShotGrid
+   * a souvent déjà placée dans le champ lui-même.
+   */
   async downloadUrl(entity: string, id: number, field: string): Promise<string | null> {
-    const json = await this.request<{ data?: { url?: string } }>(
-      `${SG_API_PATH}/entity/${encodeURIComponent(entity)}/${id}/${encodeURIComponent(field)}/download?redirect=false`,
-    );
-    return json.data?.url ?? null;
+    try {
+      const json = await this.request<{ data?: { url?: string } }>(
+        `${SG_API_PATH}/entity/${encodeURIComponent(entity)}/${id}/${encodeURIComponent(field)}/download?redirect=false`,
+        { retries: 0 },
+      );
+      return json.data?.url ?? null;
+    } catch (err) {
+      if (err instanceof ShotgridApiError && (err.status === 404 || err.status === 400)) return null;
+      throw err;
+    }
   }
 
   async openStream(url: string): Promise<{ stream: Readable; size: number | null; type: string | null }> {

@@ -2428,5 +2428,6 @@
   "shotgrid.admin.deleted": "ShotGrid site removed",
   "shotgrid.admin.updated": "ShotGrid site updated",
   "shotgrid.admin.editTitle": "Edit « {name} »",
-  "shotgrid.admin.keepSecret": "leave empty to keep the current one"
+  "shotgrid.admin.keepSecret": "leave empty to keep the current one",
+  "shotgrid.log.mediaImportFailed": "Media of « {name} » could not be imported ({error}) — the version itself is in place"
 }

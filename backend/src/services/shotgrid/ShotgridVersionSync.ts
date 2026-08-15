@@ -19,6 +19,7 @@ import {
   asString,
   pickVersionMediaField,
   attachmentName,
+  attachmentUrl,
   type SgRecord,
 } from './shotgridMapper';
 import { mapSgToLocal, upsertLink, type VersionLinkData } from './shotgridLinks';
@@ -239,11 +240,13 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     mediaImported: Boolean((existingLink?.data as VersionLinkData | undefined)?.mediaImported),
   };
 
-  if (withMedia && !linkData.mediaImported && ctx.settings.media.autoImport) {
-    const imported = await importVersionMedia(ctx, record, version.id, name);
-    linkData.mediaImported = imported;
-  }
-
+  /**
+   * La correspondance est posée AVANT toute tentative sur le média, et c'est capital :
+   * elle dit « cette Version ShotGrid est déjà dans ReView », ce qui est vrai dès
+   * maintenant. Poser le lien après le transfert laissait la version orpheline au
+   * moindre échec de téléchargement — et la synchronisation suivante, ne retrouvant
+   * rien, en recréait une. Une par passe, indéfiniment.
+   */
   await upsertLink({
     connectionId: ctx.connection.id,
     localType: 'version',
@@ -253,6 +256,31 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     sgUpdatedAt: asDate(record.updated_at),
     data: linkData,
   });
+
+  // Le média est un supplément : son échec n'invalide ni la version ni son statut.
+  if (withMedia && !linkData.mediaImported && ctx.settings.media.autoImport) {
+    try {
+      if (await importVersionMedia(ctx, record, version.id, name)) {
+        await upsertLink({
+          connectionId: ctx.connection.id,
+          localType: 'version',
+          localId: version.id,
+          sgType: 'Version',
+          sgId: record.id,
+          sgUpdatedAt: asDate(record.updated_at),
+          data: { ...linkData, mediaImported: true },
+        });
+      }
+    } catch (err) {
+      ctx.journal.count('media', 'failed');
+      await ctx.journal.log(
+        'warn',
+        'shotgrid.log.mediaImportFailed',
+        { name, error: err instanceof Error ? err.message : String(err) },
+        { sgType: 'Version', sgId: record.id, localType: 'version', localId: version.id },
+      );
+    }
+  }
 }
 
 /**
@@ -279,7 +307,10 @@ export async function importVersionMedia(
     return false;
   }
 
-  const url = await ctx.client.downloadUrl('Version', record.id, picked.field);
+  // L'endpoint dédié d'abord, l'adresse portée par le champ ensuite : selon le site et
+  // le champ, l'un ou l'autre répond.
+  const url =
+    (await ctx.client.downloadUrl('Version', record.id, picked.field)) ?? attachmentUrl(picked.value);
   if (!url) {
     await ctx.journal.log(
       'warn',

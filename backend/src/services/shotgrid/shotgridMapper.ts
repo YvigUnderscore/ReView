@@ -191,6 +191,22 @@ export function pickVersionMediaField(
   return null;
 }
 
+/**
+ * Adresse directe portée par un champ fichier.
+ *
+ * ShotGrid place souvent l'URL dans le champ lui-même, à côté du nom : quand
+ * l'endpoint de téléchargement dédié ne répond pas, c'est un repli utilisable tel quel.
+ */
+export function attachmentUrl(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  const url = asString(v.url);
+  if (url) return url;
+  // Certains champs imbriquent l'attachment (`{ attachment: { url } }`).
+  const nested = v.attachment;
+  return nested && typeof nested === 'object' ? asString((nested as Record<string, unknown>).url) : null;
+}
+
 /** Nom de fichier d'un attachment ShotGrid, ou un repli stable. */
 export function attachmentName(value: unknown, fallback: string): string {
   if (value && typeof value === 'object') {
