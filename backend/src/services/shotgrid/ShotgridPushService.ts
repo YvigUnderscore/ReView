@@ -303,7 +303,22 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
   if (!version) return;
 
   const already = await findByLocal(ctx.connectionId, 'version', version.id);
-  if (already) return; // déjà connue de ShotGrid : rien à créer
+  if (already) {
+    // La version existe déjà là-bas : ajouter un média à une version en cours doit
+    // enrichir CETTE version, pas en fabriquer une seconde portant le même nom.
+    const media = version.media[0];
+    if (media) {
+      await uploadThumbnail(ctx, already.sgId, media);
+      if (ctx.settings.push.publishMode === 'upload') {
+        await uploadMasterMedia(ctx, already.sgId, media);
+      }
+      logger.info(
+        { versionId: version.id, sgId: already.sgId },
+        'Média ajouté à la version ShotGrid existante',
+      );
+    }
+    return;
+  }
 
   const payload: Record<string, unknown> = {
     project: { type: 'Project', id: ctx.sgProjectId },

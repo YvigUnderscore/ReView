@@ -320,6 +320,14 @@ export class ShotgridClient {
     return flattenRecord(json.data);
   }
 
+  /** Retire une entité du site (mise à la corbeille ShotGrid). */
+  async remove(entity: string, id: number): Promise<void> {
+    await this.request(`${SG_API_PATH}/entity/${encodeURIComponent(entity)}/${id}`, {
+      method: 'DELETE',
+      retries: 0,
+    });
+  }
+
   async createAs(
     entity: string,
     data: Record<string, unknown>,

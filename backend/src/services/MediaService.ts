@@ -29,6 +29,7 @@ import { assertCanContribute } from '../lib/projectRoles';
 import { notifyWatchers } from './WatchService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import type { UsdRequest } from './ModelConvertService';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
  * Logique métier des médias (upload présigné, finalize/validation magic bytes,
@@ -466,6 +467,10 @@ export async function publish(user: SessionUser, id: number) {
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (projectId) {
     emitToProject(projectId, 'media:update', { projectId, id, versionId: media.versionId });
+    // 48 : la version part vers ShotGrid — création si elle y est inconnue, ajout du
+    // média à la version existante sinon. Un média ajouté en cours de route ne doit
+    // pas fabriquer un doublon portant le même nom.
+    await enqueuePush(projectId, { type: 'version-publish', versionId: media.versionId, actorId: user.id });
     // Suiveurs (32.G) : publication sur la chaîne version/shot/asset.
     await notifyWatchers({
       mediaObjectId: id,

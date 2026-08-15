@@ -135,7 +135,7 @@ export interface SgImportableVersion {
 
 export interface PipelineStatus {
   id: number;
-  scope: 'task' | 'shot';
+  scope: 'task' | 'shot' | 'sequence';
   code: string;
   name: string;
   color: string;

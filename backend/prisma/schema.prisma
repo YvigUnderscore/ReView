@@ -410,6 +410,9 @@ model Sequence {
   order     Int       @default(0)
   // Réglages pipeline propres (override résolution/fps/frames du projet). JSON.
   settings  Json      @default("{}")
+  // Statut de sequence (Phase 48) — ShotGrid en a un, avec sa propre liste de valeurs.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
   deletedAt DateTime?
 
   shots     Shot[]
@@ -458,6 +461,11 @@ model Asset {
   projectId    Int
   name         String
   type         AssetType @default(OTHER)
+  // Libellé exact du type tel que le studio le nomme (Phase 48). Un site ShotGrid en
+  // définit librement des dizaines — « Station Interior », « Matte Painting », « Mecha » —
+  // qu'aucune énumération figée ne peut représenter. `type` reste pour les filtres et
+  // les statistiques ; c'est `typeLabel` qui s'affiche quand il est renseigné.
+  typeLabel    String?
   description  String?
   thumbnailKey String?
   deletedAt    DateTime?
@@ -1069,8 +1077,9 @@ model PipelineStatus {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  tasks Task[]
-  shots Shot[]
+  tasks     Task[]
+  shots     Shot[]
+  sequences Sequence[]
 
   @@unique([scope, code])
   @@index([scope, order])

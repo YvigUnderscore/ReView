@@ -89,10 +89,12 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     // 1. Référentiels de statuts — tout le reste s'y réfère.
     let taskStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let shotStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
+    let sequenceStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     if (can(ctx.settings, 'statuses', 'read')) {
       const siteStatuses = await fetchSiteStatuses(ctx.client);
       taskStatuses = await syncPipelineStatuses(ctx.client, 'task', siteStatuses, journal);
       shotStatuses = await syncPipelineStatuses(ctx.client, 'shot', siteStatuses, journal);
+      sequenceStatuses = await syncPipelineStatuses(ctx.client, 'sequence', siteStatuses, journal);
       const versionMap = await syncVersionStatuses(
         ctx.client,
         siteStatuses,
@@ -109,19 +111,21 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         pullCtx.settings.versionStatusMap = versionMap;
       }
     } else {
-      const [t, s] = await Promise.all([
+      const [t, s, q] = await Promise.all([
         prisma.pipelineStatus.findMany({ where: { scope: 'task' } }),
         prisma.pipelineStatus.findMany({ where: { scope: 'shot' } }),
+        prisma.pipelineStatus.findMany({ where: { scope: 'sequence' } }),
       ]);
       taskStatuses = new Map(t.map((x) => [x.code, x]));
       shotStatuses = new Map(s.map((x) => [x.code, x]));
+      sequenceStatuses = new Map(q.map((x) => [x.code, x]));
     }
 
     // 2. Comptes (correspondance par courriel, aucune création).
     const userMap = await buildUserMap(pullCtx);
 
     // 3. Hiérarchie, dans l'ordre des dépendances.
-    await pullSequences(pullCtx, pullOptions);
+    await pullSequences(pullCtx, sequenceStatuses, pullOptions);
     await pullShots(pullCtx, shotStatuses, pullOptions);
     await pullAssets(pullCtx, pullOptions);
     await pullTasks(pullCtx, taskStatuses, userMap, pullOptions);

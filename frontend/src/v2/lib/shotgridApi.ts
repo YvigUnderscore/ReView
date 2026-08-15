@@ -237,25 +237,29 @@ export function useImportVersions(projectId: number) {
   });
 }
 
+/**
+ * Arbitrage d'un conflit. La ligne de journal suffit à l'identifier — exiger en plus
+ * l'exécution dont elle provient avait conduit les écrans qui ne la connaissent pas à
+ * envoyer un identifiant vide, et donc à ne rien faire du tout.
+ */
 export function useResolveConflict(projectId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      runId,
-      logId,
-      resolution,
-    }: {
-      runId: number;
-      logId: number;
-      resolution: 'sg' | 'review';
-    }) => api.post<{ ok: boolean }>(`/api/shotgrid/logs/${runId}/resolve`, { logId, resolution }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) }),
+    mutationFn: ({ logId, resolution }: { logId: number; resolution: 'sg' | 'review' }) =>
+      api.post<{ ok: boolean; applied: { direction: string; action: string } }>(
+        `/api/shotgrid/logs/${logId}/resolve`,
+        { resolution },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) });
+      qc.invalidateQueries({ queryKey: sgKeys.diff(projectId) });
+    },
   });
 }
 
 // ───────────────────────────── Statuts de pipeline ─────────────────────────────
 
-export function usePipelineStatuses(scope?: 'task' | 'shot') {
+export function usePipelineStatuses(scope?: 'task' | 'shot' | 'sequence') {
   return useQuery({
     queryKey: sgKeys.pipelineStatuses(scope),
     queryFn: () =>

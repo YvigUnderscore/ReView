@@ -12,6 +12,7 @@ import * as Config from '../services/shotgrid/ShotgridConfigService';
 import * as Sync from '../services/shotgrid/ShotgridSyncService';
 import * as Journal from '../services/shotgrid/ShotgridSyncJournal';
 import { buildDiff } from '../services/shotgrid/ShotgridDiffService';
+import { resolveConflict } from '../services/shotgrid/ShotgridConflictService';
 import { listImportableVersions, pullVersions } from '../services/shotgrid/ShotgridVersionSync';
 import { SyncJournal } from '../services/shotgrid/ShotgridSyncJournal';
 
@@ -83,24 +84,38 @@ router.get(
 );
 
 /** Arbitrage d'un conflit laissé en attente (politique manuelle). */
+/**
+ * Arbitrage d'un conflit. Le journal ne se contente pas d'être classé : la décision
+ * s'applique. « ShotGrid » relit l'entité distante et l'écrit par-dessus la locale ;
+ * « ReView » pousse la valeur locale vers le site. Marquer la ligne résolue sans rien
+ * faire laisserait l'écart en place, ce qui est pire que de ne rien proposer.
+ */
 router.post(
-  '/logs/:runId/resolve',
+  '/logs/:logId/resolve',
   validate({
-    params: runParam,
-    body: z.object({ logId: z.number().int().positive(), resolution: z.enum(['sg', 'review']) }),
+    params: z.object({ logId: z.coerce.number().int().positive() }),
+    body: z.object({ resolution: z.enum(['sg', 'review']) }),
   }),
   async (req, res) => {
-    const run = await prisma.shotgridSyncRun.findUnique({
-      where: { id: Number(req.params.runId) },
-      include: { connection: { select: { projectId: true } } },
+    const logId = Number(req.params.logId);
+    const log = await prisma.shotgridSyncLog.findUnique({
+      where: { id: logId },
+      include: { run: { include: { connection: { select: { projectId: true } } } } },
     });
-    if (!run) throw notFound('Exécution introuvable');
-    await assertProjectManager(req.user!, run.connection.projectId);
+    if (!log) throw notFound('Ligne de journal introuvable');
+    await assertProjectManager(req.user!, log.run.connection.projectId);
+
+    const applied = await resolveConflict(
+      log.run.connection.projectId,
+      log,
+      req.body.resolution,
+      req.user!.id,
+    );
     await prisma.shotgridSyncLog.update({
-      where: { id: req.body.logId },
+      where: { id: logId },
       data: { resolvedAt: new Date(), resolution: req.body.resolution },
     });
-    res.json({ ok: true });
+    res.json({ ok: true, applied });
   },
 );
 

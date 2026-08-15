@@ -16,7 +16,7 @@ export default function PipelineStatusBadge({
   size = 'sm',
 }: {
   statusId: number | null | undefined;
-  scope: 'task' | 'shot';
+  scope: 'task' | 'shot' | 'sequence';
   size?: 'sm' | 'xs';
 }) {
   const { data: statuses = [] } = usePipelineStatuses(scope);

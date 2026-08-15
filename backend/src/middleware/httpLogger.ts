@@ -11,6 +11,13 @@ import { logger } from '../lib/logger';
 const TOKEN_IN_URL = /([?&](?:token|access_token)=)[^&]*/gi;
 
 /**
+ * Jeton porté par le CHEMIN et non par la requête : la réception des webhooks ShotGrid
+ * s'identifie par `/api/shotgrid/webhook/<jeton>`. Ce jeton vaut droit d'écrire de faux
+ * événements — le masquer relève du même réflexe que pour un en-tête d'autorisation.
+ */
+const TOKEN_IN_PATH = /(\/api\/shotgrid\/webhook\/)[^/?]+/i;
+
+/**
  * Journalisation HTTP structurée (pino-http) : une ligne JSON par requête avec
  * request-id, méthode, URL, statut et durée. Attache `req.log` (logger enfant
  * corrélé au request-id) réutilisable dans les handlers et le middleware d'erreur.
@@ -44,8 +51,13 @@ export const httpLogger = pinoHttp({
       const serialized = stdSerializers.req(req);
       // Garde bon marché en `includes` : `RegExp.test` sur une regex /g est capricieux
       // (il déplace `lastIndex` d'un appel à l'autre).
-      if (typeof serialized.url === 'string' && serialized.url.includes('token=')) {
-        serialized.url = serialized.url.replace(TOKEN_IN_URL, '$1[Redacted]');
+      if (typeof serialized.url === 'string') {
+        if (serialized.url.includes('token=')) {
+          serialized.url = serialized.url.replace(TOKEN_IN_URL, '$1[Redacted]');
+        }
+        if (serialized.url.includes('/shotgrid/webhook/')) {
+          serialized.url = serialized.url.replace(TOKEN_IN_PATH, '$1[Redacted]');
+        }
       }
       return serialized;
     },

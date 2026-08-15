@@ -70,11 +70,13 @@ export async function fetchValidStatusCodes(client: ShotgridClient, entity: stri
  */
 export async function syncPipelineStatuses(
   client: ShotgridClient,
-  scope: 'task' | 'shot',
+  scope: 'task' | 'shot' | 'sequence',
   siteStatuses: Map<string, SgStatusInfo>,
   journal?: SyncJournal,
 ): Promise<Map<string, PipelineStatus>> {
-  const entity = scope === 'task' ? 'Task' : 'Shot';
+  // Chaque entité a SA liste : quatre statuts sur une sequence, quinze sur un shot.
+  // Les confondre proposerait des états que le site refuserait à l'écriture.
+  const entity = scope === 'task' ? 'Task' : scope === 'shot' ? 'Shot' : 'Sequence';
   const codes = await fetchValidStatusCodes(client, entity);
   const out = new Map<string, PipelineStatus>();
 
@@ -183,7 +185,9 @@ export function inverseVersionStatusMap(map: Record<string, number>): Map<number
 }
 
 /** Statuts d'un scope, indexés par code — utilisé par le moteur de synchronisation. */
-export async function loadPipelineStatuses(scope: 'task' | 'shot'): Promise<Map<string, PipelineStatus>> {
+export async function loadPipelineStatuses(
+  scope: 'task' | 'shot' | 'sequence',
+): Promise<Map<string, PipelineStatus>> {
   const list = await prisma.pipelineStatus.findMany({ where: { scope } });
   return new Map(list.map((s) => [s.code, s]));
 }

@@ -40,6 +40,15 @@ export default function SgSyncPanel({
 
   const conflicts = data?.openConflicts ?? [];
 
+  const applyResolution = async (logId: number, resolution: 'sg' | 'review') => {
+    try {
+      await resolve.mutateAsync({ logId, resolution });
+      toast.success(t('shotgrid.conflict.resolved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('shotgrid.conflict.failed'));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -77,25 +86,36 @@ export default function SgSyncPanel({
           </p>
           <ul className="space-y-1 text-xs">
             {conflicts.slice(0, 10).map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-2">
-                <span>
-                  {c.localType} #{c.localId} — {String(c.vars?.name ?? '')}
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">
+                    {String(c.vars?.name ?? `${c.localType} #${c.localId}`)}
+                  </span>
+                  {/* Ce qui diverge, en toutes lettres : sans cela, « garder ShotGrid »
+                      revient à trancher à l'aveugle. */}
+                  <span className="block text-[11px] text-muted-foreground">
+                    {t('shotgrid.conflict.detail', {
+                      field: String(c.vars?.field ?? '—'),
+                      review: String(c.vars?.review ?? '—'),
+                      shotgrid: String(c.vars?.shotgrid ?? '—'),
+                    })}
+                  </span>
                 </span>
                 {canManage && (
                   <span className="flex gap-1">
                     <button
                       type="button"
-                      onClick={() => resolve.mutate({ runId: openRun ?? 0, logId: c.id, resolution: 'sg' })}
-                      className="rounded border border-border px-1.5 py-0.5 hover:bg-secondary"
+                      disabled={resolve.isPending}
+                      onClick={() => applyResolution(c.id, 'sg')}
+                      className="rounded border border-border px-1.5 py-0.5 hover:bg-secondary disabled:opacity-50"
                     >
                       {t('shotgrid.sync.keepSg')}
                     </button>
                     <button
                       type="button"
-                      onClick={() =>
-                        resolve.mutate({ runId: openRun ?? 0, logId: c.id, resolution: 'review' })
-                      }
-                      className="rounded border border-border px-1.5 py-0.5 hover:bg-secondary"
+                      disabled={resolve.isPending}
+                      onClick={() => applyResolution(c.id, 'review')}
+                      className="rounded border border-border px-1.5 py-0.5 hover:bg-secondary disabled:opacity-50"
                     >
                       {t('shotgrid.sync.keepReview')}
                     </button>

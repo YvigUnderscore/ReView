@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { prisma } from '../../lib/prisma';
+import { annotationToSvg } from '../../lib/annotationSvg';
+import { mediaSourceKey } from '../MediaService';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
 import { storage } from '../StorageService';
@@ -156,7 +162,7 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
     where: { id: commentId },
     include: {
       author: { select: { name: true, email: true } },
-      media: { select: { id: true, versionId: true, metadata: true } },
+      media: { select: { id: true, versionId: true, metadata: true, storageKey: true, mimeType: true } },
     },
   });
   if (!comment) return null;
@@ -164,7 +170,23 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   const versionLink = await findByLocal(ctx.connectionId, 'version', comment.media.versionId);
   if (!versionLink) return null;
 
+  // Un commentaire déjà porté par une note ne doit pas en engendrer une seconde :
+  // une reprise de synchronisation, un rattrapage ou un simple double clic passeraient
+  // sinon deux fois par ici.
+  const existing = await findByLocal(ctx.connectionId, 'comment', comment.id);
+  if (existing) {
+    logger.debug({ commentId, sgNoteId: existing.sgId }, 'Commentaire déjà présent en note ShotGrid');
+    return existing.sgId;
+  }
+
   const author = comment.author?.name ?? comment.author?.email ?? 'ReView';
+  // Nom de la version : sans rattachement possible, c'est lui qui situe le retour.
+  const versionName = (
+    await prisma.version.findUnique({
+      where: { id: comment.media.versionId },
+      select: { name: true },
+    })
+  )?.name;
   // Repère de temps : la frame quand la cadence du média permet de la calculer,
   // l'horodatage sinon. Une remarque sans repère est inexploitable en review.
   const fps = mediaFrameRate(comment.media.metadata);
@@ -183,16 +205,37 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
     .filter((line) => line !== null)
     .join('\n');
 
-  const created = await ctx.client.createAs(
-    'Note',
-    {
-      project: { type: 'Project', id: ctx.sgProjectId },
-      subject: timecode ? `ReView — ${timecode}` : 'ReView',
-      content: body,
-      note_links: [{ type: 'Version', id: versionLink.sgId }],
-    },
-    ctx.asUserLogin,
-  );
+  /**
+   * Le rattachement à la version est tenté, pas exigé.
+   *
+   * Certains sites refusent d'écrire `note_links` — restriction de permissions ou de
+   * schéma propre au studio. Perdre le retour pour autant serait absurde : on retombe
+   * sur une note libre dont le sujet et le corps portent le contexte, et le lien de
+   * retour vers ReView reste cliquable.
+   */
+  const base = {
+    project: { type: 'Project', id: ctx.sgProjectId },
+    subject: timecode ? `ReView — ${timecode}` : 'ReView',
+    content: body,
+  };
+  let created: SgRecord;
+  try {
+    created = await ctx.client.createAs(
+      'Note',
+      { ...base, note_links: [{ type: 'Version', id: versionLink.sgId }] },
+      ctx.asUserLogin,
+    );
+  } catch (err) {
+    logger.info(
+      { commentId, sgVersionId: versionLink.sgId, err: err instanceof Error ? err.message : err },
+      'Rattachement de note refusé par le site — note créée sans lien',
+    );
+    created = await ctx.client.createAs(
+      'Note',
+      { ...base, subject: `${base.subject} — ${versionName ?? `Version #${versionLink.sgId}`}` },
+      ctx.asUserLogin,
+    );
+  }
 
   await upsertLink({
     connectionId: ctx.connectionId,
@@ -209,19 +252,29 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
 }
 
 /**
- * Pièce jointe : l'image de l'annotation telle qu'elle a été dessinée.
- * Sans elle, la note décrit un tracé que personne ne peut voir.
+ * Pièce jointe : la frame avec le dessin incrusté.
+ *
+ * L'annotation est stockée en géométrie normalisée, pas en image : envoyée telle
+ * quelle, elle ne montrerait rien. On l'incruste donc sur la frame concernée. Une
+ * capture déjà calculée (`screenshotKey`) est utilisée en priorité ; sinon la frame est
+ * extraite du média et composée à la volée.
  */
 async function attachAnnotationImage(
   ctx: PushNoteContext,
   sgNoteId: number,
-  comment: { id: number; screenshotKey: string | null },
+  comment: {
+    id: number;
+    screenshotKey: string | null;
+    annotation: unknown;
+    timestamp: number | null;
+    media: { id: number; storageKey: string; mimeType: string; metadata: unknown };
+  },
 ): Promise<void> {
-  // `screenshotKey` porte la capture de la frame AVEC le dessin incrusté : c'est elle
-  // qui rend la remarque compréhensible sans ouvrir ReView.
-  if (!comment.screenshotKey) return;
   try {
-    const buffer = await storage.getObjectBuffer(comment.screenshotKey);
+    const buffer = comment.screenshotKey
+      ? await storage.getObjectBuffer(comment.screenshotKey)
+      : await renderAnnotatedFrame(comment);
+    if (!buffer) return;
     await ctx.client.uploadFile(
       'Note',
       sgNoteId,
@@ -230,6 +283,7 @@ async function attachAnnotationImage(
       `review-annotation-${comment.id}.png`,
       'image/png',
     );
+    logger.info({ commentId: comment.id, sgNoteId }, 'Frame annotée jointe à la note ShotGrid');
   } catch (err) {
     logger.warn({ err, commentId: comment.id }, 'Annotation non jointe à la note ShotGrid');
   }
@@ -274,4 +328,64 @@ function asEntityRefs(value: unknown): Array<{ id: number; type: string; name?: 
   return value
     .map((v) => asEntityRef(v))
     .filter((r): r is { id: number; type: string; name?: string } => r !== null);
+}
+
+/**
+ * Compose la frame commentée et son annotation en une image unique.
+ *
+ * ffmpeg fait les deux opérations : extraire l'instant du média, puis incruster le SVG
+ * rendu de l'annotation. Passer par le SVG évite d'ajouter une bibliothèque de dessin —
+ * et donne exactement la géométrie que l'artiste a tracée à l'écran.
+ */
+async function renderAnnotatedFrame(comment: {
+  annotation: unknown;
+  timestamp: number | null;
+  media: { storageKey: string; mimeType: string; metadata: unknown };
+}): Promise<Buffer | null> {
+  const meta = (comment.media.metadata ?? {}) as { width?: number; height?: number };
+  const width = typeof meta.width === 'number' && meta.width > 0 ? meta.width : 1920;
+  const height = typeof meta.height === 'number' && meta.height > 0 ? meta.height : 1080;
+  const svg = annotationToSvg(comment.annotation, width, height);
+  if (!svg) return null;
+
+  const dir = await mkdtemp(join(tmpdir(), 'sg-annot-'));
+  try {
+    const source = join(dir, 'source');
+    const overlay = join(dir, 'overlay.svg');
+    const output = join(dir, 'out.png');
+    // Après transcodage, l'original est effacé et c'est le proxy qui fait foi :
+    // `mediaSourceKey` désigne le fichier réellement servi.
+    await storage.downloadToFile(mediaSourceKey(comment.media), source);
+    await writeFile(overlay, svg, 'utf8');
+
+    const seek = comment.timestamp && comment.timestamp > 0 ? ['-ss', String(comment.timestamp)] : [];
+    await runFfmpeg([
+      ...seek,
+      '-i',
+      source,
+      '-i',
+      overlay,
+      '-filter_complex',
+      `[0:v]scale=${width}:${height}[bg];[bg][1:v]overlay=0:0`,
+      '-frames:v',
+      '1',
+      '-y',
+      output,
+    ]);
+    return await readFile(output);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+function runFfmpeg(args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', ...args]);
+    let stderr = '';
+    proc.stderr.on('data', (chunk) => (stderr += String(chunk)));
+    proc.on('error', reject);
+    proc.on('close', (code) =>
+      code === 0 ? resolve() : reject(new Error(`ffmpeg (${code}) : ${stderr.slice(0, 200)}`)),
+    );
+  });
 }

@@ -17,8 +17,36 @@ import { env } from '../config/env';
 const level =
   env.LOG_LEVEL ?? (env.NODE_ENV === 'test' ? 'silent' : env.NODE_ENV === 'production' ? 'info' : 'debug');
 
+/**
+ * Champs jamais journalisés, où qu'ils apparaissent dans l'objet passé au logger.
+ *
+ * La rédaction du journal HTTP couvre les en-têtes ; celle-ci couvre le reste — un
+ * enregistrement de site ShotGrid, un formulaire SMTP, une entité relue depuis la base.
+ * Un secret n'a aucune raison d'atteindre un fichier de log, et l'oubli se produit au
+ * moment où l'on ajoute un `logger.error({ site })` pour déboguer.
+ */
+const REDACTED_FIELDS = [
+  'password',
+  '*.password',
+  '*.*.password',
+  'scriptKey',
+  '*.scriptKey',
+  '*.*.scriptKey',
+  'webhookSecret',
+  '*.webhookSecret',
+  'secret',
+  '*.secret',
+  'apiKey',
+  '*.apiKey',
+  'accessToken',
+  '*.accessToken',
+  'access_token',
+  '*.access_token',
+];
+
 const options: LoggerOptions = {
   level,
+  redact: { paths: REDACTED_FIELDS, censor: '[Redacted]' },
   // pino-pretty n'est chargé qu'en développement (devDependency) : la prod reste en JSON pur.
   ...(env.NODE_ENV === 'development'
     ? {

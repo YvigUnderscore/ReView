@@ -2473,7 +2473,7 @@
   "shotgrid.log.noStatusSchema": "Aucune liste de statuts lisible pour {entity}",
   "shotgrid.log.statusNotOnSite": "Statut « {code} » ({scope}) absent du site — conservé",
   "shotgrid.log.reviewStatusCreated": "Statut de review « {name} » créé depuis le code ShotGrid {code}",
-  "shotgrid.log.conflictOverwritten": "« {name} » modifié des deux côtés — arbitré par {policy}",
+  "shotgrid.log.conflictOverwritten": "« {name} » — {field} diverge : ReView « {review} » contre ShotGrid « {shotgrid} ». Arbitré par {policy}.",
   "shotgrid.log.truncated": "Journal tronqué — les compteurs restent exacts",
   "shotgrid.locked.title": "Création dans ShotGrid",
   "shotgrid.locked.body": "Ce projet est piloté depuis ShotGrid. Créez l'élément là-bas — il apparaîtra dans ReView à la prochaine synchronisation.",
@@ -2504,5 +2504,9 @@
   "shotgrid.openIn.sequence": "Ouvrir la sequence dans ShotGrid",
   "shotgrid.openIn.asset": "Ouvrir l'asset dans ShotGrid",
   "shotgrid.openIn.task": "Ouvrir la tâche dans ShotGrid",
-  "shotgrid.openIn.version": "Ouvrir la version dans ShotGrid"
+  "shotgrid.openIn.version": "Ouvrir la version dans ShotGrid",
+  "shotgrid.conflict.applying": "Application de la décision…",
+  "shotgrid.conflict.resolved": "Conflit arbitré",
+  "shotgrid.conflict.failed": "Arbitrage impossible",
+  "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »"
 }

@@ -165,6 +165,10 @@ async function noteConflictIfLocalChanged(
     sgType: string;
     sgId: number;
     name: string;
+    /** Champ concerné et valeurs en présence — ce que l'arbitre doit voir. */
+    field?: string;
+    reviewValue?: string | null;
+    remoteValue?: string | null;
   },
 ): Promise<void> {
   const { localUpdatedAt, linkSyncedAt } = params;
@@ -173,7 +177,16 @@ async function noteConflictIfLocalChanged(
   ctx.journal.count('conflicts', 'updated');
   await ctx.journal.conflict(
     'shotgrid.log.conflictOverwritten',
-    { name: params.name, policy: ctx.settings.conflictPolicy },
+    {
+      name: params.name,
+      policy: ctx.settings.conflictPolicy,
+      // Sans ces repères, la ligne de conflit ne dit pas ce qui a divergé ni quand :
+      // impossible d'arbitrer en connaissance de cause.
+      field: params.field ?? 'plusieurs champs',
+      review: params.reviewValue ?? '—',
+      shotgrid: params.remoteValue ?? '—',
+      localAt: localUpdatedAt.toISOString(),
+    },
     {
       sgType: params.sgType,
       sgId: params.sgId,
@@ -185,13 +198,21 @@ async function noteConflictIfLocalChanged(
 
 // ───────────────────────────── Séquences ─────────────────────────────
 
-export async function pullSequences(ctx: PullContext, options: PullOptions = {}) {
+export async function pullSequences(
+  ctx: PullContext,
+  statuses: Map<string, PipelineStatus> = new Map(),
+  options: PullOptions = {},
+) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Sequence', SEQUENCE_FIELDS, options);
+  // Passe complète : ce que le site ne renvoie plus a été mis à la corbeille là-bas.
+  if (!options.since && !options.onlySgIds)
+    await trashRemoved(ctx, 'Sequence', new Set(records.map((r) => r.id)));
   const links = await mapSgToLocal(ctx.connection.id, 'sequence');
 
   for (const [index, record] of records.entries()) {
     const code = asString(record.code) ?? `SQ${record.id}`;
+    const statusCode = asString(record.sg_status_list);
     const link = links.get(record.id);
     const existing = link
       ? await prisma.sequence.findUnique({ where: { id: link.localId } })
@@ -204,6 +225,7 @@ export async function pullSequences(ctx: PullContext, options: PullOptions = {})
       code,
       order: index,
       projectId: ctx.connection.projectId,
+      pipelineStatusId: statusCode ? (statuses.get(statusCode)?.id ?? null) : null,
       deletedAt: null,
     };
     const saved = existing
@@ -231,6 +253,8 @@ export async function pullShots(
 ) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Shot', SHOT_FIELDS, options);
+  if (!options.since && !options.onlySgIds)
+    await trashRemoved(ctx, 'Shot', new Set(records.map((r) => r.id)));
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
 
@@ -299,6 +323,8 @@ export async function pullShots(
 export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Asset', ASSET_FIELDS, options);
+  if (!options.since && !options.onlySgIds)
+    await trashRemoved(ctx, 'Asset', new Set(records.map((r) => r.id)));
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
 
   for (const record of records) {
@@ -310,10 +336,13 @@ export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
           where: { projectId_name: { projectId: ctx.connection.projectId, name } },
         });
 
+    const sgType = asString(record.sg_asset_type);
     const data = {
       projectId: ctx.connection.projectId,
       name,
-      type: sgAssetType(record.sg_asset_type),
+      // L'énumération sert aux filtres ; le libellé exact du studio est ce qui s'affiche.
+      type: sgAssetType(sgType),
+      typeLabel: sgType,
       description: asString(record.description),
       deletedAt: null,
     };
@@ -438,6 +467,10 @@ export async function pullTasks(
 
     let savedId: number;
     if (existing) {
+      const localStatus = existing.pipelineStatusId
+        ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
+          null)
+        : null;
       await noteConflictIfLocalChanged(ctx, {
         localUpdatedAt: existing.updatedAt,
         linkSyncedAt: link?.syncedAt,
@@ -446,6 +479,9 @@ export async function pullTasks(
         sgType: 'Task',
         sgId: record.id,
         name,
+        field: 'statut',
+        reviewValue: localStatus,
+        remoteValue: statusCode,
       });
       await prisma.task.update({ where: { id: existing.id }, data });
       savedId = existing.id;
