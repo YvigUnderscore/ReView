@@ -12,6 +12,7 @@ import { pipelineOverrideSchema } from '../lib/projectSettings';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as ShotService from '../services/ShotService';
+import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
 
 const router = Router();
 router.use(authenticate);
@@ -63,6 +64,7 @@ router.post(
   validate({ body: shotBody.extend({ projectId: z.number().int() }) }),
   async (req, res) => {
     await assertProjectAccess(req, req.body.projectId);
+    await assertLocalCreationAllowed(req.body.projectId, 'shot'); // 48 : ShotGrid mène
     res.status(201).json({ shot: await ShotService.create(req.body) });
   },
 );
@@ -77,6 +79,7 @@ router.post(
   async (req, res) => {
     const { projectId, items } = req.body as { projectId: number; items: ShotService.BulkShotItem[] };
     await assertProjectAccess(req, projectId);
+    await assertLocalCreationAllowed(projectId, 'shot'); // 48 : ShotGrid mène
     res.status(201).json({ shots: await ShotService.createBulk(projectId, items) });
   },
 );

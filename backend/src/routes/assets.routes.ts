@@ -12,10 +12,11 @@ import { resolveProjectIdForAsset } from '../lib/pipeline';
 import { softDeleteAsset, restoreAsset, purgeAsset } from '../lib/trash';
 import { firstMediaThumbKeyForAsset, effectiveThumbnailUrl } from '../lib/thumbnails';
 import { logAudit } from '../services/AuditService';
-import { badRequest, notFound } from '../lib/errors';
+import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination, pageArgs, paginate } from '../lib/pagination';
 import * as PipelineLatestService from '../services/PipelineLatestService';
 import * as AssetService from '../services/AssetService';
+import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
 
 const router = Router();
 router.use(authenticate);
@@ -63,20 +64,10 @@ router.post(
     }),
   }),
   async (req, res) => {
-    const { projectId, name, type, description } = req.body as {
-      projectId: number;
-      name: string;
-      type: AssetType;
-      description?: string;
-    };
-    await assertProjectAccess(req, projectId);
-    if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name } } })) {
-      throw badRequest('Un asset avec ce nom existe déjà', 'NAME_TAKEN');
-    }
-    const asset = await prisma.asset.create({
-      data: { projectId, name, type, description: description ?? null },
-    });
-    res.status(201).json({ asset });
+    const body = req.body as AssetService.CreateAssetInput;
+    await assertProjectAccess(req, body.projectId);
+    await assertLocalCreationAllowed(body.projectId, 'asset'); // 48 : ShotGrid mène
+    res.status(201).json({ asset: await AssetService.create(body) });
   },
 );
 

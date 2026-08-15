@@ -96,6 +96,9 @@ router.patch(
       type: z.nativeEnum(TaskType).optional(),
       department: z.string().min(1).max(40).nullable().optional(),
       status: z.nativeEnum(TaskStatus).optional(),
+      // Statut personnalisable (Phase 48) : les deux formes sont acceptées et alignées
+      // par le service — le kanban envoie l'une, les anciens clients l'autre.
+      pipelineStatusId: z.number().int().nullable().optional(),
       assigneeId: z.number().int().nullable().optional(),
       order: z.number().int().optional(),
       // Planification (43.C) : début + échéance (superviseurs) — null pour effacer.

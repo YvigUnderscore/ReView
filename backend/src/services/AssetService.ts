@@ -7,6 +7,26 @@ import { badRequest } from '../lib/errors';
 
 /** Logique métier des assets. L'accès projet (RBAC) est asserté dans la route (10.D8). */
 
+export interface CreateAssetInput {
+  projectId: number;
+  name: string;
+  type: AssetType;
+  description?: string;
+}
+
+/**
+ * Crée un asset. Le verrou ShotGrid (48) est vérifié par la route AVANT d'arriver ici :
+ * il porte un lien de création distant que seule la couche HTTP sait présenter.
+ */
+export async function create(body: CreateAssetInput) {
+  const { projectId, name, type, description } = body;
+  if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name } } }))
+    throw badRequest('Un asset avec ce nom existe déjà', 'NAME_TAKEN');
+  return prisma.asset.create({
+    data: { projectId, name, type, description: description ?? null },
+  });
+}
+
 export interface UpdateAssetInput {
   name?: string;
   type?: AssetType;

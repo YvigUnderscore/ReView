@@ -11,6 +11,7 @@ import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute } from '../lib/projectRoles';
 import { taskSelect, toTask } from '../lib/v1Resources';
 import * as ApiEventService from './ApiEventService';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
  * Logique métier des tâches (liste, création XOR Shot/Asset, mise à jour avec droits
@@ -184,11 +185,36 @@ export interface UpdateTaskInput {
   type?: TaskType;
   department?: string | null;
   status?: TaskStatus;
+  /** Statut personnalisable (Phase 48) — écrit en parallèle de `status`. */
+  pipelineStatusId?: number | null;
   assigneeId?: number | null;
   order?: number;
   startDate?: Date | null;
   dueDate?: Date | null;
   checklist?: ChecklistItem[];
+}
+
+/**
+ * Aligne `pipelineStatusId` et `status` d'après ce que l'appelant a fourni.
+ * Le kanban envoie l'un ou l'autre selon l'écran d'origine ; la base porte les deux.
+ */
+async function resolveStatusPair(
+  body: Pick<UpdateTaskInput, 'status' | 'pipelineStatusId'>,
+): Promise<{ status?: TaskStatus; pipelineStatusId?: number | null }> {
+  if (body.pipelineStatusId !== undefined) {
+    if (body.pipelineStatusId === null) return { pipelineStatusId: null };
+    const status = await prisma.pipelineStatus.findUnique({ where: { id: body.pipelineStatusId } });
+    if (!status) throw badRequest('Statut de pipeline inconnu');
+    return { pipelineStatusId: status.id, status: status.legacyStatus ?? TaskStatus.TODO };
+  }
+  if (body.status !== undefined) {
+    const match = await prisma.pipelineStatus.findFirst({
+      where: { scope: 'task', legacyStatus: body.status },
+      orderBy: { order: 'asc' },
+    });
+    return { status: body.status, ...(match ? { pipelineStatusId: match.id } : {}) };
+  }
+  return {};
 }
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {
@@ -199,20 +225,34 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (!manager) {
     // Un non-manager (artiste assigné) ne peut changer que le statut et la checklist de sa tâche.
     const keys = Object.keys(body);
-    if (!isAssignee || keys.some((k) => k !== 'status' && k !== 'checklist'))
+    const allowed = ['status', 'pipelineStatusId', 'checklist'];
+    if (!isAssignee || keys.some((k) => !allowed.includes(k)))
       throw forbidden('Seuls le statut et la checklist de votre tâche assignée sont modifiables');
   }
   const { checklist, ...rest } = body;
+  // Statut : le référentiel personnalisable et l'énumération avancent ensemble, quel
+  // que soit celui des deux que l'appelant a fourni. Les laisser diverger ferait
+  // afficher un état au kanban et un autre sur la fiche.
+  const statusPair = await resolveStatusPair(body);
   const updated = await prisma.task.update({
     where: { id },
     data: {
       ...rest,
+      ...statusPair,
       ...(checklist !== undefined ? { checklist: checklist as unknown as Prisma.InputJsonValue } : {}),
     },
     include: { assignee: { select: { id: true, name: true } } },
   });
   await notifyAssignee(body.assigneeId, user.id, projectId, id, updated.name);
   emitTaskUpdate(projectId, updated);
+  // 48 : ce qui a changé remonte vers ShotGrid, domaine par domaine. Les dates partent
+  // ensemble — ShotGrid recalcule la durée à partir des deux.
+  if (body.status !== undefined || body.pipelineStatusId !== undefined)
+    await enqueuePush(projectId, { type: 'task-status', taskId: id, actorId: user.id });
+  if (body.startDate !== undefined || body.dueDate !== undefined)
+    await enqueuePush(projectId, { type: 'task-dates', taskId: id, actorId: user.id });
+  if (body.assigneeId !== undefined)
+    await enqueuePush(projectId, { type: 'task-assignee', taskId: id, actorId: user.id });
   return updated;
 }
 

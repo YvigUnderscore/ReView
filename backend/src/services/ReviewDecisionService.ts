@@ -10,6 +10,7 @@ import { emitToProject } from './SocketService';
 import { publish as publishApiEvent } from './ApiEventService';
 import { notifyChat } from './ChatNotifyService';
 import { badRequest, conflict, notFound } from '../lib/errors';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
  * Circuit d'approbation (Phase 31) : statuts de review personnalisables (studio)
@@ -127,6 +128,9 @@ export async function decide(
     taskId: version.taskId,
     assetId: version.assetId,
   });
+  // 48 : la décision remonte au registre de production. Mise en file — l'artiste ne
+  // doit pas attendre ShotGrid, et une panne du site ne fait pas échouer la review.
+  await enqueuePush(projectId, { type: 'version-status', versionId, actorId: user.id });
   // Notifie l'auteur de la version (sauf s'il pose lui-même la décision).
   if (version.authorId && version.authorId !== user.id) {
     await notify({

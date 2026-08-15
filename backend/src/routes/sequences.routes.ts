@@ -14,6 +14,7 @@ import { softDeleteSequence, restoreSequence, purgeSequence } from '../lib/trash
 import { logAudit } from '../services/AuditService';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, notFound } from '../lib/errors';
+import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
 
 const router = Router();
 router.use(authenticate);
@@ -53,6 +54,7 @@ router.post(
     const { projectId, name, code, order, settings } = req.body as CreateSequenceBody;
     await assertProjectAccess(req, projectId);
     await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+    await assertLocalCreationAllowed(projectId, 'sequence'); // 48 : ShotGrid mène
     if (await prisma.sequence.findUnique({ where: { projectId_code: { projectId, code } } })) {
       throw badRequest('Une séquence avec ce code existe déjà', 'CODE_TAKEN');
     }
