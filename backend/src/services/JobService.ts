@@ -13,7 +13,19 @@ export const QUEUE_NAMES = {
   STORAGE_CLEANUP: 'storage-cleanup',
   WEBHOOKS: 'webhooks',
   TIMELINE_EXPORT: 'timeline-export',
+  SHOTGRID: 'shotgrid',
 } as const;
+
+/**
+ * Travaux ShotGrid (Phase 48) : application d'un événement reçu, relevé périodique du
+ * journal d'événements, réconciliation, et écritures vers ShotGrid. Une seule file :
+ * l'ordre relatif des opérations d'une même connexion compte plus que le parallélisme.
+ */
+export type ShotgridJobData =
+  | { kind: 'event'; connectionId: number; event: unknown; deliveryId?: string | null }
+  | { kind: 'poll'; connectionId: number }
+  | { kind: 'reconcile'; projectId: number }
+  | { kind: 'push'; connectionId: number; push: unknown };
 
 export interface MediaJobData {
   mediaObjectId: number;
@@ -78,6 +90,18 @@ export const webhookQueue = new Queue<WebhookJobData, void, string>(QUEUE_NAMES.
 });
 
 export const enqueueWebhookDelivery = (data: WebhookJobData) => webhookQueue.add(data.event, data);
+
+export const shotgridQueue = new Queue<ShotgridJobData, void, string>(QUEUE_NAMES.SHOTGRID, {
+  connection: redisConnectionOptions,
+  defaultJobOptions: {
+    // Une seule tentative pour les événements : la réconciliation périodique rattrape
+    // ce qui a échoué, mieux qu'un empilement de reprises sur un site indisponible.
+    attempts: 2,
+    backoff: { type: 'exponential', delay: 15_000 },
+    removeOnComplete: 200,
+    removeOnFail: 500,
+  },
+});
 
 /**
  * Export d'un montage en fichier unique (Phase 45). Un seul job à la fois par montage :

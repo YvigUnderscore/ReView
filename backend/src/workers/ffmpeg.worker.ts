@@ -45,6 +45,7 @@ import { sourceFormatLabel } from '../lib/modelConvert';
 import { convertToGlb, DEFAULT_USD_REQUEST, type UsdRequest } from '../services/ModelConvertService';
 import { startStorageCleanupWorker } from './storageCleanup.worker';
 import { startWebhookWorker } from './webhook.worker';
+import { startShotgridWorker } from './shotgrid.worker';
 import { startTimelineExportWorker } from './timelineExport.worker';
 
 /**
@@ -825,4 +826,7 @@ if (require.main === module) {
   startWebhookWorker();
   // Export des montages automatiques (45) : même process, file dédiée à concurrence 1.
   startTimelineExportWorker();
+  // Intégration ShotGrid (48) : événements, relevé périodique, réconciliation et
+  // écritures sortantes — avec rattrapage au démarrage après une coupure.
+  startShotgridWorker();
 }

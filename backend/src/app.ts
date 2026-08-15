@@ -41,6 +41,7 @@ import assetsRoutes from './routes/assets.routes';
 import tasksRoutes from './routes/tasks.routes';
 import versionsRoutes from './routes/versions.routes';
 import reviewStatusesRoutes from './routes/review-statuses.routes';
+import pipelineStatusesRoutes from './routes/pipeline-statuses.routes';
 import commentsRoutes from './routes/comments.routes';
 import boardsRoutes from './routes/boards.routes';
 import shareRoutes from './routes/share.routes';
@@ -65,6 +66,9 @@ import liveRoutes from './routes/live.routes';
 import productionRoutes from './routes/production.routes';
 import serviceTokensRoutes from './routes/service-tokens.routes';
 import v1Routes from './routes/v1';
+import shotgridConfigRoutes from './routes/shotgrid-config.routes';
+import shotgridSyncRoutes from './routes/shotgrid-sync.routes';
+import shotgridWebhookRoutes from './routes/shotgrid-webhook.routes';
 
 export const createApp = (): Express => {
   const app = express();
@@ -144,6 +148,12 @@ export const createApp = (): Express => {
   app.use('/api/tasks', tasksRoutes);
   app.use('/api/versions', versionsRoutes);
   app.use('/api/review-statuses', reviewStatusesRoutes); // statuts de review custom (Phase 31)
+  app.use('/api/pipeline-statuses', pipelineStatusesRoutes); // statuts de tâche/plan (Phase 48)
+  // ShotGrid (48). La route de réception des webhooks est publique et lit le corps brut
+  // (signature HMAC) : elle est montée avant les routes authentifiées.
+  app.use('/api/shotgrid/webhook', shotgridWebhookRoutes);
+  app.use('/api/shotgrid', shotgridConfigRoutes);
+  app.use('/api/shotgrid', shotgridSyncRoutes);
   app.use('/api/comments', commentsRoutes);
   app.use('/api/boards', boardsRoutes);
   // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).
