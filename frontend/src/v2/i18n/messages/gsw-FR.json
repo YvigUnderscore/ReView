@@ -2462,5 +2462,7 @@
   "shotgrid.log.reviewStatusCreated": "Review-Status « {name} » uus em ShotGrid-Code {code} aagleit",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} wiicht ab: ReView « {review} » gege ShotGrid « {shotgrid} ». Entschiide durch {policy}.",
   "shotgrid.log.truncated": "Protokoll gchirzt — d Zähler bliibe exakt",
-  "shotgrid.conflict.applying": "D Entscheidung wird aagwendet…"
+  "shotgrid.conflict.applying": "D Entscheidung wird aagwendet…",
+  "shotgrid.conflict.noDetail": "Abwiichung erfasst, bevor d Wärt gnuu worre sin — nomol synchronisiere, für si z gseh",
+  "shotgrid.conflict.field.status": "Status"
 }

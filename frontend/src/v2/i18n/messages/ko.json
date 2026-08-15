@@ -2404,5 +2404,7 @@
   "shotgrid.log.reviewStatusCreated": "ShotGrid 코드 {code}에서 review 상태 « {name} »을(를) 만들었습니다",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} 불일치: ReView « {review} » 대 ShotGrid « {shotgrid} ». {policy}(으)로 결정.",
   "shotgrid.log.truncated": "로그가 잘렸습니다 — 집계는 정확합니다",
-  "shotgrid.conflict.applying": "결정을 적용하는 중…"
+  "shotgrid.conflict.applying": "결정을 적용하는 중…",
+  "shotgrid.conflict.noDetail": "값이 기록되기 전에 남은 차이 — 보려면 다시 동기화하세요",
+  "shotgrid.conflict.field.status": "상태"
 }

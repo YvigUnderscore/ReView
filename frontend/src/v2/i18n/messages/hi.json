@@ -2456,5 +2456,7 @@
   "shotgrid.log.reviewStatusCreated": "ShotGrid कोड {code} से review स्थिति « {name} » बनाई",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} भिन्न: ReView « {review} » बनाम ShotGrid « {shotgrid} »। {policy} द्वारा तय।",
   "shotgrid.log.truncated": "लॉग छाँटा गया — गणना सटीक रहती है",
-  "shotgrid.conflict.applying": "निर्णय लागू किया जा रहा है…"
+  "shotgrid.conflict.applying": "निर्णय लागू किया जा रहा है…",
+  "shotgrid.conflict.noDetail": "मान दर्ज होने से पहले का अंतर — देखने के लिए फिर से समन्वयित करें",
+  "shotgrid.conflict.field.status": "स्थिति"
 }

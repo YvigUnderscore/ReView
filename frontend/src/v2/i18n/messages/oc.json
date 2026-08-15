@@ -2462,5 +2462,7 @@
   "shotgrid.log.reviewStatusCreated": "Estat de review « {name} » creat dempuèi lo còdi ShotGrid {code}",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} diverge : ReView « {review} » contra ShotGrid « {shotgrid} ». Arbitrat per {policy}.",
   "shotgrid.log.truncated": "Jornal copat — los comptadors demòran exactes",
-  "shotgrid.conflict.applying": "Aplicacion de la decision…"
+  "shotgrid.conflict.applying": "Aplicacion de la decision…",
+  "shotgrid.conflict.noDetail": "Divergéncia enregistrada abans lo relevat de las valors — tornar sincronizar per las veire",
+  "shotgrid.conflict.field.status": "estat"
 }

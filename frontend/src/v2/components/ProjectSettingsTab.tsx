@@ -14,6 +14,7 @@ import ProjectColorSection from './ProjectColorSection';
 import type { Nomenclature, ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
 import { useSgConnection } from '../lib/shotgridApi';
+import SgProjectSection from './shotgrid/SgProjectSection';
 
 /**
  * Onglet « Réglages » d'un projet (admin/superviseur) :
@@ -268,12 +269,16 @@ export default function ProjectSettingsTab({
         />
       )}
 
+      {/* Liaison ShotGrid (48) : le point d'entrée vit ici, pas dans un onglet
+          permanent qu'un studio sans ShotGrid n'a aucune raison de voir. */}
+      <SgProjectSection projectId={projectId} canManage />
+
       <button
         onClick={saveSettings}
         disabled={savingSettings || !draft}
         className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        <Save size={15} /> {savingSettings ? 'Enregistrement…' : t('project.saveSettings')}
+        <Save size={15} /> {savingSettings ? t('common.saving') : t('project.saveSettings')}
       </button>
     </div>
   );

@@ -2465,5 +2465,7 @@
   "shotgrid.log.reviewStatusCreated": "« {name} » review egoera sortu da ShotGrid {code} kodetik",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} desberdina: ReView « {review} » vs ShotGrid « {shotgrid} ». {policy} bidez ebatzia.",
   "shotgrid.log.truncated": "Egunkaria moztuta — kontagailuak zehatzak dira oraindik",
-  "shotgrid.conflict.applying": "Erabakia aplikatzen…"
+  "shotgrid.conflict.applying": "Erabakia aplikatzen…",
+  "shotgrid.conflict.noDetail": "Balioak jaso baino lehen erregistratutako aldea — sinkronizatu berriro ikusteko",
+  "shotgrid.conflict.field.status": "egoera"
 }

@@ -176,7 +176,11 @@ async function noteConflictIfLocalChanged(
     sgType: string;
     sgId: number;
     name: string;
-    /** Champ concerné et valeurs en présence — ce que l'arbitre doit voir. */
+    /**
+     * Champ concerné et valeurs en présence — ce que l'arbitre doit voir.
+     * `field` est un identifiant stable (`status`…), pas un libellé : c'est le lecteur
+     * qui décide de la langue, pas le serveur qui a écrit la ligne.
+     */
     field?: string;
     reviewValue?: string | null;
     remoteValue?: string | null;
@@ -193,7 +197,7 @@ async function noteConflictIfLocalChanged(
       policy: ctx.settings.conflictPolicy,
       // Sans ces repères, la ligne de conflit ne dit pas ce qui a divergé ni quand :
       // impossible d'arbitrer en connaissance de cause.
-      field: params.field ?? 'plusieurs champs',
+      ...(params.field ? { field: params.field } : {}),
       review: params.reviewValue ?? '—',
       shotgrid: params.remoteValue ?? '—',
       localAt: localUpdatedAt.toISOString(),
@@ -511,7 +515,7 @@ export async function pullTasks(
         sgType: 'Task',
         sgId: record.id,
         name,
-        field: 'statut',
+        field: 'status',
         reviewValue: localStatus,
         remoteValue: statusCode,
       });

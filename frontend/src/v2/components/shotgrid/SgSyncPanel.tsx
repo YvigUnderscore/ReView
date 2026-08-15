@@ -14,6 +14,16 @@ import type { SgConnection, SgSyncRun } from '../../types/shotgrid';
  * des conflits laissés en attente. Le journal enregistre des clés de message, traduites
  * ici : une synchronisation d'il y a six mois se relit dans la langue du lecteur.
  */
+
+/**
+ * Libellé du champ en litige. Le journal ne stocke qu'un identifiant : la table vit ici
+ * pour qu'un conflit relu dans une autre langue se lise dans celle du lecteur.
+ */
+function fieldLabel(t: ReturnType<typeof useT>, field: string): string {
+  if (field === 'status') return t('shotgrid.conflict.field.status');
+  return field;
+}
+
 export default function SgSyncPanel({
   connection,
   canManage,
@@ -92,13 +102,17 @@ export default function SgSyncPanel({
                     {String(c.vars?.name ?? `${c.localType} #${c.localId}`)}
                   </span>
                   {/* Ce qui diverge, en toutes lettres : sans cela, « garder ShotGrid »
-                      revient à trancher à l'aveugle. */}
+                      revient à trancher à l'aveugle. Les conflits enregistrés avant que
+                      ces valeurs soient relevées le disent, plutôt que d'aligner des
+                      tirets qu'on prendrait pour des valeurs vides. */}
                   <span className="block text-[11px] text-muted-foreground">
-                    {t('shotgrid.conflict.detail', {
-                      field: String(c.vars?.field ?? '—'),
-                      review: String(c.vars?.review ?? '—'),
-                      shotgrid: String(c.vars?.shotgrid ?? '—'),
-                    })}
+                    {c.vars?.field
+                      ? t('shotgrid.conflict.detail', {
+                          field: fieldLabel(t, String(c.vars.field)),
+                          review: String(c.vars.review ?? '—'),
+                          shotgrid: String(c.vars.shotgrid ?? '—'),
+                        })
+                      : t('shotgrid.conflict.noDetail')}
                   </span>
                 </span>
                 {canManage && (

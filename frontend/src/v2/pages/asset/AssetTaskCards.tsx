@@ -9,6 +9,7 @@ import EmptyState from '../../components/ui/empty-state';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import { useT, intlLocale } from '../../i18n';
+import { scheduleLabel } from './taskSchedule';
 import type { AssetTreeTask, AssetTreeVersion, DepartmentGroup } from '../../types/api';
 
 /**
@@ -79,30 +80,21 @@ export default function AssetTaskCards({
   );
 }
 
-const formatDay = (value: string): string => new Date(value).toLocaleDateString(intlLocale());
-
-/** Une échéance passée sur une tâche non terminée : c'est l'information qu'on cherche. */
-const isLate = (due: string | null | undefined): boolean =>
-  Boolean(due) && new Date(due as string).getTime() < Date.now();
+const formatDay = (value: string): string => (value ? new Date(value).toLocaleDateString(intlLocale()) : '—');
 
 /** Fenêtre de travail d'une tâche, telle que la production l'a fixée. */
 function TaskSchedule({ task }: { task: AssetTreeTask }) {
   const t = useT();
-  if (!task.startDate && !task.dueDate) return null;
+  const label = scheduleLabel(task);
+  if (!label) return null;
 
-  const late = isLate(task.dueDate);
-  const label = task.startDate
-    ? t('task.schedule.window', {
-        start: formatDay(task.startDate),
-        due: task.dueDate ? formatDay(task.dueDate) : '—',
-      })
-    : t('task.schedule.due', { date: formatDay(task.dueDate as string) });
+  const late = label.key === 'task.schedule.late';
+  const text =
+    label.key === 'task.schedule.window'
+      ? t(label.key, { start: formatDay(label.start), due: formatDay(label.due) })
+      : t(label.key, { date: formatDay(label.date) });
 
-  return (
-    <span className={`text-[11px] ${late ? 'text-destructive' : 'text-muted-foreground'}`}>
-      {late && task.dueDate ? t('task.schedule.late', { date: formatDay(task.dueDate) }) : label}
-    </span>
-  );
+  return <span className={`text-[11px] ${late ? 'text-destructive' : 'text-muted-foreground'}`}>{text}</span>;
 }
 
 /** Carte d'une tâche : statut, échéance, nombre de versions, dernière image connue. */

@@ -2462,5 +2462,7 @@
   "shotgrid.log.reviewStatusCreated": "Review-Status « {name} » aus dem ShotGrid-Code {code} angelegt",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} weicht ab: ReView « {review} » gegenüber ShotGrid « {shotgrid} ». Entschieden durch {policy}.",
   "shotgrid.log.truncated": "Protokoll gekürzt — die Zähler bleiben exakt",
-  "shotgrid.conflict.applying": "Entscheidung wird angewendet…"
+  "shotgrid.conflict.applying": "Entscheidung wird angewendet…",
+  "shotgrid.conflict.noDetail": "Abweichung erfasst, bevor die Werte festgehalten wurden — erneut synchronisieren, um sie zu sehen",
+  "shotgrid.conflict.field.status": "Status"
 }

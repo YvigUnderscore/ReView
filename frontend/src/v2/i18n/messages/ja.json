@@ -2404,5 +2404,7 @@
   "shotgrid.log.reviewStatusCreated": "ShotGrid のコード {code} から review ステータス「{name}」を作成しました",
   "shotgrid.log.conflictOverwritten": "「{name}」— {field} が不一致: ReView「{review}」対 ShotGrid「{shotgrid}」。{policy} で決定。",
   "shotgrid.log.truncated": "ログは切り詰められました — 件数は正確です",
-  "shotgrid.conflict.applying": "判断を適用しています…"
+  "shotgrid.conflict.applying": "判断を適用しています…",
+  "shotgrid.conflict.noDetail": "値が記録される前に生じた差異です — 見るには再同期してください",
+  "shotgrid.conflict.field.status": "ステータス"
 }

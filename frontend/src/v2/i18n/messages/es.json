@@ -2462,5 +2462,7 @@
   "shotgrid.log.reviewStatusCreated": "Estado de review « {name} » creado desde el código ShotGrid {code}",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} diverge: ReView « {review} » frente a ShotGrid « {shotgrid} ». Arbitrado por {policy}.",
   "shotgrid.log.truncated": "Registro truncado — los contadores siguen siendo exactos",
-  "shotgrid.conflict.applying": "Aplicando la decisión…"
+  "shotgrid.conflict.applying": "Aplicando la decisión…",
+  "shotgrid.conflict.noDetail": "Divergencia registrada antes de captar los valores — vuelve a sincronizar para verlos",
+  "shotgrid.conflict.field.status": "estado"
 }

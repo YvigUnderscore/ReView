@@ -122,8 +122,9 @@ export default function ProjectPage() {
     ...(canManage ? [{ key: 'shares', label: t('project.tab.shares'), icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),
     ...(canManage ? [{ key: 'trash', label: t('admin.tab.trash'), icon: <Trash2 size={16} /> }] : []),
-    // ShotGrid (48) : visible dès qu'un projet peut être relié — l'onglet indique
-    // lui-même s'il ne l'est pas encore.
+    // ShotGrid (48) : l'onglet n'existe que sur un projet relié. Un studio sans ShotGrid
+    // ne doit pas voir l'intégration du tout ; la liaison se fait depuis les réglages du
+    // projet, qui est l'endroit où l'on décide de relier.
     ...(canManage && sgConnection?.active
       ? [{ key: 'shotgrid', label: t('shotgrid.tab.label'), icon: <Workflow size={16} /> }]
       : []),

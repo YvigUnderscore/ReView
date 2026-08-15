@@ -2512,5 +2512,7 @@
   "shotgrid.conflict.resolved": "Conflit arbitré",
   "shotgrid.conflict.failed": "Arbitrage impossible",
   "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »",
-  "shotgrid.playlists.pulled": "{count} playlist(s) importée(s)"
+  "shotgrid.playlists.pulled": "{count} playlist(s) importée(s)",
+  "shotgrid.conflict.noDetail": "Divergence enregistrée avant le relevé des valeurs — resynchroniser pour les voir",
+  "shotgrid.conflict.field.status": "statut"
 }

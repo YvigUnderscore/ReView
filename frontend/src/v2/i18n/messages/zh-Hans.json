@@ -2394,5 +2394,7 @@
   "shotgrid.log.reviewStatusCreated": "已从 ShotGrid 代码 {code} 创建 review 状态「{name}」",
   "shotgrid.log.conflictOverwritten": "「{name}」— {field} 不一致：ReView「{review}」对 ShotGrid「{shotgrid}」。按 {policy} 裁决。",
   "shotgrid.log.truncated": "日志已截断 — 计数仍然准确",
-  "shotgrid.conflict.applying": "正在应用决定…"
+  "shotgrid.conflict.applying": "正在应用决定…",
+  "shotgrid.conflict.noDetail": "差异在记录具体值之前就已产生 — 重新同步以查看",
+  "shotgrid.conflict.field.status": "状态"
 }

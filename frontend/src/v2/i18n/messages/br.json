@@ -2451,5 +2451,7 @@
   "shotgrid.log.reviewStatusCreated": "Statud review « {name} » krouet diwar ar c'hod ShotGrid {code}",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} disheñvel : ReView « {review} » a-enep ShotGrid « {shotgrid} ». Diskoulmet gant {policy}.",
   "shotgrid.log.truncated": "Marilh troc'het — reizh e chom ar c'honteroù",
-  "shotgrid.conflict.applying": "Oc'h arloañ an diviz…"
+  "shotgrid.conflict.applying": "Oc'h arloañ an diviz…",
+  "shotgrid.conflict.noDetail": "Diforc'h enrollet a-raok ma voe dastumet an talvoudoù — adkempredañ evit o gwelet",
+  "shotgrid.conflict.field.status": "statud"
 }
