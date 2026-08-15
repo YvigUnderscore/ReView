@@ -16,6 +16,7 @@ import { can, parseSettings } from './shotgridSettings';
 import { markEcho } from './ShotgridEventService';
 import { inverseVersionStatusMap } from './ShotgridStatusSync';
 import { pushComment } from './ShotgridNoteSync';
+import { pushPlaylist } from './ShotgridPlaylistSync';
 
 /**
  * Écritures ReView → ShotGrid.
@@ -35,7 +36,8 @@ export type PushJob =
   | { type: 'version-status'; versionId: number; actorId?: number | null }
   | { type: 'version-publish'; versionId: number; actorId?: number | null }
   | { type: 'asset-links'; assetId: number; actorId?: number | null }
-  | { type: 'comment'; commentId: number; actorId?: number | null };
+  | { type: 'comment'; commentId: number; actorId?: number | null }
+  | { type: 'playlist'; playlistId: number; actorId?: number | null };
 
 /**
  * Met une écriture en file pour le projet concerné, si une connexion existe.
@@ -151,6 +153,9 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
         break;
       case 'comment':
         await pushCommentJob(ctx, job);
+        break;
+      case 'playlist':
+        await pushPlaylistJob(ctx, job);
         break;
     }
   } catch (err) {
@@ -368,6 +373,20 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
       await uploadMasterMedia(ctx, created.id, media);
     }
   }
+}
+
+/** Playlist de dailies ReView → Playlist ShotGrid, ordre compris. */
+async function pushPlaylistJob(ctx: PushContext, job: Extract<PushJob, { type: 'playlist' }>) {
+  if (!can(ctx.settings, 'playlists', 'write')) return;
+  await pushPlaylist(
+    {
+      connectionId: ctx.connectionId,
+      sgProjectId: ctx.sgProjectId,
+      client: ctx.client,
+      asUserLogin: await actorLogin(ctx, job.actorId),
+    },
+    job.playlistId,
+  );
 }
 
 /** Commentaire ReView → note ShotGrid, avec la frame annotée en pièce jointe. */

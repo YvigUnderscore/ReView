@@ -5,6 +5,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors';
 import { storage } from './StorageService';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 type SessionUser = { id: number; role: Role };
 
@@ -212,10 +213,16 @@ export async function addItems(
     ),
     prisma.playlist.update({ where: { id }, data: { updatedAt: new Date() } }),
   ]);
+  await syncToShotgrid(id, playlist.projectId, user.id);
   return { added: toAdd.length, skipped: resolved.length - toAdd.length };
 }
 
 /** Réordonne : `itemIds` = ids d'items dans le nouvel ordre (doit couvrir la playlist). */
+/** Remonte la playlist vers ShotGrid après une modification (contenu ou ordre). */
+async function syncToShotgrid(playlistId: number, projectId: number, actorId: number) {
+  await enqueuePush(projectId, { type: 'playlist', playlistId, actorId });
+}
+
 export async function reorder(user: SessionUser, id: number, itemIds: number[]) {
   const playlist = await getOwning(id);
   assertCanEdit(user, playlist);
@@ -226,6 +233,7 @@ export async function reorder(user: SessionUser, id: number, itemIds: number[]) 
   await prisma.$transaction(
     itemIds.map((itemId, order) => prisma.playlistItem.update({ where: { id: itemId }, data: { order } })),
   );
+  await syncToShotgrid(id, playlist.projectId, user.id);
 }
 
 export async function removeItem(user: SessionUser, id: number, itemId: number) {
@@ -233,6 +241,7 @@ export async function removeItem(user: SessionUser, id: number, itemId: number) 
   assertCanEdit(user, playlist);
   const { count } = await prisma.playlistItem.deleteMany({ where: { id: itemId, playlistId: id } });
   if (count === 0) throw notFound('Item introuvable dans cette playlist');
+  await syncToShotgrid(id, playlist.projectId, user.id);
 }
 
 export async function remove(user: SessionUser, id: number) {
