@@ -77,10 +77,20 @@ export function useAssetsQuery(projectId: number, enabled = true) {
 }
 
 /** Statuts de review du studio (Phase 31) — badges, filtres, menus de décision. */
-export function useReviewStatusesQuery(enabled = true) {
+/**
+ * Statuts de review. Avec un `projectId`, la liste est celle du projet : sur un projet
+ * relié à ShotGrid, elle se restreint au vocabulaire du site plutôt que d'empiler les
+ * statuts d'origine de ReView et ceux du studio.
+ */
+export function useReviewStatusesQuery(enabled = true, projectId?: number) {
   return useQuery({
-    queryKey: qk.reviewStatuses,
-    queryFn: () => api.get<{ statuses: ReviewStatus[] }>('/api/review-statuses').then((d) => d.statuses),
+    queryKey: projectId ? [...qk.reviewStatuses, projectId] : qk.reviewStatuses,
+    queryFn: () =>
+      api
+        .get<{ statuses: ReviewStatus[] }>(
+          `/api/review-statuses${projectId ? `?projectId=${projectId}` : ''}`,
+        )
+        .then((d) => d.statuses),
     staleTime: 5 * 60 * 1000,
     enabled,
   });

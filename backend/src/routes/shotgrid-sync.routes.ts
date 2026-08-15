@@ -105,6 +105,25 @@ router.post(
 );
 
 /**
+ * Correspondances du projet — l'interface en tire les liens directs vers les fiches
+ * ShotGrid. Une requête par projet plutôt qu'une par carte affichée.
+ */
+router.get('/projects/:projectId/links', validate({ params: projectParam }), async (req, res) => {
+  const projectId = Number(req.params.projectId);
+  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  const conn = await Config.getConnection(projectId);
+  if (!conn?.active) return res.json({ links: [] });
+  const links = await prisma.shotgridLink.findMany({
+    where: {
+      connectionId: conn.id,
+      localType: { in: ['sequence', 'shot', 'asset', 'task', 'version'] },
+    },
+    select: { localType: true, localId: true, sgId: true },
+  });
+  res.json({ links });
+});
+
+/**
  * Comparaison des deux côtés. Aucune écriture : elle sert à décider, pas à corriger.
  */
 router.get('/projects/:projectId/diff', validate({ params: projectParam }), async (req, res) => {

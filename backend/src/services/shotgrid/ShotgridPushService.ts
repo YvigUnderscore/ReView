@@ -7,6 +7,7 @@ import { env } from '../../config/env';
 import { shotgridQueue } from '../JobService';
 import { clientForSiteRecord } from './ShotgridConfigService';
 import { belongsToProject } from './shotgridProjectGuard';
+import { writeAllowedOn } from './shotgridTemplateGuard';
 import { toSgDate } from './shotgridMapper';
 import { findByLocal, upsertLink } from './shotgridLinks';
 import { can, parseSettings } from './shotgridSettings';
@@ -86,6 +87,11 @@ async function resolveTarget(
       { sgType, sgId: link.sgId, expected: ctx.sgProjectId, found: verdict.foundProjectId },
       'Écriture ShotGrid annulée : la cible appartient à un autre projet',
     );
+    return null;
+  }
+  // Second rempart, indépendant du cloisonnement : jamais dans un projet modèle.
+  if (!writeAllowedOn(remote)) {
+    logger.error({ sgType, sgId: link.sgId }, 'Écriture ShotGrid annulée : cible dans un projet modèle');
     return null;
   }
   return link.sgId;

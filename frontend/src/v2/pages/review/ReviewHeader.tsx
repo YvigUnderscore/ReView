@@ -173,6 +173,7 @@ export default function ReviewHeader({
         open={decisionOpen}
         onOpenChange={setDecisionOpen}
         canDecide={canDecide}
+        projectId={data.projectId}
       />
     </div>
   );

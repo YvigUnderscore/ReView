@@ -27,16 +27,19 @@ export default function ReviewDecisionDialog({
   open,
   onOpenChange,
   canDecide,
+  projectId,
 }: {
   versionId: number;
   versionName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   canDecide: boolean;
+  /** Restreint les statuts proposés au vocabulaire du projet (ShotGrid le cas échéant). */
+  projectId?: number;
 }) {
   const t = useT();
   const qc = useQueryClient();
-  const statusesQ = useReviewStatusesQuery(open);
+  const statusesQ = useReviewStatusesQuery(open, projectId);
   const historyQ = useQuery({
     queryKey: qk.versionDecisions(versionId),
     queryFn: () =>

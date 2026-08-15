@@ -10,6 +10,7 @@ import { logger } from '../../lib/logger';
 import { ShotgridClient, ShotgridApiError, clearTokenCache } from './ShotgridClient';
 import { asString } from './shotgridMapper';
 import { projectNameMatches } from './shotgridProjectGuard';
+import { assertNotTemplateProject } from './shotgridTemplateGuard';
 import {
   assertSafeBaseUrl,
   parseSettings,
@@ -200,6 +201,8 @@ export async function createConnection(projectId: number, input: ConnectionInput
   const remote = await client.findById('Project', input.sgProjectId, ['name', 'sg_status', 'archived']);
   if (!remote) throw badRequest("Ce projet n'existe pas sur le site ShotGrid");
   const remoteName = asString(remote.name);
+  // Un gabarit ne se relie pas : l'abîmer abîmerait tous les projets à venir.
+  assertNotTemplateProject(remoteName, input.sgProjectId);
   if (!projectNameMatches(remoteName, input.sgProjectName))
     throw badRequest(
       `Le projet ShotGrid #${input.sgProjectId} s'appelle « ${remoteName ?? '?'} », pas « ${input.sgProjectName} » — connexion refusée`,

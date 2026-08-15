@@ -250,6 +250,7 @@ export default function VersionTimelineItem({
         open={decisionOpen}
         onOpenChange={setDecisionOpen}
         canDecide={canDecide}
+        projectId={projectId ?? undefined}
       />
     </li>
   );

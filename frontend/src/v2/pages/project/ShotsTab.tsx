@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Bell, BellOff, Clapperboard } from 'lucide-react';
+import { Bell, BellOff, Clapperboard, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
@@ -18,6 +18,7 @@ import { sortByCode, type Nomenclature, type Sequence, type Shot } from './proje
 import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
 import SgCreationLock from '../../components/shotgrid/SgCreationLock';
+import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 
 /**
  * Onglet Shots : création en lot (Shots/Sequences creation), cartes groupées par séquence,
@@ -89,6 +90,8 @@ export default function ShotsTab({
     { seq: null as Sequence | null, list: shots.filter((sh) => sh.sequenceId === null) },
   ].filter((g) => g.list.length > 0 || g.seq);
 
+  const sgLinks = useSgLinks(projectId);
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -147,6 +150,18 @@ export default function ShotsTab({
                     },
                   ]
                 : [];
+              // Lien direct vers la fiche ShotGrid — clic droit seulement, et seulement
+              // si le projet est relié : sur un projet autonome, l'entrée n'existe pas.
+              const sgUrl = sgLinks.linkFor('shot', shot.id);
+              const sgAction = sgUrl
+                ? [
+                    {
+                      icon: <ExternalLink size={14} />,
+                      label: t('shotgrid.openIn.shot'),
+                      onClick: () => window.open(sgUrl, '_blank', 'noreferrer'),
+                    },
+                  ]
+                : [];
               // Suivi (32.G) : action de clic droit uniquement (UI simple).
               const watching = watch.isWatching('SHOT', shot.id);
               const watchAction = {
@@ -168,7 +183,7 @@ export default function ShotsTab({
                   thumbnailUrl={shot.thumbnailUrl}
                   favorite={{ type: 'SHOT', entityId: shot.id }}
                   actions={actions}
-                  contextActions={[watchAction, ...actions]}
+                  contextActions={[...sgAction, watchAction, ...actions]}
                 />
               );
             })}

@@ -2429,5 +2429,15 @@
   "shotgrid.admin.updated": "ShotGrid site updated",
   "shotgrid.admin.editTitle": "Edit « {name} »",
   "shotgrid.admin.keepSecret": "leave empty to keep the current one",
-  "shotgrid.log.mediaImportFailed": "Media of « {name} » could not be imported ({error}) — the version itself is in place"
+  "shotgrid.log.mediaImportFailed": "Media of « {name} » could not be imported ({error}) — the version itself is in place",
+  "shotgrid.settings.notLinked": "This project is not linked to a ShotGrid project.",
+  "shotgrid.settings.linkProject": "Link to ShotGrid",
+  "shotgrid.settings.tabHint": "Synchronisation, comparison and exchange settings live in the ShotGrid tab.",
+  "shotgrid.settings.inheritedTitle": "Inherited from ShotGrid",
+  "shotgrid.settings.inheritedHint": "These values come from the linked ShotGrid project and are overwritten at each synchronisation.",
+  "shotgrid.openIn.shot": "Open the shot in ShotGrid",
+  "shotgrid.openIn.sequence": "Open the sequence in ShotGrid",
+  "shotgrid.openIn.asset": "Open the asset in ShotGrid",
+  "shotgrid.openIn.task": "Open the task in ShotGrid",
+  "shotgrid.openIn.version": "Open the version in ShotGrid"
 }

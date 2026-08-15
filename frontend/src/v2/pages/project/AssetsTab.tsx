@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, BellOff, Box, FolderOpen, Link2, Plus, Trash2 } from 'lucide-react';
+import { Bell, BellOff, Box, FolderOpen, Link2, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
@@ -24,6 +24,7 @@ import { Select } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ASSET_TYPES, type Asset } from './projectTypes';
 import { useT } from '../../i18n';
+import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 
 /** Onglet Assets réutilisables : création, cartes, assignation shots/séquences. */
 export default function AssetsTab({
@@ -85,6 +86,8 @@ export default function AssetsTab({
       setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
+
+  const sgLinks = useSgLinks(projectId);
 
   return (
     <div>
@@ -185,6 +188,16 @@ export default function AssetsTab({
                 favorite={{ type: 'ASSET', entityId: a.id }}
                 actions={manageActions}
                 contextActions={[
+                  // Fiche ShotGrid — présente uniquement si le projet est relié.
+                  ...(sgLinks.linkFor('asset', a.id)
+                    ? [
+                        {
+                          icon: <ExternalLink size={14} />,
+                          label: t('shotgrid.openIn.asset'),
+                          onClick: () => window.open(sgLinks.linkFor('asset', a.id)!, '_blank', 'noreferrer'),
+                        },
+                      ]
+                    : []),
                   {
                     icon: <FolderOpen size={14} />,
                     label: t('common.open'),

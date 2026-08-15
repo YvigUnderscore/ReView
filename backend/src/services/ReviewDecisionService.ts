@@ -40,6 +40,26 @@ export async function listStatuses() {
   return prisma.reviewStatus.findMany({ orderBy: [{ order: 'asc' }, { id: 'asc' }] });
 }
 
+/**
+ * Statuts proposés pour un projet donné.
+ *
+ * Sur un projet relié à ShotGrid, seuls les statuts qui existent réellement là-bas ont
+ * un sens : poser une décision que le site ne connaît pas ne remonterait nulle part, et
+ * l'écran se retrouvait à mélanger le vocabulaire d'origine de ReView avec celui du
+ * studio — deux fois « approuvé », trois fois « à refaire ». On restreint donc à la
+ * correspondance établie. Un projet autonome garde la liste complète.
+ */
+export async function listStatusesForProject(projectId: number) {
+  const all = await listStatuses();
+  const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });
+  if (!connection?.active) return all;
+
+  const settings = (connection.settings ?? {}) as { versionStatusMap?: Record<string, number> };
+  const mapped = new Set(Object.values(settings.versionStatusMap ?? {}));
+  if (mapped.size === 0) return all;
+  return all.filter((s) => mapped.has(s.id));
+}
+
 export interface StatusInput {
   name: string;
   color: string;

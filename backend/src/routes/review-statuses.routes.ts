@@ -27,10 +27,24 @@ const statusBody = z.object({
   isDefault: z.boolean().optional(),
 });
 
-// GET /api/review-statuses — liste ordonnée (crée les statuts classiques au 1er accès)
-router.get('/', async (_req, res) => {
-  res.json({ statuses: await ReviewDecisionService.listStatuses() });
-});
+// GET /api/review-statuses[?projectId=] — liste ordonnée (crée les statuts classiques
+// au 1er accès). Avec un projet relié à ShotGrid, restreinte au vocabulaire du site.
+router.get(
+  '/',
+  validate({ query: z.object({ projectId: z.coerce.number().int().positive().optional() }) }),
+  async (req, res) => {
+    // Express 5 : `req.query` n'est pas remplacé par la validation, seulement fusionné —
+    // la valeur peut rester une chaîne. On la convertit explicitement.
+    const raw = req.query.projectId;
+    const projectId = raw === undefined ? undefined : Number(raw);
+    res.json({
+      statuses:
+        projectId && Number.isInteger(projectId)
+          ? await ReviewDecisionService.listStatusesForProject(projectId)
+          : await ReviewDecisionService.listStatuses(),
+    });
+  },
+);
 
 // POST /api/review-statuses — ADMIN
 router.post('/', requireRole(Role.ADMIN), validate({ body: statusBody }), async (req, res) => {
