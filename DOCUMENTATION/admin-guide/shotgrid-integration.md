@@ -58,7 +58,8 @@ refused, so that no one can make the server probe internal services.
 
 ## 3. Linking a project
 
-Open a project, then the **ShotGrid** tab.
+Open a project, then **Settings → ShotGrid**. The **ShotGrid** tab appears only once the
+project is linked: a studio that does not use ShotGrid never sees the integration.
 
 1. Choose the site.
 2. Search the target project **by name** and select it.
@@ -88,6 +89,10 @@ from ShotGrid and whether it writes back.
 
 Field notes:
 
+- **Duplicate codes**: a site may hold several entities with the same code (four
+  sequences named `DO_NOT_USE_`, say). ReView can only hold one per code, so the extra
+  ones are imported with their ShotGrid id appended — `DO_NOT_USE_ (4686)`. The suffix is
+  stable, and the comparison ignores it.
 - **Cut ranges**: `sg_cut_in` / `sg_cut_out` become the shot's start and end frames.
 - **Task duration**: ShotGrid stores working minutes (2400 = five 8-hour days). ReView
   keeps the raw value alongside the link and displays working days.
@@ -223,6 +228,8 @@ Sites differ, and some restrict what an account may write. Two cases met in the 
 | Media not imported | Look at the run log: the version may carry no media, exceed the size limit, or fall outside the status filter. |
 | A shot exists in ReView but nowhere in ShotGrid | It was created locally before the link. The comparison lists it as *not linked*. |
 | An entity disappeared from ReView | It was moved to the ShotGrid bin. Deletion happens there and propagates here; restore it in ShotGrid and re-synchronise. |
+| A task deleted in ShotGrid is still in ReView | It carries versions. Deleting the task would delete that review work with it, so ReView keeps it and logs a warning. Move the versions elsewhere, then re-synchronise. |
+| The comparison shows more tasks or versions in ReView | Expected when tasks were kept as above, or when local versions were never pushed (see *publish mode*). |
 | Annotations not attached to notes | Check the run log: the media file must still exist in storage, and the site must accept uploads on `Note.attachments`. |
 
 Every synchronisation is recorded with per-domain counters and a filterable log, kept
