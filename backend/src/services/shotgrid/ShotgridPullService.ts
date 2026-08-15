@@ -52,7 +52,18 @@ const SHOT_FIELDS = [
   'project',
   'updated_at',
 ];
-const ASSET_FIELDS = ['code', 'description', 'sg_asset_type', 'sg_status_list', 'project', 'updated_at'];
+const ASSET_FIELDS = [
+  'code',
+  'description',
+  'sg_asset_type',
+  'sg_status_list',
+  // Rattachements portés par l'asset côté ShotGrid : c'est de là que sortent les
+  // listes « quels assets pour ce plan », et les lire évite de les ressaisir ici.
+  'shots',
+  'sequences',
+  'project',
+  'updated_at',
+];
 const TASK_FIELDS = [
   'content',
   'step',
@@ -326,6 +337,10 @@ export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
   if (!options.since && !options.onlySgIds)
     await trashRemoved(ctx, 'Asset', new Set(records.map((r) => r.id)));
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
+  // Les plans et sequences ont été importés juste avant : leurs correspondances
+  // existent, on peut donc rattacher sans rien créer au passage.
+  const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
+  const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
 
   for (const record of records) {
     const name = asString(record.code) ?? `Asset ${record.id}`;
@@ -349,6 +364,23 @@ export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
     const saved = existing
       ? await prisma.asset.update({ where: { id: existing.id }, data })
       : await prisma.asset.create({ data });
+
+    // Rattachements : `set` remplace la liste entière plutôt que d'ajouter — c'est ce
+    // qui empêche les doublons quand une synchronisation repasse. Seules les entités
+    // déjà reliées sont citées : un shot inconnu de ReView n'a rien à rattacher.
+    const shotIds = asEntityRefs(record.shots)
+      .map((r) => shotLinks.get(r.id)?.localId)
+      .filter((id): id is number => typeof id === 'number');
+    const sequenceIds = asEntityRefs(record.sequences)
+      .map((r) => sequenceLinks.get(r.id)?.localId)
+      .filter((id): id is number => typeof id === 'number');
+    await prisma.asset.update({
+      where: { id: saved.id },
+      data: {
+        shots: { set: shotIds.map((id) => ({ id })) },
+        sequences: { set: sequenceIds.map((id) => ({ id })) },
+      },
+    });
 
     const linkData: AssetLinkData = {
       sgAssetType: asString(record.sg_asset_type),

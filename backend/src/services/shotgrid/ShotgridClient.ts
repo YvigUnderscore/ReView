@@ -393,18 +393,17 @@ export class ShotgridClient {
     filename: string,
     contentType = 'application/octet-stream',
   ): Promise<void> {
+    // ShotGrid décrit le dépôt dans `links`, pas dans `data` : `data` ne porte que la
+    // description de l'envoi (type, service de stockage), et l'adresse signée S3 vit
+    // sous `links.upload`. Chercher `data.upload_url` renvoyait toujours vide, donc
+    // « pas d'URL de dépôt » alors que le site en avait bien fourni une.
     const init = await this.request<{
-      data?: {
-        timestamp?: string;
-        upload_url?: string;
-        upload_info?: unknown;
-        links?: { complete_upload?: string };
-      };
-      links?: { complete_upload?: string };
+      data?: Record<string, unknown>;
+      links?: { upload?: string; complete_upload?: string };
     }>(
       `${SG_API_PATH}/entity/${encodeURIComponent(entity)}/${id}/${encodeURIComponent(field)}/_upload?filename=${encodeURIComponent(filename)}`,
     );
-    const uploadUrl = init.data?.upload_url;
+    const uploadUrl = init.links?.upload;
     if (!uploadUrl) throw new ShotgridApiError("ShotGrid n'a pas fourni d'URL de dépôt", 502, init);
 
     const put = await fetch(uploadUrl, {
@@ -414,11 +413,13 @@ export class ShotgridClient {
     });
     if (!put.ok) throw new ShotgridApiError('Dépôt du fichier vers ShotGrid refusé', put.status);
 
-    const completePath = init.links?.complete_upload ?? init.data?.links?.complete_upload;
-    if (completePath) {
-      await this.request(completePath.startsWith('http') ? completePath : completePath, {
+    // La confirmation rend le fichier visible dans l'interface : sans elle, l'objet
+    // reste sur le stockage sans être rattaché à l'entité.
+    const complete = init.links?.complete_upload;
+    if (complete) {
+      await this.request(complete, {
         method: 'POST',
-        body: JSON.stringify({ upload_info: init.data?.upload_info }),
+        body: JSON.stringify({ upload_info: init.data, upload_data: {} }),
       });
     }
   }

@@ -214,3 +214,45 @@ describe('ShotgridClient', () => {
     expect(fetchMock.mock.calls.every((c) => String(c[0]).includes('/api/v1.1/'))).toBe(true);
   });
 });
+
+describe('uploadFile', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    clearTokenCache();
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('lit l’adresse de dépôt sous « links », pas sous « data »', async () => {
+    // ShotGrid décrit l'envoi dans `data` et met l'adresse signée dans `links.upload` :
+    // la chercher dans `data.upload_url` renvoyait toujours vide, d'où un « pas d'URL
+    // de dépôt » alors que le site en fournissait bien une.
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockResolvedValueOnce(
+      json({
+        data: { upload_type: 'Attachment', storage_service: 's3' },
+        links: { upload: 'https://s3.example/signed', complete_upload: '/api/v1.1/complete' },
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    fetchMock.mockResolvedValueOnce(json({ data: {} }));
+
+    const client = new ShotgridClient(creds);
+    await client.uploadFile('Note', 42, 'attachments', Buffer.from('image'), 'a.png', 'image/png');
+
+    const put = fetchMock.mock.calls.find((c) => c[1]?.method === 'PUT');
+    expect(String(put![0])).toBe('https://s3.example/signed');
+    // La confirmation rend le fichier visible : sans elle il reste orphelin.
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/complete'))).toBe(true);
+  });
+
+  it('signale clairement l’absence d’adresse de dépôt', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: {}, links: {} }));
+    const client = new ShotgridClient(creds);
+    await expect(client.uploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png')).rejects.toThrow();
+  });
+});
