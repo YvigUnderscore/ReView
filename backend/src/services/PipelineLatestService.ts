@@ -169,6 +169,8 @@ export interface AssetTreeTask {
   name: string;
   type: string | null;
   status: string | null;
+  /** Statut personnalisable (48) : celui du site ShotGrid sur un projet relié. */
+  pipelineStatusId: number | null;
   department: string | null;
   versions: AssetTreeVersion[];
 }
@@ -207,6 +209,7 @@ export async function assetTree(
         name: true,
         type: true,
         status: true,
+        pipelineStatusId: true,
         department: true,
         versions: {
           where: { deletedAt: null },
@@ -240,6 +243,7 @@ export async function assetTree(
     name: t.name,
     type: t.type,
     status: t.status,
+    pipelineStatusId: t.pipelineStatusId,
     department: t.department,
     versions: t.versions.map(toVersion),
   }));
@@ -248,6 +252,7 @@ export async function assetTree(
       id: null,
       name: '',
       type: null,
+      pipelineStatusId: null,
       status: null,
       department: null,
       versions: looseVersions.map(toVersion),

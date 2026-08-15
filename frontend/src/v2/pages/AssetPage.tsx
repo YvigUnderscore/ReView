@@ -17,7 +17,7 @@ import { Button } from '../components/ui/button';
 import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
 import AssetLatestCard from './asset/AssetLatestCard';
-import AssetTree from './asset/AssetTree';
+import AssetTaskCards from './asset/AssetTaskCards';
 import { SkeletonRows } from '../components/ui/skeleton';
 import type { AssetDetail, AssetOverview } from '../types/api';
 import { useT } from '../i18n';
@@ -131,7 +131,11 @@ export default function AssetPage() {
       {overview?.latest && <AssetLatestCard assetId={assetId} latest={overview.latest} />}
 
       <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t('asset.tree.title')}</h2>
-      {treeQ.isLoading ? <SkeletonRows count={3} /> : <AssetTree groups={overview?.groups ?? []} />}
+      {treeQ.isLoading ? (
+        <SkeletonRows count={3} />
+      ) : (
+        <AssetTaskCards groups={overview?.groups ?? []} projectId={asset?.projectId ?? 0} />
+      )}
 
       <div className="mb-3 mt-6 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('asset.tree.direct')}</h2>
