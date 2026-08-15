@@ -83,6 +83,10 @@ export const createApp = (): Express => {
   );
   app.use(cors({ origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(',') }));
 
+  // ShotGrid (48) — monté avant le parseur JSON : la signature HMAC porte sur les
+  // octets reçus, et un corps déjà reparsé puis re-sérialisé ne redonne pas les mêmes.
+  app.use('/api/shotgrid/webhook', shotgridWebhookRoutes);
+
   // En v2 les fichiers transitent par MinIO via URLs présignées : pas de gros body.
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
@@ -149,9 +153,7 @@ export const createApp = (): Express => {
   app.use('/api/versions', versionsRoutes);
   app.use('/api/review-statuses', reviewStatusesRoutes); // statuts de review custom (Phase 31)
   app.use('/api/pipeline-statuses', pipelineStatusesRoutes); // statuts de tâche/plan (Phase 48)
-  // ShotGrid (48). La route de réception des webhooks est publique et lit le corps brut
-  // (signature HMAC) : elle est montée avant les routes authentifiées.
-  app.use('/api/shotgrid/webhook', shotgridWebhookRoutes);
+  // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);
   app.use('/api/comments', commentsRoutes);

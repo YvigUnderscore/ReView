@@ -29,6 +29,9 @@ export interface ShotgridEventPayload {
 
 const ENTITY_FROM_EVENT = /^Shotgun_([A-Za-z]+)_(New|Change|Retirement|Revival)$/;
 
+/** Fenêtre de regroupement des événements portant sur une même entité. */
+const COALESCE_MS = 5_000;
+
 /** Entités que ReView sait traiter — le reste est ignoré sans bruit. */
 const HANDLED = new Set([
   'Shot',
@@ -73,7 +76,13 @@ export async function enqueueShotgridEvent(
       'event',
       { kind: 'event', connectionId, event: data, deliveryId: meta.deliveryId ?? null },
       {
-        jobId: `sgevt:${connectionId}:${parsed.entity}:${entityRef.id}`,
+        // L'identifiant regroupe les événements d'une même entité par tranche de
+        // COALESCE_MS : une modification en lot n'entraîne qu'une relecture, mais un
+        // changement survenu plus tard n'est pas confondu avec le précédent. Sans la
+        // tranche, l'identifiant resterait pris par le travail déjà terminé et tout
+        // événement ultérieur serait silencieusement ignoré. Pas de deux-points :
+        // BullMQ les réserve à ses propres clés et rejette l'identifiant.
+        jobId: `sgevt-${connectionId}-${parsed.entity}-${entityRef.id}-${Math.floor(Date.now() / COALESCE_MS)}`,
         delay: 2000,
         removeOnComplete: 200,
         removeOnFail: 500,

@@ -76,7 +76,7 @@ export async function scheduleShotgridJobs(): Promise<void> {
         { kind: 'poll', connectionId: conn.id },
         {
           repeat: { every: settings.pollingIntervalSec * 1000 },
-          jobId: `sgpoll:${conn.id}`,
+          jobId: `sgpoll-${conn.id}`,
           removeOnComplete: 20,
         },
       );
@@ -88,7 +88,7 @@ export async function scheduleShotgridJobs(): Promise<void> {
         { kind: 'reconcile', projectId: conn.projectId },
         {
           repeat: { pattern: `0 ${settings.reconcile.hour} * * *` },
-          jobId: `sgreconcile:${conn.id}`,
+          jobId: `sgreconcile-${conn.id}`,
           removeOnComplete: 20,
         },
       );
@@ -112,7 +112,7 @@ export async function catchUpOnBoot(): Promise<void> {
     await shotgridQueue.add(
       'reconcile',
       { kind: 'reconcile', projectId: conn.projectId },
-      { delay, jobId: `sgboot:${conn.id}:${Date.now()}`, removeOnComplete: 20 },
+      { delay, jobId: `sgboot-${conn.id}-${Date.now()}`, removeOnComplete: 20 },
     );
     delay += 15_000;
   }

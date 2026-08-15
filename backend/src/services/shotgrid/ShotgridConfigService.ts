@@ -341,7 +341,13 @@ export async function markStatus(id: number, status: string, message: string | n
   });
 }
 
-/** Vue d'une connexion pour l'API (aucun secret, URL de webhook complète). */
+/**
+ * Vue d'une connexion pour l'API (aucun secret, adresse de webhook complète).
+ *
+ * L'adresse doit être copiable telle quelle dans ShotGrid. `APP_URL` la fournit quand
+ * l'instance la déclare ; sinon on retombe sur l'origine de la requête courante, ce qui
+ * reste juste dans la quasi-totalité des déploiements et évite d'afficher un chemin nu.
+ */
 export function connectionView(
   conn: ShotgridConnection & { site: ShotgridSite },
   appUrl: string | undefined,

@@ -11,6 +11,7 @@ import { env } from '../config/env';
 import * as Config from '../services/shotgrid/ShotgridConfigService';
 import { shotgridSettingsSchema } from '../services/shotgrid/shotgridSettings';
 import { assertProjectManager } from '../lib/shotgridAccess';
+import type { Request } from 'express';
 
 /**
  * Configuration ShotGrid : sites du studio (ADMIN) et connexion d'un projet
@@ -18,6 +19,10 @@ import { assertProjectManager } from '../lib/shotgridAccess';
  */
 const router = Router();
 router.use(authenticate);
+
+/** Adresse publique de l'instance : réglage explicite, sinon origine de la requête. */
+const publicUrl = (req: Request): string =>
+  env.APP_URL ?? `${req.protocol}://${req.get('host') ?? 'localhost'}`;
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const projectParam = z.object({ projectId: z.coerce.number().int().positive() });
@@ -93,7 +98,7 @@ router.post(
     const projectId = Number(req.params.projectId);
     await assertProjectManager(req.user!, projectId);
     const conn = await Config.createConnection(projectId, req.body);
-    res.status(201).json({ connection: Config.connectionView(conn, env.APP_URL) });
+    res.status(201).json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },
 );
 
@@ -101,7 +106,7 @@ router.get('/projects/:projectId/connection', validate({ params: projectParam })
   const projectId = Number(req.params.projectId);
   await assertProjectManager(req.user!, projectId, { allowMembers: true });
   const conn = await Config.getConnection(projectId);
-  res.json({ connection: conn ? Config.connectionView(conn, env.APP_URL) : null });
+  res.json({ connection: conn ? Config.connectionView(conn, publicUrl(req)) : null });
 });
 
 router.patch(
@@ -124,7 +129,7 @@ router.patch(
         ? { ...(current.settings as object), ...(req.body.settings as object) }
         : undefined;
     const conn = await Config.updateConnection(projectId, { ...req.body, settings: merged });
-    res.json({ connection: Config.connectionView(conn, env.APP_URL) });
+    res.json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },
 );
 
@@ -143,7 +148,7 @@ router.post(
     const projectId = Number(req.params.projectId);
     await assertProjectManager(req.user!, projectId);
     const conn = await Config.rotateWebhookToken(projectId);
-    res.json({ connection: Config.connectionView(conn, env.APP_URL) });
+    res.json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },
 );
 
