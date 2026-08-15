@@ -13,6 +13,7 @@ import * as Resolve from './PipelineResolveService';
 import * as VersionService from './VersionService';
 import * as ApiEventService from './ApiEventService';
 import type { UsdRequest } from './ModelConvertService';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
  * Publication depuis un DCC en deux appels (API v1).
@@ -206,6 +207,18 @@ export async function complete(actor: Actor, mediaId: number, input: CompletePub
         () => undefined, // verrou de publication ou droits : le média reste publié, la version non
       );
     }
+  }
+
+  // 48 : une publication ReView crée sa Version côté ShotGrid (lien ou fichier selon
+  // le réglage du projet). Mise en file — l'artiste n'attend pas le site distant.
+  if (shouldPublish) {
+    const projectId = await resolveProjectIdForVersion(media.versionId);
+    if (projectId)
+      await enqueuePush(projectId, {
+        type: 'version-publish',
+        versionId: media.versionId,
+        actorId: actor.id,
+      });
   }
 
   const version = await prisma.version.findUnique({

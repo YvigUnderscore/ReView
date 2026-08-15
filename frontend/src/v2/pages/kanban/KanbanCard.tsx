@@ -26,7 +26,7 @@ export function KanbanCardBody({ task, dragging }: { task: BoardTask; dragging?:
             {task.name}
           </Link>
           <div className="mt-0.5 truncate text-muted-foreground">
-            {task.shotCode} · {task.type}
+            {task.parentLabel} · {task.type}
           </div>
         </div>
         {task.assignee && (

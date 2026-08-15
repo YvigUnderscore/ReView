@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Film } from 'lucide-react';
+import { Film, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -19,6 +19,7 @@ import TimelineCard from '../timeline/TimelineCard';
 import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData } from './projectTypes';
 import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
+import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 
 /** Onglet Séquences : création en lot (Shots/Sequences creation), édition (dialog), détail en accordéon. */
 export default function SequencesTab({
@@ -69,6 +70,8 @@ export default function SequencesTab({
     }
   };
 
+  const sgLinks = useSgLinks(projectId);
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -101,6 +104,18 @@ export default function SequencesTab({
                   <span className="font-medium">{s.code}</span> · {s.name}
                 </button>
                 <div className="flex items-center gap-1">
+                  {/* Fiche ShotGrid — uniquement si la sequence y est reliée. */}
+                  {sgLinks.linkFor('sequence', s.id) && (
+                    <a
+                      href={sgLinks.linkFor('sequence', s.id)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={t('shotgrid.openIn.sequence')}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
+                    >
+                      <ExternalLink size={13} />
+                    </a>
+                  )}
                   <FavoriteButton type="SEQUENCE" entityId={s.id} />
                   {canManage && (
                     <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">

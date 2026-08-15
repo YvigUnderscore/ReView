@@ -14,6 +14,7 @@ import { publish as publishApiEvent } from './ApiEventService';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, forbidden } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
  * Logique métier des commentaires de review (fil, enrichissement auteur/pièces jointes,
@@ -261,6 +262,12 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       timestamp: body.timestamp ?? null,
     },
   });
+
+  // 48 : le retour part aussi vers ShotGrid, en note rattachée à la version, avec la
+  // frame annotée en pièce jointe. Une réponse dans un fil reste locale — ShotGrid
+  // n'a pas de notion de fil qui corresponde au nôtre.
+  if (!body.parentId)
+    await enqueuePush(projectId, { type: 'comment', commentId: comment.id, actorId: user.id });
 
   // Mentions @user (32.B) : notification ciblée des membres cités.
   const mentioned = await notifyMentions(user.id, projectId, body.mediaObjectId, comment.content);

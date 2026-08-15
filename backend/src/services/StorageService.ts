@@ -287,6 +287,18 @@ class StorageService {
     return res.Body as Readable;
   }
 
+  /**
+   * Objet complet en mémoire. Réservé aux contenus dont la taille est maîtrisée
+   * (vignettes, envois vers une API tierce qui exige un corps unique) : pour tout ce
+   * qui peut peser lourd, préférer `getObjectStream` ou `downloadToFile`.
+   */
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const stream = await this.getObjectStream(key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(chunk as Buffer);
+    return Buffer.concat(chunks);
+  }
+
   /** Lit les `length` premiers octets d'un objet (validation magic bytes). */
   async getObjectHeader(key: string, length = 32): Promise<Buffer> {
     const res = await this.client.send(

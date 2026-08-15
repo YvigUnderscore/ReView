@@ -4,6 +4,7 @@
 import { AssetType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest } from '../lib/errors';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /** Logique métier des assets. L'accès projet (RBAC) est asserté dans la route (10.D8). */
 
@@ -51,7 +52,7 @@ export async function update(projectId: number, id: number, body: UpdateAssetInp
     const ok = await prisma.sequence.count({ where: { id: { in: sequenceIds }, projectId } });
     if (ok !== sequenceIds.length) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
   }
-  return prisma.asset.update({
+  const updated = await prisma.asset.update({
     where: { id },
     data: {
       ...scalar,
@@ -63,4 +64,7 @@ export async function update(projectId: number, id: number, body: UpdateAssetInp
       sequences: { where: { deletedAt: null }, select: { id: true, code: true, name: true } },
     },
   });
+  // 48 : les rattachements remontent à ShotGrid, qui porte ces liens sur l'asset.
+  if (shotIds || sequenceIds) await enqueuePush(projectId, { type: 'asset-links', assetId: id });
+  return updated;
 }

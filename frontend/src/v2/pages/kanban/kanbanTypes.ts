@@ -3,10 +3,20 @@
 
 import type { TaskWithAssignee } from '../../types/api';
 
-/** Tâche enrichie du contexte de son shot pour l'affichage kanban. */
+/**
+ * Tâche enrichie de son contexte pour l'affichage kanban.
+ *
+ * Une tâche pend d'un shot OU d'un asset : un projet dont tout le travail vit sur des
+ * assets (modélisation, texturing) affichait un board vide tant que seuls les shots
+ * étaient parcourus. `parentLabel` porte le repère montré sur la carte, quel que soit
+ * le côté d'où vient la tâche.
+ */
 export type BoardTask = TaskWithAssignee & {
-  shotId: number;
-  shotCode: string;
+  shotId: number | null;
+  assetId: number | null;
+  /** Code du shot ou nom de l'asset — ce que lit l'utilisateur sur la carte. */
+  parentLabel: string;
+  parentKind: 'shot' | 'asset';
   sequenceId: number | null;
 };
 

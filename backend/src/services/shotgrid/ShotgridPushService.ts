@@ -5,6 +5,8 @@ import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
 import { shotgridQueue } from '../JobService';
+import { storage } from '../StorageService';
+import { mediaSourceKey } from '../MediaService';
 import { clientForSiteRecord } from './ShotgridConfigService';
 import { belongsToProject } from './shotgridProjectGuard';
 import { writeAllowedOn } from './shotgridTemplateGuard';
@@ -13,6 +15,7 @@ import { findByLocal, upsertLink } from './shotgridLinks';
 import { can, parseSettings } from './shotgridSettings';
 import { markEcho } from './ShotgridEventService';
 import { inverseVersionStatusMap } from './ShotgridStatusSync';
+import { pushComment } from './ShotgridNoteSync';
 
 /**
  * Écritures ReView → ShotGrid.
@@ -30,7 +33,9 @@ export type PushJob =
   | { type: 'task-assignee'; taskId: number; actorId?: number | null }
   | { type: 'shot-status'; shotId: number; actorId?: number | null }
   | { type: 'version-status'; versionId: number; actorId?: number | null }
-  | { type: 'version-publish'; versionId: number; actorId?: number | null };
+  | { type: 'version-publish'; versionId: number; actorId?: number | null }
+  | { type: 'asset-links'; assetId: number; actorId?: number | null }
+  | { type: 'comment'; commentId: number; actorId?: number | null };
 
 /**
  * Met une écriture en file pour le projet concerné, si une connexion existe.
@@ -140,6 +145,12 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
         break;
       case 'version-publish':
         await pushVersionPublish(ctx, job);
+        break;
+      case 'asset-links':
+        await pushAssetLinks(ctx, job);
+        break;
+      case 'comment':
+        await pushCommentJob(ctx, job);
         break;
     }
   } catch (err) {
@@ -286,7 +297,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     include: {
       task: { include: { shot: true, asset: true } },
       asset: true,
-      media: { where: { deletedAt: null }, take: 1 },
+      media: { where: { deletedAt: null }, orderBy: { id: 'asc' }, take: 1 },
     },
   });
   if (!version) return;
@@ -333,9 +344,140 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     'Version créée dans ShotGrid depuis une publication ReView',
   );
 
-  if (ctx.settings.push.publishMode === 'upload' && version.media[0]) {
-    logger.info({ versionId: version.id }, 'Envoi du média vers ShotGrid demandé');
-    // Le transfert du fichier passe par le stockage : traité hors de cette écriture
-    // courte, il fera l'objet d'un travail dédié quand le média sera prêt.
+  // Miniature d'abord : légère, elle suffit à rendre la version reconnaissable dans
+  // les listes ShotGrid même quand le fichier lui-même reste chez nous.
+  const media = version.media[0];
+  if (media) {
+    await uploadThumbnail(ctx, created.id, media);
+    if (ctx.settings.push.publishMode === 'upload') {
+      await uploadMasterMedia(ctx, created.id, media);
+    }
+  }
+}
+
+/** Commentaire ReView → note ShotGrid, avec la frame annotée en pièce jointe. */
+async function pushCommentJob(ctx: PushContext, job: Extract<PushJob, { type: 'comment' }>) {
+  if (!can(ctx.settings, 'notes', 'write')) return;
+  await pushComment(
+    {
+      connectionId: ctx.connectionId,
+      sgProjectId: ctx.sgProjectId,
+      client: ctx.client,
+      attachAnnotations: ctx.settings.push.attachAnnotations,
+      asUserLogin: await actorLogin(ctx, job.actorId),
+    },
+    job.commentId,
+  );
+}
+
+/**
+ * Rattachements d'un asset aux shots et aux sequences.
+ *
+ * ShotGrid porte ces liens sur l'asset lui-même (`shots`, `sequences`) : c'est de là
+ * que sortent les listes « quels assets pour ce plan ». Assigner dans ReView sans les
+ * répercuter laissait la production aveugle côté ShotGrid, alors même que
+ * l'information existait des deux côtés.
+ */
+async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'asset-links' }>) {
+  if (!can(ctx.settings, 'hierarchy', 'write')) return;
+  const asset = await prisma.asset.findUnique({
+    where: { id: job.assetId },
+    include: {
+      shots: { where: { deletedAt: null }, select: { id: true } },
+      sequences: { where: { deletedAt: null }, select: { id: true } },
+    },
+  });
+  if (!asset) return;
+  const sgId = await resolveTarget(ctx, 'asset', asset.id, 'Asset');
+  if (!sgId) return;
+
+  // Seuls les rattachements dont la contrepartie existe côté ShotGrid partent : un
+  // shot créé localement et jamais synchronisé n'a pas d'identifiant distant à citer.
+  const shotRefs: Array<{ type: string; id: number }> = [];
+  for (const shot of asset.shots) {
+    const link = await findByLocal(ctx.connectionId, 'shot', shot.id);
+    if (link) shotRefs.push({ type: 'Shot', id: link.sgId });
+  }
+  const sequenceRefs: Array<{ type: string; id: number }> = [];
+  for (const sequence of asset.sequences) {
+    const link = await findByLocal(ctx.connectionId, 'sequence', sequence.id);
+    if (link) sequenceRefs.push({ type: 'Sequence', id: link.sgId });
+  }
+
+  await markEcho(ctx.connectionId, 'Asset', sgId, 'shots', shotRefs);
+  await ctx.client.update(
+    'Asset',
+    sgId,
+    { shots: shotRefs, sequences: sequenceRefs },
+    { asUserLogin: await actorLogin(ctx, job.actorId) },
+  );
+  logger.info(
+    { assetId: asset.id, sgId, shots: shotRefs.length, sequences: sequenceRefs.length },
+    'Rattachements d’asset poussés vers ShotGrid',
+  );
+}
+
+/** Vignette de la version, envoyée dans le champ `image` de ShotGrid. */
+async function uploadThumbnail(
+  ctx: PushContext,
+  sgVersionId: number,
+  media: { id: number; thumbnailKey: string | null },
+): Promise<void> {
+  if (!media.thumbnailKey) return;
+  try {
+    const buffer = await storage.getObjectBuffer(media.thumbnailKey);
+    await ctx.client.uploadFile(
+      'Version',
+      sgVersionId,
+      'image',
+      buffer,
+      `thumb-${media.id}.webp`,
+      'image/webp',
+    );
+  } catch (err) {
+    logger.warn({ err, mediaId: media.id }, 'Vignette non transmise à ShotGrid');
+  }
+}
+
+/**
+ * Transfert du fichier lui-même vers `sg_uploaded_movie`, qui déclenche le transcodage
+ * de ShotGrid. Réservé au mode « upload » : un master de dailies pèse lourd, et le
+ * dupliquer n'a de sens que si le studio veut ShotGrid autonome.
+ */
+async function uploadMasterMedia(
+  ctx: PushContext,
+  sgVersionId: number,
+  media: {
+    id: number;
+    storageKey: string;
+    originalName: string;
+    mimeType: string;
+    size: bigint;
+    metadata: unknown;
+  },
+): Promise<void> {
+  const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
+  if (Number(media.size) > MAX_UPLOAD_BYTES) {
+    logger.warn(
+      { mediaId: media.id, size: Number(media.size) },
+      'Média trop volumineux pour un envoi vers ShotGrid — la version reste liée sans fichier',
+    );
+    return;
+  }
+  try {
+    const buffer = await storage.getObjectBuffer(mediaSourceKey(media));
+    // `sg_uploaded_movie` accepte images et vidéos : c'est lui qui déclenche le
+    // transcodage de ShotGrid et alimente son lecteur.
+    await ctx.client.uploadFile(
+      'Version',
+      sgVersionId,
+      'sg_uploaded_movie',
+      buffer,
+      media.originalName,
+      media.mimeType,
+    );
+    logger.info({ mediaId: media.id, sgVersionId }, 'Média envoyé vers ShotGrid');
+  } catch (err) {
+    logger.error({ err, mediaId: media.id }, 'Envoi du média vers ShotGrid en échec');
   }
 }

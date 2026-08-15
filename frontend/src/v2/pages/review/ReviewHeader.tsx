@@ -10,6 +10,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   PictureInPicture2,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -28,6 +29,7 @@ import LiveControl from './LiveControl';
 import { useReviewPresence } from './useReviewPresence';
 import type { LiveSession } from './useLiveSession';
 import { useT } from '../../i18n';
+import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 
 /**
  * En-tête de la review : nom du média + badge brouillon, sélecteur de version
@@ -71,6 +73,8 @@ export default function ReviewHeader({
   const role = useAuth((s) => s.user?.role);
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
   const versionId = data.media.versionId;
+  // Correspondances ShotGrid du projet : sans connexion, rien n'est demandé ni affiché.
+  const sgLinks = useSgLinks(data.projectId);
   // Décision courante de la version (badge en-tête) — même clé que la timeline des versions.
   const versionQ = useQuery({
     queryKey: qk.version(versionId),
@@ -103,6 +107,19 @@ export default function ReviewHeader({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2 text-sm">
+        {/* Fiche ShotGrid de la version en cours de review — seulement si le projet
+            est relié et que cette version y a son équivalent. */}
+        {sgLinks.linkFor('version', versionId) && (
+          <a
+            href={sgLinks.linkFor('version', versionId)!}
+            target="_blank"
+            rel="noreferrer"
+            title={t('shotgrid.openIn.version')}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <ExternalLink size={15} />
+          </a>
+        )}
         <LiveControl live={live} projectId={data.projectId} />
         {viewers.length > 0 && (
           <div

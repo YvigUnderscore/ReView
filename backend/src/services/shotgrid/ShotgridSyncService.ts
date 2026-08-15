@@ -17,6 +17,7 @@ import {
   type PullOptions,
 } from './ShotgridPullService';
 import { pullVersions, pullPublishedFiles } from './ShotgridVersionSync';
+import { pullNotes } from './ShotgridNoteSync';
 import { fetchSiteStatuses, syncPipelineStatuses, syncVersionStatuses } from './ShotgridStatusSync';
 import { can, parseSettings } from './shotgridSettings';
 import { projectFilter } from './shotgridProjectGuard';
@@ -129,6 +130,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     if (options.withMedia !== false) {
       await pullVersions(pullCtx, { since: options.since ?? null });
       await pullPublishedFiles(pullCtx);
+      // 5. Notes : après les versions, sur lesquelles elles se rattachent.
+      await pullNotes(pullCtx);
     }
 
     await journal.finish('ok');
