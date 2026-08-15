@@ -79,7 +79,33 @@ export default function AssetTaskCards({
   );
 }
 
-/** Carte d'une tâche : statut, nombre de versions, dernière image connue. */
+const formatDay = (value: string): string => new Date(value).toLocaleDateString(intlLocale());
+
+/** Une échéance passée sur une tâche non terminée : c'est l'information qu'on cherche. */
+const isLate = (due: string | null | undefined): boolean =>
+  Boolean(due) && new Date(due as string).getTime() < Date.now();
+
+/** Fenêtre de travail d'une tâche, telle que la production l'a fixée. */
+function TaskSchedule({ task }: { task: AssetTreeTask }) {
+  const t = useT();
+  if (!task.startDate && !task.dueDate) return null;
+
+  const late = isLate(task.dueDate);
+  const label = task.startDate
+    ? t('task.schedule.window', {
+        start: formatDay(task.startDate),
+        due: task.dueDate ? formatDay(task.dueDate) : '—',
+      })
+    : t('task.schedule.due', { date: formatDay(task.dueDate as string) });
+
+  return (
+    <span className={`text-[11px] ${late ? 'text-destructive' : 'text-muted-foreground'}`}>
+      {late && task.dueDate ? t('task.schedule.late', { date: formatDay(task.dueDate) }) : label}
+    </span>
+  );
+}
+
+/** Carte d'une tâche : statut, échéance, nombre de versions, dernière image connue. */
 function TaskCard({
   task,
   projectId,
@@ -142,6 +168,7 @@ function TaskCard({
             {t('asset.tree.versionCount', { count: task.versions.length })}
           </span>
         </div>
+        <TaskSchedule task={task} />
         {latest && (
           <span className="text-[11px] text-muted-foreground">
             {t('asset.card.latest', {
@@ -187,6 +214,7 @@ function TaskVersions({
         {task.id !== null && (
           <>
             <PipelineStatusBadge statusId={task.pipelineStatusId} scope="task" />
+            <TaskSchedule task={task} />
             <Link to={`/tasks/${task.id}`} className="text-xs text-muted-foreground hover:text-foreground">
               {t('asset.card.openTask')}
             </Link>

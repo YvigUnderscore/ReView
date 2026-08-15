@@ -43,6 +43,9 @@ export interface AssetTreeTask {
   status: string | null;
   /** Statut personnalisable (Phase 48) — celui du site ShotGrid sur un projet relié. */
   pipelineStatusId?: number | null;
+  /** Planification (Phase 48) — reprise de ShotGrid quand le projet y est relié. */
+  startDate?: string | null;
+  dueDate?: string | null;
   department: string | null;
   versions: AssetTreeVersion[];
 }
