@@ -5,19 +5,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { db, linkMap } = vi.hoisted(() => ({
   db: {
-    shot: { update: vi.fn() },
-    sequence: { update: vi.fn() },
-    asset: { update: vi.fn() },
-    task: { delete: vi.fn() },
+    shot: { update: vi.fn(), findUnique: vi.fn() },
+    sequence: { update: vi.fn(), findUnique: vi.fn() },
+    asset: { update: vi.fn(), findUnique: vi.fn() },
+    task: { delete: vi.fn(), findUnique: vi.fn() },
     version: { count: vi.fn() },
   },
-  linkMap: { mapSgToLocal: vi.fn() },
+  linkMap: { mapSgToLocal: vi.fn(), removeLink: vi.fn() },
 }));
 
 vi.mock('../../lib/prisma', () => ({ prisma: db }));
 vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('./shotgridLinks', () => ({
   mapSgToLocal: (...a: unknown[]) => linkMap.mapSgToLocal(...a),
+  removeLink: (...a: unknown[]) => linkMap.removeLink(...a),
+  findByLocal: vi.fn(),
   findBySg: vi.fn(),
   upsertLink: vi.fn(),
 }));
@@ -43,6 +45,9 @@ beforeEach(() => {
   logs.length = 0;
   db.shot.update.mockResolvedValue({});
   db.task.delete.mockResolvedValue({});
+  // Par défaut la cible existe : c'est le cas courant.
+  for (const t of [db.shot, db.sequence, db.asset, db.task])
+    t.findUnique.mockImplementation(async (a: { where: { id: number } }) => ({ id: a.where.id }));
 });
 
 describe('trashRemoved', () => {
@@ -66,6 +71,27 @@ describe('trashRemoved', () => {
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[100, { localId: 10 }]]));
     await trashRemoved(context(), 'Sequence', new Set([100]));
     expect(db.sequence.update).not.toHaveBeenCalled();
+  });
+
+  it('nettoie un lien dont la cible locale a disparu', async () => {
+    // Sinon le retrait — et son message — rejouent à chaque synchronisation, sans fin.
+    linkMap.mapSgToLocal.mockResolvedValue(new Map([[400, { localId: 40 }]]));
+    db.sequence.findUnique.mockResolvedValue(null);
+
+    await trashRemoved(context(), 'Sequence', new Set());
+
+    expect(linkMap.removeLink).toHaveBeenCalledWith(1, 'Sequence', 400);
+    expect(db.sequence.update).not.toHaveBeenCalled();
+    expect(logs).toHaveLength(0);
+  });
+
+  it('garde le lien d’une entité mise à la corbeille : elle peut revenir', async () => {
+    linkMap.mapSgToLocal.mockResolvedValue(new Map([[100, { localId: 10 }]]));
+
+    await trashRemoved(context(), 'Shot', new Set());
+
+    expect(db.shot.update).toHaveBeenCalled();
+    expect(linkMap.removeLink).not.toHaveBeenCalled();
   });
 
   it('retire une tâche vide supprimée côté ShotGrid', async () => {

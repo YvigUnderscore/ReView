@@ -23,6 +23,7 @@ import {
   findByLocal,
   findBySg,
   mapSgToLocal,
+  removeLink,
   upsertLink,
   type LocalType,
   type AssetLinkData,
@@ -184,6 +185,46 @@ async function adoptable(
 }
 
 /**
+ * Où écrire cette entité du site, et sous quel nom.
+ *
+ * Trois questions dans l'ordre : a-t-elle déjà une contrepartie locale (le lien) ? sinon,
+ * peut-elle adopter une entité de même nom créée avant la liaison ? et surtout : le nom
+ * du site est-il libre au moment d'écrire ?
+ *
+ * Cette dernière question vaut aussi à la mise à jour, pas seulement à la création. La
+ * poser trop tard coûte une violation de contrainte d'unicité : une entité déjà
+ * désambiguïsée se ferait renommer vers le nom du site à la passe suivante — nom que sa
+ * jumelle porte toujours.
+ *
+ * Les accès à la base sont injectés : cette résolution est une règle, et elle se teste
+ * comme telle.
+ */
+export async function localTarget<T extends { id: number }>(params: {
+  connectionId: number;
+  localType: LocalType;
+  sgId: number;
+  /** Nom porté par l'entité côté ShotGrid. */
+  sgName: string;
+  linkedId: number | null;
+  findById: (id: number) => Promise<T | null>;
+  findByName: (name: string) => Promise<T | null>;
+}): Promise<{ existing: T | null; name: string }> {
+  const { connectionId, localType, sgId, sgName, linkedId } = params;
+  let existing = linkedId !== null ? await params.findById(linkedId) : null;
+
+  if (!existing) {
+    const sameName = await params.findByName(sgName);
+    if (sameName && (await adoptable(connectionId, localType, sameName.id, sgId))) existing = sameName;
+    else if (sameName) existing = await params.findByName(disambiguatedName(sgName, sgId));
+  }
+
+  // Le nom du site s'il est libre ou déjà le nôtre ; sinon le nôtre, suffixé.
+  const holder = await params.findByName(sgName);
+  const name = !holder || holder.id === existing?.id ? sgName : disambiguatedName(sgName, sgId);
+  return { existing, name };
+}
+
+/**
  * Le côté ReView a-t-il bougé depuis la dernière synchronisation ?
  * Sert à repérer les conflits : ShotGrid tranche par défaut, mais l'écrasement est
  * journalisé pour rester explicable.
@@ -251,20 +292,18 @@ export async function pullSequences(
     const code = asString(record.code) ?? `SQ${record.id}`;
     const statusCode = asString(record.sg_status_list);
     const link = links.get(record.id);
-    let existing = link
-      ? await prisma.sequence.findUnique({ where: { id: link.localId } })
-      : await prisma.sequence.findUnique({
-          where: { projectId_code: { projectId: ctx.connection.projectId, code } },
-        });
-
-    // Code déjà pris par une autre séquence du site : celle-ci prend le sien.
-    let localCode = code;
-    if (!link && existing && !(await adoptable(ctx.connection.id, 'sequence', existing.id, record.id))) {
-      localCode = disambiguatedName(code, record.id);
-      existing = await prisma.sequence.findUnique({
-        where: { projectId_code: { projectId: ctx.connection.projectId, code: localCode } },
-      });
-    }
+    const { existing, name: localCode } = await localTarget({
+      connectionId: ctx.connection.id,
+      localType: 'sequence',
+      sgId: record.id,
+      sgName: code,
+      linkedId: link?.localId ?? null,
+      findById: (id) => prisma.sequence.findUnique({ where: { id } }),
+      findByName: (c) =>
+        prisma.sequence.findUnique({
+          where: { projectId_code: { projectId: ctx.connection.projectId, code: c } },
+        }),
+    });
 
     const data = {
       name: localCode,
@@ -380,20 +419,18 @@ export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
   for (const record of records) {
     const name = asString(record.code) ?? `Asset ${record.id}`;
     const link = assetLinks.get(record.id);
-    let existing = link
-      ? await prisma.asset.findUnique({ where: { id: link.localId } })
-      : await prisma.asset.findUnique({
-          where: { projectId_name: { projectId: ctx.connection.projectId, name } },
-        });
-
-    // Nom déjà porté par un autre asset du site : celui-ci prend le sien.
-    let localName = name;
-    if (!link && existing && !(await adoptable(ctx.connection.id, 'asset', existing.id, record.id))) {
-      localName = disambiguatedName(name, record.id);
-      existing = await prisma.asset.findUnique({
-        where: { projectId_name: { projectId: ctx.connection.projectId, name: localName } },
-      });
-    }
+    const { existing, name: localName } = await localTarget({
+      connectionId: ctx.connection.id,
+      localType: 'asset',
+      sgId: record.id,
+      sgName: name,
+      linkedId: link?.localId ?? null,
+      findById: (id) => prisma.asset.findUnique({ where: { id } }),
+      findByName: (n) =>
+        prisma.asset.findUnique({
+          where: { projectId_name: { projectId: ctx.connection.projectId, name: n } },
+        }),
+    });
 
     const sgType = asString(record.sg_asset_type);
     const data = {
@@ -603,10 +640,33 @@ export async function trashRemoved(
   const links = await mapSgToLocal(ctx.connection.id, localType);
   for (const [sgId, link] of links) {
     if (aliveSgIds.has(sgId)) continue;
+
+    const table =
+      sgType === 'Shot'
+        ? prisma.shot
+        : sgType === 'Sequence'
+          ? prisma.sequence
+          : sgType === 'Asset'
+            ? prisma.asset
+            : prisma.task;
+    const target = (await (table as { findUnique: (a: unknown) => Promise<unknown> }).findUnique({
+      where: { id: link.localId },
+    })) as { id: number } | null;
+
+    // Cible déjà disparue : le lien ne désigne plus rien. Le garder ferait rejouer ce
+    // retrait — et son message — à chaque synchronisation, indéfiniment.
+    if (!target) {
+      await removeLink(ctx.connection.id, sgType, sgId);
+      continue;
+    }
+
     if (sgType === 'Task') {
       if (!(await retireTask(ctx, link.localId, sgId))) continue;
+      // La task est partie pour de bon : plus rien à relier.
+      await removeLink(ctx.connection.id, sgType, sgId);
     } else {
-      const table = sgType === 'Shot' ? prisma.shot : sgType === 'Sequence' ? prisma.sequence : prisma.asset;
+      // Le lien survit à la mise à la corbeille : restaurer côté ShotGrid doit rendre
+      // l'entité telle qu'elle était, avec son historique, pas en fabriquer une copie.
       await (table as { update: (a: unknown) => Promise<unknown> })
         .update({ where: { id: link.localId }, data: { deletedAt: new Date() } })
         .catch(() => undefined);
