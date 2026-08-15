@@ -201,6 +201,18 @@ If a field changed on both sides between two synchronisations, the policy decide
 
 ---
 
+## 10bis. Site-specific limits
+
+Sites differ, and some restrict what an account may write. Two cases met in the field:
+
+- **`note_links` refused.** When the site does not allow writing note links, ReView
+  still posts the note, with the version name in the subject and a link back to the
+  ReView review. Ask a ShotGrid administrator to grant the permission if you want notes
+  attached to their version.
+- **Status codes outside the standard lists.** `rtk`, `pass`, `suprev` and similar
+  studio codes are mapped explicitly; an unknown code falls back to *To Do* rather than
+  failing the import. Add yours to the mapping if a status lands in the wrong column.
+
 ## 11. Troubleshooting
 
 | Symptom | Cause and fix |
@@ -210,6 +222,8 @@ If a field changed on both sides between two synchronisations, the policy decide
 | No events arriving | Check the webhook status in ShotGrid (it is disabled after 100 failures), the secret, and that the URL is reachable from the internet. Switch to polling if it is not. |
 | Media not imported | Look at the run log: the version may carry no media, exceed the size limit, or fall outside the status filter. |
 | A shot exists in ReView but nowhere in ShotGrid | It was created locally before the link. The comparison lists it as *not linked*. |
+| An entity disappeared from ReView | It was moved to the ShotGrid bin. Deletion happens there and propagates here; restore it in ShotGrid and re-synchronise. |
+| Annotations not attached to notes | Check the run log: the media file must still exist in storage, and the site must accept uploads on `Note.attachments`. |
 
 Every synchronisation is recorded with per-domain counters and a filterable log, kept
 under **Synchronisation**.
