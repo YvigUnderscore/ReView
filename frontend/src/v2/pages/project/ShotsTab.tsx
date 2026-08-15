@@ -17,6 +17,7 @@ import ShotEditDialog from './ShotEditDialog';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
 import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
+import SgCreationLock from '../../components/shotgrid/SgCreationLock';
 
 /**
  * Onglet Shots : création en lot (Shots/Sequences creation), cartes groupées par séquence,
@@ -99,23 +100,25 @@ export default function ShotsTab({
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
       {canManage && (
-        <BatchGenerator
-          defaults={{
-            prefix: nomenclature.shotPrefix,
-            step: nomenclature.step,
-            padding: nomenclature.padding,
-          }}
-          sequences={sortedSequences}
-          onSubmit={(items) =>
-            createBulk(
-              items.map((it) => ({
-                code: it.code,
-                name: it.name,
-                sequenceId: it.sequenceId != null ? String(it.sequenceId) : '',
-              })),
-            )
-          }
-        />
+        <SgCreationLock projectId={projectId} kind="shot">
+          <BatchGenerator
+            defaults={{
+              prefix: nomenclature.shotPrefix,
+              step: nomenclature.step,
+              padding: nomenclature.padding,
+            }}
+            sequences={sortedSequences}
+            onSubmit={(items) =>
+              createBulk(
+                items.map((it) => ({
+                  code: it.code,
+                  name: it.name,
+                  sequenceId: it.sequenceId != null ? String(it.sequenceId) : '',
+                })),
+              )
+            }
+          />
+        </SgCreationLock>
       )}
       {shots.length === 0 && (
         <EmptyState
