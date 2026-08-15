@@ -188,6 +188,7 @@ model User {
   comments             Comment[]            @relation("CommentAuthor")
   assignedComments     Comment[]            @relation("CommentAssignee")
   resolvedComments     Comment[]            @relation("CommentResolver")
+  shotgridSyncRuns     ShotgridSyncRun[]    @relation("SyncRunTrigger")
   watches              Watch[]
   reactions            Reaction[]
   notifications        Notification[]
@@ -395,6 +396,7 @@ model Project {
   apiTokens     ApiToken[]
   apiEvents     ApiEvent[]
   timelines     Timeline[]
+  shotgrid      ShotgridConnection?
 
   @@unique([studioId, slug])
 }
@@ -431,6 +433,10 @@ model Shot {
   // Réglages pipeline propres (override résolution/fps du parent). JSON.
   settings     Json      @default("{}")
   thumbnailKey String?
+  // Statut de shot (Phase 48) — ShotGrid en a un (`sg_status_list` sur Shot) ; sans
+  // connexion il reste simplement vide.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
   // Omis du montage : le plan est coupé au montage éditorial mais reste en base (son
   // travail, ses commentaires et son historique demeurent consultables). Les timelines
   // automatiques le sautent — supprimer le shot ferait perdre tout le reste.
@@ -469,6 +475,10 @@ model Task {
   id         Int        @id @default(autoincrement())
   type       TaskType   @default(OTHER)
   status     TaskStatus @default(TODO)
+  // Statut personnalisable (Phase 48) — source d'affichage quand il est présent ;
+  // `status` (enum) reste écrit en parallèle via `PipelineStatus.legacyStatus`.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
   name       String
   // Département du pipeline (clé libre : `ProjectSettings.departments[].key`). C'est lui
   // qui porte l'ORDRE du pipe — `type` reste une énumération figée, utile aux filtres et
@@ -1034,4 +1044,149 @@ model ChatMessage {
   deletedAt      DateTime?
 
   @@index([conversationId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Statuts de pipeline personnalisables (Phase 48) — pendant de ReviewStatus pour
+// les tâches et les shots. L'enum `TaskStatus` reste écrit en parallèle (colonnes
+// du kanban, statistiques historiques) : c'est `legacyStatus` qui fait le pont.
+// Un studio connecté à ShotGrid voit ici les statuts exacts de son site.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PipelineStatus {
+  id           Int         @id @default(autoincrement())
+  // « task » ou « shot » : ShotGrid a deux listes distinctes, ReView aussi.
+  scope        String
+  // Code court et stable (repris tel quel de ShotGrid : "ip", "fin", "rev"…).
+  code         String
+  name         String
+  color        String // hex #RRGGBB (converti du bg_color décimal ShotGrid)
+  order        Int         @default(0)
+  isDone       Boolean     @default(false) // statut terminal (stats, jauges)
+  isDefault    Boolean     @default(false)
+  // Pont vers l'enum figé : toute écriture de statut renseigne les deux.
+  legacyStatus TaskStatus?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tasks Task[]
+  shots Shot[]
+
+  @@unique([scope, code])
+  @@index([scope, order])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Intégration ShotGrid / Flow Production Tracking (Phase 48)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Site ShotGrid (niveau studio) : une paire de credentials pour N projets.
+model ShotgridSite {
+  id         Int      @id @default(autoincrement())
+  name       String
+  baseUrl    String   @unique // https://<studio>.shotgrid.autodesk.com (validée anti-SSRF)
+  // « script » = client_credentials (recommandé) ; « user » = grant password
+  // (legacy login + PAT lié côté ShotGrid), à la manière du plugin Prism.
+  authMode   String   @default("script")
+  scriptName String?
+  scriptKey  String? // chiffré (lib/crypto)
+  login      String?
+  password   String? // chiffré (lib/crypto)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  connections ShotgridConnection[]
+}
+
+// Connexion d'UN projet ReView à UN projet ShotGrid.
+// `sgProjectName` n'est pas décoratif : il est revérifié avant chaque synchronisation
+// (garde-fou anti-mauvais-projet). Si le nom du projet distant ne correspond plus,
+// la synchronisation s'arrête au lieu d'écrire dans le mauvais projet.
+model ShotgridConnection {
+  id            Int       @id @default(autoincrement())
+  site          ShotgridSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteId        Int
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     Int       @unique
+  sgProjectId   Int
+  sgProjectName String
+  active        Boolean   @default(true)
+  // Matrice de droits + réglages (schéma Zod : services/shotgrid/shotgridSettings.ts)
+  settings      Json      @default("{}")
+  webhookToken  String    @unique
+  webhookSecret String? // chiffré (lib/crypto)
+  lastSyncAt    DateTime?
+  lastEventAt   DateTime?
+  lastEventId   BigInt? // curseur EventLogEntry (mode polling)
+  // ok | auth_error | project_mismatch | disabled | syncing | error
+  status        String    @default("ok")
+  statusMessage String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  links ShotgridLink[]
+  runs  ShotgridSyncRun[]
+
+  @@unique([siteId, sgProjectId])
+}
+
+// Correspondance locale ↔ ShotGrid. Porte aussi les champs SG sans équivalent
+// natif (durée en minutes, assignés non-membres, chemins de publish…).
+model ShotgridLink {
+  id           Int                @id @default(autoincrement())
+  connection   ShotgridConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId Int
+  // sequence | shot | asset | task | version | media | pipelineStatus | reviewStatus | user | playlist | comment
+  localType    String
+  localId      Int
+  sgType       String
+  sgId         Int
+  sgUpdatedAt  DateTime?
+  data         Json               @default("{}")
+  syncedAt     DateTime           @default(now())
+
+  @@unique([connectionId, sgType, sgId])
+  @@unique([connectionId, localType, localId])
+  @@index([connectionId, localType])
+}
+
+model ShotgridSyncRun {
+  id           Int                @id @default(autoincrement())
+  connection   ShotgridConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId Int
+  // full | incremental | reconcile | webhook | polling | import-versions | diff | push
+  kind         String
+  // running | ok | partial | error | cancelled
+  status       String             @default("running")
+  startedAt    DateTime           @default(now())
+  finishedAt   DateTime?
+  stats        Json               @default("{}")
+  triggeredBy  User?              @relation("SyncRunTrigger", fields: [triggeredById], references: [id], onDelete: SetNull)
+  triggeredById Int?
+
+  logs ShotgridSyncLog[]
+
+  @@index([connectionId, startedAt])
+}
+
+model ShotgridSyncLog {
+  id        Int             @id @default(autoincrement())
+  run       ShotgridSyncRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId     Int
+  // info | warn | error | conflict
+  level     String
+  // Clé i18n + variables : l'UI traduit, le journal ne fige aucune langue.
+  messageKey String
+  vars      Json            @default("{}")
+  sgType    String?
+  sgId      Int?
+  localType String?
+  localId   Int?
+  // Conflit en attente d'arbitrage (conflictPolicy = manual) : null sinon.
+  resolvedAt DateTime?
+  resolution String? // sg | review
+  createdAt DateTime        @default(now())
+
+  @@index([runId, createdAt])
+  @@index([level, resolvedAt])
 }
