@@ -474,6 +474,16 @@ const server = createServer(async (req, res) => {
     log(`mutation ${json.entityType}#${json.id}.${json.field} = ${JSON.stringify(json.value)}`);
     return send(res, 200, { ok: true, record });
   }
+  // Inventaire des plans d'un projet — le scénario de vérification s'en sert pour
+  // connaître l'effectif attendu sans le figer dans le test.
+  if (path === '/_control/shots' && req.method === 'GET') {
+    const pid = Number(url.searchParams.get('projectId'));
+    const shots = data.Shot.filter((s) => s.project?.id === pid);
+    return send(res, 200, {
+      codes: shots.map((s) => s.code),
+      shots: shots.map((s) => ({ id: s.id, code: s.code, sg_cut_in: s.sg_cut_in, sg_cut_out: s.sg_cut_out })),
+    });
+  }
   if (path === '/_control/state' && req.method === 'GET') {
     return send(res, 200, {
       counts: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, v.length])),

@@ -157,15 +157,23 @@ async function main() {
 
   // ── 7. LE contrôle : cloisonnement des projets
   console.log('\n7. Cloisonnement des projets (contrôle critique)');
+  // L'effectif attendu se lit sur le simulateur plutôt que d'être écrit en dur : le jeu
+  // de données peut grossir au fil des essais, la garantie testée reste le cloisonnement.
+  const sgState = await fetch(`${SG_CONTROL}/_control/shots?projectId=70`).then((r) => r.json());
+  const expectedCodes = sgState.codes.slice().sort();
   const shots = await call('GET', `/api/shots?projectId=${projectId}`);
   const list = shots.json?.items ?? shots.json?.shots ?? shots.json?.data ?? [];
   const codes = list.map((s) => s.code).sort();
   console.log('   plans importés :', codes.join(', ') || '(aucun)');
-  check('trois plans importés', codes.length === 3, `reçu ${codes.length}`);
+  check(
+    'autant de plans que dans le projet ShotGrid',
+    codes.length === expectedCodes.length,
+    `reçu ${codes.length}, attendu ${expectedCodes.length}`,
+  );
   check(
     'uniquement les plans du projet lié',
-    codes.length === 3 && codes.every((c) => ['DEMO_SH010', 'DEMO_SH020', 'DEMO_SH030'].includes(c)),
-    codes.join(','),
+    JSON.stringify(codes) === JSON.stringify(expectedCodes),
+    `${codes.join(',')} vs ${expectedCodes.join(',')}`,
   );
 
   // Le projet #71 porte les mêmes codes : on vérifie côté base qu'aucune entité du
@@ -179,8 +187,12 @@ async function main() {
   // ── 8. Données de production
   console.log('\n8. Données importées');
   const shot = list.find((s) => s.code === 'DEMO_SH010');
-  check('bornes de cut reprises', shot?.startFrame === 1001 && shot?.endFrame === 1096,
-    `${shot?.startFrame}-${shot?.endFrame}`);
+  const sgShot = sgState.shots.find((x) => x.code === 'DEMO_SH010');
+  check(
+    'bornes de cut reprises',
+    shot?.startFrame === sgShot?.sg_cut_in && shot?.endFrame === sgShot?.sg_cut_out,
+    `${shot?.startFrame}-${shot?.endFrame} vs ${sgShot?.sg_cut_in}-${sgShot?.sg_cut_out}`,
+  );
   check('statut de plan repris', Boolean(shot?.pipelineStatusId ?? shot?.pipelineStatus));
 
   const statuses = await call('GET', '/api/pipeline-statuses?scope=task');
@@ -207,7 +219,7 @@ async function main() {
   check('aucun plan créé en double', (stats2.shots?.created ?? 0) === 0, JSON.stringify(stats2.shots));
   const shots2 = await call('GET', `/api/shots?projectId=${projectId}`);
   const list2 = shots2.json?.items ?? shots2.json?.shots ?? [];
-  check('toujours trois plans', list2.length === 3, `reçu ${list2.length}`);
+  check('effectif inchangé', list2.length === expectedCodes.length, `reçu ${list2.length}`);
 
   // ── 11. Verrou de création locale
   console.log('\n11. Verrou de création locale');
