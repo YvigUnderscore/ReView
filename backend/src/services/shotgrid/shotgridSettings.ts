@@ -96,6 +96,23 @@ export function parseSettings(raw: unknown): ShotgridSettings {
   return parsed.success ? parsed.data : shotgridSettingsSchema.parse({});
 }
 
+/**
+ * Réglages d'une connexion neuve : tout en lecture, rien en écriture.
+ *
+ * Le schéma ouvre l'écriture par défaut parce que c'est l'usage visé une fois
+ * l'intégration en confiance. Mais au moment précis où l'on relie un projet, personne
+ * n'a encore vérifié que la cible est la bonne — et un site ShotGrid de production ne
+ * pardonne pas une première synchronisation qui écrit. On ouvre donc les écritures
+ * après coup, explicitement.
+ */
+export function readOnlySettings(): ShotgridSettings {
+  const base = shotgridSettingsSchema.parse({});
+  const domains = Object.fromEntries(
+    Object.entries(base.domains).map(([key, access]) => [key, { ...access, write: false }]),
+  ) as ShotgridSettings['domains'];
+  return { ...base, domains, push: { ...base.push, publishMode: 'off' } };
+}
+
 /** Le domaine est-il ouvert dans ce sens ? Toute lecture/écriture passe par là. */
 export function can(settings: ShotgridSettings, domain: SgDomain, direction: 'read' | 'write'): boolean {
   return settings.domains[domain][direction];

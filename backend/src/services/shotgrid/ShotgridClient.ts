@@ -16,6 +16,14 @@ import type { SgRecord } from './shotgridMapper';
 
 export const SG_API_PATH = '/api/v1.1';
 
+/**
+ * Types de contenu de la recherche ShotGrid. L'endpoint `_search` refuse
+ * `application/json` : il exige de savoir si les filtres arrivent sous forme de tableau
+ * de conditions ou d'objet à opérateur logique, et l'annonce par le Content-Type.
+ */
+export const SG_FILTER_ARRAY_TYPE = 'application/vnd+shotgun.api3_array+json';
+export const SG_FILTER_HASH_TYPE = 'application/vnd+shotgun.api3_hash+json';
+
 export type SgAuthMode = 'script' | 'user';
 
 export interface ShotgridCredentials {
@@ -161,7 +169,10 @@ export class ShotgridClient {
         ...rest,
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'application/json',
+          // Content-Type seulement quand il y a un corps : un site ShotGrid réel
+          // refuse l'en-tête sur une requête sans charge utile (« Unsupported
+          // Content-Type »), là où un serveur permissif l'ignore.
+          ...(rest.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
           ...(rest.headers ?? {}),
           Authorization: `Bearer ${token}`,
         },
@@ -209,17 +220,34 @@ export class ShotgridClient {
     const out: SgRecord[] = [];
     let page = 1;
     for (;;) {
-      const payload: Record<string, unknown> = {
-        filters: options.filters ?? [],
-        page: { size: pageSize, number: page },
-      };
+      const payload: Record<string, unknown> = { page: { size: pageSize, number: page } };
       if (options.fields?.length) payload.fields = options.fields;
       if (options.sort) payload.sort = options.sort;
-      if (options.logicalOperator) payload.logical_operator = options.logicalOperator;
+
+      /**
+       * La recherche exige un type de contenu propriétaire qui déclare la FORME des
+       * filtres, et refuse `application/json` : le tableau de conditions et l'objet à
+       * opérateur logique ont chacun le leur. ShotGrid ne le devine pas.
+       */
+      const useHash = Boolean(options.logicalOperator);
+      if (useHash) {
+        payload.filters = {
+          logical_operator: options.logicalOperator,
+          conditions: options.filters ?? [],
+        };
+      } else {
+        payload.filters = options.filters ?? [];
+      }
 
       const json = await this.request<{ data?: unknown[] }>(
         `${SG_API_PATH}/entity/${encodeURIComponent(entity)}/_search`,
-        { method: 'POST', body: JSON.stringify(payload) },
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: {
+            'Content-Type': useHash ? SG_FILTER_HASH_TYPE : SG_FILTER_ARRAY_TYPE,
+          },
+        },
       );
       const batch = (json.data ?? []).map(flattenRecord);
       out.push(...batch);

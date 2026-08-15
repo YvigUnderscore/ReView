@@ -159,6 +159,53 @@ describe('ShotgridClient', () => {
     expect(await client.schemaField('Shot', 'sg_inexistant')).toBeNull();
   });
 
+  it('n’envoie pas de Content-Type sur une requête sans corps', async () => {
+    // Un site ShotGrid réel répond « Unsupported Content-Type » à un GET portant
+    // cet en-tête ; le défaut n'était pas visible contre un serveur permissif.
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: { shotgun_version: '8.60' } }));
+    const client = new ShotgridClient(creds);
+    await client.serverInfo();
+
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/api/v1.1/'));
+    const headers = call![1].headers as Record<string, string>;
+    expect(headers['Content-Type']).toBeUndefined();
+    expect(headers.Accept).toBe('application/json');
+  });
+
+  it('déclare la forme des filtres dans le Content-Type de la recherche', async () => {
+    // ShotGrid refuse `application/json` sur `_search` et exige de savoir si les
+    // filtres arrivent en tableau de conditions ou en objet à opérateur logique.
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    const client = new ShotgridClient(creds);
+
+    await client.search('Shot', { filters: [['project', 'is', { type: 'Project', id: 70 }]] });
+    const arrayCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
+    expect((arrayCall![1].headers as Record<string, string>)['Content-Type']).toBe(
+      'application/vnd+shotgun.api3_array+json',
+    );
+    expect(JSON.parse(String(arrayCall![1].body)).filters).toEqual([
+      ['project', 'is', { type: 'Project', id: 70 }],
+    ]);
+
+    fetchMock.mockClear();
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    await client.search('Shot', {
+      filters: [['code', 'contains', 'SH']],
+      logicalOperator: 'or',
+    });
+    const hashCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
+    expect((hashCall![1].headers as Record<string, string>)['Content-Type']).toBe(
+      'application/vnd+shotgun.api3_hash+json',
+    );
+    // En forme objet, les conditions sont imbriquées sous l'opérateur.
+    expect(JSON.parse(String(hashCall![1].body)).filters).toEqual({
+      logical_operator: 'or',
+      conditions: [['code', 'contains', 'SH']],
+    });
+  });
+
   it('cible la version 1.1 de l’API', async () => {
     fetchMock.mockResolvedValueOnce(authOk());
     fetchMock.mockImplementation(async () => json({ data: [] }));

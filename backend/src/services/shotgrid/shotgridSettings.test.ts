@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { assertSafeBaseUrl, can, parseSettings, sgCreateLink, sgDeepLink } from './shotgridSettings';
+import {
+  assertSafeBaseUrl,
+  can,
+  parseSettings,
+  readOnlySettings,
+  sgCreateLink,
+  sgDeepLink,
+  SG_DOMAINS,
+} from './shotgridSettings';
 
 describe('parseSettings', () => {
   it('complète un objet vide avec des réglages utilisables', () => {
@@ -116,5 +124,33 @@ describe('liens profonds', () => {
     expect(sgCreateLink('https://studio.shotgrid.autodesk.com', 'Shot', 70)).toBe(
       'https://studio.shotgrid.autodesk.com/new/Shot?project=70',
     );
+  });
+});
+
+describe('readOnlySettings', () => {
+  it('ferme toutes les écritures d’une connexion neuve', () => {
+    const s = readOnlySettings();
+    for (const domain of SG_DOMAINS) {
+      expect(can(s, domain, 'write')).toBe(false);
+    }
+  });
+
+  it('laisse la lecture ouverte — c’est l’intérêt de relier', () => {
+    const s = readOnlySettings();
+    expect(can(s, 'hierarchy', 'read')).toBe(true);
+    expect(can(s, 'tasks', 'read')).toBe(true);
+    expect(can(s, 'versions', 'read')).toBe(true);
+  });
+
+  it('n’envoie rien vers ShotGrid à la publication', () => {
+    // Une première synchronisation ne doit rien créer sur un site de production.
+    expect(readOnlySettings().push.publishMode).toBe('off');
+  });
+
+  it('conserve les autres réglages du schéma', () => {
+    const s = readOnlySettings();
+    expect(s.lockLocalCreation).toBe(true);
+    expect(s.conflictPolicy).toBe('sg_wins');
+    expect(s.reconcile.enabled).toBe(true);
   });
 });

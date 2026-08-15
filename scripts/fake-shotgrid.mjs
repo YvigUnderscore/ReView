@@ -352,6 +352,29 @@ function send(res, status, payload) {
   res.end(body);
 }
 
+/**
+ * Un site ShotGrid réel refuse `Content-Type: application/json` sur une requête sans
+ * corps (« Unsupported Content-Type »). Le simulateur applique la même exigence :
+ * un serveur plus permissif que la réalité laisserait passer un défaut jusqu'en
+ * production, ce qui est exactement arrivé une fois.
+ */
+function rejectStrayContentType(req, res) {
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
+  if (!hasBody && req.headers['content-type']) {
+    send(res, 500, {
+      errors: [
+        {
+          status: 500,
+          title: 'Internal Server Error',
+          detail: `Unsupported Content-Type '${req.headers['content-type']}'`,
+        },
+      ],
+    });
+    return true;
+  }
+  return false;
+}
+
 function requireAuth(req, res) {
   const header = req.headers.authorization ?? '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -503,6 +526,7 @@ const server = createServer(async (req, res) => {
     return send(res, 200, { ok: true });
   }
 
+  if (rejectStrayContentType(req, res)) return;
   if (!requireAuth(req, res)) return;
 
   // ── Informations serveur
@@ -527,10 +551,28 @@ const server = createServer(async (req, res) => {
   // ── Recherche
   m = path.match(/^\/api\/v1\.1\/entity\/([^/]+)\/_search$/);
   if (m && req.method === 'POST') {
+    // Comme un site réel : la recherche exige un type de contenu qui déclare la forme
+    // des filtres, et refuse `application/json`.
+    const ct = (req.headers['content-type'] ?? '').split(';')[0].trim();
+    const FILTER_TYPES = ['application/vnd+shotgun.api3_array+json', 'application/vnd+shotgun.api3_hash+json'];
+    if (!FILTER_TYPES.includes(ct)) {
+      return send(res, 415, {
+        errors: [
+          {
+            status: 415,
+            code: 103,
+            title: `Unsupported Content-Type '${ct || 'aucun'}'`,
+            source: { content_type: `Content-Type must be one of: '${FILTER_TYPES.join("', '")}'.` },
+          },
+        ],
+      });
+    }
     const entity = m[1];
     const list = data[entity] ?? [];
-    const filters = Array.isArray(json.filters) ? json.filters : [];
-    const op = json.logical_operator === 'or' ? 'some' : 'every';
+    const raw = json.filters;
+    const isHash = raw && !Array.isArray(raw) && typeof raw === 'object';
+    const filters = isHash ? (raw.conditions ?? []) : Array.isArray(raw) ? raw : [];
+    const op = (isHash ? raw.logical_operator : json.logical_operator) === 'or' ? 'some' : 'every';
     const matched = list.filter((r) => filters[op]((f) => matchFilter(r, f)));
     const size = json.page?.size ?? 500;
     const number = json.page?.number ?? 1;

@@ -10,7 +10,12 @@ import { logger } from '../../lib/logger';
 import { ShotgridClient, ShotgridApiError, clearTokenCache } from './ShotgridClient';
 import { asString } from './shotgridMapper';
 import { projectNameMatches } from './shotgridProjectGuard';
-import { assertSafeBaseUrl, parseSettings, type ShotgridSettings } from './shotgridSettings';
+import {
+  assertSafeBaseUrl,
+  parseSettings,
+  readOnlySettings,
+  type ShotgridSettings,
+} from './shotgridSettings';
 
 /**
  * Configuration des sites ShotGrid et des connexions projet.
@@ -213,7 +218,12 @@ export async function createConnection(projectId: number, input: ConnectionInput
       sgProjectName: remoteName ?? input.sgProjectName,
       webhookToken: randomBytes(24).toString('base64url'),
       webhookSecret: encryptSecret(randomBytes(24).toString('base64url')),
-      settings: {},
+      // Une connexion naît en LECTURE SEULE, quels que soient les défauts du schéma.
+      // Relier un projet, c'est vérifier que la bonne cible remonte les bonnes données ;
+      // écrire dans un site de production tant que personne n'a rien vérifié serait un
+      // effet de bord qu'aucun clic n'a demandé. Les écritures s'ouvrent ensuite dans
+      // la matrice, domaine par domaine, en connaissance de cause.
+      settings: readOnlySettings() as never,
     },
     include: { site: true },
   });
