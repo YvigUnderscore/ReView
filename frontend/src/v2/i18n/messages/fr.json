@@ -2480,5 +2480,15 @@
   "shotgrid.level.info": "info",
   "shotgrid.level.warn": "avertissement",
   "shotgrid.level.error": "erreur",
-  "shotgrid.level.conflict": "conflit"
+  "shotgrid.level.conflict": "conflit",
+  "shotgrid.admin.title": "Sites ShotGrid",
+  "shotgrid.admin.intro": "Les identifiants vivent ici, une fois pour tout le studio : chaque connexion de projet les réutilise, et changer une clé se fait en un seul endroit. Aucun secret n'est jamais renvoyé au navigateur.",
+  "shotgrid.admin.empty": "Aucun site ShotGrid enregistré. En ajouter un depuis l'onglet ShotGrid d'un projet.",
+  "shotgrid.admin.projects": "Projets reliés",
+  "shotgrid.admin.linkedProjects": { "one": "{count} projet", "other": "{count} projets" },
+  "shotgrid.admin.deleteConfirm": "Supprimer le site « {name} » ? Ses identifiants sont effacés.",
+  "shotgrid.admin.deleted": "Site ShotGrid supprimé",
+  "shotgrid.admin.updated": "Site ShotGrid mis à jour",
+  "shotgrid.admin.editTitle": "Modifier « {name} »",
+  "shotgrid.admin.keepSecret": "laisser vide pour conserver l'actuel"
 }

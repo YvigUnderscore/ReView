@@ -13,6 +13,11 @@ export interface Task {
   /** Département du pipe (clé des réglages projet) — null tant qu'aucun n'est posé. */
   department?: string | null;
   status: TaskStatus;
+  /**
+   * Statut du référentiel personnalisable (Phase 48) — celui du site ShotGrid sur un
+   * projet relié. `status` reste écrit en parallèle pour le kanban et les statistiques.
+   */
+  pipelineStatusId?: number | null;
 }
 /** Listes (kanban, activité projet) : assigné joint. */
 export type TaskWithAssignee = Task & { assignee: UserRef | null };

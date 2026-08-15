@@ -11,9 +11,9 @@ import { qk } from '../../lib/query';
 import { useAssetsQuery } from '../../lib/queries';
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '../../components/ui/sheet';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '../../lib/taskStatus';
 import { ASSET_TYPES, TASK_TYPES, type AssetRef, type Shot, type Task } from './projectTypes';
 import { useT } from '../../i18n';
+import TaskStatusBadge from '../../components/TaskStatusBadge';
 
 /**
  * Détail d'un shot en drawer latéral (10.C1) : miniature, tâches (avec accès
@@ -125,9 +125,7 @@ function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }
                 <Link to={`/tasks/${t.id}`} className="min-w-0 flex-1 truncate text-sm hover:text-primary">
                   {t.name} <span className="text-xs text-muted-foreground">({t.type})</span>
                 </Link>
-                <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[t.status] ?? ''}`}>
-                  {TASK_STATUS_LABEL_KEY[t.status] ? tr(TASK_STATUS_LABEL_KEY[t.status]!) : t.status}
-                </span>
+                <TaskStatusBadge status={t.status} pipelineStatusId={t.pipelineStatusId} />
                 <button
                   onClick={() => openReview(t.id)}
                   title={tr('home.openLastReview')}

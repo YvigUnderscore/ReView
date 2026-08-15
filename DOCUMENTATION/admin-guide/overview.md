@@ -28,6 +28,7 @@ link straight into them.
 | Communications | Annonces | Studio-wide announcements — see [SMTP & announcements](smtp-and-announcements.md) |
 | Communications | SMTP | Outgoing mail configuration |
 | Communications | API & Webhooks | Studio API tokens + outgoing webhooks — see [Identity, API & audit](identity-and-api.md) |
+| Communications | ShotGrid | Studio-wide ShotGrid sites and credentials — see [ShotGrid integration](shotgrid-integration.md) |
 | Maintenance | Jobs | BullMQ queues (retry, purge) + derived-files purge — see [Monitoring](../infrastructure/monitoring.md) |
 | Maintenance | Corbeille | Soft-deleted items, restore/purge |
 | Maintenance | Audit | Audit log of sensitive actions |

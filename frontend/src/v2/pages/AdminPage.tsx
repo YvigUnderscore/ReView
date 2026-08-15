@@ -13,6 +13,7 @@ import {
   FolderKanban,
   KeyRound,
   ListChecks,
+  Workflow,
   FolderCog,
   History,
   LayoutDashboard,
@@ -57,6 +58,7 @@ import SmtpTab from './admin/SmtpTab';
 import TrashTab from './admin/TrashTab';
 import AuditTab from './admin/AuditTab';
 import { useT, type MessageKey } from '../i18n';
+import ShotgridSitesTab from './admin/ShotgridSitesTab';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
 type Tr = (key: MessageKey) => string;
@@ -180,6 +182,13 @@ const sections = (t: Tr) =>
       label: t('admin.tab.api'),
       icon: KeyRound,
       Component: ApiWebhooksTab,
+    },
+    {
+      key: 'shotgrid',
+      group: 'communications',
+      label: t('shotgrid.tab.label'),
+      icon: Workflow,
+      Component: ShotgridSitesTab,
     },
     { key: 'jobs', group: 'maintenance', label: t('admin.tab.jobs'), icon: ListChecks, Component: JobsTab },
     { key: 'trash', group: 'maintenance', label: t('admin.tab.trash'), icon: Trash2, Component: TrashTab },

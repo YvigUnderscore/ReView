@@ -1,0 +1,243 @@
+# ShotGrid (Flow Production Tracking) integration
+
+Link a ReView project to a ShotGrid project and keep both in step: sequences, shots,
+assets, tasks, statuses, schedule and published media flow into ReView, while review
+decisions, statuses and dates flow back.
+
+> ShotGrid was renamed **Autodesk Flow Production Tracking**. This guide uses
+> "ShotGrid" throughout, as the API and URLs still do.
+
+---
+
+## 1. Before you start
+
+You need a **ShotGrid site address** (`https://yourstudio.shotgrid.autodesk.com`) and
+credentials. Two kinds are supported.
+
+### Script key — recommended
+
+A service account created once by a ShotGrid administrator. It survives password
+rotations and people leaving, and its actions are attributable in the ShotGrid event
+log.
+
+1. In ShotGrid, open **Admin → Scripts**.
+2. Create a script, for example `review_sync`.
+3. Copy the **Script Name** and the **Application Key** — the key is shown once.
+4. Give the script a permission group that can read (and, if you want write-back,
+   update) Shots, Assets, Tasks, Versions, Notes and Playlists.
+
+### User login — the Prism-style option
+
+The same approach as the Prism ShotGrid plugin. It is offered as a fallback, but it is
+more fragile: it ties the integration to one person's account.
+
+Since the migration to Autodesk Identity, an Autodesk password does **not** work for the
+API. Each user must:
+
+1. Enable **Legacy Login** and set a legacy password in
+   `https://<your-site>/page/account_settings`.
+2. Generate a **Personal Access Token** from the Autodesk profile page.
+3. Paste that token into the **Token Code** field of the same ShotGrid page and bind it.
+
+Only then do the login and legacy password work against the API. Note that repeated
+wrong passwords lock the ShotGrid account.
+
+---
+
+## 2. Registering a site
+
+Sites are managed studio-wide in **Administration → Communications → ShotGrid**, or
+created on the fly from a project. Credentials are encrypted at rest and never returned
+by the API — editing a site leaves secret fields blank, and only what you type replaces
+the stored value.
+
+The site address must be public HTTPS. Addresses pointing at private networks are
+refused, so that no one can make the server probe internal services.
+
+---
+
+## 3. Linking a project
+
+Open a project, then the **ShotGrid** tab.
+
+1. Choose the site.
+2. Search the target project **by name** and select it.
+3. Confirm.
+
+The name matters. A studio site hosts every project, often with similar names
+("Demo", "Demo 2"). ReView records both the id and the name, re-checks the name before
+every synchronisation, and stops if it no longer matches — a renamed or reused id halts
+the sync instead of writing into the wrong project.
+
+---
+
+## 4. What is exchanged
+
+The **Settings** section holds a matrix: for each kind of data, whether ReView reads it
+from ShotGrid and whether it writes back.
+
+| Data | Read | Write back |
+|---|---|---|
+| Sequences, shots, assets | codes, cut ranges, shot statuses | shot statuses |
+| Tasks | name, pipeline step, status, start/due dates, assignee | status, dates, assignee |
+| Status list | the exact statuses of your site, names and colours | — (reference data) |
+| Versions and published media | media imported for review | review decisions, new versions |
+| Notes | ShotGrid notes as ReView comments | ReView comments as notes |
+| Playlists | dailies playlists | dailies playlists |
+| People | matched by email address | — (no account is ever created) |
+
+Field notes:
+
+- **Cut ranges**: `sg_cut_in` / `sg_cut_out` become the shot's start and end frames.
+- **Task duration**: ShotGrid stores working minutes (2400 = five 8-hour days). ReView
+  keeps the raw value alongside the link and displays working days.
+- **Dates**: start and due dates are pushed together, because ShotGrid recalculates
+  duration from whichever one changes.
+- **Statuses**: imported with their site colours (ShotGrid encodes them as decimal RGB).
+
+---
+
+## 5. Creating entities
+
+By default, **creating sequences, shots and assets in ReView is refused** on a linked
+project: the request returns a link to the matching ShotGrid form, pre-filled with the
+right project. This keeps ShotGrid the single place where production structure is
+decided.
+
+Turn off *Create in ShotGrid only* in the settings if your studio prefers the opposite.
+
+---
+
+## 6. Staying up to date
+
+Three mechanisms work together. You are not expected to choose one and hope.
+
+### Webhooks (near-instant)
+
+Copy the address shown in the settings, then in ShotGrid:
+
+1. Open **Admin → Webhooks → Create Webhook**.
+2. Paste the URL.
+3. Filter on **the linked project** and on the entity types you care about (Shot,
+   Sequence, Asset, Task, Version, Note, Playlist).
+4. Set the **secret token** to the one shown in ReView.
+
+ReView answers within milliseconds and processes in the background — ShotGrid requires a
+reply within six seconds and counts response time against a site-wide budget.
+
+The address can be renewed at any time; the previous one stops working immediately.
+
+### Polling
+
+If your ReView instance is not reachable from the internet, switch the update mode to
+**periodic polling**. ReView reads the ShotGrid event log from its last processed entry.
+Slightly delayed, but it needs no inbound connection.
+
+### Catch-up after downtime
+
+Neither of the above survives everything: an instance can be stopped for a night, and
+ShotGrid disables a webhook endpoint after a hundred failed deliveries, keeping delivery
+logs for only seven days.
+
+So ReView also re-reads a **look-back window** — nightly, and when the instance starts.
+Set the window to cover the longest outage you want to survive (72 hours by default).
+ShotGrid is the production record: on catch-up, ReView realigns on it.
+
+---
+
+## 7. Comparing both sides
+
+The **Comparison** section reads both sides live and lists every difference, without
+changing anything:
+
+- present in ShotGrid, missing in ReView;
+- present in ReView, gone from ShotGrid;
+- values that diverge, field by field;
+- local entities that were never linked.
+
+Use **Realign on ShotGrid** to run a full synchronisation and close the gaps. It is a
+separate, explicit action, because overwriting work should be decided rather than
+happen quietly.
+
+---
+
+## 8. Published media
+
+New ShotGrid versions carrying media are imported automatically and enter the normal
+ReView pipeline (transcoding, thumbnails, frame-accurate review). You can:
+
+- choose between the **ShotGrid transcode** (lighter) and the **original file**;
+- cap the size above which media is skipped and logged;
+- restrict the automatic import to certain statuses;
+- import anything else on demand from the **Published media** section.
+
+A version whose ShotGrid task is unknown to ReView is attached to a per-shot task named
+`ShotGrid`, rather than being dropped.
+
+---
+
+## 9. Writing back
+
+- **Review decisions** update the ShotGrid version status through the status mapping.
+- **Task statuses, dates and assignments** are pushed when the matching domain is open
+  for writing.
+- **Publishing in ReView** creates a ShotGrid version — either with a link back to the
+  ReView review (default, no duplicated storage) or with the media file uploaded.
+- Changes are attributed to the ReView user when their email matches a ShotGrid account.
+
+Writes go through a queue: a ShotGrid outage never makes a local action fail. What could
+not be written is logged, and the catch-up pass closes the gap.
+
+---
+
+## 10. Conflicts
+
+If a field changed on both sides between two synchronisations, the policy decides:
+
+- **ShotGrid wins** (default) — the production record prevails, and each overwrite is
+  logged;
+- **ReView wins** — the local value is kept and pushed back;
+- **Ask a human** — the conflict waits in the log for an explicit decision.
+
+---
+
+## 11. Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| *Authentication refused* | Script name/key wrong, or in user mode: Legacy Login not enabled, or the Personal Access Token not bound to the site. |
+| *Remote project name changed* | The linked ShotGrid project was renamed or its id reused. Check the target, then unlink and relink. |
+| No events arriving | Check the webhook status in ShotGrid (it is disabled after 100 failures), the secret, and that the URL is reachable from the internet. Switch to polling if it is not. |
+| Media not imported | Look at the run log: the version may carry no media, exceed the size limit, or fall outside the status filter. |
+| A shot exists in ReView but nowhere in ShotGrid | It was created locally before the link. The comparison lists it as *not linked*. |
+
+Every synchronisation is recorded with per-domain counters and a filterable log, kept
+under **Synchronisation**.
+
+---
+
+## 12. Development without a ShotGrid site
+
+The repository ships a simulator that reproduces the API surface ReView uses:
+
+```bash
+node scripts/fake-shotgrid.mjs --port 8890
+```
+
+It exposes three projects, two of which deliberately carry entities with identical
+codes — the fixture that proves synchronisation never spills into a neighbouring
+project. Point a site at `http://localhost:8890` with script `review_sync` and key
+`dev-script-key-0000`, after allowing the host:
+
+```bash
+SHOTGRID_INSECURE_HOSTS=localhost:8890
+```
+
+That variable lifts the HTTPS and private-network checks for the listed hosts only. It
+is empty by default and logged loudly at startup — a real ShotGrid site never needs it.
+
+The end-to-end scenario runs with:
+
+```bash
+node scripts/test-shotgrid-e2e.mjs
+```

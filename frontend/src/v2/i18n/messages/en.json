@@ -2418,5 +2418,15 @@
   "shotgrid.level.info": "info",
   "shotgrid.level.warn": "warning",
   "shotgrid.level.error": "error",
-  "shotgrid.level.conflict": "conflict"
+  "shotgrid.level.conflict": "conflict",
+  "shotgrid.admin.title": "ShotGrid sites",
+  "shotgrid.admin.intro": "Credentials live here, once for the whole studio: every project connection reuses them, and rotating a key is a single edit. Secrets are never sent back to the browser.",
+  "shotgrid.admin.empty": "No ShotGrid site registered yet. Add one from a project's ShotGrid tab.",
+  "shotgrid.admin.projects": "Linked projects",
+  "shotgrid.admin.linkedProjects": { "one": "{count} project", "other": "{count} projects" },
+  "shotgrid.admin.deleteConfirm": "Remove the site « {name} »? Its credentials are deleted.",
+  "shotgrid.admin.deleted": "ShotGrid site removed",
+  "shotgrid.admin.updated": "ShotGrid site updated",
+  "shotgrid.admin.editTitle": "Edit « {name} »",
+  "shotgrid.admin.keepSecret": "leave empty to keep the current one"
 }
