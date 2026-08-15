@@ -1639,6 +1639,9 @@
   "task.plural": "Tâches",
   "task.schedule": "Planning",
   "task.startsOn": "Début : {date}",
+  "task.schedule.due": "échéance {date}",
+  "task.schedule.window": "{start} → {due}",
+  "task.schedule.late": "en retard depuis {date}",
   "panel.info": "Infos",
   "panel.export": "Export",
   "panel.display": "Affichage",
@@ -2508,5 +2511,6 @@
   "shotgrid.conflict.applying": "Application de la décision…",
   "shotgrid.conflict.resolved": "Conflit arbitré",
   "shotgrid.conflict.failed": "Arbitrage impossible",
-  "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »"
+  "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »",
+  "shotgrid.playlists.pulled": "{count} playlist(s) importée(s)"
 }

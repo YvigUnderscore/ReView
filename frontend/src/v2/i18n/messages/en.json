@@ -1610,6 +1610,9 @@
   "task.plural": "Tasks",
   "task.schedule": "Schedule",
   "task.startsOn": "Starts {date}",
+  "task.schedule.due": "due {date}",
+  "task.schedule.window": "{start} → {due}",
+  "task.schedule.late": "overdue since {date}",
   "panel.info": "Info",
   "panel.export": "Export",
   "panel.display": "Display",
@@ -2446,5 +2449,6 @@
   "shotgrid.conflict.applying": "Applying the decision…",
   "shotgrid.conflict.resolved": "Conflict resolved",
   "shotgrid.conflict.failed": "Could not resolve the conflict",
-  "shotgrid.conflict.detail": "{field}: ReView « {review} » · ShotGrid « {shotgrid} »"
+  "shotgrid.conflict.detail": "{field}: ReView « {review} » · ShotGrid « {shotgrid} »",
+  "shotgrid.playlists.pulled": "{count} playlist(s) imported"
 }
