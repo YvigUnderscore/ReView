@@ -51,6 +51,11 @@ describe('shotgridMapper — statuts', () => {
     expect(sgStatusToEnum('apr')).toBe(TaskStatus.APPROVED);
     expect(sgStatusToEnum('fin')).toBe(TaskStatus.APPROVED);
     expect(sgStatusToEnum('cbb')).toBe(TaskStatus.RETAKE);
+    // « rtk » est le code de reprise le plus répandu sur les sites réels, alors qu'il
+    // ne figure dans aucune liste standard : l'oublier rangeait ces tâches en « à faire ».
+    expect(sgStatusToEnum('rtk')).toBe(TaskStatus.RETAKE);
+    expect(sgStatusToEnum('pass')).toBe(TaskStatus.APPROVED);
+    expect(sgStatusToEnum('suprev')).toBe(TaskStatus.PENDING_REVIEW);
     expect(sgStatusToEnum('omt')).toBe(TaskStatus.REJECTED);
     expect(sgStatusToEnum('WTG')).toBe(TaskStatus.TODO);
   });

@@ -91,7 +91,12 @@ const SG_STATUS_TO_ENUM: Record<string, TaskStatus> = {
   fin: TaskStatus.APPROVED, // Final
   cmpt: TaskStatus.APPROVED, // Complete
   cbb: TaskStatus.RETAKE, // Cbb / to redo
-  rrq: TaskStatus.RETAKE, // Retake requested
+  rrq: TaskStatus.RETAKE, // Revision requested
+  rtk: TaskStatus.RETAKE, // Retake — code le plus répandu, absent des listes « standard »
+  rej: TaskStatus.REJECTED,
+  pass: TaskStatus.APPROVED, // relu sans réserve
+  suprev: TaskStatus.PENDING_REVIEW, // en attente de supervision
+  ign: TaskStatus.TODO,
   omt: TaskStatus.REJECTED, // Omit
   dcl: TaskStatus.REJECTED, // Declined
 };
