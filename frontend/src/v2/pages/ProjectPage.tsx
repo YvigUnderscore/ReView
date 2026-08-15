@@ -17,6 +17,7 @@ import {
   Settings,
   Share2,
   BarChart3,
+  Workflow,
 } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -38,6 +39,7 @@ import PlaylistsTab from './project/PlaylistsTab';
 import ProductionTab from './project/ProductionTab';
 import SharesTab from './project/SharesTab';
 import TrashTab from './project/TrashTab';
+import ShotgridTab from './project/ShotgridTab';
 import ProjectCsvActions from './project/ProjectCsvActions';
 import type { ProjectSettings } from './project/projectTypes';
 import { useT } from '../i18n';
@@ -115,6 +117,9 @@ export default function ProjectPage() {
     ...(canManage ? [{ key: 'shares', label: t('project.tab.shares'), icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),
     ...(canManage ? [{ key: 'trash', label: t('admin.tab.trash'), icon: <Trash2 size={16} /> }] : []),
+    // ShotGrid (48) : visible dès qu'un projet peut être relié — l'onglet indique
+    // lui-même s'il ne l'est pas encore.
+    ...(canManage ? [{ key: 'shotgrid', label: t('shotgrid.tab.label'), icon: <Workflow size={16} /> }] : []),
   ];
 
   return (
@@ -195,6 +200,7 @@ export default function ProjectPage() {
         />
       )}
       {tab === 'trash' && canManage && <TrashTab projectId={projectId} reload={loadStructure} />}
+      {tab === 'shotgrid' && canManage && <ShotgridTab projectId={projectId} canManage={canManage} />}
     </Shell>
   );
 }
