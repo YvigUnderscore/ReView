@@ -2464,5 +2464,6 @@
   "shotgrid.log.truncated": "Ghjurnale troncu — i cuntatori restanu esatti",
   "shotgrid.conflict.applying": "Applicazione di a decisione…",
   "shotgrid.conflict.noDetail": "Divergenza arregistrata nanzu chì i valori fussinu pigliati — sincronizà torna per vedeli",
-  "shotgrid.conflict.field.status": "statu"
+  "shotgrid.conflict.field.status": "statu",
+  "shotgrid.log.trashedTaskKept": "A task #{sgId} hè in a rumenza di ShotGrid ma porta sempre {count} version — cunservata in ReView"
 }

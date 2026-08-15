@@ -13,15 +13,18 @@ import {
   asNumber,
   asString,
   cutDuration,
+  disambiguatedName,
   sgAssetType,
   sgDisplayName,
   sgStepToTaskType,
   type SgRecord,
 } from './shotgridMapper';
 import {
+  findByLocal,
   findBySg,
   mapSgToLocal,
   upsertLink,
+  type LocalType,
   type AssetLinkData,
   type ShotLinkData,
   type TaskLinkData,
@@ -162,6 +165,25 @@ async function fetchScoped(
 }
 
 /**
+ * Une entité locale trouvée par son nom peut-elle accueillir cette entité ShotGrid ?
+ *
+ * Non si elle est déjà la contrepartie d'une autre : un site héberge sans peine quatre
+ * séquences nommées « DO_NOT_USE_ », et les fondre sur la même ligne locale n'en
+ * importerait qu'une — les trois autres manqueraient à chaque comparaison, sans que rien
+ * ne dise pourquoi. Le nom sert donc à adopter ce qui existait avant la liaison, jamais
+ * à confondre deux entités distinctes du site.
+ */
+async function adoptable(
+  connectionId: number,
+  localType: LocalType,
+  localId: number,
+  sgId: number,
+): Promise<boolean> {
+  const held = await findByLocal(connectionId, localType, localId);
+  return !held || held.sgId === sgId;
+}
+
+/**
  * Le côté ReView a-t-il bougé depuis la dernière synchronisation ?
  * Sert à repérer les conflits : ShotGrid tranche par défaut, mais l'écrasement est
  * journalisé pour rester explicable.
@@ -229,15 +251,24 @@ export async function pullSequences(
     const code = asString(record.code) ?? `SQ${record.id}`;
     const statusCode = asString(record.sg_status_list);
     const link = links.get(record.id);
-    const existing = link
+    let existing = link
       ? await prisma.sequence.findUnique({ where: { id: link.localId } })
       : await prisma.sequence.findUnique({
           where: { projectId_code: { projectId: ctx.connection.projectId, code } },
         });
 
+    // Code déjà pris par une autre séquence du site : celle-ci prend le sien.
+    let localCode = code;
+    if (!link && existing && !(await adoptable(ctx.connection.id, 'sequence', existing.id, record.id))) {
+      localCode = disambiguatedName(code, record.id);
+      existing = await prisma.sequence.findUnique({
+        where: { projectId_code: { projectId: ctx.connection.projectId, code: localCode } },
+      });
+    }
+
     const data = {
-      name: code,
-      code,
+      name: localCode,
+      code: localCode,
       order: index,
       projectId: ctx.connection.projectId,
       pipelineStatusId: statusCode ? (statuses.get(statusCode)?.id ?? null) : null,
@@ -349,16 +380,25 @@ export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
   for (const record of records) {
     const name = asString(record.code) ?? `Asset ${record.id}`;
     const link = assetLinks.get(record.id);
-    const existing = link
+    let existing = link
       ? await prisma.asset.findUnique({ where: { id: link.localId } })
       : await prisma.asset.findUnique({
           where: { projectId_name: { projectId: ctx.connection.projectId, name } },
         });
 
+    // Nom déjà porté par un autre asset du site : celui-ci prend le sien.
+    let localName = name;
+    if (!link && existing && !(await adoptable(ctx.connection.id, 'asset', existing.id, record.id))) {
+      localName = disambiguatedName(name, record.id);
+      existing = await prisma.asset.findUnique({
+        where: { projectId_name: { projectId: ctx.connection.projectId, name: localName } },
+      });
+    }
+
     const sgType = asString(record.sg_asset_type);
     const data = {
       projectId: ctx.connection.projectId,
-      name,
+      name: localName,
       // L'énumération sert aux filtres ; le libellé exact du studio est ce qui s'affiche.
       type: sgAssetType(sgType),
       typeLabel: sgType,
@@ -457,6 +497,9 @@ export async function pullTasks(
 ) {
   if (!can(ctx.settings, 'tasks', 'read')) return;
   const records = await fetchScoped(ctx, 'Task', TASK_FIELDS, options);
+  // Passe complète : une tâche que le site ne renvoie plus y a été mise à la corbeille.
+  if (!options.since && !options.onlySgIds)
+    await trashRemoved(ctx, 'Task', new Set(records.map((r) => r.id)));
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
   const taskLinks = await mapSgToLocal(ctx.connection.id, 'task');
@@ -553,17 +596,21 @@ export async function pullTasks(
  */
 export async function trashRemoved(
   ctx: PullContext,
-  sgType: 'Shot' | 'Sequence' | 'Asset',
+  sgType: 'Shot' | 'Sequence' | 'Asset' | 'Task',
   aliveSgIds: Set<number>,
 ): Promise<void> {
-  const localType = sgType.toLowerCase() as 'shot' | 'sequence' | 'asset';
+  const localType = sgType.toLowerCase() as 'shot' | 'sequence' | 'asset' | 'task';
   const links = await mapSgToLocal(ctx.connection.id, localType);
   for (const [sgId, link] of links) {
     if (aliveSgIds.has(sgId)) continue;
-    const table = sgType === 'Shot' ? prisma.shot : sgType === 'Sequence' ? prisma.sequence : prisma.asset;
-    await (table as { update: (a: unknown) => Promise<unknown> })
-      .update({ where: { id: link.localId }, data: { deletedAt: new Date() } })
-      .catch(() => undefined);
+    if (sgType === 'Task') {
+      if (!(await retireTask(ctx, link.localId, sgId))) continue;
+    } else {
+      const table = sgType === 'Shot' ? prisma.shot : sgType === 'Sequence' ? prisma.sequence : prisma.asset;
+      await (table as { update: (a: unknown) => Promise<unknown> })
+        .update({ where: { id: link.localId }, data: { deletedAt: new Date() } })
+        .catch(() => undefined);
+    }
     ctx.journal.count(`${localType}s`, 'skipped');
     await ctx.journal.log(
       'info',
@@ -572,6 +619,31 @@ export async function trashRemoved(
       { sgType, sgId, localType, localId: link.localId },
     );
   }
+}
+
+/**
+ * Retrait d'une tâche mise à la corbeille côté ShotGrid.
+ *
+ * Une tâche n'a pas de suppression douce : la supprimer emporte ses versions en cascade,
+ * donc le travail de review qui y est attaché. On ne retire donc que les tâches vides ;
+ * une tâche qui porte des versions reste en place et le journal le dit, à charge d'un
+ * humain de décider quoi faire de ce travail devenu orphelin.
+ *
+ * Renvoie `true` si la tâche a effectivement été retirée.
+ */
+async function retireTask(ctx: PullContext, localId: number, sgId: number): Promise<boolean> {
+  const versions = await prisma.version.count({ where: { taskId: localId } });
+  if (versions > 0) {
+    await ctx.journal.log(
+      'warn',
+      'shotgrid.log.trashedTaskKept',
+      { sgId, count: versions },
+      { sgType: 'Task', sgId, localType: 'task', localId },
+    );
+    return false;
+  }
+  await prisma.task.delete({ where: { id: localId } }).catch(() => undefined);
+  return true;
 }
 
 export async function existsRemotely(ctx: PullContext, sgType: string, sgId: number): Promise<boolean> {

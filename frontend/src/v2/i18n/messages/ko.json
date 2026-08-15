@@ -2406,5 +2406,6 @@
   "shotgrid.log.truncated": "로그가 잘렸습니다 — 집계는 정확합니다",
   "shotgrid.conflict.applying": "결정을 적용하는 중…",
   "shotgrid.conflict.noDetail": "값이 기록되기 전에 남은 차이 — 보려면 다시 동기화하세요",
-  "shotgrid.conflict.field.status": "상태"
+  "shotgrid.conflict.field.status": "상태",
+  "shotgrid.log.trashedTaskKept": "task #{sgId}은(는) ShotGrid 휴지통에 있지만 아직 version {count}개를 가지고 있습니다 — ReView에 유지"
 }

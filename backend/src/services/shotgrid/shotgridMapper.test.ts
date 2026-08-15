@@ -6,6 +6,8 @@ import { AssetType, TaskStatus, TaskType } from '@prisma/client';
 import {
   asDate,
   asEntityRef,
+  disambiguatedName,
+  plainName,
   asEntityRefs,
   attachmentName,
   attachmentUrl,
@@ -218,5 +220,28 @@ describe('attachmentUrl', () => {
     expect(attachmentUrl({ name: 'v001.mov' })).toBeNull();
     expect(attachmentUrl(null)).toBeNull();
     expect(attachmentUrl('https://direct')).toBeNull();
+  });
+});
+
+describe('disambiguatedName / plainName', () => {
+  it('sépare deux entités du site qui portent le même code', () => {
+    // Un site accepte quatre séquences « DO_NOT_USE_ » ; la base locale, une seule.
+    expect(disambiguatedName('DO_NOT_USE_', 4686)).toBe('DO_NOT_USE_ (4686)');
+  });
+
+  it('retrouve le nom du site pour comparer sans faux écart', () => {
+    expect(plainName('DO_NOT_USE_ (4686)', 4686)).toBe('DO_NOT_USE_');
+    expect(plainName('sq010', 4685)).toBe('sq010');
+  });
+
+  it("ne retire que le suffixe de l'entité comparée", () => {
+    // Un nom qui finit par les parenthèses d'un AUTRE identifiant reste intact.
+    expect(plainName('DO_NOT_USE_ (4686)', 4687)).toBe('DO_NOT_USE_ (4686)');
+    expect(plainName(null, 1)).toBeNull();
+  });
+
+  it('est stable : re-synchroniser n’empile pas les suffixes', () => {
+    const once = disambiguatedName('Alba', 19472);
+    expect(plainName(once, 19472)).toBe('Alba');
   });
 });

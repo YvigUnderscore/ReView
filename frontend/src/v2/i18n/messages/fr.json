@@ -2514,5 +2514,6 @@
   "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »",
   "shotgrid.playlists.pulled": "{count} playlist(s) importée(s)",
   "shotgrid.conflict.noDetail": "Divergence enregistrée avant le relevé des valeurs — resynchroniser pour les voir",
-  "shotgrid.conflict.field.status": "statut"
+  "shotgrid.conflict.field.status": "statut",
+  "shotgrid.log.trashedTaskKept": "La task #{sgId} est à la corbeille dans ShotGrid mais porte encore {count} version(s) — conservée dans ReView"
 }

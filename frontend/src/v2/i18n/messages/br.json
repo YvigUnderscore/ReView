@@ -2453,5 +2453,6 @@
   "shotgrid.log.truncated": "Marilh troc'het — reizh e chom ar c'honteroù",
   "shotgrid.conflict.applying": "Oc'h arloañ an diviz…",
   "shotgrid.conflict.noDetail": "Diforc'h enrollet a-raok ma voe dastumet an talvoudoù — adkempredañ evit o gwelet",
-  "shotgrid.conflict.field.status": "statud"
+  "shotgrid.conflict.field.status": "statud",
+  "shotgrid.log.trashedTaskKept": "An task #{sgId} a zo el lastez e ShotGrid met a zoug c'hoazh {count} version — miret e ReView"
 }

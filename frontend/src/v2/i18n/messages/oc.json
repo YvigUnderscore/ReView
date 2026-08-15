@@ -2464,5 +2464,6 @@
   "shotgrid.log.truncated": "Jornal copat — los comptadors demòran exactes",
   "shotgrid.conflict.applying": "Aplicacion de la decision…",
   "shotgrid.conflict.noDetail": "Divergéncia enregistrada abans lo relevat de las valors — tornar sincronizar per las veire",
-  "shotgrid.conflict.field.status": "estat"
+  "shotgrid.conflict.field.status": "estat",
+  "shotgrid.log.trashedTaskKept": "La task #{sgId} es a la banasta dins ShotGrid mas pòrta encara {count} version — servada dins ReView"
 }

@@ -2464,5 +2464,6 @@
   "shotgrid.log.truncated": "Registro truncado — los contadores siguen siendo exactos",
   "shotgrid.conflict.applying": "Aplicando la decisión…",
   "shotgrid.conflict.noDetail": "Divergencia registrada antes de captar los valores — vuelve a sincronizar para verlos",
-  "shotgrid.conflict.field.status": "estado"
+  "shotgrid.conflict.field.status": "estado",
+  "shotgrid.log.trashedTaskKept": "La task #{sgId} está en la papelera de ShotGrid pero aún tiene {count} version(es) — conservada en ReView"
 }

@@ -2467,5 +2467,6 @@
   "shotgrid.log.truncated": "Egunkaria moztuta — kontagailuak zehatzak dira oraindik",
   "shotgrid.conflict.applying": "Erabakia aplikatzen…",
   "shotgrid.conflict.noDetail": "Balioak jaso baino lehen erregistratutako aldea — sinkronizatu berriro ikusteko",
-  "shotgrid.conflict.field.status": "egoera"
+  "shotgrid.conflict.field.status": "egoera",
+  "shotgrid.log.trashedTaskKept": "#{sgId} task ShotGrid-en zakarrontzian dago baina {count} version ditu oraindik — ReView-en mantendua"
 }

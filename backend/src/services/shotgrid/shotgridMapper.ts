@@ -220,3 +220,22 @@ export function attachmentName(value: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+/**
+ * Nom local d'une entité dont le code est déjà porté par une autre entité du site.
+ *
+ * Un site héberge sans peine quatre séquences nommées « DO_NOT_USE_ » : la contrainte
+ * d'unicité locale, elle, n'en accepte qu'une. Le suffixe est l'identifiant ShotGrid,
+ * donc stable : re-synchroniser retombe sur le même nom, sans jamais empiler les
+ * suffixes ni fabriquer un doublon de plus.
+ */
+export function disambiguatedName(name: string, sgId: number): string {
+  return `${name} (${sgId})`;
+}
+
+/** Le nom du site derrière un nom local éventuellement désambiguïsé. */
+export function plainName(name: string | null | undefined, sgId: number): string | null {
+  if (!name) return null;
+  const suffix = ` (${sgId})`;
+  return name.endsWith(suffix) ? name.slice(0, -suffix.length) : name;
+}

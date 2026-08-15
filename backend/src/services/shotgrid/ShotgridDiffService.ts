@@ -4,7 +4,7 @@
 import { prisma } from '../../lib/prisma';
 import { openConnection, type ConnectionContext } from './ShotgridConfigService';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
-import { asDate, asNumber, asString, type SgRecord } from './shotgridMapper';
+import { asDate, asNumber, asString, plainName, type SgRecord } from './shotgridMapper';
 import { mapSgToLocal } from './shotgridLinks';
 import { sgDeepLink } from './shotgridSettings';
 
@@ -155,7 +155,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
       continue;
     }
-    const diffs = [fieldDiff('code', local.code, asString(sg.code))].filter(Boolean);
+    const diffs = [fieldDiff('code', plainName(local.code, sg.id), asString(sg.code))].filter(Boolean);
     if (diffs.length)
       entries.push({
         kind: 'field_differs',
@@ -197,7 +197,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       continue;
     }
     const diffs = [
-      fieldDiff('code', local.code, asString(sg.code)),
+      fieldDiff('code', plainName(local.code, sg.id), asString(sg.code)),
       fieldDiff('startFrame', local.startFrame, asNumber(sg.sg_cut_in)),
       fieldDiff('endFrame', local.endFrame, asNumber(sg.sg_cut_out)),
       fieldDiff('status', local.pipelineStatus?.code ?? null, asString(sg.sg_status_list)),
