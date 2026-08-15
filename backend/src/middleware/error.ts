@@ -18,7 +18,7 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
   }
 
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({ error: err.message, code: err.code });
+    res.status(err.statusCode).json({ error: err.message, code: err.code, ...(err.details ?? {}) });
     return;
   }
 

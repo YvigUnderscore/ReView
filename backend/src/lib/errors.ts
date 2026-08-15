@@ -7,12 +7,19 @@
 export class AppError extends Error {
   statusCode: number;
   code?: string;
+  /**
+   * Données que le client doit recevoir pour proposer une suite à l'utilisateur —
+   * par exemple le lien de création côté ShotGrid quand la création locale est
+   * verrouillée. Un message seul obligerait l'interface à le réanalyser.
+   */
+  details?: Record<string, unknown>;
 
-  constructor(message: string, statusCode = 500, code?: string) {
+  constructor(message: string, statusCode = 500, code?: string, details?: Record<string, unknown>) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;
     this.code = code;
+    this.details = details;
   }
 }
 

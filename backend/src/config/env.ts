@@ -104,6 +104,11 @@ const baseEnvSchema = z.object({
   DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
   // URL publique de l'app (liens dans les emails) ; sans elle, liens omis.
   APP_URL: z.string().optional(),
+  // Phase 48 : hôtes ShotGrid joignables hors HTTPS public (liste séparée par des
+  // virgules, ex. « localhost:8890 »). Destiné au simulateur de développement : il
+  // lève, pour ces hôtes précis, le refus des adresses non publiques. Vide par défaut,
+  // et signalé bruyamment au démarrage — un site ShotGrid réel n'en a jamais besoin.
+  SHOTGRID_INSECURE_HOSTS: z.string().optional(),
 });
 
 /** Un secret est « faible » s'il est trop court ou ressemble à un placeholder. */

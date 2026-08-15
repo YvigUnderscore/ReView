@@ -97,6 +97,15 @@ async function main(): Promise<void> {
   scheduleDailyDigest();
   scheduleWeeklyReport();
 
+  // La dérogation ShotGrid ouvre des adresses normalement refusées (HTTP, réseau
+  // privé) : si elle est posée, on veut la voir à chaque démarrage, pas la découvrir
+  // le jour d'un incident.
+  if (env.SHOTGRID_INSECURE_HOSTS)
+    logger.warn(
+      { hosts: env.SHOTGRID_INSECURE_HOSTS },
+      '⚠️  SHOTGRID_INSECURE_HOSTS actif : ces hôtes ShotGrid échappent au contrôle HTTPS/réseau privé. À réserver au simulateur de développement.',
+    );
+
   server.listen(env.PORT, () => {
     logger.info(`✅ ReView 2.0 backend démarré sur le port ${env.PORT} (${env.NODE_ENV})`);
   });
