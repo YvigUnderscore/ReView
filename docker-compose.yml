@@ -69,9 +69,14 @@ services:
       TZ: Europe/Paris
       # 37.E : nécessaire aussi côté API (déclenche le job `scan` des médias sans traitement).
       CLAMAV_HOST: ${CLAMAV_HOST:-}
+      # Phase 48 : hôtes ShotGrid tolérés hors HTTPS public (simulateur de développement).
+      SHOTGRID_INSECURE_HOSTS: ${SHOTGRID_INSECURE_HOSTS:-}
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       # 37.G : jeton d'accès à GET /metrics (vide = réseau interne uniquement).
       METRICS_TOKEN: ${METRICS_TOKEN:-}
+    # Le simulateur ShotGrid de développement tourne sur la machine hôte.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${BPORT:-3430}:3000"
     depends_on:
@@ -119,6 +124,8 @@ services:
       VIDEO_ENCODER: ${VIDEO_ENCODER:-libx264}
       # 37.E : scan antivirus opt-in — pointer vers le service clamav (profil antivirus).
       CLAMAV_HOST: ${CLAMAV_HOST:-}
+      # Phase 48 : hôtes ShotGrid tolérés hors HTTPS public (simulateur de développement).
+      SHOTGRID_INSECURE_HOSTS: ${SHOTGRID_INSECURE_HOSTS:-}
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       # 39.A : convertisseur USD→glTF natif (ex. `guc`, installé via --build-arg GUC_URL).
       # Repli utilisé seulement si Blender est absent. Voir DOCUMENTATION/admin-guide/3d-usd.md.
@@ -132,6 +139,10 @@ services:
       ARCHIVE_MAX_ENTRIES: ${ARCHIVE_MAX_ENTRIES:-20000}
       ARCHIVE_MAX_UNCOMPRESSED_BYTES: ${ARCHIVE_MAX_UNCOMPRESSED_BYTES:-8589934592}
       ARCHIVE_MAX_COMPRESSION_RATIO: ${ARCHIVE_MAX_COMPRESSION_RATIO:-200}
+    # Le simulateur ShotGrid de développement tourne sur la machine hôte : c'est le
+    # worker qui synchronise, il doit pouvoir l'atteindre.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
