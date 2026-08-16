@@ -2469,5 +2469,7 @@
   "upload.pickTask.steps": "Krouiñ an task a vank",
   "upload.pickTask.createStep": "Krouiñ un task « {step} » e ShotGrid",
   "upload.pickTask.created": "Task « {name} » krouet e ShotGrid",
-  "upload.pickTask.createFailed": "N’eus ket bet gallet krouiñ an task"
+  "upload.pickTask.createFailed": "N’eus ket bet gallet krouiñ an task",
+  "upload.pickTask.namePlaceholder": "Anv an task (al lankad dre ziouer)",
+  "upload.pickTask.noAssignee": "Dizeliet"
 }

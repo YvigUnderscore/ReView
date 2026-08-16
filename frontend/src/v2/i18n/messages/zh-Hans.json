@@ -2412,5 +2412,7 @@
   "upload.pickTask.steps": "创建缺失的 task",
   "upload.pickTask.createStep": "在 ShotGrid 中创建「{step}」task",
   "upload.pickTask.created": "已在 ShotGrid 中创建 task「{name}」",
-  "upload.pickTask.createFailed": "无法创建该 task"
+  "upload.pickTask.createFailed": "无法创建该 task",
+  "upload.pickTask.namePlaceholder": "task 名称（默认取环节名）",
+  "upload.pickTask.noAssignee": "未指派"
 }

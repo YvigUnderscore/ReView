@@ -22,7 +22,7 @@ import {
   attachmentUrl,
   type SgRecord,
 } from './shotgridMapper';
-import { mapSgToLocal, upsertLink, type VersionLinkData } from './shotgridLinks';
+import { mapSgToLocal, shouldImportMedia, upsertLink, type VersionLinkData } from './shotgridLinks';
 import { can } from './shotgridSettings';
 import type { PullContext } from './ShotgridPullService';
 
@@ -232,12 +232,17 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     : await prisma.version.create({ data });
   ctx.journal.count('versions', existing ? 'updated' : 'created');
 
+  const previous = existingLink?.data as VersionLinkData | undefined;
   const linkData: VersionLinkData = {
     sgStatusCode: statusCode,
     sgPathToMovie: asString(record.sg_path_to_movie),
     sgFirstFrame: asNumber(record.sg_first_frame),
     sgLastFrame: asNumber(record.sg_last_frame),
-    mediaImported: Boolean((existingLink?.data as VersionLinkData | undefined)?.mediaImported),
+    mediaImported: Boolean(previous?.mediaImported),
+    // L'origine ne se redécouvre pas : `upsertLink` remplace `data`, et l'oublier ici
+    // ferait passer une version née dans ReView pour une version du site à la passe
+    // suivante — avec son média rapatrié en double.
+    ...(previous?.createdFromReview ? { createdFromReview: true } : {}),
   };
 
   /**
@@ -258,7 +263,7 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
   });
 
   // Le média est un supplément : son échec n'invalide ni la version ni son statut.
-  if (withMedia && !linkData.mediaImported && ctx.settings.media.autoImport) {
+  if (shouldImportMedia({ withMedia, autoImport: ctx.settings.media.autoImport, link: linkData })) {
     try {
       if (await importVersionMedia(ctx, record, version.id, name)) {
         await upsertLink({

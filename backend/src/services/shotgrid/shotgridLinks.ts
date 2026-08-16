@@ -155,6 +155,8 @@ export interface VersionLinkData extends LinkData {
   sgFirstFrame?: number | null;
   sgLastFrame?: number | null;
   mediaImported?: boolean;
+  /** Version née dans ReView puis poussée : son média vient d'ici, pas du site. */
+  createdFromReview?: boolean;
   /** Publishes de pipeline rattachés (chemins de fichiers, lecture seule). */
   publishedFiles?: Array<{
     id: number;
@@ -181,4 +183,24 @@ export async function listForUi(connectionId: number) {
     },
     select: { localType: true, localId: true, sgId: true, sgType: true, syncedAt: true },
   });
+}
+
+/**
+ * Faut-il rapatrier le média de cette version ?
+ *
+ * Écrit comme une règle nommée plutôt qu'en condition dissoute, parce que l'oublier a
+ * coûté un défaut visible : une version publiée depuis ReView voyait son propre fichier
+ * retéléchargé depuis le site à la synchronisation suivante et ajouté à la même version
+ * — une copie de plus à chaque passe.
+ */
+export function shouldImportMedia(params: {
+  withMedia: boolean;
+  autoImport: boolean;
+  link: VersionLinkData;
+}): boolean {
+  if (!params.withMedia || !params.autoImport) return false;
+  if (params.link.mediaImported) return false;
+  // Ce qu'on lirait sur le site est le fichier qu'on y a envoyé.
+  if (params.link.createdFromReview) return false;
+  return true;
 }

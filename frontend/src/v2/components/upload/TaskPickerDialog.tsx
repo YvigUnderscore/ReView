@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import PipelineStatusBadge from '../shotgrid/PipelineStatusBadge';
 import { toast } from 'sonner';
 import { useProjectTasks } from '../../lib/queries';
-import { useCreateTaskFromStep, useSgSteps } from '../../lib/shotgridApi';
+import { useCreateTaskFromStep, useSgProjectMembers, useSgSteps } from '../../lib/shotgridTasksApi';
 import { useT } from '../../i18n';
 
 export interface PickableTask {
@@ -67,7 +67,13 @@ export default function TaskPickerDialog({
     parent?.kind === 'shot' ? 'Shot' : 'Asset',
     open && Boolean(parent),
   );
+  const { data: members = [] } = useSgProjectMembers(projectId, open && Boolean(parent));
   const createTask = useCreateTaskFromStep(projectId);
+  // Nom et personne à qui confier la tâche : proposés, jamais imposés. Le nom part du
+  // code de l'étape — c'est la convention — mais un studio nomme parfois « model_hi »
+  // là où l'étape s'appelle « modeling ».
+  const [draftName, setDraftName] = useState('');
+  const [assignee, setAssignee] = useState('');
 
   const others = useMemo(() => {
     const known = new Set(tasks.map((task) => task.id));
@@ -112,6 +118,8 @@ export default function TaskPickerDialog({
         stepSgId: step.sgId,
         parentType: parent.kind,
         parentId: parent.id,
+        name: draftName.trim() || undefined,
+        assigneeSgId: assignee ? Number(assignee) : null,
       });
       toast.success(t('upload.pickTask.created', { name: r.name }));
       choose(r.taskId);
@@ -191,9 +199,41 @@ export default function TaskPickerDialog({
           ))}
 
           {freeSteps.length > 0 && (
-            <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {t('upload.pickTask.steps')}
-            </p>
+            <>
+              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('upload.pickTask.steps')}
+              </p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                <input
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  list="review-task-names"
+                  placeholder={t('upload.pickTask.namePlaceholder')}
+                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none"
+                />
+                {/* Les noms déjà employés ici : un pipe se lit mieux quand les tâches
+                    d'un même asset portent des noms cohérents. */}
+                <datalist id="review-task-names">
+                  {[...new Set([...tasks.map((x) => x.name), ...projectTasks.map((x) => x.name)])].map(
+                    (n) => (
+                      <option key={n} value={n} />
+                    ),
+                  )}
+                </datalist>
+                <select
+                  value={assignee}
+                  onChange={(e) => setAssignee(e.target.value)}
+                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none"
+                >
+                  <option value="">{t('upload.pickTask.noAssignee')}</option>
+                  {members.map((m) => (
+                    <option key={m.sgId} value={m.sgId}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
           {freeSteps.map((step) => (
             <button

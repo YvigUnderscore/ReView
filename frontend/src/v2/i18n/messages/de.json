@@ -2480,5 +2480,7 @@
   "upload.pickTask.steps": "Fehlende Task anlegen",
   "upload.pickTask.createStep": "Eine Task « {step} » in ShotGrid anlegen",
   "upload.pickTask.created": "Task « {name} » in ShotGrid angelegt",
-  "upload.pickTask.createFailed": "Die Task konnte nicht angelegt werden"
+  "upload.pickTask.createFailed": "Die Task konnte nicht angelegt werden",
+  "upload.pickTask.namePlaceholder": "Task-Name (standardmäßig der Step)",
+  "upload.pickTask.noAssignee": "Nicht zugewiesen"
 }

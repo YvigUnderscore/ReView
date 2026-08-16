@@ -2480,5 +2480,7 @@
   "upload.pickTask.steps": "Crear la task que manca",
   "upload.pickTask.createStep": "Crear una task « {step} » dins ShotGrid",
   "upload.pickTask.created": "Task « {name} » creada dins ShotGrid",
-  "upload.pickTask.createFailed": "La task a pas pogut èsser creada"
+  "upload.pickTask.createFailed": "La task a pas pogut èsser creada",
+  "upload.pickTask.namePlaceholder": "Nom de la task (l’etapa per defaut)",
+  "upload.pickTask.noAssignee": "Pas assignada"
 }

@@ -2483,5 +2483,7 @@
   "upload.pickTask.steps": "Falta den task sortu",
   "upload.pickTask.createStep": "Sortu « {step} » task bat ShotGrid-en",
   "upload.pickTask.created": "« {name} » task sortu da ShotGrid-en",
-  "upload.pickTask.createFailed": "Ezin izan da task sortu"
+  "upload.pickTask.createFailed": "Ezin izan da task sortu",
+  "upload.pickTask.namePlaceholder": "Task-aren izena (urratsa lehenetsita)",
+  "upload.pickTask.noAssignee": "Esleitu gabe"
 }

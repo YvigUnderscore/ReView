@@ -10,7 +10,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { assertProjectManager } from '../lib/shotgridAccess';
 import * as Config from '../services/shotgrid/ShotgridConfigService';
 import { runSync } from '../services/shotgrid/ShotgridSyncService';
-import { createTaskFromStep, listSteps } from '../services/shotgrid/ShotgridSteps';
+import { createTaskFromStep, listProjectMembers, listSteps } from '../services/shotgrid/ShotgridSteps';
 
 /**
  * Réalignement d'une entité seule sur ShotGrid.
@@ -74,14 +74,25 @@ router.get(
   '/projects/:projectId/steps',
   validate({
     params: z.object({ projectId: z.coerce.number().int().positive() }),
-    query: z.object({ entityType: z.enum(['Asset', 'Shot']) }),
+    query: z.object({
+      entityType: z.enum(['Asset', 'Shot']),
+      // Par défaut on s'en tient aux étapes que le projet emploie ; le catalogue complet
+      // du site reste accessible à qui le demande explicitement.
+      all: z.coerce.boolean().optional(),
+    }),
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
     await assertProjectManager(req.user!, projectId, { allowMembers: true });
     const connection = await Config.getConnection(projectId);
     if (!connection?.active) return res.json({ steps: [] });
-    res.json({ steps: await listSteps(projectId, req.query.entityType as 'Asset' | 'Shot') });
+    res.json({
+      steps: await listSteps(projectId, req.query.entityType as 'Asset' | 'Shot', {
+        // Express 5 ne remplace pas `req.query` par la valeur validée : la valeur y reste
+        // une chaîne, quel que soit le schéma Zod.
+        all: String(req.query.all) === 'true',
+      }),
+    });
   },
 );
 
@@ -94,12 +105,26 @@ router.post(
       parentType: z.enum(['asset', 'shot']),
       parentId: z.number().int().positive(),
       name: z.string().min(1).max(160).optional(),
+      assigneeSgId: z.number().int().positive().nullish(),
     }),
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
     await assertProjectManager(req.user!, projectId);
     res.status(201).json(await createTaskFromStep(projectId, req.body, req.user!.email ?? null));
+  },
+);
+
+/** Personnes affectées au projet sur le site — celles à qui une tâche peut être confiée. */
+router.get(
+  '/projects/:projectId/members',
+  validate({ params: z.object({ projectId: z.coerce.number().int().positive() }) }),
+  async (req, res) => {
+    const projectId = Number(req.params.projectId);
+    await assertProjectManager(req.user!, projectId, { allowMembers: true });
+    const connection = await Config.getConnection(projectId);
+    if (!connection?.active) return res.json({ members: [] });
+    res.json({ members: await listProjectMembers(projectId) });
   },
 );
 

@@ -2480,5 +2480,7 @@
   "upload.pickTask.steps": "Fählendi Task aalege",
   "upload.pickTask.createStep": "E Task « {step} » in ShotGrid aalege",
   "upload.pickTask.created": "Task « {name} » in ShotGrid aagleit",
-  "upload.pickTask.createFailed": "D Task het nit chönne aagleit werde"
+  "upload.pickTask.createFailed": "D Task het nit chönne aagleit werde",
+  "upload.pickTask.namePlaceholder": "Task-Name (standardmässig de Schritt)",
+  "upload.pickTask.noAssignee": "Nit zuegwiese"
 }

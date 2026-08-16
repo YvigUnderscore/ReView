@@ -2480,5 +2480,7 @@
   "upload.pickTask.steps": "Creà u task chì manca",
   "upload.pickTask.createStep": "Creà un task « {step} » in ShotGrid",
   "upload.pickTask.created": "Task « {name} » creatu in ShotGrid",
-  "upload.pickTask.createFailed": "U task ùn hè pussutu esse creatu"
+  "upload.pickTask.createFailed": "U task ùn hè pussutu esse creatu",
+  "upload.pickTask.namePlaceholder": "Nome di u task (a tappa per difettu)",
+  "upload.pickTask.noAssignee": "Micca assignatu"
 }

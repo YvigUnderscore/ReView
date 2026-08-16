@@ -5,9 +5,9 @@ import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { badRequest, forbidden } from '../../lib/errors';
 import { openConnection } from './ShotgridConfigService';
-import { belongsToProject } from './shotgridProjectGuard';
+import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import { writeAllowedOn } from './shotgridTemplateGuard';
-import { asNumber, asString, sgStepToTaskType } from './shotgridMapper';
+import { asEntityRef, asNumber, asString, sgStepToTaskType } from './shotgridMapper';
 import { upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
 
@@ -20,10 +20,12 @@ import { can } from './shotgridSettings';
  * étape sans quitter ReView, là où il fallait auparavant aller créer la tâche à la main
  * dans ShotGrid, puis revenir et resynchroniser.
  *
- * Les étapes sont globales au site, pas propres à un projet : `Step` ne porte aucun champ
- * qui le relie à un projet, et `task_templates` est vide chez ce studio. On les rend donc
- * toutes, en signalant celles que le projet emploie déjà — ce sont presque toujours
- * celles qu'on cherche.
+ * `Step` est global au site — il ne porte aucun champ qui le relie à un projet, et
+ * `task_templates` est vide chez ce studio. Mais une étape « du projet » se lit ailleurs :
+ * dans les tasks qui y existent déjà. Ce sont elles qui font foi, et pour une raison
+ * concrète : un site accumule des homonymes, et l'étape « modeling » employée par ce
+ * projet porte l'identifiant 14 quand le catalogue en propose une autre sous le 1584.
+ * Choisir la mauvaise range la task ailleurs que là où l'équipe la cherche.
  */
 
 export interface PipelineStep {
@@ -46,9 +48,29 @@ function hexColor(value: unknown): string | null {
   return `#${parts.map((n) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('')}`;
 }
 
-export async function listSteps(projectId: number, entityType: 'Asset' | 'Shot'): Promise<PipelineStep[]> {
+export async function listSteps(
+  projectId: number,
+  entityType: 'Asset' | 'Shot',
+  options: { all?: boolean } = {},
+): Promise<PipelineStep[]> {
   const ctx = await openConnection(projectId);
   if (!can(ctx.settings, 'tasks', 'read')) return [];
+
+  // Ce que le projet emploie : les étapes portées par ses tasks, avec LEURS identifiants.
+  const projectTasks = await ctx.client.search('Task', {
+    fields: ['step', 'entity'],
+    filters: [projectFilter(ctx.connection.sgProjectId)],
+    sort: 'id',
+  });
+  const inProject = new Map<number, string>();
+  for (const task of projectTasks) {
+    const ref = asEntityRef(task.step);
+    const parent = asEntityRef(task.entity);
+    // Une étape d'asset ne se propose pas sur un plan, et réciproquement.
+    if (ref && parent?.type === entityType) inProject.set(ref.id, ref.name ?? `step-${ref.id}`);
+  }
+
+  const wanted = options.all || inProject.size === 0 ? null : new Set(inProject.keys());
 
   const records = await ctx.client.search('Step', {
     fields: ['code', 'short_name', 'entity_type', 'color', 'list_order'],
@@ -56,18 +78,8 @@ export async function listSteps(projectId: number, entityType: 'Asset' | 'Shot')
     sort: 'list_order',
   });
 
-  // Étapes déjà employées dans le projet : `Task.department` porte le nom du step.
-  const local = await prisma.task.findMany({
-    where: {
-      OR: [{ shot: { projectId } }, { asset: { projectId } }],
-      department: { not: null },
-    },
-    select: { department: true },
-    distinct: ['department'],
-  });
-  const used = new Set(local.map((t) => (t.department ?? '').toLowerCase()));
-
   const steps = records
+    .filter((r) => !wanted || wanted.has(r.id))
     .map((r, index) => ({
       sgId: r.id,
       code: asString(r.code) ?? `step-${r.id}`,
@@ -75,21 +87,66 @@ export async function listSteps(projectId: number, entityType: 'Asset' | 'Shot')
       entityType,
       color: hexColor(r.color),
       order: asNumber(r.list_order) ?? index,
-      used: used.has((asString(r.code) ?? '').toLowerCase()),
+      used: inProject.has(r.id),
     }))
     .sort((a, b) => Number(b.used) - Number(a.used) || a.order - b.order || a.code.localeCompare(b.code));
 
-  // Un site accumule les étapes au fil des années : ArtFX en a deux nommées « art » et
-  // deux « modeling » pour les assets. Deux lignes identiques dans une liste ne sont pas
-  // un choix, c'est une devinette — on garde la première, qui est celle que le projet
-  // emploie déjà si l'une des deux l'est. La casse ne départage pas : « Modeling » et
-  // « modeling » se lisent pareil à l'écran.
+  // Hors du périmètre du projet, le catalogue du site aligne les homonymes : ArtFX a deux
+  // étapes « art » et deux « modeling » pour les assets. Deux lignes identiques ne sont
+  // pas un choix, c'est une devinette — on garde la première, en préférant celle que le
+  // projet emploie. La casse ne départage pas : « Modeling » et « modeling » se lisent
+  // pareil à l'écran.
   const seen = new Set<string>();
   return steps.filter((s) => {
     const key = s.code.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
+  });
+}
+
+export interface ProjectMember {
+  sgId: number;
+  name: string;
+  email: string | null;
+  /** Identifiant local, quand cette personne a un compte ReView (rapprochement par e-mail). */
+  userId: number | null;
+}
+
+/**
+ * Personnes affectées à ce projet sur le site.
+ *
+ * Le studio en compte des centaines ; le projet, quelques-unes. Proposer l'annuaire
+ * entier pour assigner une tâche revient à ne rien proposer du tout.
+ */
+export async function listProjectMembers(projectId: number): Promise<ProjectMember[]> {
+  const ctx = await openConnection(projectId);
+  const project = await ctx.client.findById('Project', ctx.connection.sgProjectId, ['users']);
+  const refs = Array.isArray(project?.users) ? project.users : [];
+  const ids = refs.map((r) => asEntityRef(r)).filter((r): r is { id: number; type: string } => r !== null);
+  if (ids.length === 0) return [];
+
+  const people = await ctx.client.search('HumanUser', {
+    fields: ['name', 'email', 'login'],
+    filters: [['id', 'in', ids.map((r) => r.id)]],
+    sort: 'name',
+  });
+
+  // Le compte local, quand il existe : assigner dans ShotGrid ET dans ReView d'un geste.
+  const emails = people.map((p) => (asString(p.email) ?? '').toLowerCase()).filter(Boolean);
+  const locals = emails.length
+    ? await prisma.user.findMany({ where: { email: { in: emails } }, select: { id: true, email: true } })
+    : [];
+  const byEmail = new Map(locals.map((u) => [u.email.toLowerCase(), u.id]));
+
+  return people.map((p) => {
+    const email = asString(p.email);
+    return {
+      sgId: p.id,
+      name: asString(p.name) ?? asString(p.login) ?? `#${p.id}`,
+      email,
+      userId: email ? (byEmail.get(email.toLowerCase()) ?? null) : null,
+    };
   });
 }
 
@@ -103,7 +160,14 @@ export async function listSteps(projectId: number, entityType: 'Asset' | 'Shot')
  */
 export async function createTaskFromStep(
   projectId: number,
-  params: { stepSgId: number; parentType: 'asset' | 'shot'; parentId: number; name?: string },
+  params: {
+    stepSgId: number;
+    parentType: 'asset' | 'shot';
+    parentId: number;
+    name?: string;
+    /** Personne à qui confier la tâche, choisie parmi les membres du projet. */
+    assigneeSgId?: number | null;
+  },
   actorEmail: string | null,
 ): Promise<{ taskId: number; sgId: number; name: string }> {
   const ctx = await openConnection(projectId);
@@ -121,11 +185,21 @@ export async function createTaskFromStep(
 
   const name = params.name?.trim() || asString(step.code) || `step-${params.stepSgId}`;
 
+  // L'assignation n'accepte qu'une personne du projet : proposer l'annuaire du studio
+  // permettrait de confier une tâche à quelqu'un qui n'y travaille pas.
+  let assignee: ProjectMember | null = null;
+  if (params.assigneeSgId) {
+    const members = await listProjectMembers(projectId);
+    assignee = members.find((m) => m.sgId === params.assigneeSgId) ?? null;
+    if (!assignee) throw badRequest('Cette personne ne fait pas partie du projet');
+  }
+
   const created = await ctx.client.create('Task', {
     project: { type: 'Project', id: ctx.connection.sgProjectId },
     content: name,
     step: { type: 'Step', id: params.stepSgId },
     entity: { type: parentLink.sgType, id: parentLink.sgId },
+    ...(assignee ? { task_assignees: [{ type: 'HumanUser', id: assignee.sgId }] } : {}),
   });
 
   // Ceinture et bretelles : on relit ce que le site a écrit et on vérifie qu'il s'agit
@@ -148,6 +222,7 @@ export async function createTaskFromStep(
       name,
       type: sgStepToTaskType(department),
       department,
+      ...(assignee?.userId ? { assigneeId: assignee.userId } : {}),
       ...(params.parentType === 'asset' ? { assetId: params.parentId } : { shotId: params.parentId }),
     },
   });
@@ -158,7 +233,12 @@ export async function createTaskFromStep(
     localId: task.id,
     sgType: 'Task',
     sgId: created.id,
-    data: { stepName: department, sgAssignees: [], sgStatusCode: null, durationMinutes: null },
+    data: {
+      stepName: department,
+      sgAssignees: assignee ? [{ id: assignee.sgId, name: assignee.name, email: assignee.email }] : [],
+      sgStatusCode: null,
+      durationMinutes: null,
+    },
   });
 
   logger.info({ projectId, taskId: task.id, sgId: created.id, actorEmail }, 'Task créée depuis une étape');

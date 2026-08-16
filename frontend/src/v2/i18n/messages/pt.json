@@ -2480,5 +2480,7 @@
   "upload.pickTask.steps": "Criar a task em falta",
   "upload.pickTask.createStep": "Criar uma task « {step} » no ShotGrid",
   "upload.pickTask.created": "Task « {name} » criada no ShotGrid",
-  "upload.pickTask.createFailed": "Não foi possível criar a task"
+  "upload.pickTask.createFailed": "Não foi possível criar a task",
+  "upload.pickTask.namePlaceholder": "Nome da task (a etapa por omissão)",
+  "upload.pickTask.noAssignee": "Não atribuída"
 }

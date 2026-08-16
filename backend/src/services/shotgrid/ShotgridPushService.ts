@@ -357,7 +357,14 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     localId: version.id,
     sgType: 'Version',
     sgId: created.id,
-    data: { createdFromReview: true, publishMode: ctx.settings.push.publishMode },
+    data: {
+      createdFromReview: true,
+      publishMode: ctx.settings.push.publishMode,
+      // Le média de cette version est celui qu'on vient d'envoyer : il est déjà ici.
+      // Sans ce marqueur, la synchronisation suivante le retéléchargerait depuis le site
+      // et l'ajouterait à la même version — une copie de plus à chaque passe.
+      mediaImported: true,
+    },
   });
   logger.info(
     { versionId: version.id, sgId: created.id, mode: ctx.settings.push.publishMode },

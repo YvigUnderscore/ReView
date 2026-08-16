@@ -2422,5 +2422,7 @@
   "upload.pickTask.steps": "足りない task を作成",
   "upload.pickTask.createStep": "ShotGrid に「{step}」task を作成",
   "upload.pickTask.created": "ShotGrid に task「{name}」を作成しました",
-  "upload.pickTask.createFailed": "task を作成できませんでした"
+  "upload.pickTask.createFailed": "task を作成できませんでした",
+  "upload.pickTask.namePlaceholder": "task 名（既定は工程名）",
+  "upload.pickTask.noAssignee": "未割り当て"
 }
