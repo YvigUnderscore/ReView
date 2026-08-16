@@ -53,15 +53,12 @@ export default function ProjectPage() {
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const [searchParams, setSearchParams] = useSearchParams();
-  // Le tab vit dans l'URL (deep-links sidebar/favoris/breadcrumb : ?tab=shots&shot=ID,
-  // ?tab=sequences&seq=ID) — back/forward navigateur cohérents (10.A6).
+  // Le tab vit dans l'URL (deep-links sidebar/favoris/breadcrumb : ?tab=sequences&seq=ID)
+  // — back/forward navigateur cohérents (10.A6).
   const tab = searchParams.get('tab') ?? 'overview';
   const setTab = (t: string) => setSearchParams(t === 'overview' ? {} : { tab: t });
-  // L'entité ouverte (drawer shot / accordéon séquence) vit aussi dans l'URL.
-  const focusShot = searchParams.get('shot') ? Number(searchParams.get('shot')) : null;
+  // La séquence ouverte (accordéon) vit dans l'URL. Un plan, lui, a sa page.
   const focusSeq = searchParams.get('seq') ? Number(searchParams.get('seq')) : null;
-  const setFocusShot = (id: number | null) =>
-    setSearchParams(id ? { tab: 'shots', shot: String(id) } : { tab: 'shots' });
   const setFocusSeq = (id: number | null) =>
     setSearchParams(id ? { tab: 'sequences', seq: String(id) } : { tab: 'sequences' });
 
@@ -173,8 +170,6 @@ export default function ProjectPage() {
           shots={shots}
           canManage={canManage}
           reload={loadStructure}
-          focusId={focusShot}
-          onFocus={setFocusShot}
           nomenclature={nomenclature}
           pipeline={pipeline}
         />

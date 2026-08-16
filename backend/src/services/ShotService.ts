@@ -145,7 +145,12 @@ export async function get(id: number) {
     },
   });
   if (!shot) throw notFound('Shot introuvable');
-  return shot;
+  // La miniature n'était calculée que dans la liste : une page de plan n'a pas de liste
+  // derrière elle, et affichait donc un en-tête vide.
+  return {
+    ...shot,
+    thumbnailUrl: await effectiveThumbnailUrl(shot.thumbnailKey, await firstMediaThumbKeyForShot(shot.id)),
+  };
 }
 
 export interface UpdateShotInput {

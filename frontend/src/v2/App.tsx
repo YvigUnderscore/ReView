@@ -24,6 +24,7 @@ import ReviewPage from './pages/ReviewPage';
 import KanbanPage from './pages/KanbanPage';
 import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
+import ShotPage from './pages/ShotPage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import TimelinePlayerPage from './pages/TimelinePlayerPage';
 import ProfilePage from './pages/ProfilePage';
@@ -151,6 +152,14 @@ function AppRoutes() {
               element={
                 <Protected>
                   <TaskPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/shots/:id"
+              element={
+                <Protected>
+                  <ShotPage />
                 </Protected>
               }
             />

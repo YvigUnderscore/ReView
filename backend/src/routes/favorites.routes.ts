@@ -65,7 +65,7 @@ async function resolveEntity(type: EntityType, entityId: number) {
       ? {
           label: `${s.code} · ${s.name}`,
           projectId: s.projectId,
-          to: `/projects/${s.projectId}?tab=shots&shot=${entityId}`,
+          to: `/shots/${entityId}`,
         }
       : null;
   }

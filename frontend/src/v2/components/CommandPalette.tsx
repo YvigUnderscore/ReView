@@ -187,11 +187,7 @@ export default function CommandPalette({
           {results.shots.length > 0 && (
             <CommandGroup heading={t('shots.title')}>
               {results.shots.map((s) => (
-                <CommandItem
-                  key={s.id}
-                  value={`shot-${s.id}`}
-                  onSelect={() => go(`/projects/${s.projectId}?tab=shots&shot=${s.id}`)}
-                >
+                <CommandItem key={s.id} value={`shot-${s.id}`} onSelect={() => go(`/shots/${s.id}`)}>
                   <Film size={15} className="text-muted-foreground" />
                   <span className="truncate">{s.code}</span>
                   <span className="truncate text-xs text-muted-foreground">{s.name}</span>

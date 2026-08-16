@@ -7,85 +7,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
-import TaskCards from '../asset/AssetTaskCards';
-import type { AssetOverview } from '../../types/api';
 import { useAssetsQuery } from '../../lib/queries';
-import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '../../components/ui/sheet';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import { ASSET_TYPES, type AssetRef, type Shot } from './projectTypes';
+import { ASSET_TYPES, type AssetRef } from '../project/projectTypes';
 import { useT } from '../../i18n';
 
 /**
- * Détail d'un shot en drawer latéral (10.C1) : miniature, tâches (avec accès
- * direct à la review du dernier média), assets rattachés. Ouverture pilotée par
- * l'URL (?tab=shots&shot=ID) — back/forward et partage de lien cohérents.
- */
-export default function ShotDetailDrawer({
-  shot,
-  projectId,
-  canManage,
-  onClose,
-  reload,
-}: {
-  shot: Shot | null;
-  projectId: number;
-  canManage: boolean;
-  onClose: () => void;
-  reload: () => Promise<void>;
-}) {
-  return (
-    <Sheet
-      open={!!shot}
-      onOpenChange={(o) => {
-        if (!o) onClose();
-      }}
-    >
-      <SheetContent>
-        {shot && (
-          <>
-            <SheetHeader>
-              <SheetTitle>
-                {shot.code} · {shot.name}
-              </SheetTitle>
-              {shot.thumbnailUrl && (
-                <img
-                  src={shot.thumbnailUrl}
-                  alt=""
-                  className="mt-2 h-36 w-full rounded-md border border-border object-cover"
-                />
-              )}
-            </SheetHeader>
-            <SheetBody>
-              <ShotTasks shotId={shot.id} projectId={projectId} />
-              <ShotAssets shotId={shot.id} projectId={projectId} canManage={canManage} reload={reload} />
-            </SheetBody>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-/**
- * Tâches du plan, en cartes — exactement l'écran d'un asset.
+ * Assets rattachés à un plan : lister, détacher, rattacher un existant, créer + rattacher.
  *
- * La liste à plat qui vivait ici ne montrait ni les versions ni les brouillons : tout ce
- * qu'un DCC publiait sous une tâche restait invisible depuis le plan. Un plan et un asset
- * se travaillent de la même façon ; leur donner deux écrans obligeait à apprendre deux
- * fois la même chose.
+ * Seul endroit de l'application qui écrit `POST|DELETE /api/shots/:id/assets` — il a
+ * quitté le tiroir de plan avec lui, sans quoi ces gestes auraient disparu.
  */
-function ShotTasks({ shotId, projectId }: { shotId: number; projectId: number }) {
-  const { data, isLoading } = useQuery({
-    queryKey: qk.shotTree(shotId),
-    queryFn: () => api.get<AssetOverview>(`/api/shots/${shotId}/tree`),
-  });
-
-  if (isLoading) return <SkeletonRows count={2} />;
-  return <TaskCards groups={data?.groups ?? []} projectId={projectId} />;
-}
-
-// Assets rattachés au shot : lister, détacher, rattacher un existant, créer + rattacher
-function ShotAssets({
+export default function ShotAssets({
   shotId,
   projectId,
   canManage,
@@ -94,7 +27,8 @@ function ShotAssets({
   shotId: number;
   projectId: number;
   canManage: boolean;
-  reload: () => Promise<void>;
+  /** Rafraîchir la liste d'où l'on vient, quand il y en a une. */
+  reload?: () => void;
 }) {
   const tr = useT();
   const qc = useQueryClient();
@@ -113,7 +47,7 @@ function ShotAssets({
       qc.invalidateQueries({ queryKey: qk.shot(shotId) }),
       qc.invalidateQueries({ queryKey: qk.assets(projectId) }),
     ]);
-    reload();
+    reload?.();
   };
   const linkExisting = async () => {
     if (!pick) return;

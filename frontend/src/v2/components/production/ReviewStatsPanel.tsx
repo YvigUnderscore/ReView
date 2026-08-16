@@ -65,10 +65,10 @@ function ConvergenceRow({ seq }: { seq: SequenceConvergence }) {
   );
 }
 
-export default function ReviewStatsPanel({ stats, projectId }: { stats: ProjectStats; projectId: number }) {
+export default function ReviewStatsPanel({ stats }: { stats: ProjectStats }) {
   const tr = useT();
   const t = stats.totals;
-  const shotHref = (shotId: number) => `/projects/${projectId}?tab=shots&shot=${shotId}`;
+  const shotHref = (shotId: number) => `/shots/${shotId}`;
 
   return (
     <div className="space-y-6">

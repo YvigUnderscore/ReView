@@ -58,7 +58,7 @@ export default function ProductionTab({ projectId }: { projectId: number }) {
       {active.error && <p className="text-sm text-destructive">{active.error.message}</p>}
       {active.isLoading && <p className="text-sm text-muted-foreground">{t('common.loading')}</p>}
 
-      {view === 'stats' && statsQ.data && <ReviewStatsPanel stats={statsQ.data} projectId={projectId} />}
+      {view === 'stats' && statsQ.data && <ReviewStatsPanel stats={statsQ.data} />}
       {view === 'calendar' && scheduleQ.data && <DeadlineCalendar tasks={scheduleQ.data.tasks} />}
       {view === 'gantt' && scheduleQ.data && <SequenceGantt tasks={scheduleQ.data.tasks} />}
 

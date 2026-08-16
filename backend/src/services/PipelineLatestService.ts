@@ -410,7 +410,10 @@ export async function shotOverview(shotId: number, userId: number): Promise<Asse
   if (!shot) throw notFound('Shot introuvable');
   const { departments } = await resolveProjectSettingsById(shot.projectId);
 
-  const groups = await shotTree(shotId, departments, userId);
+  const [groups, latestMap] = await Promise.all([
+    shotTree(shotId, departments, userId),
+    latestForShots([shotId], departments),
+  ]);
   const signedGroups = await Promise.all(
     groups.map(async (g) => ({
       ...g,
@@ -428,8 +431,24 @@ export async function shotOverview(shotId: number, userId: number): Promise<Asse
     })),
   );
 
-  // La « version qui fait foi » d'un plan se déduit du même classement que pour un asset,
-  // mais son calcul est écrit pour les assets : on s'en tient ici à l'arbre, qui est ce
-  // que l'écran affiche.
-  return { departments, groups: signedGroups, latest: null };
+  const pick = latestMap.get(shotId) ?? null;
+  const nameOf = (key: string | null) =>
+    key ? (departments.find((d) => d.key.toLowerCase() === key.toLowerCase())?.name ?? key) : null;
+
+  return {
+    departments,
+    groups: signedGroups,
+    latest: pick
+      ? {
+          versionId: pick.versionId,
+          versionName: pick.versionName,
+          department: pick.department,
+          departmentName: nameOf(pick.department),
+          taskId: pick.taskId,
+          taskName: pick.taskName,
+          createdAt: pick.createdAt,
+          media: pick.media ? await toMediaView(pick.media) : null,
+        }
+      : null,
+  };
 }

@@ -12,7 +12,6 @@ import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../../compone
 import ConfirmDialog from '../../components/ConfirmDialog';
 import BatchGenerator from '../../components/BatchGenerator';
 import EmptyState from '../../components/ui/empty-state';
-import ShotDetailDrawer from './ShotDetailDrawer';
 import ShotEditDialog from './ShotEditDialog';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
 import type { PipelineSettings } from '../../types/api';
@@ -31,8 +30,6 @@ export default function ShotsTab({
   shots,
   canManage,
   reload,
-  focusId = null,
-  onFocus,
   nomenclature,
   pipeline,
 }: {
@@ -41,8 +38,6 @@ export default function ShotsTab({
   shots: Shot[];
   canManage: boolean;
   reload: () => Promise<void>;
-  focusId?: number | null;
-  onFocus: (id: number | null) => void;
   nomenclature: Nomenclature;
   pipeline: PipelineSettings;
 }) {
@@ -55,7 +50,6 @@ export default function ShotsTab({
   const [error, setError] = useState<string | null>(null);
 
   // Drawer piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
-  const openShot = focusId != null ? (shots.find((s) => s.id === focusId) ?? null) : null;
 
   const sortedSequences = sortByCode(sequences);
 
@@ -174,8 +168,7 @@ export default function ShotsTab({
                 <EntityCard
                   key={shot.id}
                   view={view}
-                  onClick={() => onFocus(focusId === shot.id ? null : shot.id)}
-                  active={focusId === shot.id}
+                  to={`/shots/${shot.id}`}
                   title={`${shot.code} · ${shot.name}`}
                   subtitle={
                     t('task.count', { count: shot._count?.tasks ?? 0 }) +
@@ -194,15 +187,6 @@ export default function ShotsTab({
           </EntityContainer>
         </section>
       ))}
-
-      {/* Détail du shot ouvert : drawer latéral (remplace l'accordéon inline) */}
-      <ShotDetailDrawer
-        shot={openShot}
-        projectId={projectId}
-        canManage={canManage}
-        onClose={() => onFocus(null)}
-        reload={reload}
-      />
 
       {editing && (
         <ShotEditDialog

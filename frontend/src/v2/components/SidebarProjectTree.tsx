@@ -91,12 +91,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
     if (shots.length === 0)
       return <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">{t('sequences.noShot')}</p>;
     return shots.map((s) => (
-      <Link
-        key={s.id}
-        to={`/projects/${projectId}?tab=shots&shot=${s.id}`}
-        title={`${s.code} — ${s.name}`}
-        className={`${rowClass} ml-6`}
-      >
+      <Link key={s.id} to={`/shots/${s.id}`} title={`${s.code} — ${s.name}`} className={`${rowClass} ml-6`}>
         <Film size={12} className="shrink-0" />
         <span className="truncate">{s.code}</span>
       </Link>

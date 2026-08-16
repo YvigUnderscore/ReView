@@ -70,10 +70,7 @@ export default function TaskPage() {
         {task?.shot && (
           <>
             <ChevronRight size={12} />
-            <Link
-              to={projectPath(task.shot.project, `?tab=shots&shot=${task.shot.id}`)}
-              className="hover:text-foreground"
-            >
+            <Link to={`/shots/${task.shot.id}`} className="hover:text-foreground">
               {task.shot.sequence ? `${task.shot.sequence.code} · ` : ''}
               {task.shot.code}
             </Link>

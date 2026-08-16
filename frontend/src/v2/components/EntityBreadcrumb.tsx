@@ -59,8 +59,7 @@ function toSegments(t: Tr, ctx: BreadcrumbContext, tail?: string): Segment[] {
       label: ctx.sequence.code,
       to: `/projects/${pslug}?tab=sequences&seq=${ctx.sequence.id}`,
     });
-  if (ctx.shot)
-    segments.push({ label: ctx.shot.code, to: `/projects/${pslug}?tab=shots&shot=${ctx.shot.id}` });
+  if (ctx.shot) segments.push({ label: ctx.shot.code, to: `/shots/${ctx.shot.id}` });
   if (ctx.asset) segments.push({ label: ctx.asset.name, to: `/assets/${ctx.asset.id}` });
   if (ctx.task) segments.push({ label: ctx.task.name, to: `/tasks/${ctx.task.id}` });
   if (ctx.version) segments.push({ label: ctx.version.name, to: ctx.task ? `/tasks/${ctx.task.id}` : null });
