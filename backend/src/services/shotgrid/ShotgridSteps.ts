@@ -56,6 +56,10 @@ export async function listSteps(
   const ctx = await openConnection(projectId);
   if (!can(ctx.settings, 'tasks', 'read')) return [];
 
+  // Ce que le studio a déclaré pour ce projet : la seule liste qui fasse autorité, faute
+  // que le site publie sa propre visibilité. Elle l'emporte sur toute déduction.
+  const declared = ctx.settings.steps?.[entityType === 'Asset' ? 'asset' : 'shot'] ?? [];
+
   // Ce que le projet emploie : les étapes portées par ses tasks, avec LEURS identifiants.
   const projectTasks = await ctx.client.search('Task', {
     fields: ['step', 'entity'],
@@ -70,7 +74,10 @@ export async function listSteps(
     if (ref && parent?.type === entityType) inProject.set(ref.id, ref.name ?? `step-${ref.id}`);
   }
 
-  const wanted = options.all || inProject.size === 0 ? null : new Set(inProject.keys());
+  const wanted =
+    options.all || (declared.length === 0 && inProject.size === 0)
+      ? null
+      : new Set(declared.length > 0 ? declared : inProject.keys());
 
   const records = await ctx.client.search('Step', {
     fields: ['code', 'short_name', 'entity_type', 'color', 'list_order'],
@@ -91,7 +98,10 @@ export async function listSteps(
     }))
     .sort((a, b) => Number(b.used) - Number(a.used) || a.order - b.order || a.code.localeCompare(b.code));
 
-  return dedupeSteps(steps);
+  // Une liste déclarée est un choix, pas une devinette : on la rend telle quelle, sans
+  // écarter d'homonymes. Si le studio a retenu deux étapes qui se ressemblent, c'est
+  // qu'elles se distinguent pour lui.
+  return declared.length > 0 && !options.all ? steps : dedupeSteps(steps);
 }
 
 /**

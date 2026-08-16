@@ -28,6 +28,8 @@ export type SgDomain = 'hierarchy' | 'tasks' | 'statuses' | 'versions' | 'notes'
 export interface SgSettings {
   domains: Record<SgDomain, SgAccess>;
   lockLocalCreation: boolean;
+  /** Étapes de pipeline retenues pour ce projet, par identifiant ShotGrid. */
+  steps: { asset: number[]; shot: number[] };
   eventMode: 'webhook' | 'polling' | 'manual';
   pollingIntervalSec: number;
   reconcile: { enabled: boolean; hour: number; lookbackHours: number; onBoot: boolean };

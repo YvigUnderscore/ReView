@@ -8,6 +8,7 @@ import { useT, intlLocale } from '../../i18n';
 import { useDeleteSgConnection, useSgConnection } from '../../lib/shotgridApi';
 import SgConnectionSetup from '../../components/shotgrid/SgConnectionSetup';
 import SgSettingsPanel from '../../components/shotgrid/SgSettingsPanel';
+import SgStepsPanel from '../../components/shotgrid/SgStepsPanel';
 import SgSyncPanel from '../../components/shotgrid/SgSyncPanel';
 import SgDiffPanel from '../../components/shotgrid/SgDiffPanel';
 import SgVersionsPanel from '../../components/shotgrid/SgVersionsPanel';
@@ -114,7 +115,14 @@ export default function ShotgridTab({ projectId, canManage }: { projectId: numbe
       {section === 'sync' && <SgSyncPanel connection={connection} canManage={canManage} />}
       {section === 'diff' && <SgDiffPanel connection={connection} canManage={canManage} />}
       {section === 'versions' && <SgVersionsPanel projectId={projectId} canManage={canManage} />}
-      {section === 'settings' && <SgSettingsPanel connection={connection} canManage={canManage} />}
+      {section === 'settings' && (
+        <div className="space-y-6">
+          <SgSettingsPanel connection={connection} canManage={canManage} />
+          {/* Les étapes retenues vivent avec les réglages : c'est une décision de projet,
+              prise une fois, pas un geste de synchronisation. */}
+          <SgStepsPanel connection={connection} canManage={canManage} />
+        </div>
+      )}
     </div>
   );
 }

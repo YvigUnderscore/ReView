@@ -29,14 +29,19 @@ export interface SgPipelineStep {
  * elles existent avant toute tâche. Demandées seulement quand on en a besoin : la liste
  * vient du site, elle n'a rien à faire dans le chargement d'une page.
  */
-export function useSgSteps(projectId: number, entityType: 'Asset' | 'Shot', enabled = true) {
+export function useSgSteps(
+  projectId: number,
+  entityType: 'Asset' | 'Shot',
+  enabled = true,
+  options: { all?: boolean } = {},
+) {
   const { data: connection } = useSgConnection(projectId);
   return useQuery({
-    queryKey: ['shotgrid', 'steps', projectId, entityType],
+    queryKey: ['shotgrid', 'steps', projectId, entityType, options.all ?? false],
     queryFn: () =>
       api
         .get<{ steps: SgPipelineStep[] }>(
-          `/api/shotgrid/projects/${projectId}/steps?entityType=${entityType}`,
+          `/api/shotgrid/projects/${projectId}/steps?entityType=${entityType}${options.all ? '&all=true' : ''}`,
         )
         .then((r) => r.steps),
     enabled: enabled && Boolean(connection?.active),

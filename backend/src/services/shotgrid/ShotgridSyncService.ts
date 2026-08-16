@@ -103,10 +103,21 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         journal,
       );
       if (JSON.stringify(versionMap) !== JSON.stringify(ctx.settings.versionStatusMap)) {
-        const merged = { ...ctx.settings, versionStatusMap: versionMap };
-        await prisma.shotgridConnection.update({
-          where: { id: ctx.connection.id },
-          data: { settings: merged as never },
+        // Les réglages sont relus juste avant d'écrire, et seul le champ concerné est
+        // remplacé. Repartir de la copie prise au début de la synchronisation annulait
+        // tout ce qu'un humain avait réglé pendant qu'elle tournait — sans trace, et sans
+        // que rien ne l'en avertisse.
+        await prisma.$transaction(async (tx) => {
+          const fresh = await tx.shotgridConnection.findUnique({
+            where: { id: ctx.connection.id },
+            select: { settings: true },
+          });
+          await tx.shotgridConnection.update({
+            where: { id: ctx.connection.id },
+            data: {
+              settings: { ...((fresh?.settings as object) ?? {}), versionStatusMap: versionMap } as never,
+            },
+          });
         });
         ctx.settings.versionStatusMap = versionMap;
         pullCtx.settings.versionStatusMap = versionMap;

@@ -41,6 +41,20 @@ export const shotgridSettingsSchema = z.object({
   domains: domainsSchema.default({}),
   /** Création locale de sequences/shots/assets interdite tant que ShotGrid mène. */
   lockLocalCreation: z.boolean().default(true),
+  /**
+   * Étapes de pipeline retenues pour ce projet, par identifiant ShotGrid.
+   *
+   * ShotGrid restreint les étapes proposées à celles dont la visibilité est activée dans
+   * le projet, mais ne l'expose par aucun endpoint de son API REST. Le studio déclare
+   * donc ici ce que son site sait sans le dire. Liste vide = on déduit des tasks
+   * existantes, et à défaut on propose le catalogue.
+   */
+  steps: z
+    .object({
+      asset: z.array(z.number().int().positive()).max(200).default([]),
+      shot: z.array(z.number().int().positive()).max(200).default([]),
+    })
+    .default({}),
   eventMode: z.enum(['webhook', 'polling', 'manual']).default('webhook'),
   pollingIntervalSec: z.number().int().min(15).max(3600).default(60),
   /** Réconciliation périodique : rattrape ce qu'un webhook perdu ou une coupure a manqué. */
