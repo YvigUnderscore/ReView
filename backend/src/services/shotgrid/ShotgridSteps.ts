@@ -91,16 +91,33 @@ export async function listSteps(
     }))
     .sort((a, b) => Number(b.used) - Number(a.used) || a.order - b.order || a.code.localeCompare(b.code));
 
-  // Hors du périmètre du projet, le catalogue du site aligne les homonymes : ArtFX a deux
-  // étapes « art » et deux « modeling » pour les assets. Deux lignes identiques ne sont
-  // pas un choix, c'est une devinette — on garde la première, en préférant celle que le
-  // projet emploie. La casse ne départage pas : « Modeling » et « modeling » se lisent
-  // pareil à l'écran.
-  const seen = new Set<string>();
+  return dedupeSteps(steps);
+}
+
+/**
+ * Une étape par nom, une étape par code court.
+ *
+ * ShotGrid restreint les étapes proposées à celles dont la visibilité est activée dans le
+ * projet, mais ne l'expose nulle part : ni entité (`StepVisibility` n'existe pas), ni
+ * champ de projet sur `Step`, ni liste de valeurs dans le schéma contextualisé — vérifié
+ * contre le site. À défaut, on écarte les homonymes, qui sont exactement ce que ce
+ * réglage masque : un site accumule les étapes au fil des années, et ArtFX en a deux
+ * nommées « art », deux « modeling ». Deux lignes qui se lisent pareil ne sont pas un
+ * choix, c'est une devinette.
+ *
+ * Le nom ET le code court départagent : « lookdev/ldv » et « Look Development/ldv »
+ * désignent la même étape pour qui la lit. La première l'emporte, et l'ordre a placé en
+ * tête celles que le projet emploie déjà — donc celles qui sont sûrement les bonnes.
+ */
+export function dedupeSteps(steps: PipelineStep[]): PipelineStep[] {
+  const seenCode = new Set<string>();
+  const seenShort = new Set<string>();
   return steps.filter((s) => {
-    const key = s.code.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const code = s.code.trim().toLowerCase();
+    const short = s.shortName.trim().toLowerCase();
+    if (seenCode.has(code) || (short && seenShort.has(short))) return false;
+    seenCode.add(code);
+    if (short) seenShort.add(short);
     return true;
   });
 }
