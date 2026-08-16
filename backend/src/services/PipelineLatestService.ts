@@ -202,10 +202,34 @@ export async function assetTree(
   departments: Department[],
   userId: number,
 ): Promise<DepartmentGroup<AssetTreeTask>[]> {
+  return entityTree({ assetId }, departments, userId);
+}
+
+/**
+ * Même arbre pour un plan.
+ *
+ * Un plan traverse ses étapes exactement comme un asset — anim, lighting, compositing —
+ * et son travail se lit de la même façon : une carte par tâche, ses versions dessous. Il
+ * n'y a aucune raison que les deux écrans divergent, ni deux fois la même requête à
+ * écrire. Seule la colonne qui porte le rattachement change.
+ */
+export async function shotTree(
+  shotId: number,
+  departments: Department[],
+  userId: number,
+): Promise<DepartmentGroup<AssetTreeTask>[]> {
+  return entityTree({ shotId }, departments, userId);
+}
+
+async function entityTree(
+  parent: { assetId: number } | { shotId: number },
+  departments: Department[],
+  userId: number,
+): Promise<DepartmentGroup<AssetTreeTask>[]> {
   const visible = { deletedAt: null, OR: [{ published: true }, { uploaderId: userId }] };
   const [tasks, looseVersions] = await Promise.all([
     prisma.task.findMany({
-      where: { assetId },
+      where: parent,
       orderBy: [{ order: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
@@ -223,11 +247,16 @@ export async function assetTree(
         },
       },
     }),
-    prisma.version.findMany({
-      where: { assetId, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-      select: { ...versionSelect, published: true, media: { where: visible, select: mediaSelect } },
-    }),
+    // Versions accrochées directement au parent, sans tâche. Un plan n'en porte jamais
+    // (la base ne le permet pas), mais un asset oui : elles existent, personne ne doit
+    // les perdre.
+    'assetId' in parent
+      ? prisma.version.findMany({
+          where: { assetId: parent.assetId, deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+          select: { ...versionSelect, published: true, media: { where: visible, select: mediaSelect } },
+        })
+      : Promise.resolve([]),
   ]);
 
   const toVersion = (v: (typeof looseVersions)[number]): AssetTreeVersion => ({
@@ -364,4 +393,43 @@ export async function assetOverview(assetId: number, userId: number): Promise<As
         }
       : null,
   };
+}
+
+/**
+ * Le plan vu comme un dossier — pendant exact de `assetOverview`.
+ *
+ * Un plan et un asset se travaillent de la même façon : des étapes, des tâches, des
+ * versions. Leur donner deux écrans différents obligerait l'équipe à apprendre deux fois
+ * la même chose, et à nous en tenir deux fois la mécanique à jour.
+ */
+export async function shotOverview(shotId: number, userId: number): Promise<AssetOverview> {
+  const shot = await prisma.shot.findFirst({
+    where: { id: shotId, deletedAt: null },
+    select: { projectId: true },
+  });
+  if (!shot) throw notFound('Shot introuvable');
+  const { departments } = await resolveProjectSettingsById(shot.projectId);
+
+  const groups = await shotTree(shotId, departments, userId);
+  const signedGroups = await Promise.all(
+    groups.map(async (g) => ({
+      ...g,
+      items: await Promise.all(
+        g.items.map(async (task) => ({
+          ...task,
+          versions: await Promise.all(
+            task.versions.map(async (v) => ({
+              ...v,
+              media: await Promise.all(v.media.map(toMediaView)),
+            })),
+          ),
+        })),
+      ),
+    })),
+  );
+
+  // La « version qui fait foi » d'un plan se déduit du même classement que pour un asset,
+  // mais son calcul est écrit pour les assets : on s'en tient ici à l'arbre, qui est ce
+  // que l'écran affiche.
+  return { departments, groups: signedGroups, latest: null };
 }

@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import TaskCards from '../asset/AssetTaskCards';
+import type { AssetOverview } from '../../types/api';
 import { useAssetsQuery } from '../../lib/queries';
 import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '../../components/ui/sheet';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import { ASSET_TYPES, TASK_TYPES, type AssetRef, type Shot, type Task } from './projectTypes';
+import { ASSET_TYPES, type AssetRef, type Shot } from './projectTypes';
 import { useT } from '../../i18n';
-import TaskStatusBadge from '../../components/TaskStatusBadge';
 
 /**
  * Détail d'un shot en drawer latéral (10.C1) : miniature, tâches (avec accès
@@ -56,7 +56,7 @@ export default function ShotDetailDrawer({
               )}
             </SheetHeader>
             <SheetBody>
-              <ShotTasks shotId={shot.id} canManage={canManage} />
+              <ShotTasks shotId={shot.id} projectId={projectId} />
               <ShotAssets shotId={shot.id} projectId={projectId} canManage={canManage} reload={reload} />
             </SheetBody>
           </>
@@ -66,106 +66,22 @@ export default function ShotDetailDrawer({
   );
 }
 
-function ShotTasks({ shotId, canManage }: { shotId: number; canManage: boolean }) {
-  const tr = useT();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
-  const { data, isError } = useQuery({
-    queryKey: qk.tasks(shotId),
-    queryFn: () => api.get<{ items: Task[] }>(`/api/tasks?shotId=${shotId}`).then((d) => d.items),
+/**
+ * Tâches du plan, en cartes — exactement l'écran d'un asset.
+ *
+ * La liste à plat qui vivait ici ne montrait ni les versions ni les brouillons : tout ce
+ * qu'un DCC publiait sous une tâche restait invisible depuis le plan. Un plan et un asset
+ * se travaillent de la même façon ; leur donner deux écrans obligeait à apprendre deux
+ * fois la même chose.
+ */
+function ShotTasks({ shotId, projectId }: { shotId: number; projectId: number }) {
+  const { data, isLoading } = useQuery({
+    queryKey: qk.shotTree(shotId),
+    queryFn: () => api.get<AssetOverview>(`/api/shots/${shotId}/tree`),
   });
-  const tasks = isError ? [] : (data ?? null);
-  const [task, setTask] = useState({ name: '', type: 'ANIMATION' });
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!task.name.trim()) return;
-    try {
-      await api.post('/api/tasks', { shotId, ...task });
-      toast.success(tr('task.created', { name: task.name }));
-      setTask({ name: '', type: 'ANIMATION' });
-      qc.invalidateQueries({ queryKey: qk.tasks(shotId) });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : tr('shot.taskFailed'));
-    }
-  };
-
-  // Ouvre la review du média le plus récent de la tâche (version la plus récente d'abord).
-  const openReview = async (taskId: number) => {
-    try {
-      const { versions } = await api.get<{ versions: { id: number }[] }>(`/api/versions?taskId=${taskId}`);
-      for (const v of versions) {
-        const { version } = await api.get<{ version: { media: { id: number }[] } }>(`/api/versions/${v.id}`);
-        if (version.media.length > 0) {
-          navigate(`/review/${version.media[0].id}`);
-          return;
-        }
-      }
-      toast.info(tr('task.noMediaToReview'));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : tr('common.error.generic'));
-    }
-  };
-
-  return (
-    <section>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {tr('task.plural')} {tasks && <span className="normal-case">· {tasks.length}</span>}
-      </h3>
-      {tasks === null ? (
-        <SkeletonRows count={2} />
-      ) : (
-        <ul className="space-y-1">
-          {tasks.length ? (
-            tasks.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center gap-1 rounded-md border border-border/60 bg-background px-2 py-1.5"
-              >
-                <Link to={`/tasks/${t.id}`} className="min-w-0 flex-1 truncate text-sm hover:text-primary">
-                  {t.name} <span className="text-xs text-muted-foreground">({t.type})</span>
-                </Link>
-                <TaskStatusBadge status={t.status} pipelineStatusId={t.pipelineStatusId} />
-                <button
-                  onClick={() => openReview(t.id)}
-                  title={tr('home.openLastReview')}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-primary"
-                >
-                  <Play size={14} />
-                </button>
-              </li>
-            ))
-          ) : (
-            <li className="px-2 py-1 text-xs text-muted-foreground">{tr('task.noTaskYet')}</li>
-          )}
-        </ul>
-      )}
-      {canManage && (
-        <form onSubmit={submit} className="mt-2 flex gap-2">
-          <input
-            className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
-            placeholder={tr('shot.newTaskPlaceholder')}
-            value={task.name}
-            onChange={(e) => setTask((s) => ({ ...s, name: e.target.value }))}
-          />
-          <select
-            className="rounded border border-input bg-background px-1 py-1 text-xs"
-            value={task.type}
-            onChange={(e) => setTask((s) => ({ ...s, type: e.target.value }))}
-          >
-            {TASK_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <button className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
-            {tr('shot.newTask')}
-          </button>
-        </form>
-      )}
-    </section>
-  );
+  if (isLoading) return <SkeletonRows count={2} />;
+  return <TaskCards groups={data?.groups ?? []} projectId={projectId} />;
 }
 
 // Assets rattachés au shot : lister, détacher, rattacher un existant, créer + rattacher

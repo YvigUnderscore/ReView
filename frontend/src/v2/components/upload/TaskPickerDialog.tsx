@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useMemo, useState } from 'react';
-import { Box, Clapperboard, FileStack, Layers, Loader2, Plus, Search } from 'lucide-react';
+import { Box, Clapperboard, FileStack, Layers, Loader2, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import PipelineStatusBadge from '../shotgrid/PipelineStatusBadge';
 import { toast } from 'sonner';
@@ -55,7 +55,6 @@ export default function TaskPickerDialog({
   onPick: (taskId: number | null) => void;
 }) {
   const t = useT();
-  const [query, setQuery] = useState('');
   const [creating, setCreating] = useState<number | null>(null);
   // Le projet entier n'est demandé qu'une fois le dialogue ouvert : sur un gros projet,
   // ce n'est pas une liste à charger à chaque affichage de page.
@@ -75,40 +74,34 @@ export default function TaskPickerDialog({
   const [draftName, setDraftName] = useState('');
   const [assignee, setAssignee] = useState('');
 
+  /**
+   * Le reste du projet, du même bord seulement.
+   *
+   * Proposer les tâches d'un plan pendant qu'on dépose sur un asset — ou l'inverse —
+   * n'offre pas un choix : cela range le rendu sous une entité qui n'a rien à voir, et
+   * ShotGrid le reçoit au mauvais endroit.
+   */
   const others = useMemo(() => {
     const known = new Set(tasks.map((task) => task.id));
-    const needle = query.trim().toLowerCase();
-    return projectTasks
-      .filter((task) => !known.has(task.id))
-      .filter(
-        (task) =>
-          !needle ||
-          task.name.toLowerCase().includes(needle) ||
-          task.parentName.toLowerCase().includes(needle) ||
-          (task.department ?? '').toLowerCase().includes(needle),
-      );
-  }, [projectTasks, query, tasks]);
+    return projectTasks.filter((task) => !known.has(task.id) && (!parent || task.parentKind === parent.kind));
+  }, [projectTasks, tasks, parent]);
 
   const choose = (taskId: number | null) => {
     onOpenChange(false);
-    setQuery('');
     onPick(taskId);
   };
 
-  /** Étapes qu'aucune tâche de l'entité ne couvre encore. */
+  /**
+   * Étapes qu'aucune tâche de l'entité ne couvre encore.
+   *
+   * Toutes déroulées, sans recherche : la liste est celle du projet — celles que le
+   * studio a déclarées, ou à défaut celles que ses tasks emploient — et elle tient à
+   * l'écran. Chercher dans cinq lignes n'aide personne.
+   */
   const freeSteps = useMemo(() => {
     const covered = new Set(tasks.map((task) => (task.department ?? task.name).toLowerCase()));
-    const needle = query.trim().toLowerCase();
-    return (
-      steps
-        .filter((step) => !covered.has(step.code.toLowerCase()))
-        .filter((step) => !needle || step.code.toLowerCase().includes(needle))
-        // Sans recherche, on s'en tient à ce que le projet emploie déjà : un site en
-        // accumule des dizaines, et les dérouler toutes noierait le choix courant.
-        .filter((step) => Boolean(needle) || step.used)
-        .slice(0, 12)
-    );
-  }, [steps, tasks, query]);
+    return steps.filter((step) => !covered.has(step.code.toLowerCase()));
+  }, [steps, tasks]);
 
   const createFromStep = async (step: { sgId: number; code: string }) => {
     if (!parent) return;
@@ -137,21 +130,6 @@ export default function TaskPickerDialog({
           <DialogTitle>{t('upload.pickTask.title')}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">{t('upload.pickTask.hint')}</p>
-
-        {/* La recherche sert autant à retrouver une tâche ailleurs dans le projet qu'à
-            atteindre une étape que le projet n'emploie pas encore : un site en compte
-            des dizaines, et seules celles déjà utilisées sont déroulées d'office. */}
-        {(projectTasks.length > tasks.length || steps.length > 0) && (
-          <label className="mt-2 flex items-center gap-2 rounded-md border border-input bg-background px-2">
-            <Search size={13} className="shrink-0 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('upload.pickTask.search')}
-              className="w-full bg-transparent py-1.5 text-sm outline-none"
-            />
-          </label>
-        )}
 
         <div className="mt-2 max-h-80 space-y-1.5 overflow-y-auto">
           {tasks.map((task) => (

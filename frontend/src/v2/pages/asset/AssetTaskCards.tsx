@@ -8,6 +8,7 @@ import { reviewPath } from '../../lib/slug';
 import EmptyState from '../../components/ui/empty-state';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
+import { useSgSteps } from '../../lib/shotgridTasksApi';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 import { useT, intlLocale } from '../../i18n';
 import { scheduleLabel } from './taskSchedule';
@@ -25,12 +26,21 @@ import type { AssetTreeTask, AssetTreeVersion, DepartmentGroup } from '../../typ
 export default function AssetTaskCards({
   groups,
   projectId,
+  entityType = 'Asset',
 }: {
   groups: DepartmentGroup<AssetTreeTask>[];
   projectId: number;
+  /** Le bord auquel ces tâches appartiennent — les étapes en dépendent, et leurs couleurs. */
+  entityType?: 'Asset' | 'Shot';
 }) {
   const t = useT();
   const navigate = useNavigate();
+  // Les couleurs viennent du site : c'est ainsi que « groom » est vert ici comme
+  // là-bas, et qu'un pipe se relit d'un coup d'œil entre les deux outils. La liste est
+  // déjà en cache pour ce projet, elle ne coûte pas une requête de plus.
+  const { data: steps = [] } = useSgSteps(projectId, entityType);
+  const colourOf = (task: AssetTreeTask): string | null =>
+    steps.find((s) => s.code.toLowerCase() === (task.department ?? task.name).toLowerCase())?.color ?? null;
   const [openTaskId, setOpenTaskId] = useState<number | 'loose' | null>(null);
 
   const allTasks = groups.flatMap((g) => g.items.map((task) => ({ task, group: g })));
@@ -72,6 +82,7 @@ export default function AssetTaskCards({
                 key={task.id ?? 'loose'}
                 task={task}
                 projectId={projectId}
+                colour={colourOf(task)}
                 // Une tâche a sa page : c'est là qu'on dépose un média, qu'on publie et
                 // qu'on voit les brouillons. La vue repliée dans cette page ne savait rien
                 // faire de tout cela — un brouillon vide y devenait un cul-de-sac.
@@ -106,10 +117,13 @@ function TaskSchedule({ task }: { task: AssetTreeTask }) {
 function TaskCard({
   task,
   projectId,
+  colour,
   onOpen,
 }: {
   task: AssetTreeTask;
   projectId: number;
+  /** Couleur de l'étape sur le site, quand elle en a une. */
+  colour: string | null;
   onOpen: () => void;
 }) {
   const t = useT();
@@ -123,6 +137,7 @@ function TaskCard({
       type="button"
       onClick={onOpen}
       className="group flex w-full flex-col overflow-hidden rounded-md border border-border bg-card text-left transition-colors hover:border-primary/60"
+      style={colour ? { borderLeft: `3px solid ${colour}` } : undefined}
     >
       <div className="flex h-24 items-center justify-center overflow-hidden bg-secondary/30">
         {thumbnail ? (

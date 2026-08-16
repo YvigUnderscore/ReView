@@ -12,6 +12,7 @@ import { pipelineOverrideSchema } from '../lib/projectSettings';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as ShotService from '../services/ShotService';
+import * as PipelineLatestService from '../services/PipelineLatestService';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
 
 const router = Router();
@@ -185,5 +186,14 @@ router.delete(
     res.status(204).end();
   },
 );
+
+// GET /api/shots/:id/tree — le plan vu comme un dossier, comme un asset (cf. shotOverview).
+router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveProjectIdForShot(id);
+  if (!projectId) throw notFound('Shot introuvable');
+  await assertProjectAccess(req, projectId);
+  res.json(await PipelineLatestService.shotOverview(id, req.user!.id));
+});
 
 export default router;
