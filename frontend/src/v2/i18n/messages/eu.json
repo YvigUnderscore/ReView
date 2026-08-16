@@ -2478,5 +2478,9 @@
   "upload.pickTask.hint": "Sortu duen urratsaren azpian jartzeak pipeline-a irakurgarri mantentzen du — eta ShotGrid-en leku egokira bidaltzen du.",
   "upload.pickTask.none": "Task-ik gabe — asset-ari erantsi",
   "upload.pickTask.search": "Bilatu task bat…",
-  "upload.pickTask.elsewhere": "Proiektuko beste leku batean"
+  "upload.pickTask.elsewhere": "Proiektuko beste leku batean",
+  "upload.pickTask.steps": "Falta den task sortu",
+  "upload.pickTask.createStep": "Sortu « {step} » task bat ShotGrid-en",
+  "upload.pickTask.created": "« {name} » task sortu da ShotGrid-en",
+  "upload.pickTask.createFailed": "Ezin izan da task sortu"
 }

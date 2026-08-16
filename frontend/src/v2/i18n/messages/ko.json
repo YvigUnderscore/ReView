@@ -2417,5 +2417,9 @@
   "upload.pickTask.hint": "만든 단계 아래 두면 파이프라인이 읽기 쉬워지고, ShotGrid에서도 올바른 위치로 갑니다.",
   "upload.pickTask.none": "task 없이 — asset에 직접 첨부",
   "upload.pickTask.search": "task 검색…",
-  "upload.pickTask.elsewhere": "프로젝트의 다른 곳"
+  "upload.pickTask.elsewhere": "프로젝트의 다른 곳",
+  "upload.pickTask.steps": "없는 task 만들기",
+  "upload.pickTask.createStep": "ShotGrid에 « {step} » task 만들기",
+  "upload.pickTask.created": "ShotGrid에 task « {name} »을(를) 만들었습니다",
+  "upload.pickTask.createFailed": "task를 만들지 못했습니다"
 }

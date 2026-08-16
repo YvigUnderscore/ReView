@@ -2475,5 +2475,9 @@
   "upload.pickTask.hint": "Sie unter dem Schritt abzulegen, der sie erzeugt hat, hält die Pipeline lesbar — und schickt sie in ShotGrid an die richtige Stelle.",
   "upload.pickTask.none": "Ohne Task — direkt am Asset",
   "upload.pickTask.search": "Task suchen…",
-  "upload.pickTask.elsewhere": "Anderswo im Projekt"
+  "upload.pickTask.elsewhere": "Anderswo im Projekt",
+  "upload.pickTask.steps": "Fehlende Task anlegen",
+  "upload.pickTask.createStep": "Eine Task « {step} » in ShotGrid anlegen",
+  "upload.pickTask.created": "Task « {name} » in ShotGrid angelegt",
+  "upload.pickTask.createFailed": "Die Task konnte nicht angelegt werden"
 }

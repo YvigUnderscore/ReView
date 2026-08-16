@@ -2463,5 +2463,9 @@
   "upload.pickTask.hint": "Filing it under the step that produced it keeps the pipeline readable — and sends it to the right place in ShotGrid.",
   "upload.pickTask.none": "No task — attach to the asset itself",
   "upload.pickTask.search": "Search a task…",
-  "upload.pickTask.elsewhere": "Elsewhere in the project"
+  "upload.pickTask.elsewhere": "Elsewhere in the project",
+  "upload.pickTask.steps": "Create the missing task",
+  "upload.pickTask.createStep": "Create a « {step} » task in ShotGrid",
+  "upload.pickTask.created": "Task « {name} » created in ShotGrid",
+  "upload.pickTask.createFailed": "Could not create the task"
 }

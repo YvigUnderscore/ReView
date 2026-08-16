@@ -2525,5 +2525,9 @@
   "upload.pickTask.hint": "La ranger sous l’étape qui l’a produite garde le pipe lisible — et l’envoie au bon endroit dans ShotGrid.",
   "upload.pickTask.none": "Sans task — rattacher à l’asset",
   "upload.pickTask.search": "Rechercher une task…",
-  "upload.pickTask.elsewhere": "Ailleurs dans le projet"
+  "upload.pickTask.elsewhere": "Ailleurs dans le projet",
+  "upload.pickTask.steps": "Créer la task manquante",
+  "upload.pickTask.createStep": "Créer une task « {step} » dans ShotGrid",
+  "upload.pickTask.created": "Task « {name} » créée dans ShotGrid",
+  "upload.pickTask.createFailed": "La task n’a pas pu être créée"
 }

@@ -2475,5 +2475,9 @@
   "upload.pickTask.hint": "Si unter em Schritt abzlege, wo si gmacht het, haltet d Pipeline läsbar — un schickt si in ShotGrid an di richtig Stell.",
   "upload.pickTask.none": "Ohni Task — direkt ans Asset",
   "upload.pickTask.search": "E Task sueche…",
-  "upload.pickTask.elsewhere": "Anderswo im Projäkt"
+  "upload.pickTask.elsewhere": "Anderswo im Projäkt",
+  "upload.pickTask.steps": "Fählendi Task aalege",
+  "upload.pickTask.createStep": "E Task « {step} » in ShotGrid aalege",
+  "upload.pickTask.created": "Task « {name} » in ShotGrid aagleit",
+  "upload.pickTask.createFailed": "D Task het nit chönne aagleit werde"
 }

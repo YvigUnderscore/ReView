@@ -2407,5 +2407,9 @@
   "upload.pickTask.hint": "归入产出它的环节可让流程保持清晰，也会送到 ShotGrid 中正确的位置。",
   "upload.pickTask.none": "不选 task — 直接挂在 asset 上",
   "upload.pickTask.search": "搜索 task…",
-  "upload.pickTask.elsewhere": "项目中的其他位置"
+  "upload.pickTask.elsewhere": "项目中的其他位置",
+  "upload.pickTask.steps": "创建缺失的 task",
+  "upload.pickTask.createStep": "在 ShotGrid 中创建「{step}」task",
+  "upload.pickTask.created": "已在 ShotGrid 中创建 task「{name}」",
+  "upload.pickTask.createFailed": "无法创建该 task"
 }

@@ -2464,5 +2464,9 @@
   "upload.pickTask.hint": "He renkañ dindan al lankad he deus he savet a viro lennus ar chadenn — hag he c’has el lec’h mat e ShotGrid.",
   "upload.pickTask.none": "Task ebet — stagañ ouzh an asset",
   "upload.pickTask.search": "Klask un task…",
-  "upload.pickTask.elsewhere": "Un lec’h all er raktres"
+  "upload.pickTask.elsewhere": "Un lec’h all er raktres",
+  "upload.pickTask.steps": "Krouiñ an task a vank",
+  "upload.pickTask.createStep": "Krouiñ un task « {step} » e ShotGrid",
+  "upload.pickTask.created": "Task « {name} » krouet e ShotGrid",
+  "upload.pickTask.createFailed": "N’eus ket bet gallet krouiñ an task"
 }

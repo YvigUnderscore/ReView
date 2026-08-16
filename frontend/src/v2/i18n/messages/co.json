@@ -2475,5 +2475,9 @@
   "upload.pickTask.hint": "Mèttela sottu à a tappa chì l’hà pruduttu tene u pipeline leghjibile — è a manda à u locu ghjustu in ShotGrid.",
   "upload.pickTask.none": "Senza task — attaccà à l’asset",
   "upload.pickTask.search": "Cercà un task…",
-  "upload.pickTask.elsewhere": "Altrò in u prughjettu"
+  "upload.pickTask.elsewhere": "Altrò in u prughjettu",
+  "upload.pickTask.steps": "Creà u task chì manca",
+  "upload.pickTask.createStep": "Creà un task « {step} » in ShotGrid",
+  "upload.pickTask.created": "Task « {name} » creatu in ShotGrid",
+  "upload.pickTask.createFailed": "U task ùn hè pussutu esse creatu"
 }

@@ -2475,5 +2475,9 @@
   "upload.pickTask.hint": "Arquivá-la sob a etapa que a produziu mantém o pipeline legível — e envia-a ao sítio certo no ShotGrid.",
   "upload.pickTask.none": "Sem task — anexar ao asset",
   "upload.pickTask.search": "Procurar uma task…",
-  "upload.pickTask.elsewhere": "Noutro sítio do projeto"
+  "upload.pickTask.elsewhere": "Noutro sítio do projeto",
+  "upload.pickTask.steps": "Criar a task em falta",
+  "upload.pickTask.createStep": "Criar uma task « {step} » no ShotGrid",
+  "upload.pickTask.created": "Task « {name} » criada no ShotGrid",
+  "upload.pickTask.createFailed": "Não foi possível criar a task"
 }

@@ -197,6 +197,7 @@ export default function AssetPage() {
         onOpenChange={(open) => !open && setPending(null)}
         tasks={pickableTasks}
         projectId={asset?.projectId ?? 0}
+        parent={{ kind: 'asset', id: assetId }}
         allowNone
         onPick={(taskId) => {
           const files = pending;

@@ -2469,5 +2469,9 @@
   "upload.pickTask.hint": "जिस चरण ने इसे बनाया, उसके अंतर्गत रखने से पाइपलाइन पठनीय रहती है — और ShotGrid में सही जगह जाती है।",
   "upload.pickTask.none": "कोई task नहीं — asset से जोड़ें",
   "upload.pickTask.search": "task खोजें…",
-  "upload.pickTask.elsewhere": "परियोजना में अन्यत्र"
+  "upload.pickTask.elsewhere": "परियोजना में अन्यत्र",
+  "upload.pickTask.steps": "अनुपस्थित task बनाएँ",
+  "upload.pickTask.createStep": "ShotGrid में « {step} » task बनाएँ",
+  "upload.pickTask.created": "ShotGrid में task « {name} » बनाई गई",
+  "upload.pickTask.createFailed": "task नहीं बनाई जा सकी"
 }

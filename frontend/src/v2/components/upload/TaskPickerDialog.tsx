@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useMemo, useState } from 'react';
-import { Box, Clapperboard, FileStack, Layers, Search } from 'lucide-react';
+import { Box, Clapperboard, FileStack, Layers, Loader2, Plus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import PipelineStatusBadge from '../shotgrid/PipelineStatusBadge';
+import { toast } from 'sonner';
 import { useProjectTasks } from '../../lib/queries';
+import { useCreateTaskFromStep, useSgSteps } from '../../lib/shotgridApi';
 import { useT } from '../../i18n';
 
 export interface PickableTask {
@@ -37,6 +39,7 @@ export default function TaskPickerDialog({
   onOpenChange,
   tasks,
   projectId,
+  parent,
   allowNone,
   onPick,
 }: {
@@ -45,15 +48,26 @@ export default function TaskPickerDialog({
   /** Tâches de l'entité ouverte, déjà connues de la page. */
   tasks: PickableTask[];
   projectId: number;
+  /** L'entité sur laquelle créer la tâche manquante, si le projet est relié. */
+  parent?: { kind: 'asset' | 'shot'; id: number };
   /** Permettre de rattacher la version au parent plutôt qu'à une tâche. */
   allowNone?: boolean;
   onPick: (taskId: number | null) => void;
 }) {
   const t = useT();
   const [query, setQuery] = useState('');
+  const [creating, setCreating] = useState<number | null>(null);
   // Le projet entier n'est demandé qu'une fois le dialogue ouvert : sur un gros projet,
   // ce n'est pas une liste à charger à chaque affichage de page.
   const { data: projectTasks = [] } = useProjectTasks(projectId, open);
+  // Les étapes du site : elles existent avant toute tâche, et c'est ce qui manquait pour
+  // déposer un rendu sur un asset neuf sans aller d'abord créer la tâche dans ShotGrid.
+  const { data: steps = [] } = useSgSteps(
+    projectId,
+    parent?.kind === 'shot' ? 'Shot' : 'Asset',
+    open && Boolean(parent),
+  );
+  const createTask = useCreateTaskFromStep(projectId);
 
   const others = useMemo(() => {
     const known = new Set(tasks.map((task) => task.id));
@@ -75,6 +89,39 @@ export default function TaskPickerDialog({
     onPick(taskId);
   };
 
+  /** Étapes qu'aucune tâche de l'entité ne couvre encore. */
+  const freeSteps = useMemo(() => {
+    const covered = new Set(tasks.map((task) => (task.department ?? task.name).toLowerCase()));
+    const needle = query.trim().toLowerCase();
+    return (
+      steps
+        .filter((step) => !covered.has(step.code.toLowerCase()))
+        .filter((step) => !needle || step.code.toLowerCase().includes(needle))
+        // Sans recherche, on s'en tient à ce que le projet emploie déjà : un site en
+        // accumule des dizaines, et les dérouler toutes noierait le choix courant.
+        .filter((step) => Boolean(needle) || step.used)
+        .slice(0, 12)
+    );
+  }, [steps, tasks, query]);
+
+  const createFromStep = async (step: { sgId: number; code: string }) => {
+    if (!parent) return;
+    setCreating(step.sgId);
+    try {
+      const r = await createTask.mutateAsync({
+        stepSgId: step.sgId,
+        parentType: parent.kind,
+        parentId: parent.id,
+      });
+      toast.success(t('upload.pickTask.created', { name: r.name }));
+      choose(r.taskId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('upload.pickTask.createFailed'));
+    } finally {
+      setCreating(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -83,7 +130,10 @@ export default function TaskPickerDialog({
         </DialogHeader>
         <p className="text-sm text-muted-foreground">{t('upload.pickTask.hint')}</p>
 
-        {projectTasks.length > tasks.length && (
+        {/* La recherche sert autant à retrouver une tâche ailleurs dans le projet qu'à
+            atteindre une étape que le projet n'emploie pas encore : un site en compte
+            des dizaines, et seules celles déjà utilisées sont déroulées d'office. */}
+        {(projectTasks.length > tasks.length || steps.length > 0) && (
           <label className="mt-2 flex items-center gap-2 rounded-md border border-input bg-background px-2">
             <Search size={13} className="shrink-0 text-muted-foreground" />
             <input
@@ -137,6 +187,33 @@ export default function TaskPickerDialog({
               <span className="shrink-0 text-[11px] text-muted-foreground">
                 {t('asset.tree.versionCount', { count: task.versionCount })}
               </span>
+            </button>
+          ))}
+
+          {freeSteps.length > 0 && (
+            <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('upload.pickTask.steps')}
+            </p>
+          )}
+          {freeSteps.map((step) => (
+            <button
+              key={step.sgId}
+              type="button"
+              disabled={creating !== null}
+              onClick={() => void createFromStep(step)}
+              className={`${ROW} disabled:opacity-50`}
+            >
+              {creating === step.sgId ? (
+                <Loader2 size={14} className="shrink-0 animate-spin text-muted-foreground" />
+              ) : (
+                <Plus size={14} className="shrink-0 text-muted-foreground" />
+              )}
+              <span className="min-w-0 flex-1 truncate">
+                {t('upload.pickTask.createStep', { step: step.code })}
+              </span>
+              {step.color && (
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: step.color }} />
+              )}
             </button>
           ))}
 

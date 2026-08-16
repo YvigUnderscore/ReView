@@ -2417,5 +2417,9 @@
   "upload.pickTask.hint": "それを作った工程の下に置くとパイプラインが読みやすくなり、ShotGrid でも正しい場所に届きます。",
   "upload.pickTask.none": "task なし — asset に直接付ける",
   "upload.pickTask.search": "task を検索…",
-  "upload.pickTask.elsewhere": "プロジェクト内の他の場所"
+  "upload.pickTask.elsewhere": "プロジェクト内の他の場所",
+  "upload.pickTask.steps": "足りない task を作成",
+  "upload.pickTask.createStep": "ShotGrid に「{step}」task を作成",
+  "upload.pickTask.created": "ShotGrid に task「{name}」を作成しました",
+  "upload.pickTask.createFailed": "task を作成できませんでした"
 }

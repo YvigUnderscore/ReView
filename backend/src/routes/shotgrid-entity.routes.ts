@@ -10,6 +10,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { assertProjectManager } from '../lib/shotgridAccess';
 import * as Config from '../services/shotgrid/ShotgridConfigService';
 import { runSync } from '../services/shotgrid/ShotgridSyncService';
+import { createTaskFromStep, listSteps } from '../services/shotgrid/ShotgridSteps';
 
 /**
  * Réalignement d'une entité seule sur ShotGrid.
@@ -59,6 +60,46 @@ router.post(
       triggeredById: req.user!.id,
     });
     res.json({ status: result.status, sgType: link.sgType, sgId: link.sgId });
+  },
+);
+
+/**
+ * Étapes de pipeline du site, pour créer la tâche qui manque.
+ *
+ * Les colonnes qu'on voit dans ShotGrid — art, model, rig, groom, lookdev — sont des
+ * étapes, pas des tâches : un asset neuf les porte toutes, vides. Les proposer ici évite
+ * l'aller-retour « créer la tâche dans ShotGrid, revenir, resynchroniser ».
+ */
+router.get(
+  '/projects/:projectId/steps',
+  validate({
+    params: z.object({ projectId: z.coerce.number().int().positive() }),
+    query: z.object({ entityType: z.enum(['Asset', 'Shot']) }),
+  }),
+  async (req, res) => {
+    const projectId = Number(req.params.projectId);
+    await assertProjectManager(req.user!, projectId, { allowMembers: true });
+    const connection = await Config.getConnection(projectId);
+    if (!connection?.active) return res.json({ steps: [] });
+    res.json({ steps: await listSteps(projectId, req.query.entityType as 'Asset' | 'Shot') });
+  },
+);
+
+router.post(
+  '/projects/:projectId/tasks',
+  validate({
+    params: z.object({ projectId: z.coerce.number().int().positive() }),
+    body: z.object({
+      stepSgId: z.number().int().positive(),
+      parentType: z.enum(['asset', 'shot']),
+      parentId: z.number().int().positive(),
+      name: z.string().min(1).max(160).optional(),
+    }),
+  }),
+  async (req, res) => {
+    const projectId = Number(req.params.projectId);
+    await assertProjectManager(req.user!, projectId);
+    res.status(201).json(await createTaskFromStep(projectId, req.body, req.user!.email ?? null));
   },
 );
 

@@ -2475,5 +2475,9 @@
   "upload.pickTask.hint": "La botar jos l’etapa que l’a producha garda lo pipe legible — e la manda al bon endrech dins ShotGrid.",
   "upload.pickTask.none": "Sens task — restacar a l’asset",
   "upload.pickTask.search": "Cercar una task…",
-  "upload.pickTask.elsewhere": "Endacòm mai dins lo projècte"
+  "upload.pickTask.elsewhere": "Endacòm mai dins lo projècte",
+  "upload.pickTask.steps": "Crear la task que manca",
+  "upload.pickTask.createStep": "Crear una task « {step} » dins ShotGrid",
+  "upload.pickTask.created": "Task « {name} » creada dins ShotGrid",
+  "upload.pickTask.createFailed": "La task a pas pogut èsser creada"
 }
