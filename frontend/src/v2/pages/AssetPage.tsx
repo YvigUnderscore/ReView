@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -33,6 +33,7 @@ export default function AssetPage() {
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const enqueue = useUploadStore((s) => s.enqueue);
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [assigning, setAssigning] = useState(false);
 
   const {
@@ -92,7 +93,13 @@ export default function AssetPage() {
 
   const withTask = async (files: File[] | 'empty', taskId: number | null) => {
     const created = await createVersion(taskId ? { taskId } : undefined);
-    if (created && files !== 'empty') files.forEach((f) => enqueue(f, created.id));
+    if (!created) return;
+    if (files !== 'empty') files.forEach((f) => enqueue(f, created.id));
+    // La timeline de cette page ne montre que les versions rattachées à l'asset : une
+    // version rangée sous une tâche y serait invisible, et l'on n'aurait nulle part où
+    // déposer son média. On suit donc la version jusqu'à sa tâche, qui a sa zone de
+    // dépôt et affiche ce qui vient d'être créé.
+    if (taskId) navigate(`/tasks/${taskId}`);
   };
 
   const onDropFiles = (files: File[]) => startVersion(files);
