@@ -1204,6 +1204,7 @@
   "pipeline.dept.moveUp": "Déplacer vers l’amont",
   "pipeline.dept.moveDown": "Déplacer vers l’aval",
   "pipeline.dept.none": "Sans département",
+  "pipeline.status.none": "Sans statut",
   "lighting.hint": "Environnement HDRI rejoué à l’ouverture des médias 3D de ce projet qui n’ont pas leur propre éclairage. Les spectateurs peuvent l’ajuster en session sans le modifier.",
   "storage.usedUnlimited": "{used} utilisés (illimité)",
   "storage.quotaLabel": "Quota (Go)",

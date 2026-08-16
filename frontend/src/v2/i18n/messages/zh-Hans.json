@@ -1152,6 +1152,7 @@
   "pipeline.dept.moveUp": "上移（更上游）",
   "pipeline.dept.moveDown": "下移（更下游）",
   "pipeline.dept.none": "无部门",
+  "pipeline.status.none": "无状态",
   "lighting.hint": "打开本项目中没有自带灯光的 3D 媒体时重现的 HDRI 环境。观看者可在会话中调整，但不会改动它。",
   "storage.usedUnlimited": "已用 {used}（不限）",
   "storage.quotaLabel": "配额（GB）",

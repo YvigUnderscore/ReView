@@ -17,11 +17,15 @@ const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
-const scopeSchema = z.enum(['task', 'shot']);
+// Les séquences portent un statut depuis la phase 48 et le référentiel en contient
+// (4 lignes en base) : les refuser ici renvoyait un 400 à chaque badge de séquence,
+// qui restait donc invisible. La création reste réservée aux deux périmètres éditables.
+const scopeSchema = z.enum(['task', 'shot', 'sequence']);
+const editableScope = z.enum(['task', 'shot']);
 const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale attendue (#RRGGBB)');
 
 const statusBody = z.object({
-  scope: scopeSchema,
+  scope: editableScope,
   code: z.string().min(1).max(40),
   name: z.string().min(1).max(60),
   color: colorSchema,
@@ -31,9 +35,28 @@ const statusBody = z.object({
   legacyStatus: z.nativeEnum(TaskStatus).nullish(),
 });
 
-router.get('/', validate({ query: z.object({ scope: scopeSchema.optional() }) }), async (req, res) => {
-  res.json({ statuses: await PipelineStatusService.list(req.query.scope as 'task' | 'shot' | undefined) });
-});
+router.get(
+  '/',
+  validate({
+    query: z.object({
+      scope: scopeSchema.optional(),
+      // Le vocabulaire dépend du projet : celui du site sur un projet relié, le nôtre
+      // sinon. Sans ce paramètre, on répond le référentiel entier — les deux mélangés.
+      projectId: z.coerce.number().int().positive().optional(),
+    }),
+  }),
+  async (req, res) => {
+    // Express 5 : `req.query` n'est pas remplacé par la valeur validée, les nombres y
+    // restent des chaînes. On relit donc la valeur brute plutôt que de la supposer.
+    const scope = req.query.scope as PipelineStatusService.Scope | undefined;
+    const projectId = req.query.projectId ? Number(req.query.projectId) : null;
+    res.json({
+      statuses: projectId
+        ? await PipelineStatusService.listForProject(projectId, scope)
+        : await PipelineStatusService.list(scope),
+    });
+  },
+);
 
 router.post('/', requireRole(Role.ADMIN), validate({ body: statusBody }), async (req, res) => {
   res.status(201).json({ status: await PipelineStatusService.create(req.body) });

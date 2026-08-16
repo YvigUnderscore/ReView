@@ -1072,6 +1072,13 @@ model PipelineStatus {
   order        Int         @default(0)
   isDone       Boolean     @default(false) // statut terminal (stats, jauges)
   isDefault    Boolean     @default(false)
+  // « local » ou « shotgrid » : d'où vient ce statut. Un studio sans ShotGrid ne doit
+  // pas se voir proposer le vocabulaire d'un site auquel il n'est pas relié, et un
+  // projet relié ne doit pas se voir proposer nos six statuts d'origine.
+  origin       String      @default("local")
+  // Ni à faire, ni fait : « omitted », « n/a », « declined ». Ces statuts existent et
+  // s'affichent, mais ils ne comptent pas dans les jauges d'avancement.
+  isInactive   Boolean     @default(false)
   // Pont vers l'enum figé : toute écriture de statut renseigne les deux.
   legacyStatus TaskStatus?
   createdAt    DateTime    @default(now())

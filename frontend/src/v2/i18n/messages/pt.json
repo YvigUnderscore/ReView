@@ -1190,6 +1190,7 @@
   "pipeline.dept.moveUp": "Mover para montante",
   "pipeline.dept.moveDown": "Mover para jusante",
   "pipeline.dept.none": "Sem departamento",
+  "pipeline.status.none": "Sem estado",
   "lighting.hint": "Ambiente HDRI reproduzido ao abrir as mídias 3D deste projeto que não têm iluminação própria. Os espectadores podem ajustá-lo na sessão sem modificá-lo.",
   "storage.usedUnlimited": "{used} usados (ilimitado)",
   "storage.quotaLabel": "Cota (GB)",

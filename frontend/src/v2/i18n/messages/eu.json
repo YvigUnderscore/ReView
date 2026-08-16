@@ -1193,6 +1193,7 @@
   "pipeline.dept.moveUp": "Eraman gorantz",
   "pipeline.dept.moveDown": "Eraman beherantz",
   "pipeline.dept.none": "Sailik gabe",
+  "pipeline.status.none": "Egoerarik gabe",
   "lighting.hint": "Beren argiztapenik ez duten proiektu honetako 3D mediak irekitzean errepikatzen den HDRI ingurunea. Ikusleek saioan doi dezakete, aldatu gabe.",
   "storage.usedUnlimited": "{used} erabilita (mugagabea)",
   "storage.quotaLabel": "Kuota (GB)",

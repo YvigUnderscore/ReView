@@ -1193,6 +1193,7 @@
   "pipeline.dept.moveUp": "Uffe schiewe",
   "pipeline.dept.moveDown": "Abe schiewe",
   "pipeline.dept.none": "Ohni Abteilig",
+  "pipeline.status.none": "Kei Status",
   "lighting.hint": "HDRI-Umgebung, wo bim Uffmache vu de 3D-Medie vu dem Projekt ohni eigens Liecht widdergeh wird. D'Zueschauer kenne sie in d'r Sitzung ahpasse, ohni sie z'ändere.",
   "storage.usedUnlimited": "{used} bruucht (unbegränzt)",
   "storage.quotaLabel": "Kontingänt (GB)",

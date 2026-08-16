@@ -10,6 +10,7 @@ import {
   rgbToHex,
   sgStatusIsApproval,
   sgStatusIsDone,
+  sgStatusIsInactive,
   sgStatusIsRetake,
   sgStatusToEnum,
 } from './shotgridMapper';
@@ -101,6 +102,10 @@ export async function syncPipelineStatuses(
       color: info.color,
       order: info.order || index,
       isDone: sgStatusIsDone(code),
+      isInactive: sgStatusIsInactive(code),
+      // Ce statut vient du site : il ne sera proposé que sur les projets qui y sont
+      // reliés. Le poser ici évite d'avoir à deviner l'origine après coup.
+      origin: 'shotgrid',
       legacyStatus: sgStatusToEnum(code),
     };
     const status = existing

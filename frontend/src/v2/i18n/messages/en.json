@@ -1184,6 +1184,7 @@
   "pipeline.dept.moveUp": "Move upstream",
   "pipeline.dept.moveDown": "Move downstream",
   "pipeline.dept.none": "No department",
+  "pipeline.status.none": "No status",
   "lighting.hint": "HDRI environment replayed when this project's 3D media open, for those without their own lighting. Viewers can adjust it in session without changing it.",
   "storage.usedUnlimited": "{used} used (unlimited)",
   "storage.quotaLabel": "Quota (GB)",

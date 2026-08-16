@@ -1190,6 +1190,7 @@
   "pipeline.dept.moveUp": "Spustà à monte",
   "pipeline.dept.moveDown": "Spustà à valle",
   "pipeline.dept.none": "Senza dipartimentu",
+  "pipeline.status.none": "Senza statu",
   "lighting.hint": "Ambiente HDRI ripigliatu à l’apertura di i media 3D di stu prughjettu chì ùn anu micca a so propria illuminazione. I spettatori ponu aghjustallu in sessione senza mudificallu.",
   "storage.usedUnlimited": "{used} adupratu (illimitatu)",
   "storage.quotaLabel": "Quota (Go)",

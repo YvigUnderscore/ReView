@@ -1193,6 +1193,7 @@
   "pipeline.dept.moveUp": "Nach upstream verschieben",
   "pipeline.dept.moveDown": "Nach downstream verschieben",
   "pipeline.dept.none": "Ohne Abteilung",
+  "pipeline.status.none": "Kein Status",
   "lighting.hint": "HDRI-Umgebung, die beim Öffnen der 3D-Medien dieses Projekts ohne eigene Beleuchtung wiedergegeben wird. Zuschauer können sie in der Sitzung anpassen, ohne sie zu ändern.",
   "storage.usedUnlimited": "{used} belegt (unbegrenzt)",
   "storage.quotaLabel": "Kontingent (GB)",

@@ -1173,6 +1173,7 @@
   "pipeline.dept.moveUp": "Dilec’hiañ war-du al lein",
   "pipeline.dept.moveDown": "Dilec’hiañ war-du an traoñ",
   "pipeline.dept.none": "Hep departamant",
+  "pipeline.status.none": "Statud ebet",
   "lighting.hint": "Endro HDRI adc’hoariet en ur zigeriñ mediaoù 3D ar raktres-mañ hep gouloù dezho o-unan. Gallout a ra ar sellerien e cheñch en dalc’h hep e zaskemmañ.",
   "storage.usedUnlimited": "{used} implijet (hep bevenn)",
   "storage.quotaLabel": "Bevenn (Go)",

@@ -26,7 +26,8 @@ export const sgKeys = {
   logs: (runId: number, level: string) => ['shotgrid', 'logs', runId, level] as const,
   diff: (projectId: number) => ['shotgrid', 'diff', projectId] as const,
   versions: (projectId: number) => ['shotgrid', 'versions', projectId] as const,
-  pipelineStatuses: (scope?: string) => ['pipeline-statuses', scope ?? 'all'] as const,
+  pipelineStatuses: (scope?: string, projectId?: number) =>
+    ['pipeline-statuses', scope ?? 'all', projectId ?? 'studio'] as const,
 };
 
 // ───────────────────────────── Sites ─────────────────────────────
@@ -259,13 +260,25 @@ export function useResolveConflict(projectId: number) {
 
 // ───────────────────────────── Statuts de pipeline ─────────────────────────────
 
-export function usePipelineStatuses(scope?: 'task' | 'shot' | 'sequence') {
+/**
+ * Statuts d'un périmètre.
+ *
+ * Passer `projectId` restreint la liste au vocabulaire qui concerne ce projet : celui du
+ * site sur un projet relié à ShotGrid, le nôtre sinon. Sans lui, on reçoit le référentiel
+ * du studio entier — ce qu'il faut à l'écran d'administration, jamais à un sélecteur.
+ */
+export function usePipelineStatuses(scope?: 'task' | 'shot' | 'sequence', projectId?: number) {
   return useQuery({
-    queryKey: sgKeys.pipelineStatuses(scope),
-    queryFn: () =>
-      api
-        .get<{ statuses: PipelineStatus[] }>(`/api/pipeline-statuses${scope ? `?scope=${scope}` : ''}`)
-        .then((r) => r.statuses),
+    queryKey: sgKeys.pipelineStatuses(scope, projectId),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (scope) params.set('scope', scope);
+      if (projectId) params.set('projectId', String(projectId));
+      const query = params.toString();
+      return api
+        .get<{ statuses: PipelineStatus[] }>(`/api/pipeline-statuses${query ? `?${query}` : ''}`)
+        .then((r) => r.statuses);
+    },
     staleTime: 5 * 60_000,
   });
 }

@@ -14,7 +14,8 @@ import { badRequest, conflict, notFound } from '../lib/errors';
  * six statuts d'origine ; un studio connecté voit ceux de son site.
  */
 
-export type Scope = 'task' | 'shot';
+/** Les trois périmètres qui portent un statut. Seuls les deux premiers sont éditables. */
+export type Scope = 'task' | 'shot' | 'sequence';
 
 export interface StatusInput {
   scope: Scope;
@@ -30,8 +31,32 @@ export interface StatusInput {
 export async function list(scope?: Scope): Promise<PipelineStatus[]> {
   return prisma.pipelineStatus.findMany({
     where: scope ? { scope } : undefined,
-    orderBy: [{ scope: 'asc' }, { order: 'asc' }],
+    // `order` seul laisse des égalités que Postgres ne départage pas : deux statuts de
+    // même rang sortiraient dans un ordre variable d'un appel à l'autre, et le « premier »
+    // servant de repli changerait sans raison. Le code tranche.
+    orderBy: [{ scope: 'asc' }, { order: 'asc' }, { code: 'asc' }],
   });
+}
+
+/**
+ * Statuts à proposer sur un projet donné.
+ *
+ * Un projet relié à ShotGrid parle le vocabulaire de son site, et lui seul : proposer en
+ * plus nos six statuts d'origine invite à poser un statut que le site refusera. Un projet
+ * non relié fait l'inverse — les statuts importés d'un site ne le concernent pas.
+ *
+ * C'est le même motif que `ReviewDecisionService.listStatusesForProject` applique déjà aux
+ * décisions de review : le référentiel reste commun au studio, la liste offerte dépend du
+ * projet.
+ */
+export async function listForProject(projectId: number, scope?: Scope): Promise<PipelineStatus[]> {
+  const all = await list(scope);
+  const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });
+  const wanted = connection?.active ? 'shotgrid' : 'local';
+  const kept = all.filter((s) => s.origin === wanted);
+  // Un site dont on n'a pas encore lu les statuts ne doit pas laisser l'utilisateur
+  // devant une liste vide : mieux vaut le vocabulaire local que rien du tout.
+  return kept.length > 0 ? kept : all;
 }
 
 export async function create(input: StatusInput): Promise<PipelineStatus> {
@@ -96,35 +121,6 @@ export async function reorder(scope: Scope, ids: number[]): Promise<PipelineStat
     ids.map((id, index) => prisma.pipelineStatus.update({ where: { id }, data: { order: index } })),
   );
   return list(scope);
-}
-
-/** Statut par défaut d'un périmètre — proposé à la création d'une tâche. */
-export async function defaultFor(scope: Scope): Promise<PipelineStatus | null> {
-  return (
-    (await prisma.pipelineStatus.findFirst({ where: { scope, isDefault: true } })) ??
-    (await prisma.pipelineStatus.findFirst({ where: { scope }, orderBy: { order: 'asc' } }))
-  );
-}
-
-/**
- * Valeurs à écrire pour poser un statut de tâche : le référentiel et l'énumération
- * avancent ensemble. Passer par cette fonction évite qu'un appelant n'en oublie une.
- */
-export async function taskStatusData(
-  pipelineStatusId: number | null | undefined,
-): Promise<{ pipelineStatusId: number | null; status?: TaskStatus }> {
-  if (!pipelineStatusId) return { pipelineStatusId: null };
-  const status = await prisma.pipelineStatus.findUnique({ where: { id: pipelineStatusId } });
-  if (!status) throw badRequest('Statut de pipeline inconnu');
-  return { pipelineStatusId: status.id, status: status.legacyStatus ?? TaskStatus.TODO };
-}
-
-/** Correspondance inverse : quel statut personnalisé représente cette valeur d'énumération ? */
-export async function fromLegacy(scope: Scope, legacy: TaskStatus): Promise<PipelineStatus | null> {
-  return prisma.pipelineStatus.findFirst({
-    where: { scope, legacyStatus: legacy },
-    orderBy: { order: 'asc' },
-  });
 }
 
 function normaliseCode(code: string): string {

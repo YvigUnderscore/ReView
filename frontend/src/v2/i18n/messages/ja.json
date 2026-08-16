@@ -1160,6 +1160,7 @@
   "pipeline.dept.moveUp": "上流へ移動",
   "pipeline.dept.moveDown": "下流へ移動",
   "pipeline.dept.none": "部門なし",
+  "pipeline.status.none": "ステータスなし",
   "lighting.hint": "独自のライティングを持たない、このプロジェクトの 3D メディアを開いたときに再現される HDRI 環境です。閲覧者はセッション中に調整できますが、元は変わりません。",
   "storage.usedUnlimited": "{used} 使用（無制限）",
   "storage.quotaLabel": "上限（GB）",

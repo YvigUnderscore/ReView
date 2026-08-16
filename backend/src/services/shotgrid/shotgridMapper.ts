@@ -112,6 +112,17 @@ export function sgStatusIsDone(code: string | null | undefined): boolean {
   return mapped === TaskStatus.APPROVED;
 }
 
+/**
+ * Statut qui ne représente ni du travail à faire, ni du travail fait.
+ *
+ * Un plan omis, sans objet ou désactivé n'attend rien de personne : le compter comme du
+ * reste-à-faire gonfle indéfiniment les jauges d'avancement d'une production, et
+ * l'annoncer comme terminé la flatterait. Ces statuts s'affichent, mais ne comptent pas.
+ */
+export function sgStatusIsInactive(code: string | null | undefined): boolean {
+  return ['omt', 'dis', 'ign', 'na', 'dcl'].includes((code ?? '').toLowerCase());
+}
+
 /** Un statut de Version vaut-il approbation ? (alimente `ReviewStatus.isApproval`) */
 export function sgStatusIsApproval(code: string | null | undefined): boolean {
   return ['apr', 'fin', 'cmpt', 'cfrm'].includes((code ?? '').toLowerCase());

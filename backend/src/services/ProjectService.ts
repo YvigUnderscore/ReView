@@ -529,6 +529,10 @@ export async function getActivity(projectId: number) {
       name: t.name,
       type: t.type,
       status: t.status,
+      // Sans le statut du référentiel, l'écran retombe sur l'énumération et propose six
+      // valeurs figées là où le projet en a quinze : le vocabulaire du site est perdu
+      // entre la base et l'affichage.
+      pipelineStatusId: t.pipelineStatusId,
       assignee: t.assignee ? { id: t.assignee.id, name: t.assignee.name } : null,
       location: loc(t),
     })),

@@ -1187,6 +1187,7 @@
   "pipeline.dept.moveUp": "ऊपर ले जाएँ",
   "pipeline.dept.moveDown": "नीचे ले जाएँ",
   "pipeline.dept.none": "कोई विभाग नहीं",
+  "pipeline.status.none": "कोई स्थिति नहीं",
   "lighting.hint": "इस प्रोजेक्ट के उन 3D मीडिया को खोलने पर चलने वाला HDRI वातावरण जिनकी अपनी लाइटिंग नहीं है। दर्शक इसे सत्र में बदल सकते हैं, मूल नहीं बदलता।",
   "storage.usedUnlimited": "{used} उपयोग में (असीमित)",
   "storage.quotaLabel": "कोटा (GB)",

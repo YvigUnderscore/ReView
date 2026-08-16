@@ -1190,6 +1190,7 @@
   "pipeline.dept.moveUp": "Mover aguas arriba",
   "pipeline.dept.moveDown": "Mover aguas abajo",
   "pipeline.dept.none": "Sin departamento",
+  "pipeline.status.none": "Sin estado",
   "lighting.hint": "Entorno HDRI reproducido al abrir los medios 3D de este proyecto que no tienen su propia iluminación. Los espectadores pueden ajustarlo en sesión sin modificarlo.",
   "storage.usedUnlimited": "{used} usados (ilimitado)",
   "storage.quotaLabel": "Cuota (GB)",

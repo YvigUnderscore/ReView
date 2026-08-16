@@ -16,6 +16,7 @@ import {
 } from '../lib/taskStatus';
 import type { Membership, TaskStatus, TaskWithAssignee } from '../types/api';
 import { useT } from '../i18n';
+import PipelineStatusSelect from './shotgrid/PipelineStatusSelect';
 
 interface RecentItem {
   type: 'version' | 'media';
@@ -29,7 +30,7 @@ interface RecentItem {
   mediaId?: number;
   versionId?: number;
 }
-type ActTask = TaskWithAssignee & { location: string };
+type ActTask = TaskWithAssignee & { location: string; pipelineStatusId?: number | null };
 
 interface Activity {
   recent: RecentItem[];
@@ -62,10 +63,15 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
     );
   const rollback = () => qc.invalidateQueries({ queryKey: qk.projectActivity(projectId) });
 
-  const setStatus = async (taskId: number, status: TaskStatus) => {
-    patchTask(taskId, { status });
+  // Les deux valeurs avancent ensemble : le référentiel porte le vocabulaire du site,
+  // l'énumération reste ce sur quoi s'appuient le kanban, les statistiques et l'API v1.
+  const setStatus = async (taskId: number, next: { statusId: number | null; legacyStatus: TaskStatus }) => {
+    patchTask(taskId, { status: next.legacyStatus, pipelineStatusId: next.statusId });
     try {
-      await api.patch(`/api/tasks/${taskId}`, { status });
+      await api.patch(`/api/tasks/${taskId}`, {
+        status: next.legacyStatus,
+        ...(next.statusId ? { pipelineStatusId: next.statusId } : {}),
+      });
     } catch {
       rollback();
     }
@@ -178,17 +184,13 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                   </Link>
                   {canManage ? (
                     <>
-                      <select
-                        value={t.status}
-                        onChange={(e) => setStatus(t.id, e.target.value as TaskStatus)}
-                        className={`rounded px-1 py-0.5 text-[11px] ${STATUS_COLOR[t.status] ?? ''}`}
-                      >
-                        {STATUS.map((s) => (
-                          <option key={s} value={s}>
-                            {tr(STATUS_LABEL[s]!)}
-                          </option>
-                        ))}
-                      </select>
+                      <PipelineStatusSelect
+                        projectId={projectId}
+                        scope="task"
+                        statusId={t.pipelineStatusId}
+                        legacyStatus={t.status}
+                        onChange={(next) => setStatus(t.id, next)}
+                      />
                       <select
                         value={t.assignee?.id ?? ''}
                         onChange={(e) => assign(t.id, e.target.value)}
