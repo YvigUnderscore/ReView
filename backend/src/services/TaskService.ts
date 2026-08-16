@@ -67,6 +67,56 @@ export async function list(
   return paginate(items, total, p);
 }
 
+/**
+ * Toutes les tâches d'un projet, avec l'entité qui les porte.
+ *
+ * Une Task n'a pas de `projectId` : elle pend à un shot ou à un asset, et c'est ce
+ * parent qui appartient au projet. La liste passe donc par les deux chemins.
+ *
+ * Sert à proposer une destination d'upload : sur un projet ShotGrid, un asset traverse
+ * cinq étapes (art, model, rig, groom, lookdev) et un plan autant — les voir toutes est
+ * ce qui permet de ranger un rendu là où il a été produit.
+ */
+export async function listForProject(
+  projectId: number,
+  limit = 500,
+): Promise<
+  Array<{
+    id: number;
+    name: string;
+    department: string | null;
+    pipelineStatusId: number | null;
+    parentKind: 'shot' | 'asset';
+    parentName: string;
+    versionCount: number;
+  }>
+> {
+  const tasks = await prisma.task.findMany({
+    where: { OR: [{ shot: { projectId, deletedAt: null } }, { asset: { projectId, deletedAt: null } }] },
+    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      department: true,
+      pipelineStatusId: true,
+      shot: { select: { code: true } },
+      asset: { select: { name: true } },
+      _count: { select: { versions: true } },
+    },
+  });
+
+  return tasks.map((t) => ({
+    id: t.id,
+    name: t.name,
+    department: t.department,
+    pipelineStatusId: t.pipelineStatusId,
+    parentKind: t.shot ? ('shot' as const) : ('asset' as const),
+    parentName: t.shot?.code ?? t.asset?.name ?? '',
+    versionCount: t._count.versions,
+  }));
+}
+
 export interface CreateTaskInput {
   name: string;
   type: TaskType;

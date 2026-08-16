@@ -88,10 +88,7 @@ export default function AssetPage() {
    */
   const [pending, setPending] = useState<File[] | 'empty' | null>(null);
 
-  const startVersion = (files: File[] | 'empty') => {
-    if (pickableTasks.length === 0) return void withTask(files, null);
-    setPending(files);
-  };
+  const startVersion = (files: File[] | 'empty') => setPending(files);
 
   const withTask = async (files: File[] | 'empty', taskId: number | null) => {
     const created = await createVersion(taskId ? { taskId } : undefined);
@@ -199,6 +196,7 @@ export default function AssetPage() {
         open={pending !== null}
         onOpenChange={(open) => !open && setPending(null)}
         tasks={pickableTasks}
+        projectId={asset?.projectId ?? 0}
         allowNone
         onPick={(taskId) => {
           const files = pending;

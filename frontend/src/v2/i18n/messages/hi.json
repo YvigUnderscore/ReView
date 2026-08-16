@@ -2467,5 +2467,7 @@
   "shotgrid.sync.dot.realigned": "ShotGrid से फिर पढ़ा गया",
   "upload.pickTask.title": "यह version किस task के लिए है?",
   "upload.pickTask.hint": "जिस चरण ने इसे बनाया, उसके अंतर्गत रखने से पाइपलाइन पठनीय रहती है — और ShotGrid में सही जगह जाती है।",
-  "upload.pickTask.none": "कोई task नहीं — asset से जोड़ें"
+  "upload.pickTask.none": "कोई task नहीं — asset से जोड़ें",
+  "upload.pickTask.search": "task खोजें…",
+  "upload.pickTask.elsewhere": "परियोजना में अन्यत्र"
 }

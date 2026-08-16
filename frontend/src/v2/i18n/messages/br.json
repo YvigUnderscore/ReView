@@ -2462,5 +2462,7 @@
   "shotgrid.sync.dot.realigned": "Adlennet adalek ShotGrid",
   "upload.pickTask.title": "Da beseurt task eo ar version-mañ ?",
   "upload.pickTask.hint": "He renkañ dindan al lankad he deus he savet a viro lennus ar chadenn — hag he c’has el lec’h mat e ShotGrid.",
-  "upload.pickTask.none": "Task ebet — stagañ ouzh an asset"
+  "upload.pickTask.none": "Task ebet — stagañ ouzh an asset",
+  "upload.pickTask.search": "Klask un task…",
+  "upload.pickTask.elsewhere": "Un lec’h all er raktres"
 }

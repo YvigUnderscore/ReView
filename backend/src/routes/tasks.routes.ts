@@ -30,13 +30,30 @@ router.get(
   '/',
   validate({
     query: z
-      .object({ shotId: z.coerce.number().int().optional(), assetId: z.coerce.number().int().optional() })
+      .object({
+        shotId: z.coerce.number().int().optional(),
+        assetId: z.coerce.number().int().optional(),
+        // Toutes les tâches du projet, quel que soit leur parent : c'est ce qu'il faut
+        // pour proposer une destination d'upload sur un projet où un asset traverse
+        // cinq étapes et chaque plan autant.
+        projectId: z.coerce.number().int().optional(),
+      })
       .merge(paginationQuery)
-      .refine((q) => q.shotId !== undefined || q.assetId !== undefined, 'shotId ou assetId requis'),
+      .refine(
+        (q) => q.shotId !== undefined || q.assetId !== undefined || q.projectId !== undefined,
+        'shotId, assetId ou projectId requis',
+      ),
   }),
   async (req, res) => {
     const shotId = req.query.shotId ? Number(req.query.shotId) : undefined;
     const assetId = req.query.assetId ? Number(req.query.assetId) : undefined;
+    const asked = req.query.projectId ? Number(req.query.projectId) : undefined;
+
+    if (asked !== undefined && !shotId && !assetId) {
+      await assertProjectAccess(req, asked);
+      return res.json({ tasks: await TaskService.listForProject(asked) });
+    }
+
     const projectId = shotId
       ? await resolveProjectIdForShot(shotId)
       : await resolveProjectIdForAsset(assetId!);

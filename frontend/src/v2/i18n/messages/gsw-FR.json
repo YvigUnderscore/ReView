@@ -2473,5 +2473,7 @@
   "shotgrid.sync.dot.realigned": "Uus ShotGrid nomol iigläse",
   "upload.pickTask.title": "Zue welere Task ghert die Version?",
   "upload.pickTask.hint": "Si unter em Schritt abzlege, wo si gmacht het, haltet d Pipeline läsbar — un schickt si in ShotGrid an di richtig Stell.",
-  "upload.pickTask.none": "Ohni Task — direkt ans Asset"
+  "upload.pickTask.none": "Ohni Task — direkt ans Asset",
+  "upload.pickTask.search": "E Task sueche…",
+  "upload.pickTask.elsewhere": "Anderswo im Projäkt"
 }

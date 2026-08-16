@@ -2461,5 +2461,7 @@
   "shotgrid.sync.dot.realigned": "Re-read from ShotGrid",
   "upload.pickTask.title": "Which task is this version for?",
   "upload.pickTask.hint": "Filing it under the step that produced it keeps the pipeline readable — and sends it to the right place in ShotGrid.",
-  "upload.pickTask.none": "No task — attach to the asset itself"
+  "upload.pickTask.none": "No task — attach to the asset itself",
+  "upload.pickTask.search": "Search a task…",
+  "upload.pickTask.elsewhere": "Elsewhere in the project"
 }

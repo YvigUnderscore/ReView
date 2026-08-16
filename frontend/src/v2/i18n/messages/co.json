@@ -2473,5 +2473,7 @@
   "shotgrid.sync.dot.realigned": "Rilettu da ShotGrid",
   "upload.pickTask.title": "À chì task appartene sta version ?",
   "upload.pickTask.hint": "Mèttela sottu à a tappa chì l’hà pruduttu tene u pipeline leghjibile — è a manda à u locu ghjustu in ShotGrid.",
-  "upload.pickTask.none": "Senza task — attaccà à l’asset"
+  "upload.pickTask.none": "Senza task — attaccà à l’asset",
+  "upload.pickTask.search": "Cercà un task…",
+  "upload.pickTask.elsewhere": "Altrò in u prughjettu"
 }

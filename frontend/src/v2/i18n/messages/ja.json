@@ -2415,5 +2415,7 @@
   "shotgrid.sync.dot.realigned": "ShotGrid から読み直しました",
   "upload.pickTask.title": "この version はどの task のものですか？",
   "upload.pickTask.hint": "それを作った工程の下に置くとパイプラインが読みやすくなり、ShotGrid でも正しい場所に届きます。",
-  "upload.pickTask.none": "task なし — asset に直接付ける"
+  "upload.pickTask.none": "task なし — asset に直接付ける",
+  "upload.pickTask.search": "task を検索…",
+  "upload.pickTask.elsewhere": "プロジェクト内の他の場所"
 }

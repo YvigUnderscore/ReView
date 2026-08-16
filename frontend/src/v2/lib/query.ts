@@ -49,6 +49,8 @@ export const qk = {
   assetTree: (id: number) => ['asset', id, 'tree'] as const,
   assetLatest: (id: number) => ['asset', id, 'latest'] as const,
   tasks: (shotId: number) => ['tasks', shotId] as const,
+  /** Toutes les tâches d'un projet, quel que soit leur parent (destination d'upload). */
+  projectTasks: (projectId: number) => ['tasks', 'project', projectId] as const,
   task: (id: number) => ['task', id] as const,
   /** parent = `taskId=1` ou `assetId=2` (query-string du GET /api/versions) */
   versions: (parent: string) => ['versions', parent] as const,

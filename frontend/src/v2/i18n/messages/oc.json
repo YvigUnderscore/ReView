@@ -2473,5 +2473,7 @@
   "shotgrid.sync.dot.realigned": "Tornat legir dempuèi ShotGrid",
   "upload.pickTask.title": "A quina task aparten aquesta version ?",
   "upload.pickTask.hint": "La botar jos l’etapa que l’a producha garda lo pipe legible — e la manda al bon endrech dins ShotGrid.",
-  "upload.pickTask.none": "Sens task — restacar a l’asset"
+  "upload.pickTask.none": "Sens task — restacar a l’asset",
+  "upload.pickTask.search": "Cercar una task…",
+  "upload.pickTask.elsewhere": "Endacòm mai dins lo projècte"
 }

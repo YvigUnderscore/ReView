@@ -150,3 +150,30 @@ export function useWatermarkConfigQuery() {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/** Tâche proposable comme destination d'une version. */
+export interface ProjectTask {
+  id: number;
+  name: string;
+  department: string | null;
+  pipelineStatusId: number | null;
+  parentKind: 'shot' | 'asset';
+  parentName: string;
+  versionCount: number;
+}
+
+/**
+ * Toutes les tâches du projet.
+ *
+ * Chargées seulement quand on en a besoin — au moment de choisir où ranger une version —
+ * et gardées un moment : la liste ne bouge qu'au rythme des synchronisations.
+ */
+export function useProjectTasks(projectId: number, enabled = true) {
+  return useQuery({
+    queryKey: qk.projectTasks(projectId),
+    queryFn: () =>
+      api.get<{ tasks: ProjectTask[] }>(`/api/tasks?projectId=${projectId}`).then((r) => r.tasks),
+    enabled: enabled && projectId > 0,
+    staleTime: 60_000,
+  });
+}

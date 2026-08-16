@@ -2473,5 +2473,7 @@
   "shotgrid.sync.dot.realigned": "Relido a partir do ShotGrid",
   "upload.pickTask.title": "A que task pertence esta version?",
   "upload.pickTask.hint": "Arquivá-la sob a etapa que a produziu mantém o pipeline legível — e envia-a ao sítio certo no ShotGrid.",
-  "upload.pickTask.none": "Sem task — anexar ao asset"
+  "upload.pickTask.none": "Sem task — anexar ao asset",
+  "upload.pickTask.search": "Procurar uma task…",
+  "upload.pickTask.elsewhere": "Noutro sítio do projeto"
 }

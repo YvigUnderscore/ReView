@@ -2473,5 +2473,7 @@
   "shotgrid.sync.dot.realigned": "Aus ShotGrid neu eingelesen",
   "upload.pickTask.title": "Zu welcher Task gehört diese Version?",
   "upload.pickTask.hint": "Sie unter dem Schritt abzulegen, der sie erzeugt hat, hält die Pipeline lesbar — und schickt sie in ShotGrid an die richtige Stelle.",
-  "upload.pickTask.none": "Ohne Task — direkt am Asset"
+  "upload.pickTask.none": "Ohne Task — direkt am Asset",
+  "upload.pickTask.search": "Task suchen…",
+  "upload.pickTask.elsewhere": "Anderswo im Projekt"
 }
