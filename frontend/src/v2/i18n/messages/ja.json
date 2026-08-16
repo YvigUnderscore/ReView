@@ -2408,5 +2408,8 @@
   "shotgrid.conflict.applying": "判断を適用しています…",
   "shotgrid.conflict.noDetail": "値が記録される前に生じた差異です — 見るには再同期してください",
   "shotgrid.conflict.field.status": "ステータス",
-  "shotgrid.log.trashedTaskKept": "task #{sgId} は ShotGrid のごみ箱にありますが、まだ {count} 件の version を持っています — ReView に保持"
+  "shotgrid.log.trashedTaskKept": "task #{sgId} は ShotGrid のごみ箱にありますが、まだ {count} 件の version を持っています — ReView に保持",
+  "upload.pickTask.title": "この version はどの task のものですか？",
+  "upload.pickTask.hint": "それを作った工程の下に置くとパイプラインが読みやすくなり、ShotGrid でも正しい場所に届きます。",
+  "upload.pickTask.none": "task なし — asset に直接付ける"
 }

@@ -2466,5 +2466,8 @@
   "shotgrid.conflict.applying": "Applicazione di a decisione…",
   "shotgrid.conflict.noDetail": "Divergenza arregistrata nanzu chì i valori fussinu pigliati — sincronizà torna per vedeli",
   "shotgrid.conflict.field.status": "statu",
-  "shotgrid.log.trashedTaskKept": "A task #{sgId} hè in a rumenza di ShotGrid ma porta sempre {count} version — cunservata in ReView"
+  "shotgrid.log.trashedTaskKept": "A task #{sgId} hè in a rumenza di ShotGrid ma porta sempre {count} version — cunservata in ReView",
+  "upload.pickTask.title": "À chì task appartene sta version ?",
+  "upload.pickTask.hint": "Mèttela sottu à a tappa chì l’hà pruduttu tene u pipeline leghjibile — è a manda à u locu ghjustu in ShotGrid.",
+  "upload.pickTask.none": "Senza task — attaccà à l’asset"
 }

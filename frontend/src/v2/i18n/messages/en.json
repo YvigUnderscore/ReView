@@ -2454,5 +2454,8 @@
   "shotgrid.playlists.pulled": "{count} playlist(s) imported",
   "shotgrid.conflict.noDetail": "Divergence recorded before the values were captured — synchronise again to see them",
   "shotgrid.conflict.field.status": "status",
-  "shotgrid.log.trashedTaskKept": "Task #{sgId} was trashed in ShotGrid but still carries {count} version(s) — kept in ReView"
+  "shotgrid.log.trashedTaskKept": "Task #{sgId} was trashed in ShotGrid but still carries {count} version(s) — kept in ReView",
+  "upload.pickTask.title": "Which task is this version for?",
+  "upload.pickTask.hint": "Filing it under the step that produced it keeps the pipeline readable — and sends it to the right place in ShotGrid.",
+  "upload.pickTask.none": "No task — attach to the asset itself"
 }

@@ -2398,5 +2398,8 @@
   "shotgrid.conflict.applying": "正在应用决定…",
   "shotgrid.conflict.noDetail": "差异在记录具体值之前就已产生 — 重新同步以查看",
   "shotgrid.conflict.field.status": "状态",
-  "shotgrid.log.trashedTaskKept": "task #{sgId} 已在 ShotGrid 回收站，但仍带有 {count} 个 version — 在 ReView 中保留"
+  "shotgrid.log.trashedTaskKept": "task #{sgId} 已在 ShotGrid 回收站，但仍带有 {count} 个 version — 在 ReView 中保留",
+  "upload.pickTask.title": "这个 version 属于哪个 task？",
+  "upload.pickTask.hint": "归入产出它的环节可让流程保持清晰，也会送到 ShotGrid 中正确的位置。",
+  "upload.pickTask.none": "不选 task — 直接挂在 asset 上"
 }

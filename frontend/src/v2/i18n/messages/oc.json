@@ -2466,5 +2466,8 @@
   "shotgrid.conflict.applying": "Aplicacion de la decision…",
   "shotgrid.conflict.noDetail": "Divergéncia enregistrada abans lo relevat de las valors — tornar sincronizar per las veire",
   "shotgrid.conflict.field.status": "estat",
-  "shotgrid.log.trashedTaskKept": "La task #{sgId} es a la banasta dins ShotGrid mas pòrta encara {count} version — servada dins ReView"
+  "shotgrid.log.trashedTaskKept": "La task #{sgId} es a la banasta dins ShotGrid mas pòrta encara {count} version — servada dins ReView",
+  "upload.pickTask.title": "A quina task aparten aquesta version ?",
+  "upload.pickTask.hint": "La botar jos l’etapa que l’a producha garda lo pipe legible — e la manda al bon endrech dins ShotGrid.",
+  "upload.pickTask.none": "Sens task — restacar a l’asset"
 }

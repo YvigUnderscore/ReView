@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
@@ -21,6 +21,7 @@ import AssetTaskCards from './asset/AssetTaskCards';
 import { SkeletonRows } from '../components/ui/skeleton';
 import type { AssetDetail, AssetOverview } from '../types/api';
 import { useT } from '../i18n';
+import TaskPickerDialog from '../components/upload/TaskPickerDialog';
 
 export default function AssetPage() {
   const t = useT();
@@ -58,14 +59,46 @@ export default function AssetPage() {
   const overview = treeQ.data ?? null;
 
   /**
+   * Tâches auxquelles une version peut appartenir, telles que l'arbre les a déjà
+   * chargées. Sur un projet relié, ce sont exactement celles de ShotGrid.
+   */
+  const pickableTasks = useMemo(
+    () =>
+      (overview?.groups ?? [])
+        .flatMap((g) => g.items)
+        .filter((task): task is typeof task & { id: number } => task.id !== null)
+        .map((task) => ({
+          id: task.id,
+          name: task.name,
+          department: task.department,
+          pipelineStatusId: task.pipelineStatusId,
+          versionCount: task.versions.length,
+        })),
+    [overview],
+  );
+
+  /**
    * Déposer crée la version suivante et l'emplit (Phase 46) : c'est le geste par défaut,
    * celui qu'on attend en lâchant un rendu sur un asset. Pour alimenter une version
    * existante, on la vise directement — chaque carte est sa propre cible.
+   *
+   * Quand l'asset a des tâches, on demande d'abord laquelle : ranger un rendu de
+   * texturing « sur l'asset » perd l'étape qui l'a produit, et prive la version poussée
+   * vers ShotGrid de son `sg_task`. Sans tâche, rien ne change.
    */
-  const onDropFiles = async (files: File[]) => {
-    const created = await createVersion();
-    if (created) files.forEach((f) => enqueue(f, created.id));
+  const [pending, setPending] = useState<File[] | 'empty' | null>(null);
+
+  const startVersion = (files: File[] | 'empty') => {
+    if (pickableTasks.length === 0) return void withTask(files, null);
+    setPending(files);
   };
+
+  const withTask = async (files: File[] | 'empty', taskId: number | null) => {
+    const created = await createVersion(taskId ? { taskId } : undefined);
+    if (created && files !== 'empty') files.forEach((f) => enqueue(f, created.id));
+  };
+
+  const onDropFiles = (files: File[]) => startVersion(files);
 
   return (
     <Shell breadcrumb={<EntityBreadcrumb entity="asset" id={assetId} />}>
@@ -140,7 +173,7 @@ export default function AssetPage() {
       <div className="mb-3 mt-6 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('asset.tree.direct')}</h2>
         {canCreate && (
-          <Button size="sm" onClick={() => void createVersion()}>
+          <Button size="sm" onClick={() => startVersion('empty')}>
             {t('version.newPlus')}
           </Button>
         )}
@@ -154,12 +187,24 @@ export default function AssetPage() {
         contextKey={`asset:${assetId}`}
         projectId={asset?.projectId ?? null}
         emptyDescription={canCreate ? t('version.emptyAsset') : t('version.noneAsset')}
-        onCreateVersion={() => void createVersion()}
+        onCreateVersion={() => startVersion('empty')}
         onDropNewVersion={(files) => void onDropFiles(files)}
         publishVersion={publishVersion}
         publishMedia={publishMedia}
         removeVersion={removeVersion}
         removeMedia={removeMedia}
+      />
+
+      <TaskPickerDialog
+        open={pending !== null}
+        onOpenChange={(open) => !open && setPending(null)}
+        tasks={pickableTasks}
+        allowNone
+        onPick={(taskId) => {
+          const files = pending;
+          setPending(null);
+          if (files !== null) void withTask(files, taskId);
+        }}
       />
 
       {canCreate && (

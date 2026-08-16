@@ -2469,5 +2469,8 @@
   "shotgrid.conflict.applying": "Erabakia aplikatzen…",
   "shotgrid.conflict.noDetail": "Balioak jaso baino lehen erregistratutako aldea — sinkronizatu berriro ikusteko",
   "shotgrid.conflict.field.status": "egoera",
-  "shotgrid.log.trashedTaskKept": "#{sgId} task ShotGrid-en zakarrontzian dago baina {count} version ditu oraindik — ReView-en mantendua"
+  "shotgrid.log.trashedTaskKept": "#{sgId} task ShotGrid-en zakarrontzian dago baina {count} version ditu oraindik — ReView-en mantendua",
+  "upload.pickTask.title": "Zein task-i dagokio version hau?",
+  "upload.pickTask.hint": "Sortu duen urratsaren azpian jartzeak pipeline-a irakurgarri mantentzen du — eta ShotGrid-en leku egokira bidaltzen du.",
+  "upload.pickTask.none": "Task-ik gabe — asset-ari erantsi"
 }

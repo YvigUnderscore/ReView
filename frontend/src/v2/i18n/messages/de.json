@@ -2466,5 +2466,8 @@
   "shotgrid.conflict.applying": "Entscheidung wird angewendet…",
   "shotgrid.conflict.noDetail": "Abweichung erfasst, bevor die Werte festgehalten wurden — erneut synchronisieren, um sie zu sehen",
   "shotgrid.conflict.field.status": "Status",
-  "shotgrid.log.trashedTaskKept": "Task #{sgId} liegt in ShotGrid im Papierkorb, trägt aber noch {count} Version(en) — in ReView behalten"
+  "shotgrid.log.trashedTaskKept": "Task #{sgId} liegt in ShotGrid im Papierkorb, trägt aber noch {count} Version(en) — in ReView behalten",
+  "upload.pickTask.title": "Zu welcher Task gehört diese Version?",
+  "upload.pickTask.hint": "Sie unter dem Schritt abzulegen, der sie erzeugt hat, hält die Pipeline lesbar — und schickt sie in ShotGrid an die richtige Stelle.",
+  "upload.pickTask.none": "Ohne Task — direkt am Asset"
 }

@@ -2466,5 +2466,8 @@
   "shotgrid.conflict.applying": "A aplicar a decisão…",
   "shotgrid.conflict.noDetail": "Divergência registada antes de os valores serem captados — sincronize novamente para os ver",
   "shotgrid.conflict.field.status": "estado",
-  "shotgrid.log.trashedTaskKept": "A task #{sgId} está na reciclagem do ShotGrid mas ainda tem {count} version(ões) — mantida no ReView"
+  "shotgrid.log.trashedTaskKept": "A task #{sgId} está na reciclagem do ShotGrid mas ainda tem {count} version(ões) — mantida no ReView",
+  "upload.pickTask.title": "A que task pertence esta version?",
+  "upload.pickTask.hint": "Arquivá-la sob a etapa que a produziu mantém o pipeline legível — e envia-a ao sítio certo no ShotGrid.",
+  "upload.pickTask.none": "Sem task — anexar ao asset"
 }

@@ -47,9 +47,17 @@ export function useVersions(scope: VersionScope) {
     }
   }, [uploads, qc, filter]);
 
-  const createVersion = async (): Promise<Version | null> => {
+  /**
+   * Crée la version suivante.
+   *
+   * `destination` permet de ranger la version sous une tâche précise plutôt que sous le
+   * parent où l'on se trouve : c'est ce que demande un pipe découpé en étapes, où un
+   * rendu appartient au texturing, pas « à l'asset » en général.
+   */
+  const createVersion = async (destination?: { taskId: number }): Promise<Version | null> => {
     try {
-      const { version } = await api.post<{ version: Version }>('/api/versions', createBody);
+      const body = destination ? { taskId: destination.taskId } : createBody;
+      const { version } = await api.post<{ version: Version }>('/api/versions', body);
       toast.success(t('version.created', { name: version.name }));
       await invalidateVersions();
       return version;
