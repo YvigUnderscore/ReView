@@ -77,11 +77,22 @@ export const DELETED_USER_VIEW = {
   avatarUrl: null,
 } as const;
 
-/** Comme `toPublicUser`, mais tolère un auteur absent (compte supprimé). */
+/**
+ * Comme `toPublicUser`, mais tolère un auteur absent (compte supprimé).
+ *
+ * `externalName` distingue les deux façons de n'avoir pas de compte. Un compte supprimé
+ * ne laisse rien derrière lui : c'est le cas que couvre `DELETED_USER_VIEW`. Un invité,
+ * ou un intervenant qui a écrit depuis ShotGrid, n'a jamais eu de compte ici mais porte
+ * son nom (`Comment.guestName`) : renvoyer `null` laisse alors l'affichage retomber sur
+ * ce nom-là. Les confondre revient à présenter quelqu'un de bien vivant comme un compte
+ * supprimé — c'est faux, et c'est ce que voyaient les retours venus de ShotGrid.
+ */
 export async function toPublicUserOrDeleted<T extends RawUserIdentity>(
   u: T | null | undefined,
+  externalName?: string | null,
 ): Promise<unknown> {
-  return u ? toPublicUser(u) : DELETED_USER_VIEW;
+  if (u) return toPublicUser(u);
+  return externalName ? null : DELETED_USER_VIEW;
 }
 
 /** Vue publique normalisée d'un utilisateur (avec displayName + avatarUrl résolu). */

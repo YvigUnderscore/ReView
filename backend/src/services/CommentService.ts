@@ -57,6 +57,8 @@ type RawAuthor = {
 type RawAttachment = { key: string; name?: string; contentType?: string };
 interface RawComment {
   author: RawAuthor;
+  /** Nom de qui a écrit sans compte ici : invité, ou intervenant venu de ShotGrid. */
+  guestName?: string | null;
   resolvedBy?: RawAuthor | null;
   replies?: RawComment[];
   attachments?: unknown;
@@ -83,7 +85,8 @@ async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
     ...c,
     // L'auteur peut être `null` : la relation est en SetNull, un compte supprimé laisse
     // ses commentaires derrière lui. Le déréférencer cassait tout le fil en 500.
-    author: await toPublicUserOrDeleted(c.author),
+    // `guestName` départage un compte supprimé d'une personne qui n'en a jamais eu.
+    author: await toPublicUserOrDeleted(c.author, c.guestName),
     resolvedBy: c.resolvedBy ? await toPublicUser(c.resolvedBy) : null,
     attachments: await resolveAttachments(c.attachments),
     replies: c.replies ? await Promise.all(c.replies.map(enrichComment)) : undefined,

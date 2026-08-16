@@ -113,7 +113,7 @@ export default function CommentItem({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-sm font-medium">
-            {c.author?.displayName ?? c.author?.name ?? c.guestName ?? 'Anonyme'}
+            {c.author?.displayName ?? c.author?.name ?? c.guestName ?? t('comments.anonymous')}
           </span>
           <span className="text-[10px] text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
           {c.isEdited && (

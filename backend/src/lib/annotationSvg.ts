@@ -48,9 +48,38 @@ export function parseShapes(annotation: unknown): AnnotationShape[] {
 const escapeXml = (value: string): string =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** Épaisseur en pixels : la valeur stockée est relative à la largeur du média. */
+/**
+ * Épaisseur par défaut du pinceau, en pixels — celle du viewer
+ * (`frontend/src/v2/pages/review/useAnnotations.ts`).
+ */
+const DEFAULT_STROKE_PX = 3;
+
+/**
+ * Largeur d'affichage de référence, en pixels.
+ *
+ * L'épaisseur d'un trait est stockée en pixels ÉCRAN : le viewer dessine dans un viewBox
+ * normalisé avec `vector-effect: non-scaling-stroke`, si bien qu'un trait de 3 px reste
+ * épais de 3 px quelle que soit la taille à laquelle le média est affiché. Rendre à la
+ * taille réelle du média demande donc de rapporter cette épaisseur à la largeur à
+ * laquelle on annotait — qu'on ne connaît plus après coup. On retient une largeur
+ * d'affichage courante : le trait garde ainsi la finesse relative qu'il avait à l'écran.
+ *
+ * Traiter cette valeur comme une fraction de la largeur, ce que faisait ce module,
+ * revenait à lire « 3 » comme « trois fois la largeur du média » : un trait de 2217 px
+ * sur une image large de 739, soit un aplat de couleur recouvrant toute la frame.
+ */
+const REFERENCE_WIDTH = 1280;
+
+/** Épaisseur de trait à l'échelle de l'image rendue. */
 const strokeWidth = (shape: AnnotationShape, width: number): number =>
-  Math.max(1, (shape.width ?? 0.004) * width);
+  Math.max(1, (shape.width ?? DEFAULT_STROKE_PX) * (width / REFERENCE_WIDTH));
+
+/**
+ * Hauteur de police, en fraction de la hauteur du média puis en pixels — même formule
+ * que `textFontSize` côté viewer, pour que le texte ait la taille qu'on lui a donnée.
+ */
+const fontSize = (shape: AnnotationShape, height: number): number =>
+  Math.max(8, (0.02 + (shape.width ?? DEFAULT_STROKE_PX) * 0.005) * height);
 
 function shapeToSvg(shape: AnnotationShape, w: number, h: number): string {
   const color = shape.color ?? '#FF3B30';
@@ -78,21 +107,29 @@ function shapeToSvg(shape: AnnotationShape, w: number, h: number): string {
       const y1 = (shape.y1 ?? 0) * h;
       const x2 = (shape.x2 ?? 0) * w;
       const y2 = (shape.y2 ?? 0) * h;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+      if (len < 1e-6) return '';
       // Pointe dessinée à la main : un marqueur SVG hérite mal de la couleur d'un trait
       // à travers les convertisseurs, et la flèche perdrait sa tête à la conversion.
-      const angle = Math.atan2(y2 - y1, x2 - x1);
-      const head = Math.max(sw * 3, 8);
-      const p1x = x2 - head * Math.cos(angle - Math.PI / 7);
-      const p1y = y2 - head * Math.sin(angle - Math.PI / 7);
-      const p2x = x2 - head * Math.cos(angle + Math.PI / 7);
-      const p2y = y2 - head * Math.sin(angle + Math.PI / 7);
+      // Mêmes proportions que le viewer (`arrowHead`), bornées par la longueur du trait :
+      // sans cette borne, une flèche courte est avalée par sa propre pointe.
+      const head = Math.min(Math.max(10, sw * 3.5), len * 0.45);
+      const headW = head * 0.75;
+      const ux = dx / len;
+      const uy = dy / len;
+      const px = -uy;
+      const py = ux;
+      const baseX = x2 - ux * head;
+      const baseY = y2 - uy * head;
       return (
         `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${common} />` +
-        `<polygon points="${x2},${y2} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}" opacity="${opacity}" />`
+        `<polygon points="${x2},${y2} ${baseX + (px * headW) / 2},${baseY + (py * headW) / 2} ${baseX - (px * headW) / 2},${baseY - (py * headW) / 2}" fill="${color}" opacity="${opacity}" />`
       );
     }
     case 'text': {
-      const size = Math.max(10, (shape.width ?? 0.02) * h * 2);
+      const size = fontSize(shape, h);
       return `<text x="${(shape.x ?? 0) * w}" y="${(shape.y ?? 0) * h}" fill="${color}" opacity="${opacity}" font-size="${size}" font-family="sans-serif">${escapeXml(shape.text ?? '')}</text>`;
     }
     default:

@@ -8,7 +8,7 @@ vi.mock('../services/StorageService', () => ({
   StorageService: class {},
 }));
 
-import { displayName, initials, toSessionUser } from './userView';
+import { displayName, initials, toSessionUser, toPublicUserOrDeleted, DELETED_USER_VIEW } from './userView';
 
 describe('displayName', () => {
   it('priorise le pseudo', () => {
@@ -65,5 +65,39 @@ describe('initials', () => {
   });
   it('prend les deux premières lettres pour un nom à un mot', () => {
     expect(initials({ id: 1, email: 'e@x.io', name: 'Madonna' })).toBe('MA');
+  });
+});
+
+/**
+ * Deux façons différentes de n'avoir pas de compte, qu'il ne faut pas confondre : le
+ * compte supprimé (plus rien derrière lui) et la personne qui n'en a jamais eu ici mais
+ * dont on connaît le nom — invité, ou intervenant venu de ShotGrid.
+ */
+describe('toPublicUserOrDeleted', () => {
+  it("rend l'auteur quand il a un compte", async () => {
+    const vue = (await toPublicUserOrDeleted({ id: 3, email: 'a@x.io', username: 'ana' })) as {
+      displayName: string;
+    };
+    expect(vue.displayName).toBe('ana');
+  });
+
+  it('annonce un compte supprimé quand rien ne subsiste', async () => {
+    expect(await toPublicUserOrDeleted(null)).toEqual(DELETED_USER_VIEW);
+    expect(await toPublicUserOrDeleted(null, null)).toEqual(DELETED_USER_VIEW);
+    expect(await toPublicUserOrDeleted(null, '')).toEqual(DELETED_USER_VIEW);
+  });
+
+  it("s'efface devant un nom externe, au lieu d'enterrer un vivant", async () => {
+    // C'est ce cas qui affichait « compte supprimé » à la place du superviseur ayant
+    // écrit la note dans ShotGrid : l'API fabriquait un auteur, donc le nom conservé
+    // sur le commentaire n'était jamais consulté.
+    expect(await toPublicUserOrDeleted(null, 'Yvig Bidon')).toBeNull();
+  });
+
+  it("le compte réel l'emporte sur le nom externe", async () => {
+    const vue = (await toPublicUserOrDeleted({ id: 3, email: 'a@x.io', username: 'ana' }, 'Autre')) as {
+      displayName: string;
+    };
+    expect(vue.displayName).toBe('ana');
   });
 });

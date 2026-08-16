@@ -15,6 +15,7 @@ import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import { asDate, asEntityRef, asString, type SgRecord } from './shotgridMapper';
 import { findByLocal, mapSgToLocal, upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
+import { importNoteAttachments } from './ShotgridNoteAttachments';
 import type { PullContext } from './ShotgridPullService';
 
 /**
@@ -32,6 +33,9 @@ const NOTE_FIELDS = [
   'note_links',
   'tasks',
   'user',
+  // Sans ce champ, l'API ne renvoie pas les pièces jointes et l'image annotée du
+  // superviseur n'atteint jamais la review — le retour arrive amputé de son sujet.
+  'attachments',
   'created_at',
   'updated_at',
   'project',
@@ -72,7 +76,15 @@ export async function pullNotes(ctx: PullContext): Promise<void> {
     }
     const content = asString(record.content) ?? asString(record.subject);
     if (!content || isFromReview(content)) continue;
-    if (commentLinks.has(record.id)) continue; // déjà importée
+
+    const known = commentLinks.get(record.id);
+    if (known) {
+      // Note déjà importée. On repasse tout de même chercher ses pièces jointes tant
+      // qu'on ne l'a pas fait : les notes reçues avant que ce chemin existe n'ont jamais
+      // eu leur image annotée, et rien d'autre ne viendrait la chercher.
+      if (!linkSaysAttachmentsDone(known.data)) await catchUpNote(ctx, record, known.localId);
+      continue;
+    }
 
     const versionRef = asEntityRefs(record.note_links).find((r) => r.type === 'Version');
     const localVersionId = versionRef ? versionLinks.get(versionRef.id)?.localId : undefined;
@@ -110,14 +122,22 @@ export async function pullNotes(ctx: PullContext): Promise<void> {
       data: {
         mediaObjectId: media.id,
         userId: authorLink?.localId ?? null,
+        // Qui a écrit, quand la personne n'a pas de compte ici. C'est le cas ordinaire :
+        // le rapprochement se fait sur l'e-mail, et un studio n'a aucune raison d'avoir
+        // les mêmes adresses des deux côtés. Sans ce champ, l'API ne pouvait proposer
+        // qu'un auteur absent — que l'interface affiche « compte supprimé », ce qui est
+        // à la fois faux et vexant pour la personne qui a fait la remarque.
+        guestName: authorRef?.name ?? null,
         // La provenance est portée par le contenu : elle survit à l'export, au copier
         // et à la lecture par quelqu'un qui ne connaît pas l'intégration.
-        content: `<p><em>ShotGrid${authorRef?.name ? ` — ${authorRef.name}` : ''}</em></p>${
+        content: `<p><em>ShotGrid</em></p>${
           subject ? `<p><strong>${escapeHtml(subject)}</strong></p>` : ''
         }<p>${escapeHtml(content)}</p>`,
         createdAt: asDate(record.created_at) ?? new Date(),
       },
     });
+
+    const attachments = await importNoteAttachments(ctx, record, created.id);
 
     await upsertLink({
       connectionId: ctx.connection.id,
@@ -126,10 +146,56 @@ export async function pullNotes(ctx: PullContext): Promise<void> {
       sgType: 'Note',
       sgId: record.id,
       sgUpdatedAt: asDate(record.updated_at),
-      data: { fromShotgrid: true },
+      data: { fromShotgrid: true, attachmentsImported: true, attachmentCount: attachments },
     });
     ctx.journal.count('notes', 'created');
   }
+}
+
+/** Le lien porte-t-il la trace d'un passage sur les pièces jointes ? */
+function linkSaysAttachmentsDone(data: unknown): boolean {
+  return Boolean(data && typeof data === 'object' && 'attachmentsImported' in data);
+}
+
+/**
+ * Rattrapage d'une note importée avant que ce chemin existe.
+ *
+ * Deux manques à réparer : la pièce jointe, jamais rapatriée, et le nom de l'auteur, resté
+ * dans la prose au lieu du champ prévu — ce qui faisait afficher « compte supprimé » à la
+ * place d'une personne bien réelle. Le commentaire peut avoir été supprimé depuis : on
+ * marque alors quand même le lien, pour ne pas y revenir à chaque synchronisation.
+ */
+async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number): Promise<void> {
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { id: true, guestName: true, userId: true, content: true },
+  });
+  const count = comment ? await importNoteAttachments(ctx, record, commentId) : 0;
+
+  const authorName = asEntityRef(record.user)?.name ?? null;
+  if (comment && !comment.userId && !comment.guestName && authorName) {
+    await prisma.comment.update({
+      where: { id: commentId },
+      data: {
+        guestName: authorName,
+        // Le nom cesse d'être écrit deux fois : une fois comme auteur, une fois dans le
+        // texte. Ce préfixe est de notre fabrication, pas la prose de quelqu'un — le
+        // normaliser ne réécrit le propos de personne.
+        content: comment.content.replace(/^<p><em>ShotGrid[^<]*<\/em><\/p>/, '<p><em>ShotGrid</em></p>'),
+      },
+    });
+  }
+
+  await upsertLink({
+    connectionId: ctx.connection.id,
+    localType: 'comment',
+    localId: commentId,
+    sgType: 'Note',
+    sgId: record.id,
+    sgUpdatedAt: asDate(record.updated_at),
+    data: { fromShotgrid: true, attachmentsImported: true, attachmentCount: count },
+  });
+  if (count > 0 || authorName) ctx.journal.count('notes', 'updated');
 }
 
 export interface PushNoteContext {

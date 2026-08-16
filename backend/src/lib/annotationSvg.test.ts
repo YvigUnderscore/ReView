@@ -74,3 +74,86 @@ describe('annotationToSvg', () => {
     expect(svg).not.toContain('a < b &');
   });
 });
+
+/**
+ * L'épaisseur est le seul champ d'une forme qui ne soit PAS normalisé : le viewer la
+ * stocke en pixels écran (`vector-effect: non-scaling-stroke`). L'avoir lue comme une
+ * fraction de la largeur donnait un trait de 2217 px sur une image de 739 : la frame
+ * entière recouverte d'un aplat, et une note ShotGrid où l'on ne voyait « que la
+ * couleur ». Ces tests fixent l'unité, faute de quoi la confusion peut revenir.
+ */
+describe('annotationToSvg — épaisseur en pixels écran', () => {
+  const strokeOf = (svg: string | null): number =>
+    Number(/stroke-width="([\d.]+)"/.exec(svg ?? '')?.[1] ?? NaN);
+
+  const trait = (width: number | undefined, w: number, h: number) =>
+    annotationToSvg(
+      [
+        {
+          type: 'path',
+          width,
+          pts: [
+            [0, 0],
+            [1, 1],
+          ],
+        },
+      ],
+      w,
+      h,
+    );
+
+  it('reste un trait, jamais un aplat', () => {
+    // Le cas exact rapporté : pinceau à 3, image de 739 × 686.
+    const sw = strokeOf(trait(3, 739, 686));
+    expect(sw).toBeLessThan(739 * 0.01);
+    expect(sw).toBeGreaterThan(0);
+  });
+
+  it('grossit avec l’image, pour garder la finesse qu’il avait à l’écran', () => {
+    const petit = strokeOf(trait(3, 640, 360));
+    const grand = strokeOf(trait(3, 3840, 2160));
+    expect(grand).toBeGreaterThan(petit);
+    expect(grand / petit).toBeCloseTo(6, 1);
+  });
+
+  it('épaissit quand l’artiste a choisi un pinceau plus large', () => {
+    expect(strokeOf(trait(12, 1280, 720))).toBeCloseTo(4 * strokeOf(trait(3, 1280, 720)), 5);
+  });
+
+  it('rend l’épaisseur nominale à la largeur de référence', () => {
+    expect(strokeOf(trait(3, 1280, 720))).toBeCloseTo(3, 5);
+  });
+
+  it('reste visible sur une vignette', () => {
+    expect(strokeOf(trait(1, 160, 90))).toBeGreaterThanOrEqual(1);
+  });
+
+  it('prend l’épaisseur du viewer quand la forme n’en porte pas', () => {
+    expect(strokeOf(trait(undefined, 1280, 720))).toBeCloseTo(3, 5);
+  });
+});
+
+describe('annotationToSvg — géométrie dérivée de l’épaisseur', () => {
+  it('donne au texte la taille que le viewer lui donne', () => {
+    // Même formule que `textFontSize` côté front : 0.02 + width × 0.005, en fraction
+    // de la HAUTEUR. Sur 1000 px de haut avec un pinceau à 4 : 40 + 20 = 40 px.
+    const svg = annotationToSvg([{ type: 'text', x: 0.1, y: 0.1, width: 4, text: 'a' }], 1000, 1000);
+    expect(svg).toContain('font-size="40"');
+  });
+
+  it('ne laisse pas la pointe dévorer une flèche courte', () => {
+    // Trait de 20 px : la tête est bornée à 45 % de sa longueur, pas à 3,5 × l'épaisseur.
+    const svg = annotationToSvg(
+      [{ type: 'arrow', x1: 0.5, y1: 0.5, x2: 0.52, y2: 0.5, width: 12 }],
+      1000,
+      1000,
+    );
+    const pointe = /points="([^"]+)"/.exec(svg ?? '')?.[1] ?? '';
+    const xs = pointe.split(' ').map((p) => Number(p.split(',')[0]));
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThanOrEqual(20 * 0.45 + 0.001);
+  });
+
+  it('ignore une flèche sans longueur plutôt que de diviser par zéro', () => {
+    expect(annotationToSvg([{ type: 'arrow', x1: 0.5, y1: 0.5, x2: 0.5, y2: 0.5 }], 800, 600)).toBeNull();
+  });
+});

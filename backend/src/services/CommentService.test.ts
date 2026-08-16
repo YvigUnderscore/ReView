@@ -31,7 +31,11 @@ vi.mock('./StorageService', () => ({
 }));
 vi.mock('../lib/userView', () => ({
   toPublicUser: vi.fn(async (u: unknown) => u),
-  toPublicUserOrDeleted: vi.fn(async (u: unknown) => u ?? { displayName: 'Compte supprimé' }),
+  // Même contrat que la vraie : un nom externe efface l'auteur au lieu d'en fabriquer un.
+  toPublicUserOrDeleted: vi.fn(
+    async (u: unknown, externalName?: string | null) =>
+      u ?? (externalName ? null : { displayName: 'Compte supprimé' }),
+  ),
 }));
 
 import { create, extractMentionTokens, listMontage, listThread, share, update } from './CommentService';
