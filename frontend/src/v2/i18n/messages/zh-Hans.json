@@ -2403,6 +2403,7 @@
   "shotgrid.sync.dot.unlinked": "不在 ShotGrid 中 — 仅在此创建",
   "shotgrid.sync.dot.realign": "从 ShotGrid 重新读取",
   "shotgrid.sync.dot.realigned": "已从 ShotGrid 重新读取",
+  "shotgrid.sync.publishOff": "向 ShotGrid 的发布已关闭：在此发布的 version 不会外传。可在「设置 → 发布」中更改。",
   "upload.pickTask.title": "这个 version 属于哪个 task？",
   "upload.pickTask.hint": "归入产出它的环节可让流程保持清晰，也会送到 ShotGrid 中正确的位置。",
   "upload.pickTask.none": "不选 task — 直接挂在 asset 上",

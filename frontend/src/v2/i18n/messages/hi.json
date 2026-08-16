@@ -2465,6 +2465,7 @@
   "shotgrid.sync.dot.unlinked": "ShotGrid में नहीं — केवल यहाँ बनाया गया",
   "shotgrid.sync.dot.realign": "ShotGrid से फिर पढ़ें",
   "shotgrid.sync.dot.realigned": "ShotGrid से फिर पढ़ा गया",
+  "shotgrid.sync.publishOff": "ShotGrid पर भेजना बंद है: यहाँ प्रकाशित version यहीं रहती हैं। सेटिंग्स → प्रकाशन में बदलें।",
   "upload.pickTask.title": "यह version किस task के लिए है?",
   "upload.pickTask.hint": "जिस चरण ने इसे बनाया, उसके अंतर्गत रखने से पाइपलाइन पठनीय रहती है — और ShotGrid में सही जगह जाती है।",
   "upload.pickTask.none": "कोई task नहीं — asset से जोड़ें",

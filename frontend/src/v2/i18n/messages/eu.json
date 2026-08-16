@@ -2474,6 +2474,7 @@
   "shotgrid.sync.dot.unlinked": "ShotGrid-en ez dago — hemen bakarrik sortua",
   "shotgrid.sync.dot.realign": "ShotGrid-etik berrirakurri",
   "shotgrid.sync.dot.realigned": "ShotGrid-etik berrirakurria",
+  "shotgrid.sync.publishOff": "ShotGrid-era bidaltzea desaktibatuta dago: hemen argitaratutako version-ak hemen geratzen dira. Aldatu Ezarpenak → Argitalpena atalean.",
   "upload.pickTask.title": "Zein task-i dagokio version hau?",
   "upload.pickTask.hint": "Sortu duen urratsaren azpian jartzeak pipeline-a irakurgarri mantentzen du — eta ShotGrid-en leku egokira bidaltzen du.",
   "upload.pickTask.none": "Task-ik gabe — asset-ari erantsi",

@@ -89,6 +89,16 @@ export default function SgSyncPanel({
         )}
       </div>
 
+      {/* Un projet qui ne publie pas vers ShotGrid le fait en silence : la version se
+          publie ici, rien ne part là-bas, et personne ne l'apprend avant de constater
+          l'absence. Une connexion neuve naît dans cet état. */}
+      {connection.settings?.push?.publishMode === 'off' && (
+        <p className="flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-xs">
+          <AlertTriangle size={13} className="shrink-0" />
+          {t('shotgrid.sync.publishOff')}
+        </p>
+      )}
+
       {conflicts.length > 0 && (
         <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">

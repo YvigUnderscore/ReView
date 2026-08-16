@@ -2459,6 +2459,7 @@
   "shotgrid.sync.dot.unlinked": "Not in ShotGrid — created here only",
   "shotgrid.sync.dot.realign": "Re-read from ShotGrid",
   "shotgrid.sync.dot.realigned": "Re-read from ShotGrid",
+  "shotgrid.sync.publishOff": "Publishing to ShotGrid is off: versions published here stay here. Change it under Settings → Publishing.",
   "upload.pickTask.title": "Which task is this version for?",
   "upload.pickTask.hint": "Filing it under the step that produced it keeps the pipeline readable — and sends it to the right place in ShotGrid.",
   "upload.pickTask.none": "No task — attach to the asset itself",

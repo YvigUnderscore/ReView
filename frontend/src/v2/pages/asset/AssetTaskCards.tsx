@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ExternalLink, FileStack, Layers } from 'lucide-react';
 import { reviewPath } from '../../lib/slug';
 import EmptyState from '../../components/ui/empty-state';
@@ -30,6 +30,7 @@ export default function AssetTaskCards({
   projectId: number;
 }) {
   const t = useT();
+  const navigate = useNavigate();
   const [openTaskId, setOpenTaskId] = useState<number | 'loose' | null>(null);
 
   const allTasks = groups.flatMap((g) => g.items.map((task) => ({ task, group: g })));
@@ -71,7 +72,10 @@ export default function AssetTaskCards({
                 key={task.id ?? 'loose'}
                 task={task}
                 projectId={projectId}
-                onOpen={() => setOpenTaskId(task.id ?? 'loose')}
+                // Une tâche a sa page : c'est là qu'on dépose un média, qu'on publie et
+                // qu'on voit les brouillons. La vue repliée dans cette page ne savait rien
+                // faire de tout cela — un brouillon vide y devenait un cul-de-sac.
+                onOpen={() => (task.id ? navigate(`/tasks/${task.id}`) : setOpenTaskId('loose'))}
               />
             ))}
           </div>

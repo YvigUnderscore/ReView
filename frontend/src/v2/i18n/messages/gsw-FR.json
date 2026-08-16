@@ -2471,6 +2471,7 @@
   "shotgrid.sync.dot.unlinked": "Nit in ShotGrid — nume do aagleit",
   "shotgrid.sync.dot.realign": "Uus ShotGrid nomol iiläse",
   "shotgrid.sync.dot.realigned": "Uus ShotGrid nomol iigläse",
+  "shotgrid.sync.publishOff": "S Schicke an ShotGrid isch uus: Versions, wo do veröffentlicht werde, bliibe do. Under Iistellunge → Veröffentlichung ändere.",
   "upload.pickTask.title": "Zue welere Task ghert die Version?",
   "upload.pickTask.hint": "Si unter em Schritt abzlege, wo si gmacht het, haltet d Pipeline läsbar — un schickt si in ShotGrid an di richtig Stell.",
   "upload.pickTask.none": "Ohni Task — direkt ans Asset",

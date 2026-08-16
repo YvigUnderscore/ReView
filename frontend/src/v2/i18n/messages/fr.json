@@ -2521,6 +2521,7 @@
   "shotgrid.sync.dot.unlinked": "Absent de ShotGrid — créé ici seulement",
   "shotgrid.sync.dot.realign": "Relire depuis ShotGrid",
   "shotgrid.sync.dot.realigned": "Relu depuis ShotGrid",
+  "shotgrid.sync.publishOff": "L’envoi vers ShotGrid est désactivé : les versions publiées ici y restent. À changer dans Réglages → Publication.",
   "upload.pickTask.title": "À quelle task appartient cette version ?",
   "upload.pickTask.hint": "La ranger sous l’étape qui l’a produite garde le pipe lisible — et l’envoie au bon endroit dans ShotGrid.",
   "upload.pickTask.none": "Sans task — rattacher à l’asset",

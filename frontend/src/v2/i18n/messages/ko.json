@@ -2413,6 +2413,7 @@
   "shotgrid.sync.dot.unlinked": "ShotGrid에 없음 — 여기서만 만들어짐",
   "shotgrid.sync.dot.realign": "ShotGrid에서 다시 읽기",
   "shotgrid.sync.dot.realigned": "ShotGrid에서 다시 읽었습니다",
+  "shotgrid.sync.publishOff": "ShotGrid로의 발행이 꺼져 있습니다. 여기서 발행한 version은 여기에만 남습니다. 설정 → 발행에서 변경하세요.",
   "upload.pickTask.title": "이 version은 어떤 task의 것인가요?",
   "upload.pickTask.hint": "만든 단계 아래 두면 파이프라인이 읽기 쉬워지고, ShotGrid에서도 올바른 위치로 갑니다.",
   "upload.pickTask.none": "task 없이 — asset에 직접 첨부",

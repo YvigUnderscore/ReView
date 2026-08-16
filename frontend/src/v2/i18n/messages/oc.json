@@ -2471,6 +2471,7 @@
   "shotgrid.sync.dot.unlinked": "Absent de ShotGrid — creat aicí solament",
   "shotgrid.sync.dot.realign": "Tornar legir dempuèi ShotGrid",
   "shotgrid.sync.dot.realigned": "Tornat legir dempuèi ShotGrid",
+  "shotgrid.sync.publishOff": "L’mandadís cap a ShotGrid es desactivat : las versions publicadas aicí i demòran. A cambiar dins Reglatges → Publicacion.",
   "upload.pickTask.title": "A quina task aparten aquesta version ?",
   "upload.pickTask.hint": "La botar jos l’etapa que l’a producha garda lo pipe legible — e la manda al bon endrech dins ShotGrid.",
   "upload.pickTask.none": "Sens task — restacar a l’asset",

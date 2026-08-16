@@ -2413,6 +2413,7 @@
   "shotgrid.sync.dot.unlinked": "ShotGrid になし — ここだけで作成",
   "shotgrid.sync.dot.realign": "ShotGrid から読み直す",
   "shotgrid.sync.dot.realigned": "ShotGrid から読み直しました",
+  "shotgrid.sync.publishOff": "ShotGrid への送信が無効です。ここで公開した version はここに留まります。設定 → 公開 で変更できます。",
   "upload.pickTask.title": "この version はどの task のものですか？",
   "upload.pickTask.hint": "それを作った工程の下に置くとパイプラインが読みやすくなり、ShotGrid でも正しい場所に届きます。",
   "upload.pickTask.none": "task なし — asset に直接付ける",
