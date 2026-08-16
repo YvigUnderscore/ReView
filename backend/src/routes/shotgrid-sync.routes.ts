@@ -9,6 +9,7 @@ import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { assertProjectManager } from '../lib/shotgridAccess';
 import * as Config from '../services/shotgrid/ShotgridConfigService';
+import { listForUi } from '../services/shotgrid/shotgridLinks';
 import * as Sync from '../services/shotgrid/ShotgridSyncService';
 import * as Journal from '../services/shotgrid/ShotgridSyncJournal';
 import { buildDiff } from '../services/shotgrid/ShotgridDiffService';
@@ -128,18 +129,7 @@ router.get('/projects/:projectId/links', validate({ params: projectParam }), asy
   await assertProjectManager(req.user!, projectId, { allowMembers: true });
   const conn = await Config.getConnection(projectId);
   if (!conn?.active) return res.json({ links: [] });
-  const links = await prisma.shotgridLink.findMany({
-    where: {
-      connectionId: conn.id,
-      localType: { in: ['sequence', 'shot', 'asset', 'task', 'version'] },
-    },
-    // `sgType` et `syncedAt` accompagnent le lien : le premier permet de réaligner une
-    // entité sans redemander de quel type ShotGrid il s'agit, le second de dire depuis
-    // quand elle n'a pas été relue. Une seule requête sert donc les liens directs ET
-    // l'état d'alignement — une liste de 200 plans n'en déclenche pas 200.
-    select: { localType: true, localId: true, sgId: true, sgType: true, syncedAt: true },
-  });
-  res.json({ links });
+  res.json({ links: await listForUi(conn.id) });
 });
 
 /**

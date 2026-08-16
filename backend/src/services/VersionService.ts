@@ -3,6 +3,7 @@
 
 import { MediaStatus, Role, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { nextVersionName } from '../lib/versionNaming';
 import { storage } from './StorageService';
 import * as MediaService from './MediaService';
 import { softDeleteVersion, restoreVersion, purgeVersion } from '../lib/trash';
@@ -59,16 +60,45 @@ export interface CreateVersionInput {
   name?: string;
 }
 
+/**
+ * Nom de la version suivante, dans la convention du projet.
+ *
+ * Sur un projet relié à ShotGrid, les versions y sont nommées d'après le plan et l'étape
+ * qui les produisent : garder un « V02 » local en face oblige chacun à traduire de tête
+ * entre les deux outils. On lit donc le parent et l'étape pour composer le même code.
+ *
+ * Les noms déjà pris incluent la corbeille : un numéro qui a servi ne doit pas resservir,
+ * même si la version qui le portait a été supprimée.
+ */
+async function autoName(projectId: number, body: CreateVersionInput): Promise<string> {
+  const where = body.taskId ? { taskId: body.taskId } : { assetId: body.assetId };
+  const [siblings, connection, task, asset] = await Promise.all([
+    prisma.version.findMany({ where, select: { name: true } }),
+    prisma.shotgridConnection.findUnique({ where: { projectId }, select: { active: true } }),
+    body.taskId
+      ? prisma.task.findUnique({
+          where: { id: body.taskId },
+          select: {
+            department: true,
+            shot: { select: { code: true } },
+            asset: { select: { name: true } },
+          },
+        })
+      : null,
+    body.assetId ? prisma.asset.findUnique({ where: { id: body.assetId }, select: { name: true } }) : null,
+  ]);
+
+  return nextVersionName({
+    existing: siblings.map((v) => v.name),
+    linked: Boolean(connection?.active),
+    parentCode: task?.shot?.code ?? task?.asset?.name ?? asset?.name ?? null,
+    step: task?.department ?? null,
+  });
+}
+
 export async function create(user: SessionUser, projectId: number, body: CreateVersionInput) {
   await assertProjectWritable(projectId); // 38.B
-  // Nom auto-incrémenté (V01, V02…) si non fourni.
-  let name = body.name;
-  if (!name) {
-    const count = await prisma.version.count({
-      where: body.taskId ? { taskId: body.taskId } : { assetId: body.assetId },
-    });
-    name = `V${String(count + 1).padStart(2, '0')}`;
-  }
+  const name = body.name ?? (await autoName(projectId, body));
   const version = await prisma.version.create({
     data: {
       taskId: body.taskId ?? null,

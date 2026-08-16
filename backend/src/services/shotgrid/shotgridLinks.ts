@@ -164,3 +164,21 @@ export interface VersionLinkData extends LinkData {
     version: number | null;
   }>;
 }
+
+/**
+ * Correspondances d'un projet, telles que l'interface les consomme.
+ *
+ * `sgType` et `syncedAt` accompagnent chaque lien : le premier permet de réaligner une
+ * entité sans redemander de quel type ShotGrid il s'agit, le second de dire depuis quand
+ * elle n'a pas été relue. Une seule requête sert ainsi les liens directs ET l'état
+ * d'alignement — une liste de deux cents plans n'en déclenche pas deux cents.
+ */
+export async function listForUi(connectionId: number) {
+  return prisma.shotgridLink.findMany({
+    where: {
+      connectionId,
+      localType: { in: ['sequence', 'shot', 'asset', 'task', 'version'] },
+    },
+    select: { localType: true, localId: true, sgId: true, sgType: true, syncedAt: true },
+  });
+}

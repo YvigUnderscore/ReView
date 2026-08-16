@@ -53,9 +53,7 @@ export function useSgLinks(projectId: number) {
             sgId: number;
             syncedAt: string | null;
           }>;
-        }>(
-          `/api/shotgrid/projects/${projectId}/links`,
-        )
+        }>(`/api/shotgrid/projects/${projectId}/links`)
         .then((r) => {
           const byType: LinkMap['byType'] = {};
           const syncedAt: LinkMap['syncedAt'] = {};

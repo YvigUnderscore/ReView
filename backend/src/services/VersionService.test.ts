@@ -5,9 +5,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({
   prisma: {
-    version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
     // Projet writable par défaut (38.B) : le verrou d’archivage interroge project.findFirst.
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
+    // Le nom d'une version dépend désormais du projet : relié ou non, et sous quel parent.
+    shotgridConnection: { findUnique: vi.fn() },
+    task: { findUnique: vi.fn() },
+    asset: { findUnique: vi.fn() },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
@@ -23,7 +27,10 @@ import { prisma } from '../lib/prisma';
 import { emitToProject } from './SocketService';
 import { Role } from '@prisma/client';
 
-const count = vi.mocked(prisma.version.count);
+const siblings = vi.mocked(prisma.version.findMany);
+const connection = vi.mocked(prisma.shotgridConnection.findUnique);
+const task = vi.mocked(prisma.task.findUnique);
+const asset = vi.mocked(prisma.asset.findUnique);
 const createVersion = vi.mocked(prisma.version.create);
 const findUnique = vi.mocked(prisma.version.findUnique);
 const updateVersion = vi.mocked(prisma.version.update);
@@ -33,10 +40,13 @@ describe('VersionService.create — auto-nommage des versions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createVersion.mockImplementation(({ data }: never) => Promise.resolve({ id: 1, ...data }) as never);
+    siblings.mockResolvedValue([] as never);
+    connection.mockResolvedValue(null as never);
+    task.mockResolvedValue(null as never);
+    asset.mockResolvedValue(null as never);
   });
 
   it('nomme V01 quand aucune version n’existe encore', async () => {
-    count.mockResolvedValue(0 as never);
     await create(user, 7, { taskId: 42 });
     expect(createVersion).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ name: 'V01', taskId: 42, authorId: 3 }) }),
@@ -48,17 +58,31 @@ describe('VersionService.create — auto-nommage des versions', () => {
     );
   });
 
-  it('incrémente avec padding sur 2 chiffres (count 9 → V10)', async () => {
-    count.mockResolvedValue(9 as never);
+  it('reprend au-dessus du plus grand numéro, jamais au nombre de versions', async () => {
+    // Compter régressait dès qu'on supprimait une version : deux V03 finissaient par
+    // désigner deux travaux différents.
+    siblings.mockResolvedValue([{ name: 'V01' }, { name: 'V09' }] as never);
     await create(user, 7, { assetId: 5 });
     expect(createVersion).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ name: 'V10', assetId: 5 }) }),
     );
   });
 
-  it('respecte un nom explicite sans compter', async () => {
+  it('suit la convention du site quand le projet y est relié', async () => {
+    connection.mockResolvedValue({ active: true } as never);
+    task.mockResolvedValue({ department: 'anim', shot: { code: 'DEMO_SH010' }, asset: null } as never);
+    siblings.mockResolvedValue([{ name: 'DEMO_SH010_anim_v002' }] as never);
+
+    await create(user, 7, { taskId: 42 });
+
+    expect(createVersion).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: 'DEMO_SH010_anim_v003' }) }),
+    );
+  });
+
+  it('respecte un nom explicite sans rien calculer', async () => {
     await create(user, 7, { taskId: 1, name: 'Final' });
-    expect(count).not.toHaveBeenCalled();
+    expect(siblings).not.toHaveBeenCalled();
     expect(createVersion).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ name: 'Final' }) }),
     );
