@@ -69,6 +69,7 @@ import v1Routes from './routes/v1';
 import shotgridConfigRoutes from './routes/shotgrid-config.routes';
 import shotgridSyncRoutes from './routes/shotgrid-sync.routes';
 import shotgridWebhookRoutes from './routes/shotgrid-webhook.routes';
+import shotgridEntityRoutes from './routes/shotgrid-entity.routes';
 
 export const createApp = (): Express => {
   const app = express();
@@ -156,6 +157,7 @@ export const createApp = (): Express => {
   // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);
+  app.use('/api/shotgrid', shotgridEntityRoutes);
   app.use('/api/comments', commentsRoutes);
   app.use('/api/boards', boardsRoutes);
   // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).

@@ -26,7 +26,17 @@ interface LinkMap {
   baseUrl: string;
   /** `localType` → `localId` → identifiant ShotGrid. */
   byType: Record<string, Record<number, number>>;
+  /** Dernière relecture, par type puis par identifiant local. */
+  syncedAt: Record<string, Record<number, string | null>>;
 }
+
+/**
+ * État d'une entité vis-à-vis de ShotGrid.
+ * - `off` : le projet n'est pas relié, il n'y a rien à dire ;
+ * - `linked` : l'entité a sa correspondance sur le site ;
+ * - `unlinked` : elle n'existe que dans ReView.
+ */
+export type SgEntityState = 'off' | 'linked' | 'unlinked';
 
 export function useSgLinks(projectId: number) {
   const { data: connection } = useSgConnection(projectId);
@@ -36,15 +46,24 @@ export function useSgLinks(projectId: number) {
     queryKey: ['shotgrid', 'links', projectId],
     queryFn: () =>
       api
-        .get<{ links: Array<{ localType: string; localId: number; sgId: number }> }>(
+        .get<{
+          links: Array<{
+            localType: string;
+            localId: number;
+            sgId: number;
+            syncedAt: string | null;
+          }>;
+        }>(
           `/api/shotgrid/projects/${projectId}/links`,
         )
         .then((r) => {
           const byType: LinkMap['byType'] = {};
+          const syncedAt: LinkMap['syncedAt'] = {};
           for (const l of r.links) {
             (byType[l.localType] ??= {})[l.localId] = l.sgId;
+            (syncedAt[l.localType] ??= {})[l.localId] = l.syncedAt ?? null;
           }
-          return { baseUrl: connection!.site.baseUrl, byType } satisfies LinkMap;
+          return { baseUrl: connection!.site.baseUrl, byType, syncedAt } satisfies LinkMap;
         }),
     enabled,
     staleTime: 60_000,
@@ -58,5 +77,20 @@ export function useSgLinks(projectId: number) {
     return `${data.baseUrl.replace(/\/$/, '')}/detail/${SG_ENTITY[type]}/${sgId}`;
   };
 
-  return { connected: enabled, linkFor };
+  /**
+   * L'entité a-t-elle sa contrepartie sur le site ?
+   *
+   * Répondu depuis la table déjà chargée : afficher l'état sur deux cents plans ne coûte
+   * aucune requête de plus que d'afficher leurs liens.
+   */
+  const stateFor = (type: SgLinkType, localId: number | null | undefined): SgEntityState => {
+    if (!enabled || !data || !localId) return 'off';
+    return data.byType[type]?.[localId] ? 'linked' : 'unlinked';
+  };
+
+  /** Date de dernière relecture, pour l'infobulle. */
+  const syncedAtFor = (type: SgLinkType, localId: number | null | undefined): string | null =>
+    (localId && data?.syncedAt[type]?.[localId]) || null;
+
+  return { connected: enabled, linkFor, stateFor, syncedAtFor };
 }

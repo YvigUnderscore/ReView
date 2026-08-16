@@ -2517,6 +2517,10 @@
   "shotgrid.conflict.noDetail": "Divergence enregistrée avant le relevé des valeurs — resynchroniser pour les voir",
   "shotgrid.conflict.field.status": "statut",
   "shotgrid.log.trashedTaskKept": "La task #{sgId} est à la corbeille dans ShotGrid mais porte encore {count} version(s) — conservée dans ReView",
+  "shotgrid.sync.dot.linked": "Dans ShotGrid · relu le {date}",
+  "shotgrid.sync.dot.unlinked": "Absent de ShotGrid — créé ici seulement",
+  "shotgrid.sync.dot.realign": "Relire depuis ShotGrid",
+  "shotgrid.sync.dot.realigned": "Relu depuis ShotGrid",
   "upload.pickTask.title": "À quelle task appartient cette version ?",
   "upload.pickTask.hint": "La ranger sous l’étape qui l’a produite garde le pipe lisible — et l’envoie au bon endroit dans ShotGrid.",
   "upload.pickTask.none": "Sans task — rattacher à l’asset"

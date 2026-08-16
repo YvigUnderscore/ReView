@@ -133,7 +133,11 @@ router.get('/projects/:projectId/links', validate({ params: projectParam }), asy
       connectionId: conn.id,
       localType: { in: ['sequence', 'shot', 'asset', 'task', 'version'] },
     },
-    select: { localType: true, localId: true, sgId: true },
+    // `sgType` et `syncedAt` accompagnent le lien : le premier permet de réaligner une
+    // entité sans redemander de quel type ShotGrid il s'agit, le second de dire depuis
+    // quand elle n'a pas été relue. Une seule requête sert donc les liens directs ET
+    // l'état d'alignement — une liste de 200 plans n'en déclenche pas 200.
+    select: { localType: true, localId: true, sgId: true, sgType: true, syncedAt: true },
   });
   res.json({ links });
 });

@@ -8,6 +8,7 @@ import { reviewPath } from '../../lib/slug';
 import EmptyState from '../../components/ui/empty-state';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
+import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 import { useT, intlLocale } from '../../i18n';
 import { scheduleLabel } from './taskSchedule';
 import type { AssetTreeTask, AssetTreeVersion, DepartmentGroup } from '../../types/api';
@@ -156,6 +157,7 @@ function TaskCard({
           {task.id !== null && (
             <PipelineStatusBadge statusId={task.pipelineStatusId} scope="task" size="xs" />
           )}
+          <SgSyncDot projectId={projectId} type="task" localId={task.id} />
           <span className="text-[11px] text-muted-foreground">
             {t('asset.tree.versionCount', { count: task.versions.length })}
           </span>

@@ -19,6 +19,7 @@ import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
 import SgCreationLock from '../../components/shotgrid/SgCreationLock';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
+import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
 /**
  * Onglet Shots : création en lot (Shots/Sequences creation), cartes groupées par séquence,
@@ -181,6 +182,9 @@ export default function ShotsTab({
                     (shot.assets?.length ? ` · ${t('assets.count', { count: shot.assets.length })}` : '')
                   }
                   thumbnailUrl={shot.thumbnailUrl}
+                  badge={
+                    <SgSyncDot projectId={projectId} type="shot" localId={shot.id} canRealign={canManage} />
+                  }
                   favorite={{ type: 'SHOT', entityId: shot.id }}
                   actions={actions}
                   contextActions={[...sgAction, watchAction, ...actions]}

@@ -2455,6 +2455,10 @@
   "shotgrid.conflict.noDetail": "Divergence recorded before the values were captured — synchronise again to see them",
   "shotgrid.conflict.field.status": "status",
   "shotgrid.log.trashedTaskKept": "Task #{sgId} was trashed in ShotGrid but still carries {count} version(s) — kept in ReView",
+  "shotgrid.sync.dot.linked": "In ShotGrid · last read {date}",
+  "shotgrid.sync.dot.unlinked": "Not in ShotGrid — created here only",
+  "shotgrid.sync.dot.realign": "Re-read from ShotGrid",
+  "shotgrid.sync.dot.realigned": "Re-read from ShotGrid",
   "upload.pickTask.title": "Which task is this version for?",
   "upload.pickTask.hint": "Filing it under the step that produced it keeps the pipeline readable — and sends it to the right place in ShotGrid.",
   "upload.pickTask.none": "No task — attach to the asset itself"

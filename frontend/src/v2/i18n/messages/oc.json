@@ -2467,6 +2467,10 @@
   "shotgrid.conflict.noDetail": "Divergéncia enregistrada abans lo relevat de las valors — tornar sincronizar per las veire",
   "shotgrid.conflict.field.status": "estat",
   "shotgrid.log.trashedTaskKept": "La task #{sgId} es a la banasta dins ShotGrid mas pòrta encara {count} version — servada dins ReView",
+  "shotgrid.sync.dot.linked": "Dins ShotGrid · legit lo {date}",
+  "shotgrid.sync.dot.unlinked": "Absent de ShotGrid — creat aicí solament",
+  "shotgrid.sync.dot.realign": "Tornar legir dempuèi ShotGrid",
+  "shotgrid.sync.dot.realigned": "Tornat legir dempuèi ShotGrid",
   "upload.pickTask.title": "A quina task aparten aquesta version ?",
   "upload.pickTask.hint": "La botar jos l’etapa que l’a producha garda lo pipe legible — e la manda al bon endrech dins ShotGrid.",
   "upload.pickTask.none": "Sens task — restacar a l’asset"

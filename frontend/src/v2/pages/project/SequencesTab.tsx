@@ -20,6 +20,7 @@ import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData }
 import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
+import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
 /** Onglet Séquences : création en lot (Shots/Sequences creation), édition (dialog), détail en accordéon. */
 export default function SequencesTab({
@@ -104,6 +105,7 @@ export default function SequencesTab({
                   <span className="font-medium">{s.code}</span> · {s.name}
                 </button>
                 <div className="flex items-center gap-1">
+                  <SgSyncDot projectId={projectId} type="sequence" localId={s.id} canRealign={canManage} />
                   {/* Fiche ShotGrid — uniquement si la sequence y est reliée. */}
                   {sgLinks.linkFor('sequence', s.id) && (
                     <a

@@ -2467,6 +2467,10 @@
   "shotgrid.conflict.noDetail": "Abwiichung erfasst, bevor d Wärt gnuu worre sin — nomol synchronisiere, für si z gseh",
   "shotgrid.conflict.field.status": "Status",
   "shotgrid.log.trashedTaskKept": "D Task #{sgId} isch in ShotGrid im Papierkorb, het aber no {count} Version — in ReView bhalte",
+  "shotgrid.sync.dot.linked": "In ShotGrid · zletscht gläse {date}",
+  "shotgrid.sync.dot.unlinked": "Nit in ShotGrid — nume do aagleit",
+  "shotgrid.sync.dot.realign": "Uus ShotGrid nomol iiläse",
+  "shotgrid.sync.dot.realigned": "Uus ShotGrid nomol iigläse",
   "upload.pickTask.title": "Zue welere Task ghert die Version?",
   "upload.pickTask.hint": "Si unter em Schritt abzlege, wo si gmacht het, haltet d Pipeline läsbar — un schickt si in ShotGrid an di richtig Stell.",
   "upload.pickTask.none": "Ohni Task — direkt ans Asset"

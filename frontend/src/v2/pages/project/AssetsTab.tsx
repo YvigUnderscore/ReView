@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ASSET_TYPES, type Asset } from './projectTypes';
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
+import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
 /** Onglet Assets réutilisables : création, cartes, assignation shots/séquences. */
 export default function AssetsTab({
@@ -180,6 +181,7 @@ export default function AssetsTab({
                 title={a.name}
                 subtitle={a.type}
                 thumbnailUrl={a.thumbnailUrl}
+                badge={<SgSyncDot projectId={projectId} type="asset" localId={a.id} canRealign={canManage} />}
                 selection={
                   canManage
                     ? { selected: sel.isSelected(a.id), onSelect: (m) => sel.onSelect(a.id, m) }

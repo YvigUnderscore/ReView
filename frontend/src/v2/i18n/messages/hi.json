@@ -2461,6 +2461,10 @@
   "shotgrid.conflict.noDetail": "मान दर्ज होने से पहले का अंतर — देखने के लिए फिर से समन्वयित करें",
   "shotgrid.conflict.field.status": "स्थिति",
   "shotgrid.log.trashedTaskKept": "task #{sgId} ShotGrid के कचरे में है पर अब भी {count} version रखती है — ReView में रखी गई",
+  "shotgrid.sync.dot.linked": "ShotGrid में · अंतिम बार पढ़ा {date}",
+  "shotgrid.sync.dot.unlinked": "ShotGrid में नहीं — केवल यहाँ बनाया गया",
+  "shotgrid.sync.dot.realign": "ShotGrid से फिर पढ़ें",
+  "shotgrid.sync.dot.realigned": "ShotGrid से फिर पढ़ा गया",
   "upload.pickTask.title": "यह version किस task के लिए है?",
   "upload.pickTask.hint": "जिस चरण ने इसे बनाया, उसके अंतर्गत रखने से पाइपलाइन पठनीय रहती है — और ShotGrid में सही जगह जाती है।",
   "upload.pickTask.none": "कोई task नहीं — asset से जोड़ें"

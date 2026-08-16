@@ -2467,6 +2467,10 @@
   "shotgrid.conflict.noDetail": "Divergencia registrada antes de captar los valores — vuelve a sincronizar para verlos",
   "shotgrid.conflict.field.status": "estado",
   "shotgrid.log.trashedTaskKept": "La task #{sgId} está en la papelera de ShotGrid pero aún tiene {count} version(es) — conservada en ReView",
+  "shotgrid.sync.dot.linked": "En ShotGrid · leído el {date}",
+  "shotgrid.sync.dot.unlinked": "Ausente de ShotGrid — creado solo aquí",
+  "shotgrid.sync.dot.realign": "Releer desde ShotGrid",
+  "shotgrid.sync.dot.realigned": "Releído desde ShotGrid",
   "upload.pickTask.title": "¿A qué task pertenece esta version?",
   "upload.pickTask.hint": "Archivarla bajo la etapa que la produjo mantiene el pipeline legible — y la envía al lugar correcto en ShotGrid.",
   "upload.pickTask.none": "Sin task — adjuntar al asset"

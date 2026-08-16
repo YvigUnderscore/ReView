@@ -2409,6 +2409,10 @@
   "shotgrid.conflict.noDetail": "값이 기록되기 전에 남은 차이 — 보려면 다시 동기화하세요",
   "shotgrid.conflict.field.status": "상태",
   "shotgrid.log.trashedTaskKept": "task #{sgId}은(는) ShotGrid 휴지통에 있지만 아직 version {count}개를 가지고 있습니다 — ReView에 유지",
+  "shotgrid.sync.dot.linked": "ShotGrid에 있음 · 마지막 읽기 {date}",
+  "shotgrid.sync.dot.unlinked": "ShotGrid에 없음 — 여기서만 만들어짐",
+  "shotgrid.sync.dot.realign": "ShotGrid에서 다시 읽기",
+  "shotgrid.sync.dot.realigned": "ShotGrid에서 다시 읽었습니다",
   "upload.pickTask.title": "이 version은 어떤 task의 것인가요?",
   "upload.pickTask.hint": "만든 단계 아래 두면 파이프라인이 읽기 쉬워지고, ShotGrid에서도 올바른 위치로 갑니다.",
   "upload.pickTask.none": "task 없이 — asset에 직접 첨부"
