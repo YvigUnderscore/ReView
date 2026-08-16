@@ -98,10 +98,15 @@ export async function listSteps(
     }))
     .sort((a, b) => Number(b.used) - Number(a.used) || a.order - b.order || a.code.localeCompare(b.code));
 
-  // Une liste déclarée est un choix, pas une devinette : on la rend telle quelle, sans
-  // écarter d'homonymes. Si le studio a retenu deux étapes qui se ressemblent, c'est
-  // qu'elles se distinguent pour lui.
-  return declared.length > 0 && !options.all ? steps : dedupeSteps(steps);
+  // Le catalogue complet ne se déduplique jamais : c'est la liste où le studio choisit,
+  // et les homonymes y sont précisément ce qu'il vient départager. ArtFX a huit étapes
+  // d'asset dont le nom contient « model », et celle que ce projet emploie — « modeling »,
+  // code court « model » — arrive après son homonyme dans l'ordre du site. L'écarter la
+  // rendait impossible à cocher.
+  if (options.all) return steps;
+
+  // Une liste déclarée est un choix, pas une devinette : on la rend telle quelle.
+  return declared.length > 0 ? steps : dedupeSteps(steps);
 }
 
 /**

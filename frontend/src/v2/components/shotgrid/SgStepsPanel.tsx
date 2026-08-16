@@ -115,8 +115,10 @@ export default function SgStepsPanel({
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: step.color }} />
               )}
               <span className="min-w-0 flex-1 truncate">{step.code}</span>
-              {step.shortName && step.shortName !== step.code && (
-                <span className="shrink-0 text-[11px] text-muted-foreground">{step.shortName}</span>
+              {/* Le code court est affiché même quand il répète le nom : c'est lui qui
+                  départage deux étapes homonymes, et il n'y a pas d'autre repère. */}
+              {step.shortName && (
+                <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{step.shortName}</span>
               )}
               {step.used && (
                 <span className="shrink-0 text-[10px] text-muted-foreground">

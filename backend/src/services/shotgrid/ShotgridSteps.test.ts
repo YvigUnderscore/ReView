@@ -71,6 +71,19 @@ describe('dedupeSteps', () => {
     expect(r.map((s) => s.sgId)).toEqual([14]);
   });
 
+  it('garde une étape que seul son code court distingue, si on la demande', () => {
+    // Le cas signalé : ArtFX a « modeling / modeling » et « modeling / model », et c'est
+    // la seconde que ce projet emploie. Le catalogue de choix ne doit écarter ni l'une ni
+    // l'autre — c'est là qu'on les départage.
+    const catalogue = [
+      step({ sgId: 1584, code: 'modeling', shortName: 'modeling', order: 19 }),
+      step({ sgId: 14, code: 'modeling', shortName: 'model', order: 43 }),
+    ];
+    expect(dedupeSteps(catalogue).map((s) => s.sgId)).toEqual([1584]);
+    // …mais la liste brute, elle, les porte toutes les deux.
+    expect(catalogue.map((s) => s.sgId)).toEqual([1584, 14]);
+  });
+
   it('tolère une étape sans code court', () => {
     const r = dedupeSteps([
       step({ sgId: 30, code: 'groom', shortName: '' }),
