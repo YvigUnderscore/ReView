@@ -1,35 +1,20 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Link, useLocation, useParams } from 'react-router-dom';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { transition as pageTransition } from '../lib/motion';
-import {
-  Home,
-  FolderKanban,
-  Film,
-  Users,
-  Settings,
-  ChevronRight,
-  Star,
-  BookText,
-  FileText,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Search,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { useProjectsQuery } from '../lib/queries';
-import { projectPath, parseIdParam } from '../lib/slug';
-import { useAuth } from '../stores/useAuth';
+import { parseIdParam } from '../lib/slug';
 import { useFavorites } from '../stores/useFavorites';
 import { useProjectContext } from '../stores/useProjectContext';
 import UploadWidget from './UploadWidget';
 import PendingDrafts from './PendingDrafts';
 import SidebarFooter from './SidebarFooter';
-import SidebarProjectTree from './SidebarProjectTree';
-import SidebarRecents from './SidebarRecents';
+import SidebarNav from './shell/SidebarNav';
+import { ShellHeaderContext } from './shell/shellHeaderContext';
 import ChatDock from './chat/ChatDock';
 import CommandPalette from './CommandPalette';
 import GlobalContextMenu from './GlobalContextMenu';
@@ -39,79 +24,62 @@ import OnboardingTour from './OnboardingTour';
 import { useGlobalShortcuts } from '../lib/shortcuts';
 import { usePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
+import { useIsNarrowViewport } from '../lib/useMediaQuery';
 import { syncAccountLocale, useT } from '../i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
 const ENTITY_PAGE_RE = /^\/(tasks|assets|review)\//;
 
-/** Entrée de navigation fixe de la sidebar hybride (12.D). */
-function SideLink({
-  to,
-  icon: Icon,
-  label,
-  active,
-}: {
-  to: string;
-  icon: LucideIcon;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <Link
-      to={to}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-        active
-          ? 'bg-secondary text-foreground'
-          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-      }`}
-    >
-      <Icon size={18} /> {label}
-    </Link>
-  );
-}
-
-export default function Shell({
-  children,
-  title,
-  breadcrumb,
-}: {
-  children: ReactNode;
-  title?: string;
-  breadcrumb?: ReactNode;
-}) {
-  const user = useAuth((s) => s.user);
+/**
+ * Coquille de l'application (A1) : **route layout**, montée une seule fois pour toutes les
+ * pages authentifiées, qui vivent dans son `<Outlet/>`.
+ *
+ * Auparavant chaque page rendait son propre `<Shell>` : changer de route démontait tout —
+ * sidebar, messagerie, abonnements socket, palette — et rejouait les requêtes de favoris et
+ * de présence à chaque clic. Les pages projettent désormais leur titre par portail
+ * (`PageShell` → `ShellHeaderContext`).
+ */
+export default function Shell() {
   const { pathname } = useLocation();
   const params = useParams();
   const { data } = useProjectsQuery();
   const projects = useMemo(() => (data ?? []).slice(0, 8), [data]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
-  // Page de review (46.O) : la sidebar démarre repliée pour laisser le viewer occuper l'espace.
-  // La dépliér reste possible — choix de session, la préférence globale n'est pas touchée.
+  const narrow = useIsNarrowViewport();
+  const t = useT();
+
+  // Deux situations imposent le repli sans toucher à la préférence globale : la review
+  // (46.O — le viewer prend l'espace) et la fenêtre étroite (A1 — 240 px de rail sur
+  // 1000 px ne laissent pas de quoi lire). Dépliér reste possible, le temps de la visite.
   const onReview = pathname.startsWith('/review/');
-  const [reviewExpanded, setReviewExpanded] = useState(false);
-  const [wasReview, setWasReview] = useState(onReview);
-  if (wasReview !== onReview) {
-    // Ajusté pendant le rendu (même pattern que useChromeState) : retour à l'état replié à
-    // chaque entrée en review, sans effet ni rendu intermédiaire.
-    setWasReview(onReview);
-    setReviewExpanded(false);
+  const forced = onReview || narrow;
+  const forceKey = `${String(onReview)}|${String(narrow)}`;
+  const [tempExpanded, setTempExpanded] = useState(false);
+  const [lastForceKey, setLastForceKey] = useState(forceKey);
+  if (lastForceKey !== forceKey) {
+    // Ajusté pendant le rendu (même motif que useChromeState) : pas d'effet, pas de rendu
+    // intermédiaire avec la sidebar dans le mauvais état.
+    setLastForceKey(forceKey);
+    setTempExpanded(false);
   }
-  const sidebarHidden = onReview ? !reviewExpanded : collapsed;
+  const sidebarHidden = forced ? !tempExpanded : collapsed;
+
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const favorites = useFavorites((s) => s.favorites);
+  const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
+  // Ref stable : une callback ref recréée à chaque rendu serait rappelée (null puis nœud)
+  // et relancerait le rendu en boucle.
+  const headerRef = useCallback((node: HTMLDivElement | null) => setHeaderEl(node), []);
   const loadFavorites = useFavorites((s) => s.load);
-  const t = useT();
 
   useEffect(() => {
     void loadFavorites();
   }, [loadFavorites]);
 
   const toggleCollapse = () => {
-    // En review, la bascule ne vaut que pour la visite : la préférence globale reste intacte.
-    if (onReview) {
-      setReviewExpanded((v) => !v);
+    if (forced) {
+      setTempExpanded((v) => !v);
       return;
     }
     setCollapsed((c) => {
@@ -128,7 +96,6 @@ export default function Shell({
   const routeProjectId = pathname.startsWith('/projects/') && !Number.isNaN(routeId) ? routeId : null;
   const isEntityPage = ENTITY_PAGE_RE.test(pathname);
   const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
-  const isProjectsRoot = pathname.startsWith('/projects');
 
   const openHelp = useCallback(() => setHelpOpen(true), []);
   // Raccourcis globaux reconfigurables (42.A2) : touches résolues depuis les préférences.
@@ -146,9 +113,23 @@ export default function Shell({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      {/* Sidebar (repliable pour gagner de la place ; repliée d'office en review — 46.O) */}
+      {/* En fenêtre étroite la sidebar se superpose au contenu : la comprimer ne laisserait
+          que ~660 px utiles, ce qui casse toutes les grilles. */}
+      {!sidebarHidden && narrow && (
+        <div
+          className="fixed inset-0 z-30 bg-background/70"
+          onClick={() => setTempExpanded(false)}
+          aria-hidden
+        />
+      )}
       {!sidebarHidden && (
-        <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-card/40">
+        <aside
+          className={
+            narrow
+              ? 'fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-border bg-card shadow-xl'
+              : 'flex w-60 shrink-0 flex-col border-r border-border bg-card/40'
+          }
+        >
           <div className="flex items-center justify-between px-4 py-4">
             {/* Logo bannière (masque alpha teinté par le thème — blanc sur sombre, encre sur clair). */}
             <Link to="/" title={t('nav.home')} aria-label={t('shell.home')}>
@@ -177,100 +158,7 @@ export default function Shell({
             </button>
           </div>
 
-          <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto px-3">
-            {/* Entrées fixes de la sidebar hybride (12.D) */}
-            <SideLink to="/" icon={Home} label={t('nav.home')} active={pathname === '/'} />
-            <SideLink to="/projects" icon={FolderKanban} label={t('nav.projects')} active={isProjectsRoot} />
-
-            {/* Arbre du projet courant (replié sous Projets) */}
-            {projects.length > 0 && (
-              <div className="pl-2">
-                {projects.map((p) => {
-                  const isCurrent = p.id === currentProjectId;
-                  return (
-                    <div key={p.id}>
-                      <Link
-                        to={projectPath(p)}
-                        className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors ${
-                          isCurrent ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        <ChevronRight size={14} className={isCurrent ? 'text-primary' : ''} />
-                        <span className="truncate">{p.name}</span>
-                      </Link>
-                      {isCurrent && <SidebarProjectTree key={p.id} projectId={p.id} />}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <SideLink
-              to="/reviews"
-              icon={Film}
-              label={t('nav.reviews')}
-              active={pathname.startsWith('/reviews')}
-            />
-
-            {user?.role === 'ADMIN' && (
-              <>
-                <SideLink
-                  to="/admin/users"
-                  icon={Users}
-                  label={t('nav.members')}
-                  active={pathname.startsWith('/admin/users')}
-                />
-                <SideLink
-                  to="/admin"
-                  icon={Settings}
-                  label={t('nav.settings')}
-                  active={pathname.startsWith('/admin') && !pathname.startsWith('/admin/users')}
-                />
-              </>
-            )}
-
-            {/* Favoris */}
-            <div className="pt-3">
-              <div className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Star size={13} className="text-warning" /> {t('shell.favorites')}
-              </div>
-              {favorites.length === 0 ? (
-                <p className="px-3 py-1 text-xs text-muted-foreground">{t('shell.favorites.empty')}</p>
-              ) : (
-                <div className="space-y-0.5">
-                  {favorites.map((f) => (
-                    <Link
-                      key={f.id}
-                      to={f.to}
-                      className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                      title={f.label}
-                    >
-                      <Star size={13} className="shrink-0 text-warning" fill="currentColor" />
-                      <span className="truncate">{f.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <SidebarRecents />
-
-            <div className="pt-3">
-              <SideLink
-                to="/documents"
-                icon={FileText}
-                label={t('nav.documents')}
-                active={pathname.startsWith('/documents')}
-              />
-              <SideLink
-                to="/docs"
-                icon={BookText}
-                label={t('nav.documentation')}
-                active={pathname.startsWith('/docs')}
-              />
-            </div>
-          </nav>
-
+          <SidebarNav projects={projects} currentProjectId={currentProjectId} />
           <SidebarFooter />
         </aside>
       )}
@@ -282,27 +170,37 @@ export default function Shell({
             <button
               onClick={toggleCollapse}
               title={t('shell.expand')}
-              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <PanelLeftOpen size={18} />
             </button>
           )}
-          {breadcrumb ?? (
-            <h1 className="truncate text-sm font-medium text-muted-foreground">{title ?? ''}</h1>
+          {/* Titre / fil d'Ariane projeté par la page courante (PageShell). */}
+          <div ref={headerRef} className="flex min-w-0 flex-1 items-center gap-3" />
+          {/* Recherche permanente (12.D) : ouvre la palette Ctrl+K. Réduite à une icône en
+              fenêtre étroite — un champ de 20rem y mangerait le fil d'Ariane. */}
+          {narrow ? (
+            <button
+              onClick={() => setPaletteOpen(true)}
+              title={t('shell.search')}
+              aria-label={t('shell.search')}
+              className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Search size={18} />
+            </button>
+          ) : (
+            <button
+              onClick={() => setPaletteOpen(true)}
+              title={t('shell.search')}
+              className="flex w-full max-w-xs shrink-0 items-center gap-2 rounded-md border border-input bg-secondary/40 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            >
+              <Search size={15} className="shrink-0" />
+              <span className="flex-1 text-left">{t('shell.search.placeholder')}</span>
+              <kbd className="shrink-0 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-2xs font-medium">
+                Ctrl K
+              </kbd>
+            </button>
           )}
-          {/* Recherche permanente (12.D) : champ topbar ouvrant la palette Ctrl+K.
-              Bouton stylé en champ — évite la boucle de refocus au retour de la palette. */}
-          <button
-            onClick={() => setPaletteOpen(true)}
-            title={t('shell.search')}
-            className="ml-auto flex w-full max-w-xs items-center gap-2 rounded-md border border-input bg-secondary/40 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
-          >
-            <Search size={15} className="shrink-0" />
-            <span className="flex-1 text-left">{t('shell.search.placeholder')}</span>
-            <kbd className="shrink-0 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium">
-              Ctrl K
-            </kbd>
-          </button>
           <NotificationBell />
         </header>
         <motion.main
@@ -310,9 +208,13 @@ export default function Shell({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={pageTransition}
-          className="custom-scrollbar flex-1 overflow-auto p-6"
+          className="custom-scrollbar flex-1 overflow-auto"
         >
-          {children}
+          {/* La gouttière est portée par PageContainer : sans quoi la variante « flush »
+              (review, montage) ne pourrait pas occuper tout l'espace. */}
+          <ShellHeaderContext.Provider value={headerEl}>
+            <Outlet />
+          </ShellHeaderContext.Provider>
         </motion.main>
       </div>
 

@@ -26,7 +26,8 @@ import { useCanonicalSlug } from '../lib/useCanonicalSlug';
 import { useSequencesQuery, useShotsQuery, useAssetsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import FavoriteButton from '../components/FavoriteButton';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
+import { PageHeader } from '../components/ui/page';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import Tabs from '../components/Tabs';
 import ProjectSettingsTab from '../components/ProjectSettingsTab';
@@ -128,28 +129,35 @@ export default function ProjectPage() {
   ];
 
   return (
-    <Shell title={name || 'Projet'} breadcrumb={<EntityBreadcrumb entity="project" id={projectId} />}>
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">{name || 'Projet'}</h1>
-          <FavoriteButton type="PROJECT" entityId={projectId} size={18} />
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          {canManage && <ProjectCsvActions projectId={projectId} onImported={loadStructure} />}
-          <Link
-            to={projectPath({ id: projectId, name }, '/kanban')}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
-          >
-            <KanbanSquare size={16} /> Kanban
-          </Link>
-          <Link
-            to={projectPath({ id: projectId, name }, '/board')}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
-          >
-            <PenTool size={16} /> Board
-          </Link>
-        </div>
-      </div>
+    <PageShell
+      title={name || t('entity.project')}
+      breadcrumb={<EntityBreadcrumb entity="project" id={projectId} />}
+    >
+      <PageHeader
+        title={
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-xl font-semibold">{name || t('entity.project')}</h1>
+            <FavoriteButton type="PROJECT" entityId={projectId} size={18} />
+          </div>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {canManage && <ProjectCsvActions projectId={projectId} onImported={loadStructure} />}
+            <Link
+              to={projectPath({ id: projectId, name }, '/kanban')}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+            >
+              <KanbanSquare size={16} /> Kanban
+            </Link>
+            <Link
+              to={projectPath({ id: projectId, name }, '/board')}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+            >
+              <PenTool size={16} /> Board
+            </Link>
+          </div>
+        }
+      />
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
@@ -204,6 +212,6 @@ export default function ProjectPage() {
       )}
       {tab === 'trash' && canManage && <TrashTab projectId={projectId} reload={loadStructure} />}
       {tab === 'shotgrid' && canManage && <ShotgridTab projectId={projectId} canManage={canManage} />}
-    </Shell>
+    </PageShell>
   );
 }

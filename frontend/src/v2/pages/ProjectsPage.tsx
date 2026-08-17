@@ -12,7 +12,7 @@ import { useProjectsQuery, useArchivedProjectsQuery } from '../lib/queries';
 import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import type { Project } from '../types/api';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../components/EntityCard';
@@ -106,7 +106,7 @@ export default function ProjectsPage() {
   };
 
   return (
-    <Shell>
+    <PageShell>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{t('nav.projects')}</h1>
@@ -283,6 +283,6 @@ export default function ProjectsPage() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
       />
-    </Shell>
+    </PageShell>
   );
 }

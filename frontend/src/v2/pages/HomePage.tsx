@@ -8,7 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useAuth } from '../stores/useAuth';
 import { useRecents } from '../stores/useRecents';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import { Skeleton } from '../components/ui/skeleton';
 import {
@@ -117,11 +117,11 @@ export default function HomePage() {
     : t('home.whatMoved');
 
   return (
-    <Shell title={t('nav.home')}>
+    <PageShell title={t('nav.home')}>
       {/* Fond de page : le clic droit compose la page (ajouter un bloc, réinitialiser). */}
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div className="mx-auto min-h-full max-w-7xl">
+          <div className="min-h-full">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h1 className="text-xl font-semibold">
@@ -202,6 +202,6 @@ export default function HomePage() {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-    </Shell>
+    </PageShell>
   );
 }

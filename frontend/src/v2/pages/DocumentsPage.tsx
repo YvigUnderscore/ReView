@@ -8,7 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import Avatar from '../components/Avatar';
 import RichTextEditor from '../components/RichTextEditor';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -77,7 +77,7 @@ export default function DocumentsPage() {
   };
 
   return (
-    <Shell>
+    <PageShell>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t('nav.documents')}</h1>
         <div className="flex items-center gap-2">
@@ -242,6 +242,6 @@ export default function DocumentsPage() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
       />
-    </Shell>
+    </PageShell>
   );
 }

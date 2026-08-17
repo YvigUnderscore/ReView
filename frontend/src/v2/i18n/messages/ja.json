@@ -1983,6 +1983,7 @@
   "usd.rootLayer": "USD ルートレイヤー",
   "entity.videoLower": "動画",
   "entity.imageLower": "画像",
+  "entity.project": "プロジェクト",
 
   "version.emptyMedia": "この version にメディアはありません。",
   "version.created": "version「{name}」を作成しました",
@@ -2432,5 +2433,6 @@
   "upload.pickTask.created": "ShotGrid に task「{name}」を作成しました",
   "upload.pickTask.createFailed": "task を作成できませんでした",
   "upload.pickTask.namePlaceholder": "task 名（既定は工程名）",
-  "upload.pickTask.noAssignee": "未割り当て"
+  "upload.pickTask.noAssignee": "未割り当て",
+  "tabs.more": "その他のタブ"
 }

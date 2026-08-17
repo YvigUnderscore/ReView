@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { qk } from '../lib/query';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import { filterSections, type DocsManifest } from './docs/docsManifest';
 import { renderDocHtml } from './docs/docsRender';
 import { t, useT } from '../i18n';
@@ -65,7 +65,7 @@ export default function DocsPage() {
   };
 
   return (
-    <Shell title={t('nav.documentation')}>
+    <PageShell title={t('nav.documentation')}>
       <div className="flex h-full min-h-0 gap-4 p-4">
         <aside className="flex w-64 shrink-0 flex-col gap-3 overflow-y-auto pr-1">
           <div className="relative">
@@ -135,6 +135,6 @@ export default function DocsPage() {
           )}
         </div>
       </div>
-    </Shell>
+    </PageShell>
   );
 }

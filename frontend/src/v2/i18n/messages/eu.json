@@ -2026,6 +2026,7 @@
   "usd.rootLayer": "USD erro-geruza",
   "entity.videoLower": "bideo",
   "entity.imageLower": "irudia",
+  "entity.project": "Proiektua",
 
   "version.emptyMedia": "Ez dago mediarik version honetan.",
   "version.created": "«{name}» version sortu da",
@@ -2493,5 +2494,6 @@
   "upload.pickTask.created": "« {name} » task sortu da ShotGrid-en",
   "upload.pickTask.createFailed": "Ezin izan da task sortu",
   "upload.pickTask.namePlaceholder": "Task-aren izena (urratsa lehenetsita)",
-  "upload.pickTask.noAssignee": "Esleitu gabe"
+  "upload.pickTask.noAssignee": "Esleitu gabe",
+  "tabs.more": "Fitxa gehiago"
 }

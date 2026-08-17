@@ -1973,6 +1973,7 @@
   "usd.rootLayer": "USD 根图层",
   "entity.videoLower": "视频",
   "entity.imageLower": "图像",
+  "entity.project": "项目",
 
   "version.emptyMedia": "该 version 中没有媒体。",
   "version.created": "已创建 version「{name}」",
@@ -2422,5 +2423,6 @@
   "upload.pickTask.created": "已在 ShotGrid 中创建 task「{name}」",
   "upload.pickTask.createFailed": "无法创建该 task",
   "upload.pickTask.namePlaceholder": "task 名称（默认取环节名）",
-  "upload.pickTask.noAssignee": "未指派"
+  "upload.pickTask.noAssignee": "未指派",
+  "tabs.more": "更多标签"
 }

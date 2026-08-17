@@ -12,6 +12,7 @@ import { queryClient, qk } from './lib/query';
 import { useAuth } from './stores/useAuth';
 import { useTheme } from './stores/useTheme';
 import { useBranding } from './lib/branding';
+import Shell from './components/Shell';
 import LoginPage from './pages/LoginPage';
 import InvitePage from './pages/InvitePage';
 import SetupPage from './pages/SetupPage';
@@ -38,11 +39,15 @@ const BoardPage = lazy(() => import('./pages/BoardPage'));
 // Page client publique (35.D) : lazy — les visiteurs anonymes ne chargent pas l'app interne.
 const ClientSharePage = lazy(() => import('./pages/ClientSharePage'));
 
-function Protected({ children }: { children: React.ReactNode }) {
+/**
+ * Route layout des pages authentifiées (A1) : garde d'accès + coquille montée une seule
+ * fois. Les pages vivent dans le `<Outlet/>` de `Shell` et n'ont plus à le rendre elles-mêmes.
+ */
+function ProtectedShell() {
   const user = useAuth((s) => s.user);
   const location = useLocation();
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
-  return <>{children}</>;
+  return <Shell />;
 }
 
 export default function App() {
@@ -107,177 +112,50 @@ function AppRoutes() {
                 </Suspense>
               }
             />
-            <Route
-              path="/"
-              element={
-                <Protected>
-                  <HomePage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/projects"
-              element={
-                <Protected>
-                  <ProjectsPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/reviews"
-              element={
-                <Protected>
-                  <ReviewsPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/projects/:id"
-              element={
-                <Protected>
-                  <ProjectPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/projects/:id/kanban"
-              element={
-                <Protected>
-                  <KanbanPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/tasks/:id"
-              element={
-                <Protected>
-                  <TaskPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/shots/:id"
-              element={
-                <Protected>
-                  <ShotPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/assets/:id"
-              element={
-                <Protected>
-                  <AssetPage />
-                </Protected>
-              }
-            />
-            {/* Lien permanent vers l'état le plus avancé de l'asset (Phase 45). */}
-            <Route
-              path="/assets/:id/latest"
-              element={
-                <Protected>
-                  <AssetLatestRedirect />
-                </Protected>
-              }
-            />
-            <Route
-              path="/review/:mediaId"
-              element={
-                <Protected>
-                  <ReviewPage />
-                </Protected>
-              }
-            />
-            {/* Page du montage (Phase 46) : la review du plan courant + la bande du film. */}
-            <Route
-              path="/timelines/:id/play"
-              element={
-                <Protected>
-                  <TimelinePlayerPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/projects/:id/board"
-              element={
-                <Protected>
+            {/* Toutes les pages authentifiées partagent la même coquille (A1). */}
+            <Route element={<ProtectedShell />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/projects/:id" element={<ProjectPage />} />
+              <Route path="/projects/:id/kanban" element={<KanbanPage />} />
+              <Route path="/tasks/:id" element={<TaskPage />} />
+              <Route path="/shots/:id" element={<ShotPage />} />
+              <Route path="/assets/:id" element={<AssetPage />} />
+              {/* Lien permanent vers l'état le plus avancé de l'asset (Phase 45). */}
+              <Route path="/assets/:id/latest" element={<AssetLatestRedirect />} />
+              <Route path="/review/:mediaId" element={<ReviewPage />} />
+              {/* Page du montage (Phase 46) : la review du plan courant + la bande du film. */}
+              <Route path="/timelines/:id/play" element={<TimelinePlayerPage />} />
+              <Route
+                path="/projects/:id/board"
+                element={
                   <Suspense
                     fallback={<div className="p-6 text-sm text-muted-foreground">{t('board.loading')}</div>}
                   >
                     <BoardPage scope="project" />
                   </Suspense>
-                </Protected>
-              }
-            />
-            <Route
-              path="/assets/:id/board"
-              element={
-                <Protected>
+                }
+              />
+              <Route
+                path="/assets/:id/board"
+                element={
                   <Suspense
                     fallback={<div className="p-6 text-sm text-muted-foreground">{t('board.loading')}</div>}
                   >
                     <BoardPage scope="asset" />
                   </Suspense>
-                </Protected>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <Protected>
-                  <AdminPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/admin/:section"
-              element={
-                <Protected>
-                  <AdminPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/admin/:section/:id"
-              element={
-                <Protected>
-                  <AdminPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <Protected>
-                  <ProfilePage />
-                </Protected>
-              }
-            />
-            {/* Fiche publique d'un membre du studio (annuaire de présence, auteurs). */}
-            <Route
-              path="/users/:id"
-              element={
-                <Protected>
-                  <UserProfilePage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/documents"
-              element={
-                <Protected>
-                  <DocumentsPage />
-                </Protected>
-              }
-            />
-            <Route
-              path="/docs"
-              element={
-                <Protected>
-                  <DocsPage />
-                </Protected>
-              }
-            />
+                }
+              />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/:section" element={<AdminPage />} />
+              <Route path="/admin/:section/:id" element={<AdminPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              {/* Fiche publique d'un membre du studio (annuaire de présence, auteurs). */}
+              <Route path="/users/:id" element={<UserProfilePage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/docs" element={<DocsPage />} />
+            </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         )}

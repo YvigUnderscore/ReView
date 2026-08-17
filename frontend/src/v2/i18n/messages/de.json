@@ -2023,6 +2023,7 @@
   "usd.rootLayer": "USD-Root-Layer",
   "entity.videoLower": "Video",
   "entity.imageLower": "Bild",
+  "entity.project": "Projekt",
 
   "version.emptyMedia": "Kein Medium in dieser version.",
   "version.created": "Version „{name}“ erstellt",
@@ -2490,5 +2491,6 @@
   "upload.pickTask.created": "Task « {name} » in ShotGrid angelegt",
   "upload.pickTask.createFailed": "Die Task konnte nicht angelegt werden",
   "upload.pickTask.namePlaceholder": "Task-Name (standardmäßig der Step)",
-  "upload.pickTask.noAssignee": "Nicht zugewiesen"
+  "upload.pickTask.noAssignee": "Nicht zugewiesen",
+  "tabs.more": "Weitere Tabs"
 }

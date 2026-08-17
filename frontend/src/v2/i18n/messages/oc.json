@@ -2023,6 +2023,7 @@
   "usd.rootLayer": "Jaç raiç USD",
   "entity.videoLower": "vidèo",
   "entity.imageLower": "imatge",
+  "entity.project": "Projècte",
 
   "version.emptyMedia": "Cap de mèdia dins aquesta version.",
   "version.created": "Version « {name} » creada",
@@ -2490,5 +2491,6 @@
   "upload.pickTask.created": "Task « {name} » creada dins ShotGrid",
   "upload.pickTask.createFailed": "La task a pas pogut èsser creada",
   "upload.pickTask.namePlaceholder": "Nom de la task (l’etapa per defaut)",
-  "upload.pickTask.noAssignee": "Pas assignada"
+  "upload.pickTask.noAssignee": "Pas assignada",
+  "tabs.more": "Autres onglets"
 }

@@ -2044,6 +2044,7 @@
   "usd.rootLayer": "Couche racine USD",
   "entity.videoLower": "vidéo",
   "entity.imageLower": "image",
+  "entity.project": "Projet",
   "version.emptyMedia": "Aucun média dans cette version.",
   "version.created": "Version « {name} » créée",
   "version.current": "Courante",
@@ -2540,5 +2541,6 @@
   "upload.pickTask.created": "Task « {name} » créée dans ShotGrid",
   "upload.pickTask.createFailed": "La task n’a pas pu être créée",
   "upload.pickTask.namePlaceholder": "Nom de la task (l’étape par défaut)",
-  "upload.pickTask.noAssignee": "Non assignée"
+  "upload.pickTask.noAssignee": "Non assignée",
+  "tabs.more": "Autres onglets"
 }

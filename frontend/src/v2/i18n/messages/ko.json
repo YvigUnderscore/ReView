@@ -1983,6 +1983,7 @@
   "usd.rootLayer": "USD 루트 레이어",
   "entity.videoLower": "비디오",
   "entity.imageLower": "이미지",
+  "entity.project": "프로젝트",
 
   "version.emptyMedia": "이 version에는 미디어가 없습니다.",
   "version.created": "version “{name}”을(를) 만들었습니다",
@@ -2432,5 +2433,6 @@
   "upload.pickTask.created": "ShotGrid에 task « {name} »을(를) 만들었습니다",
   "upload.pickTask.createFailed": "task를 만들지 못했습니다",
   "upload.pickTask.namePlaceholder": "task 이름 (기본값은 단계명)",
-  "upload.pickTask.noAssignee": "미지정"
+  "upload.pickTask.noAssignee": "미지정",
+  "tabs.more": "탭 더 보기"
 }

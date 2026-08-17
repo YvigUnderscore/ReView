@@ -2000,6 +2000,7 @@
   "usd.rootLayer": "Gwiskad gwrizienn USD",
   "entity.videoLower": "video",
   "entity.imageLower": "skeudenn",
+  "entity.project": "Raktres",
 
   "version.emptyMedia": "Media ebet er version-mañ.",
   "version.created": "Version « {name} » krouet",
@@ -2479,5 +2480,6 @@
   "upload.pickTask.created": "Task « {name} » krouet e ShotGrid",
   "upload.pickTask.createFailed": "N’eus ket bet gallet krouiñ an task",
   "upload.pickTask.namePlaceholder": "Anv an task (al lankad dre ziouer)",
-  "upload.pickTask.noAssignee": "Dizeliet"
+  "upload.pickTask.noAssignee": "Dizeliet",
+  "tabs.more": "Ivinelloù all"
 }

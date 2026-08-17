@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import FavoriteButton from '../components/FavoriteButton';
 import { SkeletonRows } from '../components/ui/skeleton';
@@ -100,7 +100,7 @@ export default function ShotPage() {
   };
 
   return (
-    <Shell breadcrumb={<EntityBreadcrumb entity="shot" id={shotId} />}>
+    <PageShell breadcrumb={<EntityBreadcrumb entity="shot" id={shotId} />}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold">
@@ -159,6 +159,6 @@ export default function ShotPage() {
       <div className="mt-6">
         <ShotAssets shotId={shotId} projectId={projectId} canManage={canManage} />
       </div>
-    </Shell>
+    </PageShell>
   );
 }

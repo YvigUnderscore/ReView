@@ -10,7 +10,7 @@ import { mediaSlug, parseIdParam } from '../lib/slug';
 import { useCanonicalSlug } from '../lib/useCanonicalSlug';
 import { useAuth } from '../stores/useAuth';
 import { userColor } from '../lib/userColor';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
@@ -262,12 +262,13 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
 
   // prettier-ignore
   const rootClass = theater ? 'fixed inset-0 z-40 bg-background p-4'
-    : isFullscreen ? 'h-screen bg-background p-4' : 'h-[calc(100vh-7rem)]';
+    : isFullscreen ? 'h-screen bg-background p-4' : 'min-h-0 flex-1 p-4';
 
   return (
-    <Shell
+    <PageShell
       title={data?.media.originalName ?? 'Review'}
       breadcrumb={<EntityBreadcrumb entity="media" id={id} />}
+      width="flush"
     >
       {/* Clic droit : menu custom des viewers — le menu natif du navigateur est désactivé
           sur toute la review (les viewers 3D/splat utilisent le clic droit pour naviguer). */}
@@ -366,6 +367,6 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
           )}
         </div>
       </div>
-    </Shell>
+    </PageShell>
   );
 }

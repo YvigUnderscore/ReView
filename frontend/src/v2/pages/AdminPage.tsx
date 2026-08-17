@@ -30,7 +30,7 @@ import {
   Users as UsersIcon,
 } from 'lucide-react';
 import { useAuth } from '../stores/useAuth';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import OverviewTab from './admin/OverviewTab';
 import ActivityTab from './admin/ActivityTab';
 import SystemTab from './admin/SystemTab';
@@ -212,9 +212,9 @@ export default function AdminPage() {
   const { section, id } = useParams();
   if (role !== 'ADMIN') {
     return (
-      <Shell title={t('nav.admin')}>
+      <PageShell title={t('nav.admin')}>
         <p className="text-sm text-destructive">{t('admin.restricted')}</p>
-      </Shell>
+      </PageShell>
     );
   }
   const active = sections(t).find((s) => s.key === section) ?? sections(t)[0];
@@ -222,7 +222,7 @@ export default function AdminPage() {
   const Active = id && Detail ? Detail : active.Component;
 
   return (
-    <Shell>
+    <PageShell>
       <h1 className="mb-4 text-xl font-semibold">{t('nav.admin')}</h1>
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-52 md:flex-col md:overflow-visible md:pb-0">
@@ -257,6 +257,6 @@ export default function AdminPage() {
           <Active />
         </div>
       </div>
-    </Shell>
+    </PageShell>
   );
 }

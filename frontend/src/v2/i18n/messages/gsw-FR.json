@@ -2023,6 +2023,7 @@
   "usd.rootLayer": "USD-Root-Layer",
   "entity.videoLower": "Video",
   "entity.imageLower": "Bild",
+  "entity.project": "Projekt",
 
   "version.emptyMedia": "Kei Medium in därre version.",
   "version.created": "Version „{name}“ erstellt",
@@ -2490,5 +2491,6 @@
   "upload.pickTask.created": "Task « {name} » in ShotGrid aagleit",
   "upload.pickTask.createFailed": "D Task het nit chönne aagleit werde",
   "upload.pickTask.namePlaceholder": "Task-Name (standardmässig de Schritt)",
-  "upload.pickTask.noAssignee": "Nit zuegwiese"
+  "upload.pickTask.noAssignee": "Nit zuegwiese",
+  "tabs.more": "Meh Tabs"
 }

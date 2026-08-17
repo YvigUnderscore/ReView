@@ -2023,6 +2023,7 @@
   "usd.rootLayer": "Capa raíz USD",
   "entity.videoLower": "vídeo",
   "entity.imageLower": "imagen",
+  "entity.project": "Proyecto",
 
   "version.emptyMedia": "Ningún medio en esta version.",
   "version.created": "Version «{name}» creada",
@@ -2490,5 +2491,6 @@
   "upload.pickTask.created": "Task « {name} » creada en ShotGrid",
   "upload.pickTask.createFailed": "No se pudo crear la task",
   "upload.pickTask.namePlaceholder": "Nombre de la task (la etapa por defecto)",
-  "upload.pickTask.noAssignee": "Sin asignar"
+  "upload.pickTask.noAssignee": "Sin asignar",
+  "tabs.more": "Más pestañas"
 }

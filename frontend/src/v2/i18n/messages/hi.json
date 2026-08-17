@@ -2017,6 +2017,7 @@
   "usd.rootLayer": "USD रूट लेयर",
   "entity.videoLower": "वीडियो",
   "entity.imageLower": "छवि",
+  "entity.project": "प्रोजेक्ट",
 
   "version.emptyMedia": "इस version में कोई मीडिया नहीं है।",
   "version.created": "version “{name}” बनाई गई",
@@ -2484,5 +2485,6 @@
   "upload.pickTask.created": "ShotGrid में task « {name} » बनाई गई",
   "upload.pickTask.createFailed": "task नहीं बनाई जा सकी",
   "upload.pickTask.namePlaceholder": "task का नाम (डिफ़ॉल्ट: चरण)",
-  "upload.pickTask.noAssignee": "अनासाइन"
+  "upload.pickTask.noAssignee": "अनासाइन",
+  "tabs.more": "और टैब"
 }

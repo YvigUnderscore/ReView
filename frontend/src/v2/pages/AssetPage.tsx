@@ -8,7 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import AssetAssignDialog from '../components/AssetAssignDialog';
 import FavoriteButton from '../components/FavoriteButton';
@@ -105,7 +105,7 @@ export default function AssetPage() {
   const onDropFiles = (files: File[]) => startVersion(files);
 
   return (
-    <Shell breadcrumb={<EntityBreadcrumb entity="asset" id={assetId} />}>
+    <PageShell breadcrumb={<EntityBreadcrumb entity="asset" id={assetId} />}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold">
@@ -219,6 +219,6 @@ export default function AssetPage() {
           label={versions[0] ? t('version.dropInto', { name: versions[0].name }) : t('version.dropAsset')}
         />
       )}
-    </Shell>
+    </PageShell>
   );
 }

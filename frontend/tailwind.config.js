@@ -13,6 +13,12 @@ export default {
       fontFamily: {
         sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
+      // Plus petit cran de la grille typographique (A1/A2). Exprimé en rem via le token,
+      // donc sensible au réglage de densité — contrairement aux `text-[10px]` en dur, qui
+      // restaient figés et aplatissaient la hiérarchie en mode compact.
+      fontSize: {
+        '2xs': ['var(--text-2xs)', { lineHeight: '1rem' }],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

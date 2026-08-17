@@ -15,7 +15,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { KanbanSquare } from 'lucide-react';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import EmptyState from '../components/ui/empty-state';
 import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from '../lib/taskStatus';
@@ -77,7 +77,7 @@ export default function KanbanPage() {
   };
 
   return (
-    <Shell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />}>
+    <PageShell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />} width="fluid">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Kanban</h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -109,6 +109,6 @@ export default function KanbanPage() {
           <DragOverlay>{activeTask && <KanbanCardBody task={activeTask} dragging />}</DragOverlay>
         </DndContext>
       )}
-    </Shell>
+    </PageShell>
   );
 }
