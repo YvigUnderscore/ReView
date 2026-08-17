@@ -12,6 +12,7 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { authenticate } from './auth';
 import { prisma } from '../lib/prisma';
+import { __testing as userCache } from '../lib/userCache';
 import { isSessionActive } from '../lib/sessions';
 import { signAccessToken, signRefreshToken, signTwoFaToken } from '../lib/jwt';
 import { signShareSession } from '../lib/shareAccess';
@@ -39,6 +40,9 @@ const run = async (token: string) => {
 };
 
 beforeEach(() => {
+  // L'identité est mise en cache 30 s (B3) : sans purge, un test hériterait de
+  // l'utilisateur résolu par le précédent.
+  userCache.cache.clear();
   vi.mocked(prisma.user.findUnique).mockResolvedValue(dbUser as never);
   vi.mocked(isSessionActive).mockResolvedValue(true);
 });

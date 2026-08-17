@@ -2486,5 +2486,10 @@
   "upload.pickTask.createFailed": "D Task het nit chönne aagleit werde",
   "upload.pickTask.namePlaceholder": "Task-Name (standardmässig de Schritt)",
   "upload.pickTask.noAssignee": "Nit zuegwiese",
-  "tabs.more": "Meh Tabs"
+  "upload.pickTask.hintLocal": "D’Version unter em Schritt abzlege, wo se gmacht het, haltet d’Pipeline läsbar.",
+  "upload.pickTask.createStepLocal": "E Task « {step} » aalege",
+  "tabs.more": "Meh Tabs",
+  "departments.title": "Abteilunge",
+  "departments.add": "E Abteilung dezuefüege",
+  "departments.keyLocked": "Dr Schlüssel wird eimol gsetzt un ändert sich nie — Tasks, Timelines un Montage-Snapshots bezieche sich druf."
 }

@@ -2536,5 +2536,10 @@
   "upload.pickTask.createFailed": "La task n’a pas pu être créée",
   "upload.pickTask.namePlaceholder": "Nom de la task (l’étape par défaut)",
   "upload.pickTask.noAssignee": "Non assignée",
-  "tabs.more": "Autres onglets"
+  "upload.pickTask.hintLocal": "Ranger la version sous l’étape qui l’a produite garde le pipeline lisible.",
+  "upload.pickTask.createStepLocal": "Créer une task « {step} »",
+  "tabs.more": "Autres onglets",
+  "departments.title": "Départements",
+  "departments.add": "Ajouter un département",
+  "departments.keyLocked": "La clé est fixée une fois pour toutes : les tasks, les timelines et les snapshots de montage s’y réfèrent."
 }

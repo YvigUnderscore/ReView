@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { Prisma, Role, UserStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { invalidateAuthUser } from '../lib/userCache';
 import { logAudit } from './AuditService';
 import * as InvitationService from './InvitationService';
 import { storage, StorageService } from './StorageService';
@@ -286,6 +287,9 @@ export async function createUser(actorId: number, input: CreateUserInput) {
 export async function changeRole(actorId: number, id: number, role: Role) {
   if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('Utilisateur introuvable');
   const user = await prisma.user.update({ where: { id }, data: { role }, select: publicUser });
+  // Le rôle est mis en cache par requête (lib/userCache) : sans cette invalidation, un
+  // compte rétrogradé garderait ses droits une demi-minute.
+  invalidateAuthUser(id);
   logAudit({
     userId: actorId,
     action: 'USER_ROLE_CHANGE',
@@ -317,6 +321,7 @@ export async function updateUser(actorId: number, id: number, body: AdminUpdateU
   if (body.storageLimit !== undefined)
     data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
   const user = await prisma.user.update({ where: { id }, data, select: publicUser });
+  invalidateAuthUser(id);
   logAudit({ userId: actorId, action: 'USER_UPDATE', entityType: 'User', entityId: id });
   // Un admin qui réinitialise un mot de passe, change l'email de connexion ou rétrograde
   // un rôle agit en général sur un compte compromis ou un départ : les jetons déjà émis
@@ -337,6 +342,7 @@ export async function deleteUser(actorId: number, id: number) {
     data: { revoked: true },
   });
   await prisma.user.delete({ where: { id } });
+  invalidateAuthUser(id);
   logAudit({
     userId: actorId,
     action: 'USER_DELETE',

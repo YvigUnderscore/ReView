@@ -29,6 +29,66 @@ export const firstMediaThumbKeyForAsset = (assetId: number) =>
 
 export const firstMediaThumbKeyForShot = (shotId: number) => firstMediaThumbKey({ task: { shotId } });
 
+/**
+ * Variantes groupées (B3) : une seule requête pour toute une page de cartes.
+ *
+ * Les listes appelaient la variante unitaire dans un `.map` : cent plans, cent requêtes,
+ * suivies de cent signatures MinIO. C'est ce qui rendait l'ouverture d'un projet lente
+ * bien avant que le volume ne devienne un problème.
+ *
+ * On récupère les miniatures candidates en une passe, triées de la plus ancienne à la
+ * plus récente, puis on élit la première par parent en mémoire — même règle qu'avant,
+ * un seul aller-retour.
+ */
+async function firstThumbKeysBy(
+  where: object,
+  pick: (media: { thumbnailKey: string | null; version: unknown }) => number | null,
+): Promise<Map<number, string>> {
+  const rows = await prisma.mediaObject.findMany({
+    where: { published: true, deletedAt: null, thumbnailKey: { not: null }, ...where },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      thumbnailKey: true,
+      version: { select: { assetId: true, task: { select: { shotId: true, assetId: true } } } },
+    },
+  });
+  const out = new Map<number, string>();
+  for (const row of rows) {
+    const id = pick(row);
+    // Le premier rencontré gagne : la requête est déjà triée par date de création.
+    if (id !== null && row.thumbnailKey && !out.has(id)) out.set(id, row.thumbnailKey);
+  }
+  return out;
+}
+
+/** Miniature de repli de chaque plan de la liste, en une requête. */
+export function firstMediaThumbKeysForShots(shotIds: number[]): Promise<Map<number, string>> {
+  if (shotIds.length === 0) return Promise.resolve(new Map());
+  return firstThumbKeysBy({ version: { task: { shotId: { in: shotIds } } } }, (m) => {
+    const version = m.version as { task: { shotId: number | null } | null } | null;
+    return version?.task?.shotId ?? null;
+  });
+}
+
+/** Miniature de repli de chaque asset de la liste, en une requête. */
+export function firstMediaThumbKeysForAssets(assetIds: number[]): Promise<Map<number, string>> {
+  if (assetIds.length === 0) return Promise.resolve(new Map());
+  return firstThumbKeysBy(
+    {
+      version: {
+        OR: [{ assetId: { in: assetIds } }, { task: { assetId: { in: assetIds } } }],
+      },
+    },
+    (m) => {
+      const version = m.version as {
+        assetId: number | null;
+        task: { assetId: number | null } | null;
+      } | null;
+      return version?.assetId ?? version?.task?.assetId ?? null;
+    },
+  );
+}
+
 /** URL présignée de la miniature effective (explicite ou fallback premier média). */
 export async function effectiveThumbnailUrl(
   explicitKey: string | null,

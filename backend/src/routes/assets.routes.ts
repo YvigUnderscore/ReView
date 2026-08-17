@@ -10,7 +10,7 @@ import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForAsset } from '../lib/pipeline';
 import { softDeleteAsset, restoreAsset, purgeAsset } from '../lib/trash';
-import { firstMediaThumbKeyForAsset, effectiveThumbnailUrl } from '../lib/thumbnails';
+import { firstMediaThumbKeysForAssets, effectiveThumbnailUrl } from '../lib/thumbnails';
 import { logAudit } from '../services/AuditService';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination, pageArgs, paginate } from '../lib/pagination';
@@ -41,10 +41,12 @@ router.get(
       }),
       prisma.asset.count({ where }),
     ]);
+    // Requête groupée (B3) — cf. ShotService.list.
+    const fallbacks = await firstMediaThumbKeysForAssets(assets.map((a) => a.id));
     const items = await Promise.all(
       assets.map(async (a) => ({
         ...a,
-        thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, await firstMediaThumbKeyForAsset(a.id)),
+        thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, fallbacks.get(a.id) ?? null),
       })),
     );
     res.json(paginate(items, total, p));

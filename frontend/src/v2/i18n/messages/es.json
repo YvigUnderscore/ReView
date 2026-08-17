@@ -2486,5 +2486,10 @@
   "upload.pickTask.createFailed": "No se pudo crear la task",
   "upload.pickTask.namePlaceholder": "Nombre de la task (la etapa por defecto)",
   "upload.pickTask.noAssignee": "Sin asignar",
-  "tabs.more": "Más pestañas"
+  "upload.pickTask.hintLocal": "Archivar la versión bajo la etapa que la produjo mantiene la pipeline legible.",
+  "upload.pickTask.createStepLocal": "Crear una task « {step} »",
+  "tabs.more": "Más pestañas",
+  "departments.title": "Departamentos",
+  "departments.add": "Añadir un departamento",
+  "departments.keyLocked": "La clave se fija una sola vez: las tasks, las timelines y los snapshots de montaje se refieren a ella."
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Lock, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { SkeletonRows } from './ui/skeleton';
 import DepartmentsEditor from './DepartmentsEditor';
@@ -13,7 +13,6 @@ import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
 import ProjectColorSection from './ProjectColorSection';
 import type { Nomenclature, ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
-import { useSgConnection } from '../lib/shotgridApi';
 import SgProjectSection from './shotgrid/SgProjectSection';
 
 /**
@@ -42,11 +41,6 @@ export default function ProjectSettingsTab({
   const [savingSettings, setSavingSettings] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Projet relié à ShotGrid : certains réglages y sont hérités et seraient réécrits
-  // à la synchronisation suivante — mieux vaut les montrer verrouillés qu'éditables
-  // pour rien.
-  const { data: sgConnection } = useSgConnection(projectId);
-  const sgConnected = Boolean(sgConnection?.active);
 
   // Synchronise le brouillon local quand les settings arrivent (asynchrones)
   if (settings && !draft) setDraft(settings);
@@ -209,28 +203,22 @@ export default function ProjectSettingsTab({
         )}
       </section>
 
-      {/* Départements — hérités de ShotGrid quand le projet y est relié : ce sont ses
-          étapes de pipeline qui font foi, et les rééditer ici serait défait à la
-          prochaine synchronisation. */}
+      {/* Départements (B1) : des entités à part entière, éditables même sur un projet relié.
+          L'éditeur était verrouillé avec la mention « hérité de ShotGrid », alors qu'aucun
+          code ne les synchronisait : le studio se retrouvait devant un champ mort. Les
+          étapes importées du site sont désormais créées à la volée à l'import ; le studio
+          reste libre de les nommer, de les ordonner et d'en ajouter. */}
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">{t('pipeline.departments')}</span>
-          {sgConnected && (
-            <span className="inline-flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground">
-              <Lock size={11} /> {t('shotgrid.settings.inheritedTitle')}
-            </span>
-          )}
         </div>
-        <div className="mb-3 text-xs text-muted-foreground">
-          {sgConnected ? t('shotgrid.settings.inheritedHint') : t('project.departmentsHint')}
-        </div>
+        <div className="mb-3 text-xs text-muted-foreground">{t('project.departmentsHint')}</div>
+        <div className="mb-3 text-xs text-muted-foreground">{t('departments.keyLocked')}</div>
         {draft && (
-          <fieldset disabled={sgConnected} className={sgConnected ? 'opacity-60' : undefined}>
-            <DepartmentsEditor
-              value={draft.departments}
-              onChange={(departments) => setDraft((d) => d && { ...d, departments })}
-            />
-          </fieldset>
+          <DepartmentsEditor
+            value={draft.departments}
+            onChange={(departments) => setDraft((d) => d && { ...d, departments })}
+          />
         )}
       </section>
 

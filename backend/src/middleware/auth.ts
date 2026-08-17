@@ -3,7 +3,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../lib/jwt';
-import { prisma } from '../lib/prisma';
+import { getAuthUser } from '../lib/userCache';
 import { isSessionActive } from '../lib/sessions';
 import { authenticateApiToken, isApiTokenFormat } from '../lib/apiTokens';
 
@@ -45,10 +45,9 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     return;
   }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: payload.id },
-    select: { id: true, email: true, role: true },
-  });
+  // Lecture mise en cache 30 s (B3) : sans elle, chaque appel d'API rejouait cette
+  // requête, soit vingt à quarante par navigation.
+  const dbUser = await getAuthUser(payload.id);
 
   if (!dbUser) {
     res.status(401).json({ error: 'Utilisateur introuvable', code: 'USER_GONE' });

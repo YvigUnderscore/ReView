@@ -53,6 +53,8 @@ export const qk = {
   shotTree: (shotId: number) => ['shot', shotId, 'tree'] as const,
   /** Toutes les tâches d'un projet, quel que soit leur parent (destination d'upload). */
   projectTasks: (projectId: number) => ['tasks', 'project', projectId] as const,
+  /** Départements applicables à un projet (B1) : les siens, sinon ceux du studio. */
+  departments: (projectId: number) => ['departments', projectId] as const,
   task: (id: number) => ['task', id] as const,
   /** parent = `taskId=1` ou `assetId=2` (query-string du GET /api/versions) */
   versions: (parent: string) => ['versions', parent] as const,

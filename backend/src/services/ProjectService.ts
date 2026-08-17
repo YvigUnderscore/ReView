@@ -7,7 +7,8 @@ import { logAudit } from './AuditService';
 import { softDeleteProject, restoreProject, purgeProject } from '../lib/trash';
 import { firstMediaThumbKeyForProject, effectiveThumbnailUrl } from '../lib/thumbnails';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
-import { resolveProjectSettings } from '../lib/projectSettings';
+import { resolveProjectSettings, resolveProjectSettingsById } from '../lib/projectSettings';
+import * as DepartmentService from './DepartmentService';
 import { slugify } from '../lib/slug';
 import { getProjectStorageUsage } from '../lib/projectQuota';
 import { assertProjectWritable } from '../lib/projectGuard';
@@ -400,13 +401,18 @@ export async function updateSettings(user: SessionUser, projectId: number, body:
   if (!(await prisma.project.findFirst({ where: { id: projectId, deletedAt: null } })))
     throw notFound('Projet introuvable');
   await prisma.project.update({ where: { id: projectId }, data: { settings: body } });
+  // Les départements sont des entités depuis B1 : la liste éditée dans les réglages est
+  // traduite en base, sans quoi l'écran écrirait dans un JSON que plus rien ne lit.
+  const departments = (body as { departments?: { key: string; name: string }[] }).departments;
+  if (Array.isArray(departments)) await DepartmentService.syncFromSettings(projectId, departments);
   logAudit({
     userId: user.id,
     action: 'PROJECT_SETTINGS_UPDATE',
     entityType: 'Project',
     entityId: projectId,
   });
-  return resolveProjectSettings(body);
+  // Relu depuis la base : c'est elle qui porte désormais les départements.
+  return resolveProjectSettingsById(projectId);
 }
 
 /** Éléments en corbeille d'un projet (séquences, shots, assets, versions, médias). */

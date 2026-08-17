@@ -2486,5 +2486,10 @@
   "upload.pickTask.createFailed": "Die Task konnte nicht angelegt werden",
   "upload.pickTask.namePlaceholder": "Task-Name (standardmäßig der Step)",
   "upload.pickTask.noAssignee": "Nicht zugewiesen",
-  "tabs.more": "Weitere Tabs"
+  "upload.pickTask.hintLocal": "Die Version unter dem Schritt abzulegen, der sie erzeugt hat, hält die Pipeline lesbar.",
+  "upload.pickTask.createStepLocal": "Task « {step} » erstellen",
+  "tabs.more": "Weitere Tabs",
+  "departments.title": "Abteilungen",
+  "departments.add": "Abteilung hinzufügen",
+  "departments.keyLocked": "Der Schlüssel wird einmal vergeben und ändert sich nie — Tasks, Timelines und Montage-Snapshots verweisen darauf."
 }

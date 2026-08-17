@@ -8,7 +8,23 @@ import PipelineStatusBadge from '../shotgrid/PipelineStatusBadge';
 import { toast } from 'sonner';
 import { useProjectTasks } from '../../lib/queries';
 import { useCreateTaskFromStep, useSgProjectMembers, useSgSteps } from '../../lib/shotgridTasksApi';
+import { useSgConnection } from '../../lib/shotgridApi';
+import { useDepartments } from '../../lib/departmentsApi';
+import { useCreateTask } from '../../lib/tasksApi';
 import { useT } from '../../i18n';
+
+/**
+ * Une étape proposée à la création, quelle que soit sa provenance (B2) : le référentiel du
+ * site sur un projet relié, les départements du projet sinon. Le dialogue ne connaît que
+ * cette forme — c'est ce qui lui permet de fonctionner sans ShotGrid.
+ */
+interface PickableStep {
+  key: string;
+  code: string;
+  color?: string | null;
+  /** Renseigné seulement pour une étape venue du site. */
+  sgId?: number;
+}
 
 export interface PickableTask {
   id: number | null;
@@ -55,19 +71,32 @@ export default function TaskPickerDialog({
   onPick: (taskId: number | null) => void;
 }) {
   const t = useT();
-  const [creating, setCreating] = useState<number | null>(null);
+  const [creating, setCreating] = useState<string | null>(null);
   // Le projet entier n'est demandé qu'une fois le dialogue ouvert : sur un gros projet,
   // ce n'est pas une liste à charger à chaque affichage de page.
   const { data: projectTasks = [] } = useProjectTasks(projectId, open);
+  const { data: connection } = useSgConnection(projectId);
+  const linked = Boolean(connection?.active);
   // Les étapes du site : elles existent avant toute tâche, et c'est ce qui manquait pour
   // déposer un rendu sur un asset neuf sans aller d'abord créer la tâche dans ShotGrid.
-  const { data: steps = [] } = useSgSteps(
+  const { data: sgSteps = [] } = useSgSteps(
     projectId,
     parent?.kind === 'shot' ? 'Shot' : 'Asset',
-    open && Boolean(parent),
+    open && Boolean(parent) && linked,
   );
-  const { data: members = [] } = useSgProjectMembers(projectId, open && Boolean(parent));
+  // Sans connexion, ce sont les départements du projet qui font office d'étapes (B2).
+  // Auparavant la liste restait vide et le dialogue n'offrait plus aucune sortie.
+  const { data: departments = [] } = useDepartments(projectId, open && Boolean(parent) && !linked);
+  const steps: PickableStep[] = useMemo(
+    () =>
+      linked
+        ? sgSteps.map((s) => ({ key: `sg-${s.sgId}`, code: s.code, color: s.color, sgId: s.sgId }))
+        : departments.map((d) => ({ key: `dept-${d.id}`, code: d.key, color: d.color })),
+    [linked, sgSteps, departments],
+  );
+  const { data: members = [] } = useSgProjectMembers(projectId, open && Boolean(parent) && linked);
   const createTask = useCreateTaskFromStep(projectId);
+  const createLocalTask = useCreateTask(projectId);
   // Nom et personne à qui confier la tâche : proposés, jamais imposés. Le nom part du
   // code de l'étape — c'est la convention — mais un studio nomme parfois « model_hi »
   // là où l'étape s'appelle « modeling ».
@@ -103,19 +132,30 @@ export default function TaskPickerDialog({
     return steps.filter((step) => !covered.has(step.code.toLowerCase()));
   }, [steps, tasks]);
 
-  const createFromStep = async (step: { sgId: number; code: string }) => {
+  const createFromStep = async (step: PickableStep) => {
     if (!parent) return;
-    setCreating(step.sgId);
+    setCreating(step.key);
     try {
-      const r = await createTask.mutateAsync({
-        stepSgId: step.sgId,
-        parentType: parent.kind,
-        parentId: parent.id,
-        name: draftName.trim() || undefined,
-        assigneeSgId: assignee ? Number(assignee) : null,
+      if (step.sgId !== undefined) {
+        const r = await createTask.mutateAsync({
+          stepSgId: step.sgId,
+          parentType: parent.kind,
+          parentId: parent.id,
+          name: draftName.trim() || undefined,
+          assigneeSgId: assignee ? Number(assignee) : null,
+        });
+        toast.success(t('upload.pickTask.created', { name: r.name }));
+        choose(r.taskId);
+        return;
+      }
+      // Chemin natif : la tâche est créée dans ReView, sur le département choisi.
+      const { task } = await createLocalTask.mutateAsync({
+        name: draftName.trim() || step.code,
+        department: step.code,
+        ...(parent.kind === 'shot' ? { shotId: parent.id } : { assetId: parent.id }),
       });
-      toast.success(t('upload.pickTask.created', { name: r.name }));
-      choose(r.taskId);
+      toast.success(t('upload.pickTask.created', { name: task.name }));
+      choose(task.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('upload.pickTask.createFailed'));
     } finally {
@@ -129,7 +169,10 @@ export default function TaskPickerDialog({
         <DialogHeader>
           <DialogTitle>{t('upload.pickTask.title')}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">{t('upload.pickTask.hint')}</p>
+        {/* L'aide parlait de ShotGrid à tout le monde, y compris sur un projet autonome. */}
+        <p className="text-sm text-muted-foreground">
+          {linked ? t('upload.pickTask.hint') : t('upload.pickTask.hintLocal')}
+        </p>
 
         <div className="mt-2 max-h-80 space-y-1.5 overflow-y-auto">
           {tasks.map((task) => (
@@ -201,7 +244,8 @@ export default function TaskPickerDialog({
                 <select
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
-                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                  disabled={members.length === 0}
+                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm disabled:opacity-50"
                 >
                   <option value="">{t('upload.pickTask.noAssignee')}</option>
                   {members.map((m) => (
@@ -215,19 +259,22 @@ export default function TaskPickerDialog({
           )}
           {freeSteps.map((step) => (
             <button
-              key={step.sgId}
+              key={step.key}
               type="button"
               disabled={creating !== null}
               onClick={() => void createFromStep(step)}
               className={`${ROW} disabled:opacity-50`}
             >
-              {creating === step.sgId ? (
+              {creating === step.key ? (
                 <Loader2 size={14} className="shrink-0 animate-spin text-muted-foreground" />
               ) : (
                 <Plus size={14} className="shrink-0 text-muted-foreground" />
               )}
               <span className="min-w-0 flex-1 truncate">
-                {t('upload.pickTask.createStep', { step: step.code })}
+                {/* Le libellé ne promet ShotGrid que lorsque la tâche y sera bien créée. */}
+                {step.sgId !== undefined
+                  ? t('upload.pickTask.createStep', { step: step.code })
+                  : t('upload.pickTask.createStepLocal', { step: step.code })}
               </span>
               {step.color && (
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: step.color }} />

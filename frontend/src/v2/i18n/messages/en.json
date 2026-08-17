@@ -2474,5 +2474,10 @@
   "upload.pickTask.createFailed": "Could not create the task",
   "upload.pickTask.namePlaceholder": "Task name (defaults to the step)",
   "upload.pickTask.noAssignee": "Unassigned",
-  "tabs.more": "More tabs"
+  "upload.pickTask.hintLocal": "Filing it under the step that produced it keeps the pipeline readable.",
+  "upload.pickTask.createStepLocal": "Create a « {step} » task",
+  "tabs.more": "More tabs",
+  "departments.title": "Departments",
+  "departments.add": "Add a department",
+  "departments.keyLocked": "The key is set once and never changes — tasks, timelines and montage snapshots rely on it."
 }

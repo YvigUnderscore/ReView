@@ -2418,5 +2418,10 @@
   "upload.pickTask.createFailed": "无法创建该 task",
   "upload.pickTask.namePlaceholder": "task 名称（默认取环节名）",
   "upload.pickTask.noAssignee": "未指派",
-  "tabs.more": "更多标签"
+  "upload.pickTask.hintLocal": "将版本归入产出它的环节，可让流程保持清晰。",
+  "upload.pickTask.createStepLocal": "创建「{step}」task",
+  "tabs.more": "更多标签",
+  "departments.title": "部门",
+  "departments.add": "添加部门",
+  "departments.keyLocked": "键值一经设定便不再更改——task、timeline 和剪辑快照都依赖它。"
 }

@@ -2475,5 +2475,10 @@
   "upload.pickTask.createFailed": "N’eus ket bet gallet krouiñ an task",
   "upload.pickTask.namePlaceholder": "Anv an task (al lankad dre ziouer)",
   "upload.pickTask.noAssignee": "Dizeliet",
-  "tabs.more": "Ivinelloù all"
+  "upload.pickTask.hintLocal": "Lakaat ar stumm dindan ar bazenn he deus he savet a zalc’h ar pipeline lennus.",
+  "upload.pickTask.createStepLocal": "Krouiñ un task « {step} »",
+  "tabs.more": "Ivinelloù all",
+  "departments.title": "Rannoù",
+  "departments.add": "Ouzhpennañ ur rann",
+  "departments.keyLocked": "Fiksata eo an alc’hwez ur wech da vat : an tasks, an timelines hag ar snapshots a zalc’h outañ."
 }

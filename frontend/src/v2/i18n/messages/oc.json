@@ -2486,5 +2486,10 @@
   "upload.pickTask.createFailed": "La task a pas pogut èsser creada",
   "upload.pickTask.namePlaceholder": "Nom de la task (l’etapa per defaut)",
   "upload.pickTask.noAssignee": "Pas assignada",
-  "tabs.more": "Autres onglets"
+  "upload.pickTask.hintLocal": "Plaçar la version jos l’etapa que l’a producha garda lo pipeline legible.",
+  "upload.pickTask.createStepLocal": "Crear una task « {step} »",
+  "tabs.more": "Autres onglets",
+  "departments.title": "Departaments",
+  "departments.add": "Apondre un departament",
+  "departments.keyLocked": "La clau es fixada un còp per totas : las tasks, las timelines e los snapshots de montatge s’i referisson."
 }

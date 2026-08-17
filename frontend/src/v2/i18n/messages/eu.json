@@ -2489,5 +2489,10 @@
   "upload.pickTask.createFailed": "Ezin izan da task sortu",
   "upload.pickTask.namePlaceholder": "Task-aren izena (urratsa lehenetsita)",
   "upload.pickTask.noAssignee": "Esleitu gabe",
-  "tabs.more": "Fitxa gehiago"
+  "upload.pickTask.hintLocal": "Bertsioa sortu duen urratsaren azpian gordetzeak pipeline-a irakurgarri mantentzen du.",
+  "upload.pickTask.createStepLocal": "Sortu « {step} » task bat",
+  "tabs.more": "Fitxa gehiago",
+  "departments.title": "Sailak",
+  "departments.add": "Gehitu sail bat",
+  "departments.keyLocked": "Gakoa behin betiko finkatzen da: taskek, timelinek eta muntaketa-snapshotek hari egiten diote erreferentzia."
 }

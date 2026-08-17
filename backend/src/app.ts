@@ -42,6 +42,7 @@ import tasksRoutes from './routes/tasks.routes';
 import versionsRoutes from './routes/versions.routes';
 import reviewStatusesRoutes from './routes/review-statuses.routes';
 import pipelineStatusesRoutes from './routes/pipeline-statuses.routes';
+import departmentsRoutes from './routes/departments.routes';
 import commentsRoutes from './routes/comments.routes';
 import boardsRoutes from './routes/boards.routes';
 import shareRoutes from './routes/share.routes';
@@ -154,6 +155,9 @@ export const createApp = (): Express => {
   app.use('/api/versions', versionsRoutes);
   app.use('/api/review-statuses', reviewStatusesRoutes); // statuts de review custom (Phase 31)
   app.use('/api/pipeline-statuses', pipelineStatusesRoutes); // statuts de tâche/plan (Phase 48)
+  // Départements (B1) : le routeur porte plusieurs préfixes (projets, entités, comptes),
+  // il est donc monté à la racine de /api plutôt que sous un segment unique.
+  app.use('/api', departmentsRoutes);
   // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);

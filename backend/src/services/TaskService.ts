@@ -11,6 +11,8 @@ import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute } from '../lib/projectRoles';
 import { taskSelect, toTask } from '../lib/v1Resources';
 import * as ApiEventService from './ApiEventService';
+import * as DepartmentService from './DepartmentService';
+import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
@@ -131,13 +133,15 @@ export interface CreateTaskInput {
 export async function create(user: SessionUser, projectId: number, body: CreateTaskInput) {
   await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas de tâche
   await assertProjectWritable(projectId); // 38.B
+  // Sans département explicite, le type fait office d'étape : il porte les mêmes clés
+  // que les départements par défaut, et une tâche sans étape se range en fourre-tout.
+  const key = body.department ?? (body.type === TaskType.OTHER ? null : body.type);
+  const department = await resolveDepartment(projectId, key);
   const task = await prisma.task.create({
     data: {
       name: body.name,
       type: body.type,
-      // Sans département explicite, le type fait office d'étape : il porte les mêmes clés
-      // que les départements par défaut, et une tâche sans étape se range en fourre-tout.
-      department: body.department ?? (body.type === TaskType.OTHER ? null : body.type),
+      ...department,
       shotId: body.shotId ?? null,
       assetId: body.assetId ?? null,
       assigneeId: body.assigneeId ?? null,
@@ -245,23 +249,48 @@ export interface UpdateTaskInput {
 }
 
 /**
+ * Aligne la clé de département et la clé étrangère (B1).
+ *
+ * La relation fait foi, la chaîne reste écrite en parallèle : c'est elle que lisent le pipe
+ * (`lib/pipelineOrder.ts`), la nomenclature des versions et les snapshots de montage, qui
+ * sont des comptes rendus figés et n'ont pas à suivre un renommage. Une étape inconnue du
+ * projet — un `step` importé de ShotGrid, un chemin DCC — est créée plutôt que perdue :
+ * elle existe puisque quelqu'un travaille dessus.
+ */
+async function resolveDepartment(
+  projectId: number,
+  key: string | null | undefined,
+): Promise<{ department: string | null; departmentId: number | null }> {
+  if (!key) return { department: null, departmentId: null };
+  const department = await DepartmentService.resolveByKey(projectId, key);
+  return department
+    ? { department: department.key, departmentId: department.id }
+    : { department: key, departmentId: null };
+}
+
+/**
  * Aligne `pipelineStatusId` et `status` d'après ce que l'appelant a fourni.
  * Le kanban envoie l'un ou l'autre selon l'écran d'origine ; la base porte les deux.
  */
 async function resolveStatusPair(
+  projectId: number,
   body: Pick<UpdateTaskInput, 'status' | 'pipelineStatusId'>,
 ): Promise<{ status?: TaskStatus; pipelineStatusId?: number | null }> {
   if (body.pipelineStatusId !== undefined) {
     if (body.pipelineStatusId === null) return { pipelineStatusId: null };
-    const status = await prisma.pipelineStatus.findUnique({ where: { id: body.pipelineStatusId } });
-    if (!status) throw badRequest('Statut de pipeline inconnu');
+    // Le statut doit appartenir au vocabulaire de CE projet : rien n'empêchait jusqu'ici
+    // de poser sur une tâche un statut importé du site d'un autre projet.
+    const offered = await PipelineStatusService.listForProject(projectId, 'task');
+    const status = offered.find((s) => s.id === body.pipelineStatusId);
+    if (!status) throw badRequest('Unknown pipeline status for this project');
     return { pipelineStatusId: status.id, status: status.legacyStatus ?? TaskStatus.TODO };
   }
   if (body.status !== undefined) {
-    const match = await prisma.pipelineStatus.findFirst({
-      where: { scope: 'task', legacyStatus: body.status },
-      orderBy: { order: 'asc' },
-    });
+    // Le kanban envoie encore l'énumération à six valeurs. La correspondance se cherche
+    // dans le vocabulaire du projet et nulle part ailleurs : la reposer depuis le
+    // référentiel entier remplaçait « On Hold » par « Waiting to Start » — et l'écrivait
+    // sur le site ShotGrid du studio.
+    const match = await PipelineStatusService.resolveByLegacy(projectId, 'task', body.status);
     return { status: body.status, ...(match ? { pipelineStatusId: match.id } : {}) };
   }
   return {};
@@ -279,16 +308,19 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     if (!isAssignee || keys.some((k) => !allowed.includes(k)))
       throw forbidden('Seuls le statut et la checklist de votre tâche assignée sont modifiables');
   }
-  const { checklist, ...rest } = body;
+  const { checklist, department, ...rest } = body;
+  // Département : la clé et la relation avancent ensemble, comme le statut plus bas.
+  const departmentPair = department !== undefined ? await resolveDepartment(projectId, department) : {};
   // Statut : le référentiel personnalisable et l'énumération avancent ensemble, quel
   // que soit celui des deux que l'appelant a fourni. Les laisser diverger ferait
   // afficher un état au kanban et un autre sur la fiche.
-  const statusPair = await resolveStatusPair(body);
+  const statusPair = await resolveStatusPair(projectId, body);
   const updated = await prisma.task.update({
     where: { id },
     data: {
       ...rest,
       ...statusPair,
+      ...departmentPair,
       ...(checklist !== undefined ? { checklist: checklist as unknown as Prisma.InputJsonValue } : {}),
     },
     include: { assignee: { select: { id: true, name: true } } },

@@ -2428,5 +2428,10 @@
   "upload.pickTask.createFailed": "task를 만들지 못했습니다",
   "upload.pickTask.namePlaceholder": "task 이름 (기본값은 단계명)",
   "upload.pickTask.noAssignee": "미지정",
-  "tabs.more": "탭 더 보기"
+  "upload.pickTask.hintLocal": "버전을 만든 단계 아래에 두면 파이프라인을 파악하기 쉬워집니다.",
+  "upload.pickTask.createStepLocal": "「{step}」 task 만들기",
+  "tabs.more": "탭 더 보기",
+  "departments.title": "부서",
+  "departments.add": "부서 추가",
+  "departments.keyLocked": "키는 한 번 정해지면 바뀌지 않습니다. task, timeline, 몽타주 스냅샷이 이를 참조합니다."
 }

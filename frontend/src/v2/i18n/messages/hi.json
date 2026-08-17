@@ -2480,5 +2480,10 @@
   "upload.pickTask.createFailed": "task नहीं बनाई जा सकी",
   "upload.pickTask.namePlaceholder": "task का नाम (डिफ़ॉल्ट: चरण)",
   "upload.pickTask.noAssignee": "अनासाइन",
-  "tabs.more": "और टैब"
+  "upload.pickTask.hintLocal": "संस्करण को उसे बनाने वाले चरण के अंतर्गत रखने से पाइपलाइन पठनीय रहती है।",
+  "upload.pickTask.createStepLocal": "« {step} » task बनाएँ",
+  "tabs.more": "और टैब",
+  "departments.title": "विभाग",
+  "departments.add": "विभाग जोड़ें",
+  "departments.keyLocked": "कुंजी एक बार तय होती है और कभी नहीं बदलती — tasks, timelines और मोंटाज स्नैपशॉट इसी पर निर्भर हैं।"
 }

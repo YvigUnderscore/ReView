@@ -2486,5 +2486,10 @@
   "upload.pickTask.createFailed": "U task ùn hè pussutu esse creatu",
   "upload.pickTask.namePlaceholder": "Nome di u task (a tappa per difettu)",
   "upload.pickTask.noAssignee": "Micca assignatu",
-  "tabs.more": "Altre schede"
+  "upload.pickTask.hintLocal": "Mette a versione sottu a tappa chì l’hà pruduttu tene u pipeline leghjìbile.",
+  "upload.pickTask.createStepLocal": "Creà una task « {step} »",
+  "tabs.more": "Altre schede",
+  "departments.title": "Dipartimenti",
+  "departments.add": "Aghjunghje un dipartimentu",
+  "departments.keyLocked": "A chjave hè fissata una volta per tutte : e tasks, e timelines è i snapshots ci si riferiscenu."
 }

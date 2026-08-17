@@ -4,7 +4,11 @@
 import { AssetType, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';
-import { firstMediaThumbKeyForShot, effectiveThumbnailUrl } from '../lib/thumbnails';
+import {
+  firstMediaThumbKeyForShot,
+  firstMediaThumbKeysForShots,
+  effectiveThumbnailUrl,
+} from '../lib/thumbnails';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { badRequest, notFound } from '../lib/errors';
@@ -38,10 +42,14 @@ export async function list(
     }),
     prisma.shot.count({ where }),
   ]);
+  // Une requête groupée pour toute la page (B3) : la variante unitaire dans un `.map`
+  // envoyait une requête et une signature MinIO par plan, soit deux cents allers-retours
+  // pour une page de cent.
+  const fallbacks = await firstMediaThumbKeysForShots(shots.map((s) => s.id));
   const items = await Promise.all(
     shots.map(async (s) => ({
       ...s,
-      thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, await firstMediaThumbKeyForShot(s.id)),
+      thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
     })),
   );
   return paginate(items, total, p);

@@ -2428,5 +2428,10 @@
   "upload.pickTask.createFailed": "task を作成できませんでした",
   "upload.pickTask.namePlaceholder": "task 名（既定は工程名）",
   "upload.pickTask.noAssignee": "未割り当て",
-  "tabs.more": "その他のタブ"
+  "upload.pickTask.hintLocal": "作成した工程の下に置くと、パイプラインが読み取りやすくなります。",
+  "upload.pickTask.createStepLocal": "「{step}」の task を作成",
+  "tabs.more": "その他のタブ",
+  "departments.title": "部署",
+  "departments.add": "部署を追加",
+  "departments.keyLocked": "キーは一度きりで変更できません。task、timeline、モンタージュのスナップショットが参照しています。"
 }
