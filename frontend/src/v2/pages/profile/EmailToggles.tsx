@@ -29,7 +29,7 @@ function PrefCheckbox({
   const toggle = async () => {
     try {
       await api.patch('/api/users/me/preferences', { [prefKey]: !enabled });
-      qc.invalidateQueries({ queryKey: qk.preferences });
+      void qc.invalidateQueries({ queryKey: qk.preferences });
       toast.success(!enabled ? onLabel : offLabel);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.generic'));

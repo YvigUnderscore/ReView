@@ -37,9 +37,7 @@ describe('pointCropped — sémantique des volumes de crop', () => {
 
   it('rotation : la boîte tourne avec son quaternion', () => {
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 4);
-    const checks = buildCropChecks(THREE, [
-      vol({ scale: [2, 0.1, 0.1], quaternion: q.toArray() as [number, number, number, number] }),
-    ]);
+    const checks = buildCropChecks(THREE, [vol({ scale: [2, 0.1, 0.1], quaternion: q.toArray() })]);
     // La boîte fine est tournée de 45° dans le plan XY : la diagonale est dedans, l'axe X non.
     expect(pointCropped(1, 1, 0, checks)).toBe(true);
     expect(pointCropped(1.5, 0, 0, checks)).toBe(false);

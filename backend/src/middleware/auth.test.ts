@@ -104,7 +104,7 @@ describe('authenticate — session et existence du compte', () => {
   });
 
   it('refuse un jeton dont le compte n’existe plus', async () => {
-    vi.mocked(prisma.user.findUnique).mockResolvedValue(null as never);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
     const { res, next } = await run(signAccessToken({ ...dbUser, sid: 'abc' }));
     expect(next).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(401);
@@ -113,7 +113,7 @@ describe('authenticate — session et existence du compte', () => {
   // Le rôle est relu en base : un jeton émis avant une rétrogradation ne doit pas
   // continuer à porter l'ancien rôle.
   it('recharge le rôle courant plutôt que celui du jeton', async () => {
-    const stale = signAccessToken({ id: 7, email: dbUser.email, role: 'ADMIN' as never, sid: 'abc' });
+    const stale = signAccessToken({ id: 7, email: dbUser.email, role: 'ADMIN', sid: 'abc' });
     const { req } = await run(stale);
     expect(req.user?.role).toBe('ARTIST');
   });

@@ -53,7 +53,7 @@ export default function TimelineExportButton({
     mutationFn: () => api.post<ExportState>(`/api/timelines/${timelineId}/export`, {}),
     onSuccess: () => {
       toast.success(t('timeline.exportStarted'));
-      qc.invalidateQueries({ queryKey: qk.timelineExport(timelineId) });
+      void qc.invalidateQueries({ queryKey: qk.timelineExport(timelineId) });
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : t('common.error.generic')),
   });

@@ -53,8 +53,8 @@ export default function ProjectsPage() {
   const sel = useMultiSelect(projects?.map((p) => p.id) ?? []);
   // Une (dés)archivage change les deux listes : on invalide les deux clés.
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: qk.projects });
-    qc.invalidateQueries({ queryKey: qk.projectsArchived });
+    void qc.invalidateQueries({ queryKey: qk.projects });
+    void qc.invalidateQueries({ queryKey: qk.projectsArchived });
   };
 
   const restore = async (p: Project) => {
@@ -179,7 +179,7 @@ export default function ProjectsPage() {
                     {
                       icon: <ArchiveRestore size={15} />,
                       label: t('projects.unarchive'),
-                      onClick: () => restore(p),
+                      onClick: () => void restore(p),
                     },
                   ]
                 : [
@@ -207,7 +207,7 @@ export default function ProjectsPage() {
                   {
                     icon: <FolderOpen size={14} />,
                     label: t('common.open'),
-                    onClick: () => navigate(projectPath(p)),
+                    onClick: () => void navigate(projectPath(p)),
                   },
                   ...(canManage && tab === 'active'
                     ? [

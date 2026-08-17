@@ -45,7 +45,7 @@ const stripEphemeral = (to: string): string => {
   const params = new URLSearchParams(search);
   params.delete('live');
   const qs = params.toString();
-  return qs ? `${path}?${qs}` : path!;
+  return qs ? `${path}?${qs}` : path;
 };
 
 export const useRecents = create<RecentsState>((set) => ({

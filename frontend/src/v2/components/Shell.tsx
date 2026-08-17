@@ -105,7 +105,7 @@ export default function Shell({
   const t = useT();
 
   useEffect(() => {
-    loadFavorites();
+    void loadFavorites();
   }, [loadFavorites]);
 
   const toggleCollapse = () => {

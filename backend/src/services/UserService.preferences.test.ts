@@ -51,7 +51,7 @@ describe('UserService — préférences UI', () => {
   });
 
   it('rejette un utilisateur introuvable', async () => {
-    findUnique.mockResolvedValue(null as never);
+    findUnique.mockResolvedValue(null);
     await expect(getPreferences(99)).rejects.toThrow();
   });
 });

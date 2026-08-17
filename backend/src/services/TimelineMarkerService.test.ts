@@ -72,15 +72,15 @@ describe('TimelineMarkerService (34.C)', () => {
       statusCode: 400,
     });
     vi.mocked(prisma.timelineMarker.count).mockResolvedValue(0);
-    vi.mocked(prisma.timelineMarker.create).mockResolvedValue(dbMarker() as never);
+    vi.mocked(prisma.timelineMarker.create).mockResolvedValue(dbMarker());
     const out = await create(artist, 9, { frame: 24, name: 'Plan 2', color: '#22d3ee' });
     expect(out.name).toBe('Plan 2');
     expect(emitToReview).toHaveBeenCalledWith(9, 'markers:changed', { mediaId: 9 });
   });
 
   it('update/remove : auteur ou superviseur seulement, marqueur du bon média', async () => {
-    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker() as never);
-    vi.mocked(prisma.timelineMarker.update).mockResolvedValue(dbMarker({ name: 'Plan 2b' }) as never);
+    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker());
+    vi.mocked(prisma.timelineMarker.update).mockResolvedValue(dbMarker({ name: 'Plan 2b' }));
     // Un autre artiste (id 4) : refusé.
     await expect(update({ id: 4, role: Role.ARTIST }, 9, 5, { name: 'x' })).rejects.toMatchObject({
       statusCode: 403,
@@ -89,10 +89,10 @@ describe('TimelineMarkerService (34.C)', () => {
     const out = await update(artist, 9, 5, { name: 'Plan 2b' });
     expect(out.name).toBe('Plan 2b');
     // Marqueur d'un autre média : 404.
-    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker({ mediaObjectId: 99 }) as never);
+    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker({ mediaObjectId: 99 }));
     await expect(remove(admin, 9, 5)).rejects.toMatchObject({ statusCode: 404 });
     // Admin sur le bon média : OK + broadcast.
-    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker() as never);
+    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker());
     await remove(admin, 9, 5);
     expect(prisma.timelineMarker.delete).toHaveBeenCalledWith({ where: { id: 5 } });
     expect(emitToReview).toHaveBeenCalledWith(9, 'markers:changed', { mediaId: 9 });

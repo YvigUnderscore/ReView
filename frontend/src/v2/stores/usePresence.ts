@@ -36,7 +36,7 @@ export function usePresence() {
       .catch(() => undefined);
 
   useEffect(() => {
-    reload();
+    void reload();
     const socket = getSocket();
     const onPresence = (data: { onlineUserIds: number[] }) => {
       setOnlineIds(new Set(data.onlineUserIds));

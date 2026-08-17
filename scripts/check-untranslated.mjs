@@ -33,6 +33,7 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { join, relative, resolve, sep } from 'node:path';
 
 // TypeScript n'est pas installé à la racine : on emprunte celui du frontend, qui sert déjà
@@ -247,7 +248,7 @@ const SKIP = [
 ];
 
 /** Une pile de classes utilitaires : tout en minuscules, avec au moins un `-`/`[` interne. */
-const isUtilityClasses = (text) => {
+export const isUtilityClasses = (text) => {
   const words = text.split(' ');
   return (
     words.length > 1 &&
@@ -256,20 +257,20 @@ const isUtilityClasses = (text) => {
   );
 };
 
-const isIdentifierLike = (text) => SKIP.some((re) => re.test(text)) || isUtilityClasses(text);
+export const isIdentifierLike = (text) => SKIP.some((re) => re.test(text)) || isUtilityClasses(text);
 
 /** Même filtre, sans les deux règles qui confondraient un mot ordinaire avec un identifiant. */
 const IDENTIFIER_ONLY = [/^[a-z0-9]+([-_:][a-z0-9]+)+$/i, /^[a-z][a-zA-Z0-9]*$/];
 const PROSE_SKIP = SKIP.filter((re) => !IDENTIFIER_ONLY.some((id) => id.source === re.source));
 
-function isAllowed(text) {
+export function isAllowed(text) {
   const clean = text.replace(/[\p{P}\p{S}\p{N}]/gu, ' ').trim();
   if (!clean) return true;
   return clean.split(/\s+/).every((word) => ALLOWED.has(word.toLowerCase()));
 }
 
 /** Un littéral de chaîne ou un gabarit sans interpolation ; sinon `null`. */
-function literalOf(node) {
+export function literalOf(node) {
   if (!node) return null;
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   if (ts.isJsxExpression(node)) return literalOf(node.expression);
@@ -282,7 +283,7 @@ function literalOf(node) {
 }
 
 /** Vrai si le nœud est contenu dans un `<code>`, `<pre>`, `<kbd>` ou `<samp>`. */
-function insideCode(node, src) {
+export function insideCode(node, src) {
   for (let cur = node.parent; cur; cur = cur.parent) {
     if (ts.isJsxElement(cur) && CODE_TAGS.has(cur.openingElement.tagName.getText(src))) return true;
   }
@@ -294,7 +295,7 @@ function insideCode(node, src) {
  * gabarits-là (`` `/api/versions?taskId=${id}` ``, `` `w-${n} rounded` ``) contiennent des
  * fragments qui ressemblent à des mots sans en être.
  */
-function inTechnicalContext(node, src) {
+export function inTechnicalContext(node, src) {
   for (let cur = node.parent; cur; cur = cur.parent) {
     if (ts.isJsxAttribute(cur) && TECHNICAL_PROPS.test(cur.name.getText(src))) return true;
     if (ts.isCallExpression(cur) && TECHNICAL_CALLS.test(calleeName(cur.expression))) return true;
@@ -304,13 +305,13 @@ function inTechnicalContext(node, src) {
 }
 
 /** Nom appelé sous forme textuelle : `toast.success`, `window.confirm`, `t`… */
-function calleeName(node) {
+export function calleeName(node) {
   if (ts.isIdentifier(node)) return node.text;
   if (ts.isPropertyAccessExpression(node)) return `${calleeName(node.expression)}.${node.name.text}`;
   return '';
 }
 
-function scan(file) {
+export function scan(file) {
   const src = ts.createSourceFile(
     file,
     readFileSync(file, 'utf8'),
@@ -382,25 +383,35 @@ function* sources(dir) {
   }
 }
 
-const findings = new Map();
-for (const file of sources(ROOT)) {
-  const items = scan(file);
-  if (items.length) findings.set(file, items);
-}
-
-const total = [...findings.values()].reduce((n, v) => n + v.length, 0);
-if (process.argv.includes('--list')) {
-  for (const [file, items] of [...findings].sort()) {
-    console.log(relative(ROOT, file).split(sep).join('/'));
-    for (const item of items) console.log('   ', item);
+/** Scanne l'arborescence et rend les textes en dur, groupés par fichier. */
+export function collectHardcoded(root = ROOT) {
+  const findings = new Map();
+  for (const file of sources(root)) {
+    const items = scan(file);
+    if (items.length) findings.set(file, items);
   }
+  return findings;
 }
 
-if (total > CEILING) {
-  console.error(
-    `\x1b[0;31m✗ ${total} texte(s) d'interface en dur dans ${ROOT} (plafond : ${CEILING}).\x1b[0m`,
-  );
-  console.error('  Relancer avec --list pour les voir, puis les passer par t().');
-  process.exit(1);
+function main() {
+  const findings = collectHardcoded();
+  const total = [...findings.values()].reduce((n, v) => n + v.length, 0);
+  if (process.argv.includes('--list')) {
+    for (const [file, items] of [...findings].sort()) {
+      console.log(relative(ROOT, file).split(sep).join('/'));
+      for (const item of items) console.log('   ', item);
+    }
+  }
+
+  if (total > CEILING) {
+    console.error(
+      `\x1b[0;31m✗ ${total} texte(s) d'interface en dur dans ${ROOT} (plafond : ${CEILING}).\x1b[0m`,
+    );
+    console.error('  Relancer avec --list pour les voir, puis les passer par t().');
+    process.exit(1);
+  }
+  console.log(`\x1b[0;32m✓ textes d'interface en dur : ${total} (plafond ${CEILING})\x1b[0m`);
 }
-console.log(`\x1b[0;32m✓ textes d'interface en dur : ${total} (plafond ${CEILING})\x1b[0m`);
+
+// Importable pour les tests ; exécuté seulement quand on l'appelle directement.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

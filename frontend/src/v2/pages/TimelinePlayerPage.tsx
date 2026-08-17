@@ -104,7 +104,7 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
   const fps = timeline.framerate || 24;
   const localTime = clip ? localTimeAt(clip, playback.time) : 0;
   const tools = montageTools(state.mode === 'annotate');
-  const activeTool = tools.find((x) => x.id === state.tool) ?? tools[0]!;
+  const activeTool = tools.find((x) => x.id === state.tool) ?? tools[0];
   const applyVolume = (v: number, mute: boolean) => {
     for (const ref of [videoA, videoB]) {
       if (ref.current) {

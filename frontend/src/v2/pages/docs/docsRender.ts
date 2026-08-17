@@ -10,6 +10,7 @@ const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
  * URL débarrassée de ses espaces et caractères de contrôle : le navigateur les ignore lui
  * aussi dans un `href`, un `java\tscript:` y reste donc parfaitement exécutable.
  */
+// eslint-disable-next-line no-control-regex -- retirer les caractères de contrôle (nul compris) est le but même de cette regex
 const protocolOf = (url: string) => url.replace(/[\u0000-\u0020]/g, '').toLowerCase();
 
 /** Protocole exécutable dans un lien ? (`data:` y sert à servir du HTML) */

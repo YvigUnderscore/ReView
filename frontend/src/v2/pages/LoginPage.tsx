@@ -119,7 +119,7 @@ export default function LoginPage() {
         setTmpToken(r.tmpToken);
         return;
       }
-      navigate('/');
+      void navigate('/');
     } catch (err) {
       setError(humanError(err instanceof Error ? err.message : tr('login.error.generic')));
     } finally {
@@ -133,7 +133,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await verify2fa(tmpToken!, code);
-      navigate('/');
+      void navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('twofa.wrongCode'));
     } finally {

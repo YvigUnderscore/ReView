@@ -136,11 +136,11 @@ export function useSubsetTransform(
         lastDelta = delta;
         cbRef.current.onChange();
       };
-      control.addEventListener('dragging-changed', onDragging as never);
+      control.addEventListener('dragging-changed', onDragging);
       control.addEventListener('objectChange', onObjectChange);
 
       cleanup = () => {
-        control.removeEventListener('dragging-changed', onDragging as never);
+        control.removeEventListener('dragging-changed', onDragging);
         control.removeEventListener('objectChange', onObjectChange);
         control.detach();
         scene.remove(helper);

@@ -11,7 +11,7 @@ import { redisConnectionOptions } from '../lib/redis';
 import { QUEUE_NAMES, type MediaJobData } from '../services/JobService';
 import { prisma } from '../lib/prisma';
 import { storage, StorageService } from '../services/StorageService';
-import { MediaStatus } from '@prisma/client';
+import { MediaStatus, Prisma } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { getTranscodeConfig, selectRenditions, type TranscodeConfig } from '../lib/transcodeConfig';
 import {
@@ -68,7 +68,7 @@ function probe(
 ): Promise<{ duration?: number; width?: number; height?: number; fps?: number; hasAudio?: boolean }> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(path, (err, data) => {
-      if (err) return reject(err);
+      if (err) return reject(err instanceof Error ? err : new Error(String(err)));
       const stream = data.streams.find((s) => s.codec_type === 'video');
       let fps: number | undefined;
       if (stream?.r_frame_rate && stream.r_frame_rate.includes('/')) {
@@ -523,7 +523,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
           where: { id: mediaId },
           data: {
             status: MediaStatus.FAILED,
-            metadata: { ...metadata, quarantined: scan.virus, quarantineKey } as object,
+            metadata: { ...metadata, quarantined: scan.virus, quarantineKey },
           },
         });
         logAudit({
@@ -567,7 +567,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       delete metadata.processingError;
       await prisma.mediaObject.update({
         where: { id: mediaId },
-        data: { status: MediaStatus.READY, metadata: metadata as object },
+        data: { status: MediaStatus.READY, metadata: metadata as Prisma.InputJsonObject },
       });
     } else if (kind === 'transcode') {
       // Sonde + proxy + miniature pour la vidéo
@@ -628,8 +628,12 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
             await prisma.mediaObject.update({
               where: { id: mediaId },
               data: readyPosted
-                ? { metadata: metadata as object }
-                : { status: MediaStatus.READY, thumbnailKey: thumbKey, metadata: metadata as object },
+                ? { metadata: metadata as Prisma.InputJsonObject }
+                : {
+                    status: MediaStatus.READY,
+                    thumbnailKey: thumbKey,
+                    metadata: metadata as Prisma.InputJsonObject,
+                  },
             });
             readyPosted = true;
             await publishWorkerEvent({
@@ -717,7 +721,11 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       metadata.sourceDeleted = true;
       await prisma.mediaObject.update({
         where: { id: mediaId },
-        data: { status: MediaStatus.READY, thumbnailKey: thumbKey, metadata: metadata as object },
+        data: {
+          status: MediaStatus.READY,
+          thumbnailKey: thumbKey,
+          metadata: metadata as Prisma.InputJsonObject,
+        },
       });
       if (!sourceGone)
         await storage
@@ -751,7 +759,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
         freshMeta.trimProxyKey = trimProxyKey;
         await prisma.mediaObject.update({
           where: { id: mediaId },
-          data: { metadata: freshMeta as object },
+          data: { metadata: freshMeta as Prisma.InputJsonObject },
         });
       } else {
         await storage.deleteObject(trimProxyKey).catch(() => undefined);
@@ -765,7 +773,11 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
       await prisma.mediaObject.update({
         where: { id: mediaId },
-        data: { status: MediaStatus.READY, thumbnailKey: thumbKey, metadata: metadata as object },
+        data: {
+          status: MediaStatus.READY,
+          thumbnailKey: thumbKey,
+          metadata: metadata as Prisma.InputJsonObject,
+        },
       });
     } else {
       throw new Error(`Type de job inconnu: ${kind}`);
@@ -788,7 +800,7 @@ async function markFailed(mediaId: number, err: unknown): Promise<void> {
     metadata.processingError = message;
     await prisma.mediaObject.update({
       where: { id: mediaId },
-      data: { status: MediaStatus.FAILED, metadata: metadata as object },
+      data: { status: MediaStatus.FAILED, metadata: metadata as Prisma.InputJsonObject },
     });
   } catch {
     // La mise à jour de statut ne doit jamais masquer l'erreur d'origine (relancée par l'appelant).
@@ -818,7 +830,8 @@ ffmpegWorker.on('failed', (job, err) =>
 );
 
 if (require.main === module) {
-  ffmpegWorker.run();
+  // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
+  void ffmpegWorker.run();
   logger.info('[ffmpeg.worker] démarré.');
   // Même process worker : traite aussi la file de nettoyage storage (retry des orphelins)
   // et la livraison des webhooks (36.D — les POST sortants ne partent pas du serveur web).

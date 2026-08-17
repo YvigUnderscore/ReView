@@ -85,7 +85,7 @@ export function useAnnotations(opts?: {
   const undo = () =>
     setPast((p) => {
       if (!p.length) return p;
-      const prev = p[p.length - 1]!;
+      const prev = p[p.length - 1];
       setFuture((f) => [annot, ...f]);
       setAnnot(prev);
       return p.slice(0, -1);
@@ -93,7 +93,7 @@ export function useAnnotations(opts?: {
   const redo = () =>
     setFuture((f) => {
       if (!f.length) return f;
-      const nx = f[0]!;
+      const nx = f[0];
       setPast((p) => [...p, annot]);
       setAnnot(nx);
       return f.slice(1);

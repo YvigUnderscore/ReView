@@ -39,6 +39,7 @@ storageCleanupWorker.on('failed', (_job, err) =>
 
 /** Démarre le worker (appelé depuis le process worker principal). */
 export function startStorageCleanupWorker(): void {
-  storageCleanupWorker.run();
+  // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
+  void storageCleanupWorker.run();
   logger.info('[storageCleanup.worker] démarré.');
 }

@@ -76,7 +76,7 @@ export default function ClientMediaViewer({
       });
       setContent('');
       toast.success(t('comments.sent'));
-      qc.invalidateQueries({ queryKey: ['client-share', token, 'media', media.id, 'comments'] });
+      void qc.invalidateQueries({ queryKey: ['client-share', token, 'media', media.id, 'comments'] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {

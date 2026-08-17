@@ -62,7 +62,7 @@ export default function MediaChrome({
   const trim = useVideoTrim({ data, fps, videoRef, onSaved });
 
   const tools = toolsFor(state.mode, kind);
-  const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0]!;
+  const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0];
   const canTrim = kind === 'VIDEO' && canEdit;
 
   return (

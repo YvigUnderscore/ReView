@@ -74,7 +74,8 @@ export function useKanbanBoard(projectId: number) {
     try {
       await api.patch(`/api/tasks/${taskId}`, { status });
     } catch (e) {
-      qc.invalidateQueries({ queryKey: key });
+      // Rollback : l'invalidation déclenche le refetch, inutile de l'attendre (erreur déjà toastée).
+      void qc.invalidateQueries({ queryKey: key });
       toast.error(e instanceof Error ? e.message : tr('kanban.moveFailed'));
     }
   };

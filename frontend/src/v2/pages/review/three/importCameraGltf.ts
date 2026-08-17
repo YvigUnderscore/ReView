@@ -64,11 +64,11 @@ export function samplesFromTracks(tracks: KeyframeTrackLike[]): CameraSample[] {
   for (let i = 0; i < posT.times.length; i++) {
     const quat: [number, number, number, number] =
       rotT && rotT.values.length >= (i + 1) * 4
-        ? [rotT.values[i * 4]!, rotT.values[i * 4 + 1]!, rotT.values[i * 4 + 2]!, rotT.values[i * 4 + 3]!]
+        ? [rotT.values[i * 4], rotT.values[i * 4 + 1], rotT.values[i * 4 + 2], rotT.values[i * 4 + 3]]
         : [0, 0, 0, 1];
     samples.push({
-      t: posT.times[i]!,
-      pos: [posT.values[i * 3]!, posT.values[i * 3 + 1]!, posT.values[i * 3 + 2]!],
+      t: posT.times[i],
+      pos: [posT.values[i * 3], posT.values[i * 3 + 1], posT.values[i * 3 + 2]],
       quat,
     });
   }
@@ -84,7 +84,7 @@ export async function importCameraFromGltf(file: File): Promise<SplatLayoutAnim 
   const gltf = await new Promise<{
     scene: import('three').Object3D;
     animations: Array<{ tracks: KeyframeTrackLike[] }>;
-  }>((resolve, reject) => loader.parse(buf, '', resolve as never, reject));
+  }>((resolve, reject) => loader.parse(buf, '', resolve, reject));
   let fovDeg = 45;
   gltf.scene.traverse((o) => {
     const cam = o as unknown as { isCamera?: boolean; fov?: number };

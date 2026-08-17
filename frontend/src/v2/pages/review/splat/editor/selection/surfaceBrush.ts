@@ -86,7 +86,7 @@ export function selectByBrush(
   if (hits.length === 0) return null;
   hits.sort((a, b) => a.distance - b.distance);
   // Profondeur vue de la surface = -z en espace caméra (équivaut au w du clip perspective).
-  const hitView = hits[0]!.point.clone().applyMatrix4(camera.matrixWorldInverse);
+  const hitView = hits[0].point.clone().applyMatrix4(camera.matrixWorldInverse);
   const viewZ = -hitView.z;
   const halfDepth = depthBand(viewZ);
   mesh.updateWorldMatrix(true, false);

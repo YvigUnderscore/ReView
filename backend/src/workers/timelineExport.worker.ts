@@ -198,6 +198,7 @@ timelineExportWorker.on('failed', (job, err) =>
 
 /** Démarré par le process worker principal (cf. ffmpeg.worker). */
 export function startTimelineExportWorker(): void {
-  timelineExportWorker.run();
+  // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
+  void timelineExportWorker.run();
   logger.info('[timelineExport.worker] démarré.');
 }

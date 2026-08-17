@@ -53,7 +53,7 @@ export default function CommentReactions({
           key={g.emoji}
           onClick={(e) => {
             stop(e);
-            react(g.emoji);
+            void react(g.emoji);
           }}
           className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs ${g.mine ? 'border-primary bg-primary/10' : 'border-border hover:bg-secondary'}`}
         >
@@ -74,6 +74,7 @@ export default function CommentReactions({
         </button>
         {emojiOpen && (
           <div
+            role="presentation"
             onClick={stop}
             className="absolute bottom-full left-0 z-20 mb-1 flex gap-0.5 rounded-md border border-border bg-card p-1 shadow-lg"
           >

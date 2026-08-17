@@ -16,7 +16,11 @@ import { prisma } from '../lib/prisma';
 
 const studioFind = vi.mocked(prisma.studio.findFirst);
 const settingFind = vi.mocked(prisma.setting.findUnique);
-const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }) as Response);
+// Signature calquée sur `fetch` : sans elle les arguments capturés seraient un tuple vide
+// et `mock.calls[n][1]` (l'init, porteur du corps posté) resterait hors de portée.
+const fetchMock = vi.fn(
+  async (_input: string | URL | Request, _init?: RequestInit) => ({ ok: true, status: 200 }) as Response,
+);
 
 describe('ChatNotifyService.notifyChat (42.B №67)', () => {
   beforeEach(() => {
@@ -29,7 +33,7 @@ describe('ChatNotifyService.notifyChat (42.B №67)', () => {
     settingFind.mockResolvedValue({ value: 'https://hooks.slack.com/services/T/B/x' } as never);
     await notifyChat('Hello');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    const bodies = fetchMock.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
+    const bodies = fetchMock.mock.calls.map((c) => JSON.parse(c[1]!.body as string));
     expect(bodies).toContainEqual({ content: 'Hello' });
     expect(bodies).toContainEqual({ text: 'Hello' });
   });
@@ -43,7 +47,7 @@ describe('ChatNotifyService.notifyChat (42.B №67)', () => {
 
   it('ne jette jamais même si un webhook échoue', async () => {
     studioFind.mockResolvedValue({ discordWebhookUrl: 'https://discord.com/api/webhooks/1/a' } as never);
-    settingFind.mockResolvedValue(null as never);
+    settingFind.mockResolvedValue(null);
     fetchMock.mockResolvedValueOnce({ ok: false, status: 500 } as Response);
     await expect(notifyChat('X')).resolves.toBeUndefined();
   });

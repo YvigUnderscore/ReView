@@ -190,7 +190,7 @@ router.post(
         guestName: body.guestName,
         content: sanitizeHtml(body.content),
         timestamp: body.timestamp ?? null,
-        cameraState: (body.cameraState ?? undefined) as object | undefined,
+        cameraState: body.cameraState ?? undefined,
         isVisibleToClient: true,
       },
       include: { author: { select: { id: true, name: true } } },

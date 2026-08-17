@@ -494,7 +494,7 @@ export async function publish(user: SessionUser, id: number) {
       },
     });
     // Messagerie d'équipe (42.B — №67).
-    notifyChat(`🎬 Nouveau média publié : ${media.originalName}`);
+    void notifyChat(`🎬 Nouveau média publié : ${media.originalName}`);
   }
   return serializeMedia(updated);
 }

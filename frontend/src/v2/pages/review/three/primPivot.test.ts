@@ -9,7 +9,7 @@ const Y90: Quat = [0, Math.sin(Math.PI / 4), 0, Math.cos(Math.PI / 4)];
 
 const base: Pose = { position: [10, 0, 0], quaternion: IDENTITY_QUAT, scale: [1, 1, 1] };
 const closeTo = (got: readonly number[], want: readonly number[]) =>
-  got.forEach((v, i) => expect(v).toBeCloseTo(want[i]!, 6));
+  got.forEach((v, i) => expect(v).toBeCloseTo(want[i], 6));
 
 describe('rotateVec / mulQuat', () => {
   it('tourne +X vers −Z pour 90° autour de +Y', () => {

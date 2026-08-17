@@ -11,6 +11,11 @@ import { publishedMediaWhere } from './ClientShareService';
 describe('publishedMediaWhere — ce que voit un visiteur du lien public', () => {
   const where = publishedMediaWhere(7);
 
+  // Chaque branche du OR remonte à une entité différente (plan porté par une task, asset
+  // porté par une task, asset direct) : seule cette entité porte projectId/deletedAt.
+  const ownerOf = (branch: (typeof where.version.OR)[number]) =>
+    branch.task ? (branch.task.shot ?? branch.task.asset) : branch.asset;
+
   it('n’expose que les médias prêts et publiés d’une version publiée', () => {
     expect(where.status).toBe('READY');
     expect(where.published).toBe(true);
@@ -23,15 +28,13 @@ describe('publishedMediaWhere — ce que voit un visiteur du lien public', () =>
     expect(where.deletedAt).toBeNull();
     expect(where.version.deletedAt).toBeNull();
     for (const branch of where.version.OR) {
-      const owner = 'task' in branch ? Object.values(branch.task)[0] : branch.asset;
-      expect(owner).toMatchObject({ projectId: 7, deletedAt: null });
+      expect(ownerOf(branch)).toMatchObject({ projectId: 7, deletedAt: null });
     }
   });
 
   it('reste borné au projet partagé', () => {
     for (const branch of where.version.OR) {
-      const owner = 'task' in branch ? Object.values(branch.task)[0] : branch.asset;
-      expect((owner as { projectId: number }).projectId).toBe(7);
+      expect(ownerOf(branch)?.projectId).toBe(7);
     }
   });
 });

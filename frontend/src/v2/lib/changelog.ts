@@ -19,7 +19,7 @@ export function parseChangelog(md: string): ChangelogEntry[] {
     const m = /^##\s+(.+?)\s*$/.exec(line);
     if (m) {
       if (current) entries.push(current);
-      current = { id: m[1]!.trim(), body: '' };
+      current = { id: m[1].trim(), body: '' };
     } else if (current) {
       current.body += line + '\n';
     }

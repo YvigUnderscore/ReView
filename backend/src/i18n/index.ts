@@ -41,20 +41,20 @@ export type MessageKey = keyof typeof en;
 export type TParams = Record<string, string | number> & { count?: number };
 
 const CATALOGS: Record<Locale, Catalog> = {
-  en: en as Catalog,
-  fr: fr as Catalog,
-  es: es as Catalog,
-  de: de as Catalog,
-  pt: pt as Catalog,
-  'zh-Hans': zhHans as Catalog,
-  ko: ko as Catalog,
-  ja: ja as Catalog,
-  hi: hi as Catalog,
-  br: br as Catalog,
-  eu: eu as Catalog,
-  co: co as Catalog,
-  'gsw-FR': gswFR as Catalog,
-  oc: oc as Catalog,
+  en: en,
+  fr: fr,
+  es: es,
+  de: de,
+  pt: pt,
+  'zh-Hans': zhHans,
+  ko: ko,
+  ja: ja,
+  hi: hi,
+  br: br,
+  eu: eu,
+  co: co,
+  'gsw-FR': gswFR,
+  oc: oc,
 };
 
 const PLACEHOLDER = /\{(\w+)\}/g;

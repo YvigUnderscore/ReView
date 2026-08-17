@@ -79,7 +79,7 @@ export default function ReviewsPage() {
       toast.success(t('reviews.trashed', { count }));
       sel.clear();
       setBulkDeleting(false);
-      refresh();
+      void refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -96,7 +96,7 @@ export default function ReviewsPage() {
     try {
       await bulkDelete('media', [id]);
       toast.success(t('reviews.trashed'));
-      refresh();
+      void refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -179,7 +179,7 @@ export default function ReviewsPage() {
                   {
                     icon: <FolderOpen size={14} />,
                     label: t('common.open'),
-                    onClick: () => navigate(reviewPath({ id: m.id, originalName: m.name })),
+                    onClick: () => void navigate(reviewPath({ id: m.id, originalName: m.name })),
                   },
                   ...(canPlaylist
                     ? [
@@ -196,7 +196,7 @@ export default function ReviewsPage() {
                     icon: <Trash2 size={14} />,
                     label: t('common.delete'),
                     danger: true,
-                    onClick: () => deleteOne(m.id),
+                    onClick: () => void deleteOne(m.id),
                   },
                 ]}
                 badge={

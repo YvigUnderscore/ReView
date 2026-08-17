@@ -76,15 +76,27 @@ function Actions({ actions }: { actions?: EntityItemAction[] }) {
 /** Case de sélection : capte les modificateurs (Shift/Ctrl) et neutralise la navigation. */
 function SelectBox({ selection, className }: { selection: EntitySelection; className?: string }) {
   const t = useT();
+  // La case interne est inerte (tabIndex -1) : c'est ce conteneur qui porte l'interaction,
+  // clavier compris — les modificateurs se lisent aussi bien sur un événement clavier.
+  const select = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) =>
+    selection.onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
   return (
     <div
+      role="button"
+      tabIndex={0}
       className={`${className ?? ''} ${
         selection.selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       } transition-opacity`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        selection.onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+        select(e);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        select(e);
       }}
     >
       <Checkbox

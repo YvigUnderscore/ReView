@@ -75,7 +75,7 @@ export default function CompareSelect({
 
   const toggle = async (v: VersionListItem) => {
     if (checked(v.id)) {
-      if (multi) onRemove(vidToMedia[v.id]!);
+      if (multi) onRemove(vidToMedia[v.id]);
       else onSet(null);
       return;
     }

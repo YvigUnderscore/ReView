@@ -116,10 +116,10 @@ export const useChat = create<ChatState>((set, get) => ({
     });
 
     socket.on('chat:deleted', ({ conversationId, messageId }: Record<string, number>) => {
-      const list = get().messages[conversationId!];
+      const list = get().messages[conversationId];
       if (!list) return;
       set({
-        messages: { ...get().messages, [conversationId!]: list.filter((m) => m.id !== messageId) },
+        messages: { ...get().messages, [conversationId]: list.filter((m) => m.id !== messageId) },
       });
     });
   },
@@ -188,7 +188,7 @@ export const useChat = create<ChatState>((set, get) => ({
     const list = get().messages[id];
     if (!list?.length || get().atStart[id]) return;
     const { messages: page } = await api.get<{ messages: ChatMessage[] }>(
-      `/api/chat/conversations/${id}/messages?before=${list[0]!.id}`,
+      `/api/chat/conversations/${id}/messages?before=${list[0].id}`,
     );
     set({
       messages: { ...get().messages, [id]: [...page, ...list] },

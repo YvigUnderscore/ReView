@@ -36,8 +36,8 @@ export function useMediaActions(
       qc.setQueryData<MediaResp>(qk.media(id), (old) =>
         old ? { ...old, media: { ...old.media, published: media.published } } : old,
       );
-      qc.invalidateQueries({ queryKey: qk.drafts });
-      qc.invalidateQueries({ queryKey: ['versions'] });
+      void qc.invalidateQueries({ queryKey: qk.drafts });
+      void qc.invalidateQueries({ queryKey: ['versions'] });
       toast.success(t('media.publishedTeam'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('media.publishFailed'));

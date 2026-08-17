@@ -72,7 +72,7 @@ export function useMentions(
     }
     if ((e.key === 'Enter' && !e.ctrlKey && !e.metaKey) || e.key === 'Tab') {
       e.preventDefault();
-      pick(candidates[activeIndex] ?? candidates[0]!);
+      pick(candidates[activeIndex] ?? candidates[0]);
       return true;
     }
     if (e.key === 'Escape') {

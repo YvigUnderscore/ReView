@@ -59,16 +59,16 @@ describe('clipIndexAt', () => {
 
 describe('localTimeAt / globalTimeOf', () => {
   it('convertit le temps global en position dans le plan', () => {
-    expect(localTimeAt(items[1]!, 3.5)).toBe(1.5);
+    expect(localTimeAt(items[1], 3.5)).toBe(1.5);
   });
 
   it('borne la position aux limites du plan', () => {
-    expect(localTimeAt(items[1]!, 0)).toBe(0);
-    expect(localTimeAt(items[1]!, 99)).toBe(2);
+    expect(localTimeAt(items[1], 0)).toBe(0);
+    expect(localTimeAt(items[1], 99)).toBe(2);
   });
 
   it('fait l’aller-retour sans dérive', () => {
-    expect(globalTimeOf(items[2]!, localTimeAt(items[2]!, 4.75))).toBe(4.75);
+    expect(globalTimeOf(items[2], localTimeAt(items[2], 4.75))).toBe(4.75);
   });
 });
 
@@ -135,7 +135,7 @@ describe('trackLayout', () => {
 
   it('couvre la bande de bout en bout', () => {
     const slots = trackLayout(items, 6);
-    const last = slots[slots.length - 1]!;
+    const last = slots[slots.length - 1];
     expect(last.leftPct + last.widthPct).toBeCloseTo(100, 6);
   });
 

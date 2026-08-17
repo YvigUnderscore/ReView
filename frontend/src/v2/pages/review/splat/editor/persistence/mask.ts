@@ -18,7 +18,7 @@ export function encodeMask(indices: Iterable<number>): Uint8Array {
   }
   if (max < 0) return new Uint8Array(0);
   const bytes = new Uint8Array(Math.ceil((max + 1) / 8));
-  for (const i of list) bytes[i >> 3] = bytes[i >> 3]! | (1 << (i & 7));
+  for (const i of list) bytes[i >> 3] = bytes[i >> 3] | (1 << (i & 7));
   return bytes;
 }
 
@@ -26,7 +26,7 @@ export function encodeMask(indices: Iterable<number>): Uint8Array {
 export function decodeMask(bytes: Uint8Array): number[] {
   const out: number[] = [];
   for (let b = 0; b < bytes.length; b++) {
-    const byte = bytes[b]!;
+    const byte = bytes[b];
     if (byte === 0) continue;
     for (let bit = 0; bit < 8; bit++) if (byte & (1 << bit)) out.push((b << 3) | bit);
   }

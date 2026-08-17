@@ -40,7 +40,7 @@ export default function UserModal({
     firstName: user?.firstName ?? '',
     lastName: user?.lastName ?? '',
     username: user?.username ?? '',
-    role: (user?.role ?? 'ARTIST') as Role,
+    role: user?.role ?? 'ARTIST',
     storageLimitGo: user?.storageLimit ? String((user.storageLimit / 1e9).toFixed(0)) : '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export default function UserModal({
       if (form.password && (isEdit || !invite)) body.password = form.password;
       if (form.storageLimitGo) body.storageLimit = Math.round(Number(form.storageLimitGo) * 1e9);
       if (isEdit) {
-        await api.patch(`/api/users/${user!.id}`, body);
+        await api.patch(`/api/users/${user.id}`, body);
         toast.success(t('userModal.updated'));
       } else {
         if (!invite && !form.password) throw new Error(t('userModal.passwordRequired'));

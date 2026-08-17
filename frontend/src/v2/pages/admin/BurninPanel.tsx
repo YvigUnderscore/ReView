@@ -45,7 +45,7 @@ export default function BurninPanel() {
     try {
       const { config } = await api.put<{ config: BurninConfig }>('/api/admin/burnin', draft);
       setDraft(config);
-      qc.invalidateQueries({ queryKey: qk.admin('burnin') });
+      void qc.invalidateQueries({ queryKey: qk.admin('burnin') });
       toast.success(t('burnin.template.saved'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));

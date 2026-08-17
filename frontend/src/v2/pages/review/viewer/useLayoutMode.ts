@@ -38,7 +38,7 @@ export function useLayoutMode(opts: {
       // À l'activation : la caméra layout part de la vue courante (le PiP démarre cohérent).
       if (on) {
         const view = captureCamera();
-        activationViewRef.current = (view as SplatCamera | undefined) ?? null;
+        activationViewRef.current = view ?? null;
         if (view) restoreLayout(view);
       }
     },

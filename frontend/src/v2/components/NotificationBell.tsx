@@ -75,7 +75,7 @@ export default function NotificationBell() {
           ? { notifications: [n, ...prev.notifications].slice(0, 100), unread: prev.unread + 1 }
           : prev,
       );
-      if (!qc.getQueryData(qk.notifications)) qc.invalidateQueries({ queryKey: qk.notifications });
+      if (!qc.getQueryData(qk.notifications)) void qc.invalidateQueries({ queryKey: qk.notifications });
       toast(n.content);
     };
     socket.on('notification:new', onNew);
@@ -113,7 +113,7 @@ export default function NotificationBell() {
       return;
     }
     const to = linkFor(n);
-    if (to) navigate(to);
+    if (to) void navigate(to);
   };
 
   return (

@@ -43,7 +43,7 @@ export default function SharesTab({ projectId }: { projectId: number }) {
     try {
       await api.del(`/api/share/${link.id}`);
       toast.success(t('shares.revokedToast'));
-      qc.invalidateQueries({ queryKey: qk.shareLinks(projectId) });
+      void qc.invalidateQueries({ queryKey: qk.shareLinks(projectId) });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -147,7 +147,7 @@ function CreateShareDialog({
       });
       await navigator.clipboard.writeText(clientUrl(link.token)).catch(() => undefined);
       toast.success(t('shares.created'));
-      qc.invalidateQueries({ queryKey: qk.shareLinks(projectId) });
+      void qc.invalidateQueries({ queryKey: qk.shareLinks(projectId) });
       setLabel('');
       setPassword('');
       setExpiresInDays('');

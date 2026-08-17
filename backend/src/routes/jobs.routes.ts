@@ -17,9 +17,9 @@ const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
 
 const QUEUES: Record<string, Queue> = {
-  media: mediaQueue as unknown as Queue,
-  'storage-cleanup': storageCleanupQueue as unknown as Queue,
-  webhooks: webhookQueue as unknown as Queue,
+  media: mediaQueue,
+  'storage-cleanup': storageCleanupQueue,
+  webhooks: webhookQueue,
 };
 
 const queueParam = z.object({ queue: z.enum(['media', 'storage-cleanup', 'webhooks']) });

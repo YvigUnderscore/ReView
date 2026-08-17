@@ -9,7 +9,7 @@ function makeObject() {
   const group = new THREE.Group();
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
   group.add(mesh);
-  return { group, mat: mesh.material as THREE.MeshStandardMaterial };
+  return { group, mat: mesh.material };
 }
 
 describe('modelCompare — comparaison A/B 3D (39.E)', () => {

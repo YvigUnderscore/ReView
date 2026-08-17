@@ -115,8 +115,12 @@ export default function DocsPage() {
           )}
         </aside>
 
+        {/* Le clic est délégué aux liens <a data-doc> du markdown, eux-mêmes accessibles
+            au clavier (Entrée déclenche un clic qui remonte ici) : le conteneur, lui,
+            n'est pas un contrôle. */}
         <div
           id="doc-content"
+          role="presentation"
           className="min-w-0 flex-1 overflow-y-auto rounded-lg border border-border bg-card px-6 py-4"
           onClick={onContentClick}
         >

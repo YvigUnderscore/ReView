@@ -16,6 +16,7 @@ const config: TranscodeConfig = {
     { height: 1080, videoBitrateK: 5000 },
     { height: 2160, videoBitrateK: 14000 },
   ],
+  sceneDetection: false,
 };
 
 describe('transcodeConfig.selectRenditions (Phase 22)', () => {
@@ -30,7 +31,7 @@ describe('transcodeConfig.selectRenditions (Phase 22)', () => {
   it('source plus petite que le plus petit palier → une rendition à la hauteur source', () => {
     const out = selectRenditions(config, 240);
     expect(out).toHaveLength(1);
-    expect(out[0].height).toBe(240);
+    expect(out[0]!.height).toBe(240);
   });
 
   it('source 4K → toute l’échelle', () => {

@@ -67,7 +67,9 @@ export function supportedCategories(tag) {
  * de mot : « boards » compte pour « board », « ReViewera » pour « ReView ».
  */
 export function glossaryHits(text, terms) {
-  return terms.filter((term) => new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')}`, 'i').test(text));
+  return terms.filter((term) =>
+    new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')}`, 'i').test(text),
+  );
 }
 
 /** Compare deux registres de langues, en ignorant les clés de commentaire. */
@@ -130,12 +132,15 @@ export function checkCatalog({ base, target, locale, categories, terms }) {
         if (!got.has(name)) errors.push(`${locale}: « ${key} » (${category}) perd la variable {${name}}`);
       }
       for (const name of got) {
-        if (!expected.has(name)) errors.push(`${locale}: « ${key} » (${category}) invente la variable {${name}}`);
+        if (!expected.has(name))
+          errors.push(`${locale}: « ${key} » (${category}) invente la variable {${name}}`);
       }
 
       for (const term of glossaryHits(Object.values(baseForms).join(' '), terms)) {
         if (!glossaryHits(text, [term]).length) {
-          errors.push(`${locale}: « ${key} » (${category}) traduit le terme métier « ${term} » — il doit rester tel quel`);
+          errors.push(
+            `${locale}: « ${key} » (${category}) traduit le terme métier « ${term} » — il doit rester tel quel`,
+          );
         }
       }
     }
@@ -182,7 +187,9 @@ async function checkSet(set, glossary, reference) {
     const declared = registry.locales.map((l) => l.code);
     if (!codes) errors.push(`${set.name}: union « Locale » introuvable dans locales.ts`);
     else if (codes.join('|') !== declared.join('|')) {
-      errors.push(`${set.name}: l'union Locale (${codes.join(', ')}) ne correspond pas à locales.json (${declared.join(', ')})`);
+      errors.push(
+        `${set.name}: l'union Locale (${codes.join(', ')}) ne correspond pas à locales.json (${declared.join(', ')})`,
+      );
     }
   }
 
@@ -191,7 +198,8 @@ async function checkSet(set, glossary, reference) {
   const declared = new Set(registry.locales.map((l) => l.code));
   for (const file of files) {
     const code = file.replace(/\.json$/, '');
-    if (!declared.has(code)) errors.push(`${set.name}: messages/${file} ne correspond à aucune langue du registre`);
+    if (!declared.has(code))
+      errors.push(`${set.name}: messages/${file} ne correspond à aucune langue du registre`);
   }
 
   const base = await readJson(path.join(messagesDir, `${registry.base}.json`));
@@ -200,7 +208,9 @@ async function checkSet(set, glossary, reference) {
   for (const locale of registry.locales) {
     const file = path.join(messagesDir, `${locale.code}.json`);
     if (!existsSync(file)) {
-      errors.push(`${set.name}: la langue « ${locale.code} » est déclarée mais messages/${locale.code}.json manque`);
+      errors.push(
+        `${set.name}: la langue « ${locale.code} » est déclarée mais messages/${locale.code}.json manque`,
+      );
       continue;
     }
     if (locale.code === registry.base) {

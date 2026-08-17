@@ -64,7 +64,7 @@ export default function IdentityTab() {
         ...patch,
       });
       setDraft({ ...oidc, clientSecret: '' });
-      qc.invalidateQueries({ queryKey: qk.admin('oidc') });
+      void qc.invalidateQueries({ queryKey: qk.admin('oidc') });
       toast.success(t('sso.saved'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -152,9 +152,12 @@ export default function IdentityTab() {
             // n'est pas complet, et une case cochée à tort ferait croire l'inverse.
             onChange={(e) => void save({ passwordLoginDisabled: e.target.checked })}
           />
-          <span>
-            <span className="font-medium">{t('sso.passwordDisable')}</span>
-            <span className="block text-xs text-muted-foreground">{t('sso.passwordDisableHint')}</span>
+          {/* Texte directement sous le span : la règle a11y ne le cherche pas plus profond. */}
+          <span className="font-medium">
+            {t('sso.passwordDisable')}
+            <span className="block text-xs font-normal text-muted-foreground">
+              {t('sso.passwordDisableHint')}
+            </span>
           </span>
         </label>
         {!ssoReady(draft) && !draft.passwordLoginDisabled && (

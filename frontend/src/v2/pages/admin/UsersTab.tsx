@@ -59,7 +59,7 @@ export default function UsersTab() {
       await api.del(`/api/users/${deleting.id}`);
       toast.success(t('userDetail.userDeleted'));
       setDeleting(null);
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
@@ -190,7 +190,7 @@ export default function UsersTab() {
           onClose={() => setCreating(false)}
           onSaved={() => {
             setCreating(false);
-            invalidate();
+            void invalidate();
           }}
         />
       )}
@@ -201,7 +201,7 @@ export default function UsersTab() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            invalidate();
+            void invalidate();
           }}
         />
       )}

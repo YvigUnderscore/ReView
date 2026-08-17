@@ -46,8 +46,8 @@ export function wipeClipPoints(pos: number, angleDeg: number, w: number, h: numb
   ];
   const out: Pt[] = [];
   for (let i = 0; i < rect.length; i++) {
-    const cur = rect[i]!;
-    const prev = rect[(i + rect.length - 1) % rect.length]!;
+    const cur = rect[i];
+    const prev = rect[(i + rect.length - 1) % rect.length];
     const curIn = inside(cur);
     const prevIn = inside(prev);
     if (curIn) {

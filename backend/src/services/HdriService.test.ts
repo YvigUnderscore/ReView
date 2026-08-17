@@ -28,7 +28,7 @@ beforeEach(() => {
 
 describe('HdriService', () => {
   it('liste vide quand aucun réglage', async () => {
-    findUnique.mockResolvedValue(null as never);
+    findUnique.mockResolvedValue(null);
     expect(await listWithUrls()).toEqual([]);
   });
 

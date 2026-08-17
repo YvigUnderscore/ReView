@@ -32,8 +32,11 @@ export function useCameraShortcuts(opts: {
 }): void {
   const { anim, active, editable, undoActive, fps } = opts;
   const t = useT();
+  // Réf synchronisée en effet (jamais pendant le rendu) : lue seulement dans les handlers clavier.
   const animRef = useRef(anim);
-  animRef.current = anim;
+  useEffect(() => {
+    animRef.current = anim;
+  }, [anim]);
 
   useEffect(() => {
     if (!active) return;

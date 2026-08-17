@@ -53,7 +53,7 @@ export default function JobsTab() {
     try {
       await api.post(`/api/admin/jobs/${queue}/${id}/retry`);
       toast.success(t('jobs.retried'));
-      invalidate();
+      void invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -62,7 +62,7 @@ export default function JobsTab() {
     try {
       const { removed } = await api.post<{ removed: number }>(`/api/admin/jobs/${queue}/clean-failed`);
       toast.success(t('jobs.cleanedFailed', { count: removed }));
-      invalidate();
+      void invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -71,7 +71,7 @@ export default function JobsTab() {
   return (
     <div className="max-w-3xl space-y-4">
       {jobsQ.data.map((q) => (
-        <Panel key={q.key} title={t(QUEUE_LABEL_KEY[q.key]!) ?? q.key}>
+        <Panel key={q.key} title={t(QUEUE_LABEL_KEY[q.key]) ?? q.key}>
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="info">{t('jobs.activeCount', { count: q.counts.active ?? 0 })}</Badge>
             <Badge variant="secondary">
@@ -159,7 +159,7 @@ function DerivedPurgePanel() {
     setDraft(next);
     try {
       await api.put('/api/admin/derived-purge', next);
-      qc.invalidateQueries({ queryKey: qk.admin('derived-purge') });
+      void qc.invalidateQueries({ queryKey: qk.admin('derived-purge') });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }

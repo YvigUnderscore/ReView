@@ -15,7 +15,7 @@ export const DIFF_GAINS = [1, 2, 4, 8, 16] as const;
 /** Gain suivant du cycle (clic sur le chip ×n). */
 export function nextGain(gain: number): number {
   const i = DIFF_GAINS.indexOf(gain as (typeof DIFF_GAINS)[number]);
-  return DIFF_GAINS[(i + 1) % DIFF_GAINS.length]!;
+  return DIFF_GAINS[(i + 1) % DIFF_GAINS.length];
 }
 
 /**

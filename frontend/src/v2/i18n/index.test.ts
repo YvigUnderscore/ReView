@@ -25,7 +25,7 @@ import {
 const catalogs = import.meta.glob<{ default: Record<string, unknown> }>('./messages/*.json', {
   eager: true,
 });
-const catalogOf = (code: Locale) => catalogs[`./messages/${code}.json`]!.default;
+const catalogOf = (code: Locale) => catalogs[`./messages/${code}.json`].default;
 
 describe('registre des langues', () => {
   it('a l’anglais pour langue de base', () => {

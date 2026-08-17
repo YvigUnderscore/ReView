@@ -244,7 +244,7 @@ export function useLiveSession({
           const carry = new URLSearchParams();
           if (playlistId > 0) carry.set('playlist', String(playlistId));
           carry.set('live', '1');
-          navigate(`${reviewPath({ id: payload.mediaId })}?${carry.toString()}`);
+          void navigate(`${reviewPath({ id: payload.mediaId })}?${carry.toString()}`);
           return;
         }
         driverMedia.lastId = payload.mediaId;

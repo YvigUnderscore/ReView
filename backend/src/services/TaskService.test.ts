@@ -86,7 +86,7 @@ describe('createFromComment (32.D)', () => {
       media: { version: { assetId: null, task: null } },
     } as never);
     await expect(createFromComment(supervisor, 3, 9)).rejects.toMatchObject({ statusCode: 400 });
-    vi.mocked(prisma.comment.findUnique).mockResolvedValue(null as never);
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue(null);
     await expect(createFromComment(supervisor, 3, 99)).rejects.toMatchObject({ statusCode: 404 });
   });
 });

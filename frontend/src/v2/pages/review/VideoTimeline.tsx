@@ -218,7 +218,7 @@ export default function VideoTimeline({
               <div
                 key={k}
                 className="pointer-events-none absolute inset-y-1 z-[7] w-0.5 rounded-full bg-primary"
-                style={{ left: `calc(${(loop[k]! / duration) * 100}% * (100% - 8px) / 100% + 4px)` }}
+                style={{ left: `calc(${(loop[k] / duration) * 100}% * (100% - 8px) / 100% + 4px)` }}
                 title={k === 'in' ? t('video.loopIn') : t('video.loopOut')}
               />
             ) : null,

@@ -6,7 +6,7 @@
 // Exécuté automatiquement avant `npm run dev` et `npm run build` (predev/prebuild).
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SOURCE = path.resolve(__dirname, '../../DOCUMENTATION');
@@ -22,13 +22,22 @@ const SECTION_ORDER = [
   'development',
 ];
 
-const sectionLabel = (dir) =>
+export const sectionLabel = (dir) =>
   dir
     .split('-')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
 
-async function pageTitle(filePath) {
+/** Ordre d'affichage : les sections connues d'abord, le reste par ordre alphabétique. */
+export const orderSections = (dirs) =>
+  [...dirs].sort((a, b) => {
+    const ia = SECTION_ORDER.indexOf(a);
+    const ib = SECTION_ORDER.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+  });
+
+/** Titre d'une page : son premier titre de niveau 1, à défaut le nom du fichier. */
+export async function pageTitle(filePath) {
   const text = await readFile(filePath, 'utf8');
   const heading = text.split('\n').find((l) => l.startsWith('# '));
   return heading ? heading.slice(2).trim() : path.basename(filePath, '.md');
@@ -58,19 +67,12 @@ async function main() {
   });
 
   const entries = await readdir(SOURCE, { withFileTypes: true });
-  const dirs = entries
-    .filter((e) => e.isDirectory() && e.name !== 'assets')
-    .map((e) => e.name)
-    .sort((a, b) => {
-      const ia = SECTION_ORDER.indexOf(a);
-      const ib = SECTION_ORDER.indexOf(b);
-      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
-    });
+  const dirs = orderSections(
+    entries.filter((e) => e.isDirectory() && e.name !== 'assets').map((e) => e.name),
+  );
 
   for (const dir of dirs) {
-    const files = (await readdir(path.join(SOURCE, dir)))
-      .filter((f) => f.endsWith('.md'))
-      .sort();
+    const files = (await readdir(path.join(SOURCE, dir))).filter((f) => f.endsWith('.md')).sort();
     if (files.length === 0) continue;
     const pages = [];
     for (const file of files) {
@@ -88,4 +90,5 @@ async function main() {
   console.log(`build-docs: ${pageCount} page(s), ${sections.length} section(s) → public/docs`);
 }
 
-main();
+// Importable pour les tests ; exécuté seulement quand on l'appelle directement.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

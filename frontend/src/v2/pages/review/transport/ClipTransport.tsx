@@ -38,9 +38,18 @@ export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState
           <div
             className="rv-track"
             style={{ flex: '1 1 200px', minWidth: 160 }}
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               const r = e.currentTarget.getBoundingClientRect();
               m.scrub(Math.max(0, ((e.clientX - r.left) / r.width) * duration));
+            }}
+            onKeyDown={(e) => {
+              // Équivalent clavier du clic : les flèches déplacent la tête de lecture de 5 %.
+              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+              e.preventDefault();
+              const delta = (e.key === 'ArrowRight' ? 1 : -1) * duration * 0.05;
+              m.scrub(Math.min(duration, Math.max(0, time + delta)));
             }}
           >
             <span className="rv-track__rail" />

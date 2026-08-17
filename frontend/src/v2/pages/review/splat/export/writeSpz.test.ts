@@ -31,11 +31,11 @@ async function readSpz(bytes: Uint8Array): Promise<DecodedSplat[]> {
     quat: [0, 0, 0, 1],
   }));
   await reader.parseSplats(
-    (i, x, y, z) => (out[i]!.center = [x, y, z]),
-    (i, a) => (out[i]!.alpha = a),
-    (i, r, g, b) => (out[i]!.rgb = [r, g, b]),
-    (i, sx, sy, sz) => (out[i]!.scale = [sx, sy, sz]),
-    (i, qx, qy, qz, qw) => (out[i]!.quat = [qx, qy, qz, qw]),
+    (i, x, y, z) => (out[i].center = [x, y, z]),
+    (i, a) => (out[i].alpha = a),
+    (i, r, g, b) => (out[i].rgb = [r, g, b]),
+    (i, sx, sy, sz) => (out[i].scale = [sx, sy, sz]),
+    (i, qx, qy, qz, qw) => (out[i].quat = [qx, qy, qz, qw]),
   );
   return out;
 }
@@ -66,9 +66,9 @@ describe('writeSpz', () => {
     const decoded = await readSpz(await writeSpz(splats));
     expect(decoded).toHaveLength(3);
     splats.forEach((s, i) => {
-      expect(decoded[i]!.center[0]).toBeCloseTo(s.center[0], 2);
-      expect(decoded[i]!.center[1]).toBeCloseTo(s.center[1], 2);
-      expect(decoded[i]!.center[2]).toBeCloseTo(s.center[2], 2);
+      expect(decoded[i].center[0]).toBeCloseTo(s.center[0], 2);
+      expect(decoded[i].center[1]).toBeCloseTo(s.center[1], 2);
+      expect(decoded[i].center[2]).toBeCloseTo(s.center[2], 2);
     });
   });
 
@@ -79,12 +79,12 @@ describe('writeSpz', () => {
     ];
     const decoded = await readSpz(await writeSpz(splats));
     splats.forEach((s, i) => {
-      expect(decoded[i]!.alpha).toBeCloseTo(s.opacity, 1);
+      expect(decoded[i].alpha).toBeCloseTo(s.opacity, 1);
       for (let k = 0; k < 3; k++) {
-        expect(decoded[i]!.rgb[k]).toBeCloseTo(s.color[k]!, 1);
+        expect(decoded[i].rgb[k]).toBeCloseTo(s.color[k], 1);
         // Échelle log-quantifiée : ~6,5 % par pas → tolérance relative généreuse.
-        expect(decoded[i]!.scale[k]! / s.scales[k]!).toBeGreaterThan(0.85);
-        expect(decoded[i]!.scale[k]! / s.scales[k]!).toBeLessThan(1.15);
+        expect(decoded[i].scale[k] / s.scales[k]).toBeGreaterThan(0.85);
+        expect(decoded[i].scale[k] / s.scales[k]).toBeLessThan(1.15);
       }
     });
   });
@@ -95,7 +95,7 @@ describe('writeSpz', () => {
     const n = Math.hypot(...raw);
     const q = raw.map((v) => v / n) as [number, number, number, number];
     const decoded = await readSpz(await writeSpz([baked({ quaternion: q })]));
-    const d = decoded[0]!.quat;
+    const d = decoded[0].quat;
     // |produit scalaire| ≈ 1 si les quaternions représentent la même rotation.
     const dot = Math.abs(q[0] * d[0] + q[1] * d[1] + q[2] * d[2] + q[3] * d[3]);
     expect(dot).toBeGreaterThan(0.99);

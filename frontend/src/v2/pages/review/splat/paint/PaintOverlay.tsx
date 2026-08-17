@@ -43,7 +43,7 @@ export default function PaintOverlay({
     const p = local(e);
     setPoints((pts) => {
       if (!pts) return pts;
-      const last = pts[pts.length - 1]!;
+      const last = pts[pts.length - 1];
       return Math.hypot(p[0] - last[0], p[1] - last[1]) >= SAMPLE_STEP ? [...pts, p] : pts;
     });
   };

@@ -22,7 +22,7 @@ const update = vi.mocked(prisma.user.update);
 describe('UserService.updateMe — profil enrichi (42.B №89)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    findFirst.mockResolvedValue(null as never);
+    findFirst.mockResolvedValue(null);
     update.mockResolvedValue({ id: 1, email: 'a@b.c', avatarKey: null } as never);
   });
 
@@ -38,6 +38,6 @@ describe('UserService.updateMe — profil enrichi (42.B №89)', () => {
 
   it('n’écrit que les champs fournis', async () => {
     await updateMe(1, { firstName: 'Ana' });
-    expect(update.mock.calls[0]![0]!.data).toEqual({ firstName: 'Ana' });
+    expect(update.mock.calls[0]![0].data).toEqual({ firstName: 'Ana' });
   });
 });

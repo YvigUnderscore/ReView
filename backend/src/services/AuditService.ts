@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { displayName, initials, avatarUrl } from '../lib/userView';
@@ -64,7 +65,7 @@ export function logAudit(params: {
         action: params.action,
         entityType: params.entityType ?? null,
         entityId: params.entityId ?? null,
-        metadata: (params.metadata ?? {}) as object,
+        metadata: (params.metadata ?? {}) as Prisma.InputJsonObject,
       },
     })
     .catch((err) => logger.warn({ err }, '[Audit] échec'));

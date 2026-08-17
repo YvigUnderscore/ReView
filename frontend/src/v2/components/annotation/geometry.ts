@@ -94,7 +94,7 @@ export function hitShape(shapes: Shape[], p: [number, number]): Shape | undefine
   const near = (a: number, b: number) => Math.abs(a - b) < 0.03;
   return [...shapes].reverse().find((s) => {
     if (s.type === 'path' || s.type === 'polygon')
-      return s.pts?.some(([x, y]) => Math.hypot(x! - p[0], y! - p[1]) < 0.03);
+      return s.pts?.some(([x, y]) => Math.hypot(x - p[0], y - p[1]) < 0.03);
     if (s.type === 'rect')
       return (
         p[0] >= (s.x ?? 0) - 0.02 &&
@@ -130,7 +130,7 @@ export function hitShape(shapes: Shape[], p: [number, number]): Shape | undefine
 /** Translation d'une forme (outil déplacement). */
 export function translateShape(s: Shape, dx: number, dy: number): Shape {
   if (s.type === 'path' || s.type === 'polygon')
-    return { ...s, pts: s.pts?.map(([x, y]) => [x! + dx, y! + dy]) };
+    return { ...s, pts: s.pts?.map(([x, y]) => [x + dx, y + dy]) };
   if (s.type === 'rect' || s.type === 'text') return { ...s, x: (s.x ?? 0) + dx, y: (s.y ?? 0) + dy };
   if (s.type === 'ellipse') return { ...s, cx: (s.cx ?? 0) + dx, cy: (s.cy ?? 0) + dy };
   return { ...s, x1: (s.x1 ?? 0) + dx, y1: (s.y1 ?? 0) + dy, x2: (s.x2 ?? 0) + dx, y2: (s.y2 ?? 0) + dy };

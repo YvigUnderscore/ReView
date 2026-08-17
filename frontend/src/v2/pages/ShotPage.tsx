@@ -93,7 +93,7 @@ export default function ShotPage() {
       });
       toast.success(t('version.created', { name: version.name }));
       // La version vit sous sa tâche : c'est là qu'on dépose son média et qu'on publie.
-      navigate(`/tasks/${taskId}?version=${version.id}`);
+      void navigate(`/tasks/${taskId}?version=${version.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('version.createFailed'));
     }

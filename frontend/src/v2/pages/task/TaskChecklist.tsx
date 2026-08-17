@@ -33,7 +33,7 @@ export default function TaskChecklist({
   const save = async (next: ChecklistItem[]) => {
     try {
       await api.patch(`/api/tasks/${taskId}`, { checklist: next });
-      qc.invalidateQueries({ queryKey: qk.task(taskId) });
+      void qc.invalidateQueries({ queryKey: qk.task(taskId) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.generic'));
     }

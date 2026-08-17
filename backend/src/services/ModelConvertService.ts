@@ -180,7 +180,9 @@ async function convertGltfToGlb(input: string, output: string): Promise<void> {
     ConvertGltfToGLB(input, output);
   } catch (err) {
     const e = err as { message?: string };
-    throw new Error(`Conversion glTF→GLB échouée : ${(e.message || 'erreur inconnue').slice(0, 500)}`);
+    throw new Error(`Conversion glTF→GLB échouée : ${(e.message || 'erreur inconnue').slice(0, 500)}`, {
+      cause: err,
+    });
   }
   await assertGlbProduced(output, 'glTF→GLB');
 }
@@ -190,7 +192,7 @@ async function convertWithAssimp(input: string, output: string): Promise<void> {
   try {
     await execFileAsync('assimp', ['export', input, output, '-f', 'glb2'], runOpts());
   } catch (err) {
-    throw new Error(describeExecError(err, 'Conversion assimp échouée'));
+    throw new Error(describeExecError(err, 'Conversion assimp échouée'), { cause: err });
   }
   await assertGlbProduced(output, 'assimp');
 }
@@ -273,11 +275,11 @@ async function convertWithBlender(
     // moitié du timeout et laisse les options restantes en `variantsSkipped` (46.P).
     variantTimeBudget: Math.floor(env.MODEL_CONVERT_TIMEOUT_MS / 2000),
   });
-  let stdout = '';
+  let stdout: string;
   try {
     ({ stdout } = await execFileAsync(env.USD_BLENDER_BIN, args, runOpts()));
   } catch (err) {
-    throw new Error(describeExecError(err, 'Conversion USD (Blender) échouée'));
+    throw new Error(describeExecError(err, 'Conversion USD (Blender) échouée'), { cause: err });
   }
   await assertGlbProduced(output, 'Blender');
   return parseBlenderSummary(stdout);
@@ -420,7 +422,9 @@ export async function extractArchive(input: string, extractDir: string): Promise
     zip = new AdmZip(input);
   } catch (err) {
     const e = err as { message?: string };
-    throw new Error(`Archive illisible : ${(e.message || 'erreur inconnue').slice(0, 300)}`);
+    throw new Error(`Archive illisible : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
+      cause: err,
+    });
   }
 
   const entries: ZipEntryInfo[] = zip.getEntries().map((entry) => ({
@@ -487,7 +491,9 @@ export async function extractArchive(input: string, extractDir: string): Promise
     // Extraction partielle = scène USD silencieusement incomplète : on efface tout.
     await rm(extractDir, { recursive: true, force: true }).catch(() => undefined);
     const e = err as { message?: string };
-    throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`);
+    throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
+      cause: err,
+    });
   }
 }
 

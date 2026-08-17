@@ -7,7 +7,7 @@ import type { TransformControls } from 'three/addons/controls/TransformControls.
 import type { SceneViewer } from '../viewer/sceneHandle';
 import type { GizmoMode } from '../viewer/gizmos/useTransformGizmo';
 import { objectsBoundingSphere } from '../viewer/frameCamera';
-import { pivotedPose, type Pose, type Quat, type Vec3 } from './primPivot';
+import { pivotedPose, type Pose, type Vec3 } from './primPivot';
 
 /** Instantané d'un représentant au début du drag — les deltas s'y rapportent, jamais cumulés. */
 interface RepSnap {
@@ -121,11 +121,11 @@ export function usePrimGizmo(
             reps.push({
               object,
               base: {
-                position: object.position.toArray() as Vec3,
-                quaternion: object.quaternion.toArray() as Quat,
-                scale: object.scale.toArray() as Vec3,
+                position: object.position.toArray(),
+                quaternion: object.quaternion.toArray(),
+                scale: object.scale.toArray(),
               },
-              pivot: parent.worldToLocal(proxy.position.clone()).toArray() as Vec3,
+              pivot: parent.worldToLocal(proxy.position.clone()).toArray(),
               parentQuat: qw,
               parentScale: sw,
             });
@@ -164,9 +164,9 @@ export function usePrimGizmo(
           const sDelta = proxy.scale.clone().divide(snap.proxyStart.scale);
 
           const pose = pivotedPose(rep.base, rep.pivot, {
-            t: tParent.toArray() as Vec3,
-            q: qParent.toArray() as Quat,
-            s: sDelta.toArray() as Vec3,
+            t: tParent.toArray(),
+            q: qParent.toArray(),
+            s: sDelta.toArray(),
           });
           rep.object.position.set(...pose.position);
           rep.object.quaternion.set(...pose.quaternion);

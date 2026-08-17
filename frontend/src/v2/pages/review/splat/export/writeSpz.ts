@@ -21,7 +21,7 @@ export async function writeSpz(splats: readonly BakedSplat[]): Promise<Uint8Arra
     flagAntiAlias: false,
   });
   for (let i = 0; i < splats.length; i++) {
-    const s = splats[i]!;
+    const s = splats[i];
     writer.setCenter(i, s.center[0], s.center[1], s.center[2]);
     writer.setScale(i, s.scales[0], s.scales[1], s.scales[2]);
     writer.setQuat(i, s.quaternion[0], s.quaternion[1], s.quaternion[2], s.quaternion[3]);

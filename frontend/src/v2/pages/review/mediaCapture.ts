@@ -31,8 +31,8 @@ export function drawAnnotations(ctx: CanvasRenderingContext2D, shapes: Shape[], 
       const pts = s.pts ?? [];
       if (pts.length) {
         ctx.beginPath();
-        ctx.moveTo(X(pts[0]![0]!), Y(pts[0]![1]!));
-        for (const [x, y] of pts.slice(1)) ctx.lineTo(X(x!), Y(y!));
+        ctx.moveTo(X(pts[0][0]), Y(pts[0][1]));
+        for (const [x, y] of pts.slice(1)) ctx.lineTo(X(x), Y(y));
         if (s.type === 'polygon' && pts.length >= 3) ctx.closePath();
         ctx.stroke();
       }
@@ -55,7 +55,7 @@ export function drawAnnotations(ctx: CanvasRenderingContext2D, shapes: Shape[], 
       const end = head ? head.shaftEnd : [s.x2 ?? 0, s.y2 ?? 0];
       ctx.beginPath();
       ctx.moveTo(X(s.x1 ?? 0), Y(s.y1 ?? 0));
-      ctx.lineTo(X(end[0]!), Y(end[1]!));
+      ctx.lineTo(X(end[0]), Y(end[1]));
       ctx.stroke();
       if (head) {
         ctx.beginPath();

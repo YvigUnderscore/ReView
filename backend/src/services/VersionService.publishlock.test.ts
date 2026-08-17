@@ -29,7 +29,7 @@ const supervisor = { id: 9, role: Role.SUPERVISOR };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  updateVersion.mockImplementation(({ data }: never) => Promise.resolve({ id: 1, ...data }) as never);
+  updateVersion.mockImplementation(({ data }) => Promise.resolve({ id: 1, ...data }) as never);
 });
 
 /**

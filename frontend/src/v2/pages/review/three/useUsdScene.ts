@@ -8,20 +8,13 @@ import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { buildRenderedPrimTree, type PrimNode } from './usdScenegraph';
 import { createSelectionGlow } from './selectionGlow';
 import {
-  addClone,
-  clonePath,
-  clonesOf,
   emptyOverride,
-  IDENTITY_TRANSFORM,
   isEmptyOverride,
   isHidden,
   isolatePrim,
   mergeOverrides,
-  newCloneId,
   normalizeOverride,
   parseClonePath,
-  removeClone,
-  setCloneTransform,
   setPrimEdit,
   type PrimEdit,
   type PrimTransform,
@@ -33,7 +26,6 @@ import {
   makePrimResolver,
   planOverride,
   renderedPrimPaths,
-  transformDeltaFrom,
   variantActive,
   variantOptionRenderable,
   type IndexedObject,
@@ -42,6 +34,7 @@ import {
 import type { AlignAxis, AlignMode } from './alignPrims';
 import { useSceneClones } from './useSceneClones';
 import { usePrimAlign } from './usePrimAlign';
+import { usePrimTransforms, type PrimTransformCommit } from './usePrimTransforms';
 
 /**
  * Scenegraph USD et « ReView override » du viewer 3D (Phase 46, 46.C).
@@ -92,9 +85,7 @@ export interface UsdSceneState {
    * Fin de drag du gizmo de groupe : la pose courante de chaque représentant devient le delta
    * d'override de son prim (ou de son clone) — un seul lot. Renvoie les deltas avant/après.
    */
-  commitPrimTransforms: (
-    objects: readonly THREE.Object3D[],
-  ) => Array<{ path: string; before: PrimTransform | null; after: PrimTransform }>;
+  commitPrimTransforms: (objects: readonly THREE.Object3D[]) => PrimTransformCommit[];
   /** Écrit un delta sur un prim ou un clone (`/prim#id`) — chemin unique de l'undo du gizmo. */
   applyPrimTransform: (path: string, transform: PrimTransform | null) => void;
   /** Duplique un prim (ou un clone) en clone d'override, le sélectionne, renvoie son pseudo-chemin. */
@@ -337,88 +328,18 @@ export function useUsdScene(
     [primary, objectsOf],
   );
 
-  /**
-   * Fin de drag du gizmo de groupe (46.N, généralisé B1) : la pose de chaque représentant,
-   * comparée à son état d'origine, devient le delta d'override de son prim — le tout en **un
-   * seul lot** (`editLocal` unique → une seule publication du delta), que `applyPlan`
-   * répercute ensuite sur tous les objets de chaque prim.
-   */
-  /** Écrit un delta sur un prim ou un clone (un seul chemin d'écriture pour l'undo du gizmo). */
-  const writeTransform = useCallback(
-    (o: SceneOverride, path: string, transform: PrimTransform | null): SceneOverride => {
-      const clone = parseClonePath(path);
-      if (clone) return setCloneTransform(o, clone.path, clone.id, transform ?? IDENTITY_TRANSFORM);
-      return setPrimEdit(o, path, { transform: transform ?? IDENTITY_TRANSFORM });
-    },
-    [],
-  );
-
-  const applyPrimTransform = useCallback(
-    (path: string, transform: PrimTransform | null) => editLocal((o) => writeTransform(o, path, transform)),
-    [editLocal, writeTransform],
-  );
-
-  const commitPrimTransforms = useCallback(
-    (objects: readonly THREE.Object3D[]) => {
-      const commits: Array<{ path: string; before: PrimTransform | null; after: PrimTransform }> = [];
-      for (const object of objects) {
-        const entry = allIndexed.find((e) => e.object === object);
-        if (!entry) continue;
-        const clone = parseClonePath(entry.primPath);
-        const before = clone
-          ? (clonesOf(override, clone.path).find((c) => c.id === clone.id)?.transform ?? null)
-          : (local.prims[entry.primPath]?.transform ?? null);
-        commits.push({ path: entry.primPath, before, after: transformDeltaFrom(entry.base, object) });
-      }
-      if (commits.length)
-        editLocal((o) => commits.reduce((acc, c) => writeTransform(acc, c.path, c.after), o));
-      return commits;
-    },
-    [allIndexed, override, local, editLocal, writeTransform],
-  );
-
-  /** Duplique un prim (ou un clone) : nouveau clone décalé d'un dixième de son rayon, sélectionné. */
-  const duplicatePrim = useCallback(
-    (path: string): string | null => {
-      const clone = parseClonePath(path);
-      const srcPath = clone?.path ?? path;
-      if (clonesOf(override, srcPath).length >= 50) return null;
-      // Delta de départ : celui de l'original (clone dupliqué → son delta ; prim → son override).
-      const from = clone
-        ? clonesOf(override, srcPath).find((c) => c.id === clone.id)?.transform
-        : override.prims[srcPath]?.transform;
-      const start = from ?? IDENTITY_TRANSFORM;
-      // Décalage visible d'emblée : un dixième de l'encombrement de la géométrie source.
-      const handle = getSceneHandle();
-      let offset = 0.5;
-      if (handle) {
-        const box = new handle.THREE.Box3();
-        for (const object of objectsOf(srcPath)) box.expandByObject(object);
-        if (!box.isEmpty()) offset = Math.max((box.max.x - box.min.x) * 1.1, 0.1);
-      }
-      const id = newCloneId();
-      editLocal((o) =>
-        addClone(o, srcPath, {
-          id,
-          transform: { t: [start.t[0] + offset, start.t[1], start.t[2]], r: [...start.r], s: [...start.s] },
-        }),
-      );
-      const pseudo = clonePath(srcPath, id);
-      setSelected([pseudo]);
-      return pseudo;
-    },
-    [override, getSceneHandle, objectsOf, editLocal],
-  );
-
-  const deleteClone = useCallback(
-    (pseudo: string) => {
-      const clone = parseClonePath(pseudo);
-      if (!clone) return;
-      editLocal((o) => removeClone(o, clone.path, clone.id));
-      setSelected((prev) => prev.filter((p) => p !== pseudo));
-    },
-    [editLocal],
-  );
+  // Poses des prims et des clones (commit du gizmo, duplication, suppression) — voir
+  // `usePrimTransforms`.
+  const { writeTransform, applyPrimTransform, commitPrimTransforms, duplicatePrim, deleteClone } =
+    usePrimTransforms({
+      getSceneHandle,
+      allIndexed,
+      override,
+      local,
+      objectsOf,
+      editLocal,
+      setSelected,
+    });
 
   // Alignement / répartition (C2) — voir `usePrimAlign`.
   const { alignSelected, distributeSelected } = usePrimAlign({

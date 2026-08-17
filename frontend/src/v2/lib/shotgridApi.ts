@@ -135,7 +135,7 @@ export function useUpdateSgConnection(projectId: number) {
         .then((r) => r.connection),
     onSuccess: (connection) => {
       qc.setQueryData(sgKeys.connection(projectId), connection);
-      qc.invalidateQueries({ queryKey: sgKeys.connection(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.connection(projectId) });
     },
   });
 }
@@ -170,13 +170,13 @@ export function useRunSync(projectId: number) {
         body,
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) });
-      qc.invalidateQueries({ queryKey: sgKeys.connection(projectId) });
-      qc.invalidateQueries({ queryKey: sgKeys.diff(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.connection(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.diff(projectId) });
       // La synchronisation réécrit la hiérarchie du projet : les vues doivent suivre.
-      qc.invalidateQueries({ queryKey: ['shots', projectId] });
-      qc.invalidateQueries({ queryKey: ['sequences', projectId] });
-      qc.invalidateQueries({ queryKey: ['assets', projectId] });
+      void qc.invalidateQueries({ queryKey: ['shots', projectId] });
+      void qc.invalidateQueries({ queryKey: ['sequences', projectId] });
+      void qc.invalidateQueries({ queryKey: ['assets', projectId] });
     },
   });
 }
@@ -232,8 +232,8 @@ export function useImportVersions(projectId: number) {
     mutationFn: (sgIds: number[]) =>
       api.post<{ runId: number }>(`/api/shotgrid/projects/${projectId}/import-versions`, { sgIds }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: sgKeys.versions(projectId) });
-      qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.versions(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) });
     },
   });
 }
@@ -252,8 +252,8 @@ export function useResolveConflict(projectId: number) {
         { resolution },
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) });
-      qc.invalidateQueries({ queryKey: sgKeys.diff(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.runs(projectId) });
+      void qc.invalidateQueries({ queryKey: sgKeys.diff(projectId) });
     },
   });
 }

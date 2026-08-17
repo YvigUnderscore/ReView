@@ -75,7 +75,7 @@ export default function TransformOptions({
             key={axis}
             label={axis}
             hint={t('transform.positionAxis', { axis })}
-            value={value.position[i]!}
+            value={value.position[i]}
             onChange={setVec('position', i)}
             min={-10000}
             max={10000}
@@ -90,7 +90,7 @@ export default function TransformOptions({
             key={axis}
             label={axis}
             hint={t('transform.rotationAxis', { axis })}
-            value={rotationDeg[i]!}
+            value={rotationDeg[i]}
             onChange={(deg) => {
               const next: [number, number, number] = [...rotationDeg];
               next[i] = deg;
@@ -109,7 +109,7 @@ export default function TransformOptions({
             key={axis}
             label={axis}
             hint={`${scaleLabel} ${axis}`}
-            value={value.scale[i]!}
+            value={value.scale[i]}
             onChange={setVec('scale', i)}
             min={0.001}
             max={10000}

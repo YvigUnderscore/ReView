@@ -34,7 +34,7 @@ describe('GET /api/docs — surface publique', () => {
   });
 
   it('retombe sur le dépôt amont quand le réglage studio est vide', async () => {
-    findUnique.mockResolvedValue(null as never);
+    findUnique.mockResolvedValue(null);
     const res = await request(app).get('/api/docs');
     expect(res.text).toContain('href="https://github.com/YvigUnderscore/ReView"');
   });

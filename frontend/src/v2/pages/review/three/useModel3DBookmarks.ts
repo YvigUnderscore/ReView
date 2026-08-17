@@ -4,7 +4,7 @@
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { t } from '../../../i18n';
-import type { MediaResp, SplatCamera, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
+import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { appendBookmark, removeBookmarkAt, MAX_BOOKMARKS } from './cameraBookmarks';
 import type { Model3DThreeState } from './useModel3DThree';
@@ -42,7 +42,7 @@ export function useModel3DBookmarks(
   );
 
   const add = useCallback(async () => {
-    const camera = captureCamera() as SplatCamera | undefined;
+    const camera = captureCamera();
     if (!camera) return;
     const base: SplatPresentation = { ...(data.splatPresentation ?? {}) };
     const next = appendBookmark(base.bookmarks ?? [], camera);

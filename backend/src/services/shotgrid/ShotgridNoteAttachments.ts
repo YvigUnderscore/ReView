@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { storage } from '../StorageService';
@@ -31,11 +32,15 @@ const ATTACHMENT_FIELDS = [
 /** Au-delà, on n'aspire pas : une note peut porter un rendu entier par mégarde. */
 const MAX_BYTES = 25 * 1024 * 1024;
 
-export interface CommentAttachmentRef {
+/**
+ * Alias de type (et non `interface`) à dessein : une interface n'a pas de signature d'index
+ * implicite, et Prisma refuse alors de la voir comme une valeur JSON stockable.
+ */
+export type CommentAttachmentRef = {
   key: string;
   name: string;
   contentType: string;
-}
+};
 
 /** Type MIME depuis le nom de fichier, quand le site n'en annonce pas. */
 export function guessType(filename: string): string {
@@ -91,7 +96,7 @@ export async function importNoteAttachments(
 
   await prisma.comment.update({
     where: { id: commentId },
-    data: { attachments: [...already, ...imported] as unknown as object },
+    data: { attachments: [...already, ...imported] as Prisma.InputJsonArray },
   });
   logger.info({ commentId, count: imported.length }, 'Pièces jointes de note importées');
   return imported.length;
@@ -160,7 +165,7 @@ async function fetchOne(
 export const sanitize = (name: string): string =>
   name
     .replace(/\.{2,}/g, '_')
-    .replace(/[^\w.\-]+/g, '_')
+    .replace(/[^\w.-]+/g, '_')
     .slice(-80);
 
 export function asRefs(value: unknown): Array<{ id: number; type: string }> {

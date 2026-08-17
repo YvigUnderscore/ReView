@@ -52,7 +52,7 @@ export default function InvitePage() {
       // Le serveur ouvre la session en même temps qu'il pose le mot de passe : on entre
       // directement dans l'application plutôt que de renvoyer sur l'écran de connexion.
       await ssoLogin(r.token, r.refreshToken);
-      navigate('/');
+      void navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic'));
       setBusy(false);

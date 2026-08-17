@@ -69,8 +69,8 @@ export default function AssetAssignDialog({
     try {
       await api.patch(`/api/assets/${assetId}`, { shotIds: [...shotIds], sequenceIds: [...sequenceIds] });
       toast.success(t('assets.assignSaved'));
-      qc.invalidateQueries({ queryKey: qk.asset(assetId) });
-      qc.invalidateQueries({ queryKey: ['shot'] });
+      void qc.invalidateQueries({ queryKey: qk.asset(assetId) });
+      void qc.invalidateQueries({ queryKey: ['shot'] });
       onSaved?.();
       onClose();
     } catch (err) {

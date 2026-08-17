@@ -29,8 +29,8 @@ export default function TrashTab() {
   const sel = useMultiSelect(trash?.map((p) => p.id) ?? []);
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: qk.admin('trash') });
-    qc.invalidateQueries({ queryKey: qk.projects });
+    void qc.invalidateQueries({ queryKey: qk.admin('trash') });
+    void qc.invalidateQueries({ queryKey: qk.projects });
   };
   const restore = async (id: number) => {
     try {
@@ -91,9 +91,16 @@ export default function TrashTab() {
         >
           <div className="flex min-w-0 items-center gap-2.5">
             <div
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                sel.onSelect(p.id, { shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                e.preventDefault();
                 sel.onSelect(p.id, { shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
               }}
             >
@@ -128,7 +135,7 @@ export default function TrashTab() {
         label={t('projects.countLabel', { count: sel.count })}
         onClear={sel.clear}
         actions={[
-          { label: t('common.restore'), icon: <RotateCcw size={14} />, onClick: bulkRestoreSel },
+          { label: t('common.restore'), icon: <RotateCcw size={14} />, onClick: () => void bulkRestoreSel() },
           {
             label: t('common.deletePermanently'),
             icon: <Trash2 size={14} />,

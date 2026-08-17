@@ -43,7 +43,7 @@ export function computeSelection(
     const b = orderedIds.indexOf(id);
     if (a !== -1 && b !== -1) {
       const [lo, hi] = a < b ? [a, b] : [b, a];
-      for (let i = lo; i <= hi; i++) next.add(orderedIds[i]!);
+      for (let i = lo; i <= hi; i++) next.add(orderedIds[i]);
       return { next, anchor };
     }
   }

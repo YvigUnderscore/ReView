@@ -53,7 +53,7 @@ export default function ApiTokensSection() {
       });
       setSecret(token);
       setName('');
-      qc.invalidateQueries({ queryKey: qk.apiTokens });
+      void qc.invalidateQueries({ queryKey: qk.apiTokens });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
@@ -65,7 +65,7 @@ export default function ApiTokensSection() {
     try {
       await api.del(`/api/auth/tokens/${id}`);
       toast.success(tr('tokens.revoked'));
-      qc.invalidateQueries({ queryKey: qk.apiTokens });
+      void qc.invalidateQueries({ queryKey: qk.apiTokens });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }

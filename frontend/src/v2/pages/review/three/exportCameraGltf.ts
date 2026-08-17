@@ -22,7 +22,7 @@ const F32 = 5126; // GLTF componentType FLOAT
 function toBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]!);
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
   return btoa(bin);
 }
 
@@ -61,8 +61,8 @@ export function buildCameraGltf(
   new Float32Array(buf, tBytes, n * 3).set(translations);
   new Float32Array(buf, tBytes + trBytes, n * 4).set(rotations);
 
-  const minT = times.length ? times[0]! : 0;
-  const maxT = times.length ? times[times.length - 1]! : 0;
+  const minT = times.length ? times[0] : 0;
+  const maxT = times.length ? times[times.length - 1] : 0;
   const fovDeg = keyframes[0]?.pose.fov ?? 45;
 
   return {

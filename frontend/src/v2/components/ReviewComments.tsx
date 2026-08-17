@@ -68,7 +68,12 @@ export default function ReviewComments({
       .post<{ task: { id: number; name: string } }>(`/api/comments/${c.id}/task`)
       .then(({ task }) =>
         toast.success(t('task.createdNamed', { name: task.name }), {
-          action: { label: t('common.open'), onClick: () => navigate(`/tasks/${task.id}`) },
+          action: {
+            label: t('common.open'),
+            onClick: () => {
+              void navigate(`/tasks/${task.id}`);
+            },
+          },
         }),
       )
       .catch((e: unknown) => toast.error(e instanceof Error ? e.message : t('version.createFailed')));

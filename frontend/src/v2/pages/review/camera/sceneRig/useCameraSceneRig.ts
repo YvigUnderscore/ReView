@@ -102,7 +102,7 @@ export function useCameraSceneRig(opts: {
           a.strokeUpsertAt(t, { tx: p.x, ty: p.y, tz: p.z });
         }
       };
-      control.addEventListener('dragging-changed', onDragging as never);
+      control.addEventListener('dragging-changed', onDragging);
       control.addEventListener('objectChange', onObjectChange);
 
       // Sélection de la cible du gizmo au clic (raycast sur corps / marqueur). Le corps prend le
@@ -131,7 +131,7 @@ export function useCameraSceneRig(opts: {
 
       cleanupGizmo = () => {
         dom.removeEventListener('pointerdown', onPointerDown);
-        control.removeEventListener('dragging-changed', onDragging as never);
+        control.removeEventListener('dragging-changed', onDragging);
         control.removeEventListener('objectChange', onObjectChange);
         control.detach();
         scene.remove(helper);

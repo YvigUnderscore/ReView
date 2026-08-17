@@ -28,8 +28,8 @@ describe('ocioDisplays — extraction displays/views (39.B)', () => {
       name: 'sRGB - Display',
       views: ['ACES 1.0 - SDR Video', 'Un-tone-mapped', 'Raw'],
     });
-    expect(displays[1].name).toBe('Rec.1886 Rec.709 - Display');
-    expect(displays[1].views).toEqual(['ACES 1.0 - SDR Video']);
+    expect(displays[1]!.name).toBe('Rec.1886 Rec.709 - Display');
+    expect(displays[1]!.views).toEqual(['ACES 1.0 - SDR Video']);
   });
 
   it('s’arrête à la clé de premier niveau suivante (active_displays ignoré)', () => {

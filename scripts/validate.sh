@@ -52,10 +52,30 @@ node "$ROOT/scripts/check-untranslated.mjs"
 step "i18n — clés de traduction affichées brutes"
 node "$ROOT/scripts/check-raw-keys.mjs"
 
+# ---------- Thème ----------
+# « Couleurs = tokens du thème » : une classe Tailwind de palette brute (bg-blue-500…)
+# ou une couleur arbitraire (bg-[#…]) échappe au thème et casse la cohérence sombre/clair.
+step "Thème — couleurs hors tokens (classes Tailwind brutes)"
+node "$ROOT/scripts/check-color-tokens.mjs"
+
+# ---------- Outillage racine ----------
+# Les scripts de la racine (contrôles de la suite, simulateur ShotGrid, i18n) sont du code
+# comme un autre : lintés (via l'ESLint du backend) et formatés comme le reste.
+step "Outillage — lint des scripts racine (eslint)"
+node "$ROOT/scripts/lint-scripts.mjs"
+
+step "Outillage — format des scripts racine (prettier --check)"
+( cd "$ROOT" && ./backend/node_modules/.bin/prettier --check "scripts/**/*.mjs" )
+
+# Un script shell à la syntaxe cassée ne se découvre qu'à l'exécution — bash -n le voit avant.
+step "Outillage — syntaxe des scripts shell (bash -n)"
+for f in "$ROOT"/scripts/*.sh; do bash -n "$f"; done
+
 # ---------- Budget de taille (10.F4) ----------
-# Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Le backend
-# n'a pas d'ESLint : on garde-fou ici la taille des routes (≤ 200 lignes ; la logique
-# métier vit dans services/). Étend la suite, ne l'affaiblit jamais.
+# Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Côté
+# backend, on garde-fou ici la taille des routes (≤ 200 lignes ; la logique métier vit
+# dans services/) — budget spécifique aux routes, distinct du lint ESLint backend.
+# Étend la suite, ne l'affaiblit jamais.
 # Les deux lignes de l'en-tête SPDX ne sont pas du code : elles sortent du décompte, le
 # budget de 200 lignes réelles reste identique.
 step "Budget — taille des routes backend (≤ 200 lignes)"
@@ -79,7 +99,16 @@ fi
 step "Backend — format (prettier --check)"
 ( cd "$ROOT/backend" && npm run format:check )
 
-step "Backend — typecheck (tsc --noEmit)"
+step "Backend — lint (eslint, zéro warning)"
+( cd "$ROOT/backend" && npm run lint )
+
+# Le schéma Prisma est validé sans dépendre d'une base : l'URL factice suffit à `validate`.
+step "Backend — schéma Prisma (prisma validate)"
+( cd "$ROOT/backend" && DATABASE_URL="${DATABASE_URL:-postgresql://validate:validate@localhost:5432/validate}" npx prisma validate )
+
+# Le tsconfig de lint étend le typecheck aux tests, à prisma/ et aux scripts — le build,
+# lui, ne compile que src/.
+step "Backend — typecheck (tsc --noEmit, tests inclus)"
 ( cd "$ROOT/backend" && npm run typecheck )
 
 step "Backend — build (prisma generate + tsc)"

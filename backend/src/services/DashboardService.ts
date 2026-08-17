@@ -233,7 +233,7 @@ export async function getDashboard(user: SessionUser) {
       location: loc(m.version?.task ?? null) || (m.version?.asset?.name ?? ''),
       author: m.uploader?.name ?? null,
       taskId: m.version?.task?.id ?? null,
-      mediaId: m.id as number | null,
+      mediaId: m.id,
     })),
   ]
     .sort((a, b) => b.at.getTime() - a.at.getTime())

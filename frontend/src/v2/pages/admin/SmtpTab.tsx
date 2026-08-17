@@ -41,7 +41,7 @@ export default function SmtpTab() {
         ...(f.password ? { password: f.password } : {}),
       };
       await api.put('/api/studio/smtp', payload);
-      qc.invalidateQueries({ queryKey: qk.admin('smtp') });
+      void qc.invalidateQueries({ queryKey: qk.admin('smtp') });
       setF({});
       toast.success(t('smtp.saved'));
     } catch (e) {

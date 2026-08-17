@@ -32,7 +32,7 @@ describe('adminStorage — sortedEntries', () => {
       pct: 90,
     });
     // Clé sans libellé : rien à traduire, l'appelant retombe sur la clé brute.
-    expect(entries[2]!.labelKey).toBeNull();
+    expect(entries[2].labelKey).toBeNull();
   });
 
   it('rend une liste vide pour un agrégat vide', () => {

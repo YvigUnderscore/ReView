@@ -35,15 +35,15 @@ export function useVersions(scope: VersionScope) {
   // tâche doit rafraîchir la page de l'asset, qui n'est pas celle où l'on se trouve.
   const invalidateVersions = async () => {
     await qc.invalidateQueries({ queryKey: versionsKey });
-    qc.invalidateQueries({ queryKey: ['asset'] });
+    void qc.invalidateQueries({ queryKey: ['asset'] });
   };
 
   // Un upload terminé rafraîchit la liste des versions + les médias de chaque version.
   useEffect(() => {
     if (uploads.some((u) => u.status === 'done')) {
-      qc.invalidateQueries({ queryKey: qk.versions(filter) });
-      qc.invalidateQueries({ queryKey: ['version'] });
-      qc.invalidateQueries({ queryKey: ['asset'] });
+      void qc.invalidateQueries({ queryKey: qk.versions(filter) });
+      void qc.invalidateQueries({ queryKey: ['version'] });
+      void qc.invalidateQueries({ queryKey: ['asset'] });
     }
   }, [uploads, qc, filter]);
 
@@ -76,7 +76,7 @@ export function useVersions(scope: VersionScope) {
       await api.post(`/api/versions/${vid}/publish`, {});
       toast.success(t('version.published'));
       await invalidateVersions();
-      qc.invalidateQueries({ queryKey: qk.version(vid) });
+      void qc.invalidateQueries({ queryKey: qk.version(vid) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.publish'));
     }
@@ -85,8 +85,8 @@ export function useVersions(scope: VersionScope) {
     try {
       await api.post(`/api/media/${mediaId}/publish`);
       toast.success(t('media.publishedTeam'));
-      qc.invalidateQueries({ queryKey: qk.version(versionId) });
-      invalidateVersions();
+      void qc.invalidateQueries({ queryKey: qk.version(versionId) });
+      void invalidateVersions();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.publish'));
     }
@@ -104,8 +104,8 @@ export function useVersions(scope: VersionScope) {
     try {
       await api.del(`/api/media/${mediaId}`);
       toast.success(t('media.trashed'));
-      qc.invalidateQueries({ queryKey: qk.version(versionId) });
-      invalidateVersions();
+      void qc.invalidateQueries({ queryKey: qk.version(versionId) });
+      void invalidateVersions();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }

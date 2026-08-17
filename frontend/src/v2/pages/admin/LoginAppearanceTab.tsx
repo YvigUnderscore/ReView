@@ -40,8 +40,8 @@ export default function LoginAppearanceTab() {
 
   // Le branding est partagé avec la page de connexion : l'invalider fait suivre l'app.
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: qk.admin('login-appearance') });
-    qc.invalidateQueries({ queryKey: qk.branding });
+    void qc.invalidateQueries({ queryKey: qk.admin('login-appearance') });
+    void qc.invalidateQueries({ queryKey: qk.branding });
   };
 
   const put = async (patch: Partial<LoginAppearance>) => {

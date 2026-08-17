@@ -89,7 +89,7 @@ export default function MontageStage({
         {overlay}
         {card && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-            <FileWarning size={30} className="text-amber-500" />
+            <FileWarning size={30} className="text-warning" />
             <span className="text-sm font-medium text-foreground">{clip?.shotCode}</span>
             <span className="text-xs">{t('timeline.noMedia')}</span>
           </div>

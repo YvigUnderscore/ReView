@@ -79,7 +79,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
       });
   });
 
-  io.use(async (socket: AuthedSocket, next) => {
+  const authenticateSocket = async (socket: AuthedSocket, next: (err?: Error) => void): Promise<void> => {
     const token = socket.handshake.query?.token;
     if (typeof token !== 'string') return next(new Error('Authentication error'));
 
@@ -122,11 +122,20 @@ export const initSocket = (server: HttpServer): SocketServer => {
       return next();
     }
     return next(new Error('Authentication error'));
+  };
+
+  // socket.io attend un middleware synchrone : on détache la vérification asynchrone,
+  // `next` étant appelé dans tous les chemins. Le `catch` ferme la porte si la
+  // vérification échoue elle-même — sans lui, le socket resterait suspendu.
+  io.use((socket: AuthedSocket, next) => {
+    void authenticateSocket(socket, next).catch(() => next(new Error('Authentication error')));
   });
 
   io.on('connection', (socket: AuthedSocket) => {
     if (socket.user) {
-      socket.join(`user_${socket.user.id}`);
+      // `join`/`leave` rendent une promesse avec les adapters distribués ; l'adapter en
+      // mémoire résout de façon synchrone — d'où le `void` sur les appels hors contexte async.
+      void socket.join(`user_${socket.user.id}`);
       const uid = socket.user.id;
       void markOnline(uid);
       // Activité : le client émet `activity` (interactions) → rafraîchit lastSeenAt.
@@ -160,7 +169,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
         });
         if (!raw) return;
         const pub = await toPublicUser(raw);
-        socket.join(`review_${mid}`);
+        await socket.join(`review_${mid}`);
         joinedReviews.add(mid);
         joinReview(mid, {
           id: pub.id,
@@ -173,7 +182,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
       socket.on('leave_review', (mediaId: number) => {
         const mid = Number(mediaId);
         if (!joinedReviews.delete(mid)) return;
-        socket.leave(`review_${mid}`);
+        void socket.leave(`review_${mid}`);
         leaveReview(mid, uid);
         emitViewers(mid);
       });
@@ -234,7 +243,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
           });
           if (media) meta.versionId = media.versionId;
         }
-        socket.join(`live_${key}`);
+        await socket.join(`live_${key}`);
         joinedLives.add(key);
         emitLiveState(key, joinLive(key, participant, meta));
         emitToProject(projectId, 'live:changed', { projectId });
@@ -243,7 +252,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
       });
       socket.on('live:leave', (key: string) => {
         if (!joinedLives.delete(key)) return;
-        socket.leave(`live_${key}`);
+        void socket.leave(`live_${key}`);
         cancelLiveLeave(key, uid);
         const pid = getLiveProjectId(key);
         emitLiveState(key, leaveLive(key, uid));
@@ -299,7 +308,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
       if (!Number.isInteger(pid)) return;
       if (socket.shareProjectId) return;
       if (socket.user && (await checkProjectAccess(socket.user.id, socket.user.role, pid))) {
-        socket.join(`project_${pid}`);
+        await socket.join(`project_${pid}`);
       }
     });
   });

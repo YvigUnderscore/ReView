@@ -41,7 +41,7 @@ export default function TranscodeTab() {
     try {
       const { config } = await api.put<{ config: TranscodeConfig }>('/api/admin/transcode', draft);
       setDraft(config);
-      qc.invalidateQueries({ queryKey: qk.admin('transcode') });
+      void qc.invalidateQueries({ queryKey: qk.admin('transcode') });
       toast.success(t('transcode.saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.save'));

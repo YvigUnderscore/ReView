@@ -238,8 +238,7 @@ export async function collectWorkspace(repoRoot, workspace) {
       id,
       name,
       version,
-      license:
-        declaredLicense(pkg) ?? lock.packages[key]?.license ?? LICENSE_OVERRIDES[id] ?? 'UNKNOWN',
+      license: declaredLicense(pkg) ?? lock.packages[key]?.license ?? LICENSE_OVERRIDES[id] ?? 'UNKNOWN',
       repository: repositoryUrl(pkg),
       texts: await readLicenseText(dir),
     });
@@ -332,9 +331,7 @@ async function main() {
   if (rejected.length) {
     console.error(`✗ ${rejected.length} dépendance(s) sous licence non compatible AGPL-3.0 :`);
     for (const pkg of rejected) console.error(`  ${pkg.id} — ${pkg.license}`);
-    console.error(
-      '  → remplacer la dépendance ; si la licence est mal déclarée, vérifier son fichier',
-    );
+    console.error('  → remplacer la dépendance ; si la licence est mal déclarée, vérifier son fichier');
     console.error('    LICENSE puis compléter LICENSE_OVERRIDES ou ALLOWED_LICENSES.');
     process.exit(1);
   }
@@ -353,7 +350,9 @@ async function main() {
       console.error('✗ THIRD-PARTY-NOTICES.md est périmé → node scripts/generate-notices.mjs');
       process.exit(1);
     }
-    console.log(`✓ THIRD-PARTY-NOTICES.md à jour (${sections.reduce((n, s) => n + s.packages.length, 0)} paquets)`);
+    console.log(
+      `✓ THIRD-PARTY-NOTICES.md à jour (${sections.reduce((n, s) => n + s.packages.length, 0)} paquets)`,
+    );
     return;
   }
 

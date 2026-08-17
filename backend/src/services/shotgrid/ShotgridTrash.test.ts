@@ -63,8 +63,8 @@ describe('trashRemoved', () => {
 
     // 100 est toujours là-bas ; 200 en est parti.
     expect(db.shot.update).toHaveBeenCalledTimes(1);
-    expect(db.shot.update.mock.calls[0][0].where).toEqual({ id: 20 });
-    expect(db.shot.update.mock.calls[0][0].data.deletedAt).toBeInstanceOf(Date);
+    expect(db.shot.update.mock.calls[0]![0].where).toEqual({ id: 20 });
+    expect(db.shot.update.mock.calls[0]![0].data.deletedAt).toBeInstanceOf(Date);
   });
 
   it('ne touche à rien quand tout est encore là', async () => {

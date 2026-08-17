@@ -59,35 +59,35 @@ export function useSocketInvalidation(projectId: number | null): void {
     // Les payloads commentaire n'exposent pas toujours le mediaObjectId (delete,
     // réactions) : invalidation par préfixe — seule la review montée re-fetch.
     const onComment = () => {
-      qc.invalidateQueries({ queryKey: ['comments'] });
+      void qc.invalidateQueries({ queryKey: ['comments'] });
     };
     const onTask = (e: TaskEvent) => {
-      if (e.shotId != null) qc.invalidateQueries({ queryKey: qk.tasks(e.shotId) });
-      qc.invalidateQueries({ queryKey: qk.task(e.id) });
-      qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+      if (e.shotId != null) void qc.invalidateQueries({ queryKey: qk.tasks(e.shotId) });
+      void qc.invalidateQueries({ queryKey: qk.task(e.id) });
+      void qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
     };
     const onVersion = (e: VersionEvent) => {
       const parent =
         e.taskId != null ? `taskId=${e.taskId}` : e.assetId != null ? `assetId=${e.assetId}` : null;
-      if (parent) qc.invalidateQueries({ queryKey: qk.versions(parent) });
-      qc.invalidateQueries({ queryKey: qk.version(e.id) });
-      qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
-      qc.invalidateQueries({ queryKey: ['asset'] });
-      qc.invalidateQueries({ queryKey: ['timeline'] });
+      if (parent) void qc.invalidateQueries({ queryKey: qk.versions(parent) });
+      void qc.invalidateQueries({ queryKey: qk.version(e.id) });
+      void qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+      void qc.invalidateQueries({ queryKey: ['asset'] });
+      void qc.invalidateQueries({ queryKey: ['timeline'] });
     };
     const onMedia = (e: MediaEvent) => {
       // Ne jamais invalider qk.media(id) : URLs présignées en staleTime Infinity
       // (10.E1) — un refetch rechargerait le viewer en pleine lecture.
-      qc.invalidateQueries({ queryKey: qk.version(e.versionId) });
-      qc.invalidateQueries({ queryKey: ['versions'] });
-      qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+      void qc.invalidateQueries({ queryKey: qk.version(e.versionId) });
+      void qc.invalidateQueries({ queryKey: ['versions'] });
+      void qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
       // Publier un média fait avancer l'asset et le montage : c'est tout l'intérêt de
       // l'auto-timeline (Phase 45), elle doit se remettre à jour sans rechargement.
-      qc.invalidateQueries({ queryKey: ['asset'] });
-      qc.invalidateQueries({ queryKey: ['timeline'] });
+      void qc.invalidateQueries({ queryKey: ['asset'] });
+      void qc.invalidateQueries({ queryKey: ['timeline'] });
     };
     const onTimeline = () => {
-      qc.invalidateQueries({ queryKey: ['timeline'] });
+      void qc.invalidateQueries({ queryKey: ['timeline'] });
     };
     COMMENT_EVENTS.forEach((ev) => socket.on(ev, onComment));
     socket.on('task:update', onTask);

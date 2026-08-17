@@ -58,7 +58,7 @@ export default function AssetsTab({
       toast.success(t('assets.trashedCount', { count }));
       sel.clear();
       setBulkDeleting(false);
-      reload();
+      void reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -71,7 +71,7 @@ export default function AssetsTab({
       toast.success(t('assets.created', { name: newAsset.name }));
       setNewAsset({ name: '', type: 'CHARACTER' });
       setCreating(false);
-      reload();
+      void reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -82,7 +82,7 @@ export default function AssetsTab({
       await api.del(`/api/assets/${deleting.id}`);
       toast.success(t('assets.trashed'));
       setDeleting(null);
-      reload();
+      void reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -203,7 +203,7 @@ export default function AssetsTab({
                   {
                     icon: <FolderOpen size={14} />,
                     label: t('common.open'),
-                    onClick: () => navigate(`/assets/${a.id}`),
+                    onClick: () => void navigate(`/assets/${a.id}`),
                   },
                   // Suivi (32.G) : notifications sur l'activité de l'asset.
                   {

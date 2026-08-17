@@ -58,7 +58,7 @@ export default function WebhooksPanel() {
       const d = await api.post<{ secret: string }>('/api/admin/webhooks', { url: url.trim(), events });
       setSecret(d.secret);
       setUrl('');
-      invalidate();
+      void invalidate();
       toast.success(t('webhooks.created'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -70,7 +70,7 @@ export default function WebhooksPanel() {
   const toggle = async (h: WebhookRow) => {
     try {
       await api.patch(`/api/admin/webhooks/${h.id}`, { active: !h.active });
-      invalidate();
+      void invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -79,7 +79,7 @@ export default function WebhooksPanel() {
     try {
       await api.del(`/api/admin/webhooks/${h.id}`);
       toast.success(t('webhooks.deleted'));
-      invalidate();
+      void invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }

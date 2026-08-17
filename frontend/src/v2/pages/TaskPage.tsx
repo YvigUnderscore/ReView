@@ -91,7 +91,7 @@ export default function TaskPage() {
           {task && <Badge variant="secondary">{task.type}</Badge>}
           {task && (
             <span className={`rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[task.status] ?? ''}`}>
-              {TASK_STATUS_LABEL_KEY[task.status] ? t(TASK_STATUS_LABEL_KEY[task.status]!) : task.status}
+              {TASK_STATUS_LABEL_KEY[task.status] ? t(TASK_STATUS_LABEL_KEY[task.status]) : task.status}
             </span>
           )}
           {/* Lien retour (32.D) : la review s'ouvre sur le commentaire d'origine. */}

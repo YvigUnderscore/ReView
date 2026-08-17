@@ -61,8 +61,8 @@ export function usePrimAlign(opts: {
       if (box.isEmpty()) continue;
       items.push({
         path,
-        min: box.min.toArray() as AlignItem['min'],
-        max: box.max.toArray() as AlignItem['max'],
+        min: box.min.toArray(),
+        max: box.max.toArray(),
       });
     }
     return items;

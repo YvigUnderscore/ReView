@@ -45,7 +45,7 @@ export type TParams = Record<string, string | number> & { count?: number };
 const STORAGE_KEY = 'locale';
 
 /** Catalogues chargés, l'anglais étant toujours présent. */
-const catalogs = new Map<Locale, Catalog>([[BASE_LOCALE, base as Catalog]]);
+const catalogs = new Map<Locale, Catalog>([[BASE_LOCALE, base]]);
 
 /**
  * Chargeurs paresseux, un par fichier de `messages/`. Le glob est résolu à la

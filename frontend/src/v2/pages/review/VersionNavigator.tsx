@@ -55,7 +55,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
         toast.error(t('version.noVisibleMedia', { version: v.name }));
         return;
       }
-      navigate(reviewPath(first));
+      void navigate(reviewPath(first));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('version.unreachable'));
     }

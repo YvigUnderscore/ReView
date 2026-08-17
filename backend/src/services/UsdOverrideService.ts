@@ -44,7 +44,7 @@ export async function setSceneOverride(user: SessionUser, id: number, override: 
 
   const metadata = {
     ...((media.metadata ?? {}) as object),
-    usdOverride: value as unknown as Prisma.InputJsonValue,
+    usdOverride: value,
   } as Prisma.InputJsonObject;
   await prisma.mediaObject.update({ where: { id }, data: { metadata } });
 

@@ -373,7 +373,7 @@ export async function importVersionMedia(
   // le stockage objet exige la taille du contenu à l'avance, que ShotGrid ne garantit
   // pas dans ses réponses. Le disque évite aussi de tenir un master en mémoire.
   const tmpPath = join(tmpdir(), `sg-${media.id}-${Date.now()}`);
-  let bytes = 0;
+  let bytes: number | undefined;
   try {
     await pipeline(stream, createWriteStream(tmpPath));
     bytes = statSync(tmpPath).size;

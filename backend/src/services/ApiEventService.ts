@@ -43,7 +43,7 @@ export function publish(event: WebhookEvent, input: EventInput): void {
           entityType: input.entityType ?? null,
           entityId: input.entityId ?? null,
           actorId: input.actorId ?? null,
-          payload: { ...input.payload, event } as object,
+          payload: { ...input.payload, event },
         },
       })
       .catch((err) => logger.warn({ err, event }, '[events] journalisation impossible'));

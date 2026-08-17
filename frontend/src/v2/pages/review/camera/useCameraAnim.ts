@@ -28,6 +28,7 @@ import {
 } from './channels/model';
 import { evalChannel } from './channels/hermite';
 import { sampleAnimV2 } from './channels/hermite';
+import { useCameraAutoKey } from './useCameraAutoKey';
 import {
   copyKeys,
   loadClipboard,
@@ -309,43 +310,8 @@ export function useCameraAnim(controller: CameraController) {
     setSelectionState(pasted);
   }, [commit]);
 
-  // Auto-key (Phase 27) : activé, tout geste caméra (drag orbite/pan, molette) pose une clé de la
-  // vue courante au temps de lecture — façon DCC.
-  useEffect(() => {
-    if (!autoKey) return;
-    const dom = getDom();
-    if (!dom) return;
-    let sx = 0;
-    let sy = 0;
-    let moved = false;
-    let wheelTimer: number | undefined;
-    const onDown = (e: PointerEvent) => {
-      sx = e.clientX;
-      sy = e.clientY;
-      moved = false;
-    };
-    const onMove = (e: PointerEvent) => {
-      if (Math.hypot(e.clientX - sx, e.clientY - sy) > 3) moved = true;
-    };
-    const onUp = () => {
-      if (moved) insertKeyAtView();
-    };
-    const onWheel = () => {
-      window.clearTimeout(wheelTimer);
-      wheelTimer = window.setTimeout(() => insertKeyAtView(), 250);
-    };
-    dom.addEventListener('pointerdown', onDown);
-    dom.addEventListener('pointermove', onMove);
-    dom.addEventListener('pointerup', onUp);
-    dom.addEventListener('wheel', onWheel, { passive: true });
-    return () => {
-      window.clearTimeout(wheelTimer);
-      dom.removeEventListener('pointerdown', onDown);
-      dom.removeEventListener('pointermove', onMove);
-      dom.removeEventListener('pointerup', onUp);
-      dom.removeEventListener('wheel', onWheel);
-    };
-  }, [autoKey, getDom, insertKeyAtView]);
+  // Auto-key (Phase 27) : tout geste caméra pose une clé de la vue au temps de lecture.
+  useCameraAutoKey(autoKey, getDom, insertKeyAtView);
 
   return {
     anim,

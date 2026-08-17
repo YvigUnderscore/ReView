@@ -99,7 +99,7 @@ export default function AssetPage() {
     // version rangée sous une tâche y serait invisible, et l'on n'aurait nulle part où
     // déposer son média. On suit donc la version jusqu'à sa tâche, qui a sa zone de
     // dépôt et affiche ce qui vient d'être créé.
-    if (taskId) navigate(`/tasks/${taskId}`);
+    if (taskId) void navigate(`/tasks/${taskId}`);
   };
 
   const onDropFiles = (files: File[]) => startVersion(files);

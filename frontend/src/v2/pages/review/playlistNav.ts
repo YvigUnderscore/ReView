@@ -29,7 +29,7 @@ export const findPlayableNeighbor = (
 ): PlaylistItemEntry | null => {
   if (idx < 0) return null;
   for (let i = idx + dir; i >= 0 && i < items.length; i += dir) {
-    if (items[i]!.media) return items[i]!;
+    if (items[i].media) return items[i];
   }
   return null;
 };

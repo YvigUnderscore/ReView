@@ -30,9 +30,9 @@ describe('libellés des statuts de tâche', () => {
   });
 
   it('définit les six statuts dans le catalogue de base', () => {
-    const base = catalogs[`../i18n/messages/${BASE_LOCALE}.json`]!.default;
+    const base = catalogs[`../i18n/messages/${BASE_LOCALE}.json`].default;
     for (const status of TASK_STATUSES) {
-      const key = TASK_STATUS_LABEL_KEY[status]!;
+      const key = TASK_STATUS_LABEL_KEY[status];
       expect(base[key], `${key} manque à ${BASE_LOCALE}.json`).toBeDefined();
     }
   });
@@ -41,7 +41,7 @@ describe('libellés des statuts de tâche', () => {
     await loadCatalog(code);
     await setLocale(code, { persist: false });
     for (const status of TASK_STATUSES) {
-      const key = TASK_STATUS_LABEL_KEY[status]!;
+      const key = TASK_STATUS_LABEL_KEY[status];
       const label = t(key);
       expect(label, `${code} : ${key} ressort telle quelle`).not.toBe(key);
       expect(label.trim()).not.toBe('');

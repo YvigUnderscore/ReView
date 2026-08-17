@@ -88,12 +88,23 @@ export default function CommentItem({
   const hasAnnotation = Array.isArray(c.annotation) && c.annotation.length > 0;
   const selected = selectedId === c.id;
   const selectable = !isReply && (c.timestamp != null || c.cameraState != null || hasAnnotation);
-  // Empêche un clic sur une action interne de déclencher la sélection de la carte.
+  // Empêche un clic sur une action interne de déclencher la sélection de la carte. Les
+  // conteneurs qui le portent sont purement présentationnels (`role="presentation"`) : ils
+  // ne sont pas des contrôles, les boutons et champs qu'ils enveloppent restent focusables.
   const stop = (e: React.MouseEvent) => e.stopPropagation();
+  // Équivalent clavier du clic sur la carte sélectionnable.
+  const onCardKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onSelect(c);
+  };
 
   return (
     <div
+      role={selectable ? 'button' : undefined}
+      tabIndex={selectable ? 0 : undefined}
       onClick={selectable ? () => onSelect(c) : undefined}
+      onKeyDown={selectable ? onCardKeyDown : undefined}
       className={
         isReply
           ? 'flex gap-2.5'
@@ -159,7 +170,7 @@ export default function CommentItem({
         </div>
 
         {editing ? (
-          <div onClick={stop} className="mt-1">
+          <div role="presentation" onClick={stop} className="mt-1">
             <textarea
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
@@ -236,7 +247,7 @@ export default function CommentItem({
           )}
           {canDelete &&
             (confirmDelete ? (
-              <span onClick={stop} className="flex items-center gap-1 text-[11px]">
+              <span role="presentation" onClick={stop} className="flex items-center gap-1 text-[11px]">
                 <button
                   onClick={remove}
                   className="rounded bg-destructive px-1.5 py-0.5 text-destructive-foreground"
@@ -286,7 +297,7 @@ export default function CommentItem({
         )}
 
         {replying && (
-          <div onClick={stop}>
+          <div role="presentation" onClick={stop}>
             <ReplyComposer
               mediaObjectId={c.mediaObjectId ?? mediaObjectId}
               parentId={c.id}

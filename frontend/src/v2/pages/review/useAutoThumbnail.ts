@@ -27,20 +27,22 @@ export function useAutoThumbnail(
   useEffect(() => {
     if (doneRef.current || !ready || data?.media.kind !== kind || data?.thumbnailUrl) return;
     doneRef.current = true;
-    const t = setTimeout(async () => {
-      const dataUrl = await capture();
-      if (!dataUrl) return;
-      try {
-        const { thumbnailUrl } = await api.post<{ thumbnailUrl: string | null }>(
-          `/api/media/${id}/auto-thumbnail`,
-          { dataUrl },
-        );
-        if (thumbnailUrl) {
-          qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
+    const t = setTimeout(() => {
+      void (async () => {
+        const dataUrl = await capture();
+        if (!dataUrl) return;
+        try {
+          const { thumbnailUrl } = await api.post<{ thumbnailUrl: string | null }>(
+            `/api/media/${id}/auto-thumbnail`,
+            { dataUrl },
+          );
+          if (thumbnailUrl) {
+            qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
+          }
+        } catch {
+          // best-effort : miniature silencieuse
         }
-      } catch {
-        // best-effort : miniature silencieuse
-      }
+      })();
     }, 600);
     return () => clearTimeout(t);
   }, [id, data, kind, ready, capture, qc]);

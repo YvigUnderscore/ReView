@@ -97,10 +97,19 @@ function TrashSection({
     <section className="mb-5">
       <div className="mb-2 flex items-center gap-2">
         <div
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             sel.toggleAll();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              sel.toggleAll();
+            }
           }}
         >
           <Checkbox
@@ -139,10 +148,19 @@ function TrashSection({
           >
             <div className="flex min-w-0 items-center gap-2.5">
               <div
+                role="button"
+                tabIndex={0}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   sel.onSelect(it.id, { shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sel.onSelect(it.id, { shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+                  }
                 }}
               >
                 <Checkbox
@@ -202,8 +220,8 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
     queryFn: () => api.get<TrashData>(`/api/projects/${projectId}/trash`),
   });
   const onChanged = () => {
-    qc.invalidateQueries({ queryKey: qk.projectTrash(projectId) });
-    reload();
+    void qc.invalidateQueries({ queryKey: qk.projectTrash(projectId) });
+    void reload();
   };
 
   if (error) return <p className="text-sm text-destructive">{error.message}</p>;

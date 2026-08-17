@@ -56,7 +56,7 @@ export default function CommentsTab() {
     try {
       await api.patch(`/api/comments/${c.id}`, { isResolved: !c.isResolved });
       toast.success(c.isResolved ? t('comments.reopened') : t('comment.resolved'));
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('comment.updateFailed'));
     }
@@ -67,7 +67,7 @@ export default function CommentsTab() {
       await api.del(`/api/comments/${deleting.id}`);
       toast.success(t('comments.deleted'));
       setDeleting(null);
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }

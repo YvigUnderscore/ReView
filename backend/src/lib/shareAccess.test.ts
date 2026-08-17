@@ -23,7 +23,7 @@ describe('shareAccess', () => {
 
   it('refuse un JWT utilisateur classique (kind ≠ share)', () => {
     // Un accès token de connexion ne doit pas ouvrir une session de partage.
-    const userToken = signAccessToken({ id: 1, email: 'a@b.c', role: 'ADMIN' as never });
+    const userToken = signAccessToken({ id: 1, email: 'a@b.c', role: 'ADMIN' });
     expect(verifyShareSession(userToken, 1)).toBe(false);
   });
 

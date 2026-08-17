@@ -31,7 +31,7 @@ export function upsertView(views: SavedView[], name: string, filters: Record<str
   const trimmed = name.trim();
   const norm = normalizeFilters(filters);
   const idx = views.findIndex((v) => v.name.trim().toLowerCase() === trimmed.toLowerCase());
-  const view: SavedView = { id: idx >= 0 ? views[idx]!.id : `v${Date.now()}`, name: trimmed, filters: norm };
+  const view: SavedView = { id: idx >= 0 ? views[idx].id : `v${Date.now()}`, name: trimmed, filters: norm };
   if (idx >= 0) {
     const next = views.slice();
     next[idx] = view;

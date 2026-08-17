@@ -21,7 +21,7 @@ describe('vues kanban sauvegardées — upsertView / removeView', () => {
     expect(next['5']).toEqual([{ name: 'A', filter: f('7') }]);
     expect(next['9']).toEqual(views['9']);
     // pureté : l'original n'est pas muté
-    expect(views['5']![0]!.filter.assignee).toBe('1');
+    expect(views['5'][0].filter.assignee).toBe('1');
   });
 
   it('retire une vue et supprime la clé projet quand vide', () => {

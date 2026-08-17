@@ -44,11 +44,11 @@ const membershipRow = (conversationId: number, memberIds: number[]) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   db.user.findMany.mockResolvedValue([{ id: 2 }] as never);
-  db.chatMessage.count.mockResolvedValue(0 as never);
+  db.chatMessage.count.mockResolvedValue(0);
   db.conversationMember.findUnique.mockResolvedValue(membershipRow(7, [1, 2]) as never);
   db.conversationMember.findMany.mockResolvedValue([{ userId: 1 }, { userId: 2 }] as never);
   db.conversation.create.mockResolvedValue({ id: 7 } as never);
-  db.conversation.findFirst.mockResolvedValue(null as never);
+  db.conversation.findFirst.mockResolvedValue(null);
 });
 
 describe('ChatService.createConversation', () => {
@@ -73,7 +73,7 @@ describe('ChatService.createConversation', () => {
 
   it('marque le fil comme groupe dès qu’un titre est donné', async () => {
     await createConversation(1, { userIds: [2], title: 'Séquence 12' });
-    expect(db.conversation.create.mock.calls[0]![0]!.data).toMatchObject({
+    expect(db.conversation.create.mock.calls[0]![0].data).toMatchObject({
       isGroup: true,
       title: 'Séquence 12',
     });
@@ -107,7 +107,7 @@ describe('ChatService.sendMessage', () => {
   });
 
   it('refuse d’écrire dans un fil dont on n’est pas membre', async () => {
-    db.conversationMember.findUnique.mockResolvedValue(null as never);
+    db.conversationMember.findUnique.mockResolvedValue(null);
     await expect(sendMessage(7, 3, 'Coucou')).rejects.toThrow(/participez pas/i);
   });
 

@@ -100,7 +100,7 @@ export default function MontageTimeline({
           <div className="h-full rounded bg-secondary/40" />
           {/* Les plans à leur durée : c'est ce qui fait d'une barre de temps un montage. */}
           {slots.map(({ index, leftPct, widthPct }) => {
-            const clip = items[index]!;
+            const clip = items[index];
             return (
               <div
                 key={clip.shotId}
@@ -110,7 +110,7 @@ export default function MontageTimeline({
                 }`}
                 className={`absolute inset-y-0 ${
                   starts.has(index) ? 'border-l border-primary/70' : 'border-l border-border/60'
-                } ${clip.placeholder ? 'bg-amber-500/20' : index % 2 === 0 ? 'bg-foreground/[0.04]' : ''} ${
+                } ${clip.placeholder ? 'bg-warning/20' : index % 2 === 0 ? 'bg-foreground/[0.04]' : ''} ${
                   index === currentIndex ? 'bg-primary/10' : ''
                 }`}
               />

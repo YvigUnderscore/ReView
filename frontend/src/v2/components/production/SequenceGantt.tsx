@@ -22,11 +22,10 @@ interface Bar {
 function spanOf(t: ScheduleTask): Bar | null {
   const s = t.startDate ? new Date(t.startDate).getTime() : null;
   const e = t.dueDate ? new Date(t.dueDate).getTime() : null;
-  if (s === null && e === null) return null;
-  let start = s ?? (e as number);
-  let end = e ?? (s as number);
-  if (end < start) [start, end] = [end, start];
-  return { task: t, start, end };
+  // Gardes explicites : une borne manquante est tenue par l'autre, aucune borne = pas de barre.
+  if (s === null) return e === null ? null : { task: t, start: e, end: e };
+  if (e === null) return { task: t, start: s, end: s };
+  return e < s ? { task: t, start: e, end: s } : { task: t, start: s, end: e };
 }
 
 interface Group {
@@ -118,7 +117,7 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
                     <Link
                       to={`/tasks/${b.task.id}`}
                       style={pos(b)}
-                      title={`${TASK_STATUS_LABEL_KEY[b.task.status] ? t(TASK_STATUS_LABEL_KEY[b.task.status]!) : b.task.status} · ${fmt(b.start)} → ${fmt(b.end)}`}
+                      title={`${TASK_STATUS_LABEL_KEY[b.task.status] ? t(TASK_STATUS_LABEL_KEY[b.task.status]) : b.task.status} · ${fmt(b.start)} → ${fmt(b.end)}`}
                       className={`absolute top-0.5 h-4 rounded ${TASK_STATUS_BAR[b.task.status] ?? 'bg-muted-foreground/40'} opacity-90 hover:opacity-100`}
                     />
                   </div>

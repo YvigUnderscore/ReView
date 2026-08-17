@@ -10,7 +10,7 @@ import { logger } from '../lib/logger';
  * Gestionnaire d'erreurs global. Standardise les réponses JSON et ne fuite jamais
  * de stack trace au client. Doit être monté en dernier.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export const errorHandler = (err: unknown, req: Request, res: Response, _next: NextFunction): void => {
   if (err instanceof ZodError) {
     res.status(400).json({ error: 'Validation échouée', details: err.flatten().fieldErrors });

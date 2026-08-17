@@ -23,8 +23,7 @@ import { useSectionPlane } from './three/useSectionPlane';
 import { useModel3DCompare } from './three/useModel3DCompare';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import { useCameraShortcuts } from './camera/useCameraShortcuts';
-import { confirmClearPresentation } from './camera/confirmReplaceAnim';
-import { useRegisterReviewCommands, type ReviewCommand } from '../../lib/reviewCommands';
+import { useModel3DCommands } from './three/useModel3DCommands';
 import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DCompareBar from './Model3DCompareBar';
@@ -181,42 +180,11 @@ export default function Model3DReview({
   });
   const { history, dirty } = useModel3DChrome({ state, m: model3d, cameraRig: rig, usdScene: scene });
 
-  // Palette Ctrl+K (B3) : rappels via refs — `cam`/`model3d` sont des objets neufs par rendu.
-  const camRef = useRef(cam);
-  camRef.current = cam;
-  const m3dRef = useRef(model3d);
-  m3dRef.current = model3d;
-  const hasKeys = cam.anim.keyTimes.length > 0;
-  const hasPres = !!data.splatPresentation;
-  const commands = useMemo<ReviewCommand[]>(() => {
-    const cmds: ReviewCommand[] = [
-      { id: 'fit', label: t('action.fitSpatial'), run: () => m3dRef.current.frameView() },
-      { id: 'home', label: t('action.resetSpatial'), run: () => m3dRef.current.homeView() },
-    ];
-    if (hasKeys)
-      cmds.push({
-        id: 'play',
-        label: t('video.playKey'),
-        run: () => (camRef.current.anim.playing ? camRef.current.anim.pause() : camRef.current.anim.play()),
-      });
-    if (canManage) {
-      cmds.push(
-        { id: 'key', label: t('review.key.set'), run: () => camRef.current.anim.insertKeyAtView() },
-        { id: 'orbit', label: t('camera.orbitPreset'), run: () => camRef.current.applyOrbitPreset() },
-      );
-      if (hasPres)
-        cmds.push({
-          id: 'clear-pres',
-          label: t('camera.clearPresentation'),
-          run: () => confirmClearPresentation(() => void camRef.current.clear?.()),
-        });
-    }
-    return cmds;
-  }, [t, hasKeys, hasPres, canManage]);
-  useRegisterReviewCommands(commands);
+  // Palette Ctrl+K (B3) : commandes cadrer/lecture/clé/orbite, extraites dans leur hook.
+  useModel3DCommands(cam, model3d, canManage, !!data.splatPresentation);
 
   const tools = toolsFor(state.mode, 'MODEL_3D');
-  const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0]!;
+  const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0];
   const trackSwitch = (
     <TrackSwitch track={track} onTrack={setTrack} hasClips={model3d.animations.length > 0} />
   );
@@ -240,7 +208,7 @@ export default function Model3DReview({
           dirty={dirty}
           canEdit={showEditTools}
           onPlaceHotspot={() => ann.setHotspot3d(model3d.hotspotAtCenter())}
-          presentation={canManage ? { busy: cam.busy, onSave: () => cam.save?.() } : undefined}
+          presentation={canManage ? { busy: cam.busy, onSave: () => void cam.save?.() } : undefined}
         />
       }
       panel={

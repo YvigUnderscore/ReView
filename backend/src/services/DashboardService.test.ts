@@ -32,22 +32,16 @@ function stubEmpty() {
   versions.mockResolvedValue([] as never);
   media.mockResolvedValue([] as never);
   tasks.mockResolvedValue([] as never);
-  vi.mocked(prisma.project.count).mockResolvedValue(2 as never);
+  vi.mocked(prisma.project.count).mockResolvedValue(2);
   vi.mocked(prisma.project.findMany).mockResolvedValue([] as never);
-  vi.mocked(prisma.mediaObject.count).mockResolvedValue(5 as never);
+  vi.mocked(prisma.mediaObject.count).mockResolvedValue(5);
   // Le compteur global (5) puis la fenêtre 7 jours (1) — l'ordre des appels de getDashboard.
-  vi.mocked(prisma.mediaObject.count)
-    .mockResolvedValueOnce(5 as never)
-    .mockResolvedValueOnce(1 as never);
-  vi.mocked(prisma.comment.count).mockResolvedValue(11 as never);
-  vi.mocked(prisma.comment.count)
-    .mockResolvedValueOnce(11 as never)
-    .mockResolvedValueOnce(3 as never);
+  vi.mocked(prisma.mediaObject.count).mockResolvedValueOnce(5).mockResolvedValueOnce(1);
+  vi.mocked(prisma.comment.count).mockResolvedValue(11);
+  vi.mocked(prisma.comment.count).mockResolvedValueOnce(11).mockResolvedValueOnce(3);
   vi.mocked(prisma.comment.groupBy).mockResolvedValue([] as never);
   // Mes retakes (1) puis verdicts attendus (4) — l'ordre des appels de getDashboard.
-  vi.mocked(prisma.task.count)
-    .mockResolvedValueOnce(1 as never)
-    .mockResolvedValueOnce(4 as never);
+  vi.mocked(prisma.task.count).mockResolvedValueOnce(1).mockResolvedValueOnce(4);
 }
 
 describe('DashboardService.getDashboard', () => {
@@ -89,10 +83,10 @@ describe('DashboardService.getDashboard', () => {
     // attendus, puis total (10) et approuvées (6) du projet 7.
     vi.mocked(prisma.task.count).mockReset();
     vi.mocked(prisma.task.count)
-      .mockResolvedValueOnce(1 as never)
-      .mockResolvedValueOnce(4 as never)
-      .mockResolvedValueOnce(10 as never)
-      .mockResolvedValueOnce(6 as never);
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(4)
+      .mockResolvedValueOnce(10)
+      .mockResolvedValueOnce(6);
     const { recentProjects } = await getDashboard(artist);
     expect(recentProjects).toEqual([
       { id: 7, name: 'Dock', thumbnailUrl: 'https://minio/thumbs/p7.jpg', totalTasks: 10, approvedTasks: 6 },

@@ -59,7 +59,7 @@ export default function HdriTab() {
         format: ext,
       });
       toast.success(t('hdri.added'));
-      refresh();
+      void refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.upload'));
     } finally {
@@ -71,7 +71,7 @@ export default function HdriTab() {
     try {
       await api.del(`/api/studio/hdris/${id}`);
       toast.success(t('hdri.deleted', { name }));
-      refresh();
+      void refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.delete'));
     }

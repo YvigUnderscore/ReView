@@ -21,7 +21,7 @@ export interface AcesAssetInfo {
   acesVersion: string;
   /** Version OCIO ciblée (ex. `2.3`). */
   ocioVersion: string;
-  /** Nom d'asset d'origine (`…​.ocio`). */
+  /** Nom d'asset d'origine (`… .ocio`). */
   assetName: string;
 }
 

@@ -75,7 +75,7 @@ export async function createVolume(
   sdf.add(wire);
 
   mesh.add(edit);
-  return { edit, sdf: sdf as VolumeRuntime['sdf'], wire };
+  return { edit, sdf: sdf, wire };
 }
 
 /** Applique une TRS sérialisée au SDF du volume (rechargement d'éditions persistées). */

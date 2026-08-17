@@ -39,16 +39,16 @@ describe('planOverride', () => {
       transform: { t: [1, 0, 0], r: [0, Math.PI, 0], s: [2, 2, 2] },
     });
     const plans = planOverride(indexed([['/W/A', { position: [5, 0, 0], scale: [3, 3, 3] }]]), override);
-    expect(plans[0]!.position).toEqual([6, 0, 0]);
-    expect(plans[0]!.rotation[1]).toBeCloseTo(Math.PI);
-    expect(plans[0]!.scale).toEqual([6, 6, 6]);
+    expect(plans[0].position).toEqual([6, 0, 0]);
+    expect(plans[0].rotation[1]).toBeCloseTo(Math.PI);
+    expect(plans[0].scale).toEqual([6, 6, 6]);
   });
 
   it('la visibilité forcée l’emporte, sinon celle d’origine est conservée', () => {
     const override = setPrimEdit(emptyOverride(), '/W/A', { visible: false });
     const plans = planOverride(indexed([['/W/A'], ['/W/B', { visible: false }]]), override);
-    expect(plans[0]!.visible).toBe(false);
-    expect(plans[1]!.visible).toBe(false);
+    expect(plans[0].visible).toBe(false);
+    expect(plans[1].visible).toBe(false);
   });
 
   it('n’applique le delta qu’au prim visé', () => {
@@ -56,8 +56,8 @@ describe('planOverride', () => {
       transform: { t: [9, 9, 9], r: [0, 0, 0], s: [1, 1, 1] },
     });
     const plans = planOverride(indexed([['/W/A'], ['/W/B']]), override);
-    expect(plans[0]!.position).toEqual([9, 9, 9]);
-    expect(plans[1]!.position).toEqual([0, 0, 0]);
+    expect(plans[0].position).toEqual([9, 9, 9]);
+    expect(plans[1].position).toEqual([0, 0, 0]);
   });
 
   it('est idempotent : replanifier depuis l’état d’origine ne cumule pas', () => {
@@ -65,8 +65,8 @@ describe('planOverride', () => {
     const override = setPrimEdit(emptyOverride(), '/W/A', {
       transform: { t: [1, 0, 0], r: [0, 0, 0], s: [1, 1, 1] },
     });
-    expect(planOverride(items, override)[0]!.position).toEqual([1, 0, 0]);
-    expect(planOverride(items, override)[0]!.position).toEqual([1, 0, 0]);
+    expect(planOverride(items, override)[0].position).toEqual([1, 0, 0]);
+    expect(planOverride(items, override)[0].position).toEqual([1, 0, 0]);
   });
 
   it('revenir à un override vide rétablit l’état d’origine', () => {
@@ -74,8 +74,8 @@ describe('planOverride', () => {
     const override = setPrimEdit(emptyOverride(), '/W/A', {
       transform: { t: [1, 1, 1], r: [0, 0, 0], s: [1, 1, 1] },
     });
-    expect(planOverride(items, override)[0]!.position).toEqual([5, 1, 1]);
-    expect(planOverride(items, emptyOverride())[0]!.position).toEqual([4, 0, 0]);
+    expect(planOverride(items, override)[0].position).toEqual([5, 1, 1]);
+    expect(planOverride(items, emptyOverride())[0].position).toEqual([4, 0, 0]);
   });
 });
 
@@ -118,7 +118,7 @@ describe('variantes cuites dans le GLB (46.G)', () => {
 
   it('une option non retenue reste masquée même si l’override la demande visible', () => {
     const override = setPrimEdit(emptyOverride(), '/W/Asset/Geo', { visible: true });
-    expect(planOverride(scene, override, defaults)[1]!.visible).toBe(false);
+    expect(planOverride(scene, override, defaults)[1].visible).toBe(false);
   });
 
   it('sans défaut connu, aucune option n’est retenue', () => {
@@ -280,7 +280,7 @@ describe('indexPrimObjects', () => {
     child.position.set(1, 2, 3);
     child.visible = false;
     const [entry] = indexPrimObjects(asObject3D(fakeObject({}, [child])), ['/W/A']);
-    expect(entry!.base).toMatchObject({ position: [1, 2, 3], scale: [1, 1, 1], visible: false });
+    expect(entry.base).toMatchObject({ position: [1, 2, 3], scale: [1, 1, 1], visible: false });
   });
 
   it('lit les appartenances multi-jeux (46.R) comme l’ancien format à jeu unique', () => {
@@ -296,17 +296,17 @@ describe('indexPrimObjects', () => {
       usdVariantOption: 'lo',
     });
     const [a, b] = indexPrimObjects(asObject3D(fakeObject({}, [multi, legacy])), []);
-    expect(a!.variant).toEqual({
+    expect(a.variant).toEqual({
       prim: '/K/Plate_1',
       selections: { modelingVariant: 'PlateA', shadingVariant: 'Dirty' },
     });
-    expect(b!.variant).toEqual({ prim: '/W/Asset', selections: { modelingVariant: 'lo' } });
+    expect(b.variant).toEqual({ prim: '/W/Asset', selections: { modelingVariant: 'lo' } });
   });
 
   it('replie sur le chemin brut quand aucun prim USD ne correspond', () => {
     const child = fakeObject({ usdPath: '/Inconnu/Truc' });
     const [entry] = indexPrimObjects(asObject3D(fakeObject({}, [child])), ['/W/A']);
-    expect(entry!.primPath).toBe('/Inconnu/Truc');
+    expect(entry.primPath).toBe('/Inconnu/Truc');
   });
 });
 
@@ -331,7 +331,7 @@ describe('makePrimResolver', () => {
     const geo = fakeObject({ usdPath: '/W/Asset/Geo/Geo' }, [mesh]);
     const items = indexPrimObjects(asObject3D(fakeObject({}, [geo])), ['/W/Asset/Geo']);
     // Le chemin glTF a un niveau de plus : l'index a déjà rétabli le prim USD réel.
-    expect(items[0]!.primPath).toBe('/W/Asset/Geo');
+    expect(items[0].primPath).toBe('/W/Asset/Geo');
     expect(makePrimResolver(items)(asObject3D(mesh))).toBe('/W/Asset/Geo');
   });
 
@@ -357,7 +357,7 @@ describe('transformDeltaFrom', () => {
     const plan = planOverride(
       [{ object: 'o', primPath: '/W/A', base: origin }] as IndexedObject<string>[],
       override,
-    )[0]!;
+    )[0];
     expect(plan.position).toEqual([3, 1, 0]);
     expect(plan.rotation[1]).toBeCloseTo(1.5);
     expect(plan.scale).toEqual([4, 2, 2]);

@@ -49,9 +49,9 @@ function computeNormalization(handle: SplatSceneHandle, sibling: SplatMesh): Sib
   const sibSphere = sibBox.getBoundingSphere(new THREE.Sphere());
   return normalizationFor(
     refSphere.radius,
-    refSphere.center.toArray() as [number, number, number],
+    refSphere.center.toArray(),
     sibSphere.radius,
-    sibSphere.center.toArray() as [number, number, number],
+    sibSphere.center.toArray(),
   );
 }
 

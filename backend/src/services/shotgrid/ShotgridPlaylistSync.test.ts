@@ -100,7 +100,7 @@ describe('pushPlaylist', () => {
     const ctx = contextWith();
     await pushPlaylist(ctx, 5);
 
-    expect(ctx.client.create.mock.calls[0][1]).toMatchObject({
+    expect(ctx.client.create.mock.calls[0]![1]).toMatchObject({
       versions: [{ type: 'Version', id: 111 }],
     });
   });

@@ -77,7 +77,7 @@ describe('commentMarkers', () => {
 
   it('distingue les retours déjà renvoyés sur la review', () => {
     const markers = commentMarkers([comment({ id: 2, sharedToShot: true })], clips);
-    expect(markers[0]!.shared).toBe(true);
+    expect(markers[0].shared).toBe(true);
   });
 
   // Un retour sans position de film reste visible : on le replace d'après son plan.
@@ -86,7 +86,7 @@ describe('commentMarkers', () => {
       [comment({ id: 3, timelineTime: null, mediaObjectId: 101, timestamp: 4 })],
       clips,
     );
-    expect(markers[0]!.time).toBe(14);
+    expect(markers[0].time).toBe(14);
   });
 
   it('borne le repli à la durée du plan', () => {
@@ -94,12 +94,12 @@ describe('commentMarkers', () => {
       [comment({ id: 4, timelineTime: null, mediaObjectId: 101, timestamp: 99 })],
       clips,
     );
-    expect(markers[0]!.time).toBe(20);
+    expect(markers[0].time).toBe(20);
   });
 
   it('étiquette le repère avec son plan et le texte du retour', () => {
     const markers = commentMarkers([comment({ id: 5, content: '<p>trop <b>long</b></p>' })], clips);
-    expect(markers[0]!.label).toBe('SQ010 · SH000 — trop long');
+    expect(markers[0].label).toBe('SQ010 · SH000 — trop long');
   });
 });
 

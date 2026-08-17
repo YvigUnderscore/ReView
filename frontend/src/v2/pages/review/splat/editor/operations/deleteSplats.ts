@@ -52,7 +52,7 @@ export function restoreSplats(handle: SplatSceneHandle, hidden: HiddenSplats): v
   if (!packed) return;
   hidden.indices.forEach((i, k) => {
     const { center, scales, quaternion, color } = packed.getSplat(i);
-    packed.setSplat(i, center, scales, quaternion, hidden.opacities[k]!, color);
+    packed.setSplat(i, center, scales, quaternion, hidden.opacities[k], color);
   });
   commitPackedChange(handle);
 }

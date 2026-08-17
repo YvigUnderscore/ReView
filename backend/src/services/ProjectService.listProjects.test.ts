@@ -24,25 +24,25 @@ const page = { page: 1, pageSize: 100, order: 'desc' as const };
 beforeEach(() => {
   vi.clearAllMocks();
   findMany.mockResolvedValue([] as never);
-  count.mockResolvedValue(0 as never);
+  count.mockResolvedValue(0);
 });
 
 describe('ProjectService.listProjects — filtre d’archivage (38.B)', () => {
   it('exclut les projets ARCHIVED par défaut', async () => {
     await listProjects(admin, page);
-    const where = findMany.mock.calls[0][0]!.where as { status: unknown };
+    const where = findMany.mock.calls[0]![0]!.where as { status: unknown };
     expect(where.status).toEqual({ not: 'ARCHIVED' });
   });
 
   it('ne renvoie que les ARCHIVED quand onlyArchived', async () => {
     await listProjects(admin, page, true);
-    const where = findMany.mock.calls[0][0]!.where as { status: unknown };
+    const where = findMany.mock.calls[0]![0]!.where as { status: unknown };
     expect(where.status).toEqual({ status: 'ARCHIVED' }.status);
   });
 
   it('garde le filtre membership pour un non-global, avec l’exclusion d’archivage', async () => {
     await listProjects(client, page);
-    const where = findMany.mock.calls[0][0]!.where as { status: unknown; memberships: unknown };
+    const where = findMany.mock.calls[0]![0]!.where as { status: unknown; memberships: unknown };
     expect(where.status).toEqual({ not: 'ARCHIVED' });
     expect(where.memberships).toEqual({ some: { userId: 9 } });
   });

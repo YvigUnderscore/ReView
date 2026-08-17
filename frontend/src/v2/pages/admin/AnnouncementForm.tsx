@@ -46,8 +46,8 @@ export default function AnnouncementForm({
   const [f, setF] = useState({
     title: announcement?.title ?? '',
     body: announcement?.body ?? '',
-    type: announcement?.type ?? ('INFO' as AnnouncementType),
-    frequency: announcement?.frequency ?? ('PERMANENT' as AnnouncementFrequency),
+    type: announcement?.type ?? 'INFO',
+    frequency: announcement?.frequency ?? 'PERMANENT',
     roles: announcement?.roles ?? ([] as Role[]),
     startsAt: toLocalInput(announcement?.startsAt ?? null),
     endsAt: toLocalInput(announcement?.endsAt ?? null),

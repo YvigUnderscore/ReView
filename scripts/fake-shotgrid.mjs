@@ -50,7 +50,6 @@ const log = (...args) => {
 const SAMPLE_MP4_BASE64 =
   'AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAQmbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAA1B0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAUAAAAC0AAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAIAAABAAAAAALIbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAwAAAAYABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAACc21pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAjNzdGJsAAAAw3N0c2QAAAAAAAAAAQAAALNhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAUAAtABIAAAASAAAAAAAAAABFUxhdmM1OS4zNy4xMDAgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAAOWF2Y0MBZAAV/+EAG2dkABWscgRBQZ+fARAAAAMAEAAAAwGA8WLYRgEAB2joQ4OSyLD9+PgAAAAAEHBhc3AAAAABAAAAAQAAABRidHJ0AAAAAAAAQAgAAEAIAAAAGHN0dHMAAAAAAAAAAQAAABgAAAQAAAAAFHN0c3MAAAAAAAAAAQAAAAEAAACYY3R0cwAAAAAAAAARAAAAAQAACAAAAAABAAAkAAAAAAEAABAAAAAAAwAAAAAAAAADAAAEAAAAAAEAABgAAAAAAQAACAAAAAABAAAAAAAAAAIAAAQAAAAAAQAAGAAAAAABAAAIAAAAAAEAAAAAAAAAAgAABAAAAAABAAAYAAAAAAEAAAgAAAAAAQAAAAAAAAACAAAEAAAAABxzdHNjAAAAAAAAAAEAAAABAAAAGAAAAAEAAAB0c3RzegAAAAAAAAAAAAAAGAAAB6kAAAGWAAAAaQAAADYAAAA9AAAAOAAAACIAAAAuAAAAMAAAAWYAAABFAAAAJgAAACEAAAAqAAABAgAAADgAAAAkAAAAGQAAACAAAADYAAAAOAAAACEAAAAiAAAAKQAAABRzdGNvAAAAAAAAAAEAAARWAAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY1OS4yNy4xMDAAAAAIZnJlZQAAEAptZGF0AAACsAYF//+s3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzA5NSBiYWVlNDAwIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMiAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTE2IGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDM6MHgxMzMgbWU9dW1oIHN1Ym1lPTEwIHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MjQgY2hyb21hX21lPTEgdHJlbGxpcz0yIDh4OGRjdD0xIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9NiBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTggYl9weXJhbWlkPTIgYl9hZGFwdD0yIGJfYmlhcz0wIGRpcmVjdD0zIHdlaWdodGI9MSBvcGVuX2dvcD0wIHdlaWdodHA9MiBrZXlpbnQ9MjUwIGtleWludF9taW49MTIgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD02MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTQwLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAATxZYiBAAd//sB3gUtBJ031qAdgfOcYU7qseZ6I7tphUfhBbs87NVNhl/LAtVupQkcQnSSuh/mVmEAgoIUDaQmXTquqs8C3Kzrg+ayJFpCh1mAIBvIIODADMP3m8aGcGBYrLxV3Z20DKGiSbaHO6qCc/uvnIkf9zitABDvyomcZ1NRYucuZ9JqnhttnQJlJyhEaIv7we1RUpFF4P6qslvW84h5yZNtFCVnHdU3HS6Z+d8496jXmfVUM/gFjyqt0Rfj/Y/0HWipoqNZSoGF1j4zo649FeSpkNX80JRQWrmMHjOSV/X7EnrlRbBElUlQzm6hYiVj9gc5ragq2HuRRcl4DoFwdBIXSn0Swjr/a1x6e3Vp9FnWRzg7gVYFnNvtjoJSIVE1oNNu9EpyFY1GbN7gWxq1KAvQpbDevRqEPFiXcVbC+/QMU2PfzMYwWRvwnIi7sfYs+e2Dx7xRWuvj/SjVeklPFQlVULo/gXAW3J4xf+bUYfBn7pxHYGfmr940/w62ThaVAIemyMj0wC39n6Hkl9oQSI9/wIyfXd/0baEufYKO6UJuMMPjVBrcVenCB1jdkZA13S47p4WeUhjnLLt5FdxMxyWAA/F+vF5ftLqNv0KCLZfEX9JDsqixgfyUv4c4/Rclll6UlaFqTdqLAPUqPF8uG34cTz5gvRcEn5S1GlobkA/VMPQ+8QXnLPHjwhoAyu7kfzFt7Gwt1+/WkT5tglT4qD6bImZ0PtNNdKV1Kxu66AjXN2BcOPKbT46LuhOUlS61mTh6iiDBrqPw3R454M+pSeuFQzVnTKipXASrEE1ZIigpg6AvOfhM5soqqAsPfPSiVozDGLYe6HLKA1D7LV9yrfzhn2lwSVFrpWbepTz9AVEZTUhQm3uaZw1AY8qPgzDg34vx2YX5tHBhqvd7+60u9CGb7c0AU4mlc127Prn1/UZD7dzWfoywQxUJFgDQ9ZZdO6AmkksszyMfqyAqocApbcuMNrXu3aY/0qNIHqqc38LmCwS/6tQ9uoZzgk0j5ho+ps1gcRWYmqTtRR7ELLAIOXS9ZkOwKkNLdPXt908MmNfVeljv2giuxnSpZRbJktqljKMw2ZWcF1rHpDvIEMleUrCmfKAU4VgCje2iycP17F6VKkALd6jD16Mu8G0/FXqhKBv/tJ37PC/vnVbaQeQo9NarRiKt2KtmgB2MXYNeUpIZM40igPEimwstfEkg74GZShLmpSfSzdhDc+6btnEX/31kyY7qReJCcU/6bZoF7rB39ykXx0VCkLLnzRJiriK1zXMQgM0daGA2UWg9CTVJMPadiZJDOJoRKPl7e0t9XwuJNbQybM5MRE3mY4Ztw9ecSlmisxGPE1chXS+pQM4Vj9kLn87gVvF9ikMvT3YkC4yXM2xaUBc8mnwvPOjQ4eIDYvXCsaj+kLIdVc8L8ALlqh+S+Q77A01A0IfAwevpGJ+wPVL/eYlFnx68flQMN6WrcQ1wB+r6PrImihcwDv8ammxX4fYXqPvZnJBCsTGcbMH+umiUi30z5zlRgIU0qIPGuianKoiGZoopYecUj53/2Ouj5zNYNU8lIWk8Xj+cjz4EYG7wG6CMhmMgDnbaVosN5zzQaysrFBxH2+pLum35ZXPVdKoVzvAGc03QrcXmGFHDDPZZR6XCACeZVE/tesKSQZOYQTTOlCgZISnFO2uEAAAGSQZoJDYh3/yKmUcTAAk7g2ebrZGW6xZD/nqefPK1LctUtDZ4P0d9k6JEn/KKOe5ESD1vCUjFYKOc4J3NaksejwbRBYpt2kobJQYty7Fsr3RM3bbdIzV4brXKo0Cf179rIgh/xHPOgLkb/DgGGmSIVYn6kEXJuX7TlcpWW0Cpu55//rjn+IBas1ebareUZHOACLJ8kK/RFKPJgYUwWRovIr/hTQXJS0L+VWpz0ljoKB3w1gZ60QmJSUDFnARW+k696x1WgMazj029aRiONyj6STOFQE2uuaJBjeGYm6vJnlTolPptot8/77jjcPCY6J/M46v7R55tA8QDfA+Ohq7BqEfFUPZSDhLdWcBh3y1J+FQnbkLy51my2B46aMDDIqW4qiZ9jZ0fBCnwRaUs5w9dxxSbaFX9MAMMbwPVnA/dzLl8CbQxittHeqeP1BjmQzX7ZJnrhjszUohih/Yi4d2D5WFtdioz0Jp62r4/IsBkuAUPF7L3Fa2A2Tk939JejIsR6TdjgXTdaN6d5FshaO4m/6o2aAAAAZUGeEIcQ/5zAHycJUJxM4QXhtew5zM47daCuqLQYF0jSsy7iT0oH668WnzeAOFd1o6BCWzBXQGq8QDUdQsCTnmPHR9mYG0y6m29d96OQVBeehiFi7SPbb6YzUd1iF5XbfG22tlQfAAAAMgGeGCaIZ/+dACiAqQoZUA6Sb+Muh28fL6ksimWJGTQFtkGfJOUSiGcrw6RBdl+XhKM4AAAAOQGeGEaIZ/+RVjCnaZvJJVHf05ZPpZKqV7XxtaVtZyM1s6W7GoL0HnwCoYDboGkKFzQ392V7P1N4DQAAADQBnhhmiGf/kVYwp2kEPZlXx6FcVS2BX+St7fWlAhcqLEjwEdwU/5T9aiamdYaR4tu52RXhAAAAHgGeGK1IZ/+V+Ehu8HPIKeSl7AdY2oFCxl73zn+cwQAAACoBnhjNSGf/o4DIBu5HGnc2cz18u94Wckm4tGLdhbXGKezuvaQJG7jcVYEAAAAsAZ4Y7Uhn/6OAyAbuRxp/1DNf+5cv+zLzTV2xMql4lhvIgFcPzWHX0hw/IN0AAAFiQZoZqTUCAtEymBDvHKeZs7ltP3kQhkL3y4/Rw/0DGyjdW7Ua1UfLLmeXbnDJVoerCfb5wFBlYTBT3Y0ecmZZEkG891jp8opdK9pbl8wihaxGib+LHR7z4VYRIJWkicQe8yHFs02Bl22heINTI72g/KCPlK5vBdvoKKWZSiUJNLsCllsrVcyeJ5P2tFPbqEPQ+sp7FoMzAGQf6pKjqk7hXsCufMBAOXLzB3YCnRlRhM+siuzf8mGSd/G30XkeCQ2WGZtqTgMD9rtSnAF7nyAH1WphNeoUoFjzzfDxldJ57KWwcmgBYymBcwdjgxaeavFz58BPNgYjKQDjQxzA7vKkmjYEScO/pnT/Lrc/lb95/+e+KcHigRGUWRvB3DTYlXvYzgj62gclYDO+NfS/dRJhU2BkVTfue0/7J8C8q3ZM0g+0XbTyiUmaubtUd7bRhB7prYxee5dyob8NjroHUI6V1VdgAAAAQUGeIU3EO/+cl419dYhX2bzT9hxluXAx1x89Bo/9hLC1NfcHJaJhAh108wG1351cpgxb2Oyt4P3h5GAAuhTZf1cFAAAAIgGeKS2iGf+dZQ7Rv8pWj31+nT4FLNGw9njOzh2+4WRO3NgAAAAdAZ4pbJIZ/wfM++dLRslflyC3SYshIgM5Ii1UxDAAAAAmAZ4pjJIZ/6N/PgIPFk0si7WYR4wXYFTEGgB5pKi2Q2GiA1YtzNkAAAD+QZoqSbUCAtrRMpgBDv8B/yB3/t03/5ZLovqznUUQeNk9p8IEJd7z/YFgWYbl7+Jk4YAHLNqqx4/dqXl3pwxW4hyv7AzStxJEkewayQmblHE2T0NAHKINdhZsZKp79JBRcJv7mdeQApvmNt4PQt0cACJKTLrcSbRl7k076xdgubXXZMsLJvS7/tIxJcYRjiVhDRqd4T7wEhtAkzvGGuGTSayAFzSf6aOYgFReKMRfyNRfLZtT/n23AGFSsqHMLiLoaMngDfoxCbkNj+sSE5jXqLTIfAWyyWo9jDFymlWeG+GJXuL1kwxvGO1I8V/Ahrvxs2AFfk5djQ/noYcpMnkAAAA0QZ4x7LEO/5yU30tkv2hyJWCVVzBxGQCwqeSosPsadSlkKYzxy8OUwo1NN3UPkqo3C8nfgQAAACABnjnMqIZ/nWLpjWzu+D9c9PNJoDz3w7mbIXobbhh4gAAAABUBnjoM0hn/AeTOaSurpY89HDAoEsAAAAAcAZ46LNIZ/6N+/Yd9wCmVpYrtkA8jD93h8X7mZQAAANRBmjrojUCAtra0TKYABDP/AAihDj4VaE4WSg+B9EKod2npyuVOMWbFPebuf3v/bqUzOvN5m25aGizOwKDhvipOdzEghkAD2+seuvSs6/GPysdduovIPvXPdZR8R1Buuk58UpXD62QHPB5VtMj6hkTwNJWmuyA5JH6u+AuqneRIem3uOiqfbkBV3SpIPm/fQFgPKlTYV5sR7jXzlws4cAuwZCQ0vrB9Aob+HJa2wIlcGXcodLk2ghwUZPNhWz5Ezq7vuKEIBLHiRHOBm1BJ2Aw1VGW0oAAAADRBnkKM8Q7/nJVVPsjDNIdzUMfO0hFK0BDqSvzvJQNZy62VxeeVMn10MNkuA73FDQ+tcbZqAAAAHQGeSmzohn+dYunGxuJPGP7MtKPKLcHTJuU+rZpFAAAAHgGeSqxEhn8CUyMB6aVjxLJLYxJCKMX0PjaewgsnIAAAACUBnkrMRIZ/o379h0ILSx84pe0wskLTvu+teR/hMrs5VTGpqagR';
 
-
 const now = () => new Date().toISOString();
 
 /** Statuts globaux du site (entité Status) — bg_color en RGB décimal, comme ShotGrid. */
@@ -73,9 +72,30 @@ const projects = [
 ];
 
 const humanUsers = [
-  { id: 500, type: 'HumanUser', login: 'demo.user', name: 'Demo User', email: 'admin@review.local', sg_status_list: 'act' },
-  { id: 501, type: 'HumanUser', login: 'a.artist', name: 'Alice Artist', email: 'artist@review.local', sg_status_list: 'act' },
-  { id: 502, type: 'HumanUser', login: 'x.extern', name: 'Xavier Extern', email: 'xavier@studio-externe.example', sg_status_list: 'act' },
+  {
+    id: 500,
+    type: 'HumanUser',
+    login: 'demo.user',
+    name: 'Demo User',
+    email: 'admin@review.local',
+    sg_status_list: 'act',
+  },
+  {
+    id: 501,
+    type: 'HumanUser',
+    login: 'a.artist',
+    name: 'Alice Artist',
+    email: 'artist@review.local',
+    sg_status_list: 'act',
+  },
+  {
+    id: 502,
+    type: 'HumanUser',
+    login: 'x.extern',
+    name: 'Xavier Extern',
+    email: 'xavier@studio-externe.example',
+    sg_status_list: 'act',
+  },
 ];
 
 const steps = [
@@ -93,65 +113,239 @@ const ref = (type, id, name) => ({ type, id, name });
 function buildProjectData(projectId, prefix, base) {
   const p = ref('Project', projectId, projects.find((x) => x.id === projectId).name);
   const sequences = [
-    { id: base + 1, type: 'Sequence', code: `${prefix}_SQ010`, project: p, sg_status_list: 'ip', description: 'Opening sequence', updated_at: now() },
-    { id: base + 2, type: 'Sequence', code: `${prefix}_SQ020`, project: p, sg_status_list: 'wtg', description: 'Chase', updated_at: now() },
+    {
+      id: base + 1,
+      type: 'Sequence',
+      code: `${prefix}_SQ010`,
+      project: p,
+      sg_status_list: 'ip',
+      description: 'Opening sequence',
+      updated_at: now(),
+    },
+    {
+      id: base + 2,
+      type: 'Sequence',
+      code: `${prefix}_SQ020`,
+      project: p,
+      sg_status_list: 'wtg',
+      description: 'Chase',
+      updated_at: now(),
+    },
   ];
   const shots = [
-    { id: base + 11, type: 'Shot', code: `${prefix}_SH010`, project: p, sg_sequence: ref('Sequence', base + 1, `${prefix}_SQ010`), sg_cut_in: 1001, sg_cut_out: 1096, sg_cut_duration: 96, sg_status_list: 'ip', description: 'Wide establishing', updated_at: now() },
-    { id: base + 12, type: 'Shot', code: `${prefix}_SH020`, project: p, sg_sequence: ref('Sequence', base + 1, `${prefix}_SQ010`), sg_cut_in: 1001, sg_cut_out: 1048, sg_cut_duration: 48, sg_status_list: 'rev', description: 'Close up', updated_at: now() },
-    { id: base + 13, type: 'Shot', code: `${prefix}_SH030`, project: p, sg_sequence: ref('Sequence', base + 2, `${prefix}_SQ020`), sg_cut_in: 1001, sg_cut_out: 1120, sg_cut_duration: 120, sg_status_list: 'wtg', description: 'Car chase', updated_at: now() },
+    {
+      id: base + 11,
+      type: 'Shot',
+      code: `${prefix}_SH010`,
+      project: p,
+      sg_sequence: ref('Sequence', base + 1, `${prefix}_SQ010`),
+      sg_cut_in: 1001,
+      sg_cut_out: 1096,
+      sg_cut_duration: 96,
+      sg_status_list: 'ip',
+      description: 'Wide establishing',
+      updated_at: now(),
+    },
+    {
+      id: base + 12,
+      type: 'Shot',
+      code: `${prefix}_SH020`,
+      project: p,
+      sg_sequence: ref('Sequence', base + 1, `${prefix}_SQ010`),
+      sg_cut_in: 1001,
+      sg_cut_out: 1048,
+      sg_cut_duration: 48,
+      sg_status_list: 'rev',
+      description: 'Close up',
+      updated_at: now(),
+    },
+    {
+      id: base + 13,
+      type: 'Shot',
+      code: `${prefix}_SH030`,
+      project: p,
+      sg_sequence: ref('Sequence', base + 2, `${prefix}_SQ020`),
+      sg_cut_in: 1001,
+      sg_cut_out: 1120,
+      sg_cut_duration: 120,
+      sg_status_list: 'wtg',
+      description: 'Car chase',
+      updated_at: now(),
+    },
   ];
   const assets = [
-    { id: base + 21, type: 'Asset', code: `${prefix}_Hero`, project: p, sg_asset_type: 'Character', description: 'Hero character', sg_status_list: 'ip', updated_at: now() },
-    { id: base + 22, type: 'Asset', code: `${prefix}_Car`, project: p, sg_asset_type: 'Vehicle', description: 'Chase car', sg_status_list: 'apr', updated_at: now() },
+    {
+      id: base + 21,
+      type: 'Asset',
+      code: `${prefix}_Hero`,
+      project: p,
+      sg_asset_type: 'Character',
+      description: 'Hero character',
+      sg_status_list: 'ip',
+      updated_at: now(),
+    },
+    {
+      id: base + 22,
+      type: 'Asset',
+      code: `${prefix}_Car`,
+      project: p,
+      sg_asset_type: 'Vehicle',
+      description: 'Chase car',
+      sg_status_list: 'apr',
+      updated_at: now(),
+    },
   ];
   const tasks = [
-    { id: base + 31, type: 'Task', content: 'Animation', project: p, entity: ref('Shot', base + 11, `${prefix}_SH010`), step: ref('Step', 301, 'Animation'), sg_status_list: 'ip', start_date: '2026-08-10', due_date: '2026-08-20', duration: 4800, task_assignees: [ref('HumanUser', 501, 'Alice Artist')], updated_at: now() },
-    { id: base + 32, type: 'Task', content: 'Lighting', project: p, entity: ref('Shot', base + 11, `${prefix}_SH010`), step: ref('Step', 302, 'Lighting'), sg_status_list: 'wtg', start_date: '2026-08-21', due_date: '2026-08-28', duration: 2400, task_assignees: [], updated_at: now() },
-    { id: base + 33, type: 'Task', content: 'Compositing', project: p, entity: ref('Shot', base + 12, `${prefix}_SH020`), step: ref('Step', 303, 'Compositing'), sg_status_list: 'rev', start_date: '2026-08-12', due_date: '2026-08-18', duration: 2880, task_assignees: [ref('HumanUser', 502, 'Xavier Extern')], updated_at: now() },
-    { id: base + 34, type: 'Task', content: 'Modeling', project: p, entity: ref('Asset', base + 21, `${prefix}_Hero`), step: ref('Step', 304, 'Modeling'), sg_status_list: 'apr', start_date: '2026-07-20', due_date: '2026-08-01', duration: 4800, task_assignees: [ref('HumanUser', 501, 'Alice Artist')], updated_at: now() },
+    {
+      id: base + 31,
+      type: 'Task',
+      content: 'Animation',
+      project: p,
+      entity: ref('Shot', base + 11, `${prefix}_SH010`),
+      step: ref('Step', 301, 'Animation'),
+      sg_status_list: 'ip',
+      start_date: '2026-08-10',
+      due_date: '2026-08-20',
+      duration: 4800,
+      task_assignees: [ref('HumanUser', 501, 'Alice Artist')],
+      updated_at: now(),
+    },
+    {
+      id: base + 32,
+      type: 'Task',
+      content: 'Lighting',
+      project: p,
+      entity: ref('Shot', base + 11, `${prefix}_SH010`),
+      step: ref('Step', 302, 'Lighting'),
+      sg_status_list: 'wtg',
+      start_date: '2026-08-21',
+      due_date: '2026-08-28',
+      duration: 2400,
+      task_assignees: [],
+      updated_at: now(),
+    },
+    {
+      id: base + 33,
+      type: 'Task',
+      content: 'Compositing',
+      project: p,
+      entity: ref('Shot', base + 12, `${prefix}_SH020`),
+      step: ref('Step', 303, 'Compositing'),
+      sg_status_list: 'rev',
+      start_date: '2026-08-12',
+      due_date: '2026-08-18',
+      duration: 2880,
+      task_assignees: [ref('HumanUser', 502, 'Xavier Extern')],
+      updated_at: now(),
+    },
+    {
+      id: base + 34,
+      type: 'Task',
+      content: 'Modeling',
+      project: p,
+      entity: ref('Asset', base + 21, `${prefix}_Hero`),
+      step: ref('Step', 304, 'Modeling'),
+      sg_status_list: 'apr',
+      start_date: '2026-07-20',
+      due_date: '2026-08-01',
+      duration: 4800,
+      task_assignees: [ref('HumanUser', 501, 'Alice Artist')],
+      updated_at: now(),
+    },
   ];
   const versions = [
     {
-      id: base + 41, type: 'Version', code: `${prefix}_SH010_anim_v001`, project: p,
-      entity: ref('Shot', base + 11, `${prefix}_SH010`), sg_task: ref('Task', base + 31, 'Animation'),
-      sg_status_list: 'rev', user: ref('HumanUser', 501, 'Alice Artist'), description: 'First animation pass',
-      sg_first_frame: 1001, sg_last_frame: 1096, frame_count: 96,
-      sg_uploaded_movie: { name: `${prefix}_SH010_anim_v001.mov`, link_type: 'upload', content_type: 'video/quicktime' },
-      sg_uploaded_movie_mp4: { name: `${prefix}_SH010_anim_v001.mp4`, link_type: 'upload', content_type: 'video/mp4' },
-      sg_path_to_movie: `/mnt/prod/${prefix}/SH010/anim/v001.mov`, updated_at: now(),
+      id: base + 41,
+      type: 'Version',
+      code: `${prefix}_SH010_anim_v001`,
+      project: p,
+      entity: ref('Shot', base + 11, `${prefix}_SH010`),
+      sg_task: ref('Task', base + 31, 'Animation'),
+      sg_status_list: 'rev',
+      user: ref('HumanUser', 501, 'Alice Artist'),
+      description: 'First animation pass',
+      sg_first_frame: 1001,
+      sg_last_frame: 1096,
+      frame_count: 96,
+      sg_uploaded_movie: {
+        name: `${prefix}_SH010_anim_v001.mov`,
+        link_type: 'upload',
+        content_type: 'video/quicktime',
+      },
+      sg_uploaded_movie_mp4: {
+        name: `${prefix}_SH010_anim_v001.mp4`,
+        link_type: 'upload',
+        content_type: 'video/mp4',
+      },
+      sg_path_to_movie: `/mnt/prod/${prefix}/SH010/anim/v001.mov`,
+      updated_at: now(),
     },
     {
-      id: base + 42, type: 'Version', code: `${prefix}_SH020_comp_v003`, project: p,
-      entity: ref('Shot', base + 12, `${prefix}_SH020`), sg_task: ref('Task', base + 33, 'Compositing'),
-      sg_status_list: 'apr', user: ref('HumanUser', 502, 'Xavier Extern'), description: 'Comp with grade',
-      sg_first_frame: 1001, sg_last_frame: 1048, frame_count: 48,
-      sg_uploaded_movie: { name: `${prefix}_SH020_comp_v003.mov`, link_type: 'upload', content_type: 'video/quicktime' },
-      sg_uploaded_movie_mp4: { name: `${prefix}_SH020_comp_v003.mp4`, link_type: 'upload', content_type: 'video/mp4' },
+      id: base + 42,
+      type: 'Version',
+      code: `${prefix}_SH020_comp_v003`,
+      project: p,
+      entity: ref('Shot', base + 12, `${prefix}_SH020`),
+      sg_task: ref('Task', base + 33, 'Compositing'),
+      sg_status_list: 'apr',
+      user: ref('HumanUser', 502, 'Xavier Extern'),
+      description: 'Comp with grade',
+      sg_first_frame: 1001,
+      sg_last_frame: 1048,
+      frame_count: 48,
+      sg_uploaded_movie: {
+        name: `${prefix}_SH020_comp_v003.mov`,
+        link_type: 'upload',
+        content_type: 'video/quicktime',
+      },
+      sg_uploaded_movie_mp4: {
+        name: `${prefix}_SH020_comp_v003.mp4`,
+        link_type: 'upload',
+        content_type: 'video/mp4',
+      },
       updated_at: now(),
     },
   ];
   const notes = [
     {
-      id: base + 51, type: 'Note', subject: 'Timing', content: 'The hero lands two frames late.',
-      project: p, user: ref('HumanUser', 500, 'Demo User'),
-      note_links: [ref('Version', base + 41, `${prefix}_SH010_anim_v001`), ref('Shot', base + 11, `${prefix}_SH010`)],
-      tasks: [ref('Task', base + 31, 'Animation')], created_at: now(), updated_at: now(),
+      id: base + 51,
+      type: 'Note',
+      subject: 'Timing',
+      content: 'The hero lands two frames late.',
+      project: p,
+      user: ref('HumanUser', 500, 'Demo User'),
+      note_links: [
+        ref('Version', base + 41, `${prefix}_SH010_anim_v001`),
+        ref('Shot', base + 11, `${prefix}_SH010`),
+      ],
+      tasks: [ref('Task', base + 31, 'Animation')],
+      created_at: now(),
+      updated_at: now(),
     },
   ];
   const playlists = [
     {
-      id: base + 61, type: 'Playlist', code: `${prefix}_Dailies_2026_08_15`, project: p,
-      description: 'Morning dailies', versions: [ref('Version', base + 41, ''), ref('Version', base + 42, '')],
+      id: base + 61,
+      type: 'Playlist',
+      code: `${prefix}_Dailies_2026_08_15`,
+      project: p,
+      description: 'Morning dailies',
+      versions: [ref('Version', base + 41, ''), ref('Version', base + 42, '')],
       updated_at: now(),
     },
   ];
   const publishedFiles = [
     {
-      id: base + 71, type: 'PublishedFile', code: `${prefix}_SH010_anim_v001.abc`, project: p,
-      entity: ref('Shot', base + 11, `${prefix}_SH010`), task: ref('Task', base + 31, 'Animation'),
-      version_number: 1, path: { local_path: `/mnt/prod/${prefix}/SH010/anim/v001.abc`, name: 'v001.abc' },
-      published_file_type: ref('PublishedFileType', 90, 'Alembic Cache'), updated_at: now(),
+      id: base + 71,
+      type: 'PublishedFile',
+      code: `${prefix}_SH010_anim_v001.abc`,
+      project: p,
+      entity: ref('Shot', base + 11, `${prefix}_SH010`),
+      task: ref('Task', base + 31, 'Animation'),
+      version_number: 1,
+      path: { local_path: `/mnt/prod/${prefix}/SH010/anim/v001.abc`, name: 'v001.abc' },
+      published_file_type: ref('PublishedFileType', 90, 'Alembic Cache'),
+      updated_at: now(),
     },
   ];
   return { sequences, shots, assets, tasks, versions, notes, playlists, publishedFiles };
@@ -203,7 +397,10 @@ const displayValues = Object.fromEntries(statuses.map((s) => [s.code, s.name]));
 const schemas = {
   Shot: {
     code: { data_type: { value: 'text' } },
-    sg_status_list: { data_type: { value: 'status_list' }, properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } } },
+    sg_status_list: {
+      data_type: { value: 'status_list' },
+      properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } },
+    },
     sg_cut_in: { data_type: { value: 'number' } },
     sg_cut_out: { data_type: { value: 'number' } },
     sg_cut_duration: { data_type: { value: 'number' } },
@@ -214,7 +411,10 @@ const schemas = {
   },
   Task: {
     content: { data_type: { value: 'text' } },
-    sg_status_list: { data_type: { value: 'status_list' }, properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } } },
+    sg_status_list: {
+      data_type: { value: 'status_list' },
+      properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } },
+    },
     start_date: { data_type: { value: 'date' } },
     due_date: { data_type: { value: 'date' } },
     duration: { data_type: { value: 'duration' } },
@@ -226,7 +426,10 @@ const schemas = {
   },
   Version: {
     code: { data_type: { value: 'text' } },
-    sg_status_list: { data_type: { value: 'status_list' }, properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } } },
+    sg_status_list: {
+      data_type: { value: 'status_list' },
+      properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } },
+    },
     entity: { data_type: { value: 'entity' } },
     sg_task: { data_type: { value: 'entity' } },
     user: { data_type: { value: 'entity' } },
@@ -240,7 +443,10 @@ const schemas = {
   },
   Sequence: {
     code: { data_type: { value: 'text' } },
-    sg_status_list: { data_type: { value: 'status_list' }, properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } } },
+    sg_status_list: {
+      data_type: { value: 'status_list' },
+      properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } },
+    },
     description: { data_type: { value: 'text' } },
     project: { data_type: { value: 'entity' } },
     updated_at: { data_type: { value: 'date_time' } },
@@ -248,7 +454,10 @@ const schemas = {
   Asset: {
     code: { data_type: { value: 'text' } },
     sg_asset_type: { data_type: { value: 'list' } },
-    sg_status_list: { data_type: { value: 'status_list' }, properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } } },
+    sg_status_list: {
+      data_type: { value: 'status_list' },
+      properties: { valid_values: { value: statusValues }, display_values: { value: displayValues } },
+    },
     description: { data_type: { value: 'text' } },
     project: { data_type: { value: 'entity' } },
     updated_at: { data_type: { value: 'date_time' } },
@@ -280,9 +489,21 @@ const schemas = {
     project: { data_type: { value: 'entity' } },
     updated_at: { data_type: { value: 'date_time' } },
   },
-  Step: { code: { data_type: { value: 'text' } }, short_name: { data_type: { value: 'text' } }, entity_type: { data_type: { value: 'text' } } },
-  HumanUser: { login: { data_type: { value: 'text' } }, name: { data_type: { value: 'text' } }, email: { data_type: { value: 'text' } } },
-  Status: { code: { data_type: { value: 'text' } }, name: { data_type: { value: 'text' } }, bg_color: { data_type: { value: 'color' } } },
+  Step: {
+    code: { data_type: { value: 'text' } },
+    short_name: { data_type: { value: 'text' } },
+    entity_type: { data_type: { value: 'text' } },
+  },
+  HumanUser: {
+    login: { data_type: { value: 'text' } },
+    name: { data_type: { value: 'text' } },
+    email: { data_type: { value: 'text' } },
+  },
+  Status: {
+    code: { data_type: { value: 'text' } },
+    name: { data_type: { value: 'text' } },
+    bg_color: { data_type: { value: 'color' } },
+  },
   Project: { name: { data_type: { value: 'text' } }, sg_status: { data_type: { value: 'text' } } },
 };
 
@@ -326,8 +547,10 @@ function jsonApi(record, fields) {
   const relationships = {};
   for (const [key, value] of Object.entries(rest)) {
     if (fields && fields.length > 0 && !fields.includes(key)) continue;
-    const isEntity = value && typeof value === 'object' && !Array.isArray(value) && 'type' in value && 'id' in value;
-    const isEntityList = Array.isArray(value) && value.every((v) => v && typeof v === 'object' && 'type' in v);
+    const isEntity =
+      value && typeof value === 'object' && !Array.isArray(value) && 'type' in value && 'id' in value;
+    const isEntityList =
+      Array.isArray(value) && value.every((v) => v && typeof v === 'object' && 'type' in v);
     if (isEntity || (isEntityList && value.length > 0)) relationships[key] = { data: value };
     else attributes[key] = value;
   }
@@ -386,7 +609,15 @@ function requireAuth(req, res) {
 }
 
 /** Enregistre un EventLogEntry et notifie les webhooks abonnés au projet. */
-function recordEvent({ eventType, entity, projectId, attributeName, oldValue, newValue, operation = 'update' }) {
+function recordEvent({
+  eventType,
+  entity,
+  projectId,
+  attributeName,
+  oldValue,
+  newValue,
+  operation = 'update',
+}) {
   nextEventId += 1;
   const entry = {
     id: nextEventId,
@@ -397,7 +628,13 @@ function recordEvent({ eventType, entity, projectId, attributeName, oldValue, ne
     user: ref('HumanUser', 500, 'Demo User'),
     created_at: now(),
     attribute_name: attributeName ?? null,
-    meta: { type: 'attribute_change', entity_id: entity?.id, attribute_name: attributeName, old_value: oldValue, new_value: newValue },
+    meta: {
+      type: 'attribute_change',
+      entity_id: entity?.id,
+      attribute_name: attributeName,
+      old_value: oldValue,
+      new_value: newValue,
+    },
   };
   data.EventLogEntry.push(entry);
   deliverWebhooks(entry, operation);
@@ -425,7 +662,8 @@ async function deliverWebhooks(entry, operation) {
       'Content-Type': 'application/json',
       'x-sg-delivery-id': randomUUID(),
     };
-    if (hook.secret) headers['x-sg-signature'] = `sha1=${createHmac('sha1', hook.secret).update(body).digest('hex')}`;
+    if (hook.secret)
+      headers['x-sg-signature'] = `sha1=${createHmac('sha1', hook.secret).update(body).digest('hex')}`;
     try {
       const res = await fetch(hook.url, { method: 'POST', headers, body });
       log(`webhook → ${hook.url} : ${res.status} (${entry.event_type})`);
@@ -460,12 +698,19 @@ const server = createServer(async (req, res) => {
         params.get('password') === USER_PASSWORD);
     if (!ok) {
       log(`auth refusée (grant=${grant})`);
-      return send(res, 401, { errors: [{ status: 401, title: 'Unauthorized', detail: "Can't authenticate user" }] });
+      return send(res, 401, {
+        errors: [{ status: 401, title: 'Unauthorized', detail: "Can't authenticate user" }],
+      });
     }
     const token = randomUUID();
     tokens.add(token);
     log(`auth ok (grant=${grant})`);
-    return send(res, 200, { access_token: token, refresh_token: randomUUID(), expires_in: 600, token_type: 'Bearer' });
+    return send(res, 200, {
+      access_token: token,
+      refresh_token: randomUUID(),
+      expires_in: 600,
+      token_type: 'Bearer',
+    });
   }
 
   // ── Pilotage du simulateur (hors API ShotGrid)
@@ -554,7 +799,10 @@ const server = createServer(async (req, res) => {
     // Comme un site réel : la recherche exige un type de contenu qui déclare la forme
     // des filtres, et refuse `application/json`.
     const ct = (req.headers['content-type'] ?? '').split(';')[0].trim();
-    const FILTER_TYPES = ['application/vnd+shotgun.api3_array+json', 'application/vnd+shotgun.api3_hash+json'];
+    const FILTER_TYPES = [
+      'application/vnd+shotgun.api3_array+json',
+      'application/vnd+shotgun.api3_hash+json',
+    ];
     if (!FILTER_TYPES.includes(ct)) {
       return send(res, 415, {
         errors: [

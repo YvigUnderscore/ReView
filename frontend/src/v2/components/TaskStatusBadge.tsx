@@ -25,7 +25,7 @@ export default function TaskStatusBadge({
   if (pipelineStatusId) return <PipelineStatusBadge statusId={pipelineStatusId} scope="task" />;
   return (
     <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${TASK_STATUS_COLOR[status] ?? ''}`}>
-      {TASK_STATUS_LABEL_KEY[status] ? t(TASK_STATUS_LABEL_KEY[status]!) : status}
+      {TASK_STATUS_LABEL_KEY[status] ? t(TASK_STATUS_LABEL_KEY[status]) : status}
     </span>
   );
 }

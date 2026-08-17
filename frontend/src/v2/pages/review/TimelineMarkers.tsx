@@ -114,7 +114,7 @@ export function MarkerDialog({
 }) {
   const tr = useT();
   const [name, setName] = useState(editing?.name ?? '');
-  const [color, setColor] = useState(editing?.color ?? MARKER_COLORS[0]!);
+  const [color, setColor] = useState(editing?.color ?? MARKER_COLORS[0]);
 
   const submit = async () => {
     const n = name.trim();

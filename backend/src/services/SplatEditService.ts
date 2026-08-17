@@ -74,7 +74,7 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
     throw badRequest('Présentation réservée aux médias 3D/splat', 'NOT_3D');
   const metadata = {
     ...((media.metadata ?? {}) as object),
-    splatPresentation: presentation as Prisma.InputJsonValue | null,
+    splatPresentation: presentation,
   } as Prisma.InputJsonObject;
   await prisma.mediaObject.update({ where: { id }, data: { metadata } });
   return { splatPresentation: presentation };

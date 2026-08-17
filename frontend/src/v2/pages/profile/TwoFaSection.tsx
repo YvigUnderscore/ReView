@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
-import { useAuth, type AuthUser } from '../../stores/useAuth';
+import { useAuth } from '../../stores/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useT } from '../../i18n';
@@ -51,7 +51,7 @@ export default function TwoFaSection() {
       setQr(null);
       setManualSecret(null);
       setCode('');
-      if (user) setUser({ ...user, twoFaEnabled: true } as AuthUser);
+      if (user) setUser({ ...user, twoFaEnabled: true });
       toast.success(t('twofa.enabled'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('twofa.wrongCode'));
@@ -67,7 +67,7 @@ export default function TwoFaSection() {
       await api.post('/api/auth/2fa/disable', { password });
       setPassword('');
       setBackupCodes(null);
-      if (user) setUser({ ...user, twoFaEnabled: false } as AuthUser);
+      if (user) setUser({ ...user, twoFaEnabled: false });
       toast.success(t('twofa.disabled'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));

@@ -60,7 +60,7 @@ function LogoPanel() {
       const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
       if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
       await api.put('/api/studio/settings', { key: 'studio_logo_key', value: key });
-      invalidate();
+      void invalidate();
       toast.success(t('distribution.logoUpdated'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -73,7 +73,7 @@ function LogoPanel() {
     setBusy(true);
     try {
       await api.put('/api/studio/settings', { key: 'studio_logo_key', value: '' });
-      invalidate();
+      void invalidate();
       toast.success(t('distribution.logoDeleted'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -136,7 +136,7 @@ function WatermarkPanel() {
     try {
       const { watermark } = await api.put<{ watermark: WatermarkConfig }>('/api/studio/watermark', draft);
       setDraft(watermark);
-      qc.invalidateQueries({ queryKey: qk.admin('watermark') });
+      void qc.invalidateQueries({ queryKey: qk.admin('watermark') });
       toast.success(t('distribution.watermarkSaved'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));

@@ -86,10 +86,10 @@ export function useCreateTaskFromStep(projectId: number) {
         body,
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['tasks'] });
-      qc.invalidateQueries({ queryKey: ['asset'] });
-      qc.invalidateQueries({ queryKey: ['shotgrid', 'links', projectId] });
-      qc.invalidateQueries({ queryKey: ['shotgrid', 'steps', projectId] });
+      void qc.invalidateQueries({ queryKey: ['tasks'] });
+      void qc.invalidateQueries({ queryKey: ['asset'] });
+      void qc.invalidateQueries({ queryKey: ['shotgrid', 'links', projectId] });
+      void qc.invalidateQueries({ queryKey: ['shotgrid', 'steps', projectId] });
     },
   });
 }

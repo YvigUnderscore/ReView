@@ -3,7 +3,7 @@
 
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { Role, UserStatus } from '@prisma/client';
+import { Prisma, Role, UserStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
 import * as InvitationService from './InvitationService';
@@ -370,7 +370,7 @@ export async function updatePreferences(
     throw badRequest('Préférences trop volumineuses', 'PREFERENCES_TOO_LARGE');
   await prisma.user.update({
     where: { id: userId },
-    data: { preferences: next as object },
+    data: { preferences: next as Prisma.InputJsonObject },
   });
   return next;
 }

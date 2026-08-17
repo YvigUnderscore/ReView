@@ -38,7 +38,7 @@ export default function PendingDrafts() {
 
   // Recharge dès qu'un upload se termine (un nouveau brouillon peut apparaître)
   useEffect(() => {
-    if (uploads.some((u) => u.status === 'done')) qc.invalidateQueries({ queryKey: qk.drafts });
+    if (uploads.some((u) => u.status === 'done')) void qc.invalidateQueries({ queryKey: qk.drafts });
   }, [uploads, qc]);
 
   // Publier/supprimer un brouillon affecte aussi les listes de versions et de médias

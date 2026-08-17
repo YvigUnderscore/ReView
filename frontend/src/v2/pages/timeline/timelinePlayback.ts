@@ -15,7 +15,7 @@ import type { TimelineClip } from '../../types/api';
 export function clipIndexAt(items: readonly TimelineClip[], t: number): number {
   if (items.length === 0) return -1;
   for (let i = 0; i < items.length; i++) {
-    const clip = items[i]!;
+    const clip = items[i];
     if (t < clip.startTime + clip.duration) return Math.max(0, i);
   }
   return items.length - 1;
@@ -73,7 +73,7 @@ export function sequenceSpans(items: readonly TimelineClip[]): SequenceSpan[] {
 export function sequenceStarts(items: readonly TimelineClip[]): number[] {
   const starts: number[] = [];
   items.forEach((clip, i) => {
-    if (i === 0 || clip.sequenceId === null || clip.sequenceId !== items[i - 1]!.sequenceId) starts.push(i);
+    if (i === 0 || clip.sequenceId === null || clip.sequenceId !== items[i - 1].sequenceId) starts.push(i);
   });
   return starts;
 }
@@ -108,7 +108,7 @@ export function trackLayout(items: readonly TimelineClip[], total: number): Trac
 
 /** Le plan lisible suivant (les cartons n'ont rien à charger), null en fin de montage. */
 export function nextPlayableIndex(items: readonly TimelineClip[], from: number): number {
-  for (let i = from + 1; i < items.length; i++) if (items[i]!.mediaId !== null) return i;
+  for (let i = from + 1; i < items.length; i++) if (items[i].mediaId !== null) return i;
   return -1;
 }
 

@@ -35,7 +35,7 @@ export default function ReviewStatusTab() {
       await api.del(`/api/review-statuses/${deleting.id}`);
       toast.success(t('reviewStatus.deleted'));
       setDeleting(null);
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('status.deleteFailed'));
     }
@@ -52,7 +52,7 @@ export default function ReviewStatusTab() {
         api.patch(`/api/review-statuses/${a.id}`, { order: b.order }),
         api.patch(`/api/review-statuses/${b.id}`, { order: a.order }),
       ]);
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('status.reorderFailed'));
     }
@@ -126,7 +126,7 @@ export default function ReviewStatusTab() {
           onSaved={() => {
             setCreating(false);
             setEditing(null);
-            invalidate();
+            void invalidate();
           }}
         />
       )}

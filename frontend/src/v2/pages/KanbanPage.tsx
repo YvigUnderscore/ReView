@@ -73,7 +73,7 @@ export default function KanbanPage() {
   const onDragStart = (e: DragStartEvent) => setActiveId(Number(e.active.id));
   const onDragEnd = (e: DragEndEvent) => {
     setActiveId(null);
-    if (e.over?.id != null) move(Number(e.active.id), e.over.id as TaskStatus);
+    if (e.over?.id != null) void move(Number(e.active.id), e.over.id as TaskStatus);
   };
 
   return (
@@ -101,7 +101,7 @@ export default function KanbanPage() {
               <KanbanColumn
                 key={key}
                 id={key}
-                label={t(TASK_STATUS_LABEL_KEY[key]!)}
+                label={t(TASK_STATUS_LABEL_KEY[key])}
                 tasks={filtered.filter((t) => t.status === key)}
               />
             ))}

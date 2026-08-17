@@ -57,7 +57,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
   });
   const playlists = listQ.data ?? [];
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ['playlists', projectId] });
+  const refresh = () => void qc.invalidateQueries({ queryKey: ['playlists', projectId] });
   const canEdit = (p: PlaylistSummary) => canWrite && (isManager || p.createdBy?.id === userId);
   // Sessions live en cours → badge LIVE cliquable sur la playlist (retours 33).
   const liveQ = useLiveSessionsQuery(projectId);
@@ -69,7 +69,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
       const first = playlist.items.find((it) => it.media);
       const path = first ? itemPath(first, p.id) : null;
       if (!path) return toast.error(t('playlists.unreadable'));
-      navigate(joinLive ? `${path}&live=1` : path);
+      void navigate(joinLive ? `${path}&live=1` : path);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('playlists.inaccessible'));
     }

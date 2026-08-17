@@ -19,17 +19,17 @@ describe('useSavedViews — helpers (42.A5)', () => {
   it('upsertView ajoute une vue et normalise ses filtres', () => {
     const next = upsertView([], 'Retards', { status: 'draft', kind: '' });
     expect(next).toHaveLength(1);
-    expect(next[0]!.name).toBe('Retards');
-    expect(next[0]!.filters).toEqual({ status: 'draft' });
-    expect(next[0]!.id).toMatch(/^v/);
+    expect(next[0].name).toBe('Retards');
+    expect(next[0].filters).toEqual({ status: 'draft' });
+    expect(next[0].id).toMatch(/^v/);
   });
 
   it('upsertView remplace par nom (insensible casse/espaces) en gardant l’id', () => {
     const existing: SavedView[] = [{ id: 'v1', name: 'Retards', filters: { status: 'draft' } }];
     const next = upsertView(existing, '  retards ', { status: 'published' });
     expect(next).toHaveLength(1);
-    expect(next[0]!.id).toBe('v1');
-    expect(next[0]!.filters).toEqual({ status: 'published' });
+    expect(next[0].id).toBe('v1');
+    expect(next[0].filters).toEqual({ status: 'published' });
   });
 
   it('removeView supprime par id', () => {

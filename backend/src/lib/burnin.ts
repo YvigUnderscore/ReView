@@ -100,7 +100,7 @@ export function escapeDrawtext(s: string): string {
   return s
     .replace(/'/g, '’')
     .replace(/\\/g, '\\\\')
-    .replace(/([:%,;\[\]])/g, '\\$1');
+    .replace(/([:%,;[\]])/g, '\\$1');
 }
 
 export interface BurninContext {

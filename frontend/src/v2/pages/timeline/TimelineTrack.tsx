@@ -93,7 +93,7 @@ export default function TimelineTrack({
         className="relative h-16 w-full cursor-pointer overflow-hidden rounded bg-secondary/30"
       >
         {slots.map(({ index, leftPct, widthPct }) => {
-          const clip = items[index]!;
+          const clip = items[index];
           return (
             <div
               key={clip.shotId}
@@ -102,7 +102,7 @@ export default function TimelineTrack({
               className={`group absolute top-0 h-16 overflow-hidden ${
                 // Le changement de séquence est plus marqué que le changement de plan.
                 starts.has(index) ? 'border-l-2 border-primary/80' : 'border-l border-border/60'
-              } ${clip.placeholder ? 'bg-amber-500/10' : ''} ${
+              } ${clip.placeholder ? 'bg-warning/10' : ''} ${
                 index === currentIndex ? 'ring-1 ring-inset ring-primary' : ''
               }`}
             >
@@ -112,7 +112,7 @@ export default function TimelineTrack({
                 <div className="flex h-full items-center justify-center">
                   <FileWarning
                     size={14}
-                    className={clip.placeholder ? 'text-amber-500' : 'text-muted-foreground'}
+                    className={clip.placeholder ? 'text-warning' : 'text-muted-foreground'}
                   />
                 </div>
               )}
@@ -123,7 +123,7 @@ export default function TimelineTrack({
               {clip.durationMismatch && (
                 <span
                   title={t('timeline.durationMismatch')}
-                  className="absolute right-0.5 top-0.5 text-amber-400"
+                  className="absolute right-0.5 top-0.5 text-warning"
                 >
                   <AlertTriangle size={10} />
                 </span>

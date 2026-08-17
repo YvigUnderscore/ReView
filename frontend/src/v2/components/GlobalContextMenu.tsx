@@ -102,13 +102,14 @@ export default function GlobalContextMenu({
       const target = e.target as HTMLElement | null;
       if (!target || target.closest(NATIVE_ZONES)) return;
       e.preventDefault();
-      const a = target.closest('a[href]') as HTMLAnchorElement | null;
-      const img = target.closest('img[src]') as HTMLImageElement | null;
+      // `closest` ne rend qu'un `Element` : on re-restreint aux types qui portent `href`/`src`.
+      const a = target.closest('a[href]');
+      const img = target.closest('img[src]');
       setCtx({
         x: e.clientX,
         y: e.clientY,
-        href: a?.href ?? null,
-        imgSrc: img?.src ?? null,
+        href: a instanceof HTMLAnchorElement ? a.href : null,
+        imgSrc: img instanceof HTMLImageElement ? img.src : null,
         selection: window.getSelection()?.toString().trim() ?? '',
       });
     };
@@ -145,7 +146,8 @@ export default function GlobalContextMenu({
               label={t('gctx.openLink')}
               onSelect={run(() => {
                 const url = new URL(ctx.href!, window.location.origin);
-                if (url.origin === window.location.origin) navigate(url.pathname + url.search + url.hash);
+                if (url.origin === window.location.origin)
+                  void navigate(url.pathname + url.search + url.hash);
                 else window.open(url.href, '_blank', 'noopener');
               })}
             />
@@ -191,8 +193,20 @@ export default function GlobalContextMenu({
             <Sep />
           </>
         )}
-        <Item icon={<ArrowLeft size={14} />} label={t('gctx.back')} onSelect={run(() => navigate(-1))} />
-        <Item icon={<ArrowRight size={14} />} label={t('gctx.forward')} onSelect={run(() => navigate(1))} />
+        <Item
+          icon={<ArrowLeft size={14} />}
+          label={t('gctx.back')}
+          onSelect={run(() => {
+            void navigate(-1);
+          })}
+        />
+        <Item
+          icon={<ArrowRight size={14} />}
+          label={t('gctx.forward')}
+          onSelect={run(() => {
+            void navigate(1);
+          })}
+        />
         <Item
           icon={<RefreshCw size={14} />}
           label={t('gctx.refreshData')}

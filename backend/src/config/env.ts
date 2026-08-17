@@ -157,7 +157,9 @@ const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   // Exception au « pas de console » : ce fail-fast s'exécute AVANT que le logger
   // (qui dépend de `env`) puisse exister. On écrit donc directement sur stderr.
+  // eslint-disable-next-line no-console
   console.error("❌ Variables d'environnement invalides :");
+  // eslint-disable-next-line no-console
   console.error(parsed.error.flatten().fieldErrors);
   process.exit(1);
 }

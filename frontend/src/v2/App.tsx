@@ -72,7 +72,7 @@ function AppRoutes() {
   const needsSetup = setup?.needsSetup ?? null;
 
   useEffect(() => {
-    init();
+    void init();
   }, [init]);
 
   if (!ready || needsSetup === null) {

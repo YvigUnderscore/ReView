@@ -375,7 +375,7 @@ export class ShotgridClient {
       throw new ShotgridApiError('Téléchargement du média ShotGrid impossible', res.status);
     const len = res.headers.get('content-length');
     return {
-      stream: Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]),
+      stream: Readable.fromWeb(res.body),
       size: len ? Number.parseInt(len, 10) : null,
       type: res.headers.get('content-type'),
     };

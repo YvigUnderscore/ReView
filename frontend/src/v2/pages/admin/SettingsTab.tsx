@@ -115,7 +115,7 @@ export default function SettingsTab() {
   const persist = async (key: string, value: string) => {
     try {
       await api.put('/api/studio/settings', { key, value });
-      qc.invalidateQueries({ queryKey: qk.admin('settings') });
+      void qc.invalidateQueries({ queryKey: qk.admin('settings') });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.save'));
     }

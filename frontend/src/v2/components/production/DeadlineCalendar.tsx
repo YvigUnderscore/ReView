@@ -121,7 +121,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
                   <Link
                     key={t.id}
                     to={`/tasks/${t.id}`}
-                    title={`${t.location} · ${t.name} — ${TASK_STATUS_LABEL_KEY[t.status] ? tr(TASK_STATUS_LABEL_KEY[t.status]!) : t.status}`}
+                    title={`${t.location} · ${t.name} — ${TASK_STATUS_LABEL_KEY[t.status] ? tr(TASK_STATUS_LABEL_KEY[t.status]) : t.status}`}
                     className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] hover:bg-secondary/60"
                   >
                     <span

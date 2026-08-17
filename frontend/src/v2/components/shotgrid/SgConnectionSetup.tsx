@@ -233,6 +233,18 @@ function SiteForm({ onDone, onCancel }: { onDone: (id: number) => void; onCancel
     </label>
   );
 
+  // Une option d'authentification. Le libellé est enfant direct du <span> porteur : le texte
+  // accessible du <label> doit rester à faible profondeur pour être reconnu comme tel.
+  const modeOption = (value: 'script' | 'user', label: string, hint: string) => (
+    <label className="flex items-start gap-2 text-sm">
+      <input type="radio" checked={authMode === value} onChange={() => setAuthMode(value)} className="mt-1" />
+      <span className="font-medium">
+        {label}
+        <span className="block text-xs font-normal text-muted-foreground">{hint}</span>
+      </span>
+    </label>
+  );
+
   return (
     <form onSubmit={submit} className="max-w-xl space-y-3">
       <h3 className="text-sm font-medium">{t('shotgrid.site.title')}</h3>
@@ -244,30 +256,8 @@ function SiteForm({ onDone, onCancel }: { onDone: (id: number) => void; onCancel
 
       <fieldset className="space-y-2">
         <legend className="mb-1 text-sm text-muted-foreground">{t('shotgrid.site.authMode')}</legend>
-        <label className="flex items-start gap-2 text-sm">
-          <input
-            type="radio"
-            checked={authMode === 'script'}
-            onChange={() => setAuthMode('script')}
-            className="mt-1"
-          />
-          <span>
-            <span className="font-medium">{t('shotgrid.site.modeScript')}</span>
-            <span className="block text-xs text-muted-foreground">{t('shotgrid.site.modeScriptHint')}</span>
-          </span>
-        </label>
-        <label className="flex items-start gap-2 text-sm">
-          <input
-            type="radio"
-            checked={authMode === 'user'}
-            onChange={() => setAuthMode('user')}
-            className="mt-1"
-          />
-          <span>
-            <span className="font-medium">{t('shotgrid.site.modeUser')}</span>
-            <span className="block text-xs text-muted-foreground">{t('shotgrid.site.modeUserHint')}</span>
-          </span>
-        </label>
+        {modeOption('script', t('shotgrid.site.modeScript'), t('shotgrid.site.modeScriptHint'))}
+        {modeOption('user', t('shotgrid.site.modeUser'), t('shotgrid.site.modeUserHint'))}
       </fieldset>
 
       {authMode === 'script' ? (

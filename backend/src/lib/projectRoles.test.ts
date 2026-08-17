@@ -33,7 +33,7 @@ describe('projectRoles.effectiveProjectRole (38.E)', () => {
   });
 
   it('rôle non-global sans membership : aucun accès (null)', async () => {
-    findUnique.mockResolvedValue(null as never);
+    findUnique.mockResolvedValue(null);
     expect(await effectiveProjectRole(2, Role.ARTIST, 9)).toBeNull();
   });
 

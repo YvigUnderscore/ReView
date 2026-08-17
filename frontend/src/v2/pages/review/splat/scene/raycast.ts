@@ -23,7 +23,7 @@ export function raycastCenter(
   mesh.raycast(raycaster, hits);
   if (hits.length === 0) return null;
   hits.sort((a, b) => a.distance - b.distance);
-  const p = hits[0]!.point;
+  const p = hits[0].point;
   const n = camera.position.clone().sub(p).normalize();
   mesh.updateMatrixWorld();
   const local = p.clone().applyMatrix4(new THREE.Matrix4().copy(mesh.matrixWorld).invert());

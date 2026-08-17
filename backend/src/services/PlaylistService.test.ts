@@ -153,7 +153,7 @@ describe('rename / removeItem / remove (33.A)', () => {
   });
 
   it('removeItem : 404 si l’item n’est pas dans la playlist', async () => {
-    vi.mocked(prisma.playlistItem.deleteMany).mockResolvedValue({ count: 0 } as never);
+    vi.mocked(prisma.playlistItem.deleteMany).mockResolvedValue({ count: 0 });
     await expect(removeItem(artist, 1, 42)).rejects.toMatchObject({ statusCode: 404 });
   });
 

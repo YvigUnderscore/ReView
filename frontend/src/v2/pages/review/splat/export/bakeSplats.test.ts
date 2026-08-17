@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { SdfVolumeData, SplatTransform } from '../../reviewTypes';
-import { bakeSplats, type BakedSplat, type ForEachSplat } from './bakeSplats';
+import { bakeSplats, type ForEachSplat } from './bakeSplats';
 
 /** Splat source « brut » (espace local) pour construire un itérateur de test. */
 interface RawSplat {
@@ -46,22 +46,22 @@ describe('bakeSplats', () => {
     const raws = [splat({ center: [1, 2, 3], color: [0.1, 0.2, 0.3] }), splat({ center: [-1, 0, 0] })];
     const out = bakeSplats(THREE, forEachOf(raws), noEdits);
     expect(out).toHaveLength(2);
-    expect(out[0]!.center).toEqual([1, 2, 3]);
-    expect(out[0]!.color).toEqual([0.1, 0.2, 0.3]);
+    expect(out[0].center).toEqual([1, 2, 3]);
+    expect(out[0].color).toEqual([0.1, 0.2, 0.3]);
   });
 
   it('exclut les splats masqués (opacité ≤ seuil)', () => {
     const raws = [splat({ opacity: 0 }), splat({ center: [5, 0, 0], opacity: 1 }), splat({ opacity: 0.0 })];
     const out = bakeSplats(THREE, forEachOf(raws), noEdits);
     expect(out).toHaveLength(1);
-    expect(out[0]!.center).toEqual([5, 0, 0]);
+    expect(out[0].center).toEqual([5, 0, 0]);
   });
 
   it('respecte un seuil d’opacité personnalisé', () => {
     const raws = [splat({ opacity: 0.05 }), splat({ center: [1, 0, 0], opacity: 0.5 })];
     const out = bakeSplats(THREE, forEachOf(raws), { ...noEdits, opacityEpsilon: 0.1 });
     expect(out).toHaveLength(1);
-    expect(out[0]!.center).toEqual([1, 0, 0]);
+    expect(out[0].center).toEqual([1, 0, 0]);
   });
 
   it('retire les splats escamotés par un volume « creuser » (delete)', () => {
@@ -72,7 +72,7 @@ describe('bakeSplats', () => {
     const raws = [splat({ center: [0, 0, 0] }), splat({ center: [2, 0, 0] })];
     const out = bakeSplats(THREE, forEachOf(raws), { transform: null, volumes });
     expect(out).toHaveLength(1);
-    expect(out[0]!.center).toEqual([2, 0, 0]);
+    expect(out[0].center).toEqual([2, 0, 0]);
   });
 
   it('ne garde que l’intérieur d’un volume « isoler » (isolate)', () => {
@@ -82,15 +82,15 @@ describe('bakeSplats', () => {
     const raws = [splat({ center: [0.5, 0, 0] }), splat({ center: [3, 0, 0] })];
     const out = bakeSplats(THREE, forEachOf(raws), { transform: null, volumes });
     expect(out).toHaveLength(1);
-    expect(out[0]!.center).toEqual([0.5, 0, 0]);
+    expect(out[0].center).toEqual([0.5, 0, 0]);
   });
 
   it('cuit une translation dans le centre', () => {
     const transform: SplatTransform = { position: [10, 0, 0], quaternion: [0, 0, 0, 1], scale: [1, 1, 1] };
     const out = bakeSplats(THREE, forEachOf([splat({ center: [1, 2, 3] })]), { transform, volumes: [] });
-    expect(out[0]!.center[0]).toBeCloseTo(11, 6);
-    expect(out[0]!.center[1]).toBeCloseTo(2, 6);
-    expect(out[0]!.center[2]).toBeCloseTo(3, 6);
+    expect(out[0].center[0]).toBeCloseTo(11, 6);
+    expect(out[0].center[1]).toBeCloseTo(2, 6);
+    expect(out[0].center[2]).toBeCloseTo(3, 6);
   });
 
   it('cuit une échelle uniforme dans le centre et les tailles', () => {
@@ -99,8 +99,8 @@ describe('bakeSplats', () => {
       transform,
       volumes: [],
     });
-    expect(out[0]!.center[0]).toBeCloseTo(2, 6);
-    expect(out[0]!.scales).toEqual([1, 1, 1]);
+    expect(out[0].center[0]).toBeCloseTo(2, 6);
+    expect(out[0].scales).toEqual([1, 1, 1]);
   });
 
   it('cuit une rotation de 90° autour de Y dans le centre et l’orientation', () => {
@@ -112,9 +112,9 @@ describe('bakeSplats', () => {
     };
     const out = bakeSplats(THREE, forEachOf([splat({ center: [1, 0, 0] })]), { transform, volumes: [] });
     // (1,0,0) tourné de +90° autour de Y → (0,0,-1).
-    expect(out[0]!.center[0]).toBeCloseTo(0, 5);
-    expect(out[0]!.center[2]).toBeCloseTo(-1, 5);
-    const baked = new THREE.Quaternion().fromArray(out[0]!.quaternion as BakedSplat['quaternion']);
+    expect(out[0].center[0]).toBeCloseTo(0, 5);
+    expect(out[0].center[2]).toBeCloseTo(-1, 5);
+    const baked = new THREE.Quaternion().fromArray(out[0].quaternion);
     expect(Math.abs(baked.angleTo(q))).toBeLessThan(1e-5);
   });
 });

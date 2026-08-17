@@ -25,7 +25,7 @@ export default function FavoriteButton({
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        toggle(type, entityId);
+        void toggle(type, entityId);
       }}
       title={isFav ? t('favorites.remove') : t('favorites.add')}
       aria-label={isFav ? t('favorites.remove') : t('favorites.add')}

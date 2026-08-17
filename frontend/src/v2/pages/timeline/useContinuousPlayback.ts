@@ -66,7 +66,7 @@ function attachHls(el: HTMLVideoElement, url: string, onFatal: () => void): Hls 
   hls.on(Hls.Events.MANIFEST_PARSED, () => {
     let best = 0;
     hls.levels.forEach((l, i) => {
-      if (l.height > hls.levels[best]!.height) best = i;
+      if (l.height > hls.levels[best].height) best = i;
     });
     hls.currentLevel = best;
   });
@@ -305,7 +305,7 @@ export function useContinuousPlayback(
     const first = Math.max(0, clipIndexAt(items, startAt));
     setStarted(true);
     setIndex(first);
-    setTime(globalTimeOf(items[first]!, startAt - items[first]!.startTime));
+    setTime(globalTimeOf(items[first], startAt - items[first].startTime));
   }
 
   // Le chargement du premier plan est asynchrone : sans ce verrou, un rendu survenu avant
@@ -416,7 +416,7 @@ export function useContinuousPlayback(
     (globalTime: number) => {
       const targetIndex = clipIndexAt(items, globalTime);
       if (targetIndex < 0) return;
-      const target = items[targetIndex]!;
+      const target = items[targetIndex];
       const local = localTimeAt(target, globalTime);
       // Déplacement à l'intérieur du plan courant : un simple `currentTime` suffit, inutile
       // de recharger la source.

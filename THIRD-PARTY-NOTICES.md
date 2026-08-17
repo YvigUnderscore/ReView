@@ -9533,7 +9533,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### body-parser@2.2.1
+### body-parser@2.3.0
 
 - License: `MIT`
 - Source: expressjs/body-parser
@@ -9929,8 +9929,32 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### content-type@2.0.0
 
 - License: `MIT`
+- Source: jshttp/content-type
 
-_No license file shipped in the package; the `MIT` declaration in its `package.json` governs._
+```text
+(The MIT License)
+
+Copyright (c) 2015 Douglas Christopher Wilson
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
 
 ### cookie-signature@1.2.2
 
@@ -11650,7 +11674,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### iconv-lite@0.7.1
+### iconv-lite@0.7.3
 
 - License: `MIT`
 - Source: https://github.com/pillarjs/iconv-lite
@@ -14447,7 +14471,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### socket.io-parser@4.2.6
+### socket.io-parser@4.2.7
 
 - License: `MIT`
 - Source: https://github.com/socketio/socket.io
@@ -14785,7 +14809,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ```
 
-### type-is@2.0.1
+### type-is@2.1.0
 
 - License: `MIT`
 - Source: jshttp/type-is
@@ -17052,7 +17076,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @mermaid-js/parser@1.1.1
+### @mermaid-js/parser@1.2.0
 
 - License: `MIT`
 - Source: https://github.com/mermaid-js/mermaid
@@ -21919,7 +21943,7 @@ THE SOFTWARE.
 ```
 ````
 
-### dompurify@3.4.12
+### dompurify@3.4.13
 
 - License: `(MPL-2.0 OR Apache-2.0)`
 - Source: https://github.com/cure53/DOMPurify
@@ -24031,7 +24055,7 @@ Redistribution and use in source and binary forms, with or without modification,
 This software is provided by the copyright holders and contributors “as is” and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed. In no event shall the copyright owner or contributors be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption) however caused and on any theory of liability, whether in contract, strict liability, or tort (including negligence or otherwise) arising in any way out of the use of this software, even if advised of the possibility of such damage.
 ```
 
-### mermaid@11.15.0
+### mermaid@11.16.1
 
 - License: `MIT`
 - Source: https://github.com/mermaid-js/mermaid
@@ -24176,7 +24200,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### nanoid@3.3.16
+### nanoid@3.3.18
 
 - License: `MIT`
 - Source: ai/nanoid
@@ -24204,7 +24228,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### nanoid@4.0.2
+### nanoid@5.1.16
 
 - License: `MIT`
 - Source: ai/nanoid
@@ -24212,7 +24236,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```text
 The MIT License (MIT)
 
-Copyright 2017 Andrey Sitnik <andrey@sitnik.ru>
+Copyright 2017 Andrey Sitnik <andrey@sitnik.es>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -27135,7 +27159,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### socket.io-parser@4.2.6
+### socket.io-parser@4.2.7
 
 - License: `MIT`
 - Source: https://github.com/socketio/socket.io

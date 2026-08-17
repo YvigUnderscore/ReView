@@ -39,7 +39,7 @@ export default function SetupPage() {
     try {
       const { token, user } = await api.post<{ token: string; user: AuthUser }>('/api/setup', form);
       setAuth(token, user);
-      navigate('/');
+      void navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : tr('setup.error.generic'));
     } finally {

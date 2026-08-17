@@ -40,8 +40,8 @@ function scheduleTrashSweep(): void {
     }
   };
   // Premier passage différé de 60 s pour ne pas alourdir le démarrage.
-  setTimeout(sweep, 60_000);
-  setInterval(sweep, TRASH_SWEEP_INTERVAL_MS).unref();
+  setTimeout(() => void sweep(), 60_000);
+  setInterval(() => void sweep(), TRASH_SWEEP_INTERVAL_MS).unref();
 }
 
 /** Digest email quotidien : premier envoi à DIGEST_HOUR (heure locale), puis toutes les 24 h. */
@@ -58,9 +58,9 @@ function scheduleDailyDigest(): void {
   if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
   setTimeout(() => {
     void run();
-    setInterval(run, 24 * 60 * 60 * 1000).unref();
+    setInterval(() => void run(), 24 * 60 * 60 * 1000).unref();
   }, next.getTime() - Date.now()).unref();
-  logger.info(`[Digest] prochain envoi planifié : ${next.toLocaleString('fr-FR')}`);
+  logger.info(`[Digest] prochain envoi planifié : ${next.toISOString()}`);
 }
 
 /** Rapport hebdomadaire (43.B) : lundi à DIGEST_HOUR (heure locale), puis toutes les semaines. */
@@ -80,9 +80,9 @@ function scheduleWeeklyReport(): void {
   } while (next.getDay() !== 1);
   setTimeout(() => {
     void run();
-    setInterval(run, WEEK_MS).unref();
+    setInterval(() => void run(), WEEK_MS).unref();
   }, next.getTime() - Date.now()).unref();
-  logger.info(`[WeeklyReport] prochain envoi planifié : ${next.toLocaleString('fr-FR')}`);
+  logger.info(`[WeeklyReport] prochain envoi planifié : ${next.toISOString()}`);
 }
 
 async function main(): Promise<void> {

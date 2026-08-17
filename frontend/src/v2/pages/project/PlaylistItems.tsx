@@ -48,7 +48,7 @@ export default function PlaylistItems({
     const ids = items.map((it) => it.id);
     const target = index + delta;
     if (target < 0 || target >= ids.length) return;
-    [ids[index], ids[target]] = [ids[target]!, ids[index]!];
+    [ids[index], ids[target]] = [ids[target], ids[index]];
     try {
       await api.patch(`/api/playlists/${playlistId}`, { itemIds: ids });
       refresh();
@@ -80,27 +80,31 @@ export default function PlaylistItems({
         return (
           <ContextMenu key={it.id}>
             <ContextMenuTrigger asChild>
-              <li
-                onClick={() => (path ? navigate(path) : toast.error(t('task.noPlayableMedia')))}
-                className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-3 py-1.5 text-sm last:border-b-0 hover:bg-secondary/50"
-              >
-                <span className="w-5 shrink-0 text-right font-mono text-xs text-muted-foreground">
-                  {i + 1}
-                </span>
-                {it.media?.thumbnailUrl ? (
-                  <img
-                    src={it.media.thumbnailUrl}
-                    alt=""
-                    className="h-8 w-14 shrink-0 rounded object-cover"
-                  />
-                ) : (
-                  <span className="h-8 w-14 shrink-0 rounded bg-secondary" />
-                )}
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="font-medium">{it.version.location || it.media?.originalName}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{it.version.name}</span>
-                </span>
-                {it.version.reviewStatus && <ReviewDecisionBadge status={it.version.reviewStatus} />}
+              <li className="border-b border-border/50 last:border-b-0">
+                {/* L'interaction vit sur un bouton interne : le <li> reste non interactif (a11y). */}
+                <button
+                  type="button"
+                  onClick={() => (path ? navigate(path) : toast.error(t('task.noPlayableMedia')))}
+                  className="flex w-full cursor-pointer items-center gap-3 px-3 py-1.5 text-left text-sm hover:bg-secondary/50"
+                >
+                  <span className="w-5 shrink-0 text-right font-mono text-xs text-muted-foreground">
+                    {i + 1}
+                  </span>
+                  {it.media?.thumbnailUrl ? (
+                    <img
+                      src={it.media.thumbnailUrl}
+                      alt=""
+                      className="h-8 w-14 shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <span className="h-8 w-14 shrink-0 rounded bg-secondary" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">{it.version.location || it.media?.originalName}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{it.version.name}</span>
+                  </span>
+                  {it.version.reviewStatus && <ReviewDecisionBadge status={it.version.reviewStatus} />}
+                </button>
               </li>
             </ContextMenuTrigger>
             <ContextMenuContent>

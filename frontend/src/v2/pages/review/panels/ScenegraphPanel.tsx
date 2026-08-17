@@ -54,7 +54,7 @@ function PrimRow({
   expanded: Set<string>;
   onToggle: (path: string) => void;
   /** Clic sur la rangée — la sélection (simple/additive/plage) est arbitrée par le panneau. */
-  onRowClick: (path: string, e: React.MouseEvent) => void;
+  onRowClick: (path: string, e: React.MouseEvent | React.KeyboardEvent) => void;
 }) {
   const t = useT();
   const open = expanded.has(node.path);
@@ -70,7 +70,14 @@ function PrimRow({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
+            role="button"
+            tabIndex={0}
             onClick={(e) => onRowClick(node.path, e)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              onRowClick(node.path, e);
+            }}
             style={{ paddingLeft: `${depth * 12 + 4}px` }}
             className={`group flex cursor-default items-center gap-1 rounded py-0.5 pr-1 text-xs ${
               isSelected ? 'bg-primary/20 text-foreground' : 'hover:bg-secondary'
@@ -150,7 +157,14 @@ function PrimRow({
         return (
           <div
             key={pseudo}
+            role="button"
+            tabIndex={0}
             onClick={(e) => scene.select(pseudo, { additive: e.ctrlKey || e.metaKey })}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              scene.select(pseudo, { additive: e.ctrlKey || e.metaKey });
+            }}
             style={{ paddingLeft: `${(depth + 1) * 12 + 4}px` }}
             className={`group flex cursor-default items-center gap-1 rounded py-0.5 pr-1 text-xs ${
               cloneSelected ? 'bg-primary/20 text-foreground' : 'text-muted-foreground hover:bg-secondary'
@@ -231,7 +245,7 @@ export default function ScenegraphPanel({
   const searching = query.trim().length > 0;
 
   /** Clic sur une rangée : simple = remplace, Ctrl = bascule, Maj = plage depuis le primaire. */
-  const onRowClick = (path: string, e: React.MouseEvent) => {
+  const onRowClick = (path: string, e: React.MouseEvent | React.KeyboardEvent) => {
     if (e.shiftKey && scene.primary && scene.primary !== path) {
       const order = flattenTree(displayTree);
       const a = order.indexOf(scene.primary);

@@ -89,7 +89,7 @@ export default function CommandPalette({
   const go = (to: string) => {
     onOpenChange(false);
     setQ('');
-    navigate(to);
+    void navigate(to);
   };
 
   const hasQuery = q.trim().length > 0;

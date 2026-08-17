@@ -14,7 +14,7 @@ function makeHandle() {
       center: null,
       scales: null,
       quaternion: null,
-      opacity: opacities[i]!,
+      opacity: opacities[i],
       color: null,
     }),
     setSplat: (i: number, _c: unknown, _s: unknown, _q: unknown, opacity: number) => {

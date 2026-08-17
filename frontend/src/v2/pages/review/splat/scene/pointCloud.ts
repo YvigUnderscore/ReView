@@ -90,9 +90,9 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
   const refresh = (i: number) => {
     const o = i * 3;
     const hide = maskHidden.has(i) || cropped.has(i);
-    positions[o] = hide ? NaN : basePositions[o]!;
-    positions[o + 1] = hide ? NaN : basePositions[o + 1]!;
-    positions[o + 2] = hide ? NaN : basePositions[o + 2]!;
+    positions[o] = hide ? NaN : basePositions[o];
+    positions[o + 1] = hide ? NaN : basePositions[o + 1];
+    positions[o + 2] = hide ? NaN : basePositions[o + 2];
   };
 
   return {

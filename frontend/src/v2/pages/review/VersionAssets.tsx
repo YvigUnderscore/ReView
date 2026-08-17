@@ -51,7 +51,7 @@ export default function VersionAssets({ versionId, mediaId }: { versionId: numbe
   const step = (delta: number) => {
     const from = index < 0 ? 0 : index;
     const next = media[(from + delta + media.length) % media.length];
-    if (next && next.id !== mediaId) navigate(reviewPath(next));
+    if (next && next.id !== mediaId) void navigate(reviewPath(next));
   };
 
   return (

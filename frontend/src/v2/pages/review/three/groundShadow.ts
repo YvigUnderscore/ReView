@@ -64,7 +64,7 @@ export function setGroundShadow(handle: ViewerSceneHandle, enabled: boolean): vo
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.bias = -0.0005;
-    const cam = key.shadow.camera as THREE.OrthographicCamera;
+    const cam = key.shadow.camera;
     const r = extent * 1.5;
     cam.left = -r;
     cam.right = r;

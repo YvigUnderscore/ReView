@@ -90,7 +90,7 @@ export default function SelectionOverlay({
     setDrag((d) => {
       if (!d) return d;
       if (tool === 'rect') return { ...d, points: [p] };
-      const last = d.points[d.points.length - 1]!;
+      const last = d.points[d.points.length - 1];
       const dist = Math.hypot(p[0] - last[0], p[1] - last[1]);
       return dist >= LASSO_STEP ? { ...d, points: [...d.points, p] } : d;
     });

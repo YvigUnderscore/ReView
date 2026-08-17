@@ -28,32 +28,36 @@ const findFirst = vi.mocked(prisma.project.findFirst);
 const findUnique = vi.mocked(prisma.project.findUnique);
 const admin = { id: 1, role: 'ADMIN' as const };
 
+// Formes minimales des créations capturées : le service ne lit que id + colonnes copiées.
+type Row = { id: number } & Record<string, unknown>;
+type CreateArgs = { data: Record<string, unknown> };
+
 // tx factice : ids séquentiels par entité, capture des créations.
 function makeTx() {
-  const created = { sequences: [] as any[], shots: [] as any[], tasks: [] as any[] };
+  const created = { sequences: [] as Row[], shots: [] as Row[], tasks: [] as CreateArgs['data'][] };
   let seqId = 100;
   let shotId = 200;
   return {
     tx: {
       project: { create: vi.fn().mockResolvedValue({ id: 42 }) },
       sequence: {
-        create: vi.fn((args: any) => {
-          const row = { id: ++seqId, ...args.data };
+        create: vi.fn((args: CreateArgs) => {
+          const row: Row = { ...args.data, id: ++seqId };
           created.sequences.push(row);
           return Promise.resolve(row);
         }),
       },
       shot: {
-        create: vi.fn((args: any) => {
-          const row = { id: ++shotId, ...args.data };
+        create: vi.fn((args: CreateArgs) => {
+          const row: Row = { ...args.data, id: ++shotId };
           created.shots.push(row);
           return Promise.resolve(row);
         }),
       },
       task: {
-        create: vi.fn((args: any) => {
+        create: vi.fn((args: CreateArgs) => {
           created.tasks.push(args.data);
-          return Promise.resolve({ id: 1, ...args.data });
+          return Promise.resolve({ ...args.data, id: 1 });
         }),
       },
     },
@@ -65,7 +69,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('ProjectService.duplicateProject (38.A)', () => {
   it('404 si le projet source est introuvable', async () => {
-    findFirst.mockResolvedValue(null as never);
+    findFirst.mockResolvedValue(null);
     await expect(duplicateProject(admin, 5, 'Copie', false)).rejects.toMatchObject({ statusCode: 404 });
   });
 
@@ -109,9 +113,10 @@ describe('ProjectService.duplicateProject (38.A)', () => {
         },
       ],
     } as never);
-    findUnique.mockResolvedValue(null as never);
+    findUnique.mockResolvedValue(null);
     const { tx, created } = makeTx();
-    vi.mocked(prisma.$transaction).mockImplementation(((fn: any) => fn(tx)) as never);
+    vi.mocked(prisma.$transaction).mockImplementation(((fn: (client: unknown) => unknown) =>
+      fn(tx)) as never);
 
     await duplicateProject(admin, 5, 'Nouveau', false);
 
@@ -120,9 +125,9 @@ describe('ProjectService.duplicateProject (38.A)', () => {
       expect.objectContaining({ data: expect.objectContaining({ settings: { departments: ['comp'] } }) }),
     );
     // Shot rattaché à la nouvelle séquence (id remappé), shot hors séquence reste null.
-    const seqNewId = created.sequences[0].id;
-    expect(created.shots.find((s) => s.code === 'SH01').sequenceId).toBe(seqNewId);
-    expect(created.shots.find((s) => s.code === 'SH02').sequenceId).toBeNull();
+    const seqNewId = created.sequences[0]!.id;
+    expect(created.shots.find((s) => s.code === 'SH01')!.sequenceId).toBe(seqNewId);
+    expect(created.shots.find((s) => s.code === 'SH02')!.sequenceId).toBeNull();
     // Pas de tâches copiées.
     expect(created.tasks).toHaveLength(0);
   });
@@ -148,9 +153,10 @@ describe('ProjectService.duplicateProject (38.A)', () => {
         },
       ],
     } as never);
-    findUnique.mockResolvedValue(null as never);
+    findUnique.mockResolvedValue(null);
     const { tx, created } = makeTx();
-    vi.mocked(prisma.$transaction).mockImplementation(((fn: any) => fn(tx)) as never);
+    vi.mocked(prisma.$transaction).mockImplementation(((fn: (client: unknown) => unknown) =>
+      fn(tx)) as never);
 
     await duplicateProject(admin, 5, 'Avec tâches', true);
 

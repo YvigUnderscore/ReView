@@ -65,7 +65,7 @@ export default function SequencesTab({
       await api.del(`/api/sequences/${deleting.id}`);
       toast.success(t('sequences.trashed'));
       setDeleting(null);
-      reload();
+      void reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -151,7 +151,7 @@ export default function SequencesTab({
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            reload();
+            void reload();
           }}
         />
       )}

@@ -36,7 +36,7 @@ export default function PlaylistNavigator({ versionId }: { versionId: number }) 
   const prev = findPlayableNeighbor(items, idx, -1);
   const next = findPlayableNeighbor(items, idx, 1);
   const go = (item: PlaylistItemEntry | null) => {
-    if (item?.media) navigate(reviewPath(item.media) + carryParams(searchParams));
+    if (item?.media) void navigate(reviewPath(item.media) + carryParams(searchParams));
   };
 
   return (

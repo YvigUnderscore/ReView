@@ -161,9 +161,13 @@ describe('checkCatalog', () => {
   });
 
   it('refuse une forme que la langue ne distingue pas', () => {
-    const r = check({ a: { one: '{n} item', other: '{n} items' } }, { a: { one: '1 件', other: '{n} 件' } }, {
-      categories: ['other'],
-    });
+    const r = check(
+      { a: { one: '{n} item', other: '{n} items' } },
+      { a: { one: '1 件', other: '{n} 件' } },
+      {
+        categories: ['other'],
+      },
+    );
     expect(r.errors.join()).toMatch(/définit « one », que cette langue ne distingue pas/);
   });
 

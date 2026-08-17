@@ -118,13 +118,13 @@ describe('mergeOverrides', () => {
       purpose: 'guide',
       prims: { '/W/A': { variants: { look: 'dirty' } } },
     });
-    expect(merged.prims['/W/A']!.variants).toEqual({ look: 'dirty' });
+    expect(merged.prims['/W/A'].variants).toEqual({ look: 'dirty' });
     expect(merged.purpose).toBe('guide');
   });
 
   it('tolère des étages absents', () => {
     expect(mergeOverrides(null, null)).toEqual(emptyOverride());
-    expect(mergeOverrides(base, null).prims['/W/A']!.transform).toEqual(moved);
+    expect(mergeOverrides(base, null).prims['/W/A'].transform).toEqual(moved);
   });
 });
 
@@ -207,7 +207,7 @@ describe('clones de mise en scène (C1)', () => {
     let o = addClone(emptyOverride(), '/W/Chair', { id: 'c1', transform: IDENTITY_TRANSFORM });
     expect(clonesOf(o, '/W/Chair')).toHaveLength(1);
     o = setCloneTransform(o, '/W/Chair', 'c1', moved);
-    expect(clonesOf(o, '/W/Chair')[0]!.transform).toEqual(moved);
+    expect(clonesOf(o, '/W/Chair')[0].transform).toEqual(moved);
     o = removeClone(o, '/W/Chair', 'c1');
     // Le dernier clone retiré rend l'édition vide : le prim disparaît de l'override.
     expect(isEmptyOverride(o)).toBe(true);
@@ -239,7 +239,7 @@ describe('clones de mise en scène (C1)', () => {
     const clean = normalizeOverride(raw);
     expect(clonesOf(clean, '/W').map((c) => c.id)).toEqual(['a', 'c']);
     // Une identité de clone est significative (copie posée au même endroit) : conservée.
-    expect(clonesOf(clean, '/W')[0]!.transform).toEqual(IDENTITY_TRANSFORM);
+    expect(clonesOf(clean, '/W')[0].transform).toEqual(IDENTITY_TRANSFORM);
   });
 
   it('fusionne les clones par id (la proposition met à jour ou ajoute)', () => {

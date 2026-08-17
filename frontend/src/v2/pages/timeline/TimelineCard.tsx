@@ -96,7 +96,7 @@ export default function TimelineCard({
           {formatDuration(timeline.totalDuration)}
         </span>
         {timeline.gapCount > 0 && (
-          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-500">
+          <span className="rounded bg-warning/15 px-1.5 py-0.5 text-[10px] text-warning">
             {t('timeline.gapCount', { count: timeline.gapCount })}
           </span>
         )}

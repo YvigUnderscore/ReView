@@ -43,7 +43,7 @@ export default function UserDetailTab() {
     try {
       await api.del(`/api/admin/sessions/${sid}`);
       toast.success(t('userDetail.sessionRevoked'));
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('user.revokeFailed'));
     }
@@ -52,7 +52,7 @@ export default function UserDetailTab() {
     try {
       const { revoked } = await api.del<{ revoked: number }>(`/api/users/${userId}/sessions`);
       toast.success(t('sessions.revokedCount', { count: revoked }));
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('user.revokeFailed'));
     }
@@ -61,8 +61,8 @@ export default function UserDetailTab() {
     try {
       await api.del(`/api/users/${userId}`);
       toast.success(t('userDetail.userDeleted'));
-      qc.invalidateQueries({ queryKey: qk.users });
-      navigate('/admin/users');
+      void qc.invalidateQueries({ queryKey: qk.users });
+      void navigate('/admin/users');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
@@ -155,8 +155,8 @@ export default function UserDetailTab() {
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
-            invalidate();
-            qc.invalidateQueries({ queryKey: qk.users });
+            void invalidate();
+            void qc.invalidateQueries({ queryKey: qk.users });
           }}
         />
       )}

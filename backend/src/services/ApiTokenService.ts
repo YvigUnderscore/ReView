@@ -120,7 +120,7 @@ export async function createService(createdById: number, input: CreateServiceTok
         email,
         password: await bcrypt.hash(randomBytes(32).toString('hex'), 12),
         name: input.name,
-        role: (input.role ?? Role.ARTIST) as Role,
+        role: input.role ?? Role.ARTIST,
         isService: true,
       },
       select: { id: true, isService: true },

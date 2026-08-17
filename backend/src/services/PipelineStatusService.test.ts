@@ -69,7 +69,7 @@ describe('listForProject', () => {
     await listForProject(448, 'task');
     // Deux statuts de même rang sortiraient dans un ordre variable sans départage :
     // le « premier » servant de repli changerait d'un appel à l'autre.
-    expect(db.pipelineStatus.findMany.mock.calls[0][0].orderBy).toEqual([
+    expect(db.pipelineStatus.findMany.mock.calls[0]![0].orderBy).toEqual([
       { scope: 'asc' },
       { order: 'asc' },
       { code: 'asc' },

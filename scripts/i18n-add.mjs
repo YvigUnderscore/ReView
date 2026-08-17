@@ -25,35 +25,16 @@
  */
 
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const SETS = {
   frontend: 'frontend/src/v2/i18n/messages',
   backend: 'backend/src/i18n/messages',
 };
 
-const args = process.argv.slice(2);
-const batchPath = args.find((a) => !a.startsWith('--'));
-const setName = (args.find((a) => a.startsWith('--set=')) ?? '--set=frontend').slice(6);
-
-if (!batchPath) {
-  console.error('usage: node scripts/i18n-add.mjs <lot.json> [--set=frontend|backend]');
-  process.exit(2);
-}
-
-const dir = SETS[setName];
-if (!dir) {
-  console.error(`jeu de catalogues inconnu : ${setName} (attendu : ${Object.keys(SETS).join('|')})`);
-  process.exit(2);
-}
-
-const batch = JSON.parse(readFileSync(batchPath, 'utf8'));
-const locales = readdirSync(dir)
-  .filter((f) => f.endsWith('.json'))
-  .map((f) => f.replace(/\.json$/, ''));
-
 /** Rend la valeur telle qu'elle s'écrit dans le catalogue — une clé par ligne, style Prettier. */
-const render = (key, value) => {
+export const render = (key, value) => {
   const body =
     typeof value === 'string'
       ? JSON.stringify(value)
@@ -63,14 +44,16 @@ const render = (key, value) => {
   return `  ${JSON.stringify(key)}: ${body},`;
 };
 
-let written = 0;
-const missing = [];
-
-for (const locale of locales) {
-  const file = join(dir, `${locale}.json`);
-  const raw = readFileSync(file, 'utf8');
+/**
+ * Fusionne un lot dans le texte brut d'un catalogue — fonction pure, rien n'est lu ni
+ * écrit sur disque. Renvoie le nouveau contenu, le nombre d'écritures et les clés dont
+ * la traduction manque pour cette langue.
+ */
+export function mergeCatalog(raw, batch, locale) {
   const eol = raw.includes('\r\n') ? '\r\n' : '\n';
   const lines = raw.split(/\r?\n/);
+  let written = 0;
+  const missing = [];
 
   for (const [key, byLocale] of Object.entries(batch)) {
     const value = byLocale[locale];
@@ -111,16 +94,54 @@ for (const locale of locales) {
     written += 1;
   }
 
-  writeFileSync(file, lines.join(eol), 'utf8');
+  return { content: lines.join(eol), written, missing };
 }
 
-if (missing.length) {
-  console.error(`\x1b[0;31m✗ ${missing.length} traduction(s) absente(s) du lot :\x1b[0m`);
-  for (const m of missing.slice(0, 20)) console.error(`   ${m}`);
-  if (missing.length > 20) console.error(`   … et ${missing.length - 20} autres`);
-  process.exit(1);
+function main() {
+  const args = process.argv.slice(2);
+  const batchPath = args.find((a) => !a.startsWith('--'));
+  const setName = (args.find((a) => a.startsWith('--set=')) ?? '--set=frontend').slice(6);
+
+  if (!batchPath) {
+    console.error('usage: node scripts/i18n-add.mjs <lot.json> [--set=frontend|backend]');
+    process.exit(2);
+  }
+
+  const dir = SETS[setName];
+  if (!dir) {
+    console.error(`jeu de catalogues inconnu : ${setName} (attendu : ${Object.keys(SETS).join('|')})`);
+    process.exit(2);
+  }
+
+  const batch = JSON.parse(readFileSync(batchPath, 'utf8'));
+  const locales = readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => f.replace(/\.json$/, ''));
+
+  let written = 0;
+  const missing = [];
+
+  for (const locale of locales) {
+    const file = join(dir, `${locale}.json`);
+    const result = mergeCatalog(readFileSync(file, 'utf8'), batch, locale);
+    writeFileSync(file, result.content, 'utf8');
+    written += result.written;
+    missing.push(...result.missing);
+  }
+
+  if (missing.length) {
+    console.error(`\x1b[0;31m✗ ${missing.length} traduction(s) absente(s) du lot :\x1b[0m`);
+    for (const m of missing.slice(0, 20)) console.error(`   ${m}`);
+    if (missing.length > 20) console.error(`   … et ${missing.length - 20} autres`);
+    process.exit(1);
+  }
+
+  console.log(
+    `\x1b[0;32m✓ ${Object.keys(batch).length} clé(s) écrite(s) dans ${locales.length} catalogues (${written} écritures)\x1b[0m`,
+  );
 }
 
-console.log(
-  `\x1b[0;32m✓ ${Object.keys(batch).length} clé(s) écrite(s) dans ${locales.length} catalogues (${written} écritures)\x1b[0m`,
-);
+// Exécuté directement (et non importé par un test) → on lance.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

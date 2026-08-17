@@ -76,9 +76,7 @@ describe('hasHeader', () => {
 
 describe('withHeader', () => {
   it('préfixe un fichier TypeScript et laisse une ligne vide', () => {
-    expect(withHeader(`import x from 'y';${LF}`, '.ts')).toBe(
-      `${HEADER_LF}${LF}import x from 'y';${LF}`,
-    );
+    expect(withHeader(`import x from 'y';${LF}`, '.ts')).toBe(`${HEADER_LF}${LF}import x from 'y';${LF}`);
   });
 
   it('est idempotent', () => {

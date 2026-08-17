@@ -22,6 +22,9 @@ CardHeader.displayName = 'CardHeader';
 
 const CardTitle = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
+    // Primitive générique : le contenu du titre arrive de l'appelant par `{...props}`
+    // (`children`), la règle ne peut pas le voir à cet endroit.
+    // eslint-disable-next-line jsx-a11y/heading-has-content
     <h3 ref={ref} className={cn('text-lg font-semibold leading-none tracking-tight', className)} {...props} />
   ),
 );

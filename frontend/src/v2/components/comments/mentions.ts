@@ -17,7 +17,7 @@ export interface MentionCandidate {
 
 /** Handle d'un membre : pseudo, sinon partie locale de l'email (matché côté backend). */
 export function mentionHandle(user: { username?: string | null; email: string }): string {
-  return user.username ?? user.email.split('@')[0]!;
+  return user.username ?? user.email.split('@')[0];
 }
 
 export function toCandidates(members: Membership[]): MentionCandidate[] {
@@ -36,7 +36,7 @@ export function activeMentionQuery(text: string, caret: number): { start: number
   const upto = text.slice(0, caret);
   const at = upto.lastIndexOf('@');
   if (at < 0) return null;
-  if (at > 0 && !/[\s([{.,;:!?'"«»]/.test(upto[at - 1]!)) return null;
+  if (at > 0 && !/[\s([{.,;:!?'"«»]/.test(upto[at - 1])) return null;
   const query = upto.slice(at + 1);
   if (/[\s@]/.test(query)) return null;
   return { start: at, query };

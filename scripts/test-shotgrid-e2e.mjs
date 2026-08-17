@@ -104,7 +104,10 @@ async function main() {
   check('trois projets visibles', test.json?.projectCount === 3, `reçu ${test.json?.projectCount}`);
 
   const remote = await call('GET', `/api/shotgrid/sites/${siteId}/projects`);
-  check('liste des projets distants', Array.isArray(remote.json?.projects) && remote.json.projects.length === 3);
+  check(
+    'liste des projets distants',
+    Array.isArray(remote.json?.projects) && remote.json.projects.length === 3,
+  );
 
   // ── 3bis. Le projet ShotGrid cible ne peut être relié qu'à un seul projet ReView :
   // une exécution précédente occupe peut-être la place. On la libère pour rester rejouable.
@@ -197,8 +200,11 @@ async function main() {
 
   const statuses = await call('GET', '/api/pipeline-statuses?scope=task');
   const codesStatus = (statuses.json?.statuses ?? []).map((s) => s.code);
-  check('statuts ShotGrid importés', codesStatus.includes('ip') && codesStatus.includes('apr'),
-    codesStatus.join(','));
+  check(
+    'statuts ShotGrid importés',
+    codesStatus.includes('ip') && codesStatus.includes('apr'),
+    codesStatus.join(','),
+  );
   const ip = (statuses.json?.statuses ?? []).find((s) => s.code === 'ip');
   check('couleur convertie du RGB décimal', ip?.color === '#2D8CF0', ip?.color);
 
@@ -208,8 +214,11 @@ async function main() {
   check('comparaison produite', diff.status === 200, JSON.stringify(diff.json).slice(0, 150));
   const report = diff.json?.diff;
   check('nom du projet distant vérifié', report?.projectNameOk === true);
-  check('mêmes effectifs de plans', report?.counts?.Shot?.review === report?.counts?.Shot?.shotgrid,
-    JSON.stringify(report?.counts?.Shot));
+  check(
+    'mêmes effectifs de plans',
+    report?.counts?.Shot?.review === report?.counts?.Shot?.shotgrid,
+    JSON.stringify(report?.counts?.Shot),
+  );
   console.log('   écarts détectés :', report?.entries?.length ?? 0);
 
   // ── 10. Idempotence
@@ -247,8 +256,11 @@ async function main() {
   const sh030 = (shots3.json?.items ?? shots3.json?.shots ?? []).find((s) => s.code === 'DEMO_SH030');
   const statusList = await call('GET', '/api/pipeline-statuses?scope=shot');
   const apr = (statusList.json?.statuses ?? []).find((s) => s.code === 'apr');
-  check('nouveau statut répercuté', sh030?.pipelineStatusId === apr?.id,
-    `${sh030?.pipelineStatusId} vs ${apr?.id}`);
+  check(
+    'nouveau statut répercuté',
+    sh030?.pipelineStatusId === apr?.id,
+    `${sh030?.pipelineStatusId} vs ${apr?.id}`,
+  );
 
   // ── Bilan
   console.log(`\n═══ ${passed} contrôle(s) réussi(s), ${failed} en échec ═══\n`);

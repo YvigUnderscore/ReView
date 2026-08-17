@@ -29,21 +29,21 @@ describe('markerSections — séparateurs marqueurs du fil (retours 34)', () => 
   it('un commentaire pile sur la frame du marqueur appartient à sa section', () => {
     const c = comment(1, 1); // frame 24
     const sections = markerSections([c], [marker(1, 24)], 24);
-    expect(sections[1]!.comments).toEqual([c]);
+    expect(sections[1].comments).toEqual([c]);
   });
 
   it('les commentaires sans timecode vont en tête ; les marqueurs sont triés par frame', () => {
     const general = comment(1, null);
     const late = comment(2, 10); // frame 240
     const sections = markerSections([late, general], [marker(2, 200), marker(1, 50)], 24);
-    expect(sections[0]!.comments).toEqual([general]);
+    expect(sections[0].comments).toEqual([general]);
     expect(sections.map((s) => s.marker?.id ?? null)).toEqual([null, 1, 2]);
-    expect(sections[2]!.comments).toEqual([late]);
+    expect(sections[2].comments).toEqual([late]);
   });
 
   it('les sections vides restent listées (le marqueur sert de repère cliquable)', () => {
     const sections = markerSections([], [marker(1, 24)], 24);
     expect(sections).toHaveLength(2);
-    expect(sections[1]!.comments).toEqual([]);
+    expect(sections[1].comments).toEqual([]);
   });
 });

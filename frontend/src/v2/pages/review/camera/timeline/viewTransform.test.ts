@@ -72,7 +72,7 @@ describe('rulerTicks', () => {
     // 2 s sur 2000 px à 24 fps : 1 frame ≈ 41,7 px → pas de 2 frames (≥ 70 px), mineurs à la frame.
     const ticks = rulerTicks({ t0: 0, t1: 2000, width: 2000 }, 24);
     expect(ticks.major[0]).toEqual({ t: 0, label: '0:00' });
-    const stepMs = ticks.major[1]!.t - ticks.major[0]!.t;
+    const stepMs = ticks.major[1].t - ticks.major[0].t;
     expect(stepMs).toBeCloseTo((1000 / 24) * 2, 6);
     expect(ticks.minor.length).toBeGreaterThan(0);
     // Les mineurs ne doublonnent pas les majeurs.
@@ -81,7 +81,7 @@ describe('rulerTicks', () => {
   it('pas étiqueté en secondes quand la fenêtre est large', () => {
     // 60 s sur 600 px : 1 s = 10 px → pas de 10 s.
     const ticks = rulerTicks({ t0: 0, t1: 60_000, width: 600 }, 24);
-    const stepMs = ticks.major[1]!.t - ticks.major[0]!.t;
+    const stepMs = ticks.major[1].t - ticks.major[0].t;
     expect(stepMs).toBe(10_000);
   });
   it('fenêtre vide ou largeur nulle : aucune graduation', () => {

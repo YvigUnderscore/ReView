@@ -42,7 +42,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
   const loadError = (projQ.error ?? usersQ.error)?.message ?? null;
   const [addUserId, setAddUserId] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const invalidate = () => qc.invalidateQueries({ queryKey: qk.project(projectId) });
+  const invalidate = () => void qc.invalidateQueries({ queryKey: qk.project(projectId) });
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();

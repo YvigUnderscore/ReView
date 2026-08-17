@@ -59,7 +59,7 @@ export default function DocumentsPage() {
       });
       setSelected({ ...selected, ...document });
       setEditing(false);
-      invalidateDocs();
+      void invalidateDocs();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error.generic'));
     }
@@ -70,7 +70,7 @@ export default function DocumentsPage() {
       await api.del(`/api/documents/${deleting.id}`);
       if (selected?.id === deleting.id) setSelected(null);
       setDeleting(null);
-      invalidateDocs();
+      void invalidateDocs();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error.generic'));
     }
@@ -228,8 +228,8 @@ export default function DocumentsPage() {
           onClose={() => setCreating(false)}
           onCreated={(doc) => {
             setCreating(false);
-            invalidateDocs();
-            openDoc(doc);
+            void invalidateDocs();
+            void openDoc(doc);
           }}
         />
       )}

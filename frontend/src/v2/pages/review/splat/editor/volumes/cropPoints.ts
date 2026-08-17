@@ -38,9 +38,9 @@ export function pointCropped(x: number, y: number, z: number, checks: readonly C
   for (const c of checks) {
     const m = c.inv;
     // Point → espace unité du volume (la matrice inverse absorbe position/rotation/échelle).
-    const lx = (m[0] as number) * x + (m[4] as number) * y + (m[8] as number) * z + (m[12] as number);
-    const ly = (m[1] as number) * x + (m[5] as number) * y + (m[9] as number) * z + (m[13] as number);
-    const lz = (m[2] as number) * x + (m[6] as number) * y + (m[10] as number) * z + (m[14] as number);
+    const lx = m[0] * x + m[4] * y + m[8] * z + m[12];
+    const ly = m[1] * x + m[5] * y + m[9] * z + m[13];
+    const lz = m[2] * x + m[6] * y + m[10] * z + m[14];
     const inside =
       c.shape === 'box'
         ? Math.abs(lx) <= 1 && Math.abs(ly) <= 1 && Math.abs(lz) <= 1

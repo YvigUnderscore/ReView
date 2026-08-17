@@ -39,11 +39,11 @@ const user = { id: 3, role: Role.ARTIST };
 describe('VersionService.create — auto-nommage des versions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    createVersion.mockImplementation(({ data }: never) => Promise.resolve({ id: 1, ...data }) as never);
+    createVersion.mockImplementation(({ data }) => Promise.resolve({ id: 1, ...data }) as never);
     siblings.mockResolvedValue([] as never);
-    connection.mockResolvedValue(null as never);
-    task.mockResolvedValue(null as never);
-    asset.mockResolvedValue(null as never);
+    connection.mockResolvedValue(null);
+    task.mockResolvedValue(null);
+    asset.mockResolvedValue(null);
   });
 
   it('nomme V01 quand aucune version n’existe encore', async () => {
@@ -95,7 +95,7 @@ describe('VersionService.update — verrou de publication de la transform (Phase
   beforeEach(() => {
     vi.clearAllMocks();
     updateVersion.mockImplementation(
-      ({ data }: never) => Promise.resolve({ id: 1, taskId: 42, assetId: null, ...data }) as never,
+      ({ data }) => Promise.resolve({ id: 1, taskId: 42, assetId: null, ...data }) as never,
     );
   });
 

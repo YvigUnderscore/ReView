@@ -51,7 +51,7 @@ export default function PipelineStatusSelect({
       >
         {TASK_STATUSES.map((s) => (
           <option key={s} value={s}>
-            {t(TASK_STATUS_LABEL_KEY[s]!)}
+            {t(TASK_STATUS_LABEL_KEY[s])}
           </option>
         ))}
       </select>

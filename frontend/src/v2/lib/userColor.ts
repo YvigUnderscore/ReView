@@ -23,5 +23,5 @@ export const USER_COLORS = [
 
 export function userColor(seed: number | string): string {
   const n = typeof seed === 'number' ? seed : [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
-  return USER_COLORS[n % USER_COLORS.length]!;
+  return USER_COLORS[n % USER_COLORS.length];
 }

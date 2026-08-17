@@ -83,7 +83,7 @@ describe('notifyWatchers (32.G)', () => {
   });
 
   it('média inconnu : personne à notifier', async () => {
-    vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(null as never);
+    vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(null);
     const out = await notifyWatchers({ mediaObjectId: 999, projectId: 2, content: 'x' });
     expect(out).toEqual([]);
     expect(notify).not.toHaveBeenCalled();

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import type * as THREE from 'three';
 import { clonePath, emptyOverride, isHidden, type PrimTransform, type SceneOverride } from './sceneOverride';
 import {
@@ -11,6 +11,16 @@ import {
   type IndexedObject,
   type VariantSelection,
 } from './sceneOverrideApply';
+
+/**
+ * Mini-store externe : l'index des clones est produit par l'effet de réconciliation (qui crée
+ * les `Object3D` — un système externe à React) et lu via `useSyncExternalStore`, le motif
+ * recommandé par la règle `set-state-in-effect` pour refléter un état né hors de React.
+ */
+interface CloneIndexStore {
+  index: IndexedObject<THREE.Object3D>[];
+  listeners: Set<() => void>;
+}
 
 /**
  * Clones de mise en scène (C1) : réconciliation des copies d'objets dans la scène Three.
@@ -26,7 +36,16 @@ export function useSceneClones(
   variantDefaults: VariantSelection,
 ): IndexedObject<THREE.Object3D>[] {
   const cloneObjectsRef = useRef(new Map<string, THREE.Object3D[]>());
-  const [cloneIndex, setCloneIndex] = useState<IndexedObject<THREE.Object3D>[]>([]);
+  // Le store vit dans une ref, pas dans un état : son contenu est écrit hors de React (effet de
+  // réconciliation) et un état React n'a pas le droit d'être muté en place.
+  const storeRef = useRef<CloneIndexStore>({ index: [], listeners: new Set() });
+  const subscribe = useCallback((onChange: () => void) => {
+    const store = storeRef.current;
+    store.listeners.add(onChange);
+    return () => store.listeners.delete(onChange);
+  }, []);
+  const getIndex = useCallback(() => storeRef.current.index, []);
+  const cloneIndex = useSyncExternalStore(subscribe, getIndex);
 
   useEffect(() => {
     const known = cloneObjectsRef.current;
@@ -77,7 +96,11 @@ export function useSceneClones(
         ...(isHidden(override, srcPath) ? { visible: false } : {}),
       };
     applyPlan(planOverride(nextIndex, cloneOverride, {}));
-    if (membershipChanged) setCloneIndex(nextIndex);
+    if (membershipChanged) {
+      const store = storeRef.current;
+      store.index = nextIndex;
+      store.listeners.forEach((notify) => notify());
+    }
   }, [override, variantDefaults, indexed]);
 
   // Démontage : les copies ne survivent pas au viewer.

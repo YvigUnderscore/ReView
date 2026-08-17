@@ -29,6 +29,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { relative, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ts = createRequire(resolve('frontend/package.json'))('typescript');
 
@@ -39,7 +40,7 @@ const CATALOG = 'frontend/src/v2/i18n/messages/en.json';
 const CEILING = 0;
 
 /** Props dont la valeur atteint l'utilisateur (à l'écran ou via un lecteur d'écran). */
-const VISIBLE_PROPS = new Set([
+export const VISIBLE_PROPS = new Set([
   'alt',
   'aria-label',
   'aria-valuetext',
@@ -58,16 +59,27 @@ const VISIBLE_PROPS = new Set([
 ]);
 
 /** Fonctions qui parlent à l'utilisateur : leur argument texte est affiché. */
-const SPEAKING_CALLS = new Set(['alert', 'confirm', 'prompt', 'toast', 'error', 'success', 'info', 'warning']);
+export const SPEAKING_CALLS = new Set([
+  'alert',
+  'confirm',
+  'prompt',
+  'toast',
+  'error',
+  'success',
+  'info',
+  'warning',
+]);
 
 /**
  * Props qui transportent *volontairement* une clé, à charge du composant destinataire de la
  * traduire. Les nommer ainsi est la façon correcte de faire circuler une clé non traduite —
  * le contrôle s'y fie plutôt que de deviner.
  */
-const isKeyProp = (name) => /Key$/.test(name);
+export const isKeyProp = (name) => /Key$/.test(name);
 
-const keys = new Set(Object.keys(JSON.parse(readFileSync(CATALOG, 'utf8'))));
+/** Clés du catalogue de référence (anglais) — l'ensemble auquel les types sont confrontés. */
+export const loadCatalogKeys = (catalog = CATALOG) =>
+  new Set(Object.keys(JSON.parse(readFileSync(catalog, 'utf8'))));
 
 function loadProgram() {
   const configPath = resolve(PROJECT);
@@ -80,7 +92,7 @@ function loadProgram() {
  * Vrai quand *toutes* les valeurs possibles du type sont des clés du catalogue. Un type
  * `string` élargi ne remonte pas : il peut déjà contenir la traduction.
  */
-function isMessageKeyType(type, checker) {
+export function isMessageKeyType(type, keys) {
   const parts = type.isUnion() ? type.types : [type];
   if (parts.length === 0) return false;
   return parts.every((part) => {
@@ -89,9 +101,7 @@ function isMessageKeyType(type, checker) {
   });
 }
 
-const findings = [];
-
-function report(node, file, what) {
+function report(findings, node, file, what) {
   const { line, character } = file.getLineAndCharacterOfPosition(node.getStart(file));
   findings.push({
     file: relative(process.cwd(), file.fileName).split(sep).join('/'),
@@ -108,7 +118,7 @@ function insideTranslator(node) {
   return parent && ts.isCallExpression(parent) && parent.arguments.includes(node);
 }
 
-function scan(file, checker) {
+function scan(file, checker, keys, findings) {
   const visit = (node) => {
     // 1. Texte JSX : <span>{expr}</span>
     if (
@@ -117,8 +127,11 @@ function scan(file, checker) {
       node.parent &&
       (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))
     ) {
-      if (!insideTranslator(node.expression) && isMessageKeyType(checker.getTypeAtLocation(node.expression), checker)) {
-        report(node.expression, file, 'texte JSX');
+      if (
+        !insideTranslator(node.expression) &&
+        isMessageKeyType(checker.getTypeAtLocation(node.expression), keys)
+      ) {
+        report(findings, node.expression, file, 'texte JSX');
       }
     }
 
@@ -127,8 +140,8 @@ function scan(file, checker) {
       const name = node.name.text;
       if (VISIBLE_PROPS.has(name) && !isKeyProp(name) && node.initializer) {
         const value = ts.isJsxExpression(node.initializer) ? node.initializer.expression : node.initializer;
-        if (value && !insideTranslator(value) && isMessageKeyType(checker.getTypeAtLocation(value), checker)) {
-          report(value, file, `prop « ${name} »`);
+        if (value && !insideTranslator(value) && isMessageKeyType(checker.getTypeAtLocation(value), keys)) {
+          report(findings, value, file, `prop « ${name} »`);
         }
       }
     }
@@ -143,8 +156,8 @@ function scan(file, checker) {
           : '';
       if (SPEAKING_CALLS.has(name)) {
         for (const arg of node.arguments) {
-          if (!insideTranslator(arg) && isMessageKeyType(checker.getTypeAtLocation(arg), checker)) {
-            report(arg, file, `appel « ${name} »`);
+          if (!insideTranslator(arg) && isMessageKeyType(checker.getTypeAtLocation(arg), keys)) {
+            report(findings, arg, file, `appel « ${name} »`);
           }
         }
       }
@@ -153,8 +166,8 @@ function scan(file, checker) {
     // 4. Interpolation : `${key} : ${count}`. Une clé n'a rien à faire dans une phrase
     //    assemblée — contrairement à une URL ou une classe CSS, où l'on n'en croise jamais.
     if (ts.isTemplateSpan(node)) {
-      if (isMessageKeyType(checker.getTypeAtLocation(node.expression), checker)) {
-        report(node.expression, file, 'interpolation');
+      if (isMessageKeyType(checker.getTypeAtLocation(node.expression), keys)) {
+        report(findings, node.expression, file, 'interpolation');
       }
     }
 
@@ -163,22 +176,35 @@ function scan(file, checker) {
   visit(file);
 }
 
-const program = loadProgram();
-const checker = program.getTypeChecker();
-for (const file of program.getSourceFiles()) {
-  if (file.isDeclarationFile) continue;
-  if (!file.fileName.includes('/src/')) continue;
-  if (/\.(test|spec)\.tsx?$/.test(file.fileName)) continue;
-  scan(file, checker);
+/** Parcourt le programme TypeScript du frontend et rend les clés nues trouvées. */
+export function collectRawKeys() {
+  const keys = loadCatalogKeys();
+  const program = loadProgram();
+  const checker = program.getTypeChecker();
+  const findings = [];
+  for (const file of program.getSourceFiles()) {
+    if (file.isDeclarationFile) continue;
+    if (!file.fileName.includes('/src/')) continue;
+    if (/\.(test|spec)\.tsx?$/.test(file.fileName)) continue;
+    scan(file, checker, keys, findings);
+  }
+  findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+  return findings;
 }
 
-findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
-for (const f of findings) {
-  console.log(`${f.file}:${f.line}:${f.column}  ${f.what} — ${f.text}`);
+function main() {
+  const findings = collectRawKeys();
+  for (const f of findings) {
+    console.log(`${f.file}:${f.line}:${f.column}  ${f.what} — ${f.text}`);
+  }
+  const total = findings.length;
+  const ok = total <= CEILING;
+  const color = ok ? '\x1b[0;32m' : '\x1b[0;31m';
+  console.log(
+    `${color}${ok ? '✓' : '✗'} clés de traduction affichées brutes : ${total} (plafond ${CEILING})\x1b[0m`,
+  );
+  process.exit(ok ? 0 : 1);
 }
 
-const total = findings.length;
-const ok = total <= CEILING;
-const color = ok ? '\x1b[0;32m' : '\x1b[0;31m';
-console.log(`${color}${ok ? '✓' : '✗'} clés de traduction affichées brutes : ${total} (plafond ${CEILING})\x1b[0m`);
-process.exit(ok ? 0 : 1);
+// Importable pour les tests ; exécuté seulement quand on l'appelle directement.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

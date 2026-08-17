@@ -21,7 +21,7 @@ export function useCanonicalSlug(rawParam: string | null | undefined, canonical:
     const escaped = rawParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pathname = location.pathname.replace(new RegExp(`(^|/)${escaped}(?=/|$)`), `$1${canonical}`);
     if (pathname !== location.pathname) {
-      navigate({ pathname, search: location.search, hash: location.hash }, { replace: true });
+      void navigate({ pathname, search: location.search, hash: location.hash }, { replace: true });
     }
   }, [rawParam, canonical, location, navigate]);
 }

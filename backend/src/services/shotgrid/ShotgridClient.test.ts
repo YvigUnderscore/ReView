@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { ShotgridClient, ShotgridApiError, clearTokenCache, flattenRecord } from './ShotgridClient';
 
 /**
@@ -58,11 +58,11 @@ describe('flattenRecord', () => {
 });
 
 describe('ShotgridClient', () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
+  let fetchMock: Mock<typeof fetch>;
 
   beforeEach(() => {
     clearTokenCache();
-    fetchMock = vi.fn();
+    fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal('fetch', fetchMock);
   });
 
@@ -80,7 +80,7 @@ describe('ShotgridClient', () => {
     const authCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('access_token'));
     expect(authCalls).toHaveLength(1);
     // Les identifiants de script passent par le flot « client_credentials ».
-    expect(String(authCalls[0]![1].body)).toContain('grant_type=client_credentials');
+    expect(String(authCalls[0]![1]!.body)).toContain('grant_type=client_credentials');
   });
 
   it('signale clairement des identifiants refusés', async () => {
@@ -100,7 +100,7 @@ describe('ShotgridClient', () => {
       password: 'legacy',
     });
     await client.search('Shot');
-    const body = String(fetchMock.mock.calls[0]![1].body);
+    const body = String(fetchMock.mock.calls[0]![1]!.body);
     expect(body).toContain('grant_type=password');
     expect(body).toContain('username=demo.user');
   });
@@ -128,7 +128,7 @@ describe('ShotgridClient', () => {
     await client.search('Shot', { filters: [['project', 'is', { type: 'Project', id: 70 }]] });
 
     const searchCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
-    const body = JSON.parse(String(searchCall![1].body));
+    const body = JSON.parse(String(searchCall![1]!.body));
     expect(body.filters).toEqual([['project', 'is', { type: 'Project', id: 70 }]]);
   });
 
@@ -168,7 +168,7 @@ describe('ShotgridClient', () => {
     await client.serverInfo();
 
     const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/api/v1.1/'));
-    const headers = call![1].headers as Record<string, string>;
+    const headers = call![1]!.headers as Record<string, string>;
     expect(headers['Content-Type']).toBeUndefined();
     expect(headers.Accept).toBe('application/json');
   });
@@ -182,10 +182,10 @@ describe('ShotgridClient', () => {
 
     await client.search('Shot', { filters: [['project', 'is', { type: 'Project', id: 70 }]] });
     const arrayCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
-    expect((arrayCall![1].headers as Record<string, string>)['Content-Type']).toBe(
+    expect((arrayCall![1]!.headers as Record<string, string>)['Content-Type']).toBe(
       'application/vnd+shotgun.api3_array+json',
     );
-    expect(JSON.parse(String(arrayCall![1].body)).filters).toEqual([
+    expect(JSON.parse(String(arrayCall![1]!.body)).filters).toEqual([
       ['project', 'is', { type: 'Project', id: 70 }],
     ]);
 
@@ -196,11 +196,11 @@ describe('ShotgridClient', () => {
       logicalOperator: 'or',
     });
     const hashCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
-    expect((hashCall![1].headers as Record<string, string>)['Content-Type']).toBe(
+    expect((hashCall![1]!.headers as Record<string, string>)['Content-Type']).toBe(
       'application/vnd+shotgun.api3_hash+json',
     );
     // En forme objet, les conditions sont imbriquées sous l'opérateur.
-    expect(JSON.parse(String(hashCall![1].body)).filters).toEqual({
+    expect(JSON.parse(String(hashCall![1]!.body)).filters).toEqual({
       logical_operator: 'or',
       conditions: [['code', 'contains', 'SH']],
     });
@@ -216,11 +216,11 @@ describe('ShotgridClient', () => {
 });
 
 describe('uploadFile', () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
+  let fetchMock: Mock<typeof fetch>;
 
   beforeEach(() => {
     clearTokenCache();
-    fetchMock = vi.fn();
+    fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal('fetch', fetchMock);
   });
 

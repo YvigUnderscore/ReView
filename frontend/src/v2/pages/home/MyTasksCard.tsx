@@ -68,7 +68,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
           <span
             className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${TASK_STATUS_COLOR[task.status]}`}
           >
-            {tr(TASK_STATUS_LABEL_KEY[task.status]!)}
+            {tr(TASK_STATUS_LABEL_KEY[task.status])}
           </span>
           <span className="truncate font-medium">{task.name}</span>
           <span className="ml-auto flex shrink-0 items-center gap-2">
@@ -86,7 +86,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
             {TASK_STATUSES.map((s) => (
               <ContextMenuItem key={s} onClick={() => setStatus.mutate(s)}>
                 <Check size={14} className={s === task.status ? 'opacity-100' : 'opacity-0'} />
-                {tr(TASK_STATUS_LABEL_KEY[s]!)}
+                {tr(TASK_STATUS_LABEL_KEY[s])}
               </ContextMenuItem>
             ))}
           </ContextMenuSubContent>

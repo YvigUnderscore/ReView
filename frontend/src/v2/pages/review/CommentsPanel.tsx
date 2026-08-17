@@ -131,7 +131,7 @@ export default function CommentsPanel({
     if (mentions.onKeyDown(e)) return;
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      void submit(e as unknown as FormEvent);
+      void submit(e);
     }
   };
 

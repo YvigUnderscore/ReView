@@ -50,7 +50,7 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
   it('purgeMedia : supprime aussi les objets storage quand MinIO répond (pas de retry)', async () => {
     findUnique.mockResolvedValue({ storageKey: 'k/b.mp4', thumbnailKey: null } as never);
     deleteMedia.mockResolvedValue({} as never);
-    deleteObject.mockResolvedValue(undefined as never);
+    deleteObject.mockResolvedValue(undefined);
 
     await purgeMedia(2);
 

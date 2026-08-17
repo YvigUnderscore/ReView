@@ -34,7 +34,7 @@ describe('projectGuard.assertProjectWritable — verrou d’archivage (38.B)', (
   });
 
   it('404 si le projet est introuvable (ou supprimé)', async () => {
-    findFirst.mockResolvedValue(null as never);
+    findFirst.mockResolvedValue(null);
     await expect(assertProjectWritable(999)).rejects.toMatchObject({ statusCode: 404 });
   });
 });

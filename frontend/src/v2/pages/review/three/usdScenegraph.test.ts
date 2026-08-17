@@ -51,19 +51,19 @@ describe('buildPrimTree', () => {
   it('reconstruit la hiérarchie depuis la liste plate', () => {
     const tree = buildPrimTree([prim('/World'), prim('/World/Asset'), prim('/World/Asset/Geo')]);
     expect(flatten(tree)).toEqual(['/World', '/World/Asset', '/World/Asset/Geo']);
-    expect(tree[0]!.children[0]!.children[0]!.path).toBe('/World/Asset/Geo');
+    expect(tree[0].children[0].children[0].path).toBe('/World/Asset/Geo');
   });
 
   it('crée les niveaux intermédiaires absents plutôt que d’orpheliner la branche', () => {
     // Arbre tronqué : `/World/Asset` manque entre la racine et la feuille.
     const tree = buildPrimTree([prim('/World'), prim('/World/Asset/Geo')]);
     expect(flatten(tree)).toEqual(['/World', '/World/Asset', '/World/Asset/Geo']);
-    expect(tree[0]!.children[0]!.type).toBe(''); // nœud implicite, non typé
+    expect(tree[0].children[0].type).toBe(''); // nœud implicite, non typé
   });
 
   it('trie les frères par nom pour un affichage stable', () => {
     const tree = buildPrimTree([prim('/W/b'), prim('/W/a'), prim('/W')]);
-    expect(tree[0]!.children.map((c) => c.name)).toEqual(['a', 'b']);
+    expect(tree[0].children.map((c) => c.name)).toEqual(['a', 'b']);
   });
 
   it('conserve les métadonnées du prim réel malgré un nœud implicite préalable', () => {
@@ -71,7 +71,7 @@ describe('buildPrimTree', () => {
       prim('/World/Asset/Geo'),
       prim('/World/Asset', { type: 'Xform', variantSets: ['modelingVariant'] }),
     ]);
-    const asset = tree[0]!.children[0]!;
+    const asset = tree[0].children[0];
     expect(asset.path).toBe('/World/Asset');
     expect(asset.variantSets).toEqual(['modelingVariant']);
     expect(asset.children.map((c) => c.path)).toEqual(['/World/Asset/Geo']);

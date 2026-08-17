@@ -95,7 +95,7 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
         await prisma.mediaObject.update({
           where: { id: created.mediaObjectId },
           data: {
-            metadata: { contentHash: input.contentHash, dedupFrom: twin.id } as Prisma.InputJsonValue,
+            metadata: { contentHash: input.contentHash, dedupFrom: twin.id },
           },
         });
         logAudit({
@@ -125,7 +125,7 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
       metadata: {
         ...((media?.metadata ?? {}) as Meta),
         multipartUploadId: uploadId,
-      } as Prisma.InputJsonValue,
+      },
     },
   });
   return {

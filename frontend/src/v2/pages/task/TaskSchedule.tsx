@@ -38,8 +38,8 @@ export default function TaskSchedule({
       await api.patch(`/api/tasks/${taskId}`, {
         [field]: value ? new Date(value).toISOString() : null,
       });
-      qc.invalidateQueries({ queryKey: qk.task(taskId) });
-      if (projectId) qc.invalidateQueries({ queryKey: qk.projectSchedule(projectId) });
+      void qc.invalidateQueries({ queryKey: qk.task(taskId) });
+      if (projectId) void qc.invalidateQueries({ queryKey: qk.projectSchedule(projectId) });
       toast.success(t('task.scheduleUpdated'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.generic'));

@@ -30,6 +30,6 @@ describe('encode/decodeSubsetOps — round-trip binaire', () => {
     const delta = [...IDENTITY];
     delta[0] = 0.123456789012345;
     const [op] = decodeSubsetOps(encodeSubsetOps([{ delta, indices: [5] }]));
-    expect(op!.delta[0]).toBe(0.123456789012345);
+    expect(op.delta[0]).toBe(0.123456789012345);
   });
 });

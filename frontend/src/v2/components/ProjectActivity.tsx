@@ -73,7 +73,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
         ...(next.statusId ? { pipelineStatusId: next.statusId } : {}),
       });
     } catch {
-      rollback();
+      void rollback();
     }
   };
   const assign = async (taskId: number, assigneeId: string) => {
@@ -83,7 +83,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
     try {
       await api.patch(`/api/tasks/${taskId}`, { assigneeId: id });
     } catch {
-      rollback();
+      void rollback();
     }
   };
 
@@ -103,7 +103,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
               .map((b) => (
                 <div
                   key={b.status}
-                  title={`${tr(STATUS_LABEL[b.status]!)} : ${b.count}`}
+                  title={`${tr(STATUS_LABEL[b.status])} : ${b.count}`}
                   className={`${STATUS_BAR[b.status] ?? 'bg-muted-foreground/40'} transition-all`}
                   style={{ width: `${(b.count / total) * 100}%` }}
                 />
@@ -117,7 +117,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                   <span
                     className={`h-2 w-2 rounded-full ${STATUS_BAR[b.status] ?? 'bg-muted-foreground/40'}`}
                   />
-                  {tr(STATUS_LABEL[b.status]!)} · {b.count}
+                  {tr(STATUS_LABEL[b.status])} · {b.count}
                 </span>
               ))}
           </div>
@@ -207,7 +207,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                   ) : (
                     <>
                       <span className={`rounded px-1.5 py-0.5 text-[11px] ${STATUS_COLOR[t.status] ?? ''}`}>
-                        {STATUS_LABEL[t.status] ? tr(STATUS_LABEL[t.status]!) : t.status}
+                        {STATUS_LABEL[t.status] ? tr(STATUS_LABEL[t.status]) : t.status}
                       </span>
                       {t.assignee && (
                         <span className="text-[11px] text-muted-foreground">{t.assignee.name}</span>

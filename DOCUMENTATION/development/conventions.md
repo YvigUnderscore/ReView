@@ -4,7 +4,9 @@
 
 ## Languages
 
-- **UI, code comments, commit messages: French.**
+- **Code comments and commit messages: French.**
+- **UI text never hardcoded**: everything goes through `t()` with English-first
+  catalogs (14 languages — see [Internationalisation](i18n.md)).
 - **This documentation: English.**
 - Commits use prefixes `feat:` / `fix:` / `refactor:` / `chore:` / `docs:` /
   `test:`, on the single `dev` branch.

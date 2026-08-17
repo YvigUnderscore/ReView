@@ -40,7 +40,7 @@ export interface HierarchySequenceRow {
 /** Un JSON de réglages contient-il un override pipeline (résolution ou framerate) ? */
 export function hasPipelineOverride(raw: unknown): boolean {
   const o = (raw ?? {}) as { resolution?: unknown; framerate?: unknown };
-  return (o.resolution != null && typeof o.resolution === 'object') || Number.isFinite(o.framerate as number);
+  return (o.resolution != null && typeof o.resolution === 'object') || Number.isFinite(o.framerate);
 }
 
 export interface HierarchyShotView {

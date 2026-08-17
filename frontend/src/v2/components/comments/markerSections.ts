@@ -29,8 +29,8 @@ export function markerSections(
     // Sans timecode : commentaire général → section de tête, avant les « chapitres ».
     const frame = c.timestamp != null ? Math.round(c.timestamp * (fps || 24)) : null;
     let idx = 0;
-    if (frame != null) for (let i = 0; i < sorted.length; i++) if (frame >= sorted[i]!.frame) idx = i + 1;
-    sections[idx]!.comments.push(c);
+    if (frame != null) for (let i = 0; i < sorted.length; i++) if (frame >= sorted[i].frame) idx = i + 1;
+    sections[idx].comments.push(c);
   }
   return sections;
 }

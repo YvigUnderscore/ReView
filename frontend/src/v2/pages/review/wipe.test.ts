@@ -7,8 +7,8 @@ import { wipeAngleFromPoint, wipeCenter, wipeClipPoints, wipePosFromPoint } from
 const area = (pts: [number, number][]) => {
   let a = 0;
   for (let i = 0; i < pts.length; i++) {
-    const [x1, y1] = pts[i]!;
-    const [x2, y2] = pts[(i + 1) % pts.length]!;
+    const [x1, y1] = pts[i];
+    const [x2, y2] = pts[(i + 1) % pts.length];
     a += x1 * y2 - x2 * y1;
   }
   return Math.abs(a) / 2;

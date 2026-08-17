@@ -55,7 +55,7 @@ export default function ProjectDefaultsTab() {
     try {
       const { settings } = await api.put<{ settings: ProjectSettings }>('/api/admin/project-defaults', draft);
       setDraft(settings);
-      qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
+      void qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
       toast.success(t('defaults.saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.save'));

@@ -49,7 +49,7 @@ export function scanFile(path: string): Promise<{ clean: boolean; virus: string 
         try {
           resolve(parseClamResponse(response));
         } catch (err) {
-          reject(err as Error);
+          reject(err instanceof Error ? err : new Error(String(err)));
         }
       }
     });

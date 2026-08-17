@@ -87,6 +87,6 @@ describe('slate', () => {
     expect(f).toHaveLength(2);
     expect(f[0]).toContain('x=(w-tw)/2');
     const size = (s: string) => Number(/fontsize=(\d+)/.exec(s)?.[1]);
-    expect(size(f[0])).toBeGreaterThan(size(f[1]));
+    expect(size(f[0]!)).toBeGreaterThan(size(f[1]!));
   });
 });

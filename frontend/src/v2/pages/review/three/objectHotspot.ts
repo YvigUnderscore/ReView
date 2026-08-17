@@ -18,7 +18,7 @@ export function raycastModelCenter(
   raycaster.setFromCamera(new three.Vector2(0, 0), camera);
   const hits = raycaster.intersectObject(object, true);
   if (hits.length === 0) return null;
-  const p = hits[0]!.point;
+  const p = hits[0].point;
   const n = camera.position.clone().sub(p).normalize();
   object.updateMatrixWorld();
   const local = p.clone().applyMatrix4(new three.Matrix4().copy(object.matrixWorld).invert());

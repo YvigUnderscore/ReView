@@ -234,8 +234,8 @@ describe('retours de montage (Phase 46)', () => {
 
   it('le fil d’un plan masque les retours de montage non renvoyés', async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
-    vi.mocked(prisma.comment.count).mockResolvedValue(0 as never);
-    await listThread(9, { page: 1, perPage: 20 });
+    vi.mocked(prisma.comment.count).mockResolvedValue(0);
+    await listThread(9, { page: 1, pageSize: 20, order: 'desc' });
     const where = (vi.mocked(prisma.comment.findMany).mock.calls.at(-1)?.[0] as { where: unknown }).where;
     expect(where).toMatchObject({
       mediaObjectId: 9,
@@ -245,8 +245,8 @@ describe('retours de montage (Phase 46)', () => {
 
   it('le fil du montage est ordonné sur la position dans le film', async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
-    vi.mocked(prisma.comment.count).mockResolvedValue(0 as never);
-    await listMontage(7, { page: 1, perPage: 20 });
+    vi.mocked(prisma.comment.count).mockResolvedValue(0);
+    await listMontage(7, { page: 1, pageSize: 20, order: 'desc' });
     const args = vi.mocked(prisma.comment.findMany).mock.calls.at(-1)?.[0] as {
       where: unknown;
       orderBy: unknown;

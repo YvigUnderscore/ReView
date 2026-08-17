@@ -74,7 +74,7 @@ export function useHlsPlayer(
       // qualité choisie manuellement, conservée à travers un rechargement 34.F.
       let target = 0;
       hls.levels.forEach((l, i) => {
-        if (l.height > hls.levels[target]!.height) target = i;
+        if (l.height > hls.levels[target].height) target = i;
       });
       const manual = manualHeightRef.current;
       if (manual != null) {

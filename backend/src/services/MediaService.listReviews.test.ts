@@ -34,7 +34,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     findMany.mockResolvedValue([] as never);
-    count.mockResolvedValue(0 as never);
+    count.mockResolvedValue(0);
   });
 
   it('par défaut : publiés de mes projets + mes brouillons (membership pour un ARTIST)', async () => {
@@ -76,7 +76,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
         },
       },
     ] as never);
-    count.mockResolvedValue(1 as never);
+    count.mockResolvedValue(1);
     const { items, total } = await listReviews(artist, {}, page);
     expect(total).toBe(1);
     expect(items[0]).toEqual({
@@ -109,7 +109,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
         version: { name: 'V01', task: null, asset: { name: 'Hero', project: { id: 7, name: 'Film' } } },
       },
     ] as never);
-    count.mockResolvedValue(1 as never);
+    count.mockResolvedValue(1);
     const { items } = await listReviews(artist, {}, page);
     expect((items[0] as { hoverSprite: unknown }).hoverSprite).toEqual({
       url: 'https://minio/sprites/6.jpg',
@@ -133,7 +133,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
         version: { name: 'V01', task: null, asset: { name: 'Hero', project: { id: 7, name: 'Film' } } },
       },
     ] as never);
-    count.mockResolvedValue(1 as never);
+    count.mockResolvedValue(1);
     const { items } = await listReviews(artist, {}, page);
     expect((items[0] as { hoverSprite: unknown }).hoverSprite).toBeNull();
   });

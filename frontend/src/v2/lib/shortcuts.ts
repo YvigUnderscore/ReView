@@ -47,13 +47,13 @@ export function useGlobalShortcuts({
         window.clearTimeout(timer.current);
         if (key === bindings['nav.projects']) {
           e.preventDefault();
-          navigate('/projects');
+          void navigate('/projects');
         } else if (key === bindings['nav.kanban'] && projectId !== null) {
           e.preventDefault();
-          navigate(`/projects/${projectId}/kanban`);
+          void navigate(`/projects/${projectId}/kanban`);
         } else if (key === bindings['nav.board'] && projectId !== null) {
           e.preventDefault();
-          navigate(`/projects/${projectId}/board`);
+          void navigate(`/projects/${projectId}/board`);
         }
         return;
       }

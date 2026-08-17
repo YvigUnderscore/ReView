@@ -39,7 +39,7 @@ export default function AnnouncementsTab() {
       await api.del(`/api/announcements/${deleting.id}`);
       toast.success(t('announcement.deleted'));
       setDeleting(null);
-      invalidate();
+      void invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error.delete'));
     }
@@ -114,7 +114,7 @@ export default function AnnouncementsTab() {
           onSaved={() => {
             setCreating(false);
             setEditing(null);
-            invalidate();
+            void invalidate();
           }}
         />
       )}

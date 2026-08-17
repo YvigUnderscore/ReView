@@ -60,7 +60,7 @@ export default function ProjectNamingSection({
           >
             {(['off', 'warn', 'reject'] as NamingMode[]).map((m) => (
               <option key={m} value={m}>
-                {t(MODE_KEY[m]!)}
+                {t(MODE_KEY[m])}
               </option>
             ))}
           </select>

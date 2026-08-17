@@ -29,8 +29,8 @@ describe('OcioService — buildReleaseCatalog (39.B)', () => {
       new Set(),
     );
     expect(catalog).toHaveLength(1);
-    expect(catalog[0].tag).toBe('v2.1.0');
-    expect(catalog[0].assets).toHaveLength(2); // le .md est ignoré
+    expect(catalog[0]!.tag).toBe('v2.1.0');
+    expect(catalog[0]!.assets).toHaveLength(2); // le .md est ignoré
   });
 
   it('marque le défaut recommandé (studio ACES 1.3) et l’état installé', () => {
@@ -43,7 +43,9 @@ describe('OcioService — buildReleaseCatalog (39.B)', () => {
       ],
       new Set(['cg-config-v2.1.0_aces-v1.3_ocio-v2.3.ocio']),
     );
-    const [studio, cg] = catalog[0].assets;
+    const assets = catalog[0]!.assets;
+    const studio = assets[0]!;
+    const cg = assets[1]!;
     expect(studio.recommendedDefault).toBe(true);
     expect(studio.installed).toBe(false);
     expect(cg.recommendedDefault).toBe(false);

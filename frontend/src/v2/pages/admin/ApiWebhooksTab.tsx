@@ -49,7 +49,7 @@ function ApiTokensAdminPanel() {
     try {
       await api.del(`/api/admin/api-tokens/${id}`);
       toast.success(t('tokens.revoked'));
-      qc.invalidateQueries({ queryKey: qk.admin('api-tokens') });
+      void qc.invalidateQueries({ queryKey: qk.admin('api-tokens') });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }

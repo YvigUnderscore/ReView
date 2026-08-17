@@ -35,7 +35,7 @@ describe('visibleBounds — bbox des splats visibles, cache invalidé (11.D)', (
       { pos: [10, 0, 0], opacity: 1 },
     ]);
     expect(visibleLocalBox(THREE, mesh)!.max.x).toBe(10);
-    mesh.points[1]!.opacity = 0; // suppression non-destructive…
+    mesh.points[1].opacity = 0; // suppression non-destructive…
     expect(visibleLocalBox(THREE, mesh)!.max.x).toBe(10); // …cache encore servi
     invalidateVisibleBounds(mesh);
     expect(visibleLocalBox(THREE, mesh)!.max.x).toBe(0); // recalculé sur les visibles

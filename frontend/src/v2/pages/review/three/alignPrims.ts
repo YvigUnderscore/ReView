@@ -51,8 +51,8 @@ export function distributeOffsets(
 ): Array<{ path: string; offset: number }> {
   if (items.length < 3) return [];
   const sorted = [...items].sort((a, b) => value(a, axis, 'center') - value(b, axis, 'center'));
-  const first = value(sorted[0]!, axis, 'center');
-  const last = value(sorted[sorted.length - 1]!, axis, 'center');
+  const first = value(sorted[0], axis, 'center');
+  const last = value(sorted[sorted.length - 1], axis, 'center');
   const step = (last - first) / (sorted.length - 1);
   return sorted.map((item, i) => ({
     path: item.path,

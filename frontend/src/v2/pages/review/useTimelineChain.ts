@@ -66,7 +66,7 @@ export function useTimelineChain(
   const go = useCallback(
     (clip: TimelineClip | null) => {
       if (!clip || clip.mediaId === null) return;
-      navigate(
+      void navigate(
         reviewPath({ id: clip.mediaId, originalName: clip.mediaName }) + carry(searchParams),
         // La lecture continue : empiler chaque plan obligerait à autant de retours arrière
         // pour sortir du montage.

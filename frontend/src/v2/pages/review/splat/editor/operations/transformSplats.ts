@@ -88,10 +88,10 @@ export function applySubsetDelta(handle: SplatSceneHandle, snap: SubsetSnapshot,
   const q = new THREE.Quaternion();
   const sc = new THREE.Vector3();
   snap.indices.forEach((i, k) => {
-    c.copy(snap.center[k]!).applyMatrix4(delta);
-    q.copy(dQuat).multiply(snap.quaternion[k]!);
-    sc.copy(snap.scales[k]!).multiply(dScale);
-    packed.setSplat(i, c, sc, q, snap.opacity[k]!, snap.color[k]!);
+    c.copy(snap.center[k]).applyMatrix4(delta);
+    q.copy(dQuat).multiply(snap.quaternion[k]);
+    sc.copy(snap.scales[k]).multiply(dScale);
+    packed.setSplat(i, c, sc, q, snap.opacity[k], snap.color[k]);
   });
   commitPackedChange(handle);
 }
@@ -101,14 +101,7 @@ export function restoreSubset(handle: SplatSceneHandle, snap: SubsetSnapshot): v
   const packed = handle.mesh.packedSplats;
   if (!packed) return;
   snap.indices.forEach((i, k) => {
-    packed.setSplat(
-      i,
-      snap.center[k]!,
-      snap.scales[k]!,
-      snap.quaternion[k]!,
-      snap.opacity[k]!,
-      snap.color[k]!,
-    );
+    packed.setSplat(i, snap.center[k], snap.scales[k], snap.quaternion[k], snap.opacity[k], snap.color[k]);
   });
   commitPackedChange(handle);
 }

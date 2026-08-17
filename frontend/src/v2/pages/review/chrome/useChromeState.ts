@@ -82,7 +82,7 @@ export function useChromeState(kind: MediaKind) {
       const index = Number(e.key) - 1;
       if (Number.isInteger(index) && index >= 0 && index < modes.length) {
         e.preventDefault();
-        update({ mode: modes[index]!.value });
+        update({ mode: modes[index].value });
         return;
       }
       // Lettre d'outil : le mode courant d'abord, sinon les autres modes — armer l'outil d'un

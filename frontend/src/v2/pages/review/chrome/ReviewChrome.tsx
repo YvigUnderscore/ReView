@@ -93,7 +93,7 @@ export default function ReviewChrome({
   // qu'un bouton qui ne fait rien.
   const tools = (toolsProp ?? toolsFor(state.mode, kind)).filter((t) => !hiddenTools?.includes(t.id));
   const panels = panelsFor(kind);
-  const activeMode = modesFor(kind).find((m) => m.value === state.mode) ?? modes[0]!;
+  const activeMode = modesFor(kind).find((m) => m.value === state.mode) ?? modes[0];
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
   const canSwitchMode = role !== 'CLIENT' && modes.length > 1;
 

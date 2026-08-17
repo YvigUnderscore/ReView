@@ -33,7 +33,7 @@ export function useWatch() {
   const mutation = useMutation({
     mutationFn: (v: WatchRef & { watching: boolean }) => api.put('/api/watch', v),
     onSuccess: (_d, v) => {
-      qc.invalidateQueries({ queryKey: qk.watches });
+      void qc.invalidateQueries({ queryKey: qk.watches });
       toast.success(v.watching ? t('watch.on') : t('watch.off'));
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : t('watch.failed')),

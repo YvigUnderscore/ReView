@@ -115,7 +115,7 @@ export default function ReviewContextMenu({
       { dataUrl: await toThumbnailDataUrl(src) },
     );
     qc.setQueryData<MediaResp>(qk.media(data.media.id), (old) => (old ? { ...old, thumbnailUrl } : old));
-    qc.invalidateQueries({ queryKey: qk.version(data.media.versionId) });
+    void qc.invalidateQueries({ queryKey: qk.version(data.media.versionId) });
   };
 
   return (

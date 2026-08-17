@@ -18,13 +18,13 @@ describe('modes', () => {
   it('donne quatre modes à chaque type de média', () => {
     for (const kind of ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'] as const) {
       expect(modesFor(kind)).toHaveLength(4);
-      expect(modesFor(kind)[0]!.value).toBe('explore');
+      expect(modesFor(kind)[0].value).toBe('explore');
     }
   });
 
   it('distingue Découper (vidéo) d’Ajuster (image)', () => {
-    expect(modesFor('VIDEO')[3]!.labelKey).toBe('mode.trim');
-    expect(modesFor('IMAGE')[3]!.labelKey).toBe('mode.adjust');
+    expect(modesFor('VIDEO')[3].labelKey).toBe('mode.trim');
+    expect(modesFor('IMAGE')[3].labelKey).toBe('mode.adjust');
   });
 
   it('donne les mêmes modes au modèle 3D et au splat', () => {
@@ -80,7 +80,7 @@ describe('toolSearchOrder — un raccourci d’outil bascule vers le mode qui le
 describe('tools', () => {
   it('commence toujours par nav', () => {
     for (const kind of ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'] as const)
-      for (const mode of modesFor(kind)) expect(toolsFor(mode.value, kind)[0]!.id).toBe('nav');
+      for (const mode of modesFor(kind)) expect(toolsFor(mode.value, kind)[0].id).toBe('nav');
   });
 
   it('réserve les outils de sélection et le volume au splat', () => {
@@ -100,7 +100,7 @@ describe('tools', () => {
 
   it('propose Cadrer et Vue d’origine en 3D, Ajuster et 1:1 à plat', () => {
     expect(viewActionsFor('SPLAT').map((a) => a.key)).toEqual(['F', 'H']);
-    expect(viewActionsFor('VIDEO')[0]!.labelKey).toBe('action.fitMedia');
+    expect(viewActionsFor('VIDEO')[0].labelKey).toBe('action.fitMedia');
   });
 });
 
@@ -111,8 +111,8 @@ describe('panels', () => {
   });
 
   it('ouvre la vidéo sur Lecture et l’image sur Affichage', () => {
-    expect(panelsFor('VIDEO')[0]!.id).toBe('playback');
-    expect(panelsFor('IMAGE')[0]!.id).toBe('view');
+    expect(panelsFor('VIDEO')[0].id).toBe('playback');
+    expect(panelsFor('IMAGE')[0].id).toBe('view');
   });
 });
 

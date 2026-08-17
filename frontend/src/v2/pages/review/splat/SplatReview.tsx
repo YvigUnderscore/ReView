@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { Role } from '../../../types/api';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
@@ -14,8 +14,6 @@ import { useSceneGrid } from '../viewer/useSceneGrid';
 import { meshBounds, selectionBounds } from './editor/selection/bounds';
 import { importCameraFile } from '../three/importCameraAbc';
 import { normalizeAnim } from '../camera/channels/model';
-import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
-import { useRegisterReviewCommands, type ReviewCommand } from '../../../lib/reviewCommands';
 import { useCameraSceneRig } from '../camera/sceneRig/useCameraSceneRig';
 import { useCameraShortcuts } from '../camera/useCameraShortcuts';
 import PipFrame from '../viewer/PipFrame';
@@ -26,10 +24,7 @@ import PaintOverlay from './paint/PaintOverlay';
 import type { SplatPaintState } from './paint/useSplatPaint';
 import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
-import { applyMaskIndices, applySavedVolumes, fetchMaskIndices } from './editor/persistence/applyEdits';
-import { applySubsetOps, fetchSubsetOps } from './editor/persistence/subsetOps';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
-import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 import ReviewChrome from '../chrome/ReviewChrome';
 import { useChromeState } from '../chrome/useChromeState';
 import { toolsFor } from '../chrome/tools';
@@ -38,6 +33,8 @@ import SpatialTransport from '../transport/SpatialTransport';
 import CurvesDrawer from '../transport/CurvesDrawer';
 import SplatPanels from './SplatPanels';
 import { SPLAT_HIDDEN_TOOLS, useSplatChrome } from './useSplatChrome';
+import { useSplatCommands } from './useSplatCommands';
+import { useSavedSplatEdits } from './useSavedSplatEdits';
 import SplatPane from './SplatPane';
 import { useT } from '../../../i18n';
 
@@ -88,7 +85,7 @@ export default function SplatReview({
     onSaved,
     showEdit,
   );
-  const { applyTransform, setBaseFlip, ready, getSceneHandle } = splat;
+  const { ready, getSceneHandle } = splat;
 
   const grid = useSceneGrid(splat);
   const pres = usePresentation(splat, data, onSaved);
@@ -173,47 +170,9 @@ export default function SplatReview({
     [pres.anim, t],
   );
 
-  // Lecture seule : applique la transformation et le flip d'orientation enregistrés
-  // (l'éditeur les gère sinon).
-  const savedTransform = saved?.transform ?? null;
-  const savedFlip = saved?.baseFlip ?? true;
-  useEffect(() => {
-    if (!showEdit && ready) {
-      applyTransform(savedTransform);
-      setBaseFlip(savedFlip);
-    }
-  }, [showEdit, ready, applyTransform, savedTransform, setBaseFlip, savedFlip]);
-
-  // Lecture seule : applique volumes de crop (sans filaire), masque de suppression et
-  // transformations de sous-ensembles — les éditions comptent pour tous les spectateurs.
-  const savedVolumes = saved?.volumes ?? null;
-  const maskUrl = data.splatMaskUrl;
-  const subsetUrl = data.splatSubsetUrl;
-  useEffect(() => {
-    if (showEdit || !ready) return;
-    const handle = getSceneHandle();
-    if (!handle) return;
-    let disposed = false;
-    let created: VolumeRuntime[] = [];
-    void (async () => {
-      if (savedVolumes?.length) {
-        created = await applySavedVolumes(handle, savedVolumes, false);
-        if (disposed) created.forEach(disposeVolume);
-      }
-      if (maskUrl) {
-        const indices = await fetchMaskIndices(maskUrl).catch(() => []);
-        if (!disposed && indices.length) applyMaskIndices(handle, indices);
-      }
-      if (subsetUrl) {
-        const ops = await fetchSubsetOps(subsetUrl).catch(() => []);
-        if (!disposed && ops.length) applySubsetOps(handle, ops);
-      }
-    })();
-    return () => {
-      disposed = true;
-      created.forEach(disposeVolume);
-    };
-  }, [showEdit, ready, getSceneHandle, savedVolumes, maskUrl, subsetUrl]);
+  // Lecture seule : rejeu des éditions persistées (transformation, flip, volumes, masque,
+  // sous-ensembles) — l'éditeur les gère lui-même quand il est monté.
+  useSavedSplatEdits(splat, data, showEdit);
 
   // Cadrage F/H, actif pour **tous** (y compris en review post-publish) : F cadre la sélection
   // si présente (édition), sinon le splat visible ; H rétablit la vue d'origine.
@@ -237,43 +196,14 @@ export default function SplatReview({
     onHome: homeView,
   });
 
-  // Palette Ctrl+K (B3) : les actions du viewer, sans bouton de plus. Les rappels passent par
-  // une ref — l'objet `pres` est neuf à chaque rendu, il ne doit pas re-publier les commandes.
-  const presRef = useRef(pres);
-  presRef.current = pres;
-  const frameRef = useRef(frameView);
-  frameRef.current = frameView;
-  const homeRef = useRef(homeView);
-  homeRef.current = homeView;
-  const hasKeys = pres.anim.keyTimes.length > 0;
-  const hasPres = !!data.splatPresentation;
-  const commands = useMemo<ReviewCommand[]>(() => {
-    const cmds: ReviewCommand[] = [
-      { id: 'fit', label: t('action.fitSpatial'), run: () => frameRef.current() },
-      { id: 'home', label: t('action.resetSpatial'), run: () => homeRef.current() },
-    ];
-    if (hasKeys)
-      cmds.push({
-        id: 'play',
-        label: t('video.playKey'),
-        run: () =>
-          presRef.current.anim.playing ? presRef.current.anim.pause() : presRef.current.anim.play(),
-      });
-    if (canPresent) {
-      cmds.push(
-        { id: 'key', label: t('review.key.set'), run: () => presRef.current.anim.insertKeyAtView() },
-        { id: 'orbit', label: t('camera.orbitPreset'), run: () => presRef.current.applyOrbitPreset() },
-      );
-      if (hasPres)
-        cmds.push({
-          id: 'clear-pres',
-          label: t('camera.clearPresentation'),
-          run: () => confirmClearPresentation(() => void presRef.current.clear()),
-        });
-    }
-    return cmds;
-  }, [t, hasKeys, hasPres, canPresent]);
-  useRegisterReviewCommands(commands);
+  // Palette Ctrl+K (B3) : les actions du viewer, sans bouton de plus.
+  useSplatCommands({
+    pres,
+    frameView,
+    homeView,
+    canPresent,
+    hasPresentation: !!data.splatPresentation,
+  });
 
   // « Non enregistré » = l'animation diffère de la présentation persistée — et plus « une
   // animation existe » (qui restait sale pour toujours, même juste après une publication).
@@ -293,7 +223,7 @@ export default function SplatReview({
           : null;
 
   const activeTool =
-    toolsFor(state.mode, 'SPLAT').find((t) => t.id === state.tool) ?? toolsFor(state.mode, 'SPLAT')[0]!;
+    toolsFor(state.mode, 'SPLAT').find((t) => t.id === state.tool) ?? toolsFor(state.mode, 'SPLAT')[0];
 
   return (
     <ReviewChrome

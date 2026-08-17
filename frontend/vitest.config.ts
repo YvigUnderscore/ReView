@@ -10,7 +10,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'happy-dom',
-    include: ['src/**/*.test.{ts,tsx}'],
+    // Les scripts d'outillage du frontend (build-docs) vivent hors de `src` : leurs
+    // tests sont ramassés ici plutôt que de rester sans suite.
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
     setupFiles: ['./vitest.setup.ts'],
   },
 });

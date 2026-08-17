@@ -71,7 +71,7 @@ export default function ShotsTab({
       await api.del(`/api/shots/${deleting.id}`);
       toast.success(t('shots.trashed'));
       setDeleting(null);
-      reload();
+      void reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -79,7 +79,7 @@ export default function ShotsTab({
 
   const groups = [
     ...sortedSequences.map((s) => ({
-      seq: s as Sequence | null,
+      seq: s,
       list: shots.filter((sh) => sh.sequenceId === s.id),
     })),
     { seq: null as Sequence | null, list: shots.filter((sh) => sh.sequenceId === null) },
@@ -196,7 +196,7 @@ export default function ShotsTab({
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            reload();
+            void reload();
           }}
         />
       )}

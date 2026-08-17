@@ -64,8 +64,8 @@ export default function OcioTab() {
     try {
       await api.post('/api/studio/ocio/install', { tag, assetName: asset.assetName });
       toast.success(t('ocio.configInstalled', { name: asset.label }));
-      refreshConfigs();
-      qc.invalidateQueries({ queryKey: qk.admin('ocio-releases') });
+      void refreshConfigs();
+      void qc.invalidateQueries({ queryKey: qk.admin('ocio-releases') });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.install'));
     } finally {
@@ -76,7 +76,7 @@ export default function OcioTab() {
   const setDefault = async (id: string) => {
     try {
       await api.put(`/api/studio/ocio/configs/${id}/default`, {});
-      refreshConfigs();
+      void refreshConfigs();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.action'));
     }
@@ -86,7 +86,7 @@ export default function OcioTab() {
     try {
       await api.del(`/api/studio/ocio/configs/${id}`);
       toast.success(t('ocio.configDeleted', { name }));
-      refreshConfigs();
+      void refreshConfigs();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.delete'));
     }

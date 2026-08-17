@@ -131,7 +131,7 @@ export async function setOidcConfig(value: unknown): Promise<void> {
  * lui-même, plutôt que de bloquer une modification légitime.
  */
 export async function updateOidcConfig(patch: Record<string, unknown>): Promise<void> {
-  const next = { ...(await getOidcConfig()), ...patch } as OidcConfig;
+  const next = { ...(await getOidcConfig()), ...patch };
   if (next.passwordLoginDisabled && !isOidcReady(next)) {
     if (patch.passwordLoginDisabled === true) {
       throw badRequest(

@@ -72,13 +72,15 @@ export default function BoardPage({ scope }: { scope: Scope }) {
   const save = (elements: readonly unknown[], _appState: unknown, files: unknown) => {
     setSaved(false);
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      try {
-        await api.put(base, { document: { elements, files } });
-        setSaved(true);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t('common.error.generic'));
-      }
+    saveTimer.current = setTimeout(() => {
+      void (async () => {
+        try {
+          await api.put(base, { document: { elements, files } });
+          setSaved(true);
+        } catch (e) {
+          setError(e instanceof Error ? e.message : t('common.error.generic'));
+        }
+      })();
     }, 1200);
   };
 

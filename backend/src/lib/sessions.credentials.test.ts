@@ -16,8 +16,8 @@ import { prisma } from './prisma';
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(prisma.userSession.findMany).mockResolvedValue([{ id: 'a' }, { id: 'b' }] as never);
-  vi.mocked(prisma.userSession.updateMany).mockResolvedValue({ count: 2 } as never);
-  vi.mocked(prisma.apiToken.updateMany).mockResolvedValue({ count: 1 } as never);
+  vi.mocked(prisma.userSession.updateMany).mockResolvedValue({ count: 2 });
+  vi.mocked(prisma.apiToken.updateMany).mockResolvedValue({ count: 1 });
 });
 
 /**
@@ -36,10 +36,7 @@ describe('revokeAllCredentials', () => {
 
   it('épargne la session courante mais révoque les tokens quand même', async () => {
     await revokeAllCredentials(42, 'session-courante');
-    const where = vi.mocked(prisma.userSession.updateMany).mock.calls[0]![0]!.where as Record<
-      string,
-      unknown
-    >;
+    const where = vi.mocked(prisma.userSession.updateMany).mock.calls[0]![0].where as Record<string, unknown>;
     expect(where).toMatchObject({ userId: 42, id: { not: 'session-courante' } });
     expect(prisma.apiToken.updateMany).toHaveBeenCalled();
   });

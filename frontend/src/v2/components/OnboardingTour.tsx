@@ -43,7 +43,7 @@ export default function OnboardingTour() {
   };
 
   const last = step === STEPS.length - 1;
-  const s = STEPS[step]!;
+  const s = STEPS[step];
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && finish()}>

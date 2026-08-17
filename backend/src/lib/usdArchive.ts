@@ -104,7 +104,7 @@ export function pickUsdRootLayer(
       const diff = (ra[i] as number) - (rb[i] as number);
       if (diff !== 0) return diff;
     }
-    return (ra[3] as string).localeCompare(rb[3] as string);
+    return ra[3].localeCompare(rb[3]);
   });
   return sorted[0] ?? null;
 }

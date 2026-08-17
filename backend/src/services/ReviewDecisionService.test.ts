@@ -39,7 +39,7 @@ beforeEach(() => {
 
 describe('ensureDefaultStatuses', () => {
   it('crée les 4 statuts classiques quand la table est vide', async () => {
-    vi.mocked(prisma.reviewStatus.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.reviewStatus.count).mockResolvedValue(0);
     await ensureDefaultStatuses();
     expect(prisma.reviewStatus.createMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -54,7 +54,7 @@ describe('ensureDefaultStatuses', () => {
   });
 
   it('ne recrée rien si des statuts existent', async () => {
-    vi.mocked(prisma.reviewStatus.count).mockResolvedValue(2 as never);
+    vi.mocked(prisma.reviewStatus.count).mockResolvedValue(2);
     await ensureDefaultStatuses();
     expect(prisma.reviewStatus.createMany).not.toHaveBeenCalled();
   });
@@ -62,7 +62,7 @@ describe('ensureDefaultStatuses', () => {
 
 describe('listStatuses', () => {
   it('bootstrape puis liste ordonnée', async () => {
-    vi.mocked(prisma.reviewStatus.count).mockResolvedValue(4 as never);
+    vi.mocked(prisma.reviewStatus.count).mockResolvedValue(4);
     vi.mocked(prisma.reviewStatus.findMany).mockResolvedValue([{ id: 1 }] as never);
     const out = await listStatuses();
     expect(out).toEqual([{ id: 1 }]);
@@ -74,13 +74,13 @@ describe('listStatuses', () => {
 
 describe('deleteStatus', () => {
   it('refuse (409) la suppression d’un statut utilisé', async () => {
-    vi.mocked(prisma.reviewDecision.count).mockResolvedValue(3 as never);
+    vi.mocked(prisma.reviewDecision.count).mockResolvedValue(3);
     await expect(deleteStatus(admin, 5)).rejects.toMatchObject({ statusCode: 409 });
     expect(prisma.reviewStatus.delete).not.toHaveBeenCalled();
   });
 
   it('supprime un statut inutilisé et audite', async () => {
-    vi.mocked(prisma.reviewDecision.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.reviewDecision.count).mockResolvedValue(0);
     vi.mocked(prisma.reviewStatus.delete).mockResolvedValue({} as never);
     await deleteStatus(admin, 5);
     expect(prisma.reviewStatus.delete).toHaveBeenCalledWith({ where: { id: 5 } });
@@ -100,7 +100,7 @@ describe('decide', () => {
       authorId: 9,
     } as never);
     vi.mocked(prisma.reviewStatus.findUnique).mockResolvedValue({ id: 2, name: 'Approved' } as never);
-    vi.mocked(prisma.$transaction).mockResolvedValue(decisionRow as never);
+    vi.mocked(prisma.$transaction).mockResolvedValue(decisionRow);
   });
 
   it('historise, dénormalise, audite, émet et notifie l’auteur', async () => {
@@ -129,10 +129,10 @@ describe('decide', () => {
   });
 
   it('404 sur version inconnue, 400 sur statut inconnu', async () => {
-    vi.mocked(prisma.version.findFirst).mockResolvedValue(null as never);
+    vi.mocked(prisma.version.findFirst).mockResolvedValue(null);
     await expect(decide(supervisor, 3, 999, 2)).rejects.toMatchObject({ statusCode: 404 });
     vi.mocked(prisma.version.findFirst).mockResolvedValue({ id: 42, authorId: null } as never);
-    vi.mocked(prisma.reviewStatus.findUnique).mockResolvedValue(null as never);
+    vi.mocked(prisma.reviewStatus.findUnique).mockResolvedValue(null);
     await expect(decide(supervisor, 3, 42, 77)).rejects.toMatchObject({ statusCode: 400 });
   });
 });
