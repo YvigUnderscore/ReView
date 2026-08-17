@@ -37,9 +37,9 @@ router.get('/', requireRole(Role.ADMIN, Role.SUPERVISOR), async (_req, res) => {
   res.json({ users: await UserService.listUsers() });
 });
 
-// GET /api/users/presence — présence de tous les utilisateurs (tout authentifié)
-router.get('/presence', async (_req, res) => {
-  res.json({ users: await UserService.listPresence() });
+// GET /api/users/presence — présence, cantonnée à ce que le demandeur a le droit de voir
+router.get('/presence', async (req, res) => {
+  res.json({ users: await UserService.listPresence(req.user) });
 });
 
 // ── Profil de l'utilisateur courant ──────────────────────────────────────────

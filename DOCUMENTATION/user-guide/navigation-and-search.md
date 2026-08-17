@@ -38,4 +38,3 @@ automatically.
 
 ## Related pages
 
-- [Documents vs Documentation](documents.md)

@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "सदस्य",
   "nav.settings": "सेटिंग्स",
-  "nav.documents": "दस्तावेज़",
   "nav.documentation": "प्रलेखन",
 
   "common.save": "सहेजें",
@@ -194,12 +193,6 @@
     "one": "{count} मीडिया रद्दी में चला जाएगा।",
     "other": "{count} मीडिया रद्दी में चले जाएँगे।"
   },
-  "documents.global": "वैश्विक दस्तावेज़",
-  "documents.editor.placeholder": "दस्तावेज़ लिखें…",
-  "documents.empty": "खाली दस्तावेज़।",
-  "documents.pdfUnavailable": "PDF उपलब्ध नहीं।",
-  "documents.delete.title": "दस्तावेज़ हटाएँ?",
-  "documents.delete.message": "«{title}» स्थायी रूप से हटा दिया जाएगा।",
 
   "common.rename": "नाम बदलें",
   "common.remove": "हटाएँ",
@@ -826,8 +819,6 @@
   "asset.card.latest": "नवीनतम: {name} · {date}",
   "asset.card.openTask": "पूरा कार्य खोलें",
   "asset.card.noMedia": "मीडिया नहीं",
-  "docs.empty": "कोई दस्तावेज़ नहीं।",
-  "docs.pick": "कोई दस्तावेज़ चुनें या नया बनाएँ।",
   "docs.filter": "पृष्ठ छाँटें…",
   "docs.noMatch": "कोई पृष्ठ मेल नहीं खाता।",
   "docs.buildHint": "दस्तावेज़ उपलब्ध नहीं — चलाएँ",
@@ -897,10 +888,6 @@
   "review.cameraViewSaved": "कैमरा दृश्य सहेजा गया",
   "email.placeholder": "aap@studio.com",
 
-  "documents.created": "दस्तावेज़ बना",
-  "documents.projectPlaceholder": "प्रोजेक्ट…",
-  "documents.richText": "रिच टेक्स्ट",
-  "documents.updatedOn": "{date} को अद्यतन",
 
   "common.escKey": "Esc",
 
@@ -1414,11 +1401,6 @@
   "csv.taskHint": "(कार्य «|» से अलग)। पहले से मौजूद shot छोड़ दिए जाते हैं।",
   "kanban.emptyHint": "प्रोजेक्ट में shot और कार्य बनाएँ ताकि उन्हें यहाँ देख सकें। स्थिति बदलने के लिए कार्ड को एक स्तंभ से दूसरे में खींचें।",
   "kanban.moveFailed": "हिलाया नहीं जा सका",
-  "doc.new": "नया दस्तावेज़",
-  "doc.chooseProject": "एक प्रोजेक्ट चुनें",
-  "doc.chooseEntity": "दस्तावेज़ बनाने की इकाई चुनें",
-  "doc.selectPdf": "एक PDF चुनें",
-  "doc.pdfUploadFailed": "PDF अपलोड विफल",
   "login.2faPrompt": "अपने प्रमाणीकरण ऐप का कोड (या कोई बैकअप कोड) भरें।",
   "login.backToLogin": "← लॉगिन पर लौटें",
   "login.ssoFailed": "SSO लॉगिन विफल",
@@ -2172,7 +2154,7 @@
   "chat.group.members": { "one": "{count} सदस्य", "other": "{count} सदस्य" },
   "chat.rename": "समूह का नाम बदलें",
   "chat.addMembers": "सदस्य जोड़ें",
-  "chat.leave": "बातचीत छोड़ें",
+  "chat.leave": "यह वार्तालाप छोड़ें",
   "chat.leave.confirm": "क्या यह बातचीत छोड़नी है?",
   "chat.mute": "सूचनाएँ बंद करें",
   "chat.unmute": "सूचनाएँ चालू करें",
@@ -2483,7 +2465,11 @@
   "upload.pickTask.hintLocal": "संस्करण को उसे बनाने वाले चरण के अंतर्गत रखने से पाइपलाइन पठनीय रहती है।",
   "upload.pickTask.createStepLocal": "« {step} » task बनाएँ",
   "tabs.more": "और टैब",
-  "departments.title": "विभाग",
-  "departments.add": "विभाग जोड़ें",
-  "departments.keyLocked": "कुंजी एक बार तय होती है और कभी नहीं बदलती — tasks, timelines और मोंटाज स्नैपशॉट इसी पर निर्भर हैं।"
+  "departments.keyLocked": "कुंजी एक बार तय होती है और कभी नहीं बदलती — tasks, timelines और मोंटाज स्नैपशॉट इसी पर निर्भर हैं।",
+  "sidebar.switchProject": "प्रोजेक्ट बदलें",
+  "sidebar.noProject": "कोई प्रोजेक्ट खुला नहीं",
+  "social.title": "लोग और संदेश",
+  "social.search": "व्यक्ति या वार्तालाप खोजें",
+  "social.people": "लोग",
+  "social.noMatch": "इस खोज के लिए कोई परिणाम नहीं।"
 }

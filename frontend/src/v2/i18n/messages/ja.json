@@ -63,7 +63,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "メンバー",
   "nav.settings": "設定",
-  "nav.documents": "ドキュメント",
   "nav.documentation": "使い方ガイド",
 
   "common.save": "保存",
@@ -186,12 +185,6 @@
   "reviews.addToPlaylist": "playlist に追加…",
   "reviews.deleteMany.title": "メディアを削除しますか？",
   "reviews.deleteMany.message": { "other": "{count} 件のメディアをゴミ箱へ移動します。" },
-  "documents.global": "全体のドキュメント",
-  "documents.editor.placeholder": "ドキュメントを書く…",
-  "documents.empty": "空のドキュメントです。",
-  "documents.pdfUnavailable": "PDF を表示できません。",
-  "documents.delete.title": "ドキュメントを削除しますか？",
-  "documents.delete.message": "「{title}」を完全に削除します。",
 
   "common.rename": "名前を変更",
   "common.remove": "削除",
@@ -803,8 +796,6 @@
   "asset.card.latest": "最新：{name} · {date}",
   "asset.card.openTask": "タスク全体を開く",
   "asset.card.noMedia": "メディアなし",
-  "docs.empty": "ドキュメントがありません。",
-  "docs.pick": "ドキュメントを選ぶか、新しく作成してください。",
   "docs.filter": "ページを絞り込む…",
   "docs.noMatch": "該当するページがありません。",
   "docs.buildHint": "ドキュメントを利用できません — 次を実行してください",
@@ -874,10 +865,6 @@
   "review.cameraViewSaved": "カメラビューを保存しました",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "ドキュメントを作成しました",
-  "documents.projectPlaceholder": "プロジェクト…",
-  "documents.richText": "リッチテキスト",
-  "documents.updatedOn": "{date} 更新",
 
   "common.escKey": "Esc",
 
@@ -1386,11 +1373,6 @@
   "csv.taskHint": "（タスクは「|」で区切ります）。既存の shot は無視されます。",
   "kanban.emptyHint": "プロジェクトで shot とタスクを作ると、ここで追えます。カードを別の列にドラッグすると状態が変わります。",
   "kanban.moveFailed": "移動できません",
-  "doc.new": "新しいドキュメント",
-  "doc.chooseProject": "プロジェクトを選ぶ",
-  "doc.chooseEntity": "記録する対象を選ぶ",
-  "doc.selectPdf": "PDF を選ぶ",
-  "doc.pdfUploadFailed": "PDF のアップロードに失敗",
   "login.2faPrompt": "認証アプリのコード（またはバックアップコード）を入力してください。",
   "login.backToLogin": "← ログインに戻る",
   "login.ssoFailed": "SSO ログインに失敗",
@@ -2120,7 +2102,7 @@
   "chat.group.members": { "other": "メンバー {count} 人" },
   "chat.rename": "グループ名を変更",
   "chat.addMembers": "参加者を追加",
-  "chat.leave": "会話から退出",
+  "chat.leave": "この会話から退出",
   "chat.leave.confirm": "この会話から退出しますか？",
   "chat.mute": "通知をオフにする",
   "chat.unmute": "通知をオンにする",
@@ -2431,7 +2413,11 @@
   "upload.pickTask.hintLocal": "作成した工程の下に置くと、パイプラインが読み取りやすくなります。",
   "upload.pickTask.createStepLocal": "「{step}」の task を作成",
   "tabs.more": "その他のタブ",
-  "departments.title": "部署",
-  "departments.add": "部署を追加",
-  "departments.keyLocked": "キーは一度きりで変更できません。task、timeline、モンタージュのスナップショットが参照しています。"
+  "departments.keyLocked": "キーは一度きりで変更できません。task、timeline、モンタージュのスナップショットが参照しています。",
+  "sidebar.switchProject": "プロジェクトを切り替え",
+  "sidebar.noProject": "プロジェクトが開かれていません",
+  "social.title": "メンバーとメッセージ",
+  "social.search": "メンバーやスレッドを検索",
+  "social.people": "メンバー",
+  "social.noMatch": "この検索に一致するものはありません。"
 }

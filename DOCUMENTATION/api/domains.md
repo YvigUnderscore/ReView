@@ -25,7 +25,6 @@ detail lives in the interactive reference at `/api/docs`.
 | `/api/playlists` | Dailies playlists (ordered versions per project, chained playback) |
 | `/api/live` | Ongoing live review sessions per project (LIVE badges) |
 | `/api/boards` | Excalidraw boards (project/asset) |
-| `/api/documents` | Rich-text documents (Documents page) |
 | `/api/dashboard` | Home dashboard aggregates |
 | `/api/search` | Multi-entity search (Ctrl+K) |
 | `/api/favorites` | Favorites |

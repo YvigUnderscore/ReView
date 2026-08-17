@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Mitglieder",
   "nav.settings": "Ihstellunge",
-  "nav.documents": "Dokumänte",
   "nav.documentation": "Dokumäntation",
 
   "common.save": "Spichere",
@@ -194,12 +193,6 @@
     "one": "{count} Medium kummt in d'Mülltonn.",
     "other": "{count} Medie kumme in d'Mülltonn."
   },
-  "documents.global": "Globali Dokumänt",
-  "documents.editor.placeholder": "D'Dokumäntation schriewe…",
-  "documents.empty": "Leers Dokumänt.",
-  "documents.pdfUnavailable": "PDF nit verfiegbar.",
-  "documents.delete.title": "S'Dokumänt lesche?",
-  "documents.delete.message": "„{title}“ wird entgiltig glescht.",
 
   "common.rename": "Umbenenne",
   "common.remove": "Wegnämme",
@@ -832,8 +825,6 @@
   "asset.card.latest": "letschti: {name} · {date}",
   "asset.card.openTask": "Ganzi Ufgab uufmache",
   "asset.card.noMedia": "kei Media",
-  "docs.empty": "Kei Dokumänt.",
-  "docs.pick": "Wähl e Dokumänt uss oder leg eins ah.",
   "docs.filter": "Sitte filtre…",
   "docs.noMatch": "Kei Sitt passt.",
   "docs.buildHint": "Dokumentation nit verfüegbar — starte",
@@ -903,10 +894,6 @@
   "review.cameraViewSaved": "Kamera-Ahsicht gspichert",
   "email.placeholder": "du@studio.els",
 
-  "documents.created": "Dokumänt ahgleit",
-  "documents.projectPlaceholder": "Projekt…",
-  "documents.richText": "Rich Text",
-  "documents.updatedOn": "aktualisiert am {date}",
 
   "common.escKey": "Esc",
 
@@ -1420,11 +1407,6 @@
   "csv.taskHint": "(Ufgabe mit „|“ trennt). Vorhandeni shots wärde iwergange.",
   "kanban.emptyHint": "Leg im Projekt shots un Ufgabe ah, fer sie do z'verfolge. Zieh e Karte vu ere Spalte in di anderi, fer d'r Status z'ändere.",
   "kanban.moveFailed": "Verschiebe nit möglich",
-  "doc.new": "Nejs Dokumänt",
-  "doc.chooseProject": "E Projekt wähle",
-  "doc.chooseEntity": "D'Entität wähle, wo dokumäntiert wird",
-  "doc.selectPdf": "E PDF usswähle",
-  "doc.pdfUploadFailed": "PDF-Upload fehlgschlage",
   "login.2faPrompt": "Gib d'r Code uss dinere Authentifizierungs-App ih (oder e Wiederherstellungscode).",
   "login.backToLogin": "← Zrugg zue d'r Ahmeldung",
   "login.ssoFailed": "SSO-Ahmeldung fehlgschlage",
@@ -2178,7 +2160,7 @@
   "chat.group.members": { "one": "{count} Mitgliid", "other": "{count} Mitglieder" },
   "chat.rename": "Gruppe umbenenne",
   "chat.addMembers": "Persone dezuefiege",
-  "chat.leave": "S Gspräch verlo",
+  "chat.leave": "D’Unterhaltig verlo",
   "chat.leave.confirm": "Des Gspräch verlo?",
   "chat.mute": "Meldunge stumm schalte",
   "chat.unmute": "Meldunge widder ischalte",
@@ -2489,7 +2471,11 @@
   "upload.pickTask.hintLocal": "D’Version unter em Schritt abzlege, wo se gmacht het, haltet d’Pipeline läsbar.",
   "upload.pickTask.createStepLocal": "E Task « {step} » aalege",
   "tabs.more": "Meh Tabs",
-  "departments.title": "Abteilunge",
-  "departments.add": "E Abteilung dezuefüege",
-  "departments.keyLocked": "Dr Schlüssel wird eimol gsetzt un ändert sich nie — Tasks, Timelines un Montage-Snapshots bezieche sich druf."
+  "departments.keyLocked": "Dr Schlüssel wird eimol gsetzt un ändert sich nie — Tasks, Timelines un Montage-Snapshots bezieche sich druf.",
+  "sidebar.switchProject": "Projekt wechsle",
+  "sidebar.noProject": "Kei Projekt offe",
+  "social.title": "Lit un Nochrichte",
+  "social.search": "Person oder Verlauf sueche",
+  "social.people": "Lit",
+  "social.noMatch": "Kei Treffer für die Suech."
 }

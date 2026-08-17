@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Membros",
   "nav.settings": "Configurações",
-  "nav.documents": "Documentos",
   "nav.documentation": "Documentação",
 
   "common.save": "Salvar",
@@ -194,12 +193,6 @@
     "one": "{count} mídia será movida para a lixeira.",
     "other": "{count} mídias serão movidas para a lixeira."
   },
-  "documents.global": "Documentos globais",
-  "documents.editor.placeholder": "Escreva a documentação…",
-  "documents.empty": "Documento vazio.",
-  "documents.pdfUnavailable": "PDF indisponível.",
-  "documents.delete.title": "Excluir o documento?",
-  "documents.delete.message": "«{title}» será excluído definitivamente.",
 
   "common.rename": "Renomear",
   "common.remove": "Remover",
@@ -829,8 +822,6 @@
   "asset.card.latest": "última: {name} · {date}",
   "asset.card.openTask": "Abrir a tarefa completa",
   "asset.card.noMedia": "sem media",
-  "docs.empty": "Nenhum documento.",
-  "docs.pick": "Selecione um documento ou crie um.",
   "docs.filter": "Filtrar as páginas…",
   "docs.noMatch": "Nenhuma página corresponde.",
   "docs.buildHint": "Documentação indisponível — execute",
@@ -900,10 +891,6 @@
   "review.cameraViewSaved": "Vista de câmera salva",
   "email.placeholder": "voce@estudio.com",
 
-  "documents.created": "Documento criado",
-  "documents.projectPlaceholder": "Projeto…",
-  "documents.richText": "Texto formatado",
-  "documents.updatedOn": "atual. {date}",
 
   "common.escKey": "Esc",
 
@@ -1417,11 +1404,6 @@
   "csv.taskHint": "(tarefas separadas por «|»). Os shots existentes são ignorados.",
   "kanban.emptyHint": "Crie shots e tarefas a partir do projeto para acompanhá-los aqui. Arraste um cartão de uma coluna para outra para mudar seu status.",
   "kanban.moveFailed": "Não foi possível mover",
-  "doc.new": "Novo documento",
-  "doc.chooseProject": "Escolha um projeto",
-  "doc.chooseEntity": "Escolha a entidade a documentar",
-  "doc.selectPdf": "Selecione um PDF",
-  "doc.pdfUploadFailed": "Falha no envio do PDF",
   "login.2faPrompt": "Digite o código do seu aplicativo de autenticação (ou um código de reserva).",
   "login.backToLogin": "← Voltar ao login",
   "login.ssoFailed": "Falha no login SSO",
@@ -2489,7 +2471,11 @@
   "upload.pickTask.hintLocal": "Arquivar a versão na etapa que a produziu mantém a pipeline legível.",
   "upload.pickTask.createStepLocal": "Criar uma task « {step} »",
   "tabs.more": "Mais separadores",
-  "departments.title": "Departamentos",
-  "departments.add": "Adicionar um departamento",
-  "departments.keyLocked": "A chave é definida uma única vez: as tasks, as timelines e os snapshots de montagem referem-se a ela."
+  "departments.keyLocked": "A chave é definida uma única vez: as tasks, as timelines e os snapshots de montagem referem-se a ela.",
+  "sidebar.switchProject": "Mudar de projeto",
+  "sidebar.noProject": "Nenhum projeto aberto",
+  "social.title": "Pessoas e mensagens",
+  "social.search": "Procurar uma pessoa ou conversa",
+  "social.people": "Pessoas",
+  "social.noMatch": "Nenhum resultado para esta pesquisa."
 }

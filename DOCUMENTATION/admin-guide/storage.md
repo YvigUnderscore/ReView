@@ -14,7 +14,7 @@ of the key conventions.
 
 - **totals** — object count and bytes;
 - **per top-level prefix** — originals, derived files, studio libraries,
-  avatars, branding, documents, comment attachments, quarantine;
+  avatars, branding, comment attachments, quarantine;
 - **derived breakdown** — HLS renditions, thumbnails, converted GLB, video
   proxies, client MP4s, timeline sprites, review references, splat edits;
 - **per project** — the weight of `projects/<slug>/…`, cross-referenced with
@@ -41,7 +41,6 @@ offers a *Re-scan* button); on very large buckets it can take a few seconds.
 | OCIO config | `studio/ocio/{uuid}.ocio` | admin color management |
 | Avatar | `avatars/{userId}.{ext}` | user profile |
 | Studio logo | `branding/logo-{timestamp}.{ext}` | admin settings |
-| Document (PDF) | `documents/{timestamp}-{name}` | Documents page |
 | Comment attachment / voice note | `comments/attachments/{userId}/{timestamp}-{name}` | review threads |
 | Quarantined upload | `quarantine/{mediaId}/{originalName}` | ClamAV scan |
 

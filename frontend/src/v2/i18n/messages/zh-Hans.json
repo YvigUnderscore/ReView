@@ -63,7 +63,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "成员",
   "nav.settings": "设置",
-  "nav.documents": "文档",
   "nav.documentation": "帮助文档",
 
   "common.save": "保存",
@@ -184,12 +183,6 @@
   "reviews.addToPlaylist": "加入 playlist…",
   "reviews.deleteMany.title": "删除这些媒体？",
   "reviews.deleteMany.message": { "other": "{count} 个媒体将被移入回收站。" },
-  "documents.global": "全局文档",
-  "documents.editor.placeholder": "撰写文档…",
-  "documents.empty": "空文档。",
-  "documents.pdfUnavailable": "PDF 不可用。",
-  "documents.delete.title": "删除该文档？",
-  "documents.delete.message": "「{title}」将被永久删除。",
 
   "common.rename": "重命名",
   "common.remove": "移除",
@@ -797,8 +790,6 @@
   "asset.card.latest": "最新：{name} · {date}",
   "asset.card.openTask": "打开完整任务",
   "asset.card.noMedia": "无媒体",
-  "docs.empty": "没有文档。",
-  "docs.pick": "请选择一个文档，或新建一个。",
   "docs.filter": "筛选页面…",
   "docs.noMatch": "没有匹配的页面。",
   "docs.buildHint": "文档不可用 — 请运行",
@@ -868,10 +859,6 @@
   "review.cameraViewSaved": "已保存摄像机视角",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "文档已创建",
-  "documents.projectPlaceholder": "项目…",
-  "documents.richText": "富文本",
-  "documents.updatedOn": "更新于 {date}",
 
   "common.escKey": "Esc",
 
@@ -1376,11 +1363,6 @@
   "csv.taskHint": "（任务用「|」分隔）。已存在的 shot 会被跳过。",
   "kanban.emptyHint": "在项目中创建 shot 和任务，即可在此跟踪。把卡片从一列拖到另一列可改变其状态。",
   "kanban.moveFailed": "移动失败",
-  "doc.new": "新建文档",
-  "doc.chooseProject": "选择一个项目",
-  "doc.chooseEntity": "选择要记录的对象",
-  "doc.selectPdf": "选择一个 PDF",
-  "doc.pdfUploadFailed": "PDF 上传失败",
   "login.2faPrompt": "输入验证器应用中的验证码（或一个备用码）。",
   "login.backToLogin": "← 返回登录",
   "login.ssoFailed": "SSO 登录失败",
@@ -2110,7 +2092,7 @@
   "chat.group.members": { "other": "{count} 位成员" },
   "chat.rename": "重命名群组",
   "chat.addMembers": "添加成员",
-  "chat.leave": "退出会话",
+  "chat.leave": "退出该会话",
   "chat.leave.confirm": "确定退出该会话？",
   "chat.mute": "关闭通知",
   "chat.unmute": "开启通知",
@@ -2421,7 +2403,11 @@
   "upload.pickTask.hintLocal": "将版本归入产出它的环节，可让流程保持清晰。",
   "upload.pickTask.createStepLocal": "创建「{step}」task",
   "tabs.more": "更多标签",
-  "departments.title": "部门",
-  "departments.add": "添加部门",
-  "departments.keyLocked": "键值一经设定便不再更改——task、timeline 和剪辑快照都依赖它。"
+  "departments.keyLocked": "键值一经设定便不再更改——task、timeline 和剪辑快照都依赖它。",
+  "sidebar.switchProject": "切换项目",
+  "sidebar.noProject": "未打开项目",
+  "social.title": "成员与消息",
+  "social.search": "搜索成员或会话",
+  "social.people": "成员",
+  "social.noMatch": "没有匹配的结果。"
 }

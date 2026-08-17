@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Mitglieder",
   "nav.settings": "Einstellungen",
-  "nav.documents": "Dokumente",
   "nav.documentation": "Dokumentation",
 
   "common.save": "Speichern",
@@ -194,12 +193,6 @@
     "one": "{count} Medium wird in den Papierkorb verschoben.",
     "other": "{count} Medien werden in den Papierkorb verschoben."
   },
-  "documents.global": "Globale Dokumente",
-  "documents.editor.placeholder": "Dokumentation verfassen…",
-  "documents.empty": "Leeres Dokument.",
-  "documents.pdfUnavailable": "PDF nicht verfügbar.",
-  "documents.delete.title": "Dokument löschen?",
-  "documents.delete.message": "„{title}“ wird endgültig gelöscht.",
 
   "common.rename": "Umbenennen",
   "common.remove": "Entfernen",
@@ -832,8 +825,6 @@
   "asset.card.latest": "letzte: {name} · {date}",
   "asset.card.openTask": "Vollständige Aufgabe öffnen",
   "asset.card.noMedia": "kein Media",
-  "docs.empty": "Kein Dokument.",
-  "docs.pick": "Wählen Sie ein Dokument oder legen Sie eines an.",
   "docs.filter": "Seiten filtern…",
   "docs.noMatch": "Keine Seite passt.",
   "docs.buildHint": "Dokumentation nicht verfügbar — starte",
@@ -903,10 +894,6 @@
   "review.cameraViewSaved": "Kameraansicht gespeichert",
   "email.placeholder": "sie@studio.de",
 
-  "documents.created": "Dokument erstellt",
-  "documents.projectPlaceholder": "Projekt…",
-  "documents.richText": "Rich Text",
-  "documents.updatedOn": "akt. {date}",
 
   "common.escKey": "Esc",
 
@@ -1420,11 +1407,6 @@
   "csv.taskHint": "(Aufgaben durch „|“ getrennt). Vorhandene shots werden übergangen.",
   "kanban.emptyHint": "Legen Sie shots und Aufgaben im Projekt an, um sie hier zu verfolgen. Ziehen Sie eine Karte von einer Spalte in die andere, um ihren Status zu ändern.",
   "kanban.moveFailed": "Verschieben nicht möglich",
-  "doc.new": "Neues Dokument",
-  "doc.chooseProject": "Ein Projekt wählen",
-  "doc.chooseEntity": "Die zu dokumentierende Entität wählen",
-  "doc.selectPdf": "Ein PDF auswählen",
-  "doc.pdfUploadFailed": "PDF-Upload fehlgeschlagen",
   "login.2faPrompt": "Geben Sie den Code aus Ihrer Authentifizierungs-App ein (oder einen Wiederherstellungscode).",
   "login.backToLogin": "← Zurück zur Anmeldung",
   "login.ssoFailed": "SSO-Anmeldung fehlgeschlagen",
@@ -2489,7 +2471,11 @@
   "upload.pickTask.hintLocal": "Die Version unter dem Schritt abzulegen, der sie erzeugt hat, hält die Pipeline lesbar.",
   "upload.pickTask.createStepLocal": "Task « {step} » erstellen",
   "tabs.more": "Weitere Tabs",
-  "departments.title": "Abteilungen",
-  "departments.add": "Abteilung hinzufügen",
-  "departments.keyLocked": "Der Schlüssel wird einmal vergeben und ändert sich nie — Tasks, Timelines und Montage-Snapshots verweisen darauf."
+  "departments.keyLocked": "Der Schlüssel wird einmal vergeben und ändert sich nie — Tasks, Timelines und Montage-Snapshots verweisen darauf.",
+  "sidebar.switchProject": "Projekt wechseln",
+  "sidebar.noProject": "Kein Projekt geöffnet",
+  "social.title": "Personen und Nachrichten",
+  "social.search": "Person oder Verlauf suchen",
+  "social.people": "Personen",
+  "social.noMatch": "Keine Treffer für diese Suche."
 }

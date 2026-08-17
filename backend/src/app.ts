@@ -51,7 +51,6 @@ import adminRoutes from './routes/admin.routes';
 import adminExplorerRoutes from './routes/admin-explorer.routes';
 import notificationsRoutes from './routes/notifications.routes';
 import favoritesRoutes from './routes/favorites.routes';
-import documentsRoutes from './routes/documents.routes';
 import contextRoutes from './routes/context.routes';
 import searchRoutes from './routes/search.routes';
 import dashboardRoutes from './routes/dashboard.routes';
@@ -179,7 +178,6 @@ export const createApp = (): Express => {
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/favorites', favoritesRoutes);
-  app.use('/api/documents', documentsRoutes);
   app.use('/api/context', contextRoutes);
   app.use('/api/search', searchRoutes);
   app.use('/api/dashboard', dashboardRoutes);

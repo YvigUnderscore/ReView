@@ -248,7 +248,6 @@ model User {
   invitation           Invitation[]         @relation("InvitationTarget")
   sentInvitations      Invitation[]         @relation("InvitationSender")
   favorites            Favorite[]
-  documents            Document[]
   announcementReads    AnnouncementRead[]
   reviewReferences     ReviewReference[]
   reviewDecisions      ReviewDecision[]     @relation("DecisionAuthor")
@@ -1033,37 +1032,6 @@ model Favorite {
 
   @@unique([userId, type, entityId])
   @@index([userId])
-}
-
-enum DocScope {
-  GLOBAL
-  PROJECT
-  SEQUENCE
-  SHOT
-  ASSET
-}
-
-enum DocKind {
-  RICH
-  PDF
-}
-
-model Document {
-  id          Int      @id @default(autoincrement())
-  title       String
-  kind        DocKind  @default(RICH)
-  content     String? // HTML sanitisé (RICH)
-  fileKey     String? // clé MinIO (PDF)
-  scope       DocScope @default(GLOBAL)
-  projectId   Int? // contrôle d'accès (NULL = documentation globale studio)
-  scopeId     Int? // id de l'entité documentée (séquence/shot/asset/projet)
-  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdById Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([projectId])
-  @@index([scope, scopeId])
 }
 
 // Annonces studio (bannière/modal au login/Accueil) — modèle complet (Phase 22)

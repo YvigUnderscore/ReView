@@ -44,8 +44,11 @@ const ENTITY_PAGE_RE = /^\/(tasks|assets|review)\//;
 export default function Shell() {
   const { pathname } = useLocation();
   const params = useParams();
+  // La liste entière, plus les huit derniers modifiés (C1) : le sélecteur doit pouvoir
+  // montrer le projet courant, fût-il ancien — il n'apparaissait nulle part auparavant,
+  // pas même quand on était en train de le regarder.
   const { data } = useProjectsQuery();
-  const projects = useMemo(() => (data ?? []).slice(0, 8), [data]);
+  const projects = useMemo(() => data ?? [], [data]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
   const narrow = useIsNarrowViewport();
   const t = useT();

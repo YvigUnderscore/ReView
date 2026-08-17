@@ -63,7 +63,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Izili",
   "nav.settings": "Arventennoù",
-  "nav.documents": "Teulioù",
   "nav.documentation": "Teuliadur",
 
   "common.save": "Enrollañ",
@@ -189,12 +188,6 @@
   "reviews.addToPlaylist": "Ouzhpennañ d'ar playlist…",
   "reviews.deleteMany.title": "Dilemel ar mediaoù ?",
   "reviews.deleteMany.message": { "other": "{count} media a vo lakaet er pod-lastez." },
-  "documents.global": "Teulioù hollek",
-  "documents.editor.placeholder": "Skrivit an teuliadur…",
-  "documents.empty": "Teul goullo.",
-  "documents.pdfUnavailable": "PDF dihegerz.",
-  "documents.delete.title": "Dilemel an teul ?",
-  "documents.delete.message": "« {title} » a vo dilamet da vat.",
 
   "common.rename": "Adenvel",
   "common.remove": "Lemel kuit",
@@ -812,8 +805,6 @@
   "asset.card.latest": "diwezhañ : {name} · {date}",
   "asset.card.openTask": "Digeriñ an trevell a-bezh",
   "asset.card.noMedia": "media ebet",
-  "docs.empty": "Teul ebet.",
-  "docs.pick": "Dibabit un teul pe krouit unan.",
   "docs.filter": "Silañ ar pajennoù…",
   "docs.noMatch": "Pajenn ebet a glot.",
   "docs.buildHint": "Teulioù dihegerz — lañsañ",
@@ -883,10 +874,6 @@
   "review.cameraViewSaved": "Gweladenn gamera enrollet",
   "email.placeholder": "c'hwi@studio.bzh",
 
-  "documents.created": "Teul krouet",
-  "documents.projectPlaceholder": "Raktres…",
-  "documents.richText": "Testenn binvidik",
-  "documents.updatedOn": "hizivaet d'an {date}",
 
   "common.escKey": "Achap",
 
@@ -1400,11 +1387,6 @@
   "csv.taskHint": "(trevelloù dispartiet gant « | »). Laosket a-gostez e vez ar shots a zo dija.",
   "kanban.emptyHint": "Krouit shots ha trevelloù adalek ar raktres evit o heuliañ amañ. Riklit ur gartenn eus ur bann d’egile evit cheñch he stad.",
   "kanban.moveFailed": "N’eo ket bet gallet dilec’hiañ",
-  "doc.new": "Teul nevez",
-  "doc.chooseProject": "Dibabit ur raktres",
-  "doc.chooseEntity": "Dibabit an elfenn da deuliañ",
-  "doc.selectPdf": "Diuzit ur PDF",
-  "doc.pdfUploadFailed": "C’hwitet eo pellgas ar PDF",
   "login.2faPrompt": "Merkit kod hoc’h arload dilesa (pe ur c’hod eskemm).",
   "login.backToLogin": "← Distreiñ d’ar c’hevreañ",
   "login.ssoFailed": "C’hwitet eo ar c’hevreañ SSO",
@@ -2478,7 +2460,11 @@
   "upload.pickTask.hintLocal": "Lakaat ar stumm dindan ar bazenn he deus he savet a zalc’h ar pipeline lennus.",
   "upload.pickTask.createStepLocal": "Krouiñ un task « {step} »",
   "tabs.more": "Ivinelloù all",
-  "departments.title": "Rannoù",
-  "departments.add": "Ouzhpennañ ur rann",
-  "departments.keyLocked": "Fiksata eo an alc’hwez ur wech da vat : an tasks, an timelines hag ar snapshots a zalc’h outañ."
+  "departments.keyLocked": "Fiksata eo an alc’hwez ur wech da vat : an tasks, an timelines hag ar snapshots a zalc’h outañ.",
+  "sidebar.switchProject": "Cheñch raktres",
+  "sidebar.noProject": "Raktres ebet digor",
+  "social.title": "Tud ha kemennadennoù",
+  "social.search": "Klask un den pe un neudenn",
+  "social.people": "Tud",
+  "social.noMatch": "Disoc’h ebet evit ar c’hlask-mañ."
 }

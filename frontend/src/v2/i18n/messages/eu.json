@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Kideak",
   "nav.settings": "Ezarpenak",
-  "nav.documents": "Dokumentuak",
   "nav.documentation": "Dokumentazioa",
 
   "common.save": "Gorde",
@@ -194,12 +193,6 @@
     "one": "Media {count} zakarrontzira joango da.",
     "other": "{count} media zakarrontzira joango dira."
   },
-  "documents.global": "Dokumentu orokorrak",
-  "documents.editor.placeholder": "Idatzi dokumentazioa…",
-  "documents.empty": "Dokumentu hutsa.",
-  "documents.pdfUnavailable": "PDFa ez dago erabilgarri.",
-  "documents.delete.title": "Dokumentua ezabatu?",
-  "documents.delete.message": "«{title}» behin betiko ezabatuko da.",
 
   "common.rename": "Berrizendatu",
   "common.remove": "Kendu",
@@ -832,8 +825,6 @@
   "asset.card.latest": "azkena: {name} · {date}",
   "asset.card.openTask": "Ireki zeregin osoa",
   "asset.card.noMedia": "mediarik ez",
-  "docs.empty": "Dokumenturik ez.",
-  "docs.pick": "Hautatu dokumentu bat edo sortu bat.",
   "docs.filter": "Iragazi orriak…",
   "docs.noMatch": "Ez dago bat datorren orririk.",
   "docs.buildHint": "Dokumentazioa ez dago erabilgarri — exekutatu",
@@ -903,10 +894,6 @@
   "review.cameraViewSaved": "Kameraren ikuspegia gorde da",
   "email.placeholder": "zu@estudioa.eus",
 
-  "documents.created": "Dokumentua sortu da",
-  "documents.projectPlaceholder": "Proiektua…",
-  "documents.richText": "Testu aberatsa",
-  "documents.updatedOn": "eguneratua {date}",
 
   "common.escKey": "Ihes",
 
@@ -1420,11 +1407,6 @@
   "csv.taskHint": "(zereginak «|» ikurraz bereizita). Dagoeneko dauden shot-ak alde batera uzten dira.",
   "kanban.emptyHint": "Sortu shot-ak eta zereginak proiektutik hemen jarraitzeko. Arrastatu txartel bat zutabe batetik bestera bere egoera aldatzeko.",
   "kanban.moveFailed": "Ezin izan da mugitu",
-  "doc.new": "Dokumentu berria",
-  "doc.chooseProject": "Aukeratu proiektu bat",
-  "doc.chooseEntity": "Aukeratu dokumentatu beharreko entitatea",
-  "doc.selectPdf": "Hautatu PDF bat",
-  "doc.pdfUploadFailed": "PDFa igotzeak huts egin du",
   "login.2faPrompt": "Idatzi zure autentifikazio-aplikazioaren kodea (edo babeseko kode bat).",
   "login.backToLogin": "← Itzuli saioa hastera",
   "login.ssoFailed": "SSO saio-hasierak huts egin du",
@@ -2492,7 +2474,11 @@
   "upload.pickTask.hintLocal": "Bertsioa sortu duen urratsaren azpian gordetzeak pipeline-a irakurgarri mantentzen du.",
   "upload.pickTask.createStepLocal": "Sortu « {step} » task bat",
   "tabs.more": "Fitxa gehiago",
-  "departments.title": "Sailak",
-  "departments.add": "Gehitu sail bat",
-  "departments.keyLocked": "Gakoa behin betiko finkatzen da: taskek, timelinek eta muntaketa-snapshotek hari egiten diote erreferentzia."
+  "departments.keyLocked": "Gakoa behin betiko finkatzen da: taskek, timelinek eta muntaketa-snapshotek hari egiten diote erreferentzia.",
+  "sidebar.switchProject": "Aldatu proiektua",
+  "sidebar.noProject": "Ez dago proiekturik irekita",
+  "social.title": "Pertsonak eta mezuak",
+  "social.search": "Bilatu pertsona edo haria",
+  "social.people": "Pertsonak",
+  "social.noMatch": "Ez dago emaitzarik bilaketa honetarako."
 }

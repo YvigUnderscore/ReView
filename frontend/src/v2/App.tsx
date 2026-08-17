@@ -30,7 +30,6 @@ import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import TimelinePlayerPage from './pages/TimelinePlayerPage';
 import ProfilePage from './pages/ProfilePage';
 import UserProfilePage from './pages/UserProfilePage';
-import DocumentsPage from './pages/DocumentsPage';
 import DocsPage from './pages/DocsPage';
 import { useT } from './i18n';
 
@@ -153,7 +152,6 @@ function AppRoutes() {
               <Route path="/profile" element={<ProfilePage />} />
               {/* Fiche publique d'un membre du studio (annuaire de présence, auteurs). */}
               <Route path="/users/:id" element={<UserProfilePage />} />
-              <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/docs" element={<DocsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

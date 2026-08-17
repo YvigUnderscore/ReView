@@ -1,56 +1,70 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import {
+  BarChart3,
   BookText,
-  ChevronRight,
-  FileText,
+  Box,
+  Clapperboard,
   Film,
   FolderKanban,
   Home,
+  KanbanSquare,
+  ListVideo,
+  PenTool,
   Settings,
   Star,
-  Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Project } from '../../types/api';
 import { projectPath } from '../../lib/slug';
 import { useAuth } from '../../stores/useAuth';
 import { useFavorites } from '../../stores/useFavorites';
-import SidebarProjectTree from '../SidebarProjectTree';
-import SidebarRecents from '../SidebarRecents';
+import ProjectSwitcher from './ProjectSwitcher';
 import { useT } from '../../i18n';
 
-/** Entrée de navigation fixe de la sidebar hybride (12.D). */
+/** Entrée de navigation de la barre latérale. */
 function SideLink({
   to,
   icon: Icon,
   label,
   active,
+  dense,
 }: {
   to: string;
   icon: LucideIcon;
   label: string;
   active: boolean;
+  /** Entrée de second niveau (section d'un projet) : plus discrète, moins haute. */
+  dense?: boolean;
 }) {
   return (
     <Link
       to={to}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+      className={`flex items-center gap-3 rounded-md text-sm transition-colors ${
+        dense ? 'px-3 py-1.5' : 'px-3 py-2'
+      } ${
         active
           ? 'bg-secondary text-foreground'
           : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
       }`}
     >
-      <Icon size={18} /> {label}
+      <Icon size={dense ? 15 : 18} className="shrink-0" /> <span className="truncate">{label}</span>
     </Link>
   );
 }
 
 /**
- * Corps de la barre latérale (extrait de `Shell` en A1 : le fichier dépassait le plafond
- * de lint et mêlait layout, navigation et raccourcis). Contenu revu en C1.
+ * Corps de la barre latérale (C1).
+ *
+ * Elle empilait l'accueil, huit projets dépliables en arbre, les reviews, les membres, les
+ * réglages, les favoris, les récents, les documents et la documentation — l'essentiel étant
+ * noyé, et l'arbre coûtant une requête par séquence ouverte pour n'afficher que des codes.
+ *
+ * Elle porte désormais trois choses, dans cet ordre : où l'on va (accueil, projets, reviews),
+ * ce qu'on regarde (le projet courant et ses sections, en liens directs — plus de déroulants),
+ * et ce qu'on a épinglé. Les récents ont rejoint l'accueil, où ils sont à leur place.
  */
 export default function SidebarNav({
   projects,
@@ -60,91 +74,96 @@ export default function SidebarNav({
   currentProjectId: number | null;
 }) {
   const { pathname } = useLocation();
+  const [params] = useSearchParams();
   const user = useAuth((s) => s.user);
   const favorites = useFavorites((s) => s.favorites);
   const t = useT();
-  const isProjectsRoot = pathname.startsWith('/projects');
+
+  const current = projects.find((p) => p.id === currentProjectId) ?? null;
+  const tab = params.get('tab') ?? 'overview';
+  const onProjectPage = current !== null && pathname.startsWith('/projects/');
+  const to = (suffix: string) => (current ? projectPath(current, suffix) : '/projects');
+
+  // Sections d'un projet : des liens directs vers l'onglet, sans arborescence.
+  const sections: { key: string; icon: LucideIcon; label: string; href: string }[] = current
+    ? [
+        { key: 'sequences', icon: Film, label: t('sequences.title'), href: to('?tab=sequences') },
+        { key: 'shots', icon: Clapperboard, label: t('shots.title'), href: to('?tab=shots') },
+        { key: 'assets', icon: Box, label: 'Assets', href: to('?tab=assets') },
+        { key: 'playlists', icon: ListVideo, label: 'Playlists', href: to('?tab=playlists') },
+        {
+          key: 'production',
+          icon: BarChart3,
+          label: t('project.tab.production'),
+          href: to('?tab=production'),
+        },
+        { key: 'kanban', icon: KanbanSquare, label: 'Kanban', href: to('/kanban') },
+        { key: 'board', icon: PenTool, label: 'Board', href: to('/board') },
+      ]
+    : [];
+
+  const sectionActive = (key: string) => {
+    if (key === 'kanban') return pathname.endsWith('/kanban');
+    if (key === 'board') return pathname.endsWith('/board');
+    return onProjectPage && !pathname.endsWith('/kanban') && !pathname.endsWith('/board') && tab === key;
+  };
 
   return (
-    <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto px-3">
+    <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto px-3 pb-3">
       <SideLink to="/" icon={Home} label={t('nav.home')} active={pathname === '/'} />
-      <SideLink to="/projects" icon={FolderKanban} label={t('nav.projects')} active={isProjectsRoot} />
+      <SideLink
+        to="/projects"
+        icon={FolderKanban}
+        label={t('nav.projects')}
+        active={pathname === '/projects'}
+      />
+      <SideLink to="/reviews" icon={Film} label={t('nav.reviews')} active={pathname.startsWith('/reviews')} />
 
-      {/* Arbre du projet courant (replié sous Projets) */}
-      {projects.length > 0 && (
-        <div className="pl-2">
-          {projects.map((p) => {
-            const isCurrent = p.id === currentProjectId;
-            return (
-              <div key={p.id}>
-                <Link
-                  to={projectPath(p)}
-                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors ${
-                    isCurrent ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <ChevronRight size={14} className={isCurrent ? 'text-primary' : ''} />
-                  <span className="truncate">{p.name}</span>
-                </Link>
-                {isCurrent && <SidebarProjectTree key={p.id} projectId={p.id} />}
-              </div>
-            );
-          })}
+      {/* Le projet qu'on regarde, et lui seul. */}
+      <div className="pt-3">
+        <ProjectSwitcher projects={projects} currentProjectId={currentProjectId} />
+      </div>
+      {sections.length > 0 && (
+        <div className="space-y-0.5 pt-1">
+          {sections.map((section) => (
+            <SideLink
+              key={section.key}
+              to={section.href}
+              icon={section.icon}
+              label={section.label}
+              dense
+              active={sectionActive(section.key)}
+            />
+          ))}
         </div>
       )}
 
-      <SideLink to="/reviews" icon={Film} label={t('nav.reviews')} active={pathname.startsWith('/reviews')} />
+      {/* Favoris : la liste seule, sans titre ni case vide — invisible tant qu'elle l'est. */}
+      {favorites.length > 0 && (
+        <div className="space-y-0.5 border-t border-border pt-3">
+          {favorites.map((f) => (
+            <Link
+              key={f.id}
+              to={f.to}
+              className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+              title={f.label}
+            >
+              <Star size={13} className="shrink-0 text-warning" fill="currentColor" />
+              <span className="truncate">{f.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
-      {user?.role === 'ADMIN' && (
-        <>
-          <SideLink
-            to="/admin/users"
-            icon={Users}
-            label={t('nav.members')}
-            active={pathname.startsWith('/admin/users')}
-          />
+      <div className="border-t border-border pt-3">
+        {user?.role === 'ADMIN' && (
           <SideLink
             to="/admin"
             icon={Settings}
             label={t('nav.settings')}
-            active={pathname.startsWith('/admin') && !pathname.startsWith('/admin/users')}
+            active={pathname.startsWith('/admin')}
           />
-        </>
-      )}
-
-      {/* Favoris */}
-      <div className="pt-3">
-        <div className="flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <Star size={13} className="text-warning" /> {t('shell.favorites')}
-        </div>
-        {favorites.length === 0 ? (
-          <p className="px-3 py-1 text-xs text-muted-foreground">{t('shell.favorites.empty')}</p>
-        ) : (
-          <div className="space-y-0.5">
-            {favorites.map((f) => (
-              <Link
-                key={f.id}
-                to={f.to}
-                className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                title={f.label}
-              >
-                <Star size={13} className="shrink-0 text-warning" fill="currentColor" />
-                <span className="truncate">{f.label}</span>
-              </Link>
-            ))}
-          </div>
         )}
-      </div>
-
-      <SidebarRecents />
-
-      <div className="pt-3">
-        <SideLink
-          to="/documents"
-          icon={FileText}
-          label={t('nav.documents')}
-          active={pathname.startsWith('/documents')}
-        />
         <SideLink
           to="/docs"
           icon={BookText}

@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Membres",
   "nav.settings": "Paramètres",
-  "nav.documents": "Documents",
   "nav.documentation": "Documentacion",
 
   "common.save": "Enregistrar",
@@ -194,12 +193,6 @@
     "one": "{count} mèdia serà mes a l’escobilhièr.",
     "other": "{count} mèdias seràn meses a l’escobilhièr."
   },
-  "documents.global": "Documents globals",
-  "documents.editor.placeholder": "Redigissètz la documentacion…",
-  "documents.empty": "Document void.",
-  "documents.pdfUnavailable": "PDF pas disponible.",
-  "documents.delete.title": "Suprimir lo document ?",
-  "documents.delete.message": "« {title} » serà suprimit definitivament.",
 
   "common.rename": "Tornar nomenar",
   "common.remove": "Levar",
@@ -829,8 +822,6 @@
   "asset.card.latest": "darrièra : {name} · {date}",
   "asset.card.openTask": "Dobrir lo prètzfach complet",
   "asset.card.noMedia": "sens mèdia",
-  "docs.empty": "Cap de document.",
-  "docs.pick": "Causissètz un document o creatz-ne un.",
   "docs.filter": "Filtrar las paginas…",
   "docs.noMatch": "Cap de pagina correspond pas.",
   "docs.buildHint": "Documentacion pas disponibla — lançar",
@@ -900,10 +891,6 @@
   "review.cameraViewSaved": "Vista de camera enregistrada",
   "email.placeholder": "vos@estudi.oc",
 
-  "documents.created": "Document creat",
-  "documents.projectPlaceholder": "Projècte…",
-  "documents.richText": "Tèxte ric",
-  "documents.updatedOn": "mesa a jorn lo {date}",
 
   "common.escKey": "Escap",
 
@@ -1417,11 +1404,6 @@
   "csv.taskHint": "(tascas separadas per « | »). Los shots existents son ignorats.",
   "kanban.emptyHint": "Creatz de shots e de tascas dempuèi lo projècte per los seguir aicí. Lisatz una carta d’una colomna a l’autra per cambiar son estatut.",
   "kanban.moveFailed": "Desplaçament impossible",
-  "doc.new": "Document novèl",
-  "doc.chooseProject": "Causissètz un projècte",
-  "doc.chooseEntity": "Causissètz l’entitat de documentar",
-  "doc.selectPdf": "Seleccionatz un PDF",
-  "doc.pdfUploadFailed": "Fracàs del mandadís PDF",
   "login.2faPrompt": "Picatz lo còdi de vòstra aplicacion d’autentificacion (o un còdi de secors).",
   "login.backToLogin": "← Tornar a la connexion",
   "login.ssoFailed": "Connexion SSO fracassada",
@@ -2489,7 +2471,11 @@
   "upload.pickTask.hintLocal": "Plaçar la version jos l’etapa que l’a producha garda lo pipeline legible.",
   "upload.pickTask.createStepLocal": "Crear una task « {step} »",
   "tabs.more": "Autres onglets",
-  "departments.title": "Departaments",
-  "departments.add": "Apondre un departament",
-  "departments.keyLocked": "La clau es fixada un còp per totas : las tasks, las timelines e los snapshots de montatge s’i referisson."
+  "departments.keyLocked": "La clau es fixada un còp per totas : las tasks, las timelines e los snapshots de montatge s’i referisson.",
+  "sidebar.switchProject": "Cambiar de projècte",
+  "sidebar.noProject": "Cap de projècte dubèrt",
+  "social.title": "Personas e messatges",
+  "social.search": "Cercar una persona o un fil",
+  "social.people": "Personas",
+  "social.noMatch": "Cap de resultat per aquesta recèrca."
 }

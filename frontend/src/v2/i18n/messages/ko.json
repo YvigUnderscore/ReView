@@ -63,7 +63,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "멤버",
   "nav.settings": "설정",
-  "nav.documents": "문서",
   "nav.documentation": "사용 설명서",
 
   "common.save": "저장",
@@ -186,12 +185,6 @@
   "reviews.addToPlaylist": "playlist에 추가…",
   "reviews.deleteMany.title": "미디어를 삭제할까요?",
   "reviews.deleteMany.message": { "other": "미디어 {count}개가 휴지통으로 이동합니다." },
-  "documents.global": "전체 문서",
-  "documents.editor.placeholder": "문서를 작성하세요…",
-  "documents.empty": "빈 문서입니다.",
-  "documents.pdfUnavailable": "PDF를 사용할 수 없습니다.",
-  "documents.delete.title": "문서를 삭제할까요?",
-  "documents.delete.message": "「{title}」이(가) 완전히 삭제됩니다.",
 
   "common.rename": "이름 변경",
   "common.remove": "제거",
@@ -803,8 +796,6 @@
   "asset.card.latest": "최신: {name} · {date}",
   "asset.card.openTask": "전체 작업 열기",
   "asset.card.noMedia": "미디어 없음",
-  "docs.empty": "문서가 없습니다.",
-  "docs.pick": "문서를 고르거나 새로 만드세요.",
   "docs.filter": "페이지 필터…",
   "docs.noMatch": "일치하는 페이지가 없습니다.",
   "docs.buildHint": "문서를 사용할 수 없습니다 — 다음을 실행하세요",
@@ -874,10 +865,6 @@
   "review.cameraViewSaved": "카메라 뷰를 저장했습니다",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "문서를 만들었습니다",
-  "documents.projectPlaceholder": "프로젝트…",
-  "documents.richText": "서식 있는 텍스트",
-  "documents.updatedOn": "{date} 수정",
 
   "common.escKey": "Esc",
 
@@ -1386,11 +1373,6 @@
   "csv.taskHint": "(작업은 「|」로 구분). 이미 있는 shot은 건너뜁니다.",
   "kanban.emptyHint": "프로젝트에서 shot과 작업을 만들면 여기서 추적할 수 있습니다. 카드를 다른 열로 끌면 상태가 바뀝니다.",
   "kanban.moveFailed": "옮길 수 없습니다",
-  "doc.new": "새 문서",
-  "doc.chooseProject": "프로젝트를 고르세요",
-  "doc.chooseEntity": "문서로 남길 대상을 고르세요",
-  "doc.selectPdf": "PDF를 고르세요",
-  "doc.pdfUploadFailed": "PDF 업로드 실패",
   "login.2faPrompt": "인증 앱의 코드(또는 백업 코드)를 입력하세요.",
   "login.backToLogin": "← 로그인으로 돌아가기",
   "login.ssoFailed": "SSO 로그인 실패",
@@ -2431,7 +2413,11 @@
   "upload.pickTask.hintLocal": "버전을 만든 단계 아래에 두면 파이프라인을 파악하기 쉬워집니다.",
   "upload.pickTask.createStepLocal": "「{step}」 task 만들기",
   "tabs.more": "탭 더 보기",
-  "departments.title": "부서",
-  "departments.add": "부서 추가",
-  "departments.keyLocked": "키는 한 번 정해지면 바뀌지 않습니다. task, timeline, 몽타주 스냅샷이 이를 참조합니다."
+  "departments.keyLocked": "키는 한 번 정해지면 바뀌지 않습니다. task, timeline, 몽타주 스냅샷이 이를 참조합니다.",
+  "sidebar.switchProject": "프로젝트 전환",
+  "sidebar.noProject": "열린 프로젝트 없음",
+  "social.title": "사람 및 메시지",
+  "social.search": "사람 또는 대화 검색",
+  "social.people": "사람",
+  "social.noMatch": "검색 결과가 없습니다."
 }

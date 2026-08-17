@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Membri",
   "nav.settings": "Parametri",
-  "nav.documents": "Ducumenti",
   "nav.documentation": "Ducumentazione",
 
   "common.save": "Arregistrà",
@@ -194,12 +193,6 @@
     "one": "{count} media serà messu in a spazzatura.",
     "other": "{count} media seranu messi in a spazzatura."
   },
-  "documents.global": "Ducumenti glubali",
-  "documents.editor.placeholder": "Scrivi a ducumentazione…",
-  "documents.empty": "Ducumentu viotu.",
-  "documents.pdfUnavailable": "PDF indispunibile.",
-  "documents.delete.title": "Sguassà u ducumentu ?",
-  "documents.delete.message": "« {title} » serà sguassatu definitivamente.",
 
   "common.rename": "Rinuminà",
   "common.remove": "Toglie",
@@ -829,8 +822,6 @@
   "asset.card.latest": "ultima : {name} · {date}",
   "asset.card.openTask": "Apre u cumpitu sanu",
   "asset.card.noMedia": "senza media",
-  "docs.empty": "Nisun ducumentu.",
-  "docs.pick": "Sceglie un ducumentu o creane unu.",
   "docs.filter": "Filtrà e pagine…",
   "docs.noMatch": "Nisuna pagina currisponde.",
   "docs.buildHint": "Ducumentazione micca dispunibule — lancià",
@@ -900,10 +891,6 @@
   "review.cameraViewSaved": "Vista di camera arregistrata",
   "email.placeholder": "tu@studio.corsica",
 
-  "documents.created": "Ducumentu creatu",
-  "documents.projectPlaceholder": "Prughjettu…",
-  "documents.richText": "Testu riccu",
-  "documents.updatedOn": "agiurnatu u {date}",
 
   "common.escKey": "Esc",
 
@@ -1417,11 +1404,6 @@
   "csv.taskHint": "(travagli separati da « | »). I shots esistenti sò ignurati.",
   "kanban.emptyHint": "Crea shots è travagli da u prughjettu per seguitalli quì. Trascina una carta da una culonna à l’altra per cambià u so statu.",
   "kanban.moveFailed": "Spustamentu impussibile",
-  "doc.new": "Novu ducumentu",
-  "doc.chooseProject": "Sceglie un prughjettu",
-  "doc.chooseEntity": "Sceglie l’entità da ducumentà",
-  "doc.selectPdf": "Selezziona un PDF",
-  "doc.pdfUploadFailed": "Fiascu di u caricamentu PDF",
   "login.2faPrompt": "Scrivi u codice di a to applicazione d’autenticazione (o un codice di succorsu).",
   "login.backToLogin": "← Torna à a cunnessione",
   "login.ssoFailed": "Cunnessione SSO fiascata",
@@ -2489,7 +2471,11 @@
   "upload.pickTask.hintLocal": "Mette a versione sottu a tappa chì l’hà pruduttu tene u pipeline leghjìbile.",
   "upload.pickTask.createStepLocal": "Creà una task « {step} »",
   "tabs.more": "Altre schede",
-  "departments.title": "Dipartimenti",
-  "departments.add": "Aghjunghje un dipartimentu",
-  "departments.keyLocked": "A chjave hè fissata una volta per tutte : e tasks, e timelines è i snapshots ci si riferiscenu."
+  "departments.keyLocked": "A chjave hè fissata una volta per tutte : e tasks, e timelines è i snapshots ci si riferiscenu.",
+  "sidebar.switchProject": "Cambià prughjettu",
+  "sidebar.noProject": "Nisun prughjettu apertu",
+  "social.title": "Persone è messagi",
+  "social.search": "Cercà una persona o un filu",
+  "social.people": "Persone",
+  "social.noMatch": "Nisun risultatu per sta ricerca."
 }

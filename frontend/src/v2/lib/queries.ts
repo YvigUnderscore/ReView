@@ -29,7 +29,7 @@ interface Page<T> {
   pageSize: number;
 }
 
-/** Liste des projets actifs (archivés exclus) — partagée Shell / ProjectsPage / DocumentsPage. */
+/** Liste des projets actifs (archivés exclus) — partagée Shell / ProjectsPage. */
 export function useProjectsQuery() {
   return useQuery({
     queryKey: qk.projects,

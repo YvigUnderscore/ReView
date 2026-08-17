@@ -64,7 +64,6 @@
   "nav.reviews": "Reviews",
   "nav.members": "Members",
   "nav.settings": "Settings",
-  "nav.documents": "Documents",
   "nav.documentation": "Documentation",
 
   "common.save": "Save",
@@ -194,12 +193,6 @@
     "one": "{count} media will be moved to the trash.",
     "other": "{count} media will be moved to the trash."
   },
-  "documents.global": "Global documents",
-  "documents.editor.placeholder": "Write the documentation…",
-  "documents.empty": "Empty document.",
-  "documents.pdfUnavailable": "PDF unavailable.",
-  "documents.delete.title": "Delete the document?",
-  "documents.delete.message": "“{title}” will be permanently deleted.",
 
   "common.rename": "Rename",
   "common.remove": "Remove",
@@ -823,8 +816,6 @@
   "asset.card.latest": "latest: {name} · {date}",
   "asset.card.openTask": "Open the full task",
   "asset.card.noMedia": "no media",
-  "docs.empty": "No document.",
-  "docs.pick": "Select a document or create one.",
   "docs.filter": "Filter the pages…",
   "docs.noMatch": "No page matches.",
   "docs.buildHint": "Documentation unavailable — run",
@@ -894,10 +885,6 @@
   "review.cameraViewSaved": "Camera view saved",
   "email.placeholder": "you@studio.com",
 
-  "documents.created": "Document created",
-  "documents.projectPlaceholder": "Project…",
-  "documents.richText": "Rich text",
-  "documents.updatedOn": "updated {date}",
 
   "common.escKey": "Esc",
 
@@ -1411,11 +1398,6 @@
   "csv.taskHint": "(tasks separated by “|”). Existing shots are ignored.",
   "kanban.emptyHint": "Create shots and tasks from the project to track them here. Drag a card from one column to another to change its status.",
   "kanban.moveFailed": "Could not move",
-  "doc.new": "New document",
-  "doc.chooseProject": "Choose a project",
-  "doc.chooseEntity": "Choose the entity to document",
-  "doc.selectPdf": "Select a PDF",
-  "doc.pdfUploadFailed": "PDF upload failed",
   "login.2faPrompt": "Enter the code from your authentication app (or a backup code).",
   "login.backToLogin": "← Back to sign-in",
   "login.ssoFailed": "SSO sign-in failed",
@@ -2166,7 +2148,7 @@
   "chat.group.members": { "one": "{count} member", "other": "{count} members" },
   "chat.rename": "Rename group",
   "chat.addMembers": "Add people",
-  "chat.leave": "Leave conversation",
+  "chat.leave": "Leave this conversation",
   "chat.leave.confirm": "Leave this conversation?",
   "chat.mute": "Mute notifications",
   "chat.unmute": "Unmute notifications",
@@ -2477,7 +2459,11 @@
   "upload.pickTask.hintLocal": "Filing it under the step that produced it keeps the pipeline readable.",
   "upload.pickTask.createStepLocal": "Create a « {step} » task",
   "tabs.more": "More tabs",
-  "departments.title": "Departments",
-  "departments.add": "Add a department",
-  "departments.keyLocked": "The key is set once and never changes — tasks, timelines and montage snapshots rely on it."
+  "departments.keyLocked": "The key is set once and never changes — tasks, timelines and montage snapshots rely on it.",
+  "sidebar.switchProject": "Switch project",
+  "sidebar.noProject": "No project open",
+  "social.title": "People and messages",
+  "social.search": "Search people or threads",
+  "social.people": "People",
+  "social.noMatch": "Nothing matches this search."
 }

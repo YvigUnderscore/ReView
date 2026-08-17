@@ -92,14 +92,28 @@ export async function listUsers() {
 }
 
 /**
- * Présence de tous les utilisateurs — accessible à TOUT compte authentifié, y compris un
- * CLIENT externe. L'email est donc retiré de la réponse : `toPublicUser` recopie l'objet
- * qu'on lui passe (`...u`), il servait ici à calculer le nom d'affichage et repartait avec.
- * C'était l'annuaire complet du studio, adresses comprises, offert à n'importe quel invité.
+ * Présence des personnes que le demandeur a le droit de voir.
+ *
+ * L'email est retiré de la réponse : `toPublicUser` recopie l'objet qu'on lui passe
+ * (`...u`), il servait ici à calculer le nom d'affichage et repartait avec. C'était
+ * l'annuaire complet du studio, adresses comprises, offert à n'importe quel invité.
+ *
+ * Le cloisonnement va plus loin depuis C1 : un CLIENT est un intervenant extérieur, il
+ * n'a pas à connaître l'équipe entière ni à pouvoir écrire à n'importe qui. Il ne voit
+ * que les personnes des projets qu'il partage. Les autres rôles voient le studio, comme
+ * avant — ils y travaillent.
  */
-export async function listPresence() {
+export async function listPresence(viewer?: { id: number; role: Role }) {
+  const scope =
+    viewer?.role === Role.CLIENT
+      ? {
+          memberships: {
+            some: { project: { memberships: { some: { userId: viewer.id } } } },
+          },
+        }
+      : {};
   const users = await prisma.user.findMany({
-    where: { isService: false },
+    where: { isService: false, ...scope },
     select: {
       id: true,
       email: true, // nécessaire au repli displayName/initials — retiré de la sortie plus bas
