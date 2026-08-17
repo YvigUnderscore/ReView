@@ -133,7 +133,7 @@ export default function ProjectAdminDetailTab() {
               }
             />
           </dl>
-          <p className="mt-2 text-[11px] text-muted-foreground">{t('projectAdmin.hint')}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t('projectAdmin.hint')}</p>
         </Panel>
       </div>
 

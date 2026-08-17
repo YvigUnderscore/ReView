@@ -120,7 +120,7 @@ export default function OcioTab() {
                 className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2"
               >
                 <span className="min-w-0 flex-1 truncate text-sm">{c.name}</span>
-                <span className="rounded bg-secondary/60 px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                <span className="rounded bg-secondary/60 px-1.5 py-0.5 text-2xs uppercase text-muted-foreground">
                   ACES {c.acesVersion}
                 </span>
                 <button
@@ -172,7 +172,7 @@ export default function OcioTab() {
                     >
                       <span className="min-w-0 flex-1 truncate text-sm">{a.label}</span>
                       {a.recommendedDefault && (
-                        <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] uppercase text-primary">
+                        <span className="rounded bg-primary/15 px-1.5 py-0.5 text-2xs uppercase text-primary">
                           {t('ocio.recommended')}
                         </span>
                       )}

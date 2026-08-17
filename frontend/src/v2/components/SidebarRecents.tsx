@@ -34,7 +34,7 @@ export default function SidebarRecents() {
           >
             <span className="truncate">{r.label}</span>
             {r.sublabel && (
-              <span className="ml-auto shrink-0 max-w-[40%] truncate text-[10px] text-muted-foreground/70">
+              <span className="ml-auto shrink-0 max-w-[40%] truncate text-2xs text-muted-foreground/70">
                 {r.sublabel}
               </span>
             )}

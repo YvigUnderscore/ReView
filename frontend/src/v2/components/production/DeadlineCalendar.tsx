@@ -90,7 +90,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
 
       <div className="grid grid-cols-7 gap-1">
         {weekdays(intlLocale()).map((w) => (
-          <div key={w} className="pb-1 text-center text-[11px] font-medium text-muted-foreground">
+          <div key={w} className="pb-1 text-center text-xs font-medium text-muted-foreground">
             {w}
           </div>
         ))}
@@ -106,7 +106,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
               }`}
             >
               <div
-                className={`mb-0.5 text-right text-[11px] ${
+                className={`mb-0.5 text-right text-xs ${
                   key === todayKey
                     ? 'font-semibold text-primary'
                     : inMonth
@@ -122,7 +122,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
                     key={t.id}
                     to={`/tasks/${t.id}`}
                     title={`${t.location} · ${t.name} — ${TASK_STATUS_LABEL_KEY[t.status] ? tr(TASK_STATUS_LABEL_KEY[t.status]) : t.status}`}
-                    className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] hover:bg-secondary/60"
+                    className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-2xs hover:bg-secondary/60"
                   >
                     <span
                       className={`h-1.5 w-1.5 shrink-0 rounded-full ${TASK_STATUS_BAR[t.status] ?? 'bg-muted-foreground/40'}`}
@@ -134,7 +134,7 @@ export default function DeadlineCalendar({ tasks }: { tasks: ScheduleTask[] }) {
                   </Link>
                 ))}
                 {dayTasks.length > 3 && (
-                  <div className="px-1 text-[10px] text-muted-foreground">+{dayTasks.length - 3}</div>
+                  <div className="px-1 text-2xs text-muted-foreground">+{dayTasks.length - 3}</div>
                 )}
               </div>
             </div>

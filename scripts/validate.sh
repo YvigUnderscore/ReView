@@ -58,6 +58,10 @@ node "$ROOT/scripts/check-raw-keys.mjs"
 step "Thème — couleurs hors tokens (classes Tailwind brutes)"
 node "$ROOT/scripts/check-color-tokens.mjs"
 
+# Une taille de police en pixels ignore le réglage de densité (qui agit sur la racine en rem).
+step "Thème — tailles de texte en pixels"
+node "$ROOT/scripts/check-text-sizes.mjs"
+
 # ---------- Outillage racine ----------
 # Les scripts de la racine (contrôles de la suite, simulateur ShotGrid, i18n) sont du code
 # comme un autre : lintés (via l'ESLint du backend) et formatés comme le reste.
@@ -139,6 +143,10 @@ step "Frontend — tests unitaires (vitest)"
 
 step "Frontend — build (vite build)"
 ( cd "$ROOT/frontend" && npm run build )
+
+# Garde-fou anti-régression sur ce que le navigateur télécharge avant le premier écran.
+step "Frontend — budget du bundle d'entrée"
+node "$ROOT/scripts/check-bundle-budget.mjs"
 
 if [[ "$WITH_E2E" == "1" ]]; then
   step "E2E — smoke Playwright (parcours critique, lance backend+frontend)"

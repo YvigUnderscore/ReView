@@ -88,7 +88,7 @@ export default function DocsPage() {
           )}
           {sections.map((section) => (
             <div key={section.dir}>
-              <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {section.label}
               </p>
               <ul>

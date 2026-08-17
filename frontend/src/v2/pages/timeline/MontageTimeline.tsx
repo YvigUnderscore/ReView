@@ -68,7 +68,7 @@ export default function MontageTimeline({
         {spans.map((span, i) => (
           <div
             key={`${span.sequenceId ?? 'none'}-${span.startTime}`}
-            className={`absolute top-0 flex h-4 items-center overflow-hidden rounded-sm px-1 text-[10px] ${
+            className={`absolute top-0 flex h-4 items-center overflow-hidden rounded-sm px-1 text-2xs ${
               i % 2 === 0 ? 'bg-secondary/70 text-foreground' : 'bg-secondary/30 text-muted-foreground'
             }`}
             style={{ left: anchor(span.startTime), width: `${pct(span.duration)}%` }}
@@ -158,7 +158,7 @@ export default function MontageTimeline({
             </button>
           ))}
 
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground">
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 font-mono text-2xs text-muted-foreground">
           {formatTime(time)} / {formatTime(total)}
         </span>
       </div>

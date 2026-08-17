@@ -116,7 +116,7 @@ export default function ProjectColorSection({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+    <label className="flex flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
       {label}
       {children}
     </label>

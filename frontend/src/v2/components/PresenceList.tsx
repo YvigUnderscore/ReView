@@ -87,7 +87,7 @@ function PresenceRow({ user }: { user: PresenceUser }) {
           />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-xs font-medium">{user.displayName}</span>
-            <span className="block truncate text-[10px] text-muted-foreground">
+            <span className="block truncate text-2xs text-muted-foreground">
               {lastSeenLabel(user.lastSeenAt, user.online)}
             </span>
           </span>

@@ -126,9 +126,9 @@ export default function CommentItem({
           <span className="text-sm font-medium">
             {c.author?.displayName ?? c.author?.name ?? c.guestName ?? t('comments.anonymous')}
           </span>
-          <span className="text-[10px] text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
+          <span className="text-2xs text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
           {c.isEdited && (
-            <span className="text-[10px] italic text-muted-foreground">{t('common.modified')}</span>
+            <span className="text-2xs italic text-muted-foreground">{t('common.modified')}</span>
           )}
           {c.isResolved && (
             <span
@@ -140,21 +140,21 @@ export default function CommentItem({
                     })
                   : t('comments.resolved')
               }
-              className="inline-flex items-center gap-1 rounded bg-success/15 px-1.5 py-0.5 text-[11px] text-success"
+              className="inline-flex items-center gap-1 rounded bg-success/15 px-1.5 py-0.5 text-xs text-success"
             >
               <CheckCircle2 size={10} /> {t('comments.resolved')}
             </span>
           )}
           {/* Badges indicateurs : la carte entière est cliquable pour tout restaurer. */}
           {c.timestamp != null && (
-            <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 font-mono text-[11px] text-primary">
+            <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 font-mono text-xs text-primary">
               <Film size={10} /> F{startFrame + Math.round(c.timestamp * fps)}
             </span>
           )}
           {c.cameraState != null && (
             <span
               title={t('review.cameraViewSaved')}
-              className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
+              className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground"
             >
               <Camera size={11} />
             </span>
@@ -162,7 +162,7 @@ export default function CommentItem({
           {hasAnnotation && (
             <span
               title={t('comment.annotationAttached')}
-              className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground"
+              className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground"
             >
               <PenLine size={11} />
             </span>
@@ -247,7 +247,7 @@ export default function CommentItem({
           )}
           {canDelete &&
             (confirmDelete ? (
-              <span role="presentation" onClick={stop} className="flex items-center gap-1 text-[11px]">
+              <span role="presentation" onClick={stop} className="flex items-center gap-1 text-xs">
                 <button
                   onClick={remove}
                   className="rounded bg-destructive px-1.5 py-0.5 text-destructive-foreground"

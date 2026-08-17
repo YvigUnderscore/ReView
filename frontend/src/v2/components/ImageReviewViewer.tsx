@@ -294,7 +294,7 @@ export default function ImageReviewViewer({
         <button
           onClick={() => zoomBy(1 / 1.25)}
           title={t('imageViewer.zoomOut')}
-          className="rounded p-1 hover:bg-muted"
+          className="rounded p-1.5 hover:bg-muted"
         >
           <ZoomOut size={16} />
         </button>
@@ -304,7 +304,7 @@ export default function ImageReviewViewer({
         <button
           onClick={() => zoomBy(1.25)}
           title={t('imageViewer.zoomIn')}
-          className="rounded p-1 hover:bg-muted"
+          className="rounded p-1.5 hover:bg-muted"
         >
           <ZoomIn size={16} />
         </button>
@@ -315,13 +315,13 @@ export default function ImageReviewViewer({
         >
           1:1
         </button>
-        <button onClick={reset} title={t('imageViewer.fit')} className="rounded p-1 hover:bg-muted">
+        <button onClick={reset} title={t('imageViewer.fit')} className="rounded p-1.5 hover:bg-muted">
           <Maximize size={16} />
         </button>
         <button
           onClick={fullscreen}
           title={t('imageViewer.fullscreen')}
-          className="rounded p-1 hover:bg-muted"
+          className="rounded p-1.5 hover:bg-muted"
         >
           <Expand size={16} />
         </button>

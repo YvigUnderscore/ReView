@@ -20,7 +20,7 @@ export default function SourceNotice({ className = '' }: { className?: string })
   const t = useT();
   const { data: branding } = useBranding();
   return (
-    <p className={`text-[11px] text-muted-foreground ${className}`}>
+    <p className={`text-xs text-muted-foreground ${className}`}>
       {t('license.notice')}{' '}
       <a
         href={branding?.sourceUrl ?? UPSTREAM_SOURCE_URL}

@@ -86,7 +86,7 @@ export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) 
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{label}</div>
           {conversation.isGroup && (
-            <div className="truncate text-[10px] text-muted-foreground">
+            <div className="truncate text-2xs text-muted-foreground">
               {t('chat.group.members', { count: conversation.members.length })}
             </div>
           )}
@@ -173,7 +173,7 @@ function HeaderButton({
       title={title}
       aria-label={title}
       onClick={onClick}
-      className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      className="shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
     >
       {children}
     </button>

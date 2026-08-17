@@ -292,7 +292,7 @@ function TextDraftInput({
       }}
       onBlur={onCommit}
       onPointerDown={(e) => e.stopPropagation()}
-      className="absolute z-10 w-48 rounded border border-primary bg-background/90 px-1.5 py-0.5 text-sm text-foreground focus:outline-none"
+      className="absolute z-10 w-48 rounded border border-primary bg-background/90 px-1.5 py-0.5 text-sm text-foreground"
       style={{ left: `${draft.x * 100}%`, top: `${(draft.y - 0.02) * 100}%` }}
     />
   );

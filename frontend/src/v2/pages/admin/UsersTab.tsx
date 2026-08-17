@@ -148,7 +148,7 @@ export default function UsersTab() {
                         onClick={() => void resendInvite(u)}
                         disabled={resending === u.id}
                         title={t('users.resendInvite')}
-                        className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+                        className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
                       >
                         <Send size={15} />
                       </button>
@@ -156,7 +156,7 @@ export default function UsersTab() {
                     <button
                       onClick={() => setEditing(u)}
                       title={t('common.edit')}
-                      className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
                     >
                       <Pencil size={15} />
                     </button>
@@ -164,7 +164,7 @@ export default function UsersTab() {
                       <button
                         onClick={() => setDeleting(u)}
                         title={t('common.delete')}
-                        className="rounded p-1 text-destructive hover:bg-secondary"
+                        className="rounded p-1.5 text-destructive hover:bg-secondary"
                       >
                         <Trash2 size={15} />
                       </button>

@@ -83,7 +83,7 @@ export default function ReviewStatusTab() {
               onClick={() => move(i, -1)}
               disabled={i === 0}
               title={t('common.moveUp')}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
             >
               <ArrowUp size={13} />
             </button>
@@ -91,21 +91,21 @@ export default function ReviewStatusTab() {
               onClick={() => move(i, 1)}
               disabled={i === items.length - 1}
               title={t('common.moveDown')}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
             >
               <ArrowDown size={13} />
             </button>
             <button
               onClick={() => setEditing(s)}
               title={t('common.edit')}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <Pencil size={13} />
             </button>
             <button
               onClick={() => setDeleting(s)}
               title={t('common.delete')}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-destructive"
             >
               <Trash2 size={13} />
             </button>

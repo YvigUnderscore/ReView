@@ -83,7 +83,7 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
       {/* Axe temporel */}
       <div className="grid grid-cols-[140px_1fr] gap-x-3">
         <div />
-        <div className="relative mb-2 h-4 text-[10px] text-muted-foreground">
+        <div className="relative mb-2 h-4 text-2xs text-muted-foreground">
           {ticks.map((t, i) => (
             <span key={t} className="absolute -translate-x-1/2" style={{ left: `${(i / 4) * 100}%` }}>
               {fmt(t)}
@@ -101,7 +101,7 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
                 <div key={b.task.id} className="grid grid-cols-[140px_1fr] items-center gap-x-3">
                   <Link
                     to={`/tasks/${b.task.id}`}
-                    className="truncate text-[11px] hover:text-primary"
+                    className="truncate text-xs hover:text-primary"
                     title={`${b.task.location} · ${b.task.name}`}
                   >
                     {b.task.location && <span className="text-muted-foreground">{b.task.location} </span>}

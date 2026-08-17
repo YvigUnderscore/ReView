@@ -56,7 +56,7 @@ export default function VersionAssets({ versionId, mediaId }: { versionId: numbe
 
   return (
     <div className="flex shrink-0 flex-col gap-2 rounded-md border border-border bg-card/60 p-2">
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Layers size={13} className="text-primary" />
         <span className="font-medium text-foreground">{t('review.versionAssets')}</span>
         {index >= 0 && (
@@ -115,17 +115,17 @@ export default function VersionAssets({ versionId, mediaId }: { versionId: numbe
                 <span className="absolute left-1 top-1 rounded bg-background/80 p-0.5 text-foreground">
                   <Icon size={11} />
                 </span>
-                <span className="absolute right-1 top-1 rounded bg-background/80 px-1 text-[9px] tabular-nums text-muted-foreground">
+                <span className="absolute right-1 top-1 rounded bg-background/80 px-1 text-2xs tabular-nums text-muted-foreground">
                   {i + 1}
                 </span>
                 {active && (
-                  <span className="absolute bottom-1 left-1 rounded bg-primary px-1 text-[9px] font-medium text-primary-foreground">
+                  <span className="absolute bottom-1 left-1 rounded bg-primary px-1 text-2xs font-medium text-primary-foreground">
                     {t('review.assetViewing')}
                   </span>
                 )}
               </div>
               <span
-                className={`truncate text-[10px] ${active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}
+                className={`truncate text-2xs ${active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}
               >
                 {m.originalName}
               </span>

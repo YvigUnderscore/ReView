@@ -29,7 +29,7 @@ function TangentModeBar({
     free: t('camera.tangent.free'),
   };
   return (
-    <div className="absolute top-1 right-2 z-10 flex overflow-hidden rounded border border-border bg-card/90 text-[10px]">
+    <div className="absolute top-1 right-2 z-10 flex overflow-hidden rounded border border-border bg-card/90 text-2xs">
       {(['auto', 'linear', 'step', 'free'] as const).map((m) => (
         <button
           key={m}
@@ -208,13 +208,13 @@ export default function CurvesDrawer({
             />
           )}
           {anim.keyTimes.length === 0 && (
-            <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 px-4 text-center text-[11px] text-muted-foreground">
+            <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 px-4 text-center text-xs text-muted-foreground">
               <span>{t(editable ? 'camera.empty.editable' : 'camera.empty')}</span>
               {editable && onOrbitPreset && (
                 <button
                   type="button"
                   onClick={onOrbitPreset}
-                  className="pointer-events-auto rounded border border-border px-2 py-0.5 text-[11px] transition-colors hover:bg-secondary/60 hover:text-foreground"
+                  className="pointer-events-auto rounded border border-border px-2 py-0.5 text-xs transition-colors hover:bg-secondary/60 hover:text-foreground"
                 >
                   {t('camera.orbitPreset')}
                 </button>

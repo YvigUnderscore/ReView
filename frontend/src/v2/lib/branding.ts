@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from './query';
+import { contrastRatio, hexToRgb, type Rgb } from './contrast';
 
 /**
  * Thème studio (42.B — №101) : accent + logo + nom, définis par l'admin et appliqués
@@ -89,17 +90,35 @@ export function hexToHsl(hex: string): string | null {
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
-/** Applique l'accent studio (hex) sur les tokens `--primary`/`--ring` ; `null` = réglages par défaut. */
+/**
+ * Applique l'accent studio (hex) sur les tokens `--primary`/`--ring` ; `null` = réglages
+ * par défaut.
+ *
+ * `--primary-foreground` est dérivé de la luminance de l'accent (A2) : le style inline
+ * l'emporte sur `:root` comme sur `.dark`, donc un accent sombre choisi par l'admin
+ * laissait un `bg-primary text-primary-foreground` illisible dans l'un des deux thèmes.
+ */
 export function applyAccent(hex: string | null): void {
   const root = document.documentElement;
   const hsl = hex ? hexToHsl(hex) : null;
   if (hsl) {
     root.style.setProperty('--primary', hsl);
     root.style.setProperty('--ring', hsl);
+    root.style.setProperty('--primary-foreground', accentForeground(hex));
   } else {
     root.style.removeProperty('--primary');
     root.style.removeProperty('--ring');
+    root.style.removeProperty('--primary-foreground');
   }
+}
+
+/** Encre lisible sur un aplat d'accent : blanc ou encre sombre, selon le plus contrasté. */
+function accentForeground(hex: string | null): string {
+  const rgb = hex ? hexToRgb(hex) : null;
+  if (!rgb) return '0 0% 100%';
+  const ink: Rgb = [0.02, 0.03, 0.05];
+  const white: Rgb = [1, 1, 1];
+  return contrastRatio(ink, rgb) >= contrastRatio(white, rgb) ? '220 29% 6%' : '0 0% 100%';
 }
 
 // Applique l'accent en cache dès l'import (avant le premier rendu / requête).

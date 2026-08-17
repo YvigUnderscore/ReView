@@ -168,7 +168,7 @@ export default function VideoTimeline({
               ...spriteSlotCss(thumb.index, sprite!.meta, thumbH),
             }}
           />
-          <p className="bg-card/95 py-0.5 text-center font-mono text-[10px] text-muted-foreground">
+          <p className="bg-card/95 py-0.5 text-center font-mono text-2xs text-muted-foreground">
             {formatTime(thumb.time)}
           </p>
         </div>
@@ -283,7 +283,7 @@ export default function VideoTimeline({
       )}
 
       {/* Timecode affiché à droite */}
-      <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground pointer-events-none">
+      <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-2xs text-muted-foreground pointer-events-none">
         {formatTime(currentTime)} / {formatTime(duration)}
       </span>
     </div>

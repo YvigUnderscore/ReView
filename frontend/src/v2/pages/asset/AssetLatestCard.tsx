@@ -43,13 +43,13 @@ export default function AssetLatestCard({ assetId, latest }: { assetId: number; 
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+        <div className="text-2xs font-semibold uppercase tracking-wide text-primary">
           {t('asset.latest.title')}
         </div>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-medium">{latest.versionName}</span>
           {latest.departmentName && (
-            <span className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
               <Layers size={11} /> {latest.departmentName}
             </span>
           )}

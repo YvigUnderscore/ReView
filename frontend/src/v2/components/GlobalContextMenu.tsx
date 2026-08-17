@@ -67,7 +67,7 @@ function Item({
       {icon}
       {label}
       {kbd && (
-        <kbd className="ml-auto rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <kbd className="ml-auto rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
           {kbd}
         </kbd>
       )}

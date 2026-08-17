@@ -130,11 +130,11 @@ export default function ReviewComments({
               className="group flex w-full items-center gap-2 pt-1 text-left"
             >
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.marker.color }} />
-              <span className="shrink-0 text-[11px] font-medium text-muted-foreground group-hover:text-foreground">
+              <span className="shrink-0 text-xs font-medium text-muted-foreground group-hover:text-foreground">
                 {s.marker.name}
               </span>
               <span className="h-px min-w-4 flex-1 bg-border" />
-              <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+              <span className="shrink-0 font-mono text-2xs text-muted-foreground">
                 {startFrame + s.marker.frame}
               </span>
             </button>

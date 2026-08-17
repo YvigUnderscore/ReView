@@ -88,7 +88,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
             </div>
           )}
           <div className="flex items-end gap-2">
-            <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+            <label className="flex flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
               {t('storage.quotaLabel')}
               <input
                 type="number"

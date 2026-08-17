@@ -91,7 +91,7 @@ export default function SgStepsPanel({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('shotgrid.steps.search')}
-            className="w-full bg-transparent py-1 text-sm outline-none"
+            className="w-full bg-transparent py-1 text-sm"
           />
         </label>
       </div>
@@ -118,12 +118,10 @@ export default function SgStepsPanel({
               {/* Le code court est affiché même quand il répète le nom : c'est lui qui
                   départage deux étapes homonymes, et il n'y a pas d'autre repère. */}
               {step.shortName && (
-                <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{step.shortName}</span>
+                <span className="shrink-0 font-mono text-xs text-muted-foreground">{step.shortName}</span>
               )}
               {step.used && (
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {t('shotgrid.steps.inUse')}
-                </span>
+                <span className="shrink-0 text-2xs text-muted-foreground">{t('shotgrid.steps.inUse')}</span>
               )}
             </label>
           ))}

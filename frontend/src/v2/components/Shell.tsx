@@ -25,6 +25,7 @@ import { useGlobalShortcuts } from '../lib/shortcuts';
 import { usePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
 import { useIsNarrowViewport } from '../lib/useMediaQuery';
+import { syncAccountDensity } from '../stores/useDensity';
 import { syncAccountLocale, useT } from '../i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
@@ -103,9 +104,13 @@ export default function Shell() {
   // Langue du compte : suivie sur un appareil qui n'a pas encore fait de choix explicite
   // (nouveau poste, session invitée). Un choix local, lui, reste prioritaire.
   const accountLocale = prefsQ.data?.locale;
+  const accountDensity = prefsQ.data?.density;
   useEffect(() => {
     syncAccountLocale(accountLocale);
   }, [accountLocale]);
+  useEffect(() => {
+    syncAccountDensity(accountDensity);
+  }, [accountDensity]);
   const bindings = useMemo(() => resolveBindings(prefsQ.data?.shortcuts), [prefsQ.data?.shortcuts]);
   useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp, bindings });
   // Temps réel : room du projet courant → invalidations de cache ciblées (10.E3)
@@ -152,7 +157,7 @@ export default function Shell() {
             <button
               onClick={toggleCollapse}
               title={t('shell.collapse')}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <PanelLeftClose size={18} />
             </button>

@@ -25,7 +25,7 @@ export default function KanbanColumn({
     >
       <div className="mb-2 flex items-center justify-between px-1 text-xs font-medium text-muted-foreground">
         <span>{label}</span>
-        <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px]">{tasks.length}</span>
+        <span className="rounded-full bg-secondary px-1.5 py-0.5 text-2xs">{tasks.length}</span>
       </div>
       <div className="space-y-2">
         {tasks.map((t) => (

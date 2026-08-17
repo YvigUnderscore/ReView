@@ -115,7 +115,7 @@ export default function SgSyncPanel({
                       revient à trancher à l'aveugle. Les conflits enregistrés avant que
                       ces valeurs soient relevées le disent, plutôt que d'aligner des
                       tirets qu'on prendrait pour des valeurs vides. */}
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className="block text-xs text-muted-foreground">
                     {c.vars?.field
                       ? t('shotgrid.conflict.detail', {
                           field: fieldLabel(t, String(c.vars.field)),

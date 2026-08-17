@@ -140,21 +140,21 @@ export default function TaskPickerDialog({
                 {/* Le département ne s'affiche que s'il apprend quelque chose : sur un
                     site ShotGrid, le nom de la tâche EST souvent celui de l'étape. */}
                 {task.department && task.department !== task.name && (
-                  <span className="ml-2 text-[11px] text-muted-foreground">
+                  <span className="ml-2 text-xs text-muted-foreground">
                     <Layers size={10} className="mr-0.5 inline" />
                     {task.department}
                   </span>
                 )}
               </span>
               <PipelineStatusBadge statusId={task.pipelineStatusId} scope="task" size="xs" />
-              <span className="shrink-0 text-[11px] text-muted-foreground">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 {t('asset.tree.versionCount', { count: task.versionCount })}
               </span>
             </button>
           ))}
 
           {others.length > 0 && (
-            <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('upload.pickTask.elsewhere')}
             </p>
           )}
@@ -170,7 +170,7 @@ export default function TaskPickerDialog({
                 <span className="truncate font-medium">{task.name}</span>
               </span>
               <PipelineStatusBadge statusId={task.pipelineStatusId} scope="task" size="xs" />
-              <span className="shrink-0 text-[11px] text-muted-foreground">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 {t('asset.tree.versionCount', { count: task.versionCount })}
               </span>
             </button>
@@ -178,7 +178,7 @@ export default function TaskPickerDialog({
 
           {freeSteps.length > 0 && (
             <>
-              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {t('upload.pickTask.steps')}
               </p>
               <div className="grid gap-1.5 sm:grid-cols-2">
@@ -187,7 +187,7 @@ export default function TaskPickerDialog({
                   onChange={(e) => setDraftName(e.target.value)}
                   list="review-task-names"
                   placeholder={t('upload.pickTask.namePlaceholder')}
-                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none"
+                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 />
                 {/* Les noms déjà employés ici : un pipe se lit mieux quand les tâches
                     d'un même asset portent des noms cohérents. */}
@@ -201,7 +201,7 @@ export default function TaskPickerDialog({
                 <select
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
-                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none"
+                  className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 >
                   <option value="">{t('upload.pickTask.noAssignee')}</option>
                   {members.map((m) => (

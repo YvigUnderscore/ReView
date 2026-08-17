@@ -77,7 +77,7 @@ export default function SavedViewsMenu({
                     type="button"
                     onClick={() => remove(v.id)}
                     title={t('savedViews.delete')}
-                    className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
+                    className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-destructive"
                   >
                     <Trash2 size={13} />
                   </button>

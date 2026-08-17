@@ -216,7 +216,7 @@ export default function ProjectSettingsTab({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">{t('pipeline.departments')}</span>
           {sgConnected && (
-            <span className="inline-flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground">
               <Lock size={11} /> {t('shotgrid.settings.inheritedTitle')}
             </span>
           )}
@@ -286,7 +286,7 @@ export default function ProjectSettingsTab({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+    <label className="flex flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
       {label}
       {children}
     </label>

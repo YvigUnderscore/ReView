@@ -156,7 +156,7 @@ export default function AssetAssignDialog({
                 <div className="space-y-3">
                   {groups.map((g) => (
                     <div key={g.seq.id}>
-                      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-primary/80">
+                      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary/80">
                         {g.seq.code}
                       </div>
                       <div className="grid grid-cols-2 gap-1">

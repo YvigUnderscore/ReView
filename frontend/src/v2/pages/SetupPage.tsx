@@ -54,7 +54,7 @@ export default function SetupPage() {
         {STEP_KEYS.map((key, i) => (
           <li key={key} className="flex items-center gap-2">
             <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-medium ${
+              className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium ${
                 i <= step
                   ? 'border-primary bg-primary/15 text-primary'
                   : 'border-border text-muted-foreground'

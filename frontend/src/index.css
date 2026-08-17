@@ -22,7 +22,13 @@
     --card-foreground: 222 30% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 30% 10%;
-    --primary: 187 100% 30%;
+    /*
+     * Luminosités calées sur WCAG AA (A2) : chaque teinte de statut doit tenir 4,5:1 à la
+     * fois sur --background et sur le badge `bg-X/15` qui la repose sur ce fond. Les
+     * valeurs d'origine tombaient entre 2,69 et 3,98 — le pire, --warning, était
+     * illisible. Teintes et saturations inchangées : la palette reste la même.
+     */
+    --primary: 187 100% 24%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 20% 92%;
     --secondary-foreground: 222 30% 12%;
@@ -30,16 +36,16 @@
     --muted-foreground: 220 12% 42%;
     --accent: 187 80% 92%;
     --accent-foreground: 187 100% 22%;
-    --accent-2: 328 90% 44%;
+    --accent-2: 328 90% 38%;
     --accent-2-foreground: 0 0% 100%;
-    --destructive: 3 85% 48%;
+    --destructive: 3 85% 40%;
     --destructive-foreground: 0 0% 100%;
-    --success: 151 90% 30%;
-    --warning: 40 95% 38%;
-    --info: 210 90% 42%;
+    --success: 151 90% 23%;
+    --warning: 40 95% 27%;
+    --info: 210 90% 38%;
     --border: 220 16% 87%;
     --input: 220 16% 83%;
-    --ring: 187 100% 30%;
+    --ring: 187 100% 24%;
     --radius: 0.625rem;
     /* Courbes de l'éditeur d'animation caméra (Phase 17) — convention DCC X/Y/Z + focale/tilt. */
     --curve-x: 3 80% 48%;
@@ -64,10 +70,16 @@
     --muted-foreground: 219 13% 65%;
     --accent: 184 70% 14%;
     --accent-foreground: 184 100% 72%;
-    --accent-2: 328 100% 56%;
-    --accent-2-foreground: 0 0% 100%;
-    --destructive: 3 100% 59%;
-    --destructive-foreground: 0 0% 100%;
+    /*
+     * Sombre : ces deux teintes passaient sous 4,5:1 sur un badge posé sur --card.
+     * Leur encre passe au sombre — sur un aplat rouge ou magenta vif, le blanc ne tenait
+     * que 3,4:1 (défaut préexistant), là où l'encre sombre atteint 5,7. C'est déjà le
+     * parti pris de --primary-foreground sur le cyan.
+     */
+    --accent-2: 328 100% 59%;
+    --accent-2-foreground: 220 29% 6%;
+    --destructive: 3 100% 62%;
+    --destructive-foreground: 220 29% 6%;
     --success: 151 100% 45%;
     --warning: 45 100% 51%;
     --info: 199 95% 60%;
@@ -182,6 +194,17 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /*
+   * Anneau de focus clavier (A2). Six fichiers seulement le déclaraient, pour près de
+   * trois cents boutons : au clavier, on ne savait pas où l'on était. Posé globalement à
+   * partir des tokens, il couvre tout élément focusable sans déclaration par composant.
+   * Les primitives qui gèrent déjà leur focus posent `focus-visible:outline-none` et
+   * neutralisent donc cette règle — pas de double anneau.
+   */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: 2px;
   }
 }
 

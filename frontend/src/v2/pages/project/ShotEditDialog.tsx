@@ -105,7 +105,7 @@ export default function ShotEditDialog({
             ))}
           </Select>
           <div className="flex gap-2">
-            <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+            <label className="flex flex-1 flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
               {t('shot.startFrame')}
               <Input
                 type="number"
@@ -114,7 +114,7 @@ export default function ShotEditDialog({
                 onChange={(e) => setVals((v) => ({ ...v, startFrame: e.target.value }))}
               />
             </label>
-            <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+            <label className="flex flex-1 flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
               {t('shot.endFrame')}
               <Input
                 type="number"
@@ -135,7 +135,7 @@ export default function ShotEditDialog({
             />
             <span>
               {t('shot.omitted')}
-              <span className="block text-[10px] text-muted-foreground">{t('shot.omittedHint')}</span>
+              <span className="block text-2xs text-muted-foreground">{t('shot.omittedHint')}</span>
             </span>
           </label>
         </div>

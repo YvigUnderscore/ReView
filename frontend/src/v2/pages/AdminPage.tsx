@@ -228,7 +228,7 @@ export default function AdminPage() {
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-52 md:flex-col md:overflow-visible md:pb-0">
           {GROUPS.map((group) => (
             <div key={group} className="flex gap-1 md:flex-col">
-              <div className="hidden px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 first:pt-0 md:block">
+              <div className="hidden px-3 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-muted-foreground/70 first:pt-0 md:block">
                 {groupLabel(t, group)}
               </div>
               {sections(t)

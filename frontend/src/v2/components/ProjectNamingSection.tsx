@@ -42,7 +42,7 @@ export default function ProjectNamingSection({
       <div className="text-sm font-medium">{t('pipeline.naming')}</div>
       <div className="mb-3 text-xs text-muted-foreground">{t('project.namingHint')}</div>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <label className="flex flex-1 flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
           {t('naming.pattern')}
           <input
             className="w-full rounded border border-input bg-background px-2 py-1.5 font-mono text-xs"
@@ -51,7 +51,7 @@ export default function ProjectNamingSection({
             onChange={(e) => onChange({ ...value, pattern: e.target.value })}
           />
         </label>
-        <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <label className="flex flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
           {t('naming.policy')}
           <select
             className="rounded border border-input bg-background px-2 py-1.5 text-xs"

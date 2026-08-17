@@ -41,7 +41,7 @@ export default function ConversationList() {
           <span className="flex items-center gap-1.5">
             <MessageSquare size={14} /> {t('chat.title')}
             {unreadTotal > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent2 px-1 text-[10px] font-semibold text-accent2-foreground">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent2 px-1 text-2xs font-semibold text-accent2-foreground">
                 {unreadTotal > 9 ? '9+' : unreadTotal}
               </span>
             )}
@@ -55,7 +55,7 @@ export default function ConversationList() {
           onClick={() => setCreating(true)}
           title={t('chat.group.create')}
           aria-label={t('chat.group.create')}
-          className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className="shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           <Plus size={14} />
         </button>
@@ -87,12 +87,12 @@ export default function ConversationList() {
                   <span className="block truncate text-xs font-medium">
                     {conversationLabel(c, self.id, t('chat.you'))}
                   </span>
-                  <span className="block truncate text-[10px] text-muted-foreground">
+                  <span className="block truncate text-2xs text-muted-foreground">
                     {c.lastMessage?.body ?? t('chat.noMessages')}
                   </span>
                 </span>
                 {c.unread > 0 && (
-                  <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-accent2 px-1 text-[10px] font-semibold text-accent2-foreground">
+                  <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-accent2 px-1 text-2xs font-semibold text-accent2-foreground">
                     {c.unread > 9 ? '9+' : c.unread}
                   </span>
                 )}

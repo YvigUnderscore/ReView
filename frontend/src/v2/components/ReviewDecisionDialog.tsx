@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from './ui/textarea';
 import ReviewDecisionBadge from './ReviewDecisionBadge';
 import { pickPreselectedStatus, reviewStatusStyle } from './reviewDecision.helpers';
+import { useTheme } from '../stores/useTheme';
 import type { ReviewDecision, ReviewStatus } from '../types/api';
 import { useT } from '../i18n';
 
@@ -38,6 +39,7 @@ export default function ReviewDecisionDialog({
   projectId?: number;
 }) {
   const t = useT();
+  const theme = useTheme((s) => s.theme);
   const qc = useQueryClient();
   const statusesQ = useReviewStatusesQuery(open, projectId);
   const historyQ = useQuery({
@@ -113,7 +115,7 @@ export default function ReviewDecisionDialog({
                   className={`rounded-md border px-2 py-1 text-xs transition-colors ${
                     statusId === s.id ? 'ring-1 ring-ring' : 'opacity-70 hover:opacity-100'
                   }`}
-                  style={reviewStatusStyle(s.color, statusId === s.id)}
+                  style={reviewStatusStyle(s.color, theme === 'dark', statusId === s.id)}
                 >
                   {s.name}
                 </button>

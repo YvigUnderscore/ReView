@@ -43,7 +43,7 @@ export default function ChatMessages({ conversationId, selfId }: { conversationI
       {!atStart && (
         <button
           onClick={() => void loadOlder(conversationId)}
-          className="w-full rounded px-2 py-1 text-center text-[11px] text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+          className="w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
         >
           {t('chat.loadOlder')}
         </button>
@@ -58,7 +58,7 @@ export default function ChatMessages({ conversationId, selfId }: { conversationI
 function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
   const t = useT();
   if (message.isSystem) {
-    return <p className="py-1 text-center text-[11px] italic text-muted-foreground">{message.body}</p>;
+    return <p className="py-1 text-center text-xs italic text-muted-foreground">{message.body}</p>;
   }
   const author = message.author;
   const mine = author?.id === selfId;
@@ -76,7 +76,7 @@ function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
           <span className="truncate text-xs font-medium">
             {mine ? t('chat.you') : (author?.displayName ?? t('chat.deletedAuthor'))}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo(message.createdAt)}</span>
+          <span className="shrink-0 text-2xs text-muted-foreground">{timeAgo(message.createdAt)}</span>
           {mine && (
             <button
               onClick={() => void api.del(`/api/chat/messages/${message.id}`).catch(() => undefined)}

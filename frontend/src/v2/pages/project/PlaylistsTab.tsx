@@ -154,7 +154,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
                         title={`${t('live.running')} ${t('live.participants', {
                           count: liveOf(p.id)!.participantCount,
                         })} ${t('live.clickToJoin')}`}
-                        className="mr-3 flex shrink-0 items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent2 hover:bg-accent2/20"
+                        className="mr-3 flex shrink-0 items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-xs font-semibold text-accent2 hover:bg-accent2/20"
                       >
                         <Radio size={12} className="animate-pulse" /> {t('live.badge')} ·{' '}
                         {liveOf(p.id)!.participantCount}

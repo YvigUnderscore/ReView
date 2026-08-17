@@ -75,7 +75,7 @@ export default function Model3DThreePane({
             {/* Raison remontée par le worker (45.C) : asset USD manquant, outillage absent,
                 archive refusée… — sans elle, l'utilisateur ne sait pas quoi corriger. */}
             {processingError && (
-              <p className="rounded border border-border bg-card/60 px-2 py-1.5 text-left font-mono text-[11px] break-words text-foreground">
+              <p className="rounded border border-border bg-card/60 px-2 py-1.5 text-left font-mono text-xs break-words text-foreground">
                 {processingError}
               </p>
             )}

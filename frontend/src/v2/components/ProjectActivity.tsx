@@ -109,7 +109,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                 />
               ))}
           </div>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             {byStatus
               .filter((b) => b.count > 0)
               .map((b) => (
@@ -153,7 +153,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                         {r.location && <span className="text-muted-foreground">{r.location} · </span>}
                         <span className="font-medium">{r.label}</span>
                       </span>
-                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                      <span className="shrink-0 text-2xs text-muted-foreground">
                         {new Date(r.at).toLocaleDateString()}
                       </span>
                     </Link>
@@ -194,7 +194,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                       <select
                         value={t.assignee?.id ?? ''}
                         onChange={(e) => assign(t.id, e.target.value)}
-                        className="rounded border border-input bg-background px-1 py-0.5 text-[11px]"
+                        className="rounded border border-input bg-background px-1 py-0.5 text-xs"
                       >
                         <option value="">{tr('activity.unassigned')}</option>
                         {members.map((m) => (
@@ -206,12 +206,10 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                     </>
                   ) : (
                     <>
-                      <span className={`rounded px-1.5 py-0.5 text-[11px] ${STATUS_COLOR[t.status] ?? ''}`}>
+                      <span className={`rounded px-1.5 py-0.5 text-xs ${STATUS_COLOR[t.status] ?? ''}`}>
                         {STATUS_LABEL[t.status] ? tr(STATUS_LABEL[t.status]) : t.status}
                       </span>
-                      {t.assignee && (
-                        <span className="text-[11px] text-muted-foreground">{t.assignee.name}</span>
-                      )}
+                      {t.assignee && <span className="text-xs text-muted-foreground">{t.assignee.name}</span>}
                     </>
                   )}
                 </li>

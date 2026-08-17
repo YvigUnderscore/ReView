@@ -22,7 +22,7 @@ function Progress({ p }: { p: DashboardProject }) {
       <span className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
         <span className={`block h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
       </span>
-      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{pct} %</span>
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{pct} %</span>
     </span>
   );
 }

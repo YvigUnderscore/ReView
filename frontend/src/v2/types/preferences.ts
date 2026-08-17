@@ -27,6 +27,11 @@ export interface UserPreferences {
    * le serveur en a besoin pour envoyer les emails dans la bonne langue.
    */
   locale?: string;
+  /**
+   * Densité d'affichage (A2) : suivie par le compte pour qu'un poste neuf reprenne le
+   * réglage. Un choix explicite fait sur l'appareil reste prioritaire.
+   */
+  density?: 'comfortable' | 'compact';
   [key: string]: unknown;
 }
 

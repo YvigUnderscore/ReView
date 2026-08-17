@@ -96,7 +96,7 @@ export default function MontagePanels({
   if (panel === 'export')
     return (
       <Group title={t('review.export.media')}>
-        <p className="text-[11px] leading-snug text-muted-foreground">{t('timeline.exportHint')}</p>
+        <p className="text-xs leading-snug text-muted-foreground">{t('timeline.exportHint')}</p>
         <TimelineExportButton
           timelineId={timeline.id}
           disabled={!timeline.items.some((it) => it.mediaId !== null)}

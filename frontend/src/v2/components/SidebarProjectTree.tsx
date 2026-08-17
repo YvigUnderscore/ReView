@@ -89,7 +89,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
     const shots = shotsBySeq[seqId];
     if (!shots) return <Skeleton className="ml-6 my-1 h-4 w-28" />;
     if (shots.length === 0)
-      return <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">{t('sequences.noShot')}</p>;
+      return <p className="ml-6 px-2 py-0.5 text-xs text-muted-foreground/70">{t('sequences.noShot')}</p>;
     return shots.map((s) => (
       <Link key={s.id} to={`/shots/${s.id}`} title={`${s.code} — ${s.name}`} className={`${rowClass} ml-6`}>
         <Film size={12} className="shrink-0" />
@@ -121,7 +121,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
         ) : (
           <div className="space-y-0.5">
             {sequences.length === 0 && unsequenced === 0 && (
-              <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">{t('tree.noSequence')}</p>
+              <p className="ml-6 px-2 py-0.5 text-xs text-muted-foreground/70">{t('tree.noSequence')}</p>
             )}
             {sequences.map((sq) => (
               <div key={sq.id}>
@@ -136,7 +136,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
                     <ChevronRight size={12} className="shrink-0" />
                   )}
                   <span className="truncate">{sq.code}</span>
-                  <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/70">
+                  <span className="ml-auto shrink-0 text-2xs text-muted-foreground/70">
                     {sq._count.shots}
                   </span>
                 </button>
@@ -152,7 +152,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
                     <ChevronRight size={12} className="shrink-0" />
                   )}
                   <span className="truncate italic">{t('tree.outsideSequence')}</span>
-                  <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/70">{unsequenced}</span>
+                  <span className="ml-auto shrink-0 text-2xs text-muted-foreground/70">{unsequenced}</span>
                 </button>
                 {open.seqs.includes(NO_SEQ) && renderShots(NO_SEQ)}
               </div>
@@ -172,7 +172,7 @@ export default function SidebarProjectTree({ projectId }: { projectId: number })
             <Skeleton className="h-4 w-24" />
           </div>
         ) : assets.length === 0 ? (
-          <p className="ml-6 px-2 py-0.5 text-[11px] text-muted-foreground/70">{t('tree.noAsset')}</p>
+          <p className="ml-6 px-2 py-0.5 text-xs text-muted-foreground/70">{t('tree.noAsset')}</p>
         ) : (
           assets.map((a) => (
             <Link key={a.id} to={`/assets/${a.id}`} title={a.name} className={`${rowClass} ml-3`}>

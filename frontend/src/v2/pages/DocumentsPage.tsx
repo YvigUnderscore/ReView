@@ -129,7 +129,7 @@ export default function DocumentsPage() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{d.title}</div>
-                <div className="text-[10px] text-muted-foreground">{SCOPE_LABEL[d.scope]}</div>
+                <div className="text-2xs text-muted-foreground">{SCOPE_LABEL[d.scope]}</div>
               </div>
             </button>
           ))}

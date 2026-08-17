@@ -66,7 +66,7 @@ export default function ImageWipeOverlay({
           <button
             onClick={onSide}
             title={t('review.compare.sideBySide')}
-            className="rounded p-1 hover:bg-secondary"
+            className="rounded p-1.5 hover:bg-secondary"
           >
             <Columns2 size={14} />
           </button>
@@ -74,7 +74,7 @@ export default function ImageWipeOverlay({
             <button
               onClick={onDiff}
               title={t('review.compare.diffMode')}
-              className="rounded p-1 hover:bg-secondary"
+              className="rounded p-1.5 hover:bg-secondary"
             >
               <Diff size={14} />
             </button>
@@ -82,7 +82,7 @@ export default function ImageWipeOverlay({
           <button
             onClick={onClose}
             title={t('review.compare.close')}
-            className="rounded p-1 hover:bg-secondary"
+            className="rounded p-1.5 hover:bg-secondary"
           >
             <X size={14} />
           </button>

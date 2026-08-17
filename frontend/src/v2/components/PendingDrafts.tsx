@@ -80,7 +80,7 @@ export default function PendingDrafts() {
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary"
             >
               <X size={15} />
             </button>
@@ -92,11 +92,11 @@ export default function PendingDrafts() {
                   {d.originalName}
                 </div>
                 {d.location && (
-                  <div className="truncate text-[11px] text-muted-foreground" title={d.location}>
+                  <div className="truncate text-xs text-muted-foreground" title={d.location}>
                     {d.location}
                   </div>
                 )}
-                <div className="mt-0.5 text-[10px] text-muted-foreground">
+                <div className="mt-0.5 text-2xs text-muted-foreground">
                   {d.versionName} · {d.kind} · {d.status}
                 </div>
                 <div className="mt-1.5 flex items-center gap-1">

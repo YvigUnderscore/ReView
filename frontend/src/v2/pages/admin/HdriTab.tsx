@@ -102,7 +102,7 @@ export default function HdriTab() {
               >
                 <HdriPreview url={h.url} format={h.format} />
                 <span className="min-w-0 flex-1 truncate text-sm">{h.name}</span>
-                <span className="rounded bg-secondary/60 px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                <span className="rounded bg-secondary/60 px-1.5 py-0.5 text-2xs uppercase text-muted-foreground">
                   {h.format}
                 </span>
                 <Button

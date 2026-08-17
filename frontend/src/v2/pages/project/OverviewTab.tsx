@@ -98,7 +98,7 @@ export default function OverviewTab({
                     <Play size={18} className="text-primary" />
                   </div>
                 </div>
-                <div className="truncate px-1.5 py-1 text-[10px] text-muted-foreground">{m.originalName}</div>
+                <div className="truncate px-1.5 py-1 text-2xs text-muted-foreground">{m.originalName}</div>
               </Link>
             ))}
           </div>

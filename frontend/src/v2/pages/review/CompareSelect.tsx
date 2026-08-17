@@ -136,7 +136,7 @@ export default function CompareSelect({
           );
         })}
         {multi && (
-          <p className="px-2 pb-1 pt-1.5 text-[10px] text-muted-foreground">
+          <p className="px-2 pb-1 pt-1.5 text-2xs text-muted-foreground">
             {t('compare.gridHint', { max: MAX_COMPARE + 1 })}
           </p>
         )}

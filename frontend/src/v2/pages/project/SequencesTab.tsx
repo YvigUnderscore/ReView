@@ -200,7 +200,7 @@ function SequenceDetail({ sequenceId, projectId }: { sequenceId: number; project
               <span key={sh.id} className="rounded border border-border bg-background px-2 py-0.5 text-xs">
                 {sh.code} <span className="text-muted-foreground">· {sh.name}</span>
                 {sh.assets.length > 0 && (
-                  <span className="ml-1 text-[10px] text-primary">{sh.assets.length} asset(s)</span>
+                  <span className="ml-1 text-2xs text-primary">{sh.assets.length} asset(s)</span>
                 )}
               </span>
             ))}

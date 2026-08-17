@@ -58,7 +58,7 @@ export default function CommentReactions({
           className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs ${g.mine ? 'border-primary bg-primary/10' : 'border-border hover:bg-secondary'}`}
         >
           <span>{g.emoji}</span>
-          <span className="text-[10px] text-muted-foreground">{g.count}</span>
+          <span className="text-2xs text-muted-foreground">{g.count}</span>
         </button>
       ))}
       <div className="relative">
@@ -79,7 +79,7 @@ export default function CommentReactions({
             className="absolute bottom-full left-0 z-20 mb-1 flex gap-0.5 rounded-md border border-border bg-card p-1 shadow-lg"
           >
             {EMOJIS.map((e) => (
-              <button key={e} onClick={() => react(e)} className="rounded p-1 text-base hover:bg-secondary">
+              <button key={e} onClick={() => react(e)} className="rounded p-1.5 text-base hover:bg-secondary">
                 {e}
               </button>
             ))}

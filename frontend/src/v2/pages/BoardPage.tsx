@@ -168,14 +168,14 @@ export default function BoardPage({ scope }: { scope: Scope }) {
                 {m.thumbnailUrl ? (
                   <img src={m.thumbnailUrl} alt={m.originalName} className="h-20 w-full object-cover" />
                 ) : (
-                  <div className="flex h-20 items-center justify-center text-[10px] text-muted-foreground">
+                  <div className="flex h-20 items-center justify-center text-2xs text-muted-foreground">
                     {m.originalName}
                   </div>
                 )}
               </button>
             ))}
             {library.length === 0 && (
-              <p className="text-[11px] text-muted-foreground">{t('board.noPublishedImage')}</p>
+              <p className="text-xs text-muted-foreground">{t('board.noPublishedImage')}</p>
             )}
           </div>
         )}

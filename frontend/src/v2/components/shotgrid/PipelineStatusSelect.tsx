@@ -47,7 +47,7 @@ export default function PipelineStatusSelect({
         value={legacyStatus ?? 'TODO'}
         disabled={disabled}
         onChange={(e) => onChange({ statusId: null, legacyStatus: e.target.value as TaskStatus })}
-        className={`rounded px-1 py-0.5 text-[11px] ${TASK_STATUS_COLOR[legacyStatus ?? 'TODO'] ?? ''} ${className}`}
+        className={`rounded px-1 py-0.5 text-xs ${TASK_STATUS_COLOR[legacyStatus ?? 'TODO'] ?? ''} ${className}`}
       >
         {TASK_STATUSES.map((s) => (
           <option key={s} value={s}>
@@ -73,7 +73,7 @@ export default function PipelineStatusSelect({
         if (next) onChange({ statusId: next.id, legacyStatus: (next.legacyStatus ?? 'TODO') as TaskStatus });
       }}
       style={current ? { backgroundColor: `${current.color}22`, color: current.color } : undefined}
-      className={`rounded px-1 py-0.5 text-[11px] ${className}`}
+      className={`rounded px-1 py-0.5 text-xs ${className}`}
       title={current?.code}
     >
       {!current && <option value="">{t('pipeline.status.none')}</option>}

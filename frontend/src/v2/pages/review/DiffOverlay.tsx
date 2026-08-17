@@ -75,17 +75,25 @@ function DiffHud({
       >
         <Flame size={14} />
       </button>
-      <button onClick={onWipe} title={t('review.compare.toWipe')} className="rounded p-1 hover:bg-secondary">
+      <button
+        onClick={onWipe}
+        title={t('review.compare.toWipe')}
+        className="rounded p-1.5 hover:bg-secondary"
+      >
         <SplitSquareHorizontal size={14} />
       </button>
       <button
         onClick={onSide}
         title={t('review.compare.sideBySide')}
-        className="rounded p-1 hover:bg-secondary"
+        className="rounded p-1.5 hover:bg-secondary"
       >
         <Columns2 size={14} />
       </button>
-      <button onClick={onClose} title={t('review.compare.close')} className="rounded p-1 hover:bg-secondary">
+      <button
+        onClick={onClose}
+        title={t('review.compare.close')}
+        className="rounded p-1.5 hover:bg-secondary"
+      >
         <X size={14} />
       </button>
     </div>

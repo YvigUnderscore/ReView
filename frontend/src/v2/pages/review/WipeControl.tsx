@@ -113,7 +113,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
       {/* Angle courant, affiché près de la poignée quand la barre n'est pas verticale */}
       {angle !== 0 && (
         <span
-          className="absolute z-40 rounded bg-card/90 px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground"
+          className="absolute z-40 rounded bg-card/90 px-1 py-0.5 text-2xs tabular-nums text-muted-foreground"
           style={{ left: rotX + 12, top: rotY - 8 }}
         >
           {Math.round(angle)}°

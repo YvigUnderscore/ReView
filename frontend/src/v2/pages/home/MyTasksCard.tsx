@@ -66,7 +66,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
           className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-secondary/60"
         >
           <span
-            className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${TASK_STATUS_COLOR[task.status]}`}
+            className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${TASK_STATUS_COLOR[task.status]}`}
           >
             {tr(TASK_STATUS_LABEL_KEY[task.status])}
           </span>
