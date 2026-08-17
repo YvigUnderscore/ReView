@@ -17,7 +17,7 @@ import SidebarNav from './shell/SidebarNav';
 import { ShellHeaderContext } from './shell/shellHeaderContext';
 import ChatDock from './chat/ChatDock';
 import CommandPalette from './CommandPalette';
-import GlobalContextMenu from './GlobalContextMenu';
+import ContextMenuGuard from './ContextMenuGuard';
 import NotificationBell from './NotificationBell';
 import ShortcutsHelp from './ShortcutsHelp';
 import OnboardingTour from './OnboardingTour';
@@ -223,14 +223,16 @@ export default function Shell() {
         </motion.main>
       </div>
 
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-      <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
-      {/* Clic droit global : bloque le menu natif et sert le menu de repli contextuel. */}
-      <GlobalContextMenu
-        onSearch={() => setPaletteOpen(true)}
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
         onShortcuts={openHelp}
         onToggleSidebar={toggleCollapse}
       />
+      <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+      {/* Le clic droit ne sert que les menus métier : ailleurs, rien ne s'ouvre et le menu
+          du navigateur reste bloqué (A3). */}
+      <ContextMenuGuard />
       <OnboardingTour />
       <UploadWidget />
       <PendingDrafts />

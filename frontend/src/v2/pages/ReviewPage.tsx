@@ -270,13 +270,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
       breadcrumb={<EntityBreadcrumb entity="media" id={id} />}
       width="flush"
     >
-      {/* Clic droit : menu custom des viewers — le menu natif du navigateur est désactivé
-          sur toute la review (les viewers 3D/splat utilisent le clic droit pour naviguer). */}
-      <div
-        ref={reviewRootRef}
-        className={`flex flex-col ${rootClass}`}
-        onContextMenu={(e) => e.preventDefault()}
-      >
+      {/* Le menu natif est bloqué globalement par ContextMenuGuard (A3) : la review n'a plus
+          à marquer l'événement comme traité, ce qui rendait muette toute zone dépourvue de
+          menu métier — en-tête, barre d'options, dock, transport, panneau de commentaires. */}
+      <div ref={reviewRootRef} className={`flex flex-col ${rootClass}`}>
         {theater && <TheaterExitButton onExit={() => setTheater(false)} />}
         {data && !theater ? (
           <ReviewHeader

@@ -21,7 +21,9 @@ The script fails on the first red step, in order:
    (`check-untranslated.mjs`, ratchet at 0), raw translation keys reaching the
    screen (`check-raw-keys.mjs`);
 3. **Theme** — no raw Tailwind palette classes (`bg-blue-500`…) or arbitrary
-   color values outside theme tokens (`check-color-tokens.mjs`);
+   color values outside theme tokens (`check-color-tokens.mjs`); no pixel font
+   sizes (`check-text-sizes.mjs`), which would ignore the density setting since
+   density scales the root font size and everything else is sized in `rem`;
 4. **Tooling** — ESLint on the root `scripts/*.mjs` (`lint-scripts.mjs`, using
    the backend's ESLint through the Node API), Prettier check on the same files,
    `bash -n` syntax check on `scripts/*.sh`;
@@ -36,7 +38,9 @@ The script fails on the first red step, in order:
    `e2e/`, `scripts/**/*.mjs` and the `.config.ts` files); **ESLint (zero
    warnings)**; typecheck (`tsc --noEmit` for `src/`, plus
    `tsconfig.e2e.json` for `e2e/` and the config files); vitest unit tests;
-   Vite build;
+   Vite build; **entry bundle budget** (`check-bundle-budget.mjs`) — gzip size
+   of the script the browser downloads before the first screen, so route-level
+   code splitting cannot silently regress;
 8. **Playwright end-to-end smoke** (optional; `E2E_CHANNEL=msedge` on local
    Windows).
 

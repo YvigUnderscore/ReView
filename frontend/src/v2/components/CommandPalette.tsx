@@ -30,6 +30,7 @@ import {
   CommandGroup,
   CommandItem,
 } from './ui/command';
+import PaletteActions from './palette/PaletteActions';
 import { useT } from '../i18n';
 
 /**
@@ -51,9 +52,13 @@ const EMPTY: SearchResults = { projects: [], sequences: [], shots: [], assets: [
 export default function CommandPalette({
   open,
   onOpenChange,
+  onShortcuts,
+  onToggleSidebar,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onShortcuts: () => void;
+  onToggleSidebar: () => void;
 }) {
   const t = useT();
   const navigate = useNavigate();
@@ -90,6 +95,12 @@ export default function CommandPalette({
     onOpenChange(false);
     setQ('');
     void navigate(to);
+  };
+
+  const run = (action: () => void) => {
+    onOpenChange(false);
+    setQ('');
+    action();
   };
 
   const hasQuery = q.trim().length > 0;
@@ -157,6 +168,10 @@ export default function CommandPalette({
                 <BookText size={15} className="text-muted-foreground" /> {t('nav.documentation')}
               </CommandItem>
             </CommandGroup>
+          )}
+
+          {!hasQuery && (
+            <PaletteActions onRun={run} onShortcuts={onShortcuts} onToggleSidebar={onToggleSidebar} />
           )}
 
           {results.projects.length > 0 && (

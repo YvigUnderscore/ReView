@@ -216,7 +216,11 @@ export default function ImageReviewViewer({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onContextMenu={(e) => e.preventDefault()}
+        // Surtout pas de `preventDefault` ici (A3) : ce viewport est un descendant du
+        // ContextMenuTrigger de la review image, et Radix compose les gestionnaires avec
+        // `checkForDefaultPrevented` — marquer l'événement comme traité empêchait le menu
+        // métier (copier/télécharger l'image, miniature, playlist, annoter) de s'ouvrir.
+        // Le menu natif est déjà bloqué en amont par ContextMenuGuard.
         style={{
           cursor: editable ? 'crosshair' : 'grab',
           touchAction: 'none',

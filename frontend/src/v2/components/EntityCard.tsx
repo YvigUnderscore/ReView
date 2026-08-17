@@ -11,14 +11,48 @@ import type { SelectModifiers } from '../lib/useMultiSelect';
 import { useFavorites, type FavType } from '../stores/useFavorites';
 import HoverSprite, { type SpriteData } from './HoverSprite';
 import { Checkbox } from './ui/checkbox';
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
+import EntityContextMenu from './ui/entity-menu';
+import { separator, type MenuEntry } from '../lib/menuSpec';
 import { useT } from '../i18n';
 
 export interface EntityItemAction {
   icon: ReactNode;
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
   danger?: boolean;
+  disabled?: boolean;
+  /** Sous-menu (choix d'un statut, d'une playlist…). `onClick` est alors ignoré. */
+  items?: EntityItemAction[];
+  /** Trait de séparation posé avant cette entrée. */
+  separatorBefore?: boolean;
+}
+
+/**
+ * Traduit les actions d'une carte en entrées de menu déclaratives (A3). L'ancien rendu
+ * ne savait exprimer qu'une liste plate : ni sous-menu, ni entrée désactivée, ni
+ * séparateur — d'où des menus qui ne pouvaient pas proposer « changer le statut ».
+ */
+function toMenuEntries(actions: EntityItemAction[], prefix = 'a'): MenuEntry[] {
+  return actions.flatMap((action, index): MenuEntry[] => {
+    const id = `${prefix}-${index}-${action.label}`;
+    const entry: MenuEntry = action.items
+      ? {
+          kind: 'submenu',
+          id,
+          label: action.label,
+          icon: action.icon,
+          items: toMenuEntries(action.items, id),
+        }
+      : {
+          id,
+          label: action.label,
+          icon: action.icon,
+          danger: action.danger,
+          disabled: action.disabled,
+          onSelect: () => action.onClick?.(),
+        };
+    return action.separatorBefore ? [separator(id), entry] : [entry];
+  });
 }
 
 /** État de multi-sélection d'une carte (13.A). */
@@ -57,10 +91,11 @@ function Actions({ actions }: { actions?: EntityItemAction[] }) {
           key={a.label}
           title={a.label}
           aria-label={a.label}
+          disabled={a.disabled}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            a.onClick();
+            a.onClick?.();
           }}
           className={`flex h-7 w-7 items-center justify-center rounded-md hover:bg-secondary ${
             a.danger ? 'text-destructive' : 'text-muted-foreground hover:text-foreground'
@@ -165,19 +200,7 @@ export default function EntityCard({
     else node = inner;
 
     if (!menuActions.length) return node;
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>{node}</ContextMenuTrigger>
-        <ContextMenuContent>
-          {menuActions.map((a) => (
-            <ContextMenuItem key={a.label} danger={a.danger} onSelect={() => a.onClick()}>
-              {a.icon}
-              {a.label}
-            </ContextMenuItem>
-          ))}
-        </ContextMenuContent>
-      </ContextMenu>
-    );
+    return <EntityContextMenu entries={toMenuEntries(menuActions)}>{node}</EntityContextMenu>;
   };
 
   if (view === 'compact') {
