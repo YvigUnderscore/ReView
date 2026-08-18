@@ -89,6 +89,10 @@ export const qk = {
   docsPage: (path: string) => ['docs', 'page', path] as const,
   reviewStatuses: ['review-statuses'] as const,
   watches: ['watches'] as const,
+  /** Pilotage de production (C6), fenêtre de rythme comprise. */
+  projectProduction: (projectId: number, weeks: number) => ['production', projectId, weeks] as const,
+  /** Toutes fenêtres confondues — à invalider quand une échéance bouge. */
+  projectProductionAll: (projectId: number) => ['production', projectId] as const,
   playlists: (projectId: number) => ['playlists', projectId] as const,
   playlist: (id: number) => ['playlist', id] as const,
   /** Catalogue des versions à mettre en playlist (C5), clé = chaîne de filtres. */
