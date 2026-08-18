@@ -14,7 +14,7 @@ dependencies are listed: build-time tooling is never redistributed.
 
 | License | Packages |
 | --- | --- |
-| MIT | 453 |
+| MIT | 454 |
 | Apache-2.0 | 62 |
 | ISC | 60 |
 | BSD-3-Clause | 10 |
@@ -27,7 +27,7 @@ dependencies are listed: build-time tooling is never redistributed.
 | MPL-2.0 | 1 |
 | OFL-1.1 | 1 |
 | Unlicense | 1 |
-| **Total** | **595** |
+| **Total** | **596** |
 
 Runtime services that ReView talks to over the network (PostgreSQL, Redis, MinIO,
 ClamAV, Prometheus, Grafana, nginx) run as separate programs in their own containers.
@@ -15195,7 +15195,7 @@ SOFTWARE.
 
 ## Frontend (browser bundle)
 
-345 packages.
+346 packages.
 
 ### @antfu/install-pkg@1.1.0
 
@@ -16598,6 +16598,35 @@ SOFTWARE.
 ```
 
 ### @dnd-kit/core@6.3.1
+
+- License: `MIT`
+- Source: https://github.com/clauderic/dnd-kit
+
+```text
+MIT License
+
+Copyright (c) 2021, Claudéric Demers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### @dnd-kit/sortable@10.0.0
 
 - License: `MIT`
 - Source: https://github.com/clauderic/dnd-kit

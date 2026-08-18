@@ -58,10 +58,7 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
   const t = useT();
   const [hero, ...rest] = reviews;
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('home.latestReviews')}
-      </h2>
+    <>
       {!hero ? (
         <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
           <Clapperboard size={28} />
@@ -111,6 +108,6 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }

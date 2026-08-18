@@ -105,10 +105,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
 export default function MyTasksCard({ tasks }: { tasks: DashboardTask[] }) {
   const tr = useT();
   return (
-    <section id="my-tasks" className="scroll-mt-6 rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {tr('home.myTasks')}
-      </h2>
+    <div id="my-tasks" className="scroll-mt-6">
       {tasks.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
           <ListTodo size={24} />
@@ -121,6 +118,6 @@ export default function MyTasksCard({ tasks }: { tasks: DashboardTask[] }) {
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }

@@ -25,6 +25,7 @@ import { useGlobalShortcuts } from '../lib/shortcuts';
 import { usePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
 import { useIsNarrowViewport } from '../lib/useMediaQuery';
+import { useStickyProjectId } from '../lib/stickyProject';
 import { syncAccountDensity } from '../stores/useDensity';
 import { syncAccountLocale, useT } from '../i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
@@ -100,6 +101,9 @@ export default function Shell() {
   const routeProjectId = pathname.startsWith('/projects/') && !Number.isNaN(routeId) ? routeId : null;
   const isEntityPage = ENTITY_PAGE_RE.test(pathname);
   const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
+  // La barre garde le projet ouvert même sur l'accueil, la liste des projets ou les
+  // reviews : sans cela ses sections disparaissaient dès qu'on quittait le projet.
+  const sidebarProjectId = useStickyProjectId(currentProjectId);
 
   const openHelp = useCallback(() => setHelpOpen(true), []);
   // Raccourcis globaux reconfigurables (42.A2) : touches résolues depuis les préférences.
@@ -166,7 +170,7 @@ export default function Shell() {
             </button>
           </div>
 
-          <SidebarNav projects={projects} currentProjectId={currentProjectId} />
+          <SidebarNav projects={projects} currentProjectId={sidebarProjectId} />
           <SidebarFooter />
         </aside>
       )}

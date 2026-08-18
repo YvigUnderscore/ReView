@@ -111,8 +111,10 @@ export default function ProjectPage() {
 
   const tabs = [
     { key: 'overview', label: t('project.tab.overview'), icon: <LayoutDashboard size={16} /> },
-    { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shots.length },
+    // L'ordre suit la hiérarchie du pipe, de l'ensemble vers le détail : une séquence
+    // contient des plans, pas l'inverse.
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
+    { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shots.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     { key: 'production', label: t('project.tab.production'), icon: <BarChart3 size={16} /> },
