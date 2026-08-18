@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,6 +14,32 @@ export default defineConfig({
   esbuild: {
     legalComments: 'inline',
   },
+  build: {
+    rollupOptions: {
+      output: {
+        /**
+         * Socle applicatif dans son propre fichier (D3) : React, le routeur, la couche de
+         * données. Le moindre correctif invalidait tout, et le navigateur retéléchargeait
+         * ces bibliothèques inchangées à chaque déploiement.
+         *
+         * On ne groupe QUE ce qui est de toute façon chargé au démarrage. Nommer un chunk
+         * pour three, Spark ou Excalidraw les ferait remonter en import statique du point
+         * d'entrée — ils sont chargés à la demande, et le resteraient sur le papier tout
+         * en étant téléchargés d'emblée.
+         */
+        manualChunks: (id) => {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('react-dom') || id.includes('/react/') || id.includes('react-router')) {
+            return 'vendor-react';
+          }
+          if (id.includes('@tanstack') || id.includes('zustand') || id.includes('socket.io-client')) {
+            return 'vendor-data';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {
@@ -23,8 +49,8 @@ export default defineConfig({
       '/socket.io': {
         target: 'ws://localhost:3000',
         ws: true,
-      }
-    }
+      },
+    },
   },
   preview: {
     proxy: {
@@ -37,7 +63,7 @@ export default defineConfig({
       '/socket.io': {
         target: 'ws://localhost:3430',
         ws: true,
-      }
-    }
+      },
+    },
   },
-})
+});

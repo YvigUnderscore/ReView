@@ -21,20 +21,27 @@ import ProjectsPage from './pages/ProjectsPage';
 import ReviewsPage from './pages/ReviewsPage';
 import ProjectPage from './pages/ProjectPage';
 import TaskPage from './pages/TaskPage';
-import ReviewPage from './pages/ReviewPage';
-import KanbanPage from './pages/KanbanPage';
-import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
 import ShotPage from './pages/ShotPage';
 import SequencePage from './pages/SequencePage';
-import PlaylistPage from './pages/PlaylistPage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
-import TimelinePlayerPage from './pages/TimelinePlayerPage';
 import ProfilePage from './pages/ProfilePage';
 import UserProfilePage from './pages/UserProfilePage';
-import DocsPage from './pages/DocsPage';
 import { useT } from './i18n';
 
+/**
+ * Chargement différé par route (D3).
+ *
+ * L'espace de review et les vingt-sept onglets d'administration partaient dans le fichier
+ * d'entrée : ils étaient téléchargés avant la page de connexion, par quelqu'un qui n'avait
+ * encore rien demandé. Chacun s'ouvre maintenant à l'usage.
+ */
+const ReviewPage = lazy(() => import('./pages/ReviewPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const TimelinePlayerPage = lazy(() => import('./pages/TimelinePlayerPage'));
+const DocsPage = lazy(() => import('./pages/DocsPage'));
+const KanbanPage = lazy(() => import('./pages/KanbanPage'));
+const PlaylistPage = lazy(() => import('./pages/PlaylistPage'));
 // Board (Excalidraw) chargé en lazy pour code-splitter sa lourde dépendance
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 // Page client publique (35.D) : lazy — les visiteurs anonymes ne chargent pas l'app interne.
@@ -48,6 +55,9 @@ function ProtectedShell() {
   const user = useAuth((s) => s.user);
   const location = useLocation();
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  // Une seule frontière pour toutes les pages différées (D3) : la coquille reste montée
+  // pendant le chargement, seule la zone de contenu attend. Sans elle, ouvrir une review
+  // ferait disparaître la barre latérale le temps du téléchargement.
   return <Shell />;
 }
 

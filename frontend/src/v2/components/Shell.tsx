@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { transition as pageTransition } from '../lib/motion';
 import { PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
@@ -225,7 +225,13 @@ export default function Shell() {
           {/* La gouttière est portée par PageContainer : sans quoi la variante « flush »
               (review, montage) ne pourrait pas occuper tout l'espace. */}
           <ShellHeaderContext.Provider value={headerEl}>
-            <Outlet />
+            {/* Frontière unique des pages différées (D3) : la coquille reste montée
+                pendant le téléchargement, seule la zone de contenu attend. */}
+            <Suspense
+              fallback={<div className="p-6 text-sm text-muted-foreground">{t('common.loading')}</div>}
+            >
+              <Outlet />
+            </Suspense>
           </ShellHeaderContext.Provider>
         </motion.main>
       </div>

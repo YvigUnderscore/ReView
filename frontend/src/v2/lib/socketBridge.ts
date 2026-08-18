@@ -51,6 +51,9 @@ export function useSocketInvalidation(projectId: number | null): void {
     socket.on('connect', join);
     return () => {
       socket.off('connect', join);
+      // On quitte la salle en partant (D3) : sans cela, un onglet ouvert toute la journée
+      // reçoit les événements de tous les projets visités depuis le matin.
+      socket.emit('leave_project', projectId);
     };
   }, [projectId]);
 

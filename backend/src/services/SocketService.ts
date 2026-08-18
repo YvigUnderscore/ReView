@@ -311,6 +311,19 @@ export const initSocket = (server: HttpServer): SocketServer => {
         await socket.join(`project_${pid}`);
       }
     });
+
+    /**
+     * Quitter la salle d'un projet (D3).
+     *
+     * Elle n'était jamais quittée : après une journée de navigation, un onglet recevait
+     * les événements de tous les projets ouverts depuis le matin, et invalidait des caches
+     * qui ne le concernaient plus.
+     */
+    socket.on('leave_project', async (projectId: number) => {
+      const pid = Number(projectId);
+      if (!Number.isInteger(pid)) return;
+      await socket.leave(`project_${pid}`);
+    });
   });
 
   return io;
