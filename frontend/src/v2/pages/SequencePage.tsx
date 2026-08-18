@@ -12,6 +12,8 @@ import TimelineCard from './timeline/TimelineCard';
 import SequenceShotGrid from './sequence/SequenceShotGrid';
 import SequenceAssets from './sequence/SequenceAssets';
 import { useProjectRole } from '../lib/useProjectRole';
+import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
+import { fetchSequenceCandidates } from '../lib/playlistApi';
 import type { SequenceDetailData } from './project/projectTypes';
 import { useT } from '../i18n';
 
@@ -35,6 +37,14 @@ export default function SequencePage() {
   });
   const projectId = data?.projectId ?? 0;
   const { canManage } = useProjectRole(projectId);
+  const playlistMenu = useAddToPlaylistMenu(projectId);
+  // Toute la séquence dans les dailies : la dernière version publiée de chacun de ses
+  // plans. La liste n'est demandée qu'au clic — pas à l'ouverture de la page.
+  const playlistEntry = playlistMenu.entry(async () => {
+    const candidates = await fetchSequenceCandidates(projectId, sequenceId);
+    return { versionIds: candidates.map((c) => c.versionId) };
+  });
+  const playlistEntries = playlistEntry ? [playlistEntry] : [];
 
   return (
     <EntityWorkPage
@@ -47,6 +57,7 @@ export default function SequencePage() {
       thumbnailUrl={data?.thumbnailUrl}
       statusId={data?.pipelineStatusId}
       canManage={canManage}
+      menuExtras={playlistEntries}
     >
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
       {data?.description && (

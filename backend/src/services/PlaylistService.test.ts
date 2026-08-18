@@ -46,6 +46,7 @@ describe('create (33.A)', () => {
     ] as never);
     vi.mocked(prisma.version.findMany).mockResolvedValue([{ id: 5 }, { id: 6 }] as never);
     vi.mocked(prisma.playlist.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.playlist.create).mockResolvedValue({ id: 7, projectId: 2 } as never);
     await create(artist, 2, 'Dailies lundi', [], [101, 102, 103]);
     expect(prisma.playlist.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -130,8 +131,16 @@ describe('reorder (33.A)', () => {
     expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 12 }, data: { order: 2 } });
   });
 
-  it('refuse une liste incomplète ou étrangère', async () => {
-    await expect(reorder(artist, 1, [13, 11])).rejects.toMatchObject({ statusCode: 400 });
+  it('accepte un ordre partiel : les items non cités suivent, dans leur ordre', async () => {
+    // Le cas qui bloquait tout : le détail masque les versions en corbeille, donc l'écran
+    // renvoyait moins d'items qu'il n'en existe — et réordonner devenait impossible.
+    await reorder(artist, 1, [13, 11]);
+    expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 13 }, data: { order: 0 } });
+    expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 11 }, data: { order: 1 } });
+    expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 12 }, data: { order: 2 } });
+  });
+
+  it('refuse un item étranger à la playlist', async () => {
     await expect(reorder(artist, 1, [13, 11, 99])).rejects.toMatchObject({ statusCode: 400 });
   });
 });

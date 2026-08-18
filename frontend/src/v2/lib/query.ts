@@ -91,6 +91,9 @@ export const qk = {
   watches: ['watches'] as const,
   playlists: (projectId: number) => ['playlists', projectId] as const,
   playlist: (id: number) => ['playlist', id] as const,
+  /** Catalogue des versions à mettre en playlist (C5), clé = chaîne de filtres. */
+  playlistCandidates: (projectId: number, filters: string) =>
+    ['playlist-candidates', projectId, filters] as const,
   /** Montages automatiques (Phase 45) — `sequenceId` null = montage du projet entier. */
   timelineOf: (projectId: number, sequenceId: number | null) =>
     ['timeline', 'of', projectId, sequenceId ?? 'project'] as const,

@@ -18,6 +18,7 @@ import ShotAssets from './shot/ShotAssets';
 import TaskPickerDialog from '../components/upload/TaskPickerDialog';
 import { Button } from '../components/ui/button';
 import { useProjectRole } from '../lib/useProjectRole';
+import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
 import type { MenuEntry } from '../lib/menuSpec';
 import { useT } from '../i18n';
 import type { AssetOverview } from '../types/api';
@@ -59,6 +60,7 @@ export default function ShotPage() {
   const shot = shotQ.data?.shot ?? null;
   const projectId = shot?.sequence?.projectId ?? shot?.projectId ?? 0;
   const { canManage, canContribute } = useProjectRole(projectId);
+  const playlistMenu = useAddToPlaylistMenu(projectId);
 
   const treeQ = useQuery({
     queryKey: qk.shotTree(shotId),
@@ -98,16 +100,24 @@ export default function ShotPage() {
     }
   };
 
-  const menuExtras: MenuEntry[] = canContribute
-    ? [
-        {
-          id: 'new-version',
-          label: t('version.newPlus'),
-          icon: <Plus size={14} />,
-          onSelect: () => setPending('empty'),
-        },
-      ]
-    : [];
+  // « Ajouter à la playlist » sur la dernière version publiée : c'est elle qu'on pousse
+  // dans les dailies, pas l'historique du plan.
+  const latestVersionId = overview?.latest?.versionId ?? null;
+  const playlistEntry = latestVersionId ? playlistMenu.entry({ versionIds: [latestVersionId] }) : null;
+
+  const menuExtras: MenuEntry[] = [
+    ...(canContribute
+      ? [
+          {
+            id: 'new-version',
+            label: t('version.newPlus'),
+            icon: <Plus size={14} />,
+            onSelect: () => setPending('empty'),
+          },
+        ]
+      : []),
+    ...(playlistEntry ? [playlistEntry] : []),
+  ];
 
   return (
     <EntityWorkPage

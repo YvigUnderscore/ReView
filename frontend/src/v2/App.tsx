@@ -27,6 +27,7 @@ import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
 import ShotPage from './pages/ShotPage';
 import SequencePage from './pages/SequencePage';
+import PlaylistPage from './pages/PlaylistPage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import TimelinePlayerPage from './pages/TimelinePlayerPage';
 import ProfilePage from './pages/ProfilePage';
@@ -122,6 +123,8 @@ function AppRoutes() {
               <Route path="/tasks/:id" element={<TaskPage />} />
               {/* La séquence a enfin sa page (C3) : c'était un accordéon dans un onglet. */}
               <Route path="/sequences/:id" element={<SequencePage />} />
+              {/* La playlist aussi (C5), avec le catalogue du projet d'où la remplir. */}
+              <Route path="/playlists/:id" element={<PlaylistPage />} />
               <Route path="/shots/:id" element={<ShotPage />} />
               <Route path="/assets/:id" element={<AssetPage />} />
               {/* Lien permanent vers l'état le plus avancé (Phase 45, étendu aux plans en C3). */}

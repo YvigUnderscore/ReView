@@ -24,7 +24,9 @@ export async function listForProject(projectId: number) {
     orderBy: { updatedAt: 'desc' },
     include: {
       createdBy: { select: { id: true, name: true } },
-      _count: { select: { items: true } },
+      // Le compteur ne comptait pas ce que la playlist montre : une version mise à la
+      // corbeille restait dans le total, et la playlist annonçait « 12 » pour dix items.
+      _count: { select: { items: { where: { version: { deletedAt: null } } } } },
     },
   });
 }
@@ -70,15 +72,20 @@ export async function create(
     where: { projectId_name: { projectId, name } },
   });
   if (existing) throw conflict('Une playlist de ce nom existe déjà dans le projet');
-  return prisma.playlist.create({
+  const playlist = await prisma.playlist.create({
     data: {
       projectId,
       name,
       createdById: user.id,
       items: { create: toAdd.map((versionId, i) => ({ versionId, order: i })) },
     },
-    include: { _count: { select: { items: true } } },
+    include: { _count: { select: { items: { where: { version: { deletedAt: null } } } } } },
   });
+  // Ajouter et retirer remontaient vers le site ; créer et renommer, non. Une playlist
+  // née dans ReView n'existait donc nulle part sur ShotGrid, et la première tentative
+  // d'y pousser un item n'avait aucune destination.
+  await syncToShotgrid(playlist.id, projectId, user.id);
+  return playlist;
 }
 
 /** Charge une playlist (ou 404) et renvoie aussi son projectId pour le RBAC des routes. */
@@ -187,7 +194,9 @@ export async function rename(user: SessionUser, id: number, name: string) {
     where: { projectId_name: { projectId: playlist.projectId, name } },
   });
   if (dup && dup.id !== id) throw conflict('Une playlist de ce nom existe déjà dans le projet');
-  return prisma.playlist.update({ where: { id }, data: { name } });
+  const updated = await prisma.playlist.update({ where: { id }, data: { name } });
+  await syncToShotgrid(id, playlist.projectId, user.id);
+  return updated;
 }
 
 /** Ajoute des versions en fin de playlist (déduplique celles déjà présentes). */
@@ -217,21 +226,35 @@ export async function addItems(
   return { added: toAdd.length, skipped: resolved.length - toAdd.length };
 }
 
-/** Réordonne : `itemIds` = ids d'items dans le nouvel ordre (doit couvrir la playlist). */
 /** Remonte la playlist vers ShotGrid après une modification (contenu ou ordre). */
 async function syncToShotgrid(playlistId: number, projectId: number, actorId: number) {
   await enqueuePush(projectId, { type: 'playlist', playlistId, actorId });
 }
 
+/**
+ * Réordonne la playlist : `itemIds` donne le nouvel ordre des items **visibles**.
+ *
+ * L'exhaustivité était exigée, et le détail masque les items dont la version est en
+ * corbeille : dès qu'une seule version était supprimée, réordonner devenait impossible —
+ * l'écran renvoyait la liste qu'il affichait, le serveur la refusait. Les items non cités
+ * conservent donc leur place relative, à la suite de ceux qu'on vient d'ordonner.
+ */
 export async function reorder(user: SessionUser, id: number, itemIds: number[]) {
   const playlist = await getOwning(id);
   assertCanEdit(user, playlist);
-  const items = await prisma.playlistItem.findMany({ where: { playlistId: id }, select: { id: true } });
+  const items = await prisma.playlistItem.findMany({
+    where: { playlistId: id },
+    orderBy: { order: 'asc' },
+    select: { id: true },
+  });
   const known = new Set(items.map((i) => i.id));
-  if (itemIds.length !== known.size || !itemIds.every((i) => known.has(i)))
-    throw badRequest('La liste réordonnée ne correspond pas aux items de la playlist');
+  const unknown = itemIds.find((i) => !known.has(i));
+  if (unknown !== undefined) throw badRequest('This item does not belong to the playlist');
+  const cited = new Set(itemIds);
+  const rest = items.filter((i) => !cited.has(i.id)).map((i) => i.id);
+  const finalOrder = [...itemIds, ...rest];
   await prisma.$transaction(
-    itemIds.map((itemId, order) => prisma.playlistItem.update({ where: { id: itemId }, data: { order } })),
+    finalOrder.map((itemId, order) => prisma.playlistItem.update({ where: { id: itemId }, data: { order } })),
   );
   await syncToShotgrid(id, playlist.projectId, user.id);
 }

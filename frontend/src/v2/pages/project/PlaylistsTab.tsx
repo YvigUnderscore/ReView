@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, ListVideo, Pencil, Play, Radio, Trash2 } from 'lucide-react';
+import { ListVideo, Pencil, Play, Radio, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -13,7 +13,6 @@ import { useAuth } from '../../stores/useAuth';
 import { useLiveSessionsQuery } from '../../lib/queries';
 import type { PlaylistDetail, PlaylistSummary } from '../../types/api';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import PlaylistItems from './PlaylistItems';
 import { itemPath } from '../review/playlistNav';
 import EmptyState from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
@@ -30,8 +29,10 @@ import {
 
 /**
  * Onglet Playlists du projet (Phase 33) : dailies = versions ordonnées cross-shots.
- * Gestion par clic droit (lire, renommer, supprimer ; item : monter/descendre/retirer),
- * lecture enchaînée via `?playlist=` sur la review.
+ *
+ * Chaque playlist mène à sa page (C5), où l'on construit son contenu depuis le catalogue
+ * du projet. L'accordéon d'ici ne montrait que ce qu'elle contient déjà — on n'y ajoutait
+ * rien, il fallait ouvrir chaque plan un par un pour y cliquer « ajouter ».
  */
 export default function PlaylistsTab({ projectId }: { projectId: number }) {
   const t = useT();
@@ -42,7 +43,6 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
   const canWrite = role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST';
   const isManager = role === 'ADMIN' || role === 'SUPERVISOR';
 
-  const [openId, setOpenId] = useState<number | null>(null);
   const [renaming, setRenaming] = useState<PlaylistSummary | null>(null);
   const [creating, setCreating] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -132,22 +132,17 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
               <ContextMenuTrigger asChild>
                 <div className="rounded-lg border border-border bg-card">
                   <div className="flex items-center">
-                    <button
-                      onClick={() => setOpenId((o) => (o === p.id ? null : p.id))}
+                    <Link
+                      to={`/playlists/${p.id}`}
                       className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left"
                     >
-                      {openId === p.id ? (
-                        <ChevronDown size={15} className="shrink-0 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
-                      )}
                       <ListVideo size={15} className="shrink-0 text-muted-foreground" />
                       <span className="font-medium">{p.name}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {p._count.items} version{p._count.items > 1 ? 's' : ''}
+                        {t('playlists.versionCount', { count: p._count.items })}
                         {p.createdBy?.name ? ` · ${p.createdBy.name}` : ''} · {timeAgo(p.updatedAt)}
                       </span>
-                    </button>
+                    </Link>
                     {liveOf(p.id) && (
                       <button
                         onClick={() => void playFirst(p, true)}
@@ -161,12 +156,12 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
                       </button>
                     )}
                   </div>
-                  {openId === p.id && (
-                    <PlaylistItems playlistId={p.id} canEdit={canEdit(p)} onChanged={refresh} />
-                  )}
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent>
+                <ContextMenuItem onClick={() => void navigate(`/playlists/${p.id}`)}>
+                  <ListVideo size={14} /> {t('common.open')}
+                </ContextMenuItem>
                 <ContextMenuItem onClick={() => void playFirst(p)}>
                   <Play size={14} /> {t('playlist.play')}
                 </ContextMenuItem>
