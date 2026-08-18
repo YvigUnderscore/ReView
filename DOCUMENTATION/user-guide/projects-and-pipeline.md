@@ -47,6 +47,31 @@ The project page groups sequences, shots, assets, media and team members, with
 tabs and filters. Right-click cards for contextual actions; use multi-select for
 bulk operations (see [Navigation & search](navigation-and-search.md)).
 
+Tabs follow the pipe, from the whole to the detail: overview, sequences, shots,
+assets. The **Shots** and **Assets** lists carry a search box and filters — status,
+sequence, department, type — and saved presets, shared with the kanban.
+
+## Sequence page
+
+A sequence opens on its own page (`/sequences/:id`): its **cut** first, kept up to
+date at every publish, then its shots as a grid with thumbnail, status and task
+count. The whole-film cut sits at the top of the **Sequences** tab.
+
+Right-click a sequence — in the tab or on its page — to open it, reach its settings
+or add its latest published versions to a playlist.
+
+## Entity settings
+
+Sequences, shots and assets share one settings panel, opened by right-click or by
+the gear in the page header (managers only):
+
+- **name, code and description**;
+- **thumbnail** — PNG, JPEG or WebP; without one, the first published media is used;
+- **status**, taken from the project's own vocabulary;
+- **departments** the entity goes through;
+- **frame range** (shots) and **type name** (assets);
+- **resolution and rate overrides**, inherited studio → project → sequence → shot.
+
 ## Related pages
 
 - [Upload & publishing](upload-and-publishing.md)

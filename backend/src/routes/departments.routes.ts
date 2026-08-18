@@ -19,7 +19,14 @@ import * as DepartmentService from '../services/DepartmentService';
  * les autres réglages structurants du projet.
  */
 const router = Router();
-router.use(authenticate);
+
+/**
+ * ⚠ Ce routeur est monté sur `/api` (il porte plusieurs préfixes) : un `router.use(authenticate)`
+ * s'appliquerait à **toute** requête traversant ce point de montage, routes publiques
+ * comprises — le partage client répondait 401 au lieu de servir la page. L'authentification
+ * est donc posée route par route.
+ */
+const auth = authenticate;
 
 const manage = requireRole(Role.ADMIN, Role.SUPERVISOR);
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -35,18 +42,19 @@ const departmentBody = z.object({
 });
 
 /** Départements applicables à un projet : les siens, sinon ceux du studio. */
-router.get('/projects/:projectId/departments', validate({ params: projectParam }), async (req, res) => {
+router.get('/projects/:projectId/departments', auth, validate({ params: projectParam }), async (req, res) => {
   res.json({ departments: await DepartmentService.listForProject(Number(req.params.projectId)) });
 });
 
 /** Référentiel du studio, celui que les projets héritent par défaut. */
-router.get('/departments', async (_req, res) => {
+router.get('/departments', auth, async (_req, res) => {
   const project = await prisma.project.findFirst({ select: { studioId: true } });
   res.json({ departments: project ? await DepartmentService.listForStudio(project.studioId) : [] });
 });
 
 router.post(
   '/projects/:projectId/departments',
+  auth,
   manage,
   validate({ params: projectParam, body: departmentBody }),
   async (req, res) => {
@@ -59,7 +67,7 @@ router.post(
   },
 );
 
-router.post('/departments', manage, validate({ body: departmentBody }), async (req, res) => {
+router.post('/departments', auth, manage, validate({ body: departmentBody }), async (req, res) => {
   const project = await prisma.project.findFirst({ select: { studioId: true } });
   if (!project) throw notFound('No studio yet');
   res.status(201).json({ department: await DepartmentService.create(project.studioId, null, req.body) });
@@ -67,6 +75,7 @@ router.post('/departments', manage, validate({ body: departmentBody }), async (r
 
 router.patch(
   '/departments/:id',
+  auth,
   manage,
   validate({ params: idParam, body: departmentBody.partial() }),
   async (req, res) => {
@@ -74,12 +83,12 @@ router.patch(
   },
 );
 
-router.delete('/departments/:id', manage, validate({ params: idParam }), async (req, res) => {
+router.delete('/departments/:id', auth, manage, validate({ params: idParam }), async (req, res) => {
   await DepartmentService.remove(Number(req.params.id));
   res.status(204).end();
 });
 
-router.put('/departments/order', manage, validate({ body: idsBody }), async (req, res) => {
+router.put('/departments/order', auth, manage, validate({ body: idsBody }), async (req, res) => {
   await DepartmentService.reorder(req.body.ids);
   res.status(204).end();
 });
@@ -95,6 +104,7 @@ for (const [segment, holder] of [
 ] as const) {
   router.put(
     `/${segment}/:id/departments`,
+    auth,
     manage,
     validate({ params: idParam, body: idsBody }),
     async (req, res) => {
@@ -105,13 +115,14 @@ for (const [segment, holder] of [
 }
 
 /** Départements d'une personne : chacun règle les siens, un ADMIN règle ceux des autres. */
-router.put('/users/me/departments', validate({ body: idsBody }), async (req, res) => {
+router.put('/users/me/departments', auth, validate({ body: idsBody }), async (req, res) => {
   await DepartmentService.setUserDepartments(req.user!.id, req.body.ids);
   res.status(204).end();
 });
 
 router.put(
   '/users/:id/departments',
+  auth,
   requireRole(Role.ADMIN),
   validate({ params: idParam, body: idsBody }),
   async (req, res) => {

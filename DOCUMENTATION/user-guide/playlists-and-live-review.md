@@ -24,21 +24,34 @@ in a custom order, freely mixed across shots and assets.
 - **From an open review** (video/image): right-click the viewer → *Ajouter à la
   playlist…* adds the current media's version.
 - **From the project page**: the *Playlists* tab also offers a
-  *Nouvelle playlist* button for an empty playlist.
+  *New playlist* button for an empty playlist.
 
 Writers are `ADMIN`, `SUPERVISOR` and `ARTIST`; a playlist can be modified or
 deleted by **its creator or any supervisor/admin**. `CLIENT` accounts read only.
 
-### Managing a playlist (project page → Playlists tab)
+### The playlist page
 
-- Click a playlist to unfold its ordered items (thumbnail, shot/task location,
-  version name, current review decision badge).
-- **Right-click the playlist**: *Lire la playlist* (opens the first playable
-  item), *Renommer…*, *Supprimer…* (references only — versions are untouched).
-- **Right-click an item**: *Ouvrir en review*, *Monter*, *Descendre*,
-  *Retirer de la playlist*.
-- Item media follow the usual draft visibility rule: an unpublished media is
-  only playable by its uploader.
+Clicking a playlist opens its own page (`/playlists/:id`), in two panels:
+
+- **left, the project catalogue** — every version you can add, with search, sequence,
+  department and a *Latest only* switch (on by default: dailies show the current state
+  of the work, not the history of each task). Add one with the `+`, or tick several and
+  add them in one go. What the playlist already holds is marked, not offered twice.
+- **right, the playlist itself** — ordered items with thumbnail, location, version name
+  and review decision. Right-click an item to open it in review, move it up or down, or
+  remove it.
+
+Renaming happens from the header. Deleting a playlist removes references only — versions
+are untouched.
+
+Item media follow the usual draft visibility rule: an unpublished media is only playable
+by its uploader.
+
+### Adding from anywhere
+
+**Add to a playlist** is a right-click action across the app: on a shot, on a sequence
+(which adds the latest published version of each of its shots), from the Reviews page
+selection, from a version card, or from an open review.
 
 ### Chained playback
 
@@ -62,7 +75,7 @@ playlist navigator, but it also works on a single media.
   wipe bar position and angle**, the **3D/splat camera including splat
   depth-of-field** (followed continuously, including while the driver holds a
   right-click fly/look-around drag), and the **image zoom/pan**. The broadcast
-  rate is configurable per media type in *Admin → Réglages* (`Live : cadence …`,
+  rate is configurable per media type in *Admin → Settings* (`Live : cadence …`,
   1–30 Hz — raise the 3D/splat rates for smoother camera following).
 - **Roles**: the first participant is the **pilot** (crown). The pilot manages
   roles by right-clicking a participant's avatar, or by **right-clicking the

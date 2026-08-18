@@ -1,6 +1,6 @@
 # API domains
 
-> Updated: 2026-07-18
+> Updated: 2026-08-19
 
 One router per domain (`backend/src/routes/*.routes.ts`). Full parameter-level
 detail lives in the interactive reference at `/api/docs`.
@@ -12,9 +12,12 @@ detail lives in the interactive reference at `/api/docs`.
 | `/api/users` | Profile, preferences, avatars |
 | `/api/studio` | Studio settings |
 | `/api/projects` | Projects CRUD, membership, settings |
-| `/api/sequences`, `/api/shots` | Shot hierarchy, per-level pipeline overrides |
+| `/api/sequences`, `/api/shots` | Shot hierarchy, per-level pipeline overrides, permalinks (`/shots/:id/latest`) |
 | `/api/assets` | Assets CRUD |
-| `/api/tasks` | Tasks CRUD, statuses, assignment |
+| `/api/{sequences\|shots\|assets}/:id/thumbnail` | Entity thumbnail: `POST …/presign` then `PUT` the key (managers) |
+| `/api/{sequences\|shots\|assets}/:id/departments` | Departments an entity goes through (managers) |
+| `/api/departments` | Department reference — studio-wide, or per project |
+| `/api/tasks` | Tasks CRUD, statuses, assignment ; `GET /tasks/board?projectId=` returns a whole kanban in one request |
 | `/api/versions` | Versions, publication (publish lock) |
 | `/api/media` | Media objects, upload lifecycle, thumbnails |
 | `/api/media/*/video` | Video-specific: HLS manifests, trim |
@@ -22,7 +25,8 @@ detail lives in the interactive reference at `/api/docs`.
 | `/api/media-reference` | Reference images |
 | `/api/comments` | Comments & annotations (threads, resolution, mentions, reactions, voice-note attachments, comment→task) |
 | `/api/watch` | Notification subscriptions (watch/unwatch shot, asset or version) |
-| `/api/playlists` | Dailies playlists (ordered versions per project, chained playback) |
+| `/api/playlists` | Dailies playlists (ordered versions per project, chained playback) ; `GET /playlists/candidates?projectId=` searches the versions to add |
+| `/api/projects/:id/production` | Production overview: sequences × departments, what is late, load per person, weekly pace |
 | `/api/live` | Ongoing live review sessions per project (LIVE badges) |
 | `/api/boards` | Excalidraw boards (project/asset) |
 | `/api/dashboard` | Home dashboard aggregates |

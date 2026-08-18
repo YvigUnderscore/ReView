@@ -39,7 +39,7 @@ Three ways to authenticate against the REST API:
 
 ## SSO (OIDC)
 
-When configured by an admin (*Admin → Studio → Identité (SSO)*), the login page
+When configured by an admin (*Admin → Studio → Identity (SSO)*), the login page
 shows an SSO button:
 
 - `GET /api/auth/oidc/status` (public) → `{ enabled, label }`.
@@ -88,4 +88,4 @@ hosts are rejected (SSRF guard) — deliveries leave from the worker container.
 ## Media access log
 
 Every media consultation (internal review or client share) is journaled
-(deduplicated per 30 min) and browsable in *Admin → Maintenance → Accès médias*.
+(deduplicated per 30 min) and browsable in *Admin → Maintenance → Media access*.

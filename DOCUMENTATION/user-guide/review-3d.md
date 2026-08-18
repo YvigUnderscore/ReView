@@ -20,7 +20,7 @@ zipped folders) are converted to GLB at upload. USD goes through Blender, so com
   textures) keeping the relative paths intact, and upload the `.zip`. ReView finds the root
   layer on its own, even when the archive holds several `.usd*` files.
 - **Missing textures** — anything the scene references but the archive does not contain is
-  listed in the technical sheet under *Scène USD*. The model still displays; re-upload a
+  listed in the technical sheet under *USD scene*. The model still displays; re-upload a
   complete archive to fix the look.
 
 ## Navigation
@@ -134,7 +134,7 @@ Overrides live at three levels:
   and glTF extensions used by the model. It also shows the **source format** and which
   **converter** produced the GLB (a `natif` badge marks USD converted natively, i.e.
   with UsdPreviewSurface materials and variants preserved).
-- **USD scene** — for USD media the sheet adds a *Scène USD* section: the **root layer**
+- **USD scene** — for USD media the sheet adds a *USD scene* section: the **root layer**
   actually opened, up axis, unit scale, layer count, purpose, animation range, rig, the
   **variant sets** in effect, and a warning listing **unresolved references**.
 - **Recomposing** — if you can manage the media and it is not published yet, *Recomposer la
@@ -149,9 +149,9 @@ Overrides live at three levels:
 When the GLB declares them (*Display* panel of the dock, shown only if present):
 
 - **Material variants** (`KHR_materials_variants`) — a dropdown switches the whole model
-  between authored looks (e.g. color options); *Défaut* restores the original materials.
+  between authored looks (e.g. color options); *Default* restores the original materials.
   The swap is non-destructive.
-- **Embedded cameras** — cameras authored in the file are offered as a *Vue caméra…*
+- **Embedded cameras** — cameras authored in the file are offered as a *Camera view…*
   menu; picking one moves the review camera to that viewpoint (position, look and FOV).
 
 ## Lighting & environment

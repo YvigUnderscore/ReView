@@ -20,7 +20,14 @@ import * as EntityThumbnailService from '../services/EntityThumbnailService';
  * appartenant à un projet auquel on n'a pas accès.
  */
 const router = Router();
-router.use(authenticate);
+
+/**
+ * ⚠ Ce routeur est monté sur `/api` (il porte plusieurs préfixes) : un `router.use(authenticate)`
+ * s'appliquerait à **toute** requête traversant ce point de montage, routes publiques
+ * comprises — le partage client répondait 401 au lieu de servir la page. L'authentification
+ * est donc posée route par route.
+ */
+const auth = authenticate;
 
 const manage = requireRole(Role.ADMIN, Role.SUPERVISOR);
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -34,6 +41,7 @@ for (const [segment, holder] of [
 ] as const) {
   router.post(
     `/${segment}/:id/thumbnail/presign`,
+    auth,
     manage,
     validate({ params: idParam, body: contentTypeBody }),
     async (req, res) => {
@@ -47,6 +55,7 @@ for (const [segment, holder] of [
 
   router.put(
     `/${segment}/:id/thumbnail`,
+    auth,
     manage,
     validate({ params: idParam, body: keyBody }),
     async (req, res) => {
