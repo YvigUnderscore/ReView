@@ -2,7 +2,7 @@
 
 > Updated: 2026-08-10
 
-## SSO (OIDC) — *Admin → Studio → Identité (SSO)*
+## SSO (OIDC) — *Admin → Studio → Identity (SSO)*
 
 Single sign-on with any OIDC provider (Google by default, authorization code
 flow):
@@ -95,7 +95,7 @@ See [API v1 — pipeline integration](../api/v1-integration.md).
   delivery time (hostname patterns; DNS re-resolution is intentionally not
   followed — put your receivers on public hostnames).
 
-## Media access log — *Admin → Maintenance → Accès médias*
+## Media access log — *Admin → Maintenance → Media access*
 
 One line per consultation (per viewer per media, deduplicated over 30 minutes),
 covering internal reviews (account) and client shares (link label), with IP and

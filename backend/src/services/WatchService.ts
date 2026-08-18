@@ -3,6 +3,7 @@
 
 import { WatchTargetType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { type MessageKey, type TParams } from '../i18n';
 import { notify } from './NotificationService';
 
 /**
@@ -97,7 +98,9 @@ export async function notifyWatchers(opts: {
   mediaObjectId?: number;
   versionId?: number;
   projectId: number;
-  content: string;
+  /** Clé traduisible et ses paramètres (D2) — jamais une phrase toute faite. */
+  messageKey: MessageKey;
+  params?: TParams;
   referenceId?: number | null;
   exclude?: number[];
 }): Promise<number[]> {
@@ -113,7 +116,8 @@ export async function notifyWatchers(opts: {
       notify({
         userId,
         type: 'WATCH',
-        content: opts.content,
+        messageKey: opts.messageKey,
+        params: opts.params,
         projectId: opts.projectId,
         referenceId: opts.referenceId ?? opts.mediaObjectId ?? null,
       }),

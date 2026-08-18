@@ -21,7 +21,7 @@ const SEGMENTS: ShotStatStatus[] = ['approved', 'inReview', 'retake', 'notStarte
 function Kpi({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
         {icon}
         {label}
       </div>
@@ -110,7 +110,7 @@ export default function ReviewStatsPanel({ stats }: { stats: ProjectStats }) {
             {stats.sequences.map((seq) => (
               <ConvergenceRow key={seq.sequenceId ?? 'none'} seq={seq} />
             ))}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs text-muted-foreground">
               {SEGMENTS.map((s) => (
                 <span key={s} className="flex items-center gap-1.5">
                   <span className={`h-2 w-2 rounded-full ${statusMeta(tr)[s].bar}`} />

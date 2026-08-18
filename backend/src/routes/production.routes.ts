@@ -8,6 +8,7 @@ import { validate } from '../middleware/validate';
 import { requireProjectAccess } from '../middleware/rbac';
 import * as StatsService from '../services/StatsService';
 import * as ScheduleService from '../services/ScheduleService';
+import * as ProductionService from '../services/ProductionService';
 
 /**
  * Production & reporting (Phase 43) — statistiques de review par projet (43.A).
@@ -25,6 +26,25 @@ router.get(
   requireProjectAccess,
   async (req, res) => {
     res.json(await StatsService.getProjectStats(Number(req.params.projectId)));
+  },
+);
+
+/**
+ * GET /api/projects/:projectId/production?weeks= — pilotage (C6).
+ *
+ * Quatre réponses en un appel : où en est le projet, ce qui bloque, qui fait quoi, à
+ * quel rythme. La fenêtre de rythme est réglable — huit semaines par défaut.
+ */
+router.get(
+  '/:projectId/production',
+  validate({
+    params: projectIdParam,
+    query: z.object({ weeks: z.coerce.number().int().min(2).max(52).optional() }),
+  }),
+  requireProjectAccess,
+  async (req, res) => {
+    const weeks = req.query.weeks ? Number(req.query.weeks) : undefined;
+    res.json(await ProductionService.getOverview(Number(req.params.projectId), weeks));
   },
 );
 

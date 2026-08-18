@@ -160,7 +160,7 @@ export default function CommentsPanel({
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
-              className={`rounded px-1.5 py-0.5 text-[10px] font-normal ${
+              className={`rounded px-1.5 py-0.5 text-2xs font-normal ${
                 filter === f.value
                   ? 'bg-secondary text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -197,10 +197,7 @@ export default function CommentsPanel({
         {attachFiles.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-1">
             {attachFiles.map((f, i) => (
-              <span
-                key={i}
-                className="flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-[10px]"
-              >
+              <span key={i} className="flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-2xs">
                 {f.name}
                 <button type="button" onClick={() => setAttachFiles((fs) => fs.filter((_, j) => j !== i))}>
                   <X size={10} />
@@ -210,16 +207,16 @@ export default function CommentsPanel({
           </div>
         )}
         {hints.annotation && (
-          <p className="mb-1.5 text-[11px] text-primary">{t('comment.annotationAttachedHint')}</p>
+          <p className="mb-1.5 text-xs text-primary">{t('comment.annotationAttachedHint')}</p>
         )}
         {(hints.references ?? 0) > 0 && (
-          <p className="mb-1.5 text-[11px] text-primary">
+          <p className="mb-1.5 text-xs text-primary">
             🖼 {t('comment.referencesAttached', { count: hints.references ?? 0 })}
           </p>
         )}
-        {hints.hotspot && <p className="mb-1.5 text-[11px] text-primary">{t('review.hotspotAttached')}</p>}
-        {hints.range && <p className="mb-1.5 text-[11px] text-primary">{t('review.rangeAttached')}</p>}
-        {hints.camera && <p className="mb-1.5 text-[11px] text-primary">{t('review.camViewSaved')}</p>}
+        {hints.hotspot && <p className="mb-1.5 text-xs text-primary">{t('review.hotspotAttached')}</p>}
+        {hints.range && <p className="mb-1.5 text-xs text-primary">{t('review.rangeAttached')}</p>}
+        {hints.camera && <p className="mb-1.5 text-xs text-primary">{t('review.camViewSaved')}</p>}
         <div className="relative">
           <MentionMenu mentions={mentions} />
           <Textarea

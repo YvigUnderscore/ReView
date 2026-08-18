@@ -22,7 +22,7 @@ function SettingsChip({ effective, override }: { effective: PipelineSettings; ov
       {override ? (
         <Badge variant="secondary">{t('pipeline.override')}</Badge>
       ) : (
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+        <span className="text-2xs uppercase tracking-wide text-muted-foreground/70">
           {t('common.inherited')}
         </span>
       )}

@@ -75,7 +75,7 @@ function Keys({ keys }: { keys: string[] }) {
       {keys.map((k) => (
         <kbd
           key={k}
-          className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[11px] font-medium"
+          className="rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-xs font-medium"
         >
           {k}
         </kbd>
@@ -141,7 +141,7 @@ function NavShortcuts() {
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {t('shortcuts.nav')}
       </p>
-      <p className="mb-2 text-[11px] text-muted-foreground">{t('shortcuts.hint')}</p>
+      <p className="mb-2 text-xs text-muted-foreground">{t('shortcuts.hint')}</p>
       <ul className="space-y-1.5">
         <li className="flex items-center justify-between gap-4 text-sm">
           <span className="text-muted-foreground">{t('shortcuts.search')}</span>

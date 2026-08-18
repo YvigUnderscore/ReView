@@ -32,7 +32,7 @@ than silently trimmed.
 
 ## Watching a cut
 
-*Lire* opens the cut on **its own page** (`/timelines/<id>/play`). That page is
+*Play* opens the cut on **its own page** (`/timelines/<id>/play`). That page is
 the video review page — same header, tool rail, options bar, inspector dock,
 transport and comments space — with one difference: the timeline is the **whole
 film**, on a single scale from zero to the end. Nothing else about the screen

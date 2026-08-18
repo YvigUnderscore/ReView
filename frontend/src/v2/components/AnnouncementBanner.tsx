@@ -51,7 +51,7 @@ export default function AnnouncementBanner() {
             <button
               onClick={() => dismiss(a.id)}
               title={t('common.close')}
-              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-black/10 hover:text-foreground"
+              className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-black/10 hover:text-foreground"
             >
               <X size={16} />
             </button>

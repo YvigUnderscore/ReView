@@ -60,7 +60,7 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
     where: { id: share.projectId, deletedAt: null },
     select: { id: true, name: true, description: true, status: true },
   });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
 
   const media = await prisma.mediaObject.findMany({
     where: publishedMediaWhere(share.projectId),
@@ -109,7 +109,7 @@ router.post(
         entityId: share.projectId,
         metadata: { shareLinkId: share.id, ip: req.ip ?? null },
       });
-      throw unauthorized('Mot de passe incorrect');
+      throw unauthorized('Wrong password');
     }
     await consumeView(share);
     logAudit({
@@ -131,7 +131,7 @@ router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req
   const media = await prisma.mediaObject.findFirst({
     where: { id, ...publishedMediaWhere(share.projectId) },
   });
-  if (!media) throw notFound('Média introuvable ou non publié');
+  if (!media) throw notFound('Media not found, or not published');
   logMediaAccess({ mediaObjectId: id, shareLinkId: share.id, ip: req.ip }); // 36.E
   const meta = (media.metadata ?? {}) as { clientProxyKey?: string; slateSec?: number };
   const clientKey = typeof meta.clientProxyKey === 'string' ? meta.clientProxyKey : null;
@@ -148,7 +148,7 @@ router.get('/:token/media/:id/comments', validate({ params: tokenAndId }), async
   const media = await prisma.mediaObject.findFirst({
     where: { id, ...publishedMediaWhere(share.projectId) },
   });
-  if (!media) throw notFound('Média introuvable ou non publié');
+  if (!media) throw notFound('Media not found, or not published');
   const comments = await prisma.comment.findMany({
     where: { mediaObjectId: id, parentId: null, isVisibleToClient: true },
     orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
@@ -171,12 +171,12 @@ router.post(
   }),
   async (req, res) => {
     const share = await loadShareWithSession(String(req.params.token), req);
-    if (share.permission !== SharePermission.COMMENT) throw forbidden('Ce lien est en lecture seule');
+    if (share.permission !== SharePermission.COMMENT) throw forbidden('This link is read-only');
     const id = Number(req.params.id);
     const media = await prisma.mediaObject.findFirst({
       where: { id, ...publishedMediaWhere(share.projectId) },
     });
-    if (!media) throw notFound('Média introuvable ou non publié');
+    if (!media) throw notFound('Media not found, or not published');
 
     const body = req.body as {
       guestName: string;

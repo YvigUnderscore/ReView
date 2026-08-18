@@ -43,7 +43,7 @@ export async function assertProjectManage(
   projectId: number,
 ): Promise<void> {
   const role = await effectiveProjectRole(userId, globalRole, projectId);
-  if (!canManageProject(role)) throw forbidden('Gestion du projet réservée aux superviseurs');
+  if (!canManageProject(role)) throw forbidden('Managing the project is reserved to supervisors');
 }
 
 /** Lève 403 si l'utilisateur ne peut pas contribuer (CLIENT ou non-membre). */
@@ -54,5 +54,5 @@ export async function assertCanContribute(
 ): Promise<void> {
   const role = await effectiveProjectRole(userId, globalRole, projectId);
   if (!canContribute(role))
-    throw forbidden('Action non autorisée pour votre rôle sur ce projet', 'ROLE_FORBIDDEN');
+    throw forbidden('Your role on this project does not allow this', 'ROLE_FORBIDDEN');
 }

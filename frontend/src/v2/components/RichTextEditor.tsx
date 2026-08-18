@@ -108,7 +108,7 @@ export default function RichTextEditor({
         suppressContentEditableWarning
         data-placeholder={placeholder}
         onInput={() => onChange(ref.current?.innerHTML ?? '')}
-        className="prose-doc min-h-[260px] max-w-none px-3 py-2 text-sm focus:outline-none"
+        className="prose-doc min-h-[260px] max-w-none px-3 py-2 text-sm"
       />
     </div>
   );

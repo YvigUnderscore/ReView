@@ -92,7 +92,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
       if (payload.kind !== undefined || typeof payload.id !== 'number') {
         return next(new Error('Authentication error'));
       }
-      // Session révoquée (36.B) : la déconnexion doit aussi fermer le canal temps réel.
+      // Session revoked (36.B) : la déconnexion doit aussi fermer le canal temps réel.
       if (payload.sid && !(await isSessionActive(payload.sid))) {
         return next(new Error('Authentication error'));
       }
@@ -310,6 +310,19 @@ export const initSocket = (server: HttpServer): SocketServer => {
       if (socket.user && (await checkProjectAccess(socket.user.id, socket.user.role, pid))) {
         await socket.join(`project_${pid}`);
       }
+    });
+
+    /**
+     * Quitter la salle d'un projet (D3).
+     *
+     * Elle n'était jamais quittée : après une journée de navigation, un onglet recevait
+     * les événements de tous les projets ouverts depuis le matin, et invalidait des caches
+     * qui ne le concernaient plus.
+     */
+    socket.on('leave_project', async (projectId: number) => {
+      const pid = Number(projectId);
+      if (!Number.isInteger(pid)) return;
+      await socket.leave(`project_${pid}`);
     });
   });
 

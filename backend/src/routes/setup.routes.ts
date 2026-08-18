@@ -53,7 +53,7 @@ router.post(
       adminName?: string;
     };
 
-    if ((await prisma.studio.count()) > 0) throw conflict('Le studio est déjà configuré', 'ALREADY_SETUP');
+    if ((await prisma.studio.count()) > 0) throw conflict('The studio is already set up', 'ALREADY_SETUP');
 
     const hash = await bcrypt.hash(adminPassword, 12);
     const { studio, admin } = await prisma.$transaction(async (tx) => {

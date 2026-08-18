@@ -8,7 +8,7 @@ import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { useTheme } from '../stores/useTheme';
 import { parseIdParam } from '../lib/slug';
@@ -118,17 +118,18 @@ export default function BoardPage({ scope }: { scope: Scope }) {
 
   if (!initial)
     return (
-      <Shell title="Board">
+      <PageShell title="Board">
         <p className="text-sm text-muted-foreground">{t('board.loading')}</p>
-      </Shell>
+      </PageShell>
     );
 
   return (
-    <Shell
+    <PageShell
       title={scope === 'project' ? t('board.projectTitle') : t('board.assetTitle')}
       breadcrumb={
         <EntityBreadcrumb entity={scope === 'project' ? 'project' : 'asset'} id={targetId} tail="Board" />
       }
+      width="fluid"
     >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -139,7 +140,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
             {t('board.mediaLibrary')}
           </button>
           <span className="text-xs text-muted-foreground">
-            {saved ? t('board.saved') : '… enregistrement'}
+            {saved ? t('board.saved') : t('board.savingShort')}
           </span>
         </div>
         <Link
@@ -167,14 +168,14 @@ export default function BoardPage({ scope }: { scope: Scope }) {
                 {m.thumbnailUrl ? (
                   <img src={m.thumbnailUrl} alt={m.originalName} className="h-20 w-full object-cover" />
                 ) : (
-                  <div className="flex h-20 items-center justify-center text-[10px] text-muted-foreground">
+                  <div className="flex h-20 items-center justify-center text-2xs text-muted-foreground">
                     {m.originalName}
                   </div>
                 )}
               </button>
             ))}
             {library.length === 0 && (
-              <p className="text-[11px] text-muted-foreground">{t('board.noPublishedImage')}</p>
+              <p className="text-xs text-muted-foreground">{t('board.noPublishedImage')}</p>
             )}
           </div>
         )}
@@ -189,6 +190,6 @@ export default function BoardPage({ scope }: { scope: Scope }) {
           />
         </div>
       </div>
-    </Shell>
+    </PageShell>
   );
 }

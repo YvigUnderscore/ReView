@@ -3,6 +3,38 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08 — Interface overhaul: sequences, kanban at scale, playlists, production
+
+- **Sequences have a page.** A sequence was an accordion row inside a tab, with its cut
+  hidden behind a fold. It now opens on its own page: the cut first, then its shots as a
+  grid with thumbnails and statuses. The whole-film cut moved to the top of the Sequences
+  tab, next to the sequences it is made of.
+- **One settings panel for sequences, shots and assets** (right-click, or the gear in the
+  header): name, code, description, thumbnail, status, departments, frame range, and the
+  resolution and rate overrides. Every entity can carry a thumbnail — the column existed,
+  but nothing in the app could produce the key.
+- **The kanban speaks your project's vocabulary.** Columns are built from the project's own
+  statuses — a ShotGrid site commonly defines fifteen — grouped into five collapsible
+  families on a scrollable band. Dropping a card no longer rewrites a fine-grained status
+  into the first one that shares its legacy value.
+- **Search and filters on Shots and Assets**, with the same criteria as the kanban and named
+  presets saved per project and per account. Those lists had neither before.
+- **Playlists are built from a catalogue.** A playlist page shows the project's versions on
+  the left — search, sequence, department, latest-only — and the playlist on the right.
+  “Add to a playlist” is now a right-click away, including on a whole sequence.
+- **Production answers four questions** instead of listing eight all-time metrics: where the
+  project stands (sequences × departments), what is late or blocked, who carries what, and
+  at what pace for which projected end. Due dates can be dragged across the calendar.
+- **Comments have states**: open, working on it, question, won't fix, resolved — each with
+  its colour, a resolve button on the card, the rest on right-click, and a filter for the
+  thread.
+- **Faster first load**: the review space and the admin tabs are no longer downloaded before
+  the sign-in screen. First load went from 724 to 401 kB compressed.
+- **Fixed**: on a shot page, “copy link” copied the address of an unrelated asset. Pressing
+  `I` on a video both set a loop point and switched the whole screen to Trim mode.
+  Reordering a playlist was impossible as soon as one of its versions was in the trash.
+  Creating or renaming a playlist never reached ShotGrid, although adding and removing did.
+
 ## 2026-08 — Messaging & member profiles
 
 - **Direct messages and group threads**, in the presence panel at the bottom of the sidebar.

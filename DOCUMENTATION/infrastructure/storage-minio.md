@@ -22,7 +22,6 @@ Everything lives in a single bucket. Keys follow these conventions
 | `derived/{mediaId}/splat-mask.bin`, `splat-subset.bin` | Non-destructive splat edit artifacts (bitset mask, subset transform ops). |
 | `derived/{mediaId}/reference-*.{ext}` | Review reference images. |
 | `comments/attachments/{userId}/…` | Comment attachments (images, voice notes). |
-| `documents/…` | Project documents. |
 | `studio/hdris/…`, `studio/ocio/…` | Studio-wide HDRIs and OCIO configs. |
 | `branding/…` | Studio logo and branding assets. |
 

@@ -35,5 +35,14 @@
   "invite.cta": "激活我的账号",
   "invite.expiry": "此链接将在 {days} 天后失效。",
   "invite.fallback": "如果按钮无法使用，请将以下链接粘贴到浏览器中：",
-  "invite.ignore": "如果您并未预期收到此邀请，可以忽略本邮件。"
+  "invite.ignore": "如果您并未预期收到此邀请，可以忽略本邮件。",
+  "notification.mentioned": "有评论提到了你",
+  "notification.reply": "你的评论有新回复",
+  "notification.watchedComment": "你关注的内容有新评论",
+  "notification.montageShared": "剪辑中的一条备注被送回你关注的内容",
+  "notification.commentAssigned": "有一条评论指派给你",
+  "notification.mediaPublished": "已发布新媒体：{name}",
+  "notification.liveStarted": "{name} 在 playlist « {playlist} » 上开始了实时 review",
+  "notification.decision": "version {version} 的判定「{status}」",
+  "notification.taskAssigned": "已指派任务：{name}"
 }

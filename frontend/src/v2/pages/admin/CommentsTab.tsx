@@ -161,14 +161,14 @@ export default function CommentsTab() {
               <button
                 onClick={() => toggleResolved(c)}
                 title={c.isResolved ? t('comment.reopen') : t('comment.markResolvedShort')}
-                className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 {c.isResolved ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}
               </button>
               <button
                 onClick={() => setDeleting(c)}
                 title={t('comments.moderate')}
-                className="rounded p-1 text-destructive hover:bg-secondary"
+                className="rounded p-1.5 text-destructive hover:bg-secondary"
               >
                 <Trash2 size={14} />
               </button>

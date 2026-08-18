@@ -141,7 +141,7 @@ export default function ClientMediaViewer({
             <div key={c.id} className="rounded-md bg-secondary/40 p-2.5 text-sm">
               <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">
-                  {c.author?.name ?? c.guestName ?? 'Anonyme'}
+                  {c.author?.name ?? c.guestName ?? t('comments.anonymous')}
                 </span>
                 {c.timestamp != null && media.kind === 'VIDEO' && (
                   <button

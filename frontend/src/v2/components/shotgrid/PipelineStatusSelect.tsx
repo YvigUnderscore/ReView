@@ -28,7 +28,8 @@ export default function PipelineStatusSelect({
   disabled,
 }: {
   projectId: number;
-  scope: 'task' | 'shot';
+  /** Une séquence porte son propre vocabulaire de statuts, distinct de celui d'un plan (C3). */
+  scope: 'task' | 'shot' | 'sequence';
   /** Statut du référentiel, quand l'entité en porte un. */
   statusId: number | null | undefined;
   /** Valeur de l'énumération, seule information disponible sur les entités anciennes. */
@@ -47,7 +48,7 @@ export default function PipelineStatusSelect({
         value={legacyStatus ?? 'TODO'}
         disabled={disabled}
         onChange={(e) => onChange({ statusId: null, legacyStatus: e.target.value as TaskStatus })}
-        className={`rounded px-1 py-0.5 text-[11px] ${TASK_STATUS_COLOR[legacyStatus ?? 'TODO'] ?? ''} ${className}`}
+        className={`rounded px-1 py-0.5 text-xs ${TASK_STATUS_COLOR[legacyStatus ?? 'TODO'] ?? ''} ${className}`}
       >
         {TASK_STATUSES.map((s) => (
           <option key={s} value={s}>
@@ -70,10 +71,10 @@ export default function PipelineStatusSelect({
       disabled={disabled}
       onChange={(e) => {
         const next = statuses.find((s) => s.id === Number(e.target.value));
-        if (next) onChange({ statusId: next.id, legacyStatus: (next.legacyStatus ?? 'TODO') as TaskStatus });
+        if (next) onChange({ statusId: next.id, legacyStatus: next.legacyStatus ?? 'TODO' });
       }}
       style={current ? { backgroundColor: `${current.color}22`, color: current.color } : undefined}
-      className={`rounded px-1 py-0.5 text-[11px] ${className}`}
+      className={`rounded px-1 py-0.5 text-xs ${className}`}
       title={current?.code}
     >
       {!current && <option value="">{t('pipeline.status.none')}</option>}

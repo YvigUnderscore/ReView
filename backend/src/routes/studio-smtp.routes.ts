@@ -57,7 +57,7 @@ router.post('/smtp/test', validate({ body: z.object({ to: z.string().email() }) 
     t(locale, 'smtp.test.subject'),
     mailLayout(locale, t(locale, 'smtp.test.title'), `<p>${t(locale, 'smtp.test.body')}</p>`),
   );
-  if (!ok) throw badRequest('Envoi impossible (SMTP non configuré ou erreur)', 'SMTP_SEND_FAILED');
+  if (!ok) throw badRequest('Could not send (SMTP not configured, or a delivery error)', 'SMTP_SEND_FAILED');
   res.json({ sent: true });
 });
 

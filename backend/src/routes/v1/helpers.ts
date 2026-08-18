@@ -52,7 +52,7 @@ type Resolver = (id: number) => Promise<number | null>;
 /** Vérifie l'accès au projet propriétaire d'une entité, désignée par son identifiant. */
 async function requireOwningProject(req: Request, id: number, resolve: Resolver, label: string) {
   const projectId = await resolve(id);
-  if (!projectId) throw notFound(`${label} introuvable`);
+  if (!projectId) throw notFound(`${label} not found`);
   await assertProjectAccess(req, projectId);
   assertTokenProject(req, projectId);
   return projectId;

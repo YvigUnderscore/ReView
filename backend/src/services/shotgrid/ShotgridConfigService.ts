@@ -64,7 +64,7 @@ export async function createSite(input: SiteInput) {
   const baseUrl = assertSafeBaseUrl(input.baseUrl);
   assertCredentials(input);
   const existing = await prisma.shotgridSite.findUnique({ where: { baseUrl } });
-  if (existing) throw conflict('Ce site ShotGrid est déjà enregistré');
+  if (existing) throw conflict('This ShotGrid site is already registered');
   const site = await prisma.shotgridSite.create({
     data: {
       name: input.name,
@@ -81,7 +81,7 @@ export async function createSite(input: SiteInput) {
 
 export async function updateSite(id: number, input: Partial<SiteInput>) {
   const site = await prisma.shotgridSite.findUnique({ where: { id } });
-  if (!site) throw notFound('Site ShotGrid introuvable');
+  if (!site) throw notFound('ShotGrid site not found');
   const baseUrl = input.baseUrl ? assertSafeBaseUrl(input.baseUrl) : undefined;
   const updated = await prisma.shotgridSite.update({
     where: { id },
@@ -107,7 +107,7 @@ export async function updateSite(id: number, input: Partial<SiteInput>) {
 
 export async function deleteSite(id: number) {
   const count = await prisma.shotgridConnection.count({ where: { siteId: id } });
-  if (count > 0) throw conflict('Ce site porte encore des connexions de projet — les retirer d’abord');
+  if (count > 0) throw conflict('This site still has project connections — remove them first');
   const site = await prisma.shotgridSite.findUnique({ where: { id } });
   if (site) clearTokenCache(site.baseUrl);
   await prisma.shotgridSite.delete({ where: { id } });
@@ -115,15 +115,15 @@ export async function deleteSite(id: number) {
 
 function assertCredentials(input: Partial<SiteInput>) {
   if (input.authMode === 'script' && !(input.scriptName && input.scriptKey))
-    throw badRequest('Nom et clé du script ShotGrid requis');
+    throw badRequest('The ShotGrid script name and key are required');
   if (input.authMode === 'user' && !(input.login && input.password))
-    throw badRequest('Identifiant et mot de passe legacy ShotGrid requis');
+    throw badRequest('The legacy ShotGrid login and password are required');
 }
 
 /** Client prêt à l'emploi pour un site (secrets déchiffrés au dernier moment). */
 export async function clientForSite(siteId: number): Promise<ShotgridClient> {
   const site = await prisma.shotgridSite.findUnique({ where: { id: siteId } });
-  if (!site) throw notFound('Site ShotGrid introuvable');
+  if (!site) throw notFound('ShotGrid site not found');
   return clientForSiteRecord(site);
 }
 
@@ -193,9 +193,9 @@ export interface ConnectionInput {
  */
 export async function createConnection(projectId: number, input: ConnectionInput) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
   const existing = await prisma.shotgridConnection.findUnique({ where: { projectId } });
-  if (existing) throw conflict('Ce projet est déjà relié à ShotGrid');
+  if (existing) throw conflict('This project is already linked to ShotGrid');
 
   const client = await clientForSite(input.siteId);
   const remote = await client.findById('Project', input.sgProjectId, ['name', 'sg_status', 'archived']);
@@ -211,7 +211,7 @@ export async function createConnection(projectId: number, input: ConnectionInput
   const duplicate = await prisma.shotgridConnection.findUnique({
     where: { siteId_sgProjectId: { siteId: input.siteId, sgProjectId: input.sgProjectId } },
   });
-  if (duplicate) throw conflict('Ce projet ShotGrid est déjà relié à un autre projet ReView');
+  if (duplicate) throw conflict('This ShotGrid project is already linked to another ReView project');
 
   const connection = await prisma.shotgridConnection.create({
     data: {
@@ -246,7 +246,7 @@ export async function getConnection(projectId: number) {
 
 export async function getConnectionOrThrow(projectId: number) {
   const conn = await getConnection(projectId);
-  if (!conn) throw notFound('Ce projet n’est pas relié à ShotGrid');
+  if (!conn) throw notFound('This project is not linked to ShotGrid');
   return conn;
 }
 
@@ -322,7 +322,7 @@ export async function openConnection(
           'project_mismatch',
           `Projet ShotGrid #${connection.sgProjectId} introuvable`,
         );
-        throw badRequest(`Le projet ShotGrid #${connection.sgProjectId} est introuvable`);
+        throw badRequest(`ShotGrid project #${connection.sgProjectId} not found`);
       }
       if (!projectNameMatches(remoteName, connection.sgProjectName)) {
         await markStatus(

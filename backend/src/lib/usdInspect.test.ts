@@ -40,7 +40,7 @@ describe('extractJsonLine', () => {
   });
 
   it('échoue explicitement sans sortie JSON', () => {
-    expect(() => extractJsonLine('rien du tout')).toThrow(/aucune sortie JSON/);
+    expect(() => extractJsonLine('rien du tout')).toThrow(/no usable JSON output/);
     expect(() => extractJsonLine('')).toThrow();
   });
 });
@@ -55,7 +55,7 @@ describe('parseUsdScan', () => {
   });
 
   it('rejette une sortie mal formée', () => {
-    expect(() => parseUsdScan('{"layers":[{"deps":[]}]}')).toThrow(/graphe de couches invalide/);
+    expect(() => parseUsdScan('{"layers":[{"deps":[]}]}')).toThrow(/invalid layer graph/);
   });
 });
 
@@ -98,7 +98,7 @@ describe('parseUsdStageInfo', () => {
   });
 
   it('rejette une description sans couche racine', () => {
-    expect(() => parseUsdStageInfo('{"stagePath":"/tmp/x"}')).toThrow(/description de scene invalide/);
+    expect(() => parseUsdStageInfo('{"stagePath":"/tmp/x"}')).toThrow(/invalid scene description/);
   });
 });
 

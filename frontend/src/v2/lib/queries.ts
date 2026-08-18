@@ -29,7 +29,7 @@ interface Page<T> {
   pageSize: number;
 }
 
-/** Liste des projets actifs (archivés exclus) — partagée Shell / ProjectsPage / DocumentsPage. */
+/** Liste des projets actifs (archivés exclus) — partagée Shell / ProjectsPage. */
 export function useProjectsQuery() {
   return useQuery({
     queryKey: qk.projects,
@@ -126,6 +126,10 @@ export function useLiveSessionsQuery(projectId: number | null) {
     socket.on('live:changed', onChanged);
     return () => {
       socket.off('live:changed', onChanged);
+      // La salle n'était jamais quittée (D3) : un onglet ouvert la journée finissait par
+      // recevoir les événements de tous les projets visités, et invalidait des caches qui
+      // ne le concernaient plus.
+      socket.emit('leave_project', projectId);
     };
   }, [projectId, qc]);
   return useQuery({

@@ -11,7 +11,7 @@ is **read-only**: uploads, comments, new versions, tasks, and structure changes
 (shots/sequences) are refused with `403 PROJECT_ARCHIVED`. Reviews and existing
 media stay fully viewable.
 
-- Archived projects are hidden from the sidebar, home, reviews, documents, and
+- Archived projects are hidden from the sidebar, home, reviews, and
   the default *Projects* list.
 - Find them under *Projects → Archived* tab; **Un-archive** restores them to
   *Active* (right-click / row action).

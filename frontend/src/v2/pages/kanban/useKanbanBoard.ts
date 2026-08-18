@@ -1,84 +1,83 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
-import { useAssetsQuery, useSequencesQuery, useShotsQuery } from '../../lib/queries';
-import type { TaskStatus, TaskWithAssignee } from '../../types/api';
-import type { BoardTask } from './kanbanTypes';
+import { useSequencesQuery } from '../../lib/queries';
+import { useDepartments } from '../../lib/departmentsApi';
+import { usePipelineStatuses } from '../../lib/shotgridApi';
+import type { TaskStatus } from '../../types/api';
+import type { BoardTask, BoardResponse } from './kanbanTypes';
 import { useT } from '../../i18n';
 
 /**
- * Données du board kanban : shots + séquences + tâches (fan-out par shot),
- * et déplacement d'une carte (changement de statut) en update optimiste avec
- * rollback par invalidation. Une clé = une shape (cohérent 10.E1).
+ * Données du board (C4) : une seule requête de tâches pour tout le projet.
+ *
+ * Le board en envoyait une par plan **et** une par asset — cent cinquante appels HTTP à
+ * l'ouverture d'un projet moyen, jusqu'à se faire limiter par le serveur. Sur le
+ * long-métrage visé, deux mille plans, l'écran ne s'ouvrait tout simplement pas.
+ *
+ * Le déplacement d'une carte envoie l'identifiant du statut du référentiel quand la
+ * colonne en a un : c'est ce qui distingue « On Hold » de « Waiting to Start », que
+ * l'énumération à six valeurs confondait.
  */
 export function useKanbanBoard(projectId: number) {
   const tr = useT();
   const qc = useQueryClient();
-  const shotsQ = useShotsQuery(projectId);
   const sequencesQ = useSequencesQuery(projectId);
-  const assetsQ = useAssetsQuery(projectId);
-  const shots = shotsQ.data ?? [];
-  const assets = assetsQ.data ?? [];
+  const departmentsQ = useDepartments(projectId, projectId > 0);
+  const statusesQ = usePipelineStatuses('task', projectId);
 
-  // Une tâche pend d'un shot ou d'un asset : parcourir les deux, sans quoi un projet
-  // dont le travail vit sur les assets affiche un board vide.
-  const parents = [
-    ...shots.map((s) => ({
-      kind: 'shot' as const,
-      id: s.id,
-      label: s.code,
-      sequenceId: s.sequenceId ?? null,
-    })),
-    ...assets.map((a) => ({ kind: 'asset' as const, id: a.id, label: a.name, sequenceId: null })),
-  ];
-
-  const taskQueries = useQueries({
-    queries: parents.map((p) => ({
-      queryKey: p.kind === 'shot' ? qk.tasks(p.id) : ['tasks', 'asset', p.id],
-      queryFn: () =>
-        api
-          .get<{ items: TaskWithAssignee[] }>(
-            p.kind === 'shot' ? `/api/tasks?shotId=${p.id}` : `/api/tasks?assetId=${p.id}`,
-          )
-          .then((d) => d.items),
-    })),
+  const boardQ = useQuery({
+    queryKey: qk.projectBoard(projectId),
+    queryFn: () => api.get<BoardResponse>(`/api/tasks/board?projectId=${projectId}`),
+    enabled: projectId > 0,
   });
 
-  const tasks: BoardTask[] = parents.flatMap((p, i) =>
-    (taskQueries[i]?.data ?? []).map((t) => ({
-      ...t,
-      shotId: p.kind === 'shot' ? p.id : null,
-      assetId: p.kind === 'asset' ? p.id : null,
-      parentLabel: p.label,
-      parentKind: p.kind,
-      sequenceId: p.sequenceId,
-    })),
-  );
+  const tasks: BoardTask[] = boardQ.data?.items ?? [];
 
-  const isLoading = shotsQ.isLoading || assetsQ.isLoading || taskQueries.some((q) => q.isLoading);
-  const loadError =
-    (shotsQ.error ?? assetsQ.error ?? taskQueries.find((q) => q.error)?.error)?.message ?? null;
-
-  // Déplacement optimiste dans le cache du parent concerné ; rollback par invalidation.
-  const move = async (taskId: number, status: TaskStatus) => {
-    const t = tasks.find((x) => x.id === taskId);
-    if (!t || t.status === status) return;
-    const key = t.shotId !== null ? qk.tasks(t.shotId) : ['tasks', 'asset', t.assetId!];
-    qc.setQueryData<TaskWithAssignee[]>(key, (old) =>
-      old?.map((x) => (x.id === taskId ? { ...x, status } : x)),
+  /**
+   * Déplacement optimiste, rollback par invalidation. Le cache est celui du board entier :
+   * la carte change de colonne à l'instant du lâcher, sans attendre le serveur.
+   */
+  const move = async (taskId: number, column: { statusId: number | null; legacyStatus: TaskStatus }) => {
+    const task = tasks.find((x) => x.id === taskId);
+    if (!task) return;
+    if (task.pipelineStatusId === column.statusId && task.status === column.legacyStatus) return;
+    const key = qk.projectBoard(projectId);
+    qc.setQueryData<BoardResponse>(key, (old) =>
+      old
+        ? {
+            ...old,
+            items: old.items.map((x) =>
+              x.id === taskId ? { ...x, status: column.legacyStatus, pipelineStatusId: column.statusId } : x,
+            ),
+          }
+        : old,
     );
     try {
-      await api.patch(`/api/tasks/${taskId}`, { status });
+      await api.patch(
+        `/api/tasks/${taskId}`,
+        column.statusId !== null ? { pipelineStatusId: column.statusId } : { status: column.legacyStatus },
+      );
     } catch (e) {
-      // Rollback : l'invalidation déclenche le refetch, inutile de l'attendre (erreur déjà toastée).
+      // Rollback : l'invalidation relance la requête, inutile de l'attendre.
       void qc.invalidateQueries({ queryKey: key });
       toast.error(e instanceof Error ? e.message : tr('kanban.moveFailed'));
     }
   };
 
-  return { shots, sequences: sequencesQ.data?.sequences ?? [], tasks, isLoading, loadError, move };
+  return {
+    tasks,
+    total: boardQ.data?.total ?? 0,
+    truncated: boardQ.data?.truncated ?? false,
+    sequences: sequencesQ.data?.sequences ?? [],
+    departments: departmentsQ.data ?? [],
+    statuses: statusesQ.data ?? [],
+    isLoading: boardQ.isLoading,
+    loadError: boardQ.error?.message ?? null,
+    move,
+  };
 }

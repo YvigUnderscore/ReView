@@ -22,7 +22,7 @@ export interface CreateAssetInput {
 export async function create(body: CreateAssetInput) {
   const { projectId, name, type, description } = body;
   if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name } } }))
-    throw badRequest('Un asset avec ce nom existe déjà', 'NAME_TAKEN');
+    throw badRequest('An asset with this name already exists', 'NAME_TAKEN');
   return prisma.asset.create({
     data: { projectId, name, type, description: description ?? null },
   });
@@ -31,6 +31,12 @@ export async function create(body: CreateAssetInput) {
 export interface UpdateAssetInput {
   name?: string;
   type?: AssetType;
+  /**
+   * Libellé exact du type tel que le studio le nomme (C3). La colonne existait depuis la
+   * phase 48 mais n'était écrite que par la synchronisation ShotGrid : un studio autonome
+   * ne pouvait pas nommer ses propres types.
+   */
+  typeLabel?: string | null;
   description?: string | null;
   thumbnailKey?: string | null;
   shotIds?: number[];
@@ -46,11 +52,12 @@ export async function update(projectId: number, id: number, body: UpdateAssetInp
   const { shotIds, sequenceIds, ...scalar } = body;
   if (shotIds && shotIds.length > 0) {
     const ok = await prisma.shot.count({ where: { id: { in: shotIds }, projectId } });
-    if (ok !== shotIds.length) throw badRequest('Shot invalide pour ce projet', 'BAD_SHOT');
+    if (ok !== shotIds.length) throw badRequest('This shot does not belong to this project', 'BAD_SHOT');
   }
   if (sequenceIds && sequenceIds.length > 0) {
     const ok = await prisma.sequence.count({ where: { id: { in: sequenceIds }, projectId } });
-    if (ok !== sequenceIds.length) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+    if (ok !== sequenceIds.length)
+      throw badRequest('This sequence does not belong to this project', 'BAD_SEQUENCE');
   }
   const updated = await prisma.asset.update({
     where: { id },

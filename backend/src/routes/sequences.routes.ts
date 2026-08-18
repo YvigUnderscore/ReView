@@ -11,10 +11,12 @@ import { validate } from '../middleware/validate';
 import { resolveProjectIdForSequence } from '../lib/pipeline';
 import { pipelineOverrideSchema } from '../lib/projectSettings';
 import { softDeleteSequence, restoreSequence, purgeSequence } from '../lib/trash';
-import { logAudit } from '../services/AuditService';
+import { mountTrashRoutes } from './trashRoutes';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, notFound } from '../lib/errors';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
+import * as SequenceService from '../services/SequenceService';
+import * as PipelineStatusService from '../services/PipelineStatusService';
 
 const router = Router();
 router.use(authenticate);
@@ -25,6 +27,16 @@ const sequenceBody = z.object({
   code: z.string().min(1).max(60),
   order: z.number().int().optional(),
   settings: pipelineOverrideSchema.optional(),
+});
+/**
+ * Ce que le PATCH accepte en plus (C3) : la fiche de la séquence. Description et vignette
+ * viennent d'être ajoutées au modèle ; le statut, lui, existait mais n'était écrit que
+ * par la synchronisation ShotGrid — un studio autonome ne pouvait pas y toucher.
+ */
+const sequencePatchBody = sequenceBody.partial().extend({
+  description: z.string().max(2000).nullable().optional(),
+  thumbnailKey: z.string().max(512).nullable().optional(),
+  pipelineStatusId: z.number().int().nullable().optional(),
 });
 const createSequenceBody = sequenceBody.extend({ projectId: z.number().int() });
 type CreateSequenceBody = z.infer<typeof createSequenceBody>;
@@ -56,7 +68,7 @@ router.post(
     await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
     await assertLocalCreationAllowed(projectId, 'sequence'); // 48 : ShotGrid mène
     if (await prisma.sequence.findUnique({ where: { projectId_code: { projectId, code } } })) {
-      throw badRequest('Une séquence avec ce code existe déjà', 'CODE_TAKEN');
+      throw badRequest('A sequence with this code already exists', 'CODE_TAKEN');
     }
     const sequence = await prisma.sequence.create({
       data: { projectId, name, code, order: order ?? 0, settings: settings ?? {} },
@@ -85,50 +97,16 @@ router.post(
     }),
   }),
   async (req, res) => {
-    const { projectId, items } = req.body as {
-      projectId: number;
-      items: { name: string; code: string; order?: number }[];
-    };
+    const { projectId, items } = req.body as { projectId: number; items: SequenceService.BulkSequenceItem[] };
     await assertProjectAccess(req, projectId);
     await assertProjectWritable(projectId); // 38.B
-    // Doublons dans le lot ou déjà existants → rejet global (rien n'est créé)
-    const codes = items.map((i) => i.code);
-    const dupInBatch = codes.find((c, i) => codes.indexOf(c) !== i);
-    if (dupInBatch) throw badRequest(`Code en double dans le lot : ${dupInBatch}`, 'CODE_DUP');
-    const existing = await prisma.sequence.findMany({
-      where: { projectId, code: { in: codes }, deletedAt: null },
-      select: { code: true },
-    });
-    if (existing.length > 0) {
-      throw badRequest(`Code(s) déjà existant(s) : ${existing.map((e) => e.code).join(', ')}`, 'CODE_TAKEN');
-    }
-    const created = await prisma.$transaction(
-      items.map((it, idx) =>
-        prisma.sequence.create({ data: { projectId, name: it.name, code: it.code, order: it.order ?? idx } }),
-      ),
-    );
-    res.status(201).json({ sequences: created });
+    res.status(201).json({ sequences: await SequenceService.createBulk(projectId, items) });
   },
 );
 
-// GET /api/sequences/:id
+// GET /api/sequences/:id — fiche complète, celle que sert la page de séquence (C3).
 router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
-  const id = Number(req.params.id);
-  const sequence = await prisma.sequence.findUnique({
-    where: { id },
-    include: {
-      shots: {
-        where: { deletedAt: null },
-        orderBy: { order: 'asc' },
-        include: {
-          _count: { select: { tasks: true } },
-          assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
-        },
-      },
-      assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
-    },
-  });
-  if (!sequence) throw notFound('Séquence introuvable');
+  const sequence = await SequenceService.getDetail(Number(req.params.id));
   await assertProjectAccess(req, sequence.projectId);
   res.json({ sequence });
 });
@@ -139,64 +117,33 @@ router.patch(
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({
     params: z.object({ id: z.coerce.number().int() }),
-    body: sequenceBody.partial(),
+    body: sequencePatchBody,
   }),
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveProjectIdForSequence(id);
-    if (!projectId) throw notFound('Séquence introuvable');
+    if (!projectId) throw notFound('Sequence not found');
     await assertProjectAccess(req, projectId);
     await assertProjectWritable(projectId); // 38.B
-    const sequence = await prisma.sequence.update({ where: { id }, data: req.body });
+    const body = req.body as z.infer<typeof sequencePatchBody>;
+    // Le statut doit appartenir au vocabulaire de CE projet, comme pour une tâche.
+    if (body.pipelineStatusId !== undefined) {
+      await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
+    }
+    const sequence = await prisma.sequence.update({ where: { id }, data: body });
     res.json({ sequence });
   },
 );
 
-// DELETE /api/sequences/:id — corbeille (soft-delete, admin/superviseur)
-router.delete(
-  '/:id',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const projectId = await resolveProjectIdForSequence(id);
-    if (!projectId) throw notFound('Séquence introuvable');
-    await assertProjectAccess(req, projectId);
-    await softDeleteSequence(id);
-    logAudit({ userId: req.user!.id, action: 'SEQUENCE_DELETE', entityType: 'Sequence', entityId: id });
-    res.status(204).end();
-  },
-);
-
-// POST /api/sequences/:id/restore (admin/superviseur)
-router.post(
-  '/:id/restore',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const projectId = await resolveProjectIdForSequence(id);
-    if (!projectId) throw notFound('Séquence introuvable');
-    await assertProjectAccess(req, projectId);
-    await restoreSequence(id);
-    res.status(204).end();
-  },
-);
-
-// DELETE /api/sequences/:id/purge — suppression définitive (admin/superviseur)
-router.delete(
-  '/:id/purge',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: z.object({ id: z.coerce.number().int() }) }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const projectId = await resolveProjectIdForSequence(id);
-    if (!projectId) throw notFound('Séquence introuvable');
-    await assertProjectAccess(req, projectId);
-    await purgeSequence(id);
-    logAudit({ userId: req.user!.id, action: 'SEQUENCE_PURGE', entityType: 'Sequence', entityId: id });
-    res.status(204).end();
-  },
-);
+// Corbeille : mise à la corbeille, restauration, purge — montage partagé (C3).
+mountTrashRoutes(router, {
+  entityType: 'Sequence',
+  auditPrefix: 'SEQUENCE',
+  notFoundMessage: 'Sequence not found',
+  resolveProjectId: resolveProjectIdForSequence,
+  softDelete: (_userId, id) => softDeleteSequence(id),
+  restore: restoreSequence,
+  purge: (_userId, id) => purgeSequence(id),
+});
 
 export default router;

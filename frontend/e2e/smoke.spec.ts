@@ -7,12 +7,18 @@ import { test, expect } from '@playwright/test';
  * Smoke E2E du parcours critique (10.F3) :
  * setup/login → créer projet → créer shot → créer tâche → upload GLB → review.
  * Tolère une instance vierge (fait le setup) comme une instance seedée (login).
+ *
+ * Les libellés sont visés **dans les deux langues**. Depuis la phase 47, l'écran de
+ * connexion s'affiche dans la langue de base (anglais) sur un navigateur neuf, tandis que
+ * l'application bascule ensuite dans la langue enregistrée sur le compte : viser une seule
+ * des deux rendait le test dépendant des préférences du compte de test, et il échouait dès
+ * le premier écran.
  */
 
 const stamp = Date.now();
 const PROJECT = `E2E Smoke ${stamp}`;
 const SHOT_CODE = `E2E${stamp % 100000}`;
-const TASK_NAME = 'Tâche smoke';
+const TASK_NAME = 'Smoke task';
 const MEDIA_NAME = 'smoke.glb';
 const EMAIL = process.env.E2E_EMAIL ?? 'admin@review.local';
 const PASSWORD = process.env.E2E_PASSWORD ?? 'admin1234';
@@ -28,21 +34,27 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
     await page.fill('#studioName', 'E2E Studio');
     await page.fill('#adminEmail', EMAIL);
     await page.fill('#adminPassword', PASSWORD);
-    await page.getByRole('button', { name: /Créer le studio/ }).click();
+    await page.getByRole('button', { name: /Create studio|Créer le studio/ }).click();
   } else {
     await page.fill('#email', EMAIL);
     await page.fill('#password', PASSWORD);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.getByRole('button', { name: /^(Sign in|Se connecter)$/ }).click();
   }
   // La racine est la page Accueil (12.B) → passer sur la page Projets
-  await expect(page.getByRole('heading', { name: /Bonjour|Accueil/ }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Hello|Bonjour|Home|Accueil/ }).first()).toBeVisible();
   await page.goto('/projects');
-  await expect(page.getByRole('heading', { name: 'Projets', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Projects|Projets)$/ }).first()).toBeVisible();
 
-  // ── 2) Créer un projet (bouton « + Créer » → dialog, 10.B8-fin) et l'ouvrir ──
-  await page.getByRole('button', { name: 'Créer', exact: true }).click();
-  await page.getByPlaceholder('Mon projet').fill(PROJECT);
-  await page.getByRole('dialog').getByRole('button', { name: 'Créer', exact: true }).click();
+  // ── 2) Créer un projet (bouton « Create » → dialog) et l'ouvrir ─────────────
+  await page
+    .getByRole('button', { name: /^(Create|Créer)$/ })
+    .first()
+    .click();
+  await page.getByPlaceholder(/My project|Mon projet/).fill(PROJECT);
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^(Create|Créer)$/ })
+    .click();
   await page
     .locator('main')
     .getByRole('link', { name: new RegExp(PROJECT) })
@@ -81,8 +93,8 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
 
   // Chrome de review : rail d'outils à gauche (outil de navigation au repos) et dock
   // inspecteur à droite (onglet Caméra) — les barres flottantes ont disparu.
-  await expect(page.getByRole('button', { name: 'Naviguer' })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole('button', { name: 'Caméra', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^(Navigate|Naviguer)$/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /^(Camera|Caméra)$/ })).toBeVisible();
 
   // ── Nettoyage : projet de test → corbeille (via l'API, hors parcours testé) ──
   await page.evaluate(async (name) => {

@@ -104,7 +104,7 @@ function PrimRow({
             {sets.length > 0 && (
               <span
                 title={sets.map((s) => s.name).join(', ')}
-                className="shrink-0 rounded bg-secondary px-1 text-[9px] text-secondary-foreground"
+                className="shrink-0 rounded bg-secondary px-1 text-2xs text-secondary-foreground"
               >
                 {t('prim.variantShort')}
               </span>
@@ -172,7 +172,7 @@ function PrimRow({
           >
             <Copy size={10} className="shrink-0" />
             <span className="truncate italic">{node.name}</span>
-            <span className="shrink-0 rounded bg-secondary px-1 text-[9px] text-secondary-foreground">
+            <span className="shrink-0 rounded bg-secondary px-1 text-2xs text-secondary-foreground">
               {t('prim.cloneBadge')}
             </span>
             <span className="flex-1" />
@@ -269,7 +269,7 @@ export default function ScenegraphPanel({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('scenegraph.search')}
-          className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+          className="min-w-0 flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground"
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -291,14 +291,14 @@ export default function ScenegraphPanel({
         )}
       </div>
       {usd?.primsTruncated && (
-        <p className="px-2 py-1 text-[10px] text-muted-foreground">{t('review.scenegraph.truncated')}</p>
+        <p className="px-2 py-1 text-2xs text-muted-foreground">{t('review.scenegraph.truncated')}</p>
       )}
       {scene.dirty && (
         <div className="flex items-center gap-3 border-t border-border px-2 py-1">
           {onRevert && (
             <button
               onClick={onRevert}
-              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
               <RotateCcw size={11} /> {t('common.undo')}
             </button>
@@ -308,14 +308,14 @@ export default function ScenegraphPanel({
             <button
               onClick={onSave}
               disabled={saving}
-              className="text-[11px] text-primary hover:underline disabled:opacity-50"
+              className="text-xs text-primary hover:underline disabled:opacity-50"
             >
               {saving ? t('common.saving') : t('scenegraph.saveForAll')}
             </button>
           ) : (
             // Après publication, la mise en scène commune est figée : les modifications ne
             // partent plus que dans un commentaire.
-            <span className="text-[11px] text-muted-foreground">{t('review.attachedToComment')}</span>
+            <span className="text-xs text-muted-foreground">{t('review.attachedToComment')}</span>
           )}
         </div>
       )}

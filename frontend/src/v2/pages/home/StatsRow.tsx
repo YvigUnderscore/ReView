@@ -38,7 +38,7 @@ function StatCard({
       <span className="min-w-0">
         <span className="flex items-baseline gap-1.5">
           <span className="text-xl font-semibold leading-tight">{value}</span>
-          {trend && <span className="truncate text-[11px] text-muted-foreground">{trend}</span>}
+          {trend && <span className="truncate text-xs text-muted-foreground">{trend}</span>}
         </span>
         <span className="block truncate text-xs text-muted-foreground">{label}</span>
       </span>

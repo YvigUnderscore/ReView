@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Router, type Request } from 'express';
+import { CommentState } from '@prisma/client';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
@@ -21,7 +22,7 @@ const idParam = z.object({ id: z.coerce.number().int() });
 /** Résout le projet d'un commentaire + assertion d'accès (RBAC) → renvoie le projectId. */
 async function resolveCommentAccess(req: Request, commentId: number): Promise<number> {
   const projectId = await resolveProjectIdForComment(commentId);
-  if (!projectId) throw notFound('Commentaire introuvable');
+  if (!projectId) throw notFound('Comment not found');
   await assertProjectAccess(req, projectId);
   return projectId;
 }
@@ -33,7 +34,7 @@ router.get(
   async (req, res) => {
     const mediaObjectId = Number(req.query.mediaObjectId);
     const projectId = await resolveProjectIdForMedia(mediaObjectId);
-    if (!projectId) throw notFound('Média introuvable');
+    if (!projectId) throw notFound('Media not found');
     await assertProjectAccess(req, projectId);
     res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query)));
   },
@@ -88,7 +89,7 @@ router.post(
   }),
   async (req, res) => {
     const projectId = await resolveProjectIdForMedia(req.body.mediaObjectId);
-    if (!projectId) throw notFound('Média introuvable');
+    if (!projectId) throw notFound('Media not found');
     await assertProjectAccess(req, projectId);
     res.status(201).json({ comment: await CommentService.create(req.user!, projectId, req.body) });
   },
@@ -99,7 +100,7 @@ router.post('/:id/share', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveCommentAccess(req, id);
   const comment = await CommentService.share(req.user!, projectId, id);
-  if (!comment) throw notFound('Commentaire introuvable');
+  if (!comment) throw notFound('Comment not found');
   res.json({ comment });
 });
 
@@ -110,6 +111,8 @@ router.patch(
     params: idParam,
     body: z.object({
       content: z.string().min(1).max(10000).optional(),
+      // État du fil (D1) ; `isResolved` reste accepté pour l'API v1 et les anciens clients.
+      state: z.nativeEnum(CommentState).optional(),
       isResolved: z.boolean().optional(),
       isVisibleToClient: z.boolean().optional(),
       assigneeId: z.number().int().nullable().optional(),
@@ -119,7 +122,7 @@ router.patch(
     const id = Number(req.params.id);
     const projectId = await resolveCommentAccess(req, id);
     const comment = await CommentService.update(req.user!, projectId, id, req.body);
-    if (!comment) throw notFound('Commentaire introuvable');
+    if (!comment) throw notFound('Comment not found');
     res.json({ comment });
   },
 );
@@ -128,7 +131,7 @@ router.patch(
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveCommentAccess(req, id);
-  if (!(await CommentService.remove(req.user!, projectId, id))) throw notFound('Commentaire introuvable');
+  if (!(await CommentService.remove(req.user!, projectId, id))) throw notFound('Comment not found');
   res.status(204).end();
 });
 
@@ -136,7 +139,7 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
 // superviseur/admin comme la création de tâche classique)
 router.post('/:id/task', validate({ params: idParam }), async (req, res) => {
   if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
-    throw forbidden('Réservé aux superviseurs/admins');
+    throw forbidden('Supervisors and administrators only');
   const id = Number(req.params.id);
   const projectId = await resolveCommentAccess(req, id);
   res.status(201).json({ task: await TaskService.createFromComment(req.user!, projectId, id) });

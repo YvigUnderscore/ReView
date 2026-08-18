@@ -35,5 +35,14 @@
   "invite.cta": "Aktibatu nire kontua",
   "invite.expiry": "Esteka honek {days} egun barru iraungiko du.",
   "invite.fallback": "Botoiak funtzionatzen ez badu, itsatsi esteka hau zure nabigatzailean:",
-  "invite.ignore": "Gonbidapen hau espero ez bazenuen, mezu hau alde batera utz dezakezu."
+  "invite.ignore": "Gonbidapen hau espero ez bazenuen, mezu hau alde batera utz dezakezu.",
+  "notification.mentioned": "Iruzkin batean aipatu zaituzte",
+  "notification.reply": "Erantzun berria zure iruzkinari",
+  "notification.watchedComment": "Iruzkin berria jarraitzen duzun zerbaitetan",
+  "notification.montageShared": "Muntaketako ohar bat jarraitzen duzun zerbaitera bidali da",
+  "notification.commentAssigned": "Iruzkin bat esleitu zaizu",
+  "notification.mediaPublished": "Euskarri berria argitaratuta: {name}",
+  "notification.liveStarted": "{name}(e)k zuzeneko review bat hasi du « {playlist} » playlist-ean",
+  "notification.decision": "« {status} » erabakia {version} version-ari buruz",
+  "notification.taskAssigned": "Zeregina esleituta: {name}"
 }

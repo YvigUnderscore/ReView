@@ -1,0 +1,135 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { useState, type ReactNode } from 'react';
+import { Settings2 } from 'lucide-react';
+import PageShell from '../PageShell';
+import EntityBreadcrumb from '../EntityBreadcrumb';
+import FavoriteButton from '../FavoriteButton';
+import PipelineStatusBadge from '../shotgrid/PipelineStatusBadge';
+import SgSyncDot from '../shotgrid/SgSyncDot';
+import EntityContextMenu from '../ui/entity-menu';
+import { separator, type MenuEntry } from '../../lib/menuSpec';
+import EntitySettingsDialog from './EntitySettingsDialog';
+import type { EntityKind, EntitySource } from './entitySettings';
+import { useT } from '../../i18n';
+
+/**
+ * Coquille commune d'une séquence, d'un plan ou d'un asset (C3).
+ *
+ * Les trois pages du même travail — des étapes, des tâches, des versions — divergeaient
+ * sans raison : le statut et la pastille de synchronisation manquaient sur un asset, la
+ * vignette n'apparaissait nulle part sauf sur un plan, et une séquence n'avait pas de page
+ * du tout. L'en-tête est désormais le même partout, et le clic droit y ouvre les réglages.
+ */
+
+const FAVORITE_TYPE: Record<EntityKind, 'SEQUENCE' | 'SHOT' | 'ASSET'> = {
+  sequence: 'SEQUENCE',
+  shot: 'SHOT',
+  asset: 'ASSET',
+};
+
+export default function EntityWorkPage({
+  kind,
+  id,
+  projectId,
+  title,
+  subtitle,
+  entity,
+  thumbnailUrl,
+  statusId,
+  canManage,
+  actions,
+  menuExtras = [],
+  children,
+}: {
+  kind: EntityKind;
+  id: number;
+  projectId: number;
+  title: string;
+  subtitle?: string | null;
+  /** Ce que porte l'entité : alimente le panneau de réglages sans le recharger. */
+  entity: EntitySource;
+  thumbnailUrl?: string | null;
+  statusId?: number | null;
+  canManage: boolean;
+  actions?: ReactNode;
+  /** Entrées propres à l'entité (nouvelle version, playlist…), au-dessus des réglages. */
+  menuExtras?: MenuEntry[];
+  children: ReactNode;
+}) {
+  const t = useT();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const entries: MenuEntry[] = [
+    ...menuExtras,
+    ...(menuExtras.length > 0 ? [separator('settings')] : []),
+    ...(canManage
+      ? [
+          {
+            id: 'settings',
+            label: t('entity.settings.open'),
+            icon: <Settings2 size={14} />,
+            onSelect: () => setSettingsOpen(true),
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <PageShell breadcrumb={<EntityBreadcrumb entity={kind} id={id} />}>
+      <EntityContextMenu entries={entries}>
+        <div className="min-h-full">
+          <header className="mb-5 flex flex-wrap items-start gap-4">
+            {thumbnailUrl && (
+              <img
+                src={thumbnailUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-24 w-40 shrink-0 rounded-lg border border-border object-cover"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-xl font-semibold">{title}</h1>
+                {statusId !== undefined && (
+                  <PipelineStatusBadge statusId={statusId} scope={kind === 'asset' ? 'task' : kind} />
+                )}
+                <SgSyncDot projectId={projectId} type={kind} localId={id} canRealign={canManage} />
+                <FavoriteButton type={FAVORITE_TYPE[kind]} entityId={id} size={18} />
+              </div>
+              {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {actions}
+              {canManage && (
+                <button
+                  onClick={() => setSettingsOpen(true)}
+                  title={t('entity.settings.open')}
+                  aria-label={t('entity.settings.open')}
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <Settings2 size={16} />
+                </button>
+              )}
+            </div>
+          </header>
+
+          {children}
+        </div>
+      </EntityContextMenu>
+
+      {settingsOpen && (
+        <EntitySettingsDialog
+          kind={kind}
+          id={id}
+          projectId={projectId}
+          entity={entity}
+          thumbnailUrl={thumbnailUrl}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+    </PageShell>
+  );
+}

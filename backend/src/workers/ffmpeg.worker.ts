@@ -487,7 +487,7 @@ async function buildHls(
 
 async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void> {
   const media = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
-  if (!media) throw new Error(`MediaObject ${mediaId} introuvable`);
+  if (!media) throw new Error(`MediaObject ${mediaId} not found`);
 
   const dir = await mkdtemp(join(tmpdir(), 'review-'));
   try {
@@ -780,7 +780,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
         },
       });
     } else {
-      throw new Error(`Type de job inconnu: ${kind}`);
+      throw new Error(`Unknown job kind: ${kind}`);
     }
   } finally {
     await rm(dir, { recursive: true, force: true });

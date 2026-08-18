@@ -125,7 +125,7 @@ export default function VersionTimelineItem({
                   <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
                 )}
                 <span className="font-semibold">{version.name}</span>
-                <span className={`rounded px-1.5 py-0.5 text-[10px] ${VERSION_STATUS_COLOR[version.status]}`}>
+                <span className={`rounded px-1.5 py-0.5 text-2xs ${VERSION_STATUS_COLOR[version.status]}`}>
                   {VERSION_STATUS_LABEL[version.status]}
                 </span>
                 {version.reviewStatus && <ReviewDecisionBadge status={version.reviewStatus} />}
@@ -146,7 +146,7 @@ export default function VersionTimelineItem({
                         'live.clickToJoin',
                       )}`
                     }
-                    className="flex items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent2 hover:bg-accent2/20"
+                    className="flex items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-xs font-semibold text-accent2 hover:bg-accent2/20"
                   >
                     <Radio size={12} className="animate-pulse" /> {t('live.badge')} ·{' '}
                     {liveSession.participantCount}

@@ -35,5 +35,14 @@
   "invite.cta": "Mi Konto àktiviara",
   "invite.expiry": "Dàs Link lauft ìn {days} Däg ab.",
   "invite.fallback": "Wenn dr Knopf nìt geht, kläbe Sie dàs Link ìn Ìhr Browser :",
-  "invite.ignore": "Wenn Sie dìa Ìnladung nìt erwàrtet hàn, kenne Sie dìa Mail ìgnoriara."
+  "invite.ignore": "Wenn Sie dìa Ìnladung nìt erwàrtet hàn, kenne Sie dìa Mail ìgnoriara.",
+  "notification.mentioned": "Sie sin in eme Kommentar erwähnt worre",
+  "notification.reply": "Nöii Antwort uf Ihre Kommentar",
+  "notification.watchedComment": "Nöie Kommentar zue öppis wo Sie verfolge",
+  "notification.montageShared": "E Notiz us em Schnitt isch uf öppis zrucggschickt worre wo Sie verfolge",
+  "notification.commentAssigned": "Ihne isch e Kommentar zuegwiese worre",
+  "notification.mediaPublished": "Nöis Medium veröffentlicht: {name}",
+  "notification.liveStarted": "{name} het e Live-review zue dr playlist « {playlist} » gstartet",
+  "notification.decision": "Entscheidig « {status} » zue dr version {version}",
+  "notification.taskAssigned": "Ufgab zuegwiese: {name}"
 }

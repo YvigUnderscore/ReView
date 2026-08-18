@@ -11,7 +11,7 @@ import { qk } from '../lib/query';
 import { parseIdParam } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import { userColor } from '../lib/userColor';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { Button } from '../components/ui/button';
 import { SkeletonRows } from '../components/ui/skeleton';
@@ -174,8 +174,12 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
   };
 
   return (
-    <Shell title={name} breadcrumb={<EntityBreadcrumb entity="project" id={timeline.projectId} />}>
-      <div ref={rootRef} className="h-[calc(100vh-7rem)]">
+    <PageShell
+      title={name}
+      breadcrumb={<EntityBreadcrumb entity="project" id={timeline.projectId} />}
+      width="flush"
+    >
+      <div ref={rootRef} className="min-h-0 flex-1 p-4">
         <ReviewChrome
           kind="VIDEO"
           state={state}
@@ -319,6 +323,6 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
           </div>
         </ReviewChrome>
       </div>
-    </Shell>
+    </PageShell>
   );
 }

@@ -8,7 +8,7 @@ import { Mail, MessageSquare, Phone, UserCog } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useChat } from '../stores/useChat';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import Avatar from '../components/Avatar';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
@@ -32,19 +32,19 @@ export default function UserProfilePage() {
 
   if (isLoading) {
     return (
-      <Shell title={t('profile.view')}>
+      <PageShell title={t('profile.view')}>
         <div className="mx-auto max-w-2xl space-y-3">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
-      </Shell>
+      </PageShell>
     );
   }
   if (isError || !data) {
     return (
-      <Shell title={t('profile.view')}>
+      <PageShell title={t('profile.view')}>
         <p className="mx-auto max-w-2xl text-sm text-muted-foreground">{t('profile.notFound')}</p>
-      </Shell>
+      </PageShell>
     );
   }
 
@@ -57,7 +57,7 @@ export default function UserProfilePage() {
   };
 
   return (
-    <Shell title={data.displayName}>
+    <PageShell title={data.displayName}>
       <div className="mx-auto max-w-2xl space-y-4">
         <section className="flex items-start gap-4 rounded-lg border border-border bg-card p-5">
           <Avatar
@@ -142,6 +142,6 @@ export default function UserProfilePage() {
           </section>
         )}
       </div>
-    </Shell>
+    </PageShell>
   );
 }

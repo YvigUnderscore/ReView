@@ -41,7 +41,7 @@ function CommentLine({ review }: { review: DashboardReview }) {
     <p className="flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground">
       <span className="flex shrink-0 translate-y-px items-center gap-0.5">
         <MessageSquare size={12} />
-        {review.commentCount > 1 && <span className="text-[10px] tabular-nums">{review.commentCount}</span>}
+        {review.commentCount > 1 && <span className="text-2xs tabular-nums">{review.commentCount}</span>}
       </span>
       <span className="truncate">
         <span className="font-medium text-foreground">{c.author ?? t('common.guest')}</span>
@@ -58,10 +58,7 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
   const t = useT();
   const [hero, ...rest] = reviews;
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('home.latestReviews')}
-      </h2>
+    <>
       {!hero ? (
         <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
           <Clapperboard size={28} />
@@ -111,6 +108,6 @@ export default function LatestReviews({ reviews }: { reviews: DashboardReview[] 
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }

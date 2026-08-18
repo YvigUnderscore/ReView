@@ -94,8 +94,12 @@ export async function syncPipelineStatuses(
       color: '#6B7280',
       order: index,
     };
-    const existing = await prisma.pipelineStatus.findUnique({
-      where: { scope_code: { scope, code } },
+    // Les statuts importés vivent au niveau du studio (`projectId: null`) et se
+    // distinguent des statuts locaux par leur origine (B2) : un même code, « wtg » par
+    // exemple, existe des deux côtés. Sans le filtre d'origine, la synchronisation
+    // écraserait le vocabulaire local du studio par celui du site.
+    const existing = await prisma.pipelineStatus.findFirst({
+      where: { projectId: null, scope, code, origin: 'shotgrid' },
     });
     const data = {
       name: info.name,
@@ -111,15 +115,16 @@ export async function syncPipelineStatuses(
     const status = existing
       ? await prisma.pipelineStatus.update({ where: { id: existing.id }, data })
       : await prisma.pipelineStatus.create({
-          data: { scope, code, ...data, isDefault: index === 0 && scope === 'shot' },
+          data: { projectId: null, scope, code, ...data, isDefault: index === 0 && scope === 'shot' },
         });
     out.set(code, status);
     journal?.count(`statuses.${scope}`, existing ? 'updated' : 'created');
   }
 
-  // Statuts locaux absents du site : conservés, mais signalés une fois.
+  // Statuts importés absents du site : conservés, mais signalés une fois. Le vocabulaire
+  // purement local n'est pas concerné — il ne prétend pas refléter le site.
   const orphans = await prisma.pipelineStatus.findMany({
-    where: { scope, code: { notIn: codes } },
+    where: { projectId: null, scope, origin: 'shotgrid', code: { notIn: codes } },
   });
   for (const orphan of orphans) {
     out.set(orphan.code, orphan);

@@ -67,7 +67,7 @@ export default function PlaylistNavigator({ versionId }: { versionId: number }) 
             ? t('playlist.nextNamed', { name: next.version.location || next.media?.originalName || '' })
             : t('playlist.end')
         }
-        className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+        className="rounded p-1.5 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <ChevronRight size={14} />
       </button>

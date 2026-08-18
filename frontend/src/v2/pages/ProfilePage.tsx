@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useAuth, type AuthUser } from '../stores/useAuth';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import Avatar from '../components/Avatar';
 import DisplaySettings from '../components/DisplaySettings';
 import PushToggle from './profile/PushToggle';
@@ -133,7 +133,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <Shell>
+    <PageShell>
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="text-xl font-semibold">{t('profile.title')}</h1>
 
@@ -256,7 +256,7 @@ export default function ProfilePage() {
         <SessionsSection />
         <ApiTokensSection />
       </div>
-    </Shell>
+    </PageShell>
   );
 }
 

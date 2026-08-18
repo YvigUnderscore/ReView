@@ -35,5 +35,14 @@
   "invite.cta": "Attivà u mo contu",
   "invite.expiry": "Stu ligame scade ind'è {days} ghjorni.",
   "invite.fallback": "S'ellu ùn funziona micca u buttone, incullate stu ligame in u vostru navigatore :",
-  "invite.ignore": "S'ellu ùn v'aspittavate micca st'invitu, pudete ignurà stu messagiu."
+  "invite.ignore": "S'ellu ùn v'aspittavate micca st'invitu, pudete ignurà stu messagiu.",
+  "notification.mentioned": "Site statu mintuvatu in un cumentu",
+  "notification.reply": "Nova risposta à u vostru cumentu",
+  "notification.watchedComment": "Novu cumentu nant'à un elementu seguitu",
+  "notification.montageShared": "Una nota di u muntaghju hè stata rimandata nant'à un elementu seguitu",
+  "notification.commentAssigned": "Un cumentu v'hè statu assignatu",
+  "notification.mediaPublished": "Novu media pubblicatu : {name}",
+  "notification.liveStarted": "{name} hà iniziatu una review in diretta nant'à a playlist « {playlist} »",
+  "notification.decision": "Decisione « {status} » nant'à a version {version}",
+  "notification.taskAssigned": "Attività assignata : {name}"
 }

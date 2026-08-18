@@ -398,6 +398,14 @@ class StorageService {
   static avatarKey(userId: number, ext: string): string {
     return `avatars/${userId}${ext}`;
   }
+  /**
+   * Vignette choisie à la main pour une séquence, un plan ou un asset (C3). La colonne
+   * `thumbnailKey` et le PATCH existaient depuis longtemps, mais rien ne savait produire
+   * la clé : aucune entité n'a jamais pu porter d'image.
+   */
+  static entityThumbnailKey(holder: 'sequence' | 'shot' | 'asset', id: number, ext: string): string {
+    return `entity-thumbs/${holder}/${id}${ext}`;
+  }
 }
 
 export const storage = new StorageService();

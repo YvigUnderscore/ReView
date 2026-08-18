@@ -35,5 +35,14 @@
   "invite.cta": "मेरा खाता सक्रिय करें",
   "invite.expiry": "यह लिंक {days} दिनों में समाप्त हो जाएगा।",
   "invite.fallback": "यदि बटन काम न करे, तो यह लिंक अपने ब्राउज़र में चिपकाएँ:",
-  "invite.ignore": "यदि आपको इस आमंत्रण की अपेक्षा नहीं थी, तो आप इस ईमेल को अनदेखा कर सकते हैं।"
+  "invite.ignore": "यदि आपको इस आमंत्रण की अपेक्षा नहीं थी, तो आप इस ईमेल को अनदेखा कर सकते हैं।",
+  "notification.mentioned": "किसी टिप्पणी में आपका उल्लेख हुआ",
+  "notification.reply": "आपकी टिप्पणी पर नया उत्तर",
+  "notification.watchedComment": "आपके द्वारा अनुसरण की जा रही चीज़ पर नई टिप्पणी",
+  "notification.montageShared": "संपादन की एक टिप्पणी आपके अनुसरण किए गए आइटम पर भेजी गई",
+  "notification.commentAssigned": "आपको एक टिप्पणी सौंपी गई",
+  "notification.mediaPublished": "नया मीडिया प्रकाशित: {name}",
+  "notification.liveStarted": "{name} ने playlist « {playlist} » पर लाइव review शुरू की",
+  "notification.decision": "version {version} पर निर्णय « {status} »",
+  "notification.taskAssigned": "कार्य सौंपा गया: {name}"
 }

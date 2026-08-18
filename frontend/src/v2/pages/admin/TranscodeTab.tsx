@@ -155,7 +155,7 @@ export default function TranscodeTab() {
       </Panel>
 
       <Button onClick={save} disabled={busy}>
-        <Save size={15} /> {busy ? 'Enregistrement…' : t('common.save')}
+        <Save size={15} /> {busy ? t('common.saving') : t('common.save')}
       </Button>
     </div>
   );
@@ -163,7 +163,7 @@ export default function TranscodeTab() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+    <label className="flex flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
       {label}
       {children}
     </label>

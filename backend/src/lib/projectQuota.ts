@@ -40,6 +40,6 @@ export async function assertProjectQuota(projectId: number, addSize: number): Pr
   if (quota == null) return;
   const used = await getProjectStorageUsage(projectId);
   if (used + BigInt(Math.max(0, Math.trunc(addSize))) > quota) {
-    throw forbidden('Quota de stockage du projet dépassé', 'PROJECT_QUOTA');
+    throw forbidden('Project storage quota exceeded', 'PROJECT_QUOTA');
   }
 }

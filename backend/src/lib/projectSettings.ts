@@ -442,11 +442,38 @@ export async function resolveProjectSettings(projectSettings: unknown): Promise<
   return sanitize(projectSettings, studio);
 }
 
-/** Réglages effectifs d'un projet à partir de son id (charge la colonne settings). */
+/**
+ * Réglages effectifs d'un projet à partir de son id (charge la colonne settings).
+ *
+ * Les départements ne viennent plus du JSON mais de la table `Department` (B1) : c'est
+ * elle qui fait foi depuis que ce sont des entités. Tout le reste du pipe
+ * (`lib/pipelineOrder.ts`, l'élection de la dernière version, les regroupements
+ * d'affichage) continue de lire `settings.departments` sans savoir d'où ils sortent.
+ * Le JSON reste lu en repli, le temps qu'une base non migrée se rattrape.
+ */
 export async function resolveProjectSettingsById(projectId: number): Promise<ProjectSettings> {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { settings: true },
+  const [project, departments] = await Promise.all([
+    prisma.project.findUnique({ where: { id: projectId }, select: { settings: true } }),
+    listDepartmentsForProject(projectId),
+  ]);
+  const base = await resolveProjectSettings(project?.settings ?? {});
+  return departments.length > 0 ? { ...base, departments } : base;
+}
+
+/** Départements du projet, sinon ceux du studio. Ordre du pipe, amont → aval. */
+async function listDepartmentsForProject(projectId: number): Promise<Department[]> {
+  const orderBy = [{ order: 'asc' as const }, { key: 'asc' as const }];
+  const own = await prisma.department.findMany({
+    where: { projectId, deletedAt: null },
+    select: { key: true, name: true },
+    orderBy,
   });
-  return resolveProjectSettings(project?.settings ?? {});
+  if (own.length > 0) return own;
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
+  if (!project) return [];
+  return prisma.department.findMany({
+    where: { studioId: project.studioId, projectId: null, deletedAt: null },
+    select: { key: true, name: true },
+    orderBy,
+  });
 }

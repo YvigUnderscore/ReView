@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { Prisma, Role, UserStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { invalidateAuthUser } from '../lib/userCache';
 import { logAudit } from './AuditService';
 import * as InvitationService from './InvitationService';
 import { storage, StorageService } from './StorageService';
@@ -49,14 +50,14 @@ async function assertUniqueIdentity(
       where: { username, id: { not: excludeId } },
       select: { id: true },
     });
-    if (taken) throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
+    if (taken) throw badRequest('Username already taken', 'USERNAME_TAKEN');
   }
   if (email) {
     const taken = await prisma.user.findFirst({
       where: { email, id: { not: excludeId } },
       select: { id: true },
     });
-    if (taken) throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
+    if (taken) throw badRequest('Email already in use', 'EMAIL_TAKEN');
   }
 }
 
@@ -91,14 +92,28 @@ export async function listUsers() {
 }
 
 /**
- * Présence de tous les utilisateurs — accessible à TOUT compte authentifié, y compris un
- * CLIENT externe. L'email est donc retiré de la réponse : `toPublicUser` recopie l'objet
- * qu'on lui passe (`...u`), il servait ici à calculer le nom d'affichage et repartait avec.
- * C'était l'annuaire complet du studio, adresses comprises, offert à n'importe quel invité.
+ * Présence des personnes que le demandeur a le droit de voir.
+ *
+ * L'email est retiré de la réponse : `toPublicUser` recopie l'objet qu'on lui passe
+ * (`...u`), il servait ici à calculer le nom d'affichage et repartait avec. C'était
+ * l'annuaire complet du studio, adresses comprises, offert à n'importe quel invité.
+ *
+ * Le cloisonnement va plus loin depuis C1 : un CLIENT est un intervenant extérieur, il
+ * n'a pas à connaître l'équipe entière ni à pouvoir écrire à n'importe qui. Il ne voit
+ * que les personnes des projets qu'il partage. Les autres rôles voient le studio, comme
+ * avant — ils y travaillent.
  */
-export async function listPresence() {
+export async function listPresence(viewer?: { id: number; role: Role }) {
+  const scope =
+    viewer?.role === Role.CLIENT
+      ? {
+          memberships: {
+            some: { project: { memberships: { some: { userId: viewer.id } } } },
+          },
+        }
+      : {};
   const users = await prisma.user.findMany({
-    where: { isService: false },
+    where: { isService: false, ...scope },
     select: {
       id: true,
       email: true, // nécessaire au repli displayName/initials — retiré de la sortie plus bas
@@ -131,7 +146,7 @@ export async function listPresence() {
  */
 export async function getProfile(viewerId: number, viewerRole: Role, id: number) {
   const user = await prisma.user.findFirst({ where: { id, isService: false }, select: publicUser });
-  if (!user) throw notFound('Utilisateur introuvable');
+  if (!user) throw notFound('User not found');
 
   const shared =
     viewerId === id
@@ -214,7 +229,7 @@ export async function presignAvatar(userId: number, contentType: string) {
 
 export async function setAvatar(userId: number, key: string | null) {
   // Sécurité : la clé doit cibler le dossier avatar de l'utilisateur courant.
-  if (key && !key.startsWith(`avatars/${userId}`)) throw badRequest('Clé avatar invalide', 'BAD_KEY');
+  if (key && !key.startsWith(`avatars/${userId}`)) throw badRequest('Invalid avatar key', 'BAD_KEY');
   const user = await prisma.user.update({
     where: { id: userId },
     data: { avatarKey: key },
@@ -242,9 +257,9 @@ export interface CreateUserInput {
 export async function createUser(actorId: number, input: CreateUserInput) {
   const email = normalizeEmail(input.email);
   if (await prisma.user.findUnique({ where: { email } }))
-    throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
+    throw badRequest('Email already in use', 'EMAIL_TAKEN');
   if (input.username && (await prisma.user.findUnique({ where: { username: input.username } })))
-    throw badRequest('Pseudo déjà pris', 'USERNAME_TAKEN');
+    throw badRequest('Username already taken', 'USERNAME_TAKEN');
   const byInvitation = input.password === undefined;
   // Relais et URL publique vérifiés AVANT la création : un compte créé puis privé de son
   // email d'activation ne serait joignable par personne, et son adresse resterait prise.
@@ -284,8 +299,11 @@ export async function createUser(actorId: number, input: CreateUserInput) {
 }
 
 export async function changeRole(actorId: number, id: number, role: Role) {
-  if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('Utilisateur introuvable');
+  if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('User not found');
   const user = await prisma.user.update({ where: { id }, data: { role }, select: publicUser });
+  // Le rôle est mis en cache par requête (lib/userCache) : sans cette invalidation, un
+  // compte rétrogradé garderait ses droits une demi-minute.
+  invalidateAuthUser(id);
   logAudit({
     userId: actorId,
     action: 'USER_ROLE_CHANGE',
@@ -303,7 +321,7 @@ export interface AdminUpdateUserInput extends UpdateMeInput {
 }
 
 export async function updateUser(actorId: number, id: number, body: AdminUpdateUserInput) {
-  if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('Utilisateur introuvable');
+  if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('User not found');
   const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
   await assertUniqueIdentity(body.username || undefined, email, id);
   const data: Record<string, unknown> = {};
@@ -317,6 +335,7 @@ export async function updateUser(actorId: number, id: number, body: AdminUpdateU
   if (body.storageLimit !== undefined)
     data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
   const user = await prisma.user.update({ where: { id }, data, select: publicUser });
+  invalidateAuthUser(id);
   logAudit({ userId: actorId, action: 'USER_UPDATE', entityType: 'User', entityId: id });
   // Un admin qui réinitialise un mot de passe, change l'email de connexion ou rétrograde
   // un rôle agit en général sur un compte compromis ou un départ : les jetons déjà émis
@@ -328,7 +347,7 @@ export async function updateUser(actorId: number, id: number, body: AdminUpdateU
 }
 
 export async function deleteUser(actorId: number, id: number) {
-  if (id === actorId) throw badRequest('Impossible de se supprimer soi-même');
+  if (id === actorId) throw badRequest('You cannot delete your own account');
   // Les liens de partage sont en `SetNull` : supprimer le compte les laissait VIVANTS, et
   // désormais sans propriétaire — un départ ne coupait donc pas les accès publics ouverts
   // par la personne, alors que c'est précisément ce qu'on attend d'un offboarding.
@@ -337,6 +356,7 @@ export async function deleteUser(actorId: number, id: number) {
     data: { revoked: true },
   });
   await prisma.user.delete({ where: { id } });
+  invalidateAuthUser(id);
   logAudit({
     userId: actorId,
     action: 'USER_DELETE',
@@ -352,7 +372,7 @@ const PREFERENCES_MAX_BYTES = 32_768;
 
 export async function getPreferences(userId: number): Promise<Record<string, unknown>> {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
-  if (!u) throw notFound('Utilisateur introuvable');
+  if (!u) throw notFound('User not found');
   return (u.preferences ?? {}) as Record<string, unknown>;
 }
 
@@ -367,7 +387,7 @@ export async function updatePreferences(
     else next[k] = v;
   }
   if (JSON.stringify(next).length > PREFERENCES_MAX_BYTES)
-    throw badRequest('Préférences trop volumineuses', 'PREFERENCES_TOO_LARGE');
+    throw badRequest('Preferences are too large', 'PREFERENCES_TOO_LARGE');
   await prisma.user.update({
     where: { id: userId },
     data: { preferences: next as Prisma.InputJsonObject },

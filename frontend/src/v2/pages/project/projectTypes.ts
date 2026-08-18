@@ -18,10 +18,28 @@ export type {
   Asset,
 } from '../../types/api';
 
-/** GET /api/sequences/:id — détail d'une séquence (shots + assets liés). */
+/**
+ * GET /api/sequences/:id — fiche complète d'une séquence (C3).
+ *
+ * Les plans arrivent avec de quoi les reconnaître (vignette, statut, plage de frames)
+ * plutôt qu'en simple liste de codes : c'est ce que sert la page de séquence.
+ */
 export type SequenceDetailData = SequenceRef & {
-  shots: (ShotRef & { assets: AssetRef[] })[];
-  assets: AssetRef[];
+  projectId: number;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  pipelineStatusId?: number | null;
+  shots: (ShotRef & {
+    assets: AssetRef[];
+    thumbnailUrl?: string | null;
+    pipelineStatusId?: number | null;
+    startFrame?: number | null;
+    endFrame?: number | null;
+    omitted?: boolean;
+    _count?: { tasks: number };
+  })[];
+  assets: (AssetRef & { typeLabel?: string | null; thumbnailUrl?: string | null })[];
+  departments?: { id: number; key: string; name: string; color?: string | null }[];
 };
 
 export const ASSET_TYPES: readonly AssetType[] = [

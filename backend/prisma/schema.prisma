@@ -126,7 +126,53 @@ model Studio {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  projects Project[]
+  projects    Project[]
+  departments Department[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Départements (B1) — les étapes du pipe, enfin des entités
+// ─────────────────────────────────────────────────────────────────────────────
+// Un département était une entrée `{key, name}` d'un tableau JSON dans les réglages du
+// projet, et `Task.department` une chaîne libre rapprochée d'elle sans casse. Renommer
+// « ANIM » en « ANIMATION » détachait donc silencieusement toutes les tâches concernées,
+// qui basculaient en fin de pipe. Rien ne garantissait non plus qu'une étape importée de
+// ShotGrid (« Art », « Groom ») corresponde à quoi que ce soit : elle finissait dans le
+// fourre-tout « sans département ».
+//
+// La `key` fait foi et reste IMMUABLE après création : c'est elle que portent les tâches,
+// les timelines et les snapshots de montage. Le `name` s'affiche et se renomme librement.
+model Department {
+  id        Int       @id @default(autoincrement())
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId  Int
+  // Null = référentiel du studio, hérité par tous ses projets. Renseigné = étape propre à
+  // ce projet (une série n'a pas le même pipe qu'un long-métrage).
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+  key       String
+  name      String
+  // Rang dans le pipe, de l'amont vers l'aval : c'est lui qui décide de « la dernière
+  // version » d'un plan (cf. lib/pipelineOrder.ts).
+  order     Int       @default(0)
+  // Teinte d'affichage (hex #RRGGBB). Normalisée à l'écran par `statusSwatch`.
+  color     String?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tasks     Task[]
+  versions  Version[]
+  members   User[]     @relation("UserDepartments")
+  assets    Asset[]    @relation("AssetDepartments")
+  shots     Shot[]     @relation("ShotDepartments")
+  sequences Sequence[] @relation("SequenceDepartments")
+
+  // L'unicité réelle est portée par deux index partiels posés dans la migration : la clé
+  // est unique par studio parmi les départements de studio, et unique par projet parmi
+  // les siens. Un `@@unique` ordinaire ne suffirait pas, Postgres tenant les NULL pour
+  // distincts — deux départements de studio pourraient porter la même clé.
+  @@index([studioId, projectId, order])
 }
 
 // Réglages clé/valeur configurables depuis l'admin (quotas, limites upload, etc.)
@@ -182,6 +228,9 @@ model User {
   updatedAt     DateTime   @updatedAt
 
   memberships          ProjectMembership[]
+  // Départements de la personne (B1) : alimente les assignations suggérées et le filtre
+  // « mon département ». `jobTitle` reste du texte libre, il ne sert à aucun regroupement.
+  departments          Department[]         @relation("UserDepartments")
   uploadedMedia        MediaObject[]        @relation("MediaUploader")
   authoredVersions     Version[]            @relation("VersionAuthor")
   assignedTasks        Task[]               @relation("TaskAssignee")
@@ -199,7 +248,6 @@ model User {
   invitation           Invitation[]         @relation("InvitationTarget")
   sentInvitations      Invitation[]         @relation("InvitationSender")
   favorites            Favorite[]
-  documents            Document[]
   announcementReads    AnnouncementRead[]
   reviewReferences     ReviewReference[]
   reviewDecisions      ReviewDecision[]     @relation("DecisionAuthor")
@@ -388,6 +436,7 @@ model Project {
   sequences     Sequence[]
   shots         Shot[]
   assets        Asset[]
+  departments   Department[]
   memberships   ProjectMembership[]
   shareLinks    ShareLink[]
   notifications Notification[]
@@ -397,6 +446,8 @@ model Project {
   apiEvents     ApiEvent[]
   timelines     Timeline[]
   shotgrid      ShotgridConnection?
+  // Vocabulaire de statuts propre au projet (B2) — vide = celui du studio.
+  pipelineStatuses PipelineStatus[]
 
   @@unique([studioId, slug])
 }
@@ -408,6 +459,10 @@ model Sequence {
   name      String
   code      String
   order     Int       @default(0)
+  // Fiche de la séquence (C3) : un plan et un asset en avaient une, pas une séquence —
+  // elle n'avait ni page ni description à porter.
+  description  String?
+  thumbnailKey String?
   // Réglages pipeline propres (override résolution/fps/frames du projet). JSON.
   settings  Json      @default("{}")
   // Statut de sequence (Phase 48) — ShotGrid en a un, avec sa propre liste de valeurs.
@@ -418,8 +473,12 @@ model Sequence {
   shots     Shot[]
   assets    Asset[]    @relation("AssetSequences")
   timelines Timeline[]
+  // Départements que traverse cette séquence (B1) : sert de gabarit à la création de ses
+  // tâches et de filtre d'affichage.
+  departments Department[] @relation("SequenceDepartments")
 
   @@unique([projectId, code])
+  @@index([projectId, deletedAt])
 }
 
 model Shot {
@@ -435,6 +494,9 @@ model Shot {
   order        Int       @default(0)
   // Réglages pipeline propres (override résolution/fps du parent). JSON.
   settings     Json      @default("{}")
+  // Fiche du plan (C3) : un asset en avait une, pas un plan — les notes de brief
+  // n'avaient donc nulle part où vivre.
+  description  String?
   thumbnailKey String?
   // Statut de shot (Phase 48) — ShotGrid en a un (`sg_status_list` sur Shot) ; sans
   // connexion il reste simplement vide.
@@ -448,11 +510,15 @@ model Shot {
 
   tasks  Task[]
   assets Asset[] @relation("AssetShots")
+  // Départements que traverse ce plan (B1).
+  departments Department[] @relation("ShotDepartments")
 
   // Un code de shot (ex: SH001) est unique par séquence : SH001 peut exister
   // dans SQ001 ET SQ002. Les shots « sans séquence » (sequenceId = null) sont
   // traités à part — l'unicité est vérifiée côté route (les NULL sont distincts en SQL).
   @@unique([projectId, sequenceId, code])
+  @@index([projectId, deletedAt])
+  @@index([sequenceId])
 }
 
 model Asset {
@@ -475,8 +541,12 @@ model Asset {
   board     Board?
   shots     Shot[]     @relation("AssetShots")
   sequences Sequence[] @relation("AssetSequences")
+  // Départements que traverse cet asset (B1) : « cet asset passe par modélisation,
+  // texturing et rig » — ce que l'interface ne permettait pas de dire.
+  departments Department[] @relation("AssetDepartments")
 
   @@unique([projectId, name])
+  @@index([projectId, deletedAt])
 }
 
 model Task {
@@ -488,12 +558,18 @@ model Task {
   pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
   pipelineStatusId Int?
   name       String
-  // Département du pipeline (clé libre : `ProjectSettings.departments[].key`). C'est lui
-  // qui porte l'ORDRE du pipe — `type` reste une énumération figée, utile aux filtres et
-  // aux statistiques, mais incapable d'accueillir le Setdress ou le Grading d'un studio.
-  // Null = tâche antérieure à la migration ou département inconnu du projet : elle est
-  // alors rangée en fin de pipe, jamais perdue.
-  department String?
+  // Département du pipeline. C'est lui qui porte l'ORDRE du pipe — `type` reste une
+  // énumération figée, utile aux filtres et aux statistiques, mais incapable d'accueillir
+  // le Setdress ou le Grading d'un studio.
+  //
+  // Depuis B1, la source de vérité est la relation ; `department` reste écrit en parallèle
+  // avec la CLÉ du département, exactement comme `status` accompagne `pipelineStatusId`.
+  // Elle est immuable, donc sûre à dénormaliser, et le pipe (lib/pipelineOrder.ts), les
+  // timelines et les snapshots continuent de travailler dessus sans réécriture.
+  // Null = tâche sans département : rangée en fin de pipe, jamais perdue.
+  departmentRef Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId  Int?
+  department    String?
   order      Int        @default(0)
   // Planification (43.C — №125/№128) : début planifié (Gantt) et échéance (calendrier + fin Gantt).
   startDate  DateTime?
@@ -517,6 +593,11 @@ model Task {
   sourceCommentId Int?
 
   versions Version[] @relation("TaskVersions")
+
+  @@index([departmentId])
+  @@index([shotId])
+  @@index([assetId])
+  @@index([assigneeId, status])
 }
 
 // Version livrable (le cahier des charges parle d'« AssetVersion » ; généralisée :
@@ -539,6 +620,11 @@ model Version {
   author   User? @relation("VersionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   authorId Int?
 
+  // Département de la version (B1) : hérité de sa tâche à la création, corrigeable à la
+  // main. Une version rattachée directement à un asset n'a pas de tâche d'où l'hériter.
+  departmentRef Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId  Int?
+
   media MediaObject[]
 
   // Décision de review courante (Phase 31) — dénormalisée depuis le dernier ReviewDecision.
@@ -546,6 +632,11 @@ model Version {
   reviewStatusId Int?
   decisions      ReviewDecision[]
   playlistItems  PlaylistItem[]
+
+  @@index([departmentId])
+  @@index([taskId])
+  @@index([assetId])
+  @@index([deletedAt, published, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -707,6 +798,12 @@ model MediaObject {
   references      ReviewReference[]
   timelineMarkers TimelineMarker[]
   accessLogs      MediaAccessLog[]
+
+  // La table n'avait aucun index (B3). Elle est pourtant au bout de tous les filtres
+  // relationnels du pipe (`version → task → shot → project`), que Postgres traduit en
+  // sous-requêtes corrélées : sans index sur la clé étrangère, chacune la balayait.
+  @@index([versionId])
+  @@index([deletedAt, published, status, createdAt])
 }
 
 // Marqueurs de timeline nommés/colorés, partagés entre spectateurs (Phase 34.C) :
@@ -780,6 +877,15 @@ model BoardChange {
 // Review : commentaires unifiés (un seul modèle pour tous les types de média)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// États d'un commentaire de review (D1) — couleur et filtre du fil.
+enum CommentState {
+  OPEN
+  WIP
+  QUESTION
+  WONT_FIX
+  RESOLVED
+}
+
 model Comment {
   id                Int         @id @default(autoincrement())
   media             MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
@@ -794,6 +900,13 @@ model Comment {
   cameraState       Json? // viewpoint 3D/splat (position, target, fov…)
   screenshotKey     String? // capture annotée (MinIO)
   attachments       Json? // pièces jointes (clés MinIO)
+  // État du commentaire (D1). `isResolved` reste écrit en parallèle — l'API v1, les
+  // compteurs de notes ouvertes et les filtres existants s'y appuient, exactement comme
+  // `status` accompagne `pipelineStatusId` sur une tâche.
+  //
+  // Un fil de review n'avait que deux états : ouvert ou résolu. « En cours », « question »
+  // et « ne sera pas corrigé » se disaient dans le texte, donc nulle part de lisible.
+  state             CommentState @default(OPEN)
   isResolved        Boolean     @default(false)
   resolvedBy        User?       @relation("CommentResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
   resolvedById      Int?
@@ -824,6 +937,9 @@ model Comment {
   spawnedTasks Task[]            @relation("TaskSourceComment") // tâches kanban créées depuis ce commentaire (32.D)
 
   @@index([timelineId])
+  // Fil d'un média : racines puis réponses, dans l'ordre (B3).
+  @@index([mediaObjectId, parentId, createdAt])
+  @@index([parentId])
 }
 
 model Reaction {
@@ -870,6 +986,12 @@ model Notification {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      Int
   type        String   @default("SYSTEM") // TASK_ASSIGNED, COMMENT_ASSIGNED, REPLY, SYSTEM…
+  // Phrase traduisible (D2) : la notification était écrite en français EN BASE, puis
+  // poussée telle quelle — y compris en notification navigateur, où elle échappait à
+  // tout catalogue. La clé et ses paramètres se traduisent au rendu, dans la langue du
+  // lecteur ; `content` reste écrit en anglais et sert de repli aux lignes antérieures.
+  messageKey  String?
+  params      Json?
   content     String
   referenceId Int? // cible navigable selon le type : id de tâche (TASK_ASSIGNED) ou de média (REPLY/COMMENT_ASSIGNED)
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -877,7 +999,10 @@ model Notification {
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  @@index([userId])
+  // La cloche demande « mes notifications récentes » et « combien de non lues » : deux
+  // requêtes jouées à chaque montage de la coquille (B3).
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
 }
 
 // Suivi de notifications (32.G) : un utilisateur « suit » un shot, un asset ou une
@@ -911,6 +1036,8 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
+  // L'écran d'audit lit toujours par ordre antéchronologique (B3).
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -934,37 +1061,6 @@ model Favorite {
 
   @@unique([userId, type, entityId])
   @@index([userId])
-}
-
-enum DocScope {
-  GLOBAL
-  PROJECT
-  SEQUENCE
-  SHOT
-  ASSET
-}
-
-enum DocKind {
-  RICH
-  PDF
-}
-
-model Document {
-  id          Int      @id @default(autoincrement())
-  title       String
-  kind        DocKind  @default(RICH)
-  content     String? // HTML sanitisé (RICH)
-  fileKey     String? // clé MinIO (PDF)
-  scope       DocScope @default(GLOBAL)
-  projectId   Int? // contrôle d'accès (NULL = documentation globale studio)
-  scopeId     Int? // id de l'entité documentée (séquence/shot/asset/projet)
-  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdById Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([projectId])
-  @@index([scope, scopeId])
 }
 
 // Annonces studio (bannière/modal au login/Accueil) — modèle complet (Phase 22)
@@ -1063,6 +1159,12 @@ model ChatMessage {
 
 model PipelineStatus {
   id           Int         @id @default(autoincrement())
+  // Portée (B2) : null = référentiel du studio, hérité par les projets qui n'ont pas le
+  // leur. Sans cette colonne, deux projets reliés à des sites ShotGrid différents
+  // partageaient le même vocabulaire, et le second synchronisé écrasait nom, couleur et
+  // `legacyStatus` des codes homonymes du premier — sans que rien ne le signale.
+  project      Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int?
   // « task » ou « shot » : ShotGrid a deux listes distinctes, ReView aussi.
   scope        String
   // Code court et stable (repris tel quel de ShotGrid : "ip", "fin", "rev"…).
@@ -1088,8 +1190,10 @@ model PipelineStatus {
   shots     Shot[]
   sequences Sequence[]
 
-  @@unique([scope, code])
-  @@index([scope, order])
+  // Comme pour Department, l'unicité réelle passe par deux index partiels posés dans la
+  // migration : Postgres tient les NULL pour distincts, un `@@unique` ordinaire laisserait
+  // donc passer deux statuts de studio de même code.
+  @@index([projectId, scope, order])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

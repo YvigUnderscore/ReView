@@ -18,7 +18,7 @@ optional flags (approval / retake / proposed by default).
 
 Two surfaces (no extra buttons elsewhere):
 
-- **Right-click a version card** (task or asset page) → *Décision de review…*
+- **Right-click a version card** (task or asset page) → *Review decision…*
 - The **clipboard button in the review header** while reviewing a media.
 
 Both open the same dialog: pick a status, optionally add a comment, submit.

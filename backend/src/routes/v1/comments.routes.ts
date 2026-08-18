@@ -117,7 +117,7 @@ router.post(
       select: { mediaObjectId: true },
     });
     if (!comment) {
-      res.status(404).json({ error: 'Commentaire introuvable' });
+      res.status(404).json({ error: 'Comment not found' });
       return;
     }
     const projectId = await requireMediaProject(req, comment.mediaObjectId);

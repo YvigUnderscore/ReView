@@ -22,7 +22,7 @@ router.get(
     const entity = req.params.entity as ContextEntity;
     const id = Number(req.params.id);
     const context = await resolveContext(entity, id);
-    if (!context) throw notFound('Entité introuvable');
+    if (!context) throw notFound('Entity not found');
     await assertProjectAccess(req, context.project.id);
     res.json({ context });
   },

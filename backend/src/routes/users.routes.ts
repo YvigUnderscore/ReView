@@ -37,9 +37,9 @@ router.get('/', requireRole(Role.ADMIN, Role.SUPERVISOR), async (_req, res) => {
   res.json({ users: await UserService.listUsers() });
 });
 
-// GET /api/users/presence — présence de tous les utilisateurs (tout authentifié)
-router.get('/presence', async (_req, res) => {
-  res.json({ users: await UserService.listPresence() });
+// GET /api/users/presence — présence, cantonnée à ce que le demandeur a le droit de voir
+router.get('/presence', async (req, res) => {
+  res.json({ users: await UserService.listPresence(req.user) });
 });
 
 // ── Profil de l'utilisateur courant ──────────────────────────────────────────
@@ -81,7 +81,7 @@ router.patch(
       const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
       if (!user) throw unauthorized();
       if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password))) {
-        throw unauthorized('Mot de passe actuel requis', 'CURRENT_PASSWORD_REQUIRED');
+        throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
       }
     }
 

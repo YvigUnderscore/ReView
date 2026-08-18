@@ -106,6 +106,9 @@ export function useSgConnection(projectId: number) {
       api
         .get<{ connection: SgConnection | null }>(`/api/shotgrid/projects/${projectId}/connection`)
         .then((r) => r.connection),
+    // Le projet n'est pas encore connu (une page d'entité le découvre en chargeant son
+    // entité) : demander la connexion du projet « 0 » ne peut que rendre une erreur.
+    enabled: projectId > 0,
     // Sans connexion, la réponse est `null` : inutile d'y revenir sans cesse.
     staleTime: 30_000,
   });

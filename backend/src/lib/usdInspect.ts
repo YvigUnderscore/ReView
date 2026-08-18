@@ -89,21 +89,21 @@ export function extractJsonLine(stdout: string): string {
     .map((l) => l.trim())
     .filter((l) => l.startsWith('{') && l.endsWith('}'));
   const last = lines.at(-1);
-  if (!last) throw new Error('Analyse USD : aucune sortie JSON exploitable');
+  if (!last) throw new Error('USD analysis: no usable JSON output');
   return last;
 }
 
 /** Parse la sortie du mode `scan` (graphe de dependances entre couches). */
 export function parseUsdScan(stdout: string): UsdLayerDep[] {
   const parsed = usdScanSchema.safeParse(JSON.parse(extractJsonLine(stdout)));
-  if (!parsed.success) throw new Error('Analyse USD : graphe de couches invalide');
+  if (!parsed.success) throw new Error('USD analysis: invalid layer graph');
   return parsed.data.layers;
 }
 
 /** Parse la sortie du mode `inspect` (description de la scene), avec deduplication. */
 export function parseUsdStageInfo(stdout: string): UsdStageInfo {
   const parsed = usdStageInfoSchema.safeParse(JSON.parse(extractJsonLine(stdout)));
-  if (!parsed.success) throw new Error('Analyse USD : description de scene invalide');
+  if (!parsed.success) throw new Error('USD analysis: invalid scene description');
   const info = parsed.data;
   const seen = new Set<string>();
   return {
@@ -212,5 +212,5 @@ export async function writeVariantOverlays(
     .object({ written: z.number().int().nonnegative() })
     .safeParse(JSON.parse(extractJsonLine(stdout)));
   if (!parsed.success || parsed.data.written !== overlays.length)
-    throw new Error('Analyse USD : couches de variantes non écrites');
+    throw new Error('USD analysis: variant layers were not written');
 }

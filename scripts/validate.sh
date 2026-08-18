@@ -52,11 +52,21 @@ node "$ROOT/scripts/check-untranslated.mjs"
 step "i18n — clés de traduction affichées brutes"
 node "$ROOT/scripts/check-raw-keys.mjs"
 
+# Le backend ne passe pas par les catalogues : ses messages d'erreur remontent tels quels
+# à l'écran, y compris sur la page publique d'un partage client. L'arbitrage est de les
+# écrire en anglais — ce contrôle empêche le français d'y revenir (D2).
+step "i18n — messages d'erreur du backend en anglais"
+node "$ROOT/scripts/check-backend-english.mjs"
+
 # ---------- Thème ----------
 # « Couleurs = tokens du thème » : une classe Tailwind de palette brute (bg-blue-500…)
 # ou une couleur arbitraire (bg-[#…]) échappe au thème et casse la cohérence sombre/clair.
 step "Thème — couleurs hors tokens (classes Tailwind brutes)"
 node "$ROOT/scripts/check-color-tokens.mjs"
+
+# Une taille de police en pixels ignore le réglage de densité (qui agit sur la racine en rem).
+step "Thème — tailles de texte en pixels"
+node "$ROOT/scripts/check-text-sizes.mjs"
 
 # ---------- Outillage racine ----------
 # Les scripts de la racine (contrôles de la suite, simulateur ShotGrid, i18n) sont du code
@@ -139,6 +149,10 @@ step "Frontend — tests unitaires (vitest)"
 
 step "Frontend — build (vite build)"
 ( cd "$ROOT/frontend" && npm run build )
+
+# Garde-fou anti-régression sur ce que le navigateur télécharge avant le premier écran.
+step "Frontend — budget du bundle d'entrée"
+node "$ROOT/scripts/check-bundle-budget.mjs"
 
 if [[ "$WITH_E2E" == "1" ]]; then
   step "E2E — smoke Playwright (parcours critique, lance backend+frontend)"

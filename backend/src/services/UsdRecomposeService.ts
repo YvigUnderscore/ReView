@@ -50,9 +50,9 @@ export async function recomposeUsd(user: SessionUser, id: number, input: Recompo
     where: { id },
     select: { id: true, kind: true, published: true, status: true, metadata: true },
   });
-  if (!media) throw notFound('Média introuvable');
-  if (media.kind !== MediaKind.MODEL_3D) throw badRequest('Recomposition réservée aux médias 3D', 'NOT_3D');
-  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload non finalisé', 'NOT_FINALIZED');
+  if (!media) throw notFound('Media not found');
+  if (media.kind !== MediaKind.MODEL_3D) throw badRequest('Recomposing is for 3D media only', 'NOT_3D');
+  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
   assertNotPublished(media);
 
   const usd = readUsdInfo(media.metadata);

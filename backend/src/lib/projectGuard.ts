@@ -14,8 +14,8 @@ export async function assertProjectWritable(projectId: number): Promise<void> {
     where: { id: projectId, deletedAt: null },
     select: { status: true },
   });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
   if (project.status === 'ARCHIVED') {
-    throw forbidden('Projet archivé — lecture seule', 'PROJECT_ARCHIVED');
+    throw forbidden('Archived project — read only', 'PROJECT_ARCHIVED');
   }
 }

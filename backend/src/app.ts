@@ -42,6 +42,8 @@ import tasksRoutes from './routes/tasks.routes';
 import versionsRoutes from './routes/versions.routes';
 import reviewStatusesRoutes from './routes/review-statuses.routes';
 import pipelineStatusesRoutes from './routes/pipeline-statuses.routes';
+import departmentsRoutes from './routes/departments.routes';
+import entityThumbnailsRoutes from './routes/entity-thumbnails.routes';
 import commentsRoutes from './routes/comments.routes';
 import boardsRoutes from './routes/boards.routes';
 import shareRoutes from './routes/share.routes';
@@ -50,7 +52,6 @@ import adminRoutes from './routes/admin.routes';
 import adminExplorerRoutes from './routes/admin-explorer.routes';
 import notificationsRoutes from './routes/notifications.routes';
 import favoritesRoutes from './routes/favorites.routes';
-import documentsRoutes from './routes/documents.routes';
 import contextRoutes from './routes/context.routes';
 import searchRoutes from './routes/search.routes';
 import dashboardRoutes from './routes/dashboard.routes';
@@ -154,6 +155,11 @@ export const createApp = (): Express => {
   app.use('/api/versions', versionsRoutes);
   app.use('/api/review-statuses', reviewStatusesRoutes); // statuts de review custom (Phase 31)
   app.use('/api/pipeline-statuses', pipelineStatusesRoutes); // statuts de tâche/plan (Phase 48)
+  // Départements (B1) : le routeur porte plusieurs préfixes (projets, entités, comptes),
+  // il est donc monté à la racine de /api plutôt que sous un segment unique.
+  app.use('/api', departmentsRoutes);
+  // Vignettes d'entité (C3) : même raison, le routeur sert séquences, plans et assets.
+  app.use('/api', entityThumbnailsRoutes);
   // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);
@@ -175,7 +181,6 @@ export const createApp = (): Express => {
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/favorites', favoritesRoutes);
-  app.use('/api/documents', documentsRoutes);
   app.use('/api/context', contextRoutes);
   app.use('/api/search', searchRoutes);
   app.use('/api/dashboard', dashboardRoutes);

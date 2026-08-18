@@ -106,14 +106,14 @@ export default function MediaTile({
           </div>
           <div className="min-w-0">
             <div className="truncate text-xs text-foreground">{media.originalName}</div>
-            <div className="truncate text-[10px] text-muted-foreground">
+            <div className="truncate text-2xs text-muted-foreground">
               {media.kind} · {media.status}
               {!media.published && <span className="ml-1 text-primary">· {t('media.draft')}</span>}
             </div>
           </div>
         </Link>
         {canManage && (
-          <div className="flex shrink-0 items-center gap-1 text-[10px]">
+          <div className="flex shrink-0 items-center gap-1 text-2xs">
             {!media.published && (
               <button
                 onClick={() => onPublish(media)}
@@ -126,7 +126,7 @@ export default function MediaTile({
             <button
               onClick={() => onDelete(media)}
               title={t('common.delete')}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive"
+              className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-destructive"
             >
               <Trash2 size={12} />
             </button>
@@ -145,7 +145,7 @@ export default function MediaTile({
         <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-black/40 text-muted-foreground">
           <MediaThumb media={media} size={22} />
           {!media.published && (
-            <span className="absolute left-1 top-1 rounded bg-primary/20 px-1 text-[10px] text-primary">
+            <span className="absolute left-1 top-1 rounded bg-primary/20 px-1 text-2xs text-primary">
               {t('reviews.draft')}
             </span>
           )}
@@ -153,13 +153,13 @@ export default function MediaTile({
             <Play size={18} className="text-primary" />
           </div>
         </div>
-        <div className="truncate px-1.5 pt-1 text-[11px] text-foreground">{media.originalName}</div>
-        <div className="truncate px-1.5 pb-1 text-[10px] text-muted-foreground">
+        <div className="truncate px-1.5 pt-1 text-xs text-foreground">{media.originalName}</div>
+        <div className="truncate px-1.5 pb-1 text-2xs text-muted-foreground">
           {media.kind} · {media.status}
         </div>
       </Link>
       {canManage && (
-        <div className="flex border-t border-border text-[10px]">
+        <div className="flex border-t border-border text-2xs">
           {!media.published && (
             <button
               onClick={() => onPublish(media)}

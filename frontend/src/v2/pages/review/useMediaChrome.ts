@@ -9,11 +9,12 @@ import type { ToolId } from './chrome/tools';
 import type { Annotations } from './useAnnotations';
 
 /**
- * Outils du rail sans implémentation dans les viewers plats : le lecteur vidéo n'a pas de
- * zoom, et la pipette d'inspection couleur n'existe pas encore côté image.
+ * Outils du rail sans implémentation dans le viewer vidéo — le lecteur n'a pas de zoom.
+ * La pipette d'image a disparu avec le mode « Ajuster » (D1), qu'elle occupait à elle
+ * seule ; la liste des outils masqués côté image est donc vide.
  */
 export const VIDEO_HIDDEN_TOOLS: ToolId[] = ['zoom'];
-export const IMAGE_HIDDEN_TOOLS: ToolId[] = ['pick'];
+export const IMAGE_HIDDEN_TOOLS: ToolId[] = [];
 
 /** Traduction rail → outil du canvas d'annotation. */
 const ANNOTATION_TOOL: Partial<Record<ToolId, Tool>> = {

@@ -26,7 +26,8 @@ import { useCanonicalSlug } from '../lib/useCanonicalSlug';
 import { useSequencesQuery, useShotsQuery, useAssetsQuery } from '../lib/queries';
 import { useAuth } from '../stores/useAuth';
 import FavoriteButton from '../components/FavoriteButton';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
+import { PageHeader } from '../components/ui/page';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import Tabs from '../components/Tabs';
 import ProjectSettingsTab from '../components/ProjectSettingsTab';
@@ -57,10 +58,6 @@ export default function ProjectPage() {
   // — back/forward navigateur cohérents (10.A6).
   const tab = searchParams.get('tab') ?? 'overview';
   const setTab = (t: string) => setSearchParams(t === 'overview' ? {} : { tab: t });
-  // La séquence ouverte (accordéon) vit dans l'URL. Un plan, lui, a sa page.
-  const focusSeq = searchParams.get('seq') ? Number(searchParams.get('seq')) : null;
-  const setFocusSeq = (id: number | null) =>
-    setSearchParams(id ? { tab: 'sequences', seq: String(id) } : { tab: 'sequences' });
 
   const qc = useQueryClient();
   const { data: projData } = useQuery({
@@ -98,20 +95,16 @@ export default function ProjectPage() {
     padding: 3,
     step: 10,
   };
-  // Pipeline projet résolu (résolution/cadence) — socle d'héritage pour séquences/shots.
-  const pipeline = {
-    resolution: settings?.resolution ?? { width: 1920, height: 1080 },
-    framerate: settings?.framerate ?? 24,
-  };
-
   // Une connexion ShotGrid change ce que la page propose : onglet dédié, liens vers le
   // site, verrou de création. Sans elle, rien de tout cela n'apparaît.
   const { data: sgConnection } = useSgConnection(projectId);
 
   const tabs = [
     { key: 'overview', label: t('project.tab.overview'), icon: <LayoutDashboard size={16} /> },
-    { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shots.length },
+    // L'ordre suit la hiérarchie du pipe, de l'ensemble vers le détail : une séquence
+    // contient des plans, pas l'inverse.
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
+    { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shots.length },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     { key: 'production', label: t('project.tab.production'), icon: <BarChart3 size={16} /> },
@@ -128,28 +121,35 @@ export default function ProjectPage() {
   ];
 
   return (
-    <Shell title={name || 'Projet'} breadcrumb={<EntityBreadcrumb entity="project" id={projectId} />}>
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">{name || 'Projet'}</h1>
-          <FavoriteButton type="PROJECT" entityId={projectId} size={18} />
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          {canManage && <ProjectCsvActions projectId={projectId} onImported={loadStructure} />}
-          <Link
-            to={projectPath({ id: projectId, name }, '/kanban')}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
-          >
-            <KanbanSquare size={16} /> Kanban
-          </Link>
-          <Link
-            to={projectPath({ id: projectId, name }, '/board')}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
-          >
-            <PenTool size={16} /> Board
-          </Link>
-        </div>
-      </div>
+    <PageShell
+      title={name || t('entity.project')}
+      breadcrumb={<EntityBreadcrumb entity="project" id={projectId} />}
+    >
+      <PageHeader
+        title={
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-xl font-semibold">{name || t('entity.project')}</h1>
+            <FavoriteButton type="PROJECT" entityId={projectId} size={18} />
+          </div>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {canManage && <ProjectCsvActions projectId={projectId} onImported={loadStructure} />}
+            <Link
+              to={projectPath({ id: projectId, name }, '/kanban')}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+            >
+              <KanbanSquare size={16} /> Kanban
+            </Link>
+            <Link
+              to={projectPath({ id: projectId, name }, '/board')}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 hover:bg-secondary/60"
+            >
+              <PenTool size={16} /> Board
+            </Link>
+          </div>
+        }
+      />
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
@@ -171,7 +171,6 @@ export default function ProjectPage() {
           canManage={canManage}
           reload={loadStructure}
           nomenclature={nomenclature}
-          pipeline={pipeline}
         />
       )}
       {tab === 'sequences' && (
@@ -180,10 +179,7 @@ export default function ProjectPage() {
           sequences={sequences}
           canManage={canManage}
           reload={loadStructure}
-          focusId={focusSeq}
-          onFocus={setFocusSeq}
           nomenclature={nomenclature}
-          pipeline={pipeline}
         />
       )}
       {tab === 'assets' && (
@@ -204,6 +200,6 @@ export default function ProjectPage() {
       )}
       {tab === 'trash' && canManage && <TrashTab projectId={projectId} reload={loadStructure} />}
       {tab === 'shotgrid' && canManage && <ShotgridTab projectId={projectId} canManage={canManage} />}
-    </Shell>
+    </PageShell>
   );
 }

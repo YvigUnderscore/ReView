@@ -11,6 +11,8 @@ import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute } from '../lib/projectRoles';
 import { taskSelect, toTask } from '../lib/v1Resources';
 import * as ApiEventService from './ApiEventService';
+import * as DepartmentService from './DepartmentService';
+import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
@@ -39,7 +41,8 @@ async function notifyAssignee(
     await notify({
       userId: assigneeId,
       type: 'TASK_ASSIGNED',
-      content: `Tâche assignée : ${taskName}`,
+      messageKey: 'notification.taskAssigned',
+      params: { name: taskName },
       projectId,
       referenceId: taskId,
     });
@@ -117,6 +120,95 @@ export async function listForProject(
   }));
 }
 
+/** Une carte de kanban, avec tout ce qu'il faut pour la lire, la filtrer et la déplacer. */
+export interface BoardTaskRow {
+  id: number;
+  name: string;
+  type: TaskType;
+  status: TaskStatus;
+  pipelineStatusId: number | null;
+  department: string | null;
+  departmentId: number | null;
+  assignee: { id: number; name: string | null } | null;
+  dueDate: string | null;
+  versionCount: number;
+  parentKind: 'shot' | 'asset';
+  parentId: number;
+  parentLabel: string;
+  sequenceId: number | null;
+}
+
+/**
+ * Toutes les tâches d'un projet, en une requête (C4).
+ *
+ * Le kanban en demandait une par plan **et** une par asset : cent cinquante appels HTTP
+ * à l'ouverture d'un projet moyen, jusqu'à se faire limiter par le serveur. Sur le
+ * long-métrage visé — deux mille plans — c'était irréalisable.
+ *
+ * La limite est explicite et le total est renvoyé : une troncature silencieuse ferait
+ * lire « ce projet a 2000 tâches » à un board qui n'en montre que la moitié.
+ */
+export async function listForBoard(
+  projectId: number,
+  limit = 2000,
+): Promise<{ items: BoardTaskRow[]; total: number; truncated: boolean }> {
+  const where = {
+    OR: [{ shot: { projectId, deletedAt: null } }, { asset: { projectId, deletedAt: null } }],
+  };
+  const [rows, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      orderBy: [{ order: 'asc' }, { name: 'asc' }],
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        status: true,
+        pipelineStatusId: true,
+        department: true,
+        departmentId: true,
+        dueDate: true,
+        assignee: { select: { id: true, name: true } },
+        _count: { select: { versions: true } },
+        shot: { select: { id: true, code: true, sequenceId: true } },
+        asset: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.task.count({ where }),
+  ]);
+
+  const items = rows.flatMap<BoardTaskRow>((t) => {
+    const parent = t.shot
+      ? { kind: 'shot' as const, id: t.shot.id, label: t.shot.code, sequenceId: t.shot.sequenceId }
+      : t.asset
+        ? { kind: 'asset' as const, id: t.asset.id, label: t.asset.name, sequenceId: null }
+        : null;
+    // Une tâche sans parent vivant ne peut pas s'afficher : son plan est en corbeille.
+    if (!parent) return [];
+    return [
+      {
+        id: t.id,
+        name: t.name,
+        type: t.type,
+        status: t.status,
+        pipelineStatusId: t.pipelineStatusId,
+        department: t.department,
+        departmentId: t.departmentId,
+        assignee: t.assignee,
+        dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+        versionCount: t._count.versions,
+        parentKind: parent.kind,
+        parentId: parent.id,
+        parentLabel: parent.label,
+        sequenceId: parent.sequenceId,
+      },
+    ];
+  });
+
+  return { items, total, truncated: total > rows.length };
+}
+
 export interface CreateTaskInput {
   name: string;
   type: TaskType;
@@ -131,13 +223,15 @@ export interface CreateTaskInput {
 export async function create(user: SessionUser, projectId: number, body: CreateTaskInput) {
   await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas de tâche
   await assertProjectWritable(projectId); // 38.B
+  // Sans département explicite, le type fait office d'étape : il porte les mêmes clés
+  // que les départements par défaut, et une tâche sans étape se range en fourre-tout.
+  const key = body.department ?? (body.type === TaskType.OTHER ? null : body.type);
+  const department = await resolveDepartment(projectId, key);
   const task = await prisma.task.create({
     data: {
       name: body.name,
       type: body.type,
-      // Sans département explicite, le type fait office d'étape : il porte les mêmes clés
-      // que les départements par défaut, et une tâche sans étape se range en fourre-tout.
-      department: body.department ?? (body.type === TaskType.OTHER ? null : body.type),
+      ...department,
       shotId: body.shotId ?? null,
       assetId: body.assetId ?? null,
       assigneeId: body.assigneeId ?? null,
@@ -178,11 +272,11 @@ export async function createFromComment(user: SessionUser, projectId: number, co
       },
     },
   });
-  if (!comment) throw notFound('Commentaire introuvable');
+  if (!comment) throw notFound('Comment not found');
   const version = comment.media.version;
   const shotId = version.task?.shotId ?? null;
   const assetId = version.task?.assetId ?? version.assetId ?? null;
-  if (!shotId && !assetId) throw badRequest('Média sans shot/asset rattaché');
+  if (!shotId && !assetId) throw badRequest('This media has no shot or asset attached');
 
   const task = await prisma.task.create({
     data: {
@@ -221,7 +315,7 @@ export async function getDetail(id: number) {
       sourceComment: { select: { id: true, mediaObjectId: true } },
     },
   });
-  if (!task) throw notFound('Tâche introuvable');
+  if (!task) throw notFound('Task not found');
   return task;
 }
 
@@ -245,23 +339,48 @@ export interface UpdateTaskInput {
 }
 
 /**
+ * Aligne la clé de département et la clé étrangère (B1).
+ *
+ * La relation fait foi, la chaîne reste écrite en parallèle : c'est elle que lisent le pipe
+ * (`lib/pipelineOrder.ts`), la nomenclature des versions et les snapshots de montage, qui
+ * sont des comptes rendus figés et n'ont pas à suivre un renommage. Une étape inconnue du
+ * projet — un `step` importé de ShotGrid, un chemin DCC — est créée plutôt que perdue :
+ * elle existe puisque quelqu'un travaille dessus.
+ */
+async function resolveDepartment(
+  projectId: number,
+  key: string | null | undefined,
+): Promise<{ department: string | null; departmentId: number | null }> {
+  if (!key) return { department: null, departmentId: null };
+  const department = await DepartmentService.resolveByKey(projectId, key);
+  return department
+    ? { department: department.key, departmentId: department.id }
+    : { department: key, departmentId: null };
+}
+
+/**
  * Aligne `pipelineStatusId` et `status` d'après ce que l'appelant a fourni.
  * Le kanban envoie l'un ou l'autre selon l'écran d'origine ; la base porte les deux.
  */
 async function resolveStatusPair(
+  projectId: number,
   body: Pick<UpdateTaskInput, 'status' | 'pipelineStatusId'>,
 ): Promise<{ status?: TaskStatus; pipelineStatusId?: number | null }> {
   if (body.pipelineStatusId !== undefined) {
     if (body.pipelineStatusId === null) return { pipelineStatusId: null };
-    const status = await prisma.pipelineStatus.findUnique({ where: { id: body.pipelineStatusId } });
-    if (!status) throw badRequest('Statut de pipeline inconnu');
+    // Le statut doit appartenir au vocabulaire de CE projet : rien n'empêchait jusqu'ici
+    // de poser sur une tâche un statut importé du site d'un autre projet.
+    const offered = await PipelineStatusService.listForProject(projectId, 'task');
+    const status = offered.find((s) => s.id === body.pipelineStatusId);
+    if (!status) throw badRequest('Unknown pipeline status for this project');
     return { pipelineStatusId: status.id, status: status.legacyStatus ?? TaskStatus.TODO };
   }
   if (body.status !== undefined) {
-    const match = await prisma.pipelineStatus.findFirst({
-      where: { scope: 'task', legacyStatus: body.status },
-      orderBy: { order: 'asc' },
-    });
+    // Le kanban envoie encore l'énumération à six valeurs. La correspondance se cherche
+    // dans le vocabulaire du projet et nulle part ailleurs : la reposer depuis le
+    // référentiel entier remplaçait « On Hold » par « Waiting to Start » — et l'écrivait
+    // sur le site ShotGrid du studio.
+    const match = await PipelineStatusService.resolveByLegacy(projectId, 'task', body.status);
     return { status: body.status, ...(match ? { pipelineStatusId: match.id } : {}) };
   }
   return {};
@@ -269,7 +388,7 @@ async function resolveStatusPair(
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {
   const task = await prisma.task.findUnique({ where: { id }, select: { assigneeId: true } });
-  if (!task) throw notFound('Tâche introuvable');
+  if (!task) throw notFound('Task not found');
   const manager = isGlobalManager(user.role);
   const isAssignee = task.assigneeId === user.id;
   if (!manager) {
@@ -277,18 +396,21 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     const keys = Object.keys(body);
     const allowed = ['status', 'pipelineStatusId', 'checklist'];
     if (!isAssignee || keys.some((k) => !allowed.includes(k)))
-      throw forbidden('Seuls le statut et la checklist de votre tâche assignée sont modifiables');
+      throw forbidden('On a task assigned to you, only the status and the checklist can change');
   }
-  const { checklist, ...rest } = body;
+  const { checklist, department, ...rest } = body;
+  // Département : la clé et la relation avancent ensemble, comme le statut plus bas.
+  const departmentPair = department !== undefined ? await resolveDepartment(projectId, department) : {};
   // Statut : le référentiel personnalisable et l'énumération avancent ensemble, quel
   // que soit celui des deux que l'appelant a fourni. Les laisser diverger ferait
   // afficher un état au kanban et un autre sur la fiche.
-  const statusPair = await resolveStatusPair(body);
+  const statusPair = await resolveStatusPair(projectId, body);
   const updated = await prisma.task.update({
     where: { id },
     data: {
       ...rest,
       ...statusPair,
+      ...departmentPair,
       ...(checklist !== undefined ? { checklist: checklist as unknown as Prisma.InputJsonValue } : {}),
     },
     include: { assignee: { select: { id: true, name: true } } },
@@ -354,9 +476,9 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
 }
 
 export async function remove(user: SessionUser, projectId: number, id: number) {
-  if (!isGlobalManager(user.role)) throw forbidden('Réservé aux superviseurs/admins');
+  if (!isGlobalManager(user.role)) throw forbidden('Supervisors and administrators only');
   const task = await prisma.task.findUnique({ where: { id }, select: { shotId: true, assetId: true } });
-  if (!task) throw notFound('Tâche introuvable');
+  if (!task) throw notFound('Task not found');
   await prisma.task.delete({ where: { id } });
   emitTaskUpdate(projectId, { id, shotId: task.shotId, assetId: task.assetId });
 }

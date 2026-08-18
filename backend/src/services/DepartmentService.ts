@@ -1,0 +1,236 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import type { Department } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { badRequest, conflict, notFound } from '../lib/errors';
+
+/**
+ * Départements du pipeline (B1).
+ *
+ * Un département était une entrée d'un tableau JSON dans les réglages : rien ne garantissait
+ * qu'une tâche pointe vers une étape existante, et renommer une clé détachait en silence
+ * tout ce qui s'y rattachait. C'est maintenant une entité, avec deux portées :
+ *
+ * - **studio** (`projectId = null`) : le pipe par défaut, hérité par tous les projets ;
+ * - **projet** : la liste propre d'un projet, qui remplace entièrement celle du studio.
+ *
+ * Le remplacement est volontairement total, non fusionné : un projet qui redéfinit son pipe
+ * le redéfinit vraiment, sinon on ne saurait plus dire d'où vient une étape ni comment
+ * l'en retirer.
+ */
+
+export interface DepartmentInput {
+  key?: string;
+  name: string;
+  order?: number;
+  color?: string | null;
+}
+
+/** Entités qui peuvent déclarer les départements qu'elles traversent. */
+export type DepartmentHolder = 'asset' | 'shot' | 'sequence';
+
+const ORDER_BY = [{ order: 'asc' as const }, { key: 'asc' as const }];
+
+/** Départements du studio, hérités par les projets qui n'en redéfinissent pas. */
+export async function listForStudio(studioId: number): Promise<Department[]> {
+  return prisma.department.findMany({
+    where: { studioId, projectId: null, deletedAt: null },
+    orderBy: ORDER_BY,
+  });
+}
+
+/**
+ * Départements applicables à un projet : les siens s'il en a, sinon ceux du studio.
+ * C'est cette liste que lit le pipe (`lib/pipelineOrder.ts`) pour ordonner les étapes.
+ */
+export async function listForProject(projectId: number): Promise<Department[]> {
+  const own = await prisma.department.findMany({
+    where: { projectId, deletedAt: null },
+    orderBy: ORDER_BY,
+  });
+  if (own.length > 0) return own;
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
+  if (!project) return [];
+  return listForStudio(project.studioId);
+}
+
+/**
+ * Clé stable dérivée du nom. Immuable après création : c'est elle que portent les tâches,
+ * les timelines et les snapshots de montage.
+ */
+export function normaliseKey(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40);
+}
+
+export async function create(
+  studioId: number,
+  projectId: number | null,
+  input: DepartmentInput,
+): Promise<Department> {
+  const key = normaliseKey(input.key ?? input.name);
+  if (!key) throw badRequest('Department name cannot be empty');
+  const existing = await prisma.department.findFirst({
+    where: projectId === null ? { studioId, projectId: null, key } : { projectId, key },
+  });
+  if (existing) {
+    // Ressusciter plutôt que refuser : supprimer puis recréer une étape est un geste
+    // courant, et la clé doit rester la même pour que les tâches d'avant se retrouvent.
+    if (existing.deletedAt)
+      return prisma.department.update({
+        where: { id: existing.id },
+        data: { deletedAt: null, name: input.name, order: input.order ?? existing.order },
+      });
+    throw conflict('A department already uses this key');
+  }
+  return prisma.department.create({
+    data: {
+      studioId,
+      projectId,
+      key,
+      name: input.name.trim(),
+      order: input.order ?? (await nextOrder(studioId, projectId)),
+      color: input.color ?? null,
+    },
+  });
+}
+
+/** Le nom, l'ordre et la couleur se modifient ; la clé, jamais. */
+export async function update(id: number, input: Partial<DepartmentInput>): Promise<Department> {
+  const department = await prisma.department.findUnique({ where: { id } });
+  if (!department) throw notFound('Department not found');
+  return prisma.department.update({
+    where: { id },
+    data: {
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.order !== undefined ? { order: input.order } : {}),
+      ...(input.color !== undefined ? { color: input.color } : {}),
+    },
+  });
+}
+
+/**
+ * Retrait d'un département. Les tâches qui le portaient gardent leur clé dénormalisée et
+ * repassent simplement en fin de pipe : rien n'est perdu, et rétablir le département les
+ * y ramène. C'est un retrait logique, jamais une suppression de travail.
+ */
+export async function remove(id: number): Promise<void> {
+  const department = await prisma.department.findUnique({ where: { id } });
+  if (!department) throw notFound('Department not found');
+  await prisma.department.update({ where: { id }, data: { deletedAt: new Date() } });
+}
+
+export async function reorder(ids: number[]): Promise<void> {
+  await prisma.$transaction(
+    ids.map((id, index) => prisma.department.update({ where: { id }, data: { order: index } })),
+  );
+}
+
+/**
+ * Départements que déclare traverser une entité. Remplace la liste entière — l'appelant
+ * envoie l'état voulu, pas un delta.
+ */
+export async function setHolderDepartments(
+  holder: DepartmentHolder,
+  id: number,
+  departmentIds: number[],
+): Promise<void> {
+  const set = departmentIds.map((departmentId) => ({ id: departmentId }));
+  if (holder === 'asset') await prisma.asset.update({ where: { id }, data: { departments: { set } } });
+  else if (holder === 'shot') await prisma.shot.update({ where: { id }, data: { departments: { set } } });
+  else await prisma.sequence.update({ where: { id }, data: { departments: { set } } });
+}
+
+/** Départements d'une personne (annuaire studio). */
+export async function setUserDepartments(userId: number, departmentIds: number[]): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { departments: { set: departmentIds.map((id) => ({ id })) } },
+  });
+}
+
+/**
+ * Résout un département par sa clé, dans le vocabulaire du projet. Sert au rattachement
+ * d'une tâche quand l'appelant ne connaît que la clé — l'import ShotGrid, notamment.
+ * Crée l'étape manquante au niveau du projet plutôt que de la perdre : une étape venue du
+ * site distant existe, même si le studio ne l'a pas déclarée.
+ */
+export async function resolveByKey(projectId: number, key: string): Promise<Department | null> {
+  const trimmed = key.trim();
+  if (!trimmed) return null;
+  const candidates = await listForProject(projectId);
+  const found = candidates.find((d) => d.key.toLowerCase() === trimmed.toLowerCase());
+  if (found) return found;
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
+  if (!project) return null;
+  return create(project.studioId, projectId, { key: trimmed, name: trimmed, order: 900 });
+}
+
+/**
+ * Aligne les départements d'un projet sur la liste éditée dans ses réglages (B1).
+ *
+ * L'écran de réglages manipule toujours une liste ordonnée de `{key, name}` — c'est la
+ * forme la plus lisible pour un pipe. Cette fonction la traduit en entités : elle crée ce
+ * qui manque, renomme et réordonne ce qui existe, et retire logiquement le reste. Sans
+ * elle, l'éditeur écrirait dans un JSON que plus personne ne lit.
+ *
+ * La clé identifie : la renommer revient à retirer une étape et à en ajouter une autre —
+ * c'est précisément ce qu'on veut, plutôt que le détachement silencieux d'avant.
+ */
+export async function syncFromSettings(
+  projectId: number,
+  wanted: { key: string; name: string }[],
+): Promise<void> {
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
+  if (!project) return;
+  const current = await listForProject(projectId);
+  // Une liste identique à celle du studio n'a pas à être recopiée dans le projet : il
+  // continue d'hériter, et suivra les évolutions du référentiel.
+  const sameAsInherited =
+    current.every((d) => d.projectId === null) &&
+    current.length === wanted.length &&
+    current.every((d, i) => d.key === normaliseKey(wanted[i]!.key) && d.name === wanted[i]!.name.trim());
+  if (sameAsInherited) return;
+
+  const own = await prisma.department.findMany({ where: { projectId } });
+  const byKey = new Map(own.map((d) => [d.key.toLowerCase(), d]));
+  const keptIds = new Set<number>();
+
+  for (const [index, entry] of wanted.entries()) {
+    const key = normaliseKey(entry.key || entry.name);
+    if (!key) continue;
+    const existing = byKey.get(key.toLowerCase());
+    if (existing) {
+      keptIds.add(existing.id);
+      await prisma.department.update({
+        where: { id: existing.id },
+        data: { name: entry.name.trim() || key, order: index, deletedAt: null },
+      });
+      continue;
+    }
+    const created = await prisma.department.create({
+      data: { studioId: project.studioId, projectId, key, name: entry.name.trim() || key, order: index },
+    });
+    keptIds.add(created.id);
+  }
+
+  const removed = own.filter((d) => !keptIds.has(d.id) && !d.deletedAt);
+  if (removed.length > 0)
+    await prisma.department.updateMany({
+      where: { id: { in: removed.map((d) => d.id) } },
+      data: { deletedAt: new Date() },
+    });
+}
+
+async function nextOrder(studioId: number, projectId: number | null): Promise<number> {
+  const last = await prisma.department.findFirst({
+    where: projectId === null ? { studioId, projectId: null } : { projectId },
+    orderBy: { order: 'desc' },
+  });
+  return (last?.order ?? -1) + 1;
+}

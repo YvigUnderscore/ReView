@@ -29,10 +29,10 @@ export async function setTrim(user: SessionUser, id: number, trim: TrimInput | n
     where: { id },
     select: { metadata: true, kind: true, published: true, status: true },
   });
-  if (!media) throw notFound('Média introuvable');
-  if (media.kind !== MediaKind.VIDEO) throw badRequest('Trim réservé aux vidéos', 'NOT_VIDEO');
+  if (!media) throw notFound('Media not found');
+  if (media.kind !== MediaKind.VIDEO) throw badRequest('Trimming is for videos only', 'NOT_VIDEO');
   if (media.status !== MediaStatus.READY)
-    throw badRequest('Vidéo pas encore prête (traitement en cours)', 'NOT_READY');
+    throw badRequest('Video not ready yet (still processing)', 'NOT_READY');
   assertNotPublished(media);
 
   const meta: Record<string, unknown> = {

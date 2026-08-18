@@ -136,12 +136,12 @@ export default function BatchGenerator({
       {/* Aperçu des codes générés */}
       <div className="mt-3 flex flex-wrap gap-1">
         {items.slice(0, 30).map((it, i) => (
-          <span key={i} className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[11px]">
+          <span key={i} className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">
             {it.code}
           </span>
         ))}
         {items.length > 30 && (
-          <span className="px-1 text-[11px] text-muted-foreground">+{items.length - 30}…</span>
+          <span className="px-1 text-xs text-muted-foreground">+{items.length - 30}…</span>
         )}
       </div>
       <button
@@ -157,7 +157,7 @@ export default function BatchGenerator({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+    <label className="flex flex-col gap-1 text-2xs uppercase tracking-wide text-muted-foreground">
       {label}
       {children}
     </label>

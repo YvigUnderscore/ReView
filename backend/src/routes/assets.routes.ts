@@ -10,8 +10,12 @@ import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForAsset } from '../lib/pipeline';
 import { softDeleteAsset, restoreAsset, purgeAsset } from '../lib/trash';
-import { firstMediaThumbKeyForAsset, effectiveThumbnailUrl } from '../lib/thumbnails';
-import { logAudit } from '../services/AuditService';
+import {
+  firstMediaThumbKeyForAsset,
+  firstMediaThumbKeysForAssets,
+  effectiveThumbnailUrl,
+} from '../lib/thumbnails';
+import { mountTrashRoutes } from './trashRoutes';
 import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination, pageArgs, paginate } from '../lib/pagination';
 import * as PipelineLatestService from '../services/PipelineLatestService';
@@ -41,10 +45,12 @@ router.get(
       }),
       prisma.asset.count({ where }),
     ]);
+    // Requête groupée (B3) — cf. ShotService.list.
+    const fallbacks = await firstMediaThumbKeysForAssets(assets.map((a) => a.id));
     const items = await Promise.all(
       assets.map(async (a) => ({
         ...a,
-        thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, await firstMediaThumbKeyForAsset(a.id)),
+        thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, fallbacks.get(a.id) ?? null),
       })),
     );
     res.json(paginate(items, total, p));
@@ -81,11 +87,16 @@ router.get('/:id', validate({ params: idParam }), async (req, res) => {
       tasks: { orderBy: { order: 'asc' } },
       shots: { where: { deletedAt: null }, select: { id: true, code: true, name: true, sequenceId: true } },
       sequences: { where: { deletedAt: null }, select: { id: true, code: true, name: true } },
+      // Départements traversés (B1) : le panneau de réglages les coche (C3).
+      departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });
-  if (!asset) throw notFound('Asset introuvable');
+  if (!asset) throw notFound('Asset not found');
   await assertProjectAccess(req, asset.projectId);
-  res.json({ asset });
+  // La vignette n'était calculée que dans la liste : la page d'un asset ne montrait
+  // jamais l'image, alors que celle d'un plan l'affichait.
+  const thumbnailUrl = await effectiveThumbnailUrl(asset.thumbnailKey, await firstMediaThumbKeyForAsset(id));
+  res.json({ asset: { ...asset, thumbnailUrl } });
 });
 
 // PATCH /api/assets/:id (admin/superviseur)
@@ -97,6 +108,8 @@ router.patch(
     body: z.object({
       name: z.string().min(1).max(160).optional(),
       type: z.nativeEnum(AssetType).optional(),
+      // C3 : le libellé de type n'était écrit que par la synchronisation ShotGrid.
+      typeLabel: z.string().max(120).nullable().optional(),
       description: z.string().max(2000).nullable().optional(),
       thumbnailKey: z.string().max(512).nullable().optional(),
       shotIds: z.array(z.number().int()).optional(),
@@ -106,7 +119,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveProjectIdForAsset(id);
-    if (!projectId) throw notFound('Asset introuvable');
+    if (!projectId) throw notFound('Asset not found');
     await assertProjectAccess(req, projectId);
     const asset = await AssetService.update(projectId, id, req.body as AssetService.UpdateAssetInput);
     res.json({ asset });
@@ -123,7 +136,7 @@ router.patch(
 router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveProjectIdForAsset(id);
-  if (!projectId) throw notFound('Asset introuvable');
+  if (!projectId) throw notFound('Asset not found');
   await assertProjectAccess(req, projectId);
   res.json(await PipelineLatestService.assetOverview(id, req.user!.id));
 });
@@ -136,58 +149,22 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
 router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveProjectIdForAsset(id);
-  if (!projectId) throw notFound('Asset introuvable');
+  if (!projectId) throw notFound('Asset not found');
   await assertProjectAccess(req, projectId);
   const { latest } = await PipelineLatestService.assetOverview(id, req.user!.id);
-  if (!latest) throw notFound('Aucune version publiée pour cet asset', 'NO_PUBLISHED_VERSION');
+  if (!latest) throw notFound('No published version for this asset', 'NO_PUBLISHED_VERSION');
   res.json({ latest });
 });
 
-// DELETE /api/assets/:id — corbeille (soft-delete, admin/superviseur)
-router.delete(
-  '/:id',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: idParam }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const projectId = await resolveProjectIdForAsset(id);
-    if (!projectId) throw notFound('Asset introuvable');
-    await assertProjectAccess(req, projectId);
-    await softDeleteAsset(id);
-    logAudit({ userId: req.user!.id, action: 'ASSET_DELETE', entityType: 'Asset', entityId: id });
-    res.status(204).end();
-  },
-);
-
-// POST /api/assets/:id/restore (admin/superviseur)
-router.post(
-  '/:id/restore',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: idParam }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const projectId = await resolveProjectIdForAsset(id);
-    if (!projectId) throw notFound('Asset introuvable');
-    await assertProjectAccess(req, projectId);
-    await restoreAsset(id);
-    res.status(204).end();
-  },
-);
-
-// DELETE /api/assets/:id/purge — suppression définitive (admin/superviseur)
-router.delete(
-  '/:id/purge',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: idParam }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const projectId = await resolveProjectIdForAsset(id);
-    if (!projectId) throw notFound('Asset introuvable');
-    await assertProjectAccess(req, projectId);
-    await purgeAsset(id);
-    logAudit({ userId: req.user!.id, action: 'ASSET_PURGE', entityType: 'Asset', entityId: id });
-    res.status(204).end();
-  },
-);
+// Corbeille : mise à la corbeille, restauration, purge — montage partagé (C3).
+mountTrashRoutes(router, {
+  entityType: 'Asset',
+  auditPrefix: 'ASSET',
+  notFoundMessage: 'Asset not found',
+  resolveProjectId: resolveProjectIdForAsset,
+  softDelete: (_userId, id) => softDeleteAsset(id),
+  restore: restoreAsset,
+  purge: (_userId, id) => purgeAsset(id),
+});
 
 export default router;

@@ -80,7 +80,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
         <select
           value={version.id}
           onChange={(e) => goToVersion(Number(e.target.value))}
-          className="bg-transparent text-xs font-medium text-foreground focus:outline-none [&>option]:bg-background"
+          className="bg-transparent text-xs font-medium text-foreground [&>option]:bg-background"
         >
           {options.map((v) => (
             <option key={v.id} value={v.id}>
@@ -95,7 +95,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
             disabled={!prev}
             onClick={() => prev && navigate(reviewPath(prev))}
             title={prev ? t('nav.previousMedia', { name: prev.originalName }) : t('nav.firstMedia')}
-            className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            className="rounded p-1.5 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <ChevronLeft size={14} />
           </button>
@@ -106,7 +106,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
             disabled={!next}
             onClick={() => next && navigate(reviewPath(next))}
             title={next ? t('nav.nextMedia', { name: next.originalName }) : t('nav.lastMedia')}
-            className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            className="rounded p-1.5 hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <ChevronRight size={14} />
           </button>

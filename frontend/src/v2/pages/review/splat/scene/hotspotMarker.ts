@@ -24,7 +24,7 @@ export interface HotspotMarker {
 export function createHotspotMarker(three: typeof THREE, container: HTMLElement): HotspotMarker {
   const el = document.createElement('div');
   el.className =
-    'pointer-events-none absolute left-0 top-0 z-[5] flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary text-[11px] font-semibold text-primary-foreground shadow';
+    'pointer-events-none absolute left-0 top-0 z-[5] flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary text-xs font-semibold text-primary-foreground shadow';
   el.textContent = '1';
   el.style.display = 'none';
   container.appendChild(el);

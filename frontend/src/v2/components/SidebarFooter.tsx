@@ -9,8 +9,7 @@ import { useAuth } from '../stores/useAuth';
 import type { UserStatus } from '../types/api';
 import { useTheme } from '../stores/useTheme';
 import Avatar from './Avatar';
-import PresenceList from './PresenceList';
-import ConversationList from './chat/ConversationList';
+import SocialPanel from './shell/SocialPanel';
 import WhatsNew from './WhatsNew';
 import { STATUS_COLOR, STATUS_LABEL_KEY } from '../lib/userStatus';
 import { useT } from '../i18n';
@@ -43,9 +42,11 @@ export default function SidebarFooter() {
 
   return (
     <div className="border-t border-border">
-      {/* Qui est là (fiche + message privé au clic) puis les fils de discussion en cours. */}
-      <PresenceList />
-      <ConversationList />
+      {/* Un seul point d'entrée pour la partie sociale (C1) : présence et messagerie
+          montraient les mêmes personnes dans deux sections empilées. */}
+      <div className="px-3 pt-2">
+        <SocialPanel />
+      </div>
 
       {/* Utilisateur courant */}
       <div className="relative border-t border-border p-3">

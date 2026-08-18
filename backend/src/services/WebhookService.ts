@@ -57,7 +57,7 @@ export async function deliver(
   const guard = await assertPublicHttpTarget(hook.url);
   if (!guard.ok) {
     await record(null, guard.reason);
-    throw new Error(`Webhook ${webhookId} → cible refusée : ${guard.reason}`);
+    throw new Error(`Webhook ${webhookId} → target refused : ${guard.reason}`);
   }
 
   try {

@@ -21,7 +21,6 @@ import {
   MoveHorizontal,
   MoveUpRight,
   Pencil,
-  Pipette,
   Rotate3d,
   Ruler,
   Scale3d,
@@ -58,7 +57,6 @@ export type ToolId =
   | 'in'
   | 'out'
   | 'range'
-  | 'pick'
   | 'focus'
   | 'pin'
   | 'paint'
@@ -137,7 +135,7 @@ export const DRAW_TOOLS: ReviewTool[] = [
   { id: 'erase', labelKey: 'tool.erase', icon: Eraser, key: 'X', hintKey: 'tool.erase.hint' },
 ];
 
-function mediaTools(mode: ModeId, kind: MediaKind): ReviewTool[] {
+function mediaTools(mode: ModeId): ReviewTool[] {
   const start = nav(NAV_HINT_MEDIA);
   if (mode === 'annotate') return [start, ...DRAW_TOOLS];
   if (mode === 'compare')
@@ -152,43 +150,32 @@ function mediaTools(mode: ModeId, kind: MediaKind): ReviewTool[] {
       },
       ZOOM,
     ];
+  // Seule la vidéo a un mode « edit » (Découpe) : celui des images a été retiré en D1.
   if (mode === 'edit')
-    return kind === 'VIDEO'
-      ? [
-          start,
-          {
-            id: 'in',
-            labelKey: 'tool.in',
-            icon: LogIn,
-            key: 'I',
-            hintKey: 'tool.in.hint',
-          },
-          {
-            id: 'out',
-            labelKey: 'tool.out',
-            icon: LogOut,
-            key: 'O',
-            hintKey: 'tool.out.hint',
-          },
-          {
-            id: 'range',
-            labelKey: 'tool.range',
-            icon: Ruler,
-            key: 'P',
-            hintKey: 'tool.range.hint',
-          },
-        ]
-      : [
-          start,
-          {
-            id: 'pick',
-            labelKey: 'tool.pick',
-            icon: Pipette,
-            key: 'P',
-            hintKey: 'tool.pick.hint',
-          },
-          ZOOM,
-        ];
+    return [
+      start,
+      {
+        id: 'in',
+        labelKey: 'tool.in',
+        icon: LogIn,
+        key: 'I',
+        hintKey: 'tool.in.hint',
+      },
+      {
+        id: 'out',
+        labelKey: 'tool.out',
+        icon: LogOut,
+        key: 'O',
+        hintKey: 'tool.out.hint',
+      },
+      {
+        id: 'range',
+        labelKey: 'tool.range',
+        icon: Ruler,
+        key: 'P',
+        hintKey: 'tool.range.hint',
+      },
+    ];
   return [start, ZOOM];
 }
 
@@ -297,7 +284,7 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
 
 /** Outils du mode actif, filtrés par type de média. */
 export function toolsFor(mode: ModeId, kind: MediaKind): ReviewTool[] {
-  const tools = isSpatialKind(kind) ? (SPATIAL_TOOLS[mode] ?? []) : mediaTools(mode, kind);
+  const tools = isSpatialKind(kind) ? (SPATIAL_TOOLS[mode] ?? []) : mediaTools(mode);
   return tools.filter((t) => !t.kind || t.kind === kind);
 }
 

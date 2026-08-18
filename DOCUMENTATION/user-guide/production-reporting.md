@@ -9,6 +9,23 @@ versions, review decisions and comments — nothing new to fill in except option
 Open a project and select the **Production** tab. A segmented control switches between
 **Statistics**, **Calendar** and **Gantt**.
 
+## The four questions
+
+The **Production** tab of a project answers four questions, in this order.
+
+1. **Where the project stands** — a sequences × departments table. Each cell shows the
+   share of work done, split by status family, and the count. Sequence names link to
+   their page.
+2. **What is late or blocked** — three short lists rather than one aggregate number:
+   past due, nobody assigned, waiting for review. Each line opens the task. A finished
+   task is never counted as late: its date has passed, but the work is done.
+3. **Who is doing what** — the load per person, counting only what is left. The assignee
+   was carried by the API all along and displayed nowhere.
+4. **Pace and projection** — deliveries per week over a window you choose (4, 8, 13 or
+   26 weeks), the overall progress, and a projected end date at the observed pace. The
+   projection is always shown together with that pace: on its own, a date reads like a
+   commitment, whereas it only holds if the rhythm does.
+
 ## Review statistics
 
 The **Statistics** view answers "where does review time go?" for the project's shots:
@@ -36,11 +53,19 @@ and editable to supervisors and admins. Artists see the dates read-only.
 
 ### Deadline calendar
 
+Managers can **drag a due date from one day to another** — the task page is no longer the
+only way to change it.
+
+
 A monthly calendar places each task on its **due date**. Navigate months with the arrows or
 jump back with **Today**. Days show up to three tasks (a coloured dot per status); click a
 task to open it. The current day is highlighted.
 
 ### Sequence Gantt
+
+The **scale** is selectable — month, quarter, everything. On a feature-length project,
+“everything” squeezes a year into one screen width and no bar stays readable.
+
 
 A read-only timeline groups dated tasks **by sequence** (tasks without a sequence appear
 last). Each bar spans from start date to due date (falling back to whichever single date

@@ -84,7 +84,7 @@ export default function HdriTab() {
       <Panel title={t('hdri.add')}>
         <input ref={fileRef} type="file" accept=".hdr,.exr" onChange={onFile} className="hidden" />
         <Button onClick={() => fileRef.current?.click()} disabled={busy}>
-          <Upload size={15} /> {busy ? 'Envoi…' : t('hdri.choose')}
+          <Upload size={15} /> {busy ? t('common.sending') : t('hdri.choose')}
         </Button>
       </Panel>
 
@@ -102,7 +102,7 @@ export default function HdriTab() {
               >
                 <HdriPreview url={h.url} format={h.format} />
                 <span className="min-w-0 flex-1 truncate text-sm">{h.name}</span>
-                <span className="rounded bg-secondary/60 px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                <span className="rounded bg-secondary/60 px-1.5 py-0.5 text-2xs uppercase text-muted-foreground">
                   {h.format}
                 </span>
                 <Button

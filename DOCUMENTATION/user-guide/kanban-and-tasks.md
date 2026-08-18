@@ -13,9 +13,20 @@ Statuses: `TODO`, `IN_PROGRESS`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`,
 
 ## Kanban
 
-Each project has a kanban (`/projects/:id/kanban`, shortcut `g` then `k`): columns
-by status, drag-and-drop to move tasks, filters by type/assignee. The task page
-shows details, versions and activity.
+Each project has a kanban (`/projects/:id/kanban`, shortcut `g` then `k`).
+
+**Columns come from the project's own statuses.** A studio connected to ShotGrid
+commonly defines fifteen of them; they are grouped into five collapsible families —
+to do, in progress, in review, done, set aside — on a horizontally scrollable band.
+Collapsing a family hides its columns, not its cards: the count stays.
+
+Dragging a card writes the exact status of the column it lands in. Filters cover
+text, status, assignee, sequence, department and task type, and named presets are
+saved per project and per account — the same mechanism as the Shots and Assets
+lists.
+
+The whole board loads in a single request. Above a few thousand tasks the list is
+capped, and the board says so rather than showing a partial board silently.
 
 ## Task page
 
@@ -26,7 +37,7 @@ From a task you can:
 - change status/assignee;
 - jump to the parent shot/asset and project (breadcrumb);
 - when the task was created from a review comment (right-click a comment →
-  *Créer une tâche kanban*), a **Commentaire d'origine** chip opens the review
+  *Create a kanban task*), a **Commentaire d'origine** chip opens the review
   at the exact frame/annotation of that comment;
 - tick items on the task **checklist**. The assignee (or a manager) can check/
   uncheck items; managers add or remove items. Checklists can also be populated in

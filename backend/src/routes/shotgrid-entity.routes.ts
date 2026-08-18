@@ -38,7 +38,7 @@ router.post(
     const projectId = Number(req.params.projectId);
     await assertProjectManager(req.user!, projectId);
     const connection = await Config.getConnection(projectId);
-    if (!connection?.active) throw badRequest('Projet non relié à ShotGrid');
+    if (!connection?.active) throw badRequest('Project not linked to ShotGrid');
 
     const link = await prisma.shotgridLink.findFirst({
       where: {
@@ -51,7 +51,7 @@ router.post(
     // Une entité sans lien n'existe pas là-bas : la « réaligner » reviendrait à la créer,
     // ce que le studio a précisément choisi de faire depuis ShotGrid. On le dit plutôt
     // que d'inventer une entité distante.
-    if (!link) throw notFound('Cette entité n’a pas de correspondance ShotGrid');
+    if (!link) throw notFound('This entity has no ShotGrid counterpart');
 
     const result = await runSync(projectId, {
       kind: 'incremental',

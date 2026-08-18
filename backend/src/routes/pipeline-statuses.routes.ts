@@ -33,6 +33,9 @@ const statusBody = z.object({
   isDone: z.boolean().optional(),
   isDefault: z.boolean().optional(),
   legacyStatus: z.nativeEnum(TaskStatus).nullish(),
+  // Portée du statut créé (B2) : absent = référentiel du studio, sinon vocabulaire propre
+  // à ce projet.
+  projectId: z.number().int().positive().nullish(),
 });
 
 router.get(
@@ -59,7 +62,8 @@ router.get(
 );
 
 router.post('/', requireRole(Role.ADMIN), validate({ body: statusBody }), async (req, res) => {
-  res.status(201).json({ status: await PipelineStatusService.create(req.body) });
+  const { projectId, ...input } = req.body as { projectId?: number | null };
+  res.status(201).json({ status: await PipelineStatusService.create(input as never, projectId ?? null) });
 });
 
 router.patch(

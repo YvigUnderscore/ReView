@@ -35,5 +35,14 @@
   "invite.cta": "アカウントを有効化する",
   "invite.expiry": "このリンクは {days} 日後に無効になります。",
   "invite.fallback": "ボタンが動作しない場合は、次のリンクをブラウザーに貼り付けてください。",
-  "invite.ignore": "この招待に心当たりがない場合は、このメールを無視してください。"
+  "invite.ignore": "この招待に心当たりがない場合は、このメールを無視してください。",
+  "notification.mentioned": "コメントであなたに言及がありました",
+  "notification.reply": "あなたのコメントに新しい返信があります",
+  "notification.watchedComment": "フォロー中の項目に新しいコメントがあります",
+  "notification.montageShared": "編集からのメモがフォロー中の項目に戻されました",
+  "notification.commentAssigned": "コメントがあなたに割り当てられました",
+  "notification.mediaPublished": "新しいメディアを公開しました：{name}",
+  "notification.liveStarted": "{name} が playlist「{playlist}」のライブ review を開始しました",
+  "notification.decision": "version {version} の判定「{status}」",
+  "notification.taskAssigned": "タスクが割り当てられました：{name}"
 }

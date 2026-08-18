@@ -159,19 +159,19 @@ export function assertSafeBaseUrl(raw: string): string {
   try {
     url = new URL(raw);
   } catch {
-    throw badRequest('URL de site ShotGrid invalide');
+    throw badRequest('Invalid ShotGrid site URL');
   }
   if (allowedInsecureHosts().has(url.host.toLowerCase())) return `${url.protocol}//${url.host}`;
-  if (url.protocol !== 'https:') throw badRequest('Le site ShotGrid doit être en HTTPS');
+  if (url.protocol !== 'https:') throw badRequest('The ShotGrid site must use HTTPS');
   const host = url.hostname.toLowerCase();
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local'))
-    throw badRequest('Hôte local refusé pour un site ShotGrid');
-  if (PRIVATE_V4.test(host)) throw badRequest('Adresse IP privée refusée pour un site ShotGrid');
+    throw badRequest('A ShotGrid site cannot be a local host');
+  if (PRIVATE_V4.test(host)) throw badRequest('A ShotGrid site cannot be a private IP address');
   // IPv6 littérale : bouclage (::1) et adresses locales uniques (fc00::/7, fe80::/10).
   if (host.startsWith('[')) {
     const v6 = host.slice(1, -1);
     if (v6 === '::1' || /^(f[cd]|fe8|fe9|fea|feb)/i.test(v6))
-      throw badRequest('Adresse IPv6 locale refusée pour un site ShotGrid');
+      throw badRequest('A ShotGrid site cannot be a local IPv6 address');
   }
   // Normalisation : pas de chemin, pas de barre finale — tout le reste est construit dessus.
   return `${url.protocol}//${url.host}`;

@@ -24,7 +24,7 @@ export function Metric({
     <>
       <div className="text-2xl font-semibold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
-      {sub && <div className="mt-0.5 text-[10px] text-primary">{sub}</div>}
+      {sub && <div className="mt-0.5 text-2xs text-primary">{sub}</div>}
     </>
   );
   if (to) {

@@ -17,8 +17,8 @@ studio-level concern (see [Transcoding](transcoding.md)).
 
 ## Where to set them
 
-- Studio defaults: *Admin → Réglages*.
-- New-project defaults: *Admin → Défauts projet*.
+- Studio defaults: *Admin → Settings*.
+- New-project defaults: *Admin → Project defaults*.
 - Project/sequence/shot overrides: on the entity's settings, for
   supervisors/admins.
 
@@ -35,8 +35,8 @@ it defines what the application calls *the latest version*.
 - Every [auto cut timeline](../user-guide/auto-cut-timelines.md) uses the same
   rule to pick a version per shot.
 
-Reorder departments with the arrows in *Project → Réglages → Départements* (or
-*Admin → Défauts projet* for new projects). Tasks carry a department key: it is
+Reorder departments with the arrows in *Project → Settings → Departments* (or
+*Admin → Project defaults* for new projects). Tasks carry a department key: it is
 set explicitly on creation, deduced from the task name for DCC publishes
 (`anim` → Animation), and tasks whose department is unknown to the project are
 grouped last and never win the "furthest stage" contest.

@@ -32,7 +32,7 @@ router.get(
       where: { id },
       select: { ...versionSelect, media: { where: { deletedAt: null }, select: mediaSelect } },
     });
-    if (!version) throw notFound('Version introuvable');
+    if (!version) throw notFound('Version not found');
     res.json({ version: toVersion(version) });
   },
 );
@@ -98,7 +98,7 @@ router.post(
     const id = Number(req.params.id);
     const projectId = await requireVersionProject(req, id);
     if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR) {
-      throw forbidden('Décision réservée aux superviseurs');
+      throw forbidden('Supervisors only');
     }
     const { statusId, comment } = req.body as { statusId: number; comment?: string };
     const decision = await ReviewDecisionService.decide(req.user!, projectId, id, statusId, comment);

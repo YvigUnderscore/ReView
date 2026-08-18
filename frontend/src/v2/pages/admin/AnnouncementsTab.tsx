@@ -66,15 +66,15 @@ export default function AnnouncementsTab() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{a.title}</span>
-                <span className={`rounded px-1.5 py-0.5 text-[10px] ${TYPE_BADGE[a.type]}`}>{a.type}</span>
+                <span className={`rounded px-1.5 py-0.5 text-2xs ${TYPE_BADGE[a.type]}`}>{a.type}</span>
                 {!a.active && (
-                  <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  <span className="rounded bg-secondary px-1.5 py-0.5 text-2xs text-muted-foreground">
                     {t('common.inactive')}
                   </span>
                 )}
               </div>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">{a.body}</p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">
+              <p className="mt-0.5 text-2xs text-muted-foreground">
                 {a.frequency} · {a.roles.length ? a.roles.join(', ') : t('admin.announce.everyRole')} ·{' '}
                 {t('announcement.readBy', { count: a._count.reads })}
               </p>
@@ -83,14 +83,14 @@ export default function AnnouncementsTab() {
               <button
                 onClick={() => setEditing(a)}
                 title={t('common.edit')}
-                className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 <Pencil size={15} />
               </button>
               <button
                 onClick={() => setDeleting(a)}
                 title={t('common.delete')}
-                className="rounded p-1 text-destructive hover:bg-secondary"
+                className="rounded p-1.5 text-destructive hover:bg-secondary"
               >
                 <Trash2 size={15} />
               </button>

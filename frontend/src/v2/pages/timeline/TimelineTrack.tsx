@@ -70,7 +70,7 @@ export default function TimelineTrack({
         {spans.map((span, i) => (
           <div
             key={`${span.sequenceId ?? 'none'}-${span.startTime}`}
-            className={`absolute top-0 flex h-4 items-center overflow-hidden rounded-sm px-1 text-[10px] ${
+            className={`absolute top-0 flex h-4 items-center overflow-hidden rounded-sm px-1 text-2xs ${
               i % 2 === 0 ? 'bg-secondary/70 text-foreground' : 'bg-secondary/30 text-muted-foreground'
             }`}
             style={{ left: `${pct(span.startTime)}%`, width: `${pct(span.duration)}%` }}
@@ -116,7 +116,7 @@ export default function TimelineTrack({
                   />
                 </div>
               )}
-              <div className="absolute inset-x-0 bottom-0 flex items-baseline justify-between gap-1 bg-background/80 px-1 text-[9px]">
+              <div className="absolute inset-x-0 bottom-0 flex items-baseline justify-between gap-1 bg-background/80 px-1 text-2xs">
                 <span className="truncate font-medium">{clip.shotCode}</span>
                 <span className="tabular-nums text-muted-foreground">{formatDuration(clip.duration)}</span>
               </div>

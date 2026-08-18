@@ -8,6 +8,7 @@ import { authenticate } from '../middleware/auth';
 import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as PlaylistService from '../services/PlaylistService';
+import * as PlaylistCandidateService from '../services/PlaylistCandidateService';
 
 const router = Router();
 router.use(authenticate);
@@ -23,6 +24,31 @@ router.get(
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     res.json({ playlists: await PlaylistService.listForProject(projectId) });
+  },
+);
+
+/**
+ * GET /api/playlists/candidates?projectId= — catalogue des versions à mettre en playlist.
+ *
+ * Déclarée avant `/:id` pour que « candidates » ne soit pas lu comme un identifiant.
+ */
+router.get(
+  '/candidates',
+  validate({
+    query: z.object({
+      projectId: z.coerce.number().int().positive(),
+      q: z.string().trim().max(120).optional(),
+      sequenceId: z.union([z.coerce.number().int().positive(), z.literal('none')]).optional(),
+      department: z.string().trim().max(40).optional(),
+      latestOnly: z.coerce.boolean().optional(),
+      limit: z.coerce.number().int().min(1).max(300).optional(),
+    }),
+  }),
+  async (req, res) => {
+    const projectId = Number(req.query.projectId);
+    await assertProjectAccess(req, projectId);
+    const query = req.query as unknown as PlaylistCandidateService.CandidateQuery;
+    res.json({ candidates: await PlaylistCandidateService.list(projectId, req.user!.id, query) });
   },
 );
 

@@ -15,28 +15,34 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { KanbanSquare } from 'lucide-react';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import EmptyState from '../components/ui/empty-state';
-import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from '../lib/taskStatus';
-import type { TaskStatus, UserRef } from '../types/api';
+import EntityFilters from '../components/EntityFilters';
+import { EMPTY_FILTERS, applyFilters } from '../lib/entityFilters';
+import { TASK_TYPES } from './project/projectTypes';
 import { useKanbanBoard } from './kanban/useKanbanBoard';
-import type { KanbanFilterState } from './kanban/kanbanTypes';
-import KanbanColumn from './kanban/KanbanColumn';
+import { buildColumns, columnIdOf, groupByFamily, type FamilyKey } from './kanban/kanbanColumns';
+import KanbanFamily from './kanban/KanbanFamily';
 import { KanbanCardBody } from './kanban/KanbanCard';
-import KanbanFilters from './kanban/KanbanFilters';
-import KanbanViews from './kanban/KanbanViews';
+import type { BoardTask } from './kanban/kanbanTypes';
 import { parseIdParam } from '../lib/slug';
 import { useT } from '../i18n';
 
-const EMPTY_FILTER: KanbanFilterState = { assignee: '', type: '', sequence: '' };
-
+/**
+ * Kanban du projet (C4).
+ *
+ * Colonnes bâties sur le vocabulaire réel du projet — un site ShotGrid en a couramment
+ * quinze, là où le board n'en montrait que six — regroupées en familles dépliables et
+ * posées sur une bande scrollable plutôt que dans une grille qui les repliait en rangées.
+ */
 export default function KanbanPage() {
   const t = useT();
   const { id } = useParams();
   const projectId = parseIdParam(id);
-  const { sequences, tasks, isLoading, loadError, move } = useKanbanBoard(projectId);
-  const [filter, setFilter] = useState<KanbanFilterState>(EMPTY_FILTER);
+  const board = useKanbanBoard(projectId);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [collapsed, setCollapsed] = useState<ReadonlySet<FamilyKey>>(new Set());
   const [activeId, setActiveId] = useState<number | null>(null);
 
   const sensors = useSensors(
@@ -44,49 +50,90 @@ export default function KanbanPage() {
     useSensor(KeyboardSensor),
   );
 
-  // Assignés distincts présents sur le board (pour le filtre).
-  const assignees: UserRef[] = useMemo(() => {
+  const columns = useMemo(() => buildColumns(board.statuses, t), [board.statuses, t]);
+  const groups = useMemo(() => groupByFamily(columns, new Set()), [columns]);
+
+  // Assignés réellement présents sur le board : proposer tout l'annuaire n'aiderait pas.
+  const assignees = useMemo(() => {
     const m = new Map<number, string | null>();
-    tasks.forEach((t) => {
-      if (t.assignee) m.set(t.assignee.id, t.assignee.name);
+    board.tasks.forEach((task) => {
+      if (task.assignee) m.set(task.assignee.id, task.assignee.name);
     });
     return [...m].map(([aid, name]) => ({ id: aid, name }));
-  }, [tasks]);
+  }, [board.tasks]);
 
   const filtered = useMemo(
     () =>
-      tasks.filter((t) => {
-        if (filter.assignee === 'none' && t.assignee) return false;
-        if (filter.assignee && filter.assignee !== 'none' && String(t.assignee?.id) !== filter.assignee)
-          return false;
-        if (filter.type && t.type !== filter.type) return false;
-        if (filter.sequence === 'none' && t.sequenceId != null) return false;
-        if (filter.sequence && filter.sequence !== 'none' && String(t.sequenceId) !== filter.sequence)
-          return false;
-        return true;
-      }),
-    [tasks, filter],
+      applyFilters(filters, board.tasks, (task) => ({
+        text: `${task.name} ${task.parentLabel}`,
+        statusId: task.pipelineStatusId,
+        legacyStatus: task.status,
+        assigneeId: task.assignee?.id ?? null,
+        sequenceId: task.sequenceId,
+        departmentId: task.departmentId,
+        type: task.type,
+      })),
+    [filters, board.tasks],
   );
 
-  const activeTask = activeId != null ? (tasks.find((t) => t.id === activeId) ?? null) : null;
+  /** Une passe pour ranger les cartes, plutôt qu'un filtrage par colonne. */
+  const tasksByColumn = useMemo(() => {
+    const map = new Map<string, BoardTask[]>();
+    for (const task of filtered) {
+      const columnId = columnIdOf(task, columns);
+      if (columnId === null) continue;
+      const bucket = map.get(columnId);
+      if (bucket) bucket.push(task);
+      else map.set(columnId, [task]);
+    }
+    return map;
+  }, [filtered, columns]);
+
+  const activeTask = activeId != null ? (board.tasks.find((x) => x.id === activeId) ?? null) : null;
 
   const onDragStart = (e: DragStartEvent) => setActiveId(Number(e.active.id));
   const onDragEnd = (e: DragEndEvent) => {
     setActiveId(null);
-    if (e.over?.id != null) void move(Number(e.active.id), e.over.id as TaskStatus);
+    const target = columns.find((c) => c.id === e.over?.id);
+    if (target) void board.move(Number(e.active.id), target);
   };
 
+  const toggleFamily = (key: FamilyKey) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   return (
-    <Shell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />}>
+    <PageShell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />} width="fluid">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Kanban</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <KanbanFilters value={filter} onChange={setFilter} assignees={assignees} sequences={sequences} />
-          <KanbanViews projectId={projectId} filter={filter} onApply={setFilter} />
-        </div>
+        <EntityFilters
+          scope={`kanban:${projectId}`}
+          value={filters}
+          onChange={setFilters}
+          statuses={columns.map((c) => ({
+            value: c.statusId != null ? String(c.statusId) : c.id,
+            label: c.label,
+          }))}
+          assignees={assignees}
+          sequences={board.sequences.map((s) => ({ value: String(s.id), label: s.code }))}
+          departments={board.departments.map((d) => ({ value: String(d.id), label: d.name }))}
+          types={TASK_TYPES}
+          searchPlaceholder={t('kanban.searchPlaceholder')}
+        />
       </div>
-      {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
-      {!isLoading && tasks.length === 0 ? (
+      {board.loadError && <p className="mb-4 text-sm text-destructive">{board.loadError}</p>}
+      {/* Une troncature silencieuse se lirait comme un board complet. */}
+      {board.truncated && (
+        <p className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+          {t('kanban.truncated', { shown: board.tasks.length, total: board.total })}
+        </p>
+      )}
+
+      {!board.isLoading && board.tasks.length === 0 ? (
         <EmptyState icon={KanbanSquare} title={t('task.noTaskYet')} description={t('kanban.emptyHint')} />
       ) : (
         <DndContext
@@ -96,19 +143,20 @@ export default function KanbanPage() {
           onDragEnd={onDragEnd}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            {TASK_STATUSES.map((key) => (
-              <KanbanColumn
-                key={key}
-                id={key}
-                label={t(TASK_STATUS_LABEL_KEY[key])}
-                tasks={filtered.filter((t) => t.status === key)}
+          <div className="space-y-4">
+            {groups.map((group) => (
+              <KanbanFamily
+                key={group.key}
+                group={group}
+                tasksByColumn={tasksByColumn}
+                collapsed={collapsed.has(group.key)}
+                onToggle={() => toggleFamily(group.key)}
               />
             ))}
           </div>
           <DragOverlay>{activeTask && <KanbanCardBody task={activeTask} dragging />}</DragOverlay>
         </DndContext>
       )}
-    </Shell>
+    </PageShell>
   );
 }

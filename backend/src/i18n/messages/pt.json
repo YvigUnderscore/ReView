@@ -35,5 +35,14 @@
   "invite.cta": "Ativar a minha conta",
   "invite.expiry": "Esta ligação expira dentro de {days} dias.",
   "invite.fallback": "Se o botão não funcionar, cole esta ligação no seu navegador:",
-  "invite.ignore": "Se não estava à espera deste convite, pode ignorar este email."
+  "invite.ignore": "Se não estava à espera deste convite, pode ignorar este email.",
+  "notification.mentioned": "Foi mencionado num comentário",
+  "notification.reply": "Nova resposta ao seu comentário",
+  "notification.watchedComment": "Novo comentário em algo que segue",
+  "notification.montageShared": "Uma nota da montagem foi devolvida a algo que segue",
+  "notification.commentAssigned": "Foi-lhe atribuído um comentário",
+  "notification.mediaPublished": "Novo média publicado: {name}",
+  "notification.liveStarted": "{name} iniciou uma review em direto sobre a playlist « {playlist} »",
+  "notification.decision": "Decisão « {status} » sobre a version {version}",
+  "notification.taskAssigned": "Tarefa atribuída: {name}"
 }

@@ -71,15 +71,15 @@ Overlay annotations, A/B comparison between versions, reference image, lightbox 
 
 ### 💬 Comments & approval
 
-- **Discussion threads** with @ mentions, resolution, reactions, **voice notes**, local drafts, deep links to a frame or a comment, comment → kanban task conversion, watching by shot/asset/version.
+- **Discussion threads** with @ mentions, **five colour-coded states** (open, working on it, question, won't fix, resolved), reactions, **voice notes**, local drafts, deep links to a frame or a comment, comment → kanban task conversion, watching by shot/asset/version.
 - **Approval workflow** with **customisable** per-studio review statuses: decisions recorded per version, badges everywhere, filters.
-- **Dailies**: cross-shot playlists with chained playback, and a synchronised **live review room** — a driver broadcasts playback, navigation, comparison and 3D camera to the whole room, handing over control in one click.
+- **Dailies**: cross-shot playlists built side by side with the project catalogue (search, sequence, department, latest-only), chained playback, and a synchronised **live review room** — a driver broadcasts playback, navigation, comparison and 3D camera to the whole room, handing over control in one click.
 
-### 📋 Boards, kanban & documents
+### 📋 Boards & kanban
 
 - **Excalidraw boards** per project and per asset (mood, references).
-- Per-project **kanban**: pipeline-typed tasks, checklists, multi-select and bulk actions.
-- Rich **documents** (briefs, meeting notes) at studio or project level.
+- Per-project **kanban** built on **your own statuses** — fifteen of them on a ShotGrid site — grouped into collapsible families, with checklists, multi-select and bulk actions.
+- **Shared filters and saved presets** across the kanban, Shots and Assets: text, status, assignee, sequence, department, type.
 
 ### 🔒 Secure distribution
 
@@ -97,7 +97,8 @@ Overlay annotations, A/B comparison between versions, reference image, lightbox 
 - **Project → Sequence → Shot / Asset → Task → Version** hierarchy; draft before publication, **publication lock** (published content is immutable — you fix it with a new version).
 - **Inherited** delivery settings, studio → project → sequence → shot (resolution, framerate, frame ranges).
 - **Project templates and duplication**, restorable read-only archiving, **storage quotas**, per-project roles, naming conventions, **CSV import/export** (ShotGrid/Ftrack/Kitsu bridge).
-- **Reporting**: review statistics (time per shot, notes & retakes, convergence per sequence), **deadline calendar**, **per-sequence Gantt**, weekly production report by email.
+- **Sequence pages** with their cut on top, and one **settings panel** for sequences, shots and assets (description, thumbnail, status, departments, frame range, overrides).
+- **Production** answers four questions: where the project stands (sequences × departments), what is late or blocked, who carries what, and at what pace for which projected end — plus an editable **deadline calendar**, a scalable **per-sequence Gantt**, review statistics and a weekly report by email.
 
 ### ⚙️ Infrastructure & operations
 

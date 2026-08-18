@@ -72,7 +72,7 @@ export default function MediaAccessTab() {
                 </>
               ) : (
                 <>
-                  <Link2 size={12} /> {r.shareLabel ?? 'Partage client'}
+                  <Link2 size={12} /> {r.shareLabel ?? t('admin.mediaAccess.clientShare')}
                 </>
               )}
             </span>

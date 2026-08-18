@@ -19,7 +19,7 @@ export const requireRole =
       return;
     }
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'Accès refusé : privilèges insuffisants' });
+      res.status(403).json({ error: 'Access denied : privilèges insuffisants' });
       return;
     }
     next();
@@ -56,7 +56,7 @@ export const requireProjectAccess = async (
   }
   const ok = await checkProjectAccess(req.user.id, req.user.role, projectId);
   if (!ok) {
-    res.status(403).json({ error: 'Accès au projet refusé' });
+    res.status(403).json({ error: 'No access to this project' });
     return;
   }
   next();
@@ -69,7 +69,7 @@ export const requireProjectAccess = async (
 export const assertProjectAccess = async (req: Request, projectId: number): Promise<void> => {
   if (!req.user) throw unauthorized();
   if (!(await checkProjectAccess(req.user.id, req.user.role, projectId))) {
-    throw forbidden('Accès au projet refusé');
+    throw forbidden('No access to this project');
   }
 };
 
@@ -94,7 +94,7 @@ export const requireProjectManage = async (
   }
   const role = await effectiveProjectRole(req.user.id, req.user.role, projectId);
   if (!canManageProject(role)) {
-    res.status(403).json({ error: 'Gestion du projet réservée aux superviseurs' });
+    res.status(403).json({ error: 'Managing the project is reserved to supervisors' });
     return;
   }
   next();

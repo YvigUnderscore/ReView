@@ -9,7 +9,7 @@ import { qk } from '../lib/query';
 import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { Button } from '../components/ui/button';
@@ -59,7 +59,10 @@ export default function TaskPage() {
   const project = task?.shot?.project ?? task?.asset?.project;
 
   return (
-    <Shell title={task?.name ?? t('entity.task')} breadcrumb={<EntityBreadcrumb entity="task" id={taskId} />}>
+    <PageShell
+      title={task?.name ?? t('entity.task')}
+      breadcrumb={<EntityBreadcrumb entity="task" id={taskId} />}
+    >
       {/* Localisation (projet › shot/asset) */}
       <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
         {project && (
@@ -153,6 +156,6 @@ export default function TaskPage() {
           label={versions[0] ? t('version.dropInto', { name: versions[0].name }) : t('version.dropAsset')}
         />
       )}
-    </Shell>
+    </PageShell>
   );
 }

@@ -225,7 +225,7 @@ export default function SplatOptions({
                   }`}
                 >
                   {v.mode === 'delete' ? <Eraser size={12} /> : <Focus size={12} />}
-                  {v.mode === 'delete' ? 'Creuser' : 'Isoler'}
+                  {v.mode === 'delete' ? t('splat.dig') : t('splat.isolate')}
                 </button>
                 <IconButton
                   icon={X}

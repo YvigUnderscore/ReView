@@ -119,7 +119,7 @@ router.delete(
   async (req, res) => {
     const id = Number(req.params.id);
     const link = await prisma.shareLink.findUnique({ where: { id }, select: { projectId: true } });
-    if (!link) throw notFound('Lien introuvable');
+    if (!link) throw notFound('Link not found');
     await assertProjectAccess(req, link.projectId);
     await prisma.shareLink.update({ where: { id }, data: { revoked: true } });
     logAudit({

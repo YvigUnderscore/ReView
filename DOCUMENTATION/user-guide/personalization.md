@@ -9,7 +9,7 @@ Open **Profile → Display**:
 
 - **Theme** — *System* (follows your OS light/dark setting), *Light*, or *Dark*.
 - **Density** — *Comfortable* (default) or *Compact* to fit more on screen.
-- **Language** — *Français* or *English*. The interface switches instantly.
+- **Language** — fourteen languages, English first. The interface switches instantly.
 
 These preferences are stored locally and applied immediately, with no flash on reload.
 

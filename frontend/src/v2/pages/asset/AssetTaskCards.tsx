@@ -110,7 +110,7 @@ function TaskSchedule({ task }: { task: AssetTreeTask }) {
       ? t(label.key, { start: formatDay(label.start), due: formatDay(label.due) })
       : t(label.key, { date: formatDay(label.date) });
 
-  return <span className={`text-[11px] ${late ? 'text-destructive' : 'text-muted-foreground'}`}>{text}</span>;
+  return <span className={`text-xs ${late ? 'text-destructive' : 'text-muted-foreground'}`}>{text}</span>;
 }
 
 /** Carte d'une tâche : statut, échéance, nombre de versions, dernière image connue. */
@@ -177,13 +177,13 @@ function TaskCard({
             <PipelineStatusBadge statusId={task.pipelineStatusId} scope="task" size="xs" />
           )}
           <SgSyncDot projectId={projectId} type="task" localId={task.id} />
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {t('asset.tree.versionCount', { count: task.versions.length })}
           </span>
         </div>
         <TaskSchedule task={task} />
         {latest && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {t('asset.card.latest', {
               name: latest.name,
               date: new Date(latest.createdAt).toLocaleDateString(intlLocale()),
@@ -289,7 +289,7 @@ function VersionCard({ version, sgUrl }: { version: AssetTreeVersion; sgUrl: str
         <div className="flex flex-wrap items-center gap-1.5">
           {version.reviewStatus && (
             <span
-              className="rounded px-1.5 py-0.5 text-[10px]"
+              className="rounded px-1.5 py-0.5 text-2xs"
               style={{
                 backgroundColor: `${version.reviewStatus.color}22`,
                 color: version.reviewStatus.color,
@@ -299,11 +299,11 @@ function VersionCard({ version, sgUrl }: { version: AssetTreeVersion; sgUrl: str
             </span>
           )}
           {!version.published && (
-            <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            <span className="rounded bg-secondary px-1.5 py-0.5 text-2xs text-muted-foreground">
               {t('media.draft')}
             </span>
           )}
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {new Date(version.createdAt).toLocaleDateString(intlLocale())}
           </span>
         </div>
@@ -319,7 +319,7 @@ function VersionCard({ version, sgUrl }: { version: AssetTreeVersion; sgUrl: str
                 {m.thumbnailUrl ? (
                   <img src={m.thumbnailUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-[9px] text-muted-foreground">{m.kind}</span>
+                  <span className="text-2xs text-muted-foreground">{m.kind}</span>
                 )}
               </Link>
             ))}

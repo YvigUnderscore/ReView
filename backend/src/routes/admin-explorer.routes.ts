@@ -38,7 +38,7 @@ router.delete(
   validate({ params: z.object({ sid: z.string().length(32) }) }),
   async (req, res) => {
     const ok = await revokeSession(String(req.params.sid));
-    if (!ok) throw notFound('Session introuvable');
+    if (!ok) throw notFound('Session not found');
     logAudit({
       userId: req.user!.id,
       action: 'SESSION_REVOKE',

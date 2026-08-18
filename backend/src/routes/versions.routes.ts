@@ -24,7 +24,7 @@ const idParam = z.object({ id: z.coerce.number().int() });
 /** Résout le projet d'une version + assertion d'accès (RBAC) → renvoie le projectId. */
 async function resolveVersionAccess(req: Request, id: number): Promise<number> {
   const projectId = await resolveProjectIdForVersion(id);
-  if (!projectId) throw notFound('Version introuvable');
+  if (!projectId) throw notFound('Version not found');
   await assertProjectAccess(req, projectId);
   return projectId;
 }
@@ -32,7 +32,7 @@ async function resolveVersionAccess(req: Request, id: number): Promise<number> {
 /** Résout le projet d'un parent Task XOR Asset + assertion d'accès. */
 async function resolveParentAccess(req: Request, taskId?: number, assetId?: number): Promise<number> {
   const projectId = taskId ? await resolveProjectIdForTask(taskId) : await resolveProjectIdForAsset(assetId!);
-  if (!projectId) throw notFound('Parent introuvable');
+  if (!projectId) throw notFound('Parent not found');
   await assertProjectAccess(req, projectId);
   return projectId;
 }
@@ -69,13 +69,13 @@ router.post(
       ),
   }),
   async (req, res) => {
-    if (req.user!.role === Role.CLIENT) throw forbidden('Les clients ne peuvent pas créer de versions');
+    if (req.user!.role === Role.CLIENT) throw forbidden('Clients cannot create versions');
     const body = req.body as { taskId?: number; assetId?: number; name?: string };
     const projectId =
       body.taskId !== undefined
         ? await resolveProjectIdForTask(body.taskId)
         : await resolveProjectIdForAsset(body.assetId!);
-    if (!projectId) throw badRequest('Task/Asset parent introuvable');
+    if (!projectId) throw badRequest('Parent task or asset not found');
     await assertProjectAccess(req, projectId);
     res.status(201).json({ version: await VersionService.create(req.user!, projectId, body) });
   },
@@ -113,7 +113,7 @@ router.patch(
 router.post('/:id/publish', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
-  if (req.user!.role === Role.CLIENT) throw forbidden('Les clients ne publient pas');
+  if (req.user!.role === Role.CLIENT) throw forbidden('Clients cannot publish');
   res.json(await VersionService.publishAll(req.user!, projectId, id));
 });
 
@@ -142,7 +142,7 @@ router.post(
   }),
   async (req, res) => {
     if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
-      throw forbidden('Décision réservée aux superviseurs');
+      throw forbidden('Supervisors only');
     const id = Number(req.params.id);
     const projectId = await resolveVersionAccess(req, id);
     const { statusId, comment } = req.body as { statusId: number; comment?: string };

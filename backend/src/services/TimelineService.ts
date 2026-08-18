@@ -31,7 +31,7 @@ const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISO
 
 /** Renommer, cibler une étape ou figer une révision engage la production : superviseur+. */
 function assertCanManage(user: SessionUser): void {
-  if (!isManager(user.role)) throw forbidden('Réservé aux superviseurs/admins');
+  if (!isManager(user.role)) throw forbidden('Supervisors and administrators only');
 }
 
 /**
@@ -47,7 +47,7 @@ export async function ensure(projectId: number, sequenceId: number | null) {
       where: { id: sequenceId, projectId, deletedAt: null },
       select: { id: true },
     });
-    if (!sequence) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+    if (!sequence) throw badRequest('This sequence does not belong to this project', 'BAD_SEQUENCE');
   }
   try {
     return await prisma.timeline.create({ data: { projectId, sequenceId } });
@@ -163,7 +163,7 @@ export async function resolve(timelineId: number): Promise<TimelineView> {
     where: { id: timelineId },
     include: { sequence: { select: { code: true, settings: true } } },
   });
-  if (!timeline) throw notFound('Montage introuvable');
+  if (!timeline) throw notFound('Timeline not found');
 
   const settings = await resolveProjectSettingsById(timeline.projectId);
   const fps = sequenceFramerate(timeline.sequence?.settings, settings.framerate);
@@ -278,7 +278,7 @@ export interface UpdateTimelineInput {
 export async function update(user: SessionUser, timelineId: number, body: UpdateTimelineInput) {
   assertCanManage(user);
   const timeline = await prisma.timeline.findUnique({ where: { id: timelineId } });
-  if (!timeline) throw notFound('Montage introuvable');
+  if (!timeline) throw notFound('Timeline not found');
   const updated = await prisma.timeline.update({
     where: { id: timelineId },
     data: {
@@ -393,7 +393,7 @@ export async function getSnapshot(timelineId: number, revision: number) {
       items: { orderBy: { order: 'asc' } },
     },
   });
-  if (!snap) throw notFound('Révision introuvable');
+  if (!snap) throw notFound('Revision not found');
   const previous = await prisma.timelineSnapshot.findFirst({
     where: { timelineId, revision: { lt: revision } },
     orderBy: { revision: 'desc' },

@@ -76,15 +76,16 @@ export interface CreateUploadInput {
 export async function createUpload(user: SessionUser, input: CreateUploadInput) {
   const { versionId, filename, contentType, kind, size } = input;
   const storageCtx = await resolveStorageContextForVersion(versionId);
-  if (!storageCtx) throw notFound('Version introuvable ou non rattachée à un projet');
+  if (!storageCtx) throw notFound('Version not found, or not attached to a project');
   const projectId = storageCtx.projectId;
-  if (!(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
+  if (!(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('No access to this project');
   await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas d'upload
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
 
   // Quotas configurables (admin exempté du quota de stockage).
   const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);
-  if (size && size > maxFileSize) throw badRequest('Fichier trop volumineux', 'FILE_TOO_LARGE');
+  if (size && size > maxFileSize) throw badRequest('File is too large', 'FILE_TOO_LARGE');
 
   const maxConcurrent = await getNumericSetting(SETTING_KEYS.MAX_CONCURRENT_UPLOADS);
   const active = await prisma.mediaObject.count({
@@ -100,7 +101,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
         : await getNumericSetting(SETTING_KEYS.STORAGE_LIMIT_USER);
     const agg = await prisma.mediaObject.aggregate({ _sum: { size: true }, where: { uploaderId: user.id } });
     const used = Number(agg._sum.size ?? 0n);
-    if (used + (size ?? 0) > limit) throw forbidden('Quota de stockage dépassé', 'STORAGE_LIMIT');
+    if (used + (size ?? 0) > limit) throw forbidden('Storage quota exceeded', 'STORAGE_LIMIT');
   }
 
   // Quota de stockage du projet (38.D) — s'applique à tous, admin compris.
@@ -110,7 +111,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   const { naming } = await resolveProjectSettingsById(projectId);
   const namingCheck = checkNaming(filename, naming);
   if (!namingCheck.pass && namingCheck.mode === 'reject')
-    throw badRequest('Nom de fichier non conforme à la nomenclature du projet', 'NAMING_REJECTED');
+    throw badRequest('Filename does not match the naming rule of this project', 'NAMING_REJECTED');
   const namingWarning = !namingCheck.pass && namingCheck.mode === 'warn';
 
   // Une version déjà publiée ne retombe pas en brouillon parce qu'on lui ajoute un rendu :
@@ -153,11 +154,11 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
 /** Finalise un upload : valide les magic bytes, met la taille à jour, déclenche le traitement. */
 export async function finalize(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
-  if (!media) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
 
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
-    throw forbidden('Accès au projet refusé');
+    throw forbidden('No access to this project');
   // `finalize` relance le pipeline de traitement et réécrit statut et taille : le simple
   // accès au projet ne suffit pas. Il faut pouvoir contribuer (un CLIENT est en lecture
   // seule) et le média ne doit pas être déjà publié (verrou Phase 11).
@@ -176,7 +177,7 @@ export async function finalize(user: SessionUser, id: number) {
   if (!detected) {
     await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.FAILED } });
     await storage.deleteObject(media.storageKey).catch(() => undefined);
-    throw badRequest('Type de fichier invalide (validation magic bytes échouée)', 'INVALID_FILE');
+    throw badRequest('Invalid file type (magic-bytes check failed)', 'INVALID_FILE');
   }
 
   // Taille RÉELLE de l'objet déposé. Les quotas n'ont été vérifiés qu'à la demande d'URL,
@@ -187,7 +188,7 @@ export async function finalize(user: SessionUser, id: number) {
   if (realSize > maxFileSize) {
     await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.FAILED } });
     await storage.deleteObject(media.storageKey).catch(() => undefined);
-    throw badRequest('Fichier trop volumineux', 'FILE_TOO_LARGE');
+    throw badRequest('File is too large', 'FILE_TOO_LARGE');
   }
   try {
     await assertProjectQuota(projectId, realSize);
@@ -233,7 +234,8 @@ export async function listPublished(
   kind: MediaKind | undefined,
   p: PaginationParams,
 ): Promise<Paginated<unknown>> {
-  if (!(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
+  if (!(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('No access to this project');
   const where = {
     published: true,
     deletedAt: null,
@@ -454,13 +456,13 @@ export async function syncVersionPublication(versionId: number, actorId: number)
 /** Publie un média brouillon (réservé à l'uploader). */
 export async function publish(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
-  if (!media) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
   // Brouillon strictement privé : seul l'uploader voit et publie son média (404 sinon).
-  if (media.uploaderId !== user.id) throw notFound('Média introuvable');
+  if (media.uploaderId !== user.id) throw notFound('Media not found');
   // Un média encore en UPLOADING n'est jamais passé par `finalize` : ni validation des
   // magic bytes, ni normalisation du type de contenu, ni antivirus, ni contrôle de la
   // taille réelle contre les quotas. Le publier ferait servir un contenu jamais vérifié.
-  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload non finalisé', 'NOT_FINALIZED');
+  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
   const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
   // La version suit ses médias : dès qu'il ne reste plus un brouillon, elle est publiée.
   await syncVersionPublication(media.versionId, user.id);
@@ -475,7 +477,8 @@ export async function publish(user: SessionUser, id: number) {
     await notifyWatchers({
       mediaObjectId: id,
       projectId,
-      content: `Nouveau média publié : ${media.originalName}`,
+      messageKey: 'notification.mediaPublished',
+      params: { name: media.originalName },
       exclude: [user.id],
     });
     // Webhooks sortants (36.D).
@@ -503,8 +506,8 @@ export async function publish(user: SessionUser, id: number) {
 export async function reprocess(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({ where: { id } });
-  if (!media) throw notFound('Média introuvable');
-  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload non finalisé', 'NOT_FINALIZED');
+  if (!media) throw notFound('Media not found');
+  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
   assertNotPublished(media);
 
   const jobKind = jobKindFor(media.kind, getExtension(media.originalName));
@@ -535,11 +538,11 @@ export function mediaSourceKey(media: { storageKey: string; metadata: unknown })
 /** Détail complet d'un média + URLs présignées (original, miniature, proxy, glb). */
 export async function getDetail(user: SessionUser, id: number, ip?: string | null) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
-  if (!media) throw notFound('Média introuvable');
-  if (!media.published && media.uploaderId !== user.id) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
+  if (!media.published && media.uploaderId !== user.id) throw notFound('Media not found');
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
-    throw forbidden('Accès au projet refusé');
+    throw forbidden('No access to this project');
   // Journal d'accès (36.E) : la review charge ce détail à l'ouverture — dédup 30 min.
   logMediaAccess({ mediaObjectId: id, userId: user.id, ip: ip ?? null });
   const meta = (media.metadata ?? {}) as {
@@ -671,11 +674,11 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
 /** URL présignée GET pour le serving direct depuis MinIO. */
 export async function getUrl(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
-  if (!media) throw notFound('Média introuvable');
-  if (!media.published && media.uploaderId !== user.id) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
+  if (!media.published && media.uploaderId !== user.id) throw notFound('Media not found');
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
-    throw forbidden('Accès au projet refusé');
+    throw forbidden('No access to this project');
   return storage.getPresignedGetUrl(mediaSourceKey(media));
 }
 
@@ -689,14 +692,14 @@ export async function getHlsFile(user: SessionUser, id: number, file: string) {
     where: { id },
     select: { published: true, uploaderId: true, versionId: true },
   });
-  if (!media) throw notFound('Média introuvable');
-  if (!media.published && media.uploaderId !== user.id) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
+  if (!media.published && media.uploaderId !== user.id) throw notFound('Media not found');
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
-    throw forbidden('Accès au projet refusé');
+    throw forbidden('No access to this project');
   const stream = await storage
     .getObjectStream(`derived/${id}/hls/${file}`)
-    .catch(() => Promise.reject(notFound('Fichier HLS introuvable')));
+    .catch(() => Promise.reject(notFound('HLS file not found')));
   return { stream, contentType: hlsContentType(file) };
 }
 
@@ -713,13 +716,13 @@ const MAX_THUMBNAIL_BYTES = 1_500_000;
 /** Décode + valide une data URL image base64 → buffer + type + extension (lève si invalide). */
 function decodeThumbnailDataUrl(dataUrl: string): { buf: Buffer; contentType: string; ext: string } {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i.exec(dataUrl);
-  if (!m) throw badRequest('Miniature invalide (data URL image attendue)', 'INVALID_THUMBNAIL');
+  if (!m) throw badRequest('Invalid thumbnail (an image data URL is expected)', 'INVALID_THUMBNAIL');
   const contentType = m[1]!.toLowerCase();
   const buf = Buffer.from(m[2]!, 'base64');
   if (buf.length === 0 || buf.length > MAX_THUMBNAIL_BYTES)
-    throw badRequest('Miniature vide ou trop volumineuse', 'INVALID_THUMBNAIL');
+    throw badRequest('Thumbnail is empty or too large', 'INVALID_THUMBNAIL');
   if (!detectImage(buf.subarray(0, 16)))
-    throw badRequest('Contenu de miniature non reconnu comme image', 'INVALID_THUMBNAIL');
+    throw badRequest('Thumbnail content is not a recognised image', 'INVALID_THUMBNAIL');
   const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
   return { buf, contentType, ext };
 }
@@ -727,7 +730,7 @@ function decodeThumbnailDataUrl(dataUrl: string): { buf: Buffer; contentType: st
 export async function setThumbnail(user: SessionUser, id: number, dataUrl: string) {
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({ where: { id }, select: { published: true } });
-  if (!media) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
   const { buf, contentType, ext } = decodeThumbnailDataUrl(dataUrl);
   const key = StorageService.thumbnailKey(id, ext);
   await storage.putObject(key, buf, contentType);
@@ -747,11 +750,11 @@ export async function setAutoThumbnail(user: SessionUser, id: number, dataUrl: s
     where: { id },
     select: { published: true, uploaderId: true, versionId: true, thumbnailKey: true },
   });
-  if (!media) throw notFound('Média introuvable');
-  if (!media.published && media.uploaderId !== user.id) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
+  if (!media.published && media.uploaderId !== user.id) throw notFound('Media not found');
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
-    throw forbidden('Accès au projet refusé');
+    throw forbidden('No access to this project');
   // Déjà une miniature (worker ou capture concurrente) : on ne touche à rien.
   if (media.thumbnailKey) {
     return { thumbnailUrl: await storage.getPresignedGetUrl(media.thumbnailKey), created: false };
@@ -783,10 +786,10 @@ export async function assertMediaManage(
     where: { id: mediaId },
     select: { uploaderId: true, versionId: true },
   });
-  if (!media) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
-    throw forbidden('Accès au projet refusé');
+    throw forbidden('No access to this project');
   const manager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
   if (!manager && media.uploaderId !== user.id)
     throw forbidden("Suppression réservée à l'uploader ou un superviseur");
@@ -811,7 +814,7 @@ export async function restore(user: SessionUser, id: number) {
 /** Purge définitive d'un média (superviseur+). */
 export async function purge(user: SessionUser, id: number) {
   if (user.role !== Role.ADMIN && user.role !== Role.SUPERVISOR)
-    throw forbidden('Réservé aux superviseurs/admins');
+    throw forbidden('Supervisors and administrators only');
   const { projectId, versionId } = await assertMediaManage(id, user);
   await purgeMedia(id);
   logAudit({ userId: user.id, action: 'MEDIA_PURGE', entityType: 'MediaObject', entityId: id });

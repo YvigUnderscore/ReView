@@ -72,7 +72,7 @@ export function SessionsPanel({
             <button
               onClick={() => onRevoke(s.id)}
               title={t('userDetail.revokeSession')}
-              className="rounded p-1 text-destructive hover:bg-secondary"
+              className="rounded p-1.5 text-destructive hover:bg-secondary"
             >
               <X size={14} />
             </button>
@@ -111,7 +111,7 @@ export function TokensPanel({ tokens }: { tokens: AdminApiToken[] }) {
         ))}
         {tokens.length === 0 && <p className="text-xs text-muted-foreground">{t('tokens.empty')}</p>}
       </div>
-      <p className="mt-2 text-[11px] text-muted-foreground">{t('sessions.adminRevoke')}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{t('sessions.adminRevoke')}</p>
     </Panel>
   );
 }

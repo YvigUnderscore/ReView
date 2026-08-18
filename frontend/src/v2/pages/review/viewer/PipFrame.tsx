@@ -146,7 +146,7 @@ export default function PipFrame({
       className="absolute cursor-move overflow-hidden rounded-md border border-primary/70 shadow-lg"
       title={t('review.pipFrame')}
     >
-      <span className="pointer-events-none absolute right-1 top-1 rounded bg-primary/80 px-1 text-[10px] font-medium text-primary-foreground">
+      <span className="pointer-events-none absolute right-1 top-1 rounded bg-primary/80 px-1 text-2xs font-medium text-primary-foreground">
         {label}
       </span>
       <span

@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Skeleton } from './ui/skeleton';
 import type { Notification, PlaylistDetail } from '../types/api';
 import { useT } from '../i18n';
+import { notificationText } from '../lib/notificationText';
 
 /** Cible navigable d'une notification selon son type (référence = tâche ou média). */
 function linkFor(n: Notification): string | null {
@@ -76,13 +77,13 @@ export default function NotificationBell() {
           : prev,
       );
       if (!qc.getQueryData(qk.notifications)) void qc.invalidateQueries({ queryKey: qk.notifications });
-      toast(n.content);
+      toast(notificationText(t, n));
     };
     socket.on('notification:new', onNew);
     return () => {
       socket.off('notification:new', onNew);
     };
-  }, [qc]);
+  }, [qc, t]);
 
   const markRead = useMutation({
     mutationFn: (id: number) => api.patch(`/api/notifications/${id}/read`),
@@ -128,7 +129,7 @@ export default function NotificationBell() {
         >
           <Bell size={18} />
           {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent2 px-1 text-[10px] font-semibold text-accent2-foreground">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent2 px-1 text-2xs font-semibold text-accent2-foreground">
               {unread > 9 ? '9+' : unread}
             </span>
           )}
@@ -165,7 +166,7 @@ export default function NotificationBell() {
               >
                 <IconFor type={n.type} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-foreground">{n.content}</span>
+                  <span className="block truncate text-sm text-foreground">{notificationText(t, n)}</span>
                   <span className="block text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
                 </span>
                 {!n.isRead && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent2" />}

@@ -54,7 +54,7 @@ describe('extractArchive', () => {
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-liar');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Extracting the'archive échouée/);
   });
 
   // Variante la plus vicieuse : annoncer ZÉRO. La confrontation taille réelle / déclarée
@@ -70,7 +70,7 @@ describe('extractArchive', () => {
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-zero');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Extracting the'archive échouée/);
     await expect(readdir(dest)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 

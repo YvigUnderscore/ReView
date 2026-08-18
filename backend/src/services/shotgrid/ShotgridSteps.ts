@@ -203,17 +203,16 @@ export async function createTaskFromStep(
   actorEmail: string | null,
 ): Promise<{ taskId: number; sgId: number; name: string }> {
   const ctx = await openConnection(projectId);
-  if (!can(ctx.settings, 'tasks', 'write'))
-    throw forbidden('L’écriture des tasks est désactivée pour ce projet');
+  if (!can(ctx.settings, 'tasks', 'write')) throw forbidden('Writing tasks is off for this project');
 
   const parentLink = await prisma.shotgridLink.findFirst({
     where: { connectionId: ctx.connection.id, localType: params.parentType, localId: params.parentId },
     select: { sgId: true, sgType: true },
   });
-  if (!parentLink) throw badRequest('Cette entité n’existe pas dans ShotGrid');
+  if (!parentLink) throw badRequest('This entity does not exist in ShotGrid');
 
   const step = await ctx.client.findById('Step', params.stepSgId, ['code', 'short_name', 'entity_type']);
-  if (!step) throw badRequest('Étape de pipeline inconnue');
+  if (!step) throw badRequest('Unknown pipeline step');
 
   const name = params.name?.trim() || asString(step.code) || `step-${params.stepSgId}`;
 
@@ -223,7 +222,7 @@ export async function createTaskFromStep(
   if (params.assigneeSgId) {
     const members = await listProjectMembers(projectId);
     assignee = members.find((m) => m.sgId === params.assigneeSgId) ?? null;
-    if (!assignee) throw badRequest('Cette personne ne fait pas partie du projet');
+    if (!assignee) throw badRequest('This person is not a member of the project');
   }
 
   const created = await ctx.client.create('Task', {
@@ -244,9 +243,9 @@ export async function createTaskFromStep(
   };
   if (check && !belongsToProject(check, scope).ok) {
     logger.error({ projectId, sgId: created.id }, 'Task créée hors du projet lié — à retirer du site');
-    throw badRequest('ShotGrid a rangé la task hors du projet visé');
+    throw badRequest('ShotGrid filed the task outside the target project');
   }
-  if (check && !writeAllowedOn(check)) throw forbidden('Projet modèle ShotGrid : écriture refusée');
+  if (check && !writeAllowedOn(check)) throw forbidden('ShotGrid template project — writing is refused');
 
   const department = asString(step.code) ?? null;
   const task = await prisma.task.create({

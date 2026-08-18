@@ -47,12 +47,17 @@ export const qk = {
   assets: (projectId: number) => ['assets', projectId] as const,
   asset: (id: number) => ['asset', id] as const,
   assetTree: (id: number) => ['asset', id, 'tree'] as const,
-  assetLatest: (id: number) => ['asset', id, 'latest'] as const,
+  /** Permalien d'un asset ou d'un plan (C3) : `/{assets|shots}/:id/latest`. */
+  entityLatest: (entity: 'asset' | 'shot', id: number) => [entity, id, 'latest'] as const,
   tasks: (shotId: number) => ['tasks', shotId] as const,
   /** Le plan vu comme un dossier : départements → tâches → versions. */
   shotTree: (shotId: number) => ['shot', shotId, 'tree'] as const,
   /** Toutes les tâches d'un projet, quel que soit leur parent (destination d'upload). */
   projectTasks: (projectId: number) => ['tasks', 'project', projectId] as const,
+  /** Le kanban entier en une requête (C4) — remplace une requête par plan et par asset. */
+  projectBoard: (projectId: number) => ['tasks', 'board', projectId] as const,
+  /** Départements applicables à un projet (B1) : les siens, sinon ceux du studio. */
+  departments: (projectId: number) => ['departments', projectId] as const,
   task: (id: number) => ['task', id] as const,
   /** parent = `taskId=1` ou `assetId=2` (query-string du GET /api/versions) */
   versions: (parent: string) => ['versions', parent] as const,
@@ -84,8 +89,15 @@ export const qk = {
   docsPage: (path: string) => ['docs', 'page', path] as const,
   reviewStatuses: ['review-statuses'] as const,
   watches: ['watches'] as const,
+  /** Pilotage de production (C6), fenêtre de rythme comprise. */
+  projectProduction: (projectId: number, weeks: number) => ['production', projectId, weeks] as const,
+  /** Toutes fenêtres confondues — à invalider quand une échéance bouge. */
+  projectProductionAll: (projectId: number) => ['production', projectId] as const,
   playlists: (projectId: number) => ['playlists', projectId] as const,
   playlist: (id: number) => ['playlist', id] as const,
+  /** Catalogue des versions à mettre en playlist (C5), clé = chaîne de filtres. */
+  playlistCandidates: (projectId: number, filters: string) =>
+    ['playlist-candidates', projectId, filters] as const,
   /** Montages automatiques (Phase 45) — `sequenceId` null = montage du projet entier. */
   timelineOf: (projectId: number, sequenceId: number | null) =>
     ['timeline', 'of', projectId, sequenceId ?? 'project'] as const,

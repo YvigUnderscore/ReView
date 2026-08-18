@@ -41,9 +41,7 @@ export default function DepartmentsEditor({
       <p className="mb-2 text-xs text-muted-foreground">{t('pipeline.dept.orderHint')}</p>
       {value.map((dep, i) => (
         <div key={i} className="flex items-center gap-2">
-          <span className="w-5 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-            {i + 1}
-          </span>
+          <span className="w-5 shrink-0 text-right text-2xs tabular-nums text-muted-foreground">{i + 1}</span>
           <div className="flex shrink-0 flex-col">
             <button
               onClick={() => move(i, -1)}

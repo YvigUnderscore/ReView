@@ -4,7 +4,7 @@
 
 ## Système
 
-*Admin → Studio → Système* exposes runtime information and studio-wide limits,
+*Admin → Studio → System* exposes runtime information and studio-wide limits,
 including **maximum upload sizes** (in MB) per media kind.
 
 ## Corbeille (trash)
@@ -21,7 +21,7 @@ context — the studio's traceability baseline.
 
 ## Activité
 
-*Admin → Studio → Activité* shows the recent activity feed across projects (who
+*Admin → Studio → Activity* shows the recent activity feed across projects (who
 uploaded/published/commented what, and when).
 
 ## Related pages

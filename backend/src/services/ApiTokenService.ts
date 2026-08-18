@@ -51,7 +51,7 @@ async function assertProjectExists(projectId: number): Promise<void> {
     where: { id: projectId, deletedAt: null },
     select: { id: true },
   });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
 }
 
 export interface CreateTokenInput {
@@ -105,11 +105,11 @@ export async function createService(createdById: number, input: CreateServiceTok
   if (input.projectId !== undefined) await assertProjectExists(input.projectId);
 
   const slug = slugify(input.name);
-  if (!slug) throw badRequest('Nom de service invalide (aucun caractère exploitable)');
+  if (!slug) throw badRequest('Invalid service name (no usable character)');
   const email = `svc-${slug}@${SERVICE_EMAIL_DOMAIN}`;
 
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, isService: true } });
-  if (existing && !existing.isService) throw conflict('Un compte non-service porte déjà cette adresse');
+  if (existing && !existing.isService) throw conflict('A regular account already uses this address');
 
   // Mot de passe aléatoire jamais communiqué : le compte reste inutilisable en connexion
   // (le login refuse `isService`), et il n'existe aucun secret « par défaut » à deviner.
@@ -181,6 +181,6 @@ export async function revokeService(actorId: number, id: number): Promise<void> 
     where: { id, kind: ApiTokenKind.SERVICE, revokedAt: null },
     data: { revokedAt: new Date() },
   });
-  if (r.count === 0) throw notFound('Token introuvable');
+  if (r.count === 0) throw notFound('Token not found');
   logAudit({ userId: actorId, action: 'API_TOKEN_REVOKE', entityType: 'ApiToken', entityId: id });
 }

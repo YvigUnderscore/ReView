@@ -96,12 +96,12 @@ export default function TimelineCard({
           {formatDuration(timeline.totalDuration)}
         </span>
         {timeline.gapCount > 0 && (
-          <span className="rounded bg-warning/15 px-1.5 py-0.5 text-[10px] text-warning">
+          <span className="rounded bg-warning/15 px-1.5 py-0.5 text-2xs text-warning">
             {t('timeline.gapCount', { count: timeline.gapCount })}
           </span>
         )}
         {timeline.latestRevision !== null && (
-          <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+          <span className="rounded border border-border px-1.5 py-0.5 text-2xs text-muted-foreground">
             {t('timeline.revision', { revision: timeline.latestRevision })}
           </span>
         )}

@@ -83,11 +83,11 @@ describe('ChatService.createConversation', () => {
 
   it('refuse un destinataire inconnu plutôt que de l’ignorer en silence', async () => {
     db.user.findMany.mockResolvedValue([{ id: 2 }] as never);
-    await expect(createConversation(1, { userIds: [2, 999] })).rejects.toThrow(/introuvable/i);
+    await expect(createConversation(1, { userIds: [2, 999] })).rejects.toThrow(/not found/i);
   });
 
   it('refuse un fil avec soi-même pour seul destinataire', async () => {
-    await expect(createConversation(1, { userIds: [1] })).rejects.toThrow(/destinataire/i);
+    await expect(createConversation(1, { userIds: [1] })).rejects.toThrow(/recipient/i);
   });
 });
 
@@ -103,12 +103,12 @@ describe('ChatService.sendMessage', () => {
   });
 
   it('refuse un message vide (espaces seuls)', async () => {
-    await expect(sendMessage(7, 1, '   ')).rejects.toThrow(/vide/i);
+    await expect(sendMessage(7, 1, '   ')).rejects.toThrow(/empty message/i);
   });
 
   it('refuse d’écrire dans un fil dont on n’est pas membre', async () => {
     db.conversationMember.findUnique.mockResolvedValue(null);
-    await expect(sendMessage(7, 3, 'Coucou')).rejects.toThrow(/participez pas/i);
+    await expect(sendMessage(7, 3, 'Coucou')).rejects.toThrow(/not part of this conversation/i);
   });
 
   it('pousse le message à tous les membres et remonte le fil', async () => {

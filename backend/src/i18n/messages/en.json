@@ -35,5 +35,14 @@
   "invite.cta": "Activate my account",
   "invite.expiry": "This link expires in {days} days.",
   "invite.fallback": "If the button does not work, paste this link into your browser:",
-  "invite.ignore": "If you were not expecting this invitation, you can ignore this email."
+  "invite.ignore": "If you were not expecting this invitation, you can ignore this email.",
+  "notification.mentioned": "You were mentioned in a comment",
+  "notification.reply": "New reply to your comment",
+  "notification.watchedComment": "New comment on something you follow",
+  "notification.montageShared": "A note from the edit was sent back to something you follow",
+  "notification.commentAssigned": "A comment was assigned to you",
+  "notification.mediaPublished": "New media published: {name}",
+  "notification.liveStarted": "{name} started a live review on the playlist « {playlist} »",
+  "notification.decision": "Decision « {status} » on version {version}",
+  "notification.taskAssigned": "Task assigned: {name}"
 }

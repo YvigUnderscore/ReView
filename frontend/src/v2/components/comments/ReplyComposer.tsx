@@ -73,13 +73,13 @@ export default function ReplyComposer({
           onPaste={onPasteImage}
           rows={2}
           placeholder={t('comments.reply.placeholder')}
-          className="w-full resize-none bg-transparent text-sm focus:outline-none"
+          className="w-full resize-none bg-transparent text-sm"
         />
       </div>
       {files.length > 0 && (
         <div className="mb-1 flex flex-wrap gap-1">
           {files.map((f, i) => (
-            <span key={i} className="flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-[10px]">
+            <span key={i} className="flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-2xs">
               {f.name}
               <button onClick={() => setFiles((fs) => fs.filter((_, j) => j !== i))}>
                 <X size={10} />
@@ -104,7 +104,7 @@ export default function ReplyComposer({
           <button
             onClick={() => fileRef.current?.click()}
             title={t('comments.attachImage')}
-            className="rounded p-1 text-muted-foreground hover:bg-secondary"
+            className="rounded p-1.5 text-muted-foreground hover:bg-secondary"
           >
             <ImagePlus size={15} />
           </button>

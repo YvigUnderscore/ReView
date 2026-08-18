@@ -62,7 +62,7 @@ export function MarkerTicks({
               style={{ background: m.color }}
             />
             {/* Tooltip custom : nom + auteur au survol (le title natif était trop discret). */}
-            <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-0.5 text-[10px] text-foreground shadow-lg group-hover:block">
+            <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-0.5 text-2xs text-foreground shadow-lg group-hover:block">
               {m.name}
               {m.authorName ? <span className="text-muted-foreground"> — {m.authorName}</span> : null}
             </span>

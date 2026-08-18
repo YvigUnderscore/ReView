@@ -28,12 +28,13 @@ const POS_MAX = 4;
 
 function decodeImageDataUrl(dataUrl: string): { buf: Buffer; ext: string; contentType: string } {
   const m = /^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/i.exec(dataUrl);
-  if (!m) throw badRequest('Image invalide (data URL image attendue)', 'INVALID_IMAGE');
+  if (!m) throw badRequest('Invalid image (an image data URL is expected)', 'INVALID_IMAGE');
   const contentType = m[1]!.toLowerCase();
   const buf = Buffer.from(m[2]!, 'base64');
   if (buf.length === 0 || buf.length > MAX_BYTES)
-    throw badRequest('Image vide ou trop volumineuse (max 6 Mo)', 'INVALID_IMAGE');
-  if (!detectImage(buf.subarray(0, 16))) throw badRequest('Contenu non reconnu comme image', 'INVALID_IMAGE');
+    throw badRequest('Image is empty or too large (6 MB max)', 'INVALID_IMAGE');
+  if (!detectImage(buf.subarray(0, 16)))
+    throw badRequest('Content is not a recognised image', 'INVALID_IMAGE');
   const ext =
     contentType === 'image/png'
       ? 'png'
@@ -82,12 +83,13 @@ export async function add(
     where: { id: commentId },
     select: { mediaObjectId: true, userId: true },
   });
-  if (!comment || comment.mediaObjectId !== mediaId) throw badRequest('Commentaire invalide pour ce média');
+  if (!comment || comment.mediaObjectId !== mediaId)
+    throw badRequest('This comment does not belong to this media');
   if (comment.userId !== user.id)
     throw forbidden("Seul l'auteur du commentaire peut y joindre une référence");
   const count = await prisma.reviewReference.count({ where: { mediaObjectId: mediaId } });
   if (count >= MAX_REFS)
-    throw badRequest(`${MAX_REFS} images de référence max par média`, 'TOO_MANY_REFERENCES');
+    throw badRequest(`At most ${MAX_REFS} reference images per media`, 'TOO_MANY_REFERENCES');
   const { buf, ext, contentType } = decodeImageDataUrl(dataUrl);
   const key = `derived/${mediaId}/reference-${randomUUID()}.${ext}`;
   await storage.putObject(key, buf, contentType);

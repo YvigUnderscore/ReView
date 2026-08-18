@@ -3,10 +3,13 @@
 
 import { AssetType, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';
-import { firstMediaThumbKeyForShot, effectiveThumbnailUrl } from '../lib/thumbnails';
-import { logAudit } from './AuditService';
+import {
+  firstMediaThumbKeyForShot,
+  firstMediaThumbKeysForShots,
+  effectiveThumbnailUrl,
+} from '../lib/thumbnails';
 import { emitToProject } from './SocketService';
+import * as PipelineStatusService from './PipelineStatusService';
 import { badRequest, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
@@ -38,10 +41,14 @@ export async function list(
     }),
     prisma.shot.count({ where }),
   ]);
+  // Une requête groupée pour toute la page (B3) : la variante unitaire dans un `.map`
+  // envoyait une requête et une signature MinIO par plan, soit deux cents allers-retours
+  // pour une page de cent.
+  const fallbacks = await firstMediaThumbKeysForShots(shots.map((s) => s.id));
   const items = await Promise.all(
     shots.map(async (s) => ({
       ...s,
-      thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, await firstMediaThumbKeyForShot(s.id)),
+      thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
     })),
   );
   return paginate(items, total, p);
@@ -52,7 +59,7 @@ async function assertSequenceInProject(sequenceId: number | null | undefined, pr
   if (!sequenceId) return;
   const seq = await prisma.sequence.findUnique({ where: { id: sequenceId }, select: { projectId: true } });
   if (!seq || seq.projectId !== projectId)
-    throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+    throw badRequest('This sequence does not belong to this project', 'BAD_SEQUENCE');
 }
 
 export interface CreateShotInput {
@@ -79,7 +86,7 @@ export async function create(input: CreateShotInput) {
     },
     select: { id: true },
   });
-  if (clash) throw badRequest('Un shot avec ce code existe déjà dans cette séquence', 'CODE_TAKEN');
+  if (clash) throw badRequest('A shot with this code already exists in this sequence', 'CODE_TAKEN');
   return prisma.shot.create({
     data: {
       projectId: input.projectId,
@@ -102,13 +109,14 @@ export async function createBulk(projectId: number, items: BulkShotItem[]) {
   const seqIds = [...new Set(items.map((i) => i.sequenceId).filter((v): v is number => !!v))];
   if (seqIds.length > 0) {
     const ok = await prisma.sequence.count({ where: { id: { in: seqIds }, projectId } });
-    if (ok !== seqIds.length) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+    if (ok !== seqIds.length)
+      throw badRequest('This sequence does not belong to this project', 'BAD_SEQUENCE');
   }
   // Doublons (code, séquence) dans le lot.
   const key = (sid: number | null | undefined, code: string) => `${sid ?? 'none'}::${code}`;
   const keys = items.map((i) => key(i.sequenceId, i.code));
   const dup = keys.find((k, i) => keys.indexOf(k) !== i);
-  if (dup) throw badRequest(`Code en double dans le lot : ${dup.split('::')[1]}`, 'CODE_DUP');
+  if (dup) throw badRequest(`Duplicate code in the batch : ${dup.split('::')[1]}`, 'CODE_DUP');
   // Conflits avec l'existant.
   const existing = await prisma.shot.findMany({
     where: { projectId, deletedAt: null, code: { in: items.map((i) => i.code) } },
@@ -116,7 +124,8 @@ export async function createBulk(projectId: number, items: BulkShotItem[]) {
   });
   const existingKeys = new Set(existing.map((e) => key(e.sequenceId, e.code)));
   const clash = items.find((i) => existingKeys.has(key(i.sequenceId, i.code)));
-  if (clash) throw badRequest(`Shot déjà existant dans cette séquence : ${clash.code}`, 'CODE_TAKEN');
+  if (clash)
+    throw badRequest(`A shot with this code already exists in this sequence: ${clash.code}`, 'CODE_TAKEN');
   return prisma.$transaction(
     items.map((it, idx) =>
       prisma.shot.create({
@@ -142,9 +151,11 @@ export async function get(id: number) {
       sequence: true,
       tasks: { orderBy: { order: 'asc' }, include: { assignee: { select: { id: true, name: true } } } },
       assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
+      // Départements traversés (B1) : le panneau de réglages les coche (C3).
+      departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });
-  if (!shot) throw notFound('Shot introuvable');
+  if (!shot) throw notFound('Shot not found');
   // La miniature n'était calculée que dans la liste : une page de plan n'a pas de liste
   // derrière elle, et affichait donc un en-tête vide.
   return {
@@ -160,8 +171,11 @@ export interface UpdateShotInput {
   startFrame?: number | null;
   endFrame?: number | null;
   order?: number;
+  description?: string | null;
   thumbnailKey?: string | null;
   settings?: Prisma.InputJsonValue;
+  /** Statut du plan (C3) — jusqu'ici écrit par la seule synchronisation ShotGrid. */
+  pipelineStatusId?: number | null;
   /** Omis du montage (Phase 45) : le plan reste en base, les timelines le sautent. */
   omitted?: boolean;
 }
@@ -169,6 +183,11 @@ export interface UpdateShotInput {
 export async function update(id: number, projectId: number, body: UpdateShotInput) {
   await assertProjectWritable(projectId); // 38.B
   await assertSequenceInProject(body.sequenceId, projectId);
+  // Le statut doit venir du vocabulaire de CE projet : poser l'identifiant d'un statut
+  // importé du site d'un autre projet passerait sans bruit et fausserait la lecture.
+  if (body.pipelineStatusId !== undefined) {
+    await PipelineStatusService.assertBelongsToProject(projectId, 'shot', body.pipelineStatusId);
+  }
   // Si le code ou la séquence change, vérifier l'unicité (code unique par séquence).
   if (body.code !== undefined || body.sequenceId !== undefined) {
     const current = await prisma.shot.findUnique({ where: { id }, select: { code: true, sequenceId: true } });
@@ -178,7 +197,7 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
       where: { projectId, sequenceId: nextSequenceId, code: nextCode, deletedAt: null, id: { not: id } },
       select: { id: true },
     });
-    if (conflict) throw badRequest('Un shot avec ce code existe déjà dans cette séquence', 'CODE_TAKEN');
+    if (conflict) throw badRequest('A shot with this code already exists in this sequence', 'CODE_TAKEN');
   }
   const shot = await prisma.shot.update({ where: { id }, data: body });
   // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
@@ -199,7 +218,7 @@ export async function attachAsset(shotId: number, projectId: number, body: Attac
   let assetId = body.assetId;
   if (assetId === undefined) {
     if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name: body.name! } } }))
-      throw badRequest('Un asset avec ce nom existe déjà', 'NAME_TAKEN');
+      throw badRequest('An asset with this name already exists', 'NAME_TAKEN');
     const created = await prisma.asset.create({
       data: { projectId, name: body.name!, type: body.type ?? AssetType.OTHER },
     });
@@ -207,7 +226,7 @@ export async function attachAsset(shotId: number, projectId: number, body: Attac
   } else {
     const asset = await prisma.asset.findUnique({ where: { id: assetId }, select: { projectId: true } });
     if (!asset || asset.projectId !== projectId)
-      throw badRequest('Asset invalide pour ce projet', 'BAD_ASSET');
+      throw badRequest('This asset does not belong to this project', 'BAD_ASSET');
   }
   await prisma.shot.update({ where: { id: shotId }, data: { assets: { connect: { id: assetId } } } });
   return prisma.asset.findUnique({ where: { id: assetId }, select: { id: true, name: true, type: true } });
@@ -215,18 +234,4 @@ export async function attachAsset(shotId: number, projectId: number, body: Attac
 
 export async function detachAsset(shotId: number, assetId: number) {
   await prisma.shot.update({ where: { id: shotId }, data: { assets: { disconnect: { id: assetId } } } });
-}
-
-export async function softDelete(userId: number, id: number) {
-  await softDeleteShot(id);
-  logAudit({ userId, action: 'SHOT_DELETE', entityType: 'Shot', entityId: id });
-}
-
-export async function restore(id: number) {
-  await restoreShot(id);
-}
-
-export async function purge(userId: number, id: number) {
-  await purgeShot(id);
-  logAudit({ userId, action: 'SHOT_PURGE', entityType: 'Shot', entityId: id });
 }

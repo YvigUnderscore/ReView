@@ -13,7 +13,7 @@ import { reviewPath } from '../lib/slug';
 import { useMultiSelect } from '../lib/useMultiSelect';
 import { bulkDelete } from '../lib/bulkApi';
 import type { MediaKind } from '../types/api';
-import Shell from '../components/Shell';
+import PageShell from '../components/PageShell';
 import AddToPlaylistDialog from '../components/AddToPlaylistDialog';
 import SavedViewsMenu from '../components/SavedViewsMenu';
 import ViewToggle from '../components/ViewToggle';
@@ -103,7 +103,7 @@ export default function ReviewsPage() {
   };
 
   return (
-    <Shell title={t('nav.reviews')}>
+    <PageShell title={t('nav.reviews')}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t('nav.reviews')}</h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -255,6 +255,6 @@ export default function ReviewsPage() {
         onConfirm={confirmBulkDelete}
         onCancel={() => setBulkDeleting(false)}
       />
-    </Shell>
+    </PageShell>
   );
 }

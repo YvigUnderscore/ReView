@@ -10,5 +10,5 @@ import { forbidden } from './errors';
  * version. Seule la présentation (mise en scène caméra/DoF/reveal/LOD) reste modifiable.
  */
 export function assertNotPublished(entity: { published: boolean }) {
-  if (entity.published) throw forbidden('Édition verrouillée après publication', 'PUBLISHED_LOCKED');
+  if (entity.published) throw forbidden('Editing is locked once published', 'PUBLISHED_LOCKED');
 }

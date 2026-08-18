@@ -29,7 +29,7 @@ export default function ChannelList({
 }) {
   const t = useT();
   return (
-    <div className="flex w-24 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border pr-1 text-[11px] custom-scrollbar">
+    <div className="flex w-24 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border pr-1 text-xs custom-scrollbar">
       {CHANNEL_META.map((c) => {
         const keyed = keyedChannels.has(c.id);
         const on = visible.has(c.id);

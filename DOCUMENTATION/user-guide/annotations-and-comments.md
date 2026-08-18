@@ -26,10 +26,10 @@ resolution, mentions, reactions, voice notes, deep links and kanban hand-off.
 ## Resolution
 
 - Root comments can be marked **Resolved** (author or `SUPERVISOR`/`ADMIN`) with
-  the check button on the card; resolved cards are dimmed and show a *Résolu*
+  the check button on the card; resolved cards are dimmed and show a *Resolved*
   badge with who resolved and when (tooltip). Re-open at any time.
 - The panel header shows the **open counter** (`N ouverts / total`) and a filter
-  (*Tous / Ouverts / Résolus*).
+  (*All / Open / Resolved*).
 
 ## Mentions
 
@@ -48,7 +48,7 @@ resolution, mentions, reactions, voice notes, deep links and kanban hand-off.
 
 ## Deep links
 
-- Viewer right-click (video) → **Copier le lien à cette frame** copies a URL with
+- Viewer right-click (video) → **Copy the link to this frame** copies a URL with
   `?frame=N`; opening it seeks the review to that exact frame.
 - Comment card right-click → **Copier le lien au commentaire** copies a URL with
   `?comment=ID`; opening it selects the comment (seek + annotation + camera
@@ -56,7 +56,7 @@ resolution, mentions, reactions, voice notes, deep links and kanban hand-off.
 
 ## Comment → kanban task
 
-- `SUPERVISOR`/`ADMIN`: right-click a comment card → **Créer une tâche kanban**.
+- `SUPERVISOR`/`ADMIN`: right-click a comment card → **Create a kanban task**.
   The task is attached to the shot/asset carrying the media's version, named
   after the comment text, and inherits the comment's assignee.
 - The task page shows a **Commentaire d'origine** chip linking back to the review
@@ -107,3 +107,22 @@ picture. The plain (un-annotated) export remains available.
 - [Kanban & tasks](kanban-and-tasks.md) — tasks created from comments
 - [Review approvals](review-approvals.md) — decisions notify watchers
 - [Sharing](sharing.md) — client access permissions
+
+## Comment states
+
+A comment carries one of five states, each with its own colour on the card:
+
+| State | Meaning |
+|---|---|
+| **Open** | nothing has been decided yet |
+| **Working on it** | someone has taken it |
+| **Question** | the note is not understood, an answer is expected |
+| **Won't fix** | knowingly left as is |
+| **Resolved** | done |
+
+The button at the top right of a card resolves it, or reopens it. The other states are a
+right-click away — five buttons per card would not read. The thread can be filtered by
+state, and the counts sit next to each filter.
+
+Supervisors also decide, from the same menu, whether a note is **visible to the client**
+on a share link.

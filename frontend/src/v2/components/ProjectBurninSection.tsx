@@ -84,7 +84,7 @@ export default function ProjectBurninSection({
           </button>
         </div>
       )}
-      <p className="mt-2 text-[11px] text-muted-foreground">{t('burnin.hint')}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{t('burnin.hint')}</p>
     </section>
   );
 }

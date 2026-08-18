@@ -348,7 +348,7 @@ export async function assetOverview(assetId: number, userId: number): Promise<As
     where: { id: assetId, deletedAt: null },
     select: { projectId: true },
   });
-  if (!asset) throw notFound('Asset introuvable');
+  if (!asset) throw notFound('Asset not found');
   const { departments } = await resolveProjectSettingsById(asset.projectId);
 
   const [groups, latestMap] = await Promise.all([
@@ -407,7 +407,7 @@ export async function shotOverview(shotId: number, userId: number): Promise<Asse
     where: { id: shotId, deletedAt: null },
     select: { projectId: true },
   });
-  if (!shot) throw notFound('Shot introuvable');
+  if (!shot) throw notFound('Shot not found');
   const { departments } = await resolveProjectSettingsById(shot.projectId);
 
   const [groups, latestMap] = await Promise.all([

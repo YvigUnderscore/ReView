@@ -2,7 +2,7 @@
 
 > Updated: 2026-07-19
 
-Configured in *Admin → Contextes de review → Vidéo*. Applies studio-wide; only
+Configured in *Admin → Review contexts → Video*. Applies studio-wide; only
 administrators can change it.
 
 ## HLS ladder

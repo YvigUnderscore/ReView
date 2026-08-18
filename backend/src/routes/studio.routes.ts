@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
   const studio = await prisma.studio.findFirst({
     select: { id: true, name: true, slug: true, discordWebhookUrl: true, createdAt: true, updatedAt: true },
   });
-  if (!studio) throw notFound('Studio non configuré');
+  if (!studio) throw notFound('Studio not set up');
   const { discordWebhookUrl, ...rest } = studio;
   // L'URL elle-même n'est utile qu'à l'admin qui la configure (PATCH ci-dessous) ; les
   // autres n'ont besoin que de savoir si l'intégration est active.
@@ -78,10 +78,10 @@ router.patch(
   async (req, res) => {
     const body = req.body as { name?: string; discordWebhookUrl?: string | null };
     if (body.discordWebhookUrl && !isValidDiscordWebhook(body.discordWebhookUrl)) {
-      throw badRequest('URL de webhook Discord invalide', 'BAD_WEBHOOK');
+      throw badRequest('Invalid Discord webhook URL', 'BAD_WEBHOOK');
     }
     const studio = await prisma.studio.findFirst();
-    if (!studio) throw notFound('Studio non configuré');
+    if (!studio) throw notFound('Studio not set up');
     const updated = await prisma.studio.update({ where: { id: studio.id }, data: body });
     // Le journal d'audit est la seule trace des changements de configuration privilegies.
     // Jamais l'URL du webhook elle-meme : un journal consultable ne doit pas devenir la
@@ -128,7 +128,7 @@ router.put(
     // par cet upsert générique permettrait d'écraser la config SMTP ou la paire VAPID par
     // du texte arbitraire — et de les relire ensuite sous une clé non filtrée.
     if (SECRET_SETTING_KEYS.includes(key))
-      throw badRequest('Ce réglage a une route dédiée', 'RESERVED_SETTING');
+      throw badRequest('This setting has its own endpoint', 'RESERVED_SETTING');
     const setting = await prisma.setting.upsert({
       where: { key },
       update: { value },

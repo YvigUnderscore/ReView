@@ -40,7 +40,7 @@ const redirectUri = (cfg: OidcConfig) => `${cfg.publicUrl}/api/auth/oidc/callbac
 
 async function readyConfig(): Promise<OidcConfig> {
   const cfg = await getOidcConfig();
-  if (!isOidcReady(cfg)) throw notFound('SSO non configuré');
+  if (!isOidcReady(cfg)) throw notFound('SSO is not configured');
   return cfg;
 }
 

@@ -42,7 +42,7 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 });
  */
 async function refusePasswordAuth(): Promise<void> {
   if (await isPasswordLoginBlocked()) {
-    throw forbidden('Connexion par mot de passe désactivée : utilisez le SSO', 'PASSWORD_LOGIN_DISABLED');
+    throw forbidden('Password sign-in is off — use SSO', 'PASSWORD_LOGIN_DISABLED');
   }
 }
 
@@ -61,13 +61,13 @@ router.post(
   }),
   async (req, res) => {
     if (!env.ALLOW_SELF_REGISTRATION) {
-      throw forbidden('Inscription libre désactivée sur cette instance', 'REGISTRATION_DISABLED');
+      throw forbidden('Open sign-up is off on this instance', 'REGISTRATION_DISABLED');
     }
     await refusePasswordAuth();
     const { password, name } = req.body as { password: string; name?: string };
     const email = normalizeEmail((req.body as { email: string }).email);
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) throw badRequest('Email déjà utilisé', 'EMAIL_TAKEN');
+    if (existing) throw badRequest('Email already in use', 'EMAIL_TAKEN');
 
     const hash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
@@ -109,10 +109,10 @@ router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) 
   const payload = verifyToken(refreshToken);
   if (!payload || payload.kind !== 'refresh') throw unauthorized('Refresh token invalide');
   const user = await prisma.user.findUnique({ where: { id: payload.id } });
-  if (!user) throw unauthorized('Utilisateur introuvable');
+  if (!user) throw unauthorized('User not found');
   let sid = payload.sid;
   if (sid) {
-    if (!(await isSessionActive(sid))) throw unauthorized('Session révoquée', 'SESSION_REVOKED');
+    if (!(await isSessionActive(sid))) throw unauthorized('Session revoked', 'SESSION_REVOKED');
     await touchSession(sid);
   } else {
     sid = await createSession(user.id, req);
@@ -159,7 +159,7 @@ router.post(
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-  if (!user) throw unauthorized('Utilisateur introuvable');
+  if (!user) throw unauthorized('User not found');
   res.json({ user: { ...(await toSessionUser(user)), twoFaEnabled: user.totpEnabledAt != null } });
 });
 

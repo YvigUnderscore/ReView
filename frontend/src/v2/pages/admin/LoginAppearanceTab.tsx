@@ -233,7 +233,7 @@ function Preview({ login }: { login: LoginAppearance }) {
       {login.showLogo && <div className="h-3 w-16 rounded bg-foreground/60" />}
       <div className="space-y-1">
         <div className="h-3 w-24 rounded bg-foreground/40" />
-        <p className="line-clamp-2 text-[10px] text-muted-foreground">{tagline}</p>
+        <p className="line-clamp-2 text-2xs text-muted-foreground">{tagline}</p>
       </div>
     </div>
   );

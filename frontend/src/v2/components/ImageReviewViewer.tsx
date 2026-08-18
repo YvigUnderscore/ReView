@@ -216,7 +216,11 @@ export default function ImageReviewViewer({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onContextMenu={(e) => e.preventDefault()}
+        // Surtout pas de `preventDefault` ici (A3) : ce viewport est un descendant du
+        // ContextMenuTrigger de la review image, et Radix compose les gestionnaires avec
+        // `checkForDefaultPrevented` — marquer l'événement comme traité empêchait le menu
+        // métier (copier/télécharger l'image, miniature, playlist, annoter) de s'ouvrir.
+        // Le menu natif est déjà bloqué en amont par ContextMenuGuard.
         style={{
           cursor: editable ? 'crosshair' : 'grab',
           touchAction: 'none',
@@ -294,7 +298,7 @@ export default function ImageReviewViewer({
         <button
           onClick={() => zoomBy(1 / 1.25)}
           title={t('imageViewer.zoomOut')}
-          className="rounded p-1 hover:bg-muted"
+          className="rounded p-1.5 hover:bg-muted"
         >
           <ZoomOut size={16} />
         </button>
@@ -304,7 +308,7 @@ export default function ImageReviewViewer({
         <button
           onClick={() => zoomBy(1.25)}
           title={t('imageViewer.zoomIn')}
-          className="rounded p-1 hover:bg-muted"
+          className="rounded p-1.5 hover:bg-muted"
         >
           <ZoomIn size={16} />
         </button>
@@ -315,13 +319,13 @@ export default function ImageReviewViewer({
         >
           1:1
         </button>
-        <button onClick={reset} title={t('imageViewer.fit')} className="rounded p-1 hover:bg-muted">
+        <button onClick={reset} title={t('imageViewer.fit')} className="rounded p-1.5 hover:bg-muted">
           <Maximize size={16} />
         </button>
         <button
           onClick={fullscreen}
           title={t('imageViewer.fullscreen')}
-          className="rounded p-1 hover:bg-muted"
+          className="rounded p-1.5 hover:bg-muted"
         >
           <Expand size={16} />
         </button>

@@ -41,7 +41,7 @@ describe('inferMediaKind', () => {
   });
 
   it('refuse explicitement plutôt que de deviner au hasard', () => {
-    expect(() => inferMediaKind('notes.txt')).toThrow(/indéterminable/i);
-    expect(() => inferMediaKind('sansextension')).toThrow(/indéterminable/i);
+    expect(() => inferMediaKind('notes.txt')).toThrow(/cannot tell the media kind/i);
+    expect(() => inferMediaKind('sansextension')).toThrow(/cannot tell the media kind/i);
   });
 });

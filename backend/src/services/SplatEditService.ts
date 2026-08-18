@@ -49,8 +49,8 @@ async function assertEditableSplat(user: SessionUser, id: number) {
     where: { id },
     select: { metadata: true, kind: true, published: true },
   });
-  if (!media) throw notFound('Média introuvable');
-  if (media.kind !== MediaKind.SPLAT) throw badRequest('Édition réservée aux splats', 'NOT_SPLAT');
+  if (!media) throw notFound('Media not found');
+  if (media.kind !== MediaKind.SPLAT) throw badRequest('Editing is for splats only', 'NOT_SPLAT');
   assertNotPublished(media);
   return media;
 }
@@ -67,11 +67,11 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
     where: { id },
     select: { metadata: true, kind: true },
   });
-  if (!media) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
   // Présentation caméra générique (rejouée pour tous) : splat ET modèle 3D Three (Phase 15).
   // Le champ garde le nom `splatPresentation` (réutilisé) ; DoF/reveal/LOD restent propres au splat.
   if (media.kind !== MediaKind.SPLAT && media.kind !== MediaKind.MODEL_3D)
-    throw badRequest('Présentation réservée aux médias 3D/splat', 'NOT_3D');
+    throw badRequest('Staging is for 3D and splat media only', 'NOT_3D');
   const metadata = {
     ...((media.metadata ?? {}) as object),
     splatPresentation: presentation,
@@ -99,7 +99,7 @@ export async function setSplatMask(user: SessionUser, id: number, dataBase64: st
   const media = await assertEditableSplat(user, id);
   const buf = Buffer.from(dataBase64, 'base64');
   if (buf.length === 0 || buf.length > MAX_MASK_BYTES)
-    throw badRequest('Masque vide ou trop volumineux', 'INVALID_MASK');
+    throw badRequest('Mask is empty or too large', 'INVALID_MASK');
   const key = StorageService.splatMaskKey(id);
   await storage.putObject(key, buf, 'application/octet-stream');
   const metadata = {
@@ -119,7 +119,7 @@ export async function setSplatSubsetOps(user: SessionUser, id: number, dataBase6
   const media = await assertEditableSplat(user, id);
   const buf = Buffer.from(dataBase64, 'base64');
   if (buf.length === 0 || buf.length > MAX_MASK_BYTES)
-    throw badRequest('Transformations vides ou trop volumineuses', 'INVALID_SUBSET_OPS');
+    throw badRequest('Transforms are empty or too large', 'INVALID_SUBSET_OPS');
   const key = StorageService.splatSubsetKey(id);
   await storage.putObject(key, buf, 'application/octet-stream');
   const metadata = {

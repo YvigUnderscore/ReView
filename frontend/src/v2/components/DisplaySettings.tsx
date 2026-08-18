@@ -79,8 +79,9 @@ export default function DisplaySettings() {
   const setMode = useTheme((s) => s.setMode);
   const density = useDensity((s) => s.density);
   const setDensity = useDensity((s) => s.setDensity);
-  // Thème et densité restent propres à l'appareil ; la langue suit le compte, parce que
-  // le serveur s'en sert pour les emails, qui ne se lisent pas depuis cet appareil-là.
+  // Le thème reste propre à l'appareil (un poste peut être en salle sombre) ; la langue et
+  // la densité suivent le compte — le serveur se sert de la langue pour les emails, et
+  // repartir en confortable sur chaque nouveau poste était une contrariété inutile (A2).
   const updatePrefs = useUpdatePreferences();
 
   const themeOpts: readonly Opt<ThemeMode>[] = [
@@ -102,7 +103,10 @@ export default function DisplaySettings() {
         <Segmented
           value={density}
           options={densityOpts}
-          onChange={setDensity}
+          onChange={(d) => {
+            setDensity(d);
+            updatePrefs.mutate({ density: d });
+          }}
           ariaLabel={t('display.density')}
         />
       </Row>
