@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Role } from '@prisma/client';
+import { CommentState, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { sanitizeHtml } from '../lib/sanitize';
 import { emitToProject } from './SocketService';
@@ -348,9 +348,25 @@ export async function share(user: SessionUser, projectId: number, id: number) {
 
 export interface UpdateCommentInput {
   content?: string;
+  /** État du fil (D1). `isResolved` en découle et reste écrit en parallèle. */
+  state?: CommentState;
   isResolved?: boolean;
   isVisibleToClient?: boolean;
   assigneeId?: number | null;
+}
+
+/**
+ * Les deux formes de la même chose (D1) : l'écran envoie un état, l'API v1 et les
+ * compteurs de notes ouvertes lisent un booléen. Écrire les deux évite qu'un fil résolu
+ * depuis la review reste compté comme ouvert dans le rapport hebdomadaire.
+ */
+export function resolutionOf(
+  state: CommentState | undefined,
+  isResolved: boolean | undefined,
+): { state?: CommentState; isResolved?: boolean } {
+  if (state !== undefined) return { state, isResolved: state === 'RESOLVED' };
+  if (isResolved !== undefined) return { state: isResolved ? 'RESOLVED' : 'OPEN', isResolved };
+  return {};
 }
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateCommentInput) {
@@ -362,18 +378,21 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (body.content !== undefined && !isAuthor) throw forbidden("Seul l'auteur peut éditer le contenu");
   if ((body.isVisibleToClient !== undefined || body.assigneeId !== undefined) && !manager)
     throw forbidden('Réservé aux superviseurs/admins');
-  if (body.isResolved !== undefined && !manager && !isAuthor) throw forbidden('Résolution non autorisée');
+  const resolution = resolutionOf(body.state, body.isResolved);
+  if (resolution.isResolved !== undefined && !manager && !isAuthor)
+    throw forbidden('Résolution non autorisée');
 
   const comment = await prisma.comment.update({
     where: { id },
     data: {
       ...(body.content !== undefined ? { content: sanitizeHtml(body.content), isEdited: true } : {}),
       // Trace de résolution (32.A) : qui a résolu et quand ; effacée à la réouverture.
-      ...(body.isResolved !== undefined
+      ...(resolution.state !== undefined
         ? {
-            isResolved: body.isResolved,
-            resolvedById: body.isResolved ? user.id : null,
-            resolvedAt: body.isResolved ? new Date() : null,
+            state: resolution.state,
+            isResolved: resolution.isResolved!,
+            resolvedById: resolution.isResolved ? user.id : null,
+            resolvedAt: resolution.isResolved ? new Date() : null,
           }
         : {}),
       ...(body.isVisibleToClient !== undefined ? { isVisibleToClient: body.isVisibleToClient } : {}),

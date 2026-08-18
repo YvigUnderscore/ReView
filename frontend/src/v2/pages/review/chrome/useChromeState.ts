@@ -13,6 +13,7 @@ import {
 } from './chromeState';
 import { switcherModesFor } from './modes';
 import { panelsFor } from './panels';
+import { canSwitchModeWith } from './reservedKeys';
 import { DEFAULT_TOOL, toolSearchOrder, toolsFor } from './tools';
 
 /**
@@ -88,8 +89,12 @@ export function useChromeState(kind: MediaKind) {
       // Lettre d'outil : le mode courant d'abord, sinon les autres modes — armer l'outil d'un
       // autre mode y bascule (T/R/S ramènent à « Nettoyer », un outil de tracé arme
       // l'annotation), au lieu de ne rien faire.
+      //
+      // Sauf pour les touches du transport (D1) : sur une vidéo, `I` posait le point
+      // d'entrée de la boucle *et* faisait basculer tout l'écran en mode Découpe.
       const key = e.key.toUpperCase();
       for (const mode of toolSearchOrder(kind, state.mode)) {
+        if (!canSwitchModeWith(kind, key, mode === state.mode)) continue;
         const tool = toolsFor(mode, kind).find((t) => t.key === key);
         if (tool) {
           e.preventDefault();

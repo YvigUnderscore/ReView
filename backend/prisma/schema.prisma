@@ -877,6 +877,15 @@ model BoardChange {
 // Review : commentaires unifiés (un seul modèle pour tous les types de média)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// États d'un commentaire de review (D1) — couleur et filtre du fil.
+enum CommentState {
+  OPEN
+  WIP
+  QUESTION
+  WONT_FIX
+  RESOLVED
+}
+
 model Comment {
   id                Int         @id @default(autoincrement())
   media             MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
@@ -891,6 +900,13 @@ model Comment {
   cameraState       Json? // viewpoint 3D/splat (position, target, fov…)
   screenshotKey     String? // capture annotée (MinIO)
   attachments       Json? // pièces jointes (clés MinIO)
+  // État du commentaire (D1). `isResolved` reste écrit en parallèle — l'API v1, les
+  // compteurs de notes ouvertes et les filtres existants s'y appuient, exactement comme
+  // `status` accompagne `pipelineStatusId` sur une tâche.
+  //
+  // Un fil de review n'avait que deux états : ouvert ou résolu. « En cours », « question »
+  // et « ne sera pas corrigé » se disaient dans le texte, donc nulle part de lisible.
+  state             CommentState @default(OPEN)
   isResolved        Boolean     @default(false)
   resolvedBy        User?       @relation("CommentResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
   resolvedById      Int?

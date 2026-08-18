@@ -9,7 +9,6 @@ import {
   PencilLine,
   Play,
   Scissors,
-  SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
@@ -66,6 +65,11 @@ const SPATIAL_MODES: ReviewMode[] = [
   },
 ];
 
+/**
+ * Une image n'a pas de quatrième mode (D1). « Ajuster » n'exposait qu'une pipette et un
+ * zoom, alors que son aide promettait exposition, gamma et canaux : un mode entier pour
+ * deux outils déjà présents ailleurs, et une promesse que rien ne tenait.
+ */
 function mediaModes(kind: MediaKind): ReviewMode[] {
   const video = kind === 'VIDEO';
   return [
@@ -87,19 +91,16 @@ function mediaModes(kind: MediaKind): ReviewMode[] {
       icon: Columns2,
       hintKey: 'mode.compare.hint',
     },
-    video
-      ? {
-          value: 'edit',
-          labelKey: 'mode.trim',
-          icon: Scissors,
-          hintKey: 'mode.trim.hint',
-        }
-      : {
-          value: 'edit',
-          labelKey: 'mode.adjust',
-          icon: SlidersHorizontal,
-          hintKey: 'mode.adjust.hint',
-        },
+    ...(video
+      ? [
+          {
+            value: 'edit' as const,
+            labelKey: 'mode.trim' as const,
+            icon: Scissors,
+            hintKey: 'mode.trim.hint' as const,
+          },
+        ]
+      : []),
   ];
 }
 

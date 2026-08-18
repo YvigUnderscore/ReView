@@ -2,15 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Reply, Camera, PenLine, Film, Pencil, Trash2, Check, CheckCircle2, RotateCcw } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { Reply, Pencil, Trash2, Check, CheckCircle2, RotateCcw } from 'lucide-react';
 import Avatar from '../Avatar';
 import ReplyComposer from './ReplyComposer';
 import CommentReactions from './CommentReactions';
 import CommentAttachmentList from './CommentAttachmentList';
 import { highlightMentions } from './mentions';
+import CommentMeta from './CommentMeta';
+import { STATE_CARD_CLASS, isClosed, stateOf, toggleState, type CommentState } from './commentState';
+import { useDeleteComment, useEditComment, useSetCommentState } from '../../lib/commentsApi';
 import type { ReviewComment } from '../../types/api';
-import { intlLocale, useT } from '../../i18n';
+import { useT } from '../../i18n';
 
 export interface CommentItemProps {
   comment: ReviewComment;
@@ -51,14 +53,15 @@ export default function CommentItem({
   // Résolution (32.A) : auteur ou superviseur/admin, sur les commentaires racine.
   const canResolve = !isReply && (isAuthor || isManager);
 
-  const toggleResolved = async () => {
-    try {
-      await api.patch(`/api/comments/${c.id}`, { isResolved: !c.isResolved });
-      reload();
-    } catch {
-      /* ignore */
-    }
-  };
+  // Les mutations passaient par un `catch {}` vide : sans droit ou sans réseau, le bouton
+  // ne produisait rien du tout — ni erreur, ni changement (D1).
+  const setState = useSetCommentState(mediaObjectId);
+  const edit = useEditComment(mediaObjectId);
+  const del = useDeleteComment(mediaObjectId);
+  const state = stateOf(c);
+
+  const applyState = (next: CommentState) =>
+    setState.mutate({ id: c.id, state: next }, { onSuccess: () => reload() });
 
   const startEdit = () => {
     // Édition en texte brut (le HTML stocké provient d'une saisie texte)
@@ -67,23 +70,17 @@ export default function CommentItem({
     setEditText(tmp.textContent ?? '');
     setEditing(true);
   };
-  const saveEdit = async () => {
-    try {
-      await api.patch(`/api/comments/${c.id}`, { content: editText });
-      setEditing(false);
-      reload();
-    } catch {
-      /* ignore */
-    }
-  };
-  const remove = async () => {
-    try {
-      await api.del(`/api/comments/${c.id}`);
-      reload();
-    } catch {
-      /* ignore */
-    }
-  };
+  const saveEdit = () =>
+    edit.mutate(
+      { id: c.id, content: editText },
+      {
+        onSuccess: () => {
+          setEditing(false);
+          reload();
+        },
+      },
+    );
+  const remove = () => del.mutate(c.id, { onSuccess: () => reload() });
 
   const hasAnnotation = Array.isArray(c.annotation) && c.annotation.length > 0;
   const selected = selectedId === c.id;
@@ -108,13 +105,36 @@ export default function CommentItem({
       className={
         isReply
           ? 'flex gap-2.5'
-          : `group flex gap-2.5 rounded-lg border p-2.5 transition-colors ${c.isResolved ? 'opacity-70' : ''} ${
+          : `group relative flex gap-2.5 rounded-lg border p-2.5 transition-colors ${
+              isClosed(state) ? 'opacity-70' : ''
+            } ${
               selected
                 ? 'border-primary/60 bg-primary/[0.06] shadow-sm'
-                : `border-border/60 bg-secondary/30 ${selectable ? 'cursor-pointer hover:border-border hover:bg-secondary/60' : ''}`
+                : `${STATE_CARD_CLASS[state]} ${selectable ? 'cursor-pointer hover:border-border hover:bg-secondary/60' : ''}`
             }`
       }
     >
+      {/* Le bouton de résolution vit dans le coin haut droit de la carte : dans la rangée
+          d'actions, il se perdait entre « répondre » et « modifier ». Les autres états
+          passent par le clic droit — cinq boutons par carte ne se lisent pas. */}
+      {canResolve && (
+        <button
+          onClick={(e) => {
+            stop(e);
+            applyState(toggleState(state));
+          }}
+          disabled={setState.isPending}
+          title={state === 'RESOLVED' ? t('comment.reopen') : t('comment.markResolved')}
+          aria-label={state === 'RESOLVED' ? t('comment.reopen') : t('comment.markResolved')}
+          className={`absolute right-1.5 top-1.5 rounded p-1 transition-opacity hover:bg-secondary ${
+            state === 'RESOLVED'
+              ? 'text-success'
+              : 'text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+          }`}
+        >
+          {state === 'RESOLVED' ? <RotateCcw size={13} /> : <CheckCircle2 size={14} />}
+        </button>
+      )}
       <Avatar
         seed={c.author?.id ?? c.guestName ?? 'g'}
         initials={c.author?.initials ?? (c.guestName ?? '?').slice(0, 2).toUpperCase()}
@@ -122,52 +142,7 @@ export default function CommentItem({
         size={isReply ? 24 : 30}
       />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-sm font-medium">
-            {c.author?.displayName ?? c.author?.name ?? c.guestName ?? t('comments.anonymous')}
-          </span>
-          <span className="text-2xs text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
-          {c.isEdited && (
-            <span className="text-2xs italic text-muted-foreground">{t('common.modified')}</span>
-          )}
-          {c.isResolved && (
-            <span
-              title={
-                c.resolvedBy
-                  ? t('comment.resolvedBy', {
-                      name: c.resolvedBy.displayName ?? c.resolvedBy.name ?? '?',
-                      date: c.resolvedAt ? new Date(c.resolvedAt).toLocaleString(intlLocale()) : '',
-                    })
-                  : t('comments.resolved')
-              }
-              className="inline-flex items-center gap-1 rounded bg-success/15 px-1.5 py-0.5 text-xs text-success"
-            >
-              <CheckCircle2 size={10} /> {t('comments.resolved')}
-            </span>
-          )}
-          {/* Badges indicateurs : la carte entière est cliquable pour tout restaurer. */}
-          {c.timestamp != null && (
-            <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 font-mono text-xs text-primary">
-              <Film size={10} /> F{startFrame + Math.round(c.timestamp * fps)}
-            </span>
-          )}
-          {c.cameraState != null && (
-            <span
-              title={t('review.cameraViewSaved')}
-              className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground"
-            >
-              <Camera size={11} />
-            </span>
-          )}
-          {hasAnnotation && (
-            <span
-              title={t('comment.annotationAttached')}
-              className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground"
-            >
-              <PenLine size={11} />
-            </span>
-          )}
-        </div>
+        <CommentMeta comment={c} state={state} fps={fps} startFrame={startFrame} />
 
         {editing ? (
           <div role="presentation" onClick={stop} className="mt-1">
@@ -218,19 +193,6 @@ export default function CommentItem({
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               <Reply size={13} /> {t('comments.reply2')}
-            </button>
-          )}
-          {canResolve && (
-            <button
-              onClick={(e) => {
-                stop(e);
-                void toggleResolved();
-              }}
-              title={c.isResolved ? t('comment.reopen') : t('comment.markResolved')}
-              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              {c.isResolved ? <RotateCcw size={12} /> : <CheckCircle2 size={13} />}
-              {!c.isResolved && t('comment.resolve')}
             </button>
           )}
           {canEdit && !editing && (

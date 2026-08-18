@@ -15,16 +15,21 @@ import { panelsFor } from './panels';
 import { toolSearchOrder, toolsFor, viewActionsFor } from './tools';
 
 describe('modes', () => {
-  it('donne quatre modes à chaque type de média', () => {
+  it('ouvre chaque type de média sur l’exploration', () => {
     for (const kind of ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'] as const) {
-      expect(modesFor(kind)).toHaveLength(4);
       expect(modesFor(kind)[0].value).toBe('explore');
     }
   });
 
-  it('distingue Découper (vidéo) d’Ajuster (image)', () => {
+  it('donne un quatrième mode à tout le monde sauf à l’image (D1)', () => {
+    // « Ajuster » n'exposait qu'une pipette et un zoom, alors que son aide promettait
+    // exposition, gamma et canaux : le mode entier a été retiré.
+    expect(modesFor('VIDEO')).toHaveLength(4);
+    expect(modesFor('MODEL_3D')).toHaveLength(4);
+    expect(modesFor('SPLAT')).toHaveLength(4);
+    expect(modesFor('IMAGE')).toHaveLength(3);
     expect(modesFor('VIDEO')[3].labelKey).toBe('mode.trim');
-    expect(modesFor('IMAGE')[3].labelKey).toBe('mode.adjust');
+    expect(modesFor('IMAGE').map((m) => m.value)).not.toContain('edit');
   });
 
   it('donne les mêmes modes au modèle 3D et au splat', () => {
@@ -34,7 +39,7 @@ describe('modes', () => {
   it('la bascule ne liste pas Annoter, qui reste un mode valide', () => {
     for (const kind of ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'] as const) {
       expect(switcherModesFor(kind).map((m) => m.value)).not.toContain('annotate');
-      expect(switcherModesFor(kind)).toHaveLength(3);
+      expect(switcherModesFor(kind)).toHaveLength(kind === 'IMAGE' ? 2 : 3);
       // `reconcileChrome` valide contre la liste complète : l'annotation s'arme ailleurs.
       expect(modesFor(kind).map((m) => m.value)).toContain('annotate');
     }

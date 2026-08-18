@@ -239,7 +239,12 @@ export interface ReviewComment {
   cameraState: unknown;
   annotation: unknown;
   isEdited: boolean;
+  /** État du fil (D1) ; absent sur les commentaires antérieurs — voir `stateOf`. */
+  state?: 'OPEN' | 'WIP' | 'QUESTION' | 'WONT_FIX' | 'RESOLVED' | null;
   isResolved: boolean;
+  /** Note visible du partage client (32) : acceptée par l'API, pilotée par rien avant D1. */
+  isVisibleToClient?: boolean;
+  assigneeId?: number | null;
   resolvedBy?: AuthorRef | null;
   resolvedAt?: string | null;
   attachments?: CommentAttachment[];

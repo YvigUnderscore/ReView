@@ -38,7 +38,15 @@ vi.mock('../lib/userView', () => ({
   ),
 }));
 
-import { create, extractMentionTokens, listMontage, listThread, share, update } from './CommentService';
+import {
+  create,
+  extractMentionTokens,
+  listMontage,
+  listThread,
+  resolutionOf,
+  share,
+  update,
+} from './CommentService';
 import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
@@ -289,5 +297,26 @@ describe('retours de montage (Phase 46)', () => {
     } as never);
     await expect(share(other, 3, 1)).rejects.toMatchObject({ statusCode: 403 });
     await expect(share(supervisor, 3, 1)).resolves.toBeTruthy();
+  });
+});
+
+describe('resolutionOf (D1)', () => {
+  it('déduit le booléen de l’état — un fil résolu ne doit pas rester compté ouvert', () => {
+    expect(resolutionOf('RESOLVED', undefined)).toEqual({ state: 'RESOLVED', isResolved: true });
+    expect(resolutionOf('WIP', undefined)).toEqual({ state: 'WIP', isResolved: false });
+    expect(resolutionOf('WONT_FIX', undefined)).toEqual({ state: 'WONT_FIX', isResolved: false });
+  });
+
+  it('déduit l’état du booléen, pour l’API v1 et les anciens clients', () => {
+    expect(resolutionOf(undefined, true)).toEqual({ state: 'RESOLVED', isResolved: true });
+    expect(resolutionOf(undefined, false)).toEqual({ state: 'OPEN', isResolved: false });
+  });
+
+  it('laisse l’état intact quand ni l’un ni l’autre n’est envoyé', () => {
+    expect(resolutionOf(undefined, undefined)).toEqual({});
+  });
+
+  it('fait foi sur l’état quand les deux arrivent — c’est lui que l’écran pilote', () => {
+    expect(resolutionOf('OPEN', true)).toEqual({ state: 'OPEN', isResolved: false });
   });
 });

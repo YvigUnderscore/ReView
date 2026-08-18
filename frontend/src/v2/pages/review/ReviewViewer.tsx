@@ -17,7 +17,6 @@ import type { useModel3DThree } from './three/useModel3DThree';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import type { SplatViewer } from './splat/useSplat';
 import ReviewAnnotationBar from './ReviewAnnotationBar';
-import VersionAssets from './VersionAssets';
 import Model3DReview from './Model3DReview';
 import SplatReview from './splat/SplatReview';
 import VideoWipeOverlay from './VideoWipeOverlay';
@@ -267,8 +266,8 @@ export default function ReviewViewer({
         />
       )}
 
-      {/* Assets de la version courante, tous types : le passage d'un livrable à l'autre. */}
-      {data && <VersionAssets versionId={data.media.versionId} mediaId={data.media.id} />}
+      {/* Les assets de la version vivent dans le tiroir « pellicule » du chrome (D1) :
+          ils étaient rendus ici *et* là, deux fois sur le même écran. */}
     </section>
   );
 }

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Fragment, type ReactNode } from 'react';
-import { Link2, ListTodo } from 'lucide-react';
+import { Fragment, useState, type ReactNode } from 'react';
+import { Eye, EyeOff, Link2, ListTodo } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
@@ -10,6 +10,15 @@ import CommentItem from './comments/CommentItem';
 import { markerSections } from './comments/markerSections';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
 import { commentLink } from '../pages/review/deepLink';
+import {
+  COMMENT_STATES,
+  STATE_DOT_CLASS,
+  STATE_LABEL_KEY,
+  matchesFilter,
+  stateOf,
+  type CommentState,
+} from './comments/commentState';
+import { useSetCommentState, useSetCommentVisibility } from '../lib/commentsApi';
 import type { ReviewComment, TimelineMarker } from '../types/api';
 import { useT } from '../i18n';
 
@@ -53,7 +62,12 @@ export default function ReviewComments({
 }) {
   const t = useT();
   const navigate = useNavigate();
-  const canCreateTask = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
+  const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
+  const canCreateTask = isManager;
+  // Filtre du fil (D1) : sur une review chargée, on veut lire ce qui reste ouvert.
+  const [filter, setFilter] = useState<CommentState | null>(null);
+  const setState = useSetCommentState(mediaObjectId);
+  const setVisibility = useSetCommentVisibility(mediaObjectId);
 
   // Lien profond (32.E) : URL de la review courante ciblant ce commentaire.
   const copyLink = (c: ReviewComment) =>
@@ -97,6 +111,28 @@ export default function ReviewComments({
       </ContextMenuTrigger>
       <ContextMenuContent>
         {extraActions?.(c)}
+        {/* Les états passent par le clic droit : cinq boutons par carte ne se lisent pas. */}
+        {COMMENT_STATES.filter((s) => s !== stateOf(c)).map((s) => (
+          <ContextMenuItem
+            key={s}
+            onSelect={() => setState.mutate({ id: c.id, state: s }, { onSuccess: reload })}
+          >
+            <span className={`h-2 w-2 rounded-full ${STATE_DOT_CLASS[s]}`} /> {t(STATE_LABEL_KEY[s])}
+          </ContextMenuItem>
+        ))}
+        {isManager && (
+          <ContextMenuItem
+            onSelect={() =>
+              setVisibility.mutate(
+                { id: c.id, isVisibleToClient: !c.isVisibleToClient },
+                { onSuccess: reload },
+              )
+            }
+          >
+            {c.isVisibleToClient ? <EyeOff size={14} /> : <Eye size={14} />}{' '}
+            {c.isVisibleToClient ? t('comment.hideFromClient') : t('comment.showToClient')}
+          </ContextMenuItem>
+        )}
         <ContextMenuItem onSelect={() => copyLink(c)}>
           <Link2 size={14} /> {t('comments.copyLink')}
         </ContextMenuItem>
@@ -109,10 +145,45 @@ export default function ReviewComments({
     </ContextMenu>
   );
 
+  const visible = comments.filter((c) => matchesFilter(c, filter));
+
   return (
     <div className="space-y-2">
+      {comments.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1">
+          <button
+            onClick={() => setFilter(null)}
+            className={`rounded-full px-2 py-0.5 text-2xs transition-colors ${
+              filter === null ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t('comments.filter.all')}
+          </button>
+          {COMMENT_STATES.map((s) => {
+            const count = comments.filter((c) => stateOf(c) === s).length;
+            if (count === 0) return null;
+            return (
+              <button
+                key={s}
+                onClick={() => setFilter(filter === s ? null : s)}
+                className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs transition-colors ${
+                  filter === s
+                    ? 'bg-secondary text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${STATE_DOT_CLASS[s]}`} />
+                {t(STATE_LABEL_KEY[s])} {count}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {comments.length === 0 && <p className="text-sm text-muted-foreground">{t('comments.empty')}</p>}
-      {markerSections(comments, markers ?? [], fps).map((s) =>
+      {comments.length > 0 && visible.length === 0 && (
+        <p className="text-sm text-muted-foreground">{t('comments.filter.none')}</p>
+      )}
+      {markerSections(visible, markers ?? [], fps).map((s) =>
         s.marker === null ? (
           <Fragment key="head">{s.comments.map(renderComment)}</Fragment>
         ) : (

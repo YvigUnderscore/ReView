@@ -948,6 +948,7 @@
     "other": "{count} ouverts"
   },
   "comments.send": "Envoyer",
+  "comments.filter.none": "Aucun commentaire dans cet état.",
   "decision.current": "Décision courante :",
   "decision.set": "Poser la décision",
   "project.burninInherit": "Ce projet hérite du template studio (Admin → Diffusion).",
@@ -2162,6 +2163,13 @@
     "other": "{count} images de référence jointes"
   },
   "comment.resolvedBy": "Résolu par {name} le {date}",
+  "comment.state.open": "Ouvert",
+  "comment.state.wip": "En cours",
+  "comment.state.question": "Question",
+  "comment.state.wontFix": "Ne sera pas corrigé",
+  "comment.state.resolved": "Résolu",
+  "comment.showToClient": "Montrer au client",
+  "comment.hideFromClient": "Masquer au client",
   "settings.accentColour": "Couleur d’accent",
   "settings.invalidNumber": "Valeur invalide (nombre attendu)",
   "ctx.finishAnnotation": "Terminer l’annotation",

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Router, type Request } from 'express';
+import { CommentState } from '@prisma/client';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
@@ -110,6 +111,8 @@ router.patch(
     params: idParam,
     body: z.object({
       content: z.string().min(1).max(10000).optional(),
+      // État du fil (D1) ; `isResolved` reste accepté pour l'API v1 et les anciens clients.
+      state: z.nativeEnum(CommentState).optional(),
       isResolved: z.boolean().optional(),
       isVisibleToClient: z.boolean().optional(),
       assigneeId: z.number().int().nullable().optional(),

@@ -99,10 +99,10 @@ export default function ReviewChrome({
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground${
-        // Largeur minimale du workspace — seulement quand le chrome tient toute la page.
-        headerLeft ? ' min-w-[1440px]' : ''
-      }`}
+      // La largeur minimale de 1440 px rendait la review inutilisable sur un portable :
+      // sous ce seuil, toute la page partait en défilement horizontal (D1). Le rail et le
+      // dock se replient désormais d'eux-mêmes, la barre d'en-tête passe à la ligne.
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
     >
       <header className="flex flex-shrink-0 flex-nowrap items-center gap-3 border-b border-border bg-card px-3 py-2">
         {headerLeft && <span className="flex min-w-0 flex-shrink-0 items-center gap-2">{headerLeft}</span>}
