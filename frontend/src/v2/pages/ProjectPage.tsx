@@ -58,10 +58,6 @@ export default function ProjectPage() {
   // — back/forward navigateur cohérents (10.A6).
   const tab = searchParams.get('tab') ?? 'overview';
   const setTab = (t: string) => setSearchParams(t === 'overview' ? {} : { tab: t });
-  // La séquence ouverte (accordéon) vit dans l'URL. Un plan, lui, a sa page.
-  const focusSeq = searchParams.get('seq') ? Number(searchParams.get('seq')) : null;
-  const setFocusSeq = (id: number | null) =>
-    setSearchParams(id ? { tab: 'sequences', seq: String(id) } : { tab: 'sequences' });
 
   const qc = useQueryClient();
   const { data: projData } = useQuery({
@@ -190,10 +186,7 @@ export default function ProjectPage() {
           sequences={sequences}
           canManage={canManage}
           reload={loadStructure}
-          focusId={focusSeq}
-          onFocus={setFocusSeq}
           nomenclature={nomenclature}
-          pipeline={pipeline}
         />
       )}
       {tab === 'assets' && (

@@ -14,6 +14,8 @@ import { paginationQuery, readPagination } from '../lib/pagination';
 import * as ShotService from '../services/ShotService';
 import * as PipelineLatestService from '../services/PipelineLatestService';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
+import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';
+import { mountTrashRoutes } from './trashRoutes';
 
 const router = Router();
 router.use(authenticate);
@@ -99,7 +101,10 @@ router.patch(
   validate({
     params: idParam,
     body: shotBody.partial().extend({
+      description: z.string().max(2000).nullable().optional(),
       thumbnailKey: z.string().max(512).nullable().optional(),
+      // Statut du plan (C3) : la colonne existait, le PATCH ne l'acceptait pas.
+      pipelineStatusId: z.number().int().nullable().optional(),
       // Omis du montage (Phase 45) : le plan est coupé au montage sans rien perdre.
       omitted: z.boolean().optional(),
     }),
@@ -148,44 +153,16 @@ router.delete(
   },
 );
 
-// DELETE /api/shots/:id — corbeille (soft-delete, admin/superviseur)
-router.delete(
-  '/:id',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: idParam }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    await resolveShotAccess(req, id);
-    await ShotService.softDelete(req.user!.id, id);
-    res.status(204).end();
-  },
-);
-
-// POST /api/shots/:id/restore (admin/superviseur)
-router.post(
-  '/:id/restore',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: idParam }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    await resolveShotAccess(req, id);
-    await ShotService.restore(id);
-    res.status(204).end();
-  },
-);
-
-// DELETE /api/shots/:id/purge — suppression définitive (admin/superviseur)
-router.delete(
-  '/:id/purge',
-  requireRole(Role.ADMIN, Role.SUPERVISOR),
-  validate({ params: idParam }),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    await resolveShotAccess(req, id);
-    await ShotService.purge(req.user!.id, id);
-    res.status(204).end();
-  },
-);
+// Corbeille : mise à la corbeille, restauration, purge — montage partagé (C3).
+mountTrashRoutes(router, {
+  entityType: 'Shot',
+  auditPrefix: 'SHOT',
+  notFoundMessage: 'Shot introuvable',
+  resolveProjectId: resolveProjectIdForShot,
+  softDelete: (_userId, id) => softDeleteShot(id),
+  restore: restoreShot,
+  purge: (_userId, id) => purgeShot(id),
+});
 
 // GET /api/shots/:id/tree — le plan vu comme un dossier, comme un asset (cf. shotOverview).
 router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
@@ -194,6 +171,21 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   if (!projectId) throw notFound('Shot introuvable');
   await assertProjectAccess(req, projectId);
   res.json(await PipelineLatestService.shotOverview(id, req.user!.id));
+});
+
+/**
+ * GET /api/shots/:id/latest — permalien du plan, pendant de celui d'un asset (C3).
+ *
+ * Il manquait, et la page d'un plan proposait quand même « copier le lien » : le bouton
+ * copiait `/assets/<id>/latest`, c'est-à-dire l'adresse d'une entité sans rapport, que le
+ * destinataire ouvrait sans se douter de rien.
+ */
+router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  await resolveShotAccess(req, id);
+  const { latest } = await PipelineLatestService.shotOverview(id, req.user!.id);
+  if (!latest) throw notFound('No published version for this shot', 'NO_PUBLISHED_VERSION');
+  res.json({ latest });
 });
 
 export default router;

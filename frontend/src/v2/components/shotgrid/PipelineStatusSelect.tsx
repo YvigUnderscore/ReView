@@ -28,7 +28,8 @@ export default function PipelineStatusSelect({
   disabled,
 }: {
   projectId: number;
-  scope: 'task' | 'shot';
+  /** Une séquence porte son propre vocabulaire de statuts, distinct de celui d'un plan (C3). */
+  scope: 'task' | 'shot' | 'sequence';
   /** Statut du référentiel, quand l'entité en porte un. */
   statusId: number | null | undefined;
   /** Valeur de l'énumération, seule information disponible sur les entités anciennes. */

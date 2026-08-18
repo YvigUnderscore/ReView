@@ -47,7 +47,8 @@ export const qk = {
   assets: (projectId: number) => ['assets', projectId] as const,
   asset: (id: number) => ['asset', id] as const,
   assetTree: (id: number) => ['asset', id, 'tree'] as const,
-  assetLatest: (id: number) => ['asset', id, 'latest'] as const,
+  /** Permalien d'un asset ou d'un plan (C3) : `/{assets|shots}/:id/latest`. */
+  entityLatest: (entity: 'asset' | 'shot', id: number) => [entity, id, 'latest'] as const,
   tasks: (shotId: number) => ['tasks', shotId] as const,
   /** Le plan vu comme un dossier : départements → tâches → versions. */
   shotTree: (shotId: number) => ['shot', shotId, 'tree'] as const,

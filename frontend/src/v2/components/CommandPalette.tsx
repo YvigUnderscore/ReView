@@ -187,11 +187,7 @@ export default function CommandPalette({
           {results.sequences.length > 0 && (
             <CommandGroup heading={t('nav.sequences')}>
               {results.sequences.map((s) => (
-                <CommandItem
-                  key={s.id}
-                  value={`sequence-${s.id}`}
-                  onSelect={() => go(`/projects/${s.projectId}?tab=sequences&seq=${s.id}`)}
-                >
+                <CommandItem key={s.id} value={`sequence-${s.id}`} onSelect={() => go(`/sequences/${s.id}`)}>
                   <Layers size={15} className="text-muted-foreground" />
                   <span className="truncate">{s.code}</span>
                   <span className="truncate text-xs text-muted-foreground">{s.name}</span>

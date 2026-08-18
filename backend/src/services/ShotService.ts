@@ -3,14 +3,13 @@
 
 import { AssetType, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { softDeleteShot, restoreShot, purgeShot } from '../lib/trash';
 import {
   firstMediaThumbKeyForShot,
   firstMediaThumbKeysForShots,
   effectiveThumbnailUrl,
 } from '../lib/thumbnails';
-import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
+import * as PipelineStatusService from './PipelineStatusService';
 import { badRequest, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
@@ -150,6 +149,8 @@ export async function get(id: number) {
       sequence: true,
       tasks: { orderBy: { order: 'asc' }, include: { assignee: { select: { id: true, name: true } } } },
       assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
+      // Départements traversés (B1) : le panneau de réglages les coche (C3).
+      departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });
   if (!shot) throw notFound('Shot introuvable');
@@ -168,8 +169,11 @@ export interface UpdateShotInput {
   startFrame?: number | null;
   endFrame?: number | null;
   order?: number;
+  description?: string | null;
   thumbnailKey?: string | null;
   settings?: Prisma.InputJsonValue;
+  /** Statut du plan (C3) — jusqu'ici écrit par la seule synchronisation ShotGrid. */
+  pipelineStatusId?: number | null;
   /** Omis du montage (Phase 45) : le plan reste en base, les timelines le sautent. */
   omitted?: boolean;
 }
@@ -177,6 +181,11 @@ export interface UpdateShotInput {
 export async function update(id: number, projectId: number, body: UpdateShotInput) {
   await assertProjectWritable(projectId); // 38.B
   await assertSequenceInProject(body.sequenceId, projectId);
+  // Le statut doit venir du vocabulaire de CE projet : poser l'identifiant d'un statut
+  // importé du site d'un autre projet passerait sans bruit et fausserait la lecture.
+  if (body.pipelineStatusId !== undefined) {
+    await PipelineStatusService.assertBelongsToProject(projectId, 'shot', body.pipelineStatusId);
+  }
   // Si le code ou la séquence change, vérifier l'unicité (code unique par séquence).
   if (body.code !== undefined || body.sequenceId !== undefined) {
     const current = await prisma.shot.findUnique({ where: { id }, select: { code: true, sequenceId: true } });
@@ -223,18 +232,4 @@ export async function attachAsset(shotId: number, projectId: number, body: Attac
 
 export async function detachAsset(shotId: number, assetId: number) {
   await prisma.shot.update({ where: { id: shotId }, data: { assets: { disconnect: { id: assetId } } } });
-}
-
-export async function softDelete(userId: number, id: number) {
-  await softDeleteShot(id);
-  logAudit({ userId, action: 'SHOT_DELETE', entityType: 'Shot', entityId: id });
-}
-
-export async function restore(id: number) {
-  await restoreShot(id);
-}
-
-export async function purge(userId: number, id: number) {
-  await purgeShot(id);
-  logAudit({ userId, action: 'SHOT_PURGE', entityType: 'Shot', entityId: id });
 }

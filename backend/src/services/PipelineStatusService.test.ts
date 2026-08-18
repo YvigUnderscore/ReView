@@ -12,7 +12,7 @@ const { db } = vi.hoisted(() => ({
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 
-import { listForProject, resolveByLegacy } from './PipelineStatusService';
+import { assertBelongsToProject, listForProject, resolveByLegacy } from './PipelineStatusService';
 import { TaskStatus } from '@prisma/client';
 
 const local = [
@@ -127,5 +127,24 @@ describe('resolveByLegacy', () => {
     answers([], local);
     db.shotgridConnection.findUnique.mockResolvedValue(null);
     expect(await resolveByLegacy(448, 'task', TaskStatus.RETAKE)).toBeNull();
+  });
+});
+
+describe('assertBelongsToProject', () => {
+  it('accepte un statut offert au projet', async () => {
+    answers(own);
+    await expect(assertBelongsToProject(461, 'task', 20)).resolves.toBe(20);
+  });
+
+  it('refuse un statut venu du site d’un autre projet', async () => {
+    // Le cas qui compte : un identifiant valide en base, mais étranger à ce projet.
+    answers([], local);
+    db.shotgridConnection.findUnique.mockResolvedValue(null);
+    await expect(assertBelongsToProject(448, 'task', 12)).rejects.toThrow();
+  });
+
+  it('laisse toujours effacer le statut', async () => {
+    await expect(assertBelongsToProject(448, 'shot', null)).resolves.toBeNull();
+    expect(db.pipelineStatus.findMany).not.toHaveBeenCalled();
   });
 });

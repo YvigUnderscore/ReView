@@ -31,6 +31,12 @@ export async function create(body: CreateAssetInput) {
 export interface UpdateAssetInput {
   name?: string;
   type?: AssetType;
+  /**
+   * Libellé exact du type tel que le studio le nomme (C3). La colonne existait depuis la
+   * phase 48 mais n'était écrite que par la synchronisation ShotGrid : un studio autonome
+   * ne pouvait pas nommer ses propres types.
+   */
+  typeLabel?: string | null;
   description?: string | null;
   thumbnailKey?: string | null;
   shotIds?: number[];

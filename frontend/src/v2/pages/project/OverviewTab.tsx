@@ -8,7 +8,6 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import ProjectActivity from '../../components/ProjectActivity';
-import TimelineCard from '../timeline/TimelineCard';
 import { Skeleton } from '../../components/ui/skeleton';
 import type { MediaRef } from '../../types/api';
 import { useT } from '../../i18n';
@@ -56,8 +55,8 @@ export default function OverviewTab({
   return (
     <div>
       <p className="mb-4 text-sm text-muted-foreground">{t('overview.projectDashboard', { name })}</p>
-      {/* Montage du film entier (45) : toutes les séquences bout à bout, tenu à jour seul. */}
-      <TimelineCard projectId={projectId} sequenceId={null} />
+      {/* Le montage du film a rejoint l'onglet Séquences (C3) : c'est là qu'on vient le
+          voir, à côté des séquences qui le composent. */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label={t('sequences.title')} value={counts.sequences} onClick={() => onGo('sequences')} />
         <StatCard label={t('shots.title')} value={counts.shots} onClick={() => onGo('shots')} />

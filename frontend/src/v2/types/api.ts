@@ -98,54 +98,8 @@ export type UserRef = Pick<User, 'id' | 'name'>;
 /** Auteur affiché avec avatar (commentaires, documents). */
 export type AuthorRef = Pick<User, 'id' | 'name' | 'displayName' | 'initials' | 'avatarUrl'>;
 
-// ── Pipeline : projet / séquence / shot / asset ───────────────────────────────
-export interface Project {
-  id: number;
-  name: string;
-  description: string | null;
-  status: ProjectStatus;
-  thumbnailUrl: string | null;
-}
-export type ProjectRef = Pick<Project, 'id' | 'name'>;
-
-export interface Sequence {
-  id: number;
-  code: string;
-  name: string;
-  order: number;
-  /** Override pipeline (résolution/fps) hérité du projet — Phase 18/19. */
-  settings?: PipelineOverride;
-}
-export type SequenceRef = Pick<Sequence, 'id' | 'code' | 'name'>;
-/** GET /api/sequences?projectId= */
-export type SequenceSummary = Sequence & { _count: { shots: number } };
-
-export interface Shot {
-  id: number;
-  code: string;
-  name: string;
-  sequenceId: number | null;
-  startFrame?: number | null;
-  endFrame?: number | null;
-  thumbnailUrl?: string | null;
-  /** Override pipeline (résolution/fps) hérité séquence→projet — Phase 18/19. */
-  settings?: PipelineOverride;
-  /** Coupé au montage (Phase 45) : sauté par les timelines, conservé partout ailleurs. */
-  omitted?: boolean;
-}
-export type ShotRef = Pick<Shot, 'id' | 'code' | 'name'>;
-/** GET /api/shots?projectId= */
-export type ShotSummary = Shot & { _count?: { tasks: number }; assets?: AssetRef[] };
-
-export interface Asset {
-  id: number;
-  name: string;
-  type: AssetType;
-  thumbnailUrl?: string | null;
-}
-export type AssetRef = Pick<Asset, 'id' | 'name' | 'type'>;
-/** GET /api/assets/:id — liens N-N vers shots/séquences. */
-export type AssetDetail = AssetRef & { projectId: number; shots: ShotRef[]; sequences: SequenceRef[] };
+// Entités du pipe (Project, Sequence, Shot, Asset) — module séparé (budget de lignes).
+export * from './entities';
 
 // Tâches (Task, TaskWithAssignee, ChecklistItem, TaskDetail) — module séparé (budget de lignes).
 export * from './task';

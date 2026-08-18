@@ -2,53 +2,51 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Film, ExternalLink } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Film, ExternalLink, Settings2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
-import { qk } from '../../lib/query';
 import FavoriteButton from '../../components/FavoriteButton';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import BatchGenerator from '../../components/BatchGenerator';
-import { EditIcon, DeleteIcon } from '../../components/EntityCard';
 import EmptyState from '../../components/ui/empty-state';
-import { SkeletonRows } from '../../components/ui/skeleton';
-import SequenceEditDialog from './SequenceEditDialog';
+import EntityContextMenu from '../../components/ui/entity-menu';
+import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
+import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
+import { separator, type MenuEntry } from '../../lib/menuSpec';
 import TimelineCard from '../timeline/TimelineCard';
-import { sortByCode, type Nomenclature, type Sequence, type SequenceDetailData } from './projectTypes';
-import type { PipelineSettings } from '../../types/api';
+import { sortByCode, type Nomenclature, type Sequence } from './projectTypes';
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
-/** Onglet Séquences : création en lot (Shots/Sequences creation), édition (dialog), détail en accordéon. */
+/**
+ * Onglet Séquences (C3).
+ *
+ * Le montage du film entier ouvre l'onglet — il vivait dans la vue d'ensemble, loin des
+ * séquences qui le composent. Chaque séquence est devenue une ligne qui mène à sa page :
+ * l'accordéon rechargeait un détail à chaque dépliage, et cachait le montage de la
+ * séquence derrière deux clics. Les réglages s'ouvrent au clic droit, comme partout.
+ */
 export default function SequencesTab({
   projectId,
   sequences,
   canManage,
   reload,
-  focusId = null,
-  onFocus,
   nomenclature,
-  pipeline,
 }: {
   projectId: number;
   sequences: Sequence[];
   canManage: boolean;
   reload: () => Promise<void>;
-  focusId?: number | null;
-  onFocus: (id: number | null) => void;
   nomenclature: Nomenclature;
-  pipeline: PipelineSettings;
 }) {
   const t = useT();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState<Sequence | null>(null);
-  // Accordéon piloté par l'URL (?seq=ID) : back/forward et partage de lien cohérents (10.A6)
-  const open = focusId;
   const [deleting, setDeleting] = useState<Sequence | null>(null);
   const [error, setError] = useState<string | null>(null);
-
+  const sgLinks = useSgLinks(projectId);
   const sorted = sortByCode(sequences);
 
   const createBulk = async (rows: Record<string, string>[]) => {
@@ -59,6 +57,7 @@ export default function SequencesTab({
     toast.success(t('sequences.createdCount', { count: rows.length }));
     await reload();
   };
+
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
@@ -71,11 +70,33 @@ export default function SequencesTab({
     }
   };
 
-  const sgLinks = useSgLinks(projectId);
+  const menuFor = (s: Sequence): MenuEntry[] => [
+    { id: 'open', label: t('sequences.open'), onSelect: () => void navigate(`/sequences/${s.id}`) },
+    ...(canManage
+      ? [
+          separator('manage'),
+          {
+            id: 'settings',
+            label: t('entity.settings.open'),
+            icon: <Settings2 size={14} />,
+            onSelect: () => setEditing(s),
+          },
+          {
+            id: 'delete',
+            label: t('common.moveToTrash'),
+            icon: <Trash2 size={14} />,
+            onSelect: () => setDeleting(s),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      {/* Montage du film entier (45) : toutes les séquences bout à bout, tenu à jour seul. */}
+      <TimelineCard projectId={projectId} sequenceId={null} />
+
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sequences.title')}</h2>
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
@@ -99,14 +120,23 @@ export default function SequencesTab({
       ) : (
         <div className="space-y-1.5">
           {sorted.map((s) => (
-            <div key={s.id} className="rounded-md border border-border bg-card">
-              <div className="group flex items-center justify-between px-3 py-2">
-                <button onClick={() => onFocus(open === s.id ? null : s.id)} className="text-left text-sm">
-                  <span className="font-medium">{s.code}</span> · {s.name}
-                </button>
-                <div className="flex items-center gap-1">
+            <EntityContextMenu key={s.id} entries={menuFor(s)}>
+              <div className="group flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 transition-colors hover:border-primary">
+                <Link to={`/sequences/${s.id}`} className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                  <span className="font-medium group-hover:text-primary">{s.code}</span>
+                  {/* Le nom ne s'affiche que s'il apporte quelque chose : la plupart des
+                      séquences importées portent leur code en guise de nom. */}
+                  {s.name !== s.code && <span className="truncate text-muted-foreground">{s.name}</span>}
+                  <PipelineStatusBadge statusId={s.pipelineStatusId} scope="sequence" size="xs" />
+                  {s._count.shots > 0 && (
+                    <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
+                      {t('sequence.shotCount', { count: s._count.shots })}
+                    </span>
+                  )}
+                </Link>
+                <div className="flex shrink-0 items-center gap-1">
                   <SgSyncDot projectId={projectId} type="sequence" localId={s.id} canRealign={canManage} />
-                  {/* Fiche ShotGrid — uniquement si la sequence y est reliée. */}
+                  {/* Fiche ShotGrid — uniquement si la séquence y est reliée. */}
                   {sgLinks.linkFor('sequence', s.id) && (
                     <a
                       href={sgLinks.linkFor('sequence', s.id)!}
@@ -119,40 +149,22 @@ export default function SequencesTab({
                     </a>
                   )}
                   <FavoriteButton type="SEQUENCE" entityId={s.id} />
-                  {canManage && (
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        onClick={() => setEditing(s)}
-                        title={t('common.edit')}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
-                      >
-                        {EditIcon}
-                      </button>
-                      <button
-                        onClick={() => setDeleting(s)}
-                        title={t('common.delete')}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-secondary"
-                      >
-                        {DeleteIcon}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
-              {open === s.id && <SequenceDetail sequenceId={s.id} projectId={projectId} />}
-            </div>
+            </EntityContextMenu>
           ))}
         </div>
       )}
+
       {editing && (
-        <SequenceEditDialog
-          sequence={editing}
-          pipeline={pipeline}
+        <EntitySettingsDialog
+          kind="sequence"
+          id={editing.id}
+          projectId={projectId}
+          entity={editing}
+          thumbnailUrl={editing.thumbnailUrl}
           onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void reload();
-          }}
+          onSaved={() => void reload()}
         />
       )}
 
@@ -165,68 +177,6 @@ export default function SequencesTab({
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
       />
-    </div>
-  );
-}
-
-// Détail d'une séquence : montage automatique, shots + assets assignés (chargé à l'ouverture)
-function SequenceDetail({ sequenceId, projectId }: { sequenceId: number; projectId: number }) {
-  const t = useT();
-  const { data: seqData } = useQuery({
-    queryKey: qk.sequence(sequenceId),
-    queryFn: () => api.get<{ sequence: SequenceDetailData }>(`/api/sequences/${sequenceId}`),
-  });
-  const data = seqData?.sequence ?? null;
-
-  if (!data)
-    return (
-      <div className="border-t border-border px-3 py-2">
-        <SkeletonRows count={2} />
-      </div>
-    );
-  return (
-    <div className="space-y-3 border-t border-border px-3 py-3">
-      {/* Le montage se met à jour à chaque publication : il est en tête, pas en annexe. */}
-      <TimelineCard projectId={projectId} sequenceId={sequenceId} />
-      <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Shots ({data.shots.length})
-        </div>
-        {data.shots.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t('sequences.noShot')}</p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {data.shots.map((sh) => (
-              <span key={sh.id} className="rounded border border-border bg-background px-2 py-0.5 text-xs">
-                {sh.code} <span className="text-muted-foreground">· {sh.name}</span>
-                {sh.assets.length > 0 && (
-                  <span className="ml-1 text-2xs text-primary">{sh.assets.length} asset(s)</span>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t('sequences.assets', { count: data.assets.length })}
-        </div>
-        {data.assets.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t('sequences.noAsset')}</p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {data.assets.map((a) => (
-              <Link
-                key={a.id}
-                to={`/assets/${a.id}`}
-                className="rounded border border-border bg-background px-2 py-0.5 text-xs hover:border-primary"
-              >
-                {a.name} <span className="text-muted-foreground">· {a.type}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

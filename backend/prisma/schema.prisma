@@ -459,6 +459,10 @@ model Sequence {
   name      String
   code      String
   order     Int       @default(0)
+  // Fiche de la séquence (C3) : un plan et un asset en avaient une, pas une séquence —
+  // elle n'avait ni page ni description à porter.
+  description  String?
+  thumbnailKey String?
   // Réglages pipeline propres (override résolution/fps/frames du projet). JSON.
   settings  Json      @default("{}")
   // Statut de sequence (Phase 48) — ShotGrid en a un, avec sa propre liste de valeurs.
@@ -490,6 +494,9 @@ model Shot {
   order        Int       @default(0)
   // Réglages pipeline propres (override résolution/fps du parent). JSON.
   settings     Json      @default("{}")
+  // Fiche du plan (C3) : un asset en avait une, pas un plan — les notes de brief
+  // n'avaient donc nulle part où vivre.
+  description  String?
   thumbnailKey String?
   // Statut de shot (Phase 48) — ShotGrid en a un (`sg_status_list` sur Shot) ; sans
   // connexion il reste simplement vide.

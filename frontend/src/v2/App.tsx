@@ -26,6 +26,7 @@ import KanbanPage from './pages/KanbanPage';
 import AdminPage from './pages/AdminPage';
 import AssetPage from './pages/AssetPage';
 import ShotPage from './pages/ShotPage';
+import SequencePage from './pages/SequencePage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import TimelinePlayerPage from './pages/TimelinePlayerPage';
 import ProfilePage from './pages/ProfilePage';
@@ -119,10 +120,13 @@ function AppRoutes() {
               <Route path="/projects/:id" element={<ProjectPage />} />
               <Route path="/projects/:id/kanban" element={<KanbanPage />} />
               <Route path="/tasks/:id" element={<TaskPage />} />
+              {/* La séquence a enfin sa page (C3) : c'était un accordéon dans un onglet. */}
+              <Route path="/sequences/:id" element={<SequencePage />} />
               <Route path="/shots/:id" element={<ShotPage />} />
               <Route path="/assets/:id" element={<AssetPage />} />
-              {/* Lien permanent vers l'état le plus avancé de l'asset (Phase 45). */}
+              {/* Lien permanent vers l'état le plus avancé (Phase 45, étendu aux plans en C3). */}
               <Route path="/assets/:id/latest" element={<AssetLatestRedirect />} />
+              <Route path="/shots/:id/latest" element={<AssetLatestRedirect entity="shot" />} />
               <Route path="/review/:mediaId" element={<ReviewPage />} />
               {/* Page du montage (Phase 46) : la review du plan courant + la bande du film. */}
               <Route path="/timelines/:id/play" element={<TimelinePlayerPage />} />

@@ -91,6 +91,26 @@ export async function resolveByLegacy(
   return candidates.find((s) => s.legacyStatus === legacyStatus) ?? null;
 }
 
+/**
+ * Vérifie qu'un statut est bien de ceux qu'on peut poser sur une entité de ce projet (C3).
+ *
+ * Même garde que pour les tâches, étendue aux plans et aux séquences dont le PATCH
+ * n'acceptait tout simplement pas le statut : la valeur ne pouvait venir que de la
+ * synchronisation ShotGrid, et un studio autonome n'avait aucun moyen de la changer.
+ * `null` efface le statut, ce qui est toujours permis.
+ */
+export async function assertBelongsToProject(
+  projectId: number,
+  scope: Scope,
+  statusId: number | null,
+): Promise<number | null> {
+  if (statusId === null) return null;
+  const offered = await listForProject(projectId, scope);
+  const found = offered.find((s) => s.id === statusId);
+  if (!found) throw badRequest('Unknown pipeline status for this project');
+  return found.id;
+}
+
 export async function create(input: StatusInput, projectId: number | null = null): Promise<PipelineStatus> {
   const code = normaliseCode(input.code);
   const existing = await prisma.pipelineStatus.findFirst({
