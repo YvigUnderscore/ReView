@@ -71,7 +71,7 @@ export default function PipelineStatusSelect({
       disabled={disabled}
       onChange={(e) => {
         const next = statuses.find((s) => s.id === Number(e.target.value));
-        if (next) onChange({ statusId: next.id, legacyStatus: (next.legacyStatus ?? 'TODO') as TaskStatus });
+        if (next) onChange({ statusId: next.id, legacyStatus: next.legacyStatus ?? 'TODO' });
       }}
       style={current ? { backgroundColor: `${current.color}22`, color: current.color } : undefined}
       className={`rounded px-1 py-0.5 text-xs ${className}`}

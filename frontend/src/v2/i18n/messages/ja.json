@@ -1354,6 +1354,7 @@
   "shots.createdNamed": "shot「{code}」を作成しました",
   "shots.delete.message": "shot「{code}」とそのタスク・version をごみ箱に移動します。",
   "shots.omitted": "編集でカット済み",
+  "shots.searchPlaceholder": "shot のコードまたは名前…",
   "shot.newTask": "+ タスク",
   "shot.newAsset": "+ Asset を作成",
   "shot.taskFailed": "タスクを作成できません",
@@ -1369,11 +1370,20 @@
   "assets.deleteMany.message": {
     "other": "{count} 件の asset とその version・メディアをごみ箱に移動します。"
   },
+  "assets.searchPlaceholder": "asset 名…",
   "overview.noPublished": "公開済みのメディアはまだありません — 最初の公開でここに現れます。",
   "overview.projectDashboard": "プロジェクト「{name}」のダッシュボード。",
   "csv.taskHint": "（タスクは「|」で区切ります）。既存の shot は無視されます。",
   "kanban.emptyHint": "プロジェクトで shot とタスクを作ると、ここで追えます。カードを別の列にドラッグすると状態が変わります。",
   "kanban.moveFailed": "移動できません",
+  "kanban.searchPlaceholder": "タスクまたは shot…",
+  "kanban.family.todo": "未着手",
+  "kanban.family.progress": "作業中",
+  "kanban.family.review": "review 中",
+  "kanban.family.done": "完了",
+  "kanban.family.blocked": "保留",
+  "kanban.more": { "other": "他 {count} 件" },
+  "kanban.truncated": "{total} 件中 {shown} 件を表示しています。残りはフィルターを絞って確認してください。",
   "login.2faPrompt": "認証アプリのコード（またはバックアップコード）を入力してください。",
   "login.backToLogin": "← ログインに戻る",
   "login.ssoFailed": "SSO ログインに失敗",
@@ -2459,5 +2469,10 @@
   "social.people": "メンバー",
   "social.noMatch": "この検索に一致するものはありません。",
   "sequence.shotCount": { "other": "shot {count} 件" },
-  "sequence.taskCount": { "other": "タスク {count} 件" }
+  "sequence.taskCount": { "other": "タスク {count} 件" },
+  "filters.search": "検索…",
+  "filters.allStatuses": "すべてのステータス",
+  "filters.allDepartments": "すべての部門",
+  "filters.noDepartment": "部門なし",
+  "filters.clear": "フィルターを解除"
 }

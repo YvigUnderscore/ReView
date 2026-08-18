@@ -12,17 +12,24 @@ import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../../compone
 import ConfirmDialog from '../../components/ConfirmDialog';
 import BatchGenerator from '../../components/BatchGenerator';
 import EmptyState from '../../components/ui/empty-state';
-import ShotEditDialog from './ShotEditDialog';
+import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
+import EntityFilters from '../../components/EntityFilters';
+import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
+import { EMPTY_FILTERS, applyFilters } from '../../lib/entityFilters';
+import { usePipelineStatuses } from '../../lib/shotgridApi';
+import { useDepartments } from '../../lib/departmentsApi';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
-import type { PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
 import SgCreationLock from '../../components/shotgrid/SgCreationLock';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
 /**
- * Onglet Shots : création en lot (Shots/Sequences creation), cartes groupées par séquence,
- * détail d'un shot en drawer latéral (10.C1) piloté par l'URL (?shot=ID).
+ * Onglet Shots : création en lot, cartes groupées par séquence, filtres partagés (C4).
+ *
+ * La liste n'avait ni recherche ni filtre : sur un long-métrage — deux mille plans — il
+ * n'existait aucun moyen d'y retrouver quoi que ce soit autrement qu'en faisant défiler.
+ * Les critères et les présélections nommées sont les mêmes qu'au kanban.
  */
 export default function ShotsTab({
   projectId,
@@ -31,7 +38,6 @@ export default function ShotsTab({
   canManage,
   reload,
   nomenclature,
-  pipeline,
 }: {
   projectId: number;
   sequences: Sequence[];
@@ -39,7 +45,6 @@ export default function ShotsTab({
   canManage: boolean;
   reload: () => Promise<void>;
   nomenclature: Nomenclature;
-  pipeline: PipelineSettings;
 }) {
   const t = useT();
   const view = useViewMode(`shots:${projectId}`);
@@ -48,6 +53,9 @@ export default function ShotsTab({
   const [editing, setEditing] = useState<Shot | null>(null);
   const [deleting, setDeleting] = useState<Shot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const { data: statuses = [] } = usePipelineStatuses('shot', projectId);
+  const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
   // Drawer piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
 
@@ -77,13 +85,20 @@ export default function ShotsTab({
     }
   };
 
+  const visible = applyFilters(filters, shots, (shot) => ({
+    text: `${shot.code} ${shot.name}`,
+    statusId: shot.pipelineStatusId,
+    sequenceId: shot.sequenceId,
+  }));
+
   const groups = [
     ...sortedSequences.map((s) => ({
       seq: s,
-      list: shots.filter((sh) => sh.sequenceId === s.id),
+      list: visible.filter((sh) => sh.sequenceId === s.id),
     })),
-    { seq: null as Sequence | null, list: shots.filter((sh) => sh.sequenceId === null) },
-  ].filter((g) => g.list.length > 0 || g.seq);
+    { seq: null as Sequence | null, list: visible.filter((sh) => sh.sequenceId === null) },
+    // Un groupe vide n'apporte rien quand on filtre : il n'y a plus rien à y ranger.
+  ].filter((g) => g.list.length > 0);
 
   const sgLinks = useSgLinks(projectId);
 
@@ -91,7 +106,16 @@ export default function ShotsTab({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('shots.title')}</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <EntityFilters
+            scope={`shots:${projectId}`}
+            value={filters}
+            onChange={setFilters}
+            statuses={statuses.map((s) => ({ value: String(s.id), label: s.name }))}
+            sequences={sortedSequences.map((s) => ({ value: String(s.id), label: s.code }))}
+            departments={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            searchPlaceholder={t('shots.searchPlaceholder')}
+          />
           <ViewToggle contextKey={`shots:${projectId}`} />
         </div>
       </div>
@@ -176,7 +200,10 @@ export default function ShotsTab({
                   }
                   thumbnailUrl={shot.thumbnailUrl}
                   badge={
-                    <SgSyncDot projectId={projectId} type="shot" localId={shot.id} canRealign={canManage} />
+                    <span className="flex items-center gap-1">
+                      <PipelineStatusBadge statusId={shot.pipelineStatusId} scope="shot" size="xs" />
+                      <SgSyncDot projectId={projectId} type="shot" localId={shot.id} canRealign={canManage} />
+                    </span>
                   }
                   favorite={{ type: 'SHOT', entityId: shot.id }}
                   actions={actions}
@@ -189,15 +216,14 @@ export default function ShotsTab({
       ))}
 
       {editing && (
-        <ShotEditDialog
-          shot={editing}
-          sequences={sortedSequences}
-          pipeline={pipeline}
+        <EntitySettingsDialog
+          kind="shot"
+          id={editing.id}
+          projectId={projectId}
+          entity={editing}
+          thumbnailUrl={editing.thumbnailUrl}
           onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void reload();
-          }}
+          onSaved={() => void reload()}
         />
       )}
 

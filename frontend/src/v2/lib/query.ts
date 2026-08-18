@@ -54,6 +54,8 @@ export const qk = {
   shotTree: (shotId: number) => ['shot', shotId, 'tree'] as const,
   /** Toutes les tâches d'un projet, quel que soit leur parent (destination d'upload). */
   projectTasks: (projectId: number) => ['tasks', 'project', projectId] as const,
+  /** Le kanban entier en une requête (C4) — remplace une requête par plan et par asset. */
+  projectBoard: (projectId: number) => ['tasks', 'board', projectId] as const,
   /** Départements applicables à un projet (B1) : les siens, sinon ceux du studio. */
   departments: (projectId: number) => ['departments', projectId] as const,
   task: (id: number) => ['task', id] as const,

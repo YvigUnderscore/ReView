@@ -12,11 +12,13 @@ export interface UserPreferences {
   weeklyReport?: boolean;
   /** Dernière couleur d'annotation choisie en review. */
   annotationColor?: string;
-  /** Vues kanban sauvegardées, clé = projectId (string). */
-  kanbanViews?: Record<string, unknown>;
   /** Surcharges de raccourcis clavier globaux (42.A2) : id d'action → touche. */
   shortcuts?: Record<string, string>;
-  /** Vues de liste sauvegardées (42.A5 — №73), clé = portée de la liste (ex. « reviews »). */
+  /**
+   * Vues de liste sauvegardées (42.A5 — №73), clé = portée de la liste : « reviews »,
+   * « kanban:12 », « shots:12 »… Mécanisme unique depuis C4 — le kanban avait le sien
+   * (`kanbanViews`), incompatible avec celui du reste de l'application.
+   */
   savedViews?: Record<string, SavedView[]>;
   /** Tour d'onboarding vu (42.B — №69) : ne plus l'afficher automatiquement. */
   onboardingSeen?: boolean;

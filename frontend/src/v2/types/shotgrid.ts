@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { TaskStatus } from './api';
 /** Types de l'intégration ShotGrid (Phase 48) — miroir des vues renvoyées par l'API. */
 
 export type SgAuthMode = 'script' | 'user';
@@ -144,5 +145,6 @@ export interface PipelineStatus {
   order: number;
   isDone: boolean;
   isDefault: boolean;
-  legacyStatus: string | null;
+  /** Valeur de l'énumération que ce statut représente — c'est elle qui porte la famille. */
+  legacyStatus: TaskStatus | null;
 }

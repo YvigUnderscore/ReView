@@ -119,6 +119,95 @@ export async function listForProject(
   }));
 }
 
+/** Une carte de kanban, avec tout ce qu'il faut pour la lire, la filtrer et la déplacer. */
+export interface BoardTaskRow {
+  id: number;
+  name: string;
+  type: TaskType;
+  status: TaskStatus;
+  pipelineStatusId: number | null;
+  department: string | null;
+  departmentId: number | null;
+  assignee: { id: number; name: string | null } | null;
+  dueDate: string | null;
+  versionCount: number;
+  parentKind: 'shot' | 'asset';
+  parentId: number;
+  parentLabel: string;
+  sequenceId: number | null;
+}
+
+/**
+ * Toutes les tâches d'un projet, en une requête (C4).
+ *
+ * Le kanban en demandait une par plan **et** une par asset : cent cinquante appels HTTP
+ * à l'ouverture d'un projet moyen, jusqu'à se faire limiter par le serveur. Sur le
+ * long-métrage visé — deux mille plans — c'était irréalisable.
+ *
+ * La limite est explicite et le total est renvoyé : une troncature silencieuse ferait
+ * lire « ce projet a 2000 tâches » à un board qui n'en montre que la moitié.
+ */
+export async function listForBoard(
+  projectId: number,
+  limit = 2000,
+): Promise<{ items: BoardTaskRow[]; total: number; truncated: boolean }> {
+  const where = {
+    OR: [{ shot: { projectId, deletedAt: null } }, { asset: { projectId, deletedAt: null } }],
+  };
+  const [rows, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      orderBy: [{ order: 'asc' }, { name: 'asc' }],
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        status: true,
+        pipelineStatusId: true,
+        department: true,
+        departmentId: true,
+        dueDate: true,
+        assignee: { select: { id: true, name: true } },
+        _count: { select: { versions: true } },
+        shot: { select: { id: true, code: true, sequenceId: true } },
+        asset: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.task.count({ where }),
+  ]);
+
+  const items = rows.flatMap<BoardTaskRow>((t) => {
+    const parent = t.shot
+      ? { kind: 'shot' as const, id: t.shot.id, label: t.shot.code, sequenceId: t.shot.sequenceId }
+      : t.asset
+        ? { kind: 'asset' as const, id: t.asset.id, label: t.asset.name, sequenceId: null }
+        : null;
+    // Une tâche sans parent vivant ne peut pas s'afficher : son plan est en corbeille.
+    if (!parent) return [];
+    return [
+      {
+        id: t.id,
+        name: t.name,
+        type: t.type,
+        status: t.status,
+        pipelineStatusId: t.pipelineStatusId,
+        department: t.department,
+        departmentId: t.departmentId,
+        assignee: t.assignee,
+        dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+        versionCount: t._count.versions,
+        parentKind: parent.kind,
+        parentId: parent.id,
+        parentLabel: parent.label,
+        sequenceId: parent.sequenceId,
+      },
+    ];
+  });
+
+  return { items, total, truncated: total > rows.length };
+}
+
 export interface CreateTaskInput {
   name: string;
   type: TaskType;

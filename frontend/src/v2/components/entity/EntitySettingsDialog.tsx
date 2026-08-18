@@ -11,6 +11,8 @@ import { Textarea } from '../ui/textarea';
 import PipelineStatusSelect from '../shotgrid/PipelineStatusSelect';
 import EntityThumbnailField from './EntityThumbnailField';
 import EntityDepartmentsField from './EntityDepartmentsField';
+import EntityPipelineField from './EntityPipelineField';
+import { formFromOverride, overrideFromForm, type PipelineForm } from '../../pages/project/pipelineForm';
 import { useSetEntityDepartments } from '../../lib/departmentsApi';
 import { useUpdateEntity } from '../../lib/entityApi';
 import {
@@ -23,6 +25,7 @@ import {
   type EntityKind,
   type EntitySource,
 } from './entitySettings';
+import type { PipelineOverride, PipelineSettings } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
 
 /**
@@ -33,6 +36,13 @@ import { useT, type MessageKey } from '../../i18n';
  * de type sur un asset. On ouvre ce panneau au clic droit ou depuis la palette ; il ne
  * montre que les champs que l'entité possède réellement, et n'envoie que ce qui a changé.
  */
+
+/**
+ * Socle de départ du formulaire pipeline, le temps que les réglages du projet arrivent.
+ * Il ne sert qu'à préremplir les champs en mode « personnaliser » ; en mode « hériter »,
+ * ce sont les valeurs réelles du projet qui s'affichent, et l'override envoyé est vide.
+ */
+const PLACEHOLDER_INHERITED: PipelineSettings = { resolution: { width: 1920, height: 1080 }, framerate: 24 };
 
 const TITLE_KEY: Record<EntityKind, MessageKey> = {
   sequence: 'entity.settings.title.sequence',
@@ -46,20 +56,28 @@ export default function EntitySettingsDialog({
   projectId,
   entity,
   thumbnailUrl,
+  sequenceOverride,
   onClose,
   onSaved,
 }: {
   kind: EntityKind;
   id: number;
   projectId: number;
-  entity: EntitySource;
+  entity: EntitySource & { settings?: PipelineOverride };
   thumbnailUrl?: string | null;
+  /** Réglages de la séquence porteuse, dont un plan hérite. */
+  sequenceOverride?: PipelineOverride;
   onClose: () => void;
   onSaved?: () => void;
 }) {
   const t = useT();
   const [initial] = useState(() => formFromEntity(entity));
   const [values, setValues] = useState(initial);
+  // Le socle hérité n'est connu qu'après la requête des réglages du projet ; le formulaire
+  // part donc de l'override lui-même, et `EntityPipelineField` affiche l'hérité réel.
+  const [pipe, setPipe] = useState<PipelineForm>(() =>
+    formFromOverride(entity.settings, PLACEHOLDER_INHERITED),
+  );
   const [error, setError] = useState<string | null>(null);
   const update = useUpdateEntity(kind, id, projectId);
   const setDepartments = useSetEntityDepartments(projectId, ENTITY_SEGMENT[kind], id);
@@ -77,6 +95,11 @@ export default function EntitySettingsDialog({
     }
     setError(null);
     const payload = payloadFromForm(kind, initial, values);
+    // Les réglages pipeline ne partent que si l'entité en possède : un asset n'a ni
+    // résolution ni cadence propres.
+    if (fields.has('pipelineStatusId')) {
+      payload.settings = overrideFromForm(pipe, PLACEHOLDER_INHERITED);
+    }
     try {
       if (Object.keys(payload).length > 0) await update.mutateAsync(payload);
       if (departmentsChanged(initial, values)) await setDepartments.mutateAsync(values.departmentIds);
@@ -174,6 +197,19 @@ export default function EntitySettingsDialog({
                   className="px-2 py-1.5 text-sm"
                 />
               </div>
+            </div>
+          )}
+
+          {fields.has('pipelineStatusId') && (
+            <div className="space-y-1">
+              <Label>{t('pipeline.title')}</Label>
+              <EntityPipelineField
+                projectId={projectId}
+                sequenceOverride={sequenceOverride}
+                form={pipe}
+                onChange={setPipe}
+                idPrefix={`${kind}-${id}`}
+              />
             </div>
           )}
 

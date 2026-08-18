@@ -11,7 +11,7 @@ import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
-import EntityCard, { EntityContainer, DeleteIcon } from '../../components/EntityCard';
+import EntityCard, { EntityContainer, DeleteIcon, EditIcon } from '../../components/EntityCard';
 import type { EntityItemAction } from '../../components/EntityCard';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import SelectionBar from '../../components/ui/selection-bar';
@@ -22,12 +22,21 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import EntityFilters from '../../components/EntityFilters';
+import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
+import { EMPTY_FILTERS, applyFilters } from '../../lib/entityFilters';
+import { useDepartments } from '../../lib/departmentsApi';
 import { ASSET_TYPES, type Asset } from './projectTypes';
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
-/** Onglet Assets réutilisables : création, cartes, assignation shots/séquences. */
+/**
+ * Onglet Assets réutilisables : création, cartes, assignation, filtres partagés (C4).
+ *
+ * La liste n'avait ni recherche ni filtre — mille assets sur un long-métrage, à faire
+ * défiler. Les critères et les présélections nommées sont ceux du kanban et des plans.
+ */
 export default function AssetsTab({
   projectId,
   assets,
@@ -49,8 +58,15 @@ export default function AssetsTab({
   const [deleting, setDeleting] = useState<Asset | null>(null);
   const [assigning, setAssigning] = useState<Asset | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [editing, setEditing] = useState<Asset | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const sel = useMultiSelect(assets.map((a) => a.id));
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const { data: departments = [] } = useDepartments(projectId, projectId > 0);
+
+  const visible = applyFilters(filters, assets, (a) => ({ text: a.name, type: a.type }));
+  // La sélection ne porte que sur ce qui est affiché : une action de masse ne doit jamais
+  // atteindre des lignes que le filtre a écartées de la vue.
+  const sel = useMultiSelect(visible.map((a) => a.id));
 
   const confirmBulkDelete = async () => {
     try {
@@ -94,7 +110,15 @@ export default function AssetsTab({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('assets.title')}</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <EntityFilters
+            scope={`assets:${projectId}`}
+            value={filters}
+            onChange={setFilters}
+            departments={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            types={ASSET_TYPES}
+            searchPlaceholder={t('assets.searchPlaceholder')}
+          />
           {canManage && (
             <Button size="sm" onClick={() => setCreating(true)}>
               <Plus size={16} /> {t('common.create')}
@@ -157,9 +181,14 @@ export default function AssetsTab({
         />
       ) : (
         <EntityContainer view={view}>
-          {assets.map((a) => {
+          {visible.map((a) => {
             const manageActions: EntityItemAction[] = canManage
               ? [
+                  {
+                    icon: EditIcon,
+                    label: t('entity.settings.open'),
+                    onClick: () => setEditing(a),
+                  },
                   {
                     icon: <Link2 size={15} />,
                     label: t('assets.assign'),
@@ -179,7 +208,7 @@ export default function AssetsTab({
                 to={`/assets/${a.id}`}
                 view={view}
                 title={a.name}
-                subtitle={a.type}
+                subtitle={a.typeLabel ?? a.type}
                 thumbnailUrl={a.thumbnailUrl}
                 badge={<SgSyncDot projectId={projectId} type="asset" localId={a.id} canRealign={canManage} />}
                 selection={
@@ -243,6 +272,17 @@ export default function AssetsTab({
         onConfirm={confirmBulkDelete}
         onCancel={() => setBulkDeleting(false)}
       />
+      {editing && (
+        <EntitySettingsDialog
+          kind="asset"
+          id={editing.id}
+          projectId={projectId}
+          entity={editing}
+          thumbnailUrl={editing.thumbnailUrl}
+          onClose={() => setEditing(null)}
+          onSaved={() => void reload()}
+        />
+      )}
       {assigning && (
         <AssetAssignDialog
           assetId={assigning.id}

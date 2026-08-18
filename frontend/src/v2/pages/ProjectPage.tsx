@@ -95,12 +95,6 @@ export default function ProjectPage() {
     padding: 3,
     step: 10,
   };
-  // Pipeline projet résolu (résolution/cadence) — socle d'héritage pour séquences/shots.
-  const pipeline = {
-    resolution: settings?.resolution ?? { width: 1920, height: 1080 },
-    framerate: settings?.framerate ?? 24,
-  };
-
   // Une connexion ShotGrid change ce que la page propose : onglet dédié, liens vers le
   // site, verrou de création. Sans elle, rien de tout cela n'apparaît.
   const { data: sgConnection } = useSgConnection(projectId);
@@ -177,7 +171,6 @@ export default function ProjectPage() {
           canManage={canManage}
           reload={loadStructure}
           nomenclature={nomenclature}
-          pipeline={pipeline}
         />
       )}
       {tab === 'sequences' && (

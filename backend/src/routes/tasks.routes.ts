@@ -25,6 +25,27 @@ async function resolveTaskAccess(req: Request, id: number): Promise<number> {
   return projectId;
 }
 
+/**
+ * GET /api/tasks/board?projectId= — toutes les tâches du projet, en un appel (C4).
+ *
+ * Déclarée avant `/:id` pour que « board » ne soit pas lu comme un identifiant.
+ */
+router.get(
+  '/board',
+  validate({
+    query: z.object({
+      projectId: z.coerce.number().int(),
+      limit: z.coerce.number().int().min(1).max(5000).optional(),
+    }),
+  }),
+  async (req, res) => {
+    const projectId = Number(req.query.projectId);
+    await assertProjectAccess(req, projectId);
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    res.json(await TaskService.listForBoard(projectId, limit));
+  },
+);
+
 // GET /api/tasks?shotId=X | ?assetId=Y — paginé (10.D1)
 router.get(
   '/',

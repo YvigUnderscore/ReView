@@ -1354,6 +1354,7 @@
   "shots.createdNamed": "shot “{code}”을(를) 만들었습니다",
   "shots.delete.message": "shot “{code}”과(와) 해당 작업 및 version이 휴지통으로 이동합니다.",
   "shots.omitted": "편집에서 제외됨",
+  "shots.searchPlaceholder": "shot 코드 또는 이름…",
   "shot.newTask": "+ 작업",
   "shot.newAsset": "+ Asset 만들기",
   "shot.taskFailed": "작업을 만들 수 없습니다",
@@ -1369,11 +1370,20 @@
   "assets.deleteMany.message": {
     "other": "asset {count}개와 해당 version 및 미디어가 휴지통으로 이동합니다."
   },
+  "assets.searchPlaceholder": "asset 이름…",
   "overview.noPublished": "아직 게시된 미디어가 없습니다 — 처음 게시되면 여기에 표시됩니다.",
   "overview.projectDashboard": "프로젝트 “{name}”의 대시보드입니다.",
   "csv.taskHint": "(작업은 「|」로 구분). 이미 있는 shot은 건너뜁니다.",
   "kanban.emptyHint": "프로젝트에서 shot과 작업을 만들면 여기서 추적할 수 있습니다. 카드를 다른 열로 끌면 상태가 바뀝니다.",
   "kanban.moveFailed": "옮길 수 없습니다",
+  "kanban.searchPlaceholder": "작업 또는 shot…",
+  "kanban.family.todo": "할 일",
+  "kanban.family.progress": "진행 중",
+  "kanban.family.review": "review 중",
+  "kanban.family.done": "완료",
+  "kanban.family.blocked": "보류",
+  "kanban.more": { "other": "외 {count}개" },
+  "kanban.truncated": "전체 {total}개 중 {shown}개를 표시합니다. 나머지는 필터를 좁혀 확인하세요.",
   "login.2faPrompt": "인증 앱의 코드(또는 백업 코드)를 입력하세요.",
   "login.backToLogin": "← 로그인으로 돌아가기",
   "login.ssoFailed": "SSO 로그인 실패",
@@ -2459,5 +2469,10 @@
   "social.people": "사람",
   "social.noMatch": "검색 결과가 없습니다.",
   "sequence.shotCount": { "other": "shot {count}개" },
-  "sequence.taskCount": { "other": "작업 {count}개" }
+  "sequence.taskCount": { "other": "작업 {count}개" },
+  "filters.search": "검색…",
+  "filters.allStatuses": "모든 상태",
+  "filters.allDepartments": "모든 부서",
+  "filters.noDepartment": "부서 없음",
+  "filters.clear": "필터 지우기"
 }

@@ -5,7 +5,8 @@ import { useDraggable } from '@dnd-kit/core';
 import { Link } from 'react-router-dom';
 import Avatar from '../../components/Avatar';
 import { TASK_STATUS_BAR } from '../../lib/taskStatus';
-import { initialsFrom, type BoardTask } from './kanbanTypes';
+import { initialsFrom } from '../../lib/initials';
+import type { BoardTask } from './kanbanTypes';
 
 /** Contenu visuel d'une carte (partagé entre la carte draggable et le DragOverlay). */
 export function KanbanCardBody({ task, dragging }: { task: BoardTask; dragging?: boolean }) {
