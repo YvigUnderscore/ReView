@@ -46,9 +46,15 @@ test('parcours critique : auth → projet → shot → tâche → upload → rev
   await expect(page.getByRole('heading', { name: /^(Projects|Projets)$/ }).first()).toBeVisible();
 
   // ── 2) Créer un projet (bouton « Create » → dialog) et l'ouvrir ─────────────
-  await page.getByRole('button', { name: /^(Create|Créer)$/ }).first().click();
+  await page
+    .getByRole('button', { name: /^(Create|Créer)$/ })
+    .first()
+    .click();
   await page.getByPlaceholder(/My project|Mon projet/).fill(PROJECT);
-  await page.getByRole('dialog').getByRole('button', { name: /^(Create|Créer)$/ }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^(Create|Créer)$/ })
+    .click();
   await page
     .locator('main')
     .getByRole('link', { name: new RegExp(PROJECT) })
