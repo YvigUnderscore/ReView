@@ -56,12 +56,12 @@ describe('parsePipelinePath', () => {
   });
 
   it('refuse un chemin vide, trop profond, ou une branche incomplète', () => {
-    expect(() => parsePipelinePath('')).toThrow(/vide/i);
-    expect(() => parsePipelinePath('///')).toThrow(/vide/i);
-    expect(() => parsePipelinePath('a/b/c/d/e/f/g')).toThrow(/profond/i);
+    expect(() => parsePipelinePath('')).toThrow(/empty path/i);
+    expect(() => parsePipelinePath('///')).toThrow(/empty path/i);
+    expect(() => parsePipelinePath('a/b/c/d/e/f/g')).toThrow(/too deep/i);
     expect(() => parsePipelinePath('PROJ/assets')).toThrow(/incomplet/i);
     expect(() => parsePipelinePath('PROJ/shots')).toThrow(/incomplet/i);
-    expect(() => parsePipelinePath(`PROJ/${'x'.repeat(201)}`)).toThrow(/trop long/i);
+    expect(() => parsePipelinePath(`PROJ/${'x'.repeat(201)}`)).toThrow(/too long/i);
   });
 });
 

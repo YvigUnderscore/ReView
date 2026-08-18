@@ -165,7 +165,7 @@ async function buildSegment(
 
 async function handle(timelineId: number): Promise<void> {
   const plan = await exportPlan(timelineId);
-  if (plan.segments.length === 0) throw new Error(`Montage ${timelineId} sans plan à exporter`);
+  if (plan.segments.length === 0) throw new Error(`Timeline ${timelineId} has no shot to export`);
 
   const dir = await mkdtemp(join(tmpdir(), 'review-timeline-'));
   try {

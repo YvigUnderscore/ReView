@@ -68,7 +68,7 @@ router.post(
     await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
     await assertLocalCreationAllowed(projectId, 'sequence'); // 48 : ShotGrid mène
     if (await prisma.sequence.findUnique({ where: { projectId_code: { projectId, code } } })) {
-      throw badRequest('Une séquence avec ce code existe déjà', 'CODE_TAKEN');
+      throw badRequest('A sequence with this code already exists', 'CODE_TAKEN');
     }
     const sequence = await prisma.sequence.create({
       data: { projectId, name, code, order: order ?? 0, settings: settings ?? {} },
@@ -122,7 +122,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveProjectIdForSequence(id);
-    if (!projectId) throw notFound('Séquence introuvable');
+    if (!projectId) throw notFound('Sequence not found');
     await assertProjectAccess(req, projectId);
     await assertProjectWritable(projectId); // 38.B
     const body = req.body as z.infer<typeof sequencePatchBody>;
@@ -139,7 +139,7 @@ router.patch(
 mountTrashRoutes(router, {
   entityType: 'Sequence',
   auditPrefix: 'SEQUENCE',
-  notFoundMessage: 'Séquence introuvable',
+  notFoundMessage: 'Sequence not found',
   resolveProjectId: resolveProjectIdForSequence,
   softDelete: (_userId, id) => softDeleteSequence(id),
   restore: restoreSequence,

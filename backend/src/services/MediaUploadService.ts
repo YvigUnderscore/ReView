@@ -141,7 +141,7 @@ async function loadOwnMultipart(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findFirst({
     where: { id, uploaderId: user.id, status: MediaStatus.UPLOADING },
   });
-  if (!media) throw notFound('Upload introuvable');
+  if (!media) throw notFound('Upload not found');
   const uploadId = (media.metadata as Meta).multipartUploadId;
   if (typeof uploadId !== 'string') throw badRequest("Ce média n'est pas un upload multipart");
   return { media, uploadId };

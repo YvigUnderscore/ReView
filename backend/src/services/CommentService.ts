@@ -187,7 +187,7 @@ async function notifyMentions(
       notify({
         userId: u.id,
         type: 'MENTION',
-        content: 'Vous avez été mentionné dans un commentaire',
+        messageKey: 'notification.mentioned',
         projectId,
         referenceId: mediaObjectId,
       }),
@@ -228,8 +228,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       where: { id: body.parentId },
       select: { mediaObjectId: true },
     });
-    if (!parent || parent.mediaObjectId !== body.mediaObjectId)
-      throw badRequest('Commentaire parent invalide');
+    if (!parent || parent.mediaObjectId !== body.mediaObjectId) throw badRequest('Invalid parent comment');
   }
 
   const comment = await prisma.comment.create({
@@ -287,7 +286,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       await notify({
         userId: parent.userId,
         type: 'REPLY',
-        content: 'Nouvelle réponse à votre commentaire',
+        messageKey: 'notification.reply',
         projectId,
         referenceId: body.mediaObjectId,
       });
@@ -301,7 +300,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
     await notifyWatchers({
       mediaObjectId: body.mediaObjectId,
       projectId,
-      content: 'Nouveau commentaire sur un élément suivi',
+      messageKey: 'notification.watchedComment',
       exclude: [user.id, ...mentioned],
     });
     void sendDiscord(`💬 Nouveau commentaire sur un média (projet #${projectId})`);
@@ -340,7 +339,7 @@ export async function share(user: SessionUser, projectId: number, id: number) {
     await notifyWatchers({
       mediaObjectId: existing.mediaObjectId,
       projectId,
-      content: 'Un retour de montage a été renvoyé sur un élément suivi',
+      messageKey: 'notification.montageShared',
       exclude: [user.id],
     });
   return enriched;
@@ -377,10 +376,10 @@ export async function update(user: SessionUser, projectId: number, id: number, b
 
   if (body.content !== undefined && !isAuthor) throw forbidden("Seul l'auteur peut éditer le contenu");
   if ((body.isVisibleToClient !== undefined || body.assigneeId !== undefined) && !manager)
-    throw forbidden('Réservé aux superviseurs/admins');
+    throw forbidden('Supervisors and administrators only');
   const resolution = resolutionOf(body.state, body.isResolved);
   if (resolution.isResolved !== undefined && !manager && !isAuthor)
-    throw forbidden('Résolution non autorisée');
+    throw forbidden('You cannot resolve this comment');
 
   const comment = await prisma.comment.update({
     where: { id },
@@ -408,7 +407,7 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     await notify({
       userId: body.assigneeId,
       type: 'COMMENT_ASSIGNED',
-      content: 'Un commentaire vous a été assigné',
+      messageKey: 'notification.commentAssigned',
       projectId,
       referenceId: comment.mediaObjectId,
     });

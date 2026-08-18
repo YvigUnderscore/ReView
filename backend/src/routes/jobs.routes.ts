@@ -70,8 +70,8 @@ router.post(
   async (req, res) => {
     const q = QUEUES[String(req.params.queue)]!;
     const job = await q.getJob(String(req.params.id));
-    if (!job) throw notFound('Job introuvable');
-    if (!(await job.isFailed())) throw badRequest('Seul un job échoué peut être relancé');
+    if (!job) throw notFound('Job not found');
+    if (!(await job.isFailed())) throw badRequest('Only a failed job can be retried');
     await job.retry();
     logAudit({
       userId: req.user!.id,

@@ -25,24 +25,24 @@ export async function assertProjectManager(
   options: { allowMembers?: boolean; adminOnly?: boolean } = {},
 ): Promise<void> {
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
 
   if (user.role === Role.ADMIN) return;
-  if (options.adminOnly) throw forbidden('Réservé aux administrateurs');
+  if (options.adminOnly) throw forbidden('Administrators only');
 
   const membership = await prisma.projectMembership.findUnique({
     where: { userId_projectId: { userId: user.id, projectId } },
     select: { role: true },
   });
-  if (!membership) throw forbidden('Accès au projet refusé');
+  if (!membership) throw forbidden('No access to this project');
 
   // Le rôle porté par l'appartenance prime sur le rôle global (10.D8).
   const effective = membership.role ?? user.role;
   if (options.allowMembers) {
-    if (effective === Role.CLIENT) throw forbidden('Accès refusé');
+    if (effective === Role.CLIENT) throw forbidden('Access denied');
     return;
   }
-  if (effective !== Role.SUPERVISOR) throw forbidden('Réservé aux superviseurs et administrateurs');
+  if (effective !== Role.SUPERVISOR) throw forbidden('Supervisors and administrators only');
 }
 
 /** L'utilisateur peut-il piloter la connexion ShotGrid de ce projet ? (sans lever) */

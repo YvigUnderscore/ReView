@@ -203,7 +203,7 @@ export async function projectDetail(id: number) {
       },
     },
   });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
 
   const settings = await resolveProjectSettings(project.settings);
   const [usage, versions, mediaAgg, comments, assets, members] = await Promise.all([

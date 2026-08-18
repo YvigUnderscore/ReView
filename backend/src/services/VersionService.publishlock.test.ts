@@ -41,12 +41,12 @@ beforeEach(() => {
 describe('VersionService.update — verrou de publication bidirectionnel', () => {
   it('refuse à l’auteur de publier sa version', async () => {
     findUnique.mockResolvedValue({ authorId: author.id, published: false } as never);
-    await expect(update(author, 7, 1, { status: VersionStatus.PUBLISHED })).rejects.toThrow(/superviseur/i);
+    await expect(update(author, 7, 1, { status: VersionStatus.PUBLISHED })).rejects.toThrow(/supervisor/i);
   });
 
   it('refuse à l’auteur de DÉpublier sa version', async () => {
     findUnique.mockResolvedValue({ authorId: author.id, published: true } as never);
-    await expect(update(author, 7, 1, { status: VersionStatus.DRAFT })).rejects.toThrow(/dépublier/i);
+    await expect(update(author, 7, 1, { status: VersionStatus.DRAFT })).rejects.toThrow(/unpublish/i);
   });
 
   it('autorise un superviseur à dépublier', async () => {

@@ -48,7 +48,7 @@ export default function SavedViewsMenu({
           }`}
         >
           <ListFilter size={13} />
-          {active ? active.name : 'Vues'}
+          {active ? active.name : t('savedViews.title')}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-2">

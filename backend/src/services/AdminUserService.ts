@@ -34,7 +34,7 @@ export async function userDetail(id: number) {
       createdAt: true,
     },
   });
-  if (!user) throw notFound('Utilisateur introuvable');
+  if (!user) throw notFound('User not found');
 
   const [memberships, sessions, apiTokens, activity, mediaCount, versionCount, commentCount, taskCount] =
     await Promise.all([

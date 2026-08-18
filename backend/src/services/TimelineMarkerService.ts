@@ -63,8 +63,9 @@ const toView = (m: {
 /** Accès lecture au média (membre du projet) — renvoie le projectId. */
 async function assertMediaRead(mediaId: number, user: SessionUser): Promise<number> {
   const projectId = await resolveProjectIdForMedia(mediaId);
-  if (!projectId) throw notFound('Média introuvable');
-  if (!(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
+  if (!projectId) throw notFound('Media not found');
+  if (!(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('No access to this project');
   return projectId;
 }
 
@@ -85,11 +86,11 @@ export async function create(
   mediaId: number,
   data: { frame: number; name: string; color: string },
 ): Promise<TimelineMarkerView> {
-  if (!canWrite(user.role)) throw forbidden('Création de marqueur réservée aux rôles d’écriture');
+  if (!canWrite(user.role)) throw forbidden('Creating a marker requires a write role');
   await assertMediaRead(mediaId, user);
-  if (!COLOR_RE.test(data.color)) throw badRequest('Couleur invalide (hex #rrggbb attendu)');
+  if (!COLOR_RE.test(data.color)) throw badRequest('Invalid colour (expected hex #rrggbb)');
   const count = await prisma.timelineMarker.count({ where: { mediaObjectId: mediaId } });
-  if (count >= MAX_MARKERS) throw badRequest('Trop de marqueurs sur ce média');
+  if (count >= MAX_MARKERS) throw badRequest('Too many markers on this media');
   const marker = await prisma.timelineMarker.create({
     data: {
       mediaObjectId: mediaId,
@@ -108,10 +109,10 @@ export async function create(
 async function assertMarkerManage(user: SessionUser, mediaId: number, markerId: number) {
   await assertMediaRead(mediaId, user);
   const marker = await prisma.timelineMarker.findUnique({ where: { id: markerId } });
-  if (!marker || marker.mediaObjectId !== mediaId) throw notFound('Marqueur introuvable');
+  if (!marker || marker.mediaObjectId !== mediaId) throw notFound('Marker not found');
   const manager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
   if (!manager && marker.authorId !== user.id)
-    throw forbidden('Modification réservée à l’auteur ou un superviseur');
+    throw forbidden('Only the author or a supervisor can change this');
   return marker;
 }
 
@@ -123,7 +124,7 @@ export async function update(
 ): Promise<TimelineMarkerView> {
   await assertMarkerManage(user, mediaId, markerId);
   if (data.color !== undefined && !COLOR_RE.test(data.color))
-    throw badRequest('Couleur invalide (hex #rrggbb attendu)');
+    throw badRequest('Invalid colour (expected hex #rrggbb)');
   const marker = await prisma.timelineMarker.update({
     where: { id: markerId },
     data,

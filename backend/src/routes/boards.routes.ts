@@ -26,7 +26,7 @@ const ownerProjectId = async (scope: Scope): Promise<number | null> =>
 
 async function readBoard(req: Request, res: Response, scope: Scope): Promise<void> {
   const projectId = await ownerProjectId(scope);
-  if (!projectId) throw notFound('Cible introuvable');
+  if (!projectId) throw notFound('Target not found');
   await assertProjectAccess(req, projectId);
   const board = await prisma.board.findUnique({ where: scope });
   res.json({ board: board ?? { ...scope, document: {}, updatedAt: null } });
@@ -34,9 +34,9 @@ async function readBoard(req: Request, res: Response, scope: Scope): Promise<voi
 
 async function writeBoard(req: Request, res: Response, scope: Scope): Promise<void> {
   const projectId = await ownerProjectId(scope);
-  if (!projectId) throw notFound('Cible introuvable');
+  if (!projectId) throw notFound('Target not found');
   await assertProjectAccess(req, projectId);
-  if (req.user!.role === Role.CLIENT) throw forbidden('Lecture seule pour les clients');
+  if (req.user!.role === Role.CLIENT) throw forbidden('Read-only for clients');
 
   const { document, summary } = req.body as { document: Prisma.InputJsonValue; summary?: string };
   const board = await prisma.board.upsert({

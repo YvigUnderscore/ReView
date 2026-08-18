@@ -55,11 +55,10 @@ function splitSegments(raw: string): string[] {
     .split('/')
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-  if (segments.length === 0) throw badRequest('Chemin vide', 'PATH_EMPTY');
-  if (segments.length > MAX_SEGMENTS) throw badRequest('Chemin trop profond', 'PATH_TOO_DEEP');
+  if (segments.length === 0) throw badRequest('Empty path', 'PATH_EMPTY');
+  if (segments.length > MAX_SEGMENTS) throw badRequest('Path is too deep', 'PATH_TOO_DEEP');
   for (const s of segments) {
-    if (s.length > MAX_SEGMENT_LENGTH)
-      throw badRequest('Segment de chemin trop long', 'PATH_SEGMENT_TOO_LONG');
+    if (s.length > MAX_SEGMENT_LENGTH) throw badRequest('Path segment is too long', 'PATH_SEGMENT_TOO_LONG');
   }
   return segments;
 }
@@ -100,7 +99,7 @@ function parseAssetBranch(project: string, rest: string[]): PipelinePath {
 /** Branche `PROJ/shots/<shot>[/<task>[/<version>]]` — shot sans séquence. */
 function parseLooseShotBranch(project: string, rest: string[]): PipelinePath {
   const [shot, taskSegment, version] = rest;
-  if (!shot) throw badRequest('Chemin de shot incomplet : code de shot attendu', 'PATH_INCOMPLETE');
+  if (!shot) throw badRequest('Incomplete shot path: a shot code is expected', 'PATH_INCOMPLETE');
   const { task, department } = splitTaskSegment(taskSegment);
   return {
     project,
@@ -135,7 +134,7 @@ function parseSequenceBranch(project: string, rest: string[]): PipelinePath {
 export function parsePipelinePath(raw: string): PipelinePath {
   const segments = splitSegments(raw);
   const [project, ...rest] = segments;
-  if (!project) throw badRequest('Chemin vide', 'PATH_EMPTY');
+  if (!project) throw badRequest('Empty path', 'PATH_EMPTY');
   if (rest.length === 0) return { project, kind: 'project' };
 
   const keyword = rest[0]?.toLowerCase();

@@ -157,15 +157,14 @@ export async function update(id: number, input: Partial<StatusInput>): Promise<P
  */
 export async function remove(id: number): Promise<void> {
   const status = await prisma.pipelineStatus.findUnique({ where: { id } });
-  if (!status) throw notFound('Statut introuvable');
+  if (!status) throw notFound('Status not found');
   const [tasks, shots] = await Promise.all([
     prisma.task.count({ where: { pipelineStatusId: id } }),
     prisma.shot.count({ where: { pipelineStatusId: id } }),
   ]);
-  if (tasks + shots > 0)
-    throw conflict(`Statut utilisé par ${tasks + shots} élément(s) — le remplacer d’abord`);
+  if (tasks + shots > 0) throw conflict(`This status is used by ${tasks + shots} item(s) — replace it first`);
   const remaining = await prisma.pipelineStatus.count({ where: { scope: status.scope } });
-  if (remaining <= 1) throw badRequest('Le dernier statut d’un périmètre ne peut pas être supprimé');
+  if (remaining <= 1) throw badRequest('The last status of a scope cannot be deleted');
   await prisma.pipelineStatus.delete({ where: { id } });
 }
 

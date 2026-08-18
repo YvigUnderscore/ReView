@@ -194,7 +194,7 @@ export default function AssetAssignDialog({
             {t('common.undo')}
           </Button>
           <Button size="sm" onClick={save} disabled={busy || loading}>
-            {busy ? 'Enregistrement…' : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </DialogContent>

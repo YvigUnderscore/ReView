@@ -78,7 +78,7 @@ export default function ProjectNamingSection({
             <span className="text-xs text-destructive">{t('naming.invalidRegex')}</span>
           ) : sample ? (
             <span className={`text-xs ${match ? 'text-success' : 'text-destructive'}`}>
-              {match ? 'Conforme' : 'Non conforme'}
+              {match ? t('naming.compliant') : t('naming.nonCompliant')}
             </span>
           ) : null}
         </div>

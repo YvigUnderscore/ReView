@@ -100,7 +100,7 @@ router.post(
   async (req, res) => {
     const { type, entityId } = req.body as { type: EntityType; entityId: number };
     const projectId = await projectIdFor(type, entityId);
-    if (!projectId) throw notFound('Entité introuvable');
+    if (!projectId) throw notFound('Entity not found');
     await assertProjectAccess(req, projectId);
     const favorite = await prisma.favorite.upsert({
       where: { userId_type_entityId: { userId: req.user!.id, type, entityId } },

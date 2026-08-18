@@ -101,7 +101,7 @@ router.get('/tasks/:id', requireScope('tasks:read'), validate({ params: idParam 
   const id = Number(req.params.id);
   await requireTaskProject(req, id);
   const task = await prisma.task.findUnique({ where: { id }, select: taskSelect });
-  if (!task) throw notFound('Tâche introuvable');
+  if (!task) throw notFound('Task not found');
   res.json({ task: toTask(task) });
 });
 

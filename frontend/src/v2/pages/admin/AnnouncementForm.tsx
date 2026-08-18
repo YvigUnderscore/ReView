@@ -172,7 +172,7 @@ export default function AnnouncementForm({
             {t('common.undo')}
           </Button>
           <Button size="sm" onClick={save} disabled={busy}>
-            {busy ? 'Enregistrement…' : t('common.save')}
+            {busy ? t('common.saving') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

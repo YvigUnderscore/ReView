@@ -52,7 +52,7 @@ describe('notifyWatchers (32.G)', () => {
     const out = await notifyWatchers({
       mediaObjectId: 9,
       projectId: 2,
-      content: 'activité',
+      messageKey: 'notification.watchedComment',
       exclude: [5],
     });
     expect(out.sort()).toEqual([3, 4]);
@@ -78,13 +78,22 @@ describe('notifyWatchers (32.G)', () => {
       task: null,
     } as never);
     vi.mocked(prisma.watch.findMany).mockResolvedValue([{ userId: 6 }] as never);
-    await notifyWatchers({ versionId: 42, projectId: 2, content: 'décision', referenceId: 77 });
+    await notifyWatchers({
+      versionId: 42,
+      projectId: 2,
+      messageKey: 'notification.decision',
+      referenceId: 77,
+    });
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 6, referenceId: 77 }));
   });
 
   it('média inconnu : personne à notifier', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(null);
-    const out = await notifyWatchers({ mediaObjectId: 999, projectId: 2, content: 'x' });
+    const out = await notifyWatchers({
+      mediaObjectId: 999,
+      projectId: 2,
+      messageKey: 'notification.watchedComment',
+    });
     expect(out).toEqual([]);
     expect(notify).not.toHaveBeenCalled();
   });

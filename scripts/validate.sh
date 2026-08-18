@@ -52,6 +52,12 @@ node "$ROOT/scripts/check-untranslated.mjs"
 step "i18n — clés de traduction affichées brutes"
 node "$ROOT/scripts/check-raw-keys.mjs"
 
+# Le backend ne passe pas par les catalogues : ses messages d'erreur remontent tels quels
+# à l'écran, y compris sur la page publique d'un partage client. L'arbitrage est de les
+# écrire en anglais — ce contrôle empêche le français d'y revenir (D2).
+step "i18n — messages d'erreur du backend en anglais"
+node "$ROOT/scripts/check-backend-english.mjs"
+
 # ---------- Thème ----------
 # « Couleurs = tokens du thème » : une classe Tailwind de palette brute (bg-blue-500…)
 # ou une couleur arbitraire (bg-[#…]) échappe au thème et casse la cohérence sombre/clair.

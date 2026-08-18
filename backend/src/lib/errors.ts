@@ -25,6 +25,6 @@ export class AppError extends Error {
 
 export const badRequest = (msg: string, code?: string) => new AppError(msg, 400, code);
 export const unauthorized = (msg = 'Non authentifié', code?: string) => new AppError(msg, 401, code);
-export const forbidden = (msg = 'Accès refusé', code?: string) => new AppError(msg, 403, code);
+export const forbidden = (msg = 'Access denied', code?: string) => new AppError(msg, 403, code);
 export const notFound = (msg = 'Ressource introuvable', code?: string) => new AppError(msg, 404, code);
 export const conflict = (msg: string, code?: string) => new AppError(msg, 409, code);

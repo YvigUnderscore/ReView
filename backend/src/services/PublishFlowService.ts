@@ -47,7 +47,7 @@ const KIND_BY_EXTENSION: [RegExp, MediaKind][] = [
 export function inferMediaKind(filename: string): MediaKind {
   const found = KIND_BY_EXTENSION.find(([re]) => re.test(filename));
   if (!found) {
-    throw badRequest(`Type de média indéterminable pour « ${filename} » — préciser « kind »`, 'KIND_UNKNOWN');
+    throw badRequest(`Cannot tell the media kind of « ${filename} » — pass « kind »`, 'KIND_UNKNOWN');
   }
   return found[1];
 }
@@ -91,7 +91,7 @@ const CONTENT_TYPE_FALLBACK: Record<MediaKind, string> = {
 export async function start(actor: Actor, input: StartPublishInput) {
   const parsed = parsePipelinePath(input.path);
   if (parsed.kind === 'project' || parsed.kind === 'sequence') {
-    throw badRequest('Le chemin doit désigner au moins un shot ou un asset', 'PATH_TOO_SHALLOW');
+    throw badRequest('The path must point to at least one shot or asset', 'PATH_TOO_SHALLOW');
   }
   if (parsed.version) {
     throw badRequest(
@@ -117,7 +117,7 @@ export async function start(actor: Actor, input: StartPublishInput) {
 
   const parent = target.taskId !== undefined ? { taskId: target.taskId } : { assetId: target.assetId };
   if (parent.taskId === undefined && parent.assetId === undefined) {
-    throw badRequest('Chemin sans tâche ni asset exploitable', 'PATH_NO_TARGET');
+    throw badRequest('Path holds no usable task or asset', 'PATH_NO_TARGET');
   }
 
   const version = await Ensure.ensureVersion({ id: actor.id, role: actor.role }, project.id, parent, {
@@ -166,7 +166,7 @@ export async function start(actor: Actor, input: StartPublishInput) {
 /** Résout une cible existante sans rien créer (mode strict). */
 async function resolveExistingTarget(projectId: number, path: string) {
   const resolved = await Resolve.resolvePath(path);
-  if (resolved.projectId !== projectId) throw notFound('Chemin hors du projet résolu');
+  if (resolved.projectId !== projectId) throw notFound('Path lies outside the resolved project');
   return {
     taskId: resolved.task?.id,
     assetId: resolved.task ? undefined : resolved.asset?.id,
@@ -192,7 +192,7 @@ export async function complete(actor: Actor, mediaId: number, input: CompletePub
     where: { id: mediaId },
     select: { id: true, versionId: true, uploaderId: true },
   });
-  if (!media) throw notFound('Média introuvable');
+  if (!media) throw notFound('Media not found');
 
   const finalized = await MediaService.finalize(actor, mediaId);
   const shouldPublish = input.publish !== false;

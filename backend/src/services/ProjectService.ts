@@ -71,12 +71,12 @@ export interface CreateProjectInput {
 
 export async function createProject(user: SessionUser, input: CreateProjectInput) {
   const studio = await prisma.studio.findFirst();
-  if (!studio) throw notFound('Studio non configuré');
+  if (!studio) throw notFound('Studio not set up');
 
   const slug = slugify(input.name);
-  if (!slug) throw badRequest('Nom de projet invalide');
+  if (!slug) throw badRequest('Invalid project name');
   if (await prisma.project.findUnique({ where: { studioId_slug: { studioId: studio.id, slug } } }))
-    throw badRequest('Un projet avec ce nom existe déjà', 'SLUG_TAKEN');
+    throw badRequest('A project with this name already exists', 'SLUG_TAKEN');
 
   const defaultStartFrame = await getNumericSetting(SETTING_KEYS.DEFAULT_START_FRAME);
   const project = await prisma.project.create({
@@ -121,12 +121,12 @@ export async function duplicateProject(
       },
     },
   });
-  if (!source) throw notFound('Projet source introuvable');
+  if (!source) throw notFound('Source project not found');
 
   const slug = slugify(name);
-  if (!slug) throw badRequest('Nom de projet invalide');
+  if (!slug) throw badRequest('Invalid project name');
   if (await prisma.project.findUnique({ where: { studioId_slug: { studioId: source.studioId, slug } } }))
-    throw badRequest('Un projet avec ce nom existe déjà', 'SLUG_TAKEN');
+    throw badRequest('A project with this name already exists', 'SLUG_TAKEN');
 
   // Les réglages sont copiés à l'identique, sauf le marqueur de template (le nouveau
   // projet est un projet concret, pas un modèle).
@@ -303,7 +303,7 @@ export async function getProject(projectId: number) {
       },
     },
   });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
   return project;
 }
 
@@ -319,7 +319,7 @@ export interface UpdateProjectInput {
 
 export async function updateProject(projectId: number, data: UpdateProjectInput) {
   if (!(await prisma.project.findFirst({ where: { id: projectId, deletedAt: null } })))
-    throw notFound('Projet introuvable');
+    throw notFound('Project not found');
   const { storageQuota, ...rest } = data;
   return prisma.project.update({
     where: { id: projectId },
@@ -338,7 +338,7 @@ export async function getProjectUsage(projectId: number) {
     where: { id: projectId, deletedAt: null },
     select: { storageQuota: true },
   });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
   const usage = await getProjectStorageUsage(projectId);
   return { usage: Number(usage), quota: project.storageQuota != null ? Number(project.storageQuota) : null };
 }
@@ -393,13 +393,13 @@ export async function getSettings(projectId: number) {
     where: { id: projectId, deletedAt: null },
     select: { settings: true },
   });
-  if (!project) throw notFound('Projet introuvable');
+  if (!project) throw notFound('Project not found');
   return resolveProjectSettings(project.settings);
 }
 
 export async function updateSettings(user: SessionUser, projectId: number, body: object) {
   if (!(await prisma.project.findFirst({ where: { id: projectId, deletedAt: null } })))
-    throw notFound('Projet introuvable');
+    throw notFound('Project not found');
   await prisma.project.update({ where: { id: projectId }, data: { settings: body } });
   // Les départements sont des entités depuis B1 : la liste éditée dans les réglages est
   // traduite en base, sans quoi l'écran écrirait dans un JSON que plus rien ne lit.

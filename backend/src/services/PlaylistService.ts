@@ -14,7 +14,7 @@ const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISO
 /** Peut modifier/supprimer : créateur de la playlist ou superviseur/admin. */
 const assertCanEdit = (user: SessionUser, playlist: { createdById: number | null }) => {
   if (!isManager(user.role) && playlist.createdById !== user.id)
-    throw forbidden('Modification réservée au créateur ou un superviseur');
+    throw forbidden('Only the creator or a supervisor can change this');
 };
 
 /** Playlists d'un projet (liste légère : compteur d'items, créateur). */
@@ -54,7 +54,7 @@ async function resolveVersionIds(projectId: number, versionIds: number[], mediaI
     select: { id: true },
   });
   if (versions.length !== ids.length)
-    throw badRequest('Certaines versions n’appartiennent pas au projet de la playlist');
+    throw badRequest('Some versions do not belong to the project of this playlist');
   // L'ordre d'entrée est conservé (l'utilisateur a ordonné sa sélection).
   const valid = new Set(versions.map((v) => v.id));
   return ids.filter((id) => valid.has(id));
@@ -71,7 +71,7 @@ export async function create(
   const existing = await prisma.playlist.findUnique({
     where: { projectId_name: { projectId, name } },
   });
-  if (existing) throw conflict('Une playlist de ce nom existe déjà dans le projet');
+  if (existing) throw conflict('A playlist with this name already exists in the project');
   const playlist = await prisma.playlist.create({
     data: {
       projectId,
@@ -94,7 +94,7 @@ export async function getOwning(id: number) {
     where: { id },
     select: { id: true, projectId: true, createdById: true },
   });
-  if (!playlist) throw notFound('Playlist introuvable');
+  if (!playlist) throw notFound('Playlist not found');
   return playlist;
 }
 
@@ -140,7 +140,7 @@ export async function getDetail(user: SessionUser, id: number) {
       },
     },
   });
-  if (!playlist) throw notFound('Playlist introuvable');
+  if (!playlist) throw notFound('Playlist not found');
   const items = await Promise.all(
     playlist.items
       .filter((it) => !it.version.deletedAt)
@@ -193,7 +193,7 @@ export async function rename(user: SessionUser, id: number, name: string) {
   const dup = await prisma.playlist.findUnique({
     where: { projectId_name: { projectId: playlist.projectId, name } },
   });
-  if (dup && dup.id !== id) throw conflict('Une playlist de ce nom existe déjà dans le projet');
+  if (dup && dup.id !== id) throw conflict('A playlist with this name already exists in the project');
   const updated = await prisma.playlist.update({ where: { id }, data: { name } });
   await syncToShotgrid(id, playlist.projectId, user.id);
   return updated;
@@ -263,7 +263,7 @@ export async function removeItem(user: SessionUser, id: number, itemId: number) 
   const playlist = await getOwning(id);
   assertCanEdit(user, playlist);
   const { count } = await prisma.playlistItem.deleteMany({ where: { id: itemId, playlistId: id } });
-  if (count === 0) throw notFound('Item introuvable dans cette playlist');
+  if (count === 0) throw notFound('This item is not in the playlist');
   await syncToShotgrid(id, playlist.projectId, user.id);
 }
 

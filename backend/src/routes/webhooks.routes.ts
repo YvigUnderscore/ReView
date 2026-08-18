@@ -47,7 +47,10 @@ router.post(
   async (req, res) => {
     const { url, events } = req.body as { url: string; events: string[] };
     if (!isWebhookUrlAllowed(url)) {
-      throw badRequest('URL de webhook refusée (hôte privé/local ou schéma non http)', 'BAD_WEBHOOK_URL');
+      throw badRequest(
+        'Webhook URL refused (private or local host, or a non-HTTP scheme)',
+        'BAD_WEBHOOK_URL',
+      );
     }
     const secret = randomBytes(24).toString('hex');
     const webhook = await prisma.webhook.create({
@@ -79,10 +82,13 @@ router.patch(
   async (req, res) => {
     const body = req.body as { url?: string; events?: string[]; active?: boolean };
     if (body.url && !isWebhookUrlAllowed(body.url)) {
-      throw badRequest('URL de webhook refusée (hôte privé/local ou schéma non http)', 'BAD_WEBHOOK_URL');
+      throw badRequest(
+        'Webhook URL refused (private or local host, or a non-HTTP scheme)',
+        'BAD_WEBHOOK_URL',
+      );
     }
     const existing = await prisma.webhook.findUnique({ where: { id: Number(req.params.id) } });
-    if (!existing) throw notFound('Webhook introuvable');
+    if (!existing) throw notFound('Webhook not found');
     const webhook = await prisma.webhook.update({
       where: { id: existing.id },
       data: body,
@@ -102,7 +108,7 @@ router.patch(
 // DELETE /api/admin/webhooks/:id
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const existing = await prisma.webhook.findUnique({ where: { id: Number(req.params.id) } });
-  if (!existing) throw notFound('Webhook introuvable');
+  if (!existing) throw notFound('Webhook not found');
   await prisma.webhook.delete({ where: { id: existing.id } });
   logAudit({
     userId: req.user!.id,
@@ -117,7 +123,7 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
 // POST /api/admin/webhooks/:id/test — livraison d'essai (via la file, signée normalement)
 router.post('/:id/test', validate({ params: idParam }), async (req, res) => {
   const existing = await prisma.webhook.findUnique({ where: { id: Number(req.params.id) } });
-  if (!existing) throw notFound('Webhook introuvable');
+  if (!existing) throw notFound('Webhook not found');
   await enqueueWebhookDelivery({
     webhookId: existing.id,
     event: 'test',

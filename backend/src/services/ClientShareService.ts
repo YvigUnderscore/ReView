@@ -42,9 +42,9 @@ export const publishedMediaWhere = (projectId: number) => ({
 /** Lien par token, ou 404 s'il est inconnu/révoqué/expiré (sans distinguer, anti-énumération). */
 export async function loadShare(token: string): Promise<ShareLink> {
   const share = await prisma.shareLink.findUnique({ where: { token } });
-  if (!share) throw notFound('Lien invalide ou expiré');
+  if (!share) throw notFound('Invalid or expired link');
   const state = shareState(share);
-  if (state === 'revoked' || state === 'expired') throw notFound('Lien invalide ou expiré');
+  if (state === 'revoked' || state === 'expired') throw notFound('Invalid or expired link');
   return share;
 }
 
@@ -55,7 +55,7 @@ export async function loadShare(token: string): Promise<ShareLink> {
 export async function loadShareWithSession(token: string, req: Request): Promise<ShareLink> {
   const share = await loadShare(token);
   if (!verifyShareSession(req.header('x-share-auth') ?? undefined, share.id)) {
-    throw unauthorized('Session de partage requise');
+    throw unauthorized('A share session is required');
   }
   return share;
 }

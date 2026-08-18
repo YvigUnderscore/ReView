@@ -38,7 +38,7 @@ export async function resolveProject(ref: string) {
     },
     select: projectSelect,
   });
-  if (!project) throw notFound(`Projet « ${ref} » introuvable`, 'PROJECT_NOT_FOUND');
+  if (!project) throw notFound(`Project « ${ref} » not found`, 'PROJECT_NOT_FOUND');
   return project;
 }
 
@@ -52,7 +52,7 @@ export async function resolveSequence(projectId: number, ref: string) {
     },
     select: sequenceSelect,
   });
-  if (!sequence) throw notFound(`Séquence « ${ref} » introuvable`, 'SEQUENCE_NOT_FOUND');
+  if (!sequence) throw notFound(`Sequence « ${ref} » not found`, 'SEQUENCE_NOT_FOUND');
   return sequence;
 }
 
@@ -71,7 +71,7 @@ export async function resolveShot(projectId: number, ref: string, sequenceId?: n
     },
     select: shotSelect,
   });
-  if (!shot) throw notFound(`Shot « ${ref} » introuvable`, 'SHOT_NOT_FOUND');
+  if (!shot) throw notFound(`Shot « ${ref} » not found`, 'SHOT_NOT_FOUND');
   return shot;
 }
 
@@ -85,7 +85,7 @@ export async function resolveAsset(projectId: number, ref: string) {
     },
     select: assetSelect,
   });
-  if (!asset) throw notFound(`Asset « ${ref} » introuvable`, 'ASSET_NOT_FOUND');
+  if (!asset) throw notFound(`Asset « ${ref} » not found`, 'ASSET_NOT_FOUND');
   return asset;
 }
 
@@ -111,7 +111,7 @@ export async function resolveTask(
     },
     select: taskSelect,
   });
-  if (!task) throw notFound(`Tâche « ${ref} » introuvable`, 'TASK_NOT_FOUND');
+  if (!task) throw notFound(`Task « ${ref} » not found`, 'TASK_NOT_FOUND');
   return task;
 }
 
@@ -126,7 +126,7 @@ export async function resolveVersion(parent: { taskId?: number; assetId?: number
     },
     select: versionSelect,
   });
-  if (!version) throw notFound(`Version « ${ref} » introuvable`, 'VERSION_NOT_FOUND');
+  if (!version) throw notFound(`Version « ${ref} » not found`, 'VERSION_NOT_FOUND');
   return version;
 }
 

@@ -90,7 +90,7 @@ export async function createStatus(user: SessionUser, input: StatusInput) {
 
 export async function updateStatus(user: SessionUser, id: number, input: Partial<StatusInput>) {
   const existing = await prisma.reviewStatus.findUnique({ where: { id } });
-  if (!existing) throw notFound('Statut introuvable');
+  if (!existing) throw notFound('Status not found');
   const status = await prisma.$transaction(async (tx) => {
     await clearDefaultIfNeeded(tx, input.isDefault);
     return tx.reviewStatus.update({ where: { id }, data: input });
@@ -101,11 +101,11 @@ export async function updateStatus(user: SessionUser, id: number, input: Partial
 
 export async function deleteStatus(user: SessionUser, id: number) {
   const used = await prisma.reviewDecision.count({ where: { statusId: id } });
-  if (used > 0) throw conflict(`Statut utilisé par ${used} décision(s) — suppression impossible`);
+  if (used > 0) throw conflict(`This status is used by ${used} decision(s) — it cannot be deleted`);
   try {
     await prisma.reviewStatus.delete({ where: { id } });
   } catch {
-    throw notFound('Statut introuvable');
+    throw notFound('Status not found');
   }
   logAudit({ userId: user.id, action: 'review_status.delete', entityType: 'ReviewStatus', entityId: id });
 }
@@ -122,9 +122,9 @@ export async function decide(
     where: { id: versionId, deletedAt: null },
     select: { id: true, name: true, taskId: true, assetId: true, authorId: true },
   });
-  if (!version) throw notFound('Version introuvable');
+  if (!version) throw notFound('Version not found');
   const status = await prisma.reviewStatus.findUnique({ where: { id: statusId } });
-  if (!status) throw badRequest('Statut de review inconnu');
+  if (!status) throw badRequest('Unknown review status');
 
   const decision = await prisma.$transaction(async (tx) => {
     const d = await tx.reviewDecision.create({
@@ -156,7 +156,8 @@ export async function decide(
     await notify({
       userId: version.authorId,
       type: 'review_decision',
-      content: `Décision « ${status.name} » sur la version ${version.name}${comment ? ` — ${comment}` : ''}`,
+      messageKey: 'notification.decision',
+      params: { status: status.name, version: version.name },
       projectId,
       referenceId: versionId,
     });
@@ -171,7 +172,8 @@ export async function decide(
   await notifyWatchers({
     versionId,
     projectId,
-    content: `Décision « ${status.name} » sur la version ${version.name}`,
+    messageKey: 'notification.decision',
+    params: { status: status.name, version: version.name },
     referenceId: firstMedia?.id ?? null,
     exclude: [user.id, ...(version.authorId ? [version.authorId] : [])],
   });

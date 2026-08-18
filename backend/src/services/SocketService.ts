@@ -92,7 +92,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
       if (payload.kind !== undefined || typeof payload.id !== 'number') {
         return next(new Error('Authentication error'));
       }
-      // Session révoquée (36.B) : la déconnexion doit aussi fermer le canal temps réel.
+      // Session revoked (36.B) : la déconnexion doit aussi fermer le canal temps réel.
       if (payload.sid && !(await isSessionActive(payload.sid))) {
         return next(new Error('Authentication error'));
       }

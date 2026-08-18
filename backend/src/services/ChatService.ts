@@ -58,7 +58,7 @@ async function requireMembership(conversationId: number, userId: number) {
   const membership = await prisma.conversationMember.findUnique({
     where: { conversationId_userId: { conversationId, userId } },
   });
-  if (!membership) throw forbidden('Vous ne participez pas à cette conversation', 'NOT_A_MEMBER');
+  if (!membership) throw forbidden('You are not part of this conversation', 'NOT_A_MEMBER');
   return membership;
 }
 
@@ -69,12 +69,12 @@ async function requireMembership(conversationId: number, userId: number) {
  */
 async function resolveTargets(actorId: number, userIds: number[]): Promise<number[]> {
   const unique = [...new Set(userIds)].filter((id) => id !== actorId);
-  if (unique.length === 0) throw badRequest('Aucun destinataire', 'NO_RECIPIENT');
+  if (unique.length === 0) throw badRequest('No recipient', 'NO_RECIPIENT');
   const found = await prisma.user.findMany({
     where: { id: { in: unique }, isService: false },
     select: { id: true },
   });
-  if (found.length !== unique.length) throw badRequest('Destinataire introuvable', 'BAD_RECIPIENT');
+  if (found.length !== unique.length) throw badRequest('Recipient not found', 'BAD_RECIPIENT');
   return unique;
 }
 
@@ -227,7 +227,7 @@ export async function conversationViewFor(conversationId: number, userId: number
       },
     },
   });
-  if (!membership) throw notFound('Conversation introuvable');
+  if (!membership) throw notFound('Conversation not found');
   const unread = await prisma.chatMessage.count({
     where: {
       conversationId,
@@ -305,8 +305,8 @@ export async function sendMessage(
 ): Promise<ChatMessageView> {
   await requireMembership(conversationId, authorId);
   const body = rawBody.trim();
-  if (!body) throw badRequest('Message vide', 'EMPTY_MESSAGE');
-  if (body.length > MESSAGE_MAX_LENGTH) throw badRequest('Message trop long', 'MESSAGE_TOO_LONG');
+  if (!body) throw badRequest('Empty message', 'EMPTY_MESSAGE');
+  if (body.length > MESSAGE_MAX_LENGTH) throw badRequest('Message is too long', 'MESSAGE_TOO_LONG');
 
   const message = await prisma.chatMessage.create({
     data: { conversationId, authorId, body },
@@ -407,10 +407,10 @@ export async function renameConversation(
 ): Promise<ConversationView> {
   await requireMembership(conversationId, userId);
   const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
-  if (!conversation) throw notFound('Conversation introuvable');
-  if (!conversation.isGroup) throw badRequest('Un tête-à-tête ne se renomme pas', 'NOT_A_GROUP');
+  if (!conversation) throw notFound('Conversation not found');
+  if (!conversation.isGroup) throw badRequest('A one-to-one conversation cannot be renamed', 'NOT_A_GROUP');
   const title = rawTitle.trim();
-  if (!title) throw badRequest('Nom de groupe vide', 'EMPTY_TITLE');
+  if (!title) throw badRequest('Empty group name', 'EMPTY_TITLE');
   await prisma.conversation.update({ where: { id: conversationId }, data: { title } });
   await postSystemMessage(conversationId, `Le groupe s'appelle désormais « ${title} »`);
   const members = await prisma.conversationMember.findMany({
@@ -441,7 +441,7 @@ export async function addMembers(
     select: { userId: true },
   });
   const toAdd = targets.filter((id) => !already.some((m) => m.userId === id));
-  if (toAdd.length === 0) throw badRequest('Déjà membres', 'ALREADY_MEMBERS');
+  if (toAdd.length === 0) throw badRequest('Already members', 'ALREADY_MEMBERS');
 
   await prisma.$transaction([
     prisma.conversationMember.createMany({
@@ -476,7 +476,7 @@ export async function removeMember(
   await requireMembership(conversationId, actorId);
   if (targetId !== actorId) {
     const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
-    if (!conversation?.isGroup) throw badRequest('Un tête-à-tête ne se quitte pas à deux', 'NOT_A_GROUP');
+    if (!conversation?.isGroup) throw badRequest('A one-to-one conversation cannot be left', 'NOT_A_GROUP');
   }
   await requireMembership(conversationId, targetId);
   const label = await prisma.user.findUnique({ where: { id: targetId }, select: memberIdentity });
@@ -510,8 +510,8 @@ export async function removeMember(
 /** Suppression douce d'un message — par son auteur uniquement. */
 export async function deleteMessage(messageId: number, userId: number): Promise<void> {
   const message = await prisma.chatMessage.findUnique({ where: { id: messageId } });
-  if (!message || message.deletedAt) throw notFound('Message introuvable');
-  if (message.authorId !== userId) throw forbidden('Seul l’auteur peut supprimer son message');
+  if (!message || message.deletedAt) throw notFound('Message not found');
+  if (message.authorId !== userId) throw forbidden('Only the author can delete their message');
   await prisma.chatMessage.update({ where: { id: messageId }, data: { deletedAt: new Date() } });
   const members = await prisma.conversationMember.findMany({
     where: { conversationId: message.conversationId },

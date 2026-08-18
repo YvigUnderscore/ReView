@@ -91,7 +91,7 @@ router.get('/:id', validate({ params: idParam }), async (req, res) => {
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });
-  if (!asset) throw notFound('Asset introuvable');
+  if (!asset) throw notFound('Asset not found');
   await assertProjectAccess(req, asset.projectId);
   // La vignette n'était calculée que dans la liste : la page d'un asset ne montrait
   // jamais l'image, alors que celle d'un plan l'affichait.
@@ -119,7 +119,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveProjectIdForAsset(id);
-    if (!projectId) throw notFound('Asset introuvable');
+    if (!projectId) throw notFound('Asset not found');
     await assertProjectAccess(req, projectId);
     const asset = await AssetService.update(projectId, id, req.body as AssetService.UpdateAssetInput);
     res.json({ asset });
@@ -136,7 +136,7 @@ router.patch(
 router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveProjectIdForAsset(id);
-  if (!projectId) throw notFound('Asset introuvable');
+  if (!projectId) throw notFound('Asset not found');
   await assertProjectAccess(req, projectId);
   res.json(await PipelineLatestService.assetOverview(id, req.user!.id));
 });
@@ -149,10 +149,10 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
 router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveProjectIdForAsset(id);
-  if (!projectId) throw notFound('Asset introuvable');
+  if (!projectId) throw notFound('Asset not found');
   await assertProjectAccess(req, projectId);
   const { latest } = await PipelineLatestService.assetOverview(id, req.user!.id);
-  if (!latest) throw notFound('Aucune version publiée pour cet asset', 'NO_PUBLISHED_VERSION');
+  if (!latest) throw notFound('No published version for this asset', 'NO_PUBLISHED_VERSION');
   res.json({ latest });
 });
 
@@ -160,7 +160,7 @@ router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
 mountTrashRoutes(router, {
   entityType: 'Asset',
   auditPrefix: 'ASSET',
-  notFoundMessage: 'Asset introuvable',
+  notFoundMessage: 'Asset not found',
   resolveProjectId: resolveProjectIdForAsset,
   softDelete: (_userId, id) => softDeleteAsset(id),
   restore: restoreAsset,

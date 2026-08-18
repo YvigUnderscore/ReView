@@ -77,7 +77,7 @@ router.get(
       where: { id: runId },
       include: { connection: { select: { projectId: true } } },
     });
-    if (!run) throw notFound('Exécution introuvable');
+    if (!run) throw notFound('Run not found');
     await assertProjectManager(req.user!, run.connection.projectId, { allowMembers: true });
     const { level, skip, take } = req.query as unknown as { level?: string; skip: number; take: number };
     res.json(await Journal.listLogs(runId, { level, skip, take }));
@@ -103,7 +103,7 @@ router.post(
       where: { id: logId },
       include: { run: { include: { connection: { select: { projectId: true } } } } },
     });
-    if (!log) throw notFound('Ligne de journal introuvable');
+    if (!log) throw notFound('Log entry not found');
     await assertProjectManager(req.user!, log.run.connection.projectId);
 
     const applied = await resolveConflict(

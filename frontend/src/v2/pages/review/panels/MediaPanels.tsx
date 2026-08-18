@@ -144,7 +144,7 @@ export default function MediaPanels({
             {onExportFrame && (
               <Button size="sm" variant="outline" onClick={onExportFrame}>
                 <Camera size={13} />
-                {kind === 'VIDEO' ? 'Frame courante (PNG)' : t('panels.viewPng')}
+                {kind === 'VIDEO' ? t('panels.currentFramePng') : t('panels.viewPng')}
               </Button>
             )}
             {onContactSheet && (

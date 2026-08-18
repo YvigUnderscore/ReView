@@ -74,7 +74,7 @@ router.get(
   validate({ params: idParam, query: z.object({ query: z.string().max(120).optional() }) }),
   async (req, res) => {
     if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
-      return res.status(403).json({ error: 'Réservé aux superviseurs et administrateurs' });
+      return res.status(403).json({ error: 'Supervisors and administrators only' });
     res.json({
       projects: await Config.listRemoteProjects(Number(req.params.id), req.query.query as string | undefined),
     });

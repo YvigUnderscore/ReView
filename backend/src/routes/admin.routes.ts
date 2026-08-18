@@ -132,7 +132,7 @@ router.delete(
       where: { id: Number(req.params.id), revokedAt: null },
       data: { revokedAt: new Date() },
     });
-    if (r.count === 0) throw notFound('Token introuvable');
+    if (r.count === 0) throw notFound('Token not found');
     logAudit({
       userId: req.user!.id,
       action: 'API_TOKEN_REVOKE',

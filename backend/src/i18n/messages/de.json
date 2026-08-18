@@ -35,5 +35,14 @@
   "invite.cta": "Mein Konto aktivieren",
   "invite.expiry": "Dieser Link läuft in {days} Tagen ab.",
   "invite.fallback": "Falls die Schaltfläche nicht funktioniert, fügen Sie diesen Link in Ihren Browser ein:",
-  "invite.ignore": "Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren."
+  "invite.ignore": "Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.",
+  "notification.mentioned": "Sie wurden in einem Kommentar erwähnt",
+  "notification.reply": "Neue Antwort auf Ihren Kommentar",
+  "notification.watchedComment": "Neuer Kommentar zu etwas, dem Sie folgen",
+  "notification.montageShared": "Eine Notiz aus dem Schnitt wurde an etwas zurückgesendet, dem Sie folgen",
+  "notification.commentAssigned": "Ihnen wurde ein Kommentar zugewiesen",
+  "notification.mediaPublished": "Neues Medium veröffentlicht: {name}",
+  "notification.liveStarted": "{name} hat eine Live-review zur playlist « {playlist} » gestartet",
+  "notification.decision": "Entscheidung « {status} » zur version {version}",
+  "notification.taskAssigned": "Aufgabe zugewiesen: {name}"
 }

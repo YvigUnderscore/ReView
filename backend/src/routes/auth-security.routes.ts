@@ -38,7 +38,7 @@ router.delete(
   validate({ params: z.object({ sid: z.string().length(32) }) }),
   async (req, res) => {
     const ok = await revokeSession(String(req.params.sid), req.user!.id);
-    if (!ok) throw notFound('Session introuvable');
+    if (!ok) throw notFound('Session not found');
     logAudit({ userId: req.user!.id, action: 'SESSION_REVOKE', entityType: 'UserSession' });
     res.status(204).end();
   },
@@ -98,7 +98,7 @@ router.delete(
       where: { id: Number(req.params.id), userId: req.user!.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
-    if (r.count === 0) throw notFound('Token introuvable');
+    if (r.count === 0) throw notFound('Token not found');
     logAudit({
       userId: req.user!.id,
       action: 'API_TOKEN_REVOKE',

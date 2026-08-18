@@ -68,7 +68,7 @@ describe('create (33.A)', () => {
   it('refuse une version hors du projet de la playlist', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([{ id: 5 }] as never);
     vi.mocked(prisma.playlist.findUnique).mockResolvedValue(null);
-    await expect(create(artist, 2, 'X', [5, 6])).rejects.toThrow(/n’appartiennent pas au projet/);
+    await expect(create(artist, 2, 'X', [5, 6])).rejects.toThrow(/do not belong to the project/);
   });
 
   it('refuse un doublon de nom dans le projet (409)', async () => {

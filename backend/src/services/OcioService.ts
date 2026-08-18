@@ -142,7 +142,7 @@ async function fetchReleases(fetchFn: typeof fetch): Promise<GithubRelease[]> {
   const res = await fetchFn(`${GITHUB_API}/repos/${OCIO_REPO}/releases?per_page=15`, {
     headers: { accept: 'application/vnd.github+json', 'user-agent': 'ReView-app' },
   });
-  if (!res.ok) throw badRequest(`GitHub a répondu ${res.status}`, 'OCIO_RELEASES_FAILED');
+  if (!res.ok) throw badRequest(`GitHub answered ${res.status}`, 'OCIO_RELEASES_FAILED');
   const data = (await res.json()) as GithubRelease[];
   releasesCache = { at: Date.now(), data };
   return data;
@@ -180,7 +180,7 @@ const displaysCache = new Map<string, OcioDisplay[]>();
 export async function getConfigDisplays(id: string): Promise<OcioDisplay[]> {
   const entries = await readLibrary();
   const entry = entries.find((e) => e.id === id);
-  if (!entry) throw notFound('Config OCIO introuvable');
+  if (!entry) throw notFound('OCIO config not found');
   const cached = displaysCache.get(entry.storageKey);
   if (cached) return cached;
   const stream = await storage.getObjectStream(entry.storageKey);
@@ -202,20 +202,20 @@ export async function install(
 ): Promise<OcioEntry> {
   const entries = await readLibrary();
   if (entries.some((e) => e.assetName === assetName))
-    throw badRequest('Cette config est déjà installée', 'OCIO_ALREADY_INSTALLED');
+    throw badRequest('This config is already installed', 'OCIO_ALREADY_INSTALLED');
 
   const catalog = buildReleaseCatalog(await fetchReleases(fetchFn), new Set());
   const release = catalog.find((r) => r.tag === tag);
   const asset = release?.assets.find((a) => a.assetName === assetName);
-  if (!asset) throw notFound('Asset de config ACES introuvable');
+  if (!asset) throw notFound('ACES config asset not found');
   if (!isAllowedAssetHost(asset.downloadUrl))
-    throw badRequest('Hôte de téléchargement non autorisé', 'OCIO_BAD_HOST');
-  if (asset.sizeBytes > MAX_ASSET_BYTES) throw badRequest('Config trop volumineuse', 'OCIO_TOO_LARGE');
+    throw badRequest('This download host is not allowed', 'OCIO_BAD_HOST');
+  if (asset.sizeBytes > MAX_ASSET_BYTES) throw badRequest('Config is too large', 'OCIO_TOO_LARGE');
 
   const dl = await fetchFn(asset.downloadUrl, { headers: { 'user-agent': 'ReView-app' } });
-  if (!dl.ok) throw badRequest(`Téléchargement échoué (${dl.status})`, 'OCIO_DOWNLOAD_FAILED');
+  if (!dl.ok) throw badRequest(`Download failed (${dl.status})`, 'OCIO_DOWNLOAD_FAILED');
   const buf = Buffer.from(await dl.arrayBuffer());
-  if (buf.byteLength > MAX_ASSET_BYTES) throw badRequest('Config trop volumineuse', 'OCIO_TOO_LARGE');
+  if (buf.byteLength > MAX_ASSET_BYTES) throw badRequest('Config is too large', 'OCIO_TOO_LARGE');
 
   const storageKey = `studio/ocio/${randomUUID()}.ocio`;
   await storage.putObject(storageKey, buf, 'text/plain; charset=utf-8');
@@ -242,7 +242,7 @@ export async function install(
 /** Définit la config par défaut (exclusive). */
 export async function setDefault(id: string): Promise<OcioEntry> {
   const entries = await readLibrary();
-  if (!entries.some((e) => e.id === id)) throw notFound('Config OCIO introuvable');
+  if (!entries.some((e) => e.id === id)) throw notFound('OCIO config not found');
   const next = entries.map((e) => ({ ...e, isDefault: e.id === id }));
   await writeLibrary(next);
   return next.find((e) => e.id === id)!;
@@ -252,7 +252,7 @@ export async function setDefault(id: string): Promise<OcioEntry> {
 export async function remove(id: string): Promise<void> {
   const entries = await readLibrary();
   const target = entries.find((e) => e.id === id);
-  if (!target) throw notFound('Config OCIO introuvable');
+  if (!target) throw notFound('OCIO config not found');
   let rest = entries.filter((e) => e.id !== id);
   if (target.isDefault && rest.length > 0 && !rest.some((e) => e.isDefault)) {
     rest = rest.map((e, i) => ({ ...e, isDefault: i === 0 }));

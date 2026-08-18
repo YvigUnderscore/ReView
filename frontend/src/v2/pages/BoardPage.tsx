@@ -140,7 +140,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
             {t('board.mediaLibrary')}
           </button>
           <span className="text-xs text-muted-foreground">
-            {saved ? t('board.saved') : '… enregistrement'}
+            {saved ? t('board.saved') : t('board.savingShort')}
           </span>
         </div>
         <Link

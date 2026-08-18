@@ -81,7 +81,7 @@ router.patch(
       const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
       if (!user) throw unauthorized();
       if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password))) {
-        throw unauthorized('Mot de passe actuel requis', 'CURRENT_PASSWORD_REQUIRED');
+        throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
       }
     }
 

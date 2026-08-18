@@ -74,7 +74,7 @@ export async function assertCanInvite(): Promise<void> {
     );
   }
   if (!(await isMailerConfigured())) {
-    throw badRequest('SMTP non configuré : impossible d’envoyer une invitation', 'SMTP_NOT_CONFIGURED');
+    throw badRequest('SMTP is not configured — an invitation cannot be sent', 'SMTP_NOT_CONFIGURED');
   }
 }
 
@@ -97,9 +97,9 @@ export async function sendInvitation(userId: number, invitedById: number | null)
       isService: true,
     },
   });
-  if (!user) throw notFound('Utilisateur introuvable');
+  if (!user) throw notFound('User not found');
   // Un compte de service porte une adresse non routable : rien à inviter.
-  if (user.isService) throw badRequest('Un compte de service ne peut pas être invité', 'SERVICE_ACCOUNT');
+  if (user.isService) throw badRequest('A service account cannot be invited', 'SERVICE_ACCOUNT');
   await assertCanInvite();
 
   const token = randomBytes(32).toString('base64url');
@@ -132,7 +132,7 @@ export async function sendInvitation(userId: number, invitedById: number | null)
     // L'invitation reste en base : l'administrateur peut relancer une fois le relais réparé,
     // sans avoir à supprimer puis recréer le compte.
     logger.error({ userId }, '[Invitation] envoi impossible');
-    throw badRequest('Envoi impossible (SMTP en erreur)', 'SMTP_SEND_FAILED');
+    throw badRequest('Could not send (SMTP error)', 'SMTP_SEND_FAILED');
   }
   logger.info({ userId }, '[Invitation] envoyée');
 }
@@ -170,7 +170,7 @@ async function findValid(token: string) {
  */
 export async function describeInvitation(token: string): Promise<InvitationView> {
   const invitation = await findValid(token);
-  if (!invitation) throw badRequest('Invitation invalide ou expirée', 'INVITATION_INVALID');
+  if (!invitation) throw badRequest('Invalid or expired invitation', 'INVITATION_INVALID');
   return {
     email: invitation.user.email,
     name: displayName(invitation.user),
@@ -181,7 +181,7 @@ export async function describeInvitation(token: string): Promise<InvitationView>
 /** Consomme le jeton et pose le mot de passe choisi. Renvoie le compte activé. */
 export async function acceptInvitation(token: string, password: string) {
   const invitation = await findValid(token);
-  if (!invitation) throw badRequest('Invitation invalide ou expirée', 'INVITATION_INVALID');
+  if (!invitation) throw badRequest('Invalid or expired invitation', 'INVITATION_INVALID');
   const hash = await bcrypt.hash(password, 12);
   // `updateMany` sur `acceptedAt: null` : deux soumissions concurrentes du même lien ne
   // doivent poser qu'un seul mot de passe.
@@ -189,7 +189,7 @@ export async function acceptInvitation(token: string, password: string) {
     where: { id: invitation.id, acceptedAt: null },
     data: { acceptedAt: new Date() },
   });
-  if (consumed.count === 0) throw badRequest('Invitation invalide ou expirée', 'INVITATION_INVALID');
+  if (consumed.count === 0) throw badRequest('Invalid or expired invitation', 'INVITATION_INVALID');
   return prisma.user.update({
     where: { id: invitation.userId },
     data: { password: hash },

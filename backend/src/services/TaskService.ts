@@ -41,7 +41,8 @@ async function notifyAssignee(
     await notify({
       userId: assigneeId,
       type: 'TASK_ASSIGNED',
-      content: `Tâche assignée : ${taskName}`,
+      messageKey: 'notification.taskAssigned',
+      params: { name: taskName },
       projectId,
       referenceId: taskId,
     });
@@ -271,11 +272,11 @@ export async function createFromComment(user: SessionUser, projectId: number, co
       },
     },
   });
-  if (!comment) throw notFound('Commentaire introuvable');
+  if (!comment) throw notFound('Comment not found');
   const version = comment.media.version;
   const shotId = version.task?.shotId ?? null;
   const assetId = version.task?.assetId ?? version.assetId ?? null;
-  if (!shotId && !assetId) throw badRequest('Média sans shot/asset rattaché');
+  if (!shotId && !assetId) throw badRequest('This media has no shot or asset attached');
 
   const task = await prisma.task.create({
     data: {
@@ -314,7 +315,7 @@ export async function getDetail(id: number) {
       sourceComment: { select: { id: true, mediaObjectId: true } },
     },
   });
-  if (!task) throw notFound('Tâche introuvable');
+  if (!task) throw notFound('Task not found');
   return task;
 }
 
@@ -387,7 +388,7 @@ async function resolveStatusPair(
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {
   const task = await prisma.task.findUnique({ where: { id }, select: { assigneeId: true } });
-  if (!task) throw notFound('Tâche introuvable');
+  if (!task) throw notFound('Task not found');
   const manager = isGlobalManager(user.role);
   const isAssignee = task.assigneeId === user.id;
   if (!manager) {
@@ -395,7 +396,7 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     const keys = Object.keys(body);
     const allowed = ['status', 'pipelineStatusId', 'checklist'];
     if (!isAssignee || keys.some((k) => !allowed.includes(k)))
-      throw forbidden('Seuls le statut et la checklist de votre tâche assignée sont modifiables');
+      throw forbidden('On a task assigned to you, only the status and the checklist can change');
   }
   const { checklist, department, ...rest } = body;
   // Département : la clé et la relation avancent ensemble, comme le statut plus bas.
@@ -475,9 +476,9 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
 }
 
 export async function remove(user: SessionUser, projectId: number, id: number) {
-  if (!isGlobalManager(user.role)) throw forbidden('Réservé aux superviseurs/admins');
+  if (!isGlobalManager(user.role)) throw forbidden('Supervisors and administrators only');
   const task = await prisma.task.findUnique({ where: { id }, select: { shotId: true, assetId: true } });
-  if (!task) throw notFound('Tâche introuvable');
+  if (!task) throw notFound('Task not found');
   await prisma.task.delete({ where: { id } });
   emitTaskUpdate(projectId, { id, shotId: task.shotId, assetId: task.assetId });
 }

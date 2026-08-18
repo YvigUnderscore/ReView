@@ -26,7 +26,7 @@ const login = async () => {
     const r = await request(app).post('/api/auth/login').send({ email, password: 'admin1234' });
     if (r.status === 200) return r.body.token as string;
   }
-  throw new Error('aucun compte administrateur de test disponible');
+  throw new Error('no test administrator account available');
 };
 
 /** Crée une tâche, sa version publiée et un média visible, à l'étape voulue. */

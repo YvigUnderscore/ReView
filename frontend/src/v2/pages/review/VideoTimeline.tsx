@@ -245,7 +245,7 @@ export default function VideoTimeline({
                 : 'ring-1 ring-primary/50 hover:scale-125 hover:ring-primary'
             }`}
             style={{ left: `calc(${pos}% * (100% - 8px) / 100% + 4px)` }}
-            title={`${c.author?.displayName ?? c.author?.name ?? c.guestName ?? 'Inconnu'} : ${c.content.slice(0, 60)}`}
+            title={`${c.author?.displayName ?? c.author?.name ?? c.guestName ?? t('common.unknown')} : ${c.content.slice(0, 60)}`}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();

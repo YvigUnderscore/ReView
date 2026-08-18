@@ -133,7 +133,7 @@ export async function getDetail(userId: number, id: number) {
       },
     },
   });
-  if (!version) throw notFound('Version introuvable');
+  if (!version) throw notFound('Version not found');
   // Présigne la miniature de chaque média (Phase 20 : vraies vignettes dans la timeline).
   const media = await Promise.all(
     version.media.map(async ({ thumbnailKey, ...m }) => ({
@@ -155,18 +155,18 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     where: { id },
     select: { authorId: true, published: true },
   });
-  if (!version) throw notFound('Version introuvable');
+  if (!version) throw notFound('Version not found');
   const manager = isGlobalManager(user.role);
   const isAuthor = version.authorId === user.id;
   if (!manager && !isAuthor) throw forbidden("Modification réservée à l'auteur ou un superviseur");
   if (body.status === VersionStatus.PUBLISHED && !manager)
-    throw forbidden('Seul un superviseur/admin peut publier une version');
+    throw forbidden('Only a supervisor or administrator can publish a version');
   // …et la sortie de l'état publié est tout aussi réservée. Sans cela le verrou n'a qu'un
   // sens : l'auteur dépublie sa version — la retirant au passage du lien de partage client,
   // décisions de review comprises — puis la modifie librement, puisque `assertNotPublished`
   // ne voit plus qu'un brouillon.
   if (version.published && body.status !== undefined && body.status !== VersionStatus.PUBLISHED && !manager)
-    throw forbidden('Seul un superviseur/admin peut dépublier une version');
+    throw forbidden('Only a supervisor or administrator can unpublish a version');
   // Verrou de publication (Phase 11) : la transform 3D d'une version publiée est figée.
   if (body.transform !== undefined) assertNotPublished(version);
 
@@ -202,7 +202,7 @@ export async function publishAll(user: SessionUser, projectId: number, id: numbe
     where: { id },
     select: { id: true, deletedAt: true },
   });
-  if (!version || version.deletedAt) throw notFound('Version introuvable');
+  if (!version || version.deletedAt) throw notFound('Version not found');
 
   const drafts = await prisma.mediaObject.findMany({
     where: {
@@ -231,7 +231,7 @@ export async function remove(user: SessionUser, projectId: number, id: number) {
     where: { id },
     select: { authorId: true, taskId: true, assetId: true },
   });
-  if (!version) throw notFound('Version introuvable');
+  if (!version) throw notFound('Version not found');
   if (!isGlobalManager(user.role) && version.authorId !== user.id)
     throw forbidden("Suppression réservée à l'auteur ou un superviseur");
   await softDeleteVersion(id);
@@ -244,7 +244,7 @@ export async function restore(user: SessionUser, projectId: number, id: number) 
     where: { id },
     select: { authorId: true, taskId: true, assetId: true },
   });
-  if (!version) throw notFound('Version introuvable');
+  if (!version) throw notFound('Version not found');
   if (!isGlobalManager(user.role) && version.authorId !== user.id)
     throw forbidden("Restauration réservée à l'auteur ou un superviseur");
   await restoreVersion(id);
@@ -252,9 +252,9 @@ export async function restore(user: SessionUser, projectId: number, id: number) 
 }
 
 export async function purge(user: SessionUser, projectId: number, id: number) {
-  if (!isGlobalManager(user.role)) throw forbidden('Réservé aux superviseurs/admins');
+  if (!isGlobalManager(user.role)) throw forbidden('Supervisors and administrators only');
   const version = await prisma.version.findUnique({ where: { id }, select: { taskId: true, assetId: true } });
-  if (!version) throw notFound('Version introuvable');
+  if (!version) throw notFound('Version not found');
   await purgeVersion(id);
   logAudit({ userId: user.id, action: 'VERSION_PURGE', entityType: 'Version', entityId: id });
   emitVersionUpdate(projectId, { id, taskId: version.taskId, assetId: version.assetId });

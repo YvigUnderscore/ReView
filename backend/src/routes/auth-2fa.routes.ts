@@ -31,7 +31,8 @@ const codeSchema = z.string().min(6).max(20);
 router.post('/setup', authenticate, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) throw unauthorized();
-  if (user.totpEnabledAt) throw badRequest('2FA déjà activée', 'TWOFA_ALREADY_ENABLED');
+  if (user.totpEnabledAt)
+    throw badRequest('Two-factor authentication is already on', 'TWOFA_ALREADY_ENABLED');
   const secret = generateTotpSecret();
   await prisma.user.update({
     where: { id: user.id },
@@ -45,7 +46,8 @@ router.post('/setup', authenticate, async (req, res) => {
 router.post('/enable', authenticate, validate({ body: z.object({ code: codeSchema }) }), async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user?.totpSecret) throw badRequest("Aucun enrôlement en cours (appelez d'abord /setup)");
-  if (user.totpEnabledAt) throw badRequest('2FA déjà activée', 'TWOFA_ALREADY_ENABLED');
+  if (user.totpEnabledAt)
+    throw badRequest('Two-factor authentication is already on', 'TWOFA_ALREADY_ENABLED');
   const secret = decryptSecret(user.totpSecret);
   if (!secret || !(await verifyTotp(secret, (req.body as { code: string }).code))) {
     throw unauthorized('Code incorrect', 'TWOFA_BAD_CODE');
@@ -68,7 +70,7 @@ router.post(
     const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
     if (!user) throw unauthorized();
     if (!(await bcrypt.compare((req.body as { password: string }).password, user.password))) {
-      throw unauthorized('Mot de passe incorrect');
+      throw unauthorized('Wrong password');
     }
     await prisma.user.update({
       where: { id: user.id },
@@ -91,9 +93,9 @@ router.post(
   async (req, res) => {
     const { tmpToken, code } = req.body as { tmpToken: string; code: string };
     const userId = verifyTwoFaToken(tmpToken);
-    if (!userId) throw unauthorized('Jeton expiré — reconnectez-vous', 'TWOFA_TOKEN_EXPIRED');
+    if (!userId) throw unauthorized('Token expired — sign in again', 'TWOFA_TOKEN_EXPIRED');
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.totpSecret || !user.totpEnabledAt) throw unauthorized('2FA non activée');
+    if (!user?.totpSecret || !user.totpEnabledAt) throw unauthorized('Two-factor authentication is not on');
 
     const secret = decryptSecret(user.totpSecret);
     let ok = secret ? await verifyTotp(secret, code) : false;

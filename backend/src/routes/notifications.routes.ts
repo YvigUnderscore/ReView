@@ -28,7 +28,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const notif = await prisma.notification.findFirst({ where: { id, userId: req.user!.id } });
-    if (!notif) throw notFound('Notification introuvable');
+    if (!notif) throw notFound('Notification not found');
     const updated = await prisma.notification.update({ where: { id }, data: { isRead: true } });
     res.json({ notification: updated });
   },

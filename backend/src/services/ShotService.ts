@@ -59,7 +59,7 @@ async function assertSequenceInProject(sequenceId: number | null | undefined, pr
   if (!sequenceId) return;
   const seq = await prisma.sequence.findUnique({ where: { id: sequenceId }, select: { projectId: true } });
   if (!seq || seq.projectId !== projectId)
-    throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+    throw badRequest('This sequence does not belong to this project', 'BAD_SEQUENCE');
 }
 
 export interface CreateShotInput {
@@ -86,7 +86,7 @@ export async function create(input: CreateShotInput) {
     },
     select: { id: true },
   });
-  if (clash) throw badRequest('Un shot avec ce code existe déjà dans cette séquence', 'CODE_TAKEN');
+  if (clash) throw badRequest('A shot with this code already exists in this sequence', 'CODE_TAKEN');
   return prisma.shot.create({
     data: {
       projectId: input.projectId,
@@ -109,13 +109,14 @@ export async function createBulk(projectId: number, items: BulkShotItem[]) {
   const seqIds = [...new Set(items.map((i) => i.sequenceId).filter((v): v is number => !!v))];
   if (seqIds.length > 0) {
     const ok = await prisma.sequence.count({ where: { id: { in: seqIds }, projectId } });
-    if (ok !== seqIds.length) throw badRequest('Séquence invalide pour ce projet', 'BAD_SEQUENCE');
+    if (ok !== seqIds.length)
+      throw badRequest('This sequence does not belong to this project', 'BAD_SEQUENCE');
   }
   // Doublons (code, séquence) dans le lot.
   const key = (sid: number | null | undefined, code: string) => `${sid ?? 'none'}::${code}`;
   const keys = items.map((i) => key(i.sequenceId, i.code));
   const dup = keys.find((k, i) => keys.indexOf(k) !== i);
-  if (dup) throw badRequest(`Code en double dans le lot : ${dup.split('::')[1]}`, 'CODE_DUP');
+  if (dup) throw badRequest(`Duplicate code in the batch : ${dup.split('::')[1]}`, 'CODE_DUP');
   // Conflits avec l'existant.
   const existing = await prisma.shot.findMany({
     where: { projectId, deletedAt: null, code: { in: items.map((i) => i.code) } },
@@ -123,7 +124,8 @@ export async function createBulk(projectId: number, items: BulkShotItem[]) {
   });
   const existingKeys = new Set(existing.map((e) => key(e.sequenceId, e.code)));
   const clash = items.find((i) => existingKeys.has(key(i.sequenceId, i.code)));
-  if (clash) throw badRequest(`Shot déjà existant dans cette séquence : ${clash.code}`, 'CODE_TAKEN');
+  if (clash)
+    throw badRequest(`A shot with this code already exists in this sequence: ${clash.code}`, 'CODE_TAKEN');
   return prisma.$transaction(
     items.map((it, idx) =>
       prisma.shot.create({
@@ -153,7 +155,7 @@ export async function get(id: number) {
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });
-  if (!shot) throw notFound('Shot introuvable');
+  if (!shot) throw notFound('Shot not found');
   // La miniature n'était calculée que dans la liste : une page de plan n'a pas de liste
   // derrière elle, et affichait donc un en-tête vide.
   return {
@@ -195,7 +197,7 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
       where: { projectId, sequenceId: nextSequenceId, code: nextCode, deletedAt: null, id: { not: id } },
       select: { id: true },
     });
-    if (conflict) throw badRequest('Un shot avec ce code existe déjà dans cette séquence', 'CODE_TAKEN');
+    if (conflict) throw badRequest('A shot with this code already exists in this sequence', 'CODE_TAKEN');
   }
   const shot = await prisma.shot.update({ where: { id }, data: body });
   // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
@@ -216,7 +218,7 @@ export async function attachAsset(shotId: number, projectId: number, body: Attac
   let assetId = body.assetId;
   if (assetId === undefined) {
     if (await prisma.asset.findUnique({ where: { projectId_name: { projectId, name: body.name! } } }))
-      throw badRequest('Un asset avec ce nom existe déjà', 'NAME_TAKEN');
+      throw badRequest('An asset with this name already exists', 'NAME_TAKEN');
     const created = await prisma.asset.create({
       data: { projectId, name: body.name!, type: body.type ?? AssetType.OTHER },
     });
@@ -224,7 +226,7 @@ export async function attachAsset(shotId: number, projectId: number, body: Attac
   } else {
     const asset = await prisma.asset.findUnique({ where: { id: assetId }, select: { projectId: true } });
     if (!asset || asset.projectId !== projectId)
-      throw badRequest('Asset invalide pour ce projet', 'BAD_ASSET');
+      throw badRequest('This asset does not belong to this project', 'BAD_ASSET');
   }
   await prisma.shot.update({ where: { id: shotId }, data: { assets: { connect: { id: assetId } } } });
   return prisma.asset.findUnique({ where: { id: assetId }, select: { id: true, name: true, type: true } });

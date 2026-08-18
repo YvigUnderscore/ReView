@@ -27,7 +27,7 @@ const idParam = z.object({ id: z.coerce.number().int() });
 /** Résout le projet d'un montage + assertion d'accès (RBAC) → renvoie le projectId. */
 async function assertTimelineAccess(req: Request, id: number): Promise<number> {
   const timeline = await prisma.timeline.findUnique({ where: { id }, select: { projectId: true } });
-  if (!timeline) throw notFound('Montage introuvable');
+  if (!timeline) throw notFound('Timeline not found');
   await assertProjectAccess(req, timeline.projectId);
   return timeline.projectId;
 }

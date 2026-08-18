@@ -186,8 +186,8 @@ export default function OcioTab() {
                         {a.installed
                           ? t('ocio.installed')
                           : busyAsset === a.assetName
-                            ? 'Installation…'
-                            : 'Installer'}
+                            ? t('common.installing')
+                            : t('common.install')}
                       </Button>
                     </div>
                   ))}

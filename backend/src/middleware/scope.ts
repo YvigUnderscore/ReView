@@ -26,7 +26,7 @@ export const requireScope = (scope: Scope): ScopeMiddleware => {
       return;
     }
     if (req.apiToken && !hasScope(req.apiToken.scopes, scope)) {
-      next(forbidden(`Scope « ${scope} » requis`, 'SCOPE_REQUIRED'));
+      next(forbidden(`Scope « ${scope} » is required`, 'SCOPE_REQUIRED'));
       return;
     }
     next();
@@ -43,6 +43,6 @@ export const requireScope = (scope: Scope): ScopeMiddleware => {
 export function assertTokenProject(req: Request, projectId: number): void {
   const bound = req.apiToken?.projectId;
   if (bound !== undefined && bound !== projectId) {
-    throw forbidden('Token cantonné à un autre projet', 'TOKEN_PROJECT_SCOPE');
+    throw forbidden('This token is scoped to another project', 'TOKEN_PROJECT_SCOPE');
   }
 }

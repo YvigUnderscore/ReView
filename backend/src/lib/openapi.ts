@@ -145,7 +145,7 @@ registry.registerPath({
       description: 'Projet',
       content: { 'application/json': { schema: z.object({ project: Project }) } },
     },
-    404: jsonError('Projet introuvable'),
+    404: jsonError('Project not found'),
   },
 });
 

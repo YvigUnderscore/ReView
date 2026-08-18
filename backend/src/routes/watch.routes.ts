@@ -45,7 +45,7 @@ router.put(
         : targetType === WatchTargetType.ASSET
           ? await resolveProjectIdForAsset(targetId)
           : await resolveProjectIdForVersion(targetId);
-    if (!projectId) throw notFound('Cible introuvable');
+    if (!projectId) throw notFound('Target not found');
     await assertProjectAccess(req, projectId);
     res.json({ watching: await WatchService.setWatch(req.user!.id, targetType, targetId, watching) });
   },

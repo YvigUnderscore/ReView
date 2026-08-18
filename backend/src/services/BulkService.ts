@@ -138,11 +138,11 @@ async function assertDeleteAccess(user: SessionUser, domain: DeleteDomain, ids: 
   const manager = isManager(user.role);
   for (const id of ids) {
     const projectId = await RESOLVERS[domain](id);
-    if (!projectId) throw notFound(`Élément ${id} introuvable`);
+    if (!projectId) throw notFound(`Item ${id} not found`);
     if (!(await checkProjectAccess(user.id, user.role, projectId)))
-      throw forbidden(`Accès refusé (${domain} ${id})`);
+      throw forbidden(`Access denied (${domain} ${id})`);
     if (domain === 'projects' || domain === 'sequences' || domain === 'shots' || domain === 'assets') {
-      if (!manager) throw forbidden('Action réservée aux superviseurs/admins');
+      if (!manager) throw forbidden('Supervisors and administrators only');
     } else if (domain === 'versions') {
       const v = await prisma.version.findUnique({ where: { id }, select: { authorId: true } });
       if (!manager && v?.authorId !== user.id)
@@ -180,7 +180,7 @@ export async function bulkPurge(user: SessionUser, domain: DeleteDomain, ids: nu
   // groupée rendait à un superviseur — dont l'accès projet est global — la destruction
   // définitive et irréversible de n'importe quel projet, base et stockage compris.
   if (domain === 'projects' && user.role !== Role.ADMIN)
-    throw forbidden('Purge définitive d’un projet réservée aux administrateurs');
+    throw forbidden('Permanently purging a project is reserved to administrators');
   for (const id of ids) await PURGE[domain](id);
   const a = AUDIT_ACTION[domain];
   logAudit({ userId: user.id, action: a.purge, entityType: a.type, entityId: ids[0], metadata: { ids } });
@@ -202,7 +202,7 @@ export async function bulkPatchTasks(
 ): Promise<number> {
   for (const id of ids) {
     const projectId = await resolveProjectIdForTask(id);
-    if (!projectId) throw notFound(`Tâche ${id} introuvable`);
+    if (!projectId) throw notFound(`Task ${id} not found`);
     await TaskService.update(user, projectId, id, patch);
   }
   return ids.length;
@@ -216,7 +216,7 @@ export async function bulkPatchVersions(
 ): Promise<number> {
   for (const id of ids) {
     const projectId = await resolveProjectIdForVersion(id);
-    if (!projectId) throw notFound(`Version ${id} introuvable`);
+    if (!projectId) throw notFound(`Version ${id} not found`);
     await VersionService.update(user, projectId, id, { status });
   }
   return ids.length;
@@ -228,21 +228,22 @@ export async function bulkMoveShots(
   ids: number[],
   sequenceId: number | null,
 ): Promise<number> {
-  if (!isManager(user.role)) throw forbidden('Action réservée aux superviseurs/admins');
+  if (!isManager(user.role)) throw forbidden('Supervisors and administrators only');
   // Tous les shots doivent appartenir au même projet, cohérent avec la séquence cible.
   const shots = await prisma.shot.findMany({
     where: { id: { in: ids } },
     select: { id: true, projectId: true },
   });
-  if (shots.length !== ids.length) throw notFound('Un ou plusieurs shots introuvables');
+  if (shots.length !== ids.length) throw notFound('One or more shots were not found');
   const projectIds = new Set(shots.map((s) => s.projectId));
-  if (projectIds.size !== 1) throw forbidden('Les shots doivent appartenir au même projet');
+  if (projectIds.size !== 1) throw forbidden('All shots must belong to the same project');
   const [projectId] = projectIds;
-  if (projectId === undefined) throw notFound('Aucun shot à déplacer');
-  if (!(await checkProjectAccess(user.id, user.role, projectId))) throw forbidden('Accès au projet refusé');
+  if (projectId === undefined) throw notFound('No shot to move');
+  if (!(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('No access to this project');
   if (sequenceId !== null) {
     const seq = await prisma.sequence.findUnique({ where: { id: sequenceId }, select: { projectId: true } });
-    if (!seq || seq.projectId !== projectId) throw notFound('Séquence cible invalide');
+    if (!seq || seq.projectId !== projectId) throw notFound('Invalid target sequence');
   }
   await prisma.shot.updateMany({ where: { id: { in: ids } }, data: { sequenceId } });
   logAudit({

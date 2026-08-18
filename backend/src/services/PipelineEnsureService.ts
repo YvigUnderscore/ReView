@@ -91,7 +91,7 @@ export async function ensureSequence(actor: Actor, projectId: number, input: Ens
     });
   } catch (err) {
     return recoverUniqueViolation(err, find, () =>
-      conflict(`La séquence « ${input.code} » est dans la corbeille`, 'SEQUENCE_IN_TRASH'),
+      conflict(`Sequence « ${input.code} » is in the trash`, 'SEQUENCE_IN_TRASH'),
     );
   }
   emitToProject(projectId, 'sequence:update', { projectId, id: entity.id });
@@ -141,7 +141,7 @@ export async function ensureShot(actor: Actor, projectId: number, input: EnsureS
     });
   } catch (err) {
     return recoverUniqueViolation(err, find, () =>
-      conflict(`Le shot « ${input.code} » est dans la corbeille`, 'SHOT_IN_TRASH'),
+      conflict(`Shot « ${input.code} » is in the trash`, 'SHOT_IN_TRASH'),
     );
   }
   emitToProject(projectId, 'shot:update', { projectId, id: entity.id });
@@ -177,7 +177,7 @@ export async function ensureAsset(actor: Actor, projectId: number, input: Ensure
     });
   } catch (err) {
     return recoverUniqueViolation(err, find, () =>
-      conflict(`L'asset « ${input.name} » est dans la corbeille`, 'ASSET_IN_TRASH'),
+      conflict(`L'asset « ${input.name} » is in the trash`, 'ASSET_IN_TRASH'),
     );
   }
   emitToProject(projectId, 'asset:update', { projectId, id: entity.id });
@@ -199,7 +199,7 @@ export async function ensureTask(
   input: EnsureTaskInput,
 ) {
   if ((parent.shotId === undefined) === (parent.assetId === undefined)) {
-    throw badRequest('Fournir exactement un parent : shot OU asset');
+    throw badRequest('Provide exactly one parent: a shot or an asset');
   }
   const parentWhere = parent.shotId !== undefined ? { shotId: parent.shotId } : { assetId: parent.assetId };
   const department = await resolveDepartmentKey(projectId, input);
@@ -283,7 +283,7 @@ export async function ensureVersion(
   input: EnsureVersionInput = {},
 ) {
   if ((parent.taskId === undefined) === (parent.assetId === undefined)) {
-    throw badRequest('Fournir exactement un parent : tâche OU asset');
+    throw badRequest('Provide exactly one parent: a task or an asset');
   }
   const parentWhere = parent.taskId !== undefined ? { taskId: parent.taskId } : { assetId: parent.assetId };
 
@@ -294,7 +294,7 @@ export async function ensureVersion(
     });
     if (existing) {
       if (input.reuseExisting) return { entity: existing, created: false };
-      throw badRequest(`La version « ${input.name} » existe déjà`, 'VERSION_EXISTS');
+      throw badRequest(`Version « ${input.name} » already exists`, 'VERSION_EXISTS');
     }
   }
 

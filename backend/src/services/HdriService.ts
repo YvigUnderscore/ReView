@@ -54,7 +54,7 @@ export async function listWithUrls(): Promise<(HdriEntry & { url: string })[]> {
 
 /** URL présignée d'upload d'un nouveau HDRI (admin) : renvoie la clé + l'URL PUT. */
 export async function presignUpload(format: HdriFormat): Promise<{ storageKey: string; uploadUrl: string }> {
-  if (!HDRI_FORMATS.includes(format)) throw badRequest('Format HDRI invalide (hdr/exr)', 'BAD_FORMAT');
+  if (!HDRI_FORMATS.includes(format)) throw badRequest('Invalid HDRI format (hdr or exr)', 'BAD_FORMAT');
   const storageKey = `studio/hdris/${randomUUID()}.${format}`;
   const contentType = format === 'exr' ? 'image/x-exr' : 'image/vnd.radiance';
   const uploadUrl = await storage.getPresignedPutUrl(storageKey, contentType);
@@ -63,7 +63,7 @@ export async function presignUpload(format: HdriFormat): Promise<{ storageKey: s
 
 /** Finalise l'ajout après upload MinIO (admin). */
 export async function add(name: string, storageKey: string, format: HdriFormat): Promise<HdriEntry> {
-  if (!storageKey.startsWith('studio/hdris/')) throw badRequest('Clé de stockage invalide', 'BAD_KEY');
+  if (!storageKey.startsWith('studio/hdris/')) throw badRequest('Invalid storage key', 'BAD_KEY');
   const entry: HdriEntry = {
     id: randomUUID(),
     name,
@@ -80,7 +80,7 @@ export async function add(name: string, storageKey: string, format: HdriFormat):
 export async function remove(id: string): Promise<void> {
   const entries = await readLibrary();
   const target = entries.find((e) => e.id === id);
-  if (!target) throw notFound('HDRI introuvable');
+  if (!target) throw notFound('HDRI not found');
   await writeLibrary(entries.filter((e) => e.id !== id));
   await storage.deleteObject(target.storageKey).catch(() => undefined);
 }

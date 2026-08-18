@@ -41,7 +41,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
 
   if (payload.sid && !(await isSessionActive(payload.sid))) {
-    res.status(401).json({ error: 'Session révoquée ou expirée', code: 'SESSION_REVOKED' });
+    res.status(401).json({ error: 'Session revoked ou expirée', code: 'SESSION_REVOKED' });
     return;
   }
 
@@ -50,7 +50,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   const dbUser = await getAuthUser(payload.id);
 
   if (!dbUser) {
-    res.status(401).json({ error: 'Utilisateur introuvable', code: 'USER_GONE' });
+    res.status(401).json({ error: 'User not found', code: 'USER_GONE' });
     return;
   }
 

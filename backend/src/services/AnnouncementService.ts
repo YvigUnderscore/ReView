@@ -51,14 +51,14 @@ export async function create(user: SessionUser, input: AnnouncementInput) {
 }
 
 export async function update(user: SessionUser, id: number, input: AnnouncementInput) {
-  if (!(await prisma.announcement.findUnique({ where: { id } }))) throw notFound('Annonce introuvable');
+  if (!(await prisma.announcement.findUnique({ where: { id } }))) throw notFound('Announcement not found');
   const a = await prisma.announcement.update({ where: { id }, data: data(input) });
   logAudit({ userId: user.id, action: 'ANNOUNCEMENT_UPDATE', entityType: 'Announcement', entityId: id });
   return a;
 }
 
 export async function remove(user: SessionUser, id: number) {
-  if (!(await prisma.announcement.findUnique({ where: { id } }))) throw notFound('Annonce introuvable');
+  if (!(await prisma.announcement.findUnique({ where: { id } }))) throw notFound('Announcement not found');
   await prisma.announcement.delete({ where: { id } });
   logAudit({ userId: user.id, action: 'ANNOUNCEMENT_DELETE', entityType: 'Announcement', entityId: id });
 }
@@ -107,7 +107,7 @@ export async function active(user: SessionUser) {
 /** Accusé de lecture (upsert) : masque l'annonce selon sa fréquence. */
 export async function acknowledge(user: SessionUser, id: number) {
   if (!(await prisma.announcement.findUnique({ where: { id }, select: { id: true } })))
-    throw notFound('Annonce introuvable');
+    throw notFound('Announcement not found');
   await prisma.announcementRead.upsert({
     where: { announcementId_userId: { announcementId: id, userId: user.id } },
     update: { readAt: new Date() },

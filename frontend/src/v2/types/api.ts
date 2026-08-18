@@ -259,6 +259,13 @@ export type NotificationType =
 export interface Notification {
   id: number;
   type: NotificationType | string;
+  /**
+   * Clé traduisible et ses paramètres (D2). La phrase était écrite en français EN BASE
+   * puis servie telle quelle : `content` reste renvoyé, en anglais, comme repli pour les
+   * notifications antérieures.
+   */
+  messageKey?: string | null;
+  params?: Record<string, string | number> | null;
   content: string;
   referenceId: number | null;
   projectId: number | null;

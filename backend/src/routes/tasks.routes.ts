@@ -20,7 +20,7 @@ const idParam = z.object({ id: z.coerce.number().int() });
 /** Résout le projet d'une tâche + assertion d'accès (RBAC) → renvoie le projectId. */
 async function resolveTaskAccess(req: Request, id: number): Promise<number> {
   const projectId = await resolveProjectIdForTask(id);
-  if (!projectId) throw notFound('Tâche introuvable');
+  if (!projectId) throw notFound('Task not found');
   await assertProjectAccess(req, projectId);
   return projectId;
 }
@@ -78,7 +78,7 @@ router.get(
     const projectId = shotId
       ? await resolveProjectIdForShot(shotId)
       : await resolveProjectIdForAsset(assetId!);
-    if (!projectId) throw notFound('Parent introuvable');
+    if (!projectId) throw notFound('Parent not found');
     await assertProjectAccess(req, projectId);
     res.json(await TaskService.list(readPagination(req.query), shotId, assetId));
   },
@@ -105,13 +105,13 @@ router.post(
   }),
   async (req, res) => {
     if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
-      throw forbidden('Réservé aux superviseurs/admins');
+      throw forbidden('Supervisors and administrators only');
     const body = req.body as { shotId?: number; assetId?: number };
     const projectId =
       body.shotId !== undefined
         ? await resolveProjectIdForShot(body.shotId)
         : await resolveProjectIdForAsset(body.assetId!);
-    if (!projectId) throw notFound('Shot/Asset parent introuvable');
+    if (!projectId) throw notFound('Parent shot or asset not found');
     await assertProjectAccess(req, projectId);
     res.status(201).json({ task: await TaskService.create(req.user!, projectId, req.body) });
   },

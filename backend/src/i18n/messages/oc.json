@@ -35,5 +35,14 @@
   "invite.cta": "Activar mon compte",
   "invite.expiry": "Aqueste ligam expira dins {days} jorns.",
   "invite.fallback": "Se lo boton foncciona pas, pegatz aqueste ligam dins vòstre navegador :",
-  "invite.ignore": "Se esperavatz pas aquesta convidacion, podètz ignorar aqueste messatge."
+  "invite.ignore": "Se esperavatz pas aquesta convidacion, podètz ignorar aqueste messatge.",
+  "notification.mentioned": "Sètz estat mencionat dins un comentari",
+  "notification.reply": "Novèla responsa a vòstre comentari",
+  "notification.watchedComment": "Novèl comentari sus un element seguit",
+  "notification.montageShared": "Una nòta del montatge es estada tornada sus un element seguit",
+  "notification.commentAssigned": "Un comentari vos es estat assignat",
+  "notification.mediaPublished": "Novèl mèdia publicat : {name}",
+  "notification.liveStarted": "{name} a lançat una review en dirècte sus la playlist « {playlist} »",
+  "notification.decision": "Decision « {status} » sus la version {version}",
+  "notification.taskAssigned": "Prètzfach assignat : {name}"
 }

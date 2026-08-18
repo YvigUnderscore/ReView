@@ -282,6 +282,28 @@ export function literalOf(node) {
   return null;
 }
 
+/** `??` et `||` : les deux façons d'écrire une valeur de repli. */
+const FALLBACK_OPERATORS = new Set([ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken]);
+
+/**
+ * Le nœud aboutit-il à l'écran ? Vrai s'il est rendu par du JSX, passé à une prop de
+ * libellé ou à un appel parlant (`toast`, `confirm`…). C'est ce qui distingue une valeur
+ * de repli affichée d'une constante technique interne.
+ */
+export function inSpeakingPosition(node, src) {
+  for (let cur = node.parent; cur; cur = cur.parent) {
+    if (ts.isJsxExpression(cur)) return true;
+    if (ts.isJsxAttribute(cur)) return VISIBLE_PROPS.has(cur.name.getText(src));
+    if (ts.isCallExpression(cur)) return SPEAKING_CALLS.test(calleeName(cur.expression));
+    // Une déclaration ou un retour de fonction coupe la recherche : au-delà, on ne sait
+    // plus si la valeur s'affiche, et deviner produirait des faux positifs en série.
+    if (ts.isVariableDeclaration(cur) || ts.isReturnStatement(cur) || ts.isPropertyAssignment(cur)) {
+      return false;
+    }
+  }
+  return false;
+}
+
 /** Vrai si le nœud est contenu dans un `<code>`, `<pre>`, `<kbd>` ou `<samp>`. */
 export function insideCode(node, src) {
   for (let cur = node.parent; cur; cur = cur.parent) {
@@ -359,6 +381,27 @@ export function scan(file) {
     ) {
       // `{name ?? 'Anonyme'}` — une valeur de repli affichée telle quelle.
       push(node.text);
+    } else if (
+      ts.isConditionalExpression(node) &&
+      inSpeakingPosition(node, src) &&
+      !inTechnicalContext(node, src)
+    ) {
+      // `{a ? 'Enregistrement…' : t('common.save')}` — la branche en dur atteint l'écran
+      // aussi sûrement que l'autre. Le contrôle ne voyait que les ternaires dont les DEUX
+      // branches étaient littérales : une seule suffit.
+      for (const branch of [node.whenTrue, node.whenFalse]) {
+        if (ts.isStringLiteral(branch) || ts.isNoSubstitutionTemplateLiteral(branch)) push(branch.text);
+      }
+    } else if (
+      ts.isBinaryExpression(node) &&
+      FALLBACK_OPERATORS.has(node.operatorToken.kind) &&
+      inSpeakingPosition(node, src) &&
+      !inTechnicalContext(node, src)
+    ) {
+      // `name ?? 'Anonyme'`, `label || 'Sans titre'` — le repli s'affiche dès que la
+      // valeur manque, c'est-à-dire précisément quand on le remarque.
+      const right = node.right;
+      if (ts.isStringLiteral(right) || ts.isNoSubstitutionTemplateLiteral(right)) push(right.text);
     } else if (ts.isTemplateExpression(node) && !inTechnicalContext(node, src)) {
       // Chaque fragment séparément : `${n} job(s) purgé(s)` n'a de sens qu'en morceaux.
       // Une espace en bord signe la prose autour de l'interpolation.

@@ -26,7 +26,7 @@ export function parseClamResponse(raw: string): { clean: boolean; virus: string 
   if (/\bOK$/.test(text)) return { clean: true, virus: null };
   const m = /:\s*(.+)\s+FOUND$/.exec(text);
   if (m) return { clean: false, virus: m[1]! };
-  throw new Error(`Réponse clamd inattendue : ${text.slice(0, 120)}`);
+  throw new Error(`Unexpected clamd response : ${text.slice(0, 120)}`);
 }
 
 const SCAN_TIMEOUT_MS = 120_000;
@@ -40,7 +40,7 @@ export function scanFile(path: string): Promise<{ clean: boolean; virus: string 
       socket.destroy();
       reject(err);
     };
-    socket.setTimeout(SCAN_TIMEOUT_MS, () => fail(new Error('clamd : délai de scan dépassé')));
+    socket.setTimeout(SCAN_TIMEOUT_MS, () => fail(new Error('clamd: scan timed out')));
     socket.on('error', fail);
     socket.on('data', (d) => {
       response += d.toString();

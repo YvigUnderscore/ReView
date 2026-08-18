@@ -36,7 +36,7 @@ const shotBody = z.object({
 /** Résout le projet d'un shot + assertion d'accès (RBAC dynamique) → renvoie le projectId. */
 async function resolveShotAccess(req: Request, shotId: number): Promise<number> {
   const projectId = await resolveProjectIdForShot(shotId);
-  if (!projectId) throw notFound('Shot introuvable');
+  if (!projectId) throw notFound('Shot not found');
   await assertProjectAccess(req, projectId);
   return projectId;
 }
@@ -157,7 +157,7 @@ router.delete(
 mountTrashRoutes(router, {
   entityType: 'Shot',
   auditPrefix: 'SHOT',
-  notFoundMessage: 'Shot introuvable',
+  notFoundMessage: 'Shot not found',
   resolveProjectId: resolveProjectIdForShot,
   softDelete: (_userId, id) => softDeleteShot(id),
   restore: restoreShot,
@@ -168,7 +168,7 @@ mountTrashRoutes(router, {
 router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveProjectIdForShot(id);
-  if (!projectId) throw notFound('Shot introuvable');
+  if (!projectId) throw notFound('Shot not found');
   await assertProjectAccess(req, projectId);
   res.json(await PipelineLatestService.shotOverview(id, req.user!.id));
 });
