@@ -54,3 +54,15 @@ export async function canManageShotgrid(user: SessionUser, projectId: number): P
     return false;
   }
 }
+
+/**
+ * Le compte peut-il créer des comptes de studio ?
+ *
+ * Rôle **global** uniquement. Un superviseur de projet — un compte ARTIST dont
+ * l'appartenance porte `SUPERVISOR` — gère son projet, mais l'écran d'administration ne
+ * lui donne pas le droit de fabriquer des comptes ; l'invitation depuis ShotGrid ne doit
+ * pas le lui donner par la bande.
+ */
+export function canCreateStudioAccounts(user: SessionUser): boolean {
+  return user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
+}

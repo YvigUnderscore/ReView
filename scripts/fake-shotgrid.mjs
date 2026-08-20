@@ -65,9 +65,34 @@ const statuses = [
   { id: 9, type: 'Status', code: 'hld', name: 'On Hold', bg_color: '170,140,90', list_order: 9 },
 ];
 
+// Référence d'entité au format ShotGrid. Déclarée avant les projets, qui s'en servent
+// pour porter leur équipe.
+const ref = (type, id, name) => ({ type, id, name });
+
 const projects = [
-  { id: 70, type: 'Project', name: 'Demo Project', sg_status: 'Active', archived: false },
-  { id: 71, type: 'Project', name: 'Demo Project 2', sg_status: 'Active', archived: false },
+  {
+    id: 70,
+    type: 'Project',
+    name: 'Demo Project',
+    sg_status: 'Active',
+    archived: false,
+    // L'équipe du projet : c'est elle que lit le panneau « Équipe ShotGrid ».
+    users: [
+      ref('HumanUser', 500, 'Demo User'),
+      ref('HumanUser', 501, 'Alice Artist'),
+      ref('HumanUser', 502, 'Xavier Extern'),
+    ],
+  },
+  {
+    id: 71,
+    type: 'Project',
+    name: 'Demo Project 2',
+    sg_status: 'Active',
+    archived: false,
+    // Équipe volontairement différente : vérifie que la liste est bien celle du projet
+    // lié, et non l'annuaire du site.
+    users: [ref('HumanUser', 502, 'Xavier Extern')],
+  },
   { id: 72, type: 'Project', name: 'Demo Archive', sg_status: 'Bidding', archived: false },
 ];
 
@@ -106,8 +131,6 @@ const steps = [
   { id: 304, type: 'Step', code: 'Modeling', short_name: 'MOD', entity_type: 'Asset' },
   { id: 305, type: 'Step', code: 'Rigging', short_name: 'RIG', entity_type: 'Asset' },
 ];
-
-const ref = (type, id, name) => ({ type, id, name });
 
 /** Construit un jeu cohérent pour un projet : mêmes codes d'un projet à l'autre. */
 function buildProjectData(projectId, prefix, base) {

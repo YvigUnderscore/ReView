@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TaskStatus } from './api';
+import type { Role, TaskStatus } from './api';
 /** Types de l'intégration ShotGrid (Phase 48) — miroir des vues renvoyées par l'API. */
 
 export type SgAuthMode = 'script' | 'user';
@@ -151,4 +151,33 @@ export interface PipelineStatus {
   isDefault: boolean;
   /** Valeur de l'énumération que ce statut représente — c'est elle qui porte la famille. */
   legacyStatus: TaskStatus | null;
+}
+
+/** Ce que ReView sait déjà d'une personne de l'équipe ShotGrid. */
+export type SgCrewState = 'member' | 'account' | 'none' | 'ineligible';
+
+export interface SgCrewPerson {
+  sgId: number;
+  name: string;
+  login: string | null;
+  email: string | null;
+  sgStatus: string | null;
+  state: SgCrewState;
+  userId: number | null;
+  projectRole: Role | null;
+  userRole: Role | null;
+}
+
+export interface SgCrewResponse {
+  crew: SgCrewPerson[];
+  /** Faux pour un superviseur de projet : il peut ajouter, pas créer de compte. */
+  canCreateAccounts: boolean;
+  /** Sans relais courriel configuré, aucune invitation ne partira. */
+  smtpReady: boolean;
+}
+
+export interface SgCrewInviteResult {
+  sgId: number;
+  outcome: 'created' | 'added' | 'linked' | 'skipped';
+  reason?: string;
 }

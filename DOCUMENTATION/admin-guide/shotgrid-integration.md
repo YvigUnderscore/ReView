@@ -113,6 +113,39 @@ Turn off *Create in ShotGrid only* in the settings if your studio prefers the op
 
 ---
 
+## 5bis. Bringing the crew into ReView
+
+Linking a project brings in its shots, tasks and media — but not the people. The
+**Members** tab of a linked project therefore offers **Load the ShotGrid crew**: the list
+comes from `Project.users` of the linked project, not from the whole site directory.
+
+Each person shows one of four states:
+
+| State | What it means | What inviting does |
+| --- | --- | --- |
+| Project member | Already has access here | Records the ShotGrid link, nothing else |
+| Has an account | Same email address exists in ReView | Adds them to this project |
+| No account yet | Nobody in ReView uses this address | Creates the account, emails the invitation, adds them to the project |
+| Cannot be invited | No email, or disabled on the site | Nothing — the row is not selectable |
+
+New accounts are created as **artists**. Promote afterwards, explicitly: an account that
+starts as a supervisor is one nobody decided to make a supervisor.
+
+Two rules worth knowing:
+
+- **Creating accounts is reserved to administrators and studio supervisors** — the global
+  role, not the project one. A supervisor *of a project* can add people who already have
+  an account, but cannot mint new ones; the administration screen does not let them
+  either, and going through ShotGrid must not be a way around it.
+- The invitation goes through the usual circuit. **Without a configured mail relay
+  nothing is sent**, and the panel says so before you click: an account created without
+  its activation email is reachable by nobody and holds the address hostage.
+
+The ShotGrid link is recorded at the same time. It is what lets ReView write to the site
+*on that person's behalf* rather than as an anonymous « ReView ».
+
+---
+
 ## 6. Staying up to date
 
 Three mechanisms work together. You are not expected to choose one and hope.

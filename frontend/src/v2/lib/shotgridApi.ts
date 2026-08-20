@@ -26,6 +26,7 @@ export const sgKeys = {
   logs: (runId: number, level: string) => ['shotgrid', 'logs', runId, level] as const,
   diff: (projectId: number) => ['shotgrid', 'diff', projectId] as const,
   versions: (projectId: number) => ['shotgrid', 'versions', projectId] as const,
+  crew: (projectId: number) => ['shotgrid', 'crew', projectId] as const,
   pipelineStatuses: (scope?: string, projectId?: number) =>
     ['pipeline-statuses', scope ?? 'all', projectId ?? 'studio'] as const,
 };

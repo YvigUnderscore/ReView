@@ -73,6 +73,7 @@ import shotgridConfigRoutes from './routes/shotgrid-config.routes';
 import shotgridSyncRoutes from './routes/shotgrid-sync.routes';
 import shotgridWebhookRoutes from './routes/shotgrid-webhook.routes';
 import shotgridEntityRoutes from './routes/shotgrid-entity.routes';
+import shotgridCrewRoutes from './routes/shotgrid-crew.routes';
 
 export const createApp = (): Express => {
   const app = express();
@@ -168,6 +169,7 @@ export const createApp = (): Express => {
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);
   app.use('/api/shotgrid', shotgridEntityRoutes);
+  app.use('/api/shotgrid', shotgridCrewRoutes);
   app.use('/api/comments', commentsRoutes);
   app.use('/api/boards', boardsRoutes);
   // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).

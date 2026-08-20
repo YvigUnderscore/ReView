@@ -13,6 +13,8 @@ import { initialsFrom } from '../../lib/initials';
 import type { Member } from './projectTypes';
 import type { Role } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
+import { useSgConnection } from '../../lib/shotgridApi';
+import SgCrewPanel from '../../components/shotgrid/SgCrewPanel';
 
 // Rôle projet : override facultatif du rôle global (38.E). '' = hérite du rôle global.
 const projectRoles = (t: (k: MessageKey) => string): { value: string; label: string }[] => [
@@ -43,6 +45,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
   const [addUserId, setAddUserId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const invalidate = () => void qc.invalidateQueries({ queryKey: qk.project(projectId) });
+  const { data: connection } = useSgConnection(projectId);
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +88,12 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     <div>
       <h2 className="mb-4 text-sm font-semibold text-muted-foreground">{t('members.title')}</h2>
       {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
+      {/* Projet relié : l'équipe du site entre ici, sans ressaisir une adresse. */}
+      {connection?.active && (
+        <div className="mb-5">
+          <SgCrewPanel projectId={projectId} />
+        </div>
+      )}
       <form onSubmit={add} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
         <select
           className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-sm"
