@@ -84,3 +84,38 @@ describe('nextVersionName', () => {
     ).toBe('Cathdrale_nef_look_dev_v001');
   });
 });
+
+describe('imitation de la nomenclature du site', () => {
+  it('rejoue la forme du frère le plus avancé, préfixe compris', () => {
+    // Le préfixe de projet (« DEMO_ ») ne se devine pas : on le reprend du frère.
+    expect(
+      nextVersionName({
+        existing: ['DEMO_SH010_anim_v007'],
+        parentCode: 'SH010',
+        step: null,
+        linked: true,
+      }),
+    ).toBe('DEMO_SH010_anim_v008');
+  });
+
+  it('conserve la largeur du padding et la casse du v', () => {
+    expect(
+      nextVersionName({ existing: ['SH010_comp_v0007'], parentCode: 'SH010', step: null, linked: true }),
+    ).toBe('SH010_comp_v0008');
+    expect(
+      nextVersionName({ existing: ['SH010_comp_V07'], parentCode: 'SH010', step: null, linked: true }),
+    ).toBe('SH010_comp_V08');
+  });
+
+  it("n'imite pas un V01 local, qui n'est pas un code de site", () => {
+    expect(nextVersionName({ existing: ['V01'], parentCode: 'SH010', step: 'anim', linked: true })).toBe(
+      'SH010_anim_v002',
+    );
+  });
+
+  it('ne change rien hors projet relié', () => {
+    expect(
+      nextVersionName({ existing: ['DEMO_SH010_anim_v007'], parentCode: 'SH010', step: null, linked: false }),
+    ).toBe('V08');
+  });
+});

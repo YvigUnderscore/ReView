@@ -10,6 +10,7 @@ import { storage } from '../StorageService';
 import { mediaSourceKey } from '../MediaService';
 import { clientForSiteRecord } from './ShotgridConfigService';
 import { belongsToProject } from './shotgridProjectGuard';
+import { findVersionByCode } from './ShotgridVersionLookup';
 import { writeAllowedOn } from './shotgridTemplateGuard';
 import { toSgDate } from './shotgridMapper';
 import { findByLocal, upsertLink } from './shotgridLinks';
@@ -400,6 +401,36 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
         'Média ajouté à la version ShotGrid existante',
       );
     }
+    return;
+  }
+
+  /**
+   * Une Version du même code existe peut-être déjà là-bas — créée par l'outil de rendu
+   * de l'artiste avant qu'il ne publie ici. S'y rattacher plutôt que d'en fabriquer une
+   * jumelle : le site n'a pas de moyen de départager deux entrées identiques, et le
+   * doublon se supprime à la main.
+   */
+  const twin = await findVersionByCode(
+    { client: ctx.client, scope: { sgProjectId: ctx.sgProjectId, sgProjectName: ctx.sgProjectName } },
+    version.name,
+  );
+  if (twin) {
+    await upsertLink({
+      connectionId: ctx.connectionId,
+      localType: 'version',
+      localId: version.id,
+      sgType: 'Version',
+      sgId: twin,
+      // `mediaImported` : sans lui, la synchronisation suivante rapatrierait le média
+      // qu'on vient d'envoyer, en double.
+      data: { publishMode: ctx.settings.push.publishMode, mediaImported: true },
+    });
+    const media = version.media[0];
+    if (media) {
+      await uploadThumbnail(ctx, twin, media);
+      if (ctx.settings.push.publishMode === 'upload') await uploadMasterMedia(ctx, twin, media);
+    }
+    logger.info({ versionId: version.id, sgId: twin }, 'Version ShotGrid homonyme réutilisée');
     return;
   }
 

@@ -82,6 +82,15 @@ export const shotgridSettingsSchema = z.object({
       /** Codes de statut SG à importer ; vide = tous les publishes. */
       statusFilter: z.array(z.string()).default([]),
       maxSizeMo: z.number().int().min(1).max(200_000).nullable().default(null),
+      /**
+       * Comment nommer le média importé.
+       *
+       * `sgCode` : le code de la Version ShotGrid — le nom que la production lit dans ses
+       * playlists et prononce en dailies. `filename` : le nom du fichier livré, utile aux
+       * studios dont la convention de fichier porte l'information (espace colorimétrique,
+       * encodage) que le code ne reprend pas.
+       */
+      naming: z.enum(['sgCode', 'filename']).default('sgCode'),
     })
     .default({}),
   push: z

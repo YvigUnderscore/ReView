@@ -39,6 +39,8 @@ export interface SgSettings {
     autoImport: boolean;
     statusFilter: string[];
     maxSizeMo: number | null;
+    /** `sgCode` : le média porte le code de la Version ShotGrid. `filename` : son nom de fichier. */
+    naming: 'sgCode' | 'filename';
   };
   push: { publishMode: 'link' | 'upload' | 'off'; attributeToUser: boolean; attachAnnotations: boolean };
   versionStatusMap: Record<string, number>;

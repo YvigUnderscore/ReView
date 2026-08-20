@@ -50,14 +50,48 @@ const slug = (value: string): string =>
     .replace(/[^A-Za-z0-9_-]/g, '')
     .slice(0, 40);
 
+/**
+ * Ce nom ressemble-t-il à un code venu du site ?
+ *
+ * Un `V01` local n'en est pas un : la forme longue se reconnaît à son suffixe `_v<n>`.
+ */
+export function looksLikeSiteCode(name: string): boolean {
+  return /_v\d+\s*$/i.test(name.trim());
+}
+
+/**
+ * Rejoue la forme d'un nom existant avec un autre numéro.
+ *
+ * On préfère **imiter** le frère le plus avancé plutôt que deviner la convention du
+ * studio : le préfixe de projet (`DEMO_`), la casse du « v » et la largeur du padding
+ * varient d'un site à l'autre, et une version fabriquée à côté de la plaque oblige la
+ * production à traduire de tête à chaque playlist.
+ */
+export function bumpToNumber(model: string, n: number): string | null {
+  const m = /^(.*?)(v)(\d+)(\s*)$/i.exec(model.trim());
+  if (!m) return null;
+  const [, prefix, v, digits] = m;
+  return `${prefix}${v}${String(n).padStart(digits!.length, '0')}`;
+}
+
 export function nextVersionName(ctx: NamingContext): string {
   const n = nextNumber(ctx.existing);
 
-  // Convention ShotGrid : <parent>_<étape>_v001. Sans parent identifiable, on retombe
-  // sur la forme courte plutôt que de produire « _anim_v001 », qui ne désigne rien.
-  if (ctx.linked && ctx.parentCode) {
-    const parts = [slug(ctx.parentCode), ctx.step ? slug(ctx.step) : null].filter(Boolean);
-    return `${parts.join('_')}_v${String(n).padStart(3, '0')}`;
+  if (ctx.linked) {
+    // Le frère le plus avancé qui porte déjà un code du site : sa forme fait autorité.
+    const model = [...ctx.existing]
+      .filter(looksLikeSiteCode)
+      .sort((a, b) => (versionNumber(a) ?? 0) - (versionNumber(b) ?? 0))
+      .pop();
+    const imitated = model ? bumpToNumber(model, n) : null;
+    if (imitated) return imitated;
+
+    // Aucun modèle : convention ShotGrid usuelle, <parent>_<étape>_v001. Sans parent
+    // identifiable on retombe sur la forme courte, « _anim_v001 » ne désignant rien.
+    if (ctx.parentCode) {
+      const parts = [slug(ctx.parentCode), ctx.step ? slug(ctx.step) : null].filter(Boolean);
+      return `${parts.join('_')}_v${String(n).padStart(3, '0')}`;
+    }
   }
   return `V${String(n).padStart(2, '0')}`;
 }

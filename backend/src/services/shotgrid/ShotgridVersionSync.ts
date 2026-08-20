@@ -25,6 +25,8 @@ import {
 } from './shotgridMapper';
 import { mapSgToLocal, shouldImportMedia, upsertLink, type VersionLinkData } from './shotgridLinks';
 import { can } from './shotgridSettings';
+import { sgMediaName } from '../../lib/mediaNaming';
+import { realignMediaNames } from './ShotgridMediaNaming';
 import { noteUnknownStatus, type PullContext } from './ShotgridPullService';
 
 /**
@@ -265,6 +267,9 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
   ctx.journal.count('versions', existing ? 'updated' : 'created');
   // Même raison que pour la hiérarchie : la review ouverte doit voir arriver la version
   // et sa décision sans qu'on lui demande de recharger.
+  // Reprise des médias importés avant l'alignement des noms : idempotent, et sans
+  // migration — le code de la Version n'est connu qu'ici.
+  await realignMediaNames(ctx, version.id, name);
   emitToProject(ctx.connection.projectId, 'version:update', {
     projectId: ctx.connection.projectId,
     id: version.id,
@@ -366,7 +371,7 @@ export async function importVersionMedia(
     return false;
   }
 
-  const filename = attachmentName(picked.value, `${versionName}.mp4`);
+  const sourceFilename = attachmentName(picked.value, `${versionName}.mp4`);
   const { stream, size, type } = await ctx.client.openStream(url);
 
   const maxBytes = ctx.settings.media.maxSizeMo ? ctx.settings.media.maxSizeMo * 1024 * 1024 : null;
@@ -389,6 +394,12 @@ export async function importVersionMedia(
   }
 
   const contentType = type ?? 'video/mp4';
+  // Le média porte le code de la Version, pas le nom du fichier joint : c'est ce nom-là
+  // que la production lit dans ses playlists et prononce pendant les dailies.
+  const filename =
+    ctx.settings.media.naming === 'filename'
+      ? sourceFilename
+      : sgMediaName({ code: versionName, sourceFilename, mimeType: contentType });
   const media = await prisma.mediaObject.create({
     data: {
       versionId,
@@ -398,7 +409,14 @@ export async function importVersionMedia(
       mimeType: contentType,
       status: MediaStatus.UPLOADING,
       published: true,
-      metadata: { importedFromShotgrid: true, sgVersionId: record.id, sgField: picked.field },
+      metadata: {
+        importedFromShotgrid: true,
+        sgVersionId: record.id,
+        sgField: picked.field,
+        // Le vrai nom du fichier reste lisible dans la fiche technique : la convention de
+        // nommage d'un studio y porte souvent une information que le code ne reprend pas.
+        sourceFilename,
+      },
     },
   });
   const storageKey = StorageService.mediaKey({

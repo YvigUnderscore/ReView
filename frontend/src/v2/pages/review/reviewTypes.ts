@@ -196,6 +196,8 @@ export const DEFAULT_LIGHTING: LightingConfig = {
 
 /** Réponse de GET /api/media/:id (viewer review). */
 export interface MediaResp {
+  /** Nom du fichier livré par ShotGrid, quand `media.originalName` porte le code du site. */
+  sourceFilename: string | null;
   media: Media;
   /** Projet porteur (mentions, liens profonds). */
   projectId: number;

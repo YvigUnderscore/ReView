@@ -179,6 +179,27 @@ ReView pipeline (transcoding, thumbnails, frame-accurate review). You can:
 A version whose ShotGrid task is unknown to ReView is attached to a per-shot task named
 `ShotGrid`, rather than being dropped.
 
+### Media names
+
+An imported media takes the **code of its ShotGrid version** — `SH010_comp_v003.mov` —
+rather than the name of the attached file. That code is what production reads in its
+playlists and says out loud in dailies, so both tools name the same thing the same way.
+The extension always comes from the delivered file (or its content type), never from the
+code: it is what tells ReView how to validate, transcode and play the file.
+
+The delivered file name is not lost. It is kept and shown as **Source file** in the
+technical sheet of the review — a studio naming convention often carries information the
+code does not repeat (colour space, encoding, retake marker).
+
+Two details worth knowing:
+
+- Media imported before this behaviour existed are renamed on the next synchronisation
+  that reads their version. Nothing to migrate, nothing to click.
+- A file dropped into ReView by hand is **never** renamed, even on a linked project.
+
+Set **Media name** to *Delivered file name* in the settings if your studio would rather
+keep the file names as they arrive.
+
 ---
 
 ## 9. Writing back

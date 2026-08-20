@@ -10,7 +10,8 @@ import type { MediaKind } from '../../../types/api';
 import type { PanelId } from '../chrome/panels';
 import { Group, Row } from '../chrome/DockGroup';
 import GuidesPanel from './GuidesPanel';
-import InfoPanel, { type InfoRow } from './InfoPanel';
+import { sheetRows } from './mediaSheet';
+import InfoPanel from './InfoPanel';
 import ExportPanel from './ExportPanel';
 import type { MediaResp } from '../reviewTypes';
 import type { CompareMode } from '../useCompareState';
@@ -24,25 +25,6 @@ const compare_modes = (t: Tr) => [
   { value: 'diff' as const, label: t('review.compare.diff') },
   { value: 'side' as const, label: t('review.compare.sideBySide') },
 ];
-
-/** Fiche technique du média, telle que l'API la renseigne. */
-function sheetRows(t: Tr, data: MediaResp, kind: MediaKind, fps: number): InfoRow[] {
-  const rows: InfoRow[] = [{ label: t('review.file'), value: data.media.originalName }];
-  if (kind === 'VIDEO') {
-    rows.push({ label: t('pipeline.fps'), value: `${fps} fps` });
-    rows.push({ label: t('review.firstFrame'), value: String(data.startFrame) });
-    if (data.hls) rows.push({ label: t('review.delivery'), value: 'HLS' });
-    if (data.trim)
-      rows.push({
-        label: t('review.trim'),
-        value: `${data.trim.inFrame} → ${data.trim.outFrame}`,
-      });
-  }
-  if (data.projectColor?.display) rows.push({ label: t('ocio.display'), value: data.projectColor.display });
-  if (data.projectColor?.view) rows.push({ label: t('ocio.view'), value: data.projectColor.view });
-  rows.push({ label: t('common.status'), value: data.media.status });
-  return rows;
-}
 
 /**
  * Contenu du dock inspecteur pour les viewers plats. Les réglages de lecture et de

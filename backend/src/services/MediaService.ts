@@ -553,6 +553,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     model?: { sourceFormat: string; converter: string; native: boolean; usd?: unknown };
     // Raison d'un échec de traitement (45.C) — affichée en review plutôt qu'un `FAILED` muet.
     processingError?: string;
+    /** Nom du fichier réellement livré par ShotGrid, quand le média porte le code du site. */
+    sourceFilename?: string;
     // Override de scène (46.D) : mise en scène rejouée à l'ouverture pour tous.
     usdOverride?: unknown;
     fps?: number;
@@ -629,6 +631,10 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     startFrame: project?.startFrame ?? 1001,
     // Provenance de conversion 3D (39.A, étendue 45.C avec le bloc `usd`) : fiche technique.
     modelSource: meta.model ?? null,
+    // Le média importé porte le code de la Version ShotGrid ; le nom du fichier livré
+    // reste consultable ici — la convention d'un studio y porte souvent une information
+    // (espace colorimétrique, encodage) que le code ne reprend pas.
+    sourceFilename: meta.sourceFilename ?? null,
     // Raison de l'échec quand le média est FAILED (45.C) : asset USD manquant, outillage absent…
     processingError: meta.processingError ?? null,
     // Override de scène (46.D) — rejoué au chargement du viewer 3D pour tous les spectateurs.

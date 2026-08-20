@@ -191,6 +191,19 @@ export default function SgSettingsPanel({
             <option value="original">{t('shotgrid.settings.sourceOriginal')}</option>
           </select>
         </Row>
+        <Row label={t('shotgrid.settings.mediaNaming')} hint={t('shotgrid.settings.mediaNamingHint')}>
+          <select
+            value={s.media.naming}
+            disabled={!canManage || saving}
+            onChange={(e) =>
+              patch({ media: { ...s.media, naming: e.target.value as 'sgCode' | 'filename' } })
+            }
+            className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+          >
+            <option value="sgCode">{t('shotgrid.settings.namingSgCode')}</option>
+            <option value="filename">{t('shotgrid.settings.namingFilename')}</option>
+          </select>
+        </Row>
         <Row label={t('shotgrid.settings.maxSize')} hint={t('shotgrid.settings.maxSizeHint')}>
           <input
             type="number"

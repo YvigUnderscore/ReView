@@ -90,7 +90,9 @@ async function autoName(projectId: number, body: CreateVersionInput): Promise<st
 
   return nextVersionName({
     existing: siblings.map((v) => v.name),
-    linked: Boolean(connection?.active),
+    // Une connexion en pause reste un projet relié : la nomenclature du studio n'a pas à
+    // changer de forme parce qu'on a suspendu la synchronisation une après-midi.
+    linked: Boolean(connection),
     parentCode: task?.shot?.code ?? task?.asset?.name ?? asset?.name ?? null,
     step: task?.department ?? null,
   });
