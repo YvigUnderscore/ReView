@@ -4,6 +4,8 @@
 import { Router } from 'express';
 import { buildOpenApiDocument } from '../lib/openapi';
 import { getSourceUrl } from '../lib/settings';
+// L'URL atterrit dans un `href` : `safeSourceUrl` a filtré le protocole, on neutralise le reste.
+import { escapeHtml } from '../lib/html';
 
 /**
  * Documentation API : spécification OpenAPI générée depuis Zod + interface Scalar.
@@ -15,10 +17,6 @@ import { getSourceUrl } from '../lib/settings';
  * connexion et les partages client, le lien vers le code source correspondant.
  */
 const router = Router();
-
-/** L'URL atterrit dans un `href` : `safeSourceUrl` a filtré le protocole, on neutralise le reste. */
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 router.get('/openapi.json', (_req, res) => {
   res.json(buildOpenApiDocument());

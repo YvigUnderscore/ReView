@@ -9,6 +9,8 @@ import { validate } from '../middleware/validate';
 import { rateLimit } from '../middleware/rateLimit';
 import { verifyUnsubscribe } from '../lib/unsubscribe';
 import { logger } from '../lib/logger';
+import { getSourceUrl } from '../lib/settings';
+import { escapeHtml } from '../lib/html';
 
 /**
  * Désabonnement des envois récurrents — route PUBLIQUE, sans session.
@@ -66,14 +68,14 @@ router.get('/:token', limiter, validate({ params: tokenParam }), async (req, res
   res
     .status(ok ? 200 : 400)
     .type('html')
-    .send(page(ok));
+    .send(page(ok, await getSourceUrl()));
 });
 
 /**
  * Page autonome : ni React, ni session, ni catalogue de traduction. Elle est lue une fois,
  * par quelqu'un qui vient de cliquer dans un email — l'anglais, langue de base, y suffit.
  */
-function page(ok: boolean): string {
+function page(ok: boolean, sourceUrl: string): string {
   const title = ok ? 'You are unsubscribed' : 'This link is no longer valid';
   const body = ok
     ? 'You will no longer receive this recurring email. You can turn it back on at any time from your ReView profile.'
@@ -85,6 +87,11 @@ function page(ok: boolean): string {
 <div style="max-width:520px;margin:15vh auto;padding:24px;background:#121620;border:1px solid #1E2433;border-radius:12px">
 <h1 style="font-size:18px;margin:0 0 12px">${title}</h1>
 <p style="font-size:14px;line-height:1.7;color:#9BA3B2;margin:0">${body}</p>
+<!-- AGPL §13 : une surface accessible sans authentification porte le lien vers le code
+     source correspondant. Cette page en est une. -->
+<p style="margin:20px 0 0;font-size:12px;color:#6B7280">
+ReView — AGPL-3.0. <a href="${escapeHtml(sourceUrl)}" style="color:#9BA3B2">Source code</a>
+</p>
 </div></body></html>`;
 }
 

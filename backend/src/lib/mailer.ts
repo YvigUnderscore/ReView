@@ -62,17 +62,26 @@ export async function sendMail(
       subject,
       html,
       text: options.text ?? htmlToText(html),
-      ...(options.unsubscribeUrl
-        ? {
-            headers: {
+      headers: {
+        /**
+         * Message émis par une machine, pas par une personne.
+         *
+         * Sans ces deux en-têtes, un répondeur d'absence répond au digest ; l'adresse
+         * d'expédition du studio reçoit la réponse, et selon la configuration du relais
+         * la boucle peut se refermer. Ils ne coûtent rien et coupent le cas net.
+         */
+        'Auto-Submitted': 'auto-generated',
+        'X-Auto-Response-Suppress': 'All',
+        ...(options.unsubscribeUrl
+          ? {
               'List-Unsubscribe': `<${options.unsubscribeUrl}>`,
               // Déclare que le désabonnement se fait en un appel, sans page de
               // confirmation : sans cet en-tête, Gmail et Outlook n'affichent pas le
               // bouton natif.
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-            },
-          }
-        : {}),
+            }
+          : {}),
+      },
     });
     return true;
   } catch (err) {

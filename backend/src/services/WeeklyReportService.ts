@@ -11,6 +11,7 @@ import { resolveUserLocale } from '../lib/settings';
 import { formatTag, t, type Locale } from '../i18n';
 import { displayName } from '../lib/userView';
 import { env } from '../config/env';
+import { escapeHtml as esc } from '../lib/html';
 
 /**
  * Rapport d'activité hebdomadaire (43.B — №124) : synthèse studio par projet
@@ -80,7 +81,6 @@ export async function buildWeeklyReport(since: Date): Promise<ProjectWeekly[]> {
   return out;
 }
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const fmt = (d: Date, locale: Locale) =>
   d.toLocaleDateString(formatTag(locale), { day: 'numeric', month: 'long' });
 

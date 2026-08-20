@@ -3,6 +3,7 @@
 
 import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
+import { escapeHtml as esc } from '../lib/html';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
 import { unsubscribeUrl } from '../lib/unsubscribe';
@@ -125,8 +126,6 @@ export async function buildUserDigest(
   }
   return digests;
 }
-
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** HTML de l'email (pur — testé unitairement). */
 export function renderDigestHtml(
