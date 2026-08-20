@@ -24,8 +24,12 @@ import { TASK_TYPES } from './project/projectTypes';
 import { useKanbanBoard } from './kanban/useKanbanBoard';
 import { buildColumns, columnIdOf, groupByFamily, type FamilyKey } from './kanban/kanbanColumns';
 import KanbanFamily from './kanban/KanbanFamily';
-import { KanbanCardBody } from './kanban/KanbanCard';
+import { useProjectRole } from '../lib/useProjectRole';
+import { useAuth } from '../stores/useAuth';
+import { useStatusMenu } from '../lib/useStatusMenu';
+import { entriesOf, type MenuEntry } from '../lib/menuSpec';
 import type { BoardTask } from './kanban/kanbanTypes';
+import { KanbanCardBody } from './kanban/KanbanCard';
 import { parseIdParam } from '../lib/slug';
 import { useT } from '../i18n';
 
@@ -41,6 +45,21 @@ export default function KanbanPage() {
   const { id } = useParams();
   const projectId = parseIdParam(id);
   const board = useKanbanBoard(projectId);
+  const { canManage } = useProjectRole(projectId);
+  const myId = useAuth((s) => s.user?.id);
+  const { entry: statusEntry } = useStatusMenu(projectId, 'task');
+  /**
+   * Menu d'une carte. L'assigné peut changer son propre statut — c'est très exactement ce
+   * que le serveur autorise (il n'accepte de lui que le statut et la checklist), et c'est
+   * le geste le plus utile de l'écran pour un artiste.
+   */
+  const menuFor = (task: BoardTask): MenuEntry[] =>
+    entriesOf(
+      statusEntry(task, {
+        canEdit: canManage || task.assignee?.id === myId,
+        onOptimistic: (choice) => board.applyOptimisticStatus(task.id, choice),
+      }),
+    );
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [collapsed, setCollapsed] = useState<ReadonlySet<FamilyKey>>(new Set());
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -151,6 +170,7 @@ export default function KanbanPage() {
                 tasksByColumn={tasksByColumn}
                 collapsed={collapsed.has(group.key)}
                 onToggle={() => toggleFamily(group.key)}
+                menuFor={menuFor}
               />
             ))}
           </div>

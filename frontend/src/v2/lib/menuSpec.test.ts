@@ -64,3 +64,35 @@ describe('discriminants', () => {
     expect(isSubmenu(action('a'))).toBe(false);
   });
 });
+
+describe('tidyMenu et les groupes radio', () => {
+  const group = (items: number) => ({
+    kind: 'radiogroup' as const,
+    id: 'status-group',
+    value: 'none',
+    onValueChange: () => {},
+    items: Array.from({ length: items }, (_, i) => ({
+      id: `s-${i}`,
+      value: String(i),
+      label: `S${i}`,
+    })),
+  });
+
+  it('garde un sous-menu qui ne contient qu’un groupe rempli', () => {
+    // C'est exactement le menu « Statut » : sans traitement dédié, le groupe ne comptait
+    // pour rien et son sous-menu était jeté alors qu'il était plein.
+    const tidy = tidyMenu([{ kind: 'submenu', id: 'status', label: 'Status', items: [group(3)] }]);
+    expect(tidy).toHaveLength(1);
+    expect(isSubmenu(tidy[0]) && tidy[0].items).toHaveLength(1);
+  });
+
+  it('jette un groupe vide, et le sous-menu qui ne contenait que lui', () => {
+    const tidy = tidyMenu([
+      { id: 'open', label: 'Open', onSelect: () => {} },
+      separator('status'),
+      { kind: 'submenu', id: 'status', label: 'Status', items: [group(0)] },
+    ]);
+    // Le séparateur laissé seul en queue part avec.
+    expect(tidy.map((e) => e.id)).toEqual(['open']);
+  });
+});

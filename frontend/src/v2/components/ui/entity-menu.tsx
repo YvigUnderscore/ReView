@@ -6,13 +6,15 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
   ContextMenuSeparator,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from './context-menu';
-import { isSeparator, isSubmenu, tidyMenu, type MenuEntry } from '../../lib/menuSpec';
+import { isRadioGroup, isSeparator, isSubmenu, tidyMenu, type MenuEntry } from '../../lib/menuSpec';
 import { useT } from '../../i18n';
 
 /** Rend une liste d'entrées déclarées (`lib/menuSpec`) avec la primitive Radix. */
@@ -21,6 +23,18 @@ function MenuEntries({ entries }: { entries: MenuEntry[] }) {
     <>
       {entries.map((entry) => {
         if (isSeparator(entry)) return <ContextMenuSeparator key={entry.id} />;
+        if (isRadioGroup(entry)) {
+          return (
+            <ContextMenuRadioGroup key={entry.id} value={entry.value} onValueChange={entry.onValueChange}>
+              {entry.items.map((item) => (
+                <ContextMenuRadioItem key={item.id} value={item.value} disabled={item.disabled}>
+                  {item.icon}
+                  {item.label}
+                </ContextMenuRadioItem>
+              ))}
+            </ContextMenuRadioGroup>
+          );
+        }
         if (isSubmenu(entry)) {
           return (
             <ContextMenuSub key={entry.id}>

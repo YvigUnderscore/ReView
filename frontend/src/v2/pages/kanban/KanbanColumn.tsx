@@ -6,6 +6,7 @@ import KanbanCard from './KanbanCard';
 import { statusSwatch } from '../../lib/contrast';
 import { useTheme } from '../../stores/useTheme';
 import type { Column } from './kanbanColumns';
+import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 import { useT } from '../../i18n';
 
@@ -22,7 +23,15 @@ import { useT } from '../../i18n';
  */
 const VISIBLE_CARDS = 60;
 
-export default function KanbanColumn({ column, tasks }: { column: Column; tasks: BoardTask[] }) {
+export default function KanbanColumn({
+  column,
+  tasks,
+  menuFor,
+}: {
+  column: Column;
+  tasks: BoardTask[];
+  menuFor?: (task: BoardTask) => MenuEntry[];
+}) {
   const t = useT();
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const isDark = useTheme((s) => s.theme) === 'dark';
@@ -50,7 +59,7 @@ export default function KanbanColumn({ column, tasks }: { column: Column; tasks:
       </div>
       <div className="space-y-2">
         {shown.map((task) => (
-          <KanbanCard key={task.id} task={task} />
+          <KanbanCard key={task.id} task={task} entries={menuFor?.(task)} />
         ))}
       </div>
       {tasks.length > shown.length && (

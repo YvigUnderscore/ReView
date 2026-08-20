@@ -38,7 +38,30 @@ export interface MenuSeparator {
   id: string;
 }
 
-export type MenuEntry = MenuAction | MenuSubmenu | MenuSeparator;
+/** Un choix parmi plusieurs, dans un groupe. */
+export interface MenuRadioItem {
+  id: string;
+  value: string;
+  label: string;
+  icon?: ReactNode;
+  disabled?: boolean;
+}
+
+/**
+ * Sélection unique — le statut d'une entité, typiquement.
+ *
+ * Une liste d'actions ne dit pas laquelle est en cours : il faut un groupe radio pour
+ * que le statut courant soit *coché* plutôt que deviné à la couleur d'une pastille.
+ */
+export interface MenuRadioGroup {
+  kind: 'radiogroup';
+  id: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  items: MenuRadioItem[];
+}
+
+export type MenuEntry = MenuAction | MenuSubmenu | MenuSeparator | MenuRadioGroup;
 
 /**
  * Séparateur dérivé de l'identifiant de l'entrée qui le suit. Le suffixe est posé ici et
@@ -57,6 +80,15 @@ export function isSubmenu(entry: MenuEntry): entry is MenuSubmenu {
   return entry.kind === 'submenu';
 }
 
+export function isRadioGroup(entry: MenuEntry): entry is MenuRadioGroup {
+  return entry.kind === 'radiogroup';
+}
+
+/** Une entrée éventuelle devient une liste — évite un `?? []` mal typé chez l'appelant. */
+export function entriesOf(...entries: (MenuEntry | null | undefined)[]): MenuEntry[] {
+  return entries.filter((e): e is MenuEntry => e != null);
+}
+
 /**
  * Nettoie une liste d'entrées avant rendu : retire les séparateurs en tête, en queue et
  * en double, et laisse tomber les sous-menus vides. Sans ça, un menu dont la moitié des
@@ -71,6 +103,14 @@ export function tidyMenu(entries: MenuEntry[]): MenuEntry[] {
       kept.push({ ...entry, items });
       continue;
     }
+    // Un groupe vide n'a rien à afficher — et son sous-menu doit disparaître avec lui.
+    // Traité avant la branche séparateur : le sous-menu « Statut » ne contient que lui,
+    // et le compter pour rien le ferait jeter alors qu'il est bien rempli.
+    if (isRadioGroup(entry)) {
+      if (entry.items.length === 0) continue;
+      kept.push(entry);
+      continue;
+    }
     if (isSeparator(entry)) {
       const previous = kept[kept.length - 1];
       if (!previous || isSeparator(previous)) continue;
@@ -79,4 +119,44 @@ export function tidyMenu(entries: MenuEntry[]): MenuEntry[] {
   }
   while (kept.length > 0 && isSeparator(kept[kept.length - 1])) kept.pop();
   return kept;
+}
+
+export interface EntityItemAction {
+  icon: ReactNode;
+  label: string;
+  onClick?: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+  /** Sous-menu (choix d'un statut, d'une playlist…). `onClick` est alors ignoré. */
+  items?: EntityItemAction[];
+  /** Trait de séparation posé avant cette entrée. */
+  separatorBefore?: boolean;
+}
+
+/**
+ * Traduit les actions d'une carte en entrées de menu déclaratives (A3). L'ancien rendu
+ * ne savait exprimer qu'une liste plate : ni sous-menu, ni entrée désactivée, ni
+ * séparateur — d'où des menus qui ne pouvaient pas proposer « changer le statut ».
+ */
+export function toMenuEntries(actions: EntityItemAction[], prefix = 'a'): MenuEntry[] {
+  return actions.flatMap((action, index): MenuEntry[] => {
+    const id = `${prefix}-${index}-${action.label}`;
+    const entry: MenuEntry = action.items
+      ? {
+          kind: 'submenu',
+          id,
+          label: action.label,
+          icon: action.icon,
+          items: toMenuEntries(action.items, id),
+        }
+      : {
+          id,
+          label: action.label,
+          icon: action.icon,
+          danger: action.danger,
+          disabled: action.disabled,
+          onSelect: () => action.onClick?.(),
+        };
+    return action.separatorBefore ? [separator(id), entry] : [entry];
+  });
 }

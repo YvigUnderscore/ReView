@@ -9,6 +9,8 @@ import { useWatch } from '../../lib/useWatch';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../../components/EntityCard';
+import { useStatusMenu } from '../../lib/useStatusMenu';
+import { entriesOf } from '../../lib/menuSpec';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import BatchGenerator from '../../components/BatchGenerator';
 import EmptyState from '../../components/ui/empty-state';
@@ -55,6 +57,9 @@ export default function ShotsTab({
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const { data: statuses = [] } = usePipelineStatuses('shot', projectId);
+  // Statut par clic droit : le geste le plus fréquent de la production n'a plus à passer
+  // par la fiche du plan puis son panneau de réglages.
+  const { entry: statusEntry } = useStatusMenu(projectId, 'shot');
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
   // Drawer piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
@@ -207,6 +212,7 @@ export default function ShotsTab({
                   }
                   favorite={{ type: 'SHOT', entityId: shot.id }}
                   actions={actions}
+                  contextEntries={entriesOf(statusEntry(shot, { canEdit: canManage }))}
                   contextActions={[...sgAction, watchAction, ...actions]}
                 />
               );

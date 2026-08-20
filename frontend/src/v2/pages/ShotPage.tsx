@@ -19,6 +19,8 @@ import TaskPickerDialog from '../components/upload/TaskPickerDialog';
 import { Button } from '../components/ui/button';
 import { useProjectRole } from '../lib/useProjectRole';
 import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
+import { useStatusMenu } from '../lib/useStatusMenu';
+import { entriesOf } from '../lib/menuSpec';
 import type { MenuEntry } from '../lib/menuSpec';
 import { useT } from '../i18n';
 import type { AssetOverview } from '../types/api';
@@ -61,6 +63,7 @@ export default function ShotPage() {
   const projectId = shot?.sequence?.projectId ?? shot?.projectId ?? 0;
   const { canManage, canContribute } = useProjectRole(projectId);
   const playlistMenu = useAddToPlaylistMenu(projectId);
+  const { entry: statusEntry } = useStatusMenu(projectId, 'shot');
 
   const treeQ = useQuery({
     queryKey: qk.shotTree(shotId),
@@ -106,6 +109,8 @@ export default function ShotPage() {
   const playlistEntry = latestVersionId ? playlistMenu.entry({ versionIds: [latestVersionId] }) : null;
 
   const menuExtras: MenuEntry[] = [
+    // Statut du plan, en tête du menu : c'est ce qu'on vient changer le plus souvent.
+    ...entriesOf(shot ? statusEntry(shot, { canEdit: canManage }) : null),
     ...(canContribute
       ? [
           {

@@ -4,6 +4,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
 import { FAMILY_LABEL_KEY, type FamilyGroup } from './kanbanColumns';
+import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 import { useT } from '../../i18n';
 
@@ -19,11 +20,13 @@ export default function KanbanFamily({
   tasksByColumn,
   collapsed,
   onToggle,
+  menuFor,
 }: {
   group: FamilyGroup;
   tasksByColumn: Map<string, BoardTask[]>;
   collapsed: boolean;
   onToggle: () => void;
+  menuFor?: (task: BoardTask) => MenuEntry[];
 }) {
   const t = useT();
   const total = group.columns.reduce((n, c) => n + (tasksByColumn.get(c.id)?.length ?? 0), 0);
@@ -45,7 +48,12 @@ export default function KanbanFamily({
       {!collapsed && (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {group.columns.map((column) => (
-            <KanbanColumn key={column.id} column={column} tasks={tasksByColumn.get(column.id) ?? []} />
+            <KanbanColumn
+              key={column.id}
+              column={column}
+              tasks={tasksByColumn.get(column.id) ?? []}
+              menuFor={menuFor}
+            />
           ))}
         </div>
       )}

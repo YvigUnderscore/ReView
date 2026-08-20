@@ -13,7 +13,8 @@ import EmptyState from '../../components/ui/empty-state';
 import EntityContextMenu from '../../components/ui/entity-menu';
 import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
-import { separator, type MenuEntry } from '../../lib/menuSpec';
+import { entriesOf, separator, type MenuEntry } from '../../lib/menuSpec';
+import { useStatusMenu } from '../../lib/useStatusMenu';
 import TimelineCard from '../timeline/TimelineCard';
 import { sortByCode, type Nomenclature, type Sequence } from './projectTypes';
 import { useT } from '../../i18n';
@@ -48,6 +49,8 @@ export default function SequencesTab({
   const [error, setError] = useState<string | null>(null);
   const sgLinks = useSgLinks(projectId);
   const sorted = sortByCode(sequences);
+  // Statut par clic droit — même vocabulaire que sur les plans et le kanban.
+  const { entry: statusEntry } = useStatusMenu(projectId, 'sequence');
 
   const createBulk = async (rows: Record<string, string>[]) => {
     await api.post('/api/sequences/bulk', {
@@ -72,6 +75,7 @@ export default function SequencesTab({
 
   const menuFor = (s: Sequence): MenuEntry[] => [
     { id: 'open', label: t('sequences.open'), onSelect: () => void navigate(`/sequences/${s.id}`) },
+    ...entriesOf(statusEntry(s, { canEdit: canManage })),
     ...(canManage
       ? [
           separator('manage'),

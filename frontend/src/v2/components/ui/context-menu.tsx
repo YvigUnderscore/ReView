@@ -3,7 +3,7 @@
 
 import { forwardRef, type ComponentPropsWithoutRef, type ComponentRef } from 'react';
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
-import { ChevronRight } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 /**
@@ -67,6 +67,37 @@ const ContextMenuItem = forwardRef<
 ));
 ContextMenuItem.displayName = 'ContextMenuItem';
 
+/**
+ * Choix unique dans un menu (statut d'une entité). Radix pose `role="menuitemradio"`,
+ * `aria-checked` et la navigation clavier ; refaire la sémantique à la main sur un
+ * `ContextMenuItem` serait de toute façon écrasé par la primitive.
+ */
+const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup;
+
+const ContextMenuRadioItem = forwardRef<
+  ComponentRef<typeof ContextMenuPrimitive.RadioItem>,
+  ComponentPropsWithoutRef<typeof ContextMenuPrimitive.RadioItem>
+>(({ className, children, ...props }, ref) => (
+  <ContextMenuPrimitive.RadioItem
+    ref={ref}
+    className={cn(
+      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-none transition-colors',
+      'focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      className,
+    )}
+    {...props}
+  >
+    {/* Emplacement fixe : sans lui, les libellés se décalent selon l'élément coché. */}
+    <span className="flex w-4 shrink-0 items-center justify-center">
+      <ContextMenuPrimitive.ItemIndicator>
+        <Check size={13} />
+      </ContextMenuPrimitive.ItemIndicator>
+    </span>
+    {children}
+  </ContextMenuPrimitive.RadioItem>
+));
+ContextMenuRadioItem.displayName = 'ContextMenuRadioItem';
+
 // Sous-menus (gestion des rôles live par clic droit — retours 33).
 const ContextMenuSub = ContextMenuPrimitive.Sub;
 
@@ -112,6 +143,8 @@ export {
   ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
   ContextMenuSeparator,
   ContextMenuSub,
   ContextMenuSubTrigger,

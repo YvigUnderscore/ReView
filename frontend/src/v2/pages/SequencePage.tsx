@@ -13,6 +13,8 @@ import SequenceShotGrid from './sequence/SequenceShotGrid';
 import SequenceAssets from './sequence/SequenceAssets';
 import { useProjectRole } from '../lib/useProjectRole';
 import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
+import { useStatusMenu } from '../lib/useStatusMenu';
+import { entriesOf } from '../lib/menuSpec';
 import { fetchSequenceCandidates } from '../lib/playlistApi';
 import type { SequenceDetailData } from './project/projectTypes';
 import { useT } from '../i18n';
@@ -44,7 +46,11 @@ export default function SequencePage() {
     const candidates = await fetchSequenceCandidates(projectId, sequenceId);
     return { versionIds: candidates.map((c) => c.versionId) };
   });
-  const playlistEntries = playlistEntry ? [playlistEntry] : [];
+  const { entry: statusEntry } = useStatusMenu(projectId, 'sequence');
+  const menuExtras = [
+    ...entriesOf(data ? statusEntry(data, { canEdit: canManage }) : null),
+    ...(playlistEntry ? [playlistEntry] : []),
+  ];
 
   return (
     <EntityWorkPage
@@ -57,7 +63,7 @@ export default function SequencePage() {
       thumbnailUrl={data?.thumbnailUrl}
       statusId={data?.pipelineStatusId}
       canManage={canManage}
-      menuExtras={playlistEntries}
+      menuExtras={menuExtras}
     >
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
       {data?.description && (

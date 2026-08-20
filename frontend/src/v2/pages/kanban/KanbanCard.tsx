@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import Avatar from '../../components/Avatar';
 import { TASK_STATUS_BAR } from '../../lib/taskStatus';
 import { initialsFrom } from '../../lib/initials';
+import EntityContextMenu from '../../components/ui/entity-menu';
+import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 
 /** Contenu visuel d'une carte (partagé entre la carte draggable et le DragOverlay). */
@@ -39,9 +41,16 @@ export function KanbanCardBody({ task, dragging }: { task: BoardTask; dragging?:
 }
 
 /** Carte déplaçable : le drag ne s'active qu'après un mouvement (le clic ouvre la tâche). */
-export default function KanbanCard({ task }: { task: BoardTask }) {
+export default function KanbanCard({
+  task,
+  entries,
+}: {
+  task: BoardTask;
+  /** Menu contextuel de la carte — le statut s'y change sans traverser le board. */
+  entries?: MenuEntry[];
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
-  return (
+  const card = (
     <div
       ref={setNodeRef}
       {...listeners}
@@ -50,5 +59,12 @@ export default function KanbanCard({ task }: { task: BoardTask }) {
     >
       <KanbanCardBody task={task} />
     </div>
+  );
+  if (!entries?.length) return card;
+  // `nested` : le board porte son propre menu contextuel, les deux s'ouvriraient ensemble.
+  return (
+    <EntityContextMenu entries={entries} nested>
+      {card}
+    </EntityContextMenu>
   );
 }

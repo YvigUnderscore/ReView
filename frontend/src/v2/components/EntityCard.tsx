@@ -12,48 +12,8 @@ import { useFavorites, type FavType } from '../stores/useFavorites';
 import HoverSprite, { type SpriteData } from './HoverSprite';
 import { Checkbox } from './ui/checkbox';
 import EntityContextMenu from './ui/entity-menu';
-import { separator, type MenuEntry } from '../lib/menuSpec';
+import { toMenuEntries, type EntityItemAction, type MenuEntry } from '../lib/menuSpec';
 import { useT } from '../i18n';
-
-export interface EntityItemAction {
-  icon: ReactNode;
-  label: string;
-  onClick?: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-  /** Sous-menu (choix d'un statut, d'une playlist…). `onClick` est alors ignoré. */
-  items?: EntityItemAction[];
-  /** Trait de séparation posé avant cette entrée. */
-  separatorBefore?: boolean;
-}
-
-/**
- * Traduit les actions d'une carte en entrées de menu déclaratives (A3). L'ancien rendu
- * ne savait exprimer qu'une liste plate : ni sous-menu, ni entrée désactivée, ni
- * séparateur — d'où des menus qui ne pouvaient pas proposer « changer le statut ».
- */
-function toMenuEntries(actions: EntityItemAction[], prefix = 'a'): MenuEntry[] {
-  return actions.flatMap((action, index): MenuEntry[] => {
-    const id = `${prefix}-${index}-${action.label}`;
-    const entry: MenuEntry = action.items
-      ? {
-          kind: 'submenu',
-          id,
-          label: action.label,
-          icon: action.icon,
-          items: toMenuEntries(action.items, id),
-        }
-      : {
-          id,
-          label: action.label,
-          icon: action.icon,
-          danger: action.danger,
-          disabled: action.disabled,
-          onSelect: () => action.onClick?.(),
-        };
-    return action.separatorBefore ? [separator(id), entry] : [entry];
-  });
-}
 
 /** État de multi-sélection d'une carte (13.A). */
 export interface EntitySelection {
@@ -76,6 +36,11 @@ export interface EntityCardProps {
   selection?: EntitySelection;
   /** Actions du menu contextuel (clic droit). */
   contextActions?: EntityItemAction[];
+  /**
+   * Entrées de menu déclaratives, pour ce que `EntityItemAction` ne sait pas exprimer —
+   * un groupe radio de statuts, par exemple. Elles se placent avant les actions.
+   */
+  contextEntries?: MenuEntry[];
   /** Épinglage aux favoris (42.A3 — №71) : injecte l'action « épingler » au clic droit + étoile. */
   favorite?: { type: FavType; entityId: number };
   /** Aperçu animé au survol (42.A — №78) : sprite de miniatures (vue cartes). */
@@ -157,6 +122,7 @@ export default function EntityCard({
   actions,
   selection,
   contextActions,
+  contextEntries,
   favorite,
   hoverSprite,
 }: EntityCardProps) {
@@ -178,6 +144,7 @@ export default function EntityCard({
       ]
     : [];
   const menuActions = [...favAction, ...(contextActions ?? [])];
+  const menuEntries = [...(contextEntries ?? []), ...toMenuEntries(menuActions)];
   const favStar =
     favorite && isFav ? (
       <Star
@@ -199,8 +166,8 @@ export default function EntityCard({
       );
     else node = inner;
 
-    if (!menuActions.length) return node;
-    return <EntityContextMenu entries={toMenuEntries(menuActions)}>{node}</EntityContextMenu>;
+    if (!menuEntries.length) return node;
+    return <EntityContextMenu entries={menuEntries}>{node}</EntityContextMenu>;
   };
 
   if (view === 'compact') {

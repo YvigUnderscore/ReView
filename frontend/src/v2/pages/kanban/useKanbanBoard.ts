@@ -9,6 +9,7 @@ import { useSequencesQuery } from '../../lib/queries';
 import { useDepartments } from '../../lib/departmentsApi';
 import { usePipelineStatuses } from '../../lib/shotgridApi';
 import type { TaskStatus } from '../../types/api';
+import { withStatus, type StatusChoice } from '../../lib/statusMenu';
 import type { BoardTask, BoardResponse } from './kanbanTypes';
 import { useT } from '../../i18n';
 
@@ -37,6 +38,24 @@ export function useKanbanBoard(projectId: number) {
   });
 
   const tasks: BoardTask[] = boardQ.data?.items ?? [];
+
+  /**
+   * Pose un statut dans le cache du board et rend de quoi revenir en arrière.
+   *
+   * Le menu contextuel et le glisser-déposer partagent cette écriture : sans elle, la
+   * carte changée au clic droit resterait dans son ancienne colonne jusqu'au retour du
+   * serveur, alors que la même carte déplacée à la souris bouge tout de suite.
+   */
+  const applyOptimisticStatus = (taskId: number, choice: StatusChoice | null) => {
+    const key = qk.projectBoard(projectId);
+    const previous = qc.getQueryData<BoardResponse>(key);
+    qc.setQueryData<BoardResponse>(key, (old) =>
+      old ? { ...old, items: withStatus(old.items, taskId, choice) } : old,
+    );
+    return () => {
+      if (previous) qc.setQueryData(key, previous);
+    };
+  };
 
   /**
    * Déplacement optimiste, rollback par invalidation. Le cache est celui du board entier :
@@ -70,6 +89,7 @@ export function useKanbanBoard(projectId: number) {
   };
 
   return {
+    applyOptimisticStatus,
     tasks,
     total: boardQ.data?.total ?? 0,
     truncated: boardQ.data?.truncated ?? false,
