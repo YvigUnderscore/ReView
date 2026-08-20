@@ -49,11 +49,27 @@ export default function SgSyncPanel({
   };
 
   const conflicts = data?.openConflicts ?? [];
+  // Les clés de libellé sont énumérées : le serveur ne nomme que ces cinq domaines, et
+  // une chaîne libre venue de la base ne doit pas devenir une clé de traduction.
+  const DOMAIN_LABELS = {
+    tasks: 'shotgrid.domain.tasks',
+    hierarchy: 'shotgrid.domain.hierarchy',
+    versions: 'shotgrid.domain.versions',
+    notes: 'shotgrid.domain.notes',
+    playlists: 'shotgrid.domain.playlists',
+  } as const;
+  const blockedDomains = Object.entries(connection.pushBlocked ?? {})
+    .filter(([domain, v]) => v.count > 0 && domain in DOMAIN_LABELS)
+    .map(([domain]) => DOMAIN_LABELS[domain as keyof typeof DOMAIN_LABELS]);
 
   const applyResolution = async (logId: number, resolution: 'sg' | 'review') => {
     try {
-      await resolve.mutateAsync({ logId, resolution });
-      toast.success(t('shotgrid.conflict.resolved'));
+      const { applied } = await resolve.mutateAsync({ logId, resolution });
+      // « blocked » : la ligne se ferme mais rien n'est parti — l'écriture du domaine est
+      // fermée dans les réglages. L'annoncer comme résolu laisserait l'écart revenir à
+      // la prochaine synchronisation sans que personne comprenne pourquoi.
+      if (applied.action === 'blocked') toast.warning(t('shotgrid.conflict.writeBlocked'));
+      else toast.success(t('shotgrid.conflict.resolved'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('shotgrid.conflict.failed'));
     }
@@ -96,6 +112,20 @@ export default function SgSyncPanel({
         <p className="flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-xs">
           <AlertTriangle size={13} className="shrink-0" />
           {t('shotgrid.sync.publishOff')}
+        </p>
+      )}
+
+      {/* Écritures refusées par la matrice de droits. Le job de file se terminait « ok » :
+          l'utilisateur voyait sa modification prise dans ReView et cherchait ensuite
+          pourquoi le site ne bougeait pas. */}
+      {blockedDomains.length > 0 && (
+        <p className="flex items-start gap-1.5 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-xs">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          <span>
+            {t('shotgrid.sync.pushBlocked', {
+              domains: blockedDomains.map((key) => t(key)).join(', '),
+            })}
+          </span>
         </p>
       )}
 

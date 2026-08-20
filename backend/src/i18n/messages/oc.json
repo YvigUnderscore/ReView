@@ -12,6 +12,7 @@
   "digest.by": "per {name}",
   "digest.commentOn": "{author} sus {media}",
   "digest.optOut": "Recebètz aqueste corrièl perque lo resumit quotidian es activat dins vòstre perfil ReView.",
+  "digest.preview": { "one": "Çò qu'a bolegat sus {count} projècte dempuèi ièr.", "other": "Çò qu'a bolegat sus {count} projèctes dempuèi ièr." },
 
   "weekly.subject": "ReView — rapòrt setmanièr de produccion",
   "weekly.title": "Rapòrt setmanièr de produccion",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Nòtas dubèrtas",
   "weekly.optOut": "Recebètz aqueste rapòrt perque es activat dins vòstre perfil ReView (supervisors).",
+  "weekly.preview": { "one": "La setmana sus {count} projècte : liuraisons, decisions, nòtas dobèrtas.", "other": "La setmana sus {count} projèctes : liuraisons, decisions, nòtas dobèrtas." },
 
   "smtp.test.subject": "ReView — tèst SMTP",
   "smtp.test.title": "Tèst SMTP",
@@ -36,6 +38,7 @@
   "invite.expiry": "Aqueste ligam expira dins {days} jorns.",
   "invite.fallback": "Se lo boton foncciona pas, pegatz aqueste ligam dins vòstre navegador :",
   "invite.ignore": "Se esperavatz pas aquesta convidacion, podètz ignorar aqueste messatge.",
+  "invite.preview": "Vòstre compte ReView vos espèra : causissètz vòstre mot de santa Clara per començar.",
   "notification.mentioned": "Sètz estat mencionat dins un comentari",
   "notification.reply": "Novèla responsa a vòstre comentari",
   "notification.watchedComment": "Novèl comentari sus un element seguit",

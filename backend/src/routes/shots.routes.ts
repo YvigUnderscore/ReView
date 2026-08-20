@@ -112,7 +112,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveShotAccess(req, id);
-    res.json({ shot: await ShotService.update(id, projectId, req.body) });
+    res.json({ shot: await ShotService.update(id, projectId, req.body, req.user!.id) });
   },
 );
 

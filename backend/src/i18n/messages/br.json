@@ -12,6 +12,7 @@
   "digest.by": "gant {name}",
   "digest.commentOn": "{author} war {media}",
   "digest.optOut": "Resev a rit ar postel-mañ rak gweredekaet eo an diverradenn pemdeziek en ho profil ReView.",
+  "digest.preview": { "one": "Ar pezh a zo fiñvet war {count} raktres abaoe dec'h.", "other": "Ar pezh a zo fiñvet war {count} raktres abaoe dec'h." },
 
   "weekly.subject": "ReView — danevell sizhuniek ar produadur",
   "weekly.title": "Danevell sizhuniek ar produadur",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Notennoù digor",
   "weekly.optOut": "Resev a rit an danevell-mañ rak gweredekaet eo en ho profil ReView (evezhierien).",
+  "weekly.preview": { "one": "Ar sizhun war {count} raktres : kasadennoù, divizoù, notennoù digor.", "other": "Ar sizhun war {count} raktres : kasadennoù, divizoù, notennoù digor." },
 
   "smtp.test.subject": "ReView — prouad SMTP",
   "smtp.test.title": "Prouad SMTP",
@@ -36,6 +38,7 @@
   "invite.expiry": "Ar liamm-mañ a vo dispredet a-benn {days} devezh.",
   "invite.fallback": "Ma ne da ket an nozelenn en-dro, pegit al liamm-mañ e-barzh ho merdeer :",
   "invite.ignore": "Ma ne c'hortozec'h ket ar bedadenn-mañ, e c'hallit tremen hebiou ar postel-mañ.",
+  "invite.preview": "Ho kont ReView a c'hortoz ac'hanoc'h : dibabit ho ker-tremen evit kregiñ.",
   "notification.mentioned": "Meneget oc'h bet en un evezhiadenn",
   "notification.reply": "Respont nevez d'ho evezhiadenn",
   "notification.watchedComment": "Evezhiadenn nevez war un elfenn heuliet",

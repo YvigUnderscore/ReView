@@ -12,6 +12,7 @@
   "digest.by": "由 {name}",
   "digest.commentOn": "{author} 于 {media}",
   "digest.optOut": "你收到这封邮件，是因为你的 ReView 个人资料中启用了每日摘要。",
+  "digest.preview": { "other": "昨天以来 {count} 个项目的动态。" },
 
   "weekly.subject": "ReView — 每周制作报告",
   "weekly.title": "每周制作报告",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "待处理意见",
   "weekly.optOut": "你收到这份报告，是因为你的 ReView 个人资料中启用了它（监制）。",
+  "weekly.preview": { "other": "{count} 个项目的一周：交付、判定、未处理备注。" },
 
   "smtp.test.subject": "ReView — SMTP 测试",
   "smtp.test.title": "SMTP 测试",
@@ -36,6 +38,7 @@
   "invite.expiry": "此链接将在 {days} 天后失效。",
   "invite.fallback": "如果按钮无法使用，请将以下链接粘贴到浏览器中：",
   "invite.ignore": "如果您并未预期收到此邀请，可以忽略本邮件。",
+  "invite.preview": "你的 ReView 账号已就绪，设置密码即可开始。",
   "notification.mentioned": "有评论提到了你",
   "notification.reply": "你的评论有新回复",
   "notification.watchedComment": "你关注的内容有新评论",

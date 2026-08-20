@@ -12,6 +12,7 @@
   "digest.by": "{name} による",
   "digest.commentOn": "{media} への {author} のコメント",
   "digest.optOut": "ReView のプロフィールで日次ダイジェストが有効になっているため、このメールをお送りしています。",
+  "digest.preview": { "other": "昨日からの {count} 件のプロジェクトの動き。" },
 
   "weekly.subject": "ReView — 週次制作レポート",
   "weekly.title": "週次制作レポート",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "未対応の指摘",
   "weekly.optOut": "ReView のプロフィールで有効になっているため、このレポートをお送りしています（スーパーバイザー向け）。",
+  "weekly.preview": { "other": "{count} 件のプロジェクトの一週間：納品、判定、未対応のメモ。" },
 
   "smtp.test.subject": "ReView — SMTP テスト",
   "smtp.test.title": "SMTP テスト",
@@ -36,6 +38,7 @@
   "invite.expiry": "このリンクは {days} 日後に無効になります。",
   "invite.fallback": "ボタンが動作しない場合は、次のリンクをブラウザーに貼り付けてください。",
   "invite.ignore": "この招待に心当たりがない場合は、このメールを無視してください。",
+  "invite.preview": "ReView アカウントの準備ができました。パスワードを設定して始めましょう。",
   "notification.mentioned": "コメントであなたに言及がありました",
   "notification.reply": "あなたのコメントに新しい返信があります",
   "notification.watchedComment": "フォロー中の項目に新しいコメントがあります",

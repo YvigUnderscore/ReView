@@ -465,6 +465,10 @@ model Sequence {
   thumbnailKey String?
   // Réglages pipeline propres (override résolution/fps/frames du projet). JSON.
   settings  Json      @default("{}")
+  // Marqueur de dernière modification. Sans lui, la synchronisation ShotGrid ne pouvait
+  // pas savoir si ReView avait bougé depuis la dernière passe : elle écrasait donc la
+  // séquence sans jamais détecter le moindre conflit.
+  updatedAt DateTime  @updatedAt
   // Statut de sequence (Phase 48) — ShotGrid en a un, avec sa propre liste de valeurs.
   pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
   pipelineStatusId Int?
@@ -498,6 +502,9 @@ model Shot {
   // n'avaient donc nulle part où vivre.
   description  String?
   thumbnailKey String?
+  // Marqueur de dernière modification — même raison que sur Sequence : la détection de
+  // conflit de statut de plan était morte faute de repère temporel local.
+  updatedAt    DateTime @updatedAt
   // Statut de shot (Phase 48) — ShotGrid en a un (`sg_status_list` sur Shot) ; sans
   // connexion il reste simplement vide.
   pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
@@ -1238,6 +1245,10 @@ model ShotgridConnection {
   lastSyncAt    DateTime?
   lastEventAt   DateTime?
   lastEventId   BigInt? // curseur EventLogEntry (mode polling)
+  // Dernières écritures refusées par la matrice de droits, agrégées par domaine :
+  // { "<domaine>": { count, at, jobType } }. Sans cette trace, un domaine fermé en
+  // écriture faisait disparaître les envois en silence — le job se terminait « ok ».
+  pushBlocked   Json      @default("{}")
   // ok | auth_error | project_mismatch | disabled | syncing | error
   status        String    @default("ok")
   statusMessage String?

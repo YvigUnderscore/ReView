@@ -12,6 +12,7 @@
   "digest.by": "{name}(e)k egina",
   "digest.commentOn": "{author}, {media}(e)n",
   "digest.optOut": "Mezu hau jaso duzu zure ReView profilean eguneroko laburpena aktibatuta duzulako.",
+  "digest.preview": { "one": "Atzotik proiektu {count}(e)an mugitu dena.", "other": "Atzotik {count} proiektutan mugitu dena." },
 
   "weekly.subject": "ReView — asteko produkzio-txostena",
   "weekly.title": "Asteko produkzio-txostena",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Ohar irekiak",
   "weekly.optOut": "Txosten hau jaso duzu zure ReView profilean aktibatuta dagoelako (gainbegiraleak).",
+  "weekly.preview": { "one": "Astea proiektu {count}(e)an: entregak, erabakiak, ohar irekiak.", "other": "Astea {count} proiektutan: entregak, erabakiak, ohar irekiak." },
 
   "smtp.test.subject": "ReView — SMTP proba",
   "smtp.test.title": "SMTP proba",
@@ -36,6 +38,7 @@
   "invite.expiry": "Esteka honek {days} egun barru iraungiko du.",
   "invite.fallback": "Botoiak funtzionatzen ez badu, itsatsi esteka hau zure nabigatzailean:",
   "invite.ignore": "Gonbidapen hau espero ez bazenuen, mezu hau alde batera utz dezakezu.",
+  "invite.preview": "Zure ReView kontua zain duzu: aukeratu pasahitza hasteko.",
   "notification.mentioned": "Iruzkin batean aipatu zaituzte",
   "notification.reply": "Erantzun berria zure iruzkinari",
   "notification.watchedComment": "Iruzkin berria jarraitzen duzun zerbaitetan",

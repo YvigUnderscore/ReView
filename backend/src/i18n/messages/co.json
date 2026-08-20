@@ -12,6 +12,7 @@
   "digest.by": "da {name}",
   "digest.commentOn": "{author} nant'à {media}",
   "digest.optOut": "Ricevi st'e-mail perchè u riassuntu ghjurnalieru hè attivatu in u to prufilu ReView.",
+  "digest.preview": { "one": "Ciò chì hà cambiatu in {count} prughjettu dapoi eri.", "other": "Ciò chì hà cambiatu in {count} prughjetti dapoi eri." },
 
   "weekly.subject": "ReView — rapportu settimanale di pruduzzione",
   "weekly.title": "Rapportu settimanale di pruduzzione",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Note aperte",
   "weekly.optOut": "Ricevi stu rapportu perchè hè attivatu in u to prufilu ReView (supervisori).",
+  "weekly.preview": { "one": "A settimana in {count} prughjettu : cunsegne, decisioni, note aperte.", "other": "A settimana in {count} prughjetti : cunsegne, decisioni, note aperte." },
 
   "smtp.test.subject": "ReView — prova SMTP",
   "smtp.test.title": "Prova SMTP",
@@ -36,6 +38,7 @@
   "invite.expiry": "Stu ligame scade ind'è {days} ghjorni.",
   "invite.fallback": "S'ellu ùn funziona micca u buttone, incullate stu ligame in u vostru navigatore :",
   "invite.ignore": "S'ellu ùn v'aspittavate micca st'invitu, pudete ignurà stu messagiu.",
+  "invite.preview": "U vostru contu ReView v'aspetta : sceglite a vostra chjave d'accessu per principià.",
   "notification.mentioned": "Site statu mintuvatu in un cumentu",
   "notification.reply": "Nova risposta à u vostru cumentu",
   "notification.watchedComment": "Novu cumentu nant'à un elementu seguitu",

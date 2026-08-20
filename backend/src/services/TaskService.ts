@@ -445,10 +445,15 @@ export interface ApiPatchInput {
  */
 export async function applyApiPatch(actorId: number, projectId: number, id: number, body: ApiPatchInput) {
   const before = await prisma.task.findUnique({ where: { id }, select: { status: true } });
+  // Même résolution que l'interface : l'API n'écrivait que l'énumération historique, si
+  // bien qu'un `PATCH {status}` depuis un DCC laissait `pipelineStatusId` sur l'ancienne
+  // valeur. La fiche affichait un état, le kanban un autre, et rien ne partait vers
+  // ShotGrid — le statut posé par le pipeline n'existait que pour l'API.
+  const statusPair = await resolveStatusPair(projectId, body);
   const task = await prisma.task.update({
     where: { id },
     data: {
-      ...(body.status !== undefined ? { status: body.status } : {}),
+      ...statusPair,
       ...(body.assigneeId !== undefined ? { assigneeId: body.assigneeId } : {}),
       ...(body.dueDate !== undefined ? { dueDate: body.dueDate } : {}),
     },
@@ -472,6 +477,13 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
     event('task.assigned', { task: view, assigneeId: body.assigneeId });
   }
   event('task.updated', { task: view });
+  // Les écrans ouverts et le site distant apprennent le changement comme pour une
+  // modification faite à la main : l'API v1 n'émettait ni l'un ni l'autre.
+  emitTaskUpdate(projectId, { id, shotId: task.shot?.id ?? null, assetId: task.asset?.id ?? null });
+  if (body.status !== undefined) await enqueuePush(projectId, { type: 'task-status', taskId: id, actorId });
+  if (body.dueDate !== undefined) await enqueuePush(projectId, { type: 'task-dates', taskId: id, actorId });
+  if (body.assigneeId !== undefined)
+    await enqueuePush(projectId, { type: 'task-assignee', taskId: id, actorId });
   return view;
 }
 

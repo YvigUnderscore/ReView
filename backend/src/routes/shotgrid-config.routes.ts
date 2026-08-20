@@ -9,8 +9,10 @@ import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { env } from '../config/env';
 import * as Config from '../services/shotgrid/ShotgridConfigService';
-import { shotgridSettingsSchema } from '../services/shotgrid/shotgridSettings';
+import { parseSettings, shotgridSettingsSchema } from '../services/shotgrid/shotgridSettings';
 import { assertProjectManager } from '../lib/shotgridAccess';
+import { scheduleShotgridJobs } from '../services/shotgrid/ShotgridSchedule';
+import { logger } from '../lib/logger';
 import type { Request } from 'express';
 
 /**
@@ -124,11 +126,28 @@ router.patch(
     await assertProjectManager(req.user!, projectId);
     const current = await Config.getConnectionOrThrow(projectId);
     // Fusion : l'UI n'envoie que la section modifiée, le reste doit survivre.
-    const merged =
-      req.body.settings !== undefined
-        ? { ...(current.settings as object), ...(req.body.settings as object) }
-        : undefined;
-    const conn = await Config.updateConnection(projectId, { ...req.body, settings: merged });
+    // En profondeur d'un cran, et à partir des réglages **normalisés** : la fusion plate
+    // laissait `shotgridSettingsSchema.partial()` reparser chaque section reçue avec ses
+    // défauts, si bien qu'envoyer un seul domaine remettait les six autres à
+    // « lecture + écriture ». Un client qui n'envoie qu'un champ rouvrait des écritures.
+    const merged = req.body.settings
+      ? Config.mergeSettings(parseSettings(current.settings), req.body.settings)
+      : undefined;
+    // Rouvrir un domaine en écriture efface son alerte : la bannière signale un problème
+    // en cours, pas une trace historique.
+    const cleared = merged ? Config.clearedBlocks(current.pushBlocked, merged) : undefined;
+    const conn = await Config.updateConnection(projectId, {
+      ...req.body,
+      settings: merged,
+      ...(cleared ? { pushBlocked: cleared } : {}),
+    });
+    // Le rythme (mode d'événements, intervalle de relevé, heure de réconciliation) vit
+    // dans des travaux répétables Redis, posés une seule fois au démarrage. Sans cette
+    // repose, basculer une connexion en « relevé » ne relevait rien jusqu'au prochain
+    // redémarrage — le réglage semblait pris en compte et ne l'était pas.
+    void scheduleShotgridJobs().catch((err: unknown) => {
+      logger.error({ err, projectId }, 'Repose des travaux périodiques ShotGrid impossible');
+    });
     res.json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },
 );

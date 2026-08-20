@@ -83,7 +83,13 @@ export async function syncPipelineStatuses(
 
   if (codes.length === 0) {
     await journal?.log('warn', 'shotgrid.log.noStatusSchema', { entity });
-    const existing = await prisma.pipelineStatus.findMany({ where: { scope } });
+    // Même filtre que le chemin nominal : sans `projectId: null` ni `origin: 'shotgrid'`,
+    // ce repli ramassait les statuts locaux du studio — et ceux d'autres projets — puis
+    // les collait aux entités du site. Un plan pouvait recevoir le statut d'un projet
+    // voisin portant le même code. Mieux vaut une carte vide qu'une carte fausse.
+    const existing = await prisma.pipelineStatus.findMany({
+      where: { projectId: null, scope, origin: 'shotgrid' },
+    });
     return new Map(existing.map((s) => [s.code, s]));
   }
 
@@ -192,6 +198,34 @@ export function inverseVersionStatusMap(map: Record<string, number>): Map<number
   const out = new Map<number, string>();
   for (const [code, id] of Object.entries(map)) if (!out.has(id)) out.set(id, code);
   return out;
+}
+
+/**
+ * Retrouve le code de statut ShotGrid correspondant à une décision de review, **sans
+ * rien créer ni écrire**.
+ *
+ * `versionStatusMap` n'est alimentée que par la synchronisation, et seulement quand la
+ * lecture du « Référentiel de statuts » est ouverte. Décocher ce réglage vidait donc la
+ * carte, et l'envoi des décisions de review s'arrêtait — sans message, sans rapport
+ * évident entre la case décochée et le symptôme. Ici, on redéduit la correspondance à la
+ * volée par le nom, exactement comme `syncVersionStatuses`, mais en lecture seule : une
+ * décision d'artiste n'a pas à créer un statut dans le référentiel du studio.
+ */
+export async function resolveVersionStatusCode(
+  client: ShotgridClient,
+  reviewStatusId: number,
+): Promise<string | null> {
+  const status = await prisma.reviewStatus.findUnique({ where: { id: reviewStatusId } });
+  if (!status) return null;
+  const codes = await fetchValidStatusCodes(client, 'Version');
+  if (codes.length === 0) return null;
+  const siteStatuses = await fetchSiteStatuses(client);
+  const wanted = status.name.toLocaleLowerCase();
+  for (const code of codes) {
+    const name = siteStatuses.get(code)?.name ?? code.toUpperCase();
+    if (name.toLocaleLowerCase() === wanted) return code;
+  }
+  return null;
 }
 
 /** Statuts d'un scope, indexés par code — utilisé par le moteur de synchronisation. */

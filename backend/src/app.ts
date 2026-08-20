@@ -44,6 +44,7 @@ import reviewStatusesRoutes from './routes/review-statuses.routes';
 import pipelineStatusesRoutes from './routes/pipeline-statuses.routes';
 import departmentsRoutes from './routes/departments.routes';
 import entityThumbnailsRoutes from './routes/entity-thumbnails.routes';
+import unsubscribeRoutes from './routes/unsubscribe.routes';
 import commentsRoutes from './routes/comments.routes';
 import boardsRoutes from './routes/boards.routes';
 import shareRoutes from './routes/share.routes';
@@ -174,6 +175,9 @@ export const createApp = (): Express => {
   });
   app.use('/api/share', shareLimiter, shareRoutes);
   app.use('/api/client', shareLimiter, clientRoutes);
+  // Désabonnement des envois récurrents : public par nature — le bouton natif des
+  // messageries l'appelle sans session, souvent depuis les serveurs du fournisseur.
+  app.use('/api/unsubscribe', unsubscribeRoutes);
   app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
   app.use('/api/admin/service-tokens', serviceTokensRoutes); // identités machine (API v1)
   app.use('/api/admin/jobs', jobsRoutes); // dashboard BullMQ (37.C)

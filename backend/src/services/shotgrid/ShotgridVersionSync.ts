@@ -11,6 +11,7 @@ import { logger } from '../../lib/logger';
 import { resolveStorageContextForVersion } from '../../lib/pipeline';
 import { storage, StorageService } from '../StorageService';
 import { enqueueMediaJob } from '../JobService';
+import { emitToProject } from '../SocketService';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import {
   asDate,
@@ -24,7 +25,7 @@ import {
 } from './shotgridMapper';
 import { mapSgToLocal, shouldImportMedia, upsertLink, type VersionLinkData } from './shotgridLinks';
 import { can } from './shotgridSettings';
-import type { PullContext } from './ShotgridPullService';
+import { noteUnknownStatus, type PullContext } from './ShotgridPullService';
 
 /**
  * Import des Media Publishes : une Version ShotGrid devient une Version ReView avec
@@ -74,6 +75,9 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
 
   const records = await ctx.client.search('Version', { fields: VERSION_FIELDS, filters, sort: 'id' });
   const statusFilter = ctx.settings.media.statusFilter;
+  // Une seule lecture de la table de liens pour tout le lot : elle sert à distinguer la
+  // version déjà connue (qu'on met à jour) de la version neuve (que le filtre peut écarter).
+  const knownVersions = await mapSgToLocal(ctx.connection.id, 'version');
 
   for (const record of records) {
     const verdict = belongsToProject(record, ctx.scope);
@@ -94,9 +98,19 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
     }
 
     const statusCode = asString(record.sg_status_list);
-    // Le filtre de statuts ne s'applique qu'à l'import automatique : une sélection
-    // manuelle est une décision explicite, elle passe outre.
+    /**
+     * Le filtre de statuts décide de ce qu'on **importe**, pas de ce qu'on **suit**.
+     *
+     * Il s'appliquait à tout le monde : une version déjà importée dont le statut passait
+     * hors filtre (par exemple d'« en review » à « approuvé ») était purement sautée, et
+     * son statut de review restait gelé pour toujours côté ReView. Elle est pourtant déjà
+     * là — c'est justement la version dont on veut voir le statut avancer.
+     *
+     * Une sélection manuelle (`onlySgIds`) passe outre : c'est une décision explicite.
+     */
+    const alreadyImported = knownVersions.has(record.id);
     if (
+      !alreadyImported &&
       !options.onlySgIds?.length &&
       statusFilter.length > 0 &&
       statusCode &&
@@ -107,7 +121,12 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
     }
 
     try {
-      await importVersion(ctx, record, options.withMedia !== false);
+      // Version connue mais hors filtre : on rafraîchit ses métadonnées et son statut,
+      // sans rapatrier de média — le filtre garde tout son sens sur ce point.
+      const withMedia =
+        options.withMedia !== false &&
+        (!alreadyImported || statusFilter.length === 0 || !statusCode || statusFilter.includes(statusCode));
+      await importVersion(ctx, record, withMedia);
     } catch (err) {
       ctx.journal.count('versions', 'failed');
       await ctx.journal.log(
@@ -196,7 +215,20 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
   }
 
   const statusCode = asString(record.sg_status_list);
-  const reviewStatusId = statusCode ? (ctx.settings.versionStatusMap[statusCode] ?? null) : null;
+  /**
+   * Statut de review : ReView fait autorité hors correspondance explicite.
+   *
+   * `reviewStatusId` était écrit sans condition — `null` dès qu'un code n'était pas dans
+   * `versionStatusMap`, carte souvent vide ou partielle. Chaque passe effaçait donc la
+   * décision humaine (approuvé, retake) prise dans ReView, sans conflit ni trace. C'est
+   * la donnée dont l'écrasement coûte le plus cher de toute l'intégration.
+   *
+   * On n'écrit donc que si le studio a explicitement traduit le code. Une version sans
+   * statut côté site ne dit rien de la décision de review : elle ne l'efface pas.
+   */
+  const mapped = statusCode ? ctx.settings.versionStatusMap[statusCode] : undefined;
+  const reviewPatch = mapped ? { reviewStatusId: mapped } : {};
+  if (statusCode && !mapped) await noteUnknownStatus(ctx, 'version', statusCode, name);
   const authorRef = asEntityRef(record.user);
   const authorLink = authorRef
     ? await prisma.shotgridLink.findUnique({
@@ -223,7 +255,7 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     authorId: authorLink?.localId ?? null,
     status: VersionStatus.PUBLISHED,
     published: true,
-    reviewStatusId,
+    ...reviewPatch,
     deletedAt: null,
   };
 
@@ -231,6 +263,14 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     ? await prisma.version.update({ where: { id: existing.id }, data })
     : await prisma.version.create({ data });
   ctx.journal.count('versions', existing ? 'updated' : 'created');
+  // Même raison que pour la hiérarchie : la review ouverte doit voir arriver la version
+  // et sa décision sans qu'on lui demande de recharger.
+  emitToProject(ctx.connection.projectId, 'version:update', {
+    projectId: ctx.connection.projectId,
+    id: version.id,
+    taskId: version.taskId,
+    assetId: version.assetId,
+  });
 
   const previous = existingLink?.data as VersionLinkData | undefined;
   const linkData: VersionLinkData = {

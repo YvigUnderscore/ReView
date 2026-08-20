@@ -60,6 +60,8 @@ export interface SgConnection {
   settings: SgSettings;
   lastSyncAt: string | null;
   lastEventAt: string | null;
+  /** Domaines dont des écritures vers le site ont été refusées par la matrice de droits. */
+  pushBlocked: Record<string, { count: number; at: string }>;
   webhookUrl: string;
   hasWebhookSecret: boolean;
   createdAt: string;

@@ -44,12 +44,49 @@ export interface SyncOptions {
 
 export interface SyncResult {
   runId: number;
-  status: 'ok' | 'partial' | 'error';
+  /**
+   * `deferred` : la demande n'a pas été exécutée tout de suite, elle est en attente
+   * derrière la synchronisation en cours. Elle n'est pas perdue — c'est justement ce
+   * que l'ancien `ok` laissait croire.
+   */
+  status: 'ok' | 'partial' | 'error' | 'deferred';
   stats: Record<string, unknown>;
 }
 
 /** Une seule synchronisation à la fois par connexion : deux passes concurrentes se marcheraient dessus. */
 const running = new Set<number>();
+
+/**
+ * Demandes arrivées pendant qu'une synchronisation tournait (D-ShotGrid).
+ *
+ * Elles étaient **jetées** : `runSync` rendait `{ status: 'ok', skipped: 'already_running' }`
+ * avant même d'ouvrir un journal. Chaque webhook devenant un job distinct et le worker
+ * tournant à deux, dix changements de statut simultanés sur le site en perdaient environ
+ * la moitié — sans erreur, sans trace, et sans que BullMQ rejoue quoi que ce soit. C'est
+ * très exactement « une partie des statuts ne remonte pas ».
+ *
+ * On les fusionne donc et on les rejoue à la fin de la passe en cours. La fusion est
+ * conservatrice : deux demandes ciblées s'additionnent, et dès qu'une demande porte sur
+ * tout le projet, la passe rejouée porte sur tout le projet.
+ */
+const pending = new Map<number, SyncOptions>();
+
+/** Fusionne deux demandes en une seule, sans jamais rétrécir la portée. */
+export function mergeSyncOptions(a: SyncOptions, b: SyncOptions): SyncOptions {
+  // Une demande sans `onlySgIds` balaie tout : elle absorbe les demandes ciblées.
+  const targeted = a.onlySgIds && b.onlySgIds ? [...a.onlySgIds, ...b.onlySgIds] : undefined;
+  const unique = targeted
+    ? targeted.filter((t, i) => targeted.findIndex((o) => o.sgType === t.sgType && o.sgId === t.sgId) === i)
+    : undefined;
+  return {
+    kind: a.kind === 'full' || b.kind === 'full' ? 'full' : (b.kind ?? a.kind),
+    // La fenêtre la plus large l'emporte : rattraper trop est sans danger, trop peu perd.
+    since: a.since && b.since ? new Date(Math.min(a.since.getTime(), b.since.getTime())) : null,
+    triggeredById: b.triggeredById ?? a.triggeredById,
+    onlySgIds: unique,
+    withMedia: a.withMedia || b.withMedia,
+  };
+}
 
 export async function runSync(projectId: number, options: SyncOptions = {}): Promise<SyncResult> {
   const kind = options.kind ?? 'full';
@@ -65,7 +102,11 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     return { runId: 0, status: 'ok', stats: { skipped: 'connection_inactive' } };
   }
   if (running.has(ctx.connection.id)) {
-    return { runId: 0, status: 'ok', stats: { skipped: 'already_running' } };
+    // La demande attend son tour au lieu d'être jetée. Le statut le dit : l'appelant
+    // HTTP ne doit pas afficher « synchronisé » pour un travail qui n'a pas eu lieu.
+    const existing = pending.get(ctx.connection.id);
+    pending.set(ctx.connection.id, existing ? mergeSyncOptions(existing, options) : options);
+    return { runId: 0, status: 'deferred', stats: { deferred: 'already_running' } };
   }
   running.add(ctx.connection.id);
 
@@ -123,10 +164,15 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         pullCtx.settings.versionStatusMap = versionMap;
       }
     } else {
+      // Lecture du référentiel fermée : on se rabat sur les statuts DÉJÀ importés du site
+      // (`projectId: null`, `origin: 'shotgrid'`). Sans ces deux filtres, le repli
+      // ramenait aussi le vocabulaire local du studio et celui des autres projets : un
+      // code commun comme « ip » suffisait à coller à un plan le statut d'un voisin.
+      const importedFromSite = { projectId: null, origin: 'shotgrid' } as const;
       const [t, s, q] = await Promise.all([
-        prisma.pipelineStatus.findMany({ where: { scope: 'task' } }),
-        prisma.pipelineStatus.findMany({ where: { scope: 'shot' } }),
-        prisma.pipelineStatus.findMany({ where: { scope: 'sequence' } }),
+        prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'task' } }),
+        prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'shot' } }),
+        prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'sequence' } }),
       ]);
       taskStatuses = new Map(t.map((x) => [x.code, x]));
       shotStatuses = new Map(s.map((x) => [x.code, x]));
@@ -175,6 +221,16 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     return { runId: journal.runId, status: 'error', stats: { error: message } };
   } finally {
     running.delete(ctx.connection.id);
+    // Rejouer ce qui est arrivé pendant la passe. Sans `await` : l'appelant courant a
+    // fini son travail, et le rattrapage ne doit ni allonger sa réponse ni faire échouer
+    // son job s'il échoue à son tour.
+    const deferred = pending.get(ctx.connection.id);
+    if (deferred) {
+      pending.delete(ctx.connection.id);
+      void runSync(projectId, deferred).catch((err: unknown) => {
+        logger.warn({ projectId, err }, 'Synchronisation différée en échec');
+      });
+    }
   }
 }
 

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
 import { Copy, KeyRound, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useT } from '../../i18n';
@@ -24,17 +23,21 @@ export default function SgSettingsPanel({
   const t = useT();
   const update = useUpdateSgConnection(connection.projectId);
   const rotate = useRotateWebhookToken(connection.projectId);
-  const [saving, setSaving] = useState(false);
   const s = connection.settings;
+  /**
+   * L'état d'écriture vient de la mutation, pas d'un booléen local : le `finally` de ce
+   * dernier retombait à `false` alors qu'une seconde requête était encore en vol. Il
+   * verrouille tout le panneau, pas seulement la matrice — chaque contrôle reconstruit
+   * l'objet complet à partir des réglages affichés, donc n'importe lequel peut écraser
+   * l'écriture en cours s'il part d'un état périmé.
+   */
+  const saving = update.isPending;
 
   const patch = async (p: Partial<SgSettings>) => {
-    setSaving(true);
     try {
       await update.mutateAsync({ settings: p });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -51,14 +54,14 @@ export default function SgSettingsPanel({
           {saving && <Loader2 className="animate-spin text-muted-foreground" size={13} />}
         </header>
         <p className="text-xs text-muted-foreground">{t('shotgrid.settings.matrixHint')}</p>
-        <SgDomainMatrix settings={s} onChange={patch} disabled={!canManage} />
+        <SgDomainMatrix settings={s} onChange={patch} disabled={!canManage || saving} />
       </section>
 
       <section className="space-y-3">
         <h3 className="text-sm font-medium">{t('shotgrid.settings.creationTitle')}</h3>
         <Toggle
           checked={s.lockLocalCreation}
-          disabled={!canManage}
+          disabled={!canManage || saving}
           onChange={(v) => patch({ lockLocalCreation: v })}
           label={t('shotgrid.settings.lockCreation')}
           hint={t('shotgrid.settings.lockCreationHint')}
@@ -70,7 +73,7 @@ export default function SgSettingsPanel({
         <Row label={t('shotgrid.settings.eventMode')} hint={t('shotgrid.settings.eventModeHint')}>
           <select
             value={s.eventMode}
-            disabled={!canManage}
+            disabled={!canManage || saving}
             onChange={(e) => patch({ eventMode: e.target.value as SgSettings['eventMode'] })}
             className="rounded-md border border-border bg-background px-2 py-1 text-sm"
           >
@@ -87,7 +90,7 @@ export default function SgSettingsPanel({
               min={15}
               max={3600}
               value={s.pollingIntervalSec}
-              disabled={!canManage}
+              disabled={!canManage || saving}
               onChange={(e) => patch({ pollingIntervalSec: Number(e.target.value) })}
               className="w-24 rounded-md border border-border bg-background px-2 py-1 text-sm"
             />
@@ -131,13 +134,13 @@ export default function SgSettingsPanel({
         <p className="text-xs text-muted-foreground">{t('shotgrid.settings.reconcileHint')}</p>
         <Toggle
           checked={s.reconcile.enabled}
-          disabled={!canManage}
+          disabled={!canManage || saving}
           onChange={(v) => patch({ reconcile: { ...s.reconcile, enabled: v } })}
           label={t('shotgrid.settings.reconcileEnabled')}
         />
         <Toggle
           checked={s.reconcile.onBoot}
-          disabled={!canManage}
+          disabled={!canManage || saving}
           onChange={(v) => patch({ reconcile: { ...s.reconcile, onBoot: v } })}
           label={t('shotgrid.settings.reconcileOnBoot')}
           hint={t('shotgrid.settings.reconcileOnBootHint')}
@@ -148,7 +151,7 @@ export default function SgSettingsPanel({
             min={0}
             max={23}
             value={s.reconcile.hour}
-            disabled={!canManage}
+            disabled={!canManage || saving}
             onChange={(e) => patch({ reconcile: { ...s.reconcile, hour: Number(e.target.value) } })}
             className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
           />
@@ -159,7 +162,7 @@ export default function SgSettingsPanel({
             min={1}
             max={720}
             value={s.reconcile.lookbackHours}
-            disabled={!canManage}
+            disabled={!canManage || saving}
             onChange={(e) => patch({ reconcile: { ...s.reconcile, lookbackHours: Number(e.target.value) } })}
             className="w-24 rounded-md border border-border bg-background px-2 py-1 text-sm"
           />
@@ -170,7 +173,7 @@ export default function SgSettingsPanel({
         <h3 className="text-sm font-medium">{t('shotgrid.settings.mediaTitle')}</h3>
         <Toggle
           checked={s.media.autoImport}
-          disabled={!canManage}
+          disabled={!canManage || saving}
           onChange={(v) => patch({ media: { ...s.media, autoImport: v } })}
           label={t('shotgrid.settings.autoImport')}
           hint={t('shotgrid.settings.autoImportHint')}
@@ -178,7 +181,7 @@ export default function SgSettingsPanel({
         <Row label={t('shotgrid.settings.mediaSource')} hint={t('shotgrid.settings.mediaSourceHint')}>
           <select
             value={s.media.source}
-            disabled={!canManage}
+            disabled={!canManage || saving}
             onChange={(e) =>
               patch({ media: { ...s.media, source: e.target.value as 'transcoded' | 'original' } })
             }
@@ -193,7 +196,7 @@ export default function SgSettingsPanel({
             type="number"
             min={0}
             value={s.media.maxSizeMo ?? ''}
-            disabled={!canManage}
+            disabled={!canManage || saving}
             placeholder={t('shotgrid.settings.noLimit')}
             onChange={(e) =>
               patch({ media: { ...s.media, maxSizeMo: e.target.value ? Number(e.target.value) : null } })
@@ -208,7 +211,7 @@ export default function SgSettingsPanel({
         <Row label={t('shotgrid.settings.publishMode')} hint={t('shotgrid.settings.publishModeHint')}>
           <select
             value={s.push.publishMode}
-            disabled={!canManage}
+            disabled={!canManage || saving}
             onChange={(e) =>
               patch({ push: { ...s.push, publishMode: e.target.value as 'link' | 'upload' | 'off' } })
             }
@@ -221,14 +224,14 @@ export default function SgSettingsPanel({
         </Row>
         <Toggle
           checked={s.push.attributeToUser}
-          disabled={!canManage}
+          disabled={!canManage || saving}
           onChange={(v) => patch({ push: { ...s.push, attributeToUser: v } })}
           label={t('shotgrid.settings.attributeToUser')}
           hint={t('shotgrid.settings.attributeToUserHint')}
         />
         <Toggle
           checked={s.push.attachAnnotations}
-          disabled={!canManage}
+          disabled={!canManage || saving}
           onChange={(v) => patch({ push: { ...s.push, attachAnnotations: v } })}
           label={t('shotgrid.settings.attachAnnotations')}
         />
@@ -239,7 +242,7 @@ export default function SgSettingsPanel({
         <Row label={t('shotgrid.settings.conflictPolicy')} hint={t('shotgrid.settings.conflictHint')}>
           <select
             value={s.conflictPolicy}
-            disabled={!canManage}
+            disabled={!canManage || saving}
             onChange={(e) => patch({ conflictPolicy: e.target.value as SgSettings['conflictPolicy'] })}
             className="rounded-md border border-border bg-background px-2 py-1 text-sm"
           >

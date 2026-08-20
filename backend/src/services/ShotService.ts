@@ -10,6 +10,7 @@ import {
 } from '../lib/thumbnails';
 import { emitToProject } from './SocketService';
 import * as PipelineStatusService from './PipelineStatusService';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { badRequest, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
@@ -180,7 +181,7 @@ export interface UpdateShotInput {
   omitted?: boolean;
 }
 
-export async function update(id: number, projectId: number, body: UpdateShotInput) {
+export async function update(id: number, projectId: number, body: UpdateShotInput, actorId?: number | null) {
   await assertProjectWritable(projectId); // 38.B
   await assertSequenceInProject(body.sequenceId, projectId);
   // Le statut doit venir du vocabulaire de CE projet : poser l'identifiant d'un statut
@@ -203,6 +204,12 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
   // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
   // montages automatiques, qui doivent se remettre à jour sans rechargement (Phase 45).
   emitToProject(projectId, 'timeline:update', { projectId, shotId: id });
+  // Le statut repart vers ShotGrid. Il ne partait nulle part : le plan changeait d'état
+  // dans ReView, le site gardait l'ancien, et la synchronisation suivante ramenait
+  // celui du site. L'artiste voyait son changement s'annuler tout seul.
+  if (body.pipelineStatusId !== undefined) {
+    await enqueuePush(projectId, { type: 'shot-status', shotId: id, actorId });
+  }
   return shot;
 }
 

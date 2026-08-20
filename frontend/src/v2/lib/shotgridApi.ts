@@ -125,21 +125,53 @@ export function useCreateSgConnection(projectId: number) {
   });
 }
 
+/** Sections de réglages fusionnées en profondeur — mêmes que côté serveur. */
+const MERGED_SECTIONS = ['domains', 'media', 'push', 'reconcile', 'steps'] as const;
+
+type SgPatch = { settings?: Partial<SgSettings>; active?: boolean; webhookSecret?: string | null };
+
+/**
+ * Applique le patch au cache exactement comme le serveur l'appliquera : d'un cran en
+ * profondeur. Un `setQueryData` plat rejouerait le défaut qu'on corrige côté route.
+ */
+function applyPatch(current: SgConnection, patch: SgPatch): SgConnection {
+  const { settings: received, ...rest } = patch;
+  if (!received) return { ...current, ...rest };
+  const settings: Record<string, unknown> = { ...current.settings, ...received };
+  for (const section of MERGED_SECTIONS) {
+    const value = received[section];
+    if (value === undefined) continue;
+    settings[section] = { ...(current.settings[section] as object), ...(value as object) };
+  }
+  return { ...current, ...rest, settings: settings as unknown as SgSettings };
+}
+
 export function useUpdateSgConnection(projectId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (patch: {
-      settings?: Partial<SgSettings>;
-      active?: boolean;
-      webhookSecret?: string | null;
-    }) =>
+    mutationFn: (patch: SgPatch) =>
       api
         .patch<{ connection: SgConnection }>(`/api/shotgrid/projects/${projectId}/connection`, patch)
         .then((r) => r.connection),
+    /**
+     * Mise à jour optimiste — sans elle, deux bascules rapides dans la matrice se
+     * marchent dessus : la seconde repart de l'état d'avant la première (le cache
+     * n'était rafraîchi qu'au retour de la requête) et annule silencieusement son effet.
+     */
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: sgKeys.connection(projectId) });
+      const previous = qc.getQueryData<SgConnection>(sgKeys.connection(projectId));
+      if (previous) qc.setQueryData(sgKeys.connection(projectId), applyPatch(previous, patch));
+      return { previous };
+    },
+    onError: (_err, _patch, context) => {
+      if (context?.previous) qc.setQueryData(sgKeys.connection(projectId), context.previous);
+    },
     onSuccess: (connection) => {
       qc.setQueryData(sgKeys.connection(projectId), connection);
-      void qc.invalidateQueries({ queryKey: sgKeys.connection(projectId) });
     },
+    // Le serveur fait foi une fois la dernière écriture retombée.
+    onSettled: () => qc.invalidateQueries({ queryKey: sgKeys.connection(projectId) }),
   });
 }
 

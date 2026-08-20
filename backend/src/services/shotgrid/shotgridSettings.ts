@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { badRequest } from '../../lib/errors';
 import { env } from '../../config/env';
+import { logger } from '../../lib/logger';
 
 /**
  * Réglages d'une connexion ShotGrid — schéma unique, validé à l'écriture comme à la
@@ -104,10 +105,52 @@ export const shotgridSettingsSchema = z.object({
 
 export type ShotgridSettings = z.infer<typeof shotgridSettingsSchema>;
 
-/** Réglages complets depuis la colonne JSON (tolère `{}` et les versions antérieures). */
+/**
+ * Réglages complets depuis la colonne JSON (tolère `{}` et les versions antérieures).
+ *
+ * Le repli est **fermé en écriture**, jamais ouvert. Il retombait sur les défauts du
+ * schéma, où tous les domaines valent `{ read: true, write: true }` : des réglages
+ * illisibles (schéma changé, JSON corrompu, champ inconnu) rendaient donc à l'appelant
+ * une autorisation d'écrire dans un site de production que personne n'avait donnée —
+ * l'exact inverse de `readOnlySettings()`, qui ferme tout au moment de relier le projet.
+ *
+ * On sauve tout de même les sections lisibles une à une : jeter `versionStatusMap` ou
+ * `steps` parce qu'une autre section est invalide couperait des correspondances que le
+ * studio a réellement configurées.
+ */
 export function parseSettings(raw: unknown): ShotgridSettings {
   const parsed = shotgridSettingsSchema.safeParse(raw ?? {});
-  return parsed.success ? parsed.data : shotgridSettingsSchema.parse({});
+  if (parsed.success) return parsed.data;
+  logger.warn(
+    { error: parsed.error.issues[0]?.message },
+    'Réglages ShotGrid illisibles : repli en lecture seule',
+  );
+  const safe = readOnlySettings();
+  if (raw && typeof raw === 'object') {
+    // Section par section : ce qui se valide seul est conservé, le reste garde le repli.
+    const source = raw as Record<string, unknown>;
+    for (const key of ['media', 'push', 'reconcile', 'steps', 'versionStatusMap'] as const) {
+      const section = shotgridSettingsSchema.shape[key].safeParse(source[key]);
+      if (section.success) (safe as Record<string, unknown>)[key] = section.data;
+    }
+    const policy = shotgridSettingsSchema.shape.conflictPolicy.safeParse(source.conflictPolicy);
+    if (policy.success) safe.conflictPolicy = policy.data;
+    // `domains` est réintégré domaine par domaine, et jamais au-delà de ce que le repli
+    // autorise : une section douteuse ne doit pas rouvrir une écriture.
+    const domains = source.domains;
+    if (domains && typeof domains === 'object') {
+      for (const [name, value] of Object.entries(domains as Record<string, unknown>)) {
+        const parsedAccess = access.safeParse(value);
+        if (parsedAccess.success && name in safe.domains) {
+          (safe.domains as Record<string, { read: boolean; write: boolean }>)[name] = {
+            read: parsedAccess.data.read,
+            write: false,
+          };
+        }
+      }
+    }
+  }
+  return safe;
 }
 
 /**

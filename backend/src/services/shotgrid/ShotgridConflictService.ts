@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { enqueuePush } from './ShotgridPushService';
 import { runSync } from './ShotgridSyncService';
+import { can, parseSettings } from './shotgridSettings';
 
 /**
  * Arbitrage d'un conflit.
@@ -20,13 +21,67 @@ export type Resolution = 'sg' | 'review';
 
 export interface ResolutionOutcome {
   direction: Resolution;
-  /** Ce qui a réellement été déclenché, pour le retour à l'utilisateur. */
-  action: 'pulled' | 'pushed' | 'nothing';
+  /**
+   * Ce qui a réellement été déclenché, pour le retour à l'utilisateur.
+   * `blocked` : l'écriture vers le site est fermée dans les réglages — la ligne se ferme,
+   * mais l'écart persistera. Le dire vaut mieux qu'un « résolu » qui ne l'est pas.
+   */
+  action: 'pulled' | 'pushed' | 'blocked' | 'nothing';
+}
+
+/** Domaine de réglage qui gouverne l'écriture, par type d'entité locale. */
+const WRITE_DOMAIN: Record<string, 'tasks' | 'hierarchy' | 'versions'> = {
+  task: 'tasks',
+  shot: 'hierarchy',
+  sequence: 'hierarchy',
+  asset: 'hierarchy',
+  version: 'versions',
+};
+
+/**
+ * Remet la valeur ReView d'avant l'écrasement, quand la politique `sg_wins` l'a déjà
+ * remplacée par celle du site.
+ *
+ * Sans cette étape, « ReView gagne » renvoyait au site… la valeur du site : le local
+ * avait été écrasé pendant la synchronisation, et la ligne de conflit est le seul
+ * endroit où la valeur d'origine subsiste (`vars.review`).
+ */
+async function restoreReviewValue(
+  projectId: number,
+  log: Pick<ShotgridSyncLog, 'localType' | 'localId' | 'vars'>,
+): Promise<void> {
+  const vars = (log.vars ?? {}) as Record<string, unknown>;
+  const code = typeof vars.review === 'string' && vars.review !== '—' ? vars.review : null;
+  if (!code || !log.localId) return;
+  if (log.localType !== 'task' && log.localType !== 'shot' && log.localType !== 'sequence') return;
+
+  const status = await prisma.pipelineStatus.findFirst({
+    where: { code, OR: [{ projectId }, { projectId: null }] },
+    orderBy: { projectId: 'desc' }, // le statut du projet prime sur celui du studio
+  });
+  if (!status) return;
+
+  if (log.localType === 'task') {
+    await prisma.task.update({
+      where: { id: log.localId },
+      data: {
+        pipelineStatusId: status.id,
+        ...(status.legacyStatus ? { status: status.legacyStatus } : {}),
+      },
+    });
+  } else if (log.localType === 'shot') {
+    await prisma.shot.update({ where: { id: log.localId }, data: { pipelineStatusId: status.id } });
+  } else {
+    await prisma.sequence.update({
+      where: { id: log.localId },
+      data: { pipelineStatusId: status.id },
+    });
+  }
 }
 
 export async function resolveConflict(
   projectId: number,
-  log: Pick<ShotgridSyncLog, 'sgType' | 'sgId' | 'localType' | 'localId'>,
+  log: Pick<ShotgridSyncLog, 'sgType' | 'sgId' | 'localType' | 'localId' | 'vars'>,
   resolution: Resolution,
   actorId: number,
 ): Promise<ResolutionOutcome> {
@@ -43,8 +98,9 @@ export async function resolveConflict(
     return { direction: 'sg', action: 'pulled' };
   }
 
+  await restoreReviewValue(projectId, log);
   const pushed = await pushLocalValue(projectId, log, actorId);
-  return { direction: 'review', action: pushed ? 'pushed' : 'nothing' };
+  return { direction: 'review', action: pushed };
 }
 
 /**
@@ -56,32 +112,45 @@ async function pushLocalValue(
   projectId: number,
   log: Pick<ShotgridSyncLog, 'localType' | 'localId'>,
   actorId: number,
-): Promise<boolean> {
-  if (!log.localType || !log.localId) return false;
+): Promise<ResolutionOutcome['action']> {
+  if (!log.localType || !log.localId) return 'nothing';
+
+  // Enfiler un job dont le domaine est fermé en écriture ne produit rien : le worker
+  // sort en silence. Le vérifier ici permet de le dire à l'utilisateur au lieu de lui
+  // annoncer un envoi qui n'aura pas lieu.
+  const domain = WRITE_DOMAIN[log.localType];
+  if (domain) {
+    const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });
+    if (!connection?.active) return 'blocked';
+    if (!can(parseSettings(connection.settings), domain, 'write')) return 'blocked';
+  }
 
   switch (log.localType) {
     case 'task': {
       const task = await prisma.task.findUnique({ where: { id: log.localId } });
-      if (!task) return false;
+      if (!task) return 'nothing';
       await enqueuePush(projectId, { type: 'task-status', taskId: task.id, actorId });
       await enqueuePush(projectId, { type: 'task-dates', taskId: task.id, actorId });
-      return true;
+      return 'pushed';
     }
     case 'shot':
       await enqueuePush(projectId, { type: 'shot-status', shotId: log.localId, actorId });
-      return true;
+      return 'pushed';
+    case 'sequence':
+      await enqueuePush(projectId, { type: 'sequence-status', sequenceId: log.localId, actorId });
+      return 'pushed';
     case 'version':
       await enqueuePush(projectId, { type: 'version-status', versionId: log.localId, actorId });
-      return true;
+      return 'pushed';
     case 'asset':
       await enqueuePush(projectId, { type: 'asset-links', assetId: log.localId, actorId });
-      return true;
+      return 'pushed';
     default:
       logger.info(
         { localType: log.localType },
         'Conflit classé sans écriture : type sans équivalent poussable',
       );
-      return false;
+      return 'nothing';
   }
 }
 

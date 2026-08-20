@@ -32,6 +32,8 @@ import {
 } from './shotgridLinks';
 import type { SyncJournal } from './ShotgridSyncJournal';
 import { can } from './shotgridSettings';
+import { enqueuePush } from './ShotgridPushService';
+import { emitToProject } from '../SocketService';
 
 /**
  * Import de la hiérarchie de production depuis ShotGrid.
@@ -225,11 +227,75 @@ export async function localTarget<T extends { id: number }>(params: {
 }
 
 /**
- * Le côté ReView a-t-il bougé depuis la dernière synchronisation ?
- * Sert à repérer les conflits : ShotGrid tranche par défaut, mais l'écrasement est
- * journalisé pour rester explicable.
+ * Y a-t-il vraiment conflit ? Deux conditions, et il faut les deux.
+ *
+ * Le côté ReView doit avoir bougé depuis la dernière synchronisation, **et** les deux
+ * valeurs doivent réellement diverger. La seconde manquait : tout changement local
+ * déclarait un conflit, y compris quand les deux côtés portaient déjà la même valeur.
+ * Le journal du studio en était plein — « review: ip, shotgrid: ip » — et l'on ne
+ * distinguait plus les vrais désaccords du bruit.
+ *
+ * Pire : `updatedAt` bouge pour n'importe quelle modification de la tâche (checklist,
+ * assigné, dates). Cocher une case déclarait donc un conflit **de statut**.
  */
-async function noteConflictIfLocalChanged(
+export function isRealConflict(params: {
+  localUpdatedAt: Date | null | undefined;
+  linkSyncedAt: Date | null | undefined;
+  reviewValue?: string | null;
+  remoteValue?: string | null;
+}): boolean {
+  const { localUpdatedAt, linkSyncedAt } = params;
+  if (!localUpdatedAt || !linkSyncedAt) return false;
+  // Une seconde de tolérance : l'écriture locale et l'horodatage du lien ne sont jamais
+  // simultanés à la milliseconde près.
+  if (localUpdatedAt.getTime() <= linkSyncedAt.getTime() + 1000) return false;
+  // Valeurs connues et identiques : le site et ReView disent la même chose, il n'y a
+  // rien à arbitrer. Valeurs inconnues (appelant qui n'en fournit pas) : on s'en tient
+  // à la date, comme avant.
+  if (params.reviewValue !== undefined && params.remoteValue !== undefined) {
+    return (params.reviewValue ?? null) !== (params.remoteValue ?? null);
+  }
+  return true;
+}
+
+/**
+ * Verdict d'arbitrage. `overwrite` : la valeur du site descend. `keep` : ReView garde la
+ * sienne et la renvoie au site. `defer` : personne ne bouge, un humain tranchera.
+ */
+export type ConflictVerdict = 'overwrite' | 'keep' | 'defer';
+
+/** Traduit le réglage du studio en verdict. Pure — c'est la règle, sans les effets. */
+export function arbitrate(policy: string | undefined): ConflictVerdict {
+  if (policy === 'review_wins') return 'keep';
+  if (policy === 'manual') return 'defer';
+  return 'overwrite';
+}
+
+/**
+ * Retire du `data` le champ que l'arbitrage a laissé à ReView.
+ *
+ * On retire le champ, pas l'écriture : le nom, les dates et le rattachement ne sont pas
+ * en conflit et doivent continuer à descendre du site.
+ */
+function withoutStatus<T extends Record<string, unknown>>(data: T, verdict: ConflictVerdict): T {
+  if (verdict === 'overwrite') return data;
+  const { pipelineStatusId: _p, status: _s, ...rest } = data;
+  return rest as unknown as T;
+}
+
+/**
+ * Arbitre un conflit et le journalise.
+ *
+ * Le réglage « Quand les deux côtés ont changé » proposait trois politiques et n'en
+ * appliquait aucune : `conflictPolicy` n'était lu que comme variable d'un message, et
+ * l'appelant écrivait la valeur du site quoi qu'il arrive. Un studio en `review_wins`
+ * voyait donc ses décisions écrasées exactement comme en `sg_wins`, avec en prime une
+ * ligne de journal affirmant le contraire.
+ *
+ * Renvoie le verdict ; c'est à l'appelant de retirer le champ litigieux de son `data`
+ * (et lui seul : les autres champs, eux, ne sont pas en conflit et doivent descendre).
+ */
+async function arbitrateConflict(
   ctx: PullContext,
   params: {
     localUpdatedAt: Date | null | undefined;
@@ -248,13 +314,22 @@ async function noteConflictIfLocalChanged(
     reviewValue?: string | null;
     remoteValue?: string | null;
   },
-): Promise<void> {
-  const { localUpdatedAt, linkSyncedAt } = params;
-  if (!localUpdatedAt || !linkSyncedAt) return;
-  if (localUpdatedAt.getTime() <= linkSyncedAt.getTime() + 1000) return;
+): Promise<ConflictVerdict> {
+  const { localUpdatedAt } = params;
+  if (!isRealConflict(params)) return 'overwrite';
+  const verdict = arbitrate(ctx.settings.conflictPolicy);
   ctx.journal.count('conflicts', 'updated');
+  // Une clé par issue : le message est écrit après l'arbitrage, pas avant. L'ancien
+  // texte annonçait un écrasement en interpolant la politique — il pouvait donc dire
+  // « review_wins » au moment même où il écrasait.
+  const key =
+    verdict === 'keep'
+      ? 'shotgrid.log.conflictKept'
+      : verdict === 'defer'
+        ? 'shotgrid.log.conflictPending'
+        : 'shotgrid.log.conflictOverwritten';
   await ctx.journal.conflict(
-    'shotgrid.log.conflictOverwritten',
+    key,
     {
       name: params.name,
       policy: ctx.settings.conflictPolicy,
@@ -263,7 +338,8 @@ async function noteConflictIfLocalChanged(
       ...(params.field ? { field: params.field } : {}),
       review: params.reviewValue ?? '—',
       shotgrid: params.remoteValue ?? '—',
-      localAt: localUpdatedAt.toISOString(),
+      // `isRealConflict` a déjà écarté le cas sans date : elle est forcément là.
+      localAt: localUpdatedAt?.toISOString() ?? '—',
     },
     {
       sgType: params.sgType,
@@ -272,6 +348,57 @@ async function noteConflictIfLocalChanged(
       localId: params.localId,
     },
   );
+  return verdict;
+}
+
+/**
+ * Traduit un `sg_status_list` en écriture Prisma — trois situations, trois réponses.
+ *
+ * Le code d'origine les confondait, et de deux façons opposées :
+ * séquence et plan écrivaient `null` dès que la carte des statuts ne reconnaissait pas
+ * le code (statut **effacé** en silence), tandis que la tâche omettait le champ même
+ * quand le site avait vidé le statut (effacement **jamais propagé**). La carte est vide
+ * dans des cas ordinaires — `statuses.read` fermé, schéma du site inaccessible, code
+ * retiré des `valid_values` — donc une passe de routine suffisait à vider les statuts
+ * d'un projet entier sans une ligne de journal.
+ *
+ * - code absent/vide  → `{ pipelineStatusId: null }` : le site a vidé, on propage.
+ * - code connu        → on écrit le statut.
+ * - code inconnu      → **rien** : on garde la valeur locale, et on le dit au journal.
+ */
+export function statusPatch(
+  statusCode: string | null | undefined,
+  statuses: Map<string, PipelineStatus>,
+): { patch: { pipelineStatusId?: number | null }; unknownCode: string | null } {
+  if (!statusCode) return { patch: { pipelineStatusId: null }, unknownCode: null };
+  const status = statuses.get(statusCode);
+  if (status) return { patch: { pipelineStatusId: status.id }, unknownCode: null };
+  return { patch: {}, unknownCode: statusCode };
+}
+
+/**
+ * Signale un code de statut inconnu — une seule fois par (portée, code) et par passe.
+ * Une passe complète sur trois mille plans écrirait autrement trois mille lignes
+ * identiques et noierait le journal.
+ */
+const reportedUnknownStatus = new WeakMap<SyncJournal, Set<string>>();
+
+export async function noteUnknownStatus(
+  ctx: PullContext,
+  scope: string,
+  code: string | null,
+  name: string,
+): Promise<void> {
+  if (!code) return;
+  let seen = reportedUnknownStatus.get(ctx.journal);
+  if (!seen) {
+    seen = new Set();
+    reportedUnknownStatus.set(ctx.journal, seen);
+  }
+  const key = `${scope}:${code}`;
+  if (seen.has(key)) return;
+  seen.add(key);
+  await ctx.journal.log('warn', 'shotgrid.log.unknownStatusCode', { code, scope, name });
 }
 
 // ───────────────────────────── Séquences ─────────────────────────────
@@ -283,14 +410,22 @@ export async function pullSequences(
 ) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Sequence', SEQUENCE_FIELDS, options);
+  /**
+   * `order` se déduit du rang dans le lot reçu. Il n'a donc de sens que si le lot est le
+   * projet entier : sur une relecture ciblée (un webhook de statut) le lot fait un
+   * élément, et l'entité repartait à `order: 0` — le changement de statut d'un plan
+   * remontait la séquence en tête de liste pour tout le monde.
+   */
+  const fullPass = !options.since && !options.onlySgIds;
   // Passe complète : ce que le site ne renvoie plus a été mis à la corbeille là-bas.
-  if (!options.since && !options.onlySgIds)
-    await trashRemoved(ctx, 'Sequence', new Set(records.map((r) => r.id)));
+  if (fullPass) await trashRemoved(ctx, 'Sequence', new Set(records.map((r) => r.id)));
   const links = await mapSgToLocal(ctx.connection.id, 'sequence');
 
   for (const [index, record] of records.entries()) {
     const code = asString(record.code) ?? `SQ${record.id}`;
     const statusCode = asString(record.sg_status_list);
+    const seqStatus = statusPatch(statusCode, statuses);
+    await noteUnknownStatus(ctx, 'sequence', seqStatus.unknownCode, code);
     const link = links.get(record.id);
     const { existing, name: localCode } = await localTarget({
       connectionId: ctx.connection.id,
@@ -308,14 +443,51 @@ export async function pullSequences(
     const data = {
       name: localCode,
       code: localCode,
-      order: index,
+      ...(fullPass ? { order: index } : {}),
       projectId: ctx.connection.projectId,
-      pipelineStatusId: statusCode ? (statuses.get(statusCode)?.id ?? null) : null,
+      ...seqStatus.patch,
       deletedAt: null,
     };
-    const saved = existing
-      ? await prisma.sequence.update({ where: { id: existing.id }, data })
-      : await prisma.sequence.create({ data });
+
+    let saved: { id: number };
+    if (existing) {
+      const localStatus = existing.pipelineStatusId
+        ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
+          null)
+        : null;
+      // La séquence n'était pas arbitrée du tout : elle était écrasée sans détection ni
+      // trace, quelle que soit la politique du studio.
+      const verdict = await arbitrateConflict(ctx, {
+        localUpdatedAt: existing.updatedAt,
+        linkSyncedAt: link?.syncedAt,
+        localType: 'sequence',
+        localId: existing.id,
+        sgType: 'Sequence',
+        sgId: record.id,
+        name: localCode,
+        field: 'status',
+        reviewValue: localStatus,
+        remoteValue: statusCode,
+      });
+      if (verdict === 'keep') {
+        await enqueuePush(ctx.connection.projectId, {
+          type: 'sequence-status',
+          sequenceId: existing.id,
+        });
+      }
+      saved = await prisma.sequence.update({
+        where: { id: existing.id },
+        data: withoutStatus(data, verdict),
+      });
+      // Sans cet événement, un statut lu depuis le site n'atteint jamais un écran ouvert :
+      // il fallait recharger la page pour le voir apparaître.
+      emitToProject(ctx.connection.projectId, 'sequence:update', {
+        projectId: ctx.connection.projectId,
+        id: saved.id,
+      });
+    } else {
+      saved = await prisma.sequence.create({ data });
+    }
 
     await upsertLink({
       connectionId: ctx.connection.id,
@@ -338,8 +510,9 @@ export async function pullShots(
 ) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Shot', SHOT_FIELDS, options);
-  if (!options.since && !options.onlySgIds)
-    await trashRemoved(ctx, 'Shot', new Set(records.map((r) => r.id)));
+  // Même raison que pour les séquences : `order` n'a de sens qu'en passe complète.
+  const fullPass = !options.since && !options.onlySgIds;
+  if (fullPass) await trashRemoved(ctx, 'Shot', new Set(records.map((r) => r.id)));
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
 
@@ -348,7 +521,8 @@ export async function pullShots(
     const sequenceRef = asEntityRef(record.sg_sequence);
     const sequenceId = sequenceRef ? (sequenceLinks.get(sequenceRef.id)?.localId ?? null) : null;
     const statusCode = asString(record.sg_status_list);
-    const status = statusCode ? statuses.get(statusCode) : undefined;
+    const shotStatus = statusPatch(statusCode, statuses);
+    await noteUnknownStatus(ctx, 'shot', shotStatus.unknownCode, code);
     const cutIn = asNumber(record.sg_cut_in);
     const cutOut = asNumber(record.sg_cut_out);
 
@@ -362,23 +536,40 @@ export async function pullShots(
       code,
       startFrame: cutIn,
       endFrame: cutOut,
-      order: index,
-      pipelineStatusId: status?.id ?? null,
+      ...(fullPass ? { order: index } : {}),
+      ...shotStatus.patch,
       deletedAt: null,
     };
 
     let savedId: number;
     if (existing) {
-      await noteConflictIfLocalChanged(ctx, {
-        localUpdatedAt: null, // Shot n'a pas d'updatedAt : le conflit se joue sur les tâches.
+      const localStatus = existing.pipelineStatusId
+        ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
+          null)
+        : null;
+      const verdict = await arbitrateConflict(ctx, {
+        localUpdatedAt: existing.updatedAt,
         linkSyncedAt: link?.syncedAt,
         localType: 'shot',
         localId: existing.id,
         sgType: 'Shot',
         sgId: record.id,
         name: code,
+        field: 'status',
+        reviewValue: localStatus,
+        remoteValue: statusCode,
       });
-      const updated = await prisma.shot.update({ where: { id: existing.id }, data });
+      if (verdict === 'keep') {
+        await enqueuePush(ctx.connection.projectId, { type: 'shot-status', shotId: existing.id });
+      }
+      const updated = await prisma.shot.update({
+        where: { id: existing.id },
+        data: withoutStatus(data, verdict),
+      });
+      emitToProject(ctx.connection.projectId, 'shot:update', {
+        projectId: ctx.connection.projectId,
+        id: updated.id,
+      });
       savedId = updated.id;
       ctx.journal.count('shots', 'updated');
     } else {
@@ -562,6 +753,8 @@ export async function pullTasks(
     const stepName = stepRef?.name ?? asString(record.step);
     const statusCode = asString(record.sg_status_list);
     const status = statusCode ? statuses.get(statusCode) : undefined;
+    const taskStatus = statusPatch(statusCode, statuses);
+    await noteUnknownStatus(ctx, 'task', taskStatus.unknownCode, name);
     const assignees = asEntityRefs(record.task_assignees);
     const assigneeId =
       assignees.map((a) => userMap.get(a.id)).find((id): id is number => Boolean(id)) ?? null;
@@ -578,7 +771,9 @@ export async function pullTasks(
       assigneeId,
       startDate: asDate(record.start_date),
       dueDate: asDate(record.due_date),
-      ...(status ? { pipelineStatusId: status.id, status: status.legacyStatus ?? undefined } : {}),
+      ...taskStatus.patch,
+      // L'enum historique suit le statut de pipeline tant qu'elle existe (`legacyStatus`).
+      ...(status?.legacyStatus ? { status: status.legacyStatus } : {}),
     };
 
     let savedId: number;
@@ -587,7 +782,7 @@ export async function pullTasks(
         ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
           null)
         : null;
-      await noteConflictIfLocalChanged(ctx, {
+      const verdict = await arbitrateConflict(ctx, {
         localUpdatedAt: existing.updatedAt,
         linkSyncedAt: link?.syncedAt,
         localType: 'task',
@@ -599,7 +794,16 @@ export async function pullTasks(
         reviewValue: localStatus,
         remoteValue: statusCode,
       });
-      await prisma.task.update({ where: { id: existing.id }, data });
+      if (verdict === 'keep') {
+        await enqueuePush(ctx.connection.projectId, { type: 'task-status', taskId: existing.id });
+      }
+      await prisma.task.update({ where: { id: existing.id }, data: withoutStatus(data, verdict) });
+      emitToProject(ctx.connection.projectId, 'task:update', {
+        projectId: ctx.connection.projectId,
+        id: existing.id,
+        shotId: data.shotId ?? null,
+        assetId: data.assetId ?? null,
+      });
       savedId = existing.id;
       ctx.journal.count('tasks', 'updated');
     } else {

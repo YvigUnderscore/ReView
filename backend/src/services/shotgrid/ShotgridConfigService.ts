@@ -250,9 +250,59 @@ export async function getConnectionOrThrow(projectId: number) {
   return conn;
 }
 
+/** Sections dont un envoi partiel doit se fondre dans l'existant plutôt que le remplacer. */
+const MERGED_SECTIONS = ['domains', 'media', 'push', 'reconcile', 'steps'] as const;
+
+/**
+ * Fusion d'un cran de profondeur des réglages.
+ *
+ * La fusion était plate : `shotgridSettingsSchema.partial()` ne rend optionnelles que les
+ * clés de premier niveau, si bien qu'envoyer un seul domaine faisait reparser toute la
+ * section `domains` avec ses défauts — les six autres domaines repassaient à
+ * « lecture + écriture ». Un client qui ne modifiait qu'une case rouvrait des écritures
+ * vers un site de production.
+ *
+ * `versionStatusMap` reste remplacée en bloc : une correspondance retirée de la carte
+ * doit disparaître, pas survivre à la fusion.
+ */
+export function mergeSettings(
+  current: ShotgridSettings,
+  patch: Partial<ShotgridSettings>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...current, ...patch };
+  for (const section of MERGED_SECTIONS) {
+    if (patch[section] === undefined) continue;
+    out[section] = { ...current[section], ...patch[section] };
+  }
+  return out;
+}
+
+/** Retire de la trace des refus les domaines dont l'écriture vient d'être rouverte. */
+export function clearedBlocks(
+  current: unknown,
+  settings: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const blocked = { ...((current as Record<string, unknown> | null) ?? {}) };
+  const domains = (settings.domains ?? {}) as Record<string, { write?: boolean } | undefined>;
+  let changed = false;
+  for (const name of Object.keys(blocked)) {
+    if (domains[name]?.write) {
+      delete blocked[name];
+      changed = true;
+    }
+  }
+  return changed ? blocked : null;
+}
+
 export async function updateConnection(
   projectId: number,
-  patch: { settings?: unknown; active?: boolean; webhookSecret?: string | null },
+  patch: {
+    settings?: unknown;
+    active?: boolean;
+    webhookSecret?: string | null;
+    /** Trace des écritures refusées, purgée des domaines qu'on vient de rouvrir. */
+    pushBlocked?: Record<string, unknown>;
+  },
 ) {
   const conn = await getConnectionOrThrow(projectId);
   const settings =
@@ -265,6 +315,7 @@ export async function updateConnection(
       ...(patch.webhookSecret !== undefined
         ? { webhookSecret: patch.webhookSecret ? encryptSecret(patch.webhookSecret) : null }
         : {}),
+      ...(patch.pushBlocked !== undefined ? { pushBlocked: patch.pushBlocked as never } : {}),
     },
     include: { site: true },
   });
@@ -379,6 +430,9 @@ export function connectionView(
     settings,
     lastSyncAt: conn.lastSyncAt,
     lastEventAt: conn.lastEventAt,
+    // Domaines dont des écritures ont été refusées par la matrice, pour que l'écran
+    // puisse le dire au lieu de laisser croire que tout est parti.
+    pushBlocked: (conn.pushBlocked ?? {}) as Record<string, { count: number; at: string }>,
     webhookUrl: `${(appUrl ?? '').replace(/\/$/, '')}/api/shotgrid/webhook/${conn.webhookToken}`,
     hasWebhookSecret: Boolean(conn.webhookSecret),
     createdAt: conn.createdAt,

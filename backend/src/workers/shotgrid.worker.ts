@@ -4,15 +4,15 @@
 import { Worker } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
 import { logger } from '../lib/logger';
-import { QUEUE_NAMES, shotgridQueue, type ShotgridJobData } from '../services/JobService';
+import { QUEUE_NAMES, type ShotgridJobData } from '../services/JobService';
 import {
   handleEvent,
   pollEvents,
   type ShotgridEventPayload,
 } from '../services/shotgrid/ShotgridEventService';
-import { listActiveConnections, runReconcile } from '../services/shotgrid/ShotgridSyncService';
+import { runReconcile } from '../services/shotgrid/ShotgridSyncService';
 import { runPush, type PushJob } from '../services/shotgrid/ShotgridPushService';
-import { parseSettings } from '../services/shotgrid/shotgridSettings';
+import { catchUpOnBoot, scheduleShotgridJobs } from '../services/shotgrid/ShotgridSchedule';
 
 /**
  * Travaux ShotGrid : application des événements reçus, relevé périodique, écritures
@@ -52,71 +52,10 @@ shotgridWorker.on('failed', (job, err) =>
   logger.warn({ err, kind: job?.data.kind }, '[shotgrid.worker] échec'),
 );
 
-/**
- * (Re)pose les travaux périodiques d'après les réglages de chaque connexion.
- * Appelée au démarrage et après toute modification des réglages : une connexion
- * basculée de webhook à relevé doit voir son rythme changer sans redémarrage.
- */
-export async function scheduleShotgridJobs(): Promise<void> {
-  const repeatables = await shotgridQueue.getRepeatableJobs();
-  for (const job of repeatables) {
-    if (job.name === 'poll' || job.name === 'reconcile') {
-      await shotgridQueue.removeRepeatableByKey(job.key);
-    }
-  }
-
-  const connections = await listActiveConnections();
-  for (const conn of connections) {
-    if (conn.project.deletedAt) continue;
-    const settings = parseSettings(conn.settings);
-
-    if (settings.eventMode === 'polling') {
-      await shotgridQueue.add(
-        'poll',
-        { kind: 'poll', connectionId: conn.id },
-        {
-          repeat: { every: settings.pollingIntervalSec * 1000 },
-          jobId: `sgpoll-${conn.id}`,
-          removeOnComplete: 20,
-        },
-      );
-    }
-
-    if (settings.reconcile.enabled) {
-      await shotgridQueue.add(
-        'reconcile',
-        { kind: 'reconcile', projectId: conn.projectId },
-        {
-          repeat: { pattern: `0 ${settings.reconcile.hour} * * *` },
-          jobId: `sgreconcile-${conn.id}`,
-          removeOnComplete: 20,
-        },
-      );
-    }
-  }
-  logger.info({ connections: connections.length }, '[shotgrid.worker] travaux périodiques posés');
-}
-
-/**
- * Rattrapage au démarrage : l'instance vient peut-être de passer des heures hors ligne.
- * Décalé de quelques secondes pour ne pas concurrencer le démarrage du service, et
- * étalé entre les connexions pour ne pas marteler le site du studio.
- */
-export async function catchUpOnBoot(): Promise<void> {
-  const connections = await listActiveConnections();
-  let delay = 10_000;
-  for (const conn of connections) {
-    if (conn.project.deletedAt) continue;
-    const settings = parseSettings(conn.settings);
-    if (!settings.reconcile.onBoot) continue;
-    await shotgridQueue.add(
-      'reconcile',
-      { kind: 'reconcile', projectId: conn.projectId },
-      { delay, jobId: `sgboot-${conn.id}-${Date.now()}`, removeOnComplete: 20 },
-    );
-    delay += 15_000;
-  }
-}
+// Réexport : le planificateur vit désormais dans un module sans effet de bord, pour que
+// le process API puisse le rappeler après un changement de réglages sans instancier ce
+// worker au passage.
+export { catchUpOnBoot, scheduleShotgridJobs };
 
 export function startShotgridWorker(): void {
   void shotgridWorker.run();

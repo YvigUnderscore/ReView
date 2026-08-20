@@ -17,6 +17,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
 import * as SequenceService from '../services/SequenceService';
 import * as PipelineStatusService from '../services/PipelineStatusService';
+import { enqueuePush } from '../services/shotgrid/ShotgridPushService';
 
 const router = Router();
 router.use(authenticate);
@@ -131,6 +132,11 @@ router.patch(
       await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
     }
     const sequence = await prisma.sequence.update({ where: { id }, data: body });
+    // Le statut repart vers ShotGrid : sans cela, le site garde l'ancien et la
+    // synchronisation suivante ramène sa valeur, effaçant le changement.
+    if (body.pipelineStatusId !== undefined) {
+      await enqueuePush(projectId, { type: 'sequence-status', sequenceId: id, actorId: req.user!.id });
+    }
     res.json({ sequence });
   },
 );

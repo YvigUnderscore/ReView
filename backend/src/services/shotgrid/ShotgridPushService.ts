@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
@@ -13,8 +14,7 @@ import { writeAllowedOn } from './shotgridTemplateGuard';
 import { toSgDate } from './shotgridMapper';
 import { findByLocal, upsertLink } from './shotgridLinks';
 import { can, parseSettings } from './shotgridSettings';
-import { markEcho } from './ShotgridEventService';
-import { inverseVersionStatusMap } from './ShotgridStatusSync';
+import { inverseVersionStatusMap, resolveVersionStatusCode } from './ShotgridStatusSync';
 import { pushComment } from './ShotgridNoteSync';
 import { pushPlaylist } from './ShotgridPlaylistSync';
 
@@ -33,6 +33,7 @@ export type PushJob =
   | { type: 'task-dates'; taskId: number; actorId?: number | null }
   | { type: 'task-assignee'; taskId: number; actorId?: number | null }
   | { type: 'shot-status'; shotId: number; actorId?: number | null }
+  | { type: 'sequence-status'; sequenceId: number; actorId?: number | null }
   | { type: 'version-status'; versionId: number; actorId?: number | null }
   | { type: 'version-publish'; versionId: number; actorId?: number | null }
   | { type: 'asset-links'; assetId: number; actorId?: number | null }
@@ -112,6 +113,44 @@ async function actorLogin(ctx: PushContext, actorId: number | null | undefined):
   return data.login ?? null;
 }
 
+/** Domaine de la matrice qui gouverne chaque type d'écriture. */
+const JOB_DOMAIN: Record<PushJob['type'], 'tasks' | 'hierarchy' | 'versions' | 'notes' | 'playlists'> = {
+  'task-status': 'tasks',
+  'task-dates': 'tasks',
+  'task-assignee': 'tasks',
+  'shot-status': 'hierarchy',
+  'sequence-status': 'hierarchy',
+  'asset-links': 'hierarchy',
+  'version-status': 'versions',
+  'version-publish': 'versions',
+  comment: 'notes',
+  playlist: 'playlists',
+};
+
+/**
+ * Consigne une écriture refusée par la matrice de droits.
+ *
+ * Les gardes de domaine sont des `return` secs : le job se terminait « ok » et personne,
+ * nulle part, n'apprenait que le statut n'était pas parti. L'utilisateur voyait sa
+ * modification prise en compte dans ReView et cherchait ensuite pourquoi ShotGrid ne
+ * bougeait pas. On agrège par domaine — un compteur et une date suffisent à faire
+ * apparaître le problème dans l'écran de synchronisation.
+ */
+async function noteBlockedPush(connectionId: number, job: PushJob, domain: string): Promise<void> {
+  const connection = await prisma.shotgridConnection.findUnique({
+    where: { id: connectionId },
+    select: { pushBlocked: true },
+  });
+  const current = { ...((connection?.pushBlocked as Record<string, unknown> | null) ?? {}) };
+  const entry = (current[domain] ?? {}) as { count?: number };
+  current[domain] = { count: (entry.count ?? 0) + 1, at: new Date().toISOString(), jobType: job.type };
+  await prisma.shotgridConnection.update({
+    where: { id: connectionId },
+    data: { pushBlocked: current as Prisma.InputJsonValue },
+  });
+  logger.info({ connectionId, domain, jobType: job.type }, 'Écriture ShotGrid refusée par les réglages');
+}
+
 export async function runPush(connectionId: number, job: PushJob): Promise<void> {
   const connection = await prisma.shotgridConnection.findUnique({
     where: { id: connectionId },
@@ -128,6 +167,14 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
     baseUrl: connection.site.baseUrl,
   };
 
+  // Le refus se constate ici, une fois pour tous les types : chaque fonction d'écriture
+  // reteste son domaine ensuite (défense en profondeur), mais aucune ne pouvait le dire.
+  const domain = JOB_DOMAIN[job.type];
+  if (!can(ctx.settings, domain, 'write')) {
+    await noteBlockedPush(connectionId, job, domain);
+    return;
+  }
+
   try {
     switch (job.type) {
       case 'task-status':
@@ -141,6 +188,9 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
         break;
       case 'shot-status':
         await pushShotStatus(ctx, job);
+        break;
+      case 'sequence-status':
+        await pushSequenceStatus(ctx, job);
         break;
       case 'version-status':
         await pushVersionStatus(ctx, job);
@@ -175,7 +225,6 @@ async function pushTaskStatus(ctx: PushContext, job: Extract<PushJob, { type: 't
   if (!sgId) return;
 
   const code = task.pipelineStatus.code;
-  await markEcho(ctx.connectionId, 'Task', sgId, 'sg_status_list', code);
   await ctx.client.update(
     'Task',
     sgId,
@@ -206,7 +255,6 @@ async function pushTaskDates(ctx: PushContext, job: Extract<PushJob, { type: 'ta
   if (task.dueDate) payload.due_date = toSgDate(task.dueDate);
   if (Object.keys(payload).length === 0) return;
 
-  await markEcho(ctx.connectionId, 'Task', sgId, 'due_date', payload.due_date);
   await ctx.client.update('Task', sgId, payload, { asUserLogin: await actorLogin(ctx, job.actorId) });
 }
 
@@ -225,7 +273,6 @@ async function pushTaskAssignee(ctx: PushContext, job: Extract<PushJob, { type: 
     logger.info({ taskId: task.id }, 'Assignation non poussée : pas de compte ShotGrid correspondant');
     return;
   }
-  await markEcho(ctx.connectionId, 'Task', sgId, 'task_assignees', [{ id: link.sgId, type: 'HumanUser' }]);
   await ctx.client.update(
     'Task',
     sgId,
@@ -247,7 +294,6 @@ async function pushShotStatus(ctx: PushContext, job: Extract<PushJob, { type: 's
   if (!sgId) return;
 
   const code = shot.pipelineStatus.code;
-  await markEcho(ctx.connectionId, 'Shot', sgId, 'sg_status_list', code);
   await ctx.client.update(
     'Shot',
     sgId,
@@ -258,6 +304,34 @@ async function pushShotStatus(ctx: PushContext, job: Extract<PushJob, { type: 's
   );
 }
 
+/**
+ * Statut de séquence ReView → ShotGrid.
+ *
+ * Il n'existait aucun chemin : une séquence porte un statut depuis la phase 48, mais
+ * aucun type de job ne l'emportait vers le site. Le studio changeait l'état d'une
+ * séquence dans ReView et le site n'en savait rien — jusqu'à ce que la synchronisation
+ * suivante ramène l'ancienne valeur.
+ */
+async function pushSequenceStatus(ctx: PushContext, job: Extract<PushJob, { type: 'sequence-status' }>) {
+  if (!can(ctx.settings, 'hierarchy', 'write')) return;
+  const sequence = await prisma.sequence.findUnique({
+    where: { id: job.sequenceId },
+    include: { pipelineStatus: true },
+  });
+  if (!sequence?.pipelineStatus) return;
+  const sgId = await resolveTarget(ctx, 'sequence', sequence.id, 'Sequence');
+  if (!sgId) return;
+
+  const code = sequence.pipelineStatus.code;
+  await ctx.client.update(
+    'Sequence',
+    sgId,
+    { sg_status_list: code },
+    { asUserLogin: await actorLogin(ctx, job.actorId) },
+  );
+  logger.info({ sequenceId: sequence.id, sgId, code }, 'Statut de séquence poussé vers ShotGrid');
+}
+
 /** Décision de review ReView → statut de la Version ShotGrid. */
 async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type: 'version-status' }>) {
   if (!can(ctx.settings, 'versions', 'write')) return;
@@ -266,7 +340,12 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
   const sgId = await resolveTarget(ctx, 'version', version.id, 'Version');
   if (!sgId) return;
 
-  const code = inverseVersionStatusMap(ctx.settings.versionStatusMap).get(version.reviewStatusId);
+  // La carte réglée d'abord ; à défaut, une déduction par le nom, en lecture seule.
+  // Sans ce second chemin, fermer la lecture du référentiel de statuts suffisait à
+  // couper tout envoi de décision de review.
+  const code =
+    inverseVersionStatusMap(ctx.settings.versionStatusMap).get(version.reviewStatusId) ??
+    (await resolveVersionStatusCode(ctx.client, version.reviewStatusId));
   if (!code) {
     logger.info(
       { versionId: version.id, reviewStatusId: version.reviewStatusId },
@@ -274,7 +353,6 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
     );
     return;
   }
-  await markEcho(ctx.connectionId, 'Version', sgId, 'sg_status_list', code);
   await ctx.client.update(
     'Version',
     sgId,
@@ -445,7 +523,6 @@ async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'a
     if (link) sequenceRefs.push({ type: 'Sequence', id: link.sgId });
   }
 
-  await markEcho(ctx.connectionId, 'Asset', sgId, 'shots', shotRefs);
   await ctx.client.update(
     'Asset',
     sgId,

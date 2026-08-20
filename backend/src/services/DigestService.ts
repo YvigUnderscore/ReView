@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
+import { unsubscribeUrl } from '../lib/unsubscribe';
 import { mailLayout, MAIL_ACCENT, MAIL_BORDER, MAIL_MUTED } from '../lib/mailTemplate';
 import { displayName } from '../lib/userView';
 import { resolveUserLocale } from '../lib/settings';
@@ -178,7 +179,12 @@ ${list(
   const content = `<p>${esc(t(locale, 'digest.greeting', { name: userName }))}</p>
 ${blocks}
 <p style="color:${MAIL_MUTED};font-size:12px">${t(locale, 'digest.optOut')}</p>`;
-  return mailLayout(locale, t(locale, 'digest.title', { day }), content);
+  return mailLayout(
+    locale,
+    t(locale, 'digest.title', { day }),
+    content,
+    t(locale, 'digest.preview', { count: digests.length }),
+  );
 }
 
 /** Envoie le digest quotidien à tous les abonnés (préférence `emailDigest`). */
@@ -209,7 +215,13 @@ export async function sendDailyDigests(now = new Date()): Promise<number> {
     const digests = await buildUserDigest(u.id, since, locale);
     if (digests.length === 0) continue;
     const html = renderDigestHtml(locale, displayName(u), digests, now);
-    if (await sendMail(u.email, t(locale, 'digest.subject'), html)) sent += 1;
+    // Envoi récurrent : il porte son désabonnement en en-tête, que la messagerie
+    // transforme en bouton natif. Sans lui, le seul geste à portée du lecteur qui n'en
+    // veut plus est « indésirable » — et c'est la réputation de tous nos envois qui trinque.
+    const sentOk = await sendMail(u.email, t(locale, 'digest.subject'), html, {
+      unsubscribeUrl: unsubscribeUrl(u.id, 'emailDigest') ?? undefined,
+    });
+    if (sentOk) sent += 1;
   }
   logger.info(`[Digest] ${sent} email(s) envoyé(s)`);
   return sent;

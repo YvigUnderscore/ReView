@@ -59,7 +59,9 @@ ${mailButton(url, t(locale, 'invite.cta'))}
 <p style="color:${MAIL_MUTED};font-size:12px">${esc(t(locale, 'invite.fallback'))}<br />
 <a href="${url}" style="color:${MAIL_ACCENT};word-break:break-all">${esc(url)}</a></p>
 <p style="color:${MAIL_MUTED};font-size:12px">${esc(t(locale, 'invite.ignore'))}</p>`;
-  return mailLayout(locale, t(locale, 'invite.title'), content);
+  // Le texte d'aperçu, celui que la boîte de réception affiche avant l'ouverture :
+  // sans lui, elle y répète le nom du studio, identique d'un message à l'autre.
+  return mailLayout(locale, t(locale, 'invite.title'), content, t(locale, 'invite.preview'));
 }
 
 /**

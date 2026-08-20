@@ -91,7 +91,12 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
   const keep = (records: SgRecord[]) => records.filter((r) => belongsToProject(r, scope).ok);
 
   const [sgSequences, sgShots, sgAssets, sgTasks, sgVersions] = await Promise.all([
-    ctx.client.search('Sequence', { fields: ['code', 'updated_at', 'project'], filters }).then(keep),
+    // `sg_status_list` demandé : l'écran de comparaison ne regardait que le code, si bien
+    // qu'un statut de séquence divergent restait invisible — la seule entité dont l'écart
+    // ne se voyait nulle part.
+    ctx.client
+      .search('Sequence', { fields: ['code', 'sg_status_list', 'updated_at', 'project'], filters })
+      .then(keep),
     ctx.client
       .search('Shot', {
         fields: ['code', 'sg_cut_in', 'sg_cut_out', 'sg_status_list', 'sg_sequence', 'updated_at', 'project'],
@@ -121,7 +126,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
   ]);
 
   const [sequences, shots, assets, tasks, versions] = await Promise.all([
-    prisma.sequence.findMany({ where: { projectId, deletedAt: null } }),
+    prisma.sequence.findMany({ where: { projectId, deletedAt: null }, include: { pipelineStatus: true } }),
     prisma.shot.findMany({ where: { projectId, deletedAt: null }, include: { pipelineStatus: true } }),
     prisma.asset.findMany({ where: { projectId, deletedAt: null } }),
     prisma.task.findMany({
@@ -155,7 +160,10 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
       continue;
     }
-    const diffs = [fieldDiff('code', plainName(local.code, sg.id), asString(sg.code))].filter(Boolean);
+    const diffs = [
+      fieldDiff('code', plainName(local.code, sg.id), asString(sg.code)),
+      fieldDiff('status', local.pipelineStatus?.code ?? null, asString(sg.sg_status_list)),
+    ].filter(Boolean);
     if (diffs.length)
       entries.push({
         kind: 'field_differs',

@@ -96,57 +96,18 @@ export async function enqueueShotgridEvent(
 }
 
 /**
- * Trace des valeurs que ReView vient d'écrire dans ShotGrid.
+ * Pas de garde-fou d'écho — c'est délibéré.
  *
- * Sans elle, l'événement que ShotGrid renvoie pour notre propre écriture serait relu
- * comme un changement distant : pas de corruption — la valeur est déjà la bonne — mais
- * un aller-retour inutile à chaque modification. La trace vit en mémoire du worker,
- * qui est à la fois l'auteur des écritures et le lecteur des événements. Si plusieurs
- * workers tournaient, le pire serait une relecture superflue.
+ * Une carte en mémoire retenait les valeurs que ReView venait d'écrire, pour ignorer
+ * l'événement que le site nous renvoyait ensuite. Elle coûtait plus qu'elle ne rapportait :
+ * l'entrée n'était jamais consommée et vivait deux minutes, si bien qu'un vrai changement
+ * ramenant la même valeur dans cet intervalle était avalé, et que la coalescence des jobs
+ * (même `jobId` sur cinq secondes) pouvait faire abandonner le seul job qui aurait relu
+ * l'entité. Un statut perdu en silence — exactement ce qu'on cherche à éviter.
+ *
+ * Ce qu'elle économisait est une relecture ciblée d'une entité : une requête, idempotente.
+ * On la paie volontiers.
  */
-const echoes = new Map<string, { value: string; expiresAt: number }>();
-const ECHO_TTL_MS = 120_000;
-
-function echoKey(connectionId: number, sgType: string, sgId: number, field: string): string {
-  return `${connectionId}:${sgType}:${sgId}:${field}`;
-}
-
-export async function markEcho(
-  connectionId: number,
-  sgType: string,
-  sgId: number,
-  field: string,
-  value: unknown,
-): Promise<void> {
-  const now = Date.now();
-  for (const [key, entry] of echoes) if (entry.expiresAt <= now) echoes.delete(key);
-  echoes.set(echoKey(connectionId, sgType, sgId, field), {
-    value: JSON.stringify(value ?? null),
-    expiresAt: now + ECHO_TTL_MS,
-  });
-}
-
-export async function isEcho(
-  connectionId: number,
-  sgType: string,
-  sgId: number,
-  field: string | undefined,
-  value: unknown,
-): Promise<boolean> {
-  if (!field) return false;
-  const entry = echoes.get(echoKey(connectionId, sgType, sgId, field));
-  if (!entry) return false;
-  if (entry.expiresAt <= Date.now()) {
-    echoes.delete(echoKey(connectionId, sgType, sgId, field));
-    return false;
-  }
-  return entry.value === JSON.stringify(value ?? null);
-}
-
-/** Vide la trace — utilisé par les tests. */
-export function clearEchoes(): void {
-  echoes.clear();
-}
 
 /**
  * Applique un événement : relecture ciblée de l'entité concernée.
@@ -170,15 +131,6 @@ export async function handleEvent(connectionId: number, event: ShotgridEventPayl
         project: asString((event.project as { name?: string })?.name),
       },
       'Événement ShotGrid hors du projet lié — ignoré',
-    );
-    return;
-  }
-
-  const field = event.meta?.attribute_name;
-  if (await isEcho(connectionId, parsed.entity, entityRef.id, field, event.meta?.new_value)) {
-    logger.debug(
-      { connectionId, entity: parsed.entity, id: entityRef.id, field },
-      'Écho de notre propre écriture ignoré',
     );
     return;
   }

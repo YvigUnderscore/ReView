@@ -54,8 +54,14 @@ export default function SgSyncDot({
     if (!canRealign || state !== 'linked' || busy || !localId) return;
     setBusy(true);
     try {
-      await api.post(`/api/shotgrid/projects/${projectId}/realign`, { localType: type, localId });
-      toast.success(t('shotgrid.sync.dot.realigned'));
+      const { status } = await api.post<{ status: string }>(`/api/shotgrid/projects/${projectId}/realign`, {
+        localType: type,
+        localId,
+      });
+      // « deferred » : une synchronisation tournait déjà, la relecture attend son tour.
+      // Annoncer « réaligné » serait faux — c'est exactement ce que faisait l'écran quand
+      // le serveur jetait la demande en la déclarant réussie.
+      toast.success(t(status === 'deferred' ? 'shotgrid.sync.dot.queued' : 'shotgrid.sync.dot.realigned'));
       // Ce qui vient d'être relu peut avoir changé de nom, de statut ou de dates :
       // on invalide largement plutôt que de deviner quel écran l'affichait.
       await qc.invalidateQueries();

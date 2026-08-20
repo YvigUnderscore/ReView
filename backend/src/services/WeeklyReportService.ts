@@ -5,6 +5,7 @@ import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
+import { unsubscribeUrl } from '../lib/unsubscribe';
 import { mailLayout, MAIL_ACCENT, MAIL_BORDER, MAIL_MUTED } from '../lib/mailTemplate';
 import { resolveUserLocale } from '../lib/settings';
 import { formatTag, t, type Locale } from '../i18n';
@@ -120,7 +121,12 @@ ${cell(p.publishedVersions)}${cell(p.approved)}${cell(p.retakes, true)}${cell(p.
   const content = `<p>${esc(greeting)}</p>
 ${projects.length ? table : `<p>${t(locale, 'weekly.empty')}</p>`}
 <p style="color:${MAIL_MUTED};font-size:12px">${t(locale, 'weekly.optOut')}</p>`;
-  return mailLayout(locale, t(locale, 'weekly.title'), content);
+  return mailLayout(
+    locale,
+    t(locale, 'weekly.title'),
+    content,
+    t(locale, 'weekly.preview', { count: projects.length }),
+  );
 }
 
 /** Envoie le rapport hebdo aux superviseurs/admins abonnés (`preferences.weeklyReport`). */
@@ -157,7 +163,10 @@ export async function sendWeeklyReports(now = new Date()): Promise<number> {
   for (const u of optedIn) {
     const locale = await resolveUserLocale(u.preferences);
     const html = renderWeeklyReportHtml(locale, displayName(u), projects, since, now);
-    if (await sendMail(u.email, t(locale, 'weekly.subject'), html)) sent += 1;
+    const sentOk = await sendMail(u.email, t(locale, 'weekly.subject'), html, {
+      unsubscribeUrl: unsubscribeUrl(u.id, 'weeklyReport') ?? undefined,
+    });
+    if (sentOk) sent += 1;
   }
   logger.info(`[WeeklyReport] ${sent} rapport(s) envoyé(s)`);
   return sent;

@@ -12,6 +12,7 @@
   "digest.by": "{name} 작성",
   "digest.commentOn": "{media}에 남긴 {author}의 댓글",
   "digest.optOut": "ReView 프로필에서 일일 요약이 켜져 있어 이 메일을 보내드립니다.",
+  "digest.preview": { "other": "어제 이후 프로젝트 {count}개의 변화." },
 
   "weekly.subject": "ReView — 주간 제작 리포트",
   "weekly.title": "주간 제작 리포트",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "미해결 노트",
   "weekly.optOut": "ReView 프로필에서 켜져 있어 이 리포트를 보내드립니다(슈퍼바이저).",
+  "weekly.preview": { "other": "프로젝트 {count}개의 한 주: 납품, 판정, 미해결 메모." },
 
   "smtp.test.subject": "ReView — SMTP 테스트",
   "smtp.test.title": "SMTP 테스트",
@@ -36,6 +38,7 @@
   "invite.expiry": "이 링크는 {days}일 후에 만료됩니다.",
   "invite.fallback": "버튼이 작동하지 않으면 아래 링크를 브라우저에 붙여넣으세요.",
   "invite.ignore": "이 초대를 예상하지 않으셨다면 이 이메일을 무시하셔도 됩니다.",
+  "invite.preview": "ReView 계정이 준비되었습니다. 비밀번호를 설정하고 시작하세요.",
   "notification.mentioned": "댓글에서 회원님이 언급되었습니다",
   "notification.reply": "댓글에 새 답글이 있습니다",
   "notification.watchedComment": "팔로우 중인 항목에 새 댓글이 있습니다",

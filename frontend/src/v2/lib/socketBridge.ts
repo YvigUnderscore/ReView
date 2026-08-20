@@ -24,6 +24,11 @@ interface MediaEvent {
   id: number;
   versionId: number;
 }
+/** Plan, séquence ou asset : le serveur n'émet que le couple projet/identifiant. */
+interface EntityEvent {
+  projectId: number;
+  id: number;
+}
 
 const COMMENT_EVENTS = [
   'comment:new',
@@ -92,17 +97,47 @@ export function useSocketInvalidation(projectId: number | null): void {
     const onTimeline = () => {
       void qc.invalidateQueries({ queryKey: ['timeline'] });
     };
+    /**
+     * Plans, séquences et assets — le serveur émettait déjà ces trois événements et
+     * personne ne les écoutait : un statut changé ailleurs (par un collègue, ou lu depuis
+     * ShotGrid) n'atteignait jamais un écran ouvert. Il fallait recharger la page pour le
+     * voir, ce qui donnait l'impression que le changement n'était pas passé.
+     */
+    const onShot = (e: EntityEvent) => {
+      void qc.invalidateQueries({ queryKey: qk.shot(e.id) });
+      void qc.invalidateQueries({ queryKey: qk.shotTree(e.id) });
+      void qc.invalidateQueries({ queryKey: ['shots', e.projectId] });
+      void qc.invalidateQueries({ queryKey: qk.projectBoard(e.projectId) });
+      void qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+    };
+    const onSequence = (e: EntityEvent) => {
+      void qc.invalidateQueries({ queryKey: qk.sequence(e.id) });
+      void qc.invalidateQueries({ queryKey: qk.sequences(e.projectId) });
+      void qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+    };
+    const onAsset = (e: EntityEvent) => {
+      void qc.invalidateQueries({ queryKey: qk.asset(e.id) });
+      void qc.invalidateQueries({ queryKey: qk.assetTree(e.id) });
+      void qc.invalidateQueries({ queryKey: qk.assets(e.projectId) });
+      void qc.invalidateQueries({ queryKey: qk.projectActivity(e.projectId) });
+    };
     COMMENT_EVENTS.forEach((ev) => socket.on(ev, onComment));
     socket.on('task:update', onTask);
     socket.on('version:update', onVersion);
     socket.on('media:update', onMedia);
     socket.on('timeline:update', onTimeline);
+    socket.on('shot:update', onShot);
+    socket.on('sequence:update', onSequence);
+    socket.on('asset:update', onAsset);
     return () => {
       COMMENT_EVENTS.forEach((ev) => socket.off(ev, onComment));
       socket.off('task:update', onTask);
       socket.off('version:update', onVersion);
       socket.off('media:update', onMedia);
       socket.off('timeline:update', onTimeline);
+      socket.off('shot:update', onShot);
+      socket.off('sequence:update', onSequence);
+      socket.off('asset:update', onAsset);
     };
   }, [qc]);
 }

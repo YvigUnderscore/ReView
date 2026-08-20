@@ -12,6 +12,7 @@
   "digest.by": "por {name}",
   "digest.commentOn": "{author} en {media}",
   "digest.optOut": "Recibes este correo porque el resumen diario está activado en tu perfil de ReView.",
+  "digest.preview": { "one": "Lo que se movió en {count} proyecto desde ayer.", "other": "Lo que se movió en {count} proyectos desde ayer." },
 
   "weekly.subject": "ReView — informe semanal de producción",
   "weekly.title": "Informe semanal de producción",
@@ -23,6 +24,7 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Notas abiertas",
   "weekly.optOut": "Recibes este informe porque está activado en tu perfil de ReView (supervisores).",
+  "weekly.preview": { "one": "La semana en {count} proyecto: entregas, decisiones, notas abiertas.", "other": "La semana en {count} proyectos: entregas, decisiones, notas abiertas." },
 
   "smtp.test.subject": "ReView — prueba SMTP",
   "smtp.test.title": "Prueba SMTP",
@@ -36,6 +38,7 @@
   "invite.expiry": "Este enlace caduca en {days} días.",
   "invite.fallback": "Si el botón no funciona, pega este enlace en tu navegador:",
   "invite.ignore": "Si no esperabas esta invitación, puedes ignorar este correo.",
+  "invite.preview": "Tu cuenta ReView te espera: elige tu contraseña para empezar.",
   "notification.mentioned": "Te han mencionado en un comentario",
   "notification.reply": "Nueva respuesta a tu comentario",
   "notification.watchedComment": "Nuevo comentario en algo que sigues",
