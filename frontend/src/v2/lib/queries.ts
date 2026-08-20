@@ -7,7 +7,7 @@ import { api } from '../../lib/apiClient';
 import { getSocket } from '../../lib/socket';
 import { qk } from './query';
 import type {
-  Asset,
+  AssetListItem,
   LiveSessionSummary,
   Notification,
   Project,
@@ -71,7 +71,7 @@ export function useShotsQuery(projectId: number, enabled = true) {
 export function useAssetsQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.assets(projectId),
-    queryFn: () => api.get<Page<Asset>>(`/api/assets?projectId=${projectId}`).then((d) => d.items),
+    queryFn: () => api.get<Page<AssetListItem>>(`/api/assets?projectId=${projectId}`).then((d) => d.items),
     enabled,
   });
 }

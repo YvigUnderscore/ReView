@@ -2572,6 +2572,8 @@
   "upload.pickTask.createStepLocal": "Krouiñ un task « {step} »",
   "tabs.more": "Ivinelloù all",
   "departments.keyLocked": "Fiksata eo an alc’hwez ur wech da vat : an tasks, an timelines hag ar snapshots a zalc’h outañ.",
+  "departments.menu": "Rannoù",
+  "departments.updated": "Rannoù hizivaet",
   "sidebar.switchProject": "Cheñch raktres",
   "sidebar.noProject": "Raktres ebet digor",
   "social.title": "Tud ha kemennadennoù",
@@ -2596,5 +2598,16 @@
   "notification.mediaPublished": "Media nevez embannet : {name}",
   "notification.liveStarted": "{name} en deus kroget ur review war-eeun war ar playlist « {playlist} »",
   "notification.decision": "Diviz « {status} » war ar version {version}",
-  "notification.taskAssigned": "Dlead roet : {name}"
+  "notification.taskAssigned": "Dlead roet : {name}",
+  "assign.menu": "Deverkañ",
+  "assign.unassigned": "Den",
+  "assign.done": "Deverkadur hizivaet",
+  "assign.failed": "N'eus ket bet gallet cheñch an deverkadur",
+  "assign.bulkTitle": { "one": "Deverkañ {count} elfenn", "other": "Deverkañ {count} elfenn" },
+  "assign.doneCount": { "one": "{count} trevell hizivaet", "other": "{count} trevell hizivaet" },
+  "assign.skippedCount": { "one": "{count} elfenn tremenet: netra da zeverkañ, pe gwirioù re verr", "other": "{count} elfenn tremenet: netra da zeverkañ, pe gwirioù re verr" },
+  "assign.person": "Den",
+  "assign.departments": "Rannoù",
+  "assign.departmentsHint": "Lezit goullo evit goleiñ an holl drevelloù a zo. Merkit rannoù evit o zargediñ — ha krouiñ an trevell ma vank.",
+  "assign.apply": "Deverkañ"
 }

@@ -112,6 +112,32 @@ for (const [segment, holder] of [
       res.status(204).end();
     },
   );
+
+  /**
+   * Cocher ou décocher un département sans réécrire la liste entière.
+   *
+   * Le `PUT` remplace tout : deux clics rapides dans un menu, et le second repart de la
+   * liste d'avant le premier. La bascule au clic droit demande un ajout et un retrait
+   * ciblés, qui ne peuvent pas se marcher dessus.
+   */
+  router.patch(
+    `/${segment}/:id/departments`,
+    auth,
+    manage,
+    validate({
+      params: idParam,
+      body: z.object({
+        add: z.array(z.number().int().positive()).max(50).optional(),
+        remove: z.array(z.number().int().positive()).max(50).optional(),
+      }),
+    }),
+    async (req, res) => {
+      const id = Number(req.params.id);
+      await DepartmentService.attachHolderDepartments(holder, id, req.body.add ?? []);
+      await DepartmentService.detachHolderDepartments(holder, id, req.body.remove ?? []);
+      res.status(204).end();
+    },
+  );
 }
 
 /** Départements d'une personne : chacun règle les siens, un ADMIN règle ceux des autres. */

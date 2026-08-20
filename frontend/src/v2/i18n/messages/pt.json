@@ -2583,6 +2583,8 @@
   "upload.pickTask.createStepLocal": "Criar uma task « {step} »",
   "tabs.more": "Mais separadores",
   "departments.keyLocked": "A chave é definida uma única vez: as tasks, as timelines e os snapshots de montagem referem-se a ela.",
+  "departments.menu": "Departamentos",
+  "departments.updated": "Departamentos atualizados",
   "sidebar.switchProject": "Mudar de projeto",
   "sidebar.noProject": "Nenhum projeto aberto",
   "social.title": "Pessoas e mensagens",
@@ -2607,5 +2609,16 @@
   "notification.mediaPublished": "Novo média publicado: {name}",
   "notification.liveStarted": "{name} iniciou uma review em direto sobre a playlist « {playlist} »",
   "notification.decision": "Decisão « {status} » sobre a version {version}",
-  "notification.taskAssigned": "Tarefa atribuída: {name}"
+  "notification.taskAssigned": "Tarefa atribuída: {name}",
+  "assign.menu": "Atribuir",
+  "assign.unassigned": "Ninguém",
+  "assign.done": "Atribuição atualizada",
+  "assign.failed": "Não foi possível alterar a atribuição",
+  "assign.bulkTitle": { "one": "Atribuir {count} elemento", "other": "Atribuir {count} elementos" },
+  "assign.doneCount": { "one": "{count} tarefa atualizada", "other": "{count} tarefas atualizadas" },
+  "assign.skippedCount": { "one": "{count} elemento ignorado: nada a atribuir ou sem permissões", "other": "{count} elementos ignorados: nada a atribuir ou sem permissões" },
+  "assign.person": "Pessoa",
+  "assign.departments": "Departamentos",
+  "assign.departmentsHint": "Deixe vazio para abranger todas as tarefas existentes. Marque departamentos para os visar — e criar a tarefa em falta.",
+  "assign.apply": "Atribuir"
 }

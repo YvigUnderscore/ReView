@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { Department } from '@prisma/client';
+import type { Department, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
 
@@ -135,15 +135,101 @@ export async function reorder(ids: number[]): Promise<void> {
  * Départements que déclare traverser une entité. Remplace la liste entière — l'appelant
  * envoie l'état voulu, pas un delta.
  */
+/**
+ * Le projet auquel appartient l'entité porteuse. Sans lui, aucun contrôle n'est possible :
+ * un identifiant de département suffisait à rattacher l'étape d'un autre projet.
+ */
+export async function holderProjectId(holder: DepartmentHolder, id: number): Promise<number> {
+  const row =
+    holder === 'asset'
+      ? await prisma.asset.findUnique({ where: { id }, select: { projectId: true } })
+      : holder === 'shot'
+        ? await prisma.shot.findUnique({ where: { id }, select: { projectId: true } })
+        : await prisma.sequence.findUnique({ where: { id }, select: { projectId: true } });
+  if (!row) throw notFound('Entity not found');
+  return row.projectId;
+}
+
+/**
+ * Vérifie que chaque département appartient bien au vocabulaire de ce projet.
+ *
+ * Le rattachement ne le vérifiait pas du tout : un identifiant pris ailleurs — l'étape
+ * d'un autre projet, ou une étape supprimée — se posait sans broncher, et l'entité se
+ * retrouvait dans un pipe qui n'était pas le sien.
+ */
+export async function assertDepartmentsOfProject(projectId: number, ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { studioId: true },
+  });
+  if (!project) throw notFound('Project not found');
+  /**
+   * Le projet **et** le studio.
+   *
+   * `listForProject` sert à *proposer* une liste — un projet qui déclare ses propres
+   * étapes remplace celles du studio dans les menus. Mais il ne les rend pas illégitimes
+   * pour autant : les tâches déjà en base vivent souvent dans une étape du studio, et
+   * les refuser ici empêcherait d'assigner du travail sur ces tâches-là. Ce qu'on
+   * interdit, c'est l'étape d'un **autre projet** — celle-là ne se rattrape pas.
+   */
+  const allowed = await prisma.department.findMany({
+    where: {
+      deletedAt: null,
+      studioId: project.studioId,
+      OR: [{ projectId }, { projectId: null }],
+    },
+    select: { id: true },
+  });
+  const known = new Set(allowed.map((d) => d.id));
+  const stranger = ids.find((id) => !known.has(id));
+  if (stranger !== undefined) throw badRequest('Unknown department for this project', 'BAD_DEPARTMENT');
+}
+
+async function writeHolderDepartments(
+  holder: DepartmentHolder,
+  id: number,
+  departments: Prisma.AssetUpdateInput['departments'],
+): Promise<void> {
+  if (holder === 'asset') await prisma.asset.update({ where: { id }, data: { departments } });
+  else if (holder === 'shot') await prisma.shot.update({ where: { id }, data: { departments } });
+  else await prisma.sequence.update({ where: { id }, data: { departments } });
+}
+
 export async function setHolderDepartments(
   holder: DepartmentHolder,
   id: number,
   departmentIds: number[],
 ): Promise<void> {
-  const set = departmentIds.map((departmentId) => ({ id: departmentId }));
-  if (holder === 'asset') await prisma.asset.update({ where: { id }, data: { departments: { set } } });
-  else if (holder === 'shot') await prisma.shot.update({ where: { id }, data: { departments: { set } } });
-  else await prisma.sequence.update({ where: { id }, data: { departments: { set } } });
+  await assertDepartmentsOfProject(await holderProjectId(holder, id), departmentIds);
+  await writeHolderDepartments(holder, id, {
+    set: departmentIds.map((departmentId) => ({ id: departmentId })),
+  });
+}
+
+/** Ajoute des départements sans toucher aux autres — idempotent. */
+export async function attachHolderDepartments(
+  holder: DepartmentHolder,
+  id: number,
+  departmentIds: number[],
+): Promise<void> {
+  if (departmentIds.length === 0) return;
+  await assertDepartmentsOfProject(await holderProjectId(holder, id), departmentIds);
+  await writeHolderDepartments(holder, id, {
+    connect: departmentIds.map((departmentId) => ({ id: departmentId })),
+  });
+}
+
+/** Retire des départements sans toucher aux autres — idempotent. */
+export async function detachHolderDepartments(
+  holder: DepartmentHolder,
+  id: number,
+  departmentIds: number[],
+): Promise<void> {
+  if (departmentIds.length === 0) return;
+  await writeHolderDepartments(holder, id, {
+    disconnect: departmentIds.map((departmentId) => ({ id: departmentId })),
+  });
 }
 
 /** Départements d'une personne (annuaire studio). */

@@ -44,6 +44,7 @@ import reviewStatusesRoutes from './routes/review-statuses.routes';
 import pipelineStatusesRoutes from './routes/pipeline-statuses.routes';
 import departmentsRoutes from './routes/departments.routes';
 import entityThumbnailsRoutes from './routes/entity-thumbnails.routes';
+import assignmentsRoutes from './routes/assignments.routes';
 import unsubscribeRoutes from './routes/unsubscribe.routes';
 import commentsRoutes from './routes/comments.routes';
 import boardsRoutes from './routes/boards.routes';
@@ -161,6 +162,8 @@ export const createApp = (): Express => {
   app.use('/api', departmentsRoutes);
   // Vignettes d'entité (C3) : même raison, le routeur sert séquences, plans et assets.
   app.use('/api', entityThumbnailsRoutes);
+  // Assignation (assets et plans) : même montage à la racine, deux préfixes.
+  app.use('/api', assignmentsRoutes);
   // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);

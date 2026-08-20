@@ -72,6 +72,16 @@ export function useRemoveDepartment(projectId: number) {
 }
 
 /** Départements que déclare traverser une entité. La liste envoyée remplace la précédente. */
+/** Les caches à rafraîchir quand les étapes d'une entité changent. */
+function entityKeys(projectId: number, holder: 'assets' | 'shots' | 'sequences', id: number) {
+  const singular = holder === 'assets' ? 'asset' : holder === 'shots' ? 'shot' : 'sequence';
+  return [
+    qk.departments(projectId),
+    [singular, id],
+    [holder === 'sequences' ? 'sequences' : holder, projectId],
+  ];
+}
+
 export function useSetEntityDepartments(
   projectId: number,
   holder: 'assets' | 'shots' | 'sequences',
@@ -80,6 +90,31 @@ export function useSetEntityDepartments(
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ids: number[]) => api.put(`/api/${holder}/${id}/departments`, { ids }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.departments(projectId) }),
+    // La fiche de l'entité aussi : n'invalider que la liste des départements du projet
+    // laissait l'écran afficher les anciennes étapes jusqu'au prochain rechargement.
+    onSuccess: () => {
+      for (const key of entityKeys(projectId, holder, id)) void qc.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/**
+ * Coche ou décoche une étape sans réécrire la liste entière.
+ *
+ * Le `PUT` remplace tout : deux bascules rapides dans un menu et la seconde repart de
+ * l'état d'avant la première, annulant son effet.
+ */
+export function useToggleEntityDepartment(
+  projectId: number,
+  holder: 'assets' | 'shots' | 'sequences',
+  id: number,
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (change: { add?: number[]; remove?: number[] }) =>
+      api.patch(`/api/${holder}/${id}/departments`, change),
+    onSuccess: () => {
+      for (const key of entityKeys(projectId, holder, id)) void qc.invalidateQueries({ queryKey: key });
+    },
   });
 }

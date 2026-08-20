@@ -2583,6 +2583,8 @@
   "upload.pickTask.createStepLocal": "Task « {step} » erstellen",
   "tabs.more": "Weitere Tabs",
   "departments.keyLocked": "Der Schlüssel wird einmal vergeben und ändert sich nie — Tasks, Timelines und Montage-Snapshots verweisen darauf.",
+  "departments.menu": "Abteilungen",
+  "departments.updated": "Abteilungen aktualisiert",
   "sidebar.switchProject": "Projekt wechseln",
   "sidebar.noProject": "Kein Projekt geöffnet",
   "social.title": "Personen und Nachrichten",
@@ -2607,5 +2609,16 @@
   "notification.mediaPublished": "Neues Medium veröffentlicht: {name}",
   "notification.liveStarted": "{name} hat eine Live-review zur playlist « {playlist} » gestartet",
   "notification.decision": "Entscheidung « {status} » zur version {version}",
-  "notification.taskAssigned": "Aufgabe zugewiesen: {name}"
+  "notification.taskAssigned": "Aufgabe zugewiesen: {name}",
+  "assign.menu": "Zuweisen",
+  "assign.unassigned": "Niemand",
+  "assign.done": "Zuweisung aktualisiert",
+  "assign.failed": "Zuweisung konnte nicht geändert werden",
+  "assign.bulkTitle": { "one": "{count} Element zuweisen", "other": "{count} Elemente zuweisen" },
+  "assign.doneCount": { "one": "{count} Aufgabe aktualisiert", "other": "{count} Aufgaben aktualisiert" },
+  "assign.skippedCount": { "one": "{count} Element übersprungen: nichts zuzuweisen oder keine Rechte", "other": "{count} Elemente übersprungen: nichts zuzuweisen oder keine Rechte" },
+  "assign.person": "Person",
+  "assign.departments": "Abteilungen",
+  "assign.departmentsHint": "Leer lassen, um alle vorhandenen Aufgaben zu erfassen. Abteilungen wählen, um sie gezielt zu treffen — und die fehlende Aufgabe anzulegen.",
+  "assign.apply": "Zuweisen"
 }

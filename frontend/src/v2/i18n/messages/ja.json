@@ -2525,6 +2525,8 @@
   "upload.pickTask.createStepLocal": "「{step}」の task を作成",
   "tabs.more": "その他のタブ",
   "departments.keyLocked": "キーは一度きりで変更できません。task、timeline、モンタージュのスナップショットが参照しています。",
+  "departments.menu": "部門",
+  "departments.updated": "部門を更新しました",
   "sidebar.switchProject": "プロジェクトを切り替え",
   "sidebar.noProject": "プロジェクトが開かれていません",
   "social.title": "メンバーとメッセージ",
@@ -2549,5 +2551,16 @@
   "notification.mediaPublished": "新しいメディアを公開しました：{name}",
   "notification.liveStarted": "{name} が playlist「{playlist}」のライブ review を開始しました",
   "notification.decision": "version {version} の判定「{status}」",
-  "notification.taskAssigned": "タスクが割り当てられました：{name}"
+  "notification.taskAssigned": "タスクが割り当てられました：{name}",
+  "assign.menu": "担当を割り当て",
+  "assign.unassigned": "担当なし",
+  "assign.done": "担当を更新しました",
+  "assign.failed": "担当を変更できませんでした",
+  "assign.bulkTitle": { "other": "{count} 件を割り当て" },
+  "assign.doneCount": { "other": "{count} 件のタスクを更新しました" },
+  "assign.skippedCount": { "other": "{count} 件をスキップしました（割り当てる作業がないか、権限がありません）" },
+  "assign.person": "担当者",
+  "assign.departments": "部門",
+  "assign.departmentsHint": "空のままにすると既存のすべてのタスクが対象になります。部門を選ぶとその部門に限定し、タスクがなければ作成します。",
+  "assign.apply": "割り当てる"
 }

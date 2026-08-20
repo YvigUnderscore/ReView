@@ -7,6 +7,7 @@ import { TaskStatus, VersionStatus } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as BulkService from '../services/BulkService';
+import * as AssignmentService from '../services/AssignmentService';
 import { DELETE_DOMAINS } from '../services/BulkService';
 
 /**
@@ -107,6 +108,54 @@ router.patch(
   async (req, res) => {
     const { ids: shotIds, sequenceId } = req.body as { ids: number[]; sequenceId: number | null };
     const count = await BulkService.bulkMoveShots(req.user!, shotIds, sequenceId);
+    res.json({ count });
+  },
+);
+
+/**
+ * Assignation d'une sélection d'assets ou de plans.
+ *
+ * Une entité qu'on ne peut pas assigner (droits, projet archivé, aucune tâche) est
+ * comptée à part plutôt que de faire échouer tout le lot : sur cinquante assets,
+ * tout perdre pour un seul serait absurde.
+ */
+for (const holder of ['assets', 'shots'] as const) {
+  router.patch(
+    `/${holder}/assign`,
+    validate({
+      body: z.object({
+        ids,
+        userId: z.number().int().positive().nullable(),
+        departmentIds: z.array(z.number().int().positive()).max(50).optional(),
+      }),
+    }),
+    async (req, res) => {
+      const result = await AssignmentService.assignMany(
+        req.user!,
+        holder === 'assets' ? 'asset' : 'shot',
+        req.body.ids as number[],
+        { userId: req.body.userId, departmentIds: req.body.departmentIds },
+      );
+      res.json(result);
+    },
+  );
+}
+
+// PATCH /api/bulk/assets/departments — cocher/décocher des étapes sur une sélection
+router.patch(
+  '/assets/departments',
+  validate({
+    body: z.object({
+      ids,
+      add: z.array(z.number().int().positive()).max(50).optional(),
+      remove: z.array(z.number().int().positive()).max(50).optional(),
+    }),
+  }),
+  async (req, res) => {
+    const count = await BulkService.bulkAssetDepartments(req.user!, req.body.ids as number[], {
+      add: req.body.add ?? [],
+      remove: req.body.remove ?? [],
+    });
     res.json({ count });
   },
 );

@@ -2583,6 +2583,8 @@
   "upload.pickTask.createStepLocal": "Creà una task « {step} »",
   "tabs.more": "Altre schede",
   "departments.keyLocked": "A chjave hè fissata una volta per tutte : e tasks, e timelines è i snapshots ci si riferiscenu.",
+  "departments.menu": "Dipartimenti",
+  "departments.updated": "Dipartimenti aghjurnati",
   "sidebar.switchProject": "Cambià prughjettu",
   "sidebar.noProject": "Nisun prughjettu apertu",
   "social.title": "Persone è messagi",
@@ -2607,5 +2609,16 @@
   "notification.mediaPublished": "Novu media pubblicatu : {name}",
   "notification.liveStarted": "{name} hà iniziatu una review in diretta nant'à a playlist « {playlist} »",
   "notification.decision": "Decisione « {status} » nant'à a version {version}",
-  "notification.taskAssigned": "Attività assignata : {name}"
+  "notification.taskAssigned": "Attività assignata : {name}",
+  "assign.menu": "Assignà",
+  "assign.unassigned": "Nimu",
+  "assign.done": "Assignazione aghjurnata",
+  "assign.failed": "Impussibile di cambià l'assignazione",
+  "assign.bulkTitle": { "one": "Assignà {count} elementu", "other": "Assignà {count} elementi" },
+  "assign.doneCount": { "one": "{count} travagliu aghjurnatu", "other": "{count} travagli aghjurnati" },
+  "assign.skippedCount": { "one": "{count} elementu saltatu : nunda da assignà, o senza dirittu", "other": "{count} elementi saltati : nunda da assignà, o senza dirittu" },
+  "assign.person": "Persona",
+  "assign.departments": "Dipartimenti",
+  "assign.departmentsHint": "Lasciate viotu per copre tutti i travagli esistenti. Sceglite i dipartimenti per mirà — è creà u travagliu s'ellu manca.",
+  "assign.apply": "Assignà"
 }

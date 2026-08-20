@@ -67,6 +67,20 @@ export interface Asset {
   thumbnailUrl?: string | null;
 }
 export type AssetRef = Pick<Asset, 'id' | 'name' | 'type'>;
+/**
+ * GET /api/assets — la liste porte les étapes et les assignés, pour que le menu
+ * contextuel d'une carte sache quoi cocher sans une requête par carte affichée.
+ */
+export type AssetListItem = Asset & {
+  departments?: { id: number; key: string; name: string; color?: string | null }[];
+  tasks?: {
+    id: number;
+    departmentId: number | null;
+    /** Le département de la tâche, nommé — il peut ne pas figurer dans `departments`. */
+    departmentRef?: { id: number; name: string } | null;
+    assignee: { id: number; name: string } | null;
+  }[];
+};
 /** GET /api/assets/:id — liens N-N vers shots/séquences, plus la fiche (C3). */
 export type AssetDetail = Asset & {
   projectId: number;

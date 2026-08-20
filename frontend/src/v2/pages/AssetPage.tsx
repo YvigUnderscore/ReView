@@ -9,6 +9,8 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useUploadStore } from '../../stores/useUploadStore';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
+import { useAssignMenu, useDepartmentMenu } from '../lib/useAssignMenu';
+import { entriesOf } from '../lib/menuSpec';
 import AssetAssignDialog from '../components/AssetAssignDialog';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { Button } from '../components/ui/button';
@@ -47,6 +49,8 @@ export default function AssetPage() {
   const projectId = asset?.projectId ?? 0;
   const { canManage, canContribute } = useProjectRole(projectId);
   const canPublish = canManage;
+  const { assignEntry } = useAssignMenu(projectId, 'asset');
+  const { entry: departmentEntry } = useDepartmentMenu(projectId, 'asset', assetId);
 
   const {
     versions,
@@ -103,6 +107,12 @@ export default function AssetPage() {
   };
 
   const menuExtras: MenuEntry[] = [
+    // Assigner quelqu'un et déclarer les étapes traversées : les deux gestes tenaient
+    // dans un panneau de réglages, ils sont désormais à portée de clic droit.
+    ...entriesOf(
+      asset ? assignEntry(asset, canManage) : null,
+      departmentEntry(asset?.departments, canManage),
+    ),
     ...(canContribute
       ? [
           {

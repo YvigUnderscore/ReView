@@ -14,16 +14,18 @@ vi.mock('../lib/prisma', () => ({
       updateMany: vi.fn(),
     },
     project: { findUnique: vi.fn() },
-    asset: { update: vi.fn() },
-    shot: { update: vi.fn() },
-    sequence: { update: vi.fn() },
+    asset: { update: vi.fn(), findUnique: vi.fn() },
+    shot: { update: vi.fn(), findUnique: vi.fn() },
+    sequence: { update: vi.fn(), findUnique: vi.fn() },
     user: { update: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
 
 import {
+  attachHolderDepartments,
   create,
+  detachHolderDepartments,
   listForProject,
   normaliseKey,
   remove,
@@ -255,7 +257,22 @@ describe('syncFromSettings', () => {
 });
 
 describe('rattachements', () => {
+  /**
+   * Le rattachement contrôle désormais que chaque département appartient bien au projet
+   * de l'entité : rien ne l'empêchait auparavant de poser l'étape d'un projet voisin.
+   */
+  const inProject = (ids: number[]) => {
+    vi.mocked(prisma.asset.findUnique).mockResolvedValue({ projectId: 7 } as never);
+    vi.mocked(prisma.shot.findUnique).mockResolvedValue({ projectId: 7 } as never);
+    vi.mocked(prisma.sequence.findUnique).mockResolvedValue({ projectId: 7 } as never);
+    vi.mocked(prisma.project.findUnique).mockResolvedValue({ studioId: 1 } as never);
+    // Le contrôle accepte les étapes du projet ET celles du studio : une tâche vit
+    // souvent dans une étape studio, la refuser interdirait de l'assigner.
+    vi.mocked(prisma.department.findMany).mockResolvedValue(ids.map((id) => ({ id })) as never);
+  };
+
   it('remplace la liste d’une entité, sans delta', async () => {
+    inProject([1, 2]);
     await setHolderDepartments('asset', 5, [1, 2]);
     expect(prisma.asset.update).toHaveBeenCalledWith({
       where: { id: 5 },
@@ -264,6 +281,7 @@ describe('rattachements', () => {
   });
 
   it('vide la liste quand on n’envoie rien', async () => {
+    inProject([]);
     await setHolderDepartments('shot', 5, []);
     expect(prisma.shot.update).toHaveBeenCalledWith({
       where: { id: 5 },
@@ -272,8 +290,32 @@ describe('rattachements', () => {
   });
 
   it('sait viser une séquence', async () => {
+    inProject([3]);
     await setHolderDepartments('sequence', 8, [3]);
     expect(prisma.sequence.update).toHaveBeenCalled();
+  });
+
+  it('refuse le département d’un autre projet', async () => {
+    // Le contrôle qui manquait : un identifiant pris ailleurs se posait sans broncher.
+    inProject([1]);
+    await expect(setHolderDepartments('asset', 5, [99])).rejects.toMatchObject({
+      code: 'BAD_DEPARTMENT',
+    });
+    expect(prisma.asset.update).not.toHaveBeenCalled();
+  });
+
+  it('ajoute et retire sans réécrire toute la liste', async () => {
+    inProject([1, 2]);
+    await attachHolderDepartments('asset', 5, [2]);
+    expect(prisma.asset.update).toHaveBeenCalledWith({
+      where: { id: 5 },
+      data: { departments: { connect: [{ id: 2 }] } },
+    });
+    await detachHolderDepartments('asset', 5, [2]);
+    expect(prisma.asset.update).toHaveBeenLastCalledWith({
+      where: { id: 5 },
+      data: { departments: { disconnect: [{ id: 2 }] } },
+    });
   });
 
   it('règle les départements d’une personne', async () => {

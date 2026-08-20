@@ -47,3 +47,37 @@ export function useProjectRole(projectId: number): ProjectRoleInfo {
   });
   return projectRoleInfo(globalRole, data?.project.myRole ?? null);
 }
+
+/** Une personne à qui l'on peut confier du travail sur ce projet. */
+export interface AssignableMember {
+  id: number;
+  name: string;
+  role: Role;
+}
+
+interface MembershipRow {
+  role: Role | null;
+  user: { id: number; name: string | null; email: string; role: Role; isService?: boolean };
+}
+
+/**
+ * Membres du projet qui peuvent recevoir du travail.
+ *
+ * Même clé de cache et même requête que `useProjectRole` : la fiche du projet est déjà
+ * chargée partout, une seconde requête pour la même donnée serait du gaspillage. Les
+ * comptes de service et les clients sont écartés — le serveur les refuse de toute façon,
+ * autant ne pas les proposer.
+ */
+export function useProjectMembers(projectId: number): AssignableMember[] {
+  const { data } = useQuery({
+    queryKey: qk.project(projectId),
+    queryFn: () => api.get<{ project: { memberships?: MembershipRow[] } }>(`/api/projects/${projectId}`),
+    enabled: projectId > 0,
+    staleTime: 5 * 60_000,
+  });
+  const rows = data?.project.memberships ?? [];
+  return rows
+    .filter((m) => !m.user.isService && (m.role ?? m.user.role) !== 'CLIENT')
+    .map((m) => ({ id: m.user.id, name: m.user.name ?? m.user.email, role: m.role ?? m.user.role }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

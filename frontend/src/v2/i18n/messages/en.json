@@ -2571,6 +2571,8 @@
   "upload.pickTask.createStepLocal": "Create a « {step} » task",
   "tabs.more": "More tabs",
   "departments.keyLocked": "The key is set once and never changes — tasks, timelines and montage snapshots rely on it.",
+  "departments.menu": "Departments",
+  "departments.updated": "Departments updated",
   "sidebar.switchProject": "Switch project",
   "sidebar.noProject": "No project open",
   "social.title": "People and messages",
@@ -2595,5 +2597,16 @@
   "notification.mediaPublished": "New media published: {name}",
   "notification.liveStarted": "{name} started a live review on the playlist « {playlist} »",
   "notification.decision": "Decision « {status} » on version {version}",
-  "notification.taskAssigned": "Task assigned: {name}"
+  "notification.taskAssigned": "Task assigned: {name}",
+  "assign.menu": "Assign",
+  "assign.unassigned": "Nobody",
+  "assign.done": "Assignment updated",
+  "assign.failed": "Could not change the assignment",
+  "assign.bulkTitle": { "one": "Assign {count} item", "other": "Assign {count} items" },
+  "assign.doneCount": { "one": "{count} task updated", "other": "{count} tasks updated" },
+  "assign.skippedCount": { "one": "{count} item skipped: nothing to assign, or not allowed", "other": "{count} items skipped: nothing to assign, or not allowed" },
+  "assign.person": "Person",
+  "assign.departments": "Departments",
+  "assign.departmentsHint": "Leave empty to cover every existing task. Pick departments to target them — and to create the task if it is missing.",
+  "assign.apply": "Assign"
 }

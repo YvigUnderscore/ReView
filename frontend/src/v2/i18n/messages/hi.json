@@ -2577,6 +2577,8 @@
   "upload.pickTask.createStepLocal": "« {step} » task बनाएँ",
   "tabs.more": "और टैब",
   "departments.keyLocked": "कुंजी एक बार तय होती है और कभी नहीं बदलती — tasks, timelines और मोंटाज स्नैपशॉट इसी पर निर्भर हैं।",
+  "departments.menu": "विभाग",
+  "departments.updated": "विभाग अपडेट हुए",
   "sidebar.switchProject": "प्रोजेक्ट बदलें",
   "sidebar.noProject": "कोई प्रोजेक्ट खुला नहीं",
   "social.title": "लोग और संदेश",
@@ -2601,5 +2603,16 @@
   "notification.mediaPublished": "नया मीडिया प्रकाशित: {name}",
   "notification.liveStarted": "{name} ने playlist « {playlist} » पर लाइव review शुरू की",
   "notification.decision": "version {version} पर निर्णय « {status} »",
-  "notification.taskAssigned": "कार्य सौंपा गया: {name}"
+  "notification.taskAssigned": "कार्य सौंपा गया: {name}",
+  "assign.menu": "सौंपें",
+  "assign.unassigned": "कोई नहीं",
+  "assign.done": "असाइनमेंट अपडेट हुआ",
+  "assign.failed": "असाइनमेंट नहीं बदला जा सका",
+  "assign.bulkTitle": { "one": "{count} आइटम सौंपें", "other": "{count} आइटम सौंपें" },
+  "assign.doneCount": { "one": "{count} कार्य अपडेट हुआ", "other": "{count} कार्य अपडेट हुए" },
+  "assign.skippedCount": { "one": "{count} आइटम छोड़ा गया: सौंपने के लिए कुछ नहीं, या अनुमति नहीं", "other": "{count} आइटम छोड़े गए: सौंपने के लिए कुछ नहीं, या अनुमति नहीं" },
+  "assign.person": "व्यक्ति",
+  "assign.departments": "विभाग",
+  "assign.departmentsHint": "सभी मौजूदा कार्यों को शामिल करने के लिए खाली छोड़ें। विशिष्ट विभाग चुनें — और कार्य न होने पर वह बनाया जाएगा।",
+  "assign.apply": "सौंपें"
 }

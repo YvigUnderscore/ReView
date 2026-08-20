@@ -41,7 +41,25 @@ router.get(
         where,
         orderBy: { name: 'asc' },
         ...pageArgs(p),
-        include: { _count: { select: { versions: true, tasks: true } } },
+        include: {
+          _count: { select: { versions: true, tasks: true } },
+          // Étapes et assignés : le menu contextuel des cartes en a besoin pour cocher
+          // l'état courant. Sans eux, il faudrait une requête par carte affichée.
+          departments: {
+            select: { id: true, key: true, name: true, color: true },
+            orderBy: { order: 'asc' },
+          },
+          tasks: {
+            select: {
+              id: true,
+              departmentId: true,
+              // Le nom de l'étape vient d'ici : une tâche peut vivre dans un département
+              // que l'asset ne déclare pas, et le menu doit tout de même savoir le nommer.
+              departmentRef: { select: { id: true, name: true } },
+              assignee: { select: { id: true, name: true } },
+            },
+          },
+        },
       }),
       prisma.asset.count({ where }),
     ]);
@@ -84,7 +102,10 @@ router.get('/:id', validate({ params: idParam }), async (req, res) => {
     where: { id },
     include: {
       versions: { orderBy: { createdAt: 'desc' } },
-      tasks: { orderBy: { order: 'asc' } },
+      tasks: {
+        orderBy: { order: 'asc' },
+        include: { assignee: { select: { id: true, name: true } } },
+      },
       shots: { where: { deletedAt: null }, select: { id: true, code: true, name: true, sequenceId: true } },
       sequences: { where: { deletedAt: null }, select: { id: true, code: true, name: true } },
       // Départements traversés (B1) : le panneau de réglages les coche (C3).

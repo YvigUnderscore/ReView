@@ -2583,6 +2583,8 @@
   "upload.pickTask.createStepLocal": "Crear una task « {step} »",
   "tabs.more": "Autres onglets",
   "departments.keyLocked": "La clau es fixada un còp per totas : las tasks, las timelines e los snapshots de montatge s’i referisson.",
+  "departments.menu": "Departaments",
+  "departments.updated": "Departaments meses a jorn",
   "sidebar.switchProject": "Cambiar de projècte",
   "sidebar.noProject": "Cap de projècte dubèrt",
   "social.title": "Personas e messatges",
@@ -2607,5 +2609,16 @@
   "notification.mediaPublished": "Novèl mèdia publicat : {name}",
   "notification.liveStarted": "{name} a lançat una review en dirècte sus la playlist « {playlist} »",
   "notification.decision": "Decision « {status} » sus la version {version}",
-  "notification.taskAssigned": "Prètzfach assignat : {name}"
+  "notification.taskAssigned": "Prètzfach assignat : {name}",
+  "assign.menu": "Assignar",
+  "assign.unassigned": "Degun",
+  "assign.done": "Assignacion mesa a jorn",
+  "assign.failed": "Impossible de cambiar l'assignacion",
+  "assign.bulkTitle": { "one": "Assignar {count} element", "other": "Assignar {count} elements" },
+  "assign.doneCount": { "one": "{count} prètzfach mes a jorn", "other": "{count} prètzfaches meses a jorn" },
+  "assign.skippedCount": { "one": "{count} element ignorat : res d'assignar, o dreches insufisents", "other": "{count} elements ignorats : res d'assignar, o dreches insufisents" },
+  "assign.person": "Persona",
+  "assign.departments": "Departaments",
+  "assign.departmentsHint": "Daissatz void per cobrir totas las prètzfachas existentas. Marcatz de departaments per los ciblar — e crear la prètzfacha se manca.",
+  "assign.apply": "Assignar"
 }

@@ -2583,6 +2583,8 @@
   "upload.pickTask.createStepLocal": "E Task « {step} » aalege",
   "tabs.more": "Meh Tabs",
   "departments.keyLocked": "Dr Schlüssel wird eimol gsetzt un ändert sich nie — Tasks, Timelines un Montage-Snapshots bezieche sich druf.",
+  "departments.menu": "Abteilige",
+  "departments.updated": "Abteilige aktualisiert",
   "sidebar.switchProject": "Projekt wechsle",
   "sidebar.noProject": "Kei Projekt offe",
   "social.title": "Lit un Nochrichte",
@@ -2607,5 +2609,16 @@
   "notification.mediaPublished": "Nöis Medium veröffentlicht: {name}",
   "notification.liveStarted": "{name} het e Live-review zue dr playlist « {playlist} » gstartet",
   "notification.decision": "Entscheidig « {status} » zue dr version {version}",
-  "notification.taskAssigned": "Ufgab zuegwiese: {name}"
+  "notification.taskAssigned": "Ufgab zuegwiese: {name}",
+  "assign.menu": "Zuewiise",
+  "assign.unassigned": "Niemer",
+  "assign.done": "Zuewiisig aktualisiert",
+  "assign.failed": "D Zuewiisig het sich nit ändere lo",
+  "assign.bulkTitle": { "one": "{count} Element zuewiise", "other": "{count} Elemänt zuewiise" },
+  "assign.doneCount": { "one": "{count} Ufgab aktualisiert", "other": "{count} Ufgabe aktualisiert" },
+  "assign.skippedCount": { "one": "{count} Element üebergange: nix zuezwiise, oder kei Rächt", "other": "{count} Elemänt üebergange: nix zuezwiise, oder kei Rächt" },
+  "assign.person": "Person",
+  "assign.departments": "Abteilige",
+  "assign.departmentsHint": "Läär lo, fer alli bstehende Ufgabe. Abteilige wähle, fer die z träffe — un d fählend Ufgab aazlege.",
+  "assign.apply": "Zuewiise"
 }

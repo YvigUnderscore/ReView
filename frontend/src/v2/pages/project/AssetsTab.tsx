@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, BellOff, Box, FolderOpen, Link2, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { Box, Plus, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
@@ -11,8 +11,11 @@ import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
-import type { EntityItemAction } from '../../lib/menuSpec';
-import EntityCard, { EntityContainer, DeleteIcon, EditIcon } from '../../components/EntityCard';
+import { entriesOf } from '../../lib/menuSpec';
+import { assetCardActions } from './assetCardActions';
+import { useAssignMenu } from '../../lib/useAssignMenu';
+import BulkAssignDialog from '../../components/entity/BulkAssignDialog';
+import EntityCard, { EntityContainer } from '../../components/EntityCard';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import SelectionBar from '../../components/ui/selection-bar';
 import AssetAssignDialog from '../../components/AssetAssignDialog';
@@ -58,6 +61,7 @@ export default function AssetsTab({
   const [deleting, setDeleting] = useState<Asset | null>(null);
   const [assigning, setAssigning] = useState<Asset | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkAssigning, setBulkAssigning] = useState(false);
   const [editing, setEditing] = useState<Asset | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -67,6 +71,9 @@ export default function AssetsTab({
   // La sélection ne porte que sur ce qui est affiché : une action de masse ne doit jamais
   // atteindre des lignes que le filtre a écartées de la vue.
   const sel = useMultiSelect(visible.map((a) => a.id));
+  // Assignation par clic droit : confier un asset demandait d'ouvrir chacune de ses
+  // tâches, une par une.
+  const { assignEntry } = useAssignMenu(projectId, 'asset');
 
   const confirmBulkDelete = async () => {
     try {
@@ -182,26 +189,18 @@ export default function AssetsTab({
       ) : (
         <EntityContainer view={view}>
           {visible.map((a) => {
-            const manageActions: EntityItemAction[] = canManage
-              ? [
-                  {
-                    icon: EditIcon,
-                    label: t('entity.settings.open'),
-                    onClick: () => setEditing(a),
-                  },
-                  {
-                    icon: <Link2 size={15} />,
-                    label: t('assets.assign'),
-                    onClick: () => setAssigning(a),
-                  },
-                  {
-                    icon: DeleteIcon,
-                    label: t('common.delete'),
-                    danger: true,
-                    onClick: () => setDeleting(a),
-                  },
-                ]
-              : [];
+            const { manageActions, contextActions } = assetCardActions({
+              asset: a,
+              t,
+              canManage,
+              sgUrl: sgLinks.linkFor('asset', a.id),
+              watching: watch.isWatching('ASSET', a.id),
+              onEdit: () => setEditing(a),
+              onLink: () => setAssigning(a),
+              onDelete: () => setDeleting(a),
+              onOpen: () => void navigate(`/assets/${a.id}`),
+              onWatch: () => watch.toggle('ASSET', a.id),
+            });
             return (
               <EntityCard
                 key={a.id}
@@ -218,30 +217,8 @@ export default function AssetsTab({
                 }
                 favorite={{ type: 'ASSET', entityId: a.id }}
                 actions={manageActions}
-                contextActions={[
-                  // Fiche ShotGrid — présente uniquement si le projet est relié.
-                  ...(sgLinks.linkFor('asset', a.id)
-                    ? [
-                        {
-                          icon: <ExternalLink size={14} />,
-                          label: t('shotgrid.openIn.asset'),
-                          onClick: () => window.open(sgLinks.linkFor('asset', a.id)!, '_blank', 'noreferrer'),
-                        },
-                      ]
-                    : []),
-                  {
-                    icon: <FolderOpen size={14} />,
-                    label: t('common.open'),
-                    onClick: () => void navigate(`/assets/${a.id}`),
-                  },
-                  // Suivi (32.G) : notifications sur l'activité de l'asset.
-                  {
-                    icon: watch.isWatching('ASSET', a.id) ? <BellOff size={14} /> : <Bell size={14} />,
-                    label: watch.isWatching('ASSET', a.id) ? t('assets.unwatch') : t('assets.watch'),
-                    onClick: () => watch.toggle('ASSET', a.id),
-                  },
-                  ...manageActions,
-                ]}
+                contextEntries={entriesOf(assignEntry(a, canManage))}
+                contextActions={contextActions}
               />
             );
           })}
@@ -255,12 +232,29 @@ export default function AssetsTab({
           onClear={sel.clear}
           actions={[
             {
+              label: t('assign.menu'),
+              icon: <UserPlus size={14} />,
+              onClick: () => setBulkAssigning(true),
+            },
+            {
               label: t('common.delete'),
               icon: <Trash2 size={14} />,
               danger: true,
               onClick: () => setBulkDeleting(true),
             },
           ]}
+        />
+      )}
+      {bulkAssigning && (
+        <BulkAssignDialog
+          projectId={projectId}
+          holder="assets"
+          ids={sel.ids}
+          onClose={() => setBulkAssigning(false)}
+          onDone={() => {
+            sel.clear();
+            void reload();
+          }}
         />
       )}
       <ConfirmDialog

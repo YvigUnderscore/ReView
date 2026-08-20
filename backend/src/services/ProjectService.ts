@@ -297,8 +297,18 @@ export async function getProject(projectId: number) {
     include: {
       memberships: {
         include: {
-          // username exposé pour l'autocomplete des mentions @user (32.B).
-          user: { select: { id: true, name: true, email: true, role: true, username: true } },
+          // username exposé pour l'autocomplete des mentions @user (32.B) ; `isService`
+          // pour que l'interface n'offre pas d'assigner du travail à une identité machine.
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              username: true,
+              isService: true,
+            },
+          },
         },
       },
     },

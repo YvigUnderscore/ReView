@@ -8,7 +8,7 @@ import { emitToProject } from './SocketService';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
-import { assertCanContribute } from '../lib/projectRoles';
+import { assertCanContribute, assertProjectManage } from '../lib/projectRoles';
 import { taskSelect, toTask } from '../lib/v1Resources';
 import * as ApiEventService from './ApiEventService';
 import * as DepartmentService from './DepartmentService';
@@ -384,6 +384,32 @@ async function resolveStatusPair(
     return { status: body.status, ...(match ? { pipelineStatusId: match.id } : {}) };
   }
   return {};
+}
+
+/**
+ * Pose (ou retire) l'assigné d'une tâche — chemin unique, hors du `PATCH` général.
+ *
+ * L'assignation par lot et l'assignation d'un asset passent par ici : elles ne peuvent pas
+ * emprunter `update()`, qui refuse à un non-manager tout autre champ que le statut, et qui
+ * attend une session complète là où le lot ne connaît que l'acteur.
+ */
+export async function setAssignee(
+  user: SessionUser,
+  projectId: number,
+  taskId: number,
+  assigneeId: number | null,
+  opts: { notify?: boolean } = {},
+) {
+  await assertProjectManage(user.id, user.role, projectId);
+  const updated = await prisma.task.update({
+    where: { id: taskId },
+    data: { assigneeId },
+    select: { id: true, name: true, shotId: true, assetId: true },
+  });
+  if (opts.notify !== false) await notifyAssignee(assigneeId, user.id, projectId, taskId, updated.name);
+  emitTaskUpdate(projectId, updated);
+  await enqueuePush(projectId, { type: 'task-assignee', taskId, actorId: user.id });
+  return updated;
 }
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {

@@ -2515,6 +2515,8 @@
   "upload.pickTask.createStepLocal": "创建「{step}」task",
   "tabs.more": "更多标签",
   "departments.keyLocked": "键值一经设定便不再更改——task、timeline 和剪辑快照都依赖它。",
+  "departments.menu": "部门",
+  "departments.updated": "已更新部门",
   "sidebar.switchProject": "切换项目",
   "sidebar.noProject": "未打开项目",
   "social.title": "成员与消息",
@@ -2539,5 +2541,16 @@
   "notification.mediaPublished": "已发布新媒体：{name}",
   "notification.liveStarted": "{name} 在 playlist « {playlist} » 上开始了实时 review",
   "notification.decision": "version {version} 的判定「{status}」",
-  "notification.taskAssigned": "已指派任务：{name}"
+  "notification.taskAssigned": "已指派任务：{name}",
+  "assign.menu": "指派",
+  "assign.unassigned": "无人",
+  "assign.done": "已更新指派",
+  "assign.failed": "无法更改指派",
+  "assign.bulkTitle": { "other": "指派 {count} 项" },
+  "assign.doneCount": { "other": "已更新 {count} 个任务" },
+  "assign.skippedCount": { "other": "已跳过 {count} 项：无可指派的任务，或权限不足" },
+  "assign.person": "人员",
+  "assign.departments": "部门",
+  "assign.departmentsHint": "留空则涵盖所有现有任务。勾选部门可限定范围，缺少任务时会自动创建。",
+  "assign.apply": "指派"
 }

@@ -2586,6 +2586,8 @@
   "upload.pickTask.createStepLocal": "Sortu « {step} » task bat",
   "tabs.more": "Fitxa gehiago",
   "departments.keyLocked": "Gakoa behin betiko finkatzen da: taskek, timelinek eta muntaketa-snapshotek hari egiten diote erreferentzia.",
+  "departments.menu": "Sailak",
+  "departments.updated": "Sailak eguneratu dira",
   "sidebar.switchProject": "Aldatu proiektua",
   "sidebar.noProject": "Ez dago proiekturik irekita",
   "social.title": "Pertsonak eta mezuak",
@@ -2610,5 +2612,16 @@
   "notification.mediaPublished": "Euskarri berria argitaratuta: {name}",
   "notification.liveStarted": "{name}(e)k zuzeneko review bat hasi du « {playlist} » playlist-ean",
   "notification.decision": "« {status} » erabakia {version} version-ari buruz",
-  "notification.taskAssigned": "Zeregina esleituta: {name}"
+  "notification.taskAssigned": "Zeregina esleituta: {name}",
+  "assign.menu": "Esleitu",
+  "assign.unassigned": "Inor ez",
+  "assign.done": "Esleipena eguneratu da",
+  "assign.failed": "Ezin izan da esleipena aldatu",
+  "assign.bulkTitle": { "one": "Esleitu elementu {count}", "other": "Esleitu {count} elementu" },
+  "assign.doneCount": { "one": "Zeregin {count} eguneratu da", "other": "{count} zeregin eguneratu dira" },
+  "assign.skippedCount": { "one": "Elementu {count} baztertu da: ez dago zer esleiturik, edo baimenik ez", "other": "{count} elementu baztertu dira: ez dago zer esleiturik, edo baimenik ez" },
+  "assign.person": "Pertsona",
+  "assign.departments": "Sailak",
+  "assign.departmentsHint": "Utzi hutsik dauden zeregin guztiak hartzeko. Markatu sailak haiei zuzentzeko —eta zeregina sortzeko falta bada.",
+  "assign.apply": "Esleitu"
 }

@@ -2525,6 +2525,8 @@
   "upload.pickTask.createStepLocal": "「{step}」 task 만들기",
   "tabs.more": "탭 더 보기",
   "departments.keyLocked": "키는 한 번 정해지면 바뀌지 않습니다. task, timeline, 몽타주 스냅샷이 이를 참조합니다.",
+  "departments.menu": "부서",
+  "departments.updated": "부서를 변경했습니다",
   "sidebar.switchProject": "프로젝트 전환",
   "sidebar.noProject": "열린 프로젝트 없음",
   "social.title": "사람 및 메시지",
@@ -2549,5 +2551,16 @@
   "notification.mediaPublished": "새 미디어를 공개했습니다: {name}",
   "notification.liveStarted": "{name}님이 playlist « {playlist} »의 실시간 review를 시작했습니다",
   "notification.decision": "version {version}에 대한 판정 « {status} »",
-  "notification.taskAssigned": "작업이 배정되었습니다: {name}"
+  "notification.taskAssigned": "작업이 배정되었습니다: {name}",
+  "assign.menu": "담당 지정",
+  "assign.unassigned": "담당자 없음",
+  "assign.done": "담당자를 변경했습니다",
+  "assign.failed": "담당자를 변경할 수 없습니다",
+  "assign.bulkTitle": { "other": "{count}개 담당 지정" },
+  "assign.doneCount": { "other": "작업 {count}건을 변경했습니다" },
+  "assign.skippedCount": { "other": "{count}건을 건너뛰었습니다(지정할 작업이 없거나 권한 부족)" },
+  "assign.person": "담당자",
+  "assign.departments": "부서",
+  "assign.departmentsHint": "비워 두면 기존 작업 전체가 대상입니다. 부서를 선택하면 해당 부서만 대상이 되며, 작업이 없으면 생성합니다.",
+  "assign.apply": "지정"
 }

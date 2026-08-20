@@ -3,6 +3,7 @@
 
 import { Role, TaskStatus, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import * as DepartmentService from './DepartmentService';
 import { checkProjectAccess } from '../middleware/rbac';
 import { forbidden, notFound } from '../lib/errors';
 import {
@@ -223,6 +224,25 @@ export async function bulkPatchVersions(
 }
 
 /** Déplacement de shots vers une séquence (ou hors séquence si `null`) — ADMIN/SUPERVISOR. */
+/**
+ * Cocher ou décocher des étapes sur une sélection d'assets.
+ *
+ * Les droits sont revérifiés pour chaque asset : une sélection peut traverser plusieurs
+ * projets, et un seul contrôle en tête laisserait passer tous les autres.
+ */
+export async function bulkAssetDepartments(
+  user: SessionUser,
+  ids: number[],
+  change: { add: number[]; remove: number[] },
+): Promise<number> {
+  await assertDeleteAccess(user, 'assets', ids);
+  for (const id of ids) {
+    await DepartmentService.attachHolderDepartments('asset', id, change.add);
+    await DepartmentService.detachHolderDepartments('asset', id, change.remove);
+  }
+  return ids.length;
+}
+
 export async function bulkMoveShots(
   user: SessionUser,
   ids: number[],
