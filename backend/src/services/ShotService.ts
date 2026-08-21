@@ -38,6 +38,13 @@ export async function list(
       include: {
         _count: { select: { tasks: true } },
         assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
+        // Étapes traversées (B1) : le filtre par département de l'onglet Shots s'appuie
+        // dessus. La fiche d'un plan les renvoyait, la liste non — choisir un département
+        // vidait donc l'écran, faute d'étape à comparer sur chaque carte.
+        departments: {
+          select: { id: true, key: true, name: true, color: true },
+          orderBy: { order: 'asc' },
+        },
       },
     }),
     prisma.shot.count({ where }),

@@ -213,9 +213,12 @@ mechanism. An empty criterion means "everything"; the explicit **None** entry me
 | Assets | text (name), department, asset type |
 | Kanban | text (task name and parent), status, assignee, sequence, department, task type |
 
-The department criterion is only meaningful on the kanban, where the filtered rows are
-tasks and therefore carry a department; on the Shots and Assets lists the cards
-themselves have no department field.
+The department criterion reads differently depending on the list. On the kanban a row is
+a task, which belongs to exactly one department, so the filter matches that one. A shot
+or an asset does not belong to a single department — it goes through several, one task
+per step — so on the Shots and Assets lists the filter keeps every card that goes through
+the chosen department. **None** therefore means "goes through no department at all", and
+never matches a card that goes through one.
 
 **Saved views** are stored server-side per account and per scope (`shots:<projectId>`,
 `assets:<projectId>`, `kanban:<projectId>`, `reviews`), so a preset built on the Shots

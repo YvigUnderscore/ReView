@@ -76,6 +76,25 @@ describe('matches', () => {
     expect(matches(filters({ department: '3' }), item({ departmentIds: [], departmentId: 3 }))).toBe(true);
   });
 
+  it('garde le département unique du kanban, où la ligne filtrée est une tâche', () => {
+    // Une tâche appartient bien à *une* étape : le kanban ne renseigne que ce champ-là,
+    // et la liste des étapes traversées n'a pas de sens pour elle.
+    expect(matches(filters({ department: '3' }), item({ departmentId: 3 }))).toBe(true);
+    expect(matches(filters({ department: '3' }), item({ departmentId: 4 }))).toBe(false);
+  });
+
+  it('« sans département » désigne l’entité qui n’en traverse aucun', () => {
+    expect(matches(filters({ department: 'none' }), item({ departmentIds: [] }))).toBe(true);
+    expect(matches(filters({ department: 'none' }), item({ departmentId: null }))).toBe(true);
+  });
+
+  it('écarte l’entité dont l’écran n’a pas fourni les départements', () => {
+    // Le champ absent vaut « aucun », pas « on ne sait pas » : c'est ce qui vidait les
+    // listes tant que l'API ne renvoyait pas les étapes. Le contrat est donc que l'écran
+    // renseigne tout critère qu'il propose — la garde est ici pour le rappeler.
+    expect(matches(filters({ department: '3' }), item())).toBe(false);
+  });
+
   it('compare le statut au référentiel du projet en priorité', () => {
     expect(matches(filters({ status: '12' }), item({ statusId: 12 }))).toBe(true);
     expect(matches(filters({ status: '12' }), item({ statusId: 13 }))).toBe(false);
