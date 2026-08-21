@@ -4,7 +4,7 @@
 // Pipe ordonné, espace asset et montages automatiques (Phase 45) — module séparé du
 // budget de lignes d'api.ts. Miroir des sorties de `PipelineLatestService` et
 // `TimelineService` côté backend.
-import type { Department, MediaKind, ReviewStatus, UserRef, VersionStatus } from './api';
+import type { DepartmentSummary, MediaKind, ReviewStatus, UserRef, VersionStatus } from './api';
 
 /** Média tel que l'API le renvoie : URL signée, jamais de clé de stockage. */
 export interface PipelineMedia {
@@ -64,7 +64,7 @@ export interface AssetLatest {
 
 /** GET /api/assets/:id/tree */
 export interface AssetOverview {
-  departments: Department[];
+  departments: DepartmentSummary[];
   groups: DepartmentGroup<AssetTreeTask>[];
   latest: AssetLatest | null;
 }
@@ -100,7 +100,7 @@ export interface TimelineView {
   sequenceCode: string | null;
   name: string | null;
   department: string | null;
-  departments: Department[];
+  departments: DepartmentSummary[];
   framerate: number;
   items: TimelineClip[];
   totalDuration: number;

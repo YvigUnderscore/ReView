@@ -9,6 +9,7 @@ import type { AssetRef, AssetType, SequenceRef, ShotRef, TaskType } from '../../
 export type {
   Nomenclature,
   Department,
+  DepartmentSummary,
   ProjectSettings,
   Task,
   AssetRef,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import type { Department } from '../types/api';
+import type { DepartmentSummary } from '../types/api';
 import { useT } from '../i18n';
 
 /**
@@ -19,12 +19,12 @@ export default function DepartmentsEditor({
   value,
   onChange,
 }: {
-  value: Department[];
-  onChange: (departments: Department[]) => void;
+  value: DepartmentSummary[];
+  onChange: (departments: DepartmentSummary[]) => void;
 }) {
   const t = useT();
 
-  const setField = (i: number, k: keyof Department, v: string) =>
+  const setField = (i: number, k: keyof DepartmentSummary, v: string) =>
     onChange(value.map((dep, idx) => (idx === i ? { ...dep, [k]: v } : dep)));
   const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const add = () => onChange([...value, { key: '', name: '' }]);

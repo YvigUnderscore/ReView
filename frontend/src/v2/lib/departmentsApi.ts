@@ -3,6 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
+import type { Department } from '../types/api';
 import { qk } from './query';
 
 /**
@@ -12,17 +13,9 @@ import { qk } from './query';
  * impossible d'en rattacher un à un asset, ni de le renommer sans détacher les tâches.
  * Ce sont maintenant des entités, avec un référentiel de studio hérité par défaut et une
  * liste propre par projet.
+ *
+ * La shape `Department` est celle de `types/api` : ce module ne porte que les hooks.
  */
-
-export interface Department {
-  id: number;
-  studioId: number;
-  projectId: number | null;
-  key: string;
-  name: string;
-  order: number;
-  color: string | null;
-}
 
 /** Départements applicables à un projet : les siens, sinon ceux du studio. */
 export function useDepartments(projectId: number, enabled = true) {

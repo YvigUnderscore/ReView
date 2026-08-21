@@ -9,7 +9,7 @@ import InfoPanel from '../review/panels/InfoPanel';
 import type { PanelId } from '../review/chrome/panels';
 import TimelineExportButton from './TimelineExportButton';
 import { formatDuration } from '../review/timelineNav';
-import type { Department, TimelineView } from '../../types/api';
+import type { DepartmentSummary, TimelineView } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
@@ -59,7 +59,7 @@ export default function MontagePanels({
               className="w-full rounded border border-input bg-background px-1.5 py-[0.3125rem] text-xs disabled:opacity-60"
             >
               <option value="">{t('timeline.departmentAuto')}</option>
-              {timeline.departments.map((d: Department) => (
+              {timeline.departments.map((d: DepartmentSummary) => (
                 <option key={d.key} value={d.key}>
                   {d.name}
                 </option>

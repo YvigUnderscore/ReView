@@ -280,10 +280,30 @@ export interface Nomenclature {
   padding: number;
   step: number;
 }
+/**
+ * Département — étape du pipe (B1). Entité de plein droit : un référentiel de studio
+ * (`projectId` null) hérité par défaut, qu'un projet peut remplacer par sa propre liste.
+ *
+ * `order` n'est pas cosmétique : c'est le rang amont → aval qui décide de « la dernière
+ * version » d'un asset ou d'un plan.
+ */
 export interface Department {
+  id: number;
+  studioId: number;
+  /** Null = référentiel du studio, hérité par tous ses projets. */
+  projectId: number | null;
   key: string;
   name: string;
+  order: number;
+  /** Teinte d'affichage (hex #RRGGBB), normalisée à l'écran par `statusSwatch`. */
+  color: string | null;
 }
+/**
+ * Le pipe tel que les réglages et les vues qui en dérivent le renvoient : la table
+ * `Department` y est projetée sur `key`/`name`, déjà triée par `order`. L'identité et
+ * la teinte ne sont pas sur le fil — n'attendre ici que ces deux champs.
+ */
+export type DepartmentSummary = Pick<Department, 'key' | 'name'>;
 /** Résolution de livraison (px). */
 export interface Resolution {
   width: number;
@@ -321,7 +341,7 @@ export interface ColorSettings {
 }
 /** GET /api/projects/:id/settings — aussi la shape des défauts studio (admin). */
 export interface ProjectSettings extends PipelineSettings {
-  departments: Department[];
+  departments: DepartmentSummary[];
   nomenclature: Nomenclature;
   /** Convention de nommage à l'upload (38.C). */
   naming: NamingRule;
