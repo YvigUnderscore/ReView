@@ -11,22 +11,32 @@ export interface ChatUser {
   avatarUrl: string | null;
 }
 
+/**
+ * Phrase d'un message de service : la clé i18n et ses variables, pas du texte. Elle était
+ * écrite en français EN BASE, donc figée pour tous les lecteurs ; `body` reste renvoyé, en
+ * anglais, et sert de repli aux messages postés avant ce changement.
+ */
+export interface ChatSystemPhrase {
+  body: string;
+  systemKey: string | null;
+  systemVars: Record<string, string | number> | null;
+}
+
 export interface ChatConversation {
   id: number;
   isGroup: boolean;
   /** Nom du groupe ; `null` pour un tête-à-tête (le nom est alors l'autre participant). */
   title: string | null;
   members: ChatUser[];
-  lastMessage: { id: number; body: string; authorId: number | null; isSystem: boolean } | null;
+  lastMessage: (ChatSystemPhrase & { id: number; authorId: number | null; isSystem: boolean }) | null;
   lastMessageAt: string;
   unread: number;
   muted: boolean;
 }
 
-export interface ChatMessage {
+export interface ChatMessage extends ChatSystemPhrase {
   id: number;
   conversationId: number;
-  body: string;
   /** Message de service (arrivée, départ, renommage) : pas d'auteur, rendu en gris. */
   isSystem: boolean;
   createdAt: string;

@@ -13,6 +13,7 @@ import PeoplePicker from '../chat/PeoplePicker';
 import EntityContextMenu from '../ui/entity-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { STATUS_LABEL_KEY } from '../../lib/userStatus';
+import { chatSystemText } from '../../lib/chatSystemText';
 import { useT } from '../../i18n';
 
 /**
@@ -157,7 +158,7 @@ export default function SocialPanel() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-medium">{label}</span>
                       <span className="block truncate text-2xs text-muted-foreground">
-                        {c.lastMessage?.body ?? t('chat.noMessages')}
+                        {c.lastMessage ? chatSystemText(t, c.lastMessage) : t('chat.noMessages')}
                       </span>
                     </span>
                     {c.unread > 0 && (

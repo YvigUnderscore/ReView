@@ -47,5 +47,9 @@
   "notification.mediaPublished": "Nuevo medio publicado: {name}",
   "notification.liveStarted": "{name} ha iniciado una review en directo sobre la playlist « {playlist} »",
   "notification.decision": "Decisión « {status} » sobre la version {version}",
-  "notification.taskAssigned": "Tarea asignada: {name}"
+  "notification.taskAssigned": "Tarea asignada: {name}",
+  "chat.system.joined": { "one": "{names} se ha unido a la conversación", "other": "{names} se han unido a la conversación" },
+  "chat.system.left": "{name} ha salido de la conversación",
+  "chat.system.removed": "Se ha retirado a {name}",
+  "chat.system.renamed": "El grupo ahora se llama « {title} »"
 }

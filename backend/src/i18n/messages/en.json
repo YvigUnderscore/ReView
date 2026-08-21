@@ -47,5 +47,9 @@
   "notification.mediaPublished": "New media published: {name}",
   "notification.liveStarted": "{name} started a live review on the playlist « {playlist} »",
   "notification.decision": "Decision « {status} » on version {version}",
-  "notification.taskAssigned": "Task assigned: {name}"
+  "notification.taskAssigned": "Task assigned: {name}",
+  "chat.system.joined": { "one": "{names} joined the conversation", "other": "{names} joined the conversation" },
+  "chat.system.left": "{name} left the conversation",
+  "chat.system.removed": "{name} was removed",
+  "chat.system.renamed": "The group is now called « {title} »"
 }

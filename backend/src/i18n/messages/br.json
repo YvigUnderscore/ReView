@@ -47,5 +47,9 @@
   "notification.mediaPublished": "Media nevez embannet : {name}",
   "notification.liveStarted": "{name} en deus kroget ur review war-eeun war ar playlist « {playlist} »",
   "notification.decision": "Diviz « {status} » war ar version {version}",
-  "notification.taskAssigned": "Dlead roet : {name}"
+  "notification.taskAssigned": "Dlead roet : {name}",
+  "chat.system.joined": { "one": "{names} a zo deuet er gaozeadenn", "other": "{names} a zo deuet er gaozeadenn" },
+  "chat.system.left": "{name} en deus kuitaet ar gaozeadenn",
+  "chat.system.removed": "Lamet eo bet {name}",
+  "chat.system.renamed": "« {title} » eo anv ar strollad bremañ"
 }

@@ -47,5 +47,9 @@
   "notification.mediaPublished": "Novu media pubblicatu : {name}",
   "notification.liveStarted": "{name} hà iniziatu una review in diretta nant'à a playlist « {playlist} »",
   "notification.decision": "Decisione « {status} » nant'à a version {version}",
-  "notification.taskAssigned": "Attività assignata : {name}"
+  "notification.taskAssigned": "Attività assignata : {name}",
+  "chat.system.joined": { "one": "{names} hè entrutu in a cunversazione", "other": "{names} sò entruti in a cunversazione" },
+  "chat.system.left": "{name} hà lasciatu a cunversazione",
+  "chat.system.removed": "{name} hè statu ritiratu",
+  "chat.system.renamed": "U gruppu si chjama avà « {title} »"
 }

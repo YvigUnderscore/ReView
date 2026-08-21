@@ -47,5 +47,9 @@
   "notification.mediaPublished": "नया मीडिया प्रकाशित: {name}",
   "notification.liveStarted": "{name} ने playlist « {playlist} » पर लाइव review शुरू की",
   "notification.decision": "version {version} पर निर्णय « {status} »",
-  "notification.taskAssigned": "कार्य सौंपा गया: {name}"
+  "notification.taskAssigned": "कार्य सौंपा गया: {name}",
+  "chat.system.joined": { "one": "{names} बातचीत में शामिल हुए", "other": "{names} बातचीत में शामिल हुए" },
+  "chat.system.left": "{name} ने बातचीत छोड़ दी",
+  "chat.system.removed": "{name} को हटा दिया गया",
+  "chat.system.renamed": "समूह का नाम अब « {title} » है"
 }

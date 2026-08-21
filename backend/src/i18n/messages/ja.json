@@ -47,5 +47,9 @@
   "notification.mediaPublished": "新しいメディアを公開しました：{name}",
   "notification.liveStarted": "{name} が playlist「{playlist}」のライブ review を開始しました",
   "notification.decision": "version {version} の判定「{status}」",
-  "notification.taskAssigned": "タスクが割り当てられました：{name}"
+  "notification.taskAssigned": "タスクが割り当てられました：{name}",
+  "chat.system.joined": { "other": "{names} が会話に参加しました" },
+  "chat.system.left": "{name} が会話から退出しました",
+  "chat.system.removed": "{name} がメンバーから外されました",
+  "chat.system.renamed": "グループ名が « {title} » に変更されました"
 }

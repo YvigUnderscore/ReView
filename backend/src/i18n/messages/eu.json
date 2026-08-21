@@ -47,5 +47,9 @@
   "notification.mediaPublished": "Euskarri berria argitaratuta: {name}",
   "notification.liveStarted": "{name}(e)k zuzeneko review bat hasi du « {playlist} » playlist-ean",
   "notification.decision": "« {status} » erabakia {version} version-ari buruz",
-  "notification.taskAssigned": "Zeregina esleituta: {name}"
+  "notification.taskAssigned": "Zeregina esleituta: {name}",
+  "chat.system.joined": { "one": "{names} elkarrizketara batu da", "other": "{names} elkarrizketara batu dira" },
+  "chat.system.left": "{name} elkarrizketatik atera da",
+  "chat.system.removed": "{name} kendu dute",
+  "chat.system.renamed": "Taldearen izena « {title} » da orain"
 }

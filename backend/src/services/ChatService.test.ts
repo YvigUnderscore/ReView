@@ -5,10 +5,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({
   prisma: {
+    $transaction: vi.fn(),
     conversation: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    conversationMember: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    conversationMember: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      update: vi.fn(),
+      createMany: vi.fn(),
+      delete: vi.fn(),
+    },
     chatMessage: { create: vi.fn(), count: vi.fn(), findMany: vi.fn() },
     user: { findMany: vi.fn(), findUnique: vi.fn() },
+    setting: { findUnique: vi.fn() },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToUser: vi.fn() }));
@@ -20,8 +28,9 @@ vi.mock('./StorageService', () => ({
 }));
 
 import { Role } from '@prisma/client';
-import { createConversation, sendMessage } from './ChatService';
+import { addMembers, createConversation, removeMember, renameConversation, sendMessage } from './ChatService';
 import { prisma } from '../lib/prisma';
+import { t } from '../i18n';
 import { emitToUser } from './SocketService';
 import { sendToUser } from './PushService';
 
@@ -181,5 +190,86 @@ describe('ChatService.sendMessage', () => {
         where: { conversationId_userId: { conversationId: 7, userId: 1 } },
       }),
     );
+  });
+});
+
+/**
+ * Messages de service (arrivée, départ, renommage). La phrase était écrite en français EN
+ * BASE : une fois enregistrée, plus rien ne pouvait la retraduire. Ce qui compte ici est
+ * donc ce qui atteint la colonne — une clé et ses variables, jamais une phrase française.
+ */
+describe('ChatService — messages de service', () => {
+  /** Données du `chatMessage.create` du message de service (le seul créé par ces flux). */
+  const systemData = () => db.chatMessage.create.mock.calls[0]![0].data as Record<string, unknown>;
+
+  beforeEach(() => {
+    db.chatMessage.create.mockImplementation((({ data }: { data: { body: string } }) =>
+      Promise.resolve({ id: 99, conversationId: 7, body: data.body, createdAt: new Date(0) })) as never);
+    db.conversation.findUnique.mockResolvedValue({ id: 7, isGroup: true } as never);
+    db.conversationMember.findMany.mockResolvedValue([
+      { userId: 1, mutedAt: null },
+      { userId: 2, mutedAt: null },
+    ] as never);
+    db.setting.findUnique.mockResolvedValue(null);
+    db.user.findMany.mockResolvedValue([] as never);
+  });
+
+  it('enregistre la clé du renommage et son titre, et un corps anglais', async () => {
+    await renameConversation(7, 1, 'Séquence 12');
+    expect(systemData()).toMatchObject({
+      isSystem: true,
+      systemKey: 'chat.system.renamed',
+      systemVars: { title: 'Séquence 12' },
+      body: 'The group is now called « Séquence 12 »',
+    });
+  });
+
+  it('accorde l’arrivée sur le nombre d’arrivants (`count`)', async () => {
+    db.user.findMany.mockResolvedValue([
+      { id: 3, email: 'u3@x.io', username: 'nina' },
+      { id: 4, email: 'u4@x.io', username: 'sacha' },
+    ] as never);
+    await addMembers(7, 1, [3, 4]);
+    expect(systemData()).toMatchObject({
+      systemKey: 'chat.system.joined',
+      systemVars: { names: 'nina, sacha', count: 2 },
+      body: 'nina, sacha joined the conversation',
+    });
+  });
+
+  it('distingue un départ volontaire d’un retrait', async () => {
+    db.user.findUnique.mockResolvedValue({ id: 1, email: 'u1@x.io', username: 'nina' } as never);
+    await removeMember(7, 1, 1);
+    expect(systemData()).toMatchObject({
+      systemKey: 'chat.system.left',
+      systemVars: { name: 'nina' },
+    });
+
+    vi.clearAllMocks();
+    db.conversationMember.findUnique.mockResolvedValue(membershipRow(7, [1, 2]) as never);
+    db.conversationMember.findMany.mockResolvedValue([{ userId: 1, mutedAt: null }] as never);
+    db.conversation.findUnique.mockResolvedValue({ id: 7, isGroup: true } as never);
+    db.chatMessage.create.mockResolvedValue({ id: 99, body: '', createdAt: new Date(0) } as never);
+    db.user.findUnique.mockResolvedValue({ id: 2, email: 'u2@x.io', username: 'sacha' } as never);
+    db.user.findMany.mockResolvedValue([] as never);
+    await removeMember(7, 1, 2);
+    expect(systemData()).toMatchObject({
+      systemKey: 'chat.system.removed',
+      systemVars: { name: 'sacha' },
+    });
+  });
+
+  it('pousse la notification navigateur dans la langue de chaque destinataire', async () => {
+    // Le Web Push sort de l'application : il échappe au catalogue du navigateur. Sans
+    // cette résolution, tout le monde recevait la phrase du serveur.
+    db.user.findMany.mockResolvedValue([
+      { id: 1, preferences: { locale: 'ja' } },
+      { id: 2, preferences: {} },
+    ] as never);
+    db.setting.findUnique.mockResolvedValue({ value: 'fr' } as never); // défaut du studio
+    await renameConversation(7, 1, 'Séquence 12');
+    const bodies = new Map(vi.mocked(sendToUser).mock.calls.map((c) => [c[0], c[1].body]));
+    expect(bodies.get(1)).toBe(t('ja', 'chat.system.renamed', { title: 'Séquence 12' }));
+    expect(bodies.get(2)).toBe(t('fr', 'chat.system.renamed', { title: 'Séquence 12' }));
   });
 });

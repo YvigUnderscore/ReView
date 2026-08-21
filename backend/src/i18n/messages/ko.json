@@ -47,5 +47,9 @@
   "notification.mediaPublished": "새 미디어를 공개했습니다: {name}",
   "notification.liveStarted": "{name}님이 playlist « {playlist} »의 실시간 review를 시작했습니다",
   "notification.decision": "version {version}에 대한 판정 « {status} »",
-  "notification.taskAssigned": "작업이 배정되었습니다: {name}"
+  "notification.taskAssigned": "작업이 배정되었습니다: {name}",
+  "chat.system.joined": { "other": "{names}님이 대화에 참여했습니다" },
+  "chat.system.left": "{name}님이 대화를 나갔습니다",
+  "chat.system.removed": "{name}님이 제외되었습니다",
+  "chat.system.renamed": "그룹 이름이 « {title} »(으)로 바뀌었습니다"
 }

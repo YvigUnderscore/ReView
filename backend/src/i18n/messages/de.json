@@ -47,5 +47,9 @@
   "notification.mediaPublished": "Neues Medium veröffentlicht: {name}",
   "notification.liveStarted": "{name} hat eine Live-review zur playlist « {playlist} » gestartet",
   "notification.decision": "Entscheidung « {status} » zur version {version}",
-  "notification.taskAssigned": "Aufgabe zugewiesen: {name}"
+  "notification.taskAssigned": "Aufgabe zugewiesen: {name}",
+  "chat.system.joined": { "one": "{names} ist der Unterhaltung beigetreten", "other": "{names} sind der Unterhaltung beigetreten" },
+  "chat.system.left": "{name} hat die Unterhaltung verlassen",
+  "chat.system.removed": "{name} wurde entfernt",
+  "chat.system.renamed": "Die Gruppe heißt jetzt « {title} »"
 }

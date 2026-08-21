@@ -47,5 +47,9 @@
   "notification.mediaPublished": "已发布新媒体：{name}",
   "notification.liveStarted": "{name} 在 playlist « {playlist} » 上开始了实时 review",
   "notification.decision": "version {version} 的判定「{status}」",
-  "notification.taskAssigned": "已指派任务：{name}"
+  "notification.taskAssigned": "已指派任务：{name}",
+  "chat.system.joined": { "other": "{names} 加入了对话" },
+  "chat.system.left": "{name} 离开了对话",
+  "chat.system.removed": "{name} 已被移除",
+  "chat.system.renamed": "群组现在名为 « {title} »"
 }

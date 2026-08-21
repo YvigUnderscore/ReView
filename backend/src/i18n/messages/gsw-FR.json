@@ -47,5 +47,9 @@
   "notification.mediaPublished": "Nöis Medium veröffentlicht: {name}",
   "notification.liveStarted": "{name} het e Live-review zue dr playlist « {playlist} » gstartet",
   "notification.decision": "Entscheidig « {status} » zue dr version {version}",
-  "notification.taskAssigned": "Ufgab zuegwiese: {name}"
+  "notification.taskAssigned": "Ufgab zuegwiese: {name}",
+  "chat.system.joined": { "one": "{names} isch in d'Underhaltung kumme", "other": "{names} sìnn in d'Underhaltung kumme" },
+  "chat.system.left": "{name} het d'Underhaltung verlonn",
+  "chat.system.removed": "{name} isch üsegnumme wore",
+  "chat.system.renamed": "D'Grupp heisst jetz « {title} »"
 }

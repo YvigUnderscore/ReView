@@ -8,6 +8,7 @@ import Avatar from '../Avatar';
 import { useChat } from '../../stores/useChat';
 import { api } from '../../../lib/apiClient';
 import { timeAgo } from '../../lib/time';
+import { chatSystemText } from '../../lib/chatSystemText';
 import type { ChatMessage } from '../../types/chat';
 import { useT } from '../../i18n';
 
@@ -58,7 +59,11 @@ export default function ChatMessages({ conversationId, selfId }: { conversationI
 function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
   const t = useT();
   if (message.isSystem) {
-    return <p className="py-1 text-center text-xs italic text-muted-foreground">{message.body}</p>;
+    // Le message de service porte une clé, pas une phrase : il se traduit ici, à l'écran,
+    // dans la langue du lecteur — et non dans celle du serveur au moment de l'événement.
+    return (
+      <p className="py-1 text-center text-xs italic text-muted-foreground">{chatSystemText(t, message)}</p>
+    );
   }
   const author = message.author;
   const mine = author?.id === selfId;

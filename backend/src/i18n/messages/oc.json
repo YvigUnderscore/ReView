@@ -47,5 +47,9 @@
   "notification.mediaPublished": "Novèl mèdia publicat : {name}",
   "notification.liveStarted": "{name} a lançat una review en dirècte sus la playlist « {playlist} »",
   "notification.decision": "Decision « {status} » sus la version {version}",
-  "notification.taskAssigned": "Prètzfach assignat : {name}"
+  "notification.taskAssigned": "Prètzfach assignat : {name}",
+  "chat.system.joined": { "one": "{names} a rejonch la convèrsa", "other": "{names} an rejonch la convèrsa" },
+  "chat.system.left": "{name} a quitat la convèrsa",
+  "chat.system.removed": "{name} es estat retirat",
+  "chat.system.renamed": "Lo grop s'apèla ara « {title} »"
 }

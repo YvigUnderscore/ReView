@@ -1150,6 +1150,13 @@ model ChatMessage {
   body           String
   // Message de service (arrivée/départ/renommage) : affiché en gris, sans auteur cliquable.
   isSystem       Boolean      @default(false)
+  // Phrase traduisible d'un message de service : la clé i18n et ses variables, jamais la
+  // phrase rendue. Elle était écrite en français EN BASE, donc figée pour toujours dans la
+  // langue du serveur — un studio japonais lisait « a rejoint la conversation ». `body`
+  // reste écrit, en anglais, et sert de repli aux lignes antérieures à ce changement
+  // (même dispositif que `Notification.messageKey` / `content`).
+  systemKey      String?
+  systemVars     Json?
   createdAt      DateTime     @default(now())
   editedAt       DateTime?
   deletedAt      DateTime?

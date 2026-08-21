@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Role } from '@prisma/client';
+import { Role, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { toPublicUser } from '../lib/userView';
+import { getDefaultLocale } from '../lib/settings';
+import { localeFromPreferences, t, BASE_LOCALE, type Locale, type MessageKey, type TParams } from '../i18n';
 import { emitToUser } from './SocketService';
 import { sendToUser } from './PushService';
 import { getOnlineUserIds } from './PresenceService';
@@ -52,6 +54,30 @@ async function toChatUser(raw: {
   // adresses du studio (même raisonnement que `UserService.listPresence`).
   const { displayName, initials, avatarUrl } = await toPublicUser(raw);
   return { id: raw.id, displayName, initials, avatarUrl };
+}
+
+/**
+ * Phrase d'un message de service — clé i18n et variables, jamais du texte.
+ *
+ * Elle était écrite en français EN BASE au moment de l'événement, puis servie telle
+ * quelle : une fois enregistrée, plus rien ne pouvait la retraduire. Le fil porte
+ * désormais la clé et ses variables (même dispositif que `ShotgridSyncLog`), et chaque
+ * lecteur la voit dans sa langue.
+ */
+interface SystemPhrase {
+  key: MessageKey;
+  vars: TParams;
+}
+
+/** Colonnes qui portent la phrase d'un message, écrite ou de service. */
+const messagePhrase = { body: true, isSystem: true, systemKey: true, systemVars: true } as const;
+
+/**
+ * Variables relues de la base. La colonne est du JSON libre : un tableau ou un scalaire
+ * n'interpolerait rien, autant rendre `null` et laisser le repli faire son travail.
+ */
+function toSystemVars(raw: Prisma.JsonValue | null): TParams | null {
+  return raw !== null && typeof raw === 'object' && !Array.isArray(raw) ? (raw as TParams) : null;
 }
 
 /** Vérifie l'appartenance au fil et renvoie l'adhésion (403 sinon : un fil est privé). */
@@ -106,16 +132,33 @@ async function resolveTargets(actorId: number, userIds: number[]): Promise<numbe
 
 // ── Lecture ──────────────────────────────────────────────────────────────────
 
+/** Dernier message d'un fil, tel qu'il s'affiche sous le nom du fil dans la liste. */
+export interface LastMessageView {
+  id: number;
+  body: string;
+  authorId: number | null;
+  isSystem: boolean;
+  systemKey: string | null;
+  systemVars: TParams | null;
+}
+
 export interface ConversationView {
   id: number;
   isGroup: boolean;
   /** Nom du groupe ; `null` pour un tête-à-tête (le front affiche l'autre participant). */
   title: string | null;
   members: ChatUserView[];
-  lastMessage: { id: number; body: string; authorId: number | null; isSystem: boolean } | null;
+  lastMessage: LastMessageView | null;
   lastMessageAt: Date;
   unread: number;
   muted: boolean;
+}
+
+/** Le dernier message tel que la base le rend, `systemVars` remis en forme. */
+function toLastMessage(
+  row: (Omit<LastMessageView, 'systemVars'> & { systemVars: Prisma.JsonValue }) | undefined,
+): LastMessageView | null {
+  return row ? { ...row, systemVars: toSystemVars(row.systemVars) } : null;
 }
 
 /** Fils de l'utilisateur, du plus récemment actif au plus ancien. */
@@ -130,7 +173,7 @@ export async function listConversations(userId: number): Promise<ConversationVie
             where: { deletedAt: null },
             orderBy: { createdAt: 'desc' },
             take: 1,
-            select: { id: true, body: true, authorId: true, isSystem: true },
+            select: { id: true, authorId: true, ...messagePhrase },
           },
         },
       },
@@ -161,7 +204,7 @@ export async function listConversations(userId: number): Promise<ConversationVie
       isGroup: m.conversation.isGroup,
       title: m.conversation.title,
       members: await Promise.all(m.conversation.members.map((cm) => toChatUser(cm.user))),
-      lastMessage: m.conversation.messages[0] ?? null,
+      lastMessage: toLastMessage(m.conversation.messages[0]),
       lastMessageAt: m.conversation.lastMessageAt,
       unread: unreadByConversation.get(m.conversationId) ?? 0,
       muted: m.mutedAt != null,
@@ -174,6 +217,9 @@ export interface ChatMessageView {
   conversationId: number;
   body: string;
   isSystem: boolean;
+  /** Clé i18n d'un message de service et ses variables — `null` pour un message écrit. */
+  systemKey: string | null;
+  systemVars: TParams | null;
   createdAt: Date;
   editedAt: Date | null;
   author: ChatUserView | null;
@@ -206,6 +252,8 @@ export async function listMessages(
       conversationId: m.conversationId,
       body: m.body,
       isSystem: m.isSystem,
+      systemKey: m.systemKey,
+      systemVars: toSystemVars(m.systemVars),
       createdAt: m.createdAt,
       editedAt: m.editedAt,
       author: m.author ? await toChatUser(m.author) : null,
@@ -247,7 +295,7 @@ export async function conversationViewFor(conversationId: number, userId: number
             where: { deletedAt: null },
             orderBy: { createdAt: 'desc' },
             take: 1,
-            select: { id: true, body: true, authorId: true, isSystem: true },
+            select: { id: true, authorId: true, ...messagePhrase },
           },
         },
       },
@@ -267,7 +315,7 @@ export async function conversationViewFor(conversationId: number, userId: number
     isGroup: membership.conversation.isGroup,
     title: membership.conversation.title,
     members: await Promise.all(membership.conversation.members.map((cm) => toChatUser(cm.user))),
-    lastMessage: membership.conversation.messages[0] ?? null,
+    lastMessage: toLastMessage(membership.conversation.messages[0]),
     lastMessageAt: membership.conversation.lastMessageAt,
     unread,
     muted: membership.mutedAt != null,
@@ -353,6 +401,8 @@ export async function sendMessage(
     conversationId,
     body: message.body,
     isSystem: false,
+    systemKey: null,
+    systemVars: null,
     createdAt: message.createdAt,
     editedAt: null,
     author: message.author ? await toChatUser(message.author) : null,
@@ -373,11 +423,28 @@ async function fanOutMessage(
   });
   const online = new Set(getOnlineUserIds());
   const label = view.author?.displayName ?? 'ReView';
+  // Un message de service n'a pas de texte à lui : l'interface le traduit au rendu. La
+  // notification navigateur, elle, sort de l'application et échappe à tout catalogue —
+  // c'est ici, et nulle part ailleurs, qu'elle prend la langue de son destinataire. Les
+  // préférences ne sont lues que dans ce cas : un message écrit part tel qu'il a été tapé.
+  const locales = view.systemKey ? await localesOf(members.map((m) => m.userId)) : null;
   for (const m of members) {
     emitToUser(m.userId, 'chat:message', { message: view });
     if (m.userId === authorId || m.mutedAt || online.has(m.userId)) continue;
-    sendToUser(m.userId, { title: label, body: view.body.slice(0, 140), url: '/?chat=' + conversationId });
+    const body = locales
+      ? t(locales.get(m.userId) ?? BASE_LOCALE, view.systemKey as MessageKey, view.systemVars ?? undefined)
+      : view.body;
+    sendToUser(m.userId, { title: label, body: body.slice(0, 140), url: '/?chat=' + conversationId });
   }
+}
+
+/** Langue de chaque destinataire : sa préférence, sinon celle du studio — en deux requêtes. */
+async function localesOf(userIds: number[]): Promise<Map<number, Locale>> {
+  const [rows, fallback] = await Promise.all([
+    prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, preferences: true } }),
+    getDefaultLocale(),
+  ]);
+  return new Map(rows.map((u) => [u.id, localeFromPreferences(u.preferences) ?? fallback]));
 }
 
 /** Marque le fil comme lu jusqu'à maintenant (les autres onglets se synchronisent). */
@@ -405,10 +472,22 @@ export async function setMuted(
   return { muted };
 }
 
-/** Message de service (arrivée, départ, renommage) : trace lisible dans le fil. */
-async function postSystemMessage(conversationId: number, body: string): Promise<void> {
+/**
+ * Message de service (arrivée, départ, renommage) : trace lisible dans le fil.
+ *
+ * La clé et ses variables sont enregistrées, pas la phrase. `body` l'est aussi, **en
+ * anglais** : les messages postés avant ce changement n'ont pas de clé et c'est lui qui
+ * les affiche encore — un onglet plus vieux que le serveur y retombe de la même façon.
+ */
+async function postSystemMessage(conversationId: number, phrase: SystemPhrase): Promise<void> {
   const message = await prisma.chatMessage.create({
-    data: { conversationId, body, isSystem: true },
+    data: {
+      conversationId,
+      body: t(BASE_LOCALE, phrase.key, phrase.vars),
+      isSystem: true,
+      systemKey: phrase.key,
+      systemVars: phrase.vars,
+    },
   });
   await prisma.conversation.update({
     where: { id: conversationId },
@@ -419,6 +498,8 @@ async function postSystemMessage(conversationId: number, body: string): Promise<
     conversationId,
     body: message.body,
     isSystem: true,
+    systemKey: phrase.key,
+    systemVars: phrase.vars,
     createdAt: message.createdAt,
     editedAt: null,
     author: null,
@@ -438,7 +519,7 @@ export async function renameConversation(
   const title = rawTitle.trim();
   if (!title) throw badRequest('Empty group name', 'EMPTY_TITLE');
   await prisma.conversation.update({ where: { id: conversationId }, data: { title } });
-  await postSystemMessage(conversationId, `Le groupe s'appelle désormais « ${title} »`);
+  await postSystemMessage(conversationId, { key: 'chat.system.renamed', vars: { title } });
   const members = await prisma.conversationMember.findMany({
     where: { conversationId },
     select: { userId: true },
@@ -477,7 +558,12 @@ export async function addMembers(
   ]);
   const names = await prisma.user.findMany({ where: { id: { in: toAdd } }, select: memberIdentity });
   const labels = await Promise.all(names.map(async (u) => (await toChatUser(u)).displayName));
-  await postSystemMessage(conversationId, `${labels.join(', ')} a rejoint la conversation`);
+  // `count` sélectionne la forme plurielle : « X a rejoint » / « X et Y ont rejoint » —
+  // l'accord se joue dans chaque langue, il ne peut pas se décider ici.
+  await postSystemMessage(conversationId, {
+    key: 'chat.system.joined',
+    vars: { names: labels.join(', '), count: labels.length },
+  });
   const members = await prisma.conversationMember.findMany({
     where: { conversationId },
     select: { userId: true },
@@ -521,10 +607,10 @@ export async function removeMember(
   }
   if (label) {
     const { displayName } = await toChatUser(label);
-    await postSystemMessage(
-      conversationId,
-      targetId === actorId ? `${displayName} a quitté la conversation` : `${displayName} a été retiré`,
-    );
+    await postSystemMessage(conversationId, {
+      key: targetId === actorId ? 'chat.system.left' : 'chat.system.removed',
+      vars: { name: displayName },
+    });
   }
   await broadcastConversation(
     conversationId,

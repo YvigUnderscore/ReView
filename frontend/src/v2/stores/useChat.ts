@@ -82,6 +82,10 @@ export const useChat = create<ChatState>((set, get) => ({
               body: message.body,
               authorId: message.author?.id ?? null,
               isSystem: message.isSystem,
+              // La clé suit le message : sans elle, l'aperçu du fil retomberait sur le
+              // `body` anglais alors que la ligne du fil, elle, est bien traduite.
+              systemKey: message.systemKey,
+              systemVars: message.systemVars,
             },
             lastMessageAt: message.createdAt,
             unread: isOpen ? 0 : conv.unread + 1,
