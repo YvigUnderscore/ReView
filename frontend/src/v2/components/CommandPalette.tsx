@@ -151,7 +151,9 @@ export default function CommandPalette({
 
           {!hasQuery && (
             <CommandGroup heading={t('palette.group.goto')}>
-              <CommandItem value="nav-projects" onSelect={() => go('/')}>
+              {/* `/projects`, pas `/` : l'entrée porte le libellé « Projets » et menait à
+                  l'accueil — le seul endroit où l'on ne trouve pas la liste des projets. */}
+              <CommandItem value="nav-projects" onSelect={() => go('/projects')}>
                 <FolderKanban size={15} className="text-muted-foreground" /> {t('nav.projects')}
               </CommandItem>
               {ctxProjectId !== null && (

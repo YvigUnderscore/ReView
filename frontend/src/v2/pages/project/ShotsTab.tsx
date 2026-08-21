@@ -94,6 +94,7 @@ export default function ShotsTab({
     text: `${shot.code} ${shot.name}`,
     statusId: shot.pipelineStatusId,
     sequenceId: shot.sequenceId,
+    departmentIds: shot.departments?.map((d) => d.id),
   }));
 
   const groups = [

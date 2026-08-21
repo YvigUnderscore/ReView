@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![Image review: zoom controls under the canvas, reference paste in the top-left corner.](../assets/user-guide/review-image.png)
+
 > All four media types share the same workspace — mode switch, tool rail, options bar,
 > inspector dock, bottom row. See **[The review workspace](review-workspace.md)** for the
 > layout, the modes and the keyboard map; this page covers what is specific to images.

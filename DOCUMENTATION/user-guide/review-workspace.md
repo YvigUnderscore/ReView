@@ -35,7 +35,8 @@ key — **the position in the switch is the key**: first mode `1`, second `2`, t
 **Annotate is a mode, but it is not in the switch.** You enter it from the comment space
 (the *Annotate* button of the composer, or right-click in the viewer on video and image),
 or simply by pressing a drawing tool letter — `D`, `R`, `E`, `A`, `G`, `T`, `M`, `X` all
-arm the tool *and* switch to Annotate. Leaving the annotation returns to the first mode.
+arm the tool *and* switch to Annotate. On video and image, finishing the annotation takes
+you back to the first mode.
 The same rule applies to the other modes: pressing the letter of a tool that belongs to
 another mode switches to that mode. The one exception is the video transport, which keeps
 `I`, `O`, `J`, `K` and `L` for itself — pressing `I` sets a loop in point instead of
@@ -191,9 +192,10 @@ the caret is in a text field no shortcut fires.
 **The mode switch is missing entirely.** Either you are signed in with the `CLIENT` role
 (read-only exploration by design), or the media has a single mode.
 
-**The workspace is too cramped on a laptop.** The rail collapses to icons and the header
-wraps below roughly 1440 px, and the dock starts collapsed. Use `Tab` to keep it that way
-and the chevron at the bottom of the rail to hide the tool labels.
+**The workspace is too cramped on a laptop.** The workspace has no minimum width any more:
+the rail and the dock fold themselves away and the header wraps rather than pushing the page
+into horizontal scrolling. Keep the dock closed with `Tab`, and use the chevron at the bottom
+of the rail to hide the tool labels.
 
 ## Related pages
 

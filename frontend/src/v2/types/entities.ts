@@ -55,7 +55,20 @@ export interface Shot {
 }
 export type ShotRef = Pick<Shot, 'id' | 'code' | 'name'>;
 /** GET /api/shots?projectId= */
-export type ShotSummary = Shot & { _count?: { tasks: number }; assets?: AssetRef[] };
+/** Étape du pipe, telle que les listes la renvoient. */
+export interface DepartmentRef {
+  id: number;
+  key: string;
+  name: string;
+  color?: string | null;
+}
+
+export type ShotSummary = Shot & {
+  _count?: { tasks: number };
+  assets?: AssetRef[];
+  /** Étapes que le plan traverse — le filtre par département s'appuie dessus. */
+  departments?: DepartmentRef[];
+};
 
 export interface Asset {
   id: number;
@@ -72,7 +85,7 @@ export type AssetRef = Pick<Asset, 'id' | 'name' | 'type'>;
  * contextuel d'une carte sache quoi cocher sans une requête par carte affichée.
  */
 export type AssetListItem = Asset & {
-  departments?: { id: number; key: string; name: string; color?: string | null }[];
+  departments?: DepartmentRef[];
   tasks?: {
     id: number;
     departmentId: number | null;

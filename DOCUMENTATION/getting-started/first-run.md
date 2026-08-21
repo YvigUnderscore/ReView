@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The home dashboard after signing in: what moved on your projects, and where you left off.](../assets/getting-started/home.png)
+
 ## Setup page
 
 On an empty database, every route redirects to **`/setup`**. This one-time wizard

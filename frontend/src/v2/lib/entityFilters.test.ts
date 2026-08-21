@@ -64,6 +64,18 @@ describe('matches', () => {
     expect(matches(filters({ department: 'none' }), item({ departmentId: 3 }))).toBe(false);
   });
 
+  it('reconnaît une entité qui traverse plusieurs départements', () => {
+    // Un plan ou un asset n'appartient pas à *un* département : il en traverse plusieurs.
+    // Comparer à un identifiant unique ne correspondait jamais, et l'écran vidait la
+    // liste dès qu'on choisissait un département.
+    expect(matches(filters({ department: '3' }), item({ departmentIds: [1, 3] }))).toBe(true);
+    expect(matches(filters({ department: '4' }), item({ departmentIds: [1, 3] }))).toBe(false);
+    // « Sans département » ne peut pas désigner une entité qui en traverse.
+    expect(matches(filters({ department: 'none' }), item({ departmentIds: [1] }))).toBe(false);
+    // Liste vide : on retombe sur le champ unique, pour les entités qui n'en portent pas.
+    expect(matches(filters({ department: '3' }), item({ departmentIds: [], departmentId: 3 }))).toBe(true);
+  });
+
   it('compare le statut au référentiel du projet en priorité', () => {
     expect(matches(filters({ status: '12' }), item({ statusId: 12 }))).toBe(true);
     expect(matches(filters({ status: '12' }), item({ statusId: 13 }))).toBe(false);

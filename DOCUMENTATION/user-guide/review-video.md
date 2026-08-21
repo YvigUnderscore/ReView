@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![Video review: transport with timecode and frame counter, tool rail on the left, inspector dock and comment thread on the right.](../assets/user-guide/review-video.png)
+
 > All four media types share the same workspace — mode switch, tool rail, options bar,
 > inspector dock, bottom row. See **[The review workspace](review-workspace.md)** for the
 > layout, the modes and the keyboard map; this page covers what is specific to video.

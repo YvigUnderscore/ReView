@@ -29,7 +29,8 @@ import EntityFilters from '../../components/EntityFilters';
 import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
 import { EMPTY_FILTERS, applyFilters } from '../../lib/entityFilters';
 import { useDepartments } from '../../lib/departmentsApi';
-import { ASSET_TYPES, type Asset } from './projectTypes';
+import { ASSET_TYPES } from './projectTypes';
+import type { AssetListItem } from '../../types/entities';
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
@@ -47,7 +48,7 @@ export default function AssetsTab({
   reload,
 }: {
   projectId: number;
-  assets: Asset[];
+  assets: AssetListItem[];
   canManage: boolean;
   reload: () => Promise<void>;
 }) {
@@ -58,16 +59,20 @@ export default function AssetsTab({
   const watch = useWatch();
   const [newAsset, setNewAsset] = useState({ name: '', type: 'CHARACTER' });
   const [creating, setCreating] = useState(false);
-  const [deleting, setDeleting] = useState<Asset | null>(null);
-  const [assigning, setAssigning] = useState<Asset | null>(null);
+  const [deleting, setDeleting] = useState<AssetListItem | null>(null);
+  const [assigning, setAssigning] = useState<AssetListItem | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkAssigning, setBulkAssigning] = useState(false);
-  const [editing, setEditing] = useState<Asset | null>(null);
+  const [editing, setEditing] = useState<AssetListItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
-  const visible = applyFilters(filters, assets, (a) => ({ text: a.name, type: a.type }));
+  const visible = applyFilters(filters, assets, (a) => ({
+    text: a.name,
+    type: a.type,
+    departmentIds: a.departments?.map((d) => d.id),
+  }));
   // La sélection ne porte que sur ce qui est affiché : une action de masse ne doit jamais
   // atteindre des lignes que le filtre a écartées de la vue.
   const sel = useMultiSelect(visible.map((a) => a.id));

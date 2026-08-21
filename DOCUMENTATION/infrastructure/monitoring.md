@@ -197,9 +197,11 @@ healthcheck has a 180 s `start_period` because the first database download is sl
 
 Set `VIDEO_ENCODER=h264_nvenc` on the worker (requires an NVIDIA GPU exposed to the
 container, e.g. compose `deploy.resources.reservations.devices`). Presets are mapped
-from the x264 ladder; if NVENC fails at runtime the worker automatically falls back to
-libx264 for that encode. The variable is validated as an enum, so a typo stops the
-worker at boot rather than silently disabling acceleration.
+from the x264 ladder (`fast` → `p4`, `medium` → `p5`, `slow` → `p6`…); if NVENC fails
+at runtime the worker automatically falls back to libx264 for that encode and logs
+`[ffmpeg.worker] h264_nvenc indisponible — repli libx264`. Grep for that line to tell
+"the GPU is being used" from "the GPU was requested". The variable is validated as an
+enum, so a typo stops the worker at boot rather than silently disabling acceleration.
 
 ## Resumable uploads & integrity
 

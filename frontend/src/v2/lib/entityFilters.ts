@@ -65,6 +65,14 @@ export interface Filterable {
   assigneeId?: number | null;
   sequenceId?: number | null;
   departmentId?: number | null;
+  /**
+   * Les étapes que l'entité traverse.
+   *
+   * Un plan ou un asset n'appartient pas à *un* département : il en traverse plusieurs,
+   * une tâche par étape. Filtrer sur un `departmentId` unique ne pouvait donc jamais
+   * correspondre — l'écran vidait la liste dès qu'on choisissait un département.
+   */
+  departmentIds?: number[];
   department?: string | null;
   type?: string | null;
 }
@@ -76,13 +84,27 @@ function matchId(filter: string, value: number | null | undefined): boolean {
   return String(value ?? '') === filter;
 }
 
+/**
+ * Le département correspond si l'entité le porte directement, ou s'il figure parmi les
+ * étapes qu'elle traverse.
+ */
+function matchDepartment(filter: string, item: Filterable): boolean {
+  if (filter === '') return true;
+  const ids = item.departmentIds;
+  if (ids && ids.length > 0) {
+    if (filter === NONE) return false;
+    return ids.some((id) => String(id) === filter);
+  }
+  return matchId(filter, item.departmentId);
+}
+
 export function matches(filters: EntityFilterState, item: Filterable): boolean {
   if (filters.text !== '' && !item.text.toLowerCase().includes(filters.text.trim().toLowerCase())) {
     return false;
   }
   if (!matchId(filters.assignee, item.assigneeId)) return false;
   if (!matchId(filters.sequence, item.sequenceId)) return false;
-  if (!matchId(filters.department, item.departmentId)) return false;
+  if (!matchDepartment(filters.department, item)) return false;
   if (filters.type !== '' && (item.type ?? '') !== filters.type) return false;
   if (filters.status !== '') {
     // Le statut se compare d'abord au référentiel du projet ; l'énumération ne sert que
