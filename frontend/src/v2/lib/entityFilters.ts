@@ -57,7 +57,13 @@ export function fromRecord(record: Record<string, string>): EntityFilterState {
   return out;
 }
 
-/** Ce qu'une entité offre au filtrage. Les champs absents ne sont jamais éliminatoires. */
+/**
+ * Ce qu'une entité offre au filtrage.
+ *
+ * Un champ absent vaut « pas de valeur », pas « on ne sait pas » : il est donc
+ * éliminatoire dès qu'un critère porte dessus. Un écran doit renseigner ici tout critère
+ * qu'il propose dans sa barre de filtres — sinon choisir ce critère vide la liste.
+ */
 export interface Filterable {
   text: string;
   statusId?: number | null;
