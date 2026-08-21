@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { toPublicUser } from '../lib/userView';
@@ -66,15 +67,40 @@ async function requireMembership(conversationId: number, userId: number) {
  * Destinataires recevables : comptes réels, hors soi-même et hors comptes de service
  * (un token machine n'a pas d'interlocuteur). Les identifiants inconnus sont refusés
  * plutôt qu'ignorés — sinon un fil se crée en silence avec moins de monde que demandé.
+ *
+ * Un CLIENT est cantonné aux personnes de ses projets, exactement comme l'annuaire de
+ * `UserService.listPresence` : un intervenant extérieur n'a pas à connaître l'équipe
+ * entière ni à pouvoir écrire à n'importe qui. Sans ce contrôle, l'annuaire restreint ne
+ * tenait qu'en lecture — poster un identifiant arbitraire sur la route de chat ouvrait un
+ * tête-à-tête avec n'importe quel compte interne, ou l'enrôlait dans un groupe.
+ *
+ * Le rôle se relit ici plutôt que de descendre des routes : `resolveTargets` est le seul
+ * passage commun à l'ouverture d'un fil et à l'ajout de membres, aucune entrée ne peut
+ * donc l'oublier (même raison que l'appartenance vérifiée dans le service).
  */
 async function resolveTargets(actorId: number, userIds: number[]): Promise<number[]> {
   const unique = [...new Set(userIds)].filter((id) => id !== actorId);
   if (unique.length === 0) throw badRequest('No recipient', 'NO_RECIPIENT');
-  const found = await prisma.user.findMany({
-    where: { id: { in: unique }, isService: false },
+  const [actor, found] = await Promise.all([
+    prisma.user.findUnique({ where: { id: actorId }, select: { role: true } }),
+    prisma.user.findMany({ where: { id: { in: unique }, isService: false }, select: { id: true } }),
+  ]);
+  if (found.length !== unique.length) throw badRequest('Recipient not found', 'BAD_RECIPIENT');
+  if (actor?.role !== Role.CLIENT) return unique;
+
+  const shared = await prisma.user.findMany({
+    where: {
+      id: { in: unique },
+      memberships: { some: { project: { memberships: { some: { userId: actorId } } } } },
+    },
     select: { id: true },
   });
-  if (found.length !== unique.length) throw badRequest('Recipient not found', 'BAD_RECIPIENT');
+  if (shared.length !== unique.length) {
+    // Refus nommé, pas un filtrage silencieux : le fil demandé n'est pas amputé de
+    // quelques destinataires sans que l'appelant le sache.
+    const refused = unique.filter((id) => !shared.some((u) => u.id === id));
+    throw forbidden(`Recipient outside your projects: ${refused.join(', ')}`, 'RECIPIENT_OUT_OF_SCOPE');
+  }
   return unique;
 }
 

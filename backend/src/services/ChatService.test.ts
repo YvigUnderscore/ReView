@@ -19,6 +19,7 @@ vi.mock('./StorageService', () => ({
   StorageService: class {},
 }));
 
+import { Role } from '@prisma/client';
 import { createConversation, sendMessage } from './ChatService';
 import { prisma } from '../lib/prisma';
 import { emitToUser } from './SocketService';
@@ -88,6 +89,50 @@ describe('ChatService.createConversation', () => {
 
   it('refuse un fil avec soi-même pour seul destinataire', async () => {
     await expect(createConversation(1, { userIds: [1] })).rejects.toThrow(/recipient/i);
+  });
+});
+
+/** Les deux `where` que `resolveTargets` envoie : le second porte le filtre par projet. */
+type TargetQuery = { where: { id: { in: number[] }; memberships?: unknown } };
+
+describe('ChatService.createConversation — cloisonnement d’un CLIENT', () => {
+  /**
+   * Acteur CLIENT dont les projets ne recoupent que `sharedIds` : la requête portant le
+   * filtre `memberships` ne renvoie que ceux-là, l'autre voit tout le monde.
+   */
+  const asClient = (sharedIds: number[]) => {
+    db.user.findUnique.mockResolvedValue({ role: Role.CLIENT } as never);
+    db.user.findMany.mockImplementation(((args: TargetQuery) => {
+      const ids = args.where.id.in;
+      const kept = args.where.memberships ? ids.filter((id) => sharedIds.includes(id)) : ids;
+      return Promise.resolve(kept.map((id) => ({ id })));
+    }) as never);
+  };
+
+  it('laisse un CLIENT écrire à quelqu’un d’un projet partagé', async () => {
+    asClient([2]);
+    const view = await createConversation(1, { userIds: [2] });
+    expect(view.id).toBe(7);
+    expect(db.conversation.create).toHaveBeenCalled();
+  });
+
+  it('refuse à un CLIENT un compte interne hors de ses projets', async () => {
+    // Refus nommé (403) et non filtrage silencieux : l'identifiant écarté est dit.
+    asClient([]);
+    await expect(createConversation(1, { userIds: [2] })).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'RECIPIENT_OUT_OF_SCOPE',
+      message: expect.stringContaining('2'),
+    });
+    expect(db.conversation.create).not.toHaveBeenCalled();
+  });
+
+  it('ne restreint pas un compte interne', async () => {
+    db.user.findUnique.mockResolvedValue({ role: Role.SUPERVISOR } as never);
+    await createConversation(1, { userIds: [2] });
+    const queries = db.user.findMany.mock.calls.map((c) => c[0] as TargetQuery);
+    expect(queries.some((q) => q.where.memberships)).toBe(false);
+    expect(db.conversation.create).toHaveBeenCalled();
   });
 });
 
