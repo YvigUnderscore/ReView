@@ -327,9 +327,10 @@ The merge never narrows the scope:
 | `onlySgIds` | the union, de-duplicated — but dropped entirely (meaning "the whole project") as soon as one request is not targeted |
 | `withMedia` | true if either side wants media |
 
-A deferred request is reported as such rather than as a success. Clicking the
-re-read dot next to an entity while a pass is running answers *"A sync is already running —
-this re-read is queued behind it."*
+The API reports such a request as `deferred` rather than as a success, so no screen can
+claim work that has not happened. Both the **Synchronise** button and the re-read dot next
+to an entity answer *"A sync is already running — this re-read is queued behind it."* The
+run list is authoritative either way: the replayed pass appears there when it completes.
 
 ---
 

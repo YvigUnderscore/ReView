@@ -42,6 +42,9 @@ export default function SgSyncPanel({
       const r = await runSync.mutateAsync({ kind });
       const status = r.result?.status;
       if (status === 'error') toast.error(t('shotgrid.sync.failed'));
+      // « deferred » : une passe tournait déjà, celle-ci attend son tour. Annoncer
+      // « terminé » ferait chercher un résultat qui n'existe pas encore.
+      else if (status === 'deferred') toast.success(t('shotgrid.sync.dot.queued'));
       else toast.success(t('shotgrid.sync.done'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('shotgrid.sync.failed'));

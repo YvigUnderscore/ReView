@@ -96,6 +96,39 @@ blender --background --python abc_camera.py -- /path/shot_cam.abc /path/shot_cam
    ready to scrub, edit in the curve editor, or **save as presentation** (replayed for
    everyone). glTF/GLB camera files still import through the same button.
 
+The button routes on the extension: `.json` is read as Alembic samples, anything else as
+glTF/GLB. Both viewers — 3D and splat — use the same control.
+
+## Use cases
+
+**Reviewing a splat against the plate camera.** The shot camera is tracked in the DCC and
+exists as `.abc`. Extract it, import the JSON on the splat media, then **save as
+presentation**: everyone who opens that media sees the scan through the same camera move as
+the plate, instead of flying around and arguing about parallax.
+
+**Handing a layout to the client.** Import the camera, trim it in the curve editor to the
+twelve seconds that matter, save it as the presentation. The share link replays exactly
+that move — see [Sharing](../user-guide/sharing.md).
+
+**Reusing a move across versions.** The JSON is the exchange format, not an attachment.
+Keep it next to the shot and re-import it on the next version rather than re-authoring the
+move.
+
+**Starting from a rough move.** Two samples are enough. Import a start and an end pose,
+then shape the rest in the curve editor — the imported keys are ordinary v2 keys with
+linear easing.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Nothing imports, a toast reports a rejected file | Fewer than two samples carry a valid `pos` | Check that `pos` is an array of three numbers on every sample |
+| The camera is in the right place but points the wrong way | Neither `target` nor `quat` was provided | Emit one of the two; the fallback simply looks down `-Z` |
+| The move is 90° off, or vertical and horizontal are swapped | Z-up source, Y-up scene | Convert the axes in the extractor, not afterwards |
+| The framing is too wide or too narrow | `fov` is horizontal, or in radians | ReView expects **vertical degrees**; Blender's `cam.data.angle_y` is in radians |
+| The move plays too fast or too slow | `fps` missing, so frames were divided by 24 | Set `fps`, or emit `t` in seconds and skip the question |
+| The move is right but nobody else sees it | It was imported, not saved | Use **save as presentation** — that is what is replayed for every viewer |
+
 ## Native `.abc` worker (future / optional)
 
 A containerized worker that reads Ogawa directly (e.g. PyAlembic or a Blender step baked into
