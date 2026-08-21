@@ -29,8 +29,19 @@ directly, over presigned URLs issued by the backend after an RBAC check.
 
 ### Boot sequence
 
-`backend/start.sh` → `npx prisma generate` → `npx prisma migrate deploy` (falling back
-to `prisma db push --accept-data-loss` when it fails) → `node dist/server.js`.
+`backend/start.sh` → `npx prisma generate` → `npx prisma migrate deploy` →
+`node dist/server.js`.
+
+**A failed migration stops the container.** `migrate deploy` keeps its stderr and exits
+non-zero; nothing else touches the schema. The script used to fall back to
+`prisma db push --accept-data-loss`, which realigns the database on the schema by
+dropping the columns and tables it no longer declares — with `restart: always`, that ran
+in a loop, and `2>/dev/null` hid the reason. Initialising an **empty** database without
+versioned migrations is now a deliberate act: set `PRISMA_DB_PUSH=1` (refused when
+`NODE_ENV=production`, and `db push` is invoked without `--accept-data-loss`, so it
+declines on its own if data would be lost). See
+[Containers & configuration](containers-and-configuration.md#database-schema-at-boot).
+
 `server.ts` then:
 
 1. `await storage.ensureBucket()` — creates the bucket and applies the CORS rules;
@@ -115,6 +126,12 @@ container is not evidence that the stack works**. The real probe is
 `GET /api/admin/system`, which pings the database, Redis and MinIO — it is admin-only
 and has no timeout of its own.
 
+The container-side half of that gap is closed: the healthcheck reads its path from
+`HEALTH_PATH` (default `/health`), so the day the API exposes an unauthenticated
+readiness probe — `SELECT 1` + Redis `PING` + a MinIO `statObject` — pointing the
+container at it is a one-line change in `.env`. Until then, alert on the Prometheus
+metrics rather than on `docker compose ps`.
+
 There is also **no graceful shutdown**: nothing listens for `SIGTERM`. A
 `docker compose stop` kills in-flight transcodes with their job lock still held; BullMQ
 recovers them ~30 s later through the stalled-job mechanism.
@@ -129,11 +146,19 @@ the storage path carries `Content-Security-Policy: sandbox; default-src 'none';
 frame-ancestors 'none'`, which neutralises any active content served from an uploaded
 object.
 
+Both nginx layers compress text responses (`gzip`, `gzip_proxied any` — without it
+nothing proxied would ever be compressed) and freeze `/assets/` for a year with
+`Cache-Control: public, immutable`, which is safe because Vite hashes those filenames.
+`index.html` is explicitly `no-cache`, so a deployment is picked up on the next
+navigation. Details in
+[Containers & configuration](containers-and-configuration.md#http-compression-and-caching).
+
 The backend refuses weak `JWT_SECRET`, `CORS_ORIGIN=*` and default MinIO credentials in
 production mode — see [Installation](../getting-started/installation.md#production-deployment).
 
 ## Related pages
 
+- [Containers & configuration](containers-and-configuration.md)
 - [Docker stack](../getting-started/docker-stack.md)
 - [Jobs & workers](jobs-and-workers.md)
 - [MinIO storage](storage-minio.md)

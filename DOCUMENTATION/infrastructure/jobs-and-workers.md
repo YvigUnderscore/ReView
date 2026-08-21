@@ -246,6 +246,12 @@ accordingly, or set `VIDEO_ENCODER=h264_nvenc` to move encoding onto an NVIDIA G
 docker compose up -d --scale worker=3
 ```
 
+Each replica is capped at `WORKER_MEM_LIMIT` (default `8g`) — **the limit is per
+container**, so three replicas may claim 24 GB. Lower it before scaling on a small host,
+and remember that a container killed by the OOM killer exits with code 137 and leaves its
+job to the stalled-job mechanism above. Rationale for the default:
+[Containers & configuration](containers-and-configuration.md#resource-limits-and-log-rotation).
+
 Do **not** scale the `backend` service — see
 [Architecture](architecture.md#single-instance-assumptions).
 

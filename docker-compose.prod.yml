@@ -33,6 +33,14 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
+    # Même rotation que les services du fichier de base : les ancres YAML ne traversent
+    # pas les fichiers compose, le bloc est donc redonné ici. Le journal d'accès de nginx
+    # est le plus bavard de la pile — c'est celui qui saturerait le pool en premier.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: always
 
   # ── Secrets requis (pas de défaut faible en production) ─────────────────────

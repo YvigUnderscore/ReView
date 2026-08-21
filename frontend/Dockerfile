@@ -16,7 +16,10 @@ COPY DOCUMENTATION/ ../DOCUMENTATION/
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx
-FROM nginx:alpine
+# Version épinglée (et alignée sur le proxy TLS de docker-compose.prod.yml) : `alpine`
+# seul suit la branche courante, et une majeure nginx peut changer le comportement de
+# `location`/`add_header` sur lequel repose frontend/nginx.conf.
+FROM nginx:1.27-alpine
 
 LABEL org.opencontainers.image.title="ReView (frontend)" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \

@@ -17,6 +17,13 @@ nor MinIO. The compose healthcheck for the `backend` service calls exactly this
 endpoint, and `worker`, `frontend` and the production `nginx` all gate on it. A green
 `docker compose ps` therefore proves the process is up — nothing more.
 
+The container probe reads its path from **`HEALTH_PATH`** (default `/health`), so once
+the API exposes a readiness route that actually pings Postgres, Redis and MinIO, setting
+`HEALTH_PATH=/health/ready` in `.env` is the whole migration. The `frontend` service has
+a probe of its own (`wget` on `/index.html`): an nginx that rejected its configuration no
+longer counts as running. See
+[Containers & configuration](containers-and-configuration.md#health-probes).
+
 The real dependency probe is admin-only:
 
 ```bash
@@ -112,6 +119,9 @@ docker compose --profile monitoring up -d
 - The Prometheus datasource and the dashboard **ReView — API & jobs** (requests/s by
   status, p95 latency, BullMQ depth, backend RSS) are provisioned from
   `monitoring/grafana/provisioning/`.
+- Both images are **pinned** (`prom/prometheus:v3.5.0`, `grafana/grafana-oss:11.6.1` —
+  the dashboard is schemaVersion 39). Override with `PROMETHEUS_VERSION` /
+  `GRAFANA_VERSION` in `.env` rather than editing the compose file.
 
 ## Logs
 
@@ -138,6 +148,15 @@ Two things escape pino and are worth knowing when reading logs:
 
 Worker log prefixes: `[ffmpeg.worker]`, `[storageCleanup.worker]`, `[webhook.worker]`,
 `[timelineExport.worker]`, `[shotgrid.worker]`. Successes are `✓`, failures `✗`.
+
+### Rotation
+
+Every service is capped at **10 MB × 5 files** (`json-file` driver). Docker's default is
+unbounded, and on a NAS an active instance fills the system pool until the appliance
+itself stops working. Consequence to keep in mind: `docker compose logs --since 24h` may
+find nothing on a busy day. Ship the logs elsewhere (`gelf`, `journald`, a sidecar) if
+you need real retention — the driver is per service and easy to swap. Ceilings and
+rationale: [Containers & configuration](containers-and-configuration.md#resource-limits-and-log-rotation).
 
 ## Job dashboard (in-app)
 
@@ -221,9 +240,11 @@ upload, `MEDIA_DEDUP` audit).
 | Backend restarting in a loop | `docker compose ps` | MinIO unreachable at boot, or an invalid environment |
 | Media stuck in `PROCESSING` with no error | Admin content explorer | Lost enqueue, or a job that stalled twice. Retry with `POST /api/media/:id/reprocess` |
 | Requests hanging with no response | Client side | Redis unreachable: enqueue paths block instead of failing |
+| Worker killed mid-transcode, exit code 137 | `docker compose ps -a` | The OOM killer hit `WORKER_MEM_LIMIT` — raise it in `.env` (Blender on a heavy USD stage is the usual suspect) |
 
 ## Related pages
 
+- [Containers & configuration](containers-and-configuration.md) — env, limits, pins, probes
 - [Jobs & workers](jobs-and-workers.md) — queue settings and failure modes in detail
 - [Architecture](architecture.md)
 - [Backups & restore](backups.md)

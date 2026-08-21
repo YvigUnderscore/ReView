@@ -16,6 +16,11 @@ All binaries live in MinIO (S3-compatible), referenced from PostgreSQL by object
 | `S3_REGION` | `us-east-1` | Signing region |
 | `S3_FORCE_PATH_STYLE` | `true` | Required by MinIO |
 
+The image is **pinned** to `minio/minio:RELEASE.2025-04-22T22-12-26Z`, the last release
+that ships the full web console the operations section below relies on. Override with
+`MINIO_VERSION` in `.env`, and treat any upgrade as a data operation: back up first, and
+read the release notes between your version and the target.
+
 Two S3 clients are built: one against `S3_ENDPOINT` for server-side operations, one
 against `S3_PUBLIC_ENDPOINT` for signing. Getting `S3_PUBLIC_ENDPOINT` wrong is the
 single most common deployment mistake: uploads and playback break in the browser while

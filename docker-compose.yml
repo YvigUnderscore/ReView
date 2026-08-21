@@ -1,3 +1,18 @@
+# ReView — pile de base (dev et prod ; la prod ajoute docker-compose.prod.yml).
+#
+# Compose ≥ 2.24 requis : `env_file` en syntaxe longue (`required: false`) ici, et
+# `!reset` dans l'overlay de production.
+
+# Rotation des journaux docker, appliquée à TOUS les services (ancre YAML ci-dessous).
+# Sans elle, le driver `json-file` par défaut écrit sans borne : sur la cible TrueNAS, les
+# journaux pino d'une instance active saturent le pool système — ce n'est plus ReView qui
+# tombe, c'est le NAS. 10 Mo × 5 = 50 Mo au plus par conteneur, soit ~450 Mo pour la pile.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -14,10 +29,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # 2 Gio : shared_buffers reste au défaut (128 Mo) et les requêtes du produit sont
+    # courtes ; la marge sert au cache de pages et aux tris. Au-delà, c'est le cache du
+    # noyau qui travaille, pas Postgres. Relever pour un studio à forte volumétrie.
+    mem_limit: ${POSTGRES_MEM_LIMIT:-2g}
+    # /dev/shm vaut 64 Mo par défaut dans un conteneur : trop peu pour les tris parallèles
+    # de Postgres, qui échouent alors sur « could not resize shared memory segment ».
+    shm_size: ${POSTGRES_SHM_SIZE:-256mb}
+    logging: *default-logging
     restart: always
 
   minio:
-    image: minio/minio:latest
+    # Version épinglée (jamais `latest` : deux installations faites à deux dates doivent
+    # exécuter le même MinIO). Cette release est la dernière à embarquer la console web
+    # complète, sur laquelle s'appuient DOCUMENTATION/infrastructure/storage-minio.md et
+    # le port 9001 ci-dessous. Surchargeable par MINIO_VERSION dans .env.
+    image: minio/minio:${MINIO_VERSION:-RELEASE.2025-04-22T22-12-26Z}
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -37,6 +64,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Volontairement sans `mem_limit` : MinIO tamponne les envois multipart, et un OOM-kill
+    # du stockage corromprait un upload en cours plutôt que de protéger l'hôte. Poser
+    # MINIO_MEM_LIMIT si la machine l'exige (cf. infrastructure/storage-minio.md).
+    logging: *default-logging
     restart: always
 
   redis:
@@ -49,10 +80,24 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging: *default-logging
     restart: always
 
   backend:
     build: ./backend
+    # Le schéma d'environnement du backend compte 43 variables (backend/src/config/env.ts) ;
+    # ce bloc `environment:` n'en énumérait que 17. APP_URL, SMTP_*, VAPID_*, LOG_LEVEL,
+    # APP_ENCRYPTION_KEY… n'atteignaient jamais le conteneur : inviter un collaborateur
+    # échouait sur APP_URL_MISSING dans TOUTE installation docker. Le fichier .env est donc
+    # chargé en entier, et `environment:` ne garde que ce qui doit primer.
+    #
+    # ⚠ Précédence : `environment:` l'emporte sur `env_file:`. Les valeurs ci-dessous sont
+    # celles de la TOPOLOGIE RÉSEAU du compose (postgres, minio, redis joignables par leur
+    # nom de service) : un .env qui contient un DATABASE_URL vers localhost — le cas normal,
+    # pour le CLI Prisma de l'hôte — ne doit surtout pas les remplacer.
+    env_file:
+      - path: .env
+        required: false
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -66,7 +111,9 @@ services:
       S3_FORCE_PATH_STYLE: "true"
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      TZ: Europe/Paris
+      # Fuseau des digests, rapports hebdomadaires et burn-ins horodatés. Défaut historique
+      # conservé ; un studio hors de France pose TZ dans .env.
+      TZ: ${TZ:-Europe/Paris}
       # 37.E : nécessaire aussi côté API (déclenche le job `scan` des médias sans traitement).
       CLAMAV_HOST: ${CLAMAV_HOST:-}
       # Phase 48 : hôtes ShotGrid tolérés hors HTTPS public (simulateur de développement).
@@ -74,6 +121,12 @@ services:
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       # 37.G : jeton d'accès à GET /metrics (vide = réseau interne uniquement).
       METRICS_TOKEN: ${METRICS_TOKEN:-}
+      # Initialisation volontaire d'une base VIDE (cf. backend/start.sh) :
+      # `PRISMA_DB_PUSH=1 docker compose up backend`. Sans cette ligne de passage, la
+      # variable du shell n'atteindrait pas le conteneur — compose ne transmet pas
+      # l'environnement de l'hôte. Vide par défaut : seule la valeur « 1 » déclenche quoi
+      # que ce soit, et start.sh la refuse quand NODE_ENV=production.
+      PRISMA_DB_PUSH: ${PRISMA_DB_PUSH:-}
     # Le simulateur ShotGrid de développement tourne sur la machine hôte.
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -87,12 +140,33 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      # Vérifie que l'API répond (les migrations sont jouées au boot avant l'écoute).
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      # Sonde HTTP de l'API (les migrations sont jouées au boot, avant l'écoute).
+      #
+      # ⚠ 127.0.0.1 et non `localhost` : le serveur écoute en IPv4 sur 0.0.0.0, alors que
+      # `fetch` de Node résout `localhost` en ::1 d'abord — la sonde échouait sur les images
+      # où l'IPv6 est active.
+      #
+      # HEALTH_PATH (via .env) désigne la route interrogée. `/health` est aujourd'hui une
+      # sonde de VIVACITÉ : elle répond « ok » sans toucher Postgres, Redis ni MinIO — un
+      # backend dont le pool est mort reste donc « healthy ». Le jour où l'API expose une
+      # sonde de DISPONIBILITÉ (SELECT 1 + PING + statObject), il suffit de poser
+      # HEALTH_PATH=/health/ready dans .env. Voir infrastructure/monitoring.md.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000' + (process.env.HEALTH_PATH || '/health')).then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 40s
+    # 2 Gio : réplica unique, tas Node ~1,5 Gio au plus + les tampons des réponses. La borne
+    # ne sert pas le fonctionnement normal — elle empêche une fuite (ex. le rapport de
+    # stockage qui matérialise le bucket) d'emporter l'hôte entier.
+    mem_limit: ${BACKEND_MEM_LIMIT:-2g}
+    logging: *default-logging
     restart: always
 
   worker:
@@ -103,6 +177,11 @@ services:
         # Mettre à vide pour revenir à une image légère (USD alors non converti).
         INSTALL_USD_TOOLS: ${INSTALL_USD_TOOLS:-1}
     command: ["node", "dist/workers/ffmpeg.worker.js"]
+    # Même raison que pour le backend : le worker partage le schéma d'environnement de
+    # l'API (SMTP, chiffrement des secrets, APP_URL des liens d'email…).
+    env_file:
+      - path: .env
+        required: false
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-review}:${POSTGRES_PASSWORD:-review_dev}@postgres:5432/${POSTGRES_DB:-review}?schema=public
@@ -119,7 +198,7 @@ services:
       # cette ligne, le worker retombe sur le défaut '*' et refuse de démarrer : il faut
       # donc lui passer la même valeur qu'au backend.
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      TZ: Europe/Paris
+      TZ: ${TZ:-Europe/Paris}
       # 37.D : h264_nvenc si un GPU NVIDIA est exposé au conteneur (repli libx264 sinon).
       VIDEO_ENCODER: ${VIDEO_ENCODER:-libx264}
       # 37.E : scan antivirus opt-in — pointer vers le service clamav (profil antivirus).
@@ -153,20 +232,32 @@ services:
       # Attend que le backend ait joué les migrations avant d'interroger la base.
       backend:
         condition: service_healthy
+    # 8 Gio : c'est le seul service qui doive être généreux — deux transcodages HLS
+    # simultanés (`media-processing` en concurrence 2) et, avec INSTALL_USD_TOOLS=1, un
+    # Blender headless qui charge une scène USD entière. En dessous de ~4 Gio, les
+    # conversions USD lourdes se font tuer par l'OOM-killer au lieu d'échouer proprement ;
+    # sans borne du tout, elles emportent l'hôte. Ajuster par WORKER_MEM_LIMIT.
+    mem_limit: ${WORKER_MEM_LIMIT:-8g}
+    logging: *default-logging
     restart: always
 
   # Monitoring opt-in (37.G) : `docker compose --profile monitoring up -d`
   # Grafana sur 127.0.0.1:3431, dashboard « ReView » provisionné.
   prometheus:
-    image: prom/prometheus:latest
+    # Épinglé sur la ligne LTS 3.5 : `latest` a déjà changé de comportement entre deux
+    # majeures. Surchargeable par PROMETHEUS_VERSION dans .env.
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.5.0}
     profiles: ["monitoring"]
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    logging: *default-logging
     restart: always
 
   grafana:
-    image: grafana/grafana-oss:latest
+    # Épinglé : le dashboard provisionné est en schemaVersion 39 (Grafana 10.4+/11.x).
+    # Surchargeable par GRAFANA_VERSION dans .env.
+    image: grafana/grafana-oss:${GRAFANA_VERSION:-11.6.1}
     profiles: ["monitoring"]
     # Boucle locale uniquement : le dashboard expose les métriques de toute l'instance et
     # n'a pas à être joignable depuis le réseau. Accès distant = tunnel SSH ou VPN.
@@ -188,6 +279,7 @@ services:
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+    logging: *default-logging
     restart: always
 
   # Antivirus opt-in (37.E) : `docker compose --profile antivirus up -d` + CLAMAV_HOST=clamav
@@ -202,6 +294,7 @@ services:
       timeout: 10s
       retries: 10
       start_period: 180s
+    logging: *default-logging
     restart: always
 
   frontend:
@@ -214,6 +307,16 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      # busybox wget (image nginx:alpine) : la SPA est-elle servie ? Sans cette sonde, un
+      # nginx qui a refusé sa configuration reste « running » et le proxy TLS de prod lui
+      # envoie du trafic.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
     restart: always
 
 volumes:
