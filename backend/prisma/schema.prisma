@@ -243,7 +243,6 @@ model User {
   notifications        Notification[]
   createdShares        ShareLink[]          @relation("ShareCreator")
   auditLogs            AuditLog[]
-  boardChanges         BoardChange[]
   passwordResets       PasswordReset[]
   invitation           Invitation[]         @relation("InvitationTarget")
   sentInvitations      Invitation[]         @relation("InvitationSender")
@@ -866,18 +865,6 @@ model Board {
   assetId   Int?     @unique
   document  Json     @default("{}") // scène Excalidraw
   updatedAt DateTime @updatedAt
-
-  changes BoardChange[]
-}
-
-model BoardChange {
-  id        Int      @id @default(autoincrement())
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  boardId   Int
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId    Int?
-  summary   String
-  createdAt DateTime @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
