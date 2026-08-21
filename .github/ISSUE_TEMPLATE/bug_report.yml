@@ -1,0 +1,95 @@
+name: Bug report
+description: Something in ReView behaves incorrectly
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        **Security issues do not belong here** — follow
+        [SECURITY.md](https://github.com/YvigUnderscore/ReView/blob/dev/SECURITY.md) instead,
+        so the problem stays private until it is fixed.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: What you did, and what ReView did instead of what you expected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a project…
+        2. Upload a 4K ProRes clip…
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Video review
+        - Image review
+        - 3D / USD review
+        - Gaussian splat review
+        - Boards
+        - Kanban / pipeline
+        - Uploads, workers, transcoding
+        - Administration
+        - Client share
+        - API / integrations (including ShotGrid)
+        - Translations
+        - Installation / deployment
+        - Other or not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Commit hash (`git rev-parse --short HEAD`) or the release you deployed.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: How it runs, plus browser and OS when the problem is in the interface.
+      placeholder: docker compose (default stack) — Chrome 140 on Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, console output or screenshots
+      description: |
+        Backend or worker logs (`docker compose logs backend worker`), browser console
+        errors, or a screenshot. Remove tokens, emails and anything else private first.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md).
+          required: true

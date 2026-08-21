@@ -83,3 +83,23 @@ The suite must be green. It checks formatting, types, lint, unit tests, builds, 
 size budget, the SPDX headers, the freshness of `THIRD-PARTY-NOTICES.md` and the
 consistency of the translation catalogues. Never disable, skip or delete a test to make it
 pass — extend the suite, never weaken it.
+
+## Continuous integration
+
+The same suite runs on GitHub Actions
+([`.github/workflows/validate.yml`](.github/workflows/validate.yml)) on every push to
+`dev`/`main` and on every pull request, under Node 22 — the version the runtime images use:
+
+| Job                                          | What it runs                       | Blocking |
+| -------------------------------------------- | ---------------------------------- | -------- |
+| `validate.sh (unitaire)`                      | `bash scripts/validate.sh`         | Yes      |
+| `validate.sh --with-integration`              | the same, plus the integration tests against real Postgres, Redis and MinIO containers | No, for now |
+
+The integration job is deliberately non-blocking while one known failure remains: the
+resumable-upload test is rejected with a 429 because the backend's global rate limiter,
+counted in process memory, is saturated by the test suite itself. It is there to be read,
+not ignored — and it becomes blocking as soon as that is fixed.
+
+CI runs the suite exactly as it is written. It is not a lighter variant, and it is not a
+substitute for running `scripts/validate.sh` locally before you push: it is the proof that
+you did.

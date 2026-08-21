@@ -1,0 +1,67 @@
+name: Feature request
+description: Suggest a capability or an improvement
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ReView is built for VFX and post-production studios. The more your request is
+        anchored in real production work, the easier it is to judge.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do today, and where does ReView get in the way?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        What ReView should do instead. Note that the interface stays deliberately sparse:
+        new actions land in the right-click menu, the Ctrl+K palette or a shortcut before a
+        visible button is considered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and workarounds
+      description: What you do today instead, or how other tools in your pipeline solve it.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Video review
+        - Image review
+        - 3D / USD review
+        - Gaussian splat review
+        - Boards
+        - Kanban / pipeline
+        - Uploads, workers, transcoding
+        - Administration
+        - Client share
+        - API / integrations (including ShotGrid)
+        - Translations
+        - Installation / deployment
+        - Other or not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: |
+            I would like to implement this myself. I have read
+            [CONTRIBUTING.md](https://github.com/YvigUnderscore/ReView/blob/dev/CONTRIBUTING.md)
+            and I understand that merging a pull request requires signing the
+            [CLA](https://github.com/YvigUnderscore/ReView/blob/dev/CLA.md).
+          required: false
