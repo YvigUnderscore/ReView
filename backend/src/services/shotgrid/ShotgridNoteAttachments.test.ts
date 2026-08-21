@@ -7,7 +7,37 @@ vi.mock('../../lib/prisma', () => ({ prisma: {} }));
 vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn() } }));
 vi.mock('../StorageService', () => ({ storage: {} }));
 
-import { asRefs, guessType, sanitize } from './ShotgridNoteAttachments';
+import { asRefs, guessType, sanitize, storedContentType } from './ShotgridNoteAttachments';
+
+/**
+ * Le `Content-Type` vient du site ShotGrid : il n'est pas plus fiable que celui d'un
+ * navigateur. La pièce jointe est servie depuis l'origine de l'application — un
+ * `text/html` y exécuterait du script avec la session du lecteur.
+ */
+describe('storedContentType', () => {
+  it('refuse les types actifs annoncés par le site distant', () => {
+    expect(storedContentType('text/html', 'note.html')).toBe('application/octet-stream');
+    expect(storedContentType('image/svg+xml', 'annot.svg')).toBe('application/octet-stream');
+    expect(storedContentType('text/html; charset=utf-8', 'note.htm')).toBe('application/octet-stream');
+  });
+
+  it('garde le type annoncé quand il est rendable sans danger', () => {
+    expect(storedContentType('image/png', 'annot.png')).toBe('image/png');
+    expect(storedContentType('application/pdf', 'brief.pdf')).toBe('application/pdf');
+  });
+
+  it('retombe sur le nom de fichier quand le transport reste générique', () => {
+    expect(storedContentType('application/octet-stream', 'annot.png')).toBe('image/png');
+    expect(storedContentType(undefined, 'frame.jpg')).toBe('image/jpeg');
+    expect(storedContentType(null, 'rendu.exr')).toBe('application/octet-stream');
+  });
+
+  it('ne se laisse pas berner par une extension active', () => {
+    // Extension trompeuse et transport muet : `guessType` ne connaît pas `.svg`, mais la
+    // liste blanche reste le dernier mot.
+    expect(storedContentType(undefined, 'annot.svg')).toBe('application/octet-stream');
+  });
+});
 
 describe('guessType', () => {
   it("donne un type image, faute de quoi la pièce jointe n'a pas de vignette", () => {

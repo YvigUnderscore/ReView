@@ -274,10 +274,25 @@ class StorageService {
     return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
   }
 
-  /** Écriture serveur → MinIO (avatars, dérivés générés par les workers). */
+  /**
+   * Écriture serveur → MinIO (avatars, dérivés générés par les workers).
+   *
+   * Le type passe par la même liste blanche que les autres chemins d'écriture : « serveur »
+   * ne veut pas dire « de confiance ». Une pièce jointe ou un média rapatriés d'un site
+   * ShotGrid arrivent ici avec le `Content-Type` annoncé par ce site — `text/html` ou
+   * `image/svg+xml` y sont donc possibles, et l'objet est servi depuis l'origine de
+   * l'application. Les types réellement produits par les workers (mp4, jpeg, playlists HLS)
+   * sont dans la liste ; les formats binaires (GLB, masques splat) tombent, comme il se
+   * doit, sur `application/octet-stream`.
+   */
   async putObject(key: string, body: Buffer | Readable, contentType: string): Promise<void> {
     await this.client.send(
-      new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType }),
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: safeUploadContentType(contentType),
+      }),
     );
   }
 

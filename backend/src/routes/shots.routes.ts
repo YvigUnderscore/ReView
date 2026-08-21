@@ -22,7 +22,7 @@ router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-// Champs d'un shot (création). PATCH les rend optionnels via `.partial()` (+ thumbnailKey).
+// Champs d'un shot (création). PATCH les rend optionnels via `.partial()`.
 const shotBody = z.object({
   sequenceId: z.number().int().nullable().optional(),
   name: z.string().min(1).max(160),
@@ -102,7 +102,9 @@ router.patch(
     params: idParam,
     body: shotBody.partial().extend({
       description: z.string().max(2000).nullable().optional(),
-      thumbnailKey: z.string().max(512).nullable().optional(),
+      // Pas de `thumbnailKey` ici : la clé est écrite par `PUT /api/shots/:id/thumbnail`,
+      // qui la reconstruit et vérifie qu'elle désigne bien CE plan. Reçue du client, elle
+      // faisait présigner n'importe quel objet du bucket — pièce jointe d'autrui comprise.
       // Statut du plan (C3) : la colonne existait, le PATCH ne l'acceptait pas.
       pipelineStatusId: z.number().int().nullable().optional(),
       // Omis du montage (Phase 45) : le plan est coupé au montage sans rien perdre.

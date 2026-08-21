@@ -30,13 +30,16 @@ const sequenceBody = z.object({
   settings: pipelineOverrideSchema.optional(),
 });
 /**
- * Ce que le PATCH accepte en plus (C3) : la fiche de la séquence. Description et vignette
- * viennent d'être ajoutées au modèle ; le statut, lui, existait mais n'était écrit que
- * par la synchronisation ShotGrid — un studio autonome ne pouvait pas y toucher.
+ * Ce que le PATCH accepte en plus (C3) : la fiche de la séquence. La description vient
+ * d'être ajoutée au modèle ; le statut, lui, existait mais n'était écrit que par la
+ * synchronisation ShotGrid — un studio autonome ne pouvait pas y toucher.
+ *
+ * La vignette n'en fait pas partie : elle s'écrit par `PUT /api/sequences/:id/thumbnail`,
+ * qui reconstruit la clé et vérifie qu'elle désigne bien CETTE séquence. Reçue du client,
+ * elle faisait présigner n'importe quel objet du bucket.
  */
 const sequencePatchBody = sequenceBody.partial().extend({
   description: z.string().max(2000).nullable().optional(),
-  thumbnailKey: z.string().max(512).nullable().optional(),
   pipelineStatusId: z.number().int().nullable().optional(),
 });
 const createSequenceBody = sequenceBody.extend({ projectId: z.number().int() });

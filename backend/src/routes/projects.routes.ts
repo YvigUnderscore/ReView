@@ -63,7 +63,10 @@ router.patch(
       name: z.string().min(1).max(160).optional(),
       description: z.string().max(2000).nullable().optional(),
       status: z.nativeEnum(ProjectStatus).optional(),
-      thumbnailKey: z.string().max(512).nullable().optional(),
+      // Pas de `thumbnailKey` ici : rien n'a jamais su produire une clé de vignette de
+      // projet (le routeur dédié ne couvre que séquence, plan et asset), et une clé reçue
+      // du client faisait présigner n'importe quel objet du bucket. Le projet retombe sur
+      // la miniature de son premier média publié, comme il l'a toujours fait.
       startFrame: z.number().int().optional(),
       // Quota de stockage en octets (38.D) — null = illimité.
       storageQuota: z.number().int().min(0).nullable().optional(),

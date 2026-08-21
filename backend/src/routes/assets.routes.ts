@@ -132,7 +132,9 @@ router.patch(
       // C3 : le libellé de type n'était écrit que par la synchronisation ShotGrid.
       typeLabel: z.string().max(120).nullable().optional(),
       description: z.string().max(2000).nullable().optional(),
-      thumbnailKey: z.string().max(512).nullable().optional(),
+      // Pas de `thumbnailKey` ici : la clé est écrite par `PUT /api/assets/:id/thumbnail`,
+      // qui la reconstruit et vérifie qu'elle désigne bien CET asset. Reçue du client, elle
+      // faisait présigner n'importe quel objet du bucket — pièce jointe d'autrui comprise.
       shotIds: z.array(z.number().int()).optional(),
       sequenceIds: z.array(z.number().int()).optional(),
     }),

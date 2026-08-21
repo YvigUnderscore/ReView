@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { storage } from '../StorageService';
+import { safeUploadContentType } from '../../lib/uploadContentType';
 import { belongsToProject } from './shotgridProjectGuard';
 import { attachmentName, attachmentUrl, asEntityRef, type SgRecord } from './shotgridMapper';
 import type { PullContext } from './ShotgridPullService';
@@ -51,6 +52,23 @@ export function guessType(filename: string): string {
   if (ext === 'gif') return 'image/gif';
   if (ext === 'pdf') return 'application/pdf';
   return 'application/octet-stream';
+}
+
+/**
+ * Type retenu pour la pièce jointe rapatriée — celui qui sera stocké **et** enregistré
+ * sur le commentaire.
+ *
+ * Le type annoncé par le transport prime, mais un `application/octet-stream` générique
+ * priverait l'image de sa vignette : le nom de fichier tranche alors. Le résultat passe
+ * ensuite par la liste blanche, car c'est le site distant qui choisit cet en-tête : un
+ * `text/html` ou un `image/svg+xml` seraient servis depuis l'origine de l'application.
+ * `putObject` normalise déjà ce qu'il écrit ; on enregistre ici la même valeur, pour que
+ * la fiche du commentaire ne promette pas une image que le stockage sert en binaire.
+ */
+export function storedContentType(announced: string | null | undefined, name: string): string {
+  const base = announced?.split(';')[0]?.trim();
+  const chosen = base && base !== 'application/octet-stream' ? base : guessType(name);
+  return safeUploadContentType(chosen);
 }
 
 /**
@@ -142,10 +160,7 @@ async function fetchOne(
     chunks.push(chunk as Buffer);
   }
 
-  // Le type annoncé par le transport prime, mais un `application/octet-stream` générique
-  // priverait l'image de sa vignette : le nom de fichier tranche alors.
-  const announced = type?.split(';')[0]?.trim();
-  const contentType = announced && announced !== 'application/octet-stream' ? announced : guessType(name);
+  const contentType = storedContentType(type, name);
 
   // Le chemin ne peut pas suivre la convention `comments/attachments/{userId}` : une note
   // importée n'a pas d'auteur local. Il est rangé sous la note d'origine, ce qui reste
