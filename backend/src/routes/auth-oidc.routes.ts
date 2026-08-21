@@ -14,6 +14,7 @@ import { createSession } from '../lib/sessions';
 import { logAudit } from '../services/AuditService';
 import { logger } from '../lib/logger';
 import { notFound } from '../lib/errors';
+import { safeFetch } from '../lib/safeFetch';
 
 /**
  * SSO OIDC (36.A) — authorization code flow (Google par défaut). State + nonce sont
@@ -26,12 +27,35 @@ const router = Router();
 const COOKIE = 'oidc_state';
 let discoveryCache: { key: string; config: oidc.Configuration; until: number } | null = null;
 
+const OIDC_TIMEOUT_MS = 10_000;
+/** Un document de découverte ou un JWKS se compte en kilo-octets : 1 Mio est déjà large. */
+const OIDC_MAX_BYTES = 1024 * 1024;
+
+/**
+ * L'issuer est une URL d'administration : le serveur va la chercher lui-même, depuis le
+ * réseau applicatif. Toutes les requêtes d'openid-client (découverte, jetons, JWKS) passent
+ * donc par `safeFetch` — garde anti-SSRF sur l'adresse résolue, délai d'attente, réponse
+ * bornée. Les redirections sont suivies (deux au plus) parce que certains fournisseurs
+ * normalisent la barre finale de l'issuer, mais chaque saut est revérifié.
+ */
+const oidcFetch: oidc.CustomFetch = (url, options) =>
+  safeFetch(url, options, {
+    timeoutMs: OIDC_TIMEOUT_MS,
+    maxRedirects: 2,
+    maxBytes: OIDC_MAX_BYTES,
+  });
+
 async function discovery(cfg: OidcConfig): Promise<oidc.Configuration> {
   const key = `${cfg.issuer}|${cfg.clientId}`;
   if (discoveryCache && discoveryCache.key === key && discoveryCache.until > Date.now()) {
     return discoveryCache.config;
   }
-  const config = await oidc.discovery(new URL(cfg.issuer), cfg.clientId, cfg.clientSecret);
+  const config = await oidc.discovery(new URL(cfg.issuer), cfg.clientId, cfg.clientSecret, undefined, {
+    [oidc.customFetch]: oidcFetch,
+  });
+  // La découverte ne propage pas toujours l'option : on la repose sur la configuration,
+  // qui sert ensuite à l'échange du code et à la lecture du JWKS.
+  config[oidc.customFetch] = oidcFetch;
   discoveryCache = { key, config, until: Date.now() + 10 * 60_000 };
   return config;
 }

@@ -4,12 +4,20 @@
 import webpush from 'web-push';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
+import { badRequest } from '../lib/errors';
+import { assertPublicHttpTarget } from '../lib/ssrfGuard';
 import { env } from '../config/env';
 
 /**
  * Web Push (42.B — №66) : abonnements par navigateur + envoi de notifications push.
  * Les clés VAPID viennent de l'env (prod) ou sont générées et persistées en base (dev).
  * `sendToUser` est fire-and-forget et purge les abonnements expirés (404/410).
+ *
+ * L'endpoint d'abonnement est une URL choisie par le client : `web-push` y émettra un POST
+ * depuis le réseau applicatif, où MinIO, Redis, Postgres et 169.254.169.254 répondent sans
+ * authentification réseau. Il passe donc par la garde anti-SSRF — à l'enregistrement (refus
+ * net, l'utilisateur en est informé) ET à l'envoi, parce que les lignes déjà en base sont
+ * antérieures à ce contrôle et qu'un nom public peut se mettre à résoudre en interne.
  */
 export interface PushJson {
   endpoint: string;
@@ -58,7 +66,22 @@ export async function getPublicKey(): Promise<string | null> {
   return publicKey;
 }
 
+/**
+ * L'endpoint désigne-t-il un service de push public ? Rend le motif de refus, ou `null`.
+ * Le contrôle porte sur l'ADRESSE RÉSOLUE : `https://push.exemple.com` peut pointer sur
+ * 127.0.0.1 tout comme `http://10.0.0.5/`.
+ */
+async function refuseReason(endpoint: string): Promise<string | null> {
+  const verdict = await assertPublicHttpTarget(endpoint);
+  return verdict.ok ? null : verdict.reason;
+}
+
 export async function saveSubscription(userId: number, sub: PushJson): Promise<void> {
+  const reason = await refuseReason(sub.endpoint);
+  if (reason) {
+    logger.warn({ userId, reason }, '[push] endpoint refusé');
+    throw badRequest(`Push endpoint refused: ${reason}`, 'PUSH_ENDPOINT_REFUSED');
+  }
   await prisma.pushSubscription.upsert({
     where: { endpoint: sub.endpoint },
     update: { userId, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
@@ -79,6 +102,13 @@ export function sendToUser(userId: number, payload: { title: string; body: strin
     const subs = await prisma.pushSubscription.findMany({ where: { userId } });
     await Promise.all(
       subs.map(async (s) => {
+        // Second contrôle, à l'instant de l'envoi : la ligne peut dater d'avant la garde,
+        // ou le nom avoir changé de résolution depuis l'abonnement.
+        const reason = await refuseReason(s.endpoint);
+        if (reason) {
+          logger.warn({ subscriptionId: s.id, reason }, '[push] envoi refusé (cible non publique)');
+          return;
+        }
         try {
           await webpush.sendNotification(
             { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },

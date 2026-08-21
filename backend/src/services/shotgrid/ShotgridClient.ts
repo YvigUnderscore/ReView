@@ -3,6 +3,8 @@
 
 import { Readable } from 'node:stream';
 import { logger } from '../../lib/logger';
+import { safeFetch } from '../../lib/safeFetch';
+import { env } from '../../config/env';
 import type { SgRecord } from './shotgridMapper';
 
 /**
@@ -79,6 +81,26 @@ export function clearTokenCache(baseUrl?: string): void {
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_PAGE_SIZE = 500;
+/** Une page de 500 enregistrements pèse quelques mégaoctets ; 32 Mio laisse de la marge. */
+const MAX_JSON_BYTES = 32 * 1024 * 1024;
+/** Débit plancher retenu pour borner un dépôt de fichier : ~100 Kio/s. */
+const UPLOAD_MIN_BYTES_PER_MS = 100;
+
+/**
+ * Hôtes dispensés de la garde anti-SSRF (`SHOTGRID_INSECURE_HOSTS`).
+ *
+ * Le simulateur de développement vit sur `host.docker.internal:8890`, donc sur une adresse
+ * privée en HTTP : sans cette liste, plus aucun test de bout en bout ne passerait. Elle est
+ * vide par défaut et signalée bruyamment au démarrage — un site réel n'en a jamais besoin.
+ * Lue à chaque appel plutôt que figée au chargement du module, pour que les tests puissent
+ * la faire varier.
+ */
+function insecureHosts(): string[] {
+  return (env.SHOTGRID_INSECURE_HOSTS ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean);
+}
 
 export class ShotgridClient {
   constructor(
@@ -145,14 +167,23 @@ export class ShotgridClient {
 
   // ───────────────────────────── Transport ─────────────────────────────
 
+  /**
+   * Toute requête sortante du client passe par `safeFetch` : le site est configuré par un
+   * admin, mais l'adresse qu'il porte n'est pas pour autant digne de confiance (un nom
+   * public peut résoudre vers 169.254.169.254), et certaines cibles — l'adresse de dépôt,
+   * l'adresse de téléchargement — sont carrément dictées par le site distant.
+   *
+   * `path` est normalement relatif à la racine du site ; ShotGrid renvoie cependant parfois
+   * une adresse ABSOLUE (`links.complete_upload`). La concaténer produisait une URL
+   * inexploitable : on la reconnaît et on l'emploie telle quelle, sous garde.
+   */
   private async raw(path: string, init: RequestInit): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    try {
-      return await fetch(`${this.baseUrl}${path}`, { ...init, signal: controller.signal });
-    } finally {
-      clearTimeout(timer);
-    }
+    const url = /^https?:\/\//i.test(path) ? path : `${this.baseUrl}${path}`;
+    return safeFetch(url, init, {
+      timeoutMs: this.timeoutMs,
+      maxBytes: MAX_JSON_BYTES,
+      allowHosts: insecureHosts(),
+    });
   }
 
   /**
@@ -369,8 +400,20 @@ export class ShotgridClient {
     }
   }
 
+  /**
+   * L'adresse vient de la RÉPONSE du site (`downloadUrl`, ou la valeur brute du champ) :
+   * c'est une entrée non fiable, qu'un site compromis pointerait vers le service de
+   * métadonnées ou la console MinIO. D'où la garde, le délai d'attente, et des redirections
+   * comptées — les liens S3 signés en émettent une, chaque saut est revérifié.
+   * Pas de plafond de taille ici : un master de dailies pèse ce qu'il pèse, et le flux est
+   * consommé à la volée par l'appelant.
+   */
   async openStream(url: string): Promise<{ stream: Readable; size: number | null; type: string | null }> {
-    const res = await fetch(url);
+    const res = await safeFetch(
+      url,
+      {},
+      { timeoutMs: this.timeoutMs, maxRedirects: 3, allowHosts: insecureHosts() },
+    );
     if (!res.ok || !res.body)
       throw new ShotgridApiError('Téléchargement du média ShotGrid impossible', res.status);
     const len = res.headers.get('content-length');
@@ -406,11 +449,25 @@ export class ShotgridClient {
     const uploadUrl = init.links?.upload;
     if (!uploadUrl) throw new ShotgridApiError("ShotGrid n'a pas fourni d'URL de dépôt", 502, init);
 
-    const put = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType },
-      body: new Uint8Array(body),
-    });
+    // L'adresse de dépôt est choisie par le site : sous garde elle aussi, et sans suivre de
+    // redirection — rejouer un PUT ailleurs reviendrait à confier le fichier à cette cible.
+    //
+    // La réponse d'un PUT n'arrive qu'une fois le corps entièrement transmis : le délai
+    // d'attente ne peut donc pas être celui d'un appel d'API. Il est calé sur un débit
+    // plancher (100 Kio/s) plus une minute de marge — un master de dailies dispose ainsi du
+    // temps qu'il lui faut, sans qu'un dépôt bloqué puisse retenir le worker indéfiniment.
+    const put = await safeFetch(
+      uploadUrl,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType },
+        body: new Uint8Array(body),
+      },
+      {
+        timeoutMs: 60_000 + Math.ceil(body.length / UPLOAD_MIN_BYTES_PER_MS),
+        allowHosts: insecureHosts(),
+      },
+    );
     if (!put.ok) throw new ShotgridApiError('Dépôt du fichier vers ShotGrid refusé', put.status);
 
     // La confirmation rend le fichier visible dans l'interface : sans elle, l'objet

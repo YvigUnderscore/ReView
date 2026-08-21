@@ -136,16 +136,16 @@ export async function assertPublicHttpTarget(rawUrl: string): Promise<TargetVerd
   try {
     url = new URL(rawUrl);
   } catch {
-    return { ok: false, reason: 'URL invalide' };
+    return { ok: false, reason: 'invalid URL' };
   }
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    return { ok: false, reason: `schéma non autorisé (${url.protocol.replace(':', '')})` };
+    return { ok: false, reason: `scheme not allowed (${url.protocol.replace(':', '')})` };
   }
 
   const host = url.hostname.replace(/^\[|\]$/g, '');
   if (isIP(host)) {
     return isPrivateAddress(host)
-      ? { ok: false, reason: 'adresse interne interdite' }
+      ? { ok: false, reason: 'internal address is not allowed' }
       : { ok: true, reason: '' };
   }
 
@@ -153,11 +153,11 @@ export async function assertPublicHttpTarget(rawUrl: string): Promise<TargetVerd
   try {
     addresses = await lookup(host, { all: true });
   } catch {
-    return { ok: false, reason: 'nom introuvable' };
+    return { ok: false, reason: 'host cannot be resolved' };
   }
-  if (!addresses.length) return { ok: false, reason: 'nom introuvable' };
+  if (!addresses.length) return { ok: false, reason: 'host cannot be resolved' };
   // Une seule réponse interne suffit à refuser : le client pourrait tomber dessus.
   if (addresses.some((a) => isPrivateAddress(a.address)))
-    return { ok: false, reason: 'le nom résout vers une adresse interne' };
+    return { ok: false, reason: 'host resolves to an internal address' };
   return { ok: true, reason: '' };
 }

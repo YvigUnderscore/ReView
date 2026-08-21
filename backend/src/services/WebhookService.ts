@@ -5,7 +5,7 @@ import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { decryptSecret } from '../lib/crypto';
 import { signWebhookPayload, type WebhookEvent } from '../lib/webhooks';
-import { assertPublicHttpTarget } from '../lib/ssrfGuard';
+import { safeFetch } from '../lib/safeFetch';
 import { enqueueWebhookDelivery } from './JobService';
 
 /**
@@ -50,30 +50,25 @@ export async function deliver(
 
   // Anti-SSRF : le worker tourne DANS le réseau interne (MinIO, Redis, Postgres y sont
   // joignables sans authentification réseau). Une URL de webhook est saisie par un admin de
-  // l'app — ce qui ne lui donne pas pour autant la main sur ce réseau. On refuse donc les
-  // cibles privées, en résolvant le nom AVANT la requête (un nom public peut pointer vers
-  // 127.0.0.1 ou 169.254.169.254), et on ne suit aucune redirection (elle rejouerait la
-  // requête vers une cible non vérifiée).
-  const guard = await assertPublicHttpTarget(hook.url);
-  if (!guard.ok) {
-    await record(null, guard.reason);
-    throw new Error(`Webhook ${webhookId} → target refused : ${guard.reason}`);
-  }
-
+  // l'app — ce qui ne lui donne pas pour autant la main sur ce réseau. `safeFetch` résout le
+  // nom AVANT la requête (un nom public peut pointer vers 127.0.0.1 ou 169.254.169.254) et
+  // ne suit aucune redirection (elle rejouerait le POST signé vers une cible non vérifiée).
   try {
-    const res = await fetch(hook.url, {
-      method: 'POST',
-      redirect: 'error',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'ReView-Webhook/1.0',
-        'X-ReView-Event': event,
-        'X-ReView-Timestamp': timestamp,
-        'X-ReView-Signature': signWebhookPayload(secret, timestamp, body),
+    const res = await safeFetch(
+      hook.url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'ReView-Webhook/1.0',
+          'X-ReView-Event': event,
+          'X-ReView-Timestamp': timestamp,
+          'X-ReView-Signature': signWebhookPayload(secret, timestamp, body),
+        },
+        body,
       },
-      body,
-      signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
-    });
+      { timeoutMs: DELIVERY_TIMEOUT_MS },
+    );
     await record(res.status, res.ok ? null : `HTTP ${res.status}`);
     if (!res.ok) throw new Error(`Webhook ${webhookId} → HTTP ${res.status}`);
   } catch (err) {

@@ -57,7 +57,7 @@ describe('assertPublicHttpTarget', () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '127.0.0.1', family: 4 }] as never);
     const v = await assertPublicHttpTarget('https://interne.exemple.com/hook');
     expect(v.ok).toBe(false);
-    expect(v.reason).toMatch(/interne/);
+    expect(v.reason).toMatch(/internal/);
   });
 
   it('refuse dès qu’UNE des adresses renvoyées est interne', async () => {
