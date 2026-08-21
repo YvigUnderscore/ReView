@@ -31,13 +31,18 @@ secure connection (TLS), user, password and the sender address shown as `From`
 
 | Feature | Without SMTP |
 |---|---|
-| Inviting a user (administration, or **Load the ShotGrid crew**) | Nothing is sent. The ShotGrid crew panel disables the action and explains why: an account created without its activation email is reachable by nobody and holds the address hostage |
+| Creating a user by invitation | Refused up front (`SMTP_NOT_CONFIGURED`) — the account is not created at all. An account created without its activation email is reachable by nobody and holds the address hostage |
+| Re-sending an invitation | Same refusal. If the relay accepts the request but delivery fails, the invitation row survives so it can be re-sent once the relay is fixed |
+| **Load the ShotGrid crew** | The panel says so and disables the action before you click |
 | Daily digest | Not sent |
 | Weekly supervisor report | Not sent |
 | The SMTP test itself | Refused, with `SMTP_SEND_FAILED` |
 
+Invitations also need `APP_URL` to be set — without it the link in the message would point
+nowhere, so the request is refused with `APP_URL_MISSING` before anything is written.
+
 Nothing else depends on the relay: in-app notifications, Socket.io events and browser push
-are unaffected, and no user-facing action fails because mail could not go out.
+go through their own channels.
 
 ## Announcements
 

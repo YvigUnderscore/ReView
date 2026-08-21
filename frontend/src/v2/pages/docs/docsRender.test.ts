@@ -17,6 +17,14 @@ describe('renderDocHtml', () => {
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
+  it('ne diffère pas le chargement des images', () => {
+    // `loading="lazy"` ne se déclenchait jamais dans le conteneur défilant de la page :
+    // les captures restaient des carrés de deux pixels, même après avoir défilé jusqu'à
+    // elles.
+    const html = renderDocHtml('![x](../assets/a.png)', 'user-guide/page.md');
+    expect(html).not.toContain('loading');
+  });
+
   it('réécrit les images relatives vers /docs/', () => {
     const html = renderDocHtml('![cap](../assets/user-guide/review-01.png)', 'user-guide/a.md');
     expect(html).toContain('src="/docs/assets/user-guide/review-01.png"');

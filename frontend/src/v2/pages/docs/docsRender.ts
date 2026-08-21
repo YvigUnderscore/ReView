@@ -58,7 +58,14 @@ export function renderDocHtml(markdown: string, currentPath: string): string {
     const src = img.getAttribute('src') ?? '';
     if (isInternalDocHref(src)) img.setAttribute('src', `/docs/${resolveDocHref(currentPath, src)}`);
     else if (isUnsafeSrc(src)) img.removeAttribute('src');
-    img.setAttribute('loading', 'lazy');
+    /**
+     * Pas de `loading="lazy"`.
+     *
+     * Le contenu est monté dans le conteneur défilant de la page, et le navigateur n'y
+     * déclenchait jamais le chargement : les captures restaient des carrés de deux pixels,
+     * même après avoir fait défiler jusqu'à elles. Une page de documentation porte deux ou
+     * trois images ; les charger tout de suite ne coûte rien.
+     */
   }
   return tpl.innerHTML;
 }
