@@ -3,7 +3,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { Registry, collectDefaultMetrics, Histogram, Gauge } from 'prom-client';
-import { mediaQueue, storageCleanupQueue, webhookQueue } from '../services/JobService';
+import { ALL_QUEUES } from '../services/JobService';
 import { logger } from './logger';
 
 /**
@@ -85,14 +85,10 @@ export function httpMetrics(req: Request, res: Response, next: NextFunction): vo
 
 export const __testing = { seenRoutes, MAX_ROUTE_LABELS, OTHER_ROUTE };
 
-const QUEUES = [
-  ['media', mediaQueue],
-  ['storage-cleanup', storageCleanupQueue],
-  ['webhooks', webhookQueue],
-] as const;
-
 async function refreshQueueGauges(): Promise<void> {
-  for (const [name, q] of QUEUES) {
+  // Les cinq files déclarées, plus l'entretien : `timeline-export` et `shotgrid` étaient
+  // absentes du registre, donc invisibles du tableau Grafana comme de toute alerte.
+  for (const [name, q] of ALL_QUEUES) {
     const counts = await q.getJobCounts('waiting', 'active', 'failed', 'delayed');
     for (const [state, value] of Object.entries(counts)) {
       queueGauge.set({ queue: name, state }, value);

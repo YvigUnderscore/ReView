@@ -48,6 +48,7 @@ export function decodeWorkerEvent(raw: string): WorkerEvent | null {
 }
 
 let pub: Redis | null = null;
+let sub: Redis | null = null;
 
 /** Publication côté worker — best effort : un échec redis ne condamne pas le transcodage. */
 export async function publishWorkerEvent(e: WorkerEvent): Promise<void> {
@@ -61,7 +62,7 @@ export async function publishWorkerEvent(e: WorkerEvent): Promise<void> {
 
 /** Souscription côté serveur (connexion dédiée : un client redis en mode subscribe est exclusif). */
 export function subscribeWorkerEvents(onEvent: (e: WorkerEvent) => void): void {
-  const sub = new Redis(redisConnectionOptions);
+  sub = new Redis(redisConnectionOptions);
   void sub.subscribe(WORKER_EVENTS_CHANNEL).catch((err: unknown) => {
     logger.warn({ err }, '[workerEvents] souscription échouée');
   });
@@ -69,4 +70,23 @@ export function subscribeWorkerEvents(onEvent: (e: WorkerEvent) => void): void {
     const e = decodeWorkerEvent(raw);
     if (e) onEvent(e);
   });
+}
+
+/**
+ * Ferme les connexions redis du canal (arrêt propre). Sans cela, le publieur du worker et
+ * l'abonné du serveur maintiennent le process en vie après la fermeture du serveur HTTP,
+ * jusqu'au SIGKILL de docker.
+ */
+export async function closeWorkerEvents(): Promise<void> {
+  const clients = [pub, sub].filter((c): c is Redis => c !== null);
+  pub = null;
+  sub = null;
+  await Promise.all(
+    clients.map((c) =>
+      c.quit().catch((err: unknown) => {
+        logger.warn({ err }, '[workerEvents] fermeture redis imparfaite');
+        c.disconnect();
+      }),
+    ),
+  );
 }

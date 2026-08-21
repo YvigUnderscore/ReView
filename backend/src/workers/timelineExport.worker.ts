@@ -21,6 +21,8 @@ import {
   type ExportProfile,
 } from '../lib/timelineExport';
 import { exportPlan, type ExportSegment } from '../services/TimelineService';
+import { FfmpegTimeoutError, ffmpegTimeoutMs } from '../lib/ffmpegTimeout';
+import { registerWorkerShutdown } from './shutdown';
 
 /**
  * Export d'un montage automatique en un fichier unique (Phase 45).
@@ -35,14 +37,47 @@ import { exportPlan, type ExportSegment } from '../services/TimelineService';
 /** Texte porté par un carton dans le master (l'export n'a pas de contexte de langue). */
 const PLACEHOLDER_LABEL = 'no media';
 
-/** Encode un segment vers le profil commun, à partir d'un fichier local. */
-function encodeSource(input: string, output: string, profile: ExportProfile): Promise<void> {
+/**
+ * Encode un segment vers le profil commun, à partir d'un fichier local.
+ *
+ * Le délai est proportionné à la durée du plan : sans lui, un plan au conteneur exotique
+ * qui fait boucler ffmpeg immobilise **définitivement** la file d'export — qui est à
+ * concurrence 1, donc plus aucun montage ne s'exporte jusqu'au redémarrage du worker.
+ */
+function encodeSource(
+  input: string,
+  output: string,
+  profile: ExportProfile,
+  label: string,
+  timeoutMs: number,
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    ffmpeg(input)
-      .outputOptions(normalizeArgs(profile))
-      .output(output)
-      .on('end', () => resolve())
-      .on('error', reject)
+    let settled = false;
+    const cmd = ffmpeg(input).outputOptions(normalizeArgs(profile)).output(output);
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try {
+        cmd.kill('SIGKILL');
+      } catch {
+        // Processus déjà mort : rien à faire.
+      }
+      reject(new FfmpegTimeoutError(label, timeoutMs));
+    }, timeoutMs);
+    if (typeof timer.unref === 'function') timer.unref();
+    cmd
+      .on('end', () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      })
+      .on('error', (err: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      })
       .run();
   });
 }
@@ -55,17 +90,31 @@ function encodeSource(input: string, output: string, profile: ExportProfile): Pr
  * source, ils sont entièrement synthétisés par ce device. On garde donc la bibliothèque
  * pour les fichiers réels, et on parle au binaire pour ce cas-là.
  */
-function runFfmpeg(args: string[]): Promise<void> {
+function runFfmpeg(args: string[], label: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.env.FFMPEG_PATH || 'ffmpeg', args, { windowsHide: true });
     let stderr = '';
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn();
+    };
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      finish(() => reject(new FfmpegTimeoutError(label, timeoutMs)));
+    }, timeoutMs);
+    if (typeof timer.unref === 'function') timer.unref();
     // La sortie d'erreur de ffmpeg est verbeuse : seule sa fin sert au diagnostic.
     child.stderr.on('data', (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-4000);
     });
-    child.on('error', reject);
+    child.on('error', (err) => finish(() => reject(err)));
     child.on('close', (code) =>
-      code === 0 ? resolve() : reject(new Error(`ffmpeg (code ${code}) : ${stderr.slice(-600)}`)),
+      finish(() =>
+        code === 0 ? resolve() : reject(new Error(`ffmpeg (code ${String(code)}) : ${stderr.slice(-600)}`)),
+      ),
     );
   });
 }
@@ -100,46 +149,73 @@ function encodePlaceholderWith(
   withText: boolean,
 ): Promise<void> {
   const { video, audio } = placeholderInputs(profile, duration);
-  return runFfmpeg([
-    '-f',
-    'lavfi',
-    '-i',
-    video,
-    '-f',
-    'lavfi',
-    '-i',
-    audio,
-    ...(withText ? ['-vf', placeholderFilter(profile, shotCode, PLACEHOLDER_LABEL)] : []),
-    '-c:v',
-    'libx264',
-    '-preset',
-    'veryfast',
-    '-crf',
-    '20',
-    '-pix_fmt',
-    'yuv420p',
-    '-c:a',
-    'aac',
-    '-ar',
-    '48000',
-    '-ac',
-    '2',
-    '-shortest',
-    '-y',
-    output,
-  ]);
+  return runFfmpeg(
+    [
+      '-f',
+      'lavfi',
+      '-i',
+      video,
+      '-f',
+      'lavfi',
+      '-i',
+      audio,
+      ...(withText ? ['-vf', placeholderFilter(profile, shotCode, PLACEHOLDER_LABEL)] : []),
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '20',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-ar',
+      '48000',
+      '-ac',
+      '2',
+      '-shortest',
+      '-y',
+      output,
+    ],
+    `placeholder ${shotCode}`,
+    ffmpegTimeoutMs(duration),
+  );
 }
 
 /** Colle les segments normalisés bout à bout, sans ré-encoder (`concat` demuxer). */
-function concatSegments(listFile: string, output: string): Promise<void> {
+function concatSegments(listFile: string, output: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    ffmpeg()
+    let settled = false;
+    const cmd = ffmpeg()
       .input(listFile)
       .inputOptions(['-f', 'concat', '-safe', '0'])
       .outputOptions(['-c', 'copy', '-movflags', '+faststart'])
-      .output(output)
-      .on('end', () => resolve())
-      .on('error', reject)
+      .output(output);
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try {
+        cmd.kill('SIGKILL');
+      } catch {
+        // Processus déjà mort : rien à faire.
+      }
+      reject(new FfmpegTimeoutError('concat', timeoutMs));
+    }, timeoutMs);
+    if (typeof timer.unref === 'function') timer.unref();
+    cmd
+      .on('end', () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      })
+      .on('error', (err: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      })
       .run();
   });
 }
@@ -158,12 +234,18 @@ async function buildSegment(
   }
   const source = join(dir, `src${String(index).padStart(4, '0')}`);
   await storage.downloadToFile(segment.storageKey, source);
-  await encodeSource(source, output, profile);
+  await encodeSource(
+    source,
+    output,
+    profile,
+    `segment ${segment.shotCode}`,
+    ffmpegTimeoutMs(segment.duration),
+  );
   await rm(source, { force: true });
   return output;
 }
 
-async function handle(timelineId: number): Promise<void> {
+async function handle(timelineId: number, onProgress: (percent: number) => void): Promise<void> {
   const plan = await exportPlan(timelineId);
   if (plan.segments.length === 0) throw new Error(`Timeline ${timelineId} has no shot to export`);
 
@@ -171,13 +253,19 @@ async function handle(timelineId: number): Promise<void> {
   try {
     const paths: string[] = [];
     for (const [index, segment] of plan.segments.entries()) {
+      // Progression par plan : la préparation des segments occupe l'essentiel du travail,
+      // la concaténation finale est une copie sans ré-encodage.
+      onProgress(Math.round((index / plan.segments.length) * 90));
       paths.push(await buildSegment(segment, index, dir, plan.profile));
     }
     const listFile = join(dir, 'concat.txt');
     await writeFile(listFile, concatList(paths), 'utf8');
     const master = join(dir, 'master.mp4');
-    await concatSegments(listFile, master);
+    onProgress(90);
+    const total = plan.segments.reduce((sum, s) => sum + s.duration, 0);
+    await concatSegments(listFile, master, ffmpegTimeoutMs(total));
     await storage.uploadFile(masterKey(timelineId), master, 'video/mp4');
+    onProgress(100);
     logger.info(`[timelineExport.worker] ✓ montage=${timelineId} (${plan.segments.length} plans)`);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -186,7 +274,11 @@ async function handle(timelineId: number): Promise<void> {
 
 export const timelineExportWorker = new Worker<TimelineExportJobData>(
   QUEUE_NAMES.TIMELINE_EXPORT,
-  (job) => handle(job.data.timelineId),
+  (job) =>
+    handle(job.data.timelineId, (percent) => {
+      // Best effort : une progression perdue ne condamne pas l'export.
+      void job.updateProgress(percent).catch(() => undefined);
+    }),
   // Un seul export à la fois : chaque job encode un film entier, les paralléliser
   // saturerait la machine qui sert aussi les transcodages courants.
   { connection: redisConnectionOptions, autorun: false, concurrency: 1 },
@@ -200,5 +292,6 @@ timelineExportWorker.on('failed', (job, err) =>
 export function startTimelineExportWorker(): void {
   // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
   void timelineExportWorker.run();
+  registerWorkerShutdown('timelineExport.worker', timelineExportWorker);
   logger.info('[timelineExport.worker] démarré.');
 }

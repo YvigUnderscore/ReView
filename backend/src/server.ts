@@ -6,84 +6,22 @@ import { env } from './config/env';
 import { createApp } from './app';
 import { initSocket } from './services/SocketService';
 import { storage } from './services/StorageService';
-import { purgeExpiredTrash } from './lib/trash';
-import { purgeObsoleteDerived } from './lib/derivedPurge';
-import { purgeIdempotencyRecords } from './lib/idempotency';
-import { purge as purgeApiEvents } from './services/ApiEventService';
-import { getNumericSetting, SETTING_KEYS } from './lib/settings';
-import { sendDailyDigests } from './services/DigestService';
-import { sendWeeklyReports } from './services/WeeklyReportService';
+import { prisma } from './lib/prisma';
+import { closeQueues } from './services/JobService';
+import { closeWorkerEvents } from './lib/workerEvents';
+import { scheduleMaintenanceJobs } from './lib/maintenanceSchedule';
+import { reconcileStuckMedia, RECONCILE_BOOT_DELAY_MS } from './lib/mediaReconcile';
+import { installShutdownHandlers, registerShutdownTask, SHUTDOWN_PHASE } from './lib/gracefulShutdown';
 import { logger } from './lib/logger';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-const TRASH_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000; // quotidien
-
-/** Balayage périodique de la corbeille : purge les éléments expirés (rétention configurable). */
-function scheduleTrashSweep(): void {
-  const sweep = async () => {
-    try {
-      const days = await getNumericSetting(SETTING_KEYS.TRASH_RETENTION_DAYS);
-      const purged = await purgeExpiredTrash(days);
-      if (purged > 0)
-        logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
-      // Purge des dérivés obsolètes (37.H) — no-op si désactivée dans l'admin.
-      await purgeObsoleteDerived();
-      // API v1 : le journal d'événements et les clés d'idempotence sont des tampons, pas
-      // des archives. Sans purge, ils grossissent indéfiniment au rythme du studio.
-      const events = await purgeApiEvents();
-      const keys = await purgeIdempotencyRecords();
-      if (events > 0 || keys > 0)
-        logger.info(`[API v1] purge : ${events} événement(s), ${keys} clé(s) d'idempotence.`);
-    } catch (err) {
-      logger.error({ err }, '[Trash] échec du balayage de purge');
-    }
-  };
-  // Premier passage différé de 60 s pour ne pas alourdir le démarrage.
-  setTimeout(() => void sweep(), 60_000);
-  setInterval(() => void sweep(), TRASH_SWEEP_INTERVAL_MS).unref();
-}
-
-/** Digest email quotidien : premier envoi à DIGEST_HOUR (heure locale), puis toutes les 24 h. */
-function scheduleDailyDigest(): void {
-  const run = async () => {
-    try {
-      await sendDailyDigests();
-    } catch (err) {
-      logger.error({ err }, '[Digest] échec de l’envoi quotidien');
-    }
-  };
-  const next = new Date();
-  next.setHours(env.DIGEST_HOUR, 0, 0, 0);
-  if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
-  setTimeout(() => {
-    void run();
-    setInterval(() => void run(), 24 * 60 * 60 * 1000).unref();
-  }, next.getTime() - Date.now()).unref();
-  logger.info(`[Digest] prochain envoi planifié : ${next.toISOString()}`);
-}
-
-/** Rapport hebdomadaire (43.B) : lundi à DIGEST_HOUR (heure locale), puis toutes les semaines. */
-function scheduleWeeklyReport(): void {
-  const run = async () => {
-    try {
-      await sendWeeklyReports();
-    } catch (err) {
-      logger.error({ err }, '[WeeklyReport] échec de l’envoi hebdomadaire');
-    }
-  };
-  const next = new Date();
-  next.setHours(env.DIGEST_HOUR, 0, 0, 0);
-  // Avance jusqu'au prochain lundi (getDay : 0 = dimanche, 1 = lundi).
-  do {
-    next.setDate(next.getDate() + 1);
-  } while (next.getDay() !== 1);
-  setTimeout(() => {
-    void run();
-    setInterval(() => void run(), WEEK_MS).unref();
-  }, next.getTime() - Date.now()).unref();
-  logger.info(`[WeeklyReport] prochain envoi planifié : ${next.toISOString()}`);
-}
+/**
+ * Process API.
+ *
+ * Les trois rendez-vous périodiques (digest, rapport hebdomadaire, purge) ne sont plus
+ * des `setInterval` : ils sont posés en file répétable (`lib/maintenanceSchedule`) et
+ * exécutés par le worker. L'API reste l'endroit qui les **planifie**, parce que c'est
+ * elle qui porte `DIGEST_HOUR`.
+ */
 
 async function main(): Promise<void> {
   // S'assure que le bucket MinIO existe avant d'accepter du trafic.
@@ -91,11 +29,22 @@ async function main(): Promise<void> {
 
   const app = createApp();
   const server = http.createServer(app);
-  initSocket(server);
+  const io = initSocket(server);
 
-  scheduleTrashSweep();
-  scheduleDailyDigest();
-  scheduleWeeklyReport();
+  // Entretien périodique : mêmes heures qu'avant, mais en file (survit au redémarrage,
+  // ne part qu'une fois, visible dans le tableau de bord des files).
+  await scheduleMaintenanceJobs(env.DIGEST_HOUR).catch((err: unknown) => {
+    logger.error({ err }, '[maintenance] pose des travaux périodiques impossible');
+  });
+
+  // Réconciliation au démarrage : les médias figés en PROCESSING par un worker tué
+  // n'ont plus de job vivant — sans ce balayage, ils le restent pour toujours. Différée
+  // pour laisser le worker se connecter à la file et éviter tout faux positif.
+  setTimeout(() => {
+    void reconcileStuckMedia().catch((err: unknown) => {
+      logger.error({ err }, '[reconcile] balayage des médias figés impossible');
+    });
+  }, RECONCILE_BOOT_DELAY_MS).unref();
 
   // La dérogation ShotGrid ouvre des adresses normalement refusées (HTTP, réseau
   // privé) : si elle est posée, on veut la voir à chaque démarrage, pas la découvrir
@@ -105,6 +54,37 @@ async function main(): Promise<void> {
       { hosts: env.SHOTGRID_INSECURE_HOSTS },
       '⚠️  SHOTGRID_INSECURE_HOSTS actif : ces hôtes ShotGrid échappent au contrôle HTTPS/réseau privé. À réserver au simulateur de développement.',
     );
+
+  // Arrêt propre : socket.io ferme le serveur HTTP qu'il enveloppe (clients prévenus),
+  // puis les files et la base coupent leurs connexions. Sans cela, SIGTERM laissait les
+  // connexions ouvertes jusqu'au SIGKILL de docker dix secondes plus tard.
+  registerShutdownTask({
+    name: 'http+socket.io',
+    phase: SHUTDOWN_PHASE.STOP_INTAKE,
+    run: async () => {
+      // Les connexions keep-alive inactives retiendraient la fermeture ; celles qui
+      // servent une requête sont laissées finir jusqu'au délai de grâce.
+      server.closeIdleConnections();
+      await io.close();
+    },
+    force: () => server.closeAllConnections(),
+  });
+  registerShutdownTask({
+    name: 'queues',
+    phase: SHUTDOWN_PHASE.STOP_INTAKE,
+    run: () => closeQueues(),
+  });
+  registerShutdownTask({
+    name: 'worker-events',
+    phase: SHUTDOWN_PHASE.DISCONNECT,
+    run: () => closeWorkerEvents(),
+  });
+  registerShutdownTask({
+    name: 'prisma',
+    phase: SHUTDOWN_PHASE.DISCONNECT,
+    run: () => prisma.$disconnect(),
+  });
+  installShutdownHandlers();
 
   server.listen(env.PORT, () => {
     logger.info(`✅ ReView 2.0 backend démarré sur le port ${env.PORT} (${env.NODE_ENV})`);

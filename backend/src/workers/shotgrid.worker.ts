@@ -13,6 +13,7 @@ import {
 import { runReconcile } from '../services/shotgrid/ShotgridSyncService';
 import { runPush, type PushJob } from '../services/shotgrid/ShotgridPushService';
 import { catchUpOnBoot, scheduleShotgridJobs } from '../services/shotgrid/ShotgridSchedule';
+import { registerWorkerShutdown } from './shutdown';
 
 /**
  * Travaux ShotGrid : application des événements reçus, relevé périodique, écritures
@@ -59,6 +60,7 @@ export { catchUpOnBoot, scheduleShotgridJobs };
 
 export function startShotgridWorker(): void {
   void shotgridWorker.run();
+  registerWorkerShutdown('shotgrid.worker', shotgridWorker);
   void scheduleShotgridJobs().catch((err) =>
     logger.error({ err }, '[shotgrid.worker] pose des travaux périodiques impossible'),
   );

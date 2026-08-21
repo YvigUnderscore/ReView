@@ -14,6 +14,7 @@ export const QUEUE_NAMES = {
   WEBHOOKS: 'webhooks',
   TIMELINE_EXPORT: 'timeline-export',
   SHOTGRID: 'shotgrid',
+  MAINTENANCE: 'maintenance',
 } as const;
 
 /**
@@ -130,3 +131,53 @@ export const timelineExportJobId = (timelineId: number) => `timeline-${timelineI
 
 export const enqueueTimelineExport = (data: TimelineExportJobData) =>
   timelineExportQueue.add('export', data, { jobId: timelineExportJobId(data.timelineId) });
+
+/**
+ * Entretien périodique (digest quotidien, rapport hebdomadaire, purges).
+ *
+ * Ces trois rendez-vous vivaient dans des `setInterval` du process API : ils mouraient
+ * avec lui, se dupliquaient sur deux répliques, et rien ne disait s'ils avaient eu lieu.
+ * Passés en file, ils sont posés par l'API (qui seule connaît `DIGEST_HOUR`) et exécutés
+ * par le worker, avec l'historique, les reprises et le tableau de bord des autres files.
+ */
+export type MaintenanceJobData = { kind: 'daily-digest' } | { kind: 'weekly-report' } | { kind: 'purge' };
+
+export const maintenanceQueue = new Queue<MaintenanceJobData, void, string>(QUEUE_NAMES.MAINTENANCE, {
+  connection: redisConnectionOptions,
+  defaultJobOptions: {
+    // Un rendez-vous manqué est rattrapé par le suivant : mieux vaut deux tentatives
+    // qu'un empilement de reprises sur un SMTP durablement injoignable.
+    attempts: 2,
+    backoff: { type: 'exponential', delay: 60_000 },
+    removeOnComplete: 50,
+    removeOnFail: 100,
+  },
+});
+
+/**
+ * Toutes les files déclarées — source unique pour les métriques et le tableau de bord.
+ *
+ * L'étiquette n'est pas le nom de file : `media-processing` s'expose depuis toujours
+ * sous `queue="media"` dans Prometheus, dans le tableau Grafana provisionné et dans la
+ * documentation d'exploitation. La renommer casserait les requêtes existantes.
+ */
+export const QUEUE_LABELS = {
+  media: mediaQueue,
+  'storage-cleanup': storageCleanupQueue,
+  webhooks: webhookQueue,
+  'timeline-export': timelineExportQueue,
+  shotgrid: shotgridQueue,
+  maintenance: maintenanceQueue,
+} as const;
+
+export type QueueLabel = keyof typeof QUEUE_LABELS;
+
+export const ALL_QUEUES = Object.entries(QUEUE_LABELS) as ReadonlyArray<readonly [QueueLabel, Queue]>;
+
+/**
+ * Ferme toutes les files (arrêt propre du process API) : sans cela, les connexions Redis
+ * des `Queue` maintiennent le process en vie après `server.close()`.
+ */
+export async function closeQueues(): Promise<void> {
+  await Promise.all(Object.values(QUEUE_LABELS).map((q) => q.close()));
+}

@@ -6,6 +6,7 @@ import { redisConnectionOptions } from '../lib/redis';
 import { QUEUE_NAMES, type StorageCleanupJobData } from '../services/JobService';
 import { storage } from '../services/StorageService';
 import { logger } from '../lib/logger';
+import { registerWorkerShutdown } from './shutdown';
 
 /**
  * Worker de nettoyage storage (retry des orphelins MinIO).
@@ -41,5 +42,6 @@ storageCleanupWorker.on('failed', (_job, err) =>
 export function startStorageCleanupWorker(): void {
   // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
   void storageCleanupWorker.run();
+  registerWorkerShutdown('storageCleanup.worker', storageCleanupWorker);
   logger.info('[storageCleanup.worker] démarré.');
 }

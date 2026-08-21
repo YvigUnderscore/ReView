@@ -6,6 +6,7 @@ import { redisConnectionOptions } from '../lib/redis';
 import { QUEUE_NAMES, type WebhookJobData } from '../services/JobService';
 import { deliver } from '../services/WebhookService';
 import { logger } from '../lib/logger';
+import { registerWorkerShutdown } from './shutdown';
 
 /**
  * Worker de livraison des webhooks (36.D) — tourne dans le process worker (comme le
@@ -27,5 +28,6 @@ webhookWorker.on('failed', (job, err) =>
 
 export function startWebhookWorker(): void {
   void webhookWorker.run();
+  registerWorkerShutdown('webhook.worker', webhookWorker);
   logger.info('[webhook.worker] démarré.');
 }

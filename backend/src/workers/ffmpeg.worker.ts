@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Worker } from 'bullmq';
+import { Worker, type Job } from 'bullmq';
 import ffmpeg from 'fluent-ffmpeg';
 import { tmpdir } from 'node:os';
 import { join, extname } from 'node:path';
@@ -47,6 +47,23 @@ import { startStorageCleanupWorker } from './storageCleanup.worker';
 import { startWebhookWorker } from './webhook.worker';
 import { startShotgridWorker } from './shotgrid.worker';
 import { startTimelineExportWorker } from './timelineExport.worker';
+import { startMaintenanceWorker } from './maintenance.worker';
+import { registerWorkerShutdown } from './shutdown';
+import {
+  FFPROBE_TIMEOUT_MS,
+  FfmpegTimeoutError,
+  ffmpegTimeoutMs,
+  isFfmpegTimeout,
+} from '../lib/ffmpegTimeout';
+import { probeFile } from '../lib/ffprobe';
+import {
+  ffmpegFraction,
+  mediaJobProgress,
+  type MediaJobProgress,
+  type MediaJobStep,
+} from '../lib/mediaProgress';
+import { installShutdownHandlers, registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
+import { closeWorkerEvents } from '../lib/workerEvents';
 
 /**
  * Worker de traitement média (FFmpeg) — BullMQ.
@@ -62,27 +79,63 @@ import { startTimelineExportWorker } from './timelineExport.worker';
  * Lancer en process séparé : `node dist/workers/ffmpeg.worker.js` (service `worker` du compose).
  */
 
-/** Sonde un fichier média et renvoie durée / dimensions / fps. */
-function probe(
-  path: string,
-): Promise<{ duration?: number; width?: number; height?: number; fps?: number; hasAudio?: boolean }> {
+/** Sonde un fichier média et renvoie durée / dimensions / fps (délai borné, cf. lib/ffprobe). */
+const probe = (path: string) => probeFile(path, FFPROBE_TIMEOUT_MS);
+
+/**
+ * Encadrement d'une invocation ffmpeg : délai maximal, mise à mort du processus, et
+ * remontée de progression.
+ *
+ * Sans délai, un fichier pathologique (conteneur exotique, flux corrompu, filtre qui
+ * n'avance plus) immobilise **définitivement** l'un des deux emplacements de la file :
+ * deux fichiers de ce genre arrêtent tout le transcodage du studio, et rien ne le signale.
+ */
+interface FfmpegRun {
+  /** Étiquette de l'étape, reprise telle quelle dans le message d'échec. */
+  label: string;
+  timeoutMs: number;
+  /** Durée du média, pour interpoler quand ffmpeg ne rapporte pas de pourcentage. */
+  durationSec?: number;
+  /** Avancement 0→1 à l'intérieur de l'étape. */
+  onFraction?: (fraction: number) => void;
+}
+
+function runFfmpeg(cmd: ffmpeg.FfmpegCommand, run: FfmpegRun): Promise<void> {
   return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(path, (err, data) => {
-      if (err) return reject(err instanceof Error ? err : new Error(String(err)));
-      const stream = data.streams.find((s) => s.codec_type === 'video');
-      let fps: number | undefined;
-      if (stream?.r_frame_rate && stream.r_frame_rate.includes('/')) {
-        const [n, d] = stream.r_frame_rate.split('/').map(Number);
-        if (n && d) fps = Math.round((n / d) * 100) / 100;
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      // `kill` transmet le signal au processus enfant : c'est ce qui libère l'emplacement.
+      try {
+        cmd.kill('SIGKILL');
+      } catch {
+        // Le processus est peut-être déjà mort : l'échec du signal ne change rien.
       }
-      resolve({
-        duration: data.format.duration ? Math.round(data.format.duration * 100) / 100 : undefined,
-        width: stream?.width,
-        height: stream?.height,
-        fps,
-        hasAudio: data.streams.some((s) => s.codec_type === 'audio'),
+      reject(new FfmpegTimeoutError(run.label, run.timeoutMs));
+    }, run.timeoutMs);
+    if (typeof timer.unref === 'function') timer.unref();
+
+    if (run.onFraction)
+      cmd.on('progress', (p: { percent?: number; timemark?: string }) => {
+        const f = ffmpegFraction(p, run.durationSec);
+        if (f !== null) run.onFraction?.(f);
       });
-    });
+
+    cmd
+      .on('end', () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      })
+      .on('error', (err: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      })
+      .run();
   });
 }
 
@@ -91,36 +144,58 @@ function probe(
  * typiquement durée/2 — plus représentatif qu'une frame de début souvent noire) ; pour
  * l'image, pas de seek (redimensionnement direct).
  */
-function makeThumbnail(input: string, output: string, seekSec?: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const cmd = ffmpeg(input);
-    if (seekSec !== undefined && seekSec > 0) cmd.seekInput(seekSec);
-    cmd
-      .outputOptions(['-vframes 1', '-vf scale=640:-2'])
-      .output(output)
-      .on('end', () => resolve())
-      .on('error', reject)
-      .run();
-  });
+function makeThumbnail(input: string, output: string, run: FfmpegRun, seekSec?: number): Promise<void> {
+  const cmd = ffmpeg(input);
+  if (seekSec !== undefined && seekSec > 0) cmd.seekInput(seekSec);
+  cmd.outputOptions(['-vframes 1', '-vf scale=640:-2']).output(output);
+  return runFfmpeg(cmd, run);
 }
 
 /** Tuile les vignettes de timeline (1 frame / intervalle) dans un unique JPEG léger. */
-function makeTimelineSprite(input: string, output: string, plan: TimelineSpritePlan): Promise<void> {
-  return new Promise((resolve, reject) => {
-    ffmpeg(input)
-      .outputOptions([
-        '-vf',
-        `fps=1/${plan.intervalSec},scale=${plan.tileW}:${plan.tileH},tile=${plan.cols}x${plan.rows}`,
-        '-frames:v',
-        '1',
-        '-q:v',
-        '7',
-      ])
-      .output(output)
-      .on('end', () => resolve())
-      .on('error', reject)
-      .run();
-  });
+function makeTimelineSprite(
+  input: string,
+  output: string,
+  plan: TimelineSpritePlan,
+  run: FfmpegRun,
+): Promise<void> {
+  const cmd = ffmpeg(input)
+    .outputOptions([
+      '-vf',
+      `fps=1/${plan.intervalSec},scale=${plan.tileW}:${plan.tileH},tile=${plan.cols}x${plan.rows}`,
+      '-frames:v',
+      '1',
+      '-q:v',
+      '7',
+    ])
+    .output(output);
+  return runFfmpeg(cmd, run);
+}
+
+/**
+ * Publication de la progression sur le job BullMQ.
+ *
+ * Sans elle, l'administration ne voit qu'un job « actif » : un encodage de six heures et
+ * un ffmpeg bloqué depuis six heures se ressemblent trait pour trait. On publie donc
+ * l'étape en cours (sonde, proxy, rendition n/N, sprite, miniature…) et son avancement.
+ * L'écriture ne part que si le pourcentage a bougé : au plus une centaine par job.
+ */
+type ProgressReporter = (
+  step: MediaJobStep,
+  opts?: { index?: number; total?: number; fraction?: number },
+) => void;
+
+function progressReporter(job: Job<MediaJobData>): ProgressReporter {
+  let last = -1;
+  return (step, opts) => {
+    const progress: MediaJobProgress = mediaJobProgress(job.data.kind, step, opts);
+    if (progress.percent === last) return;
+    last = progress.percent;
+    // Best effort : une écriture de progression perdue ne doit jamais faire échouer
+    // le transcodage qu'elle décrit.
+    void job.updateProgress(progress).catch((err: unknown) => {
+      logger.debug({ err }, '[ffmpeg.worker] progression non publiée');
+    });
+  };
 }
 
 /** Burn-ins résolus pour un média : config effective + contexte + logo local éventuel. */
@@ -166,7 +241,9 @@ async function withEncoderFallback(run: (encoder: VideoEncoder) => Promise<void>
   try {
     await run(env.VIDEO_ENCODER);
   } catch (err) {
-    if (env.VIDEO_ENCODER === 'libx264') throw err;
+    // Un dépassement de délai n'est pas un encodeur absent : rejouer en libx264
+    // consommerait une seconde fois le délai pour échouer de la même façon.
+    if (env.VIDEO_ENCODER === 'libx264' || isFfmpegTimeout(err)) throw err;
     logger.warn({ err }, `[ffmpeg.worker] ${env.VIDEO_ENCODER} indisponible — repli libx264`);
     await run('libx264');
   }
@@ -175,30 +252,27 @@ async function withEncoderFallback(run: (encoder: VideoEncoder) => Promise<void>
 function transcodeProxy(
   input: string,
   output: string,
+  run: FfmpegRun,
   window?: { startSec: number; durationSec: number },
   burnin?: BurninJob | null,
   srcHeight?: number,
   encoder: VideoEncoder = 'libx264',
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const cmd = ffmpeg(input);
-    // Trim non-destructif (10.G-V10) : seek + durée, ré-encodage → coupe précise à la frame.
-    if (window) cmd.setStartTime(window.startSec).setDuration(window.durationSec);
-    const proxyHeight = Math.min(1080, srcHeight && srcHeight > 0 ? srcHeight : 1080);
-    const mapping = applyVideoChain(cmd, 'scale=-2:min(1080\\,ih)', burnin ?? null, proxyHeight);
-    cmd
-      .outputOptions([
-        ...qualityEncoderArgs(encoder, 23, 'veryfast'),
-        '-pix_fmt yuv420p',
-        '-c:a aac',
-        '-movflags +faststart',
-      ])
-      .outputOptions(mapping)
-      .output(output)
-      .on('end', () => resolve())
-      .on('error', reject)
-      .run();
-  });
+  const cmd = ffmpeg(input);
+  // Trim non-destructif (10.G-V10) : seek + durée, ré-encodage → coupe précise à la frame.
+  if (window) cmd.setStartTime(window.startSec).setDuration(window.durationSec);
+  const proxyHeight = Math.min(1080, srcHeight && srcHeight > 0 ? srcHeight : 1080);
+  const mapping = applyVideoChain(cmd, 'scale=-2:min(1080\\,ih)', burnin ?? null, proxyHeight);
+  cmd
+    .outputOptions([
+      ...qualityEncoderArgs(encoder, 23, 'veryfast'),
+      '-pix_fmt yuv420p',
+      '-c:a aac',
+      '-movflags +faststart',
+    ])
+    .outputOptions(mapping)
+    .output(output);
+  return runFfmpeg(cmd, run);
 }
 
 /**
@@ -214,65 +288,65 @@ function transcodeHlsRendition(
   height: number,
   videoBitrateK: number,
   cfg: Pick<TranscodeConfig, 'preset' | 'audioBitrateK'>,
+  run: FfmpegRun,
   fps?: number,
   burnin?: BurninJob | null,
   encoder: VideoEncoder = 'libx264',
 ): Promise<void> {
   const gop = hlsGopSize(fps);
-  return new Promise((resolve, reject) => {
-    const cmd = ffmpeg(input);
-    const mapping = applyVideoChain(cmd, `scale=-2:${height}`, burnin ?? null, height);
-    cmd
-      .outputOptions(mapping)
-      .outputOptions(bitrateEncoderArgs(encoder, cfg.preset))
-      .outputOptions([
-        '-b:v',
-        `${videoBitrateK}k`,
-        '-maxrate',
-        `${Math.round(videoBitrateK * 1.07)}k`,
-        '-bufsize',
-        `${Math.round(videoBitrateK * 1.5)}k`,
-        '-g',
-        String(gop),
-        '-keyint_min',
-        String(gop),
-        '-pix_fmt',
-        'yuv420p',
-        '-c:a',
-        'aac',
-        '-b:a',
-        `${cfg.audioBitrateK}k`,
-        '-hls_time',
-        String(HLS_SEGMENT_SEC),
-        '-hls_playlist_type',
-        'vod',
-        '-hls_segment_filename',
-        join(hlsDir, `${name}_%03d.ts`),
-      ])
-      .output(join(hlsDir, `${name}.m3u8`))
-      .on('end', () => resolve())
-      .on('error', reject)
-      .run();
-  });
+  const cmd = ffmpeg(input);
+  const mapping = applyVideoChain(cmd, `scale=-2:${height}`, burnin ?? null, height);
+  cmd
+    .outputOptions(mapping)
+    .outputOptions(bitrateEncoderArgs(encoder, cfg.preset))
+    .outputOptions([
+      '-b:v',
+      `${videoBitrateK}k`,
+      '-maxrate',
+      `${Math.round(videoBitrateK * 1.07)}k`,
+      '-bufsize',
+      `${Math.round(videoBitrateK * 1.5)}k`,
+      '-g',
+      String(gop),
+      '-keyint_min',
+      String(gop),
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-b:a',
+      `${cfg.audioBitrateK}k`,
+      '-hls_time',
+      String(HLS_SEGMENT_SEC),
+      '-hls_playlist_type',
+      'vod',
+      '-hls_segment_filename',
+      join(hlsDir, `${name}_%03d.ts`),
+    ])
+    .output(join(hlsDir, `${name}.m3u8`));
+  return runFfmpeg(cmd, run);
 }
 
 /**
  * Passe de scene detection (34.H, opt-in admin) : frames retenues par `select(scene)`,
  * listées par showinfo sur stderr. Best effort — un échec renvoie une liste vide.
  */
-function detectScenes(input: string): Promise<number[]> {
-  return new Promise((resolve) => {
-    let err = '';
-    ffmpeg(input)
-      .outputOptions(['-vf', `select='gt(scene,${SCENE_THRESHOLD})',showinfo`, '-an', '-f', 'null'])
-      .output('/dev/null')
-      .on('stderr', (line: string) => {
-        err += line + '\n';
-      })
-      .on('end', () => resolve(parseSceneTimes(err)))
-      .on('error', () => resolve([]))
-      .run();
-  });
+async function detectScenes(input: string, run: FfmpegRun): Promise<number[]> {
+  let err = '';
+  const cmd = ffmpeg(input)
+    .outputOptions(['-vf', `select='gt(scene,${SCENE_THRESHOLD})',showinfo`, '-an', '-f', 'null'])
+    .output('/dev/null')
+    .on('stderr', (line: string) => {
+      err += line + '\n';
+    });
+  try {
+    await runFfmpeg(cmd, run);
+  } catch {
+    // Best effort, délai compris : une détection qui échoue ou s'éternise ne coûte que
+    // des marqueurs automatiques, elle ne condamne pas le transcodage.
+    return [];
+  }
+  return parseSceneTimes(err);
 }
 
 /** Pose les marqueurs « Plan n » (remplace les précédents marqueurs auto du média). */
@@ -369,17 +443,19 @@ async function loadBurninSetup(
 }
 
 /** Rend l'image du slate (fond sombre + lignes centrées) aux dimensions du proxy. */
-function makeSlateImage(output: string, width: number, height: number, lines: string[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(`color=c=0x0b0f14:s=${width}x${height}`)
-      .inputFormat('lavfi')
-      .outputOptions(['-vf', buildSlateFilters(lines, height).join(','), '-frames:v', '1'])
-      .output(output)
-      .on('end', () => resolve())
-      .on('error', reject)
-      .run();
-  });
+function makeSlateImage(
+  output: string,
+  width: number,
+  height: number,
+  lines: string[],
+  run: FfmpegRun,
+): Promise<void> {
+  const cmd = ffmpeg()
+    .input(`color=c=0x0b0f14:s=${width}x${height}`)
+    .inputFormat('lavfi')
+    .outputOptions(['-vf', buildSlateFilters(lines, height).join(','), '-frames:v', '1'])
+    .output(output);
+  return runFfmpeg(cmd, run);
 }
 
 /**
@@ -392,39 +468,36 @@ function buildClientDerivative(
   proxyPath: string,
   output: string,
   opts: { width: number; height: number; fps: number; hasAudio: boolean },
+  run: FfmpegRun,
   encoder: VideoEncoder = 'libx264',
 ): Promise<void> {
   const { width, height, fps, hasAudio } = opts;
   const slateV = `[0:v]fps=${fps},scale=${width}:${height},setsar=1,format=yuv420p[sv]`;
-  return new Promise((resolve, reject) => {
-    const cmd = ffmpeg()
-      .input(slatePng)
-      .inputOptions(['-loop 1', `-t ${SLATE_SEC}`]);
-    if (hasAudio) {
-      cmd
-        .input('anullsrc=r=48000:cl=stereo')
-        .inputFormat('lavfi')
-        .inputOptions([`-t ${SLATE_SEC}`])
-        .input(proxyPath)
-        .complexFilter(`${slateV};[2:v]setsar=1[pv];[sv][1:a][pv][2:a]concat=n=2:v=1:a=1[v][a]`)
-        .outputOptions(['-map', '[v]', '-map', '[a]', '-c:a', 'aac']);
-    } else {
-      cmd
-        .input(proxyPath)
-        .complexFilter(`${slateV};[1:v]setsar=1[pv];[sv][pv]concat=n=2:v=1:a=0[v]`)
-        .outputOptions(['-map', '[v]']);
-    }
+  const cmd = ffmpeg()
+    .input(slatePng)
+    .inputOptions(['-loop 1', `-t ${SLATE_SEC}`]);
+  if (hasAudio) {
     cmd
-      .outputOptions([
-        ...qualityEncoderArgs(encoder, 23, 'veryfast'),
-        '-pix_fmt yuv420p',
-        '-movflags +faststart',
-      ])
-      .output(output)
-      .on('end', () => resolve())
-      .on('error', reject)
-      .run();
-  });
+      .input('anullsrc=r=48000:cl=stereo')
+      .inputFormat('lavfi')
+      .inputOptions([`-t ${SLATE_SEC}`])
+      .input(proxyPath)
+      .complexFilter(`${slateV};[2:v]setsar=1[pv];[sv][1:a][pv][2:a]concat=n=2:v=1:a=1[v][a]`)
+      .outputOptions(['-map', '[v]', '-map', '[a]', '-c:a', 'aac']);
+  } else {
+    cmd
+      .input(proxyPath)
+      .complexFilter(`${slateV};[1:v]setsar=1[pv];[sv][pv]concat=n=2:v=1:a=0[v]`)
+      .outputOptions(['-map', '[v]']);
+  }
+  cmd
+    .outputOptions([
+      ...qualityEncoderArgs(encoder, 23, 'veryfast'),
+      '-pix_fmt yuv420p',
+      '-movflags +faststart',
+    ])
+    .output(output);
+  return runFfmpeg(cmd, run);
 }
 
 type HlsRenditionMeta = { height: number; width: number; videoBitrateK: number };
@@ -443,6 +516,7 @@ async function buildHls(
   cfg: TranscodeConfig,
   srcWidth: number,
   srcHeight: number,
+  progress: { timeoutMs: number; durationSec?: number; report: ProgressReporter },
   srcFps?: number,
   onRendition?: (renditions: HlsRenditionMeta[], building: boolean) => Promise<void>,
   burnin?: BurninJob | null,
@@ -455,8 +529,25 @@ async function buildHls(
   const todo = selectRenditions(cfg, srcHeight);
   for (const [i, r] of todo.entries()) {
     const name = renditionName(r.height);
+    progress.report('renditions', { index: i, total: todo.length });
     await withEncoderFallback((encoder) =>
-      transcodeHlsRendition(input, hlsDir, name, r.height, r.videoBitrateK, cfg, srcFps, burnin, encoder),
+      transcodeHlsRendition(
+        input,
+        hlsDir,
+        name,
+        r.height,
+        r.videoBitrateK,
+        cfg,
+        {
+          label: `hls ${name}`,
+          timeoutMs: progress.timeoutMs,
+          durationSec: progress.durationSec,
+          onFraction: (fraction) => progress.report('renditions', { index: i, total: todo.length, fraction }),
+        },
+        srcFps,
+        burnin,
+        encoder,
+      ),
     );
     const width =
       srcWidth > 0 && srcHeight > 0
@@ -485,12 +576,13 @@ async function buildHls(
   return metas();
 }
 
-async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void> {
+async function handle(mediaId: number, kind: MediaJobData['kind'], report: ProgressReporter): Promise<void> {
   const media = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
   if (!media) throw new Error(`MediaObject ${mediaId} not found`);
 
   const dir = await mkdtemp(join(tmpdir(), 'review-'));
   try {
+    report('download');
     const metadata: Record<string, unknown> = { ...(media.metadata as object) };
     // Source vidéo supprimée après transcodage (gain de place) : les retraitements
     // (trim, reprocess) repartent du proxy MP4 — seul fichier « source » restant.
@@ -539,10 +631,12 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
 
     if (kind === 'scan') {
       // Antivirus seul (37.E) : le préambule ci-dessus a déjà scanné/quarantainé.
+      report('scan', { fraction: 1 });
       return;
     }
 
     if (kind === 'convert3d') {
+      report('convert');
       // Conversion → GLB pour le viewer Three.js (corrige l'erreur DataView sur FBX/OBJ bruts)
       const glbPath = join(dir, 'model.glb');
       // Recomposition USD demandée par l'utilisateur (45.E) : elle vit dans les métadonnées, donc
@@ -571,7 +665,12 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       });
     } else if (kind === 'transcode') {
       // Sonde + proxy + miniature pour la vidéo
+      report('probe');
       Object.assign(metadata, await probe(src));
+      // Toutes les commandes de ce job sont bornées par la durée sondée du média : une
+      // passe qui la dépasse largement ne progresse plus, elle boucle.
+      const durationSec = typeof metadata.duration === 'number' ? metadata.duration : undefined;
+      const timeoutMs = ffmpegTimeoutMs(durationSec);
 
       // Burn-ins configurables (35.A) : config effective du projet + contexte shot/version.
       // Best effort — un échec de résolution ne condamne pas le transcodage.
@@ -582,10 +681,17 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       if (burnin) burnin.ctx.fps = typeof metadata.fps === 'number' ? metadata.fps : null;
 
       const proxyPath = join(dir, 'proxy.mp4');
+      report('proxy');
       await withEncoderFallback((encoder) =>
         transcodeProxy(
           src,
           proxyPath,
+          {
+            label: 'proxy',
+            timeoutMs,
+            durationSec,
+            onFraction: (fraction) => report('proxy', { fraction }),
+          },
           undefined,
           burnin,
           typeof metadata.height === 'number' ? metadata.height : undefined,
@@ -600,7 +706,8 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       // Frame au centre de la vidéo (durée/2) — repli à 1 s si la durée est inconnue.
       const midSec =
         typeof metadata.duration === 'number' && metadata.duration > 0 ? metadata.duration / 2 : 1;
-      await makeThumbnail(src, thumbPath, midSec);
+      report('thumbnail');
+      await makeThumbnail(src, thumbPath, { label: 'thumbnail', timeoutMs }, midSec);
       const thumbKey = StorageService.thumbnailKey(mediaId, 'jpg');
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
 
@@ -622,6 +729,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
           tcfg,
           srcWidth,
           srcHeight,
+          { timeoutMs, durationSec, report },
           srcFps,
           async (soFar, building) => {
             metadata.hls = building ? { renditions: soFar, building: true } : { renditions: soFar };
@@ -653,13 +761,17 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       // Slate + dérivé client (35.A, best effort) : slate d'identification concaténé en
       // tête du proxy → `derived/{id}/client.mp4`, servi uniquement par les partages.
       if (burnin?.slateInfo) {
+        report('client');
         try {
           const p = await probe(proxyPath);
           const pw = p.width ?? 0;
           const ph = p.height ?? 0;
           if (pw > 0 && ph > 0) {
             const slatePng = join(dir, 'slate.png');
-            await makeSlateImage(slatePng, pw, ph, buildSlateLines(burnin.slateInfo));
+            await makeSlateImage(slatePng, pw, ph, buildSlateLines(burnin.slateInfo), {
+              label: 'slate',
+              timeoutMs,
+            });
             const clientPath = join(dir, 'client.mp4');
             await withEncoderFallback((encoder) =>
               buildClientDerivative(
@@ -671,6 +783,12 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
                   height: ph,
                   fps: Math.min(Math.max(Math.round(p.fps ?? 24), 1), 240),
                   hasAudio: p.hasAudio === true,
+                },
+                {
+                  label: 'client derivative',
+                  timeoutMs,
+                  durationSec,
+                  onFraction: (fraction) => report('client', { fraction }),
                 },
                 encoder,
               ),
@@ -688,9 +806,16 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       // Scene detection (34.H, opt-in admin) : marqueurs auto « Plan n » aux coupes —
       // best effort, après l'ouverture de la lecture (READY déjà posé par la 1re rendition).
       if (tcfg.sceneDetection) {
+        report('scenes');
         try {
           const fps = typeof metadata.fps === 'number' ? metadata.fps : 24;
-          await writeSceneMarkers(mediaId, sceneFrames(await detectScenes(src), fps));
+          const scenes = await detectScenes(src, {
+            label: 'scene detection',
+            timeoutMs,
+            durationSec,
+            onFraction: (fraction) => report('scenes', { fraction }),
+          });
+          await writeSceneMarkers(mediaId, sceneFrames(scenes, fps));
         } catch (err) {
           logger.warn({ err }, `[ffmpeg.worker] scene detection échouée media=${mediaId}`);
         }
@@ -704,9 +829,15 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
         srcHeight,
       );
       if (plan) {
+        report('sprite');
         try {
           const spritePath = join(dir, 'timeline-sprite.jpg');
-          await makeTimelineSprite(src, spritePath, plan);
+          await makeTimelineSprite(src, spritePath, plan, {
+            label: 'timeline sprite',
+            timeoutMs,
+            durationSec,
+            onFraction: (fraction) => report('sprite', { fraction }),
+          });
           const spriteKey = `derived/${mediaId}/timeline-sprite.jpg`;
           await storage.uploadFile(spriteKey, spritePath, 'image/jpeg');
           metadata.timelineSprite = { ...plan, key: spriteKey };
@@ -744,8 +875,22 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       const startSec = trim.inFrame / fps;
       const durationSec = Math.max((trim.outFrame - trim.inFrame) / fps, 1 / fps);
       const trimPath = join(dir, 'proxy-trim.mp4');
+      report('trim');
       await withEncoderFallback((encoder) =>
-        transcodeProxy(src, trimPath, { startSec, durationSec }, null, undefined, encoder),
+        transcodeProxy(
+          src,
+          trimPath,
+          {
+            label: 'trim',
+            timeoutMs: ffmpegTimeoutMs(durationSec),
+            durationSec,
+            onFraction: (fraction) => report('trim', { fraction }),
+          },
+          { startSec, durationSec },
+          null,
+          undefined,
+          encoder,
+        ),
       );
       const trimProxyKey = `derived/${mediaId}/proxy-trim.mp4`;
       await storage.uploadFile(trimProxyKey, trimPath, 'video/mp4');
@@ -766,9 +911,12 @@ async function handle(mediaId: number, kind: MediaJobData['kind']): Promise<void
       }
     } else if (kind === 'thumbnail') {
       // Image : sonde dimensions + miniature
+      report('probe');
       Object.assign(metadata, await probe(src));
       const thumbPath = join(dir, 'thumb.jpg');
-      await makeThumbnail(src, thumbPath);
+      report('thumbnail');
+      // Une image fixe n'a pas de durée : le forfait de `ffmpegTimeoutMs` s'applique.
+      await makeThumbnail(src, thumbPath, { label: 'thumbnail', timeoutMs: ffmpegTimeoutMs() });
       const thumbKey = StorageService.thumbnailKey(mediaId, 'jpg');
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
       await prisma.mediaObject.update({
@@ -811,7 +959,8 @@ export const ffmpegWorker = new Worker<MediaJobData>(
   QUEUE_NAMES.MEDIA,
   async (job) => {
     try {
-      await handle(job.data.mediaObjectId, job.data.kind);
+      await handle(job.data.mediaObjectId, job.data.kind, progressReporter(job));
+      await job.updateProgress(mediaJobProgress(job.data.kind, 'done')).catch(() => undefined);
     } catch (err) {
       // Un trim raté ne condamne pas le média (proxy d'origine servi) ; un scan en erreur
       // (clamd injoignable) non plus — BullMQ retente, seule une détection met FAILED.
@@ -832,6 +981,7 @@ ffmpegWorker.on('failed', (job, err) =>
 if (require.main === module) {
   // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
   void ffmpegWorker.run();
+  registerWorkerShutdown('ffmpeg.worker', ffmpegWorker);
   logger.info('[ffmpeg.worker] démarré.');
   // Même process worker : traite aussi la file de nettoyage storage (retry des orphelins)
   // et la livraison des webhooks (36.D — les POST sortants ne partent pas du serveur web).
@@ -842,4 +992,21 @@ if (require.main === module) {
   // Intégration ShotGrid (48) : événements, relevé périodique, réconciliation et
   // écritures sortantes — avec rattrapage au démarrage après une coupure.
   startShotgridWorker();
+  // Entretien périodique (digest, rapport hebdomadaire, purges) : planifié par l'API,
+  // exécuté ici — c'était trois `setInterval` du process web.
+  startMaintenanceWorker();
+
+  // Arrêt propre : les cinq consommateurs de file d'abord (phase « cesser d'accepter »),
+  // puis les connexions Redis du canal d'événements et la base.
+  registerShutdownTask({
+    name: 'worker-events',
+    phase: SHUTDOWN_PHASE.DISCONNECT,
+    run: () => closeWorkerEvents(),
+  });
+  registerShutdownTask({
+    name: 'prisma',
+    phase: SHUTDOWN_PHASE.DISCONNECT,
+    run: () => prisma.$disconnect(),
+  });
+  installShutdownHandlers();
 }
