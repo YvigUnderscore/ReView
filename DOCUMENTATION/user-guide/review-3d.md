@@ -24,8 +24,10 @@ Annotate mode is armed from the comment composer or by pressing a tool letter.
   layer on its own, even when the archive holds several `.usd*` files; the *Info* panel of
   the dock then shows which one it opened.
 - **Missing textures** — anything the scene references but the archive does not contain is
-  simply not applied. The model still displays; re-upload a complete archive to fix the
-  look.
+  simply not applied. The model still displays, and the *Info* panel warns about it: the
+  **unresolved references** are counted and listed by path, so you can see which texture or
+  layer was left out instead of guessing why the asset looks grey. Re-upload a complete
+  archive to fix the look.
 
 ## Navigation
 
@@ -133,16 +135,46 @@ Overrides live at three levels:
 
 ## Inspection
 
-- **Render mode** — the *Display* panel of the dock switches between **Shaded**,
-  **Wireframe** and **Normals**. The override is non-destructive: the original materials are
-  restored when you return to Shaded.
+- **Render mode** — the *Display* panel of the dock offers five modes, as a row of icons
+  (hover for the name): **Shaded**, **Wireframe**, **Normals**, **Matcap** and **UV
+  checker**. Matcap replaces every material with a neutral clay ball, which is how you judge
+  a silhouette without the textures arguing about it; the UV checker maps a coloured
+  chequerboard so stretched or badly oriented UVs show up as distorted squares. The override
+  is non-destructive whatever the mode: the original materials are restored when you return
+  to Shaded, and the file is never touched.
 - **Rig skeleton** — when the model carries a rig, a switch in the *Display* panel overlays
   the skeleton, drawn through the geometry, to debug skinning; it follows the animation. The
   row only appears on rigged models.
 - **Technical sheet** — the *Info* panel lists the live scene statistics (meshes, triangles,
-  vertices, materials) and, below them, the file name, the UV sets and the glTF extensions
-  used by the model. On a USD media it also shows the **root layer** that was actually
-  opened.
+  vertices, materials) and, below them, the file name, the **source format**, the
+  **conversion** that produced the displayed GLB, the UV sets and the glTF extensions used
+  by the model. A `native` badge next to the conversion means the full USD toolchain was
+  used, so `UsdPreviewSurface` materials and variants were preserved rather than
+  approximated.
+- **Textures** — still in the *Info* panel, one row per texture channel of the file (base
+  colour, normal, roughness, metalness, AO, emissive, alpha, bump, displacement) with a
+  thumbnail, the material carrying it and its pixel dimensions. This is where a 64×64 base
+  colour or a normal map that is really a colour map becomes obvious.
+
+## The USD scene sheet
+
+On a USD media the *Info* panel adds a **USD scene** group describing what the converter
+actually opened and composed:
+
+- the **unresolved references** — the count, then the first paths that were missing from the
+  archive, with the reminder that they are not applied;
+- the **root layer** it opened and the **default prim**;
+- the **up axis** and the **scene unit** the file declares (metre, centimetre, millimetre,
+  or the raw `metersPerUnit` for anything else). The viewer normalises the model anyway, so
+  these are there to tell you what the source scene assumed — which is what you quote back
+  to whoever exported it;
+- the number of **layers** and of **prims** in the composed stage;
+- the **purpose** the scene was converted with (Render, Proxy or Guide);
+- the **animation** range as `start → end`, with the fps when the file declares one, and a
+  **rig** row when the scene carries `UsdSkel` skinning;
+- the **variant sets**, each with the value currently in place. When the converter that ran
+  could not apply the selection that was asked for, the group says so — that is the case to
+  recompose from, below.
 
 ## Material variants & embedded cameras
 
@@ -172,7 +204,8 @@ The *Lighting* panel exists on 3D models only — a splat carries its own baked 
 ## Recomposing a USD scene
 
 If you can manage the media and it is not published yet, the *Info* panel offers **Recompose
-from the USD**. The dialog lets you pick another **purpose** (Render, Proxy or Guide) and a
+from the USD**, at the bottom of the USD scene sheet that lists the variant sets you are
+about to change. The dialog lets you pick another **purpose** (Render, Proxy or Guide) and a
 different option for each variant set, then re-runs the conversion through an overlay layer.
 The original USD file is never modified. Once the media is published, recomposing is
 refused — publish a new version.
@@ -211,9 +244,18 @@ drag the label horizontally to scrub the value, or click and type it. No sliders
 
 Open the model, `H` for the home view, and go around it by dragging. Switch the *Display*
 panel to **Wireframe** to check the topology density on the silhouette, then to **Normals**
-to catch the inverted face nobody noticed in the DCC. Nothing you do here is written to the
+to catch the inverted face nobody noticed in the DCC, then to **Matcap** to look at the
+shape alone once the textures stop flattering it. Nothing you do here is written to the
 file — the mode override is restored the moment you go back to Shaded. Drop a *Pin* on the
 bad face in Annotate mode and the modeller lands on it from the comment.
+
+### The texturing does not hold up close
+
+Switch to the **UV checker**: a chequer that stretches into rectangles on the sleeve tells
+you the unwrap is the problem, not the map. Then open the *Info* panel and read the
+**Textures** list — a 4K normal map next to a 128×128 base colour explains the softness
+without opening the source file, and the thumbnails show at a glance which channel was
+plugged where.
 
 ### The prop is in the wrong place, and you can prove it
 
@@ -259,9 +301,16 @@ always loads.
 acceleration is enabled in the browser and that the tab has not lost its GL context after a
 long session; reloading the page rebuilds the scene.
 
+**The model is grey, or a texture is obviously missing.** Open the *Info* panel: the **USD
+scene** group lists the unresolved references, that is, the files the scene points at but
+the archive did not carry. Zip the folder again with the relative paths intact and re-upload
+it. When there is no unresolved reference and the model is still grey, look at the
+**conversion** row instead — without the `native` badge, materials were approximated.
+
 **A variant option is greyed out or marked as not baked.** The conversion only bakes the
 combinations it was asked for. Recompose the scene from the *Info* panel with that selection
-— possible on unpublished media only.
+— possible on unpublished media only. If the USD scene group says the selection was not
+applied, the converter that ran does not handle variants at all.
 
 **Moving a prim is refused, or nothing saves.** Saving the media's override needs both the
 right to manage the media and an unpublished version. After publication the override is

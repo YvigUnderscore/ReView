@@ -5,9 +5,10 @@ import type { UsdModelInfo, UsdVariantSelection } from '../../types/api';
 import { t } from '../../i18n';
 
 /**
- * Logique d'affichage partagée entre la section USD de la fiche technique et le dialogue de
- * recomposition (Phase 45, 45.F). Extraite ici pour être testable et n'exister qu'une fois :
- * les deux composants doivent afficher **la même** valeur courante de variante.
+ * Logique d'affichage partagée entre `UsdSceneGroup` (section USD de la fiche technique) et
+ * `UsdRecomposeDialog` (Phase 45, 45.F). Extraite ici pour être testable et n'exister qu'une
+ * fois : les deux composants doivent afficher **la même** valeur courante de variante, et le
+ * même mot pour le purpose que l'on relit avant de recomposer.
  */
 
 /** Libellé lisible de l'échelle de scène (`metersPerUnit` USD). */
@@ -16,6 +17,14 @@ export function unitLabel(metersPerUnit: number): string {
   if (metersPerUnit === 0.01) return t('usd.centimetre');
   if (metersPerUnit === 0.001) return t('usd.millimetre');
   return `${metersPerUnit} m`;
+}
+
+/** Libellé du purpose USD — « Proxy » est le mot du format, il ne se traduit pas. */
+export function purposeLabel(purpose: string): string {
+  if (purpose === 'render') return t('viewer.render.title');
+  if (purpose === 'proxy') return 'Proxy';
+  if (purpose === 'guide') return t('usd.purposeGuide');
+  return purpose;
 }
 
 /**
