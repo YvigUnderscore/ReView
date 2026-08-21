@@ -35,12 +35,17 @@ import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 type Actor = { id: number; role: Role; email: string };
 
-/** Extensions reconnues, par type de média — sert à déduire `kind` quand il est tu. */
+/**
+ * Extensions reconnues, par type de média — sert à déduire `kind` quand il est tu.
+ * La ligne SPLAT suit `detectSplat` (`lib/fileSignatures`) : ce qui passe la validation
+ * d'en-tête doit être devinable ici, sans quoi le DCC se voit refuser un fichier que le
+ * viewer sait lire.
+ */
 const KIND_BY_EXTENSION: [RegExp, MediaKind][] = [
   [/\.(mov|mp4|mkv|avi|webm|mxf|m4v)$/i, MediaKind.VIDEO],
   [/\.(jpg|jpeg|png|tif|tiff|exr|dpx|webp|gif|bmp|tga)$/i, MediaKind.IMAGE],
   [/\.(glb|gltf|fbx|obj|usd|usda|usdc|usdz|dae|stl|abc|zip)$/i, MediaKind.MODEL_3D],
-  [/\.(splat|ply|ksplat|spz)$/i, MediaKind.SPLAT],
+  [/\.(splat|ply|ksplat|spz|sogs|sog)$/i, MediaKind.SPLAT],
 ];
 
 /** Type de média déduit de l'extension. Explicite l'échec plutôt que de deviner au hasard. */

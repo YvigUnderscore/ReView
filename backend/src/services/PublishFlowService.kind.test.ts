@@ -40,6 +40,15 @@ describe('inferMediaKind', () => {
     }
   });
 
+  // Tout ce que `detectSplat` accepte à la validation d'en-tête doit être devinable ici :
+  // sans quoi un envoi DCC sans `kind` explicite est refusé (KIND_UNKNOWN) alors que le
+  // viewer sait afficher le fichier.
+  it('reconnaît les conteneurs splat sans magic bytes (KSPLAT, SOG, SOGS)', () => {
+    for (const f of ['scan.ksplat', 'capture.sog', 'capture.sogs', 'CAPTURE.SOGS']) {
+      expect(inferMediaKind(f)).toBe(MediaKind.SPLAT);
+    }
+  });
+
   it('refuse explicitement plutôt que de deviner au hasard', () => {
     expect(() => inferMediaKind('notes.txt')).toThrow(/cannot tell the media kind/i);
     expect(() => inferMediaKind('sansextension')).toThrow(/cannot tell the media kind/i);
