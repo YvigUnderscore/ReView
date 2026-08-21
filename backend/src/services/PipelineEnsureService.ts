@@ -9,6 +9,7 @@ import { assertCanContribute, assertProjectManage } from '../lib/projectRoles';
 import { parsePipelinePath } from '../lib/pipelinePath';
 import { resolveProjectSettingsById } from '../lib/projectSettings';
 import { sequenceSelect, shotSelect, assetSelect, taskSelect, versionSelect } from '../lib/v1Resources';
+import * as DepartmentService from './DepartmentService';
 import { emitToProject } from './SocketService';
 
 /**
@@ -44,10 +45,15 @@ async function recoverUniqueViolation<T>(
   refind: () => Promise<T | null>,
   trashConflict: () => Error,
 ): Promise<EnsureOutcome<T>> {
-  if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== 'P2002') throw err;
+  if (!isUniqueViolation(err)) throw err;
   const winner = await refind();
   if (winner) return { entity: winner, created: false };
   throw trashConflict();
+}
+
+/** Violation d'un index d'unicité (P2002), par opposition à une panne à laisser remonter. */
+function isUniqueViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 }
 
 /** Créer de la structure (séquence, shot, asset) engage la production : superviseur+. */
@@ -202,47 +208,86 @@ export async function ensureTask(
     throw badRequest('Provide exactly one parent: a shot or an asset');
   }
   const parentWhere = parent.shotId !== undefined ? { shotId: parent.shotId } : { assetId: parent.assetId };
-  const department = await resolveDepartmentKey(projectId, input);
+  const { department, departmentId } = await resolveTaskDepartment(projectId, input);
 
   // Le département fait partie de l'identité de la tâche : `modeling:main` et
   // `lookdev:main` cohabitent, et rejouer une publication doit retrouver la bonne.
-  const existing = await prisma.task.findFirst({
-    where: {
-      ...parentWhere,
-      name: insensitive(input.name),
-      ...(department ? { department: insensitive(department) } : {}),
-    },
-    select: taskSelect,
-  });
-  if (existing) return { entity: existing, created: false };
+  // La relation ET la clé sont interrogées : les tâches d'avant le rattrapage n'ont que
+  // la seconde, et ne pas les voir ferait un doublon à chaque publication.
+  const find = () =>
+    prisma.task.findFirst({
+      where: { ...parentWhere, name: insensitive(input.name), ...departmentWhere(department, departmentId) },
+      select: taskSelect,
+    });
+  const existing = await find();
+  if (existing) {
+    if (departmentId !== null) await healTaskDepartment(existing.id, departmentId);
+    return { entity: existing, created: false };
+  }
 
   await assertCanCreateWork(actor, projectId);
-  const entity = await prisma.task.create({
-    data: {
-      ...parentWhere,
-      name: input.name,
-      type: input.type ?? inferTaskType(input.name),
-      department,
-    },
-    select: taskSelect,
-  });
+  let entity;
+  try {
+    entity = await prisma.task.create({
+      data: {
+        ...parentWhere,
+        name: input.name,
+        type: input.type ?? inferTaskType(input.name),
+        department,
+        departmentId,
+      },
+      select: taskSelect,
+    });
+  } catch (err) {
+    // Deux publications simultanées de la même ferme de rendu : la seconde perd la course
+    // et récupère la tâche que la première vient de créer, au lieu d'en faire une jumelle.
+    return recoverUniqueViolation(err, find, () =>
+      conflict(`Task « ${input.name} » already exists`, 'TASK_EXISTS'),
+    );
+  }
   emitToProject(projectId, 'task:update', { projectId, id: entity.id });
   return { entity, created: true };
 }
 
+/** Critère de département d'une recherche de tâche : la relation, ou la clé, ou rien. */
+function departmentWhere(department: string | null, departmentId: number | null) {
+  if (departmentId !== null && department)
+    return { OR: [{ departmentId }, { department: insensitive(department) }] };
+  return department ? { department: insensitive(department) } : {};
+}
+
 /**
- * Clé de département d'une tâche à créer. Un département fourni par le client est retenu
- * tel qu'il est déclaré dans le projet (casse comprise) ; sinon il est déduit du nom de la
- * tâche, faute de quoi les publications DCC historiques rempliraient le fourre-tout
- * « sans département » et fausseraient la notion d'étape la plus avancée.
+ * Rattache au passage une tâche que la publication d'avant n'avait reliée que par sa clé.
+ * Le filtre `departmentId: null` fait de l'écriture un non-événement dans le cas courant :
+ * aucune ligne ne correspond, `updatedAt` ne bouge pas.
  */
-async function resolveDepartmentKey(projectId: number, input: EnsureTaskInput): Promise<string | null> {
-  const { departments } = await resolveProjectSettingsById(projectId);
-  const match = (needle: string) =>
-    departments.find((d) => d.key.toLowerCase() === needle.toLowerCase())?.key ?? null;
-  if (input.department) return match(input.department) ?? input.department;
+async function healTaskDepartment(taskId: number, departmentId: number): Promise<void> {
+  await prisma.task.updateMany({ where: { id: taskId, departmentId: null }, data: { departmentId } });
+}
+
+/**
+ * Département d'une tâche à créer : la clé dénormalisée ET la relation (B1).
+ *
+ * Une clé fournie par le client est *déclarée* — elle crée l'étape si le projet ne la
+ * connaît pas encore, comme le fait l'import ShotGrid. Une clé simplement *devinée* depuis
+ * le nom de la tâche, non : elle ne se pose que si l'étape existe déjà, faute de quoi une
+ * heuristique enrichirait le pipe du studio. Sans elle, en revanche, les publications DCC
+ * rempliraient le fourre-tout « sans département » et fausseraient l'étape la plus avancée.
+ */
+async function resolveTaskDepartment(
+  projectId: number,
+  input: EnsureTaskInput,
+): Promise<DepartmentService.TaskDepartment> {
+  if (input.department) return DepartmentService.resolveForTask(projectId, input.department);
   const guessed = input.type ?? inferTaskType(input.name);
-  return guessed === TaskType.OTHER ? null : match(guessed);
+  if (guessed === TaskType.OTHER) return { department: null, departmentId: null };
+  const found = await DepartmentService.findByKey(projectId, guessed);
+  if (found) return { department: found.key, departmentId: found.id };
+  // Repli sur les réglages : une base dont les départements ne sont pas encore des
+  // entités continue d'écrire la clé, même sans relation à poser.
+  const { departments } = await resolveProjectSettingsById(projectId);
+  const match = departments.find((d) => d.key.toLowerCase() === guessed.toLowerCase());
+  return { department: match?.key ?? null, departmentId: null };
 }
 
 /**
@@ -286,12 +331,14 @@ export async function ensureVersion(
     throw badRequest('Provide exactly one parent: a task or an asset');
   }
   const parentWhere = parent.taskId !== undefined ? { taskId: parent.taskId } : { assetId: parent.assetId };
-
-  if (input.name) {
-    const existing = await prisma.version.findFirst({
-      where: { ...parentWhere, deletedAt: null, name: insensitive(input.name) },
+  const find = (name: string) =>
+    prisma.version.findFirst({
+      where: { ...parentWhere, deletedAt: null, name: insensitive(name) },
       select: versionSelect,
     });
+
+  if (input.name) {
+    const existing = await find(input.name);
     if (existing) {
       if (input.reuseExisting) return { entity: existing, created: false };
       throw badRequest(`Version « ${input.name} » already exists`, 'VERSION_EXISTS');
@@ -299,11 +346,28 @@ export async function ensureVersion(
   }
 
   await assertCanCreateWork(actor, projectId);
-  const name = input.name ?? (await nextVersionName(parentWhere));
-  const entity = await prisma.version.create({
-    data: { ...parentWhere, name, authorId: actor.id, status: VersionStatus.DRAFT },
-    select: versionSelect,
-  });
+  const create = (name: string) =>
+    prisma.version.create({
+      data: { ...parentWhere, name, authorId: actor.id, status: VersionStatus.DRAFT },
+      select: versionSelect,
+    });
+
+  let entity;
+  if (input.name) {
+    try {
+      entity = await create(input.name);
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      // Le nom est pris depuis la recherche : soit par une publication concurrente, soit
+      // par une version en corbeille — l'index d'unicité, lui, ignore le soft-delete.
+      const winner = await find(input.name);
+      if (!winner) throw conflict(`Version « ${input.name} » is in the trash`, 'VERSION_IN_TRASH');
+      if (input.reuseExisting) return { entity: winner, created: false };
+      throw badRequest(`Version « ${input.name} » already exists`, 'VERSION_EXISTS');
+    }
+  } else {
+    entity = await createNextVersion(parentWhere, create);
+  }
   emitToProject(projectId, 'version:update', {
     projectId,
     id: entity.id,
@@ -311,6 +375,30 @@ export async function ensureVersion(
     assetId: parent.assetId ?? null,
   });
   return { entity, created: true };
+}
+
+/**
+ * Version suivante, en tenant compte des publications concurrentes.
+ *
+ * Le numéro se calcule hors transaction : deux publications simultanées visent la même
+ * V03, et l'une des deux perd la course. Lui rendre la version de l'autre serait le pire
+ * des dénouements — son média se rattacherait au travail d'un collègue. On recalcule donc
+ * le numéro et on retente : c'est bien « la version suivante » qui a été demandée.
+ */
+async function createNextVersion<T>(
+  parentWhere: { taskId?: number; assetId?: number },
+  create: (name: string) => Promise<T>,
+  attempts = 3,
+): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    const name = await nextVersionName(parentWhere);
+    try {
+      return await create(name);
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      if (attempt >= attempts) throw conflict('Could not allocate a version number', 'VERSION_RACE');
+    }
+  }
 }
 
 /**

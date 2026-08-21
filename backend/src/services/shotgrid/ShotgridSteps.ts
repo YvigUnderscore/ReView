@@ -10,6 +10,7 @@ import { writeAllowedOn } from './shotgridTemplateGuard';
 import { asEntityRef, asNumber, asString, sgStepToTaskType } from './shotgridMapper';
 import { upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
+import { resolveForTask } from '../DepartmentService';
 
 /**
  * Étapes de pipeline (« Pipeline Steps ») d'un site ShotGrid.
@@ -247,12 +248,18 @@ export async function createTaskFromStep(
   }
   if (check && !writeAllowedOn(check)) throw forbidden('ShotGrid template project — writing is refused');
 
-  const department = asString(step.code) ?? null;
+  // L'étape du site devient un département du projet — relation comprise. N'écrire que la
+  // chaîne rendait la tâche invisible à l'assignation par département, qui interroge la
+  // relation : elle répondait « créez la tâche dans ShotGrid d'abord » alors qu'elle
+  // venait d'y être créée.
+  const stepCode = asString(step.code) ?? null;
+  const { department, departmentId } = await resolveForTask(projectId, stepCode);
   const task = await prisma.task.create({
     data: {
       name,
-      type: sgStepToTaskType(department),
+      type: sgStepToTaskType(stepCode),
       department,
+      departmentId,
       ...(assignee?.userId ? { assigneeId: assignee.userId } : {}),
       ...(params.parentType === 'asset' ? { assetId: params.parentId } : { shotId: params.parentId }),
     },
@@ -265,7 +272,9 @@ export async function createTaskFromStep(
     sgType: 'Task',
     sgId: created.id,
     data: {
-      stepName: department,
+      // Le lien décrit le côté distant : il garde le nom d'étape tel que le site l'écrit,
+      // pas la clé normalisée du département local.
+      stepName: stepCode,
       sgAssignees: assignee ? [{ id: assignee.sgId, name: assignee.name, email: assignee.email }] : [],
       sgStatusCode: null,
       durationMinutes: null,

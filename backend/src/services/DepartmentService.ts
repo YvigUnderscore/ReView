@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { Department, Prisma } from '@prisma/client';
+import { Prisma, type Department } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
 
@@ -241,6 +241,39 @@ export async function setUserDepartments(userId: number, departmentIds: number[]
 }
 
 /**
+ * Département portant cette clé, sans le créer. Deux portées sont fouillées, dans cet
+ * ordre : celle du projet, puis celle du studio.
+ *
+ * `listForProject` ne convient pas ici : elle *propose* une liste, et masque le
+ * référentiel du studio dès que le projet en a un. Or une tâche déjà en base porte
+ * souvent une étape du studio — c'est le même raisonnement que
+ * `assertDepartmentsOfProject` : ce qu'on refuse, c'est l'étape d'un AUTRE projet.
+ *
+ * La comparaison ignore la casse et la ponctuation : le site distant envoie
+ * « Look Development » là où la base porte `LOOK_DEV`, et les clés reprises par la
+ * migration de rattrapage n'ont pas toutes été normalisées.
+ */
+export async function findByKey(projectId: number, key: string): Promise<Department | null> {
+  const trimmed = key.trim();
+  if (!trimmed) return null;
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
+  if (!project) return null;
+  const candidates = await prisma.department.findMany({
+    where: { deletedAt: null, studioId: project.studioId, OR: [{ projectId }, { projectId: null }] },
+    orderBy: ORDER_BY,
+  });
+  const needle = trimmed.toLowerCase();
+  const normalised = normaliseKey(trimmed);
+  const matches = (d: Department) =>
+    d.key.toLowerCase() === needle || (normalised !== '' && normaliseKey(d.key) === normalised);
+  return (
+    candidates.find((d) => d.projectId === projectId && matches(d)) ??
+    candidates.find((d) => d.projectId === null && matches(d)) ??
+    null
+  );
+}
+
+/**
  * Résout un département par sa clé, dans le vocabulaire du projet. Sert au rattachement
  * d'une tâche quand l'appelant ne connaît que la clé — l'import ShotGrid, notamment.
  * Crée l'étape manquante au niveau du projet plutôt que de la perdre : une étape venue du
@@ -249,12 +282,93 @@ export async function setUserDepartments(userId: number, departmentIds: number[]
 export async function resolveByKey(projectId: number, key: string): Promise<Department | null> {
   const trimmed = key.trim();
   if (!trimmed) return null;
-  const candidates = await listForProject(projectId);
-  const found = candidates.find((d) => d.key.toLowerCase() === trimmed.toLowerCase());
+  const found = await findByKey(projectId, trimmed);
   if (found) return found;
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
   if (!project) return null;
-  return create(project.studioId, projectId, { key: trimmed, name: trimmed, order: 900 });
+  await materialiseInheritance(project.studioId, projectId);
+  try {
+    return await create(project.studioId, projectId, { key: trimmed, name: trimmed, order: 900 });
+  } catch (err) {
+    // Deux publications simultanées portant la même étape inconnue : la seconde perd la
+    // course contre l'index d'unicité. C'est le résultat attendu qui compte, pas qui a
+    // écrit — on relit ce que l'autre vient de poser.
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== 'P2002') throw err;
+    return findByKey(projectId, trimmed);
+  }
+}
+
+/**
+ * Fige l'héritage avant d'ajouter une étape au projet.
+ *
+ * Un projet sans liste propre hérite de celle du studio ; lui poser UNE étape ne l'ajoute
+ * pas à la liste héritée, elle la remplace tout entière (`listForProject` s'arrête à la
+ * première liste non vide). Un `step` importé suffisait donc à réduire le pipe d'un projet
+ * à une seule ligne, et à faire disparaître des menus les huit étapes qu'il affichait la
+ * minute d'avant. On recopie donc l'héritage à la portée projet, puis on complète.
+ *
+ * Le projet cesse alors de suivre les évolutions du studio — c'est le prix, et il est
+ * réversible : retirer ses étapes propres lui rend l'héritage.
+ */
+async function materialiseInheritance(studioId: number, projectId: number): Promise<void> {
+  const own = await prisma.department.findMany({
+    where: { projectId, deletedAt: null },
+    select: { id: true },
+  });
+  if (own.length > 0) return;
+  const inherited = await listForStudio(studioId);
+  if (inherited.length === 0) return;
+  await prisma.department.createMany({
+    data: inherited.map((d) => ({
+      studioId,
+      projectId,
+      key: d.key,
+      name: d.name,
+      order: d.order,
+      color: d.color,
+    })),
+    skipDuplicates: true,
+  });
+  // Une étape que le projet portait en corbeille garde la clé (l'index d'unicité ignore le
+  // soft-delete) : la copie ci-dessus l'a sautée, on la relève pour que la liste figée soit
+  // bien celle qui était affichée.
+  await prisma.department.updateMany({
+    where: { projectId, deletedAt: { not: null }, key: { in: inherited.map((d) => d.key) } },
+    data: { deletedAt: null },
+  });
+}
+
+/** Ce que porte une tâche : la clé dénormalisée ET la relation (B1). */
+export interface TaskDepartment {
+  department: string | null;
+  departmentId: number | null;
+}
+
+/**
+ * Couple `{department, departmentId}` à écrire sur une tâche, depuis une clé quelconque.
+ *
+ * Tous les chemins d'écriture passent par ici — interface, publication DCC, import
+ * ShotGrid — pour que la relation ne soit plus le privilège de l'un d'eux : une tâche dont
+ * seule la chaîne est renseignée est invisible à l'assignation par département.
+ *
+ * `create: false` interdit la création : c'est la politique appliquée aux clés *devinées*
+ * (le type déduit du nom d'une tâche). Une devinette n'a pas à enrichir le pipe d'un
+ * studio ; une étape explicitement nommée par un DCC ou par le site distant, si.
+ */
+export async function resolveForTask(
+  projectId: number,
+  key: string | null | undefined,
+  options: { create?: boolean } = {},
+): Promise<TaskDepartment> {
+  const trimmed = key?.trim();
+  if (!trimmed) return { department: null, departmentId: null };
+  const found =
+    options.create === false ? await findByKey(projectId, trimmed) : await resolveByKey(projectId, trimmed);
+  // Étape introuvable et création refusée : la clé reste écrite telle quelle plutôt que
+  // perdue — elle porte l'ordre du pipe et le nommage des versions.
+  return found
+    ? { department: found.key, departmentId: found.id }
+    : { department: trimmed, departmentId: null };
 }
 
 /**

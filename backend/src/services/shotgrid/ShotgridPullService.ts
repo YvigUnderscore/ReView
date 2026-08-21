@@ -34,6 +34,7 @@ import type { SyncJournal } from './ShotgridSyncJournal';
 import { can } from './shotgridSettings';
 import { enqueuePush } from './ShotgridPushService';
 import { emitToProject } from '../SocketService';
+import { resolveForTask, type TaskDepartment } from '../DepartmentService';
 
 /**
  * Import de la hiérarchie de production depuis ShotGrid.
@@ -717,6 +718,28 @@ export async function buildUserMap(ctx: PullContext): Promise<Map<number, number
   return out;
 }
 
+/**
+ * Résolution mémorisée des étapes en départements, le temps d'une passe.
+ *
+ * Un projet compte des milliers de tâches pour une dizaine d'étapes : sans mémoire, la
+ * synchronisation ferait autant d'allers-retours en base qu'il y a de tâches, pour
+ * retrouver chaque fois les mêmes dix lignes.
+ */
+export function departmentResolver(
+  projectId: number,
+): (stepName: string | null | undefined) => Promise<TaskDepartment> {
+  const seen = new Map<string, TaskDepartment>();
+  return async (stepName) => {
+    const key = stepName?.trim();
+    if (!key) return { department: null, departmentId: null };
+    const cached = seen.get(key.toLowerCase());
+    if (cached) return cached;
+    const resolved = await resolveForTask(projectId, key);
+    seen.set(key.toLowerCase(), resolved);
+    return resolved;
+  };
+}
+
 export async function pullTasks(
   ctx: PullContext,
   statuses: Map<string, PipelineStatus>,
@@ -731,6 +754,7 @@ export async function pullTasks(
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
   const taskLinks = await mapSgToLocal(ctx.connection.id, 'task');
+  const departmentOf = departmentResolver(ctx.connection.projectId);
 
   for (const record of records) {
     const name = asString(record.content) ?? sgDisplayName(record);
@@ -762,10 +786,16 @@ export async function pullTasks(
     const link = taskLinks.get(record.id);
     const existing = link ? await prisma.task.findUnique({ where: { id: link.localId } }) : null;
 
+    // L'étape du site devient un département local, relation comprise : n'écrire que la
+    // chaîne laissait `departmentId` vide sur TOUTES les tâches d'un projet piloté depuis
+    // ShotGrid, et l'assignation par département — qui interroge la relation — refusait
+    // des tâches qui existent.
+    const department = await departmentOf(stepName);
+
     const data = {
       name,
       type: sgStepToTaskType(stepName),
-      department: stepName ?? null,
+      ...department,
       shotId,
       assetId: shotId ? null : assetId,
       assigneeId,
