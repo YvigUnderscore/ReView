@@ -1,6 +1,6 @@
 # USD & 3D conversion
 
-> Updated: 2026-08-08
+> Updated: 2026-08-21
 
 Uploaded 3D media are converted to **GLB** by the asset worker so the Three.js viewer can
 display them. Routing by source format:
@@ -49,6 +49,29 @@ things happen at ingest:
 Archives are validated **before** any byte is written: entries escaping the target directory,
 symbolic links, excessive entry counts, excessive uncompressed size and abnormal compression
 ratios reject the whole archive with an explicit message.
+
+An archive that behaves well looks like this — one obvious root layer, payloads and
+textures below it:
+
+```
+SH0100_set_v003.zip
+├── set.usda              ← root: no other layer references it
+├── payloads/
+│   ├── building_a.usdc
+│   └── props.usdc
+└── textures/
+    ├── brick_basecolor.jpg
+    └── brick_normal.jpg
+```
+
+The two mistakes that cost a re-delivery:
+
+- **Absolute asset paths** (`/mnt/show/textures/brick.jpg`). The worker does not mount your
+  storage, so those resolve to nothing and land in the *unresolved assets* list. Author
+  relative paths, or flatten before packing.
+- **Two candidate roots.** If `set.usda` and `set_lookdev.usda` both reference nobody, the
+  tie is broken by depth, then by a name matching the archive, then by convention — which
+  may not be the layer you meant. Ship one root per archive.
 
 ## Baked variants & the scene graph
 
@@ -107,6 +130,45 @@ An integration that already knows the selection should not go through recomposit
 `POST /api/v1/publish` accepts the same `variants` and `purpose` under a `usd` field, and the
 **first** conversion then runs with them. See
 [API v1 — pipeline integration](../api/v1-integration.md#publishing-a-usd-scene-with-a-variant-selection).
+
+```jsonc
+POST /api/v1/publish
+{
+  "path": "NEBULA/SQ010/SH0100/lookdev",
+  "filename": "SH0100_set_v003.usd",
+  "usd": {
+    // One entry per bearing prim; inside it, one choice per variant set.
+    "variants": { "/World/Set": { "modelingVariant": "hero", "lodVariant": "high" } },
+    "purpose": "render"      // render | proxy | guide — default: render
+  }
+}
+```
+
+Both entry points share one schema, so anything the recomposition accepts is accepted here
+too. The bounds: at most **64 prims** in a selection, prim paths up to 1024 characters,
+variant names up to 200. An unknown purpose (`"beauty"`) is rejected rather than ignored.
+
+## Typical workflows
+
+**Delivering an asset for look review.** Publish the `.usd` (or a `.zip` with its
+payloads). The worker converts with `purpose: render` and bakes every variant. In the
+review, the *Scene* panel shows the prim tree; the reviewer switches variants live and
+leaves annotations on the frame they care about. Nothing is re-converted.
+
+**Reviewing a heavy set in dailies.** Publish twice from the DCC — once with
+`purpose: proxy` for the session that needs to stay responsive, once with
+`purpose: render` for the look pass. Two versions, two files, no recomposition.
+
+**A supervisor sets the scene before publication.** Before publishing, a manager can author
+a **media override** (`PUT /api/media/:id/usd/override`): the variant, visibility and
+transform everyone should open on. It is frozen at publication and replayed for every
+viewer, so the whole team starts from the same shot. Afterwards, reviewers attach their
+proposals to a comment instead, and those only play back when that comment is selected.
+
+**A variant menu that is greyed out.** The option exceeded a baking budget, or the media
+predates baking. The conversion summary
+(`metadata.model.blender.variantsSkipped`) names the skipped options. Recompose with just
+that selection, or re-upload a version.
 
 ## Enabling the USD toolchain
 
@@ -173,6 +235,16 @@ A media that fails conversion now shows **why** in the review, and the same mess
 
 Unresolved assets do **not** fail the conversion: the model is shown and the missing
 references are listed in the technical sheet.
+
+Symptoms that are not failures:
+
+| Symptom | Cause | What to do |
+|---|---|---|
+| The model shows up untextured | Textures were not in the archive, or their paths are absolute | Check *unresolved assets* in the technical sheet; re-pack with relative paths |
+| Switching a variant does nothing | The media was converted before variant baking existed | Re-upload a version — baking happens at conversion time |
+| A variant option is greyed out | It hit `USD_MAX_BAKED_VARIANTS`, the vertex budget, or the time budget | Recompose with that selection alone |
+| The *Scene* panel carries no USD prim paths, and there is no USD section in the technical sheet | The converter used was `guc` or assimp, not Blender — only Blender resolves composition and tags prims | Confirm the converter in the technical sheet, then install the USD toolchain in the worker image |
+| Geometry is there but nothing animates | `guc` produced it — its geometry is static by design | Same: make Blender the converter |
 
 ## Security notes
 

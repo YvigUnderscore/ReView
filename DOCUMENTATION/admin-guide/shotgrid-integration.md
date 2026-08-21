@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The ShotGrid tab of a linked project: the read/write matrix, then the pace and media settings.](../assets/admin-guide/shotgrid-settings.png)
+
 Link a ReView project to a ShotGrid project and keep both in step: sequences, shots,
 assets, tasks, statuses, schedule and published media flow into ReView, while review
 decisions, statuses and dates flow back.
@@ -214,6 +216,8 @@ see two.
 Linking a project brings in its shots, tasks and media — but not the people. The
 **Members** tab of a linked project therefore offers **Load the ShotGrid crew**: the list
 comes from `Project.users` of the linked project, not from the whole site directory.
+
+![The ShotGrid crew panel: one row per person, with what ReView already knows about them.](../assets/admin-guide/shotgrid-crew.png)
 
 Each person shows one of four states:
 

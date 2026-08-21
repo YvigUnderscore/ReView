@@ -269,6 +269,33 @@ async function uploadDemoMedia(
   );
 }
 
+/** Relie le projet de démonstration à un site de simulation, le temps des captures. */
+async function linkDemoToShotgrid(page: Page, projectId: number, siteId: number) {
+  await page.evaluate(
+    async ({ pid, site }) => {
+      const token = window.localStorage.getItem('token');
+      const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+      await fetch(`/api/shotgrid/projects/${pid}/connection`, {
+        method: 'POST',
+        headers: h,
+        // Le projet du simulateur : la documentation ne doit montrer aucun nom réel.
+        body: JSON.stringify({ siteId: site, sgProjectId: 70, sgProjectName: 'Demo Project' }),
+      });
+    },
+    { pid: projectId, site: siteId },
+  );
+}
+
+async function unlinkDemoFromShotgrid(page: Page, projectId: number) {
+  await page.evaluate(async (pid) => {
+    const token = window.localStorage.getItem('token');
+    await fetch(`/api/shotgrid/projects/${pid}/connection`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }, projectId);
+}
+
 test('captures de la documentation', async ({ page }) => {
   test.setTimeout(300_000);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -380,6 +407,26 @@ test('captures de la documentation', async ({ page }) => {
   // ── Partages ──────────────────────────────────────────────────────────────
   await page.goto(`/projects/${projectId}?tab=shares`);
   await shot(page, 'user-guide', 'shares');
+
+  // ── ShotGrid ──────────────────────────────────────────────────────────────
+  // Sans connexion, l'onglet montre l'écran de liaison — utile en soi, c'est la première
+  // chose que voit un administrateur. Avec `DOCS_SG_SITE_ID` (un simulateur local), on
+  // relie le projet de démonstration le temps des captures, puis on le délie.
+  const sgSiteId = process.env.DOCS_SG_SITE_ID ? Number(process.env.DOCS_SG_SITE_ID) : null;
+  if (sgSiteId) await linkDemoToShotgrid(page, projectId, sgSiteId);
+  await page.goto(`/projects/${projectId}?tab=shotgrid`);
+  await shot(page, 'admin-guide', sgSiteId ? 'shotgrid-settings' : 'shotgrid-link');
+  if (sgSiteId) {
+    await page.goto(`/projects/${projectId}?tab=members`);
+    await settle(page);
+    const loadCrew = page.getByRole('button', { name: /ShotGrid crew|équipe ShotGrid/i });
+    if (await loadCrew.isVisible().catch(() => false)) {
+      await loadCrew.click();
+      await page.waitForTimeout(2500);
+      await shot(page, 'admin-guide', 'shotgrid-crew');
+    }
+    await unlinkDemoFromShotgrid(page, projectId);
+  }
 
   // ── Administration du studio ──────────────────────────────────────────────
   await page.goto('/admin');

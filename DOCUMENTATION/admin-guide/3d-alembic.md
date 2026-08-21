@@ -1,6 +1,6 @@
 # Alembic camera import
 
-> Updated: 2026-07-20
+> Updated: 2026-08-21
 
 Alembic (`.abc`) is the standard camera-interchange format in VFX (Maya, Houdini, Nuke,
 Blender). ReView can turn an Alembic **camera** into an editable v2 camera animation in the
@@ -25,13 +25,27 @@ in the review — the same **Import** control that accepts glTF cameras.
 }
 ```
 
-- `pos` — camera world position `[x, y, z]` (required).
+- `pos` — camera world position `[x, y, z]` (**required**; a sample without it is skipped
+  rather than failing the file).
 - `target` — look-at point `[x, y, z]`. If omitted, `quat` (xyzw) is used and the target is
-  derived from the view direction (roll from the up vector).
+  derived from the view direction (roll from the up vector). With neither, the camera looks
+  one unit down `-Z` — which is almost never what you want, so always ship one of the two.
 - `fov` — per-sample vertical FOV in degrees (falls back to `fovDeg`, then `45`).
 - `t` / `frame` — timing. `t` (seconds) wins; otherwise `frame / fps`; otherwise the sample
   index at `fps`.
 - At least **2** usable samples are required. Dense samples are interpolated linearly.
+
+### Focal length
+
+ReView works in **millimetres on a fixed 36 mm sensor** and stores the field of view, so
+the two are interchangeable. Convert in your extractor if your DCC gives you millimetres:
+
+```
+fov_deg = 2 * atan(18 / focal_mm) * 180 / pi
+```
+
+A 50 mm lens is therefore ≈ 39.6°, and a 24 mm ≈ 73.7°. The review HUD shows the
+millimetre value, so a mismatch here is immediately visible to the reviewer.
 
 ## Extracting samples with Blender (headless)
 
