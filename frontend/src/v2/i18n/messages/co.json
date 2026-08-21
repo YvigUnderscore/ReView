@@ -1887,6 +1887,7 @@
   "common.install": "Installà",
   "common.starting": "Lanciamentu…",
   "common.retrying": "Novu tentativu…",
+  "common.error.sessionExpired": "A vostra sessione hè scaduta. Cunnettatevi torna.",
   "admin.outOfService": "Fora di serviziu",
   "admin.tab.api": "API è Webhooks",
   "admin.tab.audit": "Audit",

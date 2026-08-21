@@ -1903,6 +1903,7 @@
   "common.install": "Installer",
   "common.starting": "Lancement…",
   "common.retrying": "Relance…",
+  "common.error.sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
   "admin.outOfService": "Hors service",
   "admin.tab.api": "API & Webhooks",
   "admin.tab.audit": "Audit",

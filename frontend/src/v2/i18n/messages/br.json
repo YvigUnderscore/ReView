@@ -1867,6 +1867,7 @@
   "common.install": "Staliañ",
   "common.starting": "O lañsañ…",
   "common.retrying": "Adlañsañ…",
+  "common.error.sessionExpired": "Aet eo ho koulzad da get. Kevreit en-dro, mar plij.",
   "admin.outOfService": "Er-maez a servij",
   "admin.tab.api": "API & Webhooks",
   "admin.tab.audit": "Enklask",

@@ -1887,6 +1887,7 @@
   "common.install": "Installar",
   "common.starting": "Lançament…",
   "common.retrying": "Relançament…",
+  "common.error.sessionExpired": "Vòstra session a expirat. Tornatz-vos connectar.",
   "admin.outOfService": "Fòra servici",
   "admin.tab.api": "API e Webhooks",
   "admin.tab.audit": "Audit",

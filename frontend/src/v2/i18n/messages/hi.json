@@ -1881,6 +1881,7 @@
   "common.install": "इंस्टॉल करें",
   "common.starting": "शुरू हो रहा है…",
   "common.retrying": "फिर से प्रयास…",
+  "common.error.sessionExpired": "आपका सत्र समाप्त हो गया है। कृपया फिर से साइन इन करें।",
   "admin.outOfService": "सेवा से बाहर",
   "admin.tab.api": "API और Webhooks",
   "admin.tab.audit": "ऑडिट",

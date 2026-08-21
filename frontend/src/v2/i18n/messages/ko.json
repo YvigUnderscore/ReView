@@ -1853,6 +1853,7 @@
   "common.install": "설치",
   "common.starting": "시작 중…",
   "common.retrying": "다시 시도 중…",
+  "common.error.sessionExpired": "세션이 만료되었습니다. 다시 로그인해 주세요.",
   "admin.outOfService": "작동 중지",
   "admin.tab.api": "API 및 웹훅",
   "admin.tab.audit": "감사",

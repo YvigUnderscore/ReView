@@ -2,6 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Le canal temps réel est doublé : on vérifie qu'il est fermé à chaque changement de
+// compte, pas le comportement de socket.io (couvert par lib/socket.test.ts).
+vi.mock('../../lib/socket', () => ({
+  getSocket: vi.fn(),
+  disconnectSocket: vi.fn(),
+  emitActivity: vi.fn(),
+}));
+
+import { disconnectSocket } from '../../lib/socket';
+import { api } from '../../lib/apiClient';
 import { useAuth, type AuthUser } from './useAuth';
 
 const mockFetch = vi.fn();
@@ -22,6 +33,7 @@ const jsonResponse = (body: unknown, status = 200) =>
 
 beforeEach(() => {
   mockFetch.mockReset();
+  vi.mocked(disconnectSocket).mockClear();
   localStorage.clear();
   useAuth.setState({ user: null, ready: false });
 });
@@ -87,5 +99,45 @@ describe('useAuth', () => {
     expect(localStorage.getItem('token')).toBeNull();
     expect(useAuth.getState().user).toBeNull();
     expect(useAuth.getState().ready).toBe(true);
+  });
+});
+
+describe('useAuth — canal temps réel', () => {
+  it('logout : ferme le socket du compte qui part', () => {
+    localStorage.setItem('token', 'jwt-1');
+    mockFetch.mockResolvedValue(jsonResponse({}));
+    useAuth.setState({ user });
+    useAuth.getState().logout();
+    expect(disconnectSocket).toHaveBeenCalledTimes(1);
+  });
+
+  it('login : repart d’un socket neuf (poste de salle de review partagé)', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', refreshToken: 'r-2', user }));
+    await useAuth.getState().login('a@b.c', 'pw');
+    expect(disconnectSocket).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('refreshToken')).toBe('r-2');
+  });
+
+  it('setAuth : ferme aussi le socket précédent', () => {
+    useAuth.getState().setAuth('jwt-3', user);
+    expect(localStorage.getItem('token')).toBe('jwt-3');
+    expect(disconnectSocket).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useAuth — session expirée', () => {
+  it('401 non rattrapable : purge la session, vide l’état et ferme le socket', async () => {
+    localStorage.setItem('token', 'jwt-mort');
+    localStorage.setItem('refreshToken', 'r-mort');
+    useAuth.setState({ user, ready: true });
+    // Tout répond 401, renouvellement compris : la session est morte.
+    mockFetch.mockResolvedValue(jsonResponse({ error: 'Non authentifié' }, 401));
+
+    await expect(api.get('/api/projects')).rejects.toThrow(/session/i);
+    expect(useAuth.getState().user).toBeNull();
+    expect(useAuth.getState().ready).toBe(true);
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('refreshToken')).toBeNull();
+    expect(disconnectSocket).toHaveBeenCalledTimes(1);
   });
 });

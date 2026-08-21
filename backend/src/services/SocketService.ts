@@ -80,8 +80,12 @@ export const initSocket = (server: HttpServer): SocketServer => {
   });
 
   const authenticateSocket = async (socket: AuthedSocket, next: (err?: Error) => void): Promise<void> => {
-    const token = socket.handshake.query?.token;
-    if (typeof token !== 'string') return next(new Error('Authentication error'));
+    // Le client pose le jeton dans `auth` (hors query string, donc hors journaux du
+    // frontal). La query reste acceptée le temps qu'un onglet ouvert avant la bascule se
+    // reconnecte ; elle pourra disparaître ensuite.
+    const authToken = (socket.handshake.auth as { token?: unknown } | undefined)?.token;
+    const token = typeof authToken === 'string' && authToken ? authToken : socket.handshake.query?.token;
+    if (typeof token !== 'string' || !token) return next(new Error('Authentication error'));
 
     // Mêmes garanties que `middleware/auth` côté HTTP — un socket ne doit pas être une
     // porte dérobée. Tous les jetons de l'app sont signés avec le même JWT_SECRET : seul

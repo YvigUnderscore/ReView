@@ -1887,6 +1887,7 @@
   "common.install": "Instalar",
   "common.starting": "Iniciando…",
   "common.retrying": "Reintentando…",
+  "common.error.sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
   "admin.outOfService": "Fuera de servicio",
   "admin.tab.api": "API y Webhooks",
   "admin.tab.audit": "Auditoría",

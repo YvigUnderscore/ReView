@@ -1890,6 +1890,7 @@
   "common.install": "Instalatu",
   "common.starting": "Abiarazten…",
   "common.retrying": "Berriro saiatzen…",
+  "common.error.sessionExpired": "Zure saioa iraungi da. Hasi saioa berriro.",
   "admin.outOfService": "Zerbitzutik kanpo",
   "admin.tab.api": "API eta Webhookak",
   "admin.tab.audit": "Auditoria",

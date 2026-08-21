@@ -1843,6 +1843,7 @@
   "common.install": "安装",
   "common.starting": "启动中…",
   "common.retrying": "重试中…",
+  "common.error.sessionExpired": "登录状态已过期，请重新登录。",
   "admin.outOfService": "停止服务",
   "admin.tab.api": "API 与 Webhooks",
   "admin.tab.audit": "审计",

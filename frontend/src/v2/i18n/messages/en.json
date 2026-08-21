@@ -1878,6 +1878,7 @@
   "common.install": "Install",
   "common.starting": "Starting…",
   "common.retrying": "Retrying…",
+  "common.error.sessionExpired": "Your session has expired. Please sign in again.",
   "admin.outOfService": "Out of service",
   "admin.tab.api": "API & Webhooks",
   "admin.tab.audit": "Audit",

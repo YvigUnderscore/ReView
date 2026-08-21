@@ -1887,6 +1887,7 @@
   "common.install": "Installieren",
   "common.starting": "Wird gestartet…",
   "common.retrying": "Neuer Versuch…",
+  "common.error.sessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
   "admin.outOfService": "Außer Betrieb",
   "admin.tab.api": "API & Webhooks",
   "admin.tab.audit": "Audit",

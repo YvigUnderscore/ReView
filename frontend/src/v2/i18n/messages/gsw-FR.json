@@ -1887,6 +1887,7 @@
   "common.install": "Installiere",
   "common.starting": "Wird gstartet…",
   "common.retrying": "Nöie Versuech…",
+  "common.error.sessionExpired": "Dini Sitzung isch abgloffe. Bitte mäld di nej a.",
   "admin.outOfService": "Usser Betryb",
   "admin.tab.api": "API & Webhooks",
   "admin.tab.audit": "Audit",

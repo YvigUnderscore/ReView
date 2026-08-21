@@ -1853,6 +1853,7 @@
   "common.install": "インストール",
   "common.starting": "開始中…",
   "common.retrying": "再実行中…",
+  "common.error.sessionExpired": "セッションの有効期限が切れました。もう一度サインインしてください。",
   "admin.outOfService": "停止中",
   "admin.tab.api": "API と Webhooks",
   "admin.tab.audit": "監査",
