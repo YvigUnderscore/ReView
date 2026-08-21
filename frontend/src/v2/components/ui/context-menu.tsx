@@ -98,6 +98,35 @@ const ContextMenuRadioItem = forwardRef<
 ));
 ContextMenuRadioItem.displayName = 'ContextMenuRadioItem';
 
+/**
+ * Bascule d'un état (plan omis du montage). Comme le choix unique, la primitive porte la
+ * sémantique — `role="menuitemcheckbox"` et `aria-checked` — qu'un item ordinaire coiffé
+ * d'une coche dessinée à la main n'aurait pas.
+ */
+const ContextMenuCheckboxItem = forwardRef<
+  ComponentRef<typeof ContextMenuPrimitive.CheckboxItem>,
+  ComponentPropsWithoutRef<typeof ContextMenuPrimitive.CheckboxItem>
+>(({ className, children, ...props }, ref) => (
+  <ContextMenuPrimitive.CheckboxItem
+    ref={ref}
+    className={cn(
+      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-none transition-colors',
+      'focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      className,
+    )}
+    {...props}
+  >
+    {/* Même emplacement fixe que le choix unique : les libellés ne bougent pas. */}
+    <span className="flex w-4 shrink-0 items-center justify-center">
+      <ContextMenuPrimitive.ItemIndicator>
+        <Check size={13} />
+      </ContextMenuPrimitive.ItemIndicator>
+    </span>
+    {children}
+  </ContextMenuPrimitive.CheckboxItem>
+));
+ContextMenuCheckboxItem.displayName = 'ContextMenuCheckboxItem';
+
 // Sous-menus (gestion des rôles live par clic droit — retours 33).
 const ContextMenuSub = ContextMenuPrimitive.Sub;
 
@@ -143,6 +172,7 @@ export {
   ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuCheckboxItem,
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
   ContextMenuSeparator,

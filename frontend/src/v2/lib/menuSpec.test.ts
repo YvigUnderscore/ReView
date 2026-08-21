@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it, vi } from 'vitest';
-import { isSeparator, isSubmenu, separator, tidyMenu, type MenuEntry } from './menuSpec';
+import { isCheckbox, isSeparator, isSubmenu, separator, tidyMenu, type MenuEntry } from './menuSpec';
 
 const action = (id: string): MenuEntry => ({ id, label: id, onSelect: vi.fn() });
 /** Résumé lisible : le libellé d'une action, `|` pour un séparateur. */
@@ -56,12 +56,36 @@ describe('tidyMenu', () => {
   });
 });
 
+const checkbox = (checked: boolean): MenuEntry => ({
+  kind: 'checkbox',
+  id: 'omitted',
+  label: 'Omis du montage',
+  checked,
+  onCheckedChange: vi.fn(),
+});
+
 describe('discriminants', () => {
-  it('distingue les trois familles d’entrées', () => {
+  it('distingue les familles d’entrées', () => {
     expect(isSeparator(separator('s'))).toBe(true);
     expect(isSeparator(action('a'))).toBe(false);
     expect(isSubmenu({ kind: 'submenu', id: 'x', label: 'x', items: [] })).toBe(true);
     expect(isSubmenu(action('a'))).toBe(false);
+    expect(isCheckbox(checkbox(true))).toBe(true);
+    expect(isCheckbox(action('a'))).toBe(false);
+  });
+});
+
+describe('tidyMenu et les cases à cocher', () => {
+  it('garde une case décochée, qui vaut un état et non une entrée vide', () => {
+    // Le piège du groupe radio vide : une case décochée n'a rien à voir avec un sous-menu
+    // sans contenu, la jeter ferait disparaître le seul moyen de remettre le plan au montage.
+    expect(ids(tidyMenu([checkbox(false)]))).toEqual(['omitted']);
+    expect(ids(tidyMenu([checkbox(true)]))).toEqual(['omitted']);
+  });
+
+  it('garde un sous-menu qui ne contient qu’une case', () => {
+    const tidy = tidyMenu([{ kind: 'submenu', id: 'cut', label: 'Montage', items: [checkbox(false)] }]);
+    expect(isSubmenu(tidy[0]) && ids(tidy[0].items)).toEqual(['omitted']);
   });
 });
 

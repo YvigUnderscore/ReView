@@ -20,6 +20,7 @@ import { Button } from '../components/ui/button';
 import { useProjectRole } from '../lib/useProjectRole';
 import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
 import { useStatusMenu } from '../lib/useStatusMenu';
+import { useOmitMenu } from '../lib/useOmitMenu';
 import { entriesOf } from '../lib/menuSpec';
 import type { MenuEntry } from '../lib/menuSpec';
 import { useT } from '../i18n';
@@ -36,6 +37,8 @@ interface ShotDetail {
   endFrame?: number | null;
   pipelineStatusId?: number | null;
   thumbnailUrl?: string | null;
+  /** Coupé au montage (Phase 45) : les montages automatiques le sautent, lui reste entier. */
+  omitted?: boolean;
   sequence?: { id: number; code: string; projectId?: number } | null;
 }
 
@@ -64,6 +67,7 @@ export default function ShotPage() {
   const { canManage, canContribute } = useProjectRole(projectId);
   const playlistMenu = useAddToPlaylistMenu(projectId);
   const { entry: statusEntry } = useStatusMenu(projectId, 'shot');
+  const { entry: omitEntry } = useOmitMenu(projectId);
 
   const treeQ = useQuery({
     queryKey: qk.shotTree(shotId),
@@ -111,6 +115,9 @@ export default function ShotPage() {
   const menuExtras: MenuEntry[] = [
     // Statut du plan, en tête du menu : c'est ce qu'on vient changer le plus souvent.
     ...entriesOf(shot ? statusEntry(shot, { canEdit: canManage }) : null),
+    // Omission du montage : elle ne touche que les montages automatiques, le plan garde
+    // tout — d'où la case à cocher plutôt qu'une action au nom définitif.
+    ...entriesOf(shot ? omitEntry(shot, { canEdit: canManage }) : null),
     ...(canContribute
       ? [
           {

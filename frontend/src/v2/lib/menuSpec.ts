@@ -38,6 +38,23 @@ export interface MenuSeparator {
   id: string;
 }
 
+/**
+ * Bascule d'un état de l'entité — un plan omis du montage, typiquement.
+ *
+ * Une action ordinaire annonce ce qu'elle va faire, jamais où en est l'entité : il
+ * faudrait deux libellés et deux icônes pour laisser deviner un état que la coche
+ * énonce d'elle-même, et le menu mentirait le temps que la liste se rafraîchisse.
+ */
+export interface MenuCheckbox {
+  kind: 'checkbox';
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}
+
 /** Un choix parmi plusieurs, dans un groupe. */
 export interface MenuRadioItem {
   id: string;
@@ -61,7 +78,7 @@ export interface MenuRadioGroup {
   items: MenuRadioItem[];
 }
 
-export type MenuEntry = MenuAction | MenuSubmenu | MenuSeparator | MenuRadioGroup;
+export type MenuEntry = MenuAction | MenuSubmenu | MenuSeparator | MenuRadioGroup | MenuCheckbox;
 
 /**
  * Séparateur dérivé de l'identifiant de l'entrée qui le suit. Le suffixe est posé ici et
@@ -82,6 +99,10 @@ export function isSubmenu(entry: MenuEntry): entry is MenuSubmenu {
 
 export function isRadioGroup(entry: MenuEntry): entry is MenuRadioGroup {
   return entry.kind === 'radiogroup';
+}
+
+export function isCheckbox(entry: MenuEntry): entry is MenuCheckbox {
+  return entry.kind === 'checkbox';
 }
 
 /** Une entrée éventuelle devient une liste — évite un `?? []` mal typé chez l'appelant. */

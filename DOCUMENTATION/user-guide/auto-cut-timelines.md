@@ -154,12 +154,19 @@ when no clip has a media.
 
 A shot cut from the edit carries an **omitted** flag. Cuts skip it entirely, while its
 tasks, versions, media and comments are preserved — deleting the shot would lose all of
-that, and it is not a soft delete. The sequence's shot grid marks it with an eye-off
-badge so it is visible as a deliberate choice rather than an absence.
+that, and it is not a soft delete. The sequence's shot grid and the project's **Shots**
+tab mark it with an eye-off badge, so it reads as a deliberate choice rather than an
+absence.
 
-The flag is written through `PATCH /api/shots/:id` (`omitted: true`); there is no toggle
-in the shot settings panel yet. It affects the cuts only — the shot still counts in the
-Production tab's matrix, workload and attention lists.
+Right-click a shot — on its card in the **Shots** tab, or anywhere on the shot page — and
+tick **Omitted from the cut**. The tick shows the current state, so the same entry puts
+the shot back in the edit. Toggling it is reserved to supervisors and admins; everyone
+else sees the badge without the entry.
+
+Under the hood this is `PATCH /api/shots/:id` with `omitted` alone, so the rest of the
+shot is left untouched — nothing else is republished to ShotGrid. Open cuts refresh on
+their own. The flag affects the cuts only: the shot still counts in the Production tab's
+matrix, workload and attention lists.
 
 ## Use cases
 

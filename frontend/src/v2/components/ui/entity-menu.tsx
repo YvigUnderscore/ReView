@@ -4,6 +4,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuRadioGroup,
@@ -14,7 +15,14 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from './context-menu';
-import { isRadioGroup, isSeparator, isSubmenu, tidyMenu, type MenuEntry } from '../../lib/menuSpec';
+import {
+  isCheckbox,
+  isRadioGroup,
+  isSeparator,
+  isSubmenu,
+  tidyMenu,
+  type MenuEntry,
+} from '../../lib/menuSpec';
 import { useT } from '../../i18n';
 
 /** Rend une liste d'entrées déclarées (`lib/menuSpec`) avec la primitive Radix. */
@@ -33,6 +41,19 @@ function MenuEntries({ entries }: { entries: MenuEntry[] }) {
                 </ContextMenuRadioItem>
               ))}
             </ContextMenuRadioGroup>
+          );
+        }
+        if (isCheckbox(entry)) {
+          return (
+            <ContextMenuCheckboxItem
+              key={entry.id}
+              checked={entry.checked}
+              disabled={entry.disabled}
+              onCheckedChange={entry.onCheckedChange}
+            >
+              {entry.icon}
+              {entry.label}
+            </ContextMenuCheckboxItem>
           );
         }
         if (isSubmenu(entry)) {

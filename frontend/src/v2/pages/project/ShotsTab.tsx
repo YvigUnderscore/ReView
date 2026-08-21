@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Bell, BellOff, Clapperboard, ExternalLink } from 'lucide-react';
+import { Bell, BellOff, Clapperboard, ExternalLink, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
@@ -10,6 +10,7 @@ import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../../components/EntityCard';
 import { useStatusMenu } from '../../lib/useStatusMenu';
+import { useOmitMenu } from '../../lib/useOmitMenu';
 import { entriesOf } from '../../lib/menuSpec';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import BatchGenerator from '../../components/BatchGenerator';
@@ -60,6 +61,8 @@ export default function ShotsTab({
   // Statut par clic droit : le geste le plus fréquent de la production n'a plus à passer
   // par la fiche du plan puis son panneau de réglages.
   const { entry: statusEntry } = useStatusMenu(projectId, 'shot');
+  // Omission du montage : décision de production, elle aussi au clic droit (UI simple).
+  const { entry: omitEntry } = useOmitMenu(projectId);
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
   // Drawer piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
@@ -207,13 +210,23 @@ export default function ShotsTab({
                   thumbnailUrl={shot.thumbnailUrl}
                   badge={
                     <span className="flex items-center gap-1">
+                      {/* Coupé au montage : la carte le dit, sinon la case cochée du clic
+                          droit serait le seul endroit où l'état existe. */}
+                      {shot.omitted && (
+                        <span title={t('shots.omitted')} className="text-muted-foreground">
+                          <EyeOff size={12} />
+                        </span>
+                      )}
                       <PipelineStatusBadge statusId={shot.pipelineStatusId} scope="shot" size="xs" />
                       <SgSyncDot projectId={projectId} type="shot" localId={shot.id} canRealign={canManage} />
                     </span>
                   }
                   favorite={{ type: 'SHOT', entityId: shot.id }}
                   actions={actions}
-                  contextEntries={entriesOf(statusEntry(shot, { canEdit: canManage }))}
+                  contextEntries={entriesOf(
+                    statusEntry(shot, { canEdit: canManage }),
+                    omitEntry(shot, { canEdit: canManage }),
+                  )}
                   contextActions={[...sgAction, watchAction, ...actions]}
                 />
               );
