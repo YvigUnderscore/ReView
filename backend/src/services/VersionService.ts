@@ -12,16 +12,20 @@ import { emitToProject } from './SocketService';
 import { forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
 import { assertProjectWritable } from '../lib/projectGuard';
+import { assertCanContribute, assertProjectManage, isProjectManager } from '../lib/projectRoles';
 
 /**
  * Logique métier des versions (liste avec comptage média respectant la visibilité,
  * création XOR Task/Asset, publication réservée superviseur+, corbeille). L'accès
  * projet (RBAC) est asserté dans la route (10.D8).
+ *
+ * Les droits se lisent sur le rôle EFFECTIF (38.E, `lib/projectRoles`) et jamais sur le
+ * rôle global : le second modèle qui vivait ici refusait à un ARTIST promu SUPERVISOR sur
+ * son projet de publier ou de supprimer une version de CE projet, et laissait un ARTIST
+ * rétrogradé CLIENT en créer.
  */
 
 type SessionUser = { id: number; role: Role };
-
-const isGlobalManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
 /** Émet l'événement temps réel de mise à jour de version vers le projet. */
 function emitVersionUpdate(
@@ -99,6 +103,7 @@ async function autoName(projectId: number, body: CreateVersionInput): Promise<st
 }
 
 export async function create(user: SessionUser, projectId: number, body: CreateVersionInput) {
+  await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas de version
   await assertProjectWritable(projectId); // 38.B
   const name = body.name ?? (await autoName(projectId, body));
   const version = await prisma.version.create({
@@ -158,9 +163,9 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     select: { authorId: true, published: true },
   });
   if (!version) throw notFound('Version not found');
-  const manager = isGlobalManager(user.role);
+  const manager = await isProjectManager(user.id, user.role, projectId);
   const isAuthor = version.authorId === user.id;
-  if (!manager && !isAuthor) throw forbidden("Modification réservée à l'auteur ou un superviseur");
+  if (!manager && !isAuthor) throw forbidden('Only the author or a supervisor can modify a version');
   if (body.status === VersionStatus.PUBLISHED && !manager)
     throw forbidden('Only a supervisor or administrator can publish a version');
   // …et la sortie de l'état publié est tout aussi réservée. Sans cela le verrou n'a qu'un
@@ -200,6 +205,7 @@ export async function update(user: SessionUser, projectId: number, id: number, b
  * PUBLISHED, qui ne dévoile aucun brouillon.
  */
 export async function publishAll(user: SessionUser, projectId: number, id: number) {
+  await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas de publication
   const version = await prisma.version.findUnique({
     where: { id },
     select: { id: true, deletedAt: true },
@@ -234,8 +240,8 @@ export async function remove(user: SessionUser, projectId: number, id: number) {
     select: { authorId: true, taskId: true, assetId: true },
   });
   if (!version) throw notFound('Version not found');
-  if (!isGlobalManager(user.role) && version.authorId !== user.id)
-    throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+  if (!(await isProjectManager(user.id, user.role, projectId)) && version.authorId !== user.id)
+    throw forbidden('Only the author or a supervisor can delete a version');
   await softDeleteVersion(id);
   logAudit({ userId: user.id, action: 'VERSION_DELETE', entityType: 'Version', entityId: id });
   emitVersionUpdate(projectId, { id, taskId: version.taskId, assetId: version.assetId });
@@ -247,14 +253,14 @@ export async function restore(user: SessionUser, projectId: number, id: number) 
     select: { authorId: true, taskId: true, assetId: true },
   });
   if (!version) throw notFound('Version not found');
-  if (!isGlobalManager(user.role) && version.authorId !== user.id)
-    throw forbidden("Restauration réservée à l'auteur ou un superviseur");
+  if (!(await isProjectManager(user.id, user.role, projectId)) && version.authorId !== user.id)
+    throw forbidden('Only the author or a supervisor can restore a version');
   await restoreVersion(id);
   emitVersionUpdate(projectId, { id, taskId: version.taskId, assetId: version.assetId });
 }
 
 export async function purge(user: SessionUser, projectId: number, id: number) {
-  if (!isGlobalManager(user.role)) throw forbidden('Supervisors and administrators only');
+  await assertProjectManage(user.id, user.role, projectId);
   const version = await prisma.version.findUnique({ where: { id }, select: { taskId: true, assetId: true } });
   if (!version) throw notFound('Version not found');
   await purgeVersion(id);

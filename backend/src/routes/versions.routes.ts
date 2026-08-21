@@ -3,7 +3,7 @@
 
 import { Router, type Request } from 'express';
 import { z } from 'zod';
-import { Role, VersionStatus } from '@prisma/client';
+import { VersionStatus } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
@@ -12,7 +12,8 @@ import {
   resolveProjectIdForTask,
   resolveProjectIdForAsset,
 } from '../lib/pipeline';
-import { badRequest, forbidden, notFound } from '../lib/errors';
+import { assertProjectManage } from '../lib/projectRoles';
+import { badRequest, notFound } from '../lib/errors';
 import * as VersionService from '../services/VersionService';
 import * as ReviewDecisionService from '../services/ReviewDecisionService';
 
@@ -69,7 +70,6 @@ router.post(
       ),
   }),
   async (req, res) => {
-    if (req.user!.role === Role.CLIENT) throw forbidden('Clients cannot create versions');
     const body = req.body as { taskId?: number; assetId?: number; name?: string };
     const projectId =
       body.taskId !== undefined
@@ -77,6 +77,9 @@ router.post(
         : await resolveProjectIdForAsset(body.assetId!);
     if (!projectId) throw badRequest('Parent task or asset not found');
     await assertProjectAccess(req, projectId);
+    // Le droit de contribuer se lit sur le rôle EFFECTIF (38.E), asserté par le service :
+    // tester `req.user.role === CLIENT` ici laissait passer un membre rétrogradé CLIENT sur
+    // ce projet et refusait un ARTIST promu SUPERVISOR dessus.
     res.status(201).json({ version: await VersionService.create(req.user!, projectId, body) });
   },
 );
@@ -113,7 +116,7 @@ router.patch(
 router.post('/:id/publish', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
-  if (req.user!.role === Role.CLIENT) throw forbidden('Clients cannot publish');
+  // Contribution jugée sur le rôle effectif du projet (38.E) — assertée par le service.
   res.json(await VersionService.publishAll(req.user!, projectId, id));
 });
 
@@ -141,10 +144,11 @@ router.post(
     body: z.object({ statusId: z.number().int(), comment: z.string().max(2000).optional() }),
   }),
   async (req, res) => {
-    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
-      throw forbidden('Supervisors only');
     const id = Number(req.params.id);
     const projectId = await resolveVersionAccess(req, id);
+    // Décider d'une review est un acte de supervision DE CE PROJET : le rôle effectif fait
+    // foi (38.E), pas le rôle global — sinon le superviseur nommé sur le projet en est exclu.
+    await assertProjectManage(req.user!.id, req.user!.role, projectId);
     const { statusId, comment } = req.body as { statusId: number; comment?: string };
     res.status(201).json({
       decision: await ReviewDecisionService.decide(req.user!, projectId, id, statusId, comment),

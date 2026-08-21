@@ -216,6 +216,10 @@ model User {
   isService     Boolean    @default(false)
   status        UserStatus @default(AVAILABLE) // statut manuel (dispo/absent/ne pas déranger)
   lastSeenAt    DateTime? // dernière activité connue (présence)
+  // Compte désactivé (offboarding) : l'accès est coupé, l'historique et l'audit restent
+  // attribués. C'est le chemin par défaut d'un départ — la suppression dure emporte, elle,
+  // l'auteur des actions journalisées.
+  disabledAt    DateTime?
   storageUsed   BigInt     @default(0)
   storageLimit  BigInt?
   preferences   Json       @default("{}")

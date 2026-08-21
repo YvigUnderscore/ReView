@@ -13,7 +13,7 @@ import { getOnlineUserIds } from './PresenceService';
 import { toPublicUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
 import { revokeAllCredentials } from '../lib/sessions';
-import { badRequest, notFound } from '../lib/errors';
+import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
 
 /**
  * Logique métier des utilisateurs (profil, présence, administration des comptes).
@@ -36,8 +36,32 @@ const publicUser = {
   avatarKey: true,
   storageUsed: true,
   storageLimit: true,
+  disabledAt: true,
   createdAt: true,
 } as const;
+
+/**
+ * Refuse de retirer au studio son dernier administrateur.
+ *
+ * Rien n'empêchait l'unique ADMIN de se rétrograder, de se désactiver ou d'être supprimé :
+ * l'instance restait debout mais plus personne ne pouvait créer un compte, nommer un rôle
+ * ou toucher aux réglages, et la porte de secours est fermée (`setup` refuse de rejouer dès
+ * qu'un studio existe). Le seul recours était un UPDATE SQL sur la base.
+ *
+ * Ne comptent que les administrateurs réellement utilisables : un compte de service porte
+ * les écritures d'un token machine et ne se connecte jamais, un compte désactivé non plus.
+ */
+export async function assertNotLastAdmin(id: number): Promise<void> {
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true, isService: true, disabledAt: true },
+  });
+  if (!target || target.role !== Role.ADMIN || target.isService || target.disabledAt) return;
+  const others = await prisma.user.count({
+    where: { id: { not: id }, role: Role.ADMIN, isService: false, disabledAt: null },
+  });
+  if (others === 0) throw badRequest('The last administrator of the studio cannot be removed', 'LAST_ADMIN');
+}
 
 /** Refuse un pseudo/email déjà pris par un autre utilisateur (excludeId = compte édité). */
 async function assertUniqueIdentity(
@@ -193,6 +217,29 @@ export interface UpdateMeInput {
   password?: string;
 }
 
+/**
+ * Garde-fou des changements d'identifiant de connexion (mot de passe, email).
+ *
+ * Un token d'API (36.C) est un secret d'automatisation, souvent en clair dans un CI : lui
+ * laisser changer le mot de passe et l'email en ferait un chemin de prise de contrôle
+ * complète du compte, 2FA comprise, puisqu'aucun facteur n'est redemandé. Une vraie session
+ * doit, elle, re-saisir le mot de passe courant : un jeton volé ne suffit pas à verrouiller
+ * le compte de quelqu'un d'autre.
+ */
+export async function assertCredentialChange(
+  userId: number,
+  body: UpdateMeInput & { currentPassword?: string },
+  viaApiToken: boolean,
+): Promise<void> {
+  if (body.password === undefined && body.email === undefined) return;
+  if (viaApiToken)
+    throw forbidden('An API token cannot change the password or the email', 'API_TOKEN_FORBIDDEN');
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+  if (!user) throw unauthorized();
+  if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password)))
+    throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
+}
+
 export async function updateMe(userId: number, body: UpdateMeInput, keepSessionId?: string) {
   const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
   await assertUniqueIdentity(body.username || undefined, email, userId);
@@ -300,6 +347,7 @@ export async function createUser(actorId: number, input: CreateUserInput) {
 
 export async function changeRole(actorId: number, id: number, role: Role) {
   if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('User not found');
+  if (role !== Role.ADMIN) await assertNotLastAdmin(id);
   const user = await prisma.user.update({ where: { id }, data: { role }, select: publicUser });
   // Le rôle est mis en cache par requête (lib/userCache) : sans cette invalidation, un
   // compte rétrogradé garderait ses droits une demi-minute.
@@ -318,10 +366,16 @@ export interface AdminUpdateUserInput extends UpdateMeInput {
   name?: string | null;
   role?: Role;
   storageLimit?: number | null;
+  /** Désactivation (`true`) ou réactivation (`false`) du compte — cf. `setDisabled`. */
+  disabled?: boolean;
 }
 
 export async function updateUser(actorId: number, id: number, body: AdminUpdateUserInput) {
-  if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('User not found');
+  const target = await prisma.user.findUnique({ where: { id }, select: { disabledAt: true } });
+  if (!target) throw notFound('User not found');
+  // Rétrograder ou désactiver l'unique administrateur rendrait le studio inadministrable.
+  if ((body.role !== undefined && body.role !== Role.ADMIN) || body.disabled === true)
+    await assertNotLastAdmin(id);
   const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
   await assertUniqueIdentity(body.username || undefined, email, id);
   const data: Record<string, unknown> = {};
@@ -334,20 +388,48 @@ export async function updateUser(actorId: number, id: number, body: AdminUpdateU
   if (body.role !== undefined) data.role = body.role;
   if (body.storageLimit !== undefined)
     data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
+  // Re-désactiver un compte déjà désactivé ne rajeunit pas la date : c'est la date du départ.
+  if (body.disabled !== undefined) data.disabledAt = body.disabled ? (target.disabledAt ?? new Date()) : null;
   const user = await prisma.user.update({ where: { id }, data, select: publicUser });
   invalidateAuthUser(id);
-  logAudit({ userId: actorId, action: 'USER_UPDATE', entityType: 'User', entityId: id });
-  // Un admin qui réinitialise un mot de passe, change l'email de connexion ou rétrograde
-  // un rôle agit en général sur un compte compromis ou un départ : les jetons déjà émis
-  // (qui portent l'ancien rôle) ne doivent pas survivre à l'opération.
-  if (body.password !== undefined || email !== undefined || body.role !== undefined) {
+  // L'audit nomme l'événement notable : une désactivation n'est pas une édition de fiche.
+  const action = body.disabled === undefined ? 'USER_UPDATE' : body.disabled ? 'USER_DISABLE' : 'USER_ENABLE';
+  logAudit({ userId: actorId, action, entityType: 'User', entityId: id });
+  // Un admin qui réinitialise un mot de passe, change l'email de connexion, rétrograde un
+  // rôle ou désactive un compte agit en général sur un compte compromis ou un départ : les
+  // jetons déjà émis (qui portent l'ancien rôle) ne doivent pas survivre à l'opération.
+  if (
+    body.password !== undefined ||
+    email !== undefined ||
+    body.role !== undefined ||
+    body.disabled === true
+  ) {
     await revokeAllCredentials(id);
   }
   return toPublicUser(user);
 }
 
+/**
+ * Désactive (ou réactive) un compte — chemin par défaut d'un départ.
+ *
+ * La suppression dure fait converger vers `User` douze cascades et vingt `SetNull` : elle
+ * emporte les notifications, les abonnements, les sessions… et vide surtout `AuditLog.userId`,
+ * c'est-à-dire l'auteur des actions journalisées. Le registre d'audit d'un studio survit à
+ * ses employés ; le compte, lui, n'a qu'à cesser de fonctionner. La désactivation coupe
+ * l'accès (session et tokens révoqués sur-le-champ) sans rien effacer.
+ */
+export async function setDisabled(actorId: number, id: number, disabled: boolean) {
+  if (disabled && id === actorId) throw badRequest('You cannot disable your own account');
+  return updateUser(actorId, id, { disabled });
+}
+
+/**
+ * Suppression définitive d'un compte — action explicite, jamais le chemin par défaut.
+ * Préférer `setDisabled` : la suppression emporte l'auteur des actions journalisées.
+ */
 export async function deleteUser(actorId: number, id: number) {
   if (id === actorId) throw badRequest('You cannot delete your own account');
+  await assertNotLastAdmin(id);
   // Les liens de partage sont en `SetNull` : supprimer le compte les laissait VIVANTS, et
   // désormais sans propriétaire — un départ ne coupait donc pas les accès publics ouverts
   // par la personne, alors que c'est précisément ce qu'on attend d'un offboarding.

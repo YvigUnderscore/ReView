@@ -18,6 +18,7 @@ import { validate } from '../../middleware/validate';
 import { requireScope, assertTokenProject } from '../../middleware/scope';
 import { assertProjectAccess } from '../../middleware/rbac';
 import { expandScopes, ALL_SCOPES } from '../../lib/apiScopes';
+import { isGlobalManager } from '../../lib/projectRoles';
 import { API_EVENTS } from '../../lib/webhooks';
 import { formatPipelinePath, parsePipelinePath } from '../../lib/pipelinePath';
 import { toProject } from '../../lib/v1Resources';
@@ -56,7 +57,8 @@ router.get('/me', async (req, res) => {
     where: { userId: user.id },
     select: { projectId: true, role: true },
   });
-  const isGlobalManager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
+  // Portée transverse (aucun projet visé) : c'est le seul cas où le rôle global décide.
+  const manager = isGlobalManager(user.role);
   res.json({
     user: { id: user.id, email: user.email, role: user.role },
     auth: req.apiToken
@@ -68,7 +70,7 @@ router.get('/me', async (req, res) => {
         }
       : { kind: 'session', scopes: null, projectId: null },
     // Un manager global voit tous les projets : la liste des adhésions serait trompeuse.
-    projects: isGlobalManager ? 'all' : memberships,
+    projects: manager ? 'all' : memberships,
   });
 });
 

@@ -7,6 +7,9 @@ vi.mock('../lib/prisma', () => ({
   prisma: {
     version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
+    // Le droit de publier se lit sur le rôle EFFECTIF du projet (38.E) : l'auteur y est
+    // membre sans rôle local, donc jugé sur son rôle global — comme auparavant.
+    projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));

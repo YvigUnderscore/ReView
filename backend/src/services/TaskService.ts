@@ -8,7 +8,7 @@ import { emitToProject } from './SocketService';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
-import { assertCanContribute, assertProjectManage } from '../lib/projectRoles';
+import { assertCanContribute, assertProjectManage, isProjectManager } from '../lib/projectRoles';
 import { taskSelect, toTask } from '../lib/v1Resources';
 import * as ApiEventService from './ApiEventService';
 import * as DepartmentService from './DepartmentService';
@@ -19,11 +19,13 @@ import { enqueuePush } from './shotgrid/ShotgridPushService';
  * Logique métier des tâches (liste, création XOR Shot/Asset, mise à jour avec droits
  * différenciés, notifications d'assignation). L'accès projet (RBAC) est asserté dans
  * la route ; ces fonctions reçoivent le projectId résolu (10.D8).
+ *
+ * Les droits se lisent sur le rôle EFFECTIF (38.E, `lib/projectRoles`) et jamais sur le
+ * rôle global : le second modèle qui vivait ici refusait à un ARTIST promu SUPERVISOR sur
+ * son projet d'y modifier ou d'y supprimer une tâche qu'il supervise pourtant.
  */
 
 type SessionUser = { id: number; role: Role };
-
-const isGlobalManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
 function emitTaskUpdate(projectId: number, t: { id: number; shotId: number | null; assetId: number | null }) {
   emitToProject(projectId, 'task:update', { projectId, id: t.id, shotId: t.shotId, assetId: t.assetId });
@@ -415,7 +417,7 @@ export async function setAssignee(
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {
   const task = await prisma.task.findUnique({ where: { id }, select: { assigneeId: true } });
   if (!task) throw notFound('Task not found');
-  const manager = isGlobalManager(user.role);
+  const manager = await isProjectManager(user.id, user.role, projectId);
   const isAssignee = task.assigneeId === user.id;
   if (!manager) {
     // Un non-manager (artiste assigné) ne peut changer que le statut et la checklist de sa tâche.
@@ -514,7 +516,7 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
 }
 
 export async function remove(user: SessionUser, projectId: number, id: number) {
-  if (!isGlobalManager(user.role)) throw forbidden('Supervisors and administrators only');
+  await assertProjectManage(user.id, user.role, projectId);
   const task = await prisma.task.findUnique({ where: { id }, select: { shotId: true, assetId: true } });
   if (!task) throw notFound('Task not found');
   await prisma.task.delete({ where: { id } });

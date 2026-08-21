@@ -33,6 +33,29 @@ export async function effectiveProjectRole(
 export const canManageProject = (role: Role | null): boolean =>
   role === Role.ADMIN || role === Role.SUPERVISOR;
 
+/**
+ * Rôle GLOBAL de gestion — **hors projet uniquement**.
+ *
+ * Réservé aux décisions qui ne portent sur aucun projet en particulier : périmètre d'une
+ * liste transverse, portée annoncée d'un token. Toute décision qui concerne UN projet passe
+ * par `effectiveProjectRole` : ce test-ci ignore l'élévation locale (38.E) — il refusait
+ * à un ARTIST promu SUPERVISOR sur son projet de publier ce qu'il supervise, et laissait
+ * un ARTIST rétrogradé CLIENT contribuer quand même.
+ */
+export const isGlobalManager = (role: Role): boolean => role === Role.ADMIN || role === Role.SUPERVISOR;
+
+/**
+ * Forme booléenne d'`assertProjectManage`, pour les règles « auteur OU manager » où le
+ * refus n'est pas immédiat (modification/suppression d'une version, d'une tâche).
+ */
+export async function isProjectManager(
+  userId: number,
+  globalRole: Role,
+  projectId: number,
+): Promise<boolean> {
+  return canManageProject(await effectiveProjectRole(userId, globalRole, projectId));
+}
+
 /** Le rôle effectif permet-il d'uploader / créer des tâches ? (CLIENT = lecture/commentaire seul.) */
 export const canContribute = (role: Role | null): boolean => role != null && role !== Role.CLIENT;
 

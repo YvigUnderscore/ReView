@@ -3,10 +3,11 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { ProjectStatus, Role } from '@prisma/client';
+import { ProjectStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { validate } from '../../middleware/validate';
 import { requireScope } from '../../middleware/scope';
+import { isGlobalManager } from '../../lib/projectRoles';
 import { readPagination, pageArgs, paginate } from '../../lib/pagination';
 import {
   projectSelect,
@@ -38,13 +39,14 @@ router.get(
   async (req, res) => {
     const p = readPagination(req.query);
     const user = req.user!;
-    const isGlobalManager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
+    // Portée transverse (aucun projet visé) : c'est le seul cas où le rôle global décide.
+    const manager = isGlobalManager(user.role);
     const where = {
       deletedAt: null,
       ...(req.query.status ? { status: req.query.status as ProjectStatus } : {}),
       // Un token cantonné ne voit que son projet, même si son porteur est admin.
       ...(req.apiToken?.projectId ? { id: req.apiToken.projectId } : {}),
-      ...(isGlobalManager ? {} : { memberships: { some: { userId: user.id } } }),
+      ...(manager ? {} : { memberships: { some: { userId: user.id } } }),
     };
     const [rows, total] = await Promise.all([
       prisma.project.findMany({ where, orderBy: { name: 'asc' }, ...pageArgs(p), select: projectSelect }),

@@ -12,6 +12,9 @@ vi.mock('../lib/prisma', () => ({
     shotgridConnection: { findUnique: vi.fn() },
     task: { findUnique: vi.fn() },
     asset: { findUnique: vi.fn() },
+    // Les droits se lisent sur le rôle EFFECTIF (38.E) : par défaut, membre sans rôle local
+    // (donc contributeur au rôle global), ce que testaient déjà les cas ci-dessous.
+    projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
@@ -22,10 +25,11 @@ vi.mock('../lib/trash', () => ({
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 
-import { create, update } from './VersionService';
+import { create, update, publishAll, purge, remove } from './VersionService';
 import { prisma } from '../lib/prisma';
 import { emitToProject } from './SocketService';
-import { Role } from '@prisma/client';
+import { purgeVersion } from '../lib/trash';
+import { Role, VersionStatus } from '@prisma/client';
 
 const siblings = vi.mocked(prisma.version.findMany);
 const connection = vi.mocked(prisma.shotgridConnection.findUnique);
@@ -34,6 +38,7 @@ const asset = vi.mocked(prisma.asset.findUnique);
 const createVersion = vi.mocked(prisma.version.create);
 const findUnique = vi.mocked(prisma.version.findUnique);
 const updateVersion = vi.mocked(prisma.version.update);
+const membership = vi.mocked(prisma.projectMembership.findUnique);
 const user = { id: 3, role: Role.ARTIST };
 
 describe('VersionService.create — auto-nommage des versions', () => {
@@ -122,5 +127,81 @@ describe('VersionService.update — verrou de publication de la transform (Phase
     expect(updateVersion).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ name: 'V02_final' }) }),
     );
+  });
+});
+
+/**
+ * Le modèle d'autorisation est celui du rôle EFFECTIF sur le projet (38.E). Le modèle
+ * concurrent — un `isGlobalManager(user.role)` recopié dans le service — jugeait sur le
+ * rôle global : il refusait au superviseur nommé sur CE projet de publier ce qu'il
+ * supervise, et laissait un membre rétrogradé CLIENT y créer des versions.
+ */
+describe('VersionService — rôle effectif du projet (38.E)', () => {
+  const artist = { id: 3, role: Role.ARTIST };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    membership.mockResolvedValue({ role: null } as never);
+    updateVersion.mockImplementation(
+      ({ data }) => Promise.resolve({ id: 1, taskId: 42, assetId: null, ...data }) as never,
+    );
+    siblings.mockResolvedValue([] as never);
+    connection.mockResolvedValue(null);
+    task.mockResolvedValue(null);
+    asset.mockResolvedValue(null);
+    createVersion.mockImplementation(({ data }) => Promise.resolve({ id: 1, ...data }) as never);
+  });
+
+  it('ARTIST promu SUPERVISOR sur le projet publie une version dont il n’est pas l’auteur', async () => {
+    membership.mockResolvedValue({ role: Role.SUPERVISOR } as never);
+    findUnique.mockResolvedValue({ authorId: 99, published: false } as never);
+    await update(artist, 7, 1, { status: VersionStatus.PUBLISHED });
+    expect(updateVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: VersionStatus.PUBLISHED, published: true }),
+      }),
+    );
+  });
+
+  it('ARTIST sans élévation locale ne publie pas la version d’un autre (403)', async () => {
+    findUnique.mockResolvedValue({ authorId: 99, published: false } as never);
+    await expect(update(artist, 7, 1, { status: VersionStatus.PUBLISHED })).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    expect(updateVersion).not.toHaveBeenCalled();
+  });
+
+  it('ARTIST rétrogradé CLIENT sur le projet ne crée plus de version (403 ROLE_FORBIDDEN)', async () => {
+    membership.mockResolvedValue({ role: Role.CLIENT } as never);
+    await expect(create(artist, 7, { taskId: 42 })).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'ROLE_FORBIDDEN',
+    });
+    expect(createVersion).not.toHaveBeenCalled();
+  });
+
+  it('ARTIST rétrogradé CLIENT sur le projet ne publie plus les brouillons (403)', async () => {
+    membership.mockResolvedValue({ role: Role.CLIENT } as never);
+    await expect(publishAll(artist, 7, 1)).rejects.toMatchObject({ statusCode: 403 });
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it('non-membre : aucune création possible, même avec un rôle global d’artiste', async () => {
+    membership.mockResolvedValue(null);
+    await expect(create(artist, 7, { taskId: 42 })).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('ARTIST promu SUPERVISOR purge et supprime sur son projet', async () => {
+    membership.mockResolvedValue({ role: Role.SUPERVISOR } as never);
+    findUnique.mockResolvedValue({ authorId: 99, taskId: 42, assetId: null } as never);
+    await purge(artist, 7, 1);
+    expect(purgeVersion).toHaveBeenCalledWith(1);
+    await expect(remove(artist, 7, 1)).resolves.toBeUndefined();
+  });
+
+  it('ARTIST sans élévation ne purge pas (403), même auteur de la version', async () => {
+    findUnique.mockResolvedValue({ authorId: 3, taskId: 42, assetId: null } as never);
+    await expect(purge(artist, 7, 1)).rejects.toMatchObject({ statusCode: 403 });
+    expect(purgeVersion).not.toHaveBeenCalled();
   });
 });

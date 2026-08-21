@@ -3,10 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
 import { Role, UserStatus } from '@prisma/client';
-import { prisma } from '../lib/prisma';
-import { forbidden, unauthorized } from '../lib/errors';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
@@ -63,28 +60,9 @@ router.patch(
     }),
   }),
   async (req, res) => {
-    const body = req.body as { email?: string; password?: string; currentPassword?: string };
-    const changesCredentials = body.password !== undefined || body.email !== undefined;
-
-    if (changesCredentials) {
-      // Un token d'API (36.C) est un secret d'automatisation, souvent en clair dans un CI :
-      // lui laisser changer le mot de passe et l'email de connexion en ferait un chemin de
-      // prise de contrôle complète du compte — 2FA comprise, puisqu'aucun facteur n'est
-      // redemandé. Ces deux champs restent réservés à une vraie session interactive.
-      if (req.apiToken) {
-        throw forbidden(
-          "Un token d'API ne peut pas modifier le mot de passe ni l'email",
-          'API_TOKEN_FORBIDDEN',
-        );
-      }
-      // Re-authentification : un jeton volé ne doit pas suffire à verrouiller le compte.
-      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-      if (!user) throw unauthorized();
-      if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password))) {
-        throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
-      }
-    }
-
+    // Changer d'identifiant de connexion se re-authentifie et reste interdit à un token
+    // d'API : la règle vit dans le service, la route ne fait que la déclencher (10.D8).
+    await UserService.assertCredentialChange(req.user!.id, req.body, Boolean(req.apiToken));
     res.json({ user: await UserService.updateMe(req.user!.id, req.body, req.sessionId) });
   },
 );
@@ -170,6 +148,8 @@ router.patch(
       password: passwordSchema.optional(),
       role: z.nativeEnum(Role).optional(),
       storageLimit: z.number().int().nonnegative().nullable().optional(),
+      /** Désactivation / réactivation du compte (offboarding réversible). */
+      disabled: z.boolean().optional(),
     }),
   }),
   async (req, res) => {
@@ -190,10 +170,20 @@ router.delete('/:id/sessions', requireRole(Role.ADMIN), validate({ params: idPar
   res.json({ revoked: count });
 });
 
-// DELETE /api/users/:id (admin)
-router.delete('/:id', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
-  await UserService.deleteUser(req.user!.id, Number(req.params.id));
-  res.status(204).end();
-});
+// DELETE /api/users/:id — désactive le compte (admin). `?hard=true` supprime définitivement :
+// la suppression dure emporte l'auteur des actions journalisées, elle reste un geste explicite.
+router.delete(
+  '/:id',
+  requireRole(Role.ADMIN),
+  // `z.coerce.boolean()` rendrait `?hard=false` vrai : sur une suppression définitive, seul
+  // le mot exact déclenche.
+  validate({ params: idParam, query: z.object({ hard: z.enum(['true', 'false']).optional() }) }),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (req.query.hard === 'true') await UserService.deleteUser(req.user!.id, id);
+    else await UserService.setDisabled(req.user!.id, id, true);
+    res.status(204).end();
+  },
+);
 
 export default router;
