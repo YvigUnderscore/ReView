@@ -1,87 +1,179 @@
 # Production & reporting
 
-> Updated: 2026-07-20
+> Updated: 2026-08-21
 
-The **Production** tab of a project gathers review statistics and a lightweight schedule
-(calendar and Gantt). It is read-only reporting: figures are derived from your existing
-versions, review decisions and comments — nothing new to fill in except optional task dates.
+The **Production** tab of a project answers four questions about where the work stands,
+then adds a lightweight schedule. It is read-only reporting: every figure is derived from
+tasks, versions, review decisions and comments you already have. The only thing anyone
+has to fill in is the two optional task dates.
 
-Open a project and select the **Production** tab. A segmented control switches between
-**Statistics**, **Calendar** and **Gantt**.
+Open a project and select the **Production** tab (`?tab=production`). It is one scrolling
+page, in a fixed order — there are no sub-views to switch between. **Every project member
+can read it**; only supervisors and admins can edit task dates.
 
-## The four questions
+## Where the project stands
 
-The **Production** tab of a project answers four questions, in this order.
+A **sequences × departments matrix**. Rows are the project's sequences in their own
+order, with a final *outside sequence* row when some tasks belong to assets or to shots
+with no sequence. Columns are the departments actually used, **sorted alphabetically** —
+not in pipeline order.
 
-1. **Where the project stands** — a sequences × departments table. Each cell shows the
-   share of work done, split by status family, and the count. Sequence names link to
-   their page.
-2. **What is late or blocked** — three short lists rather than one aggregate number:
-   past due, nobody assigned, waiting for review. Each line opens the task. A finished
-   task is never counted as late: its date has passed, but the work is done.
-3. **Who is doing what** — the load per person, counting only what is left. The assignee
-   was carried by the API all along and displayed nowhere.
-4. **Pace and projection** — deliveries per week over a window you choose (4, 8, 13 or
-   26 weeks), the overall progress, and a projected end date at the observed pace. The
-   projection is always shown together with that pace: on its own, a date reads like a
-   commitment, whereas it only holds if the rhythm does.
+Each cell is a stacked proportional bar plus a `done/total` count, and its tooltip spells
+out every family with its count. An empty cell shows a dash. The five families:
 
-## Review statistics
+| Family | Built from | Colour |
+|--------|-----------|--------|
+| Done | `APPROVED` | success |
+| In review | `PENDING_REVIEW` | warning |
+| In progress | `IN_PROGRESS` | info |
+| Set aside | `RETAKE`, `REJECTED` | destructive |
+| To do | `TODO` | muted |
 
-The **Statistics** view answers "where does review time go?" for the project's shots:
+If no task carries a department yet, the matrix says so instead of drawing an empty grid.
 
-- **Key indicators** — shots, versions, approval rate (share of *started* shots whose latest
-  version is approved), open notes, average review delay, retakes per shot, notes per version,
-  total decisions.
-- **Convergence per sequence** — a stacked bar per sequence showing how its shots split
-  between *approved*, *in review*, *retake* and *not started*, with the approved ratio.
-- **Shots to watch** — the costliest shots ranked by review delay, then retakes, then open
-  notes. Each row links to the shot.
+## What is late or blocked
 
-Definitions:
+Three short lists rather than one aggregate number: **Past due**, **Nobody assigned**,
+**Waiting for review**. Each line opens the task.
 
-- **Review delay** — days between a shot's first version and its first approval decision.
-- **Shot status** — taken from the review status of the shot's most recent version
-  (approval / retake flags are configured in **Admin → Review statuses**).
-- **Open notes** — unresolved root comments on the shot's media.
+- **A finished task is never listed.** Tasks in the *Done* family are removed first: the
+  date has passed, but the work is done. Tasks in *Set aside* stay — a retake past its
+  due date is still late.
+- **Past due** compares the due date to now, so a task due today is late only once its
+  timestamp has passed.
+- **Waiting for review** is the raw `PENDING_REVIEW` status.
+- The three lists are **not exclusive**: an unassigned, overdue task waiting for review
+  appears in all three.
+- The badge next to each heading counts up to **50** tasks; the list itself shows the
+  **first 8**, sorted by due date with undated tasks last, then an *and n more* line.
 
-## Task scheduling
+## Who is doing what
 
-Calendar and Gantt are populated from two optional task dates: a **start date** (planned
-start) and a **due date** (deadline). Set them from a task page (**Planning** row), visible
-and editable to supervisors and admins. Artists see the dates read-only.
+The load per person, **counting only what is left** — done tasks are excluded. Each row
+shows the split across to-do / in-progress / in-review / set-aside, the total, and how
+many of those are **late**. The late count overlaps the others; it is not a sixth bucket.
 
-### Deadline calendar
+Rows are sorted by total, descending, with the **unassigned** row always last regardless
+of its size — it is a gap to fill, not a person to compare against. The bars are scaled
+against the largest total, so a glance shows who is carrying the batch.
 
-Managers can **drag a due date from one day to another** — the task page is no longer the
-only way to change it.
+## Pace and projection
 
+Deliveries per week over an observation window you choose — **4, 8, 13 or 26 weeks**,
+defaulting to 8. A delivery is a **published media created inside the window**. Weeks are
+ISO weeks starting Monday; empty weeks are kept so a gap reads as a gap.
 
-A monthly calendar places each task on its **due date**. Navigate months with the arrows or
-jump back with **Today**. Days show up to three tasks (a coloured dot per status); click a
-task to open it. The current day is highlighted.
+Below the bars: the overall progress (`done/total` tasks and a percentage), the observed
+rate as *n per week*, and a **projected end date**.
 
-### Sequence Gantt
+The projection is deliberately never shown alone. On its own a date reads like a
+commitment, whereas it only holds if the rhythm does. It is computed as
+`now + ceil(remaining / rate) weeks`, where `remaining` is the count of tasks that are
+not done. When there is nothing left, or the observed rate is zero, the panel says
+*Not enough pace to project an end* rather than inventing a date.
 
-The **scale** is selectable — month, quarter, everything. On a feature-length project,
-“everything” squeezes a year into one screen width and no bar stays readable.
+Note that the rate counts **published media** while the remainder counts **tasks**: read
+the projection as an order of magnitude, not as a schedule.
 
+## Deadline calendar
 
-A read-only timeline groups dated tasks **by sequence** (tasks without a sequence appear
-last). Each bar spans from start date to due date (falling back to whichever single date
-exists), coloured by task status, with a marker for today. Click a bar or its label to open
-the task.
+A monthly calendar placing each task on its **due date**. It appears only once at least
+one task in the project carries a date.
+
+- Navigate with the arrows; **Today** jumps back to the current month. The current day is
+  highlighted. Weeks start on Monday.
+- Each day shows up to **three** tasks — a coloured dot per status, the location and the
+  name — then a `+n` overflow marker. Click a task to open it.
+- **Supervisors and admins can drag a task from one day to another.** The drop writes the
+  new **due date** only; the start date is untouched. A toast confirms *Due date moved*,
+  and the Gantt and the rest of the tab refresh with it. The date is stored at midday UTC
+  so it does not slip a day for readers west of Greenwich.
+- Everyone else sees the same calendar without the drag. Dates are then edited from the
+  task page.
+
+## Sequence Gantt
+
+A read-only timeline grouping dated tasks **by sequence**, alphabetically, with tasks
+that have no sequence last. Each bar is a link to its task.
+
+- **Scale**: *Month* (30 days), *Quarter* (90 days, the default) or *Everything*. The
+  windowed scales start a week in the past so what has just finished stays visible. On a
+  feature-length project, *Everything* squeezes a year into one screen width and no bar
+  stays readable — that is why the choice exists.
+- A bar spans **start date → due date**. With only one of the two it collapses to a
+  marker at that date; if the due date precedes the start date the two are swapped rather
+  than drawing backwards. Bars are coloured by task status.
+- A single vertical line marks today, drawn once across the whole chart.
+
+## Task dates
+
+Both the calendar and the Gantt are fed by two optional dates on a task: a planned
+**start** and a **due** date. Set them in the **Schedule** row of a task page —
+supervisors and admins edit, everybody else reads. When neither date is set, the row is
+hidden for readers entirely.
 
 ## Weekly production report (email)
 
 Supervisors and admins can subscribe to a **weekly production report** in
-**Profile → Notifications**. Every Monday morning it emails a studio-wide summary — per
-active project: versions published, approvals, retakes and open notes over the last 7 days.
-It is only sent when SMTP is configured (see the admin guide) and when there was activity in
-the week. The daily digest is a separate, per-user subscription.
+**Profile → Notifications**. It is a per-account subscription, opt-in: an unset
+preference means no mail.
+
+- **Sent on Monday**, at the studio's digest hour (`DIGEST_HOUR`, default 07:00, in the
+  server's local time zone). The daily digest uses the same hour and is a separate
+  subscription.
+- **Content**: one studio-wide table, identical for every recipient — one row per active
+  project, with versions published, approvals, retakes and open notes. The first three
+  cover the **last 7 days**; open notes are a running total of unresolved root comments.
+  Archived and deleted projects are left out.
+- **It is not sent** when SMTP is not configured, when nobody has subscribed, or when
+  there was no activity anywhere in the week. A project with nothing to report is dropped
+  from the table; if every project is dropped, no mail goes out at all. There is no
+  "quiet week" email.
+- Service accounts never receive it, and every message carries an unsubscribe link.
+
+## Use cases
+
+### The Monday production meeting
+
+You have ten minutes and need to know what to talk about.
+
+1. Open **Production**. The matrix gives the shape of the film: which sequence is
+   dragging, in which department.
+2. Read the three attention lists in order. *Nobody assigned* is the one you can fix on
+   the spot — note the tasks, then go and assign them from the Assets tab or the project
+   Overview panel.
+3. *Who is doing what* tells you whether the load is one person's problem or the batch's.
+4. Set the observation window to **13 weeks** if the project has been running a while:
+   4 weeks reacts to a single good fortnight, 13 does not.
+
+### Following a single department
+
+Lighting is behind and you want to know by how much.
+
+The matrix column tells you the ratio, but the useful screen is the **kanban** with the
+department filter on: the Production tab is a map, the kanban is where you move things.
+Come back to the matrix once a week to see whether the column moved.
+
+### Planning a delivery window
+
+1. Open a handful of tasks and fill their **Schedule** rows — start and due dates. Only
+   dated tasks appear in the calendar and the Gantt.
+2. Look at the Gantt on the **Quarter** scale: overlaps within a sequence show up as
+   stacked bars around the same week.
+3. When editorial moves a deadline, drag the task in the **calendar** rather than opening
+   its page. The Gantt follows immediately.
+
+### Explaining the projected end date
+
+Someone asks when the film lands.
+
+Never quote the date without the rate next to it — that is why the panel prints the two
+together. Say "at eleven deliveries a week we land around the 12th"; if the rate is a
+recent accident, widen the observation window and quote the slower figure instead.
 
 ## Related
 
-- [Review approvals](review-approvals.md) — review statuses and decisions that feed the stats.
-- [Kanban & tasks](kanban-and-tasks.md) — task assignment and status.
-- [Personalization](personalization.md) — notification subscriptions.
+- [Review approvals](review-approvals.md) — the decisions that feed approvals and retakes
+- [Kanban & tasks](kanban-and-tasks.md) — where dates, assignees and statuses are set
+- [Personalization](personalization.md) — notification subscriptions
+- [SMTP & announcements (admin)](../admin-guide/smtp-and-announcements.md) — mail setup
