@@ -106,6 +106,35 @@ Any evolution must **extend** the suite; never trade a check away.
   modules (e.g. `lib/`, `pages/docs/…`) rather than tested through full pages.
 - Integration tests need the docker stack (Postgres, Redis, MinIO) up.
 
+## Documentation screenshots
+
+The images under `DOCUMENTATION/assets/` are **generated**, never taken by hand:
+
+```bash
+cd frontend && DOCS_FIXTURES=/path/to/fixtures E2E_CHANNEL=msedge npx playwright test e2e/docs-capture.spec.ts
+```
+
+`e2e/docs-capture.spec.ts` signs in, forces the interface to English, builds a neutral demo
+project (`Nebula Rising`) if it is missing, and captures the screens the documentation
+refers to. Re-run it after a visual change: a stale screenshot misleads more than no
+screenshot at all.
+
+Three rules are enforced by the script itself, and matter if you extend it:
+
+- **Nothing from a real production.** The repository is public. Other projects of the
+  studio are hidden from the sidebar, and the demo data uses invented names.
+- **Nothing that only exists in development.** The TanStack Query devtools button and the
+  account's own overlays (pending drafts, ongoing uploads) are hidden.
+- **Wait for content, never for a delay.** Heavy pages load lazily; a fixed timeout used to
+  capture a `Loading…` on an empty background.
+
+Demo media (FFmpeg test patterns) stay **outside** the repository — they weigh more than
+the whole documentation. Regenerate them:
+
+```bash
+ffmpeg -y -f lavfi -i "testsrc2=size=1920x1080:rate=24:duration=6" -f lavfi -i "sine=frequency=440:duration=6" -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest SH010_comp_v001.mp4
+```
+
 ## Related pages
 
 - [Conventions](conventions.md)

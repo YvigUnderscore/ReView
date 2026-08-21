@@ -3,6 +3,35 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08-21 — ShotGrid statuses, assignment by right-click, better emails
+
+- **Statuses travel again, both ways.** Twenty confirmed defects were breaking the chain
+  between ReView and ShotGrid: shot and sequence statuses never left ReView, concurrent
+  syncs were silently dropped, an unknown status code *erased* the local status instead of
+  keeping it, an unmapped version status wiped the review decision, and the
+  “when both sides changed” setting arbitrated nothing — *ReView wins* and *manual*
+  behaved exactly like *ShotGrid wins*. All fixed, with the reasons written down in
+  [ShotGrid integration](admin-guide/shotgrid-integration.md).
+- **Set a status from the right-click menu**, on a shot card, a sequence row, a kanban
+  card, or the page of any of them. The current status is ticked, the vocabulary is your
+  project's, and the badge moves before the server answers. Artists can set the status of
+  a task assigned to them — the server always allowed it, the interface never offered it.
+- **Assign a person or a department to an asset** the same way, and to a whole selection
+  at once. Assigning an asset writes on its *tasks*, one per department — that is how the
+  work is actually divided, and how ShotGrid models it too.
+- **Imported media keep their ShotGrid name.** A media took the name of the attached file
+  while its version carried the ShotGrid code: the two tools named the same thing
+  differently, which made shots impossible to follow across windows. Media now carry the
+  version code, keeping the real file extension; the delivered file name stays readable in
+  the review technical sheet. Media imported earlier are renamed on the next sync.
+- **Bring the ShotGrid crew into ReView in one click.** The Members tab of a linked project
+  lists the people assigned to the project on the site, says who already has an account,
+  and creates the missing ones — invitation sent, project membership included.
+- **Emails are readable everywhere.** Every message now goes out as both HTML and plain
+  text, opens with a preheader, and lays out on tables that Outlook renders predictably.
+  Recurring emails carry a one-click unsubscribe; every message is marked as automatic, so
+  out-of-office replies no longer answer the daily digest.
+
 ## 2026-08 — Interface overhaul: sequences, kanban at scale, playlists, production
 
 - **Sequences have a page.** A sequence was an accordion row inside a tab, with its cut
