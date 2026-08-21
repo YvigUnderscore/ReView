@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The Shots tab of a project: bulk creation on top, then one card per shot grouped by sequence.](../assets/user-guide/project-shots.png)
+
 ## Hierarchy
 
 ```

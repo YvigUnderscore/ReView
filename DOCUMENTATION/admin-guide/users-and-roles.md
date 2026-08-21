@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The Members tab of a project — where a role is granted for this project only.](../assets/admin-guide/project-members.png)
+
 ReView has **two layers of authorisation** and confusing them is the most common
 administration mistake:
 

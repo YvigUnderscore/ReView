@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The Shares tab, where client links are created and revoked.](../assets/user-guide/shares.png)
+
 Supervisors and admins can create **share links** giving external clients access to a
 project's published media without an account. Links are managed in the project's
 **Shares** tab and open a dedicated, distraction-free client page.

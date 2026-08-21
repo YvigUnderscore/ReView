@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The Production tab: one scrolling page, from the sequence × department matrix down to the schedule.](../assets/user-guide/production-reporting.png)
+
 The **Production** tab of a project answers four questions about where the work stands,
 then adds a lightweight schedule. It is read-only reporting: every figure is derived from
 tasks, versions, review decisions and comments you already have. The only thing anyone

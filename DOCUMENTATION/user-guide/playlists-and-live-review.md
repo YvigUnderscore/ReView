@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The Playlists tab of a project.](../assets/user-guide/playlists.png)
+
 ReView supports the classic **dailies** workflow: build a playlist of versions across
 shots, play it end to end, and hold a **synchronized live session** where one pilot
 drives playback for everyone in the room.

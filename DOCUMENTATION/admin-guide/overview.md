@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The studio administration screen.](../assets/admin-guide/admin-overview.png)
+
 The admin area lives at `/admin` and is **reserved to accounts whose global role is
 `ADMIN`**. The restriction is enforced twice: the page itself refuses any other role,
 and every `/api/admin/*` route is mounted behind `authenticate + requireRole(ADMIN)`.

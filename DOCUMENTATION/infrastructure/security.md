@@ -178,7 +178,7 @@ See [Licensing](../development/licensing.md).
 
 ## Related pages
 
-- [API overview](overview.md) — error codes and limits
+- [API overview](../api/overview.md) — error codes and limits
 - [Authentication & API access](../api/authentication.md)
 - [Architecture](architecture.md) — failure modes and single-instance assumptions
 - [Monitoring & operations](monitoring.md)

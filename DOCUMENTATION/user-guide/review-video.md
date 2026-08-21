@@ -83,8 +83,10 @@ same task or asset.
 
 - **One version checked — A/B**: the second version plays muted and synchronised with the
   master. Three sub-modes, from the *Wipe bar* tool (`W`) options or the *Comparison*
-  panel: **side by side**, **Wipe** (a split bar you can drag, and rotate with a
-  right-click) and **Diff**.
+  panel: **side by side**, **Wipe** and **Diff**.
+- The **wipe bar** carries two handles: the round grip at its centre slides it across the
+  picture, and the small handle further along the bar rotates it — the current angle is
+  displayed next to it. Double-click the centre grip to snap back to vertical and centred.
 - **Two or three versions checked — 2×2 grid**: up to four versions on screen (three B
   panes maximum), all slaved to the master transport. Each pane has its own close button;
   wipe and diff are only available in simple A/B.
@@ -185,7 +187,8 @@ rather than a single frame with "around here it flickers".
 ### Before / after on a colour fix
 
 Check the previous version in *Compare…*, arm the wipe bar with `W`, and drag the split
-across the picture; a right-click on the bar rotates it if the fix runs horizontally. When
+across the picture by its centre grip; the second handle turns it horizontal if the fix runs
+along the horizon. When
 the difference is too subtle to see, switch to *Diff* and click the `×n` chip up to ×8 —
 what was invisible side by side becomes an obvious patch. The heatmap makes it printable
 for a note.

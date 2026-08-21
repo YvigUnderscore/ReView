@@ -22,7 +22,7 @@ right-click menu or any drawing tool letter.
   (one image pixel = one screen pixel), **fit** (the image contained in the viewport, the
   state it opens in) and **fullscreen**. There is no double-click shortcut for fit, and the
   rail's `F` / `H` keys are a 3D and splat feature.
-- A small **info** panel folds out with the resolution, the format and the file size.
+- A small **info** panel folds out with the image's native resolution and its format.
 - The background is a grid that follows the pan and the zoom, so you can tell transparent
   areas from white ones and judge how far you have zoomed.
 
@@ -68,8 +68,9 @@ dock:
 
 - **Side by side** — the two versions in two panes, with the zoom and the pan replicated
   between them, so both stay on the same detail.
-- **Wipe** — a single picture split by a bar you drag across; right-click the bar to rotate
-  it.
+- **Wipe** — the two pictures superimposed, split by a bar. The round grip at the centre of
+  the bar slides it, the smaller handle further along rotates it (the angle is shown next to
+  it), and a double-click on the centre grip snaps it back to vertical and centred.
 - **Diff** — |A − B| computed in the browser. Click the `×n` chip to amplify the result
   (×1 → ×2 → ×4 → ×8 → ×16), and the flame icon for a false-colour heatmap running from
   dark where nothing changed to red where the difference is largest.

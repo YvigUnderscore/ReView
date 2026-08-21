@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The kanban, with columns built from the project statuses and grouped into collapsible families.](../assets/user-guide/kanban.png)
+
 ## Tasks
 
 Tasks are the unit of work: typed (`MODELING`, `RIGGING`, `ANIMATION`, `FX`, `LIGHTING`,

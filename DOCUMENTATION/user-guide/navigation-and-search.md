@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![The command palette (Ctrl/Cmd + K): search and navigation in one place.](../assets/user-guide/command-palette.png)
+
 ## Layout
 
 - **Home** (`/`) — a personal dashboard of configurable widgets.

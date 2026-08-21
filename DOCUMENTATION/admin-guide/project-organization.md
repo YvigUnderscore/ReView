@@ -2,6 +2,8 @@
 
 > Updated: 2026-08-21
 
+![A project settings tab: pipeline defaults, status vocabulary and departments.](../assets/admin-guide/project-settings.png)
+
 Tools to structure, protect and delegate projects. They are reached from the project
 page rather than from `/admin`, but several of them still require a **global** manager
 role — the split is spelled out for each feature below, and in full in
