@@ -367,8 +367,13 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
     // GLB de 17 Mo (> seuil multipart 16 Mo) : 2 parts, pas de worker (READY au finalize).
+    // Le contenu porte un marqueur propre au run : à octets identiques, la dédup (37.B)
+    // reconnaîtrait dès le premier `init` le média laissé par le passage précédent et
+    // renverrait une copie serveur — le chemin multipart ne serait alors jamais exercé et
+    // la demande de parts échouerait (média sans `multipartUploadId`).
+    const { createHash, randomUUID } = await import('node:crypto');
     const glb = Buffer.concat([Buffer.from('glTF', 'ascii'), Buffer.alloc(17 * 1024 * 1024 - 4)]);
-    const { createHash } = await import('node:crypto');
+    glb.write(randomUUID(), 4, 'ascii');
     const hash = createHash('sha256').update(glb).digest('hex');
     const base = {
       versionId: ver.body.version.id,
@@ -427,6 +432,13 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(dedup.body.deduplicated).toBe(true);
     const fin2 = await request(app).post(`/api/media/${dedup.body.mediaObjectId}/finalize`).set(auth);
     expect(fin2.body.media.status).toBe('READY');
+
+    // Les deux médias pèsent 17 Mo chacun dans le stockage : la purge (DB + objet) évite
+    // qu'un passage sur la base de développement en laisse autant derrière lui.
+    for (const id of [mediaObjectId, dedup.body.mediaObjectId as number]) {
+      const purged = await request(app).delete(`/api/media/${id}/purge`).set(auth);
+      expect(purged.status).toBe(204);
+    }
   });
 
   it('miniature média (10.G) : POST /thumbnail stocke une image et alimente thumbnailUrl', async () => {
