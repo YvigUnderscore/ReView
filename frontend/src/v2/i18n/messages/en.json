@@ -550,6 +550,8 @@
   "viewer.reveal.fade": "Fade",
   "viewer.reveal.dissolve": "Dissolve",
   "viewer.reveal.sweep": "Sweep",
+  "viewer.bookmarks.remove": "Remove this saved view",
+  "viewer.bookmarks.full": "All nine saved views are taken — remove one first",
   "review.prim.reset": "Reset this prim",
   "review.scenegraph.empty": "No USD scenegraph for this media.",
   "review.scenegraph.truncated": "Tree truncated (large scene).",

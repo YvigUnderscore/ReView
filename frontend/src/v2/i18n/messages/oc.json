@@ -553,6 +553,8 @@
   "viewer.reveal.fade": "Fondut",
   "viewer.reveal.dissolve": "Dissolucion",
   "viewer.reveal.sweep": "Balajatge",
+  "viewer.bookmarks.remove": "Levar aquesta vista enregistrada",
+  "viewer.bookmarks.full": "Las nòu vistas enregistradas son presas — levatz-ne una d’abòrd",
   "review.prim.reset": "Reïnicializar aqueste prim",
   "review.scenegraph.empty": "Cap de scenegraph USD per aqueste mèdia.",
   "review.scenegraph.truncated": "Arbre troncat (scèna voluminosa).",

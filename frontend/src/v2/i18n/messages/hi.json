@@ -550,6 +550,8 @@
   "viewer.reveal.fade": "फ़ेड",
   "viewer.reveal.dissolve": "डिज़ॉल्व",
   "viewer.reveal.sweep": "स्वीप",
+  "viewer.bookmarks.remove": "यह सहेजा गया दृश्य हटाएँ",
+  "viewer.bookmarks.full": "सभी नौ सहेजे गए दृश्य भरे हैं — पहले एक हटाएँ",
   "review.prim.reset": "इस prim को रीसेट करें",
   "review.scenegraph.empty": "इस मीडिया के लिए कोई USD scenegraph नहीं।",
   "review.scenegraph.truncated": "वृक्ष छोटा किया गया (बड़ा दृश्य)।",

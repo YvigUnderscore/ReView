@@ -553,6 +553,8 @@
   "viewer.reveal.fade": "Fondu",
   "viewer.reveal.dissolve": "Dissolution",
   "viewer.reveal.sweep": "Balayage",
+  "viewer.bookmarks.remove": "Retirer cette vue enregistrée",
+  "viewer.bookmarks.full": "Les neuf vues enregistrées sont prises — en retirer une d’abord",
   "review.prim.reset": "Réinitialiser ce prim",
   "review.scenegraph.empty": "Aucun scenegraph USD pour ce média.",
   "review.scenegraph.truncated": "Arbre tronqué (scène volumineuse).",

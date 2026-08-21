@@ -553,6 +553,8 @@
   "viewer.reveal.fade": "Fondu",
   "viewer.reveal.dissolve": "Dissoluzione",
   "viewer.reveal.sweep": "Spazzata",
+  "viewer.bookmarks.remove": "Toglie sta vista arregistrata",
+  "viewer.bookmarks.full": "E nove viste arregistrate sò piene — toglie ne una prima",
   "review.prim.reset": "Rimette stu prim",
   "review.scenegraph.empty": "Nisun scenegraph USD per stu media.",
   "review.scenegraph.truncated": "Arburu troncatu (scena vulumosa).",

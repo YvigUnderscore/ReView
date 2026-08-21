@@ -531,6 +531,8 @@
   "viewer.reveal.fade": "淡入",
   "viewer.reveal.dissolve": "溶解",
   "viewer.reveal.sweep": "扫过",
+  "viewer.bookmarks.remove": "移除该已保存视角",
+  "viewer.bookmarks.full": "九个已保存视角均已占用 — 请先移除一个",
   "review.prim.reset": "重置该 prim",
   "review.scenegraph.empty": "该媒体没有 USD scenegraph。",
   "review.scenegraph.truncated": "层级已截断（场景过大）。",

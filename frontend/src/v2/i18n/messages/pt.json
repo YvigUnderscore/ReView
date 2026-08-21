@@ -553,6 +553,8 @@
   "viewer.reveal.fade": "Fade",
   "viewer.reveal.dissolve": "Dissolução",
   "viewer.reveal.sweep": "Varredura",
+  "viewer.bookmarks.remove": "Remover esta vista salva",
+  "viewer.bookmarks.full": "As nove vistas salvas estão ocupadas — remova uma primeiro",
   "review.prim.reset": "Redefinir este prim",
   "review.scenegraph.empty": "Nenhum scenegraph USD para esta mídia.",
   "review.scenegraph.truncated": "Árvore truncada (cena volumosa).",

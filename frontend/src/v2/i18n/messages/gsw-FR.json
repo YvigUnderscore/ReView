@@ -556,6 +556,8 @@
   "viewer.reveal.fade": "Blend",
   "viewer.reveal.dissolve": "Ufflesung",
   "viewer.reveal.sweep": "Wische",
+  "viewer.bookmarks.remove": "Die gspicherti Ahsicht ewägnämme",
+  "viewer.bookmarks.full": "Alli nin gspicherti Ahsichte sin bsetzt — zerscht eini ewägnämme",
   "review.prim.reset": "Des prim zerucksetze",
   "review.scenegraph.empty": "Kei USD-scenegraph fer des Medium.",
   "review.scenegraph.truncated": "Baum gekirzt (großi Szene).",

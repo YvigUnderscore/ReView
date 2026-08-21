@@ -553,6 +553,8 @@
   "viewer.reveal.fade": "Fundido",
   "viewer.reveal.dissolve": "Disolución",
   "viewer.reveal.sweep": "Barrido",
+  "viewer.bookmarks.remove": "Quitar esta vista guardada",
+  "viewer.bookmarks.full": "Las nueve vistas guardadas están ocupadas: quita una antes",
   "review.prim.reset": "Restablecer este prim",
   "review.scenegraph.empty": "Ningún scenegraph USD para este medio.",
   "review.scenegraph.truncated": "Árbol truncado (escena voluminosa).",

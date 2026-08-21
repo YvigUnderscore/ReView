@@ -556,6 +556,8 @@
   "viewer.reveal.fade": "Iraungitzea",
   "viewer.reveal.dissolve": "Disoluzioa",
   "viewer.reveal.sweep": "Barreiadura",
+  "viewer.bookmarks.remove": "Kendu gordetako ikuspegi hau",
+  "viewer.bookmarks.full": "Gordetako bederatzi ikuspegiak beteta daude — kendu bat lehenik",
   "review.prim.reset": "Berrezarri prim hau",
   "review.scenegraph.empty": "Ez dago USD scenegraph-ik media honentzat.",
   "review.scenegraph.truncated": "Zuhaitza moztuta (eszena handia).",

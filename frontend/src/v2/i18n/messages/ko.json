@@ -535,6 +535,8 @@
   "viewer.reveal.fade": "페이드",
   "viewer.reveal.dissolve": "디졸브",
   "viewer.reveal.sweep": "스윕",
+  "viewer.bookmarks.remove": "저장된 뷰 삭제",
+  "viewer.bookmarks.full": "저장된 뷰 9개가 모두 찼습니다 — 먼저 하나를 삭제하세요",
   "review.prim.reset": "이 prim 초기화",
   "review.scenegraph.empty": "이 미디어에는 USD scenegraph가 없습니다.",
   "review.scenegraph.truncated": "트리를 잘랐습니다(장면이 큼).",

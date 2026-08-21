@@ -41,10 +41,12 @@ on the ground in the source scene rests on the ground here. `H` returns to the h
 model when nothing is selected — keeping the view direction.
 
 - **Saved views** — the *Camera* panel of the dock keeps up to nine shared camera poses.
-  The bookmark button stores the current view (managers only); anyone recalls one by
-  clicking its chip, or with keys `1`–`9`. They are persisted with the media and replayed
-  for everyone. Note that `1`, `2` and `3` also drive the mode switch, so recalling those
-  three from the keyboard changes mode at the same time — click the chip instead.
+  The bookmark button stores the current view and the `×` on a chip removes it (managers
+  only); anyone recalls one by clicking its chip, or with `Alt`+`1` to `Alt`+`9`. The bare
+  number keys belong to the mode switch in every viewer, so the recall sits under `Alt` and
+  all nine views stay reachable from the keyboard. As with free flight, the key is read by
+  its **position**, so the digit row works whatever the layout. Saved views are persisted
+  with the media and replayed for everyone.
 - **Turntable** — auto-rotation around the target (axis and speed in °/s), in the *Scene*
   panel. A session-only inspection preview: nothing is saved and the model is untouched.
 - **Section plane** — also in the *Scene* panel: clip the model along an axis, type or drag
@@ -272,8 +274,13 @@ their bounding box at ground level. A stray helper object or a wide bounding box
 source scene will therefore shift what "the ground" means — clean the export, or hide the
 offending prim in the scene graph.
 
-**Pressing `1` or `2` recalls a saved view *and* changes mode.** Both are bound to the
-number keys. Use the chips in the *Camera* panel when you only want the view.
+**A number key changes mode instead of recalling a saved view.** The bare digits are the
+mode switch, in every viewer and with nothing else on them. Saved views answer to `Alt`+`1`
+to `Alt`+`9`, and only for a slot that actually holds a view: with two views saved, `Alt`+`3`
+and beyond stay silent.
+
+**The bookmark button is greyed out.** The nine slots are all taken. Remove a view with the
+`×` on its chip to free one.
 
 ## Related pages
 
