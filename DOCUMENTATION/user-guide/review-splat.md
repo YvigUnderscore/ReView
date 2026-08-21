@@ -89,7 +89,7 @@ everywhere.
 ## Presentation (staging)
 
 Independently of the content edits, the **presentation** — camera framing and animation,
-depth of field, reveal effect, default level of detail, saved views — is persisted per media
+depth of field, reveal effect, default level of detail — is persisted per media
 and stays editable **even after publication**. It is replayed identically for every
 spectator. See [Camera animation](camera-animation.md).
 

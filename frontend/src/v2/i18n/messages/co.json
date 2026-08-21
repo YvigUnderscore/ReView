@@ -557,6 +557,8 @@
   "viewer.mode.matcap.hint": "Matcap d’argilla — ghjudicà a forma senza i materiali",
   "viewer.mode.uv": "Scaccheru UV",
   "viewer.mode.uv.hint": "Scaccheru UV — stiramentu è orientazione di l’UV",
+  "viewer.bookmarks.remove": "Toglie sta vista arregistrata",
+  "viewer.bookmarks.full": "E nove viste arregistrate sò piene — toglie ne una prima",
   "review.prim.reset": "Rimette stu prim",
   "review.scenegraph.empty": "Nisun scenegraph USD per stu media.",
   "review.scenegraph.truncated": "Arburu troncatu (scena vulumosa).",

@@ -560,6 +560,8 @@
   "viewer.mode.matcap.hint": "Buztin-matcap — forma materialik gabe epaitzeko",
   "viewer.mode.uv": "UV xake-taula",
   "viewer.mode.uv.hint": "UV xake-taula — UVen luzatzea eta orientazioa",
+  "viewer.bookmarks.remove": "Kendu gordetako ikuspegi hau",
+  "viewer.bookmarks.full": "Gordetako bederatzi ikuspegiak beteta daude — kendu bat lehenik",
   "review.prim.reset": "Berrezarri prim hau",
   "review.scenegraph.empty": "Ez dago USD scenegraph-ik media honentzat.",
   "review.scenegraph.truncated": "Zuhaitza moztuta (eszena handia).",

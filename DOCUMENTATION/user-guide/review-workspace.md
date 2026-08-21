@@ -135,6 +135,7 @@ Lighting only exists for 3D models: a splat carries its own baked light.
 | Keys | Action |
 | --- | --- |
 | `1`–`3` | Mode, in switch order (`1`–`2` on an image) |
+| `Alt`+`1`–`9` | Recall a saved camera view — **3D only** |
 | `V` | Navigate (rest) |
 | Tool letters | Arm the tool — and switch to its mode if it belongs to another one |
 | `Esc` | Back to navigation |
@@ -178,10 +179,9 @@ is exactly why it is the mode served to clients on a share link.
 
 ## Troubleshooting
 
-**A number key changes the mode instead of doing what I expect.** The number keys are bound
-to the mode switch in every viewer. On a 3D model or a splat they are *also* bound to the
-saved camera views (`1`–`9`), so recalling views 1 to 3 from the keyboard changes the mode
-at the same time. Click the view in the *Camera* panel instead.
+**A number key changes the mode instead of doing what I expect.** The bare number keys are
+the mode switch, in every viewer and with nothing else on them. The saved camera views of a
+3D model, which used to share those keys, answer to `Alt`+`1` to `Alt`+`9`.
 
 **Pressing a letter jumps me to another mode.** That is intended: a tool letter arms its
 tool wherever it lives. If you only wanted to type, click into the composer first — while

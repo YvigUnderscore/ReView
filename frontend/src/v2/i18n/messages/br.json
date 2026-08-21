@@ -546,6 +546,8 @@
   "viewer.mode.matcap.hint": "Matcap pri — barnañ ar stumm hep an danvezioù",
   "viewer.mode.uv": "Damer UV",
   "viewer.mode.uv.hint": "Damer UV — astennadur ha reteradur an UV",
+  "viewer.bookmarks.remove": "Dilemel ar gweladenn enrollet-mañ",
+  "viewer.bookmarks.full": "Leun eo an nav gweladenn enrollet — dilemel unan da gentañ",
   "review.prim.reset": "Adderaouekaat ar prim-mañ",
   "review.scenegraph.empty": "Scenegraph USD ebet evit ar media-mañ.",
   "review.scenegraph.truncated": "Gwezenn troc'het (senenn vras).",

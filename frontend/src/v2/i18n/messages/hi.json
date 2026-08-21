@@ -554,6 +554,8 @@
   "viewer.mode.matcap.hint": "क्ले मैटकैप — मटीरियल के बिना आकृति परखें",
   "viewer.mode.uv": "UV चेकर",
   "viewer.mode.uv.hint": "UV चेकर — UV का खिंचाव और दिशा",
+  "viewer.bookmarks.remove": "यह सहेजा गया दृश्य हटाएँ",
+  "viewer.bookmarks.full": "सभी नौ सहेजे गए दृश्य भरे हैं — पहले एक हटाएँ",
   "review.prim.reset": "इस prim को रीसेट करें",
   "review.scenegraph.empty": "इस मीडिया के लिए कोई USD scenegraph नहीं।",
   "review.scenegraph.truncated": "वृक्ष छोटा किया गया (बड़ा दृश्य)।",

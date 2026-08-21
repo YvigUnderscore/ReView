@@ -129,7 +129,10 @@ export default function Model3DPanels({
           items: saved.map((b, i) => ({ id: String(i), label: b.label ?? t('camera.viewN', { n: i + 1 }) })),
           activeId: null,
           onGo: (id) => bookmarks.recall(Number(id)),
-          onSave: () => void bookmarks.add?.(),
+          onSave: bookmarks.add && (() => void bookmarks.add?.()),
+          onRemove: bookmarks.remove && ((id) => void bookmarks.remove?.(Number(id))),
+          busy: bookmarks.busy,
+          full: bookmarks.full,
         }}
       />
     );

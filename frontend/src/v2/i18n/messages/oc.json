@@ -557,6 +557,8 @@
   "viewer.mode.matcap.hint": "Matcap d’argila — jutjar la forma sens los materials",
   "viewer.mode.uv": "Damièr UV",
   "viewer.mode.uv.hint": "Damièr UV — estirament e orientacion dels UV",
+  "viewer.bookmarks.remove": "Levar aquesta vista enregistrada",
+  "viewer.bookmarks.full": "Las nòu vistas enregistradas son presas — levatz-ne una d’abòrd",
   "review.prim.reset": "Reïnicializar aqueste prim",
   "review.scenegraph.empty": "Cap de scenegraph USD per aqueste mèdia.",
   "review.scenegraph.truncated": "Arbre troncat (scèna voluminosa).",

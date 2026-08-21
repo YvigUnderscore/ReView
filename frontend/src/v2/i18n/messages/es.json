@@ -557,6 +557,8 @@
   "viewer.mode.matcap.hint": "Matcap de arcilla — juzgar la forma sin los materiales",
   "viewer.mode.uv": "Damero UV",
   "viewer.mode.uv.hint": "Damero UV — estiramiento y orientación de las UV",
+  "viewer.bookmarks.remove": "Quitar esta vista guardada",
+  "viewer.bookmarks.full": "Las nueve vistas guardadas están ocupadas: quita una antes",
   "review.prim.reset": "Restablecer este prim",
   "review.scenegraph.empty": "Ningún scenegraph USD para este medio.",
   "review.scenegraph.truncated": "Árbol truncado (escena voluminosa).",

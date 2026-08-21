@@ -557,6 +557,8 @@
   "viewer.mode.matcap.hint": "Matcap argile — juger la forme sans les matériaux",
   "viewer.mode.uv": "Damier UV",
   "viewer.mode.uv.hint": "Damier UV — étirement et orientation des UV",
+  "viewer.bookmarks.remove": "Retirer cette vue enregistrée",
+  "viewer.bookmarks.full": "Les neuf vues enregistrées sont prises — en retirer une d’abord",
   "review.prim.reset": "Réinitialiser ce prim",
   "review.scenegraph.empty": "Aucun scenegraph USD pour ce média.",
   "review.scenegraph.truncated": "Arbre tronqué (scène volumineuse).",

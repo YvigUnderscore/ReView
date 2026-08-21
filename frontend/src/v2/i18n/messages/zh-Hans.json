@@ -535,6 +535,8 @@
   "viewer.mode.matcap.hint": "黏土材质捕捉 — 不受材质影响地检查形体",
   "viewer.mode.uv": "UV 棋盘格",
   "viewer.mode.uv.hint": "UV 棋盘格 — UV 的拉伸与方向",
+  "viewer.bookmarks.remove": "移除该已保存视角",
+  "viewer.bookmarks.full": "九个已保存视角均已占用 — 请先移除一个",
   "review.prim.reset": "重置该 prim",
   "review.scenegraph.empty": "该媒体没有 USD scenegraph。",
   "review.scenegraph.truncated": "层级已截断（场景过大）。",

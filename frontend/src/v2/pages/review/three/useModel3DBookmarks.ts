@@ -4,24 +4,18 @@
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { t } from '../../../i18n';
+import { isEditable } from '../../../lib/shortcuts';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
-import { appendBookmark, removeBookmarkAt, MAX_BOOKMARKS } from './cameraBookmarks';
+import { appendBookmark, bookmarkShortcutIndex, removeBookmarkAt, MAX_BOOKMARKS } from './cameraBookmarks';
 import type { Model3DThreeState } from './useModel3DThree';
-
-/** Ignore le raccourci quand l'utilisateur saisit du texte (champ de commentaire, etc.). */
-function isTypingTarget(el: EventTarget | null): boolean {
-  const t = el as HTMLElement | null;
-  if (!t) return false;
-  const tag = t.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || t.isContentEditable;
-}
 
 /**
  * Bookmarks caméra **partagés** du viewer 3D (39.D) : vues nommées persistées dans la présentation
  * (`splatPresentation.bookmarks`), rejouées/rappelables pour tous. Le gestionnaire enregistre la vue
- * courante ou en retire une ; tout spectateur les rappelle (clic ou touches **1-9**). Persistance via
- * `useCameraPresentation` (fusion sur la présentation existante, comme l'éclairage/l'animation).
+ * courante ou en retire une ; tout spectateur les rappelle (clic sur la pastille du panneau Caméra,
+ * ou **Alt+1** à **Alt+9**). Persistance via `useCameraPresentation` (fusion sur la présentation
+ * existante, comme l'éclairage/l'animation).
  */
 export function useModel3DBookmarks(
   model3d: Model3DThreeState,
@@ -62,18 +56,16 @@ export function useModel3DBookmarks(
     [data.splatPresentation, persist],
   );
 
-  // Raccourcis 1-9 : rappel d'un bookmark (hors saisie de texte, sans modificateur).
+  // Alt+1 à Alt+9 : rappel d'un bookmark (hors saisie de texte, hors frappe déjà consommée).
+  // Les chiffres nus restent à la bascule de mode du chrome — cf. `bookmarkShortcutIndex`.
   useEffect(() => {
     if (bookmarks.length === 0) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
-      if (e.key >= '1' && e.key <= '9') {
-        const i = Number(e.key) - 1;
-        if (i < bookmarks.length) {
-          recall(i);
-          e.preventDefault();
-        }
-      }
+      if (e.defaultPrevented || isEditable(e.target)) return;
+      const i = bookmarkShortcutIndex(e, bookmarks.length);
+      if (i === null) return;
+      e.preventDefault();
+      recall(i);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

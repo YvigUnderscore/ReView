@@ -560,6 +560,8 @@
   "viewer.mode.matcap.hint": "Ton-Matcap — die Form ohne Materialien beurteilen",
   "viewer.mode.uv": "UV-Schachbrett",
   "viewer.mode.uv.hint": "UV-Schachbrett — Verzerrung und Ausrichtung der UVs",
+  "viewer.bookmarks.remove": "Diese gespeicherte Ansicht entfernen",
+  "viewer.bookmarks.full": "Alle neun gespeicherten Ansichten sind belegt — zuerst eine entfernen",
   "review.prim.reset": "Dieses Prim zurücksetzen",
   "review.scenegraph.empty": "Kein USD-Scenegraph für dieses Medium.",
   "review.scenegraph.truncated": "Baum gekürzt (große Szene).",

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Aperture, BookmarkPlus, Frame, Home, Orbit, Trash2 } from 'lucide-react';
+import { Aperture, BookmarkPlus, Frame, Home, Orbit, Trash2, X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
@@ -60,7 +60,14 @@ export default function CameraPanel({
     items: CameraBookmark[];
     activeId: string | null;
     onGo: (id: string) => void;
-    onSave: () => void;
+    /** Enregistre la vue courante — absent hors gestionnaire. */
+    onSave?: () => void;
+    /** Retire une vue enregistrée — absent hors gestionnaire. */
+    onRemove?: (id: string) => void;
+    /** Écriture de la présentation en cours : l'ajout attend. */
+    busy?: boolean;
+    /** Liste au maximum : plus un slot libre tant qu'une vue n'est pas retirée. */
+    full?: boolean;
   };
 }) {
   const t = useT();
@@ -138,26 +145,54 @@ export default function CameraPanel({
         <Group
           title={t('viewer.bookmarks.title')}
           action={
-            <IconButton icon={BookmarkPlus} label={t('viewer.bookmarks.save')} onClick={bookmarks.onSave} />
+            bookmarks.onSave && (
+              <IconButton
+                icon={BookmarkPlus}
+                label={bookmarks.full ? t('viewer.bookmarks.full') : t('viewer.bookmarks.save')}
+                disabled={bookmarks.busy || bookmarks.full}
+                onClick={bookmarks.onSave}
+              />
+            )
           }
         >
           <div className="flex flex-wrap gap-1">
-            {bookmarks.items.map((v, i) => (
-              <button
-                key={v.id}
-                type="button"
-                title={t('camera.bookmarkKey', { label: v.label, key: i + 1 })}
-                onClick={() => bookmarks.onGo(v.id)}
-                className={`flex min-h-[26px] items-center gap-1 rounded border px-1.5 text-[0.625rem] transition-colors ${
-                  bookmarks.activeId === v.id
-                    ? 'border-primary bg-primary/15 text-primary'
-                    : 'border-border text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {i < 9 && <span className="rv-kbd px-[3px]">{i + 1}</span>}
-                {v.label}
-              </button>
-            ))}
+            {bookmarks.items.map((v, i) => {
+              const onRemove = bookmarks.onRemove;
+              return (
+                // Deux gestes distincts sur la même pastille : un bouton chacun — le rappel ne
+                // peut pas contenir la suppression (bouton dans bouton).
+                <span
+                  key={v.id}
+                  className={`flex min-h-[26px] items-center rounded border text-[0.625rem] transition-colors ${
+                    bookmarks.activeId === v.id
+                      ? 'border-primary bg-primary/15 text-primary'
+                      : 'border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    title={t('camera.bookmarkKey', { label: v.label, key: `Alt+${i + 1}` })}
+                    onClick={() => bookmarks.onGo(v.id)}
+                    className="flex items-center gap-1 px-1.5 py-1"
+                  >
+                    {i < 9 && <span className="rv-kbd px-[3px]">Alt+{i + 1}</span>}
+                    {v.label}
+                  </button>
+                  {onRemove && (
+                    <button
+                      type="button"
+                      title={t('viewer.bookmarks.remove')}
+                      aria-label={t('viewer.bookmarks.remove')}
+                      disabled={bookmarks.busy}
+                      onClick={() => onRemove(v.id)}
+                      className="px-1 py-1 hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
             {bookmarks.items.length === 0 && (
               <span className="rv-optbar__hint">{t('viewer.bookmarks.empty')}</span>
             )}

@@ -539,6 +539,8 @@
   "viewer.mode.matcap.hint": "クレイのマットキャップ — マテリアルなしで形状を確認",
   "viewer.mode.uv": "UV チェッカー",
   "viewer.mode.uv.hint": "UV チェッカー — UV の伸びと向き",
+  "viewer.bookmarks.remove": "この保存済みビューを削除",
+  "viewer.bookmarks.full": "保存済みビューは 9 件すべて使用中です。先に 1 件削除してください",
   "review.prim.reset": "この prim をリセット",
   "review.scenegraph.empty": "このメディアに USD scenegraph はありません。",
   "review.scenegraph.truncated": "ツリーを省略しました（大きなシーン）。",

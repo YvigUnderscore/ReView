@@ -560,6 +560,8 @@
   "viewer.mode.matcap.hint": "Ton-Matcap — d'Form ohne Materialie beurteile",
   "viewer.mode.uv": "UV-Schachbrätt",
   "viewer.mode.uv.hint": "UV-Schachbrätt — Verzerrig un Uusrichtig vun de UVs",
+  "viewer.bookmarks.remove": "Die gspicherti Ahsicht ewägnämme",
+  "viewer.bookmarks.full": "Alli nin gspicherti Ahsichte sin bsetzt — zerscht eini ewägnämme",
   "review.prim.reset": "Des prim zerucksetze",
   "review.scenegraph.empty": "Kei USD-scenegraph fer des Medium.",
   "review.scenegraph.truncated": "Baum gekirzt (großi Szene).",

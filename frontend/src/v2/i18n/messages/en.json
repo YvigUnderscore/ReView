@@ -554,6 +554,8 @@
   "viewer.mode.matcap.hint": "Clay matcap — judge the shape without the materials",
   "viewer.mode.uv": "UV checker",
   "viewer.mode.uv.hint": "UV checker — stretching and orientation of the UVs",
+  "viewer.bookmarks.remove": "Remove this saved view",
+  "viewer.bookmarks.full": "All nine saved views are taken — remove one first",
   "review.prim.reset": "Reset this prim",
   "review.scenegraph.empty": "No USD scenegraph for this media.",
   "review.scenegraph.truncated": "Tree truncated (large scene).",
