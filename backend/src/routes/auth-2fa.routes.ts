@@ -15,6 +15,8 @@ import {
   verifyTotp,
   generateBackupCodes,
   consumeBackupCode,
+  consumeTotpOnce,
+  hashBackupCode,
 } from '../lib/twofa';
 import { signAccessToken, signRefreshToken, verifyTwoFaToken } from '../lib/jwt';
 import { createSession } from '../lib/sessions';
@@ -25,7 +27,13 @@ import { badRequest, unauthorized } from '../lib/errors';
 /** 2FA TOTP (36.A) — enrôlement, activation, désactivation, vérification au login. */
 const router = Router();
 
-const codeSchema = z.string().min(6).max(20);
+/**
+ * Un code TOTP (6 chiffres) ou un code de secours (128 bits en hexadécimal, groupé par 8
+ * pour la recopie : 35 caractères séparateurs compris). Le plafond doit rester au-dessus
+ * du plus long des deux, sinon la validation refuse le code de secours avant même de le
+ * lire — c'est-à-dire précisément le jour où le téléphone est perdu.
+ */
+const codeSchema = z.string().min(6).max(64);
 
 // POST /api/auth/2fa/setup — génère le secret (chiffré) et l'URI otpauth (QR côté client)
 router.post('/setup', authenticate, async (req, res) => {
@@ -45,12 +53,12 @@ router.post('/setup', authenticate, async (req, res) => {
 // POST /api/auth/2fa/enable — confirme l'enrôlement avec un code ; renvoie les codes de secours
 router.post('/enable', authenticate, validate({ body: z.object({ code: codeSchema }) }), async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-  if (!user?.totpSecret) throw badRequest("Aucun enrôlement en cours (appelez d'abord /setup)");
+  if (!user?.totpSecret) throw badRequest('No enrolment in progress — call /setup first');
   if (user.totpEnabledAt)
     throw badRequest('Two-factor authentication is already on', 'TWOFA_ALREADY_ENABLED');
   const secret = decryptSecret(user.totpSecret);
   if (!secret || !(await verifyTotp(secret, (req.body as { code: string }).code))) {
-    throw unauthorized('Code incorrect', 'TWOFA_BAD_CODE');
+    throw unauthorized('Invalid code', 'TWOFA_BAD_CODE');
   }
   const { plain, hashes } = generateBackupCodes();
   await prisma.user.update({
@@ -87,7 +95,7 @@ router.post(
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 15,
-    message: { error: 'Trop de tentatives, réessayez plus tard.' },
+    message: { error: 'Too many attempts, try again later.' },
   }),
   validate({ body: z.object({ tmpToken: z.string(), code: codeSchema }) }),
   async (req, res) => {
@@ -98,19 +106,29 @@ router.post(
     if (!user?.totpSecret || !user.totpEnabledAt) throw unauthorized('Two-factor authentication is not on');
 
     const secret = decryptSecret(user.totpSecret);
-    let ok = secret ? await verifyTotp(secret, code) : false;
+    // Un code TOTP ne vaut qu'une fois : sans cette consommation, le code intercepté se
+    // rejoue pendant toute sa fenêtre (30 s + tolérance), et le second facteur ne prouve
+    // plus la possession du téléphone. Le refus est indistinguable d'un code faux.
+    let ok = secret ? (await verifyTotp(secret, code)) && consumeTotpOnce(user.id, code) : false;
     if (!ok) {
-      // Code de secours (consommé définitivement).
+      // Code de secours (consommé définitivement). La suppression passe par un `updateMany`
+      // conditionné au code encore présent : deux requêtes concurrentes portant le même
+      // code se sérialisent sur la ligne, et la seconde ne trouve plus rien à consommer.
       const rest = consumeBackupCode(user.backupCodes, code);
       if (rest) {
-        await prisma.user.update({ where: { id: user.id }, data: { backupCodes: rest } });
-        logAudit({ userId: user.id, action: 'TWOFA_BACKUP_USED', entityType: 'User', entityId: user.id });
-        ok = true;
+        const consumed = await prisma.user.updateMany({
+          where: { id: user.id, backupCodes: { has: hashBackupCode(code) } },
+          data: { backupCodes: rest },
+        });
+        if (consumed.count === 1) {
+          logAudit({ userId: user.id, action: 'TWOFA_BACKUP_USED', entityType: 'User', entityId: user.id });
+          ok = true;
+        }
       }
     }
     if (!ok) {
       logAudit({ userId: user.id, action: 'TWOFA_FAIL', entityType: 'User', entityId: user.id });
-      throw unauthorized('Code incorrect', 'TWOFA_BAD_CODE');
+      throw unauthorized('Invalid code', 'TWOFA_BAD_CODE');
     }
 
     const sid = await createSession(user.id, req);

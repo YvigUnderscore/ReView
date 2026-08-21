@@ -3,6 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -11,7 +12,7 @@ import { API_SCOPES } from '../lib/apiTokens';
 import { ALL_SCOPES } from '../lib/apiScopes';
 import * as ApiTokenService from '../services/ApiTokenService';
 import { logAudit } from '../services/AuditService';
-import { badRequest, notFound } from '../lib/errors';
+import { badRequest, notFound, unauthorized } from '../lib/errors';
 
 /**
  * Sécurité du compte (36.B/36.C) : sessions actives et tokens d'API personnels.
@@ -74,12 +75,25 @@ router.post(
       expiresInDays: z.number().int().positive().max(3650).optional(),
       // Cantonnement facultatif à un projet.
       projectId: z.number().int().positive().optional(),
+      /** Mot de passe actuel — exigé, comme pour changer d'email ou de mot de passe. */
+      currentPassword: z.string().max(128).optional(),
     }),
   }),
   async (req, res) => {
     // Un token d'API ne doit pas pouvoir en fabriquer d'autres (pas d'escalade).
-    if (req.apiToken) throw badRequest("Un token d'API ne peut pas créer de token");
-    const body = req.body as ApiTokenService.CreateTokenInput;
+    if (req.apiToken) throw badRequest('An API token cannot create another token');
+    const body = req.body as ApiTokenService.CreateTokenInput & { currentPassword?: string };
+
+    // Re-authentification : un `rvk_` vit jusqu'à 3650 jours et survit à la fermeture de
+    // l'onglet. Fabriqué depuis un jeton d'accès volé, il transforme un vol de session
+    // passager en accès durable — que « se déconnecter partout » ne soupçonne même pas.
+    // Le mot de passe est la seule chose que l'attaquant n'a pas.
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!user) throw unauthorized();
+    if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password))) {
+      throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
+    }
+
     res.status(201).json(await ApiTokenService.createPersonal(req.user!.id, body));
   },
 );

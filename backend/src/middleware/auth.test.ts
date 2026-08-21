@@ -99,6 +99,50 @@ describe('authenticate — liste blanche des types de jetons', () => {
   });
 });
 
+/**
+ * Une URL traverse les journaux applicatifs, ceux du frontal, l'historique du navigateur
+ * et l'en-tête `Referer` ; un en-tête ne va nulle part. Le support de `?token=` a donc été
+ * retiré — aucun appelant n'en dépendait (le lecteur HLS pose son propre `Authorization`,
+ * le socket a son handshake, `/metrics` lit sa query lui-même dans `app.ts`).
+ */
+describe('authenticate — le jeton ne se lit que dans l’en-tête', () => {
+  const runRaw = async (headers: Record<string, string>, query: Record<string, string> = {}) => {
+    const req = { headers, query } as unknown as Request;
+    const res = {
+      statusCode: 0,
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      json() {
+        return this;
+      },
+    };
+    const next = vi.fn() as unknown as NextFunction;
+    await authenticate(req, res as unknown as Response, next);
+    return { req, res, next };
+  };
+
+  it('refuse un jeton d’accès valide présenté en query', async () => {
+    const { res, next } = await runRaw({}, { token: signAccessToken({ ...dbUser, sid: 'abc' }) });
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('ignore la query même quand l’en-tête est absent et le jeton correct', async () => {
+    const { req } = await runRaw({}, { token: signAccessToken({ ...dbUser, sid: 'abc' }) });
+    expect(req.user).toBeUndefined();
+  });
+
+  it('exige le schéma Bearer (sa casse est libre)', async () => {
+    const token = signAccessToken({ ...dbUser, sid: 'abc' });
+    expect((await runRaw({ authorization: `bearer ${token}` })).next).toHaveBeenCalled();
+    const { res, next } = await runRaw({ authorization: token });
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+  });
+});
+
 describe('authenticate — session et existence du compte', () => {
   it('refuse quand la session a été révoquée', async () => {
     vi.mocked(isSessionActive).mockResolvedValue(false);

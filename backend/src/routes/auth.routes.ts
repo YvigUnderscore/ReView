@@ -21,10 +21,19 @@ const router = Router();
 
 const passwordSchema = z
   .string()
-  .min(8, 'Mot de passe : 8 caractères minimum')
+  .min(8, 'Password: 8 characters minimum')
   .max(128)
-  .regex(/[A-Za-z]/, 'Au moins une lettre')
-  .regex(/[0-9]/, 'Au moins un chiffre');
+  .regex(/[A-Za-z]/, 'At least one letter')
+  .regex(/[0-9]/, 'At least one digit');
+
+/**
+ * Hash bcrypt (coût 12) d'une valeur aléatoire perdue : aucun mot de passe ne le vérifie.
+ *
+ * Il sert à faire travailler bcrypt même quand l'adresse ne correspond à aucun compte.
+ * Sans lui, la réponse revient ~100 ms plus tôt dans ce cas : de quoi énumérer à distance
+ * les adresses du studio sans jamais deviner un mot de passe.
+ */
+const ABSENT_ACCOUNT_HASH = '$2b$12$FZqqqvbZMoTW4t0AxtCNBOlpsEVwaNdSPZWu1.p/Q2tXt/kj3SMp2';
 
 const credentialsSchema = z.object({
   email: z.string().email().max(254),
@@ -81,14 +90,20 @@ router.post(
 // jeton intermédiaire à échanger contre les tokens via /api/auth/2fa/verify (36.A).
 router.post('/login', authLimiter, validate({ body: credentialsSchema }), async (req, res) => {
   await refusePasswordAuth();
-  const { email, password } = req.body as { email: string; password: string };
+  const { password } = req.body as { password: string };
+  // Toutes les écritures normalisent l'adresse (inscription, invitation, installation,
+  // provisionnement OIDC). La chercher telle qu'elle est tapée rendait « Alice@Studio.com »
+  // inatteignable pour un compte enregistré « alice@studio.com ».
+  const email = normalizeEmail((req.body as { email: string }).email);
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    throw unauthorized('Identifiants invalides', 'BAD_CREDENTIALS');
-  }
+  // La comparaison a lieu même sans compte (hash factice) : c'est ce qui rend le refus
+  // aussi lent qu'un mot de passe faux, donc muet sur l'existence de l'adresse.
+  const passwordOk = await bcrypt.compare(password, user?.password ?? ABSENT_ACCOUNT_HASH);
   // Un compte de service (API v1) n'existe que pour porter les écritures d'un token
   // machine : il ne se connecte jamais, même si son mot de passe aléatoire fuitait.
-  if (user.isService) throw unauthorized('Identifiants invalides', 'BAD_CREDENTIALS');
+  if (!user || !passwordOk || user.isService) {
+    throw unauthorized('Invalid credentials', 'BAD_CREDENTIALS');
+  }
   if (user.totpEnabledAt) {
     res.json({ requires2fa: true, tmpToken: signTwoFaToken(user.id) });
     return;
@@ -107,7 +122,7 @@ router.post('/login', authLimiter, validate({ body: credentialsSchema }), async 
 router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) }), async (req, res) => {
   const { refreshToken } = req.body as { refreshToken: string };
   const payload = verifyToken(refreshToken);
-  if (!payload || payload.kind !== 'refresh') throw unauthorized('Refresh token invalide');
+  if (!payload || payload.kind !== 'refresh') throw unauthorized('Invalid refresh token');
   const user = await prisma.user.findUnique({ where: { id: payload.id } });
   if (!user) throw unauthorized('User not found');
   let sid = payload.sid;

@@ -25,6 +25,12 @@ import { escapeHtml } from '../lib/html';
  * Sans ce chemin, le lecteur qui ne veut plus du digest n'a qu'un geste à sa portée :
  * marquer le message comme indésirable — ce qui abîme la réputation du serveur pour tous
  * les envois du studio, invitations comprises.
+ *
+ * ⚠ Trois routes, et le partage des rôles entre elles n'est pas décoratif :
+ * le GET ne DOIT rien modifier. Les passerelles antivirus et les proxys de messagerie
+ * (SafeLinks et assimilés) préchargent les liens des messages : un GET qui désabonne
+ * désabonne tout seul, sans que personne n'ait cliqué. Le lien reçu par mail reste donc
+ * valide, mais il n'affiche qu'une demande de confirmation.
  */
 const router = Router();
 
@@ -52,6 +58,19 @@ async function unsubscribe(token: string): Promise<boolean> {
 }
 
 /**
+ * Confirmation humaine : la cible du bouton de la page servie par le GET.
+ *
+ * Déclarée avant `POST /:token` — sinon le mot « confirm » serait lu comme un jeton.
+ */
+router.post('/:token/confirm', limiter, validate({ params: tokenParam }), async (req, res) => {
+  const ok = await unsubscribe(String(req.params.token));
+  res
+    .status(ok ? 200 : 400)
+    .type('html')
+    .send(page(ok ? 'done' : 'invalid', '', await getSourceUrl()));
+});
+
+/**
  * Appelé par le bouton natif des messageries (`List-Unsubscribe-Post`). La réponse doit
  * être immédiate et sans page : personne ne la lit.
  */
@@ -62,31 +81,54 @@ router.post('/:token', limiter, validate({ params: tokenParam }), async (req, re
   res.status(204).end();
 });
 
-/** Le même lien, suivi à la main depuis le corps du message : une page de confirmation. */
+/**
+ * Le même lien, suivi à la main depuis le corps du message : une page de confirmation.
+ * Aucune écriture ici — voir l'avertissement en tête de fichier.
+ */
 router.get('/:token', limiter, validate({ params: tokenParam }), async (req, res) => {
-  const ok = await unsubscribe(String(req.params.token));
+  const token = String(req.params.token);
+  const valid = verifyUnsubscribe(token) !== null;
   res
-    .status(ok ? 200 : 400)
+    .status(valid ? 200 : 400)
     .type('html')
-    .send(page(ok, await getSourceUrl()));
+    .send(page(valid ? 'confirm' : 'invalid', token, await getSourceUrl()));
 });
 
 /**
  * Page autonome : ni React, ni session, ni catalogue de traduction. Elle est lue une fois,
  * par quelqu'un qui vient de cliquer dans un email — l'anglais, langue de base, y suffit.
  */
-function page(ok: boolean, sourceUrl: string): string {
-  const title = ok ? 'You are unsubscribed' : 'This link is no longer valid';
-  const body = ok
-    ? 'You will no longer receive this recurring email. You can turn it back on at any time from your ReView profile.'
-    : 'The link may have expired or been altered. Open your ReView profile to change your email preferences.';
+function page(state: 'confirm' | 'done' | 'invalid', token: string, sourceUrl: string): string {
+  const copy = {
+    confirm: {
+      title: 'Confirm your unsubscribe',
+      body: 'Confirm below to stop receiving this recurring email. You can turn it back on at any time from your ReView profile.',
+    },
+    done: {
+      title: 'You are unsubscribed',
+      body: 'You will no longer receive this recurring email. You can turn it back on at any time from your ReView profile.',
+    },
+    invalid: {
+      title: 'This link is no longer valid',
+      body: 'The link may have expired or been altered. Open your ReView profile to change your email preferences.',
+    },
+  }[state];
+  // Le bouton POSTe : c'est ce qui met l'action hors de portée d'un préchargement de lien.
+  const form =
+    state === 'confirm'
+      ? `<form method="post" action="/api/unsubscribe/${escapeHtml(encodeURIComponent(token))}/confirm" style="margin:20px 0 0">
+<button type="submit" style="font:inherit;font-size:14px;padding:10px 16px;border-radius:8px;border:1px solid #1E2433;background:#1B2233;color:#E6EBEF;cursor:pointer">Unsubscribe</button>
+</form>`
+      : '';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title></head>
+<meta name="robots" content="noindex,nofollow">
+<title>${copy.title}</title></head>
 <body style="margin:0;font-family:ui-sans-serif,system-ui,sans-serif;background:#0B0E14;color:#E6EBEF">
 <div style="max-width:520px;margin:15vh auto;padding:24px;background:#121620;border:1px solid #1E2433;border-radius:12px">
-<h1 style="font-size:18px;margin:0 0 12px">${title}</h1>
-<p style="font-size:14px;line-height:1.7;color:#9BA3B2;margin:0">${body}</p>
+<h1 style="font-size:18px;margin:0 0 12px">${copy.title}</h1>
+<p style="font-size:14px;line-height:1.7;color:#9BA3B2;margin:0">${copy.body}</p>
+${form}
 <!-- AGPL §13 : une surface accessible sans authentification porte le lien vers le code
      source correspondant. Cette page en est une. -->
 <p style="margin:20px 0 0;font-size:12px;color:#6B7280">
