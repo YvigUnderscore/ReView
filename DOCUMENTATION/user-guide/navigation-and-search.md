@@ -42,8 +42,8 @@ There is **no prefix or filter syntax**: the text is sent as is. Input is deboun
 
 With the field **empty**, the palette shows two groups instead of results:
 
-- **Go to** — Projects, plus Kanban and Board of the current project when there is one,
-  plus Documentation.
+- **Go to** — Projects, which opens the projects list (`/projects`), plus Kanban and Board
+  of the current project when there is one, plus Documentation.
 - **Actions** — copy the current page link, refresh the data on screen, toggle the
   sidebar, toggle the theme, open the shortcut help.
 
