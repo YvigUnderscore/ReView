@@ -2584,6 +2584,7 @@
   "shotgrid.crew.done": "{created} खाते बनाए गए, {added} लोग परियोजना में जोड़े गए",
   "shotgrid.crew.skipped": { "one": "{count} व्यक्ति छोड़ा गया", "other": "{count} लोग छोड़े गए" },
   "shotgrid.crew.plan": "{create} खाते बनाने हैं, {add} को परियोजना में जोड़ना है",
+  "shotgrid.sync.queued": "एक समन्वयन पहले से चल रहा है — यह प्रतीक्षा में है।",
   "upload.pickTask.title": "यह version किस task के लिए है?",
   "upload.pickTask.hint": "जिस चरण ने इसे बनाया, उसके अंतर्गत रखने से पाइपलाइन पठनीय रहती है — और ShotGrid में सही जगह जाती है।",
   "upload.pickTask.none": "कोई task नहीं — asset से जोड़ें",

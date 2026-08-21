@@ -2532,6 +2532,7 @@
   "shotgrid.crew.done": "계정 {created}개를 만들고 {added}명을 프로젝트에 추가했습니다",
   "shotgrid.crew.skipped": { "other": "{count}명을 건너뛰었습니다" },
   "shotgrid.crew.plan": "만들 계정 {create}개, 프로젝트에 추가할 인원 {add}명",
+  "shotgrid.sync.queued": "동기화가 이미 실행 중입니다. 이번 동기화는 대기열에 들어갔습니다.",
   "upload.pickTask.title": "이 version은 어떤 task의 것인가요?",
   "upload.pickTask.hint": "만든 단계 아래 두면 파이프라인이 읽기 쉬워지고, ShotGrid에서도 올바른 위치로 갑니다.",
   "upload.pickTask.none": "task 없이 — asset에 직접 첨부",

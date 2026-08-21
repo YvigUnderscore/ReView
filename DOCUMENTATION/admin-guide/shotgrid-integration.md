@@ -328,9 +328,12 @@ The merge never narrows the scope:
 | `withMedia` | true if either side wants media |
 
 The API reports such a request as `deferred` rather than as a success, so no screen can
-claim work that has not happened. Both the **Synchronise** button and the re-read dot next
-to an entity answer *"A sync is already running — this re-read is queued behind it."* The
-run list is authoritative either way: the replayed pass appears there when it completes.
+claim work that has not happened. Both the **Synchronise** and **Catch up** buttons and the
+re-read dot next to an entity say so, each about what you actually asked for — *"A
+synchronisation is already running — this one is queued behind it."* for the buttons, *"A
+sync is already running — this re-read is queued behind it."* for the dot. Neither is shown
+in the green of a finished pass. The run list is authoritative either way: the replayed
+pass appears there when it completes.
 
 ---
 

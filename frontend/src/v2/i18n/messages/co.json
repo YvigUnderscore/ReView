@@ -2590,6 +2590,7 @@
   "shotgrid.crew.done": "{created} contu creatu, {added} persona aghjunta à u prughjettu",
   "shotgrid.crew.skipped": { "one": "{count} persona hè stata saltata", "other": "{count} persone sò state saltate" },
   "shotgrid.crew.plan": "{create} contu da creà, {add} da aghjunghje à u prughjettu",
+  "shotgrid.sync.queued": "Una sincronizazione hè digià in corsu : questa aspetta u so turnu.",
   "upload.pickTask.title": "À chì task appartene sta version ?",
   "upload.pickTask.hint": "Mèttela sottu à a tappa chì l’hà pruduttu tene u pipeline leghjibile — è a manda à u locu ghjustu in ShotGrid.",
   "upload.pickTask.none": "Senza task — attaccà à l’asset",

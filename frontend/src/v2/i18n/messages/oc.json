@@ -2590,6 +2590,7 @@
   "shotgrid.crew.done": "{created} compte(s) creat(s), {added} persona(s) aponduda(s) al projècte",
   "shotgrid.crew.skipped": { "one": "{count} persona es estada ignorada", "other": "{count} personas son estadas ignoradas" },
   "shotgrid.crew.plan": "{create} compte(s) de crear, {add} d'apondre al projècte",
+  "shotgrid.sync.queued": "Una sincronizacion es ja en cors : aquesta espèra son torn.",
   "upload.pickTask.title": "A quina task aparten aquesta version ?",
   "upload.pickTask.hint": "La botar jos l’etapa que l’a producha garda lo pipe legible — e la manda al bon endrech dins ShotGrid.",
   "upload.pickTask.none": "Sens task — restacar a l’asset",

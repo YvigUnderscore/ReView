@@ -2640,6 +2640,7 @@
   "shotgrid.crew.done": "{created} compte(s) créé(s), {added} personne(s) ajoutée(s) au projet",
   "shotgrid.crew.skipped": { "one": "{count} personne a été ignorée", "other": "{count} personnes ont été ignorées" },
   "shotgrid.crew.plan": "{create} compte(s) à créer, {add} à ajouter au projet",
+  "shotgrid.sync.queued": "Une synchronisation est déjà en cours : celle-ci attend son tour.",
   "upload.pickTask.title": "À quelle task appartient cette version ?",
   "upload.pickTask.hint": "La ranger sous l’étape qui l’a produite garde le pipe lisible — et l’envoie au bon endroit dans ShotGrid.",
   "upload.pickTask.none": "Sans task — rattacher à l’asset",

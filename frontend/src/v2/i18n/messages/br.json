@@ -2579,6 +2579,7 @@
   "shotgrid.crew.done": "{created} kont krouet, {added} den ouzhpennet d'ar raktres",
   "shotgrid.crew.skipped": { "one": "{count} den a zo bet tremenet", "other": "{count} den a zo bet tremenet" },
   "shotgrid.crew.plan": "{create} kont da grouiñ, {add} da ouzhpennañ d'ar raktres",
+  "shotgrid.sync.queued": "Ur c'hensturiañ a zo war ober : gortoz a ra hemañ e dro.",
   "upload.pickTask.title": "Da beseurt task eo ar version-mañ ?",
   "upload.pickTask.hint": "He renkañ dindan al lankad he deus he savet a viro lennus ar chadenn — hag he c’has el lec’h mat e ShotGrid.",
   "upload.pickTask.none": "Task ebet — stagañ ouzh an asset",

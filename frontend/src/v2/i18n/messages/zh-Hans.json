@@ -2522,6 +2522,7 @@
   "shotgrid.crew.done": "已创建 {created} 个账号，已将 {added} 人加入项目",
   "shotgrid.crew.skipped": { "other": "已跳过 {count} 人" },
   "shotgrid.crew.plan": "待创建账号 {create} 个，待加入项目 {add} 人",
+  "shotgrid.sync.queued": "已有同步在进行，本次同步已排队等待。",
   "upload.pickTask.title": "这个 version 属于哪个 task？",
   "upload.pickTask.hint": "归入产出它的环节可让流程保持清晰，也会送到 ShotGrid 中正确的位置。",
   "upload.pickTask.none": "不选 task — 直接挂在 asset 上",
