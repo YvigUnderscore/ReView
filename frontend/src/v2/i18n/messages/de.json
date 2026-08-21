@@ -2594,6 +2594,7 @@
   "shotgrid.crew.done": "{created} Konto/Konten angelegt, {added} Person(en) zum Projekt hinzugefügt",
   "shotgrid.crew.skipped": { "one": "{count} Person übersprungen", "other": "{count} Personen übersprungen" },
   "shotgrid.crew.plan": "{create} Konto/Konten anzulegen, {add} zum Projekt hinzuzufügen",
+  "shotgrid.sync.queued": "Eine Synchronisierung läuft bereits — diese wartet.",
   "upload.pickTask.title": "Zu welcher Task gehört diese Version?",
   "upload.pickTask.hint": "Sie unter dem Schritt abzulegen, der sie erzeugt hat, hält die Pipeline lesbar — und schickt sie in ShotGrid an die richtige Stelle.",
   "upload.pickTask.none": "Ohne Task — direkt am Asset",

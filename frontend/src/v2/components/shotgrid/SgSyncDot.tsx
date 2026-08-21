@@ -60,8 +60,10 @@ export default function SgSyncDot({
       });
       // « deferred » : une synchronisation tournait déjà, la relecture attend son tour.
       // Annoncer « réaligné » serait faux — c'est exactement ce que faisait l'écran quand
-      // le serveur jetait la demande en la déclarant réussie.
-      toast.success(t(status === 'deferred' ? 'shotgrid.sync.dot.queued' : 'shotgrid.sync.dot.realigned'));
+      // le serveur jetait la demande en la déclarant réussie. Le ton suit le message :
+      // le vert dit « c'est fait », et rien n'est fait tant que la passe en cours tourne.
+      if (status === 'deferred') toast.info(t('shotgrid.sync.dot.queued'));
+      else toast.success(t('shotgrid.sync.dot.realigned'));
       // Ce qui vient d'être relu peut avoir changé de nom, de statut ou de dates :
       // on invalide largement plutôt que de deviner quel écran l'affichait.
       await qc.invalidateQueries();

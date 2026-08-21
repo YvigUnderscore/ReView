@@ -2582,6 +2582,7 @@
   "shotgrid.crew.done": "{created} account(s) created, {added} person(s) added to the project",
   "shotgrid.crew.skipped": { "one": "{count} person was skipped", "other": "{count} people were skipped" },
   "shotgrid.crew.plan": "{create} account(s) to create, {add} to add to the project",
+  "shotgrid.sync.queued": "A synchronisation is already running — this one is queued behind it.",
   "upload.pickTask.title": "Which task is this version for?",
   "upload.pickTask.hint": "Filing it under the step that produced it keeps the pipeline readable — and sends it to the right place in ShotGrid.",
   "upload.pickTask.none": "No task — attach to the asset itself",

@@ -8,6 +8,7 @@ import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
 import { useResolveConflict, useRunSync, useSgLogs, useSgRuns } from '../../lib/shotgridApi';
 import type { SgConnection, SgSyncRun } from '../../types/shotgrid';
+import { syncOutcome } from './syncOutcome';
 
 /**
  * Exécutions de synchronisation : lancement, compteurs, journal détaillé et arbitrage
@@ -40,12 +41,10 @@ export default function SgSyncPanel({
   const launch = async (kind: 'full' | 'reconcile') => {
     try {
       const r = await runSync.mutateAsync({ kind });
-      const status = r.result?.status;
-      if (status === 'error') toast.error(t('shotgrid.sync.failed'));
-      // « deferred » : une passe tournait déjà, celle-ci attend son tour. Annoncer
-      // « terminé » ferait chercher un résultat qui n'existe pas encore.
-      else if (status === 'deferred') toast.success(t('shotgrid.sync.dot.queued'));
-      else toast.success(t('shotgrid.sync.done'));
+      // Le choix du ton et du message vit dans `syncOutcome` : c'est la table qui
+      // empêche « deferred » de repasser en vert, et elle se relit sans monter l'écran.
+      const { tone, key } = syncOutcome(r.result?.status);
+      toast[tone](t(key));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('shotgrid.sync.failed'));
     }

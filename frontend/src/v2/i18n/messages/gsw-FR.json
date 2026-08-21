@@ -2594,6 +2594,7 @@
   "shotgrid.crew.done": "{created} Konto aagleit, {added} Person zum Projekt dezue",
   "shotgrid.crew.skipped": { "one": "{count} Person üebergange", "other": "{count} Persone üebergange" },
   "shotgrid.crew.plan": "{create} Konto aazlege, {add} zum Projekt dezuedue",
+  "shotgrid.sync.queued": "E Synchronisierig lauft scho — die do wartet.",
   "upload.pickTask.title": "Zue welere Task ghert die Version?",
   "upload.pickTask.hint": "Si unter em Schritt abzlege, wo si gmacht het, haltet d Pipeline läsbar — un schickt si in ShotGrid an di richtig Stell.",
   "upload.pickTask.none": "Ohni Task — direkt ans Asset",

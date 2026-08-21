@@ -2536,6 +2536,7 @@
   "shotgrid.crew.done": "アカウントを {created} 件作成し、{added} 人をプロジェクトに追加しました",
   "shotgrid.crew.skipped": { "other": "{count} 人をスキップしました" },
   "shotgrid.crew.plan": "作成するアカウント {create} 件、プロジェクトに追加 {add} 人",
+  "shotgrid.sync.queued": "同期の実行中です。今回の同期は順番待ちになりました。",
   "upload.pickTask.title": "この version はどの task のものですか？",
   "upload.pickTask.hint": "それを作った工程の下に置くとパイプラインが読みやすくなり、ShotGrid でも正しい場所に届きます。",
   "upload.pickTask.none": "task なし — asset に直接付ける",

@@ -2597,6 +2597,7 @@
   "shotgrid.crew.done": "{created} kontu sortu dira, {added} pertsona gehitu dira proiektuan",
   "shotgrid.crew.skipped": { "one": "Pertsona {count} baztertu da", "other": "{count} pertsona baztertu dira" },
   "shotgrid.crew.plan": "{create} kontu sortzeko, {add} proiektuan gehitzeko",
+  "shotgrid.sync.queued": "Sinkronizazio bat abian da: hau zain geratu da.",
   "upload.pickTask.title": "Zein task-i dagokio version hau?",
   "upload.pickTask.hint": "Sortu duen urratsaren azpian jartzeak pipeline-a irakurgarri mantentzen du — eta ShotGrid-en leku egokira bidaltzen du.",
   "upload.pickTask.none": "Task-ik gabe — asset-ari erantsi",
