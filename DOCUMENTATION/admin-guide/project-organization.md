@@ -15,9 +15,9 @@ Archive a project from *Project → Edit → Status → Archived*
 (`PATCH /api/projects/:projectId`, **global `ADMIN`/`SUPERVISOR`**).
 
 An archived project is **read-only**: `assertProjectWritable` refuses uploads,
-comments, new versions, task changes and structure changes (shots, sequences) with
-`403 PROJECT_ARCHIVED`. Reviews and existing media stay fully viewable, and share
-links keep working.
+comments, new versions, task changes, structure changes (shots, sequences) and board
+edits with `403 PROJECT_ARCHIVED`. Reviews and existing media stay fully viewable,
+boards stay readable, and share links keep working.
 
 - Archived projects are hidden from the sidebar, the home page, the reviews list and
   the default *Projects* list.
