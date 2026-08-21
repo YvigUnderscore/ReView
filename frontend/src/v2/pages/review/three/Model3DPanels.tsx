@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Camera, Download, Layers, Upload } from 'lucide-react';
+import { Camera, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../../components/ui/button';
 import type { PanelId } from '../chrome/panels';
 import CameraPanel from '../panels/CameraPanel';
 import DisplayPanel from '../panels/DisplayPanel';
 import ExportPanel from '../panels/ExportPanel';
-import InfoPanel, { type InfoRow } from '../panels/InfoPanel';
 import LightingPanel from '../panels/LightingPanel';
+import Model3DInfo from './Model3DInfo';
 import ScenePanel from '../panels/ScenePanel';
 import ScenegraphPanel from '../panels/ScenegraphPanel';
 import { focalToFov, fovToFocal } from '../camera/focal';
@@ -28,10 +28,8 @@ import type { TurntableState } from './useTurntable';
 import type { UsdSceneState } from './useUsdScene';
 import type { CameraAnimState } from '../camera/useCameraAnim';
 import { useT } from '../../../i18n';
-import { intlLocale } from '../../../i18n';
 
 const RAD = Math.PI / 180;
-const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
 
 /** Aspect du cadre de livraison, en texte — hérité des réglages pipeline. */
 function aspectLabel(aspect: number | undefined): string {
@@ -49,7 +47,8 @@ function aspectLabel(aspect: number | undefined): string {
 /**
  * Contenu du dock inspecteur pour le viewer 3D. Rassemble ce qui flottait dans `InspectBar`,
  * `Model3DVariantsBar`, `LightingBar`, `BookmarksBar`, `TurntableBar`, `SectionBar`,
- * `ModelInfoPanel` et `CameraBar` — même contenu, six onglets fixes.
+ * `ModelInfoPanel` et `CameraBar` — même contenu, six onglets fixes. L'onglet Infos vit dans
+ * `Model3DInfo` : c'est le seul dont le contenu ne tient pas en quelques lignes ici.
  */
 export default function Model3DPanels({
   panel,
@@ -209,41 +208,7 @@ export default function Model3DPanels({
       />
     );
 
-  if (panel === 'info') {
-    const s = inspect.stats;
-    const live: InfoRow[] = s
-      ? [
-          { label: t('model3d.meshes'), value: fmt(s.meshes) },
-          { label: t('model3d.triangles'), value: fmt(s.triangles) },
-          { label: t('model3d.vertices'), value: fmt(s.vertices) },
-          { label: t('viewer.materials'), value: fmt(s.materials.length) },
-        ]
-      : [{ label: t('stats.measuring'), value: '—' }];
-    const sheet: InfoRow[] = [
-      { label: t('review.file'), value: data.media.originalName },
-      { label: t('info.uvSets'), value: s?.uvSets.length ? s.uvSets.join(', ') : t('review.none') },
-      {
-        label: t('model3d.extensions'),
-        value: inspect.extensions.length ? inspect.extensions.join(', ') : t('common.noneFem'),
-      },
-    ];
-    if (data.modelSource?.usd)
-      sheet.push({ label: t('usd.rootLayer'), value: data.modelSource.usd.rootLayer });
-    return (
-      <InfoPanel
-        live={live}
-        sheet={sheet}
-        action={
-          onRecompose && (
-            <Button size="sm" variant="outline" onClick={onRecompose}>
-              <Layers size={13} />
-              {t('usd.recomposeFrom')}
-            </Button>
-          )
-        }
-      />
-    );
-  }
+  if (panel === 'info') return <Model3DInfo data={data} inspect={inspect} onRecompose={onRecompose} />;
 
   if (panel === 'export')
     return (

@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '../../components/ui/dialog';
-import { initialSelection, variantValue } from './usdDisplay';
+import { initialSelection, purposeLabel, variantValue } from './usdDisplay';
 import { useT, type MessageKey } from '../../i18n';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
@@ -32,9 +32,9 @@ type Tr = (key: MessageKey) => string;
  */
 
 const purposes = (t: Tr): { value: UsdPurpose; label: string; hint: string }[] => [
-  { value: 'render', label: t('viewer.render.title'), hint: t('usd.renderGeom') },
-  { value: 'proxy', label: 'Proxy', hint: t('usd.proxyGeom') },
-  { value: 'guide', label: t('usd.purposeGuide'), hint: t('usd.guideGeom') },
+  { value: 'render', label: purposeLabel('render'), hint: t('usd.renderGeom') },
+  { value: 'proxy', label: purposeLabel('proxy'), hint: t('usd.proxyGeom') },
+  { value: 'guide', label: purposeLabel('guide'), hint: t('usd.guideGeom') },
 ];
 
 export default function UsdRecomposeDialog({

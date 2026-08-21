@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Circle, Grid3x3, Grip, Sparkles, Triangle } from 'lucide-react';
+import { Circle, Eclipse, Grid2x2, Grid3x3, Grip, Sparkles, Triangle } from 'lucide-react';
 import { Select } from '../../../components/ui/select';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
+import { SegmentedControl, type SegmentedItem } from '../../../components/ui/segmented-control';
 import { Switch } from '../../../components/ui/switch';
 import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { DebugColorMode } from '../splat/scene/effects/debugColor';
@@ -20,10 +20,17 @@ const splatRender = (t: T) => [
   { value: 'points' as const, label: t('viewer.mode.points'), icon: Grip },
 ];
 
-const modelRender = (t: T) => [
-  { value: 'shaded' as const, label: t('viewer.mode.shaded'), icon: Circle },
-  { value: 'wireframe' as const, label: t('viewer.mode.wireframe'), icon: Grid3x3 },
-  { value: 'normals' as const, label: t('viewer.mode.normals'), icon: Triangle },
+/**
+ * Les cinq modes d'inspection du maillage. Réduits à leurs icônes : cinq libellés ne tiennent
+ * pas dans les 17,5 rem du dock, et l'infobulle dit ce que l'icône ne peut pas — pourquoi on
+ * bascule en matcap ou en damier UV plutôt que le nom du mode.
+ */
+const modelRender = (t: T): SegmentedItem<DisplayMode>[] => [
+  { value: 'shaded', label: t('viewer.mode.shaded'), icon: Circle },
+  { value: 'wireframe', label: t('viewer.mode.wireframe'), icon: Grid3x3 },
+  { value: 'normals', label: t('viewer.mode.normals'), icon: Triangle },
+  { value: 'matcap', label: t('viewer.mode.matcap'), icon: Eclipse, hint: t('viewer.mode.matcap.hint') },
+  { value: 'uv', label: t('viewer.mode.uv'), icon: Grid2x2, hint: t('viewer.mode.uv.hint') },
 ];
 
 const debugColors = (t: T): { value: DebugColorMode; label: string }[] => [
@@ -80,8 +87,9 @@ export default function DisplayPanel({
           <SegmentedControl
             label={t('viewer.render.model')}
             items={modelRender(t)}
-            value={model.mode as ReturnType<typeof modelRender>[number]['value']}
+            value={model.mode}
             onChange={model.onMode}
+            iconOnly
           />
         )}
         {debugMode !== undefined && onDebugMode && (

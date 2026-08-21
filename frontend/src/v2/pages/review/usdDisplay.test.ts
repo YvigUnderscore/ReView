@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { initialSelection, unitLabel, variantValue } from './usdDisplay';
+import { initialSelection, purposeLabel, unitLabel, variantValue } from './usdDisplay';
 import type { UsdModelInfo } from '../../types/api';
 
 const usd = (over: Partial<UsdModelInfo> = {}): UsdModelInfo => ({
@@ -38,6 +38,17 @@ describe('unitLabel', () => {
   });
   it('affiche la valeur brute pour une échelle inhabituelle', () => {
     expect(unitLabel(0.3048)).toBe('0.3048 m');
+  });
+});
+
+describe('purposeLabel', () => {
+  it('nomme les trois purposes du format', () => {
+    expect(purposeLabel('render')).toBe('Render');
+    expect(purposeLabel('proxy')).toBe('Proxy');
+    expect(purposeLabel('guide')).toBe('Guide');
+  });
+  it('laisse passer un purpose inconnu tel quel', () => {
+    expect(purposeLabel('default')).toBe('default');
   });
 });
 

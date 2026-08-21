@@ -18,11 +18,14 @@ export interface InfoRow {
 export default function InfoPanel({
   live,
   sheet,
+  extra,
   action,
 }: {
   /** Mesures de la frame courante — absentes pour les médias plats. */
   live?: InfoRow[];
   sheet: InfoRow[];
+  /** Groupes qui ne tiennent pas en couples libellé/valeur : scène USD, inspecteur de textures. */
+  extra?: ReactNode;
   /** Action de bas de panneau (« Recomposer depuis l'USD »…). */
   action?: ReactNode;
 }) {
@@ -41,6 +44,7 @@ export default function InfoPanel({
           <ReadRow key={r.label} label={r.label} value={r.value} stack />
         ))}
       </Group>
+      {extra}
       {action}
     </>
   );
