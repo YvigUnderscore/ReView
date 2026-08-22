@@ -173,6 +173,7 @@ model Department {
   // les siens. Un `@@unique` ordinaire ne suffirait pas, Postgres tenant les NULL pour
   // distincts — deux départements de studio pourraient porter la même clé.
   @@index([studioId, projectId, order])
+  @@index([projectId])
 }
 
 // Réglages clé/valeur configurables depuis l'admin (quotas, limites upload, etc.)
@@ -313,6 +314,7 @@ model ApiToken {
 
   @@index([userId])
   @@index([projectId])
+  @@index([createdById])
 }
 
 // Journal d'événements de l'API v1 : alimente le polling `/api/v1/events` (daemon Prism,
@@ -329,7 +331,12 @@ model ApiEvent {
   actorId    Int?
   createdAt  DateTime @default(now())
 
-  @@index([id, projectId])
+  // Le polling lit « les événements de mes projets postérieurs à ce curseur, dans l'ordre
+  // des id » : c'est le projet qui filtre et l'id qui trie, donc `(projectId, id)`.
+  // L'index `(id, projectId)` d'origine ne servait à rien que la clé primaire ne fasse
+  // déjà — l'id est en tête des deux.
+  @@index([projectId, id])
+  @@index([actorId])
   @@index([createdAt])
   @@index([event])
 }
@@ -358,6 +365,7 @@ model MediaAccessLog {
   createdAt     DateTime    @default(now())
 
   @@index([mediaObjectId, createdAt])
+  @@index([userId, createdAt])
   @@index([createdAt])
 }
 
@@ -374,6 +382,11 @@ model Webhook {
   createdAt      DateTime  @default(now())
 }
 
+// ⚠ Table morte, conservée sous réserve. Aucune ligne de code ne l'écrit ni ne la lit
+// depuis sa création (seul le balayage de rétention l'énumère), et sa forme est fausse :
+// le jeton y serait stocké EN CLAIR, là où `Invitation` ne garde que son SHA-256. Le jour
+// où « mot de passe oublié » sera implémenté, c'est sur le modèle d'`Invitation`
+// (`tokenHash`) qu'il faudra la refaire — pas sur celle-ci.
 model PasswordReset {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -382,6 +395,8 @@ model PasswordReset {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Invitation d'un nouveau membre (Phase 47) : le compte existe déjà mais n'a pas encore de
@@ -400,6 +415,7 @@ model Invitation {
   createdAt   DateTime  @default(now())
 
   @@index([userId])
+  @@index([invitedById])
 }
 
 model ProjectMembership {
@@ -412,6 +428,9 @@ model ProjectMembership {
   joinedAt  DateTime @default(now())
 
   @@unique([userId, projectId])
+  // « Qui est membre de ce projet » : lu à chaque contrôle d'accès et à chaque écran
+  // d'équipe. L'unicité ci-dessus commence par `userId` et ne répond pas à cette question.
+  @@index([projectId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -485,7 +504,10 @@ model Sequence {
   departments Department[] @relation("SequenceDepartments")
 
   @@unique([projectId, code])
-  @@index([projectId, deletedAt])
+  // La liste des séquences d'un projet se lit paginée, triée par `order` puis `code` : les
+  // quatre colonnes dans cet ordre évitent le tri en mémoire sur un long-métrage.
+  @@index([projectId, deletedAt, order, code])
+  @@index([pipelineStatusId])
 }
 
 model Shot {
@@ -524,11 +546,21 @@ model Shot {
   departments Department[] @relation("ShotDepartments")
 
   // Un code de shot (ex: SH001) est unique par séquence : SH001 peut exister
-  // dans SQ001 ET SQ002. Les shots « sans séquence » (sequenceId = null) sont
-  // traités à part — l'unicité est vérifiée côté route (les NULL sont distincts en SQL).
+  // dans SQ001 ET SQ002.
+  //
+  // Les shots « sans séquence » (sequenceId = null) échappaient à cette contrainte, les
+  // NULL étant distincts en SQL : purger une séquence remet `sequenceId` à null sur ses
+  // plans (SetNull), et deux SH010 venus de deux séquences devenaient deux lignes
+  // légitimes que `findFirst` départageait au hasard — une publication DCC atterrissait
+  // sur l'une ou l'autre. Un index partiel posé dans la migration ferme ce trou
+  // (`Shot_project_code_no_sequence_unique`), restreint aux plans vivants pour que le
+  // SetNull d'une purge de séquence ne puisse jamais échouer sur des plans en corbeille.
   @@unique([projectId, sequenceId, code])
-  @@index([projectId, deletedAt])
-  @@index([sequenceId])
+  // Onglet Plans : filtre projet + corbeille, tri par `order`, pagination. `id` en queue
+  // pour que deux plans d'`order` égal ne changent pas de page d'une requête à l'autre.
+  @@index([projectId, deletedAt, order, id])
+  @@index([sequenceId, deletedAt, order])
+  @@index([pipelineStatusId])
 }
 
 model Asset {
@@ -589,7 +621,11 @@ model Task {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
-  // Une Task est rattachée à un Shot OU un Asset (réutilisable)
+  // Une Task est rattachée à un Shot OU un Asset (réutilisable). Le XOR n'était qu'un
+  // commentaire : une contrainte CHECK (`Task_parent_xor`) le porte désormais en base,
+  // Prisma ne sachant pas l'exprimer. Une tâche rattachée aux deux parents — ou à aucun —
+  // n'apparaissait dans AUCUN listing (tous filtrés par shotId ou assetId) sans qu'aucune
+  // erreur ne le signale.
   shot    Shot?  @relation(fields: [shotId], references: [id], onDelete: Cascade)
   shotId  Int?
   asset   Asset? @relation(fields: [assetId], references: [id], onDelete: Cascade)
@@ -604,10 +640,27 @@ model Task {
 
   versions Version[] @relation("TaskVersions")
 
+  // Une tâche est identifiée, dans son parent, par son étape et son nom : `modeling:main`
+  // et `lookdev:main` cohabitent, deux `modeling:main` non. Sans cette contrainte, deux
+  // publications DCC simultanées (ferme de rendu, synchro ShotGrid concurrente) passaient
+  // toutes deux le `findFirst` de `PipelineEnsureService.ensureTask` et créaient deux
+  // tâches jumelles — chacune avec ses versions, donc un travail coupé en deux.
+  //
+  // Portée volontairement limitée aux tâches QUI ONT une étape : les NULL étant distincts
+  // en SQL, une tâche sans département reste libre de porter un nom déjà pris. C'est
+  // délibéré — une tâche créée depuis un commentaire de review (TaskService.createFromComment)
+  // tire son nom du texte du retour, et deux retours identiques sur le même plan sont
+  // légitimes.
+  @@unique([shotId, departmentId, name])
+  @@unique([assetId, departmentId, name])
   @@index([departmentId])
-  @@index([shotId])
-  @@index([assetId])
+  // Le kanban d'un plan/asset lit ses tâches triées par `order` : la colonne de tri suit
+  // la colonne de filtre dans l'index, qui reste utilisable seul pour la cascade.
+  @@index([shotId, order])
+  @@index([assetId, order])
   @@index([assigneeId, status])
+  @@index([pipelineStatusId])
+  @@index([sourceCommentId])
 }
 
 // Version livrable (le cahier des charges parle d'« AssetVersion » ; généralisée :
@@ -622,6 +675,7 @@ model Version {
   updatedAt DateTime      @updatedAt
   deletedAt DateTime?
 
+  // XOR porté en base par la contrainte CHECK `Version_parent_xor` (cf. Task).
   task    Task?  @relation("TaskVersions", fields: [taskId], references: [id], onDelete: Cascade)
   taskId  Int?
   asset   Asset? @relation("AssetVersions", fields: [assetId], references: [id], onDelete: Cascade)
@@ -643,9 +697,23 @@ model Version {
   decisions      ReviewDecision[]
   playlistItems  PlaylistItem[]
 
+  // Deux V02 sur la même tâche n'ont aucun sens : le nom EST le numéro de livraison.
+  // `ensureVersion` calcule pourtant « la suivante » hors transaction, et deux publications
+  // simultanées visaient la même. La contrainte transforme la course en P2002, que le
+  // service rattrape déjà en recalculant le numéro (`createNextVersion`).
+  //
+  // La corbeille est volontairement DANS la portée : un numéro qui a servi ne resservira
+  // pas, même après suppression — `VersionService.autoName` compte déjà les versions
+  // supprimées pour cette raison, et `ensureVersion` sait répondre `VERSION_IN_TRASH`.
+  @@unique([taskId, name])
+  @@unique([assetId, name])
   @@index([departmentId])
-  @@index([taskId])
-  @@index([assetId])
+  // Historique d'une tâche/d'un asset : versions vivantes, de la plus récente à la plus
+  // ancienne (VersionService.list).
+  @@index([taskId, deletedAt, createdAt])
+  @@index([assetId, deletedAt, createdAt])
+  @@index([authorId])
+  @@index([reviewStatusId])
   @@index([deletedAt, published, createdAt])
 }
 
@@ -666,6 +734,7 @@ model Playlist {
   items PlaylistItem[]
 
   @@unique([projectId, name])
+  @@index([createdById])
 }
 
 model PlaylistItem {
@@ -679,6 +748,7 @@ model PlaylistItem {
 
   @@unique([playlistId, versionId])
   @@index([playlistId, order])
+  @@index([versionId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -709,8 +779,12 @@ model Timeline {
   comments  Comment[]
 
   // Les NULL étant distincts en SQL, l'unicité du montage de projet (sequenceId null)
-  // est garantie côté service — même parti pris que les shots sans séquence.
+  // n'était garantie que côté service : deux onglets ouverts au même instant créaient deux
+  // montages de projet, dont un seul recevait ensuite les révisions. Un index partiel posé
+  // dans la migration (`Timeline_project_unique_no_sequence`) la porte désormais en base —
+  // `TimelineService.ensure` rattrape déjà l'échec de création en relisant le gagnant.
   @@unique([projectId, sequenceId])
+  @@index([sequenceId])
 }
 
 // Révision figée d'un montage : ce qui a été montré, tel qu'il a été montré, à une date.
@@ -727,6 +801,7 @@ model TimelineSnapshot {
   items TimelineSnapshotItem[]
 
   @@unique([timelineId, revision])
+  @@index([createdById])
 }
 
 // Ligne figée d'une révision. Les identifiants sont volontairement SANS clé étrangère :
@@ -781,6 +856,9 @@ model ReviewDecision {
   createdAt DateTime     @default(now())
 
   @@index([versionId, createdAt])
+  // `onDelete: Restrict` : supprimer un statut de review compte d'abord ses décisions.
+  @@index([statusId])
+  @@index([authorId])
 }
 
 model MediaObject {
@@ -813,6 +891,10 @@ model MediaObject {
   // relationnels du pipe (`version → task → shot → project`), que Postgres traduit en
   // sous-requêtes corrélées : sans index sur la clé étrangère, chacune la balayait.
   @@index([versionId])
+  // Quota par personne : chaque demande d'upload somme les tailles de ses médias
+  // (MediaService), et supprimer un compte repasse en SetNull sur toute la table. Sans
+  // index de tête sur `uploaderId`, les deux balayaient la table entière.
+  @@index([uploaderId, deletedAt])
   @@index([deletedAt, published, status, createdAt])
 }
 
@@ -830,6 +912,7 @@ model TimelineMarker {
   createdAt     DateTime    @default(now())
 
   @@index([mediaObjectId])
+  @@index([authorId])
 }
 
 // Images de référence d'une review 2D (Phase 24, multi-items) : persistées & partagées,
@@ -854,6 +937,7 @@ model ReviewReference {
 
   @@index([mediaObjectId])
   @@index([commentId])
+  @@index([createdById])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -861,6 +945,7 @@ model ReviewReference {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Board mood/reference (9.B) — rattaché à un Projet OU un Asset (XOR), plus à une version.
+// XOR porté en base par la contrainte CHECK `Board_parent_xor` (cf. Task).
 model Board {
   id        Int      @id @default(autoincrement())
   project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -938,19 +1023,30 @@ model Comment {
   // Fil d'un média : racines puis réponses, dans l'ordre (B3).
   @@index([mediaObjectId, parentId, createdAt])
   @@index([parentId])
+  // Trois clés étrangères vers User sans index : à 50 000 commentaires par projet, la
+  // suppression d'un compte déclenchait trois balayages complets de la table dans la même
+  // transaction, verrous compris.
+  @@index([userId])
+  @@index([resolvedById])
+  @@index([assigneeId])
 }
 
+// Réaction emoji à un commentaire. `userId` est OBLIGATOIRE (C1) : le seul écrivain,
+// `CommentService.addReaction`, exige une session, et `guestName` — prévu pour un
+// spectateur anonyme du partage client — n'a jamais été ni écrit ni lu. Les deux colonnes
+// se tenaient : nullable, `userId` sortait l'unicité du jeu (les NULL sont distincts en
+// SQL), et rien n'empêchait cinquante fois le même emoji sur le même commentaire.
 model Reaction {
   id        Int      @id @default(autoincrement())
   emoji     String
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    Int?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
   comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId Int
-  guestName String?
   createdAt DateTime @default(now())
 
   @@unique([commentId, userId, emoji])
+  @@index([userId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -973,6 +1069,11 @@ model ShareLink {
   createdBy    User?           @relation("ShareCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdById  Int?
   createdAt    DateTime        @default(now())
+
+  // L'écran d'administration liste les liens d'un projet ; supprimer un compte repasse en
+  // SetNull sur les siens.
+  @@index([projectId, createdAt])
+  @@index([createdById])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1001,6 +1102,7 @@ model Notification {
   // requêtes jouées à chaque montage de la coquille (B3).
   @@index([userId, createdAt])
   @@index([userId, isRead])
+  @@index([projectId])
 }
 
 // Suivi de notifications (32.G) : un utilisateur « suit » un shot, un asset ou une
@@ -1036,6 +1138,9 @@ model AuditLog {
   @@index([entityType, entityId])
   // L'écran d'audit lit toujours par ordre antéchronologique (B3).
   @@index([createdAt])
+  // … et se filtre par acteur (« qu'a fait cette personne »). Supprimer un compte repasse
+  // aussi en SetNull sur toute la table.
+  @@index([userId, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1112,6 +1217,7 @@ model Conversation {
   messages ChatMessage[]
 
   @@index([lastMessageAt])
+  @@index([createdById])
 }
 
 // Appartenance à un fil. `lastReadAt` porte le compteur de non-lus ; `mutedAt` coupe la
@@ -1153,6 +1259,7 @@ model ChatMessage {
   deletedAt      DateTime?
 
   @@index([conversationId, createdAt])
+  @@index([authorId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1296,6 +1403,7 @@ model ShotgridSyncRun {
   logs ShotgridSyncLog[]
 
   @@index([connectionId, startedAt])
+  @@index([triggeredById])
 }
 
 model ShotgridSyncLog {
