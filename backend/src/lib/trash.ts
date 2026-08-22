@@ -281,51 +281,49 @@ export async function purgeProject(id: number): Promise<void> {
 // ── Purge automatique (balayage planifié) ────────────────────────────────────────
 
 /**
- * Purge définitivement tout élément en corbeille depuis plus de `retentionDays` jours.
+ * Plafond d'une passe de purge automatique. Chaque élément coûte une transaction DB **et**
+ * un ou plusieurs appels MinIO : vider d'un coup la corbeille d'un long-métrage occuperait
+ * le worker des heures et martèlerait le stockage pendant que le studio travaille. La purge
+ * est idempotente et reprend là où elle s'est arrêtée à la passe suivante.
+ */
+export const TRASH_PURGE_MAX_ITEMS = 2000;
+
+/**
+ * Purge définitivement tout élément en corbeille depuis plus de `retentionDays` jours, dans
+ * la limite de `maxItems` éléments par passe.
  * `retentionDays <= 0` désactive la purge automatique (no-op).
  * Ordre : enfants avant parents pour éviter les conflits de cascade.
  */
-export async function purgeExpiredTrash(retentionDays: number): Promise<number> {
+export async function purgeExpiredTrash(
+  retentionDays: number,
+  maxItems: number = TRASH_PURGE_MAX_ITEMS,
+): Promise<number> {
   if (!retentionDays || retentionDays <= 0) return 0;
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
   const expired = { deletedAt: { lt: cutoff, not: null } } as const;
+  let budget = Math.max(0, Math.trunc(maxItems));
   let purged = 0;
 
-  const media = await prisma.mediaObject.findMany({ where: expired, select: { id: true } });
-  for (const m of media) {
-    await purgeMedia(m.id);
-    purged++;
-  }
+  /** Consomme le budget restant sur un niveau de la hiérarchie, du plus ancien au plus récent. */
+  const sweep = async (
+    find: (take: number) => Promise<{ id: number }[]>,
+    purgeOne: (id: number) => Promise<void>,
+  ): Promise<void> => {
+    if (budget <= 0) return;
+    for (const row of await find(budget)) {
+      await purgeOne(row.id);
+      purged += 1;
+      budget -= 1;
+    }
+  };
 
-  const versions = await prisma.version.findMany({ where: expired, select: { id: true } });
-  for (const v of versions) {
-    await purgeVersion(v.id);
-    purged++;
-  }
-
-  const shots = await prisma.shot.findMany({ where: expired, select: { id: true } });
-  for (const s of shots) {
-    await purgeShot(s.id);
-    purged++;
-  }
-
-  const sequences = await prisma.sequence.findMany({ where: expired, select: { id: true } });
-  for (const s of sequences) {
-    await purgeSequence(s.id);
-    purged++;
-  }
-
-  const assets = await prisma.asset.findMany({ where: expired, select: { id: true } });
-  for (const a of assets) {
-    await purgeAsset(a.id);
-    purged++;
-  }
-
-  const projects = await prisma.project.findMany({ where: expired, select: { id: true } });
-  for (const p of projects) {
-    await purgeProject(p.id);
-    purged++;
-  }
+  const page = { where: expired, select: { id: true }, orderBy: { id: 'asc' } } as const;
+  await sweep((take) => prisma.mediaObject.findMany({ ...page, take }), purgeMedia);
+  await sweep((take) => prisma.version.findMany({ ...page, take }), purgeVersion);
+  await sweep((take) => prisma.shot.findMany({ ...page, take }), purgeShot);
+  await sweep((take) => prisma.sequence.findMany({ ...page, take }), purgeSequence);
+  await sweep((take) => prisma.asset.findMany({ ...page, take }), purgeAsset);
+  await sweep((take) => prisma.project.findMany({ ...page, take }), purgeProject);
 
   return purged;
 }

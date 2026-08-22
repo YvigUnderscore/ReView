@@ -9,7 +9,7 @@ import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { purgeExpiredTrash } from '../lib/trash';
 import { purgeObsoleteDerived } from '../lib/derivedPurge';
 import { purgeIdempotencyRecords } from '../lib/idempotency';
-import { purge as purgeApiEvents } from '../services/ApiEventService';
+import { sweepRetention } from '../lib/retention';
 import { sendDailyDigests } from '../services/DigestService';
 import { sendWeeklyReports } from '../services/WeeklyReportService';
 import { registerWorkerShutdown } from './shutdown';
@@ -24,9 +24,13 @@ import { registerWorkerShutdown } from './shutdown';
  */
 
 /**
- * Purge des tampons : corbeille expirée, dérivés obsolètes, journal d'événements API et
- * clés d'idempotence. Ces deux derniers sont des tampons, pas des archives : sans purge,
- * ils grossissent indéfiniment au rythme du studio.
+ * Purge des tampons : corbeille expirée, dérivés obsolètes, clés d'idempotence, puis
+ * balayage de rétention des neuf tables de journal (`lib/retention`). Ce sont des tampons,
+ * pas des archives : sans purge, ils grossissent indéfiniment au rythme du studio.
+ *
+ * Tout est plafonné par passe — corbeille comme journaux. Un studio qui active la rétention
+ * après un an d'exploitation rattrape son retard en plusieurs nuits, sans jamais bloquer la
+ * base sur une suppression de plusieurs millions de lignes.
  */
 async function runPurge(): Promise<void> {
   const days = await getNumericSetting(SETTING_KEYS.TRASH_RETENTION_DAYS);
@@ -34,10 +38,10 @@ async function runPurge(): Promise<void> {
   if (purged > 0) logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
   // Purge des dérivés obsolètes (37.H) — no-op si désactivée dans l'admin.
   await purgeObsoleteDerived();
-  const events = await purgeApiEvents();
   const keys = await purgeIdempotencyRecords();
-  if (events > 0 || keys > 0)
-    logger.info(`[API v1] purge : ${events} événement(s), ${keys} clé(s) d'idempotence.`);
+  if (keys > 0) logger.info(`[API v1] purge : ${keys} clé(s) d'idempotence.`);
+  // Journalise lui-même son résultat (et le consigne dans l'audit quand il a supprimé).
+  await sweepRetention();
 }
 
 export const maintenanceWorker = new Worker<MaintenanceJobData, void, string>(

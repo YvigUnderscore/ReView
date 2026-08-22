@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   Activity,
   Box,
+  CalendarClock,
   ClipboardCheck,
   Database,
   Eye,
@@ -56,6 +57,7 @@ import ReviewStatusTab from './admin/ReviewStatusTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
 import TrashTab from './admin/TrashTab';
+import RetentionTab from './admin/RetentionTab';
 import AuditTab from './admin/AuditTab';
 import { useT, type MessageKey } from '../i18n';
 import ShotgridSitesTab from './admin/ShotgridSitesTab';
@@ -192,6 +194,13 @@ const sections = (t: Tr) =>
     },
     { key: 'jobs', group: 'maintenance', label: t('admin.tab.jobs'), icon: ListChecks, Component: JobsTab },
     { key: 'trash', group: 'maintenance', label: t('admin.tab.trash'), icon: Trash2, Component: TrashTab },
+    {
+      key: 'retention',
+      group: 'maintenance',
+      label: t('admin.tab.retention'),
+      icon: CalendarClock,
+      Component: RetentionTab,
+    },
     { key: 'audit', group: 'maintenance', label: t('admin.tab.audit'), icon: History, Component: AuditTab },
     {
       key: 'media-access',

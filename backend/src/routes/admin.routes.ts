@@ -27,9 +27,13 @@ import {
 import { getTranscodeConfig, setTranscodeConfig, transcodeConfigSchema } from '../lib/transcodeConfig';
 import { getStudioBurninConfig, setStudioBurninConfig, burninConfigSchema } from '../lib/burnin';
 import * as AdminService from '../services/AdminService';
+import adminRetentionRoutes from './admin-retention.routes';
 
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
+
+// Rétention des journaux — routes /retention* (fichier dédié, mêmes gardes que ci-dessus).
+router.use(adminRetentionRoutes);
 
 // GET /api/admin/project-defaults — réglages par défaut des nouveaux projets
 router.get('/project-defaults', async (_req, res) => {

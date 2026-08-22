@@ -94,13 +94,10 @@ export async function list(params: ListEventsParams) {
   };
 }
 
-/** Rétention du journal, en jours. Au-delà, un client trop en retard repart du présent. */
-export const EVENT_RETENTION_DAYS = 30;
-
-/** Purge les événements expirés (worker de maintenance). */
-export async function purge(now = new Date()): Promise<number> {
-  const { count } = await prisma.apiEvent.deleteMany({
-    where: { createdAt: { lt: new Date(now.getTime() - EVENT_RETENTION_DAYS * 86_400_000) } },
-  });
-  return count;
-}
+/**
+ * Rétention : le journal est purgé par `lib/retention` (famille `apiEvent`, 30 jours par
+ * défaut, réglable par l'administration). Il s'y ajoute la garantie qui manquait ici — la
+ * suppression part par tranches plafonnées au lieu d'un `DELETE` sur toute la table.
+ * Conséquence inchangée côté client : passé la durée, un consommateur trop en retard
+ * (`GET /api/v1/events?since=…`) repart du présent au lieu de rejouer l'historique.
+ */
