@@ -30,9 +30,23 @@ export interface Normalized {
  * caméra vise l'objet et non le sol.
  */
 export function normalizeTransform(three: typeof import('three'), box: THREE.Box3): Normalized {
+  return poseForScale(three, box, normalizationScale(three, box));
+}
+
+/** Facteur qui ramène la plus grande dimension de la bbox à `TARGET_SIZE` (1 si bbox vide). */
+export function normalizationScale(three: typeof import('three'), box: THREE.Box3): number {
   const size = box.getSize(new three.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
-  const scale = maxDim > 0 ? TARGET_SIZE / maxDim : 1;
+  return maxDim > 0 ? TARGET_SIZE / maxDim : 1;
+}
+
+/**
+ * Pose du wrapper pour un facteur d'échelle **donné** : c'est ce qui permet la bascule
+ * « taille réelle » (`scale = 1`, le modèle garde les unités de son fichier) sans recharger
+ * quoi que ce soit — la normalisation n'est plus qu'un cas particulier de cette fonction.
+ */
+export function poseForScale(three: typeof import('three'), box: THREE.Box3, scale: number): Normalized {
+  const size = box.getSize(new three.Vector3());
   const center = box.getCenter(new three.Vector3());
   const radius = box.getBoundingSphere(new three.Sphere()).radius * scale;
   const position = new three.Vector3(-center.x * scale, -box.min.y * scale, -center.z * scale);
@@ -73,6 +87,10 @@ export interface LoadedModel {
   extensions: string[];
   /** Nombre de `SkinnedMesh` (rig présent → active le debug squelette 40.B). */
   skinnedCount: number;
+  /** Facteur de normalisation appliqué — **conservé** pour la bascule « taille réelle ». */
+  scale: number;
+  /** Boîte englobante **brute**, dans les unités du fichier : dimensions réelles et mesure. */
+  box: THREE.Box3;
   /** Objet glTF chargé (parser + userData.variants + cameras) — variantes & caméras embarquées (40.C). */
   gltf: GLTF;
 }
@@ -111,6 +129,8 @@ export async function loadModel(
     center,
     extensions,
     skinnedCount,
+    scale,
+    box,
     gltf,
   };
 }

@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "このリンクに有効期限はありません。",
   "share.mail.viewLimit": { "other": "開けるのは合計 {count} 回までです。" },
   "share.mail.password": "パスワードで保護されています。パスワードは別途お送りします。",
-  "share.mail.fallback": "ボタンが動作しない場合は、次のリンクをブラウザーに貼り付けてください。"
+  "share.mail.fallback": "ボタンが動作しない場合は、次のリンクをブラウザーに貼り付けてください。",
+  "notesSheet.title": "review ノート",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "タイムコード",
+  "notesSheet.state": "状態",
+  "notesSheet.decision": "判断",
+  "notesSheet.noFrame": "利用できる frame がありません",
+  "notesSheet.printHint": "このページを印刷し、「PDF に保存」を選ぶと控えを残せます。",
+  "notesSheet.empty": "ここに印刷するノートはありません。",
+  "notesSheet.reply": "返信",
+  "notesSheet.truncated": "先頭の {count} 件のノートのみ表示しています。"
 }

@@ -1,14 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Undo2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../components/ui/context-menu';
 import PrimMenuItems from './panels/PrimMenuItems';
-import { api } from '../../../lib/apiClient';
-import { qk } from '../../lib/query';
+import { useSaveSceneOverride } from './three/useSaveSceneOverride';
+import { useCommentSceneEscape } from './three/useCommentSceneEscape';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { Model3DThreeState } from './three/useModel3DThree';
@@ -21,6 +19,10 @@ import { useModel3DBookmarks } from './three/useModel3DBookmarks';
 import { useTurntable } from './three/useTurntable';
 import { useSectionPlane } from './three/useSectionPlane';
 import { useModel3DCompare } from './three/useModel3DCompare';
+import { useModel3DViewState } from './three/useModel3DViewState';
+import { useModelMeasure } from './three/useModelMeasure';
+import { useHotspotPlacement } from './three/useHotspotPlacement';
+import SpatialCompareHeader from './three/SpatialCompareHeader';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import { useCameraShortcuts } from './camera/useCameraShortcuts';
 import { useModel3DCommands } from './three/useModel3DCommands';
@@ -76,7 +78,6 @@ export default function Model3DReview({
   overlay: ReactNode;
 }) {
   const t = useT();
-  const qc = useQueryClient();
   // Scène Three réellement construite (modèle chargé, runtime posé). À ne pas confondre avec
   // « le média est affichable » : les hooks qui lisent la scène de façon impérative n'ont rien
   // à lire tant que le GLB n'est pas chargé, et leur effet ne serait pas rejoué ensuite.
@@ -93,8 +94,15 @@ export default function Model3DReview({
   // Turntable + plan de coupe : prévisualisations d'inspection session-local.
   const turntable = useTurntable(model3d);
   const section = useSectionPlane(model3d);
-  // Comparaison A/B des modèles 3D d'une version : caméra liée (même scène).
+  // Comparaison A/B des modèles 3D : frères de la version **et** modèles d'autres versions
+  // cochés dans `CompareSelect` — tous chargés dans la même scène (caméra liée).
   const compare = useModel3DCompare(model3d, data.media);
+  // Mesure point-à-point et dimensions réelles (39.G) : l'unité vient de la scène USD.
+  const measure = useModelMeasure(model3d, data.modelSource?.usd?.metersPerUnit ?? 1);
+  // Mode d'affichage + plan de coupe + HDRI joints à la vue caméra du commentaire.
+  useModel3DViewState({ model3d, inspect, section, lighting });
+  // Hotspot posé au clic (et non plus au centre de l'écran) : l'outil s'arme, puis on désigne.
+  const hotspot = useHotspotPlacement(model3d, (hs) => ann.setHotspot3d(hs));
   // Scenegraph USD + « ReView override » (46.C) : l'override de base du média est rejoué pour
   // tous, l'exploration locale du spectateur reste dans sa session.
   // Mémoïsé : sans cela l'override serait un objet neuf à chaque rendu et la scène serait
@@ -129,23 +137,19 @@ export default function Model3DReview({
     if (hadProposal.current && !has && sceneDirty) revert();
     hadProposal.current = has;
   }, [ann.sceneOverride, sceneDirty, revert]);
-  // La scène d'un commentaire reste appliquée après un mouvement de vue (46.T) : Échap la
-  // relâche — même touche que le retour à l'outil de repos, même sémantique de « repos ».
+  // Échap relâche la scène proposée par le commentaire sélectionné (46.T).
   const hasCommentScene = ann.viewedSceneOverride != null;
   const { setViewedSceneOverride } = ann;
-  useEffect(() => {
-    if (!hasCommentScene) return;
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) return;
-      if (e.key === 'Escape') setViewedSceneOverride(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [hasCommentScene, setViewedSceneOverride]);
+  const releaseCommentScene = useCallback(() => setViewedSceneOverride(null), [setViewedSceneOverride]);
+  useCommentSceneEscape(hasCommentScene, releaseCommentScene);
   // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
   const [recomposeOpen, setRecomposeOpen] = useState(false);
-  const [savingOverride, setSavingOverride] = useState(false);
+  const saveOverride = useSaveSceneOverride({
+    mediaId: data.media.id,
+    allowed: canManage && !data.media.published,
+    merged: () => scene.merged,
+    onSaved: scene.revert,
+  });
   const usd = data.modelSource?.usd ?? null;
   const canRecompose = canManage && !data.media.published && !!usd;
   const grid = useSceneGrid(model3d);
@@ -181,7 +185,7 @@ export default function Model3DReview({
   const { history, dirty } = useModel3DChrome({ state, m: model3d, cameraRig: rig, usdScene: scene });
 
   // Palette Ctrl+K (B3) : commandes cadrer/lecture/clé/orbite, extraites dans leur hook.
-  useModel3DCommands(cam, model3d, canManage, !!data.splatPresentation);
+  useModel3DCommands(cam, model3d, canManage, !!data.splatPresentation, measure);
 
   const tools = toolsFor(state.mode, 'MODEL_3D');
   const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0];
@@ -196,7 +200,16 @@ export default function Model3DReview({
       onState={update}
       role={role ?? 'ARTIST'}
       hiddenTools={MODEL_HIDDEN_TOOLS}
-      headerRight={compare.enabled && !showEditTools ? <Model3DCompareBar compare={compare} /> : undefined}
+      headerRight={
+        <SpatialCompareHeader
+          versionId={data.media.versionId}
+          mediaId={data.media.id}
+          kind="MODEL_3D"
+          versions={compare.versions}
+        >
+          {compare.enabled && !showEditTools && <Model3DCompareBar compare={compare} />}
+        </SpatialCompareHeader>
+      }
       dirty={showEditTools ? dirty : undefined}
       onViewAction={(action) => (action === 'fit' ? model3d.frameView() : model3d.homeView())}
       options={
@@ -207,7 +220,7 @@ export default function Model3DReview({
           history={history}
           dirty={dirty}
           canEdit={showEditTools}
-          onPlaceHotspot={() => ann.setHotspot3d(model3d.hotspotAtCenter())}
+          onPlaceHotspot={hotspot.arm}
           presentation={canManage ? { busy: cam.busy, onSave: () => void cam.save?.() } : undefined}
         />
       }
@@ -224,26 +237,10 @@ export default function Model3DReview({
           turntable={turntable}
           section={section}
           grid={grid}
+          measure={measure}
           scene={scene}
-          onSaveOverride={
-            canManage && !data.media.published
-              ? () => {
-                  setSavingOverride(true);
-                  api
-                    .put(`/api/media/${data.media.id}/usd/override`, { override: scene.merged })
-                    .then(() => {
-                      toast.success(t('review.staging.saved'));
-                      void qc.invalidateQueries({ queryKey: qk.media(data.media.id) });
-                      scene.revert();
-                    })
-                    .catch((e: unknown) =>
-                      toast.error(e instanceof Error ? e.message : t('common.error.save')),
-                    )
-                    .finally(() => setSavingOverride(false));
-                }
-              : undefined
-          }
-          savingOverride={savingOverride}
+          onSaveOverride={saveOverride.run}
+          savingOverride={saveOverride.busy}
           onRecompose={canRecompose ? () => setRecomposeOpen(true) : undefined}
           onImportAnim={canManage ? cam.importGltf : undefined}
           onOrbit={canManage ? () => cam.applyOrbitPreset() : undefined}
@@ -304,7 +301,11 @@ export default function Model3DReview({
               processingError={data.processingError}
               onReprocess={onReprocess}
               notice={
-                hasCommentScene ? (
+                hotspot.armed ? (
+                  <p className="absolute top-2 left-1/2 z-20 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow-lg">
+                    {t('hotspot.clickToPlace')}
+                  </p>
+                ) : hasCommentScene ? (
                   <button
                     onClick={() => setViewedSceneOverride(null)}
                     title={t('review.resetScene')}

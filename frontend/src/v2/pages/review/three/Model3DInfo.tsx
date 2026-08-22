@@ -9,7 +9,10 @@ import TexturesGroup from '../panels/TexturesGroup';
 import UsdSceneGroup from '../panels/UsdSceneGroup';
 import type { MediaResp } from '../reviewTypes';
 import type { ModelSource } from '../../../types/api';
+import Model3DMeasureGroup from './Model3DMeasureGroup';
 import type { Model3DInspectState } from './useModel3DInspect';
+import type { Model3DThreeState } from './useModel3DThree';
+import type { ModelMeasureState } from './useModelMeasure';
 import { intlLocale, useT, type MessageKey, type Tr } from '../../../i18n';
 
 /**
@@ -54,10 +57,15 @@ function converterValue(source: ModelSource, t: Tr): ReactNode {
 export default function Model3DInfo({
   data,
   inspect,
+  measure,
+  m,
   onRecompose,
 }: {
   data: MediaResp;
   inspect: Model3DInspectState;
+  /** Dimensions réelles + outil de mesure (39.G). */
+  measure: ModelMeasureState;
+  m: Model3DThreeState;
   /** Recomposition USD — gestionnaire, média non publié, source USD présente. */
   onRecompose?: () => void;
 }) {
@@ -95,6 +103,7 @@ export default function Model3DInfo({
       sheet={sheet}
       extra={
         <>
+          <Model3DMeasureGroup measure={measure} realScale={m.realScale} onRealScale={m.setRealScale} />
           {source?.usd && <UsdSceneGroup usd={source.usd} />}
           {/* Un modèle sans texture est courant (sculpt, blocking) : pas de groupe vide. */}
           {s && s.textures.length > 0 && <TexturesGroup textures={s.textures} />}

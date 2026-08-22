@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "This link has no expiry date.",
   "share.mail.viewLimit": { "one": "It can be opened {count} time in all.", "other": "It can be opened {count} times in all." },
   "share.mail.password": "It is protected by a password, sent to you separately.",
-  "share.mail.fallback": "If the button does not work, paste this link into your browser:"
+  "share.mail.fallback": "If the button does not work, paste this link into your browser:",
+  "notesSheet.title": "Review notes",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "State",
+  "notesSheet.decision": "Decision",
+  "notesSheet.noFrame": "No frame available",
+  "notesSheet.printHint": "Print this page and choose “Save as PDF” to keep a copy.",
+  "notesSheet.empty": "No notes to print here.",
+  "notesSheet.reply": "Reply",
+  "notesSheet.truncated": "Only the first {count} notes are shown."
 }

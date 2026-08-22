@@ -34,6 +34,12 @@ import {
   type UsdPurpose,
   type VariantLayerEntry,
 } from '../lib/blenderUsd';
+import {
+  BLENDER_THUMB_TIMEOUT_MS,
+  blenderThumbTimeoutReason,
+  buildThumbArgs,
+  parseThumbSummary,
+} from '../lib/blenderThumb';
 
 /**
  * Conversion des médias 3D vers GLB — seul format lu par le viewer Three.js de la review.
@@ -395,6 +401,54 @@ async function convertUsd(
   }
   await convertWithAssimp(stagePath, output);
   return { converter: 'assimp', usd: buildUsdInfo(info, rootLayer, request, false) };
+}
+
+// ---------------------------------------------------------------------------- vignette
+
+/** Issue d'un rendu de vignette : jamais une exception — une vignette absente n'est pas un échec. */
+export interface ModelThumbResult {
+  rendered: boolean;
+  /** Motif exploitable en journal quand rien n'a été rendu (`blender-missing`, `no-geometry`…). */
+  reason: string;
+}
+
+/**
+ * Rend une vignette PNG (fond transparent) d'un GLB via Blender headless.
+ *
+ * **Ne lève jamais** et ne touche à rien d'autre que le fichier de sortie : le job de
+ * vignette est décoratif, il ne doit ni bloquer la publication ni faire passer un média en
+ * échec. Blender absent de l'image (build sans `INSTALL_USD_TOOLS`) est un cas nominal :
+ * on renvoie `blender-missing`, l'appelant journalise, et la capture côté client au premier
+ * affichage (`setAutoThumbnail`) reste le filet de sécurité.
+ */
+export async function renderModelThumbnail(
+  glbPath: string,
+  output: string,
+  opts: { size?: number; samples?: number } = {},
+): Promise<ModelThumbResult> {
+  if (!(await hasBlender())) return { rendered: false, reason: 'blender-missing' };
+
+  const timeout = Math.min(env.MODEL_CONVERT_TIMEOUT_MS, BLENDER_THUMB_TIMEOUT_MS);
+  const args = buildThumbArgs(resolveUsdScript('render_thumb.py'), { input: glbPath, output, ...opts });
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync(env.USD_BLENDER_BIN, args, {
+      timeout,
+      maxBuffer: 8 * 1024 * 1024,
+      windowsHide: true,
+    }));
+  } catch (err) {
+    const e = err as { killed?: boolean; stderr?: string; stdout?: string; message?: string };
+    if (e.killed) return { rendered: false, reason: blenderThumbTimeoutReason(timeout) };
+    const detail = (e.stderr || e.stdout || e.message || '').toString();
+    return { rendered: false, reason: summarizeBlenderError(detail, 'blender-failed') };
+  }
+
+  const summary = parseThumbSummary(stdout);
+  if (summary && !summary.rendered) return { rendered: false, reason: summary.reason || 'not-rendered' };
+  const info = await stat(output).catch(() => null);
+  if (!info || info.size === 0) return { rendered: false, reason: 'empty-output' };
+  return { rendered: true, reason: '' };
 }
 
 // ---------------------------------------------------------------------------- archives

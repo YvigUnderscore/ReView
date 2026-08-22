@@ -12,7 +12,8 @@ import { resizeRendererCamera } from '../three/sceneConfig';
 import { createFlyControls } from '../viewer/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { createHotspotMarker } from './scene/hotspotMarker';
-import { raycastCenter as raycastCenterCore } from './scene/raycast';
+import { raycastAt, raycastCenter as raycastCenterCore } from './scene/raycast';
+import { toNdc } from '../three/usdPicking';
 import type { PointCloud } from './scene/pointCloud';
 import { applyRenderModeToScene, type RenderMode } from './scene/renderModes';
 import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
@@ -69,6 +70,8 @@ export interface SplatViewer {
   restoreCamera: (state: unknown) => void;
   /** Hotspot sur la surface au centre du viewer (raycast), sinon null si le rayon ne touche rien. */
   raycastCenter: () => Hotspot3D | null;
+  /** Hotspot sur la surface **sous le pointeur** (coordonnées client) — pose au clic. */
+  hotspotAtPointer: (clientX: number, clientY: number) => Hotspot3D | null;
   /** Affiche (ou masque si null) le marqueur de hotspot, projeté à l'écran à chaque frame. */
   showHotspot: (hs: Hotspot3D | null) => void;
   /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
@@ -286,6 +289,15 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     return raycastCenterCore(THREE, s.camera, s.mesh);
   }, []);
 
+  /** Hotspot posé sous le pointeur (coordonnées client) — placement au clic dans le viewer. */
+  const hotspotAtPointer = useCallback((clientX: number, clientY: number): Hotspot3D | null => {
+    const s = sceneRef.current;
+    const THREE = threeRef.current;
+    if (!s || !THREE) return null;
+    const rect = s.renderer.domElement.getBoundingClientRect();
+    return raycastAt(THREE, s.camera, s.mesh, toNdc(clientX, clientY, rect));
+  }, []);
+
   const showHotspot = useCallback((hs: Hotspot3D | null) => {
     const THREE = threeRef.current;
     hotspotRef.current = hs && THREE ? parseHotspotPoint(THREE, hs) : null;
@@ -378,6 +390,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     captureCamera,
     restoreCamera,
     raycastCenter,
+    hotspotAtPointer,
     showHotspot,
     captureThumbnail,
     applyTransform,

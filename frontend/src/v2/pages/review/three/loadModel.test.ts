@@ -3,7 +3,13 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { markDeformableMeshes, normalizeTransform, TARGET_SIZE } from './loadModel';
+import {
+  markDeformableMeshes,
+  normalizationScale,
+  normalizeTransform,
+  poseForScale,
+  TARGET_SIZE,
+} from './loadModel';
 
 /** Bbox du modèle une fois la normalisation appliquée (échelle uniforme puis translation). */
 function normalizedBox(box: THREE.Box3): THREE.Box3 {
@@ -61,6 +67,51 @@ describe('loadModel.normalizeTransform — normalisation par bbox (V1)', () => {
     const n = normalizeTransform(THREE, box);
     expect(n.scale).toBe(1);
     expect(n.center.length()).toBeCloseTo(0);
+  });
+});
+
+describe('loadModel.poseForScale — bascule « taille réelle » (39.G)', () => {
+  /** Bbox après application d'une pose (échelle uniforme puis translation). */
+  const posed = (box: THREE.Box3, scale: number) => {
+    const p = poseForScale(THREE, box, scale);
+    return new THREE.Box3(
+      box.min.clone().multiplyScalar(p.scale).add(p.position),
+      box.max.clone().multiplyScalar(p.scale).add(p.position),
+    );
+  };
+
+  it('à l’échelle 1, le modèle garde les dimensions de son fichier', () => {
+    // Décor de 30 m posé au sol dans le DCC, ramené à 2 unités par la normalisation.
+    const box = new THREE.Box3(new THREE.Vector3(-15, 0, -10), new THREE.Vector3(15, 8, 10));
+    expect(normalizationScale(THREE, box)).toBeCloseTo(TARGET_SIZE / 30);
+    const real = posed(box, 1);
+    const size = real.getSize(new THREE.Vector3());
+    expect(size.x).toBeCloseTo(30);
+    expect(size.y).toBeCloseTo(8);
+    // Toujours posé sur la grille et centré horizontalement, quelle que soit l'échelle.
+    expect(real.min.y).toBeCloseTo(0);
+    expect(real.getCenter(new THREE.Vector3()).x).toBeCloseTo(0);
+  });
+
+  it('deux objets de tailles très différentes cessent de se ressembler', () => {
+    const prop = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.2, 0.2, 0.2));
+    const set = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(30, 30, 30));
+    // Normalisés, les deux font TARGET_SIZE ; à l'échelle réelle, le rapport est de 150.
+    expect(posed(prop, normalizationScale(THREE, prop)).getSize(new THREE.Vector3()).x).toBeCloseTo(
+      posed(set, normalizationScale(THREE, set)).getSize(new THREE.Vector3()).x,
+    );
+    expect(
+      posed(set, 1).getSize(new THREE.Vector3()).x / posed(prop, 1).getSize(new THREE.Vector3()).x,
+    ).toBeCloseTo(150);
+  });
+
+  it('reste équivalente à la normalisation quand on lui passe son facteur', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-3, -5, 1), new THREE.Vector3(1, 3, 5));
+    const n = normalizeTransform(THREE, box);
+    const p = poseForScale(THREE, box, normalizationScale(THREE, box));
+    expect(p.scale).toBeCloseTo(n.scale);
+    expect(p.position.toArray()).toEqual(n.position.toArray());
+    expect(p.radius).toBeCloseTo(n.radius);
   });
 });
 

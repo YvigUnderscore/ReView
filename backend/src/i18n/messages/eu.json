@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "Esteka honek ez du iraungitze-datarik.",
   "share.mail.viewLimit": { "one": "{count} aldiz ireki daiteke guztira.", "other": "{count} aldiz ireki daiteke guztira." },
   "share.mail.password": "Pasahitz batez babestuta dago, bereiz bidalia.",
-  "share.mail.fallback": "Botoiak funtzionatzen ez badu, itsatsi esteka hau zure nabigatzailean:"
+  "share.mail.fallback": "Botoiak funtzionatzen ez badu, itsatsi esteka hau zure nabigatzailean:",
+  "notesSheet.title": "Review oharrak",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "Egoera",
+  "notesSheet.decision": "Erabakia",
+  "notesSheet.noFrame": "Ez dago frame eskuragarririk",
+  "notesSheet.printHint": "Inprimatu orri hau eta aukeratu «Gorde PDF gisa» kopia bat gordetzeko.",
+  "notesSheet.empty": "Hemen ez dago inprimatzeko oharrik.",
+  "notesSheet.reply": "Erantzuna",
+  "notesSheet.truncated": "Lehen {count} oharrak baino ez dira erakusten."
 }

@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "इस लिंक की कोई समाप्ति तिथि नहीं है।",
   "share.mail.viewLimit": { "one": "इसे कुल {count} बार खोला जा सकता है।", "other": "इसे कुल {count} बार खोला जा सकता है।" },
   "share.mail.password": "यह पासवर्ड से सुरक्षित है, जो अलग से भेजा जाता है।",
-  "share.mail.fallback": "यदि बटन काम न करे, तो यह लिंक अपने ब्राउज़र में चिपकाएँ:"
+  "share.mail.fallback": "यदि बटन काम न करे, तो यह लिंक अपने ब्राउज़र में चिपकाएँ:",
+  "notesSheet.title": "review नोट्स",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "टाइमकोड",
+  "notesSheet.state": "स्थिति",
+  "notesSheet.decision": "निर्णय",
+  "notesSheet.noFrame": "कोई frame उपलब्ध नहीं",
+  "notesSheet.printHint": "इस पृष्ठ को प्रिंट करें और प्रतिलिपि रखने के लिए “PDF के रूप में सहेजें” चुनें।",
+  "notesSheet.empty": "यहाँ प्रिंट करने के लिए कोई नोट नहीं है।",
+  "notesSheet.reply": "उत्तर",
+  "notesSheet.truncated": "केवल पहले {count} नोट्स दिखाए गए हैं।"
 }

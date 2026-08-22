@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "Stu ligame ùn hà nisuna data di scadenza.",
   "share.mail.viewLimit": { "one": "Pò esse apertu {count} volta in tuttu.", "other": "Pò esse apertu {count} volte in tuttu." },
   "share.mail.password": "Hè prutettu da una parola d'ordine, mandata à parte.",
-  "share.mail.fallback": "S'è u buttone ùn funziona micca, incollate stu ligame in u vostru navigatore:"
+  "share.mail.fallback": "S'è u buttone ùn funziona micca, incollate stu ligame in u vostru navigatore:",
+  "notesSheet.title": "Note di review",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "Statu",
+  "notesSheet.decision": "Decisione",
+  "notesSheet.noFrame": "Nisuna frame dispunibule",
+  "notesSheet.printHint": "Stampate sta pagina è sceglite « Arregistrà in PDF » per tene una copia.",
+  "notesSheet.empty": "Ùn ci hè nisuna nota da stampà quì.",
+  "notesSheet.reply": "Risposta",
+  "notesSheet.truncated": "Solu e prime {count} note sò mustrate."
 }

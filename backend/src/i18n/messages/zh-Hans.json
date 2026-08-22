@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "该链接没有过期日期。",
   "share.mail.viewLimit": { "other": "总共可打开 {count} 次。" },
   "share.mail.password": "该链接受密码保护，密码将另行发送。",
-  "share.mail.fallback": "如果按钮无效，请将此链接粘贴到浏览器中："
+  "share.mail.fallback": "如果按钮无效，请将此链接粘贴到浏览器中：",
+  "notesSheet.title": "review 备注",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "时间码",
+  "notesSheet.state": "状态",
+  "notesSheet.decision": "决定",
+  "notesSheet.noFrame": "没有可用的 frame",
+  "notesSheet.printHint": "打印本页并选择“另存为 PDF”即可保存一份副本。",
+  "notesSheet.empty": "这里没有可打印的备注。",
+  "notesSheet.reply": "回复",
+  "notesSheet.truncated": "仅显示前 {count} 条备注。"
 }

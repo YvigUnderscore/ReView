@@ -9,16 +9,28 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import type { VersionDetail, VersionListItem } from '../../types/api';
+import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
 import { findCompareMedia } from './reviewTypes';
 import { MAX_COMPARE } from './useCompareState';
-import { useT } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
+
+/** Nom du type de média dans le message « rien à comparer » — accordé au type maître. */
+const KIND_LABEL: Record<string, MessageKey> = {
+  VIDEO: 'entity.videoLower',
+  IMAGE: 'entity.imageLower',
+  MODEL_3D: 'entity.model3dLower',
+  SPLAT: 'entity.splatLower',
+};
 
 /**
- * Sélecteur de comparaison (vidéo **et image**) : coche d'autres versions de la même
- * tâche/asset — 1 version = A/B côte-à-côte/wipe ; 2-3 versions (vidéo, 34.D) = grille
- * 2×2 synchronisée. L'image reste mono-comparaison (coche exclusive). Rendu uniquement
- * s'il existe une autre version.
+ * Sélecteur de comparaison (vidéo, image, **modèle 3D et splat**) : coche d'autres versions de
+ * la même tâche/asset — 1 version = A/B côte-à-côte/wipe ; 2-3 versions (vidéo, 34.D) = grille
+ * 2×2 synchronisée ; en 3D/splat, les modèles cochés rejoignent la scène commune (caméra
+ * liée). L'image reste mono-comparaison (coche exclusive). Rendu uniquement s'il existe une
+ * autre version.
+ *
+ * Le résumé du média résolu est transmis avec son identifiant : les viewers spatiaux en ont
+ * besoin pour nommer l'onglet de comparaison, et l'ont déjà sous la main ici.
  */
 export default function CompareSelect({
   versionId,
@@ -34,16 +46,18 @@ export default function CompareSelect({
   /** Type du média maître — les médias B doivent être du même type. */
   kind: string;
   compareIds: number[];
-  onAdd: (mediaId: number) => void;
+  onAdd: (mediaId: number, media?: MediaSummary) => void;
   onRemove: (mediaId: number) => void;
   /** Remplacement exclusif (image) — garde la sémantique A/B simple. */
-  onSet: (mediaId: number | null) => void;
+  onSet: (mediaId: number | null, media?: MediaSummary) => void;
 }) {
   const t = useT();
   const qc = useQueryClient();
   // Version cochée → média B résolu (nécessaire pour décocher et refléter l'état).
   const [vidToMedia, setVidToMedia] = useState<Record<number, number>>({});
-  const multi = kind === 'VIDEO';
+  // L'image reste seule en A/B exclusif : la grille vidéo et la scène spatiale acceptent
+  // plusieurs versions à la fois.
+  const multi = kind !== 'IMAGE';
 
   // Mêmes queries que VersionNavigator (cache partagé) : version courante → liste parente.
   const versionQ = useQuery({
@@ -88,15 +102,16 @@ export default function CompareSelect({
       if (!target) {
         toast.error(
           t('compare.noMediaToCompare', {
-            kind: kind === 'IMAGE' ? t('entity.imageLower') : t('entity.videoLower'),
+            kind: t(KIND_LABEL[kind] ?? 'entity.videoLower'),
             version: v.name,
           }),
         );
         return;
       }
+      const media = detail.media.find((m) => m.id === target);
       setVidToMedia((m) => ({ ...m, [v.id]: target }));
-      if (multi) onAdd(target);
-      else onSet(target);
+      if (multi) onAdd(target, media);
+      else onSet(target, media);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('version.unreachable'));
     }
@@ -104,15 +119,24 @@ export default function CompareSelect({
 
   const label =
     compareIds.length === 0
-      ? 'Comparer…'
+      ? t('compare.pick')
       : compareIds.length === 1
         ? t('compare.vs', { name: others.find((v) => checked(v.id))?.name ?? '…' })
         : t('compare.grid', { count: compareIds.length + 1 });
 
+  // La grille 2×2 est propre à la vidéo ; en 3D/splat, les versions cochées rejoignent la
+  // scène commune — deux promesses différentes, deux infobulles.
+  const spatial = kind === 'MODEL_3D' || kind === 'SPLAT';
+  const title = spatial
+    ? t('compare.otherVersionsSpatial')
+    : multi
+      ? t('compare.otherVersions')
+      : t('compare.otherVersion');
+
   return (
     <Popover>
       <PopoverTrigger
-        title={multi ? t('compare.otherVersions') : t('compare.otherVersion')}
+        title={title}
         className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary"
       >
         {compareIds.length >= 2 ? <LayoutGrid size={13} /> : <Columns2 size={13} />}
@@ -137,7 +161,7 @@ export default function CompareSelect({
         })}
         {multi && (
           <p className="px-2 pb-1 pt-1.5 text-2xs text-muted-foreground">
-            {t('compare.gridHint', { max: MAX_COMPARE + 1 })}
+            {spatial ? t('compare.sceneHint') : t('compare.gridHint', { max: MAX_COMPARE + 1 })}
           </p>
         )}
       </PopoverContent>

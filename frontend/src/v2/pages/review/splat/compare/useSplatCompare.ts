@@ -11,16 +11,18 @@ import type { Media, MediaSummary, VersionDetail } from '../../../../types/api';
 import type { MediaResp } from '../../reviewTypes';
 import { visibleLocalBox } from '../scene/visibleBounds';
 import type { SplatSceneHandle, SplatViewer } from '../useSplat';
+import { mergeCompareMedia, useCompareVersions } from '../../three/useCompareVersions';
 import { normalizationFor, type SiblingNormalization } from './normalize';
 import { useT } from '../../../../i18n';
 
 /**
- * Comparaison des splats d'une même version (10.G-V8) : si la version porte plusieurs médias
- * SPLAT, charge les frères dans la même scène (même caméra) — **switch A/B** avec fondu,
- * **« voir tous »** côte à côte avec glissement. Réutilise la query de version du navigateur
- * (`qk.version`). Mono-média : inactif (no-op). Les frères sont chargés bruts (sans leurs
- * éditions non-destructives) — objectif comparatif. Leur taille est **unifiée par bounding
- * box** sur le splat de référence (11.H), toggle « Taille réelle » pour revenir au brut.
+ * Comparaison de splats (10.G-V8) : les frères SPLAT de la version courante **et les splats
+ * cochés dans d'autres versions** sont chargés dans la même scène (même caméra) — **switch
+ * A/B** avec fondu, **« voir tous »** côte à côte avec glissement. Réutilise la query de
+ * version du navigateur (`qk.version`). Sans rien à comparer : inactif (no-op). Les splats
+ * comparés sont chargés bruts (sans leurs éditions non-destructives) — objectif comparatif.
+ * Leur taille est **unifiée par bounding box** sur le splat de référence (11.H), toggle
+ * « Taille réelle » pour revenir au brut.
  */
 
 /** Décalages côte à côte centrés (pur) : n positions espacées de `spacing`. */
@@ -74,7 +76,8 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     queryFn: () =>
       api.get<{ version: VersionDetail }>(`/api/versions/${current.versionId}`).then((d) => d.version),
   });
-  const splats = splatSiblings(versionQ.data?.media ?? []);
+  const versions = useCompareVersions();
+  const splats = mergeCompareMedia(splatSiblings(versionQ.data?.media ?? []), versions.extras);
   const enabled = splats.length > 1;
   const [mode, setMode] = useState<'single' | 'all'>('single');
   const [activeId, setActiveId] = useState(current.id);
@@ -221,19 +224,65 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     if (mode === 'all') void viewAll();
   }, [normalized, mode, viewAll]);
 
+  /** Coche une version : le splat est chargé et affiché tout de suite. */
+  const addVersion = useCallback(
+    (id: number, media?: MediaSummary) => {
+      versions.add(id, media);
+      void switchTo(id);
+    },
+    [versions, switchTo],
+  );
+
+  /** Décoche une version : retour au splat courant si c'était lui qui était affiché. */
+  const removeVersion = useCallback(
+    (id: number) => {
+      versions.remove(id);
+      if (activeId === id) void switchTo(current.id);
+    },
+    [versions, activeId, switchTo, current.id],
+  );
+
+  // Décochage : le splat retiré de la liste quitte la scène (il resterait chargé sinon).
+  const listedIds = splats.map((m) => m.id).join(',');
+  useEffect(() => {
+    const kept = new Set(listedIds.split(',').map(Number));
+    for (const [id, mesh] of siblingsRef.current) {
+      if (kept.has(id)) continue;
+      disposeMesh(mesh);
+      siblingsRef.current.delete(id);
+      normRef.current.delete(id);
+      baseXRef.current.delete(id);
+    }
+  }, [listedIds]);
+
   // Démontage : retire et libère les frères chargés (le principal appartient au viewer).
   useEffect(() => {
     const map = siblingsRef.current;
     return () => {
-      map.forEach((mesh) => {
-        (mesh as unknown as { dispose?: () => void }).dispose?.();
-        mesh.removeFromParent();
-      });
+      map.forEach(disposeMesh);
       map.clear();
     };
   }, []);
 
-  return { enabled, splats, mode, activeId, busy, normalized, toggleNormalized, switchTo, viewAll };
+  return {
+    enabled,
+    splats,
+    mode,
+    activeId,
+    busy,
+    normalized,
+    toggleNormalized,
+    switchTo,
+    viewAll,
+    /** Sélection d'autres versions (alimente `CompareSelect`). */
+    versions: { ids: versions.ids, add: addVersion, remove: removeVersion, set: versions.set },
+  };
+}
+
+/** Libère un splat comparé et le retire de la scène. */
+function disposeMesh(mesh: SplatMesh): void {
+  (mesh as unknown as { dispose?: () => void }).dispose?.();
+  mesh.removeFromParent();
 }
 
 export type SplatCompareState = ReturnType<typeof useSplatCompare>;

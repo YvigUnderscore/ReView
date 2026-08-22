@@ -10,6 +10,7 @@ import DisplayPanel from '../panels/DisplayPanel';
 import ExportPanel from '../panels/ExportPanel';
 import LightingPanel from '../panels/LightingPanel';
 import Model3DInfo from './Model3DInfo';
+import Model3DPerfGroup from './Model3DPerfGroup';
 import ScenePanel from '../panels/ScenePanel';
 import ScenegraphPanel from '../panels/ScenegraphPanel';
 import { focalToFov, fovToFocal } from '../camera/focal';
@@ -23,6 +24,7 @@ import type { Model3DInspectState } from './useModel3DInspect';
 import type { Model3DLightingState } from './useModel3DLighting';
 import type { Model3DThreeState } from './useModel3DThree';
 import type { Model3DVariantsState } from './useModel3DVariants';
+import type { ModelMeasureState } from './useModelMeasure';
 import type { SectionPlaneState } from './useSectionPlane';
 import type { TurntableState } from './useTurntable';
 import type { UsdSceneState } from './useUsdScene';
@@ -62,6 +64,7 @@ export default function Model3DPanels({
   turntable,
   section,
   grid,
+  measure,
   scene,
   onSaveOverride,
   savingOverride,
@@ -81,6 +84,8 @@ export default function Model3DPanels({
   turntable: TurntableState;
   section: SectionPlaneState;
   grid: { visible: boolean; toggle: () => void };
+  /** Dimensions réelles et outil de mesure (39.G) — affichés dans l'onglet Infos. */
+  measure: ModelMeasureState;
   /** Scenegraph USD + override (46.C), absent si le media n'est pas une scene USD. */
   scene?: UsdSceneState;
   /** Enregistre l'override de base — absent apres publication ou sans droits (46.D). */
@@ -174,44 +179,50 @@ export default function Model3DPanels({
 
   if (panel === 'scene')
     return (
-      <ScenePanel
-        grid={{ visible: grid.visible, onToggle: grid.toggle }}
-        section={{
-          active: section.active,
-          onActive: section.toggle,
-          axis: section.axis,
-          onAxis: section.setAxis,
-          position: section.position,
-          onPosition: section.setPosition,
-          flipped: section.flip,
-          onFlip: section.toggleFlip,
-        }}
-        turntable={{
-          active: turntable.active,
-          onActive: turntable.toggle,
-          axis: turntable.axis,
-          onAxis: turntable.setAxis,
-          speed: turntable.speed,
-          onSpeed: turntable.setSpeed,
-        }}
-        perf={{}}
-        // Scenegraph USD (46.C) : l'arbre reel de la scene, au-dessus des reperes de scene.
-        scenegraph={
-          scene && scene.tree.length > 0 ? (
-            <ScenegraphPanel
-              scene={scene}
-              usd={data.modelSource?.usd ?? null}
-              baked={data.modelSource?.blender?.variantsBaked ?? null}
-              onRevert={scene.revert}
-              onSave={onSaveOverride}
-              saving={savingOverride}
-            />
-          ) : undefined
-        }
-      />
+      <>
+        <ScenePanel
+          grid={{ visible: grid.visible, onToggle: grid.toggle }}
+          section={{
+            active: section.active,
+            onActive: section.toggle,
+            axis: section.axis,
+            onAxis: section.setAxis,
+            position: section.position,
+            onPosition: section.setPosition,
+            flipped: section.flip,
+            onFlip: section.toggleFlip,
+          }}
+          turntable={{
+            active: turntable.active,
+            onActive: turntable.toggle,
+            axis: turntable.axis,
+            onAxis: turntable.setAxis,
+            speed: turntable.speed,
+            onSpeed: turntable.setSpeed,
+          }}
+          // LOD, culling et effet d'apparition sont propres au splat : le modèle n'en a pas.
+          // Ses compteurs de rendu sont dans le groupe qui suit.
+          perf={{}}
+          // Scenegraph USD (46.C) : l'arbre reel de la scene, au-dessus des reperes de scene.
+          scenegraph={
+            scene && scene.tree.length > 0 ? (
+              <ScenegraphPanel
+                scene={scene}
+                usd={data.modelSource?.usd ?? null}
+                baked={data.modelSource?.blender?.variantsBaked ?? null}
+                onRevert={scene.revert}
+                onSave={onSaveOverride}
+                saving={savingOverride}
+              />
+            ) : undefined
+          }
+        />
+        <Model3DPerfGroup m={m} textures={inspect.stats?.textures ?? null} />
+      </>
     );
 
-  if (panel === 'info') return <Model3DInfo data={data} inspect={inspect} onRecompose={onRecompose} />;
+  if (panel === 'info')
+    return <Model3DInfo data={data} inspect={inspect} measure={measure} m={m} onRecompose={onRecompose} />;
 
   if (panel === 'export')
     return (

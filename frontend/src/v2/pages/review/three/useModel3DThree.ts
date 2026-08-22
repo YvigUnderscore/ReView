@@ -7,14 +7,17 @@ import type * as THREE from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { api } from '../../../../lib/apiClient';
 import { qk } from '../../../lib/query';
-import { DEFAULT_TRANSFORM, type Hotspot3D, type MediaResp, type Transform } from '../reviewTypes';
+import { DEFAULT_TRANSFORM, type MediaResp, type Transform } from '../reviewTypes';
 import { applyEulerTransform } from './applyTransform';
-import { applyRoll } from './cameraRoll';
 import { createModelScene, type ModelScene } from './createModelScene';
 import { loadModel } from './loadModel';
 import { fitDistance, resizeRendererCamera } from './sceneConfig';
-import { createObjectMarker, raycastModelCenter } from './objectHotspot';
-import { captureModelCamera, restoreModelCamera } from './modelCamera';
+import { createObjectMarker } from './objectHotspot';
+import { createSampler, type Sampler } from './statsSampler';
+import type { ModelPerfSample } from './perfStats';
+import { useModelScale } from './useModelScale';
+import { useModelHotspots } from './useModelHotspots';
+import { useModelCameraHandles } from './useModelCameraHandles';
 import { useModelAnimations } from './useModelAnimations';
 import { useModelLayout } from './useModelLayout';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
@@ -43,6 +46,10 @@ export interface SceneRuntime {
   skinnedCount: number;
   /** glTF chargé — variantes de matériaux & caméras embarquées (40.C). */
   gltf: GLTF;
+  /** Boîte englobante brute du modèle (unités du fichier) — dimensions réelles et mesure. */
+  modelBox: THREE.Box3;
+  /** Facteur de normalisation calculé au chargement — conservé pour la bascule taille réelle. */
+  normScale: number;
 }
 
 /**
@@ -58,8 +65,14 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<SceneRuntime | null>(null);
   const threeRef = useRef<typeof import('three') | null>(null);
-  const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
+  // Compteurs de performance (FPS, draw calls, triangles) — alimentés par la boucle de rendu,
+  // lus par le panneau Scène. Rien n'est mesuré tant que personne n'est abonné.
+  const statsRef = useRef<Sampler<ModelPerfSample> | null>(null);
+  const { hotspotRef, hotspotAtCenter, hotspotAtPointer, showHotspot } = useModelHotspots({
+    runtimeRef,
+    threeRef,
+  });
   const frameCbs = useRef(new Set<(dt: number) => void>());
   const { onFrame: captureFrame, capture: captureThumbnail } = useThumbnailCapture();
   const flyRef = useRef<FlyControls | null>(null);
@@ -68,11 +81,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const frameAspectRef = useRef<number>(DEFAULT_REVIEW_ASPECT);
   frameAspectRef.current = data?.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT;
   const [ready, setReady] = useState(false);
-  const [fov, setFovState] = useState(45);
-  const [roll, setRollState] = useState(0);
   const [loadError, setLoadError] = useState(false);
   // Extensions glTF déclarées par le fichier chargé (fiche technique — 39.C).
   const [extensions, setExtensions] = useState<string[]>([]);
+  // Dimensions brutes de la boîte englobante, dans les unités du fichier (mesure, 39.G).
+  const [modelSize, setModelSize] = useState<[number, number, number] | null>(null);
 
   // Transformation enregistrée sur la version, surchargée par l'édition locale non sauvegardée.
   const versionQ = useQuery({
@@ -96,16 +109,13 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     return () => frameCbs.current.delete(cb);
   }, []);
   const getDom = useCallback(() => runtimeRef.current?.scene.renderer.domElement ?? containerRef.current, []);
-  const captureCamera = useCallback(() => {
-    const rt = runtimeRef.current;
-    const THREE = threeRef.current;
-    return rt && THREE ? captureModelCamera(THREE, rt.scene.camera, rt.scene.controls) : undefined;
-  }, []);
-  const restoreCamera = useCallback((state: unknown) => {
-    const rt = runtimeRef.current;
-    const THREE = threeRef.current;
-    if (rt && THREE) restoreModelCamera(THREE, rt.scene.camera, rt.scene.controls, state);
-  }, []);
+  // Capture/restauration de la vue (état de vue compris), focale et tilt.
+  const { captureCamera, restoreCamera, registerViewState, fov, setFov, roll, setRoll } =
+    useModelCameraHandles({ runtimeRef, threeRef });
+  const subscribeStats = useCallback(
+    (cb: (stats: { fps: number } & ModelPerfSample) => void) => statsRef.current?.subscribe(cb) ?? (() => {}),
+    [],
+  );
   const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
 
   /** Poignée impérative commune (gizmos, caméra-objet, cadrage) — cf. `viewer/sceneHandle`. */
@@ -128,6 +138,15 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
 
   // `setFrameTarget` (46.I) : la review y branche le prim sélectionné pour que `F` le cadre.
   const { frameView, homeView, setFrameTarget } = useModelFraming({ runtimeRef, threeRef, ready, isFlying });
+  // Bascule « taille réelle » (39.G) : le modèle reprend les unités de son fichier. La
+  // préférence est rejouée sur chaque modèle chargé via `reapplyScaleRef`.
+  const reapplyScaleRef = useRef<(() => void) | null>(null);
+  const { realScale, setRealScale } = useModelScale({
+    runtimeRef,
+    threeRef,
+    homeView,
+    reapplyRef: reapplyScaleRef,
+  });
 
   const anim = useModelAnimations(runtimeRef, actionRef, threeRef, subscribeFrame);
   // `init` reste privé (appelé au chargement) ; le reste du transport est exposé tel quel.
@@ -148,6 +167,14 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       threeRef.current = THREE;
       const scene = createModelScene({ THREE, OrbitControls }, container);
       const marker = createObjectMarker(THREE, container);
+      // Compteurs de rendu : `renderer.info` est remis à zéro à chaque frame par Three, on le
+      // lit donc à la fin de la boucle, pas à l'abonnement.
+      statsRef.current = createSampler<ModelPerfSample>(() => ({
+        calls: scene.renderer.info.render.calls,
+        triangles: scene.renderer.info.render.triangles,
+        geometries: scene.renderer.info.memory.geometries,
+        textures: scene.renderer.info.memory.textures,
+      }));
       let model;
       try {
         model = await loadModel(THREE, new GLTFLoader(), glbSrc);
@@ -178,8 +205,14 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         animRoot: model.animRoot,
         skinnedCount: model.skinnedCount,
         gltf: model.gltf,
+        modelBox: model.box,
+        normScale: model.scale,
       };
       setExtensions(model.extensions);
+      // Dimensions **brutes** du fichier : c'est la seule mesure que la normalisation détruirait
+      // si on ne la relevait pas ici (le wrapper, lui, sera rescalé à la demande).
+      const raw = model.box.getSize(new THREE.Vector3());
+      setModelSize([raw.x, raw.y, raw.z]);
       animInit(model.animations);
       // Navigation unifiée avec le splat (Phase 17) : vol clic droit + ZQSD/WASD + A/E,
       // pan sur le bouton du milieu (réglé par createFlyControls), orbite au clic gauche.
@@ -208,6 +241,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         layoutCam.updateProjectionMatrix();
         scene.controls.update();
       }
+      // Préférence « taille réelle » en cours : rejouée sur ce modèle-ci, cadrage compris — le
+      // wrapper vient d'être posé normalisé, l'interrupteur mentirait sinon.
+      reapplyScaleRef.current?.();
       const ro = new ResizeObserver(resize);
       ro.observe(container);
 
@@ -231,6 +267,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
           container.clientWidth,
           container.clientHeight,
         );
+        statsRef.current?.frame(now);
         captureFrame(scene.renderer.domElement); // miniature auto (Phase 20)
       });
       setReady(true);
@@ -256,8 +293,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       threeRef.current = null;
       hotspotRef.current = null;
       actionRef.current = null;
+      statsRef.current = null;
     };
-  }, [active, glbSrc, animInit, renderPip, captureFrame]);
+  }, [active, glbSrc, animInit, renderPip, captureFrame, hotspotRef]);
 
   // Applique la transformation (orientation + échelle) au groupe parent, en live.
   useEffect(() => {
@@ -277,45 +315,6 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
 
   const saveTransform = useSaveTransform(versionId, transform, () => setTfEdit(null));
 
-  const hotspotAtCenter = useCallback((): Hotspot3D | null => {
-    const rt = runtimeRef.current;
-    const THREE = threeRef.current;
-    return rt && THREE ? raycastModelCenter(THREE, rt.scene.camera, rt.scene.root) : null;
-  }, []);
-
-  const showHotspot = useCallback((hs: Hotspot3D | null) => {
-    const THREE = threeRef.current;
-    if (!hs || !THREE) {
-      hotspotRef.current = null;
-      return;
-    }
-    const [x, y, z] = hs.position.split(/\s+/).map((v) => parseFloat(v));
-    hotspotRef.current =
-      Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)
-        ? { point: new THREE.Vector3(x, y, z), objectSpace: hs.space === 'object' }
-        : null;
-  }, []);
-
-  /** Focale (fov) — live (caméra principale). */
-  const setFov = useCallback((value: number) => {
-    setFovState(value);
-    const rt = runtimeRef.current;
-    if (!rt) return;
-    rt.scene.camera.fov = value;
-    rt.scene.camera.updateProjectionMatrix();
-  }, []);
-
-  /** Tilt (roll) — oriente `camera.up` selon la direction de vue (mode layout). */
-  const setRoll = useCallback((value: number) => {
-    setRollState(value);
-    const rt = runtimeRef.current;
-    const THREE = threeRef.current;
-    if (!rt || !THREE) return;
-    const forward = new THREE.Vector3().subVectors(rt.scene.controls.target, rt.scene.camera.position);
-    applyRoll(THREE, rt.scene.camera, forward, value);
-    rt.scene.controls.update();
-  }, []);
-
   const clearLoadError = useCallback(() => setLoadError(false), []);
 
   return {
@@ -333,11 +332,19 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     // speed, loop, play, pause, selectAnim, scrub, setSpeed, setLoop.
     ...animApi,
     hotspotAtCenter,
+    hotspotAtPointer,
     showHotspot,
     captureThumbnail,
     captureCamera,
     restoreCamera,
+    registerViewState,
+    subscribeStats,
     subscribeFrame,
+    /** Dimensions brutes du modèle (unités du fichier) — `null` tant qu'il n'est pas chargé. */
+    modelSize,
+    /** Facteur de normalisation courant : 1 en taille réelle, sinon `TARGET_SIZE / maxDim`. */
+    realScale,
+    setRealScale,
     getDom,
     getSceneHandle,
     isFlying,

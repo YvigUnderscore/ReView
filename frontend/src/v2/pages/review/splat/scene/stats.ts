@@ -1,11 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { createSampler, type Sampler } from '../../three/statsSampler';
+
 /**
  * Métriques du viewer splat (10.G-V1), sans dépendance Three/Spark : l'échantillonneur reçoit
  * un `read()` branché sur le renderer (splats actifs, draw calls…) et calcule le FPS sur une
  * fenêtre glissante. Pur et testable ; la boucle de rendu appelle `frame(now)` à chaque frame,
  * les panneaux du HUD s'abonnent (aucune mesure ni émission sans abonné).
+ *
+ * La mécanique de fenêtre est partagée avec le viewer 3D (`three/statsSampler`) : ici on ne
+ * décrit plus que les compteurs propres au nuage.
  */
 export interface SplatStats {
   /** Images par seconde, moyennées sur la fenêtre d'échantillonnage. */
@@ -18,40 +23,8 @@ export interface SplatStats {
   calls: number;
 }
 
-export interface StatsSampler {
-  /** À appeler à chaque frame rendue (temps en ms, ex. `performance.now()`). */
-  frame(nowMs: number): void;
-  /** Abonne un panneau ; renvoie la fonction de désabonnement. */
-  subscribe(cb: (stats: SplatStats) => void): () => void;
-}
+export type StatsSampler = Sampler<Omit<SplatStats, 'fps'>>;
 
 export function createStatsSampler(read: () => Omit<SplatStats, 'fps'>, intervalMs = 500): StatsSampler {
-  const listeners = new Set<(stats: SplatStats) => void>();
-  let windowStart: number | null = null;
-  let frames = 0;
-
-  return {
-    frame(nowMs: number) {
-      if (listeners.size === 0) {
-        windowStart = null; // fenêtre invalidée : pas de mesure sans abonné
-        return;
-      }
-      if (windowStart === null) {
-        windowStart = nowMs;
-        frames = 0;
-        return;
-      }
-      frames += 1;
-      const elapsed = nowMs - windowStart;
-      if (elapsed < intervalMs) return;
-      const stats: SplatStats = { fps: (frames * 1000) / elapsed, ...read() };
-      windowStart = nowMs;
-      frames = 0;
-      for (const cb of listeners) cb(stats);
-    },
-    subscribe(cb) {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
-  };
+  return createSampler(read, intervalMs);
 }

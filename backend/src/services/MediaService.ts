@@ -13,7 +13,8 @@ import { slugifyFilename } from '../lib/slug';
 import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
-import { enqueueMediaJob } from './JobService';
+import { enqueueMediaJob, enqueueSpatialThumb } from './JobService';
+import { jobKindFor, spatialThumbSource } from '../lib/mediaJobKind';
 import { getLiveSyncHz, getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { logMediaAccess } from '../lib/mediaAccess';
 import { publish as publishApiEvent } from './ApiEventService';
@@ -49,21 +50,21 @@ import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 type SessionUser = { id: number; role: Role };
 
-// Formats 3D convertibles en GLB (model-viewer ne lit que GLB/glTF) — 9.A1.
-const CONVERT_3D = ['.fbx', '.obj', '.usd', '.usda', '.usdc', '.dae', '.stl', '.gltf', '.zip', '.usdz'];
-
 /** Sérialise le `size` BigInt d'un média en Number pour la réponse JSON. */
 const serializeMedia = <T extends { size: bigint }>(m: T): Omit<T, 'size'> & { size: number } => ({
   ...m,
   size: Number(m.size),
 });
 
-/** Job de traitement à déclencher selon le type de média et l'extension détectée. */
-function jobKindFor(kind: MediaKind, ext: string): 'transcode' | 'thumbnail' | 'convert3d' | null {
-  if (kind === MediaKind.VIDEO) return 'transcode';
-  if (kind === MediaKind.IMAGE) return 'thumbnail';
-  if (kind === MediaKind.MODEL_3D && CONVERT_3D.includes(ext)) return 'convert3d';
-  return null;
+/**
+ * Demande la vignette d'un média spatial (3D/splat) — file dédiée, **jamais bloquante** :
+ * Redis indisponible ne doit pas faire échouer une finalisation d'upload pour un aperçu.
+ */
+async function requestSpatialThumb(mediaId: number, kind: MediaKind, ext: string): Promise<void> {
+  if (!spatialThumbSource(kind, ext)) return;
+  await enqueueSpatialThumb({ mediaObjectId: mediaId }).catch((err: unknown) =>
+    logger.warn({ err }, `[Media] vignette spatiale non enfilée media=${mediaId}`),
+  );
 }
 
 export interface CreateUploadInput {
@@ -225,6 +226,8 @@ export async function finalize(user: SessionUser, id: number) {
   // 37.E : les médias servis tels quels (GLB natif, splats) passent quand même à
   // l'antivirus — READY tout de suite, quarantaine a posteriori si détection.
   else if (isClamavEnabled()) await enqueueMediaJob({ mediaObjectId: id, kind: 'scan' });
+  // Aperçu des médias spatiaux : le rendu attend le GLB quand une conversion est en cours.
+  await requestSpatialThumb(id, media.kind, detected);
 
   // Compteur de stockage utilisateur (affichage ; le quota utilise la somme live).
   if (media.uploaderId) {
@@ -520,10 +523,12 @@ export async function reprocess(user: SessionUser, id: number) {
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
   assertNotPublished(media);
 
-  const jobKind = jobKindFor(media.kind, getExtension(media.originalName));
+  const ext = getExtension(media.originalName);
+  const jobKind = jobKindFor(media.kind, ext);
   if (!jobKind) {
     // Rien à reconvertir (ex : GLB/glTF natif) → simplement remettre READY.
     const updated = await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.READY } });
+    await requestSpatialThumb(id, media.kind, ext);
     return { media: serializeMedia(updated), requeued: false };
   }
 
@@ -532,6 +537,7 @@ export async function reprocess(user: SessionUser, id: number) {
     data: { status: MediaStatus.PROCESSING },
   });
   await enqueueMediaJob({ mediaObjectId: id, kind: jobKind });
+  await requestSpatialThumb(id, media.kind, ext);
   logAudit({ userId: user.id, action: 'MEDIA_REPROCESS', entityType: 'MediaObject', entityId: id });
   return { media: serializeMedia(updated), requeued: true };
 }

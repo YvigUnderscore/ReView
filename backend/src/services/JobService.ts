@@ -15,6 +15,7 @@ export const QUEUE_NAMES = {
   TIMELINE_EXPORT: 'timeline-export',
   SHOTGRID: 'shotgrid',
   MAINTENANCE: 'maintenance',
+  SPATIAL_THUMB: 'spatial-thumb',
 } as const;
 
 /**
@@ -45,6 +46,40 @@ export const mediaQueue = new Queue<MediaJobData, void, string>(QUEUE_NAMES.MEDI
 });
 
 export const enqueueMediaJob = (data: MediaJobData) => mediaQueue.add(data.kind, data);
+
+/**
+ * Vignette d'un média spatial (3D / gaussian splat) — file **dédiée**, à part de
+ * `media-processing`.
+ *
+ * Pourquoi pas un `kind` de plus sur la file média : ce travail est décoratif. Il ne doit
+ * jamais faire passer un média en `PROCESSING` ni en `FAILED`, il occupe le CPU longtemps
+ * (rendu Cycles) et il doit pouvoir échouer sans conséquence. Une file séparée à
+ * concurrence 1 l'isole du transcodage, qui lui est bloquant pour l'utilisateur.
+ */
+export interface SpatialThumbJobData {
+  mediaObjectId: number;
+}
+
+export const spatialThumbQueue = new Queue<SpatialThumbJobData, void, string>(QUEUE_NAMES.SPATIAL_THUMB, {
+  connection: redisConnectionOptions,
+  defaultJobOptions: {
+    // Le GLB n'existe qu'une fois la conversion terminée : les premières tentatives
+    // peuvent arriver trop tôt. Le recul exponentiel laisse plus d'une heure au total,
+    // ce qui couvre une scène USD lourde sans occuper la file entre-temps.
+    attempts: 8,
+    backoff: { type: 'exponential', delay: 30_000 },
+    // Identifiant déterministe (anti-doublon) : l'expiration libère la clé, sans quoi un
+    // `reprocess` ultérieur du même média serait silencieusement ignoré.
+    removeOnComplete: { age: 600, count: 100 },
+    removeOnFail: { age: 86_400, count: 200 },
+  },
+});
+
+/** Un seul rendu en vol par média : deux uploads/reprocess rapprochés n'en lancent pas deux. */
+export const spatialThumbJobId = (mediaObjectId: number) => `spatial-thumb-${mediaObjectId}`;
+
+export const enqueueSpatialThumb = (data: SpatialThumbJobData) =>
+  spatialThumbQueue.add('render', data, { jobId: spatialThumbJobId(data.mediaObjectId) });
 
 /**
  * Journal des orphelins storage : quand une suppression MinIO échoue APRÈS que la DB
@@ -168,6 +203,7 @@ export const QUEUE_LABELS = {
   'timeline-export': timelineExportQueue,
   shotgrid: shotgridQueue,
   maintenance: maintenanceQueue,
+  'spatial-thumb': spatialThumbQueue,
 } as const;
 
 export type QueueLabel = keyof typeof QUEUE_LABELS;

@@ -19,16 +19,17 @@ beforeAll(async () => {
 });
 
 describe('déclaration des files', () => {
-  it('les six files sont étiquetées, aucune n’échappe aux métriques', () => {
+  it('les sept files sont étiquetées, aucune n’échappe aux métriques', () => {
     expect(Object.keys(mod.QUEUE_LABELS).sort()).toEqual([
       'maintenance',
       'media',
       'shotgrid',
+      'spatial-thumb',
       'storage-cleanup',
       'timeline-export',
       'webhooks',
     ]);
-    expect(mod.ALL_QUEUES).toHaveLength(6);
+    expect(mod.ALL_QUEUES).toHaveLength(7);
   });
 
   it('toute file déclarée dans QUEUE_NAMES est étiquetée', () => {
@@ -47,5 +48,9 @@ describe('déclaration des files', () => {
 
   it('l’identifiant d’export de montage reste déterministe (double clic sans effet)', () => {
     expect(mod.timelineExportJobId(42)).toBe('timeline-42');
+  });
+
+  it('l’identifiant de vignette spatiale est déterministe (un seul rendu en vol par média)', () => {
+    expect(mod.spatialThumbJobId(7)).toBe('spatial-thumb-7');
   });
 });

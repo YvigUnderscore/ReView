@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "Ce lien n'a pas de date d'expiration.",
   "share.mail.viewLimit": { "one": "Il peut être ouvert {count} fois en tout.", "other": "Il peut être ouvert {count} fois en tout." },
   "share.mail.password": "Il est protégé par un mot de passe, transmis séparément.",
-  "share.mail.fallback": "Si le bouton ne fonctionne pas, collez ce lien dans votre navigateur :"
+  "share.mail.fallback": "Si le bouton ne fonctionne pas, collez ce lien dans votre navigateur :",
+  "notesSheet.title": "Notes de review",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "État",
+  "notesSheet.decision": "Décision",
+  "notesSheet.noFrame": "Aucune frame disponible",
+  "notesSheet.printHint": "Imprimez cette page et choisissez « Enregistrer au format PDF » pour en garder une copie.",
+  "notesSheet.empty": "Aucune note à imprimer ici.",
+  "notesSheet.reply": "Réponse",
+  "notesSheet.truncated": "Seules les {count} premières notes sont affichées."
 }

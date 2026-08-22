@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "Aqueste ligam a pas de data d'expiracion.",
   "share.mail.viewLimit": { "one": "Se pòt dobrir {count} còp en tot.", "other": "Se pòt dobrir {count} còps en tot." },
   "share.mail.password": "Es protegit per un senhal, mandat a despart.",
-  "share.mail.fallback": "Se lo boton fonciona pas, pegatz aqueste ligam dins vòstre navegador :"
+  "share.mail.fallback": "Se lo boton fonciona pas, pegatz aqueste ligam dins vòstre navegador :",
+  "notesSheet.title": "Nòtas de review",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "Estat",
+  "notesSheet.decision": "Decision",
+  "notesSheet.noFrame": "Cap de frame disponibla",
+  "notesSheet.printHint": "Imprimissètz aquesta pagina e causissètz « Enregistrar en PDF » per ne gardar una còpia.",
+  "notesSheet.empty": "I a cap de nòta d'imprimir aicí.",
+  "notesSheet.reply": "Responsa",
+  "notesSheet.truncated": "Solas las {count} primièras nòtas son mostradas."
 }

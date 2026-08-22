@@ -11,6 +11,7 @@ import type { Media, MediaSummary, VersionDetail } from '../../../types/api';
 import type { MediaResp } from '../reviewTypes';
 import { loadModel, TARGET_SIZE } from './loadModel';
 import { setObjectOpacity, sideBySideOffsets } from './modelCompare';
+import { mergeCompareMedia, useCompareVersions } from './useCompareVersions';
 import type { Model3DThreeState } from './useModel3DThree';
 import { useT } from '../../../i18n';
 
@@ -23,12 +24,14 @@ export function model3dSiblings(media: MediaSummary[]): MediaSummary[] {
 }
 
 /**
- * Comparaison A/B des modèles 3D d'une même version (39.E, parité avec l'A/B splat) : si la version
- * porte plusieurs médias `MODEL_3D`, charge les frères dans la **même scène** (donc **caméra liée**)
- * — bascule A/B en fondu, ou **« voir tous »** côte à côte avec glissement. Les modèles sont
- * normalisés (bbox → taille cible, bas de bbox sur `y = 0`) par `loadModel`, donc déjà à des tailles
- * comparables et **posés sur le même sol** — l'écartement ne joue que sur X. Non destructif : les
- * frères sont chargés bruts et libérés au démontage.
+ * Comparaison A/B des modèles 3D (39.E, parité avec l'A/B splat) : les frères `MODEL_3D` de la
+ * version courante **et les modèles cochés dans d'autres versions** sont chargés dans la
+ * **même scène** (donc **caméra liée**) — bascule A/B en fondu, ou **« voir tous »** côte à
+ * côte avec glissement. Les modèles sont normalisés (bbox → taille cible, bas de bbox sur
+ * `y = 0`) par `loadModel`, donc déjà à des tailles comparables et **posés sur le même sol** —
+ * l'écartement ne joue que sur X ; la bascule « taille réelle » du viewer répond, elle, à la
+ * question des tailles. Non destructif : les modèles comparés sont chargés **bruts** (sans les
+ * éditions persistées de leur média) et libérés au démontage ou au décochage.
  */
 export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
   const t = useT();
@@ -38,7 +41,8 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     queryFn: () =>
       api.get<{ version: VersionDetail }>(`/api/versions/${current.versionId}`).then((d) => d.version),
   });
-  const models = model3dSiblings(versionQ.data?.media ?? []);
+  const versions = useCompareVersions();
+  const models = mergeCompareMedia(model3dSiblings(versionQ.data?.media ?? []), versions.extras);
   const enabled = models.length > 1;
   const [mode, setMode] = useState<'single' | 'all'>('single');
   const [activeId, setActiveId] = useState(current.id);
@@ -159,25 +163,70 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     }
   }, [models, current.id, ensureSibling, allObjects, fade, slideX, t]);
 
+  /** Coche une version : le modèle est chargé et affiché tout de suite (pas d'étape en plus). */
+  const addVersion = useCallback(
+    (id: number, media?: MediaSummary) => {
+      versions.add(id, media);
+      void switchTo(id);
+    },
+    [versions, switchTo],
+  );
+
+  /** Décoche une version : retour au modèle courant si c'était lui qui était affiché. */
+  const removeVersion = useCallback(
+    (id: number) => {
+      versions.remove(id);
+      if (activeId === id) void switchTo(current.id);
+    },
+    [versions, activeId, switchTo, current.id],
+  );
+
+  // Décochage : le modèle retiré de la liste doit quitter la scène — sinon il resterait chargé,
+  // invisible en A/B mais bien présent en « voir tous ».
+  const listedIds = models.map((m) => m.id).join(',');
+  useEffect(() => {
+    const kept = new Set(listedIds.split(',').map(Number));
+    for (const [id, object] of siblingsRef.current) {
+      if (kept.has(id)) continue;
+      disposeObject(object);
+      siblingsRef.current.delete(id);
+      opacityRef.current.delete(id);
+      baseXRef.current.delete(id);
+    }
+  }, [listedIds]);
+
   // Démontage : retire et libère les frères chargés (le modèle principal appartient au viewer).
   useEffect(() => {
     const map = siblingsRef.current;
     return () => {
-      map.forEach((object) => {
-        object.traverse((o) => {
-          const mesh = o as THREE.Mesh;
-          mesh.geometry?.dispose?.();
-          const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
-          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-          else mat?.dispose?.();
-        });
-        object.removeFromParent();
-      });
+      map.forEach(disposeObject);
       map.clear();
     };
   }, []);
 
-  return { enabled, models, mode, activeId, busy, switchTo, viewAll };
+  return {
+    enabled,
+    models,
+    mode,
+    activeId,
+    busy,
+    switchTo,
+    viewAll,
+    /** Sélection d'autres versions (alimente `CompareSelect`). */
+    versions: { ids: versions.ids, add: addVersion, remove: removeVersion, set: versions.set },
+  };
+}
+
+/** Libère géométries et matériaux d'un modèle comparé, puis le retire de la scène. */
+function disposeObject(object: THREE.Object3D): void {
+  object.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    mesh.geometry?.dispose?.();
+    const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+    else mat?.dispose?.();
+  });
+  object.removeFromParent();
 }
 
 export type Model3DCompareState = ReturnType<typeof useModel3DCompare>;

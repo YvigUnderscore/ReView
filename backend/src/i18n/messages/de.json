@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "Dieser Link hat kein Ablaufdatum.",
   "share.mail.viewLimit": { "one": "Er kann insgesamt {count} Mal geöffnet werden.", "other": "Er kann insgesamt {count} Mal geöffnet werden." },
   "share.mail.password": "Er ist durch ein Passwort geschützt, das Ihnen separat zugeht.",
-  "share.mail.fallback": "Wenn die Schaltfläche nicht funktioniert, fügen Sie diesen Link in Ihren Browser ein:"
+  "share.mail.fallback": "Wenn die Schaltfläche nicht funktioniert, fügen Sie diesen Link in Ihren Browser ein:",
+  "notesSheet.title": "Review-Notizen",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "Status",
+  "notesSheet.decision": "Entscheidung",
+  "notesSheet.noFrame": "Keine frame verfügbar",
+  "notesSheet.printHint": "Drucken Sie diese Seite und wählen Sie „Als PDF speichern“, um eine Kopie zu behalten.",
+  "notesSheet.empty": "Hier gibt es keine Notizen zum Drucken.",
+  "notesSheet.reply": "Antwort",
+  "notesSheet.truncated": "Es werden nur die ersten {count} Notizen angezeigt."
 }

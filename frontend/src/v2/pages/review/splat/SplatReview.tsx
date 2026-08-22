@@ -20,6 +20,8 @@ import PipFrame from '../viewer/PipFrame';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import CompareControl from './compare/CompareControl';
 import { useSplatCompare } from './compare/useSplatCompare';
+import SpatialCompareHeader from '../three/SpatialCompareHeader';
+import { useHotspotPlacement } from '../three/useHotspotPlacement';
 import PaintOverlay from './paint/PaintOverlay';
 import type { SplatPaintState } from './paint/useSplatPaint';
 import { usePresentation } from './presentation/usePresentation';
@@ -90,6 +92,8 @@ export default function SplatReview({
   const grid = useSceneGrid(splat);
   const pres = usePresentation(splat, data, onSaved);
   const compare = useSplatCompare(splat, data.media);
+  // Hotspot posé au clic (et non plus au centre de l'écran), comme dans le viewer 3D.
+  const hotspot = useHotspotPlacement(splat, ann.setHotspot3d);
   const { state, update } = useChromeState('SPLAT');
   // Culling Spark neutralisé par défaut : rien ne disparaît en zoom fort (réglage de session).
   const [cullingOff, setCullingOffState] = useState(true);
@@ -232,7 +236,16 @@ export default function SplatReview({
       onState={update}
       role={role ?? 'ARTIST'}
       hiddenTools={SPLAT_HIDDEN_TOOLS}
-      headerRight={compare.enabled ? <CompareControl compare={compare} /> : undefined}
+      headerRight={
+        <SpatialCompareHeader
+          versionId={data.media.versionId}
+          mediaId={data.media.id}
+          kind="SPLAT"
+          versions={compare.versions}
+        >
+          {compare.enabled && <CompareControl compare={compare} />}
+        </SpatialCompareHeader>
+      }
       dirty={showEdit ? editor.dirty : undefined}
       onViewAction={(action) => (action === 'fit' ? frameView() : homeView())}
       options={
@@ -244,7 +257,7 @@ export default function SplatReview({
           presentation={
             canPresent ? { dirty: animDirty, busy: pres.busy, onSave: () => void pres.save() } : undefined
           }
-          onPlaceHotspot={() => ann.setHotspot3d(splat.raycastCenter())}
+          onPlaceHotspot={hotspot.arm}
         />
       }
       panel={

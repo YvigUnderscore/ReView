@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SceneViewer } from '../viewer/sceneHandle';
 import { makeClipPlane, type SectionAxis } from './sectionPlane';
+import type { SectionState } from './viewState';
 
 type Bounds = Record<SectionAxis, { min: number; max: number }>;
 
@@ -65,6 +66,18 @@ export function useSectionPlane(viewer: SceneViewer) {
     [bounds, center],
   );
 
+  /**
+   * Rejoue un plan de coupe capturé (état de vue d'un commentaire) : les quatre réglages sont
+   * posés d'un bloc, sans le recentrage que déclenche un changement d'axe à la main — la
+   * position enregistrée est celle qu'il faut retrouver, pas le milieu de la bbox.
+   */
+  const apply = useCallback((s: SectionState) => {
+    setActive(s.active);
+    setAxisState(s.axis);
+    setPosition(s.position);
+    setFlip(s.flip);
+  }, []);
+
   const cur = bounds?.[axis] ?? { min: -1, max: 1 };
   return {
     active,
@@ -75,6 +88,7 @@ export function useSectionPlane(viewer: SceneViewer) {
     setPosition,
     flip,
     toggleFlip: useCallback(() => setFlip((f) => !f), []),
+    apply,
     bounds: cur,
   };
 }

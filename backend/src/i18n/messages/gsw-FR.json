@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "Der Link het kei Abloifdatum.",
   "share.mail.viewLimit": { "one": "Er cha insgsamt {count} Mol uufgmacht were.", "other": "Er cha insgsamt {count} Mol uufgmacht were." },
   "share.mail.password": "Er isch mit eme Passwort gschützt, wu Ihne separat gschickt wurd.",
-  "share.mail.fallback": "Wenn der Knopf nit goht, kläbe Sie der Link in Ihre Browser ii:"
+  "share.mail.fallback": "Wenn der Knopf nit goht, kläbe Sie der Link in Ihre Browser ii:",
+  "notesSheet.title": "Review-Notize",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "Status",
+  "notesSheet.decision": "Entscheid",
+  "notesSheet.noFrame": "Kei frame verfüegbar",
+  "notesSheet.printHint": "Drucke Sie die Syte un wähle Sie „Als PDF spychere“, fer e Kopie z behalte.",
+  "notesSheet.empty": "Do git s kei Notize zum Drucke.",
+  "notesSheet.reply": "Antwort",
+  "notesSheet.truncated": "S wärde nur di erschte {count} Notize zeigt."
 }

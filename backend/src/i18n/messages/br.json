@@ -66,5 +66,15 @@
   "share.mail.noExpiry": "N'en deus ket al liamm-mañ a zeiziad echuiñ.",
   "share.mail.viewLimit": { "one": "Digeriñ a c'haller anezhañ {count} gwech.", "other": "Digeriñ a c'haller anezhañ {count} gwech." },
   "share.mail.password": "Gwarezet eo gant ur ger-tremen, kaset a-du.",
-  "share.mail.fallback": "Ma ne da ket an afell en-dro, pegit al liamm-mañ en ho merdeer :"
+  "share.mail.fallback": "Ma ne da ket an afell en-dro, pegit al liamm-mañ en ho merdeer :",
+  "notesSheet.title": "Notennoù review",
+  "notesSheet.frame": "Frame",
+  "notesSheet.timecode": "Timecode",
+  "notesSheet.state": "Stad",
+  "notesSheet.decision": "Diviz",
+  "notesSheet.noFrame": "Frame ebet hegerz",
+  "notesSheet.printHint": "Moulit ar bajenn-mañ ha dibabit « Enrollañ e PDF » evit mirout un eilenn.",
+  "notesSheet.empty": "N'eus notenn ebet da voulañ amañ.",
+  "notesSheet.reply": "Respont",
+  "notesSheet.truncated": "Nemet an {count} notenn gentañ a zo diskouezet."
 }
