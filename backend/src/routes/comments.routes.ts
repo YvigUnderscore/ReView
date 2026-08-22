@@ -11,7 +11,9 @@ import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pip
 import { Role } from '@prisma/client';
 import { forbidden, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
+import { rateLimit, identityRateKey } from '../middleware/rateLimit';
 import * as CommentService from '../services/CommentService';
+import * as CommentExportService from '../services/CommentExportService';
 import * as TaskService from '../services/TaskService';
 
 const router = Router();
@@ -37,6 +39,33 @@ router.get(
     if (!projectId) throw notFound('Media not found');
     await assertProjectAccess(req, projectId);
     res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query)));
+  },
+);
+
+// GET /api/comments/export?scope=&id=&format= — sortie des notes : CSV pour la production,
+// EDL/OTIO pour le montage, planche imprimable. Déclarée avant `/:id` (« export » n'en est pas un).
+router.get(
+  '/export',
+  rateLimit({ windowMs: 60_000, max: 20, keyGenerator: identityRateKey }),
+  validate({
+    query: z.object({
+      scope: z.enum(['media', 'version', 'shot', 'playlist', 'timeline']),
+      id: z.coerce.number().int().positive(),
+      format: z.enum(['csv', 'edl', 'otio', 'sheet']),
+    }),
+  }),
+  async (req, res) => {
+    const scope = req.query.scope as unknown as CommentExportService.NotesScope;
+    const format = req.query.format as unknown as CommentExportService.NotesFormat;
+    const id = Number(req.query.id);
+    const projectId = await CommentExportService.resolveScopeProject(scope, id);
+    if (projectId === null) throw notFound('Nothing to export here');
+    await assertProjectAccess(req, projectId);
+    const file = await CommentExportService.exportNotes({ scope, id, format, viewer: req.user! });
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    if (file.truncated) res.setHeader('X-Notes-Truncated', '1');
+    res.send(file.body);
   },
 );
 

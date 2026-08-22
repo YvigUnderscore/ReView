@@ -5,18 +5,21 @@ import type { ReactNode } from 'react';
 import { Camera, FileArchive, FileDown, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Group } from '../chrome/DockGroup';
+import NotesExportPanel from './NotesExportPanel';
 import { useT } from '../../../i18n';
 
 /**
  * Panneau Export du dock : le média d'abord (avec ou sans les éditions cuites), la mise en
- * scène ensuite. Hérite de `SplatExportPanel`. Les exports reprennent les éditions
- * **enregistrées**, jamais la sélection en cours — c'est dit en toutes lettres au lecteur.
+ * scène ensuite, les notes de review pour finir. Hérite de `SplatExportPanel`. Les exports
+ * reprennent les éditions **enregistrées**, jamais la sélection en cours — c'est dit en
+ * toutes lettres au lecteur.
  */
 export default function ExportPanel({
   cleaned,
   originalUrl,
   originalName,
   staging,
+  notesMediaId,
 }: {
   /** Export du média avec les éditions appliquées (.spz nettoyé, .glb transformé). */
   cleaned?: { label: string; hint: string; busy: boolean; onExport: () => void };
@@ -24,6 +27,8 @@ export default function ExportPanel({
   originalName: string;
   /** Exports de mise en scène (animation caméra, capture de vue). */
   staging?: ReactNode;
+  /** Média dont on peut sortir les notes (absent = viewer qui ne l'a pas encore branché). */
+  notesMediaId?: number;
 }) {
   const t = useT();
   return (
@@ -55,6 +60,7 @@ export default function ExportPanel({
         </Button>
       </Group>
       {staging && <Group title={t('review.export.staging')}>{staging}</Group>}
+      {notesMediaId !== undefined && <NotesExportPanel scope="media" id={notesMediaId} />}
       <span className="rv-optbar__hint whitespace-normal">{t('review.exportsHint')}</span>
     </>
   );

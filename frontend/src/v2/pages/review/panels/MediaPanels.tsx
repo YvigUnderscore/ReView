@@ -121,6 +121,7 @@ export default function MediaPanels({
       <ExportPanel
         originalUrl={data.url}
         originalName={data.media.originalName}
+        notesMediaId={data.media.id}
         staging={
           <>
             {onExportFrame && (
