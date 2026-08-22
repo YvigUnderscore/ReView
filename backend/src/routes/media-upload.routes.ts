@@ -110,9 +110,10 @@ router.post(
   },
 );
 
-// POST /api/media/multipart/:id/abort — annule l'upload et supprime le média
+// POST /api/media/multipart/:id/abort — annule l'upload (multipart ou PUT simple),
+// libère les parts déjà déposées et supprime le média resté en UPLOADING.
 router.post('/multipart/:id/abort', validate({ params: idParam }), async (req, res) => {
-  res.json(await MediaUploadService.abortMultipart(req.user!, Number(req.params.id)));
+  res.json(await MediaUploadService.abortUpload(req.user!, Number(req.params.id)));
 });
 
 export default router;

@@ -35,8 +35,24 @@ function accessibleMediaWhere(user: SessionUser): Prisma.MediaObjectWhereInput {
  * source est encore présent, l'objet est copié côté serveur (« upload instantané »).
  */
 
-/** Taille de part (min S3 : 5 Mo). Communiquée au client par `init`. */
+/** Taille de part par défaut (min S3 : 5 Mo). Communiquée au client par `init`. */
 export const MULTIPART_PART_SIZE = 16 * 1024 * 1024;
+/**
+ * Parts au-delà desquelles le seul trafic de contrôle (signatures, ListParts, Complete)
+ * devient coûteux : un master de 20 Go découpé en 16 Mo ferait 1 250 parts.
+ */
+const MAX_PARTS = 1000;
+
+/**
+ * Découpe d'un fichier : 16 Mo, agrandie au Mo supérieur au-delà de 16 Go pour rester
+ * sous `MAX_PARTS`. Fonction **déterministe** de la taille : une reprise retrouve
+ * exactement la découpe de l'envoi initial, même sans métadonnée.
+ */
+export function partSizeFor(size: number): number {
+  const mb = 1024 * 1024;
+  if (size <= MULTIPART_PART_SIZE * MAX_PARTS) return MULTIPART_PART_SIZE;
+  return Math.ceil(size / MAX_PARTS / mb) * mb;
+}
 
 type Meta = Record<string, unknown>;
 
@@ -58,7 +74,10 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
         const uploadedParts = await storage.listUploadedParts(pending.storageKey, meta.multipartUploadId);
         return {
           mediaObjectId: pending.id,
-          partSize: MULTIPART_PART_SIZE,
+          // La découpe de l'envoi initial fait foi : la recalculer changerait les
+          // frontières de parts et rendrait inutilisables celles déjà reçues.
+          partSize:
+            typeof meta.multipartPartSize === 'number' ? meta.multipartPartSize : partSizeFor(input.size),
           resumed: true,
           uploadedParts,
         };
@@ -107,7 +126,7 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
         });
         return {
           mediaObjectId: created.mediaObjectId,
-          partSize: MULTIPART_PART_SIZE,
+          partSize: partSizeFor(input.size),
           deduplicated: true,
           uploadedParts: [],
           namingWarning: created.namingWarning,
@@ -119,18 +138,20 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
   const created = await createUpload(user, input);
   const media = await prisma.mediaObject.findUnique({ where: { id: created.mediaObjectId } });
   const uploadId = await storage.createMultipartUpload(created.storageKey, input.contentType);
+  const partSize = partSizeFor(input.size);
   await prisma.mediaObject.update({
     where: { id: created.mediaObjectId },
     data: {
       metadata: {
         ...((media?.metadata ?? {}) as Meta),
         multipartUploadId: uploadId,
+        multipartPartSize: partSize,
       },
     },
   });
   return {
     mediaObjectId: created.mediaObjectId,
-    partSize: MULTIPART_PART_SIZE,
+    partSize,
     uploadedParts: [],
     namingWarning: created.namingWarning,
   };
@@ -143,7 +164,7 @@ async function loadOwnMultipart(user: SessionUser, id: number) {
   });
   if (!media) throw notFound('Upload not found');
   const uploadId = (media.metadata as Meta).multipartUploadId;
-  if (typeof uploadId !== 'string') throw badRequest("Ce média n'est pas un upload multipart");
+  if (typeof uploadId !== 'string') throw badRequest('This media is not a multipart upload');
   return { media, uploadId };
 }
 
@@ -161,6 +182,7 @@ export async function completeMultipart(
   await storage.completeMultipartUpload(media.storageKey, uploadId, parts);
   const meta = { ...(media.metadata as Meta) };
   delete meta.multipartUploadId;
+  delete meta.multipartPartSize;
   await prisma.mediaObject.update({
     where: { id },
     data: { metadata: meta as Prisma.InputJsonValue },
@@ -168,9 +190,25 @@ export async function completeMultipart(
   return { completed: true };
 }
 
-export async function abortMultipart(user: SessionUser, id: number) {
-  const { media, uploadId } = await loadOwnMultipart(user, id);
-  await storage.abortMultipartUpload(media.storageKey, uploadId).catch(() => undefined);
+/**
+ * Abandon d'un téléversement en cours, quel qu'en soit le chemin.
+ *
+ * Le bouton « annuler » du client aboutit ici : un multipart interrompu doit être
+ * explicitement abandonné (sinon MinIO garde — et facture — les parts déjà déposées),
+ * et un PUT simple coupé en vol peut avoir laissé un objet tronqué. Les deux cas se
+ * terminent par la suppression de la ligne `MediaObject`, restée en UPLOADING.
+ */
+export async function abortUpload(user: SessionUser, id: number) {
+  const media = await prisma.mediaObject.findFirst({
+    where: { id, uploaderId: user.id, status: MediaStatus.UPLOADING },
+  });
+  if (!media) throw notFound('Upload not found');
+  const uploadId = (media.metadata as Meta).multipartUploadId;
+  if (typeof uploadId === 'string') {
+    await storage.abortMultipartUpload(media.storageKey, uploadId).catch(() => undefined);
+  } else {
+    await storage.deleteObject(media.storageKey).catch(() => undefined);
+  }
   await prisma.mediaObject.delete({ where: { id } });
   return { aborted: true };
 }
