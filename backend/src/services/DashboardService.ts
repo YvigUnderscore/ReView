@@ -3,12 +3,31 @@
 
 import { MediaStatus, Prisma, Role, TaskStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import {
+  TASK_BLOCKED_FILTER,
+  TASK_OPEN_FILTER,
+  TASK_REVIEW_FILTER,
+  familyOf,
+  statusRefOf,
+  taskPriority,
+} from '../lib/statusFamily';
 import { storage } from './StorageService';
 
 /**
  * Données de la page Accueil (12.B) : dernières reviews commentées, flux d'activité,
  * mes tâches assignées et statistiques — le tout borné à « mes projets »
  * (ADMIN/SUPERVISOR voient tout, sinon filtre par membership, motif lib/search.ts).
+ *
+ * Deux corrections d'échelle par rapport à la version d'origine.
+ *
+ * La progression des projets récents coûtait deux `count` corrélés PAR projet, soit dix
+ * requêtes sur les vingt-trois de l'ouverture d'accueil, pour chaque utilisateur et à
+ * chaque affichage. Un seul agrégat les remplace.
+ *
+ * Et les compteurs raisonnaient sur l'enum figé `TaskStatus` : un studio relié à ShotGrid
+ * voyait « mes retakes », « verdicts attendus » et la jauge de chaque projet calculés sur
+ * six seaux qui ne sont pas son vocabulaire. Ils lisent désormais `PipelineStatus`
+ * (`lib/statusFamily`), avec repli sur l'enum quand aucun statut personnalisable n'est posé.
  */
 
 type SessionUser = { id: number; role: Role };
@@ -56,15 +75,53 @@ const versionSelect = {
   },
 } as const;
 
-/** Ordre d'affichage des tâches : ce qui demande une action en premier (miroir du front). */
-const TASK_PRIORITY: Record<TaskStatus, number> = {
-  RETAKE: 0,
-  REJECTED: 1,
-  PENDING_REVIEW: 2,
-  IN_PROGRESS: 3,
-  TODO: 4,
-  APPROVED: 5,
-};
+/** Une ligne de l'agrégat de progression : un projet, un statut, un compte. */
+interface ProjectTaskCount {
+  projectId: number;
+  status: TaskStatus;
+  isDone: boolean | null;
+  isInactive: boolean | null;
+  legacyStatus: TaskStatus | null;
+  count: number;
+}
+
+/**
+ * Progression des projets récents en UNE requête : tâches par projet et par statut.
+ *
+ * Les statuts sont joints ici plutôt que relus ensuite — l'agrégat rend au plus quelques
+ * dizaines de lignes (cinq projets × le vocabulaire du studio), là où le motif précédent
+ * posait deux `count` corrélés par projet.
+ */
+async function taskCountsByProject(
+  projectIds: number[],
+): Promise<Map<number, { total: number; done: number }>> {
+  const out = new Map<number, { total: number; done: number }>();
+  if (projectIds.length === 0) return out;
+  const rows = await prisma.$queryRaw<ProjectTaskCount[]>`
+    SELECT COALESCE(sh."projectId", a."projectId") AS "projectId",
+           t.status::text          AS "status",
+           ps."isDone"             AS "isDone",
+           ps."isInactive"         AS "isInactive",
+           ps."legacyStatus"::text AS "legacyStatus",
+           COUNT(*)::int           AS "count"
+    FROM "Task" t
+    LEFT JOIN "Shot" sh  ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL
+    LEFT JOIN "Asset" a  ON a.id  = t."assetId" AND a."deletedAt" IS NULL
+    LEFT JOIN "PipelineStatus" ps ON ps.id = t."pipelineStatusId"
+    WHERE COALESCE(sh."projectId", a."projectId") IN (${Prisma.join(projectIds)})
+    GROUP BY 1, 2, 3, 4, 5
+  `;
+  for (const row of rows) {
+    const family = familyOf(row.status, statusRefOf(row));
+    // Un statut inactif (omis, sans objet) ne pèse sur aucune jauge d'avancement.
+    if (family === 'inactive') continue;
+    const entry = out.get(row.projectId) ?? { total: 0, done: 0 };
+    entry.total += row.count;
+    if (family === 'done') entry.done += row.count;
+    out.set(row.projectId, entry);
+  }
+  return out;
+}
 
 export async function getDashboard(user: SessionUser) {
   const access = accessWhere(user);
@@ -79,6 +136,12 @@ export async function getDashboard(user: SessionUser) {
   // Tâche vivante rattachée à un projet accessible (les deux chemins de rattachement).
   const taskInAccess: Prisma.TaskWhereInput = {
     OR: [{ shot: { deletedAt: null, project: access } }, { asset: { deletedAt: null, project: access } }],
+  };
+  const myTaskInProject: Prisma.TaskWhereInput = {
+    OR: [
+      { shot: { deletedAt: null, project: { deletedAt: null } } },
+      { asset: { deletedAt: null, project: { deletedAt: null } } },
+    ],
   };
 
   const [
@@ -134,19 +197,13 @@ export async function getDashboard(user: SessionUser) {
       },
     }),
     prisma.task.findMany({
-      where: {
-        assigneeId: user.id,
-        status: { not: TaskStatus.APPROVED },
-        OR: [
-          { shot: { deletedAt: null, project: { deletedAt: null } } },
-          { asset: { deletedAt: null, project: { deletedAt: null } } },
-        ],
-      },
+      where: { assigneeId: user.id, AND: [myTaskInProject, TASK_OPEN_FILTER] },
       orderBy: { updatedAt: 'desc' },
       take: 24,
       include: {
         shot: { select: { projectId: true, code: true, sequence: { select: { code: true } } } },
         asset: { select: { projectId: true, name: true } },
+        pipelineStatus: { select: { isDone: true, isInactive: true, legacyStatus: true } },
       },
     }),
     prisma.project.count({ where: access }),
@@ -156,11 +213,9 @@ export async function getDashboard(user: SessionUser) {
     prisma.mediaObject.count({ where: { ...mediaWhere, createdAt: { gte: weekAgo } } }),
     prisma.comment.count({ where: { media: mediaWhere, createdAt: { gte: weekAgo } } }),
     // Mes retakes/rejets : ce qui me demande une action immédiate.
-    prisma.task.count({
-      where: { assigneeId: user.id, status: { in: [TaskStatus.RETAKE, TaskStatus.REJECTED] } },
-    }),
+    prisma.task.count({ where: { assigneeId: user.id, ...TASK_BLOCKED_FILTER } }),
     // Verdicts attendus dans mon périmètre (tâches en attente de review).
-    prisma.task.count({ where: { status: TaskStatus.PENDING_REVIEW, ...taskInAccess } }),
+    prisma.task.count({ where: { AND: [taskInAccess, TASK_REVIEW_FILTER] } }),
     // Projets récents (miroir du tri de GET /api/projects) — la progression est calculée après.
     prisma.project.findMany({
       where: access,
@@ -170,32 +225,29 @@ export async function getDashboard(user: SessionUser) {
     }),
   ]);
 
-  // Progression des projets récents : tâches approuvées / total (deux counts par projet).
+  // Progression + compteurs par média : deux agrégats, plus aucune requête par ligne.
+  const [progress, commentCounts] = await Promise.all([
+    taskCountsByProject(recentProjectRows.map((p) => p.id)),
+    prisma.comment.groupBy({
+      by: ['mediaObjectId'],
+      where: { mediaObjectId: { in: lastComments.map((c) => c.media.id) } },
+      _count: { _all: true },
+    }),
+  ]);
+
   const recentProjects = await Promise.all(
     recentProjectRows.map(async (p) => {
-      const inProject: Prisma.TaskWhereInput = {
-        OR: [{ shot: { deletedAt: null, projectId: p.id } }, { asset: { deletedAt: null, projectId: p.id } }],
-      };
-      const [totalTasks, approvedTasks] = await Promise.all([
-        prisma.task.count({ where: inProject }),
-        prisma.task.count({ where: { status: TaskStatus.APPROVED, ...inProject } }),
-      ]);
+      const counts = progress.get(p.id) ?? { total: 0, done: 0 };
       return {
         id: p.id,
         name: p.name,
         thumbnailUrl: p.thumbnailKey ? await storage.getPresignedGetUrl(p.thumbnailKey) : null,
-        totalTasks,
-        approvedTasks,
+        totalTasks: counts.total,
+        approvedTasks: counts.done,
       };
     }),
   );
 
-  // Nombre de commentaires par média affiché en « dernières reviews ».
-  const commentCounts = await prisma.comment.groupBy({
-    by: ['mediaObjectId'],
-    where: { mediaObjectId: { in: lastComments.map((c) => c.media.id) } },
-    _count: { _all: true },
-  });
   const countByMedia = new Map(commentCounts.map((g) => [g.mediaObjectId, g._count._all]));
 
   const latestReviews = await Promise.all(
@@ -239,8 +291,10 @@ export async function getDashboard(user: SessionUser) {
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, 15);
 
+  // Ce qui demande une action d'abord (miroir du front) : la famille de statut décide du
+  // bloc, l'enum départage à l'intérieur — RETAKE reste devant REJECTED.
   const tasks = myTasks
-    .sort((a, b) => TASK_PRIORITY[a.status] - TASK_PRIORITY[b.status])
+    .sort((a, b) => taskPriority(a.status, a.pipelineStatus) - taskPriority(b.status, b.pipelineStatus))
     .slice(0, 8)
     .map((t) => ({
       id: t.id,

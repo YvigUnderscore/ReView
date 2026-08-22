@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({
   prisma: {
+    $queryRaw: vi.fn(),
     comment: { findMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
     version: { findMany: vi.fn() },
     mediaObject: { findMany: vi.fn(), count: vi.fn() },
@@ -18,12 +19,13 @@ vi.mock('./StorageService', () => ({
 
 import { getDashboard } from './DashboardService';
 import { prisma } from '../lib/prisma';
-import { Role } from '@prisma/client';
+import { Role, TaskStatus } from '@prisma/client';
 
 const comments = vi.mocked(prisma.comment.findMany);
 const versions = vi.mocked(prisma.version.findMany);
 const media = vi.mocked(prisma.mediaObject.findMany);
 const tasks = vi.mocked(prisma.task.findMany);
+const queryRaw = vi.mocked(prisma.$queryRaw);
 
 const artist = { id: 3, role: Role.ARTIST };
 
@@ -32,6 +34,7 @@ function stubEmpty() {
   versions.mockResolvedValue([] as never);
   media.mockResolvedValue([] as never);
   tasks.mockResolvedValue([] as never);
+  queryRaw.mockResolvedValue([] as never);
   vi.mocked(prisma.project.count).mockResolvedValue(2);
   vi.mocked(prisma.project.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.mediaObject.count).mockResolvedValue(5);
@@ -79,18 +82,85 @@ describe('DashboardService.getDashboard', () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([
       { id: 7, name: 'Dock', thumbnailKey: 'thumbs/p7.jpg' },
     ] as never);
-    // Repart de zéro (stubEmpty a déjà mis 2 réponses en file) : mes retakes, verdicts
-    // attendus, puis total (10) et approuvées (6) du projet 7.
-    vi.mocked(prisma.task.count).mockReset();
-    vi.mocked(prisma.task.count)
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(4)
-      .mockResolvedValueOnce(10)
-      .mockResolvedValueOnce(6);
+    // Un seul agrégat remplace les deux `count` par projet : 6 approuvées sur 10.
+    queryRaw.mockResolvedValue([
+      {
+        projectId: 7,
+        status: TaskStatus.APPROVED,
+        isDone: null,
+        isInactive: null,
+        legacyStatus: null,
+        count: 6,
+      },
+      { projectId: 7, status: TaskStatus.TODO, isDone: null, isInactive: null, legacyStatus: null, count: 4 },
+    ] as never);
     const { recentProjects } = await getDashboard(artist);
     expect(recentProjects).toEqual([
       { id: 7, name: 'Dock', thumbnailUrl: 'https://minio/thumbs/p7.jpg', totalTasks: 10, approvedTasks: 6 },
     ]);
+  });
+
+  it('ne pose plus deux comptes par projet récent : un seul agrégat, cinq projets', async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue(
+      Array.from({ length: 5 }, (_, i) => ({ id: i + 1, name: `P${i}`, thumbnailKey: null })) as never,
+    );
+    await getDashboard(artist);
+    // Deux `task.count` en tout (mes retakes, verdicts attendus) — plus aucun par projet.
+    expect(vi.mocked(prisma.task.count)).toHaveBeenCalledTimes(2);
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+    // Les cinq identifiants voyagent en paramètres du même agrégat.
+    expect(JSON.stringify(queryRaw.mock.calls[0]!.slice(1))).toContain('5');
+  });
+
+  it('n’interroge pas la base quand aucun projet récent n’est à afficher', async () => {
+    await getDashboard(artist);
+    expect(queryRaw).not.toHaveBeenCalled();
+  });
+
+  it('lit le référentiel du studio : terminal compte comme fait, inactif ne compte pas', async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([
+      { id: 7, name: 'Dock', thumbnailKey: null },
+    ] as never);
+    queryRaw.mockResolvedValue([
+      // « fin » : terminal côté site, l'enum local dit encore IN_PROGRESS.
+      {
+        projectId: 7,
+        status: TaskStatus.IN_PROGRESS,
+        isDone: true,
+        isInactive: false,
+        legacyStatus: TaskStatus.APPROVED,
+        count: 3,
+      },
+      // « omt » : omis — hors de toute jauge, ni au numérateur ni au dénominateur.
+      {
+        projectId: 7,
+        status: TaskStatus.REJECTED,
+        isDone: false,
+        isInactive: true,
+        legacyStatus: TaskStatus.REJECTED,
+        count: 5,
+      },
+      {
+        projectId: 7,
+        status: TaskStatus.TODO,
+        isDone: false,
+        isInactive: false,
+        legacyStatus: TaskStatus.TODO,
+        count: 1,
+      },
+    ] as never);
+    const { recentProjects } = await getDashboard(artist);
+    expect(recentProjects[0]).toMatchObject({ totalTasks: 4, approvedTasks: 3 });
+  });
+
+  it('exclut de « mes tâches » et des compteurs ce que le studio tient pour terminé ou inactif', async () => {
+    await getDashboard(artist);
+    const myTasksWhere = JSON.stringify(tasks.mock.calls[0]![0]!.where);
+    expect(myTasksWhere).toContain('"isDone":false');
+    expect(myTasksWhere).toContain('"isInactive":false');
+    for (const call of vi.mocked(prisma.task.count).mock.calls) {
+      expect(JSON.stringify(call[0]!.where)).toContain('"isInactive":false');
+    }
   });
 
   it('mappe les dernières reviews avec miniature présignée et dernier commentaire', async () => {
@@ -166,6 +236,7 @@ describe('DashboardService.getDashboard', () => {
         name: `t${i}`,
         type: 'OTHER',
         status: 'TODO',
+        pipelineStatus: null,
         shot: { projectId: 1, code: 'SH001', sequence: null },
         asset: null,
       })),
@@ -174,6 +245,7 @@ describe('DashboardService.getDashboard', () => {
         name: 'retake',
         type: 'FX',
         status: 'RETAKE',
+        pipelineStatus: null,
         shot: null,
         asset: { projectId: 2, name: 'Robot' },
       },
@@ -182,6 +254,7 @@ describe('DashboardService.getDashboard', () => {
         name: `p${i}`,
         type: 'OTHER',
         status: 'PENDING_REVIEW',
+        pipelineStatus: null,
         shot: { projectId: 1, code: 'SH002', sequence: null },
         asset: null,
       })),
@@ -190,5 +263,31 @@ describe('DashboardService.getDashboard', () => {
     expect(myTasks).toHaveLength(8);
     expect(myTasks[0]).toMatchObject({ id: 1, status: 'RETAKE', location: 'Robot', projectId: 2 });
     expect(myTasks.slice(1, 5).every((t) => t.status === 'PENDING_REVIEW')).toBe(true);
+  });
+
+  it('ordonne mes tâches sur la famille du statut personnalisé, pas sur l’enum local', async () => {
+    tasks.mockResolvedValue([
+      {
+        id: 10,
+        name: 'à faire',
+        type: 'OTHER',
+        status: 'TODO',
+        pipelineStatus: null,
+        shot: { projectId: 1, code: 'SH001', sequence: null },
+        asset: null,
+      },
+      {
+        // Statut « rtk » du site : l'enum local dit IN_PROGRESS, la famille dit « bloqué ».
+        id: 11,
+        name: 'retake du site',
+        type: 'OTHER',
+        status: 'IN_PROGRESS',
+        pipelineStatus: { isDone: false, isInactive: false, legacyStatus: 'RETAKE' },
+        shot: { projectId: 1, code: 'SH002', sequence: null },
+        asset: null,
+      },
+    ] as never);
+    const { myTasks } = await getDashboard(artist);
+    expect(myTasks.map((t) => t.id)).toEqual([11, 10]);
   });
 });

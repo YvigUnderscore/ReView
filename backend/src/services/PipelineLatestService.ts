@@ -82,22 +82,39 @@ function toPick(row: VersionRow): LatestPick {
   };
 }
 
-/** Versions publiées, porteuses d'au moins un média visible, pour un ensemble d'entités. */
-function fetchPublished(where: Prisma.VersionWhereInput): Promise<VersionRow[]> {
+/**
+ * Le strict nécessaire à l'élection : rattachement, étape, date, identifiant.
+ *
+ * L'élection chargeait auparavant la version ENTIÈRE — auteur, statut de review et tous
+ * ses médias, `metadata` JSON compris — pour toutes les versions publiées des entités
+ * demandées, puis en jetait 90 %. Un montage de deux mille plans à dix versions chacun
+ * rapatriait ainsi des dizaines de milliers de lignes pour n'en garder que deux mille.
+ */
+const candidateSelect = {
+  id: true,
+  createdAt: true,
+  assetId: true,
+  task: { select: { department: true, shotId: true, assetId: true } },
+} satisfies Prisma.VersionSelect;
+
+type CandidateRow = Prisma.VersionGetPayload<{ select: typeof candidateSelect }>;
+
+/** Prétendants : versions publiées portant au moins un média visible, colonnes minimales. */
+function fetchCandidates(where: Prisma.VersionWhereInput): Promise<CandidateRow[]> {
   return prisma.version.findMany({
     where: { ...where, deletedAt: null, published: true, media: { some: VISIBLE_MEDIA } },
-    select: versionSelect,
+    select: candidateSelect,
     orderBy: { createdAt: 'asc' },
   });
 }
 
-/** Regroupe des versions par entité parente, puis élit la plus avancée de chaque groupe. */
+/** Élit la version la plus avancée de chaque entité parente, sans charger leur contenu. */
 function electPerParent(
-  rows: VersionRow[],
-  parentOf: (row: VersionRow) => number | null,
+  rows: CandidateRow[],
+  parentOf: (row: CandidateRow) => number | null,
   departments: Department[],
-): Map<number, LatestPick> {
-  const byParent = new Map<number, VersionRow[]>();
+): Map<number, number> {
+  const byParent = new Map<number, CandidateRow[]>();
   for (const row of rows) {
     const parent = parentOf(row);
     if (parent === null) continue;
@@ -105,16 +122,32 @@ function electPerParent(
     if (list) list.push(row);
     else byParent.set(parent, [row]);
   }
-  const out = new Map<number, LatestPick>();
+  const out = new Map<number, number>();
   for (const [parent, list] of byParent) {
-    const candidates = list.map((row) => ({
-      id: row.id,
-      at: row.createdAt,
-      department: row.task?.department ?? null,
-      row,
-    }));
-    const winner = pickMostAdvanced(candidates, departments);
-    if (winner) out.set(parent, toPick(winner.row));
+    const winner = pickMostAdvanced(
+      list.map((row) => ({ id: row.id, at: row.createdAt, department: row.task?.department ?? null })),
+      departments,
+    );
+    if (winner) out.set(parent, winner.id);
+  }
+  return out;
+}
+
+/**
+ * Charge le contenu des seules versions élues — au plus une par entité — puis le range
+ * sous son parent.
+ */
+async function loadPicks(elected: Map<number, number>): Promise<Map<number, LatestPick>> {
+  const out = new Map<number, LatestPick>();
+  if (elected.size === 0) return out;
+  const rows = await prisma.version.findMany({
+    where: { id: { in: [...new Set(elected.values())] } },
+    select: versionSelect,
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  for (const [parent, versionId] of elected) {
+    const row = byId.get(versionId);
+    if (row) out.set(parent, toPick(row));
   }
   return out;
 }
@@ -130,9 +163,9 @@ export async function latestForShots(
   department?: string | null,
 ): Promise<Map<number, LatestPick>> {
   if (shotIds.length === 0) return new Map();
-  const rows = await fetchPublished({ task: { shotId: { in: shotIds } } });
+  const rows = await fetchCandidates({ task: { shotId: { in: shotIds } } });
   const kept = department ? withinDepartment(rows, departments, department) : rows;
-  return electPerParent(kept, (row) => row.task?.shotId ?? null, departments);
+  return loadPicks(electPerParent(kept, (row) => row.task?.shotId ?? null, departments));
 }
 
 /**
@@ -140,7 +173,11 @@ export async function latestForShots(
  * déjà en compositing doit montrer le layout, pas le compositing ; demander « Lighting »
  * sur un plan qui n'en a pas encore doit montrer l'animation plutôt qu'un carton vide.
  */
-function withinDepartment(rows: VersionRow[], departments: Department[], department: string): VersionRow[] {
+function withinDepartment(
+  rows: CandidateRow[],
+  departments: Department[],
+  department: string,
+): CandidateRow[] {
   const ceiling = departments.findIndex((d) => d.key.toLowerCase() === department.toLowerCase());
   if (ceiling < 0) return rows;
   return rows.filter((row) => {
@@ -157,10 +194,10 @@ export async function latestForAssets(
   departments: Department[],
 ): Promise<Map<number, LatestPick>> {
   if (assetIds.length === 0) return new Map();
-  const rows = await fetchPublished({
+  const rows = await fetchCandidates({
     OR: [{ task: { assetId: { in: assetIds } } }, { assetId: { in: assetIds } }],
   });
-  return electPerParent(rows, (row) => row.task?.assetId ?? row.assetId, departments);
+  return loadPicks(electPerParent(rows, (row) => row.task?.assetId ?? row.assetId, departments));
 }
 
 /** Une tâche de l'arbre d'un asset, avec ses versions de la plus récente à la plus ancienne. */

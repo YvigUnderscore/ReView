@@ -5,37 +5,43 @@ import { prisma } from '../lib/prisma';
 
 /**
  * Statistiques de review par projet (43.A — №123) : temps par shot, notes/retakes par
- * version, convergence par séquence. Le calcul est isolé dans des fonctions pures
- * (testées sans DB) ; `getProjectStats` fait les requêtes Prisma puis délègue.
+ * version, convergence par séquence.
+ *
+ * Le comptage se fait EN BASE. Le service chargeait auparavant toutes les versions, toutes
+ * les décisions et tous les commentaires racines du projet pour les compter en JavaScript :
+ * à la volumétrie d'un long-métrage (~20 000 versions, ~20 000 décisions, ~50 000 notes),
+ * cela occupait l'event loop du process pendant des secondes pour produire une page de
+ * chiffres. Une seule requête d'agrégation rend désormais UNE ligne par plan ; les
+ * fonctions pures ci-dessous (testées sans base) ne font plus que dériver statut, moyennes
+ * et classements de ces lignes.
  */
 
 // ── Lignes brutes (entrée des fonctions pures) ──
-export interface ShotRow {
-  id: number;
-  code: string;
-  name: string;
-  sequenceId: number | null;
-}
 export interface SequenceRow {
   id: number;
   code: string;
   name: string;
 }
-export interface VersionRow {
+
+/**
+ * Un plan, déjà compté par la base. Les dates sont celles dont dépend le délai de review ;
+ * `lastIsApproval`/`lastIsRetake` décrivent la dernière version publiée, qui porte le
+ * statut courant du plan.
+ */
+export interface ShotAggregateRow {
   shotId: number;
-  createdAt: Date;
-  isApproval: boolean;
-  isRetake: boolean;
-}
-export interface DecisionRow {
-  shotId: number;
-  createdAt: Date;
-  isApproval: boolean;
-  isRetake: boolean;
-}
-export interface NoteRow {
-  shotId: number;
-  isResolved: boolean;
+  code: string;
+  name: string;
+  sequenceId: number | null;
+  versions: number;
+  firstVersionAt: Date | null;
+  lastIsApproval: boolean;
+  lastIsRetake: boolean;
+  decisions: number;
+  retakes: number;
+  firstApprovalAt: Date | null;
+  notes: number;
+  openNotes: number;
 }
 
 // ── Sorties ──
@@ -90,49 +96,28 @@ export function daysBetween(from: Date, to: Date): number {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-/** Agrège par shot : versions, retakes, notes ouvertes, délai de review, statut courant. */
-export function computeShotStats(
-  shots: ShotRow[],
-  versions: VersionRow[],
-  decisions: DecisionRow[],
-  notes: NoteRow[],
-): ShotStat[] {
-  return shots.map((shot) => {
-    const vs = versions
-      .filter((v) => v.shotId === shot.id)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    const ds = decisions.filter((d) => d.shotId === shot.id);
-    const ns = notes.filter((n) => n.shotId === shot.id);
-
-    const firstVersionAt = vs[0]?.createdAt ?? null;
-    const firstApprovalAt = ds
-      .filter((d) => d.isApproval)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0]?.createdAt;
-    const reviewDays =
-      firstVersionAt && firstApprovalAt ? daysBetween(firstVersionAt, firstApprovalAt) : null;
-
+/** Dérive statut et délai de review de chaque plan déjà compté en base. */
+export function computeShotStats(rows: ShotAggregateRow[]): ShotStat[] {
+  return rows.map((row) => ({
+    shotId: row.shotId,
+    code: row.code,
+    name: row.name,
+    sequenceId: row.sequenceId,
+    versions: row.versions,
+    retakes: row.retakes,
+    openNotes: row.openNotes,
+    reviewDays:
+      row.firstVersionAt && row.firstApprovalAt ? daysBetween(row.firstVersionAt, row.firstApprovalAt) : null,
     // Statut courant = statut de review dénormalisé de la dernière version.
-    const last = vs.length ? vs[vs.length - 1] : null;
-    const status: ShotStatus = !last
-      ? 'notStarted'
-      : last.isApproval
-        ? 'approved'
-        : last.isRetake
-          ? 'retake'
-          : 'inReview';
-
-    return {
-      shotId: shot.id,
-      code: shot.code,
-      name: shot.name,
-      sequenceId: shot.sequenceId,
-      versions: vs.length,
-      retakes: ds.filter((d) => d.isRetake).length,
-      openNotes: ns.filter((n) => !n.isResolved).length,
-      reviewDays,
-      status,
-    };
-  });
+    status:
+      row.versions === 0
+        ? 'notStarted'
+        : row.lastIsApproval
+          ? 'approved'
+          : row.lastIsRetake
+            ? 'retake'
+            : 'inReview',
+  }));
 }
 
 function tally(
@@ -203,70 +188,116 @@ export function rankSlowestShots(shotStats: ShotStat[], limit = 10): ShotStat[] 
     .slice(0, limit);
 }
 
-/** Requêtes Prisma bornées aux shots du projet, puis calcul pur. */
+/**
+ * Une ligne par plan, comptée par Postgres.
+ *
+ * Trois sous-agrégats indépendants (versions, décisions, notes) rejoignent la liste des
+ * plans du projet. `DISTINCT ON` élit la dernière version de chaque plan sans en rapatrier
+ * l'historique, et les `FILTER` remplacent les `Array.filter` d'origine. Tous les
+ * paramètres passent par la substitution du driver — aucune concaténation.
+ */
+function queryShotAggregates(projectId: number): Promise<ShotAggregateRow[]> {
+  return prisma.$queryRaw<ShotAggregateRow[]>`
+    WITH shots AS (
+      SELECT s.id, s.code, s.name, s."sequenceId"
+      FROM "Shot" s
+      WHERE s."projectId" = ${projectId} AND s."deletedAt" IS NULL
+    ),
+    versions AS (
+      SELECT t."shotId" AS shot_id,
+             v.id       AS version_id,
+             v."createdAt" AS created_at,
+             COALESCE(rs."isApproval", false) AS is_approval,
+             COALESCE(rs."isRetake", false)   AS is_retake
+      FROM "Version" v
+      JOIN "Task" t   ON t.id = v."taskId"
+      JOIN shots      ON shots.id = t."shotId"
+      LEFT JOIN "ReviewStatus" rs ON rs.id = v."reviewStatusId"
+      WHERE v."deletedAt" IS NULL
+    ),
+    version_agg AS (
+      SELECT shot_id, COUNT(*)::int AS versions, MIN(created_at) AS first_version_at
+      FROM versions GROUP BY shot_id
+    ),
+    version_last AS (
+      SELECT DISTINCT ON (shot_id) shot_id, is_approval, is_retake
+      FROM versions ORDER BY shot_id, created_at DESC, version_id DESC
+    ),
+    decisions AS (
+      SELECT t."shotId" AS shot_id,
+             d."createdAt" AS created_at,
+             rs."isApproval" AS is_approval,
+             rs."isRetake"   AS is_retake
+      FROM "ReviewDecision" d
+      JOIN "Version" v ON v.id = d."versionId"
+      JOIN "Task" t    ON t.id = v."taskId"
+      JOIN shots       ON shots.id = t."shotId"
+      JOIN "ReviewStatus" rs ON rs.id = d."statusId"
+    ),
+    decision_agg AS (
+      SELECT shot_id,
+             COUNT(*)::int AS decisions,
+             COUNT(*) FILTER (WHERE is_retake)::int AS retakes,
+             MIN(created_at) FILTER (WHERE is_approval) AS first_approval_at
+      FROM decisions GROUP BY shot_id
+    ),
+    notes AS (
+      SELECT t."shotId" AS shot_id, c."isResolved" AS is_resolved
+      FROM "Comment" c
+      JOIN "MediaObject" m ON m.id = c."mediaObjectId"
+      JOIN "Version" v     ON v.id = m."versionId"
+      JOIN "Task" t        ON t.id = v."taskId"
+      JOIN shots           ON shots.id = t."shotId"
+      WHERE c."parentId" IS NULL AND m."deletedAt" IS NULL
+    ),
+    note_agg AS (
+      SELECT shot_id,
+             COUNT(*)::int AS notes,
+             COUNT(*) FILTER (WHERE NOT is_resolved)::int AS open_notes
+      FROM notes GROUP BY shot_id
+    )
+    SELECT shots.id                            AS "shotId",
+           shots.code                          AS "code",
+           shots.name                          AS "name",
+           shots."sequenceId"                  AS "sequenceId",
+           COALESCE(va.versions, 0)            AS "versions",
+           va.first_version_at                 AS "firstVersionAt",
+           COALESCE(vl.is_approval, false)     AS "lastIsApproval",
+           COALESCE(vl.is_retake, false)       AS "lastIsRetake",
+           COALESCE(da.decisions, 0)           AS "decisions",
+           COALESCE(da.retakes, 0)             AS "retakes",
+           da.first_approval_at                AS "firstApprovalAt",
+           COALESCE(na.notes, 0)               AS "notes",
+           COALESCE(na.open_notes, 0)          AS "openNotes"
+    FROM shots
+    LEFT JOIN version_agg  va ON va.shot_id = shots.id
+    LEFT JOIN version_last vl ON vl.shot_id = shots.id
+    LEFT JOIN decision_agg da ON da.shot_id = shots.id
+    LEFT JOIN note_agg     na ON na.shot_id = shots.id
+    ORDER BY shots.id
+  `;
+}
+
+/** Agrégats SQL bornés au projet, puis calcul pur. */
 export async function getProjectStats(projectId: number): Promise<ProjectStats> {
-  const shotWhere = { projectId, deletedAt: null };
-  const [shots, sequences, versionRows, decisionRows, noteRows] = await Promise.all([
-    prisma.shot.findMany({
-      where: shotWhere,
-      select: { id: true, code: true, name: true, sequenceId: true },
-    }),
+  const [rows, sequences] = await Promise.all([
+    queryShotAggregates(projectId),
     prisma.sequence.findMany({
       where: { projectId, deletedAt: null },
       orderBy: { order: 'asc' },
       select: { id: true, code: true, name: true },
     }),
-    prisma.version.findMany({
-      where: { deletedAt: null, task: { shot: shotWhere } },
-      select: {
-        createdAt: true,
-        task: { select: { shotId: true } },
-        reviewStatus: { select: { isApproval: true, isRetake: true } },
-      },
-    }),
-    prisma.reviewDecision.findMany({
-      where: { version: { task: { shot: shotWhere } } },
-      select: {
-        createdAt: true,
-        status: { select: { isApproval: true, isRetake: true } },
-        version: { select: { task: { select: { shotId: true } } } },
-      },
-    }),
-    prisma.comment.findMany({
-      where: { parentId: null, media: { deletedAt: null, version: { task: { shot: shotWhere } } } },
-      select: {
-        isResolved: true,
-        media: { select: { version: { select: { task: { select: { shotId: true } } } } } },
-      },
-    }),
   ]);
 
-  const versions: VersionRow[] = versionRows.flatMap((v) =>
-    v.task?.shotId
-      ? [
-          {
-            shotId: v.task.shotId,
-            createdAt: v.createdAt,
-            isApproval: v.reviewStatus?.isApproval ?? false,
-            isRetake: v.reviewStatus?.isRetake ?? false,
-          },
-        ]
-      : [],
-  );
-  const decisions: DecisionRow[] = decisionRows.flatMap((d) => {
-    const shotId = d.version?.task?.shotId;
-    return shotId
-      ? [{ shotId, createdAt: d.createdAt, isApproval: d.status.isApproval, isRetake: d.status.isRetake }]
-      : [];
-  });
-  const notes: NoteRow[] = noteRows.flatMap((c) => {
-    const shotId = c.media?.version?.task?.shotId;
-    return shotId ? [{ shotId, isResolved: c.isResolved }] : [];
-  });
-
-  const shotStats = computeShotStats(shots, versions, decisions, notes);
+  const sum = (pick: (row: ShotAggregateRow) => number) => rows.reduce((n, row) => n + pick(row), 0);
+  const shotStats = computeShotStats(rows);
   return {
-    totals: computeTotals(shotStats, versions.length, decisions.length, notes.length),
+    totals: computeTotals(
+      shotStats,
+      sum((r) => r.versions),
+      sum((r) => r.decisions),
+      sum((r) => r.notes),
+    ),
     sequences: computeSequenceConvergence(sequences, shotStats),
     slowestShots: rankSlowestShots(shotStats),
   };
