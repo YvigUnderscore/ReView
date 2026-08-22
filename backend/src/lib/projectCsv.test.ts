@@ -2,7 +2,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { parseShotsCsv, toShotsCsv } from './projectCsv';
+import { detectDelimiter, parseShotsCsv, toCsvLine, toShotsCsv } from './projectCsv';
+import { parseProjectCsv } from './projectCsvParse';
+
+describe('projectCsv.detectDelimiter', () => {
+  it('élit le séparateur le plus fréquent de l’en-tête', () => {
+    expect(detectDelimiter('sequence,shot,name')).toBe(',');
+    expect(detectDelimiter('sequence;shot;"nom, complet"')).toBe(';');
+    expect(detectDelimiter('sequence\tshot')).toBe('\t');
+    expect(detectDelimiter('shot')).toBe(',');
+  });
+});
+
+describe('projectCsv.toCsvLine', () => {
+  it('échappe et neutralise l’injection de formule', () => {
+    expect(toCsvLine(['a,b', '=SUM(1)'])).toBe('"a,b",\'=SUM(1)');
+  });
+});
 
 describe('projectCsv.parseShotsCsv (38.F)', () => {
   it('parse en-tête + lignes, tâches séparées par |', () => {
@@ -48,6 +64,18 @@ describe('projectCsv.toShotsCsv (38.G)', () => {
     const back = parseShotsCsv(csv).rows;
     expect(back[0]).toEqual({ sequence: 'SQ01', shot: 'SH01', name: 'Plan, large', tasks: ['Anim', 'Comp'] });
     expect(back[1]).toEqual({ sequence: null, shot: 'SH02', name: 'SH02', tasks: [] });
+  });
+
+  it('n’écrit une colonne facultative que si une ligne la renseigne', () => {
+    const plain = toShotsCsv([{ sequence: null, shot: 'SH01', name: 'SH01', tasks: [] }]);
+    expect(plain.split('\n')[0]).toBe('sequence,shot,name,tasks');
+    const rich = toShotsCsv([
+      { sequence: 'SQ01', shot: 'SH01', name: 'Intro', tasks: ['Anim'], episode: 'EP01', startFrame: 1001 },
+    ]);
+    expect(rich.split('\n')[0]).toBe('sequence,shot,name,tasks,episode,start_frame');
+    // Les en-têtes enrichis se relisent par l'import : l'aller-retour reste possible.
+    const back = parseProjectCsv(rich).entries[0];
+    expect(back).toMatchObject({ episode: 'EP01', sequence: 'SQ01', shot: 'SH01', startFrame: 1001 });
   });
 
   it('neutralise l’injection de formule (CP-SEC) : préfixe apostrophe', () => {

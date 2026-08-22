@@ -8,7 +8,9 @@ import { authenticate } from '../middleware/auth';
 import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { projectSettingsPatchSchema, type ProjectSettingsPatch } from '../lib/projectSettings';
+import { CSV_FIELDS } from '../lib/projectCsvColumns';
 import * as ProjectService from '../services/ProjectService';
+import * as ProjectImportService from '../services/ProjectImportService';
 
 /**
  * Routes projet additionnelles (Phase 38) montées AVANT projects.routes pour que les chemins
@@ -56,17 +58,43 @@ router.get(
   },
 );
 
-// POST /api/projects/:projectId/import-csv — import shots/tâches (dry-run si commit=false, 38.F).
+// GET /api/projects/:projectId/import-csv/template — gabarit d'import, en-tête complet.
+router.get(
+  '/:projectId/import-csv/template',
+  validate({ params: projectIdParam }),
+  requireProjectManage,
+  (_req, res) => {
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="review-import-template.csv"');
+    res.send(ProjectImportService.template());
+  },
+);
+
+// POST /api/projects/:projectId/import-csv — import de nomenclature (38.F).
+// `commit=false` (défaut) rend l'aperçu : ce qui serait créé, mis à jour, laissé tel quel,
+// et les lignes refusées avec leur motif. Aucune écriture tant que `commit` n'est pas vrai.
+const importBody = z.object({
+  csv: z.string().min(1).max(1_000_000),
+  commit: z.boolean().optional(),
+  // Correspondance imposée par l'utilisateur quand l'en-tête du fichier ne parle pas
+  // notre vocabulaire — `field: null` neutralise la colonne.
+  mapping: z
+    .array(z.object({ index: z.number().int().min(0).max(999), field: z.enum(CSV_FIELDS).nullable() }))
+    .max(200)
+    .optional(),
+});
 router.post(
   '/:projectId/import-csv',
-  validate({
-    params: projectIdParam,
-    body: z.object({ csv: z.string().min(1).max(1_000_000), commit: z.boolean().optional() }),
-  }),
+  validate({ params: projectIdParam, body: importBody }),
   requireProjectManage,
   async (req, res) => {
-    const { csv, commit } = req.body as { csv: string; commit?: boolean };
-    res.json(await ProjectService.importCsv(req.user!, Number(req.params.projectId), csv, commit ?? false));
+    const { csv, commit, mapping } = req.body as z.infer<typeof importBody>;
+    const projectId = Number(req.params.projectId);
+    res.json(
+      commit
+        ? await ProjectImportService.commit(req.user!, projectId, csv, mapping ?? [])
+        : await ProjectImportService.preview(projectId, csv, mapping ?? []),
+    );
   },
 );
 

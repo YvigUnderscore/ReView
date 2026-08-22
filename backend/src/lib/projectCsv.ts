@@ -2,31 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Passerelle CSV shots/tâches (38.F/38.G) — format tableur simple, compatible export→import
- * (chemin retour ShotGrid/Ftrack/Kitsu via colonnes homogènes). Parsing PUR (testé), aucune
- * dépendance Prisma : le service applique le résultat.
+ * Tokenisation et sérialisation du CSV de pipeline (38.F/38.G).
  *
- * Colonnes (en-tête obligatoire, ordre libre, casse ignorée) :
- *   sequence : code de séquence (optionnel — vide = shot hors séquence)
- *   shot     : code du shot (obligatoire)
- *   name     : nom du shot (optionnel — défaut = code)
- *   tasks    : noms de tâches séparés par « | » (optionnel)
+ * Ce module ne connaît que la grammaire du fichier : découpage des champs, délimiteur,
+ * échappement. La reconnaissance des colonnes vit dans `projectCsvColumns`, la lecture
+ * enrichie dans `projectCsvParse`, l'écriture en base dans `ProjectImportService`.
+ * PUR (testé), aucune dépendance Prisma.
  */
 
-export interface ParsedShotRow {
-  sequence: string | null;
-  shot: string;
-  name: string;
-  tasks: string[];
-}
-
-export interface ParseResult {
-  rows: ParsedShotRow[];
-  errors: string[];
-}
-
-/** Découpe une ligne CSV en champs (gère les guillemets et le séparateur `,` ou `;`). */
-function splitCsvLine(line: string, delimiter: string): string[] {
+/**
+ * Découpe une ligne CSV en champs (gère les guillemets et le séparateur `,` ou `;`).
+ * Les champs sont rendus détourés : un tableur recopie volontiers « SH010 » avec l'espace.
+ */
+export function splitCsvLine(line: string, delimiter: string): string[] {
   const out: string[] = [];
   let cur = '';
   let inQuotes = false;
@@ -49,9 +37,114 @@ function splitCsvLine(line: string, delimiter: string): string[] {
   return out.map((f) => f.trim());
 }
 
-/** Détecte le délimiteur dominant de l'en-tête (`;` sinon `,`). */
-function detectDelimiter(header: string): string {
-  return header.includes(';') && !header.includes(',') ? ';' : ',';
+/**
+ * Délimiteur dominant, lu sur l'en-tête.
+ *
+ * Un export français passé par Excel sépare au point-virgule et met des virgules dans les
+ * libellés : compter les occurrences est plus sûr que de chercher la présence de l'un ou
+ * de l'autre. La tabulation est acceptée pour le copier-coller depuis un tableur.
+ */
+export function detectDelimiter(header: string): string {
+  const count = (d: string) => header.split(d).length - 1;
+  const candidates: [string, number][] = [
+    [',', count(',')],
+    [';', count(';')],
+    ['\t', count('\t')],
+  ];
+  const best = candidates.reduce((a, b) => (b[1] > a[1] ? b : a));
+  return best[1] > 0 ? best[0] : ',';
+}
+
+/**
+ * Échappe un champ CSV (guillemets si séparateur/quote/retour présent) et neutralise
+ * l'injection de formule tableur : un champ commençant par `= + - @` (ou tab/CR) est préfixé
+ * d'une apostrophe pour qu'Excel/Sheets ne l'interprète pas comme une formule.
+ */
+export function csvField(v: string): string {
+  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+/** Une ligne CSV complète, champs échappés et séparés par la virgule. */
+export function toCsvLine(fields: string[]): string {
+  return fields.map(csvField).join(',');
+}
+
+// ---------------------------------------------------------------------------
+// Export des plans (38.G) — ré-importable tel quel par l'import enrichi.
+// ---------------------------------------------------------------------------
+
+export interface ExportShotRow {
+  sequence: string | null;
+  shot: string;
+  name: string;
+  tasks: string[];
+  // Colonnes facultatives : elles n'apparaissent dans l'en-tête que si au moins une ligne
+  // les renseigne — un projet sans épisode n'exporte pas une colonne vide.
+  episode?: string | null;
+  description?: string | null;
+  shotStatus?: string | null;
+  startFrame?: number | null;
+  endFrame?: number | null;
+}
+
+type OptionalExport = 'episode' | 'description' | 'shotStatus' | 'startFrame' | 'endFrame';
+
+/** En-tête de chaque colonne facultative, choisi parmi les synonymes reconnus à l'import. */
+const OPTIONAL_HEADERS: Record<OptionalExport, string> = {
+  episode: 'episode',
+  description: 'description',
+  shotStatus: 'shot_status',
+  startFrame: 'start_frame',
+  endFrame: 'end_frame',
+};
+
+const OPTIONAL_ORDER: OptionalExport[] = ['episode', 'description', 'shotStatus', 'startFrame', 'endFrame'];
+
+function cell(row: ExportShotRow, field: OptionalExport): string {
+  const value = row[field];
+  return value === null || value === undefined ? '' : String(value);
+}
+
+/**
+ * Sérialise des shots/tâches au format CSV (en-tête inclus), ré-importable tel quel.
+ * Les quatre colonnes historiques sont toujours écrites — un fichier exporté hier reste
+ * lisible par un tableur configuré pour lui.
+ */
+export function toShotsCsv(rows: ExportShotRow[]): string {
+  const extras = OPTIONAL_ORDER.filter((field) => rows.some((r) => cell(r, field) !== ''));
+  const lines = [['sequence', 'shot', 'name', 'tasks', ...extras.map((f) => OPTIONAL_HEADERS[f])].join(',')];
+  for (const r of rows) {
+    lines.push(
+      toCsvLine([
+        r.sequence ?? '',
+        r.shot,
+        r.name,
+        r.tasks.join('|'),
+        ...extras.map((field) => cell(r, field)),
+      ]),
+    );
+  }
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Lecture historique (38.F) — quatre colonnes, messages en clair.
+//
+// Conservée le temps que `ProjectService.importCsv` soit retiré au profit de
+// `ProjectImportService` : elle n'a plus qu'un appelant et aucune évolution à recevoir.
+// ---------------------------------------------------------------------------
+
+export interface ParsedShotRow {
+  sequence: string | null;
+  shot: string;
+  name: string;
+  tasks: string[];
+}
+
+export interface ParseResult {
+  rows: ParsedShotRow[];
+  errors: string[];
 }
 
 /** Parse un CSV de shots/tâches. Renvoie les lignes valides + la liste des erreurs. */
@@ -99,32 +192,4 @@ export function parseShotsCsv(text: string): ParseResult {
     rows.push({ sequence, shot, name: (iName >= 0 && f[iName]?.trim()) || shot, tasks });
   }
   return { rows, errors };
-}
-
-/**
- * Échappe un champ CSV (guillemets si séparateur/quote/retour présent) et neutralise
- * l'injection de formule tableur : un champ commençant par `= + - @` (ou tab/CR) est préfixé
- * d'une apostrophe pour qu'Excel/Sheets ne l'interprète pas comme une formule.
- */
-function csvField(v: string): string {
-  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
-}
-
-export interface ExportShotRow {
-  sequence: string | null;
-  shot: string;
-  name: string;
-  tasks: string[];
-}
-
-/** Sérialise des shots/tâches au format CSV (en-tête inclus), ré-importable tel quel. */
-export function toShotsCsv(rows: ExportShotRow[]): string {
-  const lines = ['sequence,shot,name,tasks'];
-  for (const r of rows) {
-    lines.push(
-      [csvField(r.sequence ?? ''), csvField(r.shot), csvField(r.name), csvField(r.tasks.join('|'))].join(','),
-    );
-  }
-  return lines.join('\n');
 }
