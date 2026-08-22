@@ -13,6 +13,7 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: vi.fn() }));
 vi.mock('../lib/pipeline', () => ({
   resolveProjectIdForProject: vi.fn(),
+  resolveProjectIdForEpisode: vi.fn(),
   resolveProjectIdForSequence: vi.fn(),
   resolveProjectIdForShot: vi.fn(),
   resolveProjectIdForAsset: vi.fn(),
@@ -22,18 +23,21 @@ vi.mock('../lib/pipeline', () => ({
 }));
 vi.mock('../lib/trash', () => ({
   softDeleteProjects: vi.fn(),
+  softDeleteEpisodes: vi.fn(),
   softDeleteSequences: vi.fn(),
   softDeleteShots: vi.fn(),
   softDeleteAssets: vi.fn(),
   softDeleteVersions: vi.fn(),
   softDeleteMedias: vi.fn(),
   restoreProjects: vi.fn(),
+  restoreEpisodes: vi.fn(),
   restoreSequences: vi.fn(),
   restoreShots: vi.fn(),
   restoreAssets: vi.fn(),
   restoreVersions: vi.fn(),
   restoreMedias: vi.fn(),
   purgeProject: vi.fn(),
+  purgeEpisode: vi.fn(),
   purgeSequence: vi.fn(),
   purgeShot: vi.fn(),
   purgeAsset: vi.fn(),

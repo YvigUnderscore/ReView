@@ -89,7 +89,12 @@ describe('GET /api/shots — plafond et curseur', () => {
     // ne demandait jamais la page 2 — 1 900 plans sur 2 000 étaient hors d'atteinte.
     const res = await request(app).get('/api/shots?projectId=1&pageSize=200');
     expect(res.status).toBe(200);
-    expect(shots.list).toHaveBeenCalledWith(1, undefined, expect.objectContaining({ pageSize: 200 }));
+    expect(shots.list).toHaveBeenCalledWith(
+      1,
+      undefined,
+      expect.objectContaining({ pageSize: 200 }),
+      undefined,
+    );
   });
 
   it('refuse au-delà du plafond dur', async () => {
@@ -100,12 +105,26 @@ describe('GET /api/shots — plafond et curseur', () => {
   it('transmet le curseur au service', async () => {
     const cursor = encodeCursor(0, 812);
     await request(app).get(`/api/shots?projectId=1&cursor=${encodeURIComponent(cursor)}`);
-    expect(shots.list).toHaveBeenCalledWith(1, undefined, expect.objectContaining({ cursor }));
+    expect(shots.list).toHaveBeenCalledWith(1, undefined, expect.objectContaining({ cursor }), undefined);
   });
 
   it('garde le filtre de séquence, « none » compris', async () => {
     await request(app).get('/api/shots?projectId=1&sequenceId=none&page=2');
-    expect(shots.list).toHaveBeenCalledWith(1, 'none', expect.objectContaining({ page: 2 }));
+    expect(shots.list).toHaveBeenCalledWith(1, 'none', expect.objectContaining({ page: 2 }), undefined);
+  });
+
+  it('transmet le filtre d’épisode, « none » compris', async () => {
+    // Express 5 rend `req.query` en lecture seule : la valeur coercée par Zod ne réécrit
+    // pas la chaîne d'origine, exactement comme pour `sequenceId`. Le service normalise
+    // avec `Number()` — c'est vérifié dans `ShotService.episode.test.ts`.
+    await request(app).get('/api/shots?projectId=1&episodeId=4');
+    expect(shots.list).toHaveBeenCalledWith(1, undefined, expect.anything(), '4');
+    await request(app).get('/api/shots?projectId=1&episodeId=none');
+    expect(shots.list).toHaveBeenCalledWith(1, undefined, expect.anything(), 'none');
+  });
+
+  it('refuse un épisode qui n’est ni un entier ni « none »', async () => {
+    expect((await request(app).get('/api/shots?projectId=1&episodeId=EP1')).status).toBe(400);
   });
 });
 

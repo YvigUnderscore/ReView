@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { AssetRef, AssetType, SequenceRef, ShotRef, TaskType } from '../../types/api';
+import type { AssetRef, AssetType, EpisodeRef, SequenceRef, ShotRef, TaskType } from '../../types/api';
 
 /** Types et constantes partagés des onglets de ProjectPage (découpage 10.C1). */
 
@@ -27,6 +27,11 @@ export type {
  */
 export type SequenceDetailData = SequenceRef & {
   projectId: number;
+  /**
+   * Épisode d'appartenance (niveau facultatif, éteint par défaut) : `null` sur un
+   * long-métrage, et la page n'affiche alors rien de plus.
+   */
+  episode?: EpisodeRef | null;
   description?: string | null;
   thumbnailUrl?: string | null;
   pipelineStatusId?: number | null;

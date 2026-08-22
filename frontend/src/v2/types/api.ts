@@ -106,6 +106,8 @@ export * from './task';
 
 // USD & provenance de conversion 3D (ModelSource, UsdModelInfo…) — module séparé (Phase 45).
 export * from './usd';
+// Niveau Épisode (facultatif par projet) — même règle : une entité, une définition.
+export * from './episode';
 
 // ── Versions & médias ─────────────────────────────────────────────────────────
 /** Statut de review personnalisable du studio (Phase 31). */

@@ -635,10 +635,27 @@ export async function patchSettings(user: SessionUser, projectId: number, patch:
   return getSettings(projectId);
 }
 
-/** Éléments en corbeille d'un projet (séquences, shots, assets, versions, médias). */
+/**
+ * Éléments en corbeille d'un projet (épisodes, séquences, shots, assets, versions, médias).
+ *
+ * Les épisodes n'y apparaissent que si le projet en a mis à la corbeille : un long-métrage,
+ * qui n'a jamais activé le niveau, ne voit pas la section.
+ */
 export async function getTrash(projectId: number) {
   const mediaWhere = { deletedAt: { not: null }, version: versionInProject(projectId) };
-  const [sequences, shots, assets, versions, media] = await Promise.all([
+  // Niveau Épisode éteint : la section n'existe pas, même si des épisodes dorment en
+  // corbeille — l'extinction ne détruit rien, elle ne doit rien montrer non plus.
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { episodesEnabled: true },
+  });
+  const [episodes, sequences, shots, assets, versions, media] = await Promise.all([
+    project?.episodesEnabled
+      ? prisma.episode.findMany({
+          where: { projectId, deletedAt: { not: null } },
+          orderBy: { deletedAt: 'desc' },
+        })
+      : [],
     prisma.sequence.findMany({
       where: { projectId, deletedAt: { not: null } },
       orderBy: { deletedAt: 'desc' },
@@ -651,7 +668,14 @@ export async function getTrash(projectId: number) {
     }),
     prisma.mediaObject.findMany({ where: mediaWhere, orderBy: { deletedAt: 'desc' } }),
   ]);
-  return { sequences, shots, assets, versions, media: media.map((m) => ({ ...m, size: Number(m.size) })) };
+  return {
+    episodes,
+    sequences,
+    shots,
+    assets,
+    versions,
+    media: media.map((m) => ({ ...m, size: Number(m.size) })),
+  };
 }
 
 /** Localisation lisible d'une tâche/version (shot·séquence ou asset). */

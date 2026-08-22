@@ -33,6 +33,27 @@ export interface BulkSequenceItem {
   name: string;
   code: string;
   order?: number;
+  /**
+   * Épisode d'accueil (niveau facultatif, cf. `EpisodeService`). Absent ou `null` : la
+   * séquence reste hors épisode — l'état normal d'un long-métrage, et celui d'un projet
+   * où le niveau n'est pas activé.
+   */
+  episodeId?: number | null;
+}
+
+/**
+ * Les épisodes cités appartiennent-ils bien à ce projet ?
+ *
+ * Sans ce contrôle, un identifiant emprunté à un autre film rangerait la séquence dans
+ * l'épisode du voisin — et le rattachement ne se voit depuis aucune des deux pages.
+ */
+async function assertEpisodesInProject(projectId: number, items: BulkSequenceItem[]): Promise<void> {
+  const ids = [...new Set(items.map((i) => i.episodeId).filter((v): v is number => typeof v === 'number'))];
+  if (ids.length === 0) return;
+  const owned = await prisma.episode.count({ where: { id: { in: ids }, projectId, deletedAt: null } });
+  if (owned !== ids.length) {
+    throw badRequest('This episode does not belong to this project', 'BAD_EPISODE');
+  }
 }
 
 /** Création en lot : un doublon dans le lot ou en base annule tout, rien n'est créé. */
@@ -47,9 +68,18 @@ export async function createBulk(projectId: number, items: BulkSequenceItem[]) {
   if (existing.length > 0) {
     throw badRequest(`Code already in use: ${existing.map((e) => e.code).join(', ')}`, 'CODE_TAKEN');
   }
+  await assertEpisodesInProject(projectId, items);
   return prisma.$transaction(
     items.map((it, idx) =>
-      prisma.sequence.create({ data: { projectId, name: it.name, code: it.code, order: it.order ?? idx } }),
+      prisma.sequence.create({
+        data: {
+          projectId,
+          name: it.name,
+          code: it.code,
+          order: it.order ?? idx,
+          episodeId: it.episodeId ?? null,
+        },
+      }),
     ),
   );
 }
@@ -78,6 +108,13 @@ export async function getDetail(id: number) {
       },
       _count: { select: { shots: { where: { deletedAt: null } } } },
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
+      // Épisode d'appartenance (niveau facultatif) : la page de séquence en fait un lien
+      // de remontée. `null` sur un long-métrage — la fiche ne montre alors rien de plus.
+      episode: { select: { id: true, code: true, name: true } },
+      // Le réglage du projet, pour taire l'épisode quand le niveau est éteint : le
+      // rattachement survit à l'extinction (rien n'est détruit), mais il ne doit alors
+      // laisser aucune trace à l'écran.
+      project: { select: { episodesEnabled: true } },
     },
   });
   if (!sequence) throw notFound('Sequence not found');
@@ -97,8 +134,10 @@ export async function getDetail(id: number) {
     })),
   );
 
+  const { project, ...rest } = sequence;
   return {
-    ...sequence,
+    ...rest,
+    episode: project.episodesEnabled ? sequence.episode : null,
     shots,
     assets,
     thumbnailUrl: sequence.thumbnailKey ? await storage.getPresignedGetUrl(sequence.thumbnailKey) : null,

@@ -90,7 +90,7 @@ describe('handleEvent', () => {
     });
 
     const options = runSync.mock.calls[0]![1] as { passes: string[]; onlySgIds?: unknown };
-    expect(options.passes).toEqual(['statuses', 'sequences', 'shots', 'assets', 'tasks']);
+    expect(options.passes).toEqual(['statuses', 'episodes', 'sequences', 'shots', 'assets', 'tasks']);
     expect(options.onlySgIds).toBeUndefined();
   });
 

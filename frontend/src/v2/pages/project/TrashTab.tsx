@@ -13,11 +13,13 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { Checkbox } from '../../components/ui/checkbox';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import type { AssetRef, MediaRef, SequenceRef, ShotRef, Version } from '../../types/api';
+import type { AssetRef, EpisodeRef, MediaRef, SequenceRef, ShotRef, Version } from '../../types/api';
 import { useT } from '../../i18n';
 
 /** GET /api/projects/:id/trash — éléments supprimés restaurables. */
 interface TrashData {
+  /** Niveau Épisode (facultatif) : liste vide — donc section absente — sans lui. */
+  episodes: EpisodeRef[];
   sequences: SequenceRef[];
   shots: ShotRef[];
   assets: AssetRef[];
@@ -228,6 +230,7 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
   if (!data) return <SkeletonRows count={4} />;
 
   const isEmpty =
+    !data.episodes.length &&
     !data.sequences.length &&
     !data.shots.length &&
     !data.assets.length &&
@@ -245,6 +248,16 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
           description={t('trash.empty.description')}
         />
       )}
+      <TrashSection
+        title={t('episodes.title')}
+        domain="episodes"
+        items={data.episodes.map((e) => ({
+          id: e.id,
+          label: `${e.code} · ${e.name}`,
+          endpoint: `/api/episodes/${e.id}`,
+        }))}
+        onChanged={onChanged}
+      />
       <TrashSection
         title={t('sequences.title')}
         domain="sequences"

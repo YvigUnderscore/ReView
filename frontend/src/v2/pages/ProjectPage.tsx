@@ -34,6 +34,7 @@ import ProjectSettingsTab from '../components/ProjectSettingsTab';
 import OverviewTab from './project/OverviewTab';
 import ShotsTab from './project/ShotsTab';
 import SequencesTab from './project/SequencesTab';
+import EpisodesTab from './project/EpisodesTab';
 import AssetsTab from './project/AssetsTab';
 import MembersTab from './project/MembersTab';
 import PlaylistsTab from './project/PlaylistsTab';
@@ -42,6 +43,7 @@ import SharesTab from './project/SharesTab';
 import TrashTab from './project/TrashTab';
 import ShotgridTab from './project/ShotgridTab';
 import { useSgConnection } from '../lib/shotgridApi';
+import { useEpisodesEnabled } from '../lib/episodesApi';
 import ProjectCsvActions from './project/ProjectCsvActions';
 import type { ProjectSettings } from './project/projectTypes';
 import { useT } from '../i18n';
@@ -98,11 +100,17 @@ export default function ProjectPage() {
   // Une connexion ShotGrid change ce que la page propose : onglet dédié, liens vers le
   // site, verrou de création. Sans elle, rien de tout cela n'apparaît.
   const { data: sgConnection } = useSgConnection(projectId);
+  // Niveau Épisode : facultatif, éteint par défaut. Tant que le serveur ne l'a pas
+  // confirmé actif, l'onglet n'existe pas — un long-métrage n'en voit aucune trace.
+  const episodesEnabled = useEpisodesEnabled(projectId);
 
   const tabs = [
     { key: 'overview', label: t('project.tab.overview'), icon: <LayoutDashboard size={16} /> },
     // L'ordre suit la hiérarchie du pipe, de l'ensemble vers le détail : une séquence
     // contient des plans, pas l'inverse.
+    ...(episodesEnabled
+      ? [{ key: 'episodes', label: t('episodes.title'), icon: <Clapperboard size={16} /> }]
+      : []),
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
     // Le badge annonce le total du projet, pas ce qui est chargé : les listes sont
     // désormais infinies, `shots.length` ne vaudrait que la première page.
@@ -175,6 +183,9 @@ export default function ProjectPage() {
           nomenclature={nomenclature}
         />
       )}
+      {/* Le garde est double : l'onglet n'existe pas, et le contenu ne se monte pas —
+          un `?tab=episodes` recopié ne fait donc rien apparaître. */}
+      {tab === 'episodes' && episodesEnabled && <EpisodesTab projectId={projectId} canManage={canManage} />}
       {tab === 'sequences' && (
         <SequencesTab
           projectId={projectId}

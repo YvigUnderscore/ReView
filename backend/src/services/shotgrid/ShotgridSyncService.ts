@@ -15,6 +15,7 @@ import {
   type PullContext,
   type PullOptions,
 } from './ShotgridPullService';
+import { pullEpisodes, pullSequenceEpisodes } from './ShotgridEpisodes';
 import { findBySg } from './shotgridLinks';
 import { pullVersions, pullPublishedFiles } from './ShotgridVersionSync';
 import { pullNotes } from './ShotgridNoteSync';
@@ -258,8 +259,13 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     // 2. Comptes (correspondance par courriel, aucune création).
     const userMap = wants('users') ? await buildUserMap(pullCtx) : new Map<number, number>();
 
-    // 3. Hiérarchie, dans l'ordre des dépendances.
+    // 3. Hiérarchie, dans l'ordre des dépendances. Les épisodes viennent en tête : le
+    // rattachement des séquences lit leur correspondance. Sur un projet où le niveau est
+    // éteint — le cas par défaut — les deux appels rendent la main sans rien demander au
+    // site.
+    if (wants('episodes')) await pullEpisodes(pullCtx, sequenceStatuses, pullOptions);
     if (wants('sequences')) await pullSequences(pullCtx, sequenceStatuses, pullOptions);
+    if (wants('episodes')) await pullSequenceEpisodes(pullCtx, pullOptions);
     if (wants('shots')) await pullShots(pullCtx, shotStatuses, pullOptions);
     if (wants('assets')) await pullAssets(pullCtx, pullOptions);
     if (wants('tasks')) await pullTasks(pullCtx, taskStatuses, userMap, pullOptions);

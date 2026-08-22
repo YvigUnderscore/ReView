@@ -15,6 +15,7 @@ import { logger } from '../../lib/logger';
  */
 
 export type LocalType =
+  | 'episode'
   | 'sequence'
   | 'shot'
   | 'asset'

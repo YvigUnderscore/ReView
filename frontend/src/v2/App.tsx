@@ -24,6 +24,7 @@ import TaskPage from './pages/TaskPage';
 import AssetPage from './pages/AssetPage';
 import ShotPage from './pages/ShotPage';
 import SequencePage from './pages/SequencePage';
+import EpisodePage from './pages/EpisodePage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import ProfilePage from './pages/ProfilePage';
 import UserProfilePage from './pages/UserProfilePage';
@@ -133,6 +134,10 @@ function AppRoutes() {
               <Route path="/tasks/:id" element={<TaskPage />} />
               {/* La séquence a enfin sa page (C3) : c'était un accordéon dans un onglet. */}
               <Route path="/sequences/:id" element={<SequencePage />} />
+              {/* Épisode : niveau facultatif de la série. La route existe toujours, la
+                  page se garde elle-même — un projet où le niveau est éteint n'y mène
+                  depuis nulle part, et le serveur y répond 409. */}
+              <Route path="/episodes/:id" element={<EpisodePage />} />
               {/* La playlist aussi (C5), avec le catalogue du projet d'où la remplir. */}
               <Route path="/playlists/:id" element={<PlaylistPage />} />
               <Route path="/shots/:id" element={<ShotPage />} />

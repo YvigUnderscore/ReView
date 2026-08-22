@@ -43,7 +43,14 @@ describe('passesForEvent', () => {
   });
 
   it('relit toute la hiérarchie pour une entité globale, sans les médias', () => {
-    expect(passesForEvent('Status')).toEqual(['statuses', 'sequences', 'shots', 'assets', 'tasks']);
+    expect(passesForEvent('Status')).toEqual([
+      'statuses',
+      'episodes',
+      'sequences',
+      'shots',
+      'assets',
+      'tasks',
+    ]);
     expect(passesForEvent('Status')).not.toContain('versions');
     expect(eventIsGlobal('Status')).toBe(true);
     expect(eventIsGlobal('HumanUser')).toBe(true);
@@ -73,7 +80,7 @@ describe('impliedPasses', () => {
         { sgType: 'Version', sgId: 1 },
         { sgType: 'Sequence', sgId: 2 },
       ]),
-    ).toEqual(['statuses', 'sequences', 'versions']);
+    ).toEqual(['statuses', 'episodes', 'sequences', 'versions']);
   });
 
   it('rend « tout » quand rien n’est ciblé ou que le type est inconnu', () => {

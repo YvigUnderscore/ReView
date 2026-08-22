@@ -22,18 +22,37 @@ import { assertProjectWritable } from '../lib/projectGuard';
  */
 
 /**
- * Shots paginés d'un projet (filtre séquence : id, `none` = hors séquence, ou tous)
- * + miniatures.
+ * Filtre d'épisode d'une liste de plans (niveau facultatif, cf. `EpisodeService`).
+ *
+ * Un plan n'appartient pas à un épisode : c'est sa séquence qui en porte un. Le filtre
+ * traverse donc la relation, et `none` désigne les plans dont la séquence est hors
+ * épisode — ainsi que ceux qui n'ont pas de séquence du tout, qui sont hors épisode par
+ * construction. Undefined : aucune restriction, exactement le comportement d'avant.
+ */
+export function episodeWhere(episode: number | 'none' | undefined): Prisma.ShotWhereInput {
+  if (episode === undefined) return {};
+  if (episode === 'none') return { OR: [{ sequenceId: null }, { sequence: { episodeId: null } }] };
+  return { sequence: { episodeId: Number(episode) } };
+}
+
+/**
+ * Shots paginés d'un projet (filtre séquence : id, `none` = hors séquence, ou tous ;
+ * filtre épisode : id, `none` = hors épisode, ou tous) + miniatures.
  *
  * Le tri se départage sur `id` : un import ShotGrid incrémental laisse tous les plans
  * créés à `order = 0`, et sans départage Postgres est libre de rendre ces ex æquo dans
  * un ordre différent d'une page à l'autre — la page 2 réaffiche alors des plans de la
  * page 1 et en saute autant. Le curseur (`p.cursor`) suit le même couple `(order, id)`.
  */
-export async function list(projectId: number, seq: number | 'none' | undefined, p: PaginationParams) {
+export async function list(
+  projectId: number,
+  seq: number | 'none' | undefined,
+  p: PaginationParams,
+  episode?: number | 'none',
+) {
   const seqFilter =
     seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
-  const where = { projectId, deletedAt: null, ...seqFilter };
+  const where = { projectId, deletedAt: null, ...seqFilter, ...episodeWhere(episode) };
   const [shots, total] = await Promise.all([
     prisma.shot.findMany({
       where: withCursor(where, p, 'order', 'asc'),

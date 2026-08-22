@@ -16,6 +16,7 @@ import { buildSettingsPatch } from '../lib/projectInheritance';
 import type { Nomenclature, ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
 import SgProjectSection from './shotgrid/SgProjectSection';
+import EpisodesToggle from '../pages/project/EpisodesToggle';
 
 /**
  * Onglet « Réglages » d'un projet (admin/superviseur) :
@@ -232,6 +233,10 @@ export default function ProjectSettingsTab({
           <SkeletonRows count={3} />
         )}
       </section>
+
+      {/* Niveau Épisode (série) : l'interrupteur vit ici, c'est le seul endroit d'où
+          il s'allume — l'onglet Épisodes n'existe pas tant qu'il est éteint. */}
+      <EpisodesToggle projectId={projectId} />
 
       {/* Départements (B1) : des entités à part entière, éditables même sur un projet relié.
           L'éditeur était verrouillé avec la mention « hérité de ShotGrid », alors qu'aucun

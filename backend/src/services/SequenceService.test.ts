@@ -57,9 +57,11 @@ describe('createBulk', () => {
       { code: 'SQ02', name: 'B', order: 9 },
     ]);
     const created = vi.mocked(prisma.sequence.create).mock.calls.map((c) => c[0].data);
+    // `episodeId: null` : le niveau Épisode est facultatif, et une séquence créée sans
+    // épisode reste hors épisode — l'état normal d'un long-métrage.
     expect(created).toEqual([
-      { projectId: 3, name: 'A', code: 'SQ01', order: 0 },
-      { projectId: 3, name: 'B', code: 'SQ02', order: 9 },
+      { projectId: 3, name: 'A', code: 'SQ01', order: 0, episodeId: null },
+      { projectId: 3, name: 'B', code: 'SQ02', order: 9, episodeId: null },
     ]);
   });
 });
@@ -77,6 +79,9 @@ describe('getDetail', () => {
     ],
     assets: [{ id: 8, name: 'Ship', type: 'PROP', typeLabel: null, thumbnailKey: null }],
     departments: [{ id: 4, key: 'comp', name: 'Compositing', color: null }],
+    episode: null,
+    // Niveau Épisode éteint : l'état par défaut de tout projet.
+    project: { episodesEnabled: false },
   };
 
   it('signale une séquence absente plutôt que de rendre un objet vide', async () => {

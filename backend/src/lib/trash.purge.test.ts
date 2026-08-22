@@ -16,6 +16,7 @@ vi.mock('./prisma', () => {
       version: level(),
       shot: level(),
       sequence: level(),
+      episode: level(),
       asset: level(),
       project: level(),
     },

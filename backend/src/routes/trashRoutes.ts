@@ -17,9 +17,9 @@ import { logAudit } from '../services/AuditService';
  * une fois évite qu'une règle corrigée à un endroit reste fausse aux deux autres.
  */
 export interface TrashRoutesOptions {
-  /** Segment d'entité pour l'audit — « Asset », « Shot », « Sequence ». */
-  entityType: 'Asset' | 'Shot' | 'Sequence';
-  /** Préfixe des actions d'audit — « ASSET », « SHOT », « SEQUENCE ». */
+  /** Segment d'entité pour l'audit — « Asset », « Shot », « Sequence », « Episode ». */
+  entityType: 'Asset' | 'Shot' | 'Sequence' | 'Episode';
+  /** Préfixe des actions d'audit — « ASSET », « SHOT », « SEQUENCE », « EPISODE ». */
   auditPrefix: string;
   /** Message quand l'entité n'existe pas. */
   notFoundMessage: string;

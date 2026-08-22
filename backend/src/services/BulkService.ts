@@ -8,6 +8,7 @@ import { checkProjectAccess } from '../middleware/rbac';
 import { forbidden, notFound } from '../lib/errors';
 import {
   resolveProjectIdForProject,
+  resolveProjectIdForEpisode,
   resolveProjectIdForSequence,
   resolveProjectIdForShot,
   resolveProjectIdForAsset,
@@ -17,18 +18,21 @@ import {
 } from '../lib/pipeline';
 import {
   softDeleteProjects,
+  softDeleteEpisodes,
   softDeleteSequences,
   softDeleteShots,
   softDeleteAssets,
   softDeleteVersions,
   softDeleteMedias,
   restoreProjects,
+  restoreEpisodes,
   restoreSequences,
   restoreShots,
   restoreAssets,
   restoreVersions,
   restoreMedias,
   purgeProject,
+  purgeEpisode,
   purgeSequence,
   purgeShot,
   purgeAsset,
@@ -43,7 +47,7 @@ import * as VersionService from './VersionService';
 /**
  * Actions groupées (13.C). Chaque id est **revalidé individuellement** (accès projet +
  * RBAC métier) avant toute mutation : si un seul id échoue, rien n'est modifié.
- * Les domaines à corbeille (sequences/shots/assets/versions/media) partagent une passe
+ * Les domaines à corbeille (episodes/sequences/shots/assets/versions/media) partagent une passe
  * de validation puis une écriture en lot transactionnelle (`lib/trash`). Les patchs
  * (tasks/versions) réutilisent les services unitaires (émission temps réel + notifs).
  */
@@ -52,11 +56,20 @@ type SessionUser = { id: number; role: Role };
 
 const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
-export const DELETE_DOMAINS = ['projects', 'sequences', 'shots', 'assets', 'versions', 'media'] as const;
+export const DELETE_DOMAINS = [
+  'projects',
+  'episodes',
+  'sequences',
+  'shots',
+  'assets',
+  'versions',
+  'media',
+] as const;
 export type DeleteDomain = (typeof DELETE_DOMAINS)[number];
 
 const RESOLVERS: Record<DeleteDomain, (id: number) => Promise<number | null>> = {
   projects: resolveProjectIdForProject,
+  episodes: resolveProjectIdForEpisode,
   sequences: resolveProjectIdForSequence,
   shots: resolveProjectIdForShot,
   assets: resolveProjectIdForAsset,
@@ -66,6 +79,7 @@ const RESOLVERS: Record<DeleteDomain, (id: number) => Promise<number | null>> = 
 
 const SOFT_DELETE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
   projects: softDeleteProjects,
+  episodes: softDeleteEpisodes,
   sequences: softDeleteSequences,
   shots: softDeleteShots,
   assets: softDeleteAssets,
@@ -75,6 +89,7 @@ const SOFT_DELETE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
 
 const RESTORE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
   projects: restoreProjects,
+  episodes: restoreEpisodes,
   sequences: restoreSequences,
   shots: restoreShots,
   assets: restoreAssets,
@@ -85,6 +100,7 @@ const RESTORE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
 // Purge définitive (DB + MinIO) — fonctions unitaires bouclées (chaque purge gère son storage).
 const PURGE: Record<DeleteDomain, (id: number) => Promise<void>> = {
   projects: purgeProject,
+  episodes: purgeEpisode,
   sequences: purgeSequence,
   shots: purgeShot,
   assets: purgeAsset,
@@ -98,6 +114,12 @@ const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; purge: 
     restore: 'PROJECT_BULK_RESTORE',
     purge: 'PROJECT_BULK_PURGE',
     type: 'Project',
+  },
+  episodes: {
+    del: 'EPISODE_BULK_DELETE',
+    restore: 'EPISODE_BULK_RESTORE',
+    purge: 'EPISODE_BULK_PURGE',
+    type: 'Episode',
   },
   sequences: {
     del: 'SEQUENCE_BULK_DELETE',
@@ -128,7 +150,7 @@ const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; purge: 
 
 /**
  * Revalide l'accès à chaque id d'un domaine à corbeille. Les domaines pipeline
- * (projects/sequences/shots/assets) exigent ADMIN/SUPERVISOR ; media délègue à
+ * (projects/episodes/sequences/shots/assets) exigent ADMIN/SUPERVISOR ; media délègue à
  * `assertMediaManage` (uploader ou manager) ; versions exige auteur ou manager.
  */
 async function assertDeleteAccess(user: SessionUser, domain: DeleteDomain, ids: number[]): Promise<void> {
@@ -142,7 +164,13 @@ async function assertDeleteAccess(user: SessionUser, domain: DeleteDomain, ids: 
     if (!projectId) throw notFound(`Item ${id} not found`);
     if (!(await checkProjectAccess(user.id, user.role, projectId)))
       throw forbidden(`Access denied (${domain} ${id})`);
-    if (domain === 'projects' || domain === 'sequences' || domain === 'shots' || domain === 'assets') {
+    if (
+      domain === 'projects' ||
+      domain === 'episodes' ||
+      domain === 'sequences' ||
+      domain === 'shots' ||
+      domain === 'assets'
+    ) {
       if (!manager) throw forbidden('Supervisors and administrators only');
     } else if (domain === 'versions') {
       const v = await prisma.version.findUnique({ where: { id }, select: { authorId: true } });

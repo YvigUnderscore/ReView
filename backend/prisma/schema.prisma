@@ -511,6 +511,12 @@ model Project {
   thumbnailKey String?
   status       ProjectStatus @default(ACTIVE)
   startFrame   Int           @default(1001)
+  // Niveau Épisode (série) : un cran au-dessus de la séquence, DÉSACTIVÉ par défaut.
+  // Un long-métrage ne doit jamais voir ce niveau apparaître — le réglage pilote la
+  // navigation, le fil d'Ariane, les filtres et la création. Colonne plutôt que clé du
+  // JSON `settings` : c'est un interrupteur de structure, lu par le serveur avant toute
+  // écriture d'épisode, et il doit pouvoir se lire sans traverser un schéma Zod.
+  episodesEnabled Boolean    @default(false)
   // Quota de stockage du projet en octets (38.D) — null = illimité.
   storageQuota BigInt?
   // Réglages projet : départements, nomenclature (override des défauts studio). JSON.
@@ -519,6 +525,7 @@ model Project {
   updatedAt    DateTime      @updatedAt
   deletedAt    DateTime?
 
+  episodes      Episode[]
   sequences     Sequence[]
   shots         Shot[]
   assets        Asset[]
@@ -539,10 +546,54 @@ model Project {
   @@unique([studioId, slug])
 }
 
+// Épisode : le cran au-dessus de la séquence, pour la série (100 à 300 plans par épisode).
+//
+// Le niveau est **facultatif par projet** (`Project.episodesEnabled`, faux par défaut) :
+// une séquence sans épisode reste parfaitement valide, et c'est le cas normal du
+// long-métrage. D'où `Sequence.episodeId` nullable et `onDelete: SetNull` — mettre un
+// épisode à la corbeille ne doit jamais faire disparaître ses séquences, encore moins
+// leurs plans, leurs versions et leurs commentaires.
+//
+// Pas de statut propre au périmètre « episode » : l'épisode réutilise le vocabulaire de
+// statuts de portée `sequence` (`PipelineStatusService.Scope`). Un cinquième périmètre
+// aurait fait doublon dans tous les écrans de réglage pour la même liste de valeurs.
+model Episode {
+  id        Int       @id @default(autoincrement())
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  name      String
+  code      String
+  order     Int       @default(0)
+  // Même fiche que celle d'une séquence : description et vignette, pas davantage.
+  description  String?
+  thumbnailKey String?
+  // Marqueur de dernière modification — comme sur Sequence et Shot, il sert à la
+  // détection de conflit de la synchronisation ShotGrid.
+  updatedAt DateTime  @updatedAt
+  createdAt DateTime  @default(now())
+  // Statut d'épisode : ShotGrid en a un (`sg_status_list` sur Episode) ; sans connexion
+  // il reste simplement vide.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
+  deletedAt DateTime?
+
+  sequences Sequence[]
+
+  @@unique([projectId, code])
+  // Même raison que sur Sequence : la liste d'un projet se lit triée par `order` puis
+  // `code`, et les quatre colonnes dans cet ordre évitent le tri en mémoire.
+  @@index([projectId, deletedAt, order, code])
+  @@index([pipelineStatusId])
+}
+
 model Sequence {
   id        Int       @id @default(autoincrement())
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId Int
+  // Épisode d'appartenance — null = séquence hors épisode. Toujours licite : c'est le
+  // cas du long-métrage, et celui d'une série dont le découpage n'est pas encore fait.
+  episode   Episode?  @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  episodeId Int?
   name      String
   code      String
   order     Int       @default(0)
@@ -573,6 +624,9 @@ model Sequence {
   // quatre colonnes dans cet ordre évitent le tri en mémoire sur un long-métrage.
   @@index([projectId, deletedAt, order, code])
   @@index([pipelineStatusId])
+  // « Les séquences de cet épisode » : la page d'épisode et le filtre des listes de plans
+  // ne posent que cette question, et l'ordre y est le même que ci-dessus.
+  @@index([episodeId, deletedAt, order, code])
 }
 
 model Shot {
@@ -1404,6 +1458,8 @@ model PipelineStatus {
   tasks     Task[]
   shots     Shot[]
   sequences Sequence[]
+  // Un épisode porte un statut du même périmètre (`sequence`) — voir le modèle Episode.
+  episodes  Episode[]
 
   // Comme pour Department, l'unicité réelle passe par deux index partiels posés dans la
   // migration : Postgres tient les NULL pour distincts, un `@@unique` ordinaire laisserait

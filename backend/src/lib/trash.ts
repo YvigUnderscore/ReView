@@ -80,6 +80,18 @@ export async function softDeleteShot(id: number): Promise<void> {
   await prisma.shot.update({ where: { id }, data: { deletedAt: new Date() } });
 }
 
+/**
+ * Épisode : aucune cascade, contrairement à la séquence.
+ *
+ * Un épisode regroupe des séquences, il ne les possède pas. Emporter avec lui ses
+ * séquences — et derrière elles les plans, les versions et les commentaires — ferait
+ * d'un geste de rangement une destruction de production. Le rattachement (`episodeId`)
+ * est conservé tel quel : la restauration rend l'épisode exactement comme il était.
+ */
+export async function softDeleteEpisode(id: number): Promise<void> {
+  await prisma.episode.update({ where: { id }, data: { deletedAt: new Date() } });
+}
+
 export async function softDeleteAsset(id: number): Promise<void> {
   const now = new Date();
   await prisma.$transaction([
@@ -121,6 +133,10 @@ export async function softDeleteShots(ids: number[]): Promise<void> {
   await prisma.shot.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
 }
 
+export async function softDeleteEpisodes(ids: number[]): Promise<void> {
+  await prisma.episode.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
+}
+
 export async function softDeleteAssets(ids: number[]): Promise<void> {
   const now = new Date();
   await prisma.$transaction([
@@ -159,6 +175,10 @@ export async function restoreShot(id: number): Promise<void> {
   await prisma.shot.update({ where: { id }, data: { deletedAt: null } });
 }
 
+export async function restoreEpisode(id: number): Promise<void> {
+  await prisma.episode.update({ where: { id }, data: { deletedAt: null } });
+}
+
 export async function restoreAsset(id: number): Promise<void> {
   await prisma.$transaction([
     prisma.mediaObject.updateMany({ where: { version: { assetId: id } }, data: { deletedAt: null } }),
@@ -193,6 +213,10 @@ export async function restoreSequences(ids: number[]): Promise<void> {
 
 export async function restoreShots(ids: number[]): Promise<void> {
   await prisma.shot.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } });
+}
+
+export async function restoreEpisodes(ids: number[]): Promise<void> {
+  await prisma.episode.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } });
 }
 
 export async function restoreAssets(ids: number[]): Promise<void> {
@@ -270,6 +294,15 @@ export async function purgeSequence(id: number): Promise<void> {
   await prisma.sequence.delete({ where: { id } });
 }
 
+/**
+ * Purge d'un épisode. Ses séquences survivent, simplement détachées (`ON DELETE SET
+ * NULL`) : un épisode est un regroupement, pas un propriétaire — le détruire ne doit
+ * emporter ni plan, ni version, ni commentaire. Aucun objet MinIO à retirer.
+ */
+export async function purgeEpisode(id: number): Promise<void> {
+  await prisma.episode.delete({ where: { id } });
+}
+
 export async function purgeProject(id: number): Promise<void> {
   const project = await prisma.project.findUnique({ where: { id }, select: { slug: true } });
   if (!project) return;
@@ -322,6 +355,9 @@ export async function purgeExpiredTrash(
   await sweep((take) => prisma.version.findMany({ ...page, take }), purgeVersion);
   await sweep((take) => prisma.shot.findMany({ ...page, take }), purgeShot);
   await sweep((take) => prisma.sequence.findMany({ ...page, take }), purgeSequence);
+  // Après les séquences : elles ne dépendent pas de leur épisode (SetNull), mais l'ordre
+  // enfants → parents reste la règle du balayage.
+  await sweep((take) => prisma.episode.findMany({ ...page, take }), purgeEpisode);
   await sweep((take) => prisma.asset.findMany({ ...page, take }), purgeAsset);
   await sweep((take) => prisma.project.findMany({ ...page, take }), purgeProject);
 

@@ -1,6 +1,6 @@
 # Projects & pipeline
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 ![The Shots tab of a project: bulk creation on top, then one card per shot grouped by sequence.](../assets/user-guide/project-shots.png)
 
@@ -8,12 +8,14 @@
 
 ```
 Project
-├── Sequence → Shot → Task → Version → Media
-└── Asset            → Task → Version → Media
+├── [Episode] → Sequence → Shot → Task → Version → Media
+└── Asset                       → Task → Version → Media
 ```
 
 - **Projects** hold everything and carry a status (`ACTIVE`, `ON_HOLD`, `COMPLETED`,
   `ARCHIVED`).
+- **Episodes** group **sequences**. This level is **optional and switched off by
+  default** — see [Episodes (series)](#episodes-series). A feature film never sees it.
 - **Sequences** group **shots** (shot-based work); **assets** (`CHARACTER`, `PROP`,
   `ENVIRONMENT`, `VEHICLE`, `FX`, `OTHER`) live directly under the project
   (asset-based work). An asset can also be linked to sequences and shots.
@@ -187,6 +189,7 @@ detail:
 | Tab | Content | Visible to |
 |-----|---------|-----------|
 | **Overview** | project summary | everyone |
+| **Episodes** | episodes and their sequences | everyone, **only where the level is on** |
 | **Sequences** | the whole-film cut, then one row per sequence | everyone |
 | **Shots** | shot cards grouped by sequence, with a badge count | everyone |
 | **Assets** | asset cards, with a badge count | everyone |
@@ -194,7 +197,7 @@ detail:
 | **Production** | statistics, calendar, Gantt | everyone |
 | **Members** | project memberships and roles | managers |
 | **Shares** | client share links | managers |
-| **Settings** | departments, nomenclature, pipeline, naming rule | managers |
+| **Settings** | departments, nomenclature, pipeline, naming rule, Episode level | managers |
 | **Trash** | soft-deleted entities, restore or purge | managers |
 | **ShotGrid** | synchronisation panel | managers, **only on a linked project** |
 
@@ -242,6 +245,42 @@ remote site, and creating them locally would produce duplicates at the next
 synchronisation.
 
 Longer lists come from [CSV import](../admin-guide/project-organization.md).
+
+## Episodes (series)
+
+Series work adds one level above the sequence. Because a feature film has no use for
+it, the level is **optional per project and off by default**: until it is switched on,
+nothing about it appears anywhere — no tab, no filter, no breadcrumb entry, no
+creation form — and the server refuses every episode request with `409`.
+
+**Switching it on.** Project → **Settings** → *Episode level* (administrators and
+supervisors). The panel states what the switch does and what it will hide.
+
+**Switching it off destroys nothing.** Episodes and the sequences attached to them are
+kept as they are; they simply stop being displayed, and they come back untouched when
+the level is switched on again. Deletion is a separate, explicit action.
+
+**Using it.** An **Episodes** tab appears next to Sequences:
+
+- create episodes in bulk with the same generator as sequences and shots (default
+  prefix `EP`);
+- right-click an episode to open it, move it up or down, or move it to the trash;
+- right-click a sequence to **attach it to an episode** or **detach it**;
+- sequences that belong to no episode are listed in their own group — an in-progress
+  breakdown always leaves some, and hiding them would hide live work.
+
+An episode page (`/episodes/:id`) lists its sequences and, under each, their shots. A
+sequence that belongs to an episode shows a link back to it on its own page.
+
+**Deleting.** Moving an episode to the trash — or purging it — never touches its
+sequences: they survive, simply detached. Trashed episodes are restorable from the
+project **Trash** tab like any other entity.
+
+**ShotGrid.** On a linked project with the level switched on, episodes are imported
+from the site's `Episode` entity and sequences are attached from their `sg_episode`
+field. The remote field is only ever requested for projects that switched the level
+on. If local creation is locked, the *New episode* action points at the site's own
+Episode form. See [ShotGrid integration](../admin-guide/shotgrid-integration.md).
 
 ## Sequence page
 

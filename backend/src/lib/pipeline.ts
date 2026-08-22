@@ -15,6 +15,11 @@ export const resolveProjectIdForProject = async (id: number): Promise<number | n
   return project?.id ?? null;
 };
 
+export const resolveProjectIdForEpisode = async (id: number): Promise<number | null> => {
+  const episode = await prisma.episode.findUnique({ where: { id }, select: { projectId: true } });
+  return episode?.projectId ?? null;
+};
+
 export const resolveProjectIdForSequence = async (id: number): Promise<number | null> => {
   const seq = await prisma.sequence.findUnique({ where: { id }, select: { projectId: true } });
   return seq?.projectId ?? null;

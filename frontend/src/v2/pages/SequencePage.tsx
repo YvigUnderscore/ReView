@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { Clapperboard } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { parseIdParam } from '../lib/slug';
+import { episodePath, parseIdParam } from '../lib/slug';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import { SkeletonRows } from '../components/ui/skeleton';
 import TimelineCard from './timeline/TimelineCard';
@@ -66,6 +67,17 @@ export default function SequencePage() {
       menuExtras={menuExtras}
     >
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
+      {/* Remontée vers l'épisode — le niveau étant facultatif, ce lien n'existe que sur un
+          projet qui l'a activé et une séquence qui y est rattachée. */}
+      {data?.episode && (
+        <Link
+          to={episodePath(data.episode)}
+          aria-label={t('episodes.open')}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <Clapperboard size={14} /> {data.episode.code}
+        </Link>
+      )}
       {data?.description && (
         <p className="mb-5 max-w-3xl whitespace-pre-line text-sm text-muted-foreground">{data.description}</p>
       )}

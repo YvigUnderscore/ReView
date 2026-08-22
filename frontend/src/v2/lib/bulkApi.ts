@@ -6,7 +6,8 @@ import type { TaskStatus, VersionStatus } from '../types/api';
 
 /** Client des actions groupées (13.C) — miroir de `routes/bulk.routes.ts`. */
 
-export type BulkDeleteDomain = 'projects' | 'sequences' | 'shots' | 'assets' | 'versions' | 'media';
+export type BulkDeleteDomain =
+  'projects' | 'episodes' | 'sequences' | 'shots' | 'assets' | 'versions' | 'media';
 
 export const bulkDelete = (domain: BulkDeleteDomain, ids: number[]) =>
   api.post<{ count: number }>(`/api/bulk/${domain}/delete`, { ids });

@@ -53,6 +53,16 @@ export function projectPath(project: { id: number; name?: string | null }, suffi
   return `/projects/${entitySlug(project.name, project.id)}${suffix}`;
 }
 
+/**
+ * Chemin client d'un épisode (`/episodes/{slug}`).
+ *
+ * Le niveau Épisode est facultatif par projet : ce chemin ne mène quelque part que sur
+ * un projet où il est activé — ailleurs, aucun écran ne le construit.
+ */
+export function episodePath(episode: { id: number; code?: string | null }): string {
+  return `/episodes/${entitySlug(episode.code, episode.id)}`;
+}
+
 /** Chemin client d'une review de média (`/review/{slug}`). */
 export function reviewPath(media: { id: number; originalName?: string | null }): string {
   return `/review/${mediaSlug(media.originalName, media.id)}`;

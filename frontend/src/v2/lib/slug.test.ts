@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { slugify, entitySlug, mediaSlug, parseIdParam, projectPath, reviewPath } from './slug';
+import { slugify, entitySlug, mediaSlug, parseIdParam, projectPath, reviewPath, episodePath } from './slug';
 
 describe('slugify', () => {
   it('retire accents, ponctuation et casse', () => {
@@ -59,6 +59,10 @@ describe('helpers de chemin', () => {
     expect(reviewPath({ id: 219, originalName: 'perso_principal_v01.mp4' })).toBe(
       '/review/perso-principal-v01-219',
     );
+  });
+  it('episodePath depuis le code, et tolère un code absent', () => {
+    expect(episodePath({ id: 4, code: 'EP101' })).toBe('/episodes/ep101-4');
+    expect(episodePath({ id: 4, code: null })).toBe('/episodes/4');
   });
   it('round-trip : parseIdParam retrouve l’id des chemins générés', () => {
     const p = projectPath({ id: 390, name: 'Château 2024' });

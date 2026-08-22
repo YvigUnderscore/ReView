@@ -38,6 +38,11 @@ export const qk = {
   projectStats: (id: number) => ['project', id, 'stats'] as const,
   projectSchedule: (id: number) => ['project', id, 'schedule'] as const,
   projectMedia: (id: number, kind?: string) => ['project', id, 'media', kind ?? 'all'] as const,
+  /** Niveau Épisode (facultatif par projet) — le réglage pend sous le projet, comme les
+   *  autres réglages : l'invalider avec lui suffit. */
+  episodeSettings: (projectId: number) => ['project', projectId, 'episodes', 'settings'] as const,
+  episodes: (projectId: number) => ['episodes', projectId] as const,
+  episode: (id: number) => ['episode', id] as const,
   sequences: (projectId: number) => ['sequences', projectId] as const,
   sequence: (id: number) => ['sequence', id] as const,
   shots: (projectId: number) => ['shots', projectId] as const,

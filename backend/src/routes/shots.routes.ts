@@ -42,7 +42,9 @@ async function resolveShotAccess(req: Request, shotId: number): Promise<number> 
 }
 
 /**
- * GET /api/shots?projectId=X[&sequenceId=Y|none] — « none » = shots hors séquence.
+ * GET /api/shots?projectId=X[&sequenceId=Y|none][&episodeId=Z|none] — « none » = hors
+ * séquence, respectivement hors épisode. Le filtre d'épisode traverse la séquence (un
+ * plan n'appartient pas à un épisode) ; absent, il ne restreint rien.
  *
  * Paginé (10.D1) en page/pageSize **ou** en curseur : la réponse porte `total`,
  * `pageCount`, `hasMore` et `nextCursor`, de quoi charger un long-métrage de deux mille
@@ -55,14 +57,15 @@ router.get(
       .object({
         projectId: z.coerce.number().int(),
         sequenceId: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
+        episodeId: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
       })
       .merge(cursorPaginationQuery),
   }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
-    const seq = req.query.sequenceId as unknown as number | 'none' | undefined;
-    res.json(await ShotService.list(projectId, seq, readPagination(req.query)));
+    const q = req.query as unknown as { sequenceId?: number | 'none'; episodeId?: number | 'none' };
+    res.json(await ShotService.list(projectId, q.sequenceId, readPagination(req.query), q.episodeId));
   },
 );
 

@@ -21,6 +21,7 @@
 export type SyncPass =
   | 'statuses'
   | 'users'
+  | 'episodes'
   | 'sequences'
   | 'shots'
   | 'assets'
@@ -33,6 +34,8 @@ export type SyncPass =
 export const ALL_PASSES: readonly SyncPass[] = [
   'statuses',
   'users',
+  // Avant les séquences : le rattachement lit la correspondance des épisodes.
+  'episodes',
   'sequences',
   'shots',
   'assets',
@@ -50,6 +53,7 @@ export const ALL_PASSES: readonly SyncPass[] = [
 export const STRUCTURE_PASSES: readonly SyncPass[] = [
   'statuses',
   'users',
+  'episodes',
   'sequences',
   'shots',
   'assets',
@@ -64,7 +68,10 @@ export const STRUCTURE_PASSES: readonly SyncPass[] = [
  * inconnu ». Les assets n'en portent pas côté ReView, ils s'en passent.
  */
 const PASSES_BY_ENTITY: Readonly<Record<string, readonly SyncPass[]>> = {
-  Sequence: ['statuses', 'sequences'],
+  // Une séquence peut avoir changé d'épisode : la passe « episodes » l'accompagne. Sur un
+  // projet sans le niveau, elle ne fait rien du tout.
+  Sequence: ['statuses', 'episodes', 'sequences'],
+  Episode: ['statuses', 'episodes'],
   Shot: ['statuses', 'shots'],
   Asset: ['assets'],
   Task: ['statuses', 'users', 'tasks'],
@@ -73,7 +80,7 @@ const PASSES_BY_ENTITY: Readonly<Record<string, readonly SyncPass[]>> = {
   Playlist: ['playlists'],
   // Un statut renommé ou retiré touche toute la hiérarchie : elle est relue en entier,
   // mais sans les médias, qui n'ont pas pu changer.
-  Status: ['statuses', 'sequences', 'shots', 'assets', 'tasks'],
+  Status: ['statuses', 'episodes', 'sequences', 'shots', 'assets', 'tasks'],
   // Un compte modifié change les assignations : seules les tâches les portent.
   HumanUser: ['statuses', 'users', 'tasks'],
 };

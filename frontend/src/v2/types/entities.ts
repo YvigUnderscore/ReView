@@ -32,6 +32,11 @@ export interface Sequence {
   pipelineStatusId?: number | null;
   /** Override pipeline (résolution/fps) hérité du projet — Phase 18/19. */
   settings?: PipelineOverride;
+  /**
+   * Épisode d'appartenance (niveau facultatif par projet, éteint par défaut).
+   * `null`/absent = séquence hors épisode — l'état normal d'un long-métrage.
+   */
+  episodeId?: number | null;
 }
 export type SequenceRef = Pick<Sequence, 'id' | 'code' | 'name'>;
 /** GET /api/sequences?projectId= */
