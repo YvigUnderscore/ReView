@@ -67,6 +67,35 @@ describe('requireScope', () => {
 
   it('expose le scope exigé, que lit le générateur OpenAPI', () => {
     expect(requireScope('media:read').scope).toBe('media:read');
+    expect(requireScope('media:read').scopes).toEqual(['media:read']);
+  });
+
+  /**
+   * Publication depuis un DCC : une version ET un média. Un token qui ne porte que l'un
+   * des deux doit être refusé, et le message doit nommer celui qui manque.
+   */
+  it('exige tous les scopes déclarés, et refuse sur le premier manquant', () => {
+    const partial = requestOf({ user: sessionUser, apiToken: { id: 1, scopes: ['versions:write'] } });
+    const err = run(requireScope('versions:write', 'media:write'), partial);
+    expect((err as AppError).statusCode).toBe(403);
+    expect((err as AppError).message).toContain('media:write');
+
+    const reversed = run(requireScope('media:write', 'versions:write'), partial);
+    expect((reversed as AppError).message).toContain('media:write');
+  });
+
+  it('accepte un token qui porte les deux scopes, ou le write hérité', () => {
+    const both = requestOf({
+      user: sessionUser,
+      apiToken: { id: 1, scopes: ['versions:write', 'media:write'] },
+    });
+    const legacy = requestOf({ user: sessionUser, apiToken: { id: 1, scopes: ['write'] } });
+    expect(run(requireScope('versions:write', 'media:write'), both)).toBeUndefined();
+    expect(run(requireScope('versions:write', 'media:write'), legacy)).toBeUndefined();
+  });
+
+  it('expose la liste complète des scopes exigés', () => {
+    expect(requireScope('versions:write', 'media:write').scopes).toEqual(['versions:write', 'media:write']);
   });
 });
 

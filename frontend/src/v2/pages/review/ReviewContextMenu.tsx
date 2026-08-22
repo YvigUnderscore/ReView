@@ -44,6 +44,7 @@ import type { Shape } from '../../components/AnnotationCanvas';
 import { buildContactSheet } from './contactSheet';
 import { frameLink } from './deepLink';
 import AddToPlaylistDialog from '../../components/AddToPlaylistDialog';
+import { NotesExportSubmenu } from '../../components/NotesExportMenu';
 import { useAuth } from '../../stores/useAuth';
 import { useT } from '../../i18n';
 
@@ -273,6 +274,10 @@ export default function ReviewContextMenu({
             </ContextMenuItem>
           </>
         )}
+        {/* Sortie des notes du média courant. Elle n'existait que dans un onglet du dock —
+            on la cherche ici, où l'on cherche déjà « télécharger la frame ». */}
+        <ContextMenuSeparator />
+        <NotesExportSubmenu scope="media" id={data.media.id} />
       </ContextMenuContent>
       {canPlaylist && (
         <AddToPlaylistDialog

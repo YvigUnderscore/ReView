@@ -7,6 +7,8 @@ import { Pencil, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
+import EntityContextMenu from '../components/ui/entity-menu';
+import { useNotesExportEntry } from '../lib/useNotesExportMenu';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { SkeletonRows } from '../components/ui/skeleton';
@@ -51,6 +53,10 @@ export default function PlaylistPage() {
   const reorder = useReorderPlaylist(playlistId, projectId);
   const rename = useRenamePlaylist(playlistId, projectId);
   const [editingName, setEditingName] = useState<string | null>(null);
+  // Sortie des notes de la playlist entière — CSV, planche, et surtout EDL/OTIO, les deux
+  // formats que la salle de montage sait relire. Au clic droit sur l'en-tête : la page
+  // n'a pas de dock où loger un panneau Export, et un bouton de plus n'apporterait rien.
+  const notesExport = useNotesExportEntry({ scope: 'playlist', id: playlistId });
 
   const busy = add.isPending || removeItem.isPending || reorder.isPending;
   const presentVersionIds = useMemo(
@@ -86,42 +92,44 @@ export default function PlaylistPage() {
       breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail={playlist?.name ?? ''} />}
       width="fluid"
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        {editingName !== null ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveName();
-            }}
-          >
-            <Input
-              autoFocus
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              onBlur={saveName}
-              onKeyDown={(e) => e.key === 'Escape' && setEditingName(null)}
-              className="h-9 w-64"
-            />
-          </form>
-        ) : (
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold">{playlist?.name ?? t('playlist.title')}</h1>
-            {canEdit && playlist && (
-              <button
-                onClick={() => setEditingName(playlist.name)}
-                title={t('playlist.rename')}
-                aria-label={t('playlist.rename')}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              >
-                <Pencil size={15} />
-              </button>
-            )}
-          </div>
-        )}
-        <Button size="sm" onClick={playFirst} disabled={!playlist || playlist.items.length === 0}>
-          <Play size={15} /> {t('playlist.play')}
-        </Button>
-      </div>
+      <EntityContextMenu entries={[notesExport]}>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {editingName !== null ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveName();
+              }}
+            >
+              <Input
+                autoFocus
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => e.key === 'Escape' && setEditingName(null)}
+                className="h-9 w-64"
+              />
+            </form>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">{playlist?.name ?? t('playlist.title')}</h1>
+              {canEdit && playlist && (
+                <button
+                  onClick={() => setEditingName(playlist.name)}
+                  title={t('playlist.rename')}
+                  aria-label={t('playlist.rename')}
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <Pencil size={15} />
+                </button>
+              )}
+            </div>
+          )}
+          <Button size="sm" onClick={playFirst} disabled={!playlist || playlist.items.length === 0}>
+            <Play size={15} /> {t('playlist.play')}
+          </Button>
+        </div>
+      </EntityContextMenu>
 
       {playlistQ.error && <p className="mb-4 text-sm text-destructive">{playlistQ.error.message}</p>}
 

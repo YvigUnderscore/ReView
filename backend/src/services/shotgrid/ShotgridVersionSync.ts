@@ -11,7 +11,6 @@ import { logger } from '../../lib/logger';
 import { resolveStorageContextForVersion } from '../../lib/pipeline';
 import { storage, StorageService } from '../StorageService';
 import { enqueueMediaJob } from '../JobService';
-import { emitToProject } from '../SocketService';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import {
   asDate,
@@ -27,7 +26,7 @@ import { mapSgToLocal, shouldImportMedia, upsertLink, type VersionLinkData } fro
 import { can } from './shotgridSettings';
 import { sgMediaName } from '../../lib/mediaNaming';
 import { realignMediaNames } from './ShotgridMediaNaming';
-import { noteUnknownStatus, type PullContext } from './ShotgridPullService';
+import { noteUnknownStatus, touch, type PullContext } from './ShotgridPullService';
 
 /**
  * Import des Media Publishes : une Version ShotGrid devient une Version ReView avec
@@ -270,12 +269,9 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
   // Reprise des médias importés avant l'alignement des noms : idempotent, et sans
   // migration — le code de la Version n'est connu qu'ici.
   await realignMediaNames(ctx, version.id, name);
-  emitToProject(ctx.connection.projectId, 'version:update', {
-    projectId: ctx.connection.projectId,
-    id: version.id,
-    taskId: version.taskId,
-    assetId: version.assetId,
-  });
+  // Passe par le collecteur : une passe complète alignait douze mille versions, donc
+  // douze mille émissions. `touch` émet tout de suite quand personne n'accumule.
+  touch(ctx, 'version', version.id, { taskId: version.taskId, assetId: version.assetId });
 
   const previous = existingLink?.data as VersionLinkData | undefined;
   const linkData: VersionLinkData = {

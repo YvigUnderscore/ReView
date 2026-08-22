@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { prisma } from '../../lib/prisma';
 import { annotationToSvg } from '../../lib/annotationSvg';
+import { escapeHtml } from '../../lib/html';
 import { mediaSourceKey } from '../MediaService';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
@@ -145,8 +146,8 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
         // La provenance est portée par le contenu : elle survit à l'export, au copier
         // et à la lecture par quelqu'un qui ne connaît pas l'intégration.
         content: `<p><em>ShotGrid</em></p>${
-          subject ? `<p><strong>${escapeHtml(subject)}</strong></p>` : ''
-        }<p>${escapeHtml(content)}</p>`,
+          subject ? `<p><strong>${escapeLines(subject)}</strong></p>` : ''
+        }<p>${escapeLines(content)}</p>`,
         createdAt: asDate(record.created_at) ?? new Date(),
       },
     });
@@ -403,8 +404,13 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+/**
+ * Texte nu d'une note ShotGrid → HTML de commentaire : l'échappement est celui de
+ * `lib/html` (six caractères, guillemet compris), les retours à la ligne deviennent des
+ * `<br>`. La copie locale qui vivait ici n'échappait ni `"` ni `'`.
+ */
+function escapeLines(text: string): string {
+  return escapeHtml(text).replace(/\n/g, '<br>');
 }
 
 function asEntityRefs(value: unknown): Array<{ id: number; type: string; name?: string }> {

@@ -117,16 +117,27 @@ router.post(
 // GET /api/client/:token/media/:id/url — URL présignée d'un média DE LA PORTÉE (session requise).
 // Vidéo : sert le dérivé client (slate en tête, 35.A) s'il existe — `slateSec` permet au
 // front de décaler les timestamps de commentaires (le slate n'existe pas côté review interne).
+// 3D : `glbUrl` sert le dérivé de conversion. Un .fbx, un .obj ou un .usd n'est lisible par
+// aucun navigateur ; le viewer invité ouvrait donc l'original et n'affichait rien, alors
+// qu'un modèle déjà livré en .glb s'ouvrait très bien. Le dérivé appartient au même média,
+// donc à la même portée : `findShareMedia` a déjà tranché l'accès, et l'URL est présignée
+// en lecture seule comme toutes les autres.
 router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req, res) => {
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
   const media = await findShareMedia(share, id);
   logMediaAccess({ mediaObjectId: id, shareLinkId: share.id, ip: req.ip }); // 36.E
-  const meta = (media.metadata ?? {}) as { clientProxyKey?: string; slateSec?: number };
+  const meta = (media.metadata ?? {}) as { clientProxyKey?: string; slateSec?: number; glbKey?: string };
   const clientKey = typeof meta.clientProxyKey === 'string' ? meta.clientProxyKey : null;
+  const glbKey = typeof meta.glbKey === 'string' ? meta.glbKey : null;
+  const [url, glbUrl] = await Promise.all([
+    storage.getPresignedGetUrl(clientKey ?? mediaSourceKey(media)),
+    glbKey ? storage.getPresignedGetUrl(glbKey) : Promise.resolve(null),
+  ]);
   res.json({
-    url: await storage.getPresignedGetUrl(clientKey ?? mediaSourceKey(media)),
+    url,
     slateSec: clientKey && typeof meta.slateSec === 'number' ? meta.slateSec : 0,
+    glbUrl,
   });
 });
 

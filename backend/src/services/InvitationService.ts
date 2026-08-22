@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
+import { escapeHtml } from '../lib/html';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
 import { mailLayout, mailButton, MAIL_ACCENT, MAIL_MUTED } from '../lib/mailTemplate';
 import { displayName } from '../lib/userView';
@@ -35,8 +36,6 @@ const INVITATION_LOCALE: Locale = 'en';
 
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
 /** URL de la page d'activation portée par l'email. */
 export function invitationUrl(token: string): string {
   return `${env.APP_URL ?? ''}/invite/${token}`;
@@ -52,13 +51,13 @@ export function renderInvitationHtml(
   const intro = inviterName
     ? t(locale, 'invite.introBy', { inviter: inviterName })
     : t(locale, 'invite.intro');
-  const content = `<p>${esc(t(locale, 'invite.greeting', { name: recipientName }))}</p>
-<p>${esc(intro)}</p>
+  const content = `<p>${escapeHtml(t(locale, 'invite.greeting', { name: recipientName }))}</p>
+<p>${escapeHtml(intro)}</p>
 ${mailButton(url, t(locale, 'invite.cta'))}
-<p style="color:${MAIL_MUTED};font-size:12px">${esc(t(locale, 'invite.expiry', { days: INVITATION_TTL_DAYS }))}</p>
-<p style="color:${MAIL_MUTED};font-size:12px">${esc(t(locale, 'invite.fallback'))}<br />
-<a href="${url}" style="color:${MAIL_ACCENT};word-break:break-all">${esc(url)}</a></p>
-<p style="color:${MAIL_MUTED};font-size:12px">${esc(t(locale, 'invite.ignore'))}</p>`;
+<p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.expiry', { days: INVITATION_TTL_DAYS }))}</p>
+<p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.fallback'))}<br />
+<a href="${url}" style="color:${MAIL_ACCENT};word-break:break-all">${escapeHtml(url)}</a></p>
+<p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.ignore'))}</p>`;
   // Le texte d'aperçu, celui que la boîte de réception affiche avant l'ouverture :
   // sans lui, elle y répète le nom du studio, identique d'un message à l'autre.
   return mailLayout(locale, t(locale, 'invite.title'), content, t(locale, 'invite.preview'));

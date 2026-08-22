@@ -20,6 +20,10 @@ import { idParam, requireMediaProject } from './helpers';
  * L'idempotence est branchée ici : c'est l'écriture la plus coûteuse à rejouer à
  * l'aveugle (une version en double dans une review), et celle qui part le plus souvent
  * d'un poste dont la connexion au studio n'est pas garantie.
+ *
+ * Les deux appels exigent `versions:write` **et** `media:write` : la publication crée une
+ * version, mais elle ouvre aussi un dépôt dans le stockage puis y attache un média. Un
+ * token qui ne porte que le premier écrivait dans le second sans l'avoir demandé.
  */
 const router = Router();
 
@@ -31,7 +35,7 @@ const sha256 = z
 // POST /api/v1/publish — ouvre la publication et renvoie l'URL d'envoi
 router.post(
   '/',
-  requireScope('versions:write'),
+  requireScope('versions:write', 'media:write'),
   idempotency,
   validate({
     body: z.object({
@@ -77,7 +81,7 @@ router.post(
 // POST /api/v1/publish/:id/complete — finalise l'envoi et publie
 router.post(
   '/:id/complete',
-  requireScope('versions:write'),
+  requireScope('versions:write', 'media:write'),
   idempotency,
   validate({
     params: idParam,

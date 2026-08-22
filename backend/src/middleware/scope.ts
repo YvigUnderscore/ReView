@@ -14,25 +14,43 @@ import { forbidden, unauthorized } from '../lib/errors';
  * requêtes portant un token d'API, dont il restreint le pouvoir *en deçà* de celui du
  * porteur : un token ne donne jamais plus que ce que son porteur peut faire.
  */
-/** Middleware de scope portant le scope exigé — lu par le générateur OpenAPI. */
+/** Middleware de scope portant les scopes exigés — lu par le générateur OpenAPI. */
 export interface ScopeMiddleware {
   (req: Request, res: Response, next: NextFunction): void;
+  /**
+   * Premier scope exigé. Conservé pour les lecteurs qui n'en attendent qu'un ; la liste
+   * complète est dans `scopes`, et c'est elle qu'il faut documenter.
+   */
   scope: Scope;
+  /** Tous les scopes exigés, dans l'ordre de déclaration. */
+  scopes: readonly Scope[];
 }
 
-export const requireScope = (scope: Scope): ScopeMiddleware => {
+/**
+ * Exige un ou plusieurs scopes. Une route qui touche deux familles les nomme toutes les
+ * deux — la publication depuis un DCC crée une version ET dépose un média, et n'exiger
+ * que `versions:write` laissait un token écrire dans le stockage sans l'avoir demandé.
+ *
+ * Le refus porte sur le **premier** scope manquant, dans l'ordre déclaré : le message dit
+ * ce qu'il faut ajouter au token, sans révéler l'ensemble des exigences d'un coup.
+ */
+export const requireScope = (...scopes: [Scope, ...Scope[]]): ScopeMiddleware => {
   const middleware = (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       next(unauthorized());
       return;
     }
-    if (req.apiToken && !hasScope(req.apiToken.scopes, scope)) {
-      next(forbidden(`Scope « ${scope} » is required`, 'SCOPE_REQUIRED'));
-      return;
+    if (req.apiToken) {
+      const missing = scopes.find((s) => !hasScope(req.apiToken!.scopes, s));
+      if (missing !== undefined) {
+        next(forbidden(`Scope « ${missing} » is required`, 'SCOPE_REQUIRED'));
+        return;
+      }
     }
     next();
   };
-  middleware.scope = scope;
+  middleware.scope = scopes[0];
+  middleware.scopes = scopes;
   return middleware;
 };
 

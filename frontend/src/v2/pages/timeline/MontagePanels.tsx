@@ -8,6 +8,7 @@ import { Group, ReadRow, Row } from '../review/chrome/DockGroup';
 import InfoPanel from '../review/panels/InfoPanel';
 import type { PanelId } from '../review/chrome/panels';
 import TimelineExportButton from './TimelineExportButton';
+import { NotesExportButtons } from '../../components/NotesExportMenu';
 import { formatDuration } from '../review/timelineNav';
 import type { DepartmentSummary, TimelineView } from '../../types/api';
 import { useT } from '../../i18n';
@@ -95,14 +96,23 @@ export default function MontagePanels({
 
   if (panel === 'export')
     return (
-      <Group title={t('review.export.media')}>
-        <p className="text-xs leading-snug text-muted-foreground">{t('timeline.exportHint')}</p>
-        <TimelineExportButton
-          timelineId={timeline.id}
-          disabled={!timeline.items.some((it) => it.mediaId !== null)}
-          icon={<Download size={13} />}
-        />
-      </Group>
+      <>
+        <Group title={t('review.export.media')}>
+          <p className="text-xs leading-snug text-muted-foreground">{t('timeline.exportHint')}</p>
+          <TimelineExportButton
+            timelineId={timeline.id}
+            disabled={!timeline.items.some((it) => it.mediaId !== null)}
+            icon={<Download size={13} />}
+          />
+        </Group>
+        {/* Le montage est la seule portée qui porte un timecode continu : c'est ici que
+            l'EDL et l'OTIO ont un sens, et c'est par eux que les retours repassent en
+            salle de montage. */}
+        <Group title={t('notesExport.title')}>
+          <NotesExportButtons scope="timeline" id={timeline.id} />
+          <span className="rv-optbar__hint whitespace-normal">{t('notesExport.editorialHint')}</span>
+        </Group>
+      </>
     );
 
   // Les autres onglets du dock vidéo (image, guides, comparaison) n'ont pas d'objet ici :
