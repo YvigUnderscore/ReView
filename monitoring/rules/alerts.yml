@@ -1,0 +1,151 @@
+# Règles d'alerte ReView (profil compose `monitoring`).
+#
+# La documentation listait des requêtes PromQL « à surveiller » que rien n'exécutait. Voici
+# les mêmes questions, posées par Prometheus toutes les quinze secondes.
+#
+# Principe : une alerte réveille quelqu'un, donc chacune décrit une panne QUE L'EXPLOITANT
+# PEUT TRAITER, avec un `for:` assez long pour ne pas se déclencher sur un redémarrage ou
+# une rafale de travail normale. `severity: critical` = le studio ne peut pas travailler ;
+# `warning` = à regarder aujourd'hui.
+#
+# Annotations en anglais : elles sont lues par des exploitants tiers, comme DOCUMENTATION/.
+groups:
+  - name: review-availability
+    rules:
+      - alert: ReviewBackendDown
+        expr: up{job="review-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'ReView API is not answering scrapes'
+          description: >-
+            Prometheus cannot reach backend:3000/metrics for 2 minutes. Check
+            `docker compose ps backend` and `docker compose logs --tail=100 backend`.
+            The API is single-replica: this means the studio is down.
+
+      - alert: ReviewWorkerDown
+        expr: up{job="review-worker"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'ReView worker is not answering scrapes'
+          description: >-
+            No media is being transcoded while this fires. Uploads keep succeeding and pile
+            up in the queue. Check `docker compose logs --tail=100 worker`; a worker killed
+            by the OOM killer restarts on its own (`restart: always`) — if it flaps, raise
+            WORKER_MEM_LIMIT.
+
+  - name: review-queues
+    rules:
+      - alert: ReviewQueueBacklog
+        expr: review_queue_jobs{state="waiting"} > 20
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Queue {{ $labels.queue }} has been backing up for 15 minutes'
+          description: >-
+            {{ $value }} jobs waiting. If `active` is 0 at the same time, the worker is not
+            consuming (container down, or Redis unreachable from it). Otherwise this is a
+            capacity problem: scale with `docker compose up -d --scale worker=3`.
+
+      - alert: ReviewQueueFailures
+        expr: review_queue_jobs{state="failed"} > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Queue {{ $labels.queue }} holds failed jobs'
+          description: >-
+            {{ $value }} failed jobs left in the queue. Inspect them in Admin → Jobs and
+            replay them there; a job that fails three times stays failed until replayed.
+
+      - alert: ReviewMediaJobStuck
+        expr: review_queue_jobs{queue="media",state="active"} > 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: 'A media job has been active for an hour'
+          description: >-
+            Long masters do exist, so this is a hint rather than a verdict. Cross-check with
+            review_worker_job_duration_seconds: if nothing has completed in the meantime, the
+            job is stuck and the media is frozen in PROCESSING. Restarting the worker
+            requeues it.
+
+      - alert: ReviewWorkerJobFailureRate
+        expr: |
+          sum by (queue) (increase(review_worker_jobs_total{outcome="failed"}[30m])) > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Repeated job failures on queue {{ $labels.queue }}'
+          description: >-
+            More than three failures in half an hour. A single corrupt file explains one;
+            a series usually means a missing encoder (VIDEO_ENCODER=h264_nvenc without a
+            GPU), MinIO refusing writes, or a full disk.
+
+  - name: review-http
+    rules:
+      - alert: ReviewHttpErrorRatio
+        expr: |
+          sum(rate(review_http_request_duration_seconds_count{status=~"5.."}[10m]))
+            / sum(rate(review_http_request_duration_seconds_count[10m])) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'More than 5% of API responses are 5xx'
+          description: >-
+            Ratio over the last 10 minutes: {{ $value | humanizePercentage }}. Look at
+            `docker compose logs --tail=200 backend`; a dead database pool shows up here
+            before anywhere else.
+
+      - alert: ReviewHttpLatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(review_http_request_duration_seconds_bucket[10m]))
+          ) > 2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'API p95 latency above 2 s'
+          description: >-
+            Sustained slowness. Usual suspects: a Postgres query without an index on a large
+            table, the storage report materialising the whole bucket, or the host swapping.
+
+  - name: review-runtime
+    rules:
+      - alert: ReviewProcessRestarting
+        expr: |
+          (
+            time() - process_start_time_seconds{job=~"review-backend|review-worker"}
+          ) < 600
+          and
+          changes(process_start_time_seconds{job=~"review-backend|review-worker"}[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.job }} restarted more than three times in an hour'
+          description: >-
+            `restart: always` hides crash loops. Frequent causes: environment validation
+            failing at boot (the process exits immediately, stderr lists the fields), a
+            failed Prisma migration, or the OOM killer.
+
+      - alert: ReviewVersionMismatch
+        expr: count(count by (version) (review_worker_info)) > 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Two different ReView versions are running at once'
+          description: >-
+            Normal for a few minutes during an update; after that it means an image switch
+            only half happened. Compare `docker compose images` with the version reported by
+            /api/version.

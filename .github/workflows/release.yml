@@ -1,0 +1,226 @@
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Publication d'une version : contrôle du CHANGELOG, suite de validation, construction et
+# poussée des trois images, puis création de la release GitHub.
+#
+# Déclenchement : une étiquette `vX.Y.Z` poussée sur le dépôt.
+#
+#   git tag -a v2.3.0 -m "ReView 2.3.0" && git push origin v2.3.0
+#
+# Rien n'est publié sans que `scripts/validate.sh` soit vert : le principe protégé du dépôt
+# vaut a fortiori pour ce qui sort vers des studios tiers. Le job `guard` refuse en outre
+# une étiquette absente de CHANGELOG.md — une version sans notes n'est pas installable par
+# quelqu'un qui ne nous connaît pas.
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*']
+  # Essai à blanc : construit tout, ne pousse rien.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Étiquette à répéter à blanc (aucune publication)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  REGISTRY: ghcr.io
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # L'étiquette est-elle publiable ? (version SemVer, notes de version présentes)
+  # ---------------------------------------------------------------------------
+  guard:
+    name: Étiquette et CHANGELOG
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      publish: ${{ steps.resolve.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Résoudre la version
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            version="${GITHUB_REF#refs/tags/}"
+            publish=true
+          else
+            version="${{ inputs.ref || 'v0.0.0-dry-run' }}"
+            publish=false
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "Version : $version (publication : $publish)"
+
+      - name: Exiger une entrée de CHANGELOG
+        if: steps.resolve.outputs.publish == 'true'
+        run: |
+          version="${{ steps.resolve.outputs.version }}"
+          if ! grep -q "^## $version " CHANGELOG.md; then
+            echo "::error::CHANGELOG.md n'a pas de section « ## $version — … »." >&2
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # La suite de validation du dépôt, telle quelle. Aucune image n'est poussée avant.
+  # ---------------------------------------------------------------------------
+  validate:
+    name: validate.sh
+    runs-on: ubuntu-latest
+    needs: guard
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgresql://validate:validate@localhost:5432/validate
+      JWT_SECRET: ci-placeholder-secret-not-used-outside-ci
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY: ci-placeholder
+      S3_SECRET_KEY: ci-placeholder-secret
+      S3_BUCKET: review
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Dépendances backend (npm ci)
+        run: npm ci
+        working-directory: backend
+
+      - name: Dépendances frontend (npm ci)
+        run: npm ci
+        working-directory: frontend
+
+      - name: Suite de validation
+        run: bash scripts/validate.sh
+
+  # ---------------------------------------------------------------------------
+  # Trois images : API, worker (Blender + USD), frontend (embarque DOCUMENTATION/).
+  #
+  # linux/amd64 seulement : la cible réelle est un serveur ou un NAS x86, et l'image worker
+  # embarque Blender — une construction arm64 émulée prendrait des heures pour un usage que
+  # personne n'a demandé. À rouvrir le jour où un studio tourne sur ARM.
+  # ---------------------------------------------------------------------------
+  images:
+    name: Image ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    needs: [guard, validate]
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: review-backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            usd: '0'
+          - image: review-worker
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            usd: '1'
+          - image: review-frontend
+            context: .
+            dockerfile: ./frontend/Dockerfile
+            usd: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authentification au registre
+        if: needs.guard.outputs.publish == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: ${{ needs.guard.outputs.publish == 'true' }}
+          # `INSTALL_USD_TOOLS` distingue l'image worker de l'image API ; les trois autres
+          # arguments servent à l'instance à se nommer (/api/version, écran « À propos »).
+          build-args: |
+            INSTALL_USD_TOOLS=${{ matrix.usd }}
+            APP_VERSION=${{ needs.guard.outputs.version }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:${{ needs.guard.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image }}
+            org.opencontainers.image.version=${{ needs.guard.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # ---------------------------------------------------------------------------
+  # Release GitHub, corps = la section de CHANGELOG.md de cette version.
+  # `gh` plutôt qu'une action tierce : une chaîne de publication n'a pas à dépendre d'un
+  # dépôt d'action qu'on ne relit jamais.
+  # ---------------------------------------------------------------------------
+  publish:
+    name: Release GitHub
+    runs-on: ubuntu-latest
+    needs: [guard, images]
+    if: needs.guard.outputs.publish == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extraire les notes de version
+        run: |
+          version="${{ needs.guard.outputs.version }}"
+          awk -v v="## $version " '
+            index($0, v) == 1 { inside = 1; next }
+            inside && /^## / { exit }
+            inside { print }
+          ' CHANGELOG.md > release-notes.md
+          {
+            echo ""
+            echo "### Images"
+            echo ""
+            echo '```'
+            echo "REVIEW_IMAGE_PREFIX=${{ env.REGISTRY }}/${{ github.repository_owner }}"
+            echo "REVIEW_IMAGE_TAG=$version"
+            echo '```'
+            echo ""
+            echo "Installation : \`bash scripts/install.sh\` — mise à jour : \`bash scripts/update.sh --version $version\`."
+            echo "Source (AGPL-3.0-or-later) : https://github.com/${{ github.repository }}"
+          } >> release-notes.md
+          cat release-notes.md
+
+      - name: Créer la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ needs.guard.outputs.version }}" \
+            --title "ReView ${{ needs.guard.outputs.version }}" \
+            --notes-file release-notes.md

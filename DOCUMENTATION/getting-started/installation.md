@@ -1,6 +1,6 @@
 # Installation
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 ReView ships as a Docker Compose stack: one instance = one studio. Everything
 (database, object storage, job queue, backend, worker, frontend) runs from a single
@@ -14,6 +14,57 @@ ReView ships as a Docker Compose stack: one instance = one studio. Everything
 - (Development only) Node.js 22+ and npm. Both images pin Node 22
   (`backend/Dockerfile`: `node:22-slim`, `frontend/Dockerfile`: `node:22-alpine`);
   Vite 7 no longer supports Node 18.
+
+## Install a studio instance
+
+```bash
+git clone https://github.com/YvigUnderscore/ReView.git ReView-app
+cd ReView-app
+bash scripts/install.sh
+```
+
+The installer asks four questions — domain, TLS mode, timezone, where the data lives —
+and does everything else: it generates every secret with `openssl rand -hex 32`, writes
+`.env`, creates the data directories, renders the nginx configuration for your domain,
+obtains or generates a certificate, starts the stack, waits until the API reports its
+dependencies healthy, and prints the URL of the setup wizard.
+
+Nothing has to be edited by hand, and **no versioned file is modified**: the site-specific
+output goes to `.env` and `deploy/` (rendered `nginx.conf` plus a compose overlay), so a
+later `git pull` or `git checkout vX.Y.Z` still applies cleanly.
+
+Non-interactive (for a configuration-managed host):
+
+```bash
+bash scripts/install.sh --non-interactive \
+  --domain review.studio.tld --tls letsencrypt --email ops@studio.tld \
+  --timezone Europe/Paris --data-root /mnt/pool/review
+```
+
+| Option | Values | Notes |
+|--------|--------|-------|
+| `--tls letsencrypt` | | Runs certbot standalone; port 80 must be free and DNS must already point here |
+| `--tls selfsigned` | | Works immediately, browsers warn. Fine to start with, switch later |
+| `--tls existing` | | Expects `nginx/certs/fullchain.pem` + `privkey.pem` |
+| `--tls none` | | No bundled front: the app is served in clear on `PORT` and MinIO on `MINIO_API_PORT`, for a host that already has a TLS proxy. That proxy must route `/api/`, `/socket.io/` and the bucket |
+| `--data-root <path>` | | Bind-mounts the Postgres, MinIO and Redis volumes there. On a NAS, point it at the data pool — otherwise media land in `/var/lib/docker/volumes`, i.e. the system pool. Choose it now: moving it later means stopping the stack, copying the volumes and recreating them |
+| `--force` | | Reinstall over an existing `.env` (the old one is kept as `.env.backup-<timestamp>`) |
+
+The installer writes `COMPOSE_FILE` (and `COMPOSE_PATH_SEPARATOR=:`) into `.env`, listing
+exactly the compose files of this instance. Consequence worth knowing: from then on a bare
+`docker compose up -d` starts **your** stack, and the classic mistake — forgetting the
+second `-f`, which silently reloads the development overlay and turns the guards off — is
+no longer possible.
+
+Certificate renewal is not automated by the installer. With `--tls letsencrypt` the
+account and certificates live in `deploy/letsencrypt/`; renew with the same container and
+reload nginx:
+
+```bash
+docker run --rm -p 80:80 -v "$PWD/deploy/letsencrypt:/etc/letsencrypt" certbot/certbot renew
+cp deploy/letsencrypt/live/<domain>/{fullchain,privkey}.pem nginx/certs/
+docker compose restart nginx
+```
 
 ## Quick start (development)
 
@@ -41,12 +92,18 @@ The backend is ready when it logs `✅ ReView 2.0 backend démarré sur le port 
 Check it directly:
 
 ```bash
-curl -s http://localhost:3430/health
+curl -s http://localhost:3430/health          # liveness — is the process up?
+curl -s http://localhost:3430/health/ready    # readiness — Postgres, Redis, MinIO
 ```
 
 ```json
-{ "status": "ok" }
+{ "status": "ok", "version": "2.3.0", "commit": "a1b2c3d4e5f6", "uptimeSec": 12 }
 ```
+
+`/health/ready` answers `503` while a dependency is missing, and names the culprit. Both
+routes are also mounted under `/api/`, which is the only prefix the production front
+proxies — external monitoring must target `https://<domain>/api/health/ready`. Details:
+[Monitoring & operations](../infrastructure/monitoring.md#health-probes).
 
 Then open **http://localhost:3429**. On a fresh database the app redirects to the
 `/setup` page to create the studio and the first administrator account
@@ -168,7 +225,20 @@ by `config/env.ts`:
 `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_API_PORT`, `MINIO_CONSOLE_PORT`,
 `MINIO_BIND`, `DEV_BIND`, `POSTGRES_PORT`, `REDIS_PORT`, `INSTALL_USD_TOOLS`,
 `GRAFANA_PORT`, `GRAFANA_BIND`, `GRAFANA_ADMIN_PASSWORD`, and — for
-`scripts/backup.sh` / `scripts/restore.sh` — `COMPOSE_PROJECT` and `BACKUP_KEEP`.
+`scripts/backup.sh` / `scripts/restore.sh` — `COMPOSE_PROJECT`, `BACKUP_KEEP` and
+`BACKUP_MODE`.
+
+Written by `scripts/install.sh` and `scripts/update.sh`:
+
+| Variable | Written by | Purpose |
+|----------|-----------|---------|
+| `COMPOSE_FILE` | install | The exact compose files of this instance; makes a bare `docker compose` correct |
+| `COMPOSE_PATH_SEPARATOR` | install | `:` — pinned because the default separator is OS-dependent (`;` on Windows) |
+| `SITE_DOMAIN` | install | Domain the nginx configuration was rendered for |
+| `DATA_ROOT` | install | Host path bind-mounted by the volumes of `deploy/compose.site.yml` |
+| `APP_VERSION` | install, update | Version the instance reports (`/api/version`, About panel, metrics) |
+| `REVIEW_IMAGE_PREFIX` | operator | Registry prefix, e.g. `ghcr.io/yvigunderscore`. Its presence switches `update.sh` to registry mode |
+| `REVIEW_IMAGE_TAG` | update | Image tag currently deployed (required by `docker-compose.release.yml`) |
 
 ## Production deployment
 
@@ -218,19 +288,15 @@ See [Monitoring & operations](../infrastructure/monitoring.md).
 ## Updating
 
 ```bash
-git pull
-docker compose up -d --build                                     # development
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build   # production
+bash scripts/update.sh --version v2.3.0
 ```
 
-Migrations are applied by the backend container at startup: `backend/start.sh` runs
-`npx prisma generate`, then `npx prisma migrate deploy`, falling back to
-`npx prisma db push --accept-data-loss` when no versioned migration is present
-(greenfield/dev). The `worker` service waits for the backend healthcheck before
-starting, so it never queries a schema that has not been migrated.
+Backup, switch, migrations, health check, and automatic rollback if the readiness probe
+fails. The full procedure — including what a rollback can and cannot undo — is on its own
+page: [Updating](updating.md).
 
 The frontend image embeds the product documentation (`DOCUMENTATION/` → `/docs` page),
-so rebuilding the frontend refreshes the in-app docs as well.
+so a new frontend image refreshes the in-app docs as well.
 
 ## Troubleshooting
 
@@ -257,6 +323,8 @@ See [Licensing](../development/licensing.md) for the details.
 
 - [Docker stack](docker-stack.md) — what each service does
 - [First run](first-run.md) — setup page, seed accounts
+- [Updating](updating.md) — versions, images, rollback
+- [Backups & restore](../infrastructure/backups.md)
 - [Architecture](../infrastructure/architecture.md)
 - [Security model](../infrastructure/security.md)
 - [Licensing](../development/licensing.md) — AGPL obligations, third-party notices

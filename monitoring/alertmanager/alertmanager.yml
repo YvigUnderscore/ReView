@@ -1,0 +1,58 @@
+# Alertmanager — exemple minimal, à copier puis adapter.
+#
+# Facultatif : sans Alertmanager, les règles de monitoring/rules/alerts.yml restent
+# évaluées et visibles (interface Prometheus, panneau « Alertes actives » du tableau
+# Grafana) ; elles ne partent simplement chez personne.
+#
+# Pour l'activer :
+#   1. décommenter le bloc `alerting:` de monitoring/prometheus.yml ;
+#   2. ajouter le service au profil `monitoring` de docker-compose.yml :
+#
+#        alertmanager:
+#          image: prom/alertmanager:v0.28.1
+#          profiles: ["monitoring"]
+#          volumes:
+#            - ./monitoring/alertmanager:/etc/alertmanager:ro
+#            - alertmanager_data:/alertmanager
+#          logging: *default-logging
+#          restart: always
+#
+#      (plus `alertmanager_data:` dans la section `volumes:`) ;
+#   3. renseigner ci-dessous un vrai SMTP — celui du studio, le même que ReView.
+#
+# Aucun port hôte : Alertmanager n'a pas à être joignable de l'extérieur, Prometheus
+# l'atteint par le réseau du compose.
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.example.tld:587'
+  smtp_from: 'review-alerts@example.tld'
+  smtp_auth_username: 'review-alerts@example.tld'
+  smtp_auth_password: 'CHANGE_ME'
+
+route:
+  receiver: studio-ops
+  # Un incident produit souvent plusieurs alertes (worker mort → file qui monte) :
+  # on les groupe pour n'envoyer qu'un message.
+  group_by: ['alertname', 'job']
+  group_wait: 1m
+  group_interval: 10m
+  # Rappel toutes les quatre heures tant que ce n'est pas réglé — assez pour ne pas
+  # oublier, assez peu pour ne pas être filtré comme du bruit.
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: studio-ops
+      repeat_interval: 1h
+
+receivers:
+  - name: studio-ops
+    email_configs:
+      - to: 'ops@example.tld'
+        send_resolved: true
+
+# Ne pas réveiller pour une file qui monte quand l'API est déjà tombée : la cause est connue.
+inhibit_rules:
+  - source_matchers: ['alertname="ReviewBackendDown"']
+    target_matchers: ['severity="warning"']
+    equal: ['instance_role']

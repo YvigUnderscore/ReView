@@ -6,10 +6,42 @@
   "time": { "from": "now-3h", "to": "now" },
   "panels": [
     {
+      "id": 7,
+      "type": "table",
+      "title": "Alertes actives (monitoring/rules/alerts.yml)",
+      "description": "Règles évaluées par Prometheus. Aucune ligne = rien ne brûle. Ne dépend pas d'Alertmanager : sans lui, les alertes sont visibles ici mais routées nulle part.",
+      "gridPos": { "x": 0, "y": 0, "w": 16, "h": 6 },
+      "targets": [
+        {
+          "expr": "sort_desc(ALERTS{alertstate=\"firing\"})",
+          "instant": true,
+          "format": "table",
+          "legendFormat": "{{alertname}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "Value": true, "__name__": true, "alertstate": true }
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Version en service",
+      "description": "review_worker_info : version et commit du worker. Deux lignes pendant une mise à jour, une seule ensuite.",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
+      "options": { "textMode": "name", "colorMode": "none" },
+      "targets": [{ "expr": "review_worker_info", "instant": true, "legendFormat": "{{version}} ({{commit}})" }]
+    },
+    {
       "id": 1,
       "type": "timeseries",
       "title": "Requêtes HTTP / s (par statut)",
-      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "sum by (status) (rate(review_http_request_duration_seconds_count[5m]))",
@@ -21,7 +53,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Latence HTTP p95 (s)",
-      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le) (rate(review_http_request_duration_seconds_bucket[5m])))",
@@ -33,17 +65,48 @@
       "id": 3,
       "type": "timeseries",
       "title": "Files BullMQ (waiting / active / failed)",
-      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "description": "Les cinq files : media, storage-cleanup, webhooks, timeline-export, shotgrid.",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
       "targets": [
-        { "expr": "review_queue_jobs{state=~\"waiting|active|failed\"}", "legendFormat": "{{queue}} {{state}}" }
+        {
+          "expr": "review_queue_jobs{state=~\"waiting|active|failed\"}",
+          "legendFormat": "{{queue}} {{state}}"
+        }
       ]
     },
     {
       "id": 4,
       "type": "timeseries",
-      "title": "Mémoire process backend (RSS)",
-      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
-      "targets": [{ "expr": "process_resident_memory_bytes", "legendFormat": "RSS" }]
+      "title": "Mémoire des process (RSS)",
+      "description": "API et worker. Le worker est le seul à devoir être généreux (ffmpeg, Blender).",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "targets": [{ "expr": "process_resident_memory_bytes", "legendFormat": "{{job}}" }]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Jobs du worker / min (par issue)",
+      "description": "review_worker_jobs_total : ce que le worker termine réellement, réussites et échecs.",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(review_worker_jobs_total[15m])) * 60",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Durée des jobs p95 (s, par file)",
+      "description": "Une durée qui dérive sans que le volume change annonce un disque saturé ou un encodeur retombé sur le CPU.",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, queue) (rate(review_worker_job_duration_seconds_bucket[30m])))",
+          "legendFormat": "{{queue}}"
+        }
+      ]
     }
   ]
 }

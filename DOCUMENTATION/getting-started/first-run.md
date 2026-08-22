@@ -1,13 +1,13 @@
 # First run
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 ![The home dashboard after signing in: what moved on your projects, and where you left off.](../assets/getting-started/home.png)
 
 ## Setup page
 
-On an empty database, every route redirects to **`/setup`**. This one-time wizard
-creates:
+On an empty database, every route redirects to **`/setup`** — the URL
+`scripts/install.sh` prints when it finishes. This one-time wizard creates:
 
 - the **studio** (name — one ReView instance hosts exactly one studio), and
 - the first **administrator** account.

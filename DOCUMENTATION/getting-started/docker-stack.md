@@ -1,6 +1,6 @@
 # Docker stack
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 `docker-compose.yml` defines **six services started by default**, three more behind
 opt-in profiles, and six named volumes. `docker-compose.override.yml` (development,
@@ -11,7 +11,7 @@ auto-loaded) and `docker-compose.prod.yml` (production, explicit) layer on top.
 | Service | Image / build | Role |
 |---------|---------------|------|
 | `postgres` | `postgres:16-alpine` | Primary database (Prisma schema). No host port in the base file |
-| `minio` | `minio/minio:latest` | S3-compatible object storage for every binary (originals, HLS renditions, thumbnails, attachments, HDRIs) |
+| `minio` | `minio/minio:RELEASE.2025-04-22T22-12-26Z` (pinned, override with `MINIO_VERSION`) | S3-compatible object storage for every binary (originals, HLS renditions, thumbnails, attachments, HDRIs) |
 | `redis` | `redis:7-alpine` | BullMQ queue backend. No host port in the base file, no password |
 | `backend` | built from `backend/` | Express 5 API + Socket.io realtime server. Host port `BPORT` → container `3000` |
 | `worker` | built from `backend/`, `command: node dist/workers/ffmpeg.worker.js` | One process, five BullMQ workers: media processing (FFmpeg/Blender/assimp), storage cleanup, outgoing webhook delivery, timeline export and ShotGrid synchronisation |
@@ -31,7 +31,7 @@ docker compose --profile antivirus up -d
 
 | Service | Profile | Role |
 |---------|---------|------|
-| `prometheus` | `monitoring` | Scrapes `backend:3000/metrics` every 15 s (`monitoring/prometheus.yml`) |
+| `prometheus` | `monitoring` | Scrapes `backend:3000/metrics` and `worker:9101/metrics` every 15 s, and evaluates the alert rules of `monitoring/rules/` (`monitoring/prometheus.yml`) |
 | `grafana` | `monitoring` | Dashboard on `GRAFANA_BIND:GRAFANA_PORT` (default `127.0.0.1:3431`). Sign-up and anonymous access disabled |
 | `clamav` | `antivirus` | `clamav/clamav:stable`. Point `CLAMAV_HOST=clamav` at it on `backend` **and** `worker` |
 
@@ -45,10 +45,15 @@ container start:
 | `postgres` | `pg_isready -U $POSTGRES_USER`, 5 s / 5 s / 10 retries | — |
 | `minio` | `mc ready local`, 5 s / 5 s / 10 retries | — |
 | `redis` | `redis-cli ping`, 5 s / 5 s / 10 retries | — |
-| `backend` | `fetch('http://localhost:3000/health')`, 10 s / 5 s / 10 retries, `start_period: 40s` | `postgres`, `minio`, `redis` healthy |
+| `backend` | `fetch('http://127.0.0.1:3000' + HEALTH_PATH)`, default `/health`, 10 s / 5 s / 10 retries, `start_period: 40s` | `postgres`, `minio`, `redis` healthy |
 | `worker` | none | `postgres`, `minio`, `redis` healthy **and `backend` healthy** |
-| `frontend` | none | `backend` healthy |
+| `frontend` | `wget /index.html`, 30 s / 5 s / 5 retries | `backend` healthy |
 | `clamav` | `clamdscan --ping 1`, 30 s / 10 s / 10 retries, `start_period: 180s` | — |
+
+`/health` is a liveness probe by design — a container is not restarted because Postgres
+is down. Set `HEALTH_PATH=/health/ready` in `.env` to make the container health status
+follow the dependencies instead; see
+[Monitoring & operations](../infrastructure/monitoring.md#health-probes).
 
 The worker waiting on the backend healthcheck is deliberate: the backend applies the
 Prisma migrations during boot (`backend/start.sh`), so the worker never talks to an
@@ -75,7 +80,7 @@ so the ShotGrid development simulator running on the host machine is reachable.
 | Volume | Content | Backed up by `scripts/backup.sh` |
 |--------|---------|-----------------------------------|
 | `pgdata` | PostgreSQL data | yes (`pg_dump -Fc`) |
-| `miniodata` | All media objects | yes (tar of the volume) |
+| `miniodata` | All media objects | yes (incremental mirror + hard-linked snapshot; `BACKUP_MODE=archive` for a whole-volume tar) |
 | `redisdata` | Queue state | no — rebuildable |
 | `clamav_db` | ClamAV virus database (profile) | no |
 | `prometheus_data` | Metrics TSDB (profile) | no |
@@ -116,6 +121,8 @@ via the `prebuild` script). The root `.dockerignore` keeps that context small.
 |------|--------|--------|
 | `docker-compose.override.yml` | automatically by `docker compose up` | Publishes PostgreSQL and Redis on `DEV_BIND` (default `127.0.0.1`), forces `NODE_ENV=development` on `backend` and `worker` |
 | `docker-compose.prod.yml` | only with an explicit `-f` | Adds the TLS `nginx` service, removes every host port from `frontend`/`backend`/`minio`, makes the critical secrets mandatory |
+| `docker-compose.release.yml` | only with an explicit `-f` | Runs the **published images** (`REVIEW_IMAGE_PREFIX`/`REVIEW_IMAGE_TAG`) instead of building them on the server |
+| `deploy/compose.site.yml` | written by `scripts/install.sh` | Everything specific to this site: the rendered nginx configuration, and the volumes bind-mounted under `DATA_ROOT` |
 
 ```bash
 # development
@@ -124,9 +131,15 @@ docker compose up -d
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
+On an instance created by `scripts/install.sh` this is settled once and for all: the
+installer writes `COMPOSE_FILE` (plus `COMPOSE_PATH_SEPARATOR=:`) into `.env` with the
+exact list of files, so a bare `docker compose up -d` starts the right stack and cannot
+fall back to the development overlay.
+
 ## Related pages
 
 - [Installation](installation.md) — environment variables, ports, production guards
+- [Updating](updating.md) — published images, rollback
 - [Architecture](../infrastructure/architecture.md)
 - [Jobs & workers](../infrastructure/jobs-and-workers.md)
 - [MinIO storage](../infrastructure/storage-minio.md)

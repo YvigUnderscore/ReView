@@ -1,45 +1,89 @@
 # Monitoring & operations
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
-## What "healthy" does and does not mean
+## Health probes
+
+Two questions, two answers. Asking the wrong one is how a backend with a dead connection
+pool keeps receiving traffic.
+
+| Endpoint | Question | Touches | Fails when |
+|----------|----------|---------|-----------|
+| `GET /health`, `GET /health/live` | Is the process alive? | nothing | the process is gone |
+| `GET /health/ready` | Can it actually serve? | Postgres, Redis, MinIO | any dependency is unreachable (**503**) |
+
+Both are also mounted under `/api/` (`/api/health`, `/api/health/ready`). That matters in
+production: the TLS front only proxies `/api/`, `/socket.io/` and signed `/review/`, so
+`GET /health` on the public domain is answered by the SPA — 200 HTML, whatever the API is
+doing. **External monitoring must use `https://<domain>/api/health/ready`.**
 
 ```bash
 curl -s http://localhost:3430/health
 ```
 
 ```json
-{ "status": "ok" }
+{ "status": "ok", "version": "2.3.0", "commit": "a1b2c3d4e5f6", "uptimeSec": 91422 }
 ```
 
-`GET /health` is a **liveness probe only**: it touches neither the database, nor Redis,
-nor MinIO. The compose healthcheck for the `backend` service calls exactly this
-endpoint, and `worker`, `frontend` and the production `nginx` all gate on it. A green
-`docker compose ps` therefore proves the process is up — nothing more.
-
-The container probe reads its path from **`HEALTH_PATH`** (default `/health`), so once
-the API exposes a readiness route that actually pings Postgres, Redis and MinIO, setting
-`HEALTH_PATH=/health/ready` in `.env` is the whole migration. The `frontend` service has
-a probe of its own (`wget` on `/index.html`): an nginx that rejected its configuration no
-longer counts as running. See
-[Containers & configuration](containers-and-configuration.md#health-probes).
-
-The real dependency probe is admin-only:
-
 ```bash
-curl -s -H "Authorization: Bearer $ADMIN_JWT" "$REVIEW/api/admin/system"
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3430/health/ready   # 200 or 503
+curl -s http://localhost:3430/health/ready | jq
 ```
 
 ```json
 {
-  "services": { "database": true, "redis": true, "minio": true },
-  "…": "…"
+  "status": "ready",
+  "version": "2.3.0",
+  "cached": false,
+  "checks": {
+    "database": { "ok": true, "ms": 2 },
+    "redis": { "ok": true, "ms": 1 },
+    "storage": { "ok": true, "ms": 7 }
+  }
 }
 ```
 
-It runs `SELECT 1`, a Redis `PING` and a MinIO `HeadBucket`, each falling back to
-`false`. Note it has no timeout of its own: with Redis unreachable this call can hang
-rather than report `redis: false`. Alert on the metrics below, not on this endpoint.
+Readiness is bounded on purpose, so that probing cannot become the load that finishes off
+a struggling instance: **each check times out at 2 s**, the result is **memoised for 5 s**
+(`"cached": true` says you got the memo), and concurrent calls share one execution.
+
+Liveness stays trivial *by design*: restarting the API container because Postgres is down
+adds an outage to an outage. That is why the compose healthcheck defaults to `/health`.
+An operator who wants the container marked unhealthy when a dependency is missing sets
+`HEALTH_PATH=/health/ready` in `.env` — the probe reads its path from that variable. The
+`frontend` service has a probe of its own (`wget` on `/index.html`): an nginx that
+rejected its configuration no longer counts as running. See
+[Containers & configuration](containers-and-configuration.md#health-probes).
+
+`GET /api/admin/system` still exists and reports the same three dependencies plus host
+metrics, but it is admin-only and has no timeout of its own; use `/health/ready` for
+monitoring and `/api/admin/system` for a human looking at a screen.
+
+## Which version is running
+
+```bash
+curl -s http://localhost:3430/api/version
+```
+
+```json
+{
+  "version": "2.3.0",
+  "commit": "a1b2c3d4e5f6",
+  "builtAt": "2026-08-22T09:30:00.000Z",
+  "node": "v22.14.0",
+  "source": "https://github.com/YvigUnderscore/ReView"
+}
+```
+
+Public and unauthenticated on purpose: support cannot diagnose an instance that cannot
+name itself, and the AGPL §13 offer only means something if you can tell *which* sources
+correspond to what is running. The same values appear in **Admin → System → About this
+instance**, in the liveness payload, and as the `review_worker_info` metric.
+
+The version comes from `APP_VERSION` in `.env` — written by `scripts/install.sh` and
+rewritten by `scripts/update.sh` at every switch — and falls back to the `package.json`
+version baked into the image. `GIT_SHA` and `BUILD_DATE` are optional and injected by the
+release workflow.
 
 ## Prometheus metrics
 
@@ -64,8 +108,26 @@ review_queue_jobs{queue="storage-cleanup",state="failed"} 0
 review_queue_jobs{queue="webhooks",state="delayed"} 2
 ```
 
-Only three of the five queues are exported: `media`, `storage-cleanup` and `webhooks`.
-`timeline-export` and `shotgrid` have no gauge and no admin dashboard entry.
+All five queues are exported: `media`, `storage-cleanup`, `webhooks`, `timeline-export`
+and `shotgrid`.
+
+### Worker metrics
+
+The worker exposes its own collection point on the compose network — **`worker:9101/metrics`**,
+no host port — because Prometheus scraping only the API left the actual work unmeasured:
+encode durations, failures per job type, and whether the process exists at all.
+
+- default Node.js process metrics for the worker process (`process_*`, `nodejs_*`) — this
+  is what makes "the worker is alive" a fact rather than an inference from queue depth;
+- `review_worker_jobs_total{queue,kind,outcome}` — jobs finished, `outcome` being
+  `completed` or `failed`;
+- `review_worker_job_duration_seconds{queue,kind}` — histogram with buckets up to one hour
+  (a multi-rendition HLS encode is not an HTTP request);
+- `review_worker_info{version,commit}` — constant 1, so PromQL can answer "which version
+  is running", and an update that only half happened becomes visible.
+
+The same `METRICS_TOKEN` applies. Both jobs are declared in `monitoring/prometheus.yml`;
+Prometheus distinguishes the two processes by the scrape `job` label, not by metric names.
 
 The `route` label is normalised (`/1234` → `/:id`, long hex tokens → `/:token`) and its
 cardinality is bounded: a route enters the catalogue only on a response below `400`, at
@@ -106,9 +168,10 @@ consuming: either the container is down, or Redis is unreachable from it.
 docker compose --profile monitoring up -d
 ```
 
-- Prometheus scrapes `backend:3000/metrics` every 15 s (job `review-backend`, config in
-  `monitoring/prometheus.yml`). If you set `METRICS_TOKEN`, uncomment the
-  `params: { token: ["<your token>"] }` line there.
+- Prometheus scrapes `backend:3000/metrics` (job `review-backend`) and
+  `worker:9101/metrics` (job `review-worker`) every 15 s, config in
+  `monitoring/prometheus.yml`. If you set `METRICS_TOKEN`, uncomment the
+  `params: { token: ["<your token>"] }` line under **both** jobs.
 - Grafana on **`GRAFANA_BIND:GRAFANA_PORT`**, default `127.0.0.1:3431` — loopback only,
   because the dashboard covers the whole instance. Reach it remotely over an SSH tunnel
   or a VPN.
@@ -116,12 +179,51 @@ docker compose --profile monitoring up -d
   `admin`, which is a real administrator account; the fallback exists only because
   compose interpolates the whole file even for inactive profiles. Sign-up and anonymous
   access are disabled.
-- The Prometheus datasource and the dashboard **ReView — API & jobs** (requests/s by
-  status, p95 latency, BullMQ depth, backend RSS) are provisioned from
-  `monitoring/grafana/provisioning/`.
+- The Prometheus datasource and the dashboard **ReView — API & jobs** are provisioned from
+  `monitoring/grafana/provisioning/`. Eight panels, alerts first: firing alerts, running
+  version, requests/s by status, p95 latency, BullMQ depth (all five queues), process RSS
+  per job, worker jobs per minute by outcome, worker job p95 duration per queue.
 - Both images are **pinned** (`prom/prometheus:v3.5.0`, `grafana/grafana-oss:11.6.1` —
   the dashboard is schemaVersion 39). Override with `PROMETHEUS_VERSION` /
   `GRAFANA_VERSION` in `.env` rather than editing the compose file.
+
+## Alert rules
+
+`monitoring/rules/alerts.yml` holds the rules Prometheus evaluates every 15 s. They exist
+so this page stops being a list of queries somebody is supposed to run by hand.
+
+| Alert | Fires when | Severity |
+|-------|-----------|----------|
+| `ReviewBackendDown` | the API answers no scrape for 2 min | critical |
+| `ReviewWorkerDown` | the worker answers no scrape for 5 min | critical |
+| `ReviewHttpErrorRatio` | >5 % of responses are 5xx over 10 min | critical |
+| `ReviewQueueBacklog` | >20 jobs waiting on a queue for 15 min | warning |
+| `ReviewQueueFailures` | failed jobs left in a queue for 10 min | warning |
+| `ReviewMediaJobStuck` | a media job active for a full hour | warning |
+| `ReviewWorkerJobFailureRate` | >3 job failures in 30 min on one queue | warning |
+| `ReviewHttpLatencyHigh` | p95 above 2 s for 15 min | warning |
+| `ReviewProcessRestarting` | more than three restarts in an hour | warning |
+| `ReviewVersionMismatch` | two versions running at once for 15 min | warning |
+
+Each rule carries a `description` that says what to look at first, so the alert text is
+usable at 3 a.m. by somebody who did not write it.
+
+**Mount the rules directory into Prometheus** — the compose service must include:
+
+```yaml
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro       # ← alert rules
+```
+
+`rule_files` uses a glob (`/etc/prometheus/rules/*.yml`) precisely so that a missing mount
+degrades to "no alerts" instead of "Prometheus refuses to start".
+
+Without an Alertmanager the rules are still evaluated and visible — in the Prometheus UI,
+through the `ALERTS` series, and in the dashboard's first panel — they are simply routed
+nowhere. To route them by email, copy `monitoring/alertmanager/alertmanager.yml`, fill in
+your SMTP details, uncomment the `alerting:` block in `monitoring/prometheus.yml` and add
+the service to the `monitoring` profile (the file's header contains the exact snippet).
 
 ## Logs
 
@@ -231,6 +333,10 @@ mismatch; identical content already in storage is **deduplicated** server-side (
 upload, `MEDIA_DEDUP` audit).
 
 ## What to watch
+
+Most of this table is now an alert rule (see [Alert rules](#alert-rules)); it is kept
+because the *meaning* column is what an operator actually needs, and because two rows —
+media stuck in `PROCESSING`, requests hanging — have no metric behind them yet.
 
 | Signal | Where | Meaning |
 |--------|-------|---------|

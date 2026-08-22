@@ -1,6 +1,33 @@
-# Prometheus (37.G) — scrape du backend ReView (profil compose `monitoring`).
+# Prometheus (37.G) — supervision de ReView (profil compose `monitoring`).
+#
+# Deux cibles : l'API et le worker. Le worker était absent — donc la durée des encodages,
+# les échecs par type de job et l'existence même du process n'étaient mesurés nulle part.
 global:
   scrape_interval: 15s
+  # Évaluation des règles d'alerte : même cadence que le scrape, les règles ci-dessous
+  # portent toutes un `for:` qui absorbe le bruit.
+  evaluation_interval: 15s
+  external_labels:
+    instance_role: review
+
+# Chemin en glob À DESSEIN : si le répertoire `monitoring/rules/` n'est pas monté dans le
+# conteneur, Prometheus démarre quand même (une glob sans correspondance n'est pas une
+# erreur). Une supervision qui refuse de démarrer parce qu'il manque un fichier d'alertes
+# est pire que pas d'alertes du tout.
+#
+# Montage attendu (docker-compose.yml, service `prometheus`) :
+#   - ./monitoring/rules:/etc/prometheus/rules:ro
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+# Alertmanager est facultatif : sans lui, les règles restent évaluées et visibles
+# (interface Prometheus, série `ALERTS`, panneau « Alertes actives » du tableau Grafana) —
+# elles ne sont simplement pas routées vers un destinataire. Décommenter après avoir ajouté
+# le service (cf. DOCUMENTATION/infrastructure/monitoring.md).
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
 
 scrape_configs:
   - job_name: review-backend
@@ -9,3 +36,12 @@ scrape_configs:
     # params: { token: ["<votre jeton>"] }
     static_configs:
       - targets: ["backend:3000"]
+
+  # Point de collecte interne du worker (backend/src/workers/metricsServer.ts) : aucun port
+  # publié sur l'hôte, Prometheus est sur le même réseau compose.
+  - job_name: review-worker
+    metrics_path: /metrics
+    # Même jeton que le backend le cas échéant :
+    # params: { token: ["<votre jeton>"] }
+    static_configs:
+      - targets: ["worker:9101"]

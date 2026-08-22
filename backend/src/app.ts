@@ -8,7 +8,7 @@ import helmet from 'helmet';
 import { env } from './config/env';
 import { secretEquals } from './lib/crypto';
 import { enableRedisTransport } from './lib/redis';
-import { rateLimit, identityRateKey, identityMax } from './middleware/rateLimit';
+import { rateLimit, identityRateKey, identityMax, __rateLimitTesting } from './middleware/rateLimit';
 import { errorHandler } from './middleware/error';
 import { httpLogger } from './middleware/httpLogger';
 
@@ -64,6 +64,7 @@ import hdriRoutes from './routes/hdri.routes';
 import ocioRoutes from './routes/ocio.routes';
 import announcementsRoutes from './routes/announcements.routes';
 import docsRoutes from './routes/docs.routes';
+import healthRoutes, { versionRouter } from './routes/health.routes';
 import watchRoutes from './routes/watch.routes';
 import playlistsRoutes from './routes/playlists.routes';
 import timelinesRoutes from './routes/timelines.routes';
@@ -92,7 +93,44 @@ import shotgridCrewRoutes from './routes/shotgrid-crew.routes';
 const GLOBAL_MAX_PER_USER = 6_000;
 const GLOBAL_MAX_PER_IP = 5_000;
 
-export const createApp = (): Express => {
+export interface CreateAppOptions {
+  /**
+   * Limiteurs de débit. `false` les neutralise — **réservé aux tests d'intégration**.
+   *
+   * Une suite d'intégration tape plusieurs centaines de fois sur la même app depuis la même
+   * adresse, en quelques secondes : elle sature ses propres compteurs et se met à recevoir
+   * des 429 qui n'ont rien à voir avec ce qu'elle vérifie. C'était le mode d'échec du test
+   * d'upload résumable, rouge depuis des semaines.
+   *
+   * La désactivation porte sur deux familles de limiteurs :
+   *  - ceux montés ici (global, /api/setup, partage client, /api/v1), remplacés par un
+   *    passe-plat ;
+   *  - ceux construits à l'import d'un routeur (`auth.routes`, `comments`, `search`,
+   *    `client`, `unsubscribe`, webhook ShotGrid), hors d'atteinte d'une option d'app : ils
+   *    sont neutralisés par leur compteur, via le crochet de test du middleware.
+   *
+   * Verrou : refusé hors `NODE_ENV=test`. Une option capable d'éteindre en silence tout le
+   * limiteur de débit d'une instance en production serait une faille, pas une commodité.
+   */
+  rateLimit?: boolean;
+}
+
+/** Compteur qui ne compte pas : chaque coup vaut le premier, donc jamais de dépassement. */
+const unlimitedCounter = () => ({ hit: () => Promise.resolve(1) });
+
+export const createApp = (options: CreateAppOptions = {}): Express => {
+  const limitersOff = options.rateLimit === false;
+  if (limitersOff && env.NODE_ENV !== 'test') {
+    throw new Error('createApp({ rateLimit: false }) is reserved for NODE_ENV=test');
+  }
+  // Passe-plat pour les limiteurs montés ici ; les autres passent par leur compteur.
+  const limiter: typeof rateLimit = limitersOff
+    ? () => (_req, _res, next) => {
+        next();
+      }
+    : rateLimit;
+  if (limitersOff) __rateLimitTesting.setCounterFactory(unlimitedCounter);
+
   const app = express();
 
   // Le limiteur, la présence et les salles live parlent à Redis : on arme le transport
@@ -139,7 +177,7 @@ export const createApp = (): Express => {
   // Rate limit global — clé par compte authentifié, repli IP pour l'anonyme.
   app.use(
     '/api',
-    rateLimit({
+    limiter({
       name: 'global',
       windowMs: 15 * 60 * 1000,
       keyGenerator: identityRateKey,
@@ -147,16 +185,21 @@ export const createApp = (): Express => {
     }),
   );
 
-  // Health check
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
-  });
+  // Sondes de santé et version (vivacité `/health`, disponibilité `/health/ready`).
+  //
+  // Montées DEUX FOIS à dessein : le nginx frontal de production ne proxifie vers le
+  // backend que `/api/`, `/socket.io/` et `/review/` — `GET /health` y était donc servi par
+  // la SPA (200 HTML, « tout va bien » quel que soit l'état de l'API) et `/api/health`
+  // n'existait pas. La sonde du conteneur, elle, interroge `/health` en direct.
+  app.use('/health', healthRoutes);
+  app.use('/api/health', healthRoutes);
+  app.use('/api/version', versionRouter);
 
   // Routes par domaine
   // Assistant de première installation : public par nature (il n'existe encore aucun
   // compte), et il crée le premier ADMIN. Le plafond global de 5000/15 min ne le protège
   // pas — on le borne étroitement, par IP. Le verrou de fond reste `studio.count() > 0`.
-  app.use('/api/setup', rateLimit({ name: 'setup', windowMs: 15 * 60 * 1000, max: 10 }), setupRoutes);
+  app.use('/api/setup', limiter({ name: 'setup', windowMs: 15 * 60 * 1000, max: 10 }), setupRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
@@ -205,7 +248,7 @@ export const createApp = (): Express => {
   app.use('/api/comments', commentsRoutes);
   app.use('/api/boards', boardsRoutes);
   // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).
-  const shareLimiter = rateLimit({
+  const shareLimiter = limiter({
     name: 'share',
     windowMs: 15 * 60 * 1000,
     max: 300,
@@ -235,7 +278,7 @@ export const createApp = (): Express => {
   // API d'intégration v1 (DCC, Prism, bots) — contrat stable, distinct de l'API interne.
   // Plafond propre : un daemon qui interroge le journal d'événements en boucle ne doit pas
   // consommer le quota des utilisateurs de l'interface.
-  app.use('/api/v1', rateLimit({ name: 'v1', windowMs: 15 * 60 * 1000, max: 10_000 }), v1Routes);
+  app.use('/api/v1', limiter({ name: 'v1', windowMs: 15 * 60 * 1000, max: 10_000 }), v1Routes);
 
   // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
   app.use('/api', docsRoutes);
