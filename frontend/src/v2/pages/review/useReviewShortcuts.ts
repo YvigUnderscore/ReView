@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef, type RefObject } from 'react';
+import { toast } from 'sonner';
 import { isEditable } from '../../lib/shortcuts';
+import { t } from '../../i18n';
 import { cancelPendingPlay, safePlay, stepVideoFrame } from './reviewTypes';
+import { useCompareOffset } from './compareOffset';
 
 /**
  * Raccourcis clavier de la review vidéo (10.C2) :
@@ -12,9 +15,13 @@ import { cancelPendingPlay, safePlay, stepVideoFrame } from './reviewTypes';
  * - J / L : lecture arrière / avant (appuis répétés : ×2, ×4, ×8)
  * - I / O : points d'entrée/sortie de boucle · Maj+I/O : efface la boucle
  * - M : pause + composer de commentaire (marqueur à la frame courante)
+ * - [ / ] : décalage de la comparaison A/B, ∓1 frame (Maj : ∓10) · Maj+\ : recale à zéro
  * Inactifs dans les champs de saisie et quand un dialog est ouvert.
  * La lecture arrière n'existe pas en HTML5 : elle est simulée par un pas de
  * requestAnimationFrame qui décrémente currentTime à vitesse réelle.
+ *
+ * Les crochets sont repérés par leur **position** (`e.code`) et non par le caractère
+ * produit : sur un clavier AZERTY, ce caractère demande AltGr, que ce gestionnaire écarte.
  */
 export function useReviewShortcuts({
   videoRef,
@@ -85,12 +92,45 @@ export function useReviewShortcuts({
       v.playbackRate = Math.min(v.playbackRate * 2, 8);
     };
 
+    /** Annonce le décalage courant : un toast qui se remplace, pas une pile de toasts. */
+    const announceOffset = (frames: number) => {
+      const message =
+        frames === 0
+          ? t('video.compareOffsetNone')
+          : frames > 0
+            ? t('video.compareOffsetAhead', { count: frames })
+            : t('video.compareOffsetBehind', { count: -frames });
+      toast.info(message, { id: 'compare-offset' });
+    };
+
+    const nudgeOffset = (delta: number) => {
+      useCompareOffset.getState().nudge(delta, fps);
+      announceOffset(useCompareOffset.getState().frames);
+    };
+
     const down = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (isEditable(e.target)) return;
       if (document.querySelector('[role="dialog"]')) return;
       const v = videoRef.current;
       if (!v) return;
+      // Décalage de la comparaison A/B : repéré à la position de la touche (cf. en-tête).
+      if (e.code === 'BracketLeft' || e.key === '[' || e.key === '{') {
+        e.preventDefault();
+        nudgeOffset(e.shiftKey ? -10 : -1);
+        return;
+      }
+      if (e.code === 'BracketRight' || e.key === ']' || e.key === '}') {
+        e.preventDefault();
+        nudgeOffset(e.shiftKey ? 10 : 1);
+        return;
+      }
+      if (e.code === 'Backslash' && e.shiftKey) {
+        e.preventDefault();
+        useCompareOffset.getState().reset();
+        announceOffset(0);
+        return;
+      }
       switch (e.key.toLowerCase()) {
         case 'i':
           e.preventDefault();
@@ -137,7 +177,21 @@ export function useReviewShortcuts({
           playForward();
           break;
         case 'm':
+          // ARBITRAGE — sur une vidéo, M appartient au transport, pas au rail d'outils.
+          //
+          // Deux gestes se disputaient la lettre : « pause + commentaire à la frame
+          // courante » ici, et l'outil `shape-move` du mode Annoter (chrome/tools.ts). Une
+          // frappe faisait les deux : le composer s'ouvrait *et* tout l'écran basculait en
+          // mode Annoter, canvas de tracé par-dessus l'image, clic-pour-lire perdu.
+          //
+          // M reste au transport, parce que c'est ce que la liste des raccourcis promet à
+          // l'utilisateur (components/ShortcutsHelp) et que noter un retour à la frame
+          // exacte est le geste central d'une review. `stopPropagation` suffit à trancher :
+          // ce gestionnaire est posé sur `document`, celui du rail sur `window`, et la phase
+          // de remontée traverse le premier avant le second. L'outil de déplacement de forme
+          // reste accessible au rail, d'un clic.
           e.preventDefault();
+          e.stopPropagation();
           stopShuttle();
           cancelPendingPlay(v);
           v.pause();
@@ -155,6 +209,9 @@ export function useReviewShortcuts({
       document.removeEventListener('keydown', down);
       v?.removeEventListener('play', onPlay);
       stopShuttle();
+      // Le décalage de comparaison appartient à la séance en cours : il ne suit pas
+      // l'utilisateur sur le média suivant, où le conform n'a aucune raison d'être le même.
+      useCompareOffset.getState().reset();
     };
   }, [videoRef, fps, onMarker, onLoopIn, onLoopOut, onClearLoop, onShuttle]);
 }

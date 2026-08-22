@@ -664,7 +664,13 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         data: { status: MediaStatus.READY, metadata: metadata as Prisma.InputJsonObject },
       });
     } else if (kind === 'transcode') {
-      // Sonde + proxy + miniature pour la vidéo
+      // Sonde + proxy + miniature pour la vidéo.
+      //
+      // La sonde dépose désormais **deux** formes de la cadence : `fps`, arrondi au centième
+      // (valeur historique, relue par tout ce qui existe déjà), et `fpsNum`/`fpsDen`, la
+      // fraction exacte du conteneur. 23.98 dérive d'une frame entière au bout de quatre
+      // minutes ; 24000/1001 ne dérive jamais. Les médias déjà en base gardent leur seul
+      // `fps` : le lecteur sait en retrouver la cadence de diffusion (cf. `frameRate.ts`).
       report('probe');
       Object.assign(metadata, await probe(src));
       // Toutes les commandes de ce job sont bornées par la durée sondée du média : une

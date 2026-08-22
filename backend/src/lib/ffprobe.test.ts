@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { parseFrameRate, parseProbeOutput, probeArgs } from './ffprobe';
+import { parseFrameRate, parseFrameRateFraction, parseProbeOutput, probeArgs } from './ffprobe';
 
 const sample = (over: Record<string, unknown> = {}) =>
   JSON.stringify({
@@ -30,6 +30,33 @@ describe('parseFrameRate', () => {
   });
 });
 
+describe('parseFrameRateFraction', () => {
+  it('garde la cadence exacte plutôt que son arrondi', () => {
+    expect(parseFrameRateFraction('24000/1001')).toEqual({ num: 24000, den: 1001 });
+    expect(parseFrameRateFraction('30000/1001')).toEqual({ num: 30000, den: 1001 });
+    // L'arrondi historique, lui, perd 0,004 frame par seconde.
+    expect(parseFrameRate('24000/1001')).toBe(23.98);
+    expect(24000 / 1001).not.toBe(23.98);
+  });
+
+  it('réduit la fraction : 50/2 et 25/1 décrivent la même cadence', () => {
+    expect(parseFrameRateFraction('50/2')).toEqual({ num: 25, den: 1 });
+    expect(parseFrameRateFraction('25/1')).toEqual({ num: 25, den: 1 });
+  });
+
+  it('laisse intacte une fraction non entière (rien à réduire)', () => {
+    expect(parseFrameRateFraction('29.97/1')).toEqual({ num: 29.97, den: 1 });
+  });
+
+  it('rejette ce qui n’est pas une cadence', () => {
+    expect(parseFrameRateFraction('0/0')).toBeUndefined();
+    expect(parseFrameRateFraction('25')).toBeUndefined();
+    expect(parseFrameRateFraction('a/b')).toBeUndefined();
+    expect(parseFrameRateFraction(undefined)).toBeUndefined();
+    expect(parseFrameRateFraction(25)).toBeUndefined();
+  });
+});
+
 describe('parseProbeOutput', () => {
   it('extrait durée, dimensions, cadence et présence d’audio', () => {
     expect(parseProbeOutput(sample())).toEqual({
@@ -37,6 +64,9 @@ describe('parseProbeOutput', () => {
       width: 1920,
       height: 1080,
       fps: 23.98,
+      // La cadence exacte accompagne désormais l'arrondi historique.
+      fpsNum: 24000,
+      fpsDen: 1001,
       hasAudio: true,
     });
   });

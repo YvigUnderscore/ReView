@@ -9,6 +9,9 @@ import WatermarkOverlay from '../../components/WatermarkOverlay';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './reviewTypes';
+import { exactFrameRate } from './frameRate';
+import { hlsMasterUrl } from './videoSource';
+import { useMediaExport } from './useMediaExport';
 import { useAnnotationOverlay, useHotspotDisplay } from './useAnnotationOverlay';
 import { useImageCompareSync } from './useImageCompareSync';
 import type { CompareMode } from './useCompareState';
@@ -42,7 +45,7 @@ export default function ReviewViewer({
   programmaticSeekRef,
   comments,
   selectedCommentId,
-  fps,
+  fps: storedFps,
   setFpsOverride,
   reprocessing,
   role,
@@ -116,9 +119,19 @@ export default function ReviewViewer({
   const src = data?.proxyUrl ?? data?.url;
   // Zoom/pan répliqué entre panes A/B image (34.D) — relais bidirectionnel.
   const imageSync = useImageCompareSync(imageViewApiRef);
-  // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent.
-  const hlsUrl = data?.hls ? `/api/media/${data.media.id}/hls/master.m3u8` : null;
+  // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent
+  // **et** que le média n'est pas coupé — le master ignore le trim (cf. videoSource.ts).
+  const hlsUrl = data ? hlsMasterUrl(data.media.id, data) : null;
   const startFrame = data?.startFrame ?? 1001;
+  // Cadence de diffusion : la base ne range qu'un arrondi au centième (23.98 pour
+  // 24000/1001), dont tous les numéros de frame dérivent. On la corrige ici, à l'entrée du
+  // viewer, pour que le compteur, la timeline et les marqueurs comptent les mêmes images
+  // que le DCC de l'artiste (cf. frameRate.ts). La cadence saisie à la main, elle, reste
+  // telle quelle : c'est une valeur que l'utilisateur est en train d'écrire, pas un relevé.
+  const fps = data?.fps != null ? exactFrameRate(data.fps) : storedFps;
+  // Exports du dock (frame courante en PNG, planche contact) — les deux boutons du panneau
+  // « Export » n'étaient rendus que si on leur passait leurs actions.
+  const mediaExport = useMediaExport(data, videoRef);
   const model3dReady =
     kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!resolveGlbSrc(data) && !model3d.loadError;
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
@@ -175,6 +188,8 @@ export default function ReviewViewer({
           canEdit={canEdit}
           videoRef={videoRef}
           onSaved={onSplatEditsSaved}
+          onExportFrame={mediaExport.onExportFrame}
+          onContactSheet={mediaExport.onContactSheet}
           compare={{
             mode: compareMode,
             onMode: onCompareModeChange,

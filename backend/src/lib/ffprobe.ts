@@ -19,7 +19,17 @@ export interface ProbeResult {
   width?: number;
   height?: number;
   fps?: number;
+  /** Numérateur de la cadence exacte (« 24000 » pour 24000/1001). */
+  fpsNum?: number;
+  /** Dénominateur de la cadence exacte (« 1001 » pour 24000/1001). */
+  fpsDen?: number;
   hasAudio?: boolean;
+}
+
+/** Cadence exacte, telle que le conteneur la déclare — jamais arrondie. */
+export interface FrameRateFraction {
+  num: number;
+  den: number;
 }
 
 interface RawStream {
@@ -37,12 +47,36 @@ const asNumber = (v: unknown): number | undefined => {
 /**
  * Cadence depuis `r_frame_rate` (« 24000/1001 »), arrondie au centième — c'est la valeur
  * historique du champ `metadata.fps`, sur laquelle reposent tous les compteurs de frame.
+ *
+ * Conservée telle quelle : les médias déjà en base ne portent que ce nombre, et tout ce qui
+ * l'affiche (« 23.98 fps ») ou le relit continue de fonctionner. La cadence **exacte** vient
+ * en plus, dans `fpsNum`/`fpsDen` — cf. `parseFrameRateFraction`.
  */
 export function parseFrameRate(raw: unknown): number | undefined {
   if (typeof raw !== 'string' || !raw.includes('/')) return undefined;
   const [n, d] = raw.split('/').map(Number);
   if (!n || !d || !Number.isFinite(n) || !Number.isFinite(d)) return undefined;
   return Math.round((n / d) * 100) / 100;
+}
+
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/**
+ * Cadence **exacte** en fraction irréductible : 24000/1001, pas 23.98.
+ *
+ * L'arrondi au centième dérive de 0,003976 frame par seconde à 23,976 fps — une frame
+ * entière d'écart au bout de quatre minutes. Le numéro de frame qu'un superviseur cite dans
+ * un retour ne désigne alors plus la même image que celle ouverte dans le DCC. On garde donc
+ * les deux termes de la fraction, seule forme dont aucun compteur ne dérive.
+ */
+export function parseFrameRateFraction(raw: unknown): FrameRateFraction | undefined {
+  if (typeof raw !== 'string' || !raw.includes('/')) return undefined;
+  const [n, d] = raw.split('/').map(Number);
+  if (!n || !d || !Number.isFinite(n) || !Number.isFinite(d) || n < 0 || d < 0) return undefined;
+  // Réduction seulement sur des entiers : `30000/1001` se réduit, `29.97/1` n'a rien à réduire.
+  if (!Number.isInteger(n) || !Number.isInteger(d)) return { num: n, den: d };
+  const g = gcd(n, d);
+  return { num: n / g, den: d / g };
 }
 
 /** Analyse la sortie JSON de ffprobe. Une sortie illisible donne un résultat vide. */
@@ -56,11 +90,14 @@ export function parseProbeOutput(raw: string): ProbeResult {
   const streams: RawStream[] = Array.isArray(data.streams) ? (data.streams as RawStream[]) : [];
   const video = streams.find((s) => s.codec_type === 'video');
   const duration = asNumber(data.format?.duration);
+  const rate = parseFrameRateFraction(video?.r_frame_rate);
   return {
     duration: duration !== undefined ? Math.round(duration * 100) / 100 : undefined,
     width: asNumber(video?.width),
     height: asNumber(video?.height),
     fps: parseFrameRate(video?.r_frame_rate),
+    fpsNum: rate?.num,
+    fpsDen: rate?.den,
     hasAudio: streams.some((s) => s.codec_type === 'audio'),
   };
 }

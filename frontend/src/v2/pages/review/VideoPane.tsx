@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import type { ReviewComment } from '../../types/api';
 import { cancelPendingPlay, createSeekCoalescer, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
+import { useVideoFrameClock } from './useVideoFrameClock';
 import { useHlsPlayer } from './useHlsPlayer';
 import { useTimelineMarkers } from './useTimelineMarkers';
 import { useVideoFullscreen } from './useVideoFullscreen';
@@ -75,7 +76,10 @@ export default function VideoPane({
   onLoopChange?: (loop: { in: number | null; out: number | null }) => void;
 }) {
   const t = useT();
-  const [currentFrame, setCurrentFrame] = useState(0);
+  // Compteur de frame piloté image par image (`requestVideoFrameCallback`, repli rAF) :
+  // `timeupdate` seul n'émet que quatre fois par seconde, et le numéro affiché retardait
+  // d'un quart de seconde en lecture. L'événement reste branché en filet dans le hook.
+  const currentFrame = useVideoFrameClock(videoRef, fps);
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -178,7 +182,6 @@ export default function VideoPane({
 
   const onTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const v = e.currentTarget;
-    setCurrentFrame(Math.round(v.currentTime * fps));
     // Boucle I/O : au-delà de O, on repart de I — en lecture seulement, la navigation
     // manuelle dépasse librement le point O (retours 34).
     if (shouldLoopBack(loop.loopIn, loop.loopOut, loop.enabled, v.paused, v.currentTime)) {
@@ -243,7 +246,6 @@ export default function VideoPane({
             onPause={() => setPlaying(false)}
             onTimeUpdate={onTimeUpdate}
             onLoadedMetadata={(e) => {
-              setCurrentFrame(Math.round(e.currentTarget.currentTime * fps));
               setDuration(e.currentTarget.duration);
               if (e.currentTarget.videoWidth > 0)
                 setAspect(e.currentTarget.videoWidth / e.currentTarget.videoHeight);
