@@ -244,7 +244,9 @@ On a project driven from ShotGrid the generator is locked: entities are created 
 remote site, and creating them locally would produce duplicates at the next
 synchronisation.
 
-Longer lists come from [CSV import](../admin-guide/project-organization.md).
+Longer lists — and everything a spreadsheet already knows about them: names, statuses,
+frame ranges, tasks, assignees, dates — come from
+[CSV import](importing-a-project.md).
 
 ## Episodes (series)
 

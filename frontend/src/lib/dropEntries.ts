@@ -16,8 +16,16 @@
 
 /** Profondeur maximale explorée — une arborescence de plans est plate, pas un dépôt git. */
 const MAX_DEPTH = 8;
-/** Garde-fou : un dossier de séquence entier ne doit pas noyer la file d'upload. */
-const MAX_FILES = 500;
+/**
+ * Garde-fou de volume.
+ *
+ * Le plafond était de 500 fichiers, et il coupait en silence : déposer un plan de 1 200
+ * frames EXR — la livraison la plus banale du métier — en aurait perdu 700 sans un mot.
+ * Il est aligné sur ce que le serveur accepte pour une séquence
+ * (`MAX_SEQUENCE_FRAMES`, backend/src/lib/imageSequence.ts) : au-delà, c'est un dépôt
+ * d'arborescence entière, pas une livraison.
+ */
+const MAX_FILES = 10_000;
 
 /** Ignore les fichiers de service des systèmes de fichiers (.DS_Store, .gitkeep…). */
 const isHidden = (name: string): boolean => name.startsWith('.');

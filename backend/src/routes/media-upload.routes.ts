@@ -8,11 +8,14 @@ import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as MediaUploadService from '../services/MediaUploadService';
 import * as MediaService from '../services/MediaService';
+import * as ImageSequenceService from '../services/ImageSequenceService';
+import { FRAME_NAME_MAX_LENGTH, MAX_SEQUENCE_FRAMES, MIN_SEQUENCE_FRAMES } from '../lib/imageSequence';
 
 /**
- * Upload résumable multipart (37.A/37.B) — monté sous /api/media AVANT media.routes
- * (sinon `/multipart/...` matcherait `/:id`). L'upload simple (PUT présigné) reste
- * dans media.routes pour les petits fichiers.
+ * Upload résumable multipart (37.A/37.B) et envoi de séquences d'images (vague 5) —
+ * monté sous /api/media AVANT media.routes (sinon `/multipart/...` et `/sequence/...`
+ * matcheraient `/:id`). L'upload simple (PUT présigné) reste dans media.routes pour les
+ * petits fichiers.
  */
 const router = Router();
 router.use(authenticate);
@@ -110,10 +113,59 @@ router.post(
   },
 );
 
-// POST /api/media/multipart/:id/abort — annule l'upload (multipart ou PUT simple),
-// libère les parts déjà déposées et supprime le média resté en UPLOADING.
+// POST /api/media/multipart/:id/abort — annule l'upload (multipart, PUT simple ou
+// séquence), libère ce qui a été déposé et supprime le média resté en UPLOADING.
 router.post('/multipart/:id/abort', validate({ params: idParam }), async (req, res) => {
   res.json(await MediaUploadService.abortUpload(req.user!, Number(req.params.id)));
+});
+
+/* ── Séquences d'images : N fichiers, UN média (vague 5) ─────────────────────────── */
+
+const frameName = z.string().min(1).max(FRAME_NAME_MAX_LENGTH);
+
+// POST /api/media/sequence/init — ouvre (ou reprend) l'envoi d'une séquence.
+router.post(
+  '/sequence/init',
+  validate({
+    body: z.object({
+      versionId: z.number().int(),
+      pattern: z.string().min(1).max(255),
+      frames: z
+        .array(z.object({ name: frameName, size: z.number().int().nonnegative() }))
+        .min(MIN_SEQUENCE_FRAMES)
+        .max(MAX_SEQUENCE_FRAMES),
+      framerate: z.number().positive().max(240).optional(),
+    }),
+  }),
+  async (req, res) => {
+    const body = req.body as ImageSequenceService.InitSequenceInput;
+    res.status(201).json(await ImageSequenceService.initSequence(req.user!, body));
+  },
+);
+
+// POST /api/media/sequence/:id/urls — URLs présignées d'un lot de frames.
+router.post(
+  '/sequence/:id/urls',
+  validate({
+    params: idParam,
+    body: z.object({ names: z.array(frameName).min(1).max(ImageSequenceService.FRAME_URL_BATCH_MAX) }),
+  }),
+  async (req, res) => {
+    const { names } = req.body as { names: string[] };
+    res.json(await ImageSequenceService.frameUploadUrls(req.user!, Number(req.params.id), names));
+  },
+);
+
+// POST /api/media/sequence/:id/complete — vérifie les frames arrivées, écrit le manifeste
+// et enfile l'assemblage (proxy + échelle HLS + miniature + sprite).
+router.post('/sequence/:id/complete', validate({ params: idParam }), async (req, res) => {
+  res.json(await ImageSequenceService.completeSequence(req.user!, Number(req.params.id)));
+});
+
+// GET /api/media/sequence/:id/frames — le livrable d'origine, frame par frame (URLs
+// présignées) : une archive de cent gigaoctets ne se fabrique pas dans le processus web.
+router.get('/sequence/:id/frames', validate({ params: idParam }), async (req, res) => {
+  res.json(await ImageSequenceService.listSequenceFrames(req.user!, Number(req.params.id)));
 });
 
 export default router;

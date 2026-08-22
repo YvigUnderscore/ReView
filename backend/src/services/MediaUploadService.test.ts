@@ -17,6 +17,7 @@ vi.mock('./StorageService', () => ({
   storage: {
     abortMultipartUpload: vi.fn().mockResolvedValue(undefined),
     deleteObject: vi.fn().mockResolvedValue(undefined),
+    deletePrefix: vi.fn().mockResolvedValue(undefined),
   },
 }));
 vi.mock('./MediaService', () => ({
@@ -34,6 +35,7 @@ const findFirst = vi.mocked(prisma.mediaObject.findFirst);
 const remove = vi.mocked(prisma.mediaObject.delete);
 const abortMultipart = vi.mocked(storage.abortMultipartUpload);
 const deleteObject = vi.mocked(storage.deleteObject);
+const deletePrefix = vi.mocked(storage.deletePrefix);
 const user = { id: 3, role: Role.ARTIST };
 
 beforeEach(() => {
@@ -102,6 +104,21 @@ describe('abortUpload — annulation réelle côté serveur', () => {
 
     await expect(abortUpload(user, 14)).resolves.toEqual({ aborted: true });
     expect(remove).toHaveBeenCalledWith({ where: { id: 14 } });
+  });
+
+  it('vide le préfixe d’une séquence abandonnée : 80 Go de frames ne restent pas facturés', async () => {
+    findFirst.mockResolvedValue({
+      id: 15,
+      storageKey: 'projects/demo/shots/sh0100/v01/15/sequence.json',
+      metadata: {},
+      imageSequence: { storagePrefix: 'projects/demo/shots/sh0100/v01/15/frames/' },
+    } as never);
+
+    await expect(abortUpload(user, 15)).resolves.toEqual({ aborted: true });
+    expect(deletePrefix).toHaveBeenCalledWith('projects/demo/shots/sh0100/v01/15/frames/');
+    expect(deleteObject).toHaveBeenCalledWith('projects/demo/shots/sh0100/v01/15/sequence.json');
+    expect(abortMultipart).not.toHaveBeenCalled();
+    expect(remove).toHaveBeenCalledWith({ where: { id: 15 } });
   });
 
   it('refuse d’annuler l’upload d’un autre compte (la requête filtre déjà uploaderId)', async () => {

@@ -23,6 +23,7 @@ import {
   type HlsRendition,
 } from '../lib/hls';
 import { planTimelineSprite, type TimelineSpritePlan } from '../lib/timelineSprite';
+import { planWaveformBins, waveformFromPcmFile, WAVEFORM_SAMPLE_RATE } from '../lib/audioWaveform';
 import { parseSceneTimes, sceneFrames, SCENE_THRESHOLD } from '../lib/sceneDetect';
 import { publishWorkerEvent } from '../lib/workerEvents';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
@@ -71,6 +72,16 @@ import {
   webProxyScaleFilter,
   WEB_PROXY_CONTENT_TYPE,
 } from '../lib/imageProxy';
+import {
+  localFrameName,
+  localFramePattern,
+  parseFrameName,
+  sequenceInputOptions,
+  sequenceMasterOutputOptions,
+  SEQUENCE_MASTER_CRF,
+  SEQUENCE_MASTER_FILENAME,
+  SEQUENCE_MASTER_SCALE,
+} from '../lib/imageSequence';
 import {
   ffmpegFraction,
   mediaJobProgress,
@@ -194,6 +205,17 @@ function makeWebProxy(
   const scale = webProxyScaleFilter(size.width, size.height);
   if (scale) cmd.outputOptions(['-vf', scale]);
   cmd.outputOptions(webProxyOutputOptions()).output(output);
+  return runFfmpeg(cmd, run);
+}
+
+/**
+ * Extrait la première piste audio en PCM mono 8 kHz — matière première de la forme d'onde.
+ * Le fichier ne quitte pas le répertoire temporaire : seules les crêtes sont conservées.
+ */
+function extractAudioPcm(input: string, output: string, run: FfmpegRun): Promise<void> {
+  const cmd = ffmpeg(input)
+    .outputOptions(['-vn', '-map', '0:a:0', '-ac', '1', '-ar', String(WAVEFORM_SAMPLE_RATE), '-f', 's16le'])
+    .output(output);
   return runFfmpeg(cmd, run);
 }
 
@@ -635,25 +657,137 @@ async function buildHls(
   return metas();
 }
 
+/* ── Séquences d'images : N frames → un master, puis la chaîne vidéo ordinaire ────── */
+
+/** Frames rapatriées de front. Au-delà, MinIO et le disque du worker se gênent. */
+const FRAME_DOWNLOAD_CONCURRENCY = 4;
+
+/** Applique `task` avec au plus `limit` tâches simultanées, index conservé. */
+async function withConcurrency<T>(
+  items: T[],
+  limit: number,
+  task: (item: T, index: number) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const lane = async (): Promise<void> => {
+    for (let i = cursor++; i < items.length; i = cursor++) await task(items[i]!, i);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
+}
+
+/**
+ * Scan antivirus d'une séquence : **toutes** les frames, une par une.
+ *
+ * Le contrôle est opt-in (`CLAMAV_HOST`) : un studio qui l'active demande que rien
+ * n'entre sans être scanné, et n'échantillonner que trois frames sur mille serait un
+ * théâtre. Une détection fait échouer le job avec le nom de la menace, et les frames
+ * restent sous leur préfixe — la décision de les détruire appartient à l'administration.
+ */
+async function scanSequenceFrames(framesDir: string, count: number, extension: string): Promise<void> {
+  for (let i = 0; i < count; i++) {
+    const scan = await scanFile(join(framesDir, localFrameName(i, extension)));
+    if (!scan.clean) throw new Error(`Infected frame in the image sequence (${scan.virus ?? 'unknown'})`);
+  }
+}
+
+/**
+ * Assemble la séquence en un master unique, entrée de tout l'aval.
+ *
+ * Deux décisions portent ce code. La première : **renuméroter localement** les frames en
+ * 0, 1, 2… Le démultiplexeur `image2` de FFmpeg s'arrête à la première frame absente ;
+ * une livraison à trous — un rendu relancé sur quelques frames, cas quotidien — sortirait
+ * un plan tronqué sans un mot. La numérotation d'origine, elle, est conservée dans le
+ * manifeste et dans `metadata.startFrame`, qui est ce que le lecteur affiche.
+ *
+ * La seconde : produire un master plutôt que d'attaquer la séquence à chaque passe. Le
+ * proxy, chaque rendition HLS, le sprite et la miniature relisent la source ; décoder cinq
+ * fois deux mille EXR 4K coûterait des heures de CPU par plan. Le master est décodé une
+ * fois, à CRF 12 — largement au-dessus de ce que les dérivés en tireront.
+ */
+async function buildSequenceMaster(
+  mediaId: number,
+  sequence: { storagePrefix: string; extension: string; framerate: number },
+  dir: string,
+  output: string,
+  report: ProgressReporter,
+): Promise<void> {
+  const framesDir = join(dir, 'frames');
+  await mkdir(framesDir, { recursive: true });
+
+  const frames: { name: string; frame: number }[] = [];
+  for await (const object of storage.iterateObjects(sequence.storagePrefix)) {
+    if (object.size === 0) continue;
+    const name = object.key.slice(sequence.storagePrefix.length);
+    const parsed = parseFrameName(name);
+    if (parsed) frames.push({ name, frame: parsed.number });
+  }
+  if (frames.length === 0)
+    throw new Error(`No frame found under ${sequence.storagePrefix} (media=${String(mediaId)})`);
+  frames.sort((a, b) => a.frame - b.frame);
+
+  // Le rapatriement occupe la première moitié de l'étape « download », l'assemblage la
+  // seconde : `lib/mediaProgress` n'a pas d'étape propre à la séquence, et lui en inventer
+  // une décalerait le barème de tous les autres travaux.
+  let downloaded = 0;
+  await withConcurrency(frames, FRAME_DOWNLOAD_CONCURRENCY, async (entry, index) => {
+    await storage.downloadToFile(
+      `${sequence.storagePrefix}${entry.name}`,
+      join(framesDir, localFrameName(index, sequence.extension)),
+    );
+    downloaded += 1;
+    report('download', { fraction: (downloaded / frames.length) * 0.5 });
+  });
+
+  if (isClamavEnabled()) await scanSequenceFrames(framesDir, frames.length, sequence.extension);
+
+  const durationSec = frames.length / Math.max(sequence.framerate, 1);
+  await withEncoderFallback((encoder) => {
+    const cmd = ffmpeg(join(framesDir, localFramePattern(sequence.extension)))
+      .inputOptions(sequenceInputOptions(sequence.framerate, sequence.extension))
+      .outputOptions(['-vf', SEQUENCE_MASTER_SCALE])
+      .outputOptions(qualityEncoderArgs(encoder, SEQUENCE_MASTER_CRF, 'veryfast'))
+      .outputOptions(sequenceMasterOutputOptions())
+      .output(output);
+    return runFfmpeg(cmd, {
+      label: 'sequence master',
+      // Décoder de l'EXR est très loin du temps réel : le facteur habituel (×20) couperait
+      // un assemblage parfaitement sain sur un plan un peu long.
+      timeoutMs: ffmpegTimeoutMs(durationSec, { factor: 60 }),
+      durationSec,
+      onFraction: (fraction) => report('download', { fraction: 0.5 + fraction * 0.5 }),
+    });
+  });
+}
+
 async function handle(mediaId: number, kind: MediaJobData['kind'], report: ProgressReporter): Promise<void> {
-  const media = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
+  const media = await prisma.mediaObject.findUnique({
+    where: { id: mediaId },
+    include: { imageSequence: true },
+  });
   if (!media) throw new Error(`MediaObject ${mediaId} not found`);
 
   const dir = await mkdtemp(join(tmpdir(), 'review-'));
   try {
     report('download');
     const metadata: Record<string, unknown> = { ...(media.metadata as object) };
+    // Séquence d'images (vague 5) : la « source » n'est pas un objet mais N frames sous un
+    // préfixe. Elles sont rapatriées, scannées puis assemblées en un master — tout l'aval
+    // travaille ensuite sur une vidéo ordinaire, sans savoir d'où elle vient. Un
+    // `reprocess` repart toujours des frames, jamais du proxy : contrairement à une vidéo,
+    // le livrable d'origine est toujours là.
+    const sequence = media.imageSequence;
     // Source vidéo supprimée après transcodage (gain de place) : les retraitements
     // (trim, reprocess) repartent du proxy MP4 — seul fichier « source » restant.
-    const sourceGone = metadata.sourceDeleted === true && typeof metadata.proxyKey === 'string';
+    const sourceGone = !sequence && metadata.sourceDeleted === true && typeof metadata.proxyKey === 'string';
     // Conserver l'extension d'origine (assimp/ffmpeg détectent le format par extension)
     const ext = sourceGone ? '.mp4' : extname(media.originalName) || '.bin';
-    const src = join(dir, `src${ext}`);
-    await storage.downloadToFile(sourceGone ? (metadata.proxyKey as string) : media.storageKey, src);
+    const src = sequence ? join(dir, SEQUENCE_MASTER_FILENAME) : join(dir, `src${ext}`);
+    if (sequence) await buildSequenceMaster(mediaId, sequence, dir, src, report);
+    else await storage.downloadToFile(sourceGone ? (metadata.proxyKey as string) : media.storageKey, src);
 
     // Checksum bout-en-bout (37.B) : le sha256 annoncé par le client doit correspondre
     // au fichier téléchargé (corruption réseau/storage → FAILED, jamais de dérivés faux).
-    if (!sourceGone && typeof metadata.contentHash === 'string') {
+    if (!sequence && !sourceGone && typeof metadata.contentHash === 'string') {
       const actual = await sha256File(src);
       if (actual !== metadata.contentHash) {
         throw new Error(
@@ -664,7 +798,9 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
 
     // Scan antivirus opt-in (37.E) : fichier infecté → objet déplacé en quarantaine,
     // média FAILED. clamd injoignable = erreur (retry BullMQ) — on ne publie pas sans scan.
-    if (isClamavEnabled() && !sourceGone) {
+    // Une séquence a déjà été scannée frame par frame pendant son assemblage : le master
+    // qu'on tient ici est notre propre sortie, le scanner ne prouverait rien.
+    if (isClamavEnabled() && !sourceGone && !sequence) {
       const scan = await scanFile(src);
       if (!scan.clean) {
         const quarantineKey = `quarantine/${mediaId}/${media.originalName}`;
@@ -732,6 +868,22 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       // `fps` : le lecteur sait en retrouver la cadence de diffusion (cf. `frameRate.ts`).
       report('probe');
       Object.assign(metadata, await probe(src));
+      if (sequence) {
+        // La numérotation d'origine (1001 → 1200) est ce que l'artiste et le superviseur
+        // citent dans un retour : le lecteur doit la retrouver, pas la base de frames du
+        // projet. `metadata.sequence` décrit la livraison — motif, bornes, trous — pour
+        // que la review puisse dire d'où vient l'image qu'elle affiche.
+        metadata.startFrame = sequence.startFrame;
+        metadata.sequence = {
+          pattern: sequence.pattern,
+          extension: sequence.extension,
+          startFrame: sequence.startFrame,
+          endFrame: sequence.endFrame,
+          frameCount: sequence.frameCount,
+          missingFrames: sequence.endFrame - sequence.startFrame + 1 - sequence.frameCount,
+          framerate: sequence.framerate,
+        };
+      }
       // Toutes les commandes de ce job sont bornées par la durée sondée du média : une
       // passe qui la dépasse largement ne progresse plus, elle boucle.
       const durationSec = typeof metadata.duration === 'number' ? metadata.duration : undefined;
@@ -916,9 +1068,34 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         }
       }
 
+      // Forme d'onde audio : une crête par barre (~8/s), rangée dans les métadonnées.
+      // Pas une image — quelques centaines d'octets, ni dérivé à stocker ni URL à
+      // présigner. Best effort : un média muet ou une piste illisible ne condamne pas le
+      // transcodage, le lecteur se contente alors de ne rien afficher sous la timeline.
+      const waveformBins = metadata.hasAudio === true ? planWaveformBins(durationSec) : null;
+      if (waveformBins) {
+        try {
+          const pcmPath = join(dir, 'audio.pcm');
+          await extractAudioPcm(src, pcmPath, { label: 'audio waveform', timeoutMs, durationSec });
+          const waveform = await waveformFromPcmFile(pcmPath, waveformBins);
+          if (waveform) metadata.waveform = waveform;
+          // Le PCM pèse deux octets par échantillon : rendu au disque sans attendre la
+          // purge du répertoire temporaire (une heure de son = 57 Mo).
+          await rm(pcmPath, { force: true });
+        } catch (err) {
+          logger.warn({ err }, `[ffmpeg.worker] forme d'onde audio échouée media=${mediaId}`);
+        }
+      }
+
       // Tous les dérivés sont produits : la source originale ne sert plus — supprimée
       // pour libérer l'espace (le flag est posé AVANT le delete : en cas d'échec du
       // delete, seul l'espace n'est pas récupéré, les URLs pointent déjà le proxy).
+      //
+      // Séquence d'images : le flag dit « la clé source n'est plus ce qu'on sert » —
+      // `mediaSourceKey` renvoie donc le proxy, et la review, le partage client et l'A/B
+      // reçoivent une vidéo. Mais RIEN n'est supprimé : le manifeste et les frames
+      // d'origine restent sous leur préfixe, seuls livrables de référence, servis par
+      // `GET /api/media/sequence/:id/frames`.
       metadata.sourceDeleted = true;
       await prisma.mediaObject.update({
         where: { id: mediaId },
@@ -928,7 +1105,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           metadata: metadata as Prisma.InputJsonObject,
         },
       });
-      if (!sourceGone)
+      if (!sourceGone && !sequence)
         await storage
           .deleteObject(media.storageKey)
           .catch((err) =>

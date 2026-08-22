@@ -195,16 +195,23 @@ export async function completeMultipart(
  *
  * Le bouton « annuler » du client aboutit ici : un multipart interrompu doit être
  * explicitement abandonné (sinon MinIO garde — et facture — les parts déjà déposées),
- * et un PUT simple coupé en vol peut avoir laissé un objet tronqué. Les deux cas se
- * terminent par la suppression de la ligne `MediaObject`, restée en UPLOADING.
+ * et un PUT simple coupé en vol peut avoir laissé un objet tronqué. Une séquence d'images,
+ * elle, a semé N frames entières sous son préfixe : la ligne supprimée, plus rien n'y
+ * mènerait — le préfixe est donc vidé ici, sans quoi 80 Go resteraient facturés et
+ * invisibles. Les trois cas se terminent par la suppression de la ligne `MediaObject`,
+ * restée en UPLOADING.
  */
 export async function abortUpload(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findFirst({
     where: { id, uploaderId: user.id, status: MediaStatus.UPLOADING },
+    include: { imageSequence: true },
   });
   if (!media) throw notFound('Upload not found');
   const uploadId = (media.metadata as Meta).multipartUploadId;
-  if (typeof uploadId === 'string') {
+  if (media.imageSequence) {
+    await storage.deletePrefix(media.imageSequence.storagePrefix).catch(() => undefined);
+    await storage.deleteObject(media.storageKey).catch(() => undefined);
+  } else if (typeof uploadId === 'string') {
     await storage.abortMultipartUpload(media.storageKey, uploadId).catch(() => undefined);
   } else {
     await storage.deleteObject(media.storageKey).catch(() => undefined);

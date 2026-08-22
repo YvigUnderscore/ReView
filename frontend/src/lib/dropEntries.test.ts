@@ -68,9 +68,16 @@ describe('filesFromDataTransfer', () => {
     expect((await filesFromDataTransfer(dt)).map((f) => f.name)).toEqual(['sh010.mov']);
   });
 
-  it('borne un dépôt démesuré plutôt que de noyer la file', async () => {
-    const many = Array.from({ length: 900 }, (_, i) => fileEntry(`sh${i}.mov`));
-    expect(await filesFromDataTransfer(transfer([dirEntry('SQ010', many)]))).toHaveLength(500);
+  it('rend un plan entier : 1 200 frames EXR ne se coupent pas à 500', async () => {
+    const plan = Array.from({ length: 1200 }, (_, i) =>
+      fileEntry(`SH0100_comp_v003.${String(1001 + i)}.exr`),
+    );
+    expect(await filesFromDataTransfer(transfer([dirEntry('SH0100', plan)]))).toHaveLength(1200);
+  });
+
+  it('borne tout de même un dépôt démesuré plutôt que de noyer la file', async () => {
+    const many = Array.from({ length: 10_400 }, (_, i) => fileEntry(`sh${String(i)}.mov`));
+    expect(await filesFromDataTransfer(transfer([dirEntry('SQ010', many)]))).toHaveLength(10_000);
   });
 
   it('replie sur `files` quand l’API d’entrées est absente (comportement d’origine)', async () => {

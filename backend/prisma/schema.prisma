@@ -1010,6 +1010,8 @@ model MediaObject {
   timelineMarkers TimelineMarker[]
   accessLogs      MediaAccessLog[]
   shareSelections ShareLinkMedia[]
+  // Séquence d'images : présente quand le média a été livré en frames plutôt qu'en fichier.
+  imageSequence   ImageSequence?
 
   // La table n'avait aucun index (B3). Elle est pourtant au bout de tous les filtres
   // relationnels du pipe (`version → task → shot → project`), que Postgres traduit en
@@ -1023,6 +1025,43 @@ model MediaObject {
   // `originalName` est cherché par fragment (`ILIKE '%…%'`, palette Ctrl+K) : index GIN de
   // trigrammes posé en SQL seul par `20260822120000_recherche_plein_texte_commentaires`,
   // la classe d'opérateurs `gin_trgm_ops` n'étant pas exprimable ici.
+}
+
+// Séquence d'images (vague 5) : le livrable réel du VFX, `plan.1001.exr` → `plan.1200.exr`.
+//
+// UN média, pas mille. Le MediaObject porteur est de type VIDEO — c'est ainsi que la
+// séquence se review, exactement comme un playblast — et sa `storageKey` désigne le
+// manifeste JSON écrit à la finalisation ; les frames vivent sous le préfixe voisin
+// `…/{mediaId}/frames/`. Cette table dit ce que le manifeste seul ne permettrait pas de
+// chercher : le motif, les bornes, le nombre de fichiers, la taille livrée.
+//
+// `onDelete: Cascade` : la séquence n'existe que par son média.
+model ImageSequence {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int         @unique
+  // Motif de nommage au format FFmpeg (`SH0100_comp_v003.%04d.exr`).
+  pattern       String
+  // Extension des frames, en minuscules, point compris.
+  extension     String
+  // Largeur du champ numérique (4 pour `%04d`).
+  digits        Int
+  startFrame    Int
+  endFrame      Int
+  // Fichiers réellement livrés : peut être inférieur à endFrame - startFrame + 1, une
+  // numérotation à trous étant un fait de production et non une erreur de lecture.
+  frameCount    Int
+  // Somme des tailles des frames reçues (une séquence 4K EXR dépasse volontiers 100 Go).
+  totalSize     BigInt      @default(0)
+  // Cadence d'assemblage, héritée du pipeline studio→projet→séquence→shot au dépôt, puis
+  // figée : le master doit pouvoir être reconstruit à l'identique des années plus tard.
+  framerate     Float
+  // Préfixe MinIO des frames, relatif au bucket (se termine par « / »).
+  storagePrefix String
+  createdAt     DateTime    @default(now())
+
+  // Pas de `@@index([mediaObjectId])` : la relation est un-à-un, l'unicité pose déjà
+  // l'index de tête que réclame `scripts/prisma-schema.test.mjs`.
 }
 
 // Marqueurs de timeline nommés/colorés, partagés entre spectateurs (Phase 34.C) :

@@ -12,6 +12,7 @@ import {
   isSupportedExtension,
   SUPPORTED_EXTENSIONS,
 } from '../lib/fileSignatures';
+import { looksLikeSequencePattern } from '../lib/imageSequence';
 import { versionSelect, mediaSelect, toVersion, toMedia } from '../lib/v1Resources';
 import * as MediaService from './MediaService';
 import * as Ensure from './PipelineEnsureService';
@@ -75,6 +76,26 @@ function assertExtensionSupported(kind: MediaKind, filename: string): void {
   );
 }
 
+/**
+ * Une séquence d'images ne se publie pas par ce chemin — et il faut le dire.
+ *
+ * `SH0100_comp_v003.%04d.exr` passerait tous les contrôles ci-dessus : l'extension est
+ * `.exr`, donc IMAGE, donc acceptée. Le DCC obtiendrait une URL présignée, y déposerait
+ * une frame — ou rien — et créerait un média nommé d'après un motif, muet et inutilisable.
+ * Un envoi de séquence demande N URLs, une reprise et un assemblage : c'est
+ * `POST /api/media/sequence/init` (vague 5), pas la publication en deux temps.
+ *
+ * Refus explicite plutôt que chemin qui échoue en silence : c'est exactement la faute que
+ * la vague précédente a corrigée sur les extensions annoncées et non reconnues.
+ */
+function assertNotSequencePattern(filename: string): void {
+  if (!looksLikeSequencePattern(filename)) return;
+  throw badRequest(
+    `« ${filename} » is an image sequence pattern — publish it through /api/media/sequence/init`,
+    'SEQUENCE_NOT_SUPPORTED_HERE',
+  );
+}
+
 export interface StartPublishInput {
   /** Chemin cible, jusqu'à la tâche ou l'asset (`PROJ/SQ010/SH0100/anim`). */
   path: string;
@@ -122,6 +143,8 @@ export async function start(actor: Actor, input: StartPublishInput) {
       'PATH_INCLUDES_VERSION',
     );
   }
+
+  assertNotSequencePattern(input.filename);
 
   const project = await Resolve.resolveProject(parsed.project);
   const kind = input.kind ?? inferMediaKind(input.filename);
