@@ -16,6 +16,7 @@ import { assetCardActions } from './assetCardActions';
 import { useAssignMenu } from '../../lib/useAssignMenu';
 import BulkAssignDialog from '../../components/entity/BulkAssignDialog';
 import EntityCard, { EntityContainer } from '../../components/EntityCard';
+import ListSentinel, { ListCount } from '../../components/ListSentinel';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import SelectionBar from '../../components/ui/selection-bar';
 import AssetAssignDialog from '../../components/AssetAssignDialog';
@@ -27,7 +28,8 @@ import { Select } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import EntityFilters from '../../components/EntityFilters';
 import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
-import { EMPTY_FILTERS, applyFilters } from '../../lib/entityFilters';
+import { EMPTY_FILTERS, activeCount, applyFilters } from '../../lib/entityFilters';
+import { useAssetsQuery } from '../../lib/queries';
 import { useDepartments } from '../../lib/departmentsApi';
 import { ASSET_TYPES } from './projectTypes';
 import type { AssetListItem } from '../../types/entities';
@@ -66,6 +68,10 @@ export default function AssetsTab({
   const [editing, setEditing] = useState<AssetListItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // Même liste que la page (même clé de cache) : on y lit combien d'assets existent et
+  // s'il en reste à descendre. Filtrer une liste tronquée mentirait sur le résultat, donc
+  // un critère posé fait descendre toutes les pages.
+  const paging = useAssetsQuery(projectId, projectId > 0, { all: activeCount(filters) > 0 });
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
   const visible = applyFilters(filters, assets, (a) => ({
@@ -182,6 +188,13 @@ export default function AssetsTab({
           </form>
         </DialogContent>
       </Dialog>
+      {assets.length > 0 && (
+        <ListCount
+          loaded={paging.loaded}
+          total={paging.total}
+          label={t('assets.count', { count: paging.total })}
+        />
+      )}
       {assets.length === 0 ? (
         <EmptyState
           compact
@@ -229,6 +242,10 @@ export default function AssetsTab({
           })}
         </EntityContainer>
       )}
+
+      {/* Hors du bloc de liste : un filtre peut ne rien laisser à l'écran, et c'est
+          justement là qu'il faut pouvoir descendre la suite. */}
+      <ListSentinel hasMore={paging.hasMore} isLoading={paging.isFetchingMore} onLoadMore={paging.loadMore} />
 
       {canManage && (
         <SelectionBar

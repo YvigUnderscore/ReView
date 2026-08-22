@@ -2,25 +2,32 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Bell, BellOff, Clapperboard, ExternalLink, EyeOff } from 'lucide-react';
+import { Clapperboard, EyeOff, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
-import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../../components/EntityCard';
+import EntityCard, { EntityContainer } from '../../components/EntityCard';
+import ListSentinel, { ListCount } from '../../components/ListSentinel';
 import { useStatusMenu } from '../../lib/useStatusMenu';
 import { useOmitMenu } from '../../lib/useOmitMenu';
 import { entriesOf } from '../../lib/menuSpec';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import BatchGenerator from '../../components/BatchGenerator';
 import EmptyState from '../../components/ui/empty-state';
+import SelectionBar from '../../components/ui/selection-bar';
+import BulkAssignDialog from '../../components/entity/BulkAssignDialog';
 import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
 import EntityFilters from '../../components/EntityFilters';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
-import { EMPTY_FILTERS, applyFilters } from '../../lib/entityFilters';
+import { EMPTY_FILTERS, activeCount, applyFilters } from '../../lib/entityFilters';
+import { useMultiSelect } from '../../lib/useMultiSelect';
+import { bulkDelete } from '../../lib/bulkApi';
+import { useShotsQuery } from '../../lib/queries';
 import { usePipelineStatuses } from '../../lib/shotgridApi';
 import { useDepartments } from '../../lib/departmentsApi';
+import { shotCardActions } from './shotCardActions';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
 import { useT } from '../../i18n';
 import SgCreationLock from '../../components/shotgrid/SgCreationLock';
@@ -55,8 +62,14 @@ export default function ShotsTab({
   const watch = useWatch();
   const [editing, setEditing] = useState<Shot | null>(null);
   const [deleting, setDeleting] = useState<Shot | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkAssigning, setBulkAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // Même liste que la page (même clé de cache), consultée ici pour ce qu'elle sait d'elle :
+  // combien de plans existent, et s'il en reste à descendre. Un filtre posé sur une page
+  // tronquée répondrait « aucun plan » pour un plan qui existe : on descend alors tout.
+  const paging = useShotsQuery(projectId, projectId > 0, { all: activeCount(filters) > 0 });
   const { data: statuses = [] } = usePipelineStatuses('shot', projectId);
   // Statut par clic droit : le geste le plus fréquent de la production n'a plus à passer
   // par la fiche du plan puis son panneau de réglages.
@@ -99,6 +112,21 @@ export default function ShotsTab({
     sequenceId: shot.sequenceId,
     departmentIds: shot.departments?.map((d) => d.id),
   }));
+  // La sélection ne porte que sur ce qui est affiché — comme sur les assets : une action
+  // de masse ne doit jamais atteindre une ligne que le filtre a écartée de la vue.
+  const sel = useMultiSelect(visible.map((s) => s.id));
+
+  const confirmBulkDelete = async () => {
+    try {
+      const { count } = await bulkDelete('shots', sel.ids);
+      toast.success(t('shots.trashedCount', { count }));
+      sel.clear();
+      setBulkDeleting(false);
+      void reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.error.generic'));
+    }
+  };
 
   const groups = [
     ...sortedSequences.map((s) => ({
@@ -151,12 +179,18 @@ export default function ShotsTab({
           />
         </SgCreationLock>
       )}
-      {shots.length === 0 && (
+      {shots.length === 0 ? (
         <EmptyState
           compact
           icon={Clapperboard}
           title={t('shots.empty.title')}
           description={canManage ? t('shots.empty.hint') : t('shots.empty.description')}
+        />
+      ) : (
+        <ListCount
+          loaded={paging.loaded}
+          total={paging.total}
+          label={t('shots.count', { count: paging.total })}
         />
       )}
 
@@ -167,36 +201,17 @@ export default function ShotsTab({
           </h3>
           <EntityContainer view={view}>
             {g.list.map((shot) => {
-              const actions = canManage
-                ? [
-                    { icon: EditIcon, label: t('common.edit'), onClick: () => setEditing(shot) },
-                    {
-                      icon: DeleteIcon,
-                      label: t('common.delete'),
-                      danger: true,
-                      onClick: () => setDeleting(shot),
-                    },
-                  ]
-                : [];
-              // Lien direct vers la fiche ShotGrid — clic droit seulement, et seulement
-              // si le projet est relié : sur un projet autonome, l'entrée n'existe pas.
-              const sgUrl = sgLinks.linkFor('shot', shot.id);
-              const sgAction = sgUrl
-                ? [
-                    {
-                      icon: <ExternalLink size={14} />,
-                      label: t('shotgrid.openIn.shot'),
-                      onClick: () => window.open(sgUrl, '_blank', 'noreferrer'),
-                    },
-                  ]
-                : [];
-              // Suivi (32.G) : action de clic droit uniquement (UI simple).
-              const watching = watch.isWatching('SHOT', shot.id);
-              const watchAction = {
-                icon: watching ? <BellOff size={14} /> : <Bell size={14} />,
-                label: watching ? t('shots.unwatch') : t('shots.watch'),
-                onClick: () => watch.toggle('SHOT', shot.id),
-              };
+              // Lien ShotGrid au clic droit seulement, et seulement si le projet est
+              // relié : sur un projet autonome, l'entrée n'existe pas.
+              const { manageActions, contextActions } = shotCardActions({
+                t,
+                canManage,
+                sgUrl: sgLinks.linkFor('shot', shot.id),
+                watching: watch.isWatching('SHOT', shot.id),
+                onEdit: () => setEditing(shot),
+                onDelete: () => setDeleting(shot),
+                onWatch: () => watch.toggle('SHOT', shot.id),
+              });
               return (
                 <EntityCard
                   key={shot.id}
@@ -222,18 +237,71 @@ export default function ShotsTab({
                     </span>
                   }
                   favorite={{ type: 'SHOT', entityId: shot.id }}
-                  actions={actions}
+                  selection={
+                    canManage
+                      ? { selected: sel.isSelected(shot.id), onSelect: (m) => sel.onSelect(shot.id, m) }
+                      : undefined
+                  }
+                  actions={manageActions}
                   contextEntries={entriesOf(
                     statusEntry(shot, { canEdit: canManage }),
                     omitEntry(shot, { canEdit: canManage }),
                   )}
-                  contextActions={[...sgAction, watchAction, ...actions]}
+                  contextActions={contextActions}
                 />
               );
             })}
           </EntityContainer>
         </section>
       ))}
+
+      {/* Hors des groupes : un filtre peut n'en laisser aucun à l'écran, et c'est
+          justement là qu'il faut pouvoir descendre la suite de la liste. */}
+      <ListSentinel hasMore={paging.hasMore} isLoading={paging.isFetchingMore} onLoadMore={paging.loadMore} />
+
+      {canManage && (
+        <SelectionBar
+          count={sel.count}
+          label={t('shots.countLabel', { count: sel.count })}
+          onClear={sel.clear}
+          actions={[
+            {
+              label: t('assign.menu'),
+              icon: <UserPlus size={14} />,
+              onClick: () => setBulkAssigning(true),
+            },
+            {
+              label: t('common.delete'),
+              icon: <Trash2 size={14} />,
+              danger: true,
+              onClick: () => setBulkDeleting(true),
+            },
+          ]}
+        />
+      )}
+
+      {bulkAssigning && (
+        <BulkAssignDialog
+          projectId={projectId}
+          holder="shots"
+          ids={sel.ids}
+          onClose={() => setBulkAssigning(false)}
+          onDone={() => {
+            sel.clear();
+            void reload();
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={bulkDeleting}
+        title={t('shots.deleteMany.title')}
+        message={t('shots.deleteMany.message', { count: sel.count })}
+        confirmLabel={t('common.moveToTrash')}
+        danger
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleting(false)}
+      />
 
       {editing && (
         <EntitySettingsDialog

@@ -3,12 +3,12 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Clapperboard, FolderOpen, ListVideo, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useProjectsQuery, useReviewStatusesQuery } from '../lib/queries';
+import { useInfiniteList } from '../lib/useInfiniteList';
 import { reviewPath } from '../lib/slug';
 import { useMultiSelect } from '../lib/useMultiSelect';
 import { bulkDelete } from '../lib/bulkApi';
@@ -20,6 +20,7 @@ import ViewToggle from '../components/ViewToggle';
 import { useAuth } from '../stores/useAuth';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer } from '../components/EntityCard';
+import ListSentinel, { ListCount } from '../components/ListSentinel';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ReviewDecisionBadge from '../components/ReviewDecisionBadge';
 import SelectionBar from '../components/ui/selection-bar';
@@ -29,11 +30,6 @@ import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
 import { MEDIA_KIND_LABEL, type ReviewItem } from './reviews/reviewsTypes';
 import { useT } from '../i18n';
-
-interface Page<T> {
-  items: T[];
-  total: number;
-}
 
 const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 
@@ -46,7 +42,9 @@ export default function ReviewsPage() {
   const view = useViewMode('reviews');
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: projects } = useProjectsQuery();
+  // Le filtre doit proposer tous les projets, pas les cent premiers : une liste déroulante
+  // ne défile pas jusqu'à une sentinelle.
+  const { data: projects } = useProjectsQuery({ all: true });
   const { data: reviewStatuses } = useReviewStatusesQuery();
   const [projectId, setProjectId] = useState('');
   const [kind, setKind] = useState('');
@@ -65,13 +63,14 @@ export default function ReviewsPage() {
   if (decision) params.set('decision', decision);
   const qs = params.toString();
 
-  const { data, error } = useQuery({
-    queryKey: qk.reviews(qs),
-    queryFn: () => api.get<Page<ReviewItem>>(`/api/media/reviews${qs ? `?${qs}` : ''}`),
-    placeholderData: keepPreviousData,
+  // La page annonçait fièrement « 1 247 media » au-dessus de cent cartes : le total venait
+  // du serveur, les cartes d'une seule page. Les deux se rejoignent enfin.
+  const list = useInfiniteList<ReviewItem>(qk.reviews(qs), `/api/media/reviews${qs ? `?${qs}` : ''}`, {
+    keepPrevious: true,
   });
+  const { data: items, error } = list;
 
-  const sel = useMultiSelect(data?.items.map((m) => m.id) ?? []);
+  const sel = useMultiSelect(items?.map((m) => m.id) ?? []);
   const refresh = () => qc.invalidateQueries({ queryKey: ['reviews'] });
   const confirmBulkDelete = async () => {
     try {
@@ -86,9 +85,9 @@ export default function ReviewsPage() {
   };
   // Projet commun des médias ciblés (une playlist = un projet) ; null si mixte.
   const targetProjectId = (() => {
-    if (!playlistTarget || !data) return null;
+    if (!playlistTarget || !items) return null;
     const ids = new Set(playlistTarget);
-    const pids = new Set(data.items.filter((m) => ids.has(m.id)).map((m) => m.project?.id ?? 0));
+    const pids = new Set(items.filter((m) => ids.has(m.id)).map((m) => m.project?.id ?? 0));
     return pids.size === 1 ? ([...pids][0] ?? null) : null;
   })();
 
@@ -153,9 +152,9 @@ export default function ReviewsPage() {
 
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
 
-      {data === undefined ? (
+      {items === undefined ? (
         <SkeletonCards />
-      ) : data.items.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState
           icon={Clapperboard}
           title={t('reviews.empty.title')}
@@ -163,9 +162,13 @@ export default function ReviewsPage() {
         />
       ) : (
         <>
-          <p className="mb-3 text-xs text-muted-foreground">{t('reviews.count', { count: data.total })}</p>
+          <ListCount
+            loaded={list.loaded}
+            total={list.total}
+            label={t('reviews.count', { count: list.total })}
+          />
           <EntityContainer view={view}>
-            {data.items.map((m) => (
+            {items.map((m) => (
               <EntityCard
                 key={m.id}
                 to={reviewPath({ id: m.id, originalName: m.name })}
@@ -212,6 +215,7 @@ export default function ReviewsPage() {
               />
             ))}
           </EntityContainer>
+          <ListSentinel hasMore={list.hasMore} isLoading={list.isFetchingMore} onLoadMore={list.loadMore} />
         </>
       )}
 

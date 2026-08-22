@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { getSocket } from '../../lib/socket';
 import { qk } from './query';
+import { useInfiniteList, type InfiniteList, type InfiniteListOptions } from './useInfiniteList';
 import type {
   AssetListItem,
   LiveSessionSummary,
@@ -19,29 +20,25 @@ import type {
 /**
  * Hooks Query partagés entre plusieurs composants (une clé = une shape).
  * Les queries propres à une seule page restent définies dans la page.
+ *
+ * Les listes d'entités (projets, plans, assets) rendent une `InfiniteList` : `data` reste
+ * le tableau attendu par les appelants, mais le total réel et « charger la suite »
+ * cessent d'être jetés à la réception. Elles ne chargent que la première page ; un
+ * appelant qui a besoin de la liste entière — un sélecteur, une modale — demande `all`.
  */
 
-/** Enveloppe de liste paginée renvoyée par les endpoints bornés (10.D1). */
-interface Page<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+/** Options de liste laissées aux appelants (l'URL et la clé sont fixées ici). */
+export type ListOptions = Pick<InfiniteListOptions, 'all' | 'pageSize'>;
 
 /** Liste des projets actifs (archivés exclus) — partagée Shell / ProjectsPage. */
-export function useProjectsQuery() {
-  return useQuery({
-    queryKey: qk.projects,
-    queryFn: () => api.get<Page<Project>>('/api/projects').then((d) => d.items),
-  });
+export function useProjectsQuery(options: ListOptions = {}): InfiniteList<Project> {
+  return useInfiniteList<Project>(qk.projects, '/api/projects', options);
 }
 
 /** Projets archivés (38.B) — onglet « Archivés » de ProjectsPage. */
-export function useArchivedProjectsQuery(enabled = true) {
-  return useQuery({
-    queryKey: qk.projectsArchived,
-    queryFn: () => api.get<Page<Project>>('/api/projects?archived=1').then((d) => d.items),
+export function useArchivedProjectsQuery(enabled = true, options: ListOptions = {}): InfiniteList<Project> {
+  return useInfiniteList<Project>(qk.projectsArchived, '/api/projects?archived=1', {
+    ...options,
     enabled,
   });
 }
@@ -59,19 +56,25 @@ export function useSequencesQuery(projectId: number, enabled = true) {
 }
 
 /** Shots d'un projet — ProjectPage / KanbanPage / AssetAssignDialog. */
-export function useShotsQuery(projectId: number, enabled = true) {
-  return useQuery({
-    queryKey: qk.shots(projectId),
-    queryFn: () => api.get<Page<ShotSummary>>(`/api/shots?projectId=${projectId}`).then((d) => d.items),
+export function useShotsQuery(
+  projectId: number,
+  enabled = true,
+  options: ListOptions = {},
+): InfiniteList<ShotSummary> {
+  return useInfiniteList<ShotSummary>(qk.shots(projectId), `/api/shots?projectId=${projectId}`, {
+    ...options,
     enabled,
   });
 }
 
 /** Assets d'un projet — sidebar / ProjectPage / ShotDetailDrawer. */
-export function useAssetsQuery(projectId: number, enabled = true) {
-  return useQuery({
-    queryKey: qk.assets(projectId),
-    queryFn: () => api.get<Page<AssetListItem>>(`/api/assets?projectId=${projectId}`).then((d) => d.items),
+export function useAssetsQuery(
+  projectId: number,
+  enabled = true,
+  options: ListOptions = {},
+): InfiniteList<AssetListItem> {
+  return useInfiniteList<AssetListItem>(qk.assets(projectId), `/api/assets?projectId=${projectId}`, {
+    ...options,
     enabled,
   });
 }

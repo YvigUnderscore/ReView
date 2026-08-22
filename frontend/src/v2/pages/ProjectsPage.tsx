@@ -17,6 +17,7 @@ import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../stores/useViewPref';
 import type { EntityItemAction } from '../lib/menuSpec';
 import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../components/EntityCard';
+import ListSentinel, { ListCount } from '../components/ListSentinel';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SelectionBar from '../components/ui/selection-bar';
 import { useMultiSelect } from '../lib/useMultiSelect';
@@ -43,7 +44,10 @@ export default function ProjectsPage() {
   const [tab, setTab] = useState<'active' | 'archived'>('active');
   const active = useProjectsQuery();
   const archived = useArchivedProjectsQuery(tab === 'archived');
-  const { data: projects, error } = tab === 'archived' ? archived : active;
+  // La liste ne descend plus qu'une page à la fois : le compteur dit ce qui reste et la
+  // sentinelle va le chercher. Un studio de deux cents projets n'en montrait que cent.
+  const list = tab === 'archived' ? archived : active;
+  const { data: projects, error } = list;
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
@@ -170,60 +174,68 @@ export default function ProjectsPage() {
           />
         )
       ) : (
-        <EntityContainer view={view}>
-          {projects.map((p) => {
-            const manageActions: EntityItemAction[] = !canManage
-              ? []
-              : tab === 'archived'
-                ? [
+        <>
+          <ListCount
+            loaded={list.loaded}
+            total={list.total}
+            label={t('projects.count', { count: list.total })}
+          />
+          <EntityContainer view={view}>
+            {projects.map((p) => {
+              const manageActions: EntityItemAction[] = !canManage
+                ? []
+                : tab === 'archived'
+                  ? [
+                      {
+                        icon: <ArchiveRestore size={15} />,
+                        label: t('projects.unarchive'),
+                        onClick: () => void restore(p),
+                      },
+                    ]
+                  : [
+                      { icon: EditIcon, label: t('common.edit'), onClick: () => setEditing(p) },
+                      {
+                        icon: DeleteIcon,
+                        label: t('common.delete'),
+                        danger: true,
+                        onClick: () => setDeleting(p),
+                      },
+                    ];
+              return (
+                <EntityCard
+                  key={p.id}
+                  to={projectPath(p)}
+                  view={view}
+                  title={p.name}
+                  subtitle={p.description ?? undefined}
+                  thumbnailUrl={p.thumbnailUrl}
+                  badge={<ProjectStatusBadge status={p.status} />}
+                  selection={{ selected: sel.isSelected(p.id), onSelect: (m) => sel.onSelect(p.id, m) }}
+                  favorite={{ type: 'PROJECT', entityId: p.id }}
+                  actions={manageActions}
+                  contextActions={[
                     {
-                      icon: <ArchiveRestore size={15} />,
-                      label: t('projects.unarchive'),
-                      onClick: () => void restore(p),
+                      icon: <FolderOpen size={14} />,
+                      label: t('common.open'),
+                      onClick: () => void navigate(projectPath(p)),
                     },
-                  ]
-                : [
-                    { icon: EditIcon, label: t('common.edit'), onClick: () => setEditing(p) },
-                    {
-                      icon: DeleteIcon,
-                      label: t('common.delete'),
-                      danger: true,
-                      onClick: () => setDeleting(p),
-                    },
-                  ];
-            return (
-              <EntityCard
-                key={p.id}
-                to={projectPath(p)}
-                view={view}
-                title={p.name}
-                subtitle={p.description ?? undefined}
-                thumbnailUrl={p.thumbnailUrl}
-                badge={<ProjectStatusBadge status={p.status} />}
-                selection={{ selected: sel.isSelected(p.id), onSelect: (m) => sel.onSelect(p.id, m) }}
-                favorite={{ type: 'PROJECT', entityId: p.id }}
-                actions={manageActions}
-                contextActions={[
-                  {
-                    icon: <FolderOpen size={14} />,
-                    label: t('common.open'),
-                    onClick: () => void navigate(projectPath(p)),
-                  },
-                  ...(canManage && tab === 'active'
-                    ? [
-                        {
-                          icon: <Copy size={14} />,
-                          label: t('common.duplicate'),
-                          onClick: () => setDuplicating(p),
-                        },
-                      ]
-                    : []),
-                  ...manageActions,
-                ]}
-              />
-            );
-          })}
-        </EntityContainer>
+                    ...(canManage && tab === 'active'
+                      ? [
+                          {
+                            icon: <Copy size={14} />,
+                            label: t('common.duplicate'),
+                            onClick: () => setDuplicating(p),
+                          },
+                        ]
+                      : []),
+                    ...manageActions,
+                  ]}
+                />
+              );
+            })}
+          </EntityContainer>
+          <ListSentinel hasMore={list.hasMore} isLoading={list.isFetchingMore} onLoadMore={list.loadMore} />
+        </>
       )}
 
       {canManage && tab === 'active' && (

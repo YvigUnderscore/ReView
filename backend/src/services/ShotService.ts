@@ -49,6 +49,18 @@ export async function list(projectId: number, seq: number | 'none' | undefined, 
           select: { id: true, key: true, name: true, color: true },
           orderBy: { order: 'asc' },
         },
+        // Étapes et assignés, comme `AssetService.list` : le sous-menu « Assigner » du clic
+        // droit lit `hasTask` par département. Sans eux il s'affichait entièrement grisé sur
+        // un projet piloté depuis ShotGrid — les deux onglets divergeaient pour cette
+        // seule raison.
+        tasks: {
+          select: {
+            id: true,
+            departmentId: true,
+            departmentRef: { select: { id: true, name: true } },
+            assignee: { select: { id: true, name: true } },
+          },
+        },
       },
     }),
     prisma.shot.count({ where }),

@@ -48,7 +48,9 @@ export default function Shell() {
   // La liste entière, plus les huit derniers modifiés (C1) : le sélecteur doit pouvoir
   // montrer le projet courant, fût-il ancien — il n'apparaissait nulle part auparavant,
   // pas même quand on était en train de le regarder.
-  const { data } = useProjectsQuery();
+  // `all` : la barre latérale liste les projets d'un bloc, elle n'a pas de sentinelle de
+  // défilement — sans cela un studio de plus de cent projets en verrait cent.
+  const { data } = useProjectsQuery({ all: true });
   const projects = useMemo(() => data ?? [], [data]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
   const narrow = useIsNarrowViewport();

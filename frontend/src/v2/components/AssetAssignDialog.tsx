@@ -36,7 +36,8 @@ export default function AssetAssignDialog({
 }) {
   const t = useT();
   const qc = useQueryClient();
-  const shotsQ = useShotsQuery(projectId);
+  // Sélecteur : toutes les pages, sinon on ne peut pas rattacher un asset au 101e plan.
+  const shotsQ = useShotsQuery(projectId, true, { all: true });
   const seqsQ = useSequencesQuery(projectId);
   const assetQ = useQuery({
     queryKey: qk.asset(assetId),

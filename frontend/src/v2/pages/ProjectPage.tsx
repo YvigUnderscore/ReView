@@ -104,8 +104,10 @@ export default function ProjectPage() {
     // L'ordre suit la hiérarchie du pipe, de l'ensemble vers le détail : une séquence
     // contient des plans, pas l'inverse.
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
-    { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shots.length },
-    { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assets.length },
+    // Le badge annonce le total du projet, pas ce qui est chargé : les listes sont
+    // désormais infinies, `shots.length` ne vaudrait que la première page.
+    { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shotsQ.total },
+    { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assetsQ.total },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
     { key: 'production', label: t('project.tab.production'), icon: <BarChart3 size={16} /> },
     ...(canManage ? [{ key: 'members', label: t('nav.members'), icon: <Users size={16} /> }] : []),
