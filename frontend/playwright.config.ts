@@ -13,6 +13,18 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: 'e2e',
+  /**
+   * `npm run test:e2e` n'exécute que le smoke.
+   *
+   * `docs-capture.spec.ts` partage ce dossier mais n'est pas un test : c'est le générateur
+   * des captures de `DOCUMENTATION/assets/`. Ramassé par la même commande, il réécrivait
+   * dix-neuf PNG suivis par git et laissait un projet de démonstration dans la base à
+   * chaque validation — de quoi rendre une suite « verte » salissante, et impossible à
+   * brancher en CI. Le générateur reste lançable, explicitement :
+   *
+   *   E2E_DOCS=1 npx playwright test e2e/docs-capture.spec.ts
+   */
+  testIgnore: process.env.E2E_DOCS === '1' ? [] : ['**/docs-capture.spec.ts'],
   timeout: 90_000,
   expect: { timeout: 15_000 },
   reporter: [['list']],

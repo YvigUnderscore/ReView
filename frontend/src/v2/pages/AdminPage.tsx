@@ -4,6 +4,7 @@
 import { Link, useParams } from 'react-router-dom';
 import {
   Activity,
+  Bot,
   Box,
   CalendarClock,
   ClipboardCheck,
@@ -49,6 +50,7 @@ import OcioTab from './admin/OcioTab';
 import TranscodeTab from './admin/TranscodeTab';
 import DistributionTab from './admin/DistributionTab';
 import ApiWebhooksTab from './admin/ApiWebhooksTab';
+import ServiceTokensTab from './admin/ServiceTokensTab';
 import MediaAccessTab from './admin/MediaAccessTab';
 import IdentityTab from './admin/IdentityTab';
 import LoginAppearanceTab from './admin/LoginAppearanceTab';
@@ -184,6 +186,16 @@ const sections = (t: Tr) =>
       label: t('admin.tab.api'),
       icon: KeyRound,
       Component: ApiWebhooksTab,
+    },
+    {
+      // Identités machine (ferme de rendu, daemon Prism, bot) : à côté de l'API, dont
+      // elles sont le poste d'entrée — mais dans leur propre écran, le formulaire
+      // d'émission portant rôle, projet, expiration et scopes fins.
+      key: 'service-tokens',
+      group: 'communications',
+      label: t('admin.tab.serviceTokens'),
+      icon: Bot,
+      Component: ServiceTokensTab,
     },
     {
       key: 'shotgrid',

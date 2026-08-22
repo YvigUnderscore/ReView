@@ -781,6 +781,8 @@ model Version {
   @@index([authorId])
   @@index([reviewStatusId])
   @@index([deletedAt, published, createdAt])
+  // `name` est cherché par fragment (« v012 ») depuis la palette : index GIN de trigrammes
+  // posé en SQL seul par `20260822120000_recherche_plein_texte_commentaires`.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -964,6 +966,9 @@ model MediaObject {
   // index de tête sur `uploaderId`, les deux balayaient la table entière.
   @@index([uploaderId, deletedAt])
   @@index([deletedAt, published, status, createdAt])
+  // `originalName` est cherché par fragment (`ILIKE '%…%'`, palette Ctrl+K) : index GIN de
+  // trigrammes posé en SQL seul par `20260822120000_recherche_plein_texte_commentaires`,
+  // la classe d'opérateurs `gin_trgm_ops` n'étant pas exprimable ici.
 }
 
 // Marqueurs de timeline nommés/colorés, partagés entre spectateurs (Phase 34.C) :
@@ -1097,6 +1102,10 @@ model Comment {
   @@index([userId])
   @@index([resolvedById])
   @@index([assigneeId])
+  // `content` est cherchable en plein texte (palette Ctrl+K) : index GIN d'expression
+  // `to_tsvector('simple', "content")`, posé en SQL seul par la migration
+  // `20260822120000_recherche_plein_texte_commentaires` — Prisma ne sait pas exprimer un
+  // index d'expression. L'expression est reproduite à l'identique par `lib/searchComments.ts`.
 }
 
 // Réaction emoji à un commentaire. `userId` est OBLIGATOIRE (C1) : le seul écrivain,
