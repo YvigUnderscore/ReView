@@ -382,15 +382,68 @@ model MediaAccessLog {
 
 // Webhook sortant (36.D) : secret chiffré (AES-GCM), events filtrés, signé HMAC-SHA256.
 model Webhook {
-  id             Int       @id @default(autoincrement())
-  url            String
-  secret         String // chiffré via lib/crypto
-  events         String[] // media.published | review.decision | comment.created
-  active         Boolean   @default(true)
+  id      Int      @id @default(autoincrement())
+  url     String
+  secret  String // chiffré via lib/crypto
+  events  String[] // media.published | review.decision | comment.created
+  active  Boolean  @default(true)
+  // Portée. `null` = tout le studio (webhook interne : bot de production, CI). Rattaché à
+  // un projet, le webhook ne reçoit QUE les événements de ce projet : brancher le Slack
+  // d'un client sur `version.published` ne doit pas lui livrer les publications de tous
+  // les films du studio, noms de plans compris.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+
   lastStatus     Int?
   lastError      String?
   lastDeliveryAt DateTime?
+  // Livraisons définitivement perdues depuis le dernier succès. Le premier succès la
+  // remet à zéro ; au-delà du seuil (WebhookService.FAILURE_STREAK_LIMIT) le webhook est
+  // désactivé — un point mort n'a pas à occuper la file indéfiniment.
+  failureStreak  Int       @default(0)
   createdAt      DateTime  @default(now())
+
+  deliveries WebhookDelivery[]
+
+  @@index([projectId])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+// Journal des livraisons de webhook. Sans lui, une livraison épuisée après cinq tentatives
+// disparaissait sans laisser de quoi savoir ce qui avait été perdu ni de quoi. Chaque ligne
+// porte un identifiant stable, repris dans l'en-tête `X-ReView-Delivery` et dans le corps
+// (`id`) : le consommateur peut dédupliquer une reprise, et l'administration peut rejouer.
+model WebhookDelivery {
+  id        Int      @id @default(autoincrement())
+  webhook   Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  webhookId Int
+  event     String
+  payload   Json     @default("{}")
+  // Événement du journal v1 à l'origine de la livraison. Pas de clé étrangère : `ApiEvent`
+  // est purgé à trente jours par `lib/retention`, alors que la trace de livraison a sa
+  // propre durée de vie — même parti pris que `MediaAccessLog.shareLinkId`.
+  apiEventId Int?
+  // Livraison rejouée depuis l'administration : identifiant de l'originale (même raison
+  // qu'au-dessus pour l'absence de clé étrangère — l'originale peut avoir été purgée).
+  replayOfId Int?
+
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  responseStatus Int?
+  responseBody   String? // tronqué (WebhookService.RESPONSE_BODY_MAX)
+  error          String?
+  createdAt      DateTime              @default(now())
+  deliveredAt    DateTime?
+
+  // La liste d'administration lit « les livraisons de CE webhook, les plus récentes
+  // d'abord » : c'est le webhook qui filtre et l'id qui trie.
+  @@index([webhookId, id])
+  @@index([createdAt])
 }
 
 // ⚠ Table morte, conservée sous réserve. Aucune ligne de code ne l'écrit ni ne la lit
@@ -477,6 +530,7 @@ model Project {
   playlists     Playlist[]
   apiTokens     ApiToken[]
   apiEvents     ApiEvent[]
+  webhooks      Webhook[]
   timelines     Timeline[]
   shotgrid      ShotgridConnection?
   // Vocabulaire de statuts propre au projet (B2) — vide = celui du studio.

@@ -27,28 +27,70 @@ export interface EventInput {
 }
 
 /**
+ * Faits qu'une couche et une route publient tous les deux.
+ *
+ * `version.published` part désormais de `VersionService` — c'est ce qui rend le flux exact
+ * quel que soit le point d'entrée (interface, patch en lot, flux de publication d'un
+ * média). La route v1 `PATCH /api/v1/versions/:id` publie encore le même fait juste après
+ * avoir appelé ce service : sans garde, un appel v1 laisserait deux lignes de journal et
+ * deux livraisons pour une seule publication.
+ *
+ * La coalescence est volontairement étroite — un seul nom d'événement, une fenêtre de
+ * quelques secondes, et une clé qui descend jusqu'à l'entité : publier deux fois la même
+ * version en cinq secondes, c'est la publier une fois. Elle n'est pas généralisée aux
+ * autres événements, où deux changements rapprochés sont deux faits distincts.
+ */
+const COALESCED_EVENTS = new Set<WebhookEvent>(['version.published']);
+const COALESCE_WINDOW_MS = 5_000;
+const recentlyPublished = new Map<string, number>();
+
+function isRepeatOfSameFact(event: WebhookEvent, input: EventInput): boolean {
+  if (!COALESCED_EVENTS.has(event)) return false;
+  const now = Date.now();
+  // Purge d'abord : la table ne doit pas grossir avec le nombre d'entités touchées.
+  for (const [key, at] of recentlyPublished) if (now - at > COALESCE_WINDOW_MS) recentlyPublished.delete(key);
+  const key = `${event}|${input.entityType ?? ''}|${input.entityId ?? ''}`;
+  const seenAt = recentlyPublished.get(key);
+  recentlyPublished.set(key, now);
+  return seenAt !== undefined && now - seenAt <= COALESCE_WINDOW_MS;
+}
+
+/**
  * Journalise l'événement et le diffuse aux webhooks abonnés.
  *
  * Ne lève jamais, y compris de façon synchrone : cette fonction est appelée depuis le
  * chemin critique (publication d'une version, dépôt d'un commentaire), et un incident du
  * journal ne doit jamais faire échouer le geste métier qui l'a déclenché.
+ *
+ * L'ordre a changé : la ligne de journal est écrite AVANT l'émission, pour que son
+ * identifiant accompagne la livraison. Ce n'est pas un blocage — l'ensemble reste dans une
+ * promesse non attendue — et l'échec de l'écriture n'empêche pas la livraison de partir,
+ * simplement sans référence au journal.
  */
 export function publish(event: WebhookEvent, input: EventInput): void {
   try {
+    if (isRepeatOfSameFact(event, input)) return;
+    const projectId = input.projectId ?? null;
+    const payload = { ...input.payload, projectId };
     void prisma.apiEvent
       .create({
         data: {
           event,
-          projectId: input.projectId ?? null,
+          projectId,
           entityType: input.entityType ?? null,
           entityId: input.entityId ?? null,
           actorId: input.actorId ?? null,
           payload: { ...input.payload, event },
         },
+        select: { id: true },
       })
-      .catch((err) => logger.warn({ err, event }, '[events] journalisation impossible'));
-
-    emitWebhookEvent(event, { ...input.payload, projectId: input.projectId ?? null });
+      .then(
+        (row) => emitWebhookEvent(event, payload, { projectId, apiEventId: row.id }),
+        (err) => {
+          logger.warn({ err, event }, '[events] journalisation impossible');
+          emitWebhookEvent(event, payload, { projectId, apiEventId: null });
+        },
+      );
   } catch (err) {
     logger.warn({ err, event }, '[events] publication impossible');
   }

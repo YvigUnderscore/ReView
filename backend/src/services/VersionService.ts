@@ -13,6 +13,8 @@ import { forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute, assertProjectManage, isProjectManager } from '../lib/projectRoles';
+import { versionSelect, toVersion } from '../lib/v1Resources';
+import * as ApiEventService from './ApiEventService';
 
 /**
  * Logique métier des versions (liste avec comptage média respectant la visibilité,
@@ -33,6 +35,33 @@ function emitVersionUpdate(
   v: { id: number; taskId: number | null; assetId: number | null },
 ) {
   emitToProject(projectId, 'version:update', { projectId, id: v.id, taskId: v.taskId, assetId: v.assetId });
+}
+
+/**
+ * Flux de changements (journal v1 + webhooks) — émis DEPUIS le service.
+ *
+ * `version.published` ne partait que de la route v1 : une publication faite à l'écran, par
+ * un patch en lot ou par le flux de publication d'un média ne produisait ni ligne de
+ * journal ni webhook. C'est pourtant l'événement auquel s'abonne d'abord un studio.
+ *
+ * La représentation est celle de l'API v1, la même que reçoit un abonné pour une
+ * publication venue d'un DCC.
+ */
+async function publishVersionEvent(
+  event: 'version.created' | 'version.published',
+  projectId: number,
+  versionId: number,
+  actorId: number,
+): Promise<void> {
+  const row = await prisma.version.findUnique({ where: { id: versionId }, select: versionSelect });
+  if (!row) return;
+  ApiEventService.publish(event, {
+    projectId,
+    entityType: 'version',
+    entityId: versionId,
+    actorId,
+    payload: { version: toVersion(row) },
+  });
 }
 
 /** Versions d'une Task ou d'un Asset. Comptage média aligné sur la visibilité réelle. */
@@ -116,6 +145,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateV
     },
   });
   emitVersionUpdate(projectId, version);
+  await publishVersionEvent('version.created', projectId, version.id, user.id);
   return version;
 }
 
@@ -190,6 +220,10 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (body.status === VersionStatus.PUBLISHED)
     logAudit({ userId: user.id, action: 'VERSION_PUBLISH', entityType: 'Version', entityId: id });
   emitVersionUpdate(projectId, updated);
+  // Seule la transition compte : repasser PUBLISHED sur une version déjà publiée n'est pas
+  // une publication, et n'a pas à réveiller les abonnés une seconde fois.
+  if (body.status === VersionStatus.PUBLISHED && !version.published)
+    await publishVersionEvent('version.published', projectId, id, user.id);
   return updated;
 }
 
@@ -208,7 +242,7 @@ export async function publishAll(user: SessionUser, projectId: number, id: numbe
   await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas de publication
   const version = await prisma.version.findUnique({
     where: { id },
-    select: { id: true, deletedAt: true },
+    select: { id: true, deletedAt: true, published: true },
   });
   if (!version || version.deletedAt) throw notFound('Version not found');
 
@@ -231,6 +265,10 @@ export async function publishAll(user: SessionUser, projectId: number, id: numbe
   await MediaService.syncVersionPublication(id, user.id);
   const updated = await prisma.version.findUniqueOrThrow({ where: { id } });
   emitVersionUpdate(projectId, updated);
+  // « Publier tout » fait basculer la version sans passer par `update` : sans cette ligne,
+  // le geste le plus courant de la review restait muet pour les abonnés.
+  if (updated.published && !version.published)
+    await publishVersionEvent('version.published', projectId, id, user.id);
   return { version: updated, publishedCount: drafts.length };
 }
 

@@ -41,6 +41,40 @@ function emitTaskUpdate(projectId: number, t: { id: number; shotId: number | nul
   emitToProject(projectId, 'task:update', { projectId, id: t.id, shotId: t.shotId, assetId: t.assetId });
 }
 
+type TaskEvent = 'task.created' | 'task.updated' | 'task.status_changed' | 'task.assigned';
+
+/**
+ * Flux de changements (journal v1 + webhooks) — émis DEPUIS le service.
+ *
+ * Il ne partait auparavant que de l'API v1 : un statut posé au clic droit, une assignation
+ * par lot ou une tâche créée à l'écran ne produisaient ni ligne de journal ni webhook. Le
+ * journal se présentait pourtant comme un flux de changements — il ne montrait que le
+ * trafic machine. L'origine du changement n'a plus à compter.
+ *
+ * La représentation est celle de l'API v1 (`toTask`), la même que reçoit un abonné pour un
+ * changement venu d'un DCC : un consommateur ne doit pas avoir à distinguer les deux. Elle
+ * coûte une relecture par clé primaire, hors transaction.
+ */
+async function publishTaskEvents(
+  projectId: number,
+  taskId: number,
+  actorId: number,
+  events: ReadonlyArray<{ event: TaskEvent; extra?: Record<string, unknown> }>,
+): Promise<void> {
+  if (events.length === 0) return;
+  const row = await prisma.task.findUnique({ where: { id: taskId }, select: taskSelect });
+  if (!row) return;
+  const task = toTask(row);
+  for (const { event, extra } of events)
+    ApiEventService.publish(event, {
+      projectId,
+      entityType: 'task',
+      entityId: taskId,
+      actorId,
+      payload: { task, ...extra },
+    });
+}
+
 /** Notifie l'assigné d'une tâche (hors auto-assignation). */
 async function notifyAssignee(
   assigneeId: number | null | undefined,
@@ -290,6 +324,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
   });
   await notifyAssignee(body.assigneeId, user.id, projectId, task.id, task.name);
   emitTaskUpdate(projectId, task);
+  await publishTaskEvents(projectId, task.id, user.id, [{ event: 'task.created' }]);
   return task;
 }
 
@@ -340,6 +375,9 @@ export async function createFromComment(user: SessionUser, projectId: number, co
   });
   await notifyAssignee(comment.assigneeId, user.id, projectId, task.id, task.name);
   emitTaskUpdate(projectId, task);
+  await publishTaskEvents(projectId, task.id, user.id, [
+    { event: 'task.created', extra: { sourceCommentId: comment.id } },
+  ]);
   return task;
 }
 
@@ -453,6 +491,7 @@ export async function setAssignee(
   opts: { notify?: boolean } = {},
 ) {
   await assertProjectManage(user.id, user.role, projectId);
+  const before = await prisma.task.findUnique({ where: { id: taskId }, select: { assigneeId: true } });
   const updated = await prisma.task.update({
     where: { id: taskId },
     data: { assigneeId },
@@ -460,12 +499,22 @@ export async function setAssignee(
   });
   if (opts.notify !== false) await notifyAssignee(assigneeId, user.id, projectId, taskId, updated.name);
   emitTaskUpdate(projectId, updated);
+  // L'assignation par lot passe par ici : c'est le geste que la production suit de plus
+  // près, et il ne laissait aucune trace hors de l'écran.
+  if (before?.assigneeId !== assigneeId)
+    await publishTaskEvents(projectId, taskId, user.id, [
+      { event: 'task.assigned', extra: { assigneeId, from: before?.assigneeId ?? null } },
+      { event: 'task.updated' },
+    ]);
   await enqueuePush(projectId, { type: 'task-assignee', taskId, actorId: user.id });
   return updated;
 }
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {
-  const task = await prisma.task.findUnique({ where: { id }, select: { assigneeId: true } });
+  const task = await prisma.task.findUnique({
+    where: { id },
+    select: { assigneeId: true, status: true, pipelineStatusId: true },
+  });
   if (!task) throw notFound('Task not found');
   const manager = await isProjectManager(user.id, user.role, projectId);
   const isAssignee = task.assigneeId === user.id;
@@ -495,6 +544,29 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   });
   await notifyAssignee(body.assigneeId, user.id, projectId, id, updated.name);
   emitTaskUpdate(projectId, updated);
+  // Flux de changements : le statut se distingue d'une modification quelconque — c'est lui
+  // que suivent les tableaux de production, et sans événement dédié chaque consommateur
+  // devrait comparer les états lui-même pour le retrouver.
+  const statusChanged = updated.status !== task.status || updated.pipelineStatusId !== task.pipelineStatusId;
+  await publishTaskEvents(projectId, id, user.id, [
+    ...(statusChanged
+      ? ([
+          {
+            event: 'task.status_changed' as const,
+            extra: { from: task.status, to: updated.status, pipelineStatusId: updated.pipelineStatusId },
+          },
+        ] as const)
+      : []),
+    ...(body.assigneeId !== undefined && updated.assigneeId !== task.assigneeId
+      ? ([
+          {
+            event: 'task.assigned' as const,
+            extra: { assigneeId: updated.assigneeId, from: task.assigneeId },
+          },
+        ] as const)
+      : []),
+    { event: 'task.updated' },
+  ]);
   // 48 : ce qui a changé remonte vers ShotGrid, domaine par domaine. Les dates partent
   // ensemble — ShotGrid recalcule la durée à partir des deux.
   if (body.status !== undefined || body.pipelineStatusId !== undefined)
