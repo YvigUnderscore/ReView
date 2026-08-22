@@ -1,18 +1,18 @@
 # Authentication & API access
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 Three ways to authenticate against the REST API:
 
 | Method | Header | For |
 |--------|--------|-----|
-| **JWT session** | `Authorization: Bearer <jwt>` | The web app (login/refresh) |
-| **API token** | `Authorization: Bearer rvk_<40 hex>` | Scripts & integrations |
+| **JWT session** | `Authorization: Bearer <jwt>` | The web app (login/refresh), all of `/api` |
+| **API token** | `Authorization: Bearer rvk_<40 hex>` | Scripts & integrations, **`/api/v1` only** |
 | **Share session** | `X-Share-Auth: <jwt>` | Public client share pages only |
 
-The access token is also accepted as `?token=` in the query string. That fallback
-exists for media elements that cannot set a header; prefer the header everywhere else,
-and never put a token in a URL you log or share.
+Tokens travel in the **header, never in the query string**: a URL crosses application
+logs, the reverse proxy's logs, the browser history and the `Referer` header, where a
+header goes nowhere.
 
 Examples below assume:
 
@@ -273,15 +273,33 @@ curl -s -H "Authorization: Bearer $JWT" "$REVIEW/api/auth/scopes"
 Legacy tokens carrying `read`/`write` keep working and are expanded on the fly, but
 legacy `write` does **not** grant `webhooks:*` or `users:*`.
 
-Scopes are enforced route by route on `/api/v1`. On the web API `/api`, which is not
-annotated per domain, only the coarse rule applies: any write method requires the
-token to carry at least one write scope, otherwise `403 SCOPE_WRITE_REQUIRED`. A scope
-never grants more than its bearer already has — role and project membership are still
-enforced.
+A scope never grants more than its bearer already has — role and project membership are
+still enforced.
+
+### An API token opens `/api/v1`, and nothing else
+
+Scopes and project binding are enforced by the v1 routes. The web API `/api` is not
+annotated per domain and cannot enforce either, so a token is refused there outright:
 
 ```bash
 curl -s -H "Authorization: Bearer rvk_…" "$REVIEW/api/projects"
+# 403 { "error": "API tokens only open the /api/v1 integration API …",
+#       "code": "API_TOKEN_V1_ONLY" }
+
+curl -s -H "Authorization: Bearer rvk_…" "$REVIEW/api/v1/projects"   # this is the way
 ```
+
+Without that rule, a token bound to one project would read and write **every** project as
+soon as it aimed at `/api` — the binding would be a promise the server does not keep.
+Whatever an integration needs exists in v1: identity (`/api/v1/me`), accepted values and
+the scope list (`/api/v1/schema`), reading files (`/api/v1/media/:id/url`), the event
+journal (`/api/v1/events`). The public documentation endpoints (`/api/docs`,
+`/api/openapi.json`) stay reachable with a token — they serve the same bytes to everyone.
+
+Sessions are unaffected: a signed-in human uses `/api` as before, bounded by their role
+and their project memberships. The coarse write gate still applies inside v1 — an API
+token with no write scope at all gets `403 SCOPE_WRITE_REQUIRED` on any non-`GET` method,
+before the route runs.
 
 ## Share links (client access)
 
@@ -386,6 +404,7 @@ Every media consultation (internal review or client share) is journaled
 
 - [API overview](overview.md) — conventions, errors, rate limits
 - [API v1 — pipeline integration](v1-integration.md) — scopes, service tokens, events
+- [Python client & DCC integrations](python-client.md) — the shipped client
 - [Identity & API (admin)](../admin-guide/identity-and-api.md)
 - [Account security (user)](../user-guide/account-security.md)
 - [Security model](../infrastructure/security.md)

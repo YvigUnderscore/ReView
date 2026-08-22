@@ -1,6 +1,6 @@
 # API overview
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 The backend is an Express 5 REST API under **`/api`**, with Socket.io realtime on
 `/socket.io`. An **interactive reference** (OpenAPI 3.0 generated from the Zod schemas,
@@ -34,10 +34,11 @@ curl -s http://localhost:3430/health
 
 - `POST /api/auth/login` returns a **JWT access token** (+ refresh token), bound to
   a **revocable session**; scripts use **API tokens** (`rvk_` + 40 hex characters,
-  fine-grained scopes). 2FA (TOTP) and SSO (OIDC) are supported. Full reference:
+  fine-grained scopes), which open **`/api/v1` only** — pointed at `/api` they get
+  `403 API_TOKEN_V1_ONLY`. 2FA (TOTP) and SSO (OIDC) are supported. Full reference:
   [Authentication & API access](authentication.md).
-- Send `Authorization: Bearer <token>` on every request. As a fallback for media
-  elements that cannot carry a header, the access token is also read from `?token=`.
+- Send `Authorization: Bearer <token>` on every request — the header, never the query
+  string.
 - Public exceptions: the setup flow (`/api/setup`) on an empty database, the login and
   SSO endpoints, invitation activation (`/api/auth/invitation/:token`), the
   unsubscribe endpoint (`/api/unsubscribe`), the ShotGrid webhook receiver
@@ -100,7 +101,7 @@ under a request id and never leak a stack trace.
 |--------|---------|
 | 400 | Validation failed (`details`), or a rejected value (`INVALID_FILE`, `KIND_UNKNOWN`…) |
 | 401 | Missing token (`TOKEN_REQUIRED`), revoked session (`SESSION_REVOKED`), deleted account (`USER_GONE`) |
-| 403 | Malformed/invalid JWT (`TOKEN_INVALID`), revoked API token (`API_TOKEN_INVALID`), missing scope (`SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`), insufficient role, membership, quota (`STORAGE_LIMIT`, `PROJECT_QUOTA`) or publish-lock violation (`PUBLISHED_LOCKED`) |
+| 403 | Malformed/invalid JWT (`TOKEN_INVALID`), revoked API token (`API_TOKEN_INVALID`), API token used outside `/api/v1` (`API_TOKEN_V1_ONLY`), missing scope (`SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`), insufficient role, membership, quota (`STORAGE_LIMIT`, `PROJECT_QUOTA`) or publish-lock violation (`PUBLISHED_LOCKED`) |
 | 404 | Not found, or not accessible to you |
 | 409 | Conflict (`ALREADY_SETUP`, `IDEMPOTENCY_IN_PROGRESS`, the `*_IN_TRASH` family) |
 | 429 | Rate limit exceeded, or too many concurrent uploads (`TOO_MANY_UPLOADS`) |
@@ -111,13 +112,15 @@ an **invalid** one is `403`.
 
 ## Rate limits
 
-Limits are counted per IP over a 15-minute sliding window, in memory in the API
-process (so they reset when the backend restarts and are not shared across replicas).
-Exceeding one returns `429` with a plain `{ "error": "…" }` body.
+Limits are counted over a 15-minute window in **Redis** (atomic `INCR` + `PTTL`), so they
+survive a restart and are shared by every API replica. The key is the authenticated
+account when there is one, the IP otherwise — a whole studio behind one NAT no longer
+shares a single budget. Exceeding a limit returns `429` with a plain `{ "error": "…" }`
+body.
 
 | Scope | Limit |
 |-------|-------|
-| `/api` (global) | 5 000 / 15 min |
+| `/api` (global) | 6 000 / 15 min per signed-in account, 5 000 / 15 min per anonymous IP |
 | `/api/v1` | 10 000 / 15 min (separate budget, so a polling daemon cannot starve the UI) |
 | `/api/setup` | 10 / 15 min |
 | `/api/share` and `/api/client` | 300 / 15 min |
@@ -127,13 +130,14 @@ Exceeding one returns `429` with a plain `{ "error": "…" }` body.
 ## Realtime
 
 Socket.io is served on the same origin at `/socket.io` and pushes presence,
-notifications, media processing status, project rooms and live review state. It uses
-the in-memory adapter: a single API instance is assumed.
+notifications, media processing status, project rooms and live review state. It runs on
+the Redis adapter, so several API replicas share the same rooms.
 
 ## Related pages
 
 - [Authentication & API access](authentication.md) — sessions, 2FA, SSO, tokens, webhooks
 - [API v1 — pipeline integration](v1-integration.md) — surface for DCC/pipeline tools
+- [Python client & DCC integrations](python-client.md) — the client shipped in `clients/`
 - [Domains](domains.md) — route map per feature
 - [Security model](../infrastructure/security.md)
 - [Monitoring & operations](../infrastructure/monitoring.md)

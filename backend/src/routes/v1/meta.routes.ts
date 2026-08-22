@@ -46,6 +46,9 @@ router.get('/', (_req, res) => {
       idempotency: 'Idempotency-Key',
       events: '/api/v1/events',
       publish: '/api/v1/publish',
+      // Chemins de lecture : un outil découvre ici qu'il peut rapatrier un fichier.
+      latest: '/api/v1/latest',
+      mediaUrl: '/api/v1/media/{id}/url',
     },
   });
 });

@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "review-client"
+version = "1.0.0"
+description = "Client for the ReView v1 pipeline API — publish and read from a DCC"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+authors = [{ name = "Yvig Bidon" }]
+keywords = ["vfx", "pipeline", "review", "dailies", "dcc"]
+# No runtime dependency, on purpose: the client must import inside a DCC interpreter
+# (Maya, Nuke, Houdini, Blender) where nothing can be installed.
+dependencies = []
+
+classifiers = [
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Multimedia :: Video",
+]
+
+[project.scripts]
+review = "review.cli:main"
+
+[tool.setuptools]
+packages = ["review"]

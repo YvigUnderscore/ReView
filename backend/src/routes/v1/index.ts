@@ -9,6 +9,8 @@ import projectContentRoutes from './project-content.routes';
 import entitiesRoutes from './entities.routes';
 import tasksRoutes from './tasks.routes';
 import versionsRoutes from './versions.routes';
+import mediaRoutes from './media.routes';
+import latestRoutes from './latest.routes';
 import publishRoutes from './publish.routes';
 import commentsRoutes from './comments.routes';
 import eventsRoutes from './events.routes';
@@ -47,6 +49,10 @@ export const V1_MOUNTS: { prefix: string; router: ExpressRouter }[] = [
   { prefix: '', router: entitiesRoutes },
   { prefix: '', router: tasksRoutes },
   { prefix: '', router: versionsRoutes },
+  // Lecture des fichiers et « dernière version » : montés après les collections, dont ils
+  // prolongent les chemins (`/tasks/:id/versions/latest` après `/tasks/:id/versions`).
+  { prefix: '', router: mediaRoutes },
+  { prefix: '', router: latestRoutes },
   { prefix: '', router: commentsRoutes },
 ];
 

@@ -1,6 +1,6 @@
 # API v1 — pipeline integration
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 **`/api/v1`** is the stable surface meant for tools: DCCs (Maya, Blender, Houdini,
 Nuke), pipeline managers (Prism), bots and third-party synchronisations. It sits
@@ -33,10 +33,29 @@ export TOKEN="rvk_0123456789abcdef0123456789abcdef01234567"
 
 Every `/api/v1` route requires authentication — there is no public v1 endpoint.
 
+A ready-made client lives in the repository: [`clients/python/`](../../clients/python/README.md),
+plus Blender and Nuke integrations built on it — see
+[Python client & DCC integrations](python-client.md). Everything below is the HTTP
+contract it speaks, for the languages it does not cover.
+
 ## Authentication
 
 Send `Authorization: Bearer <token>` — either a session JWT or an API token
 (`rvk_…`). See [Authentication & API access](authentication.md).
+
+**An API token opens `/api/v1` and nothing else.** Pointed at the web API it gets:
+
+```json
+{ "error": "API tokens only open the /api/v1 integration API — use a session token for /api",
+  "code": "API_TOKEN_V1_ONLY" }
+```
+
+That is deliberate: project binding and fine-grained scopes are enforced by the v1
+routes, so a token loose on `/api` would carry the full power of its bearer over every
+project. Whatever an integration needs exists here — identity (`/api/v1/me`), accepted
+values (`/api/v1/schema`), reading files (`/api/v1/media/:id/url`). The public
+documentation endpoints (`/api/docs`, `/api/openapi.json`) remain reachable with a token,
+since they serve the same bytes to everyone.
 
 Two kinds of API token:
 
@@ -106,11 +125,12 @@ media     comments   playlists  events  webhooks  users
 ```
 
 …each with `:read` and `:write`, plus `admin` which covers everything — 25 grantable
-strings in total. Granting `x:write` implies `x:read`. The full list is served by
-`GET /api/auth/scopes`:
+strings in total. Granting `x:write` implies `x:read`. A token reads the list from
+`GET /api/v1/schema`, under `scopes` (`GET /api/auth/scopes` returns the same list but
+lives on the web API, so it needs a session JWT):
 
 ```bash
-curl -s -H "Authorization: Bearer $TOKEN" "$REVIEW/api/auth/scopes"
+curl -s -H "Authorization: Bearer $TOKEN" "$REVIEW/api/v1/schema" # → .scopes
 ```
 
 ```json
@@ -403,12 +423,117 @@ is refused (`USD_NOT_3D`) rather than silently ignored.
 
 See [3D & USD](../admin-guide/3d-usd.md) for what the conversion does with it.
 
+## Reading back — the version to open, and the file behind it
+
+Publishing is half a pipeline. The other half is *fetching*: a Nuke script that needs
+the approved plate, a farm node that needs the layout, a tool that shows what the
+review is looking at. Three endpoints cover it.
+
+### The version to open
+
+`GET /api/v1/latest` — scope `versions:read`.
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  --get --data-urlencode "path=PROJ/SQ010/SH0100" --data "urls=true" \
+  "$REVIEW/api/v1/latest"
+```
+
+```json
+{
+  "version": {
+    "id": 514, "name": "V03", "status": "PUBLISHED", "published": true,
+    "author": { "id": 9, "name": "farm-publisher" },
+    "reviewStatus": { "id": 1, "name": "Approved", "color": "#3fb950" },
+    "task": { "id": 91, "name": "comp" },
+    "asset": null,
+    "projectId": 3,
+    "path": "proj/SQ010/SH0100/comp/V03",
+    "media": [
+      {
+        "id": 128, "kind": "VIDEO", "status": "READY",
+        "filename": "SH0100_comp_v003.mov", "mimeType": "video/mp4",
+        "size": 184320000, "published": true,
+        "createdAt": "2026-08-20T10:00:00.000Z",
+        "url": "https://minio.mystudio.com/review/…?X-Amz-Algorithm=…"
+      }
+    ],
+    "createdAt": "2026-08-20T10:00:00.000Z",
+    "updatedAt": "2026-08-20T11:04:12.006Z"
+  }
+}
+```
+
+| Query | Default | Meaning |
+|---|---|---|
+| `path` | — | Pipeline path down to a shot, an asset or a task (**not** a version) |
+| `published` | `true` | `false` includes drafts — an artist reading back their own work |
+| `urls` | `false` | `true` adds a presigned `url` to every media of the version |
+| `expiresIn` | `3600` | Validity of those URLs, 60 – 86 400 seconds |
+| `department` | — | Restrict the election to one pipeline step (`comp`, `anim`…) |
+
+On a **shot or an asset**, "latest" is the *most advanced pipeline step* that has
+something to show, then the most recent version at that step — the same rule the web
+interface applies, so the API and the screen never disagree. An animation published
+after a compositing does not win. On a **task**, where the step is constant, it reduces
+to the most recent. The elected version always carries at least one readable media;
+when nothing qualifies the answer is `404 NO_LATEST_VERSION`.
+
+`GET /api/v1/tasks/:id/versions/latest` is the same answer for a task you already hold
+the id of (same query parameters, minus `path`).
+
+### The file behind it
+
+`GET /api/v1/media/:id/url` — scope `media:read`.
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" "$REVIEW/api/v1/media/128/url?variant=source"
+```
+
+```json
+{
+  "mediaId": 128,
+  "variant": "source",
+  "expiresIn": 3600,
+  "url": "https://minio.mystudio.com/review/…?X-Amz-Algorithm=…",
+  "media": { "id": 128, "kind": "VIDEO", "status": "READY", "filename": "SH0100_comp_v003.mov",
+             "mimeType": "video/mp4", "size": 184320000, "published": true,
+             "createdAt": "2026-08-20T10:00:00.000Z" }
+}
+```
+
+Three variants:
+
+| `variant` | What you get |
+|---|---|
+| `source` (default) | The file as published — or the transcoded proxy once the original has been reclaimed |
+| `proxy` | The review MP4, **including the non-destructive trim** when one exists: what the review actually plays |
+| `thumbnail` | The still used in lists and playlists |
+
+A variant the media does not carry answers `404 VARIANT_UNAVAILABLE` rather than a URL
+that would fetch nothing. Then `GET` the URL **without** the `Authorization` header:
+object storage refuses a request that carries two authentication mechanisms.
+
+`GET /api/v1/media/:id` returns the media resource alone (`{ media, versionId }`), for a
+tool that needs the metadata without minting a URL.
+
+Adaptive playback (HLS) stays on the web API: it is a player concern, and a workstation
+wants the file, not a manifest.
+
+Visibility follows the rest of the product: a media in the trash, or an unpublished one
+uploaded by somebody else, answers `404` — not `403`, which would confirm it exists.
+
 ## Use case 1 — a publish shelf button in a DCC
 
 Maya, Houdini and Nuke all ship a Python 3 interpreter, but none guarantees
 `requests`. The script below uses only the standard library, so it runs from a shelf
 button, a ROP post-render script or a Nuke write callback without installing
 anything.
+
+> In Python, prefer the shipped client — `review.ReviewClient().publish(path, file)` does
+> exactly this, with retries and an idempotency key handled for you. See
+> [Python client & DCC integrations](python-client.md). The script below is the same
+> three calls written out, for the languages the client does not cover.
 
 ```python
 # review_publish.py — publish the file the DCC just wrote.
@@ -738,7 +863,9 @@ ensure answers `409` with a named code (`SEQUENCE_IN_TRASH`, `SHOT_IN_TRASH`,
     "pathResolution": true,
     "idempotency": "Idempotency-Key",
     "events": "/api/v1/events",
-    "publish": "/api/v1/publish"
+    "publish": "/api/v1/publish",
+    "latest": "/api/v1/latest",
+    "mediaUrl": "/api/v1/media/{id}/url"
   }
 }
 ```
@@ -807,7 +934,8 @@ no `code` at all (`"Shot not found"`, `"Version not found"`, `"Média not found"
 that item rather than retrying.
 
 Codes worth handling: `TOKEN_REQUIRED`, `TOKEN_INVALID`, `API_TOKEN_INVALID`,
-`SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`, `VERSION_EXISTS`,
+`API_TOKEN_V1_ONLY`, `SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`,
+`NO_LATEST_VERSION`, `VARIANT_UNAVAILABLE`, `VERSION_EXISTS`,
 `KIND_UNKNOWN`, `PATH_TOO_SHALLOW`, `PATH_INCLUDES_VERSION`, `USD_NOT_3D`,
 `IDEMPOTENCY_IN_PROGRESS`, `PROJECT_ARCHIVED`, `ROLE_FORBIDDEN`, `PROJECT_QUOTA`,
 `STORAGE_LIMIT`, `FILE_TOO_LARGE`, `TOO_MANY_UPLOADS`, `INVALID_FILE`,
@@ -819,6 +947,7 @@ quota (5 000 / 15 min on `/api`). Over the limit, the response is `429` with a p
 
 ## Related pages
 
+- [Python client & DCC integrations](python-client.md) — the shipped client, Blender, Nuke
 - [API overview](overview.md) — conventions shared with `/api`
 - [Domains](domains.md) — route map of the web API
 - [Authentication & API access](authentication.md)

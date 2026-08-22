@@ -1,6 +1,6 @@
 # API domains
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 One router per domain (`backend/src/routes/*.routes.ts`), mounted in
 `backend/src/app.ts`. Full parameter-level detail lives in the interactive reference at
@@ -113,7 +113,7 @@ There is **no `/api/media-reference` prefix**: reference images live under
 |--------|--------|
 | `/api/shotgrid` | ShotGrid connection config, sync, entity mapping, crew — see [ShotGrid integration](../admin-guide/shotgrid-integration.md) |
 | `/api/shotgrid/webhook` | ShotGrid webhook receiver. Mounted **before** the JSON body parser: the HMAC signature covers the raw bytes |
-| `/api/v1` | Pipeline integration surface — see [v1-integration.md](v1-integration.md) |
+| `/api/v1` | Pipeline integration surface — see [v1-integration.md](v1-integration.md). **The only prefix an API token (`rvk_…`) may reach**; everywhere else it gets `403 API_TOKEN_V1_ONLY` |
 | `/api/docs`, `/api/openapi.json` | This API's interactive reference |
 
 ## Related pages
@@ -121,3 +121,4 @@ There is **no `/api/media-reference` prefix**: reference images live under
 - [API overview](overview.md)
 - [Authentication & API access](authentication.md)
 - [API v1 — pipeline integration](v1-integration.md)
+- [Python client & DCC integrations](python-client.md)
