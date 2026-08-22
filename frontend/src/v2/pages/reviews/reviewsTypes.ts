@@ -30,10 +30,16 @@ export interface ReviewItem {
   uploader: string | null;
 }
 
-/** Libellés FR des types de média (filtre + badge). */
-export const MEDIA_KIND_LABEL: Record<MediaKind, string> = {
-  VIDEO: t('entity.video'),
-  IMAGE: t('panel.image'),
-  MODEL_3D: t('entity.model3d'),
-  SPLAT: 'Splat',
-};
+/**
+ * Libellés des types de média (filtre + badge), en fonction et non en constante : une table
+ * évaluée au chargement du module fige la langue à l'import, avant l'arrivée du catalogue.
+ * « Splat » appartient au vocabulaire de production : il ne se traduit pas.
+ */
+export function mediaKindLabels(tr: typeof t): Record<MediaKind, string> {
+  return {
+    VIDEO: tr('entity.video'),
+    IMAGE: tr('panel.image'),
+    MODEL_3D: tr('entity.model3d'),
+    SPLAT: 'Splat',
+  };
+}

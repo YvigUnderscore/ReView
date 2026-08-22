@@ -12,7 +12,7 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { fmtBytes } from './adminShared';
-import { filterProjects, PROJECT_STATUS_LABELS, quotaPct } from './adminProjects';
+import { filterProjects, PROJECT_STATUSES, projectStatusLabels, quotaPct } from './adminProjects';
 import type { AdminProjectRow, ProjectStatus } from '../../types/api';
 import { useT } from '../../i18n';
 
@@ -42,9 +42,9 @@ export default function ProjectsAdminTab() {
         </div>
         <Select value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus | 'ALL')}>
           <option value="ALL">{t('projectsAdmin.allStatuses')}</option>
-          {(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => (
+          {PROJECT_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {PROJECT_STATUS_LABELS[s]}
+              {projectStatusLabels(t)[s]}
             </option>
           ))}
         </Select>
@@ -79,7 +79,7 @@ export default function ProjectsAdminTab() {
                     <span className="ml-2 text-xs text-muted-foreground">{p.slug}</span>
                   </td>
                   <td className="px-3 py-2">
-                    <Badge variant="secondary">{PROJECT_STATUS_LABELS[p.status]}</Badge>
+                    <Badge variant="secondary">{projectStatusLabels(t)[p.status]}</Badge>
                   </td>
                   <td className="px-3 py-2 text-right text-muted-foreground">{p.counts.memberships}</td>
                   <td className="px-3 py-2 text-right text-muted-foreground">{p.counts.sequences}</td>

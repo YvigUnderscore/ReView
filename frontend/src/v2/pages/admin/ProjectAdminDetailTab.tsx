@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { Metric, Panel, Row } from './AdminPrimitives';
 import { fmtBytes, fmtDateTime } from './adminShared';
-import { pipelineLabel, PROJECT_STATUS_LABELS, quotaPct } from './adminProjects';
+import { pipelineLabel, projectStatusLabels, quotaPct } from './adminProjects';
 import ProjectHierarchy from './ProjectHierarchy';
 import type { AdminProjectDetail } from '../../types/api';
 import { useT } from '../../i18n';
@@ -44,7 +44,7 @@ export default function ProjectAdminDetailTab() {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold">{project.name}</h2>
-            <Badge variant="secondary">{PROJECT_STATUS_LABELS[project.status]}</Badge>
+            <Badge variant="secondary">{projectStatusLabels(t)[project.status]}</Badge>
             {project.deletedAt && <Badge variant="secondary">{t('common.trash')}</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">

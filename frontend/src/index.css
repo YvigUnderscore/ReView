@@ -44,7 +44,15 @@
     --warning: 40 95% 27%;
     --info: 210 90% 38%;
     --border: 220 16% 87%;
-    --input: 220 16% 83%;
+    /*
+     * `--input` est la *limite d'un contrôle*, pas une décoration : WCAG 1.4.11 lui
+     * demande 3:1 avec la surface qui l'entoure, là où `--border` (séparateurs, cartes)
+     * n'est soumis à rien. Les champs de ReView n'ont pas de fond contrasté — ce trait
+     * est leur seule frontière. Il tenait 1,42:1 (220 16% 83%) : un formulaire d'admin
+     * était une zone de texte sans limite perceptible. Mesuré à 3,53:1 sur --background,
+     * 3,79 sur --card/--popover, 3,13 sur --secondary/--muted (cf. src/theme.a11y.test.ts).
+     */
+    --input: 220 16% 54%;
     --ring: 187 100% 24%;
     --radius: 0.625rem;
     /* Courbes de l'éditeur d'animation caméra (Phase 17) — convention DCC X/Y/Z + focale/tilt. */
@@ -84,7 +92,8 @@
     --warning: 45 100% 51%;
     --info: 199 95% 60%;
     --border: 223 26% 16%;
-    --input: 223 26% 20%;
+    /* Même règle qu'en clair : 3,88:1 sur --background, 3,54 sur --popover (était 1,41:1). */
+    --input: 223 26% 49%;
     --ring: 184 100% 50%;
     /* Courbes de l'éditeur d'animation caméra (Phase 17), teintes lisibles sur fond sombre. */
     --curve-x: 3 100% 66%;
@@ -105,7 +114,14 @@
     --font-mono:
       ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-    --text-2xs: 0.625rem;
+    /*
+     * Plancher typographique : le bas de la rampe vaut 11 px en densité normale et ne
+     * descend pas sous 10 px en densité compacte (0.6875rem × 15 px = 10,3 px). Il valait
+     * 0.625rem, soit 10 px — et 9,06 px en compact, sur des libellés de champ, donc de
+     * l'information nécessaire et non décorative. Le plancher est vérifié par
+     * `src/theme.a11y.test.ts` : baisser une valeur de la rampe y échoue.
+     */
+    --text-2xs: 0.6875rem;
     --text-xs: 0.75rem;
     --text-sm: 0.875rem;
     --text-base: 1rem;
@@ -189,8 +205,12 @@
   html {
     font-size: 16px;
   }
+  /*
+   * 15 px et non 14,5 : la densité compacte reste un choix de l'utilisateur, mais elle ne
+   * doit pas faire passer le bas de la rampe sous 10 px (14,5 × 0.6875 = 9,97).
+   */
   html[data-density='compact'] {
-    font-size: 14.5px;
+    font-size: 15px;
   }
   body {
     @apply bg-background text-foreground;

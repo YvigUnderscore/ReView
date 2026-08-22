@@ -27,7 +27,7 @@ function stubServer(valid: string, refresh: { token?: string; status?: number } 
     const auth = (init.headers as Record<string, string>).Authorization;
     return auth === `Bearer ${valid}`
       ? Promise.resolve(jsonResponse({ ok: true }))
-      : Promise.resolve(jsonResponse({ error: 'Non authentifié' }, 401));
+      : Promise.resolve(jsonResponse({ error: 'Not authenticated' }, 401));
   });
 }
 
@@ -128,9 +128,9 @@ describe('api — 401 et renouvellement de session', () => {
   it('session absente : un 401 public ne tente aucun renouvellement', async () => {
     const expired = vi.fn();
     setSessionExpiredHandler(expired);
-    mockFetch.mockResolvedValue(jsonResponse({ error: 'Non authentifié' }, 401));
+    mockFetch.mockResolvedValue(jsonResponse({ error: 'Not authenticated' }, 401));
 
-    await expect(api.get('/api/client/share/abc')).rejects.toThrow('Non authentifié');
+    await expect(api.get('/api/client/share/abc')).rejects.toThrow('Not authenticated');
     expect(refreshCalls()).toBe(0);
     expect(expired).not.toHaveBeenCalled();
   });
@@ -155,7 +155,7 @@ describe('api — 401 et renouvellement de session', () => {
     setSessionExpiredHandler(expired);
     stubServer('jamais', { status: 503 });
 
-    await expect(api.get('/api/projects')).rejects.toThrow('Non authentifié');
+    await expect(api.get('/api/projects')).rejects.toThrow('Not authenticated');
     expect(expired).not.toHaveBeenCalled();
     expect(localStorage.getItem('token')).toBe('jwt-1');
   });
@@ -168,10 +168,10 @@ describe('api — 401 et renouvellement de session', () => {
     mockFetch.mockImplementation((url: string) =>
       url === '/api/auth/refresh'
         ? Promise.reject(new Error('Failed to fetch'))
-        : Promise.resolve(jsonResponse({ error: 'Non authentifié' }, 401)),
+        : Promise.resolve(jsonResponse({ error: 'Not authenticated' }, 401)),
     );
 
-    await expect(api.get('/api/projects')).rejects.toThrow('Non authentifié');
+    await expect(api.get('/api/projects')).rejects.toThrow('Not authenticated');
     expect(expired).not.toHaveBeenCalled();
     expect(localStorage.getItem('token')).toBe('jwt-1');
   });

@@ -45,6 +45,7 @@ export default function PipelineStatusSelect({
     // Repli : le vocabulaire figé, tant qu'aucun référentiel n'est disponible.
     return (
       <select
+        aria-label={t('common.status')}
         value={legacyStatus ?? 'TODO'}
         disabled={disabled}
         onChange={(e) => onChange({ statusId: null, legacyStatus: e.target.value as TaskStatus })}
@@ -66,7 +67,11 @@ export default function PipelineStatusSelect({
     (legacyStatus ? statuses.find((s) => s.legacyStatus === legacyStatus) : undefined);
 
   return (
+    // `title` porte le code du référentiel : c'est une précision, pas un nom. Sans
+    // `aria-label`, une page de kanban annonçait autant de « listes déroulantes » que de
+    // cartes — le sélecteur de statut est présent sur chacune.
     <select
+      aria-label={t('common.status')}
       value={current?.id ?? ''}
       disabled={disabled}
       onChange={(e) => {

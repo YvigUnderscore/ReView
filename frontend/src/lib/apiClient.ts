@@ -14,7 +14,7 @@
  * de session morte (branché par le store d'auth) ramène l'utilisateur à la connexion.
  */
 
-import { t } from '../v2/i18n';
+import { hasMessage, t } from '../v2/i18n';
 
 const TOKEN_KEY = 'token';
 const REFRESH_KEY = 'refreshToken';
@@ -111,10 +111,46 @@ const send = (method: string, path: string, body?: unknown): Promise<Response> =
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
+/** Corps d'erreur normalisé par `middleware/error` côté backend. */
+type ErrorBody = { error?: string; code?: string };
+
+/**
+ * Erreur d'API : le message est déjà dans la langue du lecteur, le code reste la forme
+ * stable de la faute — c'est lui qu'un appelant doit tester, jamais le texte.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/**
+ * Message d'erreur dans la langue du lecteur.
+ *
+ * Le serveur répond `{ error, code }` : `error` est un texte **anglais** de trace, `code`
+ * est l'identifiant stable de la faute (`PROJECT_ARCHIVED`, `CODE_TAKEN`…). L'interface
+ * est traduite en quatorze langues ; laisser passer le texte du serveur, c'est écrire en
+ * anglais dans une page japonaise — jusque sur le partage client, où le lecteur n'est même
+ * pas salarié du studio. On traduit donc par le code (`error.<CODE>` au catalogue) et l'on
+ * ne retombe sur le texte anglais que pour un code absent du catalogue ou de la réponse :
+ * une erreur non traduite reste lisible, elle n'est jamais remplacée par sa clé.
+ */
+export function apiErrorMessage(body: ErrorBody, status: number): string {
+  const key = `error.${body.code ?? ''}`;
+  if (body.code && hasMessage(key)) return t(key);
+  return body.error ?? t('common.error.http', { status });
+}
+
 async function parse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? t('common.error.http', { status: res.status }));
+    const data = (await res.json().catch(() => ({}))) as ErrorBody;
+    throw new ApiError(apiErrorMessage(data, res.status), res.status, data.code);
   }
   // Réponses sans corps (204 No Content, DELETE…) : pas de JSON à parser.
   if (res.status === 204 || res.headers.get('content-length') === '0') {
@@ -132,7 +168,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     // suffit alors de rejouer.
     const outcome = getToken() === sentWith ? await refreshSession() : 'refreshed';
     if (outcome === 'refreshed') res = await send(method, path, body);
-    else if (outcome === 'expired') throw new Error(t('common.error.sessionExpired'));
+    else if (outcome === 'expired')
+      throw new ApiError(t('common.error.sessionExpired'), 401, 'SESSION_EXPIRED');
   }
   return parse<T>(res);
 }

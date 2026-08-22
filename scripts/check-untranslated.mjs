@@ -103,6 +103,8 @@ const ALLOWED = new Set(
     'Blender',
     'OpenColorIO',
     'AGPL-3.0-or-later',
+    // Nom de classe Three.js affiché tel quel (`MeshStandardMaterial`, à défaut `Material`).
+    'Material',
     // sigles et formats
     'ID',
     'URL',
@@ -245,6 +247,8 @@ const SKIP = [
   /[;{}]|^[-+*/%<>=!&|]\s|^\)|\w\($/, // code : instruction, opérateur de tête, appel
   /\b(float|vec[234]|int|uint|mat[234]|gl_\w+)\b/, // GLSL
   /\b(translate|scale|rotate|matrix|calc|url)\(/i, // fonction CSS
+  /^[a-z][\w-]*\([^)]*\)$/i, // valeur CSS complète (`polygon(0 0, 0 0, 0 0)`)
+  /^[a-z]+\/[a-z0-9.+-]+$/i, // type MIME (`application/octet-stream`)
 ];
 
 /** Une pile de classes utilitaires : tout en minuscules, avec au moins un `-`/`[` interne. */
@@ -286,6 +290,55 @@ export function literalOf(node) {
 const FALLBACK_OPERATORS = new Set([ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken]);
 
 /**
+ * Noms qui annoncent un texte d'interface : `statusLabel`, `formatDuration`, `errorText`,
+ * `VERSION_STATUS_LABEL`. Ils complètent l'annotation `: string`, que le code n'écrit pas
+ * toujours — et nomment aussi les tables de libellés, où le texte se cache le plus.
+ */
+const UI_TEXT_NAME = /(^|[a-z_])(label|text|title|message|caption|wording)s?$|^format[A-Z]/i;
+
+const declaredName = (fn) => {
+  if (fn.name && ts.isIdentifier(fn.name)) return fn.name.text;
+  // `const statusLabel = (...) => …` : le nom est porté par la déclaration.
+  const parent = fn.parent;
+  if (parent && ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) return parent.name.text;
+  return '';
+};
+
+/**
+ * La fonction rend-elle du texte destiné à l'écran ? Le détecteur s'arrêtait au bord de
+ * toute fonction, et cinq libellés français s'affichaient à chaque upload derrière un
+ * `switch` : une table de libellés est du texte d'interface, où qu'elle soit écrite.
+ * Deux signes suffisent, tous deux syntaxiques (ce contrôle n'a pas de vérificateur de
+ * types) : le type de retour annoncé `string`, ou un nom qui dit ce qu'il rend.
+ */
+export function returnsUiText(fn) {
+  if (fn.type && fn.type.kind === ts.SyntaxKind.StringKeyword) return true;
+  return UI_TEXT_NAME.test(declaredName(fn));
+}
+
+/** Fonction englobante la plus proche, ou `null` au niveau du module. */
+export function enclosingFunction(node) {
+  for (let cur = node.parent; cur; cur = cur.parent) if (ts.isFunctionLike(cur)) return cur;
+  return null;
+}
+
+/**
+ * Le nœud appartient-il à une **table de libellés** — `const VERSION_STATUS_LABEL = {
+ * REVIEW: 'En review' }` ? La clé y est un identifiant métier (`REVIEW`), donc aucune des
+ * règles fondées sur le nom de la propriété ne voit le texte : c'est le nom de la table
+ * qui dit ce qu'elle contient.
+ */
+export function inLabelTable(node) {
+  for (let cur = node.parent; cur; cur = cur.parent) {
+    if (ts.isFunctionLike(cur)) return false;
+    if (ts.isVariableDeclaration(cur)) {
+      return ts.isIdentifier(cur.name) && UI_TEXT_NAME.test(cur.name.text);
+    }
+  }
+  return false;
+}
+
+/**
  * Le nœud aboutit-il à l'écran ? Vrai s'il est rendu par du JSX, passé à une prop de
  * libellé ou à un appel parlant (`toast`, `confirm`…). C'est ce qui distingue une valeur
  * de repli affichée d'une constante technique interne.
@@ -295,11 +348,16 @@ export function inSpeakingPosition(node, src) {
     if (ts.isJsxExpression(cur)) return true;
     if (ts.isJsxAttribute(cur)) return VISIBLE_PROPS.has(cur.name.getText(src));
     if (ts.isCallExpression(cur)) return SPEAKING_CALLS.test(calleeName(cur.expression));
-    // Une déclaration ou un retour de fonction coupe la recherche : au-delà, on ne sait
-    // plus si la valeur s'affiche, et deviner produirait des faux positifs en série.
-    if (ts.isVariableDeclaration(cur) || ts.isReturnStatement(cur) || ts.isPropertyAssignment(cur)) {
-      return false;
+    // Valeur rendue par une fonction : parlante si la fonction rend du texte d'interface
+    // (`statusLabel()`, `(): string`). C'était l'angle mort principal du contrôle.
+    if (ts.isReturnStatement(cur)) {
+      const fn = enclosingFunction(cur);
+      return fn ? returnsUiText(fn) : false;
     }
+    if (ts.isArrowFunction(cur)) return returnsUiText(cur);
+    // Une déclaration coupe la recherche : au-delà, on ne sait plus si la valeur
+    // s'affiche, et deviner produirait des faux positifs en série.
+    if (ts.isVariableDeclaration(cur) || ts.isPropertyAssignment(cur)) return false;
   }
   return false;
 }
@@ -356,6 +414,20 @@ export function scan(file) {
   };
 
   const visit = (node) => {
+    // `const LABELS = { DRAFT: t('reviews.draft') }` — évalué à l'import, c'est-à-dire
+    // avant l'arrivée du catalogue de la langue (seul l'anglais est embarqué) et jamais
+    // réévalué ensuite : la table reste anglaise pour toujours. Même faute qu'un texte en
+    // dur, sous une autre forme — la table se convertit en fonction prenant `t`.
+    if (
+      ts.isCallExpression(node) &&
+      /^(t|tr)$/.test(calleeName(node.expression)) &&
+      !enclosingFunction(node)
+    ) {
+      const key = literalOf(node.arguments[0]) ?? '?';
+      const item = `t('${key}') hors fonction — langue figée à l'import`;
+      if (!found.includes(item)) found.push(item);
+    }
+
     if (ts.isJsxText(node)) {
       if (!insideCode(node, src)) push(node.text, true);
     } else if (ts.isJsxAttribute(node) && VISIBLE_PROPS.has(node.name.getText(src))) {
@@ -363,7 +435,7 @@ export function scan(file) {
       if (value) push(value);
     } else if (
       ts.isPropertyAssignment(node) &&
-      VISIBLE_PROPS.has(node.name.getText(src).replace(/['"]/g, ''))
+      (VISIBLE_PROPS.has(node.name.getText(src).replace(/['"]/g, '')) || inLabelTable(node))
     ) {
       // `const FILTERS = [{ value: 'open', label: 'Ouverts' }]` — une table de libellés est
       // du texte d'interface, et c'est là qu'il se cache le plus souvent.
@@ -402,6 +474,27 @@ export function scan(file) {
       // valeur manque, c'est-à-dire précisément quand on le remarque.
       const right = node.right;
       if (ts.isStringLiteral(right) || ts.isNoSubstitutionTemplateLiteral(right)) push(right.text);
+    } else if (
+      (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+      (ts.isReturnStatement(node.parent) || ts.isArrowFunction(node.parent)) &&
+      inSpeakingPosition(node, src) &&
+      !inTechnicalContext(node, src)
+    ) {
+      // `function statusLabel(u): string { … return 'En attente…' }` — la valeur s'affiche
+      // une ligne plus loin, à côté de branches qui appellent bien `t()`.
+      push(node.text);
+    } else if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.PlusToken &&
+      inSpeakingPosition(node, src) &&
+      !inTechnicalContext(node, src)
+    ) {
+      // `'Supprimer ' + n + ' fichiers'` — la même phrase qu'un gabarit, écrite autrement.
+      for (const side of [node.left, node.right]) {
+        if (ts.isStringLiteral(side) || ts.isNoSubstitutionTemplateLiteral(side)) {
+          push(side.text, /^\s|\s$/.test(side.text));
+        }
+      }
     } else if (ts.isTemplateExpression(node) && !inTechnicalContext(node, src)) {
       // Chaque fragment séparément : `${n} job(s) purgé(s)` n'a de sens qu'en morceaux.
       // Une espace en bord signe la prose autour de l'interpolation.

@@ -20,14 +20,7 @@ import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
 import ReviewsPage from './pages/ReviewsPage';
 import ProjectPage from './pages/ProjectPage';
-import TaskPage from './pages/TaskPage';
-import AssetPage from './pages/AssetPage';
-import ShotPage from './pages/ShotPage';
-import SequencePage from './pages/SequencePage';
-import EpisodePage from './pages/EpisodePage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
-import ProfilePage from './pages/ProfilePage';
-import UserProfilePage from './pages/UserProfilePage';
 import { useT } from './i18n';
 
 /**
@@ -38,6 +31,13 @@ import { useT } from './i18n';
  * encore rien demandé. Chacun s'ouvre maintenant à l'usage.
  */
 const ReviewPage = lazy(() => import('./pages/ReviewPage'));
+const TaskPage = lazy(() => import('./pages/TaskPage'));
+const AssetPage = lazy(() => import('./pages/AssetPage'));
+const ShotPage = lazy(() => import('./pages/ShotPage'));
+const SequencePage = lazy(() => import('./pages/SequencePage'));
+const EpisodePage = lazy(() => import('./pages/EpisodePage'));
+const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const TimelinePlayerPage = lazy(() => import('./pages/TimelinePlayerPage'));
 const DocsPage = lazy(() => import('./pages/DocsPage'));

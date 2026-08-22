@@ -6,12 +6,21 @@ import { t } from '../../i18n';
 
 /** Helpers purs des pages admin Projets — testés. */
 
-export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-  ACTIVE: t('project.status.active'),
-  ON_HOLD: t('project.status.onHold'),
-  COMPLETED: t('project.status.completed'),
-  ARCHIVED: t('project.status.archived'),
-};
+/** Ordre d'affichage des statuts — sûr à figer, ce ne sont pas des libellés. */
+export const PROJECT_STATUSES: ProjectStatus[] = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
+
+/**
+ * Libellés de statut de projet, en fonction et non en constante : une table évaluée au
+ * chargement du module fige la langue à l'import, avant l'arrivée du catalogue.
+ */
+export function projectStatusLabels(tr: typeof t): Record<ProjectStatus, string> {
+  return {
+    ACTIVE: tr('project.status.active'),
+    ON_HOLD: tr('project.status.onHold'),
+    COMPLETED: tr('project.status.completed'),
+    ARCHIVED: tr('project.status.archived'),
+  };
+}
 
 /** Filtre plein-texte (nom, slug) + statut. */
 export function filterProjects(

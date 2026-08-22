@@ -35,7 +35,7 @@ import { useAuth } from '../../stores/useAuth';
 import { useWatch } from '../../lib/useWatch';
 import { useFileDrop } from '../../lib/useFileDrop';
 import MediaTile from './MediaTile';
-import { VERSION_STATUS_COLOR, VERSION_STATUS_DOT, VERSION_STATUS_LABEL } from './taskTypes';
+import { VERSION_STATUS_COLOR, VERSION_STATUS_DOT, versionStatusLabels } from './taskTypes';
 import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/api';
 import type { ViewMode } from '../../stores/useViewPref';
 import { useT } from '../../i18n';
@@ -126,7 +126,7 @@ export default function VersionTimelineItem({
                 )}
                 <span className="font-semibold">{version.name}</span>
                 <span className={`rounded px-1.5 py-0.5 text-2xs ${VERSION_STATUS_COLOR[version.status]}`}>
-                  {VERSION_STATUS_LABEL[version.status]}
+                  {versionStatusLabels(t)[version.status]}
                 </span>
                 {version.reviewStatus && <ReviewDecisionBadge status={version.reviewStatus} />}
                 <span className="truncate text-xs text-muted-foreground">

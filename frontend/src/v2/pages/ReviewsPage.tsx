@@ -28,7 +28,7 @@ import { Badge } from '../components/ui/badge';
 import { Select } from '../components/ui/select';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
-import { MEDIA_KIND_LABEL, type ReviewItem } from './reviews/reviewsTypes';
+import { mediaKindLabels, type ReviewItem } from './reviews/reviewsTypes';
 import { useT } from '../i18n';
 
 const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
@@ -39,6 +39,7 @@ const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT
  */
 export default function ReviewsPage() {
   const t = useT();
+  const kindLabels = mediaKindLabels(t);
   const view = useViewMode('reviews');
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -118,7 +119,7 @@ export default function ReviewsPage() {
             <option value="">{t('reviews.filter.allTypes')}</option>
             {KIND_OPTIONS.map((k) => (
               <option key={k} value={k}>
-                {MEDIA_KIND_LABEL[k]}
+                {kindLabels[k]}
               </option>
             ))}
           </Select>
@@ -205,7 +206,7 @@ export default function ReviewsPage() {
                 badge={
                   <span className="flex items-center gap-1">
                     {m.published ? (
-                      <Badge variant="info">{MEDIA_KIND_LABEL[m.kind]}</Badge>
+                      <Badge variant="info">{kindLabels[m.kind]}</Badge>
                     ) : (
                       <Badge variant="warning">{t('reviews.draft')}</Badge>
                     )}

@@ -9,6 +9,7 @@ import {
   coverage,
   formatTag,
   getLocale,
+  hasMessage,
   isLocale,
   loadCatalog,
   localeInfo,
@@ -168,6 +169,16 @@ describe('traduction', () => {
 
   it('rend la clé elle-même si elle n’existe nulle part', () => {
     expect(t('nope.nope' as never)).toBe('nope.nope');
+  });
+
+  /**
+   * Une clé construite (`error.${code}` pour un code d'erreur d'API) peut ne rien
+   * désigner : l'appelant doit pouvoir le savoir avant d'afficher la clé à l'écran.
+   */
+  it('dit si une clé construite existe au catalogue', () => {
+    expect(hasMessage('common.save')).toBe(true);
+    expect(hasMessage('error.CODE_QUI_N_EXISTE_PAS')).toBe(false);
+    expect(hasMessage('')).toBe(false);
   });
 
   it('interpole les variables', async () => {

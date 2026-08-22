@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo_banner.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!--
+      Le zoom reste possible : `maximum-scale=1.0, user-scalable=no` faisait échouer
+      WCAG 2.1 AA 1.4.4 (Resize Text). Le pincement d'un viewer 3D/splat se protège
+      par `touch-action` sur le canvas, jamais en verrouillant le viewport du document.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>ReView</title>

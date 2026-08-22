@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 import { useT } from '../../i18n';
 import { clampValue, dragValue, formatValue, parseInput, type NumberFieldSpec } from './number-field.math';
@@ -47,6 +47,14 @@ export function NumberField({
 }: NumberFieldProps) {
   const t = useT();
   const spec: NumberFieldSpec = { min, max, step, pixelsPerStep };
+  /*
+   * Le libellé visible est un *frère* de l'input — c'est lui qui porte le geste de
+   * glissement, il ne peut donc pas l'englober. Sans association, un lecteur d'écran
+   * annonce une zone de saisie anonyme. On le rattache par `aria-labelledby` ; quand le
+   * libellé est une icône (donc sans texte), `hint` prend le relais.
+   */
+  const labelId = useId();
+  const textLabel = typeof label === 'string';
   const drag = useRef<{ pointerId: number; startX: number; startValue: number } | null>(null);
   // Pendant la frappe l'input vit sa vie (« -», « 0, », champ vide) ; on ne commet qu'à la sortie.
   const [draft, setDraft] = useState<string | null>(null);
@@ -68,6 +76,7 @@ export function NumberField({
       title={hint ? t('numberField.dragHint', { hint }) : undefined}
     >
       <span
+        id={textLabel ? labelId : undefined}
         className="flex touch-none select-none items-center text-muted-foreground [cursor:ew-resize]"
         onPointerDown={(e) => {
           if (e.button !== 0) return;
@@ -88,6 +97,8 @@ export function NumberField({
       <input
         type="text"
         inputMode="decimal"
+        aria-labelledby={textLabel ? labelId : undefined}
+        aria-label={textLabel ? undefined : hint}
         value={draft ?? formatValue(value, step)}
         disabled={disabled}
         onChange={(e) => setDraft(e.target.value)}

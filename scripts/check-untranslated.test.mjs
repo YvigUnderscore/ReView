@@ -90,3 +90,64 @@ describe('scan', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * Les trois angles morts fermés après l'audit du 2026-08-21 : le contrôle passait au vert
+ * pendant que huit chaînes françaises atteignaient l'écran.
+ */
+describe('scan — texte rendu par une fonction', () => {
+  it('relève un littéral renvoyé par une fonction annoncée `: string`', () => {
+    const src = `export function statut(u: { s: string }): string {
+      switch (u.s) { case 'pending': return 'En attente…'; default: return 'Traitement…'; }
+    }`;
+    expect(scanSource(src, 'Fn.ts')).toEqual(['En attente…', 'Traitement…']);
+  });
+
+  it('relève un littéral renvoyé par une fonction au nom parlant', () => {
+    expect(
+      scanSource('export const statusLabel = (s: string) => (s ? "Terminé" : "En cours");', 'B.ts'),
+    ).toEqual(['Terminé', 'En cours']);
+  });
+
+  it('laisse passer une fonction technique, même annoncée `: string`', () => {
+    expect(
+      scanSource('export function bucket(id: number): string { return `derived/${id}`; }', 'C.ts'),
+    ).toEqual([]);
+  });
+
+  it('laisse passer un type MIME et une valeur CSS renvoyés par une fonction', () => {
+    const src = `export const fallbackType = (m?: string): string => m ?? 'application/octet-stream';
+      export function clip(): string { return 'polygon(0 0, 0 0, 0 0)'; }`;
+    expect(scanSource(src, 'D.ts')).toEqual([]);
+  });
+});
+
+describe('scan — table de libellés et t() hors fonction', () => {
+  it('relève le texte d’une table de libellés dont la clé est un identifiant métier', () => {
+    const src = `export const VERSION_STATUS_LABEL: Record<string, string> = {
+      DRAFT: 'Brouillon', REVIEW: 'En review',
+    };`;
+    expect(scanSource(src, 'E.ts')).toEqual(['Brouillon', 'En review']);
+  });
+
+  it('relève un t() appelé hors de toute fonction — la langue y est figée à l’import', () => {
+    const src = `import { t } from '../i18n';
+      export const LABELS = { DRAFT: t('reviews.draft') };`;
+    expect(scanSource(src, 'F.ts')).toEqual(["t('reviews.draft') hors fonction — langue figée à l'import"]);
+  });
+
+  it('laisse passer un t() appelé dans une fonction, un constructeur compris', () => {
+    const src = `import { t } from '../i18n';
+      export class E extends Error { constructor() { super(t('uploads.error.storage')); } }
+      export const label = () => t('reviews.draft');`;
+    expect(scanSource(src, 'G.ts')).toEqual([]);
+  });
+});
+
+describe('scan — concaténation', () => {
+  it('relève une phrase assemblée par +', () => {
+    const found = scanSource('export const A = ({ n }: { n: number }) => <p>{"Reste " + n + " objets"}</p>;');
+    // L'ordre suit le parcours de l'arbre (`('Reste ' + n) + ' objets'`), pas la phrase.
+    expect([...found].sort()).toEqual(['Reste', 'objets']);
+  });
+});

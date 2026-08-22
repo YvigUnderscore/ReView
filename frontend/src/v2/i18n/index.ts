@@ -200,6 +200,15 @@ export function t(key: MessageKey, params?: TParams): string {
   return interpolate(selectPlural(message, count, resolved), params);
 }
 
+/**
+ * La clé existe-t-elle au catalogue ? Utile aux clés **construites** — `error.${code}`
+ * pour un code d'erreur d'API — où l'appelant doit pouvoir se rabattre sur autre chose
+ * que la clé elle-même affichée à l'écran.
+ */
+export function hasMessage(key: string): key is MessageKey {
+  return Object.hasOwn(base, key);
+}
+
 const subscribe = (fn: () => void) => {
   listeners.add(fn);
   return () => {
