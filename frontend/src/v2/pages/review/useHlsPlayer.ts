@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import Hls from 'hls.js';
 import { getToken } from '../../../lib/apiClient';
 import { getSocket } from '../../../lib/socket';
+import { applyHlsAuth, isExpiredMediaUrlError, MAX_HLS_REFRESHES } from './hlsSource';
 
 export interface HlsLevel {
   height: number;
@@ -12,8 +13,11 @@ export interface HlsLevel {
 }
 
 /**
- * Lecture HLS (Phase 23) via hls.js (MSE). Le manifeste et les segments sont servis par le
- * proxy authentifié `/api/media/:id/hls/*` → le token JWT est injecté par `xhrSetup`.
+ * Lecture HLS (Phase 23) via hls.js (MSE). Les **manifestes** sont servis par l'API
+ * authentifiée `/api/media/:id/hls/*` (le JWT est injecté par `xhrSetup`) ; depuis la
+ * vague 2, les **segments** y sont référencés par URL MinIO présignées et ne passent plus
+ * par le backend — d'où deux règles portées par `hlsSource` : le jeton de session ne suit
+ * que les URL d'API, et une signature périmée se répare en rechargeant le manifeste.
  * Sans support MSE (`active=false`), l'appelant retombe sur le proxy MP4.
  *
  * Système de qualité volontairement minimal (refonte 2026-07-18) :
@@ -49,6 +53,15 @@ export function useHlsPlayer(
   const [gen, setGen] = useState(0);
   const restoreRef = useRef<{ t: number; paused: boolean } | null>(null);
   const manualHeightRef = useRef<number | null>(null);
+  // Rechargements déclenchés par une URL de segment périmée — bornés (cf. MAX_HLS_REFRESHES).
+  const refreshesRef = useRef(0);
+
+  /** Recharge le manifeste en préservant position et état de lecture. */
+  const reloadSource = useCallback(() => {
+    const video = videoRef.current;
+    restoreRef.current = { t: video?.currentTime ?? 0, paused: video?.paused ?? true };
+    setGen((g) => g + 1);
+  }, [videoRef]);
 
   const markSwitching = useCallback(() => {
     setSwitching(true);
@@ -60,10 +73,7 @@ export function useHlsPlayer(
     const video = videoRef.current;
     if (!video || !hlsUrl || !Hls.isSupported()) return;
     const hls = new Hls({
-      xhrSetup: (xhr) => {
-        const token = getToken();
-        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      },
+      xhrSetup: (xhr, url) => applyHlsAuth(xhr, url, getToken()),
     });
     hlsRef.current = hls;
     hls.attachMedia(video);
@@ -98,6 +108,14 @@ export function useHlsPlayer(
       // lecture : micro-seek sur place pour recharger le segment et rafraîchir la frame.
       if (video.paused && video.readyState < 3) video.currentTime = Math.max(0, video.currentTime - 0.001);
     });
+    // Segment refusé par le stockage : sa signature a expiré (séance plus longue que la
+    // durée de validité). Le manifeste, lui, reste accessible — on le redemande, ce qui
+    // rend un jeu d'URL fraîches, position et lecture préservées.
+    hls.on(Hls.Events.ERROR, (_evt, data) => {
+      if (!isExpiredMediaUrlError(data) || refreshesRef.current >= MAX_HLS_REFRESHES) return;
+      refreshesRef.current += 1;
+      reloadSource();
+    });
     return () => {
       hls.destroy();
       hlsRef.current = null;
@@ -105,7 +123,12 @@ export function useHlsPlayer(
       setLevels([]);
       setSwitching(false);
     };
-  }, [videoRef, hlsUrl, gen]);
+  }, [videoRef, hlsUrl, gen, reloadSource]);
+
+  // Nouveau média : le compteur de rechargements repart à zéro.
+  useEffect(() => {
+    refreshesRef.current = 0;
+  }, [hlsUrl]);
 
   // Échelle progressive (34.F) : de nouvelles renditions sont prêtes → recharge le master.
   useEffect(() => {
@@ -113,15 +136,13 @@ export function useHlsPlayer(
     const socket = getSocket();
     const onChanged = (e: { mediaId: number; renditions: number }) => {
       if (e.mediaId !== mediaId || e.renditions <= levels.length) return;
-      const video = videoRef.current;
-      restoreRef.current = { t: video?.currentTime ?? 0, paused: video?.paused ?? true };
-      setGen((g) => g + 1);
+      reloadSource();
     };
     socket.on('hls:changed', onChanged);
     return () => {
       socket.off('hls:changed', onChanged);
     };
-  }, [active, mediaId, videoRef, levels.length]);
+  }, [active, mediaId, levels.length, reloadSource]);
 
   /** Change la qualité de lecture (index de rendition). */
   const setLevel = (idx: number) => {

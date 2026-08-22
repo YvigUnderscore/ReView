@@ -142,24 +142,31 @@ router.get('/:id/url', validate({ params: idParam }), async (req, res) => {
 });
 
 /**
- * GET /api/media/:id/hls/:file — proxy des fichiers HLS (master/rendition/segment) depuis MinIO
- * (Phase 23). `file` restreint (pas de `/` ni `..`) ; accès lecture re-vérifié dans le service.
+ * GET /api/media/:id/hls/:file — manifestes HLS (Phase 23, révisé vague 2 : les segments ne
+ * traversent plus Node, cf. MediaService). Le maître paie l'autorisation en base ; `pt` est
+ * le jeton de lecture qu'il a émis, qui en dispense les sous-playlists. `file` est restreint
+ * (ni `/`, ni query) et revalidé côté service. Le cache est décidé par le service : jamais
+ * pour un manifeste (jeton + URL signées), immuable pour un segment servi en repli.
  */
 router.get(
   '/:id/hls/:file',
   validate({
     params: z.object({ id: z.coerce.number().int(), file: z.string().regex(/^[A-Za-z0-9._-]+$/) }),
+    query: z.object({ pt: z.string().max(2048).optional() }),
   }),
   async (req, res) => {
-    const { stream, contentType } = await MediaService.getHlsFile(
-      req.user!,
-      Number(req.params.id),
-      String(req.params.file),
-    );
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'private, max-age=60');
-    stream.on('error', () => res.destroy());
-    stream.pipe(res);
+    const out = await MediaService.getHlsFile(req.user!, Number(req.params.id), String(req.params.file), {
+      playbackToken: req.query.pt as string | undefined,
+      ip: req.ip,
+    });
+    res.setHeader('Content-Type', out.contentType);
+    res.setHeader('Cache-Control', out.cacheControl);
+    if (out.body !== undefined) {
+      res.send(out.body);
+      return;
+    }
+    out.stream?.on('error', () => res.destroy());
+    out.stream?.pipe(res);
   },
 );
 

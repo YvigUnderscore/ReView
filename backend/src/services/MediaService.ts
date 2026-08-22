@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { MediaKind, MediaStatus, Prisma, Role, VersionStatus } from '@prisma/client';
+import type { Readable } from 'node:stream';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
@@ -19,6 +20,15 @@ import { publish as publishApiEvent } from './ApiEventService';
 import { notifyChat } from './ChatNotifyService';
 import { isClamavEnabled } from '../lib/clamav';
 import { hlsContentType } from '../lib/hls';
+import {
+  HLS_URL_TTL_SEC,
+  isSafeHlsName,
+  playlistUris,
+  signingWindowStart,
+  withPlaybackToken,
+  withPresignedSegments,
+} from '../lib/hlsPlaylist';
+import { signMediaPlaybackToken, verifyMediaPlaybackToken } from '../lib/mediaToken';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertNotPublished } from '../lib/publishLock';
 import { inheritsPublication, shouldPublishVersion } from '../lib/publishState';
@@ -689,11 +699,42 @@ export async function getUrl(user: SessionUser, id: number) {
 }
 
 /**
- * Flux d'un fichier HLS (`derived/{id}/hls/{file}`) — proxy auth (Phase 23) : les playlists
- * référencent des URI relatifs, servis derrière `/api/media/:id/hls/:file`. `file` est validé
- * par la route (pas de traversée). Accès lecture (média publié ou uploader + membre projet).
+ * ── Diffusion HLS (Phase 23, révisée vague 2 : la vidéo ne traverse plus Node) ────────────
+ *
+ * Avant : chaque segment de 2 s repassait par le process web après trois requêtes Prisma de
+ * contrôle d'accès, et repartait en `private, max-age=60` — sur un contenu pourtant
+ * immuable. Un plan de dix minutes coûtait ~300 requêtes par rendition et par spectateur,
+ * toutes imputées au plafond de débit partagé par IP : c'est ce qui plafonnait les dailies.
+ *
+ * Maintenant, trois niveaux :
+ *  1. `master.m3u8` — l'autorisation en base est payée **ici, une seule fois** (avec le
+ *     journal d'accès). Le maître renvoyé accroche un jeton de lecture à chaque rendition.
+ *  2. `<rendition>.m3u8?pt=…` — le jeton tient lieu d'autorisation : vérification HMAC,
+ *     zéro requête SQL. La sous-playlist renvoyée pointe des URL MinIO présignées.
+ *  3. les segments — servis directement par le stockage. Aucun octet de vidéo dans Node.
+ *
+ * Le proxy historique `/api/media/:id/hls/<segment>.ts` reste servi (client qui n'aurait pas
+ * de manifeste réécrit, nom de segment inattendu) : rien ne casse, mais il n'est plus le
+ * chemin nominal — et il pose enfin un cache immuable.
  */
-export async function getHlsFile(user: SessionUser, id: number, file: string) {
+
+/** Réponse d'un fichier HLS : un corps texte (playlist réécrite) ou un flux (repli segment). */
+export interface HlsFileResponse {
+  contentType: string;
+  cacheControl: string;
+  body?: string;
+  stream?: Readable;
+}
+
+/** Un segment ne change jamais : une fois pris, il n'a plus jamais à être redemandé. */
+const HLS_SEGMENT_CACHE_CONTROL = 'private, max-age=31536000, immutable';
+/** Les playlists portent un jeton et des URL signées : jamais de cache partagé. */
+const HLS_PLAYLIST_CACHE_CONTROL = 'private, no-store';
+
+const hlsKey = (id: number, file: string) => `derived/${id}/hls/${file}`;
+
+/** Le contrôle d'accès complet — les trois requêtes que le jeton de lecture évite ensuite. */
+async function assertHlsRead(user: SessionUser, id: number): Promise<void> {
   const media = await prisma.mediaObject.findUnique({
     where: { id },
     select: { published: true, uploaderId: true, versionId: true },
@@ -703,10 +744,99 @@ export async function getHlsFile(user: SessionUser, id: number, file: string) {
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  const stream = await storage
-    .getObjectStream(`derived/${id}/hls/${file}`)
+}
+
+async function readHlsText(id: number, file: string): Promise<string> {
+  const buf = await storage
+    .getObjectBuffer(hlsKey(id, file))
     .catch(() => Promise.reject(notFound('HLS file not found')));
-  return { stream, contentType: hlsContentType(file) };
+  return buf.toString('utf8');
+}
+
+/**
+ * Sous-playlists réécrites, **gelées par fenêtre de signature**.
+ *
+ * Sans cela, deux spectateurs recevraient deux jeux d'URL présignées différents pour les
+ * mêmes segments (la signature dépend de l'instant), et aucun cache partagé ne pourrait les
+ * rapprocher. En figeant la playlist par fenêtre de quinze minutes, les vingt spectateurs
+ * d'un daily demandent exactement les mêmes URL : le frontal ne lit qu'une fois chaque
+ * segment au stockage. Corollaire assumé : une échelle HLS régénérée (reprocess) peut être
+ * annoncée avec au plus une fenêtre de retard.
+ */
+const renditionCache = new Map<string, string>();
+const RENDITION_CACHE_MAX = 32;
+
+async function presignedRendition(id: number, file: string): Promise<string> {
+  const windowStart = signingWindowStart();
+  const cacheKey = `${windowStart}:${id}:${file}`;
+  const cached = renditionCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const text = await readHlsText(id, file);
+  const names = playlistUris(text).filter(isSafeHlsName);
+  const signed = await Promise.all(
+    names.map(
+      async (name) => [name, await storage.getPresignedGetUrl(hlsKey(id, name), HLS_URL_TTL_SEC)] as const,
+    ),
+  );
+  const rewritten = withPresignedSegments(text, new Map(signed));
+
+  // Les fenêtres passées ne resserviront jamais ; le reste est borné par ancienneté.
+  for (const key of [...renditionCache.keys()])
+    if (!key.startsWith(`${windowStart}:`)) renditionCache.delete(key);
+  if (renditionCache.size >= RENDITION_CACHE_MAX) {
+    const oldest = renditionCache.keys().next().value;
+    if (oldest !== undefined) renditionCache.delete(oldest);
+  }
+  renditionCache.set(cacheKey, rewritten);
+  return rewritten;
+}
+
+/** Vide le cache des sous-playlists (tests, et point d'entrée si un purgeur en a besoin). */
+export function resetHlsPlaylistCache(): void {
+  renditionCache.clear();
+}
+
+/**
+ * Manifeste ou segment HLS (`derived/{id}/hls/{file}`). `file` est validé par la route ;
+ * on le revalide ici parce qu'il compose une clé de stockage.
+ */
+export async function getHlsFile(
+  user: SessionUser,
+  id: number,
+  file: string,
+  opts: { playbackToken?: string; ip?: string } = {},
+): Promise<HlsFileResponse> {
+  if (!isSafeHlsName(file)) throw notFound('HLS file not found');
+  const contentType = hlsContentType(file);
+  const isMaster = file === 'master.m3u8';
+  // Un jeton de lecture valide dispense du contrôle en base ; absent ou invalide (expiré,
+  // autre média, autre compte), on refait le contrôle complet — jamais de refus surprise.
+  if (isMaster || !verifyMediaPlaybackToken(opts.playbackToken, id, user.id)) await assertHlsRead(user, id);
+
+  if (isMaster) {
+    // Journal d'accès (36.E), dédupliqué par fenêtre de 30 min : le visionnage reste tracé
+    // alors même que les segments ne passent plus par l'API.
+    logMediaAccess({ mediaObjectId: id, userId: user.id, ip: opts.ip ?? null });
+    const master = await readHlsText(id, file);
+    return {
+      contentType,
+      cacheControl: HLS_PLAYLIST_CACHE_CONTROL,
+      body: withPlaybackToken(master, signMediaPlaybackToken(id, user.id)),
+    };
+  }
+
+  if (file.endsWith('.m3u8'))
+    return {
+      contentType,
+      cacheControl: HLS_PLAYLIST_CACHE_CONTROL,
+      body: await presignedRendition(id, file),
+    };
+
+  const stream = await storage
+    .getObjectStream(hlsKey(id, file))
+    .catch(() => Promise.reject(notFound('HLS file not found')));
+  return { contentType, cacheControl: HLS_SEGMENT_CACHE_CONTROL, stream };
 }
 
 const MAX_THUMBNAIL_BYTES = 1_500_000;
