@@ -101,4 +101,30 @@ describe('getDetail', () => {
     expect(firstMediaThumbKeysForShots).toHaveBeenCalledTimes(1);
     expect(firstMediaThumbKeysForShots).toHaveBeenCalledWith([1, 2, 3]);
   });
+
+  it('borne les plans et les assets de la fiche, et rend le compte réel', async () => {
+    // La fiche affiche tout d'un bloc : sans plafond, une séquence mal découpée
+    // ramènerait la moitié du long-métrage à chaque ouverture.
+    vi.mocked(prisma.sequence.findUnique).mockResolvedValue(sequence as never);
+    await getDetail(5);
+    const include = vi.mocked(prisma.sequence.findUnique).mock.calls[0]![0].include as {
+      shots: { take: number; orderBy: unknown };
+      assets: { take: number; orderBy: unknown };
+      _count: unknown;
+    };
+    expect(include.shots.take).toBe(500);
+    expect(include.assets.take).toBe(500);
+    expect(include._count).toEqual({ select: { shots: { where: { deletedAt: null } } } });
+  });
+
+  it('départage l’ordre des plans par id', async () => {
+    // Les plans d'un import partagent order = 0 ; le code ne suffit pas non plus quand
+    // deux séquences fusionnées portent la même numérotation.
+    vi.mocked(prisma.sequence.findUnique).mockResolvedValue(sequence as never);
+    await getDetail(5);
+    const include = vi.mocked(prisma.sequence.findUnique).mock.calls[0]![0].include as {
+      shots: { orderBy: unknown };
+    };
+    expect(include.shots.orderBy).toEqual([{ order: 'asc' }, { code: 'asc' }, { id: 'asc' }]);
+  });
 });

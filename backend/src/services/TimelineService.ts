@@ -71,11 +71,30 @@ const shotSelect = {
 } satisfies Prisma.ShotSelect;
 
 /**
+ * Plafond du montage. Un long-métrage tient sous les deux mille plans ; au-delà, on est
+ * dans l'anomalie d'import, et charger la table entière pour la trier en mémoire ferait
+ * tomber le serveur plutôt que d'afficher quelque chose d'utile.
+ */
+const TIMELINE_SHOT_LIMIT = 5000;
+
+/** Révisions listées dans le sélecteur d'un montage (les plus récentes d'abord). */
+const SNAPSHOT_LIST_LIMIT = 200;
+
+/**
  * Les plans du montage, dans l'ordre de la production : séquence par séquence, puis
  * l'ordre du plan, le code servant d'ultime départage — un plan sans ordre explicite ne
  * doit pas se retrouver placé au hasard.
+ *
+ * La requête est bornée ET triée côté base : sans `orderBy`, le plafond aurait coupé
+ * dans un ensemble arbitraire, et le montage d'un même projet aurait changé d'un
+ * rafraîchissement à l'autre. Le tri finit en mémoire parce que le départage par code
+ * est **naturel** (`SH2` avant `SH10`), ce qu'aucune collation SQL ne fait — l'ordre
+ * affiché est donc exactement celui d'avant, sur un ensemble désormais déterministe.
  */
-async function orderedShots(projectId: number, sequenceId: number | null): Promise<ShotRow[]> {
+async function orderedShots(
+  projectId: number,
+  sequenceId: number | null,
+): Promise<{ rows: ShotRow[]; truncated: boolean }> {
   const shots = await prisma.shot.findMany({
     where: {
       projectId,
@@ -83,6 +102,16 @@ async function orderedShots(projectId: number, sequenceId: number | null): Promi
       omitted: false,
       ...(sequenceId !== null ? { sequenceId } : {}),
     },
+    // Les plans hors séquence partent en fin de liste : Postgres range les NULL en
+    // dernier sur un tri ascendant, comme le faisait le rang `MAX_SAFE_INTEGER`.
+    orderBy: [
+      { sequence: { order: 'asc' } },
+      { sequence: { code: 'asc' } },
+      { order: 'asc' },
+      { code: 'asc' },
+      { id: 'asc' },
+    ],
+    take: TIMELINE_SHOT_LIMIT,
     select: shotSelect,
   });
   const rank = (s: (typeof shots)[number]) => s.sequence?.order ?? Number.MAX_SAFE_INTEGER;
@@ -91,17 +120,21 @@ async function orderedShots(projectId: number, sequenceId: number | null): Promi
       rank(a) - rank(b) ||
       (a.sequence?.code ?? '').localeCompare(b.sequence?.code ?? '') ||
       a.order - b.order ||
-      a.code.localeCompare(b.code, undefined, { numeric: true }),
+      a.code.localeCompare(b.code, undefined, { numeric: true }) ||
+      a.id - b.id,
   );
-  return shots.map((s) => ({
-    id: s.id,
-    code: s.code,
-    name: s.name,
-    sequenceId: s.sequenceId,
-    sequenceCode: s.sequence?.code ?? null,
-    startFrame: s.startFrame,
-    endFrame: s.endFrame,
-  }));
+  return {
+    rows: shots.map((s) => ({
+      id: s.id,
+      code: s.code,
+      name: s.name,
+      sequenceId: s.sequenceId,
+      sequenceCode: s.sequence?.code ?? null,
+      startFrame: s.startFrame,
+      endFrame: s.endFrame,
+    })),
+    truncated: shots.length >= TIMELINE_SHOT_LIMIT,
+  };
 }
 
 /** Traduit les versions élues en entrées de montage (durée lue dans les métadonnées). */
@@ -155,6 +188,8 @@ export interface TimelineView {
   gapCount: number;
   updatedAt: Date;
   latestRevision: number | null;
+  /** Le plafond de plans a mordu : le montage montré n'est pas le montage entier. */
+  truncated: boolean;
 }
 
 /** Calcule le montage courant : ordre des plans × version la plus avancée × durées. */
@@ -167,7 +202,7 @@ export async function resolve(timelineId: number): Promise<TimelineView> {
 
   const settings = await resolveProjectSettingsById(timeline.projectId);
   const fps = sequenceFramerate(timeline.sequence?.settings, settings.framerate);
-  const shots = await orderedShots(timeline.projectId, timeline.sequenceId);
+  const { rows: shots, truncated } = await orderedShots(timeline.projectId, timeline.sequenceId);
   const picks = await latestForShots(
     shots.map((s) => s.id),
     settings.departments,
@@ -213,6 +248,7 @@ export async function resolve(timelineId: number): Promise<TimelineView> {
     gapCount: items.filter((it) => it.placeholder).length,
     updatedAt: timeline.updatedAt,
     latestRevision: latest?.revision ?? null,
+    truncated,
   };
 }
 
@@ -369,11 +405,18 @@ export async function requestExport(user: SessionUser, timelineId: number): Prom
   return exportState(timelineId);
 }
 
-/** Révisions figées d'un montage, de la plus récente à la plus ancienne. */
+/**
+ * Révisions figées d'un montage, de la plus récente à la plus ancienne.
+ *
+ * Bornée : une projection quotidienne pendant deux ans fait sept cents révisions, et la
+ * liste est un menu déroulant. Le tri décroissant garantit que ce sont les plus anciennes
+ * qui sortent du cadre, jamais celles qu'on consulte.
+ */
 export function listSnapshots(timelineId: number) {
   return prisma.timelineSnapshot.findMany({
     where: { timelineId },
     orderBy: { revision: 'desc' },
+    take: SNAPSHOT_LIST_LIMIT,
     include: {
       createdBy: { select: { id: true, name: true, username: true } },
       _count: { select: { items: true } },

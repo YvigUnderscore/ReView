@@ -10,7 +10,7 @@ import { validate } from '../middleware/validate';
 import { resolveProjectIdForShot } from '../lib/pipeline';
 import { pipelineOverrideSchema } from '../lib/projectSettings';
 import { notFound } from '../lib/errors';
-import { paginationQuery, readPagination } from '../lib/pagination';
+import { cursorPaginationQuery, readPagination } from '../lib/pagination';
 import * as ShotService from '../services/ShotService';
 import * as PipelineLatestService from '../services/PipelineLatestService';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
@@ -41,7 +41,13 @@ async function resolveShotAccess(req: Request, shotId: number): Promise<number> 
   return projectId;
 }
 
-// GET /api/shots?projectId=X[&sequenceId=Y|none] — « none » = shots hors séquence. Paginé (10.D1).
+/**
+ * GET /api/shots?projectId=X[&sequenceId=Y|none] — « none » = shots hors séquence.
+ *
+ * Paginé (10.D1) en page/pageSize **ou** en curseur : la réponse porte `total`,
+ * `pageCount`, `hasMore` et `nextCursor`, de quoi charger un long-métrage de deux mille
+ * plans sans en perdre ni en dupliquer.
+ */
 router.get(
   '/',
   validate({
@@ -50,7 +56,7 @@ router.get(
         projectId: z.coerce.number().int(),
         sequenceId: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
       })
-      .merge(paginationQuery),
+      .merge(cursorPaginationQuery),
   }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);

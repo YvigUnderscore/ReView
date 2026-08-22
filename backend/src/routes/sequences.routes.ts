@@ -15,6 +15,7 @@ import { mountTrashRoutes } from './trashRoutes';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, notFound } from '../lib/errors';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
+import { MAX_PAGE_SIZE, paginate, pageArgs, paginationQuery, readPagination } from '../lib/pagination';
 import * as SequenceService from '../services/SequenceService';
 import * as PipelineStatusService from '../services/PipelineStatusService';
 import { enqueuePush } from '../services/shotgrid/ShotgridPushService';
@@ -45,21 +46,45 @@ const sequencePatchBody = sequenceBody.partial().extend({
 const createSequenceBody = sequenceBody.extend({ projectId: z.number().int() });
 type CreateSequenceBody = z.infer<typeof createSequenceBody>;
 
-// GET /api/sequences?projectId=X — liste les séquences d'un projet
-// + `unsequencedShots` : nombre de shots du projet hors séquence (arbre sidebar)
-router.get('/', validate({ query: z.object({ projectId: z.coerce.number().int() }) }), async (req, res) => {
-  const projectId = Number(req.query.projectId);
-  await assertProjectAccess(req, projectId);
-  const [sequences, unsequencedShots] = await Promise.all([
-    prisma.sequence.findMany({
-      where: { projectId, deletedAt: null },
-      orderBy: { order: 'asc' },
-      include: { _count: { select: { shots: true } } },
-    }),
-    prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null } }),
-  ]);
-  res.json({ sequences, unsequencedShots });
-});
+/**
+ * GET /api/sequences?projectId=X — liste les séquences d'un projet
+ * + `unsequencedShots` : nombre de shots du projet hors séquence (arbre sidebar).
+ *
+ * La requête n'était pas bornée. L'arbre de la sidebar consomme la liste d'un bloc, d'où
+ * une taille de page large par défaut — mais elle reste une page : `total` et `hasMore`
+ * disent la vérité, et `page`/`pageSize` permettent de lire la suite.
+ */
+router.get(
+  '/',
+  validate({ query: z.object({ projectId: z.coerce.number().int() }).merge(paginationQuery) }),
+  async (req, res) => {
+    const projectId = Number(req.query.projectId);
+    await assertProjectAccess(req, projectId);
+    const p = readPagination(req.query, { defaultPageSize: MAX_PAGE_SIZE });
+    const where = { projectId, deletedAt: null };
+    const [sequences, total, unsequencedShots] = await Promise.all([
+      prisma.sequence.findMany({
+        where,
+        // Départage sur `id` : les séquences importées partagent toutes `order = 0`.
+        orderBy: [{ order: 'asc' }, { id: 'asc' }],
+        ...pageArgs(p),
+        include: { _count: { select: { shots: true } } },
+      }),
+      prisma.sequence.count({ where }),
+      prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null } }),
+    ]);
+    const { pageCount, hasMore } = paginate(sequences, total, p);
+    res.json({
+      sequences,
+      unsequencedShots,
+      total,
+      page: p.page,
+      pageSize: p.pageSize,
+      pageCount,
+      hasMore,
+    });
+  },
+);
 
 // POST /api/sequences (admin/superviseur)
 router.post(

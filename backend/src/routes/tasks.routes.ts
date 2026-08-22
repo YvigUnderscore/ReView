@@ -9,7 +9,7 @@ import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForTask, resolveProjectIdForShot, resolveProjectIdForAsset } from '../lib/pipeline';
 import { forbidden, notFound } from '../lib/errors';
-import { paginationQuery, readPagination } from '../lib/pagination';
+import { MAX_PAGE_SIZE, cursorPaginationQuery, readPagination } from '../lib/pagination';
 import * as TaskService from '../services/TaskService';
 
 const router = Router();
@@ -26,7 +26,11 @@ async function resolveTaskAccess(req: Request, id: number): Promise<number> {
 }
 
 /**
- * GET /api/tasks/board?projectId= — toutes les tâches du projet, en un appel (C4).
+ * GET /api/tasks/board?projectId=[&limit=][&cursor=] — les tâches du projet (C4).
+ *
+ * `cursor` reprend après la dernière tâche servie : à dix mille tâches, le board se
+ * remplit en plusieurs appels bornés au lieu d'une réponse unique qu'aucun navigateur
+ * n'aime recevoir. Sans curseur, le comportement est celui d'avant.
  *
  * Déclarée avant `/:id` pour que « board » ne soit pas lu comme un identifiant.
  */
@@ -36,13 +40,15 @@ router.get(
     query: z.object({
       projectId: z.coerce.number().int(),
       limit: z.coerce.number().int().min(1).max(5000).optional(),
+      cursor: z.string().min(1).max(300).optional(),
     }),
   }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     const limit = req.query.limit ? Number(req.query.limit) : undefined;
-    res.json(await TaskService.listForBoard(projectId, limit));
+    const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+    res.json(await TaskService.listForBoard(projectId, limit, cursor));
   },
 );
 
@@ -59,7 +65,7 @@ router.get(
         // cinq étapes et chaque plan autant.
         projectId: z.coerce.number().int().optional(),
       })
-      .merge(paginationQuery)
+      .merge(cursorPaginationQuery)
       .refine(
         (q) => q.shotId !== undefined || q.assetId !== undefined || q.projectId !== undefined,
         'shotId, assetId ou projectId requis',
@@ -72,7 +78,11 @@ router.get(
 
     if (asked !== undefined && !shotId && !assetId) {
       await assertProjectAccess(req, asked);
-      return res.json({ tasks: await TaskService.listForProject(asked) });
+      // Liste consommée d'un bloc (destinations d'upload) : page large par défaut, mais
+      // `total`/`truncated`/`nextCursor` disent enfin ce qui n'a pas été servi.
+      const p = readPagination(req.query, { defaultPageSize: MAX_PAGE_SIZE });
+      const { items, total, truncated, nextCursor } = await TaskService.listForProject(asked, p);
+      return res.json({ tasks: items, total, truncated, nextCursor });
     }
 
     const projectId = shotId

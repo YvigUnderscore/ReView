@@ -3,6 +3,7 @@
 
 import type { Prisma, ShotgridLink } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 
 /**
  * Table de correspondance locale ↔ ShotGrid.
@@ -50,7 +51,14 @@ export async function findByLocal(
   });
 }
 
-/** Identifiants ShotGrid d'un lot d'entités locales — évite N requêtes en boucle. */
+/**
+ * Identifiants ShotGrid d'un lot d'entités locales — évite N requêtes en boucle.
+ *
+ * Volontairement **non bornée**, contrairement à `listForUi` : la synchronisation s'en
+ * sert pour savoir ce qui est déjà lié. Un lien absent de la table s'y lit « entité
+ * jamais importée » et déclenche une création sur le site distant — tronquer la carte
+ * dupliquerait des plans chez le client. Elle est appelée par un job, pas par un écran.
+ */
 export async function mapLocalToSg(
   connectionId: number,
   localType: LocalType,
@@ -59,6 +67,7 @@ export async function mapLocalToSg(
   return new Map(links.map((l) => [l.localId, l]));
 }
 
+/** Le sens inverse, non bornée pour la même raison que `mapLocalToSg`. */
 export async function mapSgToLocal(
   connectionId: number,
   localType: LocalType,
@@ -167,6 +176,21 @@ export interface VersionLinkData extends LinkData {
   }>;
 }
 
+/** Types de correspondance dont l'interface tire une pastille ou un lien direct. */
+export const UI_LINK_TYPES: readonly LocalType[] = ['sequence', 'shot', 'asset', 'task', 'version'];
+
+/**
+ * Plafond de la table de correspondance servie à l'interface.
+ *
+ * La requête n'était pas bornée : à la volumétrie visée (2 000 plans, 10 000 tâches,
+ * 20 000 versions) elle renvoyait plusieurs mégaoctets de JSON à chaque ouverture de
+ * projet. Le plafond laisse passer l'intégralité des types « carte » — séquences, plans,
+ * assets, tâches — et ne rogne que sur les versions : le tri par `localType` les place
+ * en dernier (ordre alphabétique), si bien que la dégradation touche d'abord ce qui
+ * s'affiche le moins.
+ */
+export const UI_LINKS_LIMIT = 20000;
+
 /**
  * Correspondances d'un projet, telles que l'interface les consomme.
  *
@@ -174,15 +198,30 @@ export interface VersionLinkData extends LinkData {
  * entité sans redemander de quel type ShotGrid il s'agit, le second de dire depuis quand
  * elle n'a pas été relue. Une seule requête sert ainsi les liens directs ET l'état
  * d'alignement — une liste de deux cents plans n'en déclenche pas deux cents.
+ *
+ * `localTypes` permet à un écran de ne demander que ce qu'il affiche (la page d'un plan
+ * n'a que faire des vingt mille versions du projet).
  */
-export async function listForUi(connectionId: number) {
-  return prisma.shotgridLink.findMany({
+export async function listForUi(
+  connectionId: number,
+  opts: { localTypes?: readonly LocalType[]; limit?: number } = {},
+) {
+  const limit = Math.min(Math.max(1, opts.limit ?? UI_LINKS_LIMIT), UI_LINKS_LIMIT);
+  const links = await prisma.shotgridLink.findMany({
     where: {
       connectionId,
-      localType: { in: ['sequence', 'shot', 'asset', 'task', 'version'] },
+      localType: { in: [...(opts.localTypes ?? UI_LINK_TYPES)] },
     },
+    orderBy: [{ localType: 'asc' }, { localId: 'asc' }],
+    take: limit,
     select: { localType: true, localId: true, sgId: true, sgType: true, syncedAt: true },
   });
+  if (links.length >= limit) {
+    // Une pastille manquante se lit « cette entité n'est pas liée » : il faut pouvoir
+    // remonter à la troncature plutôt qu'à une désynchronisation imaginaire.
+    logger.warn({ connectionId, limit }, 'shotgrid links truncated for UI');
+  }
+  return links;
 }
 
 /**

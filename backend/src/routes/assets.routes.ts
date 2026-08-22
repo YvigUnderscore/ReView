@@ -4,20 +4,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, AssetType } from '@prisma/client';
-import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForAsset } from '../lib/pipeline';
 import { softDeleteAsset, restoreAsset, purgeAsset } from '../lib/trash';
-import {
-  firstMediaThumbKeyForAsset,
-  firstMediaThumbKeysForAssets,
-  effectiveThumbnailUrl,
-} from '../lib/thumbnails';
 import { mountTrashRoutes } from './trashRoutes';
 import { notFound } from '../lib/errors';
-import { paginationQuery, readPagination, pageArgs, paginate } from '../lib/pagination';
+import { cursorPaginationQuery, readPagination } from '../lib/pagination';
 import * as PipelineLatestService from '../services/PipelineLatestService';
 import * as AssetService from '../services/AssetService';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
@@ -27,51 +21,17 @@ router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-// GET /api/assets?projectId=X — paginé (10.D1)
+/**
+ * GET /api/assets?projectId=X — paginé (10.D1), en page/pageSize ou en curseur.
+ * La réponse porte `total`, `pageCount`, `hasMore` et `nextCursor`.
+ */
 router.get(
   '/',
-  validate({ query: z.object({ projectId: z.coerce.number().int() }).merge(paginationQuery) }),
+  validate({ query: z.object({ projectId: z.coerce.number().int() }).merge(cursorPaginationQuery) }),
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
-    const p = readPagination(req.query);
-    const where = { projectId, deletedAt: null };
-    const [assets, total] = await Promise.all([
-      prisma.asset.findMany({
-        where,
-        orderBy: { name: 'asc' },
-        ...pageArgs(p),
-        include: {
-          _count: { select: { versions: true, tasks: true } },
-          // Étapes et assignés : le menu contextuel des cartes en a besoin pour cocher
-          // l'état courant. Sans eux, il faudrait une requête par carte affichée.
-          departments: {
-            select: { id: true, key: true, name: true, color: true },
-            orderBy: { order: 'asc' },
-          },
-          tasks: {
-            select: {
-              id: true,
-              departmentId: true,
-              // Le nom de l'étape vient d'ici : une tâche peut vivre dans un département
-              // que l'asset ne déclare pas, et le menu doit tout de même savoir le nommer.
-              departmentRef: { select: { id: true, name: true } },
-              assignee: { select: { id: true, name: true } },
-            },
-          },
-        },
-      }),
-      prisma.asset.count({ where }),
-    ]);
-    // Requête groupée (B3) — cf. ShotService.list.
-    const fallbacks = await firstMediaThumbKeysForAssets(assets.map((a) => a.id));
-    const items = await Promise.all(
-      assets.map(async (a) => ({
-        ...a,
-        thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, fallbacks.get(a.id) ?? null),
-      })),
-    );
-    res.json(paginate(items, total, p));
+    res.json(await AssetService.list(projectId, readPagination(req.query)));
   },
 );
 
@@ -95,29 +55,11 @@ router.post(
   },
 );
 
-// GET /api/assets/:id
+// GET /api/assets/:id — fiche complète (versions et tâches bornées, cf. AssetService).
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
-  const id = Number(req.params.id);
-  const asset = await prisma.asset.findUnique({
-    where: { id },
-    include: {
-      versions: { orderBy: { createdAt: 'desc' } },
-      tasks: {
-        orderBy: { order: 'asc' },
-        include: { assignee: { select: { id: true, name: true } } },
-      },
-      shots: { where: { deletedAt: null }, select: { id: true, code: true, name: true, sequenceId: true } },
-      sequences: { where: { deletedAt: null }, select: { id: true, code: true, name: true } },
-      // Départements traversés (B1) : le panneau de réglages les coche (C3).
-      departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
-    },
-  });
-  if (!asset) throw notFound('Asset not found');
+  const asset = await AssetService.getDetail(Number(req.params.id));
   await assertProjectAccess(req, asset.projectId);
-  // La vignette n'était calculée que dans la liste : la page d'un asset ne montrait
-  // jamais l'image, alors que celle d'un plan l'affichait.
-  const thumbnailUrl = await effectiveThumbnailUrl(asset.thumbnailKey, await firstMediaThumbKeyForAsset(id));
-  res.json({ asset: { ...asset, thumbnailUrl } });
+  res.json({ asset });
 });
 
 // PATCH /api/assets/:id (admin/superviseur)

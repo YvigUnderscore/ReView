@@ -12,7 +12,7 @@ import { emitToProject } from './SocketService';
 import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { badRequest, notFound } from '../lib/errors';
-import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
+import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
 
 /**
@@ -21,19 +21,23 @@ import { assertProjectWritable } from '../lib/projectGuard';
  * asserté dans la route ; ces fonctions reçoivent des paramètres validés (10.D8).
  */
 
-/** Shots paginés d'un projet (filtre séquence : id, `none` = hors séquence, ou tous) + miniatures. */
-export async function list(
-  projectId: number,
-  seq: number | 'none' | undefined,
-  p: PaginationParams,
-): Promise<Paginated<unknown>> {
+/**
+ * Shots paginés d'un projet (filtre séquence : id, `none` = hors séquence, ou tous)
+ * + miniatures.
+ *
+ * Le tri se départage sur `id` : un import ShotGrid incrémental laisse tous les plans
+ * créés à `order = 0`, et sans départage Postgres est libre de rendre ces ex æquo dans
+ * un ordre différent d'une page à l'autre — la page 2 réaffiche alors des plans de la
+ * page 1 et en saute autant. Le curseur (`p.cursor`) suit le même couple `(order, id)`.
+ */
+export async function list(projectId: number, seq: number | 'none' | undefined, p: PaginationParams) {
   const seqFilter =
     seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
   const where = { projectId, deletedAt: null, ...seqFilter };
   const [shots, total] = await Promise.all([
     prisma.shot.findMany({
-      where,
-      orderBy: { order: 'asc' },
+      where: withCursor(where, p, 'order', 'asc'),
+      orderBy: [{ order: 'asc' }, { id: 'asc' }],
       ...pageArgs(p),
       include: {
         _count: { select: { tasks: true } },
@@ -59,7 +63,7 @@ export async function list(
       thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
     })),
   );
-  return paginate(items, total, p);
+  return paginateCursor(items, total, p, (s) => s.order);
 }
 
 /** Vérifie que la séquence (si fournie) appartient bien au projet. */
@@ -157,7 +161,11 @@ export async function get(id: number) {
     where: { id },
     include: {
       sequence: true,
-      tasks: { orderBy: { order: 'asc' }, include: { assignee: { select: { id: true, name: true } } } },
+      // Départage sur `id` : deux tâches créées par le même import partagent `order = 0`.
+      tasks: {
+        orderBy: [{ order: 'asc' }, { id: 'asc' }],
+        include: { assignee: { select: { id: true, name: true } } },
+      },
       assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
       // Départements traversés (B1) : le panneau de réglages les coche (C3).
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },

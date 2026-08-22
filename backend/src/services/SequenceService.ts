@@ -19,6 +19,16 @@ import { storage } from './StorageService';
  * qu'une séquence n'atteigne cent plans.
  */
 
+/**
+ * Plans et assets ramenés par la fiche d'une séquence.
+ *
+ * La fiche les affiche d'un bloc : elle n'est pas paginée, mais elle ne peut pas non plus
+ * être non bornée — une séquence mal découpée porterait la moitié du long-métrage. Le
+ * plafond est haut pour ne jamais mordre sur un découpage sain (une séquence dépasse
+ * rarement la centaine de plans) et `shotCount`/`assetCount` disent le compte réel.
+ */
+const DETAIL_LIMIT = 500;
+
 export interface BulkSequenceItem {
   name: string;
   code: string;
@@ -51,7 +61,10 @@ export async function getDetail(id: number) {
     include: {
       shots: {
         where: { deletedAt: null },
-        orderBy: [{ order: 'asc' }, { code: 'asc' }],
+        // `id` en dernier départage : les plans d'un import partagent `order = 0`, et le
+        // code ne suffit pas quand deux séquences fusionnées portent la même numérotation.
+        orderBy: [{ order: 'asc' }, { code: 'asc' }, { id: 'asc' }],
+        take: DETAIL_LIMIT,
         include: {
           _count: { select: { tasks: true } },
           assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
@@ -59,8 +72,11 @@ export async function getDetail(id: number) {
       },
       assets: {
         where: { deletedAt: null },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        take: DETAIL_LIMIT,
         select: { id: true, name: true, type: true, typeLabel: true, thumbnailKey: true },
       },
+      _count: { select: { shots: { where: { deletedAt: null } } } },
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });

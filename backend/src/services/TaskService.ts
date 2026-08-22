@@ -6,7 +6,14 @@ import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
 import { emitToProject } from './SocketService';
 import { badRequest, forbidden, notFound } from '../lib/errors';
-import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
+import {
+  type PaginationParams,
+  MAX_PAGE_SIZE,
+  nextCursor,
+  pageArgs,
+  paginateCursor,
+  withCursor,
+} from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute, assertProjectManage, isProjectManager } from '../lib/projectRoles';
 import { taskSelect, toTask } from '../lib/v1Resources';
@@ -26,6 +33,9 @@ import { enqueuePush } from './shotgrid/ShotgridPushService';
  */
 
 type SessionUser = { id: number; role: Role };
+
+/** Versions ramenées par la fiche d'une tâche — la plus récente d'abord. */
+const DETAIL_VERSIONS_LIMIT = 200;
 
 function emitTaskUpdate(projectId: number, t: { id: number; shotId: number | null; assetId: number | null }) {
   emitToProject(projectId, 'task:update', { projectId, id: t.id, shotId: t.shotId, assetId: t.assetId });
@@ -50,17 +60,18 @@ async function notifyAssignee(
     });
 }
 
-/** Tâches paginées d'un Shot ou d'un Asset. */
-export async function list(
-  p: PaginationParams,
-  shotId?: number,
-  assetId?: number,
-): Promise<Paginated<unknown>> {
+/**
+ * Tâches paginées d'un Shot ou d'un Asset.
+ *
+ * Départage sur `id` : les tâches d'un plan importé partagent toutes `order = 0`, et
+ * sans clé de départage deux pages successives se recouvrent.
+ */
+export async function list(p: PaginationParams, shotId?: number, assetId?: number) {
   const where = shotId ? { shotId } : { assetId };
   const [items, total] = await Promise.all([
     prisma.task.findMany({
-      where,
-      orderBy: { order: 'asc' },
+      where: withCursor(where, p, 'order', 'asc'),
+      orderBy: [{ order: 'asc' }, { id: 'asc' }],
       ...pageArgs(p),
       include: {
         assignee: { select: { id: true, name: true, email: true } },
@@ -69,7 +80,7 @@ export async function list(
     }),
     prisma.task.count({ where }),
   ]);
-  return paginate(items, total, p);
+  return paginateCursor(items, total, p, (t) => t.order);
 }
 
 /**
@@ -82,44 +93,64 @@ export async function list(
  * cinq étapes (art, model, rig, groom, lookdev) et un plan autant — les voir toutes est
  * ce qui permet de ranger un rendu là où il a été produit.
  */
+export interface ProjectTaskRow {
+  id: number;
+  name: string;
+  department: string | null;
+  pipelineStatusId: number | null;
+  parentKind: 'shot' | 'asset';
+  parentName: string;
+  versionCount: number;
+}
+
+/**
+ * Le plafond ne renvoyait rien qui permette de savoir qu'il avait mordu : à dix mille
+ * tâches, la liste des destinations d'upload en montrait cinq cents et se taisait. Le
+ * total et le curseur de suite accompagnent désormais la page.
+ */
 export async function listForProject(
   projectId: number,
-  limit = 500,
-): Promise<
-  Array<{
-    id: number;
-    name: string;
-    department: string | null;
-    pipelineStatusId: number | null;
-    parentKind: 'shot' | 'asset';
-    parentName: string;
-    versionCount: number;
-  }>
-> {
-  const tasks = await prisma.task.findMany({
-    where: { OR: [{ shot: { projectId, deletedAt: null } }, { asset: { projectId, deletedAt: null } }] },
-    orderBy: [{ order: 'asc' }, { name: 'asc' }],
-    take: limit,
-    select: {
-      id: true,
-      name: true,
-      department: true,
-      pipelineStatusId: true,
-      shot: { select: { code: true } },
-      asset: { select: { name: true } },
-      _count: { select: { versions: true } },
-    },
-  });
+  p?: PaginationParams,
+): Promise<{ items: ProjectTaskRow[]; total: number; truncated: boolean; nextCursor: string | null }> {
+  const where = {
+    OR: [{ shot: { projectId, deletedAt: null } }, { asset: { projectId, deletedAt: null } }],
+  };
+  const take = p?.pageSize ?? MAX_PAGE_SIZE;
+  const [tasks, total] = await Promise.all([
+    prisma.task.findMany({
+      where: p ? withCursor(where, p, 'order', 'asc') : where,
+      // `id` en dernier départage : deux tâches homonymes sur deux plans (« comp ») ne
+      // doivent pas s'échanger de place entre deux pages.
+      orderBy: [{ order: 'asc' }, { name: 'asc' }, { id: 'asc' }],
+      take,
+      select: {
+        id: true,
+        name: true,
+        order: true,
+        department: true,
+        pipelineStatusId: true,
+        shot: { select: { code: true } },
+        asset: { select: { name: true } },
+        _count: { select: { versions: true } },
+      },
+    }),
+    prisma.task.count({ where }),
+  ]);
 
-  return tasks.map((t) => ({
-    id: t.id,
-    name: t.name,
-    department: t.department,
-    pipelineStatusId: t.pipelineStatusId,
-    parentKind: t.shot ? ('shot' as const) : ('asset' as const),
-    parentName: t.shot?.code ?? t.asset?.name ?? '',
-    versionCount: t._count.versions,
-  }));
+  return {
+    items: tasks.map((t) => ({
+      id: t.id,
+      name: t.name,
+      department: t.department,
+      pipelineStatusId: t.pipelineStatusId,
+      parentKind: t.shot ? ('shot' as const) : ('asset' as const),
+      parentName: t.shot?.code ?? t.asset?.name ?? '',
+      versionCount: t._count.versions,
+    })),
+    total,
+    truncated: tasks.length >= take && total > tasks.length,
+    nextCursor: nextCursor(tasks, take, (t) => t.order),
+  };
 }
 
 /** Une carte de kanban, avec tout ce qu'il faut pour la lire, la filtrer et la déplacer. */
@@ -149,23 +180,31 @@ export interface BoardTaskRow {
  *
  * La limite est explicite et le total est renvoyé : une troncature silencieuse ferait
  * lire « ce projet a 2000 tâches » à un board qui n'en montre que la moitié.
+ *
+ * `cursor` permet d'aller chercher la suite plutôt que de relever la limite : à dix mille
+ * tâches, le board se remplit en cinq requêtes bornées au lieu d'une seule réponse de
+ * plusieurs mégaoctets. Le tri se départage sur `id`, sans quoi les tâches à `order = 0`
+ * — c'est-à-dire toutes celles d'un import ShotGrid — changeraient de page à chaque appel.
  */
 export async function listForBoard(
   projectId: number,
   limit = 2000,
-): Promise<{ items: BoardTaskRow[]; total: number; truncated: boolean }> {
+  cursor?: string,
+): Promise<{ items: BoardTaskRow[]; total: number; truncated: boolean; nextCursor: string | null }> {
   const where = {
     OR: [{ shot: { projectId, deletedAt: null } }, { asset: { projectId, deletedAt: null } }],
   };
+  const window = { page: 1, pageSize: limit, order: 'asc' as const, cursor };
   const [rows, total] = await Promise.all([
     prisma.task.findMany({
-      where,
-      orderBy: [{ order: 'asc' }, { name: 'asc' }],
+      where: withCursor(where, window, 'order', 'asc'),
+      orderBy: [{ order: 'asc' }, { name: 'asc' }, { id: 'asc' }],
       take: limit,
       select: {
         id: true,
         name: true,
         type: true,
+        order: true,
         status: true,
         pipelineStatusId: true,
         department: true,
@@ -208,7 +247,15 @@ export async function listForBoard(
     ];
   });
 
-  return { items, total, truncated: total > rows.length };
+  // Sans curseur, `truncated` garde son sens d'origine — le board affiche un
+  // avertissement. Avec un curseur, la question n'est plus « ai-je tout » mais « reste-t-il
+  // une page », et c'est une page pleine qui y répond.
+  return {
+    items,
+    total,
+    truncated: cursor ? rows.length >= limit : total > rows.length,
+    nextCursor: nextCursor(rows, limit, (t) => t.order),
+  };
 }
 
 export interface CreateTaskInput {
@@ -302,7 +349,10 @@ export async function getDetail(id: number) {
     where: { id },
     include: {
       assignee: { select: { id: true, name: true, email: true } },
-      versions: { orderBy: { createdAt: 'desc' } },
+      // Historique borné : une tâche de comp reprise deux cents fois ne doit pas faire
+      // grossir la fiche indéfiniment. `_count` dit le nombre réel de versions.
+      versions: { orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: DETAIL_VERSIONS_LIMIT },
+      _count: { select: { versions: true } },
       shot: {
         select: {
           id: true,
