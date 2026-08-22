@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { prisma } from './prisma';
+import { publishRedis, subscribeRedis } from './redis';
 import type { Role } from '@prisma/client';
 
 /**
@@ -12,10 +13,11 @@ import type { Role } from '@prisma/client';
  * autant d'allers-retours sur la table la plus sollicitée de l'instance, pour trois
  * colonnes qui ne changent presque jamais.
  *
- * Même parti pris que la validité de session (`lib/sessions.ts`) : un cache in-process de
- * courte durée, mono-instance. Un rôle modifié met donc jusqu'à trente secondes à
- * s'appliquer — sauf aux endroits qui invalident explicitement, ce que font toutes les
- * écritures sur le compte.
+ * Le cache reste **en mémoire de process** — c'est ce qui lui donne son intérêt — mais son
+ * **invalidation traverse les répliques** (canal Redis). Sans cela, rétrograder un compte
+ * n'aurait effacé l'entrée que sur la réplique qui a traité l'écriture : les autres
+ * auraient continué à servir l'ancien rôle jusqu'à l'expiration, c'est-à-dire jusqu'à
+ * trente secondes de droits qu'on croyait retirés.
  */
 
 export interface CachedUser {
@@ -26,8 +28,20 @@ export interface CachedUser {
 
 const TTL_MS = 30_000;
 const CACHE_MAX = 5_000;
+const INVALIDATE_CHANNEL = 'review:user-cache';
 
 const cache = new Map<number, { user: CachedUser | null; until: number }>();
+let wired = false;
+
+/** Souscription posée à la première lecture : un process qui n'authentifie pas s'en passe. */
+function ensureWiring(): void {
+  if (wired) return;
+  wired = true;
+  subscribeRedis(INVALIDATE_CHANNEL, (raw) => {
+    const id = Number(raw);
+    if (Number.isInteger(id)) cache.delete(id);
+  });
+}
 
 function cacheSet(id: number, user: CachedUser | null): void {
   if (cache.size >= CACHE_MAX) cache.clear();
@@ -36,6 +50,7 @@ function cacheSet(id: number, user: CachedUser | null): void {
 
 /** Identité minimale d'un compte, mise en cache 30 s. `null` = compte supprimé. */
 export async function getAuthUser(id: number): Promise<CachedUser | null> {
+  ensureWiring();
   const hit = cache.get(id);
   if (hit && hit.until > Date.now()) return hit.user;
   const user = await prisma.user.findUnique({
@@ -48,10 +63,20 @@ export async function getAuthUser(id: number): Promise<CachedUser | null> {
 
 /**
  * À appeler après toute écriture qui touche le rôle, l'adresse ou l'existence d'un compte.
- * Sans cet oubli-là, un compte rétrogradé garderait ses droits pendant la durée du cache.
+ * Sans cet oubli-là, un compte rétrogradé garderait ses droits pendant la durée du cache —
+ * sur **toutes** les répliques, d'où la notification et pas seulement l'oubli local.
  */
 export function invalidateAuthUser(id: number): void {
   cache.delete(id);
+  publishRedis(INVALIDATE_CHANNEL, String(id));
 }
 
-export const __testing = { cache, cacheSet, TTL_MS };
+export const __testing = {
+  cache,
+  cacheSet,
+  TTL_MS,
+  INVALIDATE_CHANNEL,
+  reset: (): void => {
+    wired = false;
+  },
+};

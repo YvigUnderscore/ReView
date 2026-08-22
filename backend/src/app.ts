@@ -7,7 +7,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env';
 import { secretEquals } from './lib/crypto';
-import { rateLimit } from './middleware/rateLimit';
+import { enableRedisTransport } from './lib/redis';
+import { rateLimit, identityRateKey, identityMax } from './middleware/rateLimit';
 import { errorHandler } from './middleware/error';
 import { httpLogger } from './middleware/httpLogger';
 
@@ -75,8 +76,27 @@ import shotgridWebhookRoutes from './routes/shotgrid-webhook.routes';
 import shotgridEntityRoutes from './routes/shotgrid-entity.routes';
 import shotgridCrewRoutes from './routes/shotgrid-crew.routes';
 
+/**
+ * Plafonds du limiteur global, par fenêtre de quinze minutes.
+ *
+ * L'ancien plafond unique (5 000 par IP) était partagé par tout un studio derrière une
+ * seule sortie NAT : cinquante personnes, environ 5,5 requêtes par seconde à se répartir,
+ * alors que la seule ouverture d'un projet en coûte une douzaine. C'était un mode de panne
+ * déjà observé — un simple parcours de tests saturait le compteur.
+ *
+ * Le compte identifié a donc son propre compteur. Le plafond anonyme, lui, reste à sa
+ * valeur d'origine : le baisser aurait resserré, sans le dire, les surfaces publiques
+ * (partage client, connexion, documentation) que ce limiteur protège vraiment.
+ */
+const GLOBAL_MAX_PER_USER = 6_000;
+const GLOBAL_MAX_PER_IP = 5_000;
+
 export const createApp = (): Express => {
   const app = express();
+
+  // Le limiteur, la présence et les salles live parlent à Redis : on arme le transport
+  // ici, et pas à l'import, pour qu'un test unitaire n'ouvre jamais de connexion.
+  enableRedisTransport();
 
   app.set('trust proxy', 1);
   // Journalisation HTTP structurée le plus tôt possible (request-id sur toutes les réponses).
@@ -115,8 +135,16 @@ export const createApp = (): Express => {
     res.end(await registry.metrics());
   });
 
-  // Rate limit global
-  app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 5000 }));
+  // Rate limit global — clé par compte authentifié, repli IP pour l'anonyme.
+  app.use(
+    '/api',
+    rateLimit({
+      name: 'global',
+      windowMs: 15 * 60 * 1000,
+      keyGenerator: identityRateKey,
+      max: identityMax(GLOBAL_MAX_PER_USER, GLOBAL_MAX_PER_IP),
+    }),
+  );
 
   // Health check
   app.get('/health', (_req, res) => {
@@ -127,7 +155,7 @@ export const createApp = (): Express => {
   // Assistant de première installation : public par nature (il n'existe encore aucun
   // compte), et il crée le premier ADMIN. Le plafond global de 5000/15 min ne le protège
   // pas — on le borne étroitement, par IP. Le verrou de fond reste `studio.count() > 0`.
-  app.use('/api/setup', rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }), setupRoutes);
+  app.use('/api/setup', rateLimit({ name: 'setup', windowMs: 15 * 60 * 1000, max: 10 }), setupRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
@@ -174,6 +202,7 @@ export const createApp = (): Express => {
   app.use('/api/boards', boardsRoutes);
   // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).
   const shareLimiter = rateLimit({
+    name: 'share',
     windowMs: 15 * 60 * 1000,
     max: 300,
     message: { error: 'Trop de requêtes sur le partage, réessayez plus tard.' },
@@ -202,7 +231,7 @@ export const createApp = (): Express => {
   // API d'intégration v1 (DCC, Prism, bots) — contrat stable, distinct de l'API interne.
   // Plafond propre : un daemon qui interroge le journal d'événements en boucle ne doit pas
   // consommer le quota des utilisateurs de l'interface.
-  app.use('/api/v1', rateLimit({ windowMs: 15 * 60 * 1000, max: 10_000 }), v1Routes);
+  app.use('/api/v1', rateLimit({ name: 'v1', windowMs: 15 * 60 * 1000, max: 10_000 }), v1Routes);
 
   // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
   app.use('/api', docsRoutes);

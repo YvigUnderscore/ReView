@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Server as SocketServer, type Socket } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
 import type { Server as HttpServer } from 'node:http';
+import { createRedisClient, enableRedisTransport } from '../lib/redis';
+import { registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
+import { logger } from '../lib/logger';
 import { verifyToken } from '../lib/jwt';
 import { isSessionActive } from '../lib/sessions';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
@@ -17,6 +21,7 @@ import {
   joinReview,
   leaveReview,
   getReviewViewers,
+  startPresenceSync,
 } from './PresenceService';
 import { resolveProjectIdForMedia } from '../lib/pipeline';
 import { toPublicUser } from '../lib/userView';
@@ -33,8 +38,10 @@ import {
   getLiveProjectId,
   scheduleLiveLeave,
   cancelLiveLeave,
+  startLiveSync,
   type LiveParticipant,
   type LiveSessionMeta,
+  type LiveState,
 } from './LiveSessionService';
 import { notifyPlaylistLiveStarted } from './NotificationService';
 import { subscribeWorkerEvents } from '../lib/workerEvents';
@@ -59,8 +66,37 @@ export const initSocket = (server: HttpServer): SocketServer => {
     },
   });
 
-  // Diffusion de la liste des utilisateurs en ligne à tous les clients connectés.
-  setPresenceBroadcaster((onlineUserIds) => io?.emit('presence:update', { onlineUserIds }));
+  // Adapter Redis : sans lui, une émission ne sort pas du process qui l'a produite. Deux
+  // répliques, et la moitié d'une salle de dailies ne reçoit rien — la mise à l'échelle
+  // horizontale était impossible, pas seulement dégradée.
+  const pub = createRedisClient('socket-pub');
+  const sub = createRedisClient('socket-sub');
+  io.adapter(createAdapter(pub, sub));
+  enableRedisTransport();
+  registerShutdownTask({
+    name: 'socket.io-adapter',
+    phase: SHUTDOWN_PHASE.DISCONNECT,
+    run: async () => {
+      await Promise.all(
+        [pub, sub].map((client) =>
+          client.quit().catch((err: unknown) => {
+            logger.warn({ err }, "[socket] fermeture imparfaite d'une connexion d'adapter");
+            client.disconnect();
+          }),
+        ),
+      );
+    },
+  });
+
+  // Miroirs de l'état volatil : à amorcer au démarrage, sinon une réplique sans socket
+  // local annoncerait « personne en ligne » et « aucune salle live » à ceux qu'elle sert.
+  startPresenceSync();
+  startLiveSync();
+
+  // Diffusion de la liste des utilisateurs en ligne. `local` est essentiel : chaque
+  // réplique tient son propre miroir de présence et diffuse le sien. Sans `local`,
+  // l'adapter ferait relayer N fois la même liste par les N répliques.
+  setPresenceBroadcaster((onlineUserIds) => io?.local.emit('presence:update', { onlineUserIds }));
 
   // Événements du worker FFmpeg (34.F, redis pub/sub) : échelle HLS progressive —
   // la review recharge son master (nouvelles qualités), le projet rafraîchit ses cartes.
@@ -141,18 +177,20 @@ export const initSocket = (server: HttpServer): SocketServer => {
       // mémoire résout de façon synchrone — d'où le `void` sur les appels hors contexte async.
       void socket.join(`user_${socket.user.id}`);
       const uid = socket.user.id;
-      void markOnline(uid);
+      // La présence est comptée **par connexion** : l'identifiant du socket distingue les
+      // onglets, et permet à une entrée orpheline (réplique tuée) d'expirer toute seule.
+      const conn = socket.id;
+      void markOnline(uid, conn);
       // Activité : le client émet `activity` (interactions) → rafraîchit lastSeenAt.
       socket.on('activity', () => void touch(uid));
 
       // Présence par review : avatars « en train de regarder » (backlog P2 10.G).
       // RBAC revérifié au join ; identité publique résolue une fois par entrée.
       const joinedReviews = new Set<number>();
-      const emitViewers = (mediaId: number) =>
-        io?.to(`review_${mediaId}`).emit('review:presence', {
-          mediaId,
-          viewers: getReviewViewers(mediaId),
-        });
+      const emitViewers = async (mediaId: number): Promise<void> => {
+        const viewers = await getReviewViewers(mediaId);
+        io?.to(`review_${mediaId}`).emit('review:presence', { mediaId, viewers });
+      };
       socket.on('join_review', async (mediaId: number) => {
         const mid = Number(mediaId);
         if (!Number.isInteger(mid)) return;
@@ -175,27 +213,32 @@ export const initSocket = (server: HttpServer): SocketServer => {
         const pub = await toPublicUser(raw);
         await socket.join(`review_${mid}`);
         joinedReviews.add(mid);
-        joinReview(mid, {
-          id: pub.id,
-          displayName: pub.displayName,
-          initials: pub.initials,
-          avatarUrl: pub.avatarUrl,
-        });
-        emitViewers(mid);
+        const viewers = await joinReview(
+          mid,
+          {
+            id: pub.id,
+            displayName: pub.displayName,
+            initials: pub.initials,
+            avatarUrl: pub.avatarUrl,
+          },
+          conn,
+        );
+        io?.to(`review_${mid}`).emit('review:presence', { mediaId: mid, viewers });
       });
       socket.on('leave_review', (mediaId: number) => {
         const mid = Number(mediaId);
         if (!joinedReviews.delete(mid)) return;
         void socket.leave(`review_${mid}`);
-        leaveReview(mid, uid);
-        emitViewers(mid);
+        void leaveReview(mid, uid, conn).then((viewers) => {
+          io?.to(`review_${mid}`).emit('review:presence', { mediaId: mid, viewers });
+        });
       });
 
       // ── Salle de review live (33.B) : rooms `live_<key>`, pilote + spectateurs. ──
       // RBAC revérifié au join (média ou playlist → projet) ; `live:sync` n'est relayé
       // que depuis le pilote, payload opaque (playhead/pause/média courant/caméra).
       const joinedLives = new Set<string>();
-      const emitLiveState = (key: string, state: ReturnType<typeof joinLive> | null) =>
+      const emitLiveState = (key: string, state: LiveState | null) =>
         io?.to(`live_${key}`).emit('live:state', { key, state });
       const resolveLiveProject = async (key: string): Promise<number | null> => {
         const target = parseLiveKey(key);
@@ -237,10 +280,11 @@ export const initSocket = (server: HttpServer): SocketServer => {
         };
         // Méta résolue à la création (badges LIVE par projet) + notification dailies :
         // un live démarré sur une playlist notifie les membres du projet (une fois).
-        const created = !getLiveState(key);
+        // Le miroir sert à décider s'il faut résoudre la version ; la création, elle, est
+        // tranchée sous verrou par `joinLive` — sinon deux répliques notifieraient deux fois.
         const meta: LiveSessionMeta =
           target.type === 'media' ? { projectId, mediaId: target.id } : { projectId, playlistId: target.id };
-        if (created && target.type === 'media') {
+        if (!getLiveState(key) && target.type === 'media') {
           const media = await prisma.mediaObject.findUnique({
             where: { id: target.id },
             select: { versionId: true },
@@ -249,7 +293,8 @@ export const initSocket = (server: HttpServer): SocketServer => {
         }
         await socket.join(`live_${key}`);
         joinedLives.add(key);
-        emitLiveState(key, joinLive(key, participant, meta));
+        const { state, created } = await joinLive(key, participant, meta);
+        emitLiveState(key, state);
         emitToProject(projectId, 'live:changed', { projectId });
         if (created && target.type === 'playlist')
           void notifyPlaylistLiveStarted(target.id, { id: uid, displayName: pub.displayName });
@@ -259,36 +304,44 @@ export const initSocket = (server: HttpServer): SocketServer => {
         void socket.leave(`live_${key}`);
         cancelLiveLeave(key, uid);
         const pid = getLiveProjectId(key);
-        emitLiveState(key, leaveLive(key, uid));
-        if (pid) emitToProject(pid, 'live:changed', { projectId: pid });
+        void leaveLive(key, uid).then((state) => {
+          emitLiveState(key, state);
+          if (pid) emitToProject(pid, 'live:changed', { projectId: pid });
+        });
       });
       socket.on('live:sync', (key: string, payload: unknown) => {
         if (!joinedLives.has(key) || !canDriveLive(key, uid)) return;
         // Interaction (`action: true`) d'un pilote/co-pilote → il devient le driver ;
         // la diffusion périodique (sans action) n'est relayée que du driver courant.
         const isAction = !!(payload as { action?: boolean } | null)?.action;
+        // La prise de main est écrite dans Redis, mais le relais ne l'attend pas : un
+        // aller-retour par trame de synchronisation (jusqu'à 30 Hz) saccaderait la lecture.
         if (isAction) {
-          const state = claimDrive(key, uid);
-          if (state) emitLiveState(key, state);
+          void claimDrive(key, uid).then((state) => {
+            if (state) emitLiveState(key, state);
+          });
         } else if (!isLiveDriver(key, uid)) return;
         socket.to(`live_${key}`).emit('live:sync', { key, payload });
       });
       socket.on('live:handoff', (key: string, toUserId: number) => {
         if (!joinedLives.has(key)) return;
-        const state = handoffLive(key, uid, Number(toUserId));
-        if (state) emitLiveState(key, state);
+        void handoffLive(key, uid, Number(toUserId)).then((state) => {
+          if (state) emitLiveState(key, state);
+        });
       });
       socket.on('live:cohost', (key: string, toUserId: number, isCoHost: boolean) => {
         if (!joinedLives.has(key)) return;
-        const state = setCoHost(key, uid, Number(toUserId), !!isCoHost);
-        if (state) emitLiveState(key, state);
+        void setCoHost(key, uid, Number(toUserId), !!isCoHost).then((state) => {
+          if (state) emitLiveState(key, state);
+        });
       });
 
       socket.on('disconnect', () => {
-        void markOffline(uid);
+        void markOffline(uid, conn);
         for (const mid of joinedReviews) {
-          leaveReview(mid, uid);
-          emitViewers(mid);
+          void leaveReview(mid, uid, conn).then((viewers) => {
+            io?.to(`review_${mid}`).emit('review:presence', { mediaId: mid, viewers });
+          });
         }
         joinedReviews.clear();
         // Départ live différé (grâce) : un F5 re-join avant l'échéance et garde son rôle.

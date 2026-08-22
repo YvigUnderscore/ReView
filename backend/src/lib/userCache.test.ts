@@ -7,13 +7,21 @@ const { db } = vi.hoisted(() => ({ db: { user: { findUnique: vi.fn() } } }));
 vi.mock('./prisma', () => ({ prisma: db }));
 
 import { getAuthUser, invalidateAuthUser, __testing } from './userCache';
+import { __redisTesting, enableRedisTransport } from './redis';
+import { createFakeRedis, type FakeRedis } from './redisFake';
 import { Role } from '@prisma/client';
 
 const user = { id: 1, email: 'a@b.c', role: Role.ARTIST };
+let redis: FakeRedis;
 
 beforeEach(() => {
   vi.clearAllMocks();
   __testing.cache.clear();
+  __testing.reset();
+  __redisTesting.reset();
+  redis = createFakeRedis();
+  __redisTesting.setClient(redis);
+  enableRedisTransport();
   db.user.findUnique.mockResolvedValue(user);
 });
 
@@ -65,6 +73,28 @@ describe('invalidateAuthUser', () => {
   it('ne touche pas aux autres comptes', async () => {
     await getAuthUser(1);
     invalidateAuthUser(999);
+    await getAuthUser(1);
+    expect(db.user.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  // Sans notification, rétrograder un compte n'aurait vidé le cache que de la réplique qui
+  // a traité l'écriture : les autres auraient servi l'ancien rôle jusqu'à trente secondes.
+  it('prévient les autres répliques', async () => {
+    await getAuthUser(1);
+    invalidateAuthUser(1);
+    expect(redis.published).toEqual([{ channel: __testing.INVALIDATE_CHANNEL, payload: '1' }]);
+  });
+
+  it('oublie l’entrée sur notification d’une autre réplique', async () => {
+    await getAuthUser(1);
+    __redisTesting.deliver(__testing.INVALIDATE_CHANNEL, '1');
+    db.user.findUnique.mockResolvedValue({ ...user, role: Role.CLIENT });
+    expect((await getAuthUser(1))?.role).toBe(Role.CLIENT);
+  });
+
+  it('ignore une notification illisible plutôt que de vider tout le cache', async () => {
+    await getAuthUser(1);
+    __redisTesting.deliver(__testing.INVALIDATE_CHANNEL, 'pas-un-id');
     await getAuthUser(1);
     expect(db.user.findUnique).toHaveBeenCalledTimes(1);
   });
