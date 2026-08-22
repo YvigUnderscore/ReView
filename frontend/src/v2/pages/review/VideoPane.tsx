@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ReviewComment } from '../../types/api';
 import { cancelPendingPlay, createSeekCoalescer, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
@@ -17,6 +16,15 @@ import { RangeAnnotationsOverlay } from './RangeAnnotations';
 import CompositionGuides from './CompositionGuides';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
+import ViewerBadges from './ViewerBadges';
+import WaveformStrip from './audio/WaveformStrip';
+import { useVolumeControl } from './audio/useVolumeControl';
+import { useWaveform } from './audio/useWaveform';
+import LivePointers from './live/LivePointers';
+import { useLivePointerCapture } from './live/useLivePointerCapture';
+import { useFitBox } from './zoom/useFitBox';
+import { useViewportZoom } from './zoom/useViewportZoom';
+import { usePlaylistChain } from '../playlist/usePlaylistChain';
 import { useT } from '../../i18n';
 
 /**
@@ -82,8 +90,7 @@ export default function VideoPane({
   const currentFrame = useVideoFrameClock(videoRef, fps);
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
+  const audio = useVolumeControl(videoRef);
   // Boucle I/O désactivable sans perdre les points (retours 34) — toggle dans le transport.
   const loop = useLoopPoints(videoRef);
   // Lecture en boucle de toute la vidéo (indépendante de la boucle I/O).
@@ -101,10 +108,6 @@ export default function VideoPane({
     hls.setLevel(idx);
     toast.success(t('video.qualitySet', { height: hls.levels[idx]?.height ?? '?' }));
   };
-  // Boîte d'affichage : la vidéo remplit tout l'espace disponible (fit « contain » calculé),
-  // même en basse résolution — l'overlay d'annotation partage exactement la même boîte.
-  const [aspect, setAspect] = useState<number | null>(null);
-  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   // Plein écran vidéo immersif (hook dédié) : vidéo plein écran + playbar translucide qui
   // s'efface après 1 s sans mouvement de souris. Complémentaire du plein écran unifié.
   const paneRef = useRef<HTMLDivElement>(null);
@@ -114,21 +117,23 @@ export default function VideoPane({
     poke: pokeControls,
     toggle: toggleVideoFullscreen,
   } = useVideoFullscreen(paneRef);
-  // `videoOnlyFs` en dépendance : l'entrée/sortie du plein écran change la taille du
-  // conteneur → on re-mesure la boîte (sinon la vidéo garderait sa taille d'avant, minuscule
-  // au centre de l'écran noir).
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || !aspect) return;
-    const fit = () => {
-      const h = Math.min(el.clientHeight, el.clientWidth / aspect);
-      setBox({ w: h * aspect, h });
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [aspect, videoOnlyFs]);
+  // Boîte d'affichage (fit « contain » calculé) : l'overlay d'annotation, les curseurs
+  // partagés et la comparaison A/B partagent exactement la même. Re-mesurée à l'entrée et
+  // à la sortie du plein écran, sinon la vidéo y garderait sa taille d'avant.
+  const { box, setAspect } = useFitBox(containerRef, videoOnlyFs);
+  const boxRef = useRef<HTMLDivElement>(null);
+  // Zoom/pan du lecteur (molette, glissement, `+`/`-`/`0`/`1`) : le viewer image le faisait
+  // depuis toujours, pas la vidéo. La comparaison suit la même transformation.
+  const zoom = useViewportZoom({
+    containerRef,
+    oneToOneScale: () => (box && videoRef.current ? videoRef.current.videoWidth / box.w : null),
+  });
+  // Curseur partagé de la salle live : capté ici, en fraction du cadre.
+  const livePointer = useLivePointerCapture(boxRef);
+  // Forme d'onde audio (calculée au transcodage) et enchaînement de playlist : deux
+  // réglages logés au clic droit de la timeline, pas en boutons supplémentaires.
+  const waveform = useWaveform(mediaId);
+  const chain = usePlaylistChain(mediaId, videoRef);
 
   // Boucle remontée à l'orchestrateur : plage in→out du prochain commentaire (34.A).
   useEffect(() => {
@@ -144,15 +149,6 @@ export default function VideoPane({
     onClearLoop: loop.clear,
     onShuttle: playbackSpeed.onShuttle,
   });
-
-  // Applique volume/mute au lecteur.
-  useEffect(() => {
-    const v = videoRef.current;
-    if (v) {
-      v.volume = volume;
-      v.muted = muted;
-    }
-  }, [videoRef, volume, muted]);
 
   // Coalesceur de seeks : le scrub émet des dizaines de seeks/s ; sans coalescing chaque
   // `currentTime =` avorte le précédent et hls.js finit dans un état incohérent après le
@@ -201,7 +197,8 @@ export default function VideoPane({
 
   const togglePlay = () => {
     const v = videoRef.current;
-    if (!v) return;
+    // Le clic qui termine un déplacement de la vue n'est pas une commande de lecture.
+    if (!v || zoom.consumeClick()) return;
     // safePlay : ne démarre que quand l'image est décodable (pas de son sur image figée).
     if (v.paused) safePlay(v);
     else {
@@ -223,10 +220,21 @@ export default function VideoPane({
       <div
         className={`${VIEWER_ZONE} ${videoOnlyFs ? 'absolute inset-0 rounded-none border-0 bg-black' : ''}`}
         ref={containerRef}
+        onPointerDown={zoom.handlers.onPointerDown}
+        onPointerMove={(e) => {
+          zoom.handlers.onPointerMove(e);
+          livePointer.onPointerMove(e);
+        }}
+        onPointerUp={zoom.handlers.onPointerUp}
+        onPointerLeave={livePointer.onPointerLeave}
       >
         <div
+          ref={boxRef}
           className="relative"
-          style={box ? { width: box.w, height: box.h } : { maxWidth: '100%', maxHeight: '100%' }}
+          style={{
+            ...(box ? { width: box.w, height: box.h } : { maxWidth: '100%', maxHeight: '100%' }),
+            ...zoom.style,
+          }}
         >
           <video
             ref={videoRef}
@@ -256,22 +264,26 @@ export default function VideoPane({
           <RangeAnnotationsOverlay comments={comments} currentFrame={currentFrame} selectedId={selectedId} />
           {/* Guides de composition (34.G) : tiers / croix / safe areas, via clic droit. */}
           <CompositionGuides />
+          {/* Curseurs des autres participants de la salle live : dans le calque
+              transformé, donc justes au zoom comme à l'ajustement. */}
+          <LivePointers />
           {overlay}
         </div>
-        {/* Vitesse de lecture (34.C) : visible dès qu'on n'est pas en lecture normale ×1. */}
-        {playbackSpeed.visible && (
-          <div className="pointer-events-none absolute right-3 top-3 z-30 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur">
-            {playbackSpeed.speed < 0 ? '◀' : '▶'} ×{Math.abs(playbackSpeed.speed)}
+        {/* La comparaison A/B (wipe, différence) subit la même transformation que le
+            calque principal : les deux images sont centrées dans la même zone, elles
+            restent donc superposées au pixel près une fois zoomées. */}
+        {compareOverlay && (
+          <div className="absolute inset-0" style={zoom.style}>
+            {compareOverlay}
           </div>
         )}
-        {/* Spinner discret : buffering (seek/scrub) ou changement de qualité en cours. */}
-        {(buffering || hls.switching) && (
-          <div className="pointer-events-none absolute bottom-3 left-3 z-30 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur">
-            <Loader2 size={13} className="animate-spin" />
-            {hls.switching ? t('video.qualitySwitch') : t('common.loading')}
-          </div>
-        )}
-        {compareOverlay}
+        {/* Repères flottants : zoom, vitesse de lecture, chargement. */}
+        <ViewerBadges
+          zoom={zoom}
+          playbackSpeed={playbackSpeed}
+          buffering={buffering}
+          switchingQuality={hls.switching}
+        />
       </div>
 
       {/* Playbar : en mode immersif, bandeau translucide sombre en surimpression, masqué
@@ -298,10 +310,16 @@ export default function VideoPane({
             loop={{ in: loop.loopIn, out: loop.loopOut }}
             sprite={timelineSprite}
             markersApi={markersApi}
+            waveform={{ available: waveform.available, enabled: waveform.visible, onToggle: waveform.toggle }}
+            autoAdvance={{ available: chain.active, enabled: chain.enabled, onToggle: chain.toggle }}
             fps={fps}
             startFrame={startFrame}
           />
         )}
+
+        {/* Forme d'onde audio sous la timeline : où le dialogue commence, où il coupe,
+            si le son colle à l'image — invisible jusqu'ici, faute d'être calculée. */}
+        <WaveformStrip track={waveform} duration={duration} time={currentFrame / fps} onSeek={seekTo} />
 
         {/* Transport custom (remplace controls natif) */}
         <VideoTransport
@@ -314,13 +332,10 @@ export default function VideoPane({
           fps={fps}
           fpsDetected={fpsDetected}
           setFpsOverride={setFpsOverride}
-          volume={volume}
-          muted={muted}
-          onVolume={(val) => {
-            setVolume(val);
-            setMuted(val === 0);
-          }}
-          onToggleMute={() => setMuted((m) => !m)}
+          volume={audio.volume}
+          muted={audio.muted}
+          onVolume={audio.setVolume}
+          onToggleMute={audio.toggleMute}
           onFullscreen={onFullscreen}
           onFullscreenVideo={toggleVideoFullscreen}
           videoOnlyFs={videoOnlyFs}

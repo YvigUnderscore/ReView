@@ -2,15 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bookmark } from 'lucide-react';
 import type { ReviewComment, TimelineMarker } from '../../types/api';
 import Avatar from '../../components/Avatar';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '../../components/ui/context-menu';
+import TimelineOptionsMenu, { type TimelineToggle } from './TimelineOptionsMenu';
 import { formatTime } from './reviewTypes';
 import { spriteIndexAt, spriteSlotCss, type TimelineSpriteMeta } from './timelineSprite';
 import { RangeSegments } from './RangeAnnotations';
@@ -32,6 +26,8 @@ export default function VideoTimeline({
   loop,
   sprite,
   markersApi,
+  waveform,
+  autoAdvance,
   fps = 24,
   startFrame = 1001,
 }: {
@@ -49,6 +45,10 @@ export default function VideoTimeline({
   sprite?: { url: string; meta: TimelineSpriteMeta } | null;
   /** Marqueurs partagés (34.C) — absent : timeline sans marqueurs (comparaison B…). */
   markersApi?: TimelineMarkersApi;
+  /** Affichage de la forme d'onde audio, réglé au clic droit sur la barre. */
+  waveform?: TimelineToggle;
+  /** Enchaînement automatique de la playlist, réglé au même endroit. */
+  autoAdvance?: TimelineToggle;
   fps?: number;
   startFrame?: number;
 }) {
@@ -129,6 +129,11 @@ export default function VideoTimeline({
       setHoverX(null);
   };
 
+  // Le clic droit n'est retenu que si la barre a quelque chose à proposer : sinon il doit
+  // remonter au menu du viewer, comme partout ailleurs dans la review.
+  const hasMenu =
+    markersApi?.canWrite === true || waveform?.available === true || autoAdvance?.available === true;
+
   // Clic droit sur la barre : mémorise la frame pointée (menu « Ajouter un marqueur ici »)
   // et ne remonte pas au menu contextuel global du viewer.
   const onBarContextMenu = (e: React.MouseEvent) => {
@@ -150,7 +155,7 @@ export default function VideoTimeline({
       onPointerLeave={() => {
         if (!scrubbing.current) setHoverX(null);
       }}
-      onContextMenu={markersApi ? onBarContextMenu : undefined}
+      onContextMenu={hasMenu ? onBarContextMenu : undefined}
       title={t('review.timeline.scrub')}
     >
       {/* Miniature de survol : la vignette à l'instant pointé, suivant le curseur */}
@@ -289,19 +294,17 @@ export default function VideoTimeline({
     </div>
   );
 
-  // Sans API marqueurs (pane B de comparaison) ou sans droit d'écriture : barre nue.
-  if (!markersApi?.canWrite) return bar;
   return (
     <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>{bar}</ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onClick={() => setMarkerDialog({ frame: ctxFrame.current, editing: null })}>
-            <Bookmark size={14} /> {t('video.addMarkerHere')}
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-      {markerDialog !== null && (
+      <TimelineOptionsMenu
+        canAddMarker={markersApi?.canWrite === true}
+        onAddMarker={() => setMarkerDialog({ frame: ctxFrame.current, editing: null })}
+        waveform={waveform}
+        autoAdvance={autoAdvance}
+      >
+        {bar}
+      </TimelineOptionsMenu>
+      {markersApi?.canWrite && markerDialog !== null && (
         <MarkerDialog
           key={markerDialog.editing?.id ?? `new-${markerDialog.frame}`}
           onClose={() => setMarkerDialog(null)}

@@ -15,6 +15,8 @@ import {
   type LiveStatePayload,
   type LiveSyncPayload,
 } from './liveSync';
+import { applyPointer } from './live/pointerBus';
+import { usePointerBroadcast } from './live/usePointerBroadcast';
 
 export type { LiveParticipant, LiveStatePayload } from './liveSync';
 
@@ -114,6 +116,8 @@ export function useLiveSession({
     onCompareModeChange,
     wipe,
     onWipeApply,
+    // Nom des curseurs partagés : le bus ne transporte que des identifiants.
+    participants: state?.participants ?? [],
   };
   const applyRef = useRef(mirror);
   useEffect(() => {
@@ -276,6 +280,8 @@ export function useLiveSession({
         if (payload.wipe && (payload.wipe.pos !== cur.wipe.pos || payload.wipe.angle !== cur.wipe.angle))
           cur.onWipeApply(payload.wipe.pos, payload.wipe.angle);
         if (payload.imageView && cur.kind === 'IMAGE') imageViewApiRef.current?.apply(payload.imageView);
+        // Curseur du driver : trame légère, hors cadence de synchronisation.
+        applyPointer(payload, cur.participants);
       } finally {
         // Reset différé : les événements play/pause/seeked découlant de l'application
         // arrivent après ce handler (même tick ou tâche suivante).
@@ -318,6 +324,9 @@ export function useLiveSession({
     window.addEventListener('pointerdown', onPointerDown);
     return () => window.removeEventListener('pointerdown', onPointerDown);
   }, [canDrive, isDriver, claimInteraction]);
+
+  // Curseur partagé (reliquat du studio) : « là, ce truc » n'avait aucun support visuel.
+  usePointerBroadcast({ active, isDriver, sessionKey: key, selfId, mediaId });
 
   // Driver : diffuse l'état courant à `syncHz` (réglable admin par type de média).
   useEffect(() => {
