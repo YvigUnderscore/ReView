@@ -268,7 +268,8 @@ export async function listPublished(
       kind: m.kind,
       originalName: m.originalName,
       thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
-      url: await storage.getPresignedGetUrl(mediaSourceKey(m)),
+      // Clé affichable : une bibliothèque d'EXR renverrait sinon des URL que rien ne rend.
+      url: await storage.getPresignedGetUrl(mediaViewKey(m)),
     })),
   );
   return paginate(items, total, p);
@@ -551,6 +552,22 @@ export function mediaSourceKey(media: { storageKey: string; metadata: unknown })
   return meta.sourceDeleted && meta.proxyKey ? meta.proxyKey : media.storageKey;
 }
 
+/**
+ * Clé réellement **affichable** d'un média : le proxy web quand le format d'origine n'est
+ * pas rendu par un navigateur (EXR, DPX, TIFF, TGA — cf. `lib/imageProxy`), la source sinon.
+ *
+ * La distinction avec `mediaSourceKey` est le point d'appui de toute la review d'image de
+ * production : le viewer, l'A/B, le wipe et le diff consomment cette clé, tandis que le
+ * téléchargement, l'API v1 et les envois ShotGrid continuent de livrer l'original — c'est
+ * lui, et lui seul, que l'artiste a déposé.
+ */
+export function mediaViewKey(media: { storageKey: string; metadata: unknown }): string {
+  const meta = (media.metadata ?? {}) as { webProxyKey?: string };
+  return typeof meta.webProxyKey === 'string' && meta.webProxyKey.length > 0
+    ? meta.webProxyKey
+    : mediaSourceKey(media);
+}
+
 /** Détail complet d'un média + URLs présignées (original, miniature, proxy, glb). */
 export async function getDetail(user: SessionUser, id: number, ip?: string | null) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
@@ -598,6 +615,10 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
   // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
   const sourceKey = mediaSourceKey(media);
+  // Image de production (EXR, DPX, TIFF, TGA) : le viewer reçoit le proxy web, jamais
+  // l'original — que le navigateur ne décoderait pas. Les deux sont renvoyés : l'un pour
+  // regarder, l'autre pour télécharger.
+  const viewKey = mediaViewKey(media);
   const [
     url,
     thumbnailUrl,
@@ -610,7 +631,7 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     projectSettings,
     references,
   ] = await Promise.all([
-    storage.getPresignedGetUrl(sourceKey),
+    storage.getPresignedGetUrl(viewKey),
     media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
     proxyKey ? storage.getPresignedGetUrl(proxyKey) : Promise.resolve(null),
     meta.glbKey ? storage.getPresignedGetUrl(meta.glbKey) : Promise.resolve(null),
@@ -641,6 +662,12 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     // Projet porteur : évite au front une résolution séparée (mentions, liens profonds).
     projectId,
     url,
+    // Fichier tel qu'il a été déposé — identique à `url` sauf pour une image de production,
+    // où `url` est le proxy JPEG. C'est cette adresse que doit suivre « télécharger ».
+    downloadUrl: viewKey === sourceKey ? url : await storage.getPresignedGetUrl(sourceKey),
+    // Le média est-il servi par un dérivé plutôt que par son fichier d'origine ? (affichage
+    // d'un EXR/DPX/TIFF/TGA : ce qui est à l'écran n'est pas le fichier de référence).
+    webProxy: viewKey !== sourceKey,
     thumbnailUrl,
     proxyUrl,
     glbUrl,
@@ -693,15 +720,21 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
   };
 }
 
-/** URL présignée GET pour le serving direct depuis MinIO. */
-export async function getUrl(user: SessionUser, id: number) {
+/**
+ * URL présignée GET pour le serving direct depuis MinIO.
+ *
+ * Sert la clé **affichable** : un EXR renvoyait jusqu'ici une présignée sur le fichier
+ * source, que le navigateur ne décode pas — la review affichait un cadre vide.
+ * `original: true` réclame le fichier déposé (téléchargement, outillage).
+ */
+export async function getUrl(user: SessionUser, id: number, opts: { original?: boolean } = {}) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Media not found');
   if (!media.published && media.uploaderId !== user.id) throw notFound('Media not found');
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  return storage.getPresignedGetUrl(mediaSourceKey(media));
+  return storage.getPresignedGetUrl(opts.original ? mediaSourceKey(media) : mediaViewKey(media));
 }
 
 /**

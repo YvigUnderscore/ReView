@@ -22,16 +22,25 @@ describe('inferMediaKind', () => {
     }
   });
 
-  it('reconnaît les images, séquences comprises', () => {
-    for (const f of ['frame.exr', 'plate.dpx', 'ref.jpg', 'thumb.PNG']) {
+  it('reconnaît les images, formats de production compris', () => {
+    for (const f of ['frame.exr', 'plate.dpx', 'ref.jpg', 'thumb.PNG', 'matte.tga', 'scan.tiff']) {
       expect(inferMediaKind(f)).toBe(MediaKind.IMAGE);
     }
   });
 
   it('reconnaît les échanges 3D', () => {
-    for (const f of ['hero.glb', 'set.usd', 'char.fbx', 'cache.abc']) {
+    for (const f of ['hero.glb', 'set.usd', 'char.fbx']) {
       expect(inferMediaKind(f)).toBe(MediaKind.MODEL_3D);
     }
+  });
+
+  /**
+   * `.abc` était annoncé en MODEL_3D alors que `detect3D` ne le reconnaît pas et qu'aucun
+   * convertisseur ne sait en tirer un GLB : l'envoi était accepté puis refusé une fois le
+   * cache Alembic entièrement transféré. Retiré tant que la chaîne ne le prend pas.
+   */
+  it('nʼannonce plus Alembic, que rien ne sait lire', () => {
+    expect(() => inferMediaKind('cache.abc')).toThrow(/cannot tell the media kind/i);
   });
 
   it('reconnaît les splats gaussiens', () => {

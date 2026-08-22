@@ -6,6 +6,12 @@ import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
 import { parsePipelinePath } from '../lib/pipelinePath';
+import {
+  getExtension,
+  inferKindFromExtension,
+  isSupportedExtension,
+  SUPPORTED_EXTENSIONS,
+} from '../lib/fileSignatures';
 import { versionSelect, mediaSelect, toVersion, toMedia } from '../lib/v1Resources';
 import * as MediaService from './MediaService';
 import * as Ensure from './PipelineEnsureService';
@@ -36,25 +42,37 @@ import { enqueuePush } from './shotgrid/ShotgridPushService';
 type Actor = { id: number; role: Role; email: string };
 
 /**
- * Extensions reconnues, par type de média — sert à déduire `kind` quand il est tu.
- * La ligne SPLAT suit `detectSplat` (`lib/fileSignatures`) : ce qui passe la validation
- * d'en-tête doit être devinable ici, sans quoi le DCC se voit refuser un fichier que le
- * viewer sait lire.
+ * Type de média déduit de l'extension. Explicite l'échec plutôt que de deviner au hasard.
+ *
+ * La table vit dans `lib/fileSignatures` (`SUPPORTED_EXTENSIONS`), à côté des signatures
+ * qui la font tenir. Elle était auparavant recopiée ici, et la copie avait dérivé : sept
+ * extensions image (`.exr .dpx .tif .tiff .tga .bmp .gif`) et trois vidéo (`.avi .mxf
+ * .m4v`) étaient annoncées — jusque dans la documentation de l'API v1 — alors qu'aucune
+ * n'était reconnue à la finalisation. Un rendu de plusieurs gigaoctets montait
+ * intégralement avant d'être refusé. Une seule liste, donc, et le refus au plus tôt.
  */
-const KIND_BY_EXTENSION: [RegExp, MediaKind][] = [
-  [/\.(mov|mp4|mkv|avi|webm|mxf|m4v)$/i, MediaKind.VIDEO],
-  [/\.(jpg|jpeg|png|tif|tiff|exr|dpx|webp|gif|bmp|tga)$/i, MediaKind.IMAGE],
-  [/\.(glb|gltf|fbx|obj|usd|usda|usdc|usdz|dae|stl|abc|zip)$/i, MediaKind.MODEL_3D],
-  [/\.(splat|ply|ksplat|spz|sogs|sog)$/i, MediaKind.SPLAT],
-];
-
-/** Type de média déduit de l'extension. Explicite l'échec plutôt que de deviner au hasard. */
 export function inferMediaKind(filename: string): MediaKind {
-  const found = KIND_BY_EXTENSION.find(([re]) => re.test(filename));
-  if (!found) {
+  const kind = inferKindFromExtension(getExtension(filename));
+  if (!kind) {
     throw badRequest(`Cannot tell the media kind of « ${filename} » — pass « kind »`, 'KIND_UNKNOWN');
   }
-  return found[1];
+  return kind;
+}
+
+/**
+ * Refus **avant** l'envoi du fichier.
+ *
+ * C'est tout l'intérêt de la publication en deux temps : le client ne transfère rien tant
+ * que `start` n'a pas répondu. Un format non lisible refusé ici coûte un aller-retour ;
+ * refusé à la finalisation, il coûte le transfert complet du master.
+ */
+function assertExtensionSupported(kind: MediaKind, filename: string): void {
+  const ext = getExtension(filename);
+  if (isSupportedExtension(kind, ext)) return;
+  throw badRequest(
+    `« ${filename} » cannot be read as ${kind} — accepted: ${SUPPORTED_EXTENSIONS[kind].join(', ')}`,
+    'UNSUPPORTED_FORMAT',
+  );
 }
 
 export interface StartPublishInput {
@@ -107,6 +125,9 @@ export async function start(actor: Actor, input: StartPublishInput) {
 
   const project = await Resolve.resolveProject(parsed.project);
   const kind = input.kind ?? inferMediaKind(input.filename);
+  // Un `kind` imposé par le client ne dispense pas du contrôle : c'est justement le cas où
+  // l'extension et le type annoncé peuvent diverger.
+  assertExtensionSupported(kind, input.filename);
   if (input.usd && kind !== MediaKind.MODEL_3D) {
     // Refus explicite plutôt qu'oubli silencieux : un client qui croit piloter la conversion
     // d'un .mov doit l'apprendre tout de suite, pas en relisant les métadonnées.

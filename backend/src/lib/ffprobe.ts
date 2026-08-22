@@ -24,6 +24,16 @@ export interface ProbeResult {
   /** Dénominateur de la cadence exacte (« 1001 » pour 24000/1001). */
   fpsDen?: number;
   hasAudio?: boolean;
+  /**
+   * Ordre de trame déclaré par le conteneur (`progressive`, `tt`, `bb`, `tb`, `bt`).
+   * Les masters MXF/AVI de diffusion sont fréquemment entrelacés : sans ce champ, le
+   * proxy sort peigné et le superviseur juge une image que personne n'a livrée.
+   */
+  fieldOrder?: string;
+  /** Nombre de canaux de la piste audio retenue (6 pour un 5.1). */
+  audioChannels?: number;
+  /** Codec de la piste vidéo retenue (`prores`, `dnxhd`, `h264`…) — trace de provenance. */
+  videoCodec?: string;
 }
 
 /** Cadence exacte, telle que le conteneur la déclare — jamais arrondie. */
@@ -34,9 +44,13 @@ export interface FrameRateFraction {
 
 interface RawStream {
   codec_type?: unknown;
+  codec_name?: unknown;
   width?: unknown;
   height?: unknown;
   r_frame_rate?: unknown;
+  field_order?: unknown;
+  channels?: unknown;
+  disposition?: { attached_pic?: unknown };
 }
 
 const asNumber = (v: unknown): number | undefined => {
@@ -79,6 +93,34 @@ export function parseFrameRateFraction(raw: unknown): FrameRateFraction | undefi
   return { num: n / g, den: d / g };
 }
 
+/**
+ * Piste vidéo **utile** d'un conteneur.
+ *
+ * `streams.find(codec_type === 'video')` prenait la première venue. Or un master ProRes en
+ * MOV, un MXF de diffusion ou un MP4 sorti d'un NLE embarquent régulièrement une pochette
+ * (`disposition.attached_pic`) ou une vignette de 120 px : sondée, elle devenait la
+ * définition du média — proxy transcodé en 120 px de haut, échelle HLS entière calculée
+ * dessus, letterbox de review faux. On écarte donc les images attachées et, à défaut de
+ * critère plus sûr, on retient la piste de plus grande surface.
+ */
+function pickVideoStream(streams: RawStream[]): RawStream | undefined {
+  const candidates = streams.filter((s) => s.codec_type === 'video' && s.disposition?.attached_pic !== 1);
+  const pool = candidates.length > 0 ? candidates : streams.filter((s) => s.codec_type === 'video');
+  const area = (s: RawStream): number => (asNumber(s.width) ?? 0) * (asNumber(s.height) ?? 0);
+  return pool.reduce<RawStream | undefined>(
+    (best, s) => (best === undefined || area(s) > area(best) ? s : best),
+    undefined,
+  );
+}
+
+/**
+ * Le média est-il entrelacé ? `unknown` et `progressive` valent « non » : on ne
+ * désentrelace jamais sur un doute — la passe coûte une frame de netteté.
+ */
+export function isInterlaced(fieldOrder: string | undefined): boolean {
+  return fieldOrder !== undefined && ['tt', 'bb', 'tb', 'bt'].includes(fieldOrder);
+}
+
 /** Analyse la sortie JSON de ffprobe. Une sortie illisible donne un résultat vide. */
 export function parseProbeOutput(raw: string): ProbeResult {
   let data: { format?: { duration?: unknown }; streams?: unknown };
@@ -88,7 +130,16 @@ export function parseProbeOutput(raw: string): ProbeResult {
     return {};
   }
   const streams: RawStream[] = Array.isArray(data.streams) ? (data.streams as RawStream[]) : [];
-  const video = streams.find((s) => s.codec_type === 'video');
+  const video = pickVideoStream(streams);
+  // Piste audio la plus « riche » : un master MXF porte souvent plusieurs pistes, dont le
+  // downmix stéréo et des stems mono. C'est le nombre de canaux qui décide du downmix.
+  const audio = streams
+    .filter((s) => s.codec_type === 'audio')
+    .reduce<RawStream | undefined>(
+      (best, s) =>
+        best === undefined || (asNumber(s.channels) ?? 0) > (asNumber(best.channels) ?? 0) ? s : best,
+      undefined,
+    );
   const duration = asNumber(data.format?.duration);
   const rate = parseFrameRateFraction(video?.r_frame_rate);
   return {
@@ -98,7 +149,10 @@ export function parseProbeOutput(raw: string): ProbeResult {
     fps: parseFrameRate(video?.r_frame_rate),
     fpsNum: rate?.num,
     fpsDen: rate?.den,
-    hasAudio: streams.some((s) => s.codec_type === 'audio'),
+    hasAudio: audio !== undefined,
+    fieldOrder: typeof video?.field_order === 'string' ? video.field_order : undefined,
+    audioChannels: asNumber(audio?.channels),
+    videoCodec: typeof video?.codec_name === 'string' ? video.codec_name : undefined,
   };
 }
 

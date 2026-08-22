@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { parseFrameRate, parseFrameRateFraction, parseProbeOutput, probeArgs } from './ffprobe';
+import { isInterlaced, parseFrameRate, parseFrameRateFraction, parseProbeOutput, probeArgs } from './ffprobe';
 
 const sample = (over: Record<string, unknown> = {}) =>
   JSON.stringify({
@@ -112,6 +112,67 @@ describe('parseProbeOutput', () => {
   it('durée « N/A » : ignorée plutôt que NaN', () => {
     const raw = JSON.stringify({ format: { duration: 'N/A' }, streams: [] });
     expect(parseProbeOutput(raw).duration).toBeUndefined();
+  });
+
+  /**
+   * Masters de post-production : un MOV ProRes ou un MXF portent régulièrement une image
+   * attachée (pochette, vignette de NLE) déclarée comme piste vidéo. Prise pour la piste
+   * principale, elle imposait sa définition à tout le traitement — proxy encodé en 120 px,
+   * échelle HLS calculée dessus, cadre de review faux.
+   */
+  it('écarte lʼimage attachée dʼun master au profit de la vraie piste', () => {
+    const raw = JSON.stringify({
+      format: { duration: '10' },
+      streams: [
+        { codec_type: 'video', width: 120, height: 120, disposition: { attached_pic: 1 } },
+        { codec_type: 'video', width: 1920, height: 1080, r_frame_rate: '25/1', codec_name: 'prores' },
+      ],
+    });
+    expect(parseProbeOutput(raw)).toMatchObject({ width: 1920, height: 1080, videoCodec: 'prores' });
+  });
+
+  it('à défaut dʼimage attachée déclarée, retient la piste de plus grande surface', () => {
+    const raw = JSON.stringify({
+      format: {},
+      streams: [
+        { codec_type: 'video', width: 320, height: 240 },
+        { codec_type: 'video', width: 4096, height: 2160 },
+      ],
+    });
+    expect(parseProbeOutput(raw)).toMatchObject({ width: 4096, height: 2160 });
+  });
+
+  it('ne renvoie rien plutôt que rien de bon si toutes les pistes sont attachées', () => {
+    const raw = JSON.stringify({
+      format: {},
+      streams: [{ codec_type: 'video', width: 96, height: 96, disposition: { attached_pic: 1 } }],
+    });
+    // Aucune piste « normale » : mieux vaut la pochette que rien du tout.
+    expect(parseProbeOutput(raw).width).toBe(96);
+  });
+
+  it('relève lʼordre de trame et le nombre de canaux de la piste la plus riche', () => {
+    const raw = JSON.stringify({
+      format: { duration: '4' },
+      streams: [
+        { codec_type: 'video', width: 720, height: 576, field_order: 'tt', r_frame_rate: '25/1' },
+        { codec_type: 'audio', channels: 2 },
+        { codec_type: 'audio', channels: 6 },
+      ],
+    });
+    expect(parseProbeOutput(raw)).toMatchObject({ fieldOrder: 'tt', audioChannels: 6, hasAudio: true });
+  });
+});
+
+describe('isInterlaced', () => {
+  it('reconnaît les quatre ordres de trame entrelacés', () => {
+    for (const order of ['tt', 'bb', 'tb', 'bt']) expect(isInterlaced(order), order).toBe(true);
+  });
+
+  it('ne désentrelace jamais sur un doute', () => {
+    expect(isInterlaced('progressive')).toBe(false);
+    expect(isInterlaced('unknown')).toBe(false);
+    expect(isInterlaced(undefined)).toBe(false);
   });
 });
 

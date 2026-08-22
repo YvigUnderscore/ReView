@@ -57,6 +57,21 @@ import {
 } from '../lib/ffmpegTimeout';
 import { probeFile } from '../lib/ffprobe';
 import {
+  audioOptionsFor,
+  NO_TRAITS,
+  preFiltersFor,
+  sourceTraits,
+  type SourceTraits,
+} from '../lib/masterTraits';
+import {
+  imageDecodeInputOptions,
+  needsWebProxy,
+  webProxyKey,
+  webProxyOutputOptions,
+  webProxyScaleFilter,
+  WEB_PROXY_CONTENT_TYPE,
+} from '../lib/imageProxy';
+import {
   ffmpegFraction,
   mediaJobProgress,
   type MediaJobProgress,
@@ -143,11 +158,42 @@ function runFfmpeg(cmd: ffmpeg.FfmpegCommand, run: FfmpegRun): Promise<void> {
  * Génère une miniature JPEG. Pour la vidéo, on capture la frame au **centre** (`seekSec`,
  * typiquement durée/2 — plus représentatif qu'une frame de début souvent noire) ; pour
  * l'image, pas de seek (redimensionnement direct).
+ *
+ * `inputOptions` porte les réglages de décodage propres au format source — la courbe de
+ * transfert d'un EXR, notamment : sans elle, la vignette d'un rendu linéaire est noire.
  */
-function makeThumbnail(input: string, output: string, run: FfmpegRun, seekSec?: number): Promise<void> {
+function makeThumbnail(
+  input: string,
+  output: string,
+  run: FfmpegRun,
+  seekSec?: number,
+  inputOptions: string[] = [],
+): Promise<void> {
   const cmd = ffmpeg(input);
+  if (inputOptions.length > 0) cmd.inputOptions(inputOptions);
   if (seekSec !== undefined && seekSec > 0) cmd.seekInput(seekSec);
   cmd.outputOptions(['-vframes 1', '-vf scale=640:-2']).output(output);
+  return runFfmpeg(cmd, run);
+}
+
+/**
+ * Proxy web pleine résolution d'une image que le navigateur ne sait pas décoder
+ * (EXR, DPX, TIFF, TGA). C'est ce dérivé — et non l'original — que la review affiche :
+ * sans lui, la page de review d'un EXR est un cadre vide (cf. `lib/imageProxy`).
+ */
+function makeWebProxy(
+  input: string,
+  output: string,
+  ext: string,
+  size: { width: number; height: number },
+  run: FfmpegRun,
+): Promise<void> {
+  const cmd = ffmpeg(input);
+  const inputOptions = imageDecodeInputOptions(ext);
+  if (inputOptions.length > 0) cmd.inputOptions(inputOptions);
+  const scale = webProxyScaleFilter(size.width, size.height);
+  if (scale) cmd.outputOptions(['-vf', scale]);
+  cmd.outputOptions(webProxyOutputOptions()).output(output);
   return runFfmpeg(cmd, run);
 }
 
@@ -216,9 +262,10 @@ function applyVideoChain(
   scale: string,
   burnin: BurninJob | null,
   outHeight: number,
+  preFilters: string[] = [],
 ): string[] {
   const extra = burnin ? buildBurninFilters(burnin.cfg, burnin.ctx, outHeight) : [];
-  const chain = [scale, ...extra].join(',');
+  const chain = [...preFilters, scale, ...extra].join(',');
   if (!burnin?.logoPath || !burnin.cfg.enabled || !burnin.cfg.showLogo) {
     return ['-vf', chain];
   }
@@ -257,17 +304,25 @@ function transcodeProxy(
   burnin?: BurninJob | null,
   srcHeight?: number,
   encoder: VideoEncoder = 'libx264',
+  traits: SourceTraits = NO_TRAITS,
 ): Promise<void> {
   const cmd = ffmpeg(input);
   // Trim non-destructif (10.G-V10) : seek + durée, ré-encodage → coupe précise à la frame.
   if (window) cmd.setStartTime(window.startSec).setDuration(window.durationSec);
   const proxyHeight = Math.min(1080, srcHeight && srcHeight > 0 ? srcHeight : 1080);
-  const mapping = applyVideoChain(cmd, 'scale=-2:min(1080\\,ih)', burnin ?? null, proxyHeight);
+  const mapping = applyVideoChain(
+    cmd,
+    'scale=-2:min(1080\\,ih)',
+    burnin ?? null,
+    proxyHeight,
+    preFiltersFor(traits),
+  );
   cmd
     .outputOptions([
       ...qualityEncoderArgs(encoder, 23, 'veryfast'),
       '-pix_fmt yuv420p',
       '-c:a aac',
+      ...audioOptionsFor(traits),
       '-movflags +faststart',
     ])
     .outputOptions(mapping)
@@ -292,13 +347,15 @@ function transcodeHlsRendition(
   fps?: number,
   burnin?: BurninJob | null,
   encoder: VideoEncoder = 'libx264',
+  traits: SourceTraits = NO_TRAITS,
 ): Promise<void> {
   const gop = hlsGopSize(fps);
   const cmd = ffmpeg(input);
-  const mapping = applyVideoChain(cmd, `scale=-2:${height}`, burnin ?? null, height);
+  const mapping = applyVideoChain(cmd, `scale=-2:${height}`, burnin ?? null, height, preFiltersFor(traits));
   cmd
     .outputOptions(mapping)
     .outputOptions(bitrateEncoderArgs(encoder, cfg.preset))
+    .outputOptions(audioOptionsFor(traits))
     .outputOptions([
       '-b:v',
       `${videoBitrateK}k`,
@@ -520,6 +577,7 @@ async function buildHls(
   srcFps?: number,
   onRendition?: (renditions: HlsRenditionMeta[], building: boolean) => Promise<void>,
   burnin?: BurninJob | null,
+  traits: SourceTraits = NO_TRAITS,
 ): Promise<HlsRenditionMeta[]> {
   const hlsDir = join(dir, 'hls');
   await mkdir(hlsDir, { recursive: true });
@@ -547,6 +605,7 @@ async function buildHls(
         srcFps,
         burnin,
         encoder,
+        traits,
       ),
     );
     const width =
@@ -677,6 +736,9 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       // passe qui la dépasse largement ne progresse plus, elle boucle.
       const durationSec = typeof metadata.duration === 'number' ? metadata.duration : undefined;
       const timeoutMs = ffmpegTimeoutMs(durationSec);
+      // Masters de post-production (MXF, AVI, ProRes en MOV) : désentrelacement et downmix
+      // décidés ici, une fois, et appliqués identiquement au proxy et à l'échelle HLS.
+      const traits = sourceTraits(metadata);
 
       // Burn-ins configurables (35.A) : config effective du projet + contexte shot/version.
       // Best effort — un échec de résolution ne condamne pas le transcodage.
@@ -702,6 +764,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           burnin,
           typeof metadata.height === 'number' ? metadata.height : undefined,
           encoder,
+          traits,
         ),
       );
       const proxyKey = `derived/${mediaId}/proxy.mp4`;
@@ -760,6 +823,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
             });
           },
           burnin,
+          traits,
         );
         metadata.hls = { renditions };
       }
@@ -916,13 +980,44 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         await storage.deleteObject(trimProxyKey).catch(() => undefined);
       }
     } else if (kind === 'thumbnail') {
-      // Image : sonde dimensions + miniature
+      // Image : sonde dimensions + miniature (+ proxy web si le navigateur ne sait pas lire).
       report('probe');
       Object.assign(metadata, await probe(src));
+      // Une image fixe n'a pas de durée : le forfait de `ffmpegTimeoutMs` s'applique.
+      const imageTimeoutMs = ffmpegTimeoutMs();
+      const decodeOptions = imageDecodeInputOptions(ext);
+
+      // Proxy web AVANT la miniature : c'est lui qui rend l'image consultable. Produit en
+      // premier, un échec de vignette (rare) laisse au moins la review fonctionnelle.
+      // (La progression reste sur l'étape « probe » : le barème du job `thumbnail`
+      // — lib/mediaProgress — n'a pas de plage `proxy`, et en inventer une ici ferait
+      // reculer le pourcentage à 0.)
+      if (needsWebProxy(ext)) {
+        const proxyPath = join(dir, 'proxy.jpg');
+        await makeWebProxy(
+          src,
+          proxyPath,
+          ext,
+          {
+            width: typeof metadata.width === 'number' ? metadata.width : 0,
+            height: typeof metadata.height === 'number' ? metadata.height : 0,
+          },
+          { label: 'web proxy', timeoutMs: imageTimeoutMs },
+        );
+        const key = webProxyKey(mediaId);
+        await storage.uploadFile(key, proxyPath, WEB_PROXY_CONTENT_TYPE);
+        metadata.webProxyKey = key;
+      }
+
       const thumbPath = join(dir, 'thumb.jpg');
       report('thumbnail');
-      // Une image fixe n'a pas de durée : le forfait de `ffmpegTimeoutMs` s'applique.
-      await makeThumbnail(src, thumbPath, { label: 'thumbnail', timeoutMs: ffmpegTimeoutMs() });
+      await makeThumbnail(
+        src,
+        thumbPath,
+        { label: 'thumbnail', timeoutMs: imageTimeoutMs },
+        undefined,
+        decodeOptions,
+      );
       const thumbKey = StorageService.thumbnailKey(mediaId, 'jpg');
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
       await prisma.mediaObject.update({
