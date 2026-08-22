@@ -15,12 +15,12 @@ import {
   loadShareWithSession,
   consumeView,
   studioBranding,
-  publishedMediaWhere,
+  listShareMedia,
+  findShareMedia,
 } from '../services/ClientShareService';
+import { createGuest } from '../services/CommentService';
 import { signShareSession, verifyShareSession } from '../lib/shareAccess';
 import { getWatermarkConfig } from '../lib/watermarkConfig';
-import { sanitizeHtml } from '../lib/sanitize';
-import { emitToProject } from '../services/SocketService';
 import { logAudit } from '../services/AuditService';
 import { logMediaAccess } from '../lib/mediaAccess';
 import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
@@ -29,13 +29,14 @@ import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
  * Routes PUBLIQUES (sans JWT) pour le partage client sécurisé (35.C/35.D).
  * Session de partage : émise par GET /:token (lien libre) ou POST /:token/unlock (mot de
  * passe) — chaque émission consomme une vue ; les sous-routes exigent `X-Share-Auth`.
+ * Tout accès à un média passe par `findShareMedia`, donc par la PORTÉE du lien.
  */
 const router = Router();
 
 const tokenParam = z.object({ token: z.string().min(8).max(128) });
 const tokenAndId = tokenParam.extend({ id: z.coerce.number().int() });
 
-// GET /api/client/:token — projet + médias publiés ; émet la session (compte une vue)
+// GET /api/client/:token — projet + médias de la portée ; émet la session (compte une vue)
 router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
   const share = await loadShare(String(req.params.token));
   const studio = await studioBranding();
@@ -62,19 +63,7 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
   });
   if (!project) throw notFound('Project not found');
 
-  const media = await prisma.mediaObject.findMany({
-    where: publishedMediaWhere(share.projectId),
-    orderBy: { createdAt: 'desc' },
-  });
-  const withUrls = await Promise.all(
-    media.map(async (m) => ({
-      id: m.id,
-      kind: m.kind,
-      originalName: m.originalName,
-      thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
-    })),
-  );
-
+  const { media, total, hasMore } = await listShareMedia(share);
   const watermark = await getWatermarkConfig();
   res.json({
     locked: false,
@@ -82,7 +71,10 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
     project,
     permission: share.permission,
     label: share.label,
-    media: withUrls,
+    scope: share.scope,
+    media,
+    mediaTotal: total,
+    mediaHasMore: hasMore,
     watermark: { enabled: watermark.shares, opacity: watermark.opacity },
     shareAuth: signShareSession(share.id),
   });
@@ -94,13 +86,13 @@ router.post(
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    message: { error: 'Trop de tentatives, réessayez plus tard.' },
+    message: { error: 'Too many attempts, try again later.' },
     keyGenerator: (req) => `unlock:${req.ip ?? 'unknown'}:${String(req.params.token ?? '')}`,
   }),
   validate({ params: tokenParam, body: z.object({ password: z.string().min(1).max(200) }) }),
   async (req, res) => {
     const share = await loadShare(String(req.params.token));
-    if (!share.passwordHash) throw badRequest("Ce lien n'a pas de mot de passe");
+    if (!share.passwordHash) throw badRequest('This link has no password');
     const ok = await bcrypt.compare((req.body as { password: string }).password, share.passwordHash);
     if (!ok) {
       logAudit({
@@ -122,16 +114,13 @@ router.post(
   },
 );
 
-// GET /api/client/:token/media/:id/url — URL présignée d'un média publié (session requise).
+// GET /api/client/:token/media/:id/url — URL présignée d'un média DE LA PORTÉE (session requise).
 // Vidéo : sert le dérivé client (slate en tête, 35.A) s'il existe — `slateSec` permet au
 // front de décaler les timestamps de commentaires (le slate n'existe pas côté review interne).
 router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req, res) => {
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
-  const media = await prisma.mediaObject.findFirst({
-    where: { id, ...publishedMediaWhere(share.projectId) },
-  });
-  if (!media) throw notFound('Media not found, or not published');
+  const media = await findShareMedia(share, id);
   logMediaAccess({ mediaObjectId: id, shareLinkId: share.id, ip: req.ip }); // 36.E
   const meta = (media.metadata ?? {}) as { clientProxyKey?: string; slateSec?: number };
   const clientKey = typeof meta.clientProxyKey === 'string' ? meta.clientProxyKey : null;
@@ -145,10 +134,7 @@ router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req
 router.get('/:token/media/:id/comments', validate({ params: tokenAndId }), async (req, res) => {
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
-  const media = await prisma.mediaObject.findFirst({
-    where: { id, ...publishedMediaWhere(share.projectId) },
-  });
-  if (!media) throw notFound('Media not found, or not published');
+  await findShareMedia(share, id);
   const comments = await prisma.comment.findMany({
     where: { mediaObjectId: id, parentId: null, isVisibleToClient: true },
     orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
@@ -157,13 +143,16 @@ router.get('/:token/media/:id/comments', validate({ params: tokenAndId }), async
   res.json({ comments });
 });
 
-// POST /api/client/:token/media/:id/comments — commentaire invité (permission COMMENT)
+// POST /api/client/:token/media/:id/comments — commentaire invité (permission COMMENT).
+// Passe par `CommentService.createGuest` : le retour d'un client déclenche la même chaîne
+// qu'un retour interne (suiveurs, webhooks, journal v1, note ShotGrid), au lieu du seul
+// `emit` socket qui se perdait dès que personne n'avait le projet ouvert.
 router.post(
   '/:token/media/:id/comments',
   validate({
     params: tokenAndId,
     body: z.object({
-      guestName: z.string().min(1).max(80),
+      guestName: z.string().trim().min(1).max(80),
       content: z.string().min(1).max(10000),
       timestamp: z.number().nonnegative().optional(),
       cameraState: z.any().optional(),
@@ -173,10 +162,7 @@ router.post(
     const share = await loadShareWithSession(String(req.params.token), req);
     if (share.permission !== SharePermission.COMMENT) throw forbidden('This link is read-only');
     const id = Number(req.params.id);
-    const media = await prisma.mediaObject.findFirst({
-      where: { id, ...publishedMediaWhere(share.projectId) },
-    });
-    if (!media) throw notFound('Media not found, or not published');
+    await findShareMedia(share, id);
 
     const body = req.body as {
       guestName: string;
@@ -184,18 +170,11 @@ router.post(
       timestamp?: number;
       cameraState?: unknown;
     };
-    const comment = await prisma.comment.create({
-      data: {
-        mediaObjectId: id,
-        guestName: body.guestName,
-        content: sanitizeHtml(body.content),
-        timestamp: body.timestamp ?? null,
-        cameraState: body.cameraState ?? undefined,
-        isVisibleToClient: true,
-      },
-      include: { author: { select: { id: true, name: true } } },
-    });
-    emitToProject(share.projectId, 'comment:new', comment);
+    const comment = await createGuest(
+      { name: body.guestName, shareLinkId: share.id, shareOwnerId: share.createdById },
+      share.projectId,
+      { mediaObjectId: id, content: body.content, timestamp: body.timestamp, cameraState: body.cameraState },
+    );
     res.status(201).json({ comment });
   },
 );

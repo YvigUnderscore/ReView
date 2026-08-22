@@ -89,6 +89,17 @@ enum SharePermission {
   COMMENT
 }
 
+// Ce qu'un lien de partage ouvre réellement. Un lien ne connaissait que son projet : faire
+// valider UN plan à un client lui ouvrait tout le film, séquences non montrées comprises.
+// La portée se choisit à la création et vaut pour TOUTES les lectures du lien (liste,
+// URL présignée, fil de commentaires) — pas seulement pour l'affichage de la liste.
+enum ShareScope {
+  PROJECT
+  PLAYLIST
+  VERSION
+  MEDIA
+}
+
 enum UserStatus {
   AVAILABLE
   AWAY
@@ -696,6 +707,7 @@ model Version {
   reviewStatusId Int?
   decisions      ReviewDecision[]
   playlistItems  PlaylistItem[]
+  shareLinks     ShareLink[]
 
   // Deux V02 sur la même tâche n'ont aucun sens : le nom EST le numéro de livraison.
   // `ensureVersion` calcule pourtant « la suivante » hors transaction, et deux publications
@@ -731,7 +743,8 @@ model Playlist {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  items PlaylistItem[]
+  items      PlaylistItem[]
+  shareLinks ShareLink[]
 
   @@unique([projectId, name])
   @@index([createdById])
@@ -886,6 +899,7 @@ model MediaObject {
   references      ReviewReference[]
   timelineMarkers TimelineMarker[]
   accessLogs      MediaAccessLog[]
+  shareSelections ShareLinkMedia[]
 
   // La table n'avait aucun index (B3). Elle est pourtant au bout de tous les filtres
   // relationnels du pipe (`version → task → shot → project`), que Postgres traduit en
@@ -1070,10 +1084,36 @@ model ShareLink {
   createdById  Int?
   createdAt    DateTime        @default(now())
 
+  // Portée du lien. La cible est en Cascade et non en SetNull : la contrainte SQL
+  // `ShareLink_scope_target` exige une cible pour les portées qui en ont une, et un lien
+  // qui survivrait à sa playlist rouvrirait le projet entier au destinataire.
+  scope      ShareScope       @default(PROJECT)
+  playlist   Playlist?        @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId Int?
+  version    Version?         @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId  Int?
+  media      ShareLinkMedia[]
+
   // L'écran d'administration liste les liens d'un projet ; supprimer un compte repasse en
   // SetNull sur les siens.
   @@index([projectId, createdAt])
   @@index([createdById])
+  @@index([playlistId])
+  @@index([versionId])
+}
+
+// Sélection explicite de médias portée par un lien (`ShareScope.MEDIA`) : le cas
+// « envoie-lui ces trois plans, rien d'autre ». Table de jonction plutôt qu'un tableau
+// d'entiers, pour que la purge définitive d'un média retire aussi le droit de le lire.
+model ShareLinkMedia {
+  id            Int         @id @default(autoincrement())
+  shareLink     ShareLink   @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  shareLinkId   Int
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+
+  @@unique([shareLinkId, mediaObjectId])
+  @@index([mediaObjectId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

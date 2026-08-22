@@ -211,6 +211,9 @@ export interface CreateCommentInput {
   timelineTime?: number;
 }
 
+/** Ping Discord d'un nouveau retour — le même, qu'il vienne d'un membre ou d'un invité. */
+const discordNewComment = (projectId: number) => `💬 Nouveau commentaire sur un média (projet #${projectId})`;
+
 export async function create(user: SessionUser, projectId: number, body: CreateCommentInput) {
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
   // Sécurité : la clé de pièce jointe est fournie par le client, elle sert ensuite à
@@ -303,8 +306,98 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       messageKey: 'notification.watchedComment',
       exclude: [user.id, ...mentioned],
     });
-    void sendDiscord(`💬 Nouveau commentaire sur un média (projet #${projectId})`);
+    void sendDiscord(discordNewComment(projectId));
   }
+  return enriched;
+}
+
+/**
+ * Un invité qui écrit depuis un lien de partage : il n'a pas de compte, donc pas de droits.
+ *
+ * Il ne peut ni mentionner (le texte n'est pas parcouru pour des `@`), ni assigner, ni
+ * résoudre, ni répondre, ni joindre un fichier — sinon le lien public deviendrait une
+ * surface d'écriture sur le projet. Ce qui reste est exactement ce qu'on attend de lui :
+ * un retour daté, visible du client, sur un média qu'il a le droit de voir.
+ */
+export interface GuestActor {
+  /** Nom saisi sur la page publique. Aucun compte ne lui correspond. */
+  name: string;
+  /** Lien emprunté — tracé dans l'événement d'API, seule piste d'audit d'un invité. */
+  shareLinkId: number;
+  /**
+   * Qui a créé le lien. Prévenu même s'il ne suit pas le plan : c'est lui qui a sollicité
+   * le client, et sans cela un retour peut n'atteindre personne (les suiveurs sont un
+   * abonnement volontaire, souvent vide sur un plan livré).
+   */
+  shareOwnerId?: number | null;
+}
+
+export interface CreateGuestCommentInput {
+  mediaObjectId: number;
+  content: string;
+  timestamp?: number;
+  cameraState?: unknown;
+}
+
+export async function createGuest(guest: GuestActor, projectId: number, body: CreateGuestCommentInput) {
+  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+  const comment = await prisma.comment.create({
+    data: {
+      mediaObjectId: body.mediaObjectId,
+      guestName: guest.name,
+      content: sanitizeHtml(body.content),
+      timestamp: body.timestamp ?? null,
+      cameraState: body.cameraState ?? undefined,
+      // Un retour de client se relit forcément côté client : il reste visible du lien.
+      isVisibleToClient: true,
+    },
+    include: commentInclude,
+  });
+  const enriched = await enrichComment(asRawComment(comment));
+  emitToProject(projectId, 'comment:new', enriched);
+
+  // Webhooks sortants + journal v1 : `actorId` reste nul (aucun compte), le lien et le nom
+  // déclaré partent dans la charge utile — c'est ce qui permet de retrouver qui a parlé.
+  publishApiEvent('comment.created', {
+    projectId,
+    entityType: 'comment',
+    entityId: comment.id,
+    actorId: null,
+    payload: {
+      commentId: comment.id,
+      mediaObjectId: body.mediaObjectId,
+      projectId,
+      authorId: null,
+      guestName: guest.name,
+      shareLinkId: guest.shareLinkId,
+      parentId: null,
+      timestamp: body.timestamp ?? null,
+    },
+  });
+
+  // 48 : le retour du client part aussi en note ShotGrid, comme un retour interne.
+  await enqueuePush(projectId, { type: 'comment', commentId: comment.id, actorId: null });
+
+  const notified = await notifyWatchers({
+    mediaObjectId: body.mediaObjectId,
+    projectId,
+    messageKey: 'notification.clientComment',
+    params: { name: guest.name },
+  });
+  if (guest.shareOwnerId && !notified.includes(guest.shareOwnerId)) {
+    // Type `WATCH` — le même que `notifyWatchers` : c'est lui qui fait pointer la
+    // notification vers la review du média côté front. Un type inédit renverrait sur la
+    // page du projet, et le lecteur perdrait le plan dont on lui parle.
+    await notify({
+      userId: guest.shareOwnerId,
+      type: 'WATCH',
+      messageKey: 'notification.clientComment',
+      params: { name: guest.name },
+      projectId,
+      referenceId: body.mediaObjectId,
+    });
+  }
+  void sendDiscord(discordNewComment(projectId));
   return enriched;
 }
 
