@@ -7,7 +7,7 @@ import { ApiTokenKind, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { generateApiToken } from '../lib/apiTokens';
 import { isGrantableScope } from '../lib/apiScopes';
-import { badRequest, conflict, notFound } from '../lib/errors';
+import { badRequest, conflict, forbidden, notFound } from '../lib/errors';
 import { slugify } from '../lib/slug';
 import { logAudit } from './AuditService';
 
@@ -43,6 +43,24 @@ const expiryFrom = (days?: number): Date | null => (days ? new Date(Date.now() +
 function assertScopes(scopes: readonly string[]): void {
   const unknown = scopes.filter((s) => !isGrantableScope(s));
   if (unknown.length > 0) throw badRequest(`Scopes inconnus : ${unknown.join(', ')}`, 'UNKNOWN_SCOPE');
+}
+
+/**
+ * Ré-authentifie l'émetteur avant de forger une identité durable.
+ *
+ * Un `rvk_` vit jusqu'à 3650 jours et survit à la fermeture de l'onglet : fabriqué depuis
+ * un jeton d'accès volé, il transforme un vol de session passager en accès permanent. Le
+ * mot de passe est la seule chose que l'attaquant n'a pas.
+ *
+ * Le refus est un **403** et non un 401 : un 401 déclencherait côté client le
+ * renouvellement de session (`lib/apiClient`), qui purge la session quand il échoue —
+ * une faute de frappe déconnecterait l'utilisateur. Ici l'appelant est bien authentifié ;
+ * c'est l'action qui lui est refusée.
+ */
+export async function assertActorPassword(userId: number, password?: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+  const ok = user !== null && password !== undefined && (await bcrypt.compare(password, user.password));
+  if (!ok) throw forbidden('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
 }
 
 /** Vérifie que le projet de cantonnement existe (et n'est pas à la corbeille). */
@@ -166,12 +184,22 @@ export async function createService(createdById: number, input: CreateServiceTok
   return { token, apiToken: created };
 }
 
-/** Tokens de service actifs du studio (jamais le secret). */
+/**
+ * Tokens de service actifs du studio (jamais le secret).
+ *
+ * Le rôle effectif vient du compte porteur et le cantonnement du projet lié : ce sont les
+ * deux réponses que l'admin cherche devant la liste (« que peut ce robot, et où ? »), on
+ * les sert avec la ligne plutôt que de faire deviner l'écran.
+ */
 export async function listService() {
   return prisma.apiToken.findMany({
     where: { kind: ApiTokenKind.SERVICE, revokedAt: null },
     orderBy: { createdAt: 'desc' },
-    select: { ...tokenSelect, user: { select: { id: true, email: true, role: true } } },
+    select: {
+      ...tokenSelect,
+      user: { select: { id: true, email: true, role: true } },
+      project: { select: { id: true, name: true } },
+    },
   });
 }
 

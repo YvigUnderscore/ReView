@@ -252,6 +252,9 @@ describe('v1 — tokens d’API et scopes', () => {
         scopes: ['projects:read', 'shots:read'],
         role: 'SUPERVISOR',
         projectId: project!.id,
+        // Ré-authentification exigée depuis la vague 3 : un jeton d'accès volé ne doit pas
+        // suffire à forger une identité machine durable.
+        currentPassword: 'admin1234',
       });
     expect(created.status).toBe(201);
     const token: string = created.body.token;
