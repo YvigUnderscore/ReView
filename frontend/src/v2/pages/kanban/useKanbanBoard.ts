@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
@@ -24,6 +25,9 @@ import { useT } from '../../i18n';
  * colonne en a un : c'est ce qui distingue « On Hold » de « Waiting to Start », que
  * l'énumération à six valeurs confondait.
  */
+/** Le board vide garde le même tableau : sinon chaque rendu re-calculerait tout l'écran. */
+const NO_TASKS: BoardTask[] = [];
+
 export function useKanbanBoard(projectId: number) {
   const tr = useT();
   const qc = useQueryClient();
@@ -37,7 +41,7 @@ export function useKanbanBoard(projectId: number) {
     enabled: projectId > 0,
   });
 
-  const tasks: BoardTask[] = boardQ.data?.items ?? [];
+  const tasks: BoardTask[] = boardQ.data?.items ?? NO_TASKS;
 
   /**
    * Pose un statut dans le cache du board et rend de quoi revenir en arrière.
@@ -45,48 +49,59 @@ export function useKanbanBoard(projectId: number) {
    * Le menu contextuel et le glisser-déposer partagent cette écriture : sans elle, la
    * carte changée au clic droit resterait dans son ancienne colonne jusqu'au retour du
    * serveur, alors que la même carte déplacée à la souris bouge tout de suite.
+   *
+   * Identité stable (le client de requêtes et le projet ne bougent pas de la vie de
+   * l'écran) : le menu des cartes s'y accroche, et les cartes sont mémoïsées.
    */
-  const applyOptimisticStatus = (taskId: number, choice: StatusChoice | null) => {
-    const key = qk.projectBoard(projectId);
-    const previous = qc.getQueryData<BoardResponse>(key);
-    qc.setQueryData<BoardResponse>(key, (old) =>
-      old ? { ...old, items: withStatus(old.items, taskId, choice) } : old,
-    );
-    return () => {
-      if (previous) qc.setQueryData(key, previous);
-    };
-  };
+  const applyOptimisticStatus = useCallback(
+    (taskId: number, choice: StatusChoice | null) => {
+      const key = qk.projectBoard(projectId);
+      const previous = qc.getQueryData<BoardResponse>(key);
+      qc.setQueryData<BoardResponse>(key, (old) =>
+        old ? { ...old, items: withStatus(old.items, taskId, choice) } : old,
+      );
+      return () => {
+        if (previous) qc.setQueryData(key, previous);
+      };
+    },
+    [qc, projectId],
+  );
 
   /**
    * Déplacement optimiste, rollback par invalidation. Le cache est celui du board entier :
    * la carte change de colonne à l'instant du lâcher, sans attendre le serveur.
    */
-  const move = async (taskId: number, column: { statusId: number | null; legacyStatus: TaskStatus }) => {
-    const task = tasks.find((x) => x.id === taskId);
-    if (!task) return;
-    if (task.pipelineStatusId === column.statusId && task.status === column.legacyStatus) return;
-    const key = qk.projectBoard(projectId);
-    qc.setQueryData<BoardResponse>(key, (old) =>
-      old
-        ? {
-            ...old,
-            items: old.items.map((x) =>
-              x.id === taskId ? { ...x, status: column.legacyStatus, pipelineStatusId: column.statusId } : x,
-            ),
-          }
-        : old,
-    );
-    try {
-      await api.patch(
-        `/api/tasks/${taskId}`,
-        column.statusId !== null ? { pipelineStatusId: column.statusId } : { status: column.legacyStatus },
+  const move = useCallback(
+    async (taskId: number, column: { statusId: number | null; legacyStatus: TaskStatus }) => {
+      const task = tasks.find((x) => x.id === taskId);
+      if (!task) return;
+      if (task.pipelineStatusId === column.statusId && task.status === column.legacyStatus) return;
+      const key = qk.projectBoard(projectId);
+      qc.setQueryData<BoardResponse>(key, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.map((x) =>
+                x.id === taskId
+                  ? { ...x, status: column.legacyStatus, pipelineStatusId: column.statusId }
+                  : x,
+              ),
+            }
+          : old,
       );
-    } catch (e) {
-      // Rollback : l'invalidation relance la requête, inutile de l'attendre.
-      void qc.invalidateQueries({ queryKey: key });
-      toast.error(e instanceof Error ? e.message : tr('kanban.moveFailed'));
-    }
-  };
+      try {
+        await api.patch(
+          `/api/tasks/${taskId}`,
+          column.statusId !== null ? { pipelineStatusId: column.statusId } : { status: column.legacyStatus },
+        );
+      } catch (e) {
+        // Rollback : l'invalidation relance la requête, inutile de l'attendre.
+        void qc.invalidateQueries({ queryKey: key });
+        toast.error(e instanceof Error ? e.message : tr('kanban.moveFailed'));
+      }
+    },
+    [tasks, qc, projectId, tr],
+  );
 
   return {
     applyOptimisticStatus,

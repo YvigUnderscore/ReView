@@ -1,12 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { memo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
-import { FAMILY_LABEL_KEY, type FamilyGroup } from './kanbanColumns';
+import { FAMILY_LABEL_KEY, type FamilyGroup, type FamilyKey } from './kanbanColumns';
 import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 import { useT } from '../../i18n';
+
+/** Une colonne vide garde le même tableau : sinon la colonne se re-rendrait sans raison. */
+const EMPTY_COLUMN: BoardTask[] = [];
 
 /**
  * Une famille de statuts, dépliable (C4).
@@ -14,19 +18,25 @@ import { useT } from '../../i18n';
  * Quinze colonnes côte à côte ne se lisent pas. Repliée, une famille devient un simple
  * compteur : on garde « terminé » et « écarté » fermées pour travailler, on les rouvre
  * pour vérifier. Le repli est un affichage, pas un filtre — les cartes restent comptées.
+ *
+ * `onToggle` reçoit la clé de la famille plutôt que d'être une fermeture par famille :
+ * la page peut ainsi passer un rappel stable, sans quoi la mémoïsation des colonnes
+ * tomberait à chaque rendu du board.
  */
-export default function KanbanFamily({
+function KanbanFamily({
   group,
   tasksByColumn,
   collapsed,
   onToggle,
   menuFor,
+  activeTaskId,
 }: {
   group: FamilyGroup;
   tasksByColumn: Map<string, BoardTask[]>;
   collapsed: boolean;
-  onToggle: () => void;
+  onToggle: (key: FamilyKey) => void;
   menuFor?: (task: BoardTask) => MenuEntry[];
+  activeTaskId?: number | null;
 }) {
   const t = useT();
   const total = group.columns.reduce((n, c) => n + (tasksByColumn.get(c.id)?.length ?? 0), 0);
@@ -35,7 +45,7 @@ export default function KanbanFamily({
     <section className="min-w-0">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => onToggle(group.key)}
         aria-expanded={!collapsed}
         className="mb-2 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
       >
@@ -51,8 +61,9 @@ export default function KanbanFamily({
             <KanbanColumn
               key={column.id}
               column={column}
-              tasks={tasksByColumn.get(column.id) ?? []}
+              tasks={tasksByColumn.get(column.id) ?? EMPTY_COLUMN}
               menuFor={menuFor}
+              activeTaskId={activeTaskId}
             />
           ))}
         </div>
@@ -60,3 +71,5 @@ export default function KanbanFamily({
     </section>
   );
 }
+
+export default memo(KanbanFamily);

@@ -136,28 +136,28 @@ router.post(
   },
 );
 
-// GET /api/projects/:projectId/settings — réglages effectifs (départements, nomenclature)
+// GET /api/projects/:projectId/settings — réglages EFFECTIFS (héritage studio appliqué)
+// + `overrides` : les sections que le projet surcharge réellement.
 router.get(
   '/:projectId/settings',
   validate({ params: projectIdParam }),
   requireProjectAccess,
   async (req, res) => {
-    res.json({ settings: await ProjectService.getSettings(Number(req.params.projectId)) });
+    res.json(await ProjectService.getSettings(Number(req.params.projectId)));
   },
 );
 
-// PUT /api/projects/:projectId/settings — override des réglages projet (admin/superviseur)
+// PUT /api/projects/:projectId/settings — remplace l'override ENTIER (admin/superviseur).
+// Les sections absentes du corps retournent à l'héritage studio ; pour n'en toucher qu'une,
+// préférer le PATCH (projects-extra.routes).
 router.put(
   '/:projectId/settings',
   validate({ params: projectIdParam, body: projectSettingsSchema }),
   requireProjectManage, // 38.E : superviseur local autorisé
   async (req, res) => {
-    const settings = await ProjectService.updateSettings(
-      req.user!,
-      Number(req.params.projectId),
-      req.body as object,
+    res.json(
+      await ProjectService.updateSettings(req.user!, Number(req.params.projectId), req.body as object),
     );
-    res.json({ settings });
   },
 );
 

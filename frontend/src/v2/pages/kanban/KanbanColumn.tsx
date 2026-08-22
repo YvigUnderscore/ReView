@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { memo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import KanbanCard from './KanbanCard';
+import KanbanCardList from './KanbanCardList';
 import { statusSwatch } from '../../lib/contrast';
 import { useTheme } from '../../stores/useTheme';
 import type { Column } from './kanbanColumns';
 import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
-import { useT } from '../../i18n';
 
 /**
  * Colonne de statut : zone de dépôt, largeur minimale fixe (C4).
@@ -18,25 +18,25 @@ import { useT } from '../../i18n';
  * flottaison. Une bande à largeur minimale se lit comme un vrai kanban : on fait
  * défiler horizontalement, chaque colonne garde sa place.
  *
- * Au-delà d'un certain nombre de cartes, la colonne s'arrête et annonce le reste : cinq
- * cents cartes montées d'un coup figeaient l'écran, et personne ne lit la cinq centième.
+ * La pile de cartes, elle, s'arrêtait à soixante et annonçait le reste sans permettre de
+ * l'atteindre ; elle défile maintenant et ne monte que sa fenêtre (`KanbanCardList`).
+ * La zone de dépôt reste la colonne entière, en-tête compris : une carte lâchée sur une
+ * colonne dont on n'a pas encore fait défiler la pile arrive quand même à bon port.
  */
-const VISIBLE_CARDS = 60;
-
-export default function KanbanColumn({
+function KanbanColumn({
   column,
   tasks,
   menuFor,
+  activeTaskId,
 }: {
   column: Column;
   tasks: BoardTask[];
   menuFor?: (task: BoardTask) => MenuEntry[];
+  activeTaskId?: number | null;
 }) {
-  const t = useT();
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const isDark = useTheme((s) => s.theme) === 'dark';
   const swatch = statusSwatch(column.color, isDark);
-  const shown = tasks.slice(0, VISIBLE_CARDS);
 
   return (
     <div
@@ -57,16 +57,9 @@ export default function KanbanColumn({
           {tasks.length}
         </span>
       </div>
-      <div className="space-y-2">
-        {shown.map((task) => (
-          <KanbanCard key={task.id} task={task} entries={menuFor?.(task)} />
-        ))}
-      </div>
-      {tasks.length > shown.length && (
-        <p className="mt-2 px-1 text-2xs text-muted-foreground">
-          {t('kanban.more', { count: tasks.length - shown.length })}
-        </p>
-      )}
+      <KanbanCardList tasks={tasks} menuFor={menuFor} activeTaskId={activeTaskId} />
     </div>
   );
 }
+
+export default memo(KanbanColumn);

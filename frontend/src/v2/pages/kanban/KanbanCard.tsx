@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { memo, useMemo } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Link } from 'react-router-dom';
 import Avatar from '../../components/Avatar';
@@ -11,7 +12,13 @@ import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 
 /** Contenu visuel d'une carte (partagé entre la carte draggable et le DragOverlay). */
-export function KanbanCardBody({ task, dragging }: { task: BoardTask; dragging?: boolean }) {
+export const KanbanCardBody = memo(function KanbanCardBody({
+  task,
+  dragging,
+}: {
+  task: BoardTask;
+  dragging?: boolean;
+}) {
   return (
     <div
       className={`rounded-md border bg-card p-2.5 text-xs shadow-sm ${
@@ -38,18 +45,27 @@ export function KanbanCardBody({ task, dragging }: { task: BoardTask; dragging?:
       </div>
     </div>
   );
-}
+});
 
-/** Carte déplaçable : le drag ne s'active qu'après un mouvement (le clic ouvre la tâche). */
-export default function KanbanCard({
+/**
+ * Carte déplaçable : le drag ne s'active qu'après un mouvement (le clic ouvre la tâche).
+ *
+ * La carte reçoit le **constructeur** de son menu, pas ses entrées : construire quinze
+ * entrées de statut par carte au niveau de la page annulait toute mémoïsation, puisque
+ * le tableau d'entrées était neuf à chaque rendu. Ici, tant que la tâche et le
+ * constructeur ne bougent pas, la carte ne se rend pas du tout — c'est ce qui permet à
+ * une frappe dans la recherche de ne pas rejouer les cartes d'une colonne dense.
+ */
+function KanbanCard({
   task,
-  entries,
+  menuFor,
 }: {
   task: BoardTask;
   /** Menu contextuel de la carte — le statut s'y change sans traverser le board. */
-  entries?: MenuEntry[];
+  menuFor?: (task: BoardTask) => MenuEntry[];
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+  const entries = useMemo(() => menuFor?.(task) ?? [], [menuFor, task]);
   const card = (
     <div
       ref={setNodeRef}
@@ -60,7 +76,7 @@ export default function KanbanCard({
       <KanbanCardBody task={task} />
     </div>
   );
-  if (!entries?.length) return card;
+  if (entries.length === 0) return card;
   // `nested` : le board porte son propre menu contextuel, les deux s'ouvriraient ensemble.
   return (
     <EntityContextMenu entries={entries} nested>
@@ -68,3 +84,5 @@ export default function KanbanCard({
     </EntityContextMenu>
   );
 }
+
+export default memo(KanbanCard);

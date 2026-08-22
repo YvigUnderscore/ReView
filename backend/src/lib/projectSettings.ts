@@ -225,23 +225,27 @@ function sanitizeResolution(raw: unknown, base: Resolution): Resolution {
   };
 }
 
+/** Liste de départements reçue : ne garde que les entrées complètes. */
+function sanitizeDepartments(raw: unknown): Department[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  return raw.filter((d): d is Department => !!d && typeof d.key === 'string' && typeof d.name === 'string');
+}
+
+/** Nomenclature reçue, champ par champ, sur un socle. */
+function sanitizeNomenclature(raw: unknown, base: Nomenclature): Nomenclature {
+  const n = (raw ?? {}) as Partial<Nomenclature>;
+  return {
+    sequencePrefix: typeof n.sequencePrefix === 'string' ? n.sequencePrefix : base.sequencePrefix,
+    shotPrefix: typeof n.shotPrefix === 'string' ? n.shotPrefix : base.shotPrefix,
+    padding: Number.isFinite(n.padding) ? Math.min(Math.max(Number(n.padding), 1), 8) : base.padding,
+    step: Number.isFinite(n.step) ? Math.max(Number(n.step), 1) : base.step,
+  };
+}
+
 function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   const o = (raw ?? {}) as Partial<ProjectSettings>;
-  const departments = Array.isArray(o.departments)
-    ? o.departments.filter(
-        (d): d is Department => !!d && typeof d.key === 'string' && typeof d.name === 'string',
-      )
-    : base.departments;
-  const n = (o.nomenclature ?? {}) as Partial<Nomenclature>;
-  const nomenclature: Nomenclature = {
-    sequencePrefix:
-      typeof n.sequencePrefix === 'string' ? n.sequencePrefix : base.nomenclature.sequencePrefix,
-    shotPrefix: typeof n.shotPrefix === 'string' ? n.shotPrefix : base.nomenclature.shotPrefix,
-    padding: Number.isFinite(n.padding)
-      ? Math.min(Math.max(Number(n.padding), 1), 8)
-      : base.nomenclature.padding,
-    step: Number.isFinite(n.step) ? Math.max(Number(n.step), 1) : base.nomenclature.step,
-  };
+  const departments = sanitizeDepartments(o.departments) ?? base.departments;
+  const nomenclature = sanitizeNomenclature(o.nomenclature, base.nomenclature);
   const resolution = sanitizeResolution(o.resolution, base.resolution);
   const framerate = Number.isFinite(o.framerate) ? clampFps(Number(o.framerate)) : base.framerate;
   const naming = sanitizeNaming(o.naming, base.naming);
@@ -309,7 +313,7 @@ function sanitizeNaming(raw: unknown, base: NamingRule): NamingRule {
   // sa convention est refusée — au lieu de la croire active alors qu'elle est neutralisée.
   if (pattern && isCatastrophicPattern(pattern))
     throw badRequest(
-      'Motif de nomenclature refusé : quantificateur ou alternance imbriqués (risque de blocage du serveur)',
+      'Naming pattern rejected: nested quantifier or alternation (the server could stall on it)',
       'NAMING_PATTERN_UNSAFE',
     );
   return { pattern, mode };
@@ -379,40 +383,62 @@ export const pipelineOverrideSchema = z
   })
   .strict();
 
+/** Schémas Zod par section — partagés entre l'écriture complète (PUT) et le PATCH. */
+const sectionSchemas = {
+  departments: z.array(z.object({ key: z.string().min(1).max(40), name: z.string().min(1).max(80) })),
+  nomenclature: z.object({
+    sequencePrefix: z.string().max(16),
+    shotPrefix: z.string().max(16),
+    padding: z.number().int().min(1).max(8),
+    step: z.number().int().min(1),
+  }),
+  naming: z.object({ pattern: z.string().max(200), mode: z.enum(['off', 'warn', 'reject']) }),
+  resolution: resolutionSchema,
+  framerate: z.number().min(FPS_MIN).max(FPS_MAX),
+  burnin: burninConfigSchema,
+  defaultLighting: z.object({
+    hdriId: z.string().max(64).optional(),
+    exposure: z.number().min(EXPOSURE_MIN).max(EXPOSURE_MAX),
+    rotationDeg: z.number().min(ROTATION_MIN).max(ROTATION_MAX),
+    showBackground: z.boolean(),
+    groundShadow: z.boolean(),
+  }),
+  color: z.object({
+    configId: z.string().max(120).optional(),
+    display: z.string().max(120).optional(),
+    view: z.string().max(120).optional(),
+  }),
+} as const;
+
 /** Schéma Zod des réglages projet/studio complets (tous optionnels). */
 export const projectSettingsSchema = z.object({
-  departments: z
-    .array(z.object({ key: z.string().min(1).max(40), name: z.string().min(1).max(80) }))
-    .optional(),
-  nomenclature: z
-    .object({
-      sequencePrefix: z.string().max(16),
-      shotPrefix: z.string().max(16),
-      padding: z.number().int().min(1).max(8),
-      step: z.number().int().min(1),
-    })
-    .optional(),
-  naming: z.object({ pattern: z.string().max(200), mode: z.enum(['off', 'warn', 'reject']) }).optional(),
-  resolution: resolutionSchema.optional(),
-  framerate: z.number().min(FPS_MIN).max(FPS_MAX).optional(),
-  burnin: burninConfigSchema.optional(),
-  defaultLighting: z
-    .object({
-      hdriId: z.string().max(64).optional(),
-      exposure: z.number().min(EXPOSURE_MIN).max(EXPOSURE_MAX),
-      rotationDeg: z.number().min(ROTATION_MIN).max(ROTATION_MAX),
-      showBackground: z.boolean(),
-      groundShadow: z.boolean(),
-    })
-    .optional(),
-  color: z
-    .object({
-      configId: z.string().max(120).optional(),
-      display: z.string().max(120).optional(),
-      view: z.string().max(120).optional(),
-    })
-    .optional(),
+  departments: sectionSchemas.departments.optional(),
+  nomenclature: sectionSchemas.nomenclature.optional(),
+  naming: sectionSchemas.naming.optional(),
+  resolution: sectionSchemas.resolution.optional(),
+  framerate: sectionSchemas.framerate.optional(),
+  burnin: sectionSchemas.burnin.optional(),
+  defaultLighting: sectionSchemas.defaultLighting.optional(),
+  color: sectionSchemas.color.optional(),
 });
+
+/**
+ * Schéma Zod d'un PATCH de réglages projet : une section absente reste inchangée,
+ * une section à `null` retourne à l'héritage studio. `.strict()` pour qu'une clé
+ * inconnue soit refusée plutôt que silencieusement perdue.
+ */
+export const projectSettingsPatchSchema = z
+  .object({
+    departments: sectionSchemas.departments.nullable().optional(),
+    nomenclature: sectionSchemas.nomenclature.nullable().optional(),
+    naming: sectionSchemas.naming.nullable().optional(),
+    resolution: sectionSchemas.resolution.nullable().optional(),
+    framerate: sectionSchemas.framerate.nullable().optional(),
+    burnin: sectionSchemas.burnin.nullable().optional(),
+    defaultLighting: sectionSchemas.defaultLighting.nullable().optional(),
+    color: sectionSchemas.color.nullable().optional(),
+  })
+  .strict();
 
 /** Défauts studio (Setting.project_defaults), fusionnés avec le repli interne. */
 export async function getStudioProjectDefaults(): Promise<ProjectSettings> {
@@ -440,6 +466,138 @@ export async function setStudioProjectDefaults(value: unknown): Promise<ProjectS
 export async function resolveProjectSettings(projectSettings: unknown): Promise<ProjectSettings> {
   const studio = await getStudioProjectDefaults();
   return sanitize(projectSettings, studio);
+}
+
+/* ------------------------------------------------------------------------------------- *
+ *  Override ≠ effectif
+ *
+ *  La même forme JSON servait aux deux : la lecture rendait l'effectif (fusionné avec les
+ *  défauts studio) et l'écriture le réenregistrait tel quel dans `Project.settings`. Ouvrir
+ *  l'onglet Réglages puis cliquer Enregistrer figeait donc la résolution, la cadence, la
+ *  nomenclature, les burn-ins, l'éclairage et l'OCIO du studio dans le projet : changer
+ *  ensuite un défaut studio n'avait plus aucun effet, sans que rien ne le signale.
+ *
+ *  Ce qui suit sépare les deux lectures et donne à l'écriture une granularité de SECTION :
+ *  une section absente du JSON du projet est héritée, une section présente est surchargée,
+ *  et un PATCH à `null` la rend à l'héritage.
+ * ------------------------------------------------------------------------------------- */
+
+/**
+ * Sections d'un override projet — unité d'écriture du PATCH et d'affichage de l'héritage.
+ * `resolution` et `framerate` restent distinctes : un projet peut livrer en 4K à la cadence
+ * du studio.
+ */
+export const SETTINGS_SECTIONS = [
+  'resolution',
+  'framerate',
+  'nomenclature',
+  'departments',
+  'naming',
+  'defaultLighting',
+  'color',
+  'burnin',
+] as const;
+
+export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+
+/** Ce que le projet stocke réellement : les seules sections qu'il surcharge. */
+export type ProjectSettingsOverride = Partial<Pick<ProjectSettings, SettingsSection>>;
+
+/** Corps d'un PATCH : section absente = inchangée, section `null` = retour à l'héritage. */
+export type ProjectSettingsPatch = { [K in SettingsSection]?: ProjectSettings[K] | null };
+
+const SECTION_SET = new Set<string>(SETTINGS_SECTIONS);
+
+/** Une valeur de section est-elle réellement fournie (présente et non nulle) ? */
+function provided(o: Record<string, unknown>, key: string): boolean {
+  return key in o && o[key] !== undefined && o[key] !== null;
+}
+
+/**
+ * Nettoie un override : SEULES les sections présentes ressortent, sans jamais être
+ * complétées par les défauts studio. C'est la différence avec `sanitize`, qui rend un
+ * réglage complet. Le socle studio ne sert ici qu'à borner les champs manquants d'une
+ * section partiellement remplie.
+ */
+export function sanitizeOverride(raw: unknown, studio: ProjectSettings): ProjectSettingsOverride {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const o = raw as Record<string, unknown>;
+  const out: ProjectSettingsOverride = {};
+
+  const departments = provided(o, 'departments') ? sanitizeDepartments(o.departments) : undefined;
+  if (departments) out.departments = departments;
+  if (provided(o, 'nomenclature'))
+    out.nomenclature = sanitizeNomenclature(o.nomenclature, studio.nomenclature);
+  if (provided(o, 'naming')) out.naming = sanitizeNaming(o.naming, studio.naming);
+  if (provided(o, 'resolution')) out.resolution = sanitizeResolution(o.resolution, studio.resolution);
+  if (provided(o, 'framerate') && Number.isFinite(o.framerate)) out.framerate = clampFps(Number(o.framerate));
+  const burnin = provided(o, 'burnin') ? sanitizeBurninOverride(o.burnin) : undefined;
+  if (burnin) out.burnin = burnin;
+  const lighting = provided(o, 'defaultLighting') ? sanitizeLighting(o.defaultLighting) : undefined;
+  if (lighting) out.defaultLighting = lighting;
+  const color = provided(o, 'color') ? sanitizeColor(o.color) : undefined;
+  if (color) out.color = color;
+  return out;
+}
+
+/** Sections effectivement surchargées par le projet (le reste est hérité du studio). */
+export function overriddenSections(override: ProjectSettingsOverride): SettingsSection[] {
+  return SETTINGS_SECTIONS.filter((section) => override[section] !== undefined);
+}
+
+/**
+ * Clés du JSON stocké qui ne sont pas des sections de réglages (`isTemplate`, notamment).
+ * Elles survivent à toute écriture : l'ancien PUT les effaçait, le schéma Zod n'en
+ * connaissant aucune.
+ */
+function extraKeys(stored: unknown): Record<string, unknown> {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(stored as Record<string, unknown>)) {
+    if (!SECTION_SET.has(key)) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Applique un PATCH section par section sur le JSON stocké d'un projet.
+ * Section absente : inchangée · section `null` : retirée (retour à l'héritage) ·
+ * section fournie : remplacée par sa version nettoyée.
+ */
+export function patchStoredSettings(
+  stored: unknown,
+  patch: ProjectSettingsPatch,
+  studio: ProjectSettings,
+): Record<string, unknown> {
+  const current = sanitizeOverride(stored, studio) as Record<string, unknown>;
+  const next: Record<string, unknown> = { ...current };
+  for (const section of SETTINGS_SECTIONS) {
+    if (!(section in patch)) continue;
+    const value = patch[section];
+    if (value === null || value === undefined) {
+      delete next[section];
+      continue;
+    }
+    const clean = sanitizeOverride({ [section]: value }, studio) as Record<string, unknown>;
+    if (clean[section] === undefined) delete next[section];
+    else next[section] = clean[section];
+  }
+  return { ...extraKeys(stored), ...next };
+}
+
+/** Remplace l'override entier (PUT) : seules les sections envoyées restent surchargées. */
+export function replaceStoredSettings(
+  stored: unknown,
+  body: unknown,
+  studio: ProjectSettings,
+): Record<string, unknown> {
+  return { ...extraKeys(stored), ...sanitizeOverride(body, studio) };
+}
+
+/** Override d'un projet tel qu'il est stocké, nettoyé (sans complétion studio). */
+export async function resolveProjectOverride(projectSettings: unknown): Promise<ProjectSettingsOverride> {
+  const studio = await getStudioProjectDefaults();
+  return sanitizeOverride(projectSettings, studio);
 }
 
 /**

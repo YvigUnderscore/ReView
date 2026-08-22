@@ -7,12 +7,14 @@ import { Role } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
+import { projectSettingsPatchSchema, type ProjectSettingsPatch } from '../lib/projectSettings';
 import * as ProjectService from '../services/ProjectService';
 
 /**
  * Routes projet additionnelles (Phase 38) montées AVANT projects.routes pour que les chemins
  * spécifiques (`/usage`, `/:id/duplicate`, `/:id/usage`) priment sur le `GET /:projectId`
- * générique. Duplication (38.A) + usage/quotas de stockage (38.D).
+ * générique. Duplication (38.A) + usage/quotas de stockage (38.D) + lecture/écriture
+ * d'override des réglages (héritage studio).
  */
 const router = Router();
 router.use(authenticate);
@@ -65,6 +67,34 @@ router.post(
   async (req, res) => {
     const { csv, commit } = req.body as { csv: string; commit?: boolean };
     res.json(await ProjectService.importCsv(req.user!, Number(req.params.projectId), csv, commit ?? false));
+  },
+);
+
+// GET /api/projects/:projectId/settings/override — ce que le projet surcharge RÉELLEMENT
+// (+ les défauts studio dont il hérite). Vue d'édition : réservée à qui gère le projet.
+router.get(
+  '/:projectId/settings/override',
+  validate({ params: projectIdParam }),
+  requireProjectManage,
+  async (req, res) => {
+    res.json(await ProjectService.getSettingsOverride(Number(req.params.projectId)));
+  },
+);
+
+// PATCH /api/projects/:projectId/settings — écriture SECTION PAR SECTION : section absente
+// = inchangée, section `null` = retour à l'héritage studio.
+router.patch(
+  '/:projectId/settings',
+  validate({ params: projectIdParam, body: projectSettingsPatchSchema }),
+  requireProjectManage,
+  async (req, res) => {
+    res.json(
+      await ProjectService.patchSettings(
+        req.user!,
+        Number(req.params.projectId),
+        req.body as ProjectSettingsPatch,
+      ),
+    );
   },
 );
 

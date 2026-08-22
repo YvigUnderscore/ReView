@@ -4,19 +4,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({
-  prisma: { project: { findMany: vi.fn(), count: vi.fn() } },
+  prisma: { project: { findMany: vi.fn(), count: vi.fn() }, $queryRaw: vi.fn() },
 }));
 vi.mock('../lib/thumbnails', () => ({
-  firstMediaThumbKeyForProject: vi.fn().mockResolvedValue(null),
   effectiveThumbnailUrl: vi.fn().mockResolvedValue(null),
 }));
 
 import { listProjects } from './ProjectService';
 import { prisma } from '../lib/prisma';
+import { effectiveThumbnailUrl } from '../lib/thumbnails';
 import { Role } from '@prisma/client';
 
 const findMany = vi.mocked(prisma.project.findMany);
 const count = vi.mocked(prisma.project.count);
+const queryRaw = vi.mocked(prisma.$queryRaw);
 const admin = { id: 1, role: Role.ADMIN };
 const client = { id: 9, role: Role.CLIENT };
 const page = { page: 1, pageSize: 100, order: 'desc' as const };
@@ -25,6 +26,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   findMany.mockResolvedValue([] as never);
   count.mockResolvedValue(0);
+  queryRaw.mockResolvedValue([] as never);
+  vi.mocked(effectiveThumbnailUrl).mockResolvedValue(null);
 });
 
 describe('ProjectService.listProjects — filtre d’archivage (38.B)', () => {
@@ -45,5 +48,44 @@ describe('ProjectService.listProjects — filtre d’archivage (38.B)', () => {
     const where = findMany.mock.calls[0]![0]!.where as { status: unknown; memberships: unknown };
     expect(where.status).toEqual({ not: 'ARCHIVED' });
     expect(where.memberships).toEqual({ some: { userId: 9 } });
+  });
+});
+
+describe('ProjectService.listProjects — miniatures de repli groupées', () => {
+  const projects = [
+    { id: 1, name: 'A', thumbnailKey: null },
+    { id: 2, name: 'B', thumbnailKey: 'explicite/2.jpg' },
+    { id: 3, name: 'C', thumbnailKey: null },
+  ];
+
+  beforeEach(() => {
+    findMany.mockResolvedValue(projects as never);
+    count.mockResolvedValue(projects.length);
+  });
+
+  it('n’émet qu’UNE requête de miniatures pour toute la page (plus de N+1)', async () => {
+    await listProjects(admin, page);
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('n’interroge rien quand la page est vide', async () => {
+    findMany.mockResolvedValue([] as never);
+    count.mockResolvedValue(0);
+    await listProjects(admin, page);
+    expect(queryRaw).not.toHaveBeenCalled();
+  });
+
+  it('rend à chaque projet SA miniature de repli, et null à celui qui n’en a pas', async () => {
+    queryRaw.mockResolvedValue([
+      { projectId: 3, thumbnailKey: 'thumbs/c.jpg' },
+      { projectId: 1, thumbnailKey: 'thumbs/a.jpg' },
+    ] as never);
+    await listProjects(admin, page);
+    const calls = vi.mocked(effectiveThumbnailUrl).mock.calls;
+    expect(calls).toEqual([
+      [null, 'thumbs/a.jpg'],
+      ['explicite/2.jpg', null],
+      [null, 'thumbs/c.jpg'],
+    ]);
   });
 });

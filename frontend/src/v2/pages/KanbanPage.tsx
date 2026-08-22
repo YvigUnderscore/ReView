@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   DndContext,
@@ -45,22 +45,52 @@ export default function KanbanPage() {
   const { id } = useParams();
   const projectId = parseIdParam(id);
   const board = useKanbanBoard(projectId);
+  // Extraits du board : ces deux-là ont une identité stable et sont les seuls à voyager
+  // jusqu'aux cartes mémoïsées.
+  const { applyOptimisticStatus, move } = board;
   const { canManage } = useProjectRole(projectId);
   const myId = useAuth((s) => s.user?.id);
-  const { entry: statusEntry } = useStatusMenu(projectId, 'task');
+  const { entry: statusEntry, choices } = useStatusMenu(projectId, 'task');
+  /**
+   * Signature de ce dont le menu d'une carte dépend réellement : les droits, le compte,
+   * le référentiel de statuts et la langue. Rien d'autre n'entre dans les entrées.
+   */
+  const menuEpoch = [
+    projectId,
+    canManage,
+    myId ?? 0,
+    t('pipeline.status.menu'),
+    ...choices.map((c) => `${c.value}:${c.label}:${c.color ?? ''}`),
+  ].join('|');
   /**
    * Menu d'une carte. L'assigné peut changer son propre statut — c'est très exactement ce
    * que le serveur autorise (il n'accepte de lui que le statut et la checklist), et c'est
    * le geste le plus utile de l'écran pour un artiste.
+   *
+   * `statusEntry` est reconstruit à chaque rendu du hook : le lister en dépendance rendrait
+   * `menuFor` neuf à chaque frappe dans la recherche, donc toutes les cartes montées avec
+   * lui — c'est ce que la mémoïsation vise précisément à éviter. `menuEpoch` résume à sa
+   * place tout ce que la fermeture lit, si bien que l'identité change quand le menu change
+   * et à ce moment-là seulement.
    */
-  const menuFor = (task: BoardTask): MenuEntry[] =>
-    entriesOf(
-      statusEntry(task, {
-        canEdit: canManage || task.assignee?.id === myId,
-        onOptimistic: (choice) => board.applyOptimisticStatus(task.id, choice),
-      }),
-    );
+  const menuFor = useCallback(
+    (task: BoardTask): MenuEntry[] =>
+      entriesOf(
+        statusEntry(task, {
+          canEdit: canManage || task.assignee?.id === myId,
+          onOptimistic: (choice) => applyOptimisticStatus(task.id, choice),
+        }),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gouverné par `menuEpoch`, cf. ci-dessus
+    [menuEpoch, applyOptimisticStatus],
+  );
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  /**
+   * Le filtre appliqué suit la frappe d'un temps de retard : sur une colonne dense, la
+   * saisie restait en arrière du curseur pendant que le board se recalculait à chaque
+   * lettre. Le champ, lui, reste piloté par `filters` — il répond au clavier tout de suite.
+   */
+  const deferredFilters = useDeferredValue(filters);
   const [collapsed, setCollapsed] = useState<ReadonlySet<FamilyKey>>(new Set());
   const [activeId, setActiveId] = useState<number | null>(null);
 
@@ -83,7 +113,7 @@ export default function KanbanPage() {
 
   const filtered = useMemo(
     () =>
-      applyFilters(filters, board.tasks, (task) => ({
+      applyFilters(deferredFilters, board.tasks, (task) => ({
         text: `${task.name} ${task.parentLabel}`,
         statusId: task.pipelineStatusId,
         legacyStatus: task.status,
@@ -92,7 +122,7 @@ export default function KanbanPage() {
         departmentId: task.departmentId,
         type: task.type,
       })),
-    [filters, board.tasks],
+    [deferredFilters, board.tasks],
   );
 
   /** Une passe pour ranger les cartes, plutôt qu'un filtrage par colonne. */
@@ -110,20 +140,29 @@ export default function KanbanPage() {
 
   const activeTask = activeId != null ? (board.tasks.find((x) => x.id === activeId) ?? null) : null;
 
-  const onDragStart = (e: DragStartEvent) => setActiveId(Number(e.active.id));
-  const onDragEnd = (e: DragEndEvent) => {
-    setActiveId(null);
-    const target = columns.find((c) => c.id === e.over?.id);
-    if (target) void board.move(Number(e.active.id), target);
-  };
+  const onDragStart = useCallback((e: DragStartEvent) => setActiveId(Number(e.active.id)), []);
+  const onDragEnd = useCallback(
+    (e: DragEndEvent) => {
+      setActiveId(null);
+      const target = columns.find((c) => c.id === e.over?.id);
+      if (target) void move(Number(e.active.id), target);
+    },
+    [columns, move],
+  );
+  const onDragCancel = useCallback(() => setActiveId(null), []);
 
-  const toggleFamily = (key: FamilyKey) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  // Rappel stable, la famille dit laquelle elle est : une fermeture par famille rendrait
+  // toutes les colonnes à chaque rendu de la page.
+  const toggleFamily = useCallback(
+    (key: FamilyKey) =>
+      setCollapsed((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      }),
+    [],
+  );
 
   return (
     <PageShell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />} width="fluid">
@@ -160,7 +199,7 @@ export default function KanbanPage() {
           collisionDetection={pointerWithin}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
-          onDragCancel={() => setActiveId(null)}
+          onDragCancel={onDragCancel}
         >
           <div className="space-y-4">
             {groups.map((group) => (
@@ -169,8 +208,9 @@ export default function KanbanPage() {
                 group={group}
                 tasksByColumn={tasksByColumn}
                 collapsed={collapsed.has(group.key)}
-                onToggle={() => toggleFamily(group.key)}
+                onToggle={toggleFamily}
                 menuFor={menuFor}
+                activeTaskId={activeId}
               />
             ))}
           </div>

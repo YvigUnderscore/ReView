@@ -11,15 +11,22 @@ import ProjectStorageSection from './ProjectStorageSection';
 import ProjectNamingSection from './ProjectNamingSection';
 import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
 import ProjectColorSection from './ProjectColorSection';
+import ProjectSettingsInheritance from './ProjectSettingsInheritance';
+import { buildSettingsPatch } from '../lib/projectInheritance';
 import type { Nomenclature, ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
 import SgProjectSection from './shotgrid/SgProjectSection';
 
 /**
  * Onglet « Réglages » d'un projet (admin/superviseur) :
+ *  - héritage studio : ce que le projet surcharge, et le moyen de le rendre
  *  - frame de départ (déplacée ici depuis la vue d'ensemble)
  *  - nomenclature (préfixes, pas, chiffres) — override des défauts studio
  *  - départements (nom/clé)
+ *
+ * L'écran manipule les réglages EFFECTIFS. Les réenregistrer en bloc figeait dans le projet
+ * tout ce qu'il ne faisait qu'hériter : on n'envoie donc que les sections réellement
+ * modifiées, en PATCH (`buildSettingsPatch`).
  */
 export default function ProjectSettingsTab({
   projectId,
@@ -38,12 +45,17 @@ export default function ProjectSettingsTab({
   const [frameVal, setFrameVal] = useState(String(startFrame));
   const [savingFrame, setSavingFrame] = useState(false);
   const [draft, setDraft] = useState<ProjectSettings | null>(settings);
+  // Point de départ du brouillon : c'est lui qui dit ce que la personne a réellement touché.
+  const [baseline, setBaseline] = useState<ProjectSettings | null>(settings);
   const [savingSettings, setSavingSettings] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Synchronise le brouillon local quand les settings arrivent (asynchrones)
-  if (settings && !draft) setDraft(settings);
+  if (settings && !draft) {
+    setDraft(settings);
+    setBaseline(settings);
+  }
 
   const saveFrame = async () => {
     const n = Number(frameVal);
@@ -61,23 +73,38 @@ export default function ProjectSettingsTab({
   };
 
   const saveSettings = async () => {
-    if (!draft) return;
-    setSavingSettings(true);
+    if (!draft || !baseline) return;
+    const patch = buildSettingsPatch(baseline, draft);
     setError(null);
+    if (Object.keys(patch).length === 0) {
+      setMsg(t('project.settingsUnchanged'));
+      return;
+    }
+    setSavingSettings(true);
     setMsg(null);
     try {
-      const { settings: saved } = await api.put<{ settings: ProjectSettings }>(
+      const { settings: saved } = await api.patch<{ settings: ProjectSettings }>(
         `/api/projects/${projectId}/settings`,
-        draft,
+        patch,
       );
       onSettingsChange(saved);
       setDraft(saved);
+      setBaseline(saved);
       setMsg(t('project.settingsSaved'));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error.generic'));
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  /** Une section rendue au studio change les effectifs : le brouillon repart de là. */
+  const applyReverted = (fresh: ProjectSettings) => {
+    setDraft(fresh);
+    setBaseline(fresh);
+    setError(null);
+    setMsg(null);
+    onSettingsChange(fresh);
   };
 
   const setRes = (k: 'width' | 'height', v: string) =>
@@ -96,6 +123,9 @@ export default function ProjectSettingsTab({
     <div className="max-w-2xl space-y-6">
       {error && <p className="text-sm text-destructive">{error}</p>}
       {msg && <p className="text-sm text-success">{msg}</p>}
+
+      {/* Héritage studio : ce qui descend du studio, ce que le projet s'est approprié. */}
+      <ProjectSettingsInheritance projectId={projectId} onReverted={applyReverted} />
 
       {/* Frame de départ */}
       <section className="rounded-lg border border-border bg-card p-4">

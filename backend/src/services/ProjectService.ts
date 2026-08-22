@@ -1,13 +1,24 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Role, ProjectStatus, TaskType, type Prisma } from '@prisma/client';
+import { Role, ProjectStatus, TaskType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
 import { softDeleteProject, restoreProject, purgeProject } from '../lib/trash';
-import { firstMediaThumbKeyForProject, effectiveThumbnailUrl } from '../lib/thumbnails';
+import { effectiveThumbnailUrl } from '../lib/thumbnails';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
-import { resolveProjectSettings, resolveProjectSettingsById } from '../lib/projectSettings';
+import {
+  getStudioProjectDefaults,
+  overriddenSections,
+  patchStoredSettings,
+  replaceStoredSettings,
+  resolveProjectOverride,
+  resolveProjectSettingsById,
+  SETTINGS_SECTIONS,
+  type ProjectSettingsOverride,
+  type ProjectSettingsPatch,
+  type SettingsSection,
+} from '../lib/projectSettings';
 import * as DepartmentService from './DepartmentService';
 import { slugify } from '../lib/slug';
 import { getProjectStorageUsage } from '../lib/projectQuota';
@@ -31,6 +42,67 @@ const versionInProject = (projectId: number) => ({
 });
 
 /**
+ * Découpe une liste d'écritures groupées. Un `createMany` passe un paramètre par colonne
+ * et par ligne : dix mille tâches dépassent la limite de 65 535 paramètres de PostgreSQL.
+ */
+function chunked<T>(items: T[], size = 1000): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Une transaction de structure (duplication, import CSV) écrit des milliers de lignes :
+ * les 5 s par défaut de Prisma la font échouer en P2028 après avoir tout écrit puis tout
+ * annulé. Deux minutes couvrent un long-métrage (2000 plans, 10 000 tâches).
+ */
+const STRUCTURE_TX = { timeout: 120_000, maxWait: 15_000 };
+
+/** Écriture groupée par lots, en récupérant les lignes créées (id + clé de rattachement). */
+async function createManyReturning<TIn, TOut>(
+  data: TIn[],
+  write: (batch: TIn[]) => Promise<TOut[]>,
+): Promise<TOut[]> {
+  const out: TOut[] = [];
+  for (const batch of chunked(data)) out.push(...(await write(batch)));
+  return out;
+}
+
+/** Identité d'un plan dans son projet : `(sequenceId, code)` — `code` seul ne suffit pas. */
+const shotKey = (sequenceId: number | null, code: string) => `${sequenceId ?? 'none'}::${code}`;
+
+/**
+ * Miniature de repli de chaque projet de la page, en UNE requête.
+ *
+ * La liste appelait `firstMediaThumbKeyForProject` dans un `.map` : cent projets, cent
+ * `findFirst` portant chacun un triple OR version → tâche → plan/asset → projet. Or la
+ * barre latérale appelle cette route sur presque chaque écran. `DISTINCT ON` élit le
+ * premier média publié de chaque projet côté PostgreSQL, sans rapatrier le reste.
+ */
+async function firstMediaThumbKeysForProjects(projectIds: number[]): Promise<Map<number, string>> {
+  const out = new Map<number, string>();
+  if (projectIds.length === 0) return out;
+  const rows = await prisma.$queryRaw<{ projectId: number; thumbnailKey: string }[]>`
+    SELECT DISTINCT ON (COALESCE(sh."projectId", ta."projectId", va."projectId"))
+           COALESCE(sh."projectId", ta."projectId", va."projectId") AS "projectId",
+           m."thumbnailKey"                                        AS "thumbnailKey"
+    FROM "MediaObject" m
+    JOIN "Version" v      ON v.id  = m."versionId"
+    LEFT JOIN "Task" t    ON t.id  = v."taskId"
+    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"
+    LEFT JOIN "Asset" ta  ON ta.id = t."assetId"
+    LEFT JOIN "Asset" va  ON va.id = v."assetId"
+    WHERE m.published = true
+      AND m."deletedAt" IS NULL
+      AND m."thumbnailKey" IS NOT NULL
+      AND COALESCE(sh."projectId", ta."projectId", va."projectId") IN (${Prisma.join(projectIds)})
+    ORDER BY COALESCE(sh."projectId", ta."projectId", va."projectId"), m."createdAt" ASC
+  `;
+  for (const row of rows) out.set(row.projectId, row.thumbnailKey);
+  return out;
+}
+
+/**
  * Liste paginée des projets visibles (globale pour admin/superviseur, membership sinon) +
  * miniatures. Par défaut les projets ARCHIVED (38.B) sont exclus ; `onlyArchived` inverse
  * le filtre pour l'onglet « Archivés ».
@@ -51,13 +123,11 @@ export async function listProjects(
     prisma.project.findMany({ where, orderBy, ...pageArgs(p) }),
     prisma.project.count({ where }),
   ]);
+  const fallbacks = await firstMediaThumbKeysForProjects(projects.map((proj) => proj.id));
   const items = await Promise.all(
     projects.map(async (proj) => ({
       ...proj,
-      thumbnailUrl: await effectiveThumbnailUrl(
-        proj.thumbnailKey,
-        await firstMediaThumbKeyForProject(proj.id),
-      ),
+      thumbnailUrl: await effectiveThumbnailUrl(proj.thumbnailKey, fallbacks.get(proj.id) ?? null),
     })),
   );
   return paginate(items, total, p);
@@ -145,55 +215,61 @@ export async function duplicateProject(
         memberships: { create: { userId: user.id } },
       },
     });
-    // Séquences : map code (unique par projet) → nouvel id, pour remapper les shots.
-    const seqIdByCode = new Map<string, number>();
-    for (const seq of source.sequences) {
-      const s = await tx.sequence.create({
-        data: {
-          projectId: project.id,
-          name: seq.name,
-          code: seq.code,
-          order: seq.order,
-          settings: seq.settings as Prisma.InputJsonValue,
-        },
-      });
-      seqIdByCode.set(seq.code, s.id);
-    }
+    // Séquences : une seule écriture, `code` (unique par projet) remappe les shots.
+    const newSeqs = await createManyReturning(
+      source.sequences.map((seq) => ({
+        projectId: project.id,
+        name: seq.name,
+        code: seq.code,
+        order: seq.order,
+        settings: seq.settings as Prisma.InputJsonValue,
+      })),
+      (data) => tx.sequence.createManyAndReturn({ data, select: { id: true, code: true } }),
+    );
+    const seqIdByCode = new Map(newSeqs.map((s) => [s.code, s.id]));
     const srcSeqById = new Map(source.sequences.map((s) => [s.id, s.code]));
-    for (const shot of source.shots) {
-      const newSeqId =
-        shot.sequenceId != null ? (seqIdByCode.get(srcSeqById.get(shot.sequenceId) ?? '') ?? null) : null;
-      const newShot = await tx.shot.create({
-        data: {
-          projectId: project.id,
-          sequenceId: newSeqId,
-          name: shot.name,
-          code: shot.code,
-          startFrame: shot.startFrame,
-          endFrame: shot.endFrame,
-          order: shot.order,
-          settings: shot.settings as Prisma.InputJsonValue,
-        },
-      });
-      const tasks = (
-        shot as { tasks?: { name: string; type: TaskType; order: number; checklist: unknown }[] }
-      ).tasks;
-      if (includeTasks && tasks) {
-        for (const t of tasks) {
-          await tx.task.create({
-            data: {
-              shotId: newShot.id,
-              name: t.name,
-              type: t.type,
-              order: t.order,
-              checklist: t.checklist as Prisma.InputJsonValue,
-            },
+    const seqIdOf = (sequenceId: number | null) =>
+      sequenceId != null ? (seqIdByCode.get(srcSeqById.get(sequenceId) ?? '') ?? null) : null;
+
+    const newShots = await createManyReturning(
+      source.shots.map((shot) => ({
+        projectId: project.id,
+        sequenceId: seqIdOf(shot.sequenceId),
+        name: shot.name,
+        code: shot.code,
+        startFrame: shot.startFrame,
+        endFrame: shot.endFrame,
+        order: shot.order,
+        settings: shot.settings as Prisma.InputJsonValue,
+      })),
+      (data) => tx.shot.createManyAndReturn({ data, select: { id: true, code: true, sequenceId: true } }),
+    );
+    // `(sequenceId, code)` identifie un plan dans un projet : on n'a pas à parier sur
+    // l'ordre de retour de l'écriture groupée pour rattacher les tâches.
+    const shotIdByKey = new Map(newShots.map((s) => [shotKey(s.sequenceId, s.code), s.id]));
+
+    if (includeTasks) {
+      const tasks: Prisma.TaskCreateManyInput[] = [];
+      for (const shot of source.shots) {
+        const shotId = shotIdByKey.get(shotKey(seqIdOf(shot.sequenceId), shot.code));
+        const sourceTasks = (
+          shot as { tasks?: { name: string; type: TaskType; order: number; checklist: unknown }[] }
+        ).tasks;
+        if (shotId === undefined || !sourceTasks) continue;
+        for (const t of sourceTasks) {
+          tasks.push({
+            shotId,
+            name: t.name,
+            type: t.type,
+            order: t.order,
+            checklist: t.checklist as Prisma.InputJsonValue,
           });
         }
       }
+      for (const batch of chunked(tasks)) await tx.task.createMany({ data: batch });
     }
     return project;
-  });
+  }, STRUCTURE_TX);
 
   logAudit({
     userId: user.id,
@@ -233,32 +309,43 @@ export async function importCsv(user: SessionUser, projectId: number, csv: strin
 
   await assertProjectWritable(projectId); // 38.B
   await prisma.$transaction(async (tx) => {
-    const seqIdByCode = new Map<string, number>();
-    for (const code of newSeqCodes) {
-      const s = await tx.sequence.create({ data: { projectId, name: code, code } });
-      seqIdByCode.set(code, s.id);
-    }
-    // Séquences préexistantes utilisées par l'import.
-    for (const code of new Set(rows.map((r) => r.sequence).filter((c): c is string => !!c))) {
-      if (!seqIdByCode.has(code)) {
-        const s = await tx.sequence.findFirst({ where: { projectId, code }, select: { id: true } });
-        if (s) seqIdByCode.set(code, s.id);
-      }
-    }
-    for (const r of newRows) {
-      const shot = await tx.shot.create({
-        data: {
-          projectId,
-          sequenceId: r.sequence ? (seqIdByCode.get(r.sequence) ?? null) : null,
-          name: r.name,
-          code: r.shot,
-        },
+    const newSeqs = await createManyReturning(
+      newSeqCodes.map((code) => ({ projectId, name: code, code })),
+      (data) => tx.sequence.createManyAndReturn({ data, select: { id: true, code: true } }),
+    );
+    const seqIdByCode = new Map(newSeqs.map((s) => [s.code, s.id]));
+    // Séquences préexistantes utilisées par l'import : une seule requête pour toutes.
+    const reusedCodes = [
+      ...new Set(rows.map((r) => r.sequence).filter((c): c is string => !!c && !seqIdByCode.has(c))),
+    ];
+    if (reusedCodes.length > 0) {
+      const existing = await tx.sequence.findMany({
+        where: { projectId, code: { in: reusedCodes } },
+        select: { id: true, code: true },
       });
-      for (const t of r.tasks) {
-        await tx.task.create({ data: { shotId: shot.id, name: t, type: TaskType.OTHER } });
-      }
+      for (const s of existing) if (!seqIdByCode.has(s.code)) seqIdByCode.set(s.code, s.id);
     }
-  });
+
+    const createdShots = await createManyReturning(
+      newRows.map((r) => ({
+        projectId,
+        sequenceId: r.sequence ? (seqIdByCode.get(r.sequence) ?? null) : null,
+        name: r.name,
+        code: r.shot,
+      })),
+      (data) => tx.shot.createManyAndReturn({ data, select: { id: true, code: true, sequenceId: true } }),
+    );
+    const shotIdByKey = new Map(createdShots.map((s) => [shotKey(s.sequenceId, s.code), s.id]));
+
+    const tasks: Prisma.TaskCreateManyInput[] = [];
+    for (const r of newRows) {
+      const sequenceId = r.sequence ? (seqIdByCode.get(r.sequence) ?? null) : null;
+      const shotId = shotIdByKey.get(shotKey(sequenceId, r.shot));
+      if (shotId === undefined) continue;
+      for (const t of r.tasks) tasks.push({ shotId, name: t, type: TaskType.OTHER });
+    }
+    for (const batch of chunked(tasks)) await tx.task.createMany({ data: batch });
+  }, STRUCTURE_TX);
   logAudit({
     userId: user.id,
     action: 'PROJECT_IMPORT_CSV',
@@ -353,22 +440,46 @@ export async function getProjectUsage(projectId: number) {
   return { usage: Number(usage), quota: project.storageQuota != null ? Number(project.storageQuota) : null };
 }
 
+/**
+ * Octets consommés par projet, en une agrégation. Le panel appelait
+ * `getProjectStorageUsage` par projet, chacune balayant les médias du studio entier
+ * derrière son triple OR : cent projets, cent balayages.
+ */
+async function storageUsageByProject(): Promise<Map<number, bigint>> {
+  const rows = await prisma.$queryRaw<{ projectId: number | null; bytes: bigint | null }[]>`
+    SELECT COALESCE(sh."projectId", ta."projectId", va."projectId") AS "projectId",
+           COALESCE(SUM(m.size), 0)::bigint                         AS "bytes"
+    FROM "MediaObject" m
+    JOIN "Version" v      ON v.id  = m."versionId"
+    LEFT JOIN "Task" t    ON t.id  = v."taskId"
+    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"
+    LEFT JOIN "Asset" ta  ON ta.id = t."assetId"
+    LEFT JOIN "Asset" va  ON va.id = v."assetId"
+    WHERE m."deletedAt" IS NULL
+    GROUP BY 1
+  `;
+  const out = new Map<number, bigint>();
+  for (const row of rows) if (row.projectId != null) out.set(row.projectId, BigInt(row.bytes ?? 0));
+  return out;
+}
+
 /** Conso de stockage de tous les projets (38.D, admin) — pour le panel Système. */
 export async function listUsage() {
-  const projects = await prisma.project.findMany({
-    where: { deletedAt: null },
-    select: { id: true, name: true, slug: true, storageQuota: true },
-    orderBy: { name: 'asc' },
-  });
-  return Promise.all(
-    projects.map(async (p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      usage: Number(await getProjectStorageUsage(p.id)),
-      quota: p.storageQuota != null ? Number(p.storageQuota) : null,
-    })),
-  );
+  const [projects, usage] = await Promise.all([
+    prisma.project.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, slug: true, storageQuota: true },
+      orderBy: { name: 'asc' },
+    }),
+    storageUsageByProject(),
+  ]);
+  return projects.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    usage: Number(usage.get(p.id) ?? 0n),
+    quota: p.storageQuota != null ? Number(p.storageQuota) : null,
+  }));
 }
 
 export async function softDelete(user: SessionUser, projectId: number) {
@@ -398,31 +509,130 @@ export async function removeMember(projectId: number, userId: number) {
   await prisma.projectMembership.delete({ where: { userId_projectId: { userId, projectId } } });
 }
 
-export async function getSettings(projectId: number) {
+/* --- Réglages : lecture effective vs lecture d'override (voir lib/projectSettings) --- */
+
+/** JSON d'override brut d'un projet vivant, ou 404. */
+async function storedSettings(projectId: number): Promise<Prisma.JsonValue> {
   const project = await prisma.project.findFirst({
     where: { id: projectId, deletedAt: null },
     select: { settings: true },
   });
   if (!project) throw notFound('Project not found');
-  return resolveProjectSettings(project.settings);
+  return project.settings;
 }
 
+/** Le projet a-t-il son propre pipe (lignes `Department` à sa portée) ? */
+async function hasOwnDepartments(projectId: number): Promise<boolean> {
+  return (await prisma.department.count({ where: { projectId, deletedAt: null } })) > 0;
+}
+
+/**
+ * Sections réellement surchargées. Les départements sont des entités depuis B1 : ce sont
+ * les lignes propres au projet qui font foi, pas le JSON qui n'en est que le reflet.
+ */
+function sectionsOf(override: ProjectSettingsOverride, ownDepartments: boolean): SettingsSection[] {
+  const sections = new Set<SettingsSection>(overriddenSections(override));
+  if (ownDepartments) sections.add('departments');
+  else sections.delete('departments');
+  return SETTINGS_SECTIONS.filter((section) => sections.has(section));
+}
+
+/**
+ * Réglages EFFECTIFS d'un projet (héritage studio appliqué) + la liste des sections qu'il
+ * surcharge. C'est cette liste qui permet à l'écran de dire « hérité du studio » plutôt que
+ * de laisser croire que tout appartient au projet.
+ */
+export async function getSettings(projectId: number) {
+  const stored = await storedSettings(projectId);
+  const [settings, override, own] = await Promise.all([
+    resolveProjectSettingsById(projectId),
+    resolveProjectOverride(stored),
+    hasOwnDepartments(projectId),
+  ]);
+  return { settings, overrides: sectionsOf(override, own) };
+}
+
+/**
+ * Lecture d'OVERRIDE : ce que le projet stocke réellement, plus les défauts studio dont il
+ * hérite. Réservée à qui peut gérer le projet — c'est la vue d'édition, pas la vue de
+ * consultation.
+ */
+export async function getSettingsOverride(projectId: number) {
+  const stored = await storedSettings(projectId);
+  const [override, studio, own] = await Promise.all([
+    resolveProjectOverride(stored),
+    getStudioProjectDefaults(),
+    hasOwnDepartments(projectId),
+  ]);
+  return { override, studio, overrides: sectionsOf(override, own) };
+}
+
+/**
+ * Rend au projet le pipe du studio : ses départements propres sont retirés logiquement,
+ * `DepartmentService.listForProject` retombe alors sur ceux du studio. Écriture directe
+ * assumée ici : c'est le pendant de `syncFromSettings`, qui n'a pas d'inverse.
+ */
+async function inheritDepartments(projectId: number) {
+  await prisma.department.updateMany({
+    where: { projectId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+}
+
+/** Les départements sont des entités depuis B1 : la liste éditée est traduite en base. */
+async function writeDepartments(projectId: number, departments: { key: string; name: string }[] | null) {
+  if (departments === null) await inheritDepartments(projectId);
+  else await DepartmentService.syncFromSettings(projectId, departments);
+}
+
+/**
+ * PUT : remplace l'override ENTIER. Seules les sections présentes dans le corps restent
+ * surchargées ; les autres retournent à l'héritage studio. L'ancien code écrivait le corps
+ * tel quel — or l'écran envoyait les réglages effectifs, ce qui figeait dans le projet tout
+ * ce qu'il ne faisait qu'hériter.
+ */
 export async function updateSettings(user: SessionUser, projectId: number, body: object) {
-  if (!(await prisma.project.findFirst({ where: { id: projectId, deletedAt: null } })))
-    throw notFound('Project not found');
-  await prisma.project.update({ where: { id: projectId }, data: { settings: body } });
-  // Les départements sont des entités depuis B1 : la liste éditée dans les réglages est
-  // traduite en base, sans quoi l'écran écrirait dans un JSON que plus rien ne lit.
+  const stored = await storedSettings(projectId);
+  const studio = await getStudioProjectDefaults();
+  const next = replaceStoredSettings(stored, body, studio);
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { settings: next as Prisma.InputJsonValue },
+  });
   const departments = (body as { departments?: { key: string; name: string }[] }).departments;
-  if (Array.isArray(departments)) await DepartmentService.syncFromSettings(projectId, departments);
+  if (Array.isArray(departments)) await writeDepartments(projectId, departments);
   logAudit({
     userId: user.id,
     action: 'PROJECT_SETTINGS_UPDATE',
     entityType: 'Project',
     entityId: projectId,
+    metadata: { sections: SETTINGS_SECTIONS.filter((section) => section in next) },
   });
-  // Relu depuis la base : c'est elle qui porte désormais les départements.
-  return resolveProjectSettingsById(projectId);
+  return getSettings(projectId);
+}
+
+/**
+ * PATCH : écriture SECTION PAR SECTION. Une section absente du corps reste ce qu'elle
+ * était, une section à `null` retourne à l'héritage studio. C'est ce qui permet
+ * d'enregistrer la nomenclature d'un projet sans y figer au passage sa résolution.
+ */
+export async function patchSettings(user: SessionUser, projectId: number, patch: ProjectSettingsPatch) {
+  const stored = await storedSettings(projectId);
+  const studio = await getStudioProjectDefaults();
+  const next = patchStoredSettings(stored, patch, studio);
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { settings: next as Prisma.InputJsonValue },
+  });
+  if ('departments' in patch) await writeDepartments(projectId, patch.departments ?? null);
+  logAudit({
+    userId: user.id,
+    action: 'PROJECT_SETTINGS_UPDATE',
+    entityType: 'Project',
+    entityId: projectId,
+    metadata: { sections: Object.keys(patch) },
+  });
+  return getSettings(projectId);
 }
 
 /** Éléments en corbeille d'un projet (séquences, shots, assets, versions, médias). */
