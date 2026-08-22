@@ -3,7 +3,6 @@
 
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
-import { emitToProject } from '../SocketService';
 import { openConnection, markStatus, type ConnectionContext } from './ShotgridConfigService';
 import { ShotgridApiError } from './ShotgridClient';
 import { SyncJournal, type SyncKind } from './ShotgridSyncJournal';
@@ -16,13 +15,16 @@ import {
   type PullContext,
   type PullOptions,
 } from './ShotgridPullService';
+import { findBySg } from './shotgridLinks';
 import { pullVersions, pullPublishedFiles } from './ShotgridVersionSync';
 import { pullNotes } from './ShotgridNoteSync';
 import { pullPlaylists } from './ShotgridPlaylistSync';
 import { fetchSiteStatuses, syncPipelineStatuses, syncVersionStatuses } from './ShotgridStatusSync';
 import { can, parseSettings } from './shotgridSettings';
-import { projectFilter } from './shotgridProjectGuard';
+import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import { asString } from './shotgridMapper';
+import { mergePasses, resolvePasses, sgIdsOfType, type SyncPass } from './ShotgridSyncPasses';
+import { flushTouched, TouchedEntities } from './ShotgridTouched';
 
 /**
  * Orchestration des synchronisations ShotGrid.
@@ -40,6 +42,12 @@ export interface SyncOptions {
   onlySgIds?: { sgType: string; sgId: number }[];
   /** Import des médias (coûteux) — désactivable pour une passe de structure seule. */
   withMedia?: boolean;
+  /**
+   * Passes à exécuter. Absente, la liste se déduit des entités ciblées, sinon tout est
+   * exécuté. C'est ce qui permet à un événement Note de ne relire que les notes — et
+   * d'être relu tout court.
+   */
+  passes?: SyncPass[];
 }
 
 export interface SyncResult {
@@ -85,7 +93,63 @@ export function mergeSyncOptions(a: SyncOptions, b: SyncOptions): SyncOptions {
     triggeredById: b.triggeredById ?? a.triggeredById,
     onlySgIds: unique,
     withMedia: a.withMedia || b.withMedia,
+    // Même règle que pour les entités : l'union, et une demande sans liste (donc « tout »)
+    // absorbe l'autre. Fusionner deux événements Note et Version doit relire les deux.
+    passes: mergePasses(a.passes, b.passes),
   };
+}
+
+/**
+ * Versions à relire parmi celles qu'un événement désigne.
+ *
+ * Transmettre les identifiants à `pullVersions` fait sauter le filtre de statuts du
+ * studio — il y est traité comme le signe d'une sélection manuelle. Ce serait rapatrier
+ * les médias de tous les WIP d'un site dont le studio a précisément choisi de ne suivre
+ * que les versions en review. On rejoue donc le filtre ici, et on en profite pour
+ * revérifier le projet : un identifiant reçu par webhook ne prouve rien.
+ *
+ * Une version déjà liée passe toujours : le filtre décide de ce qu'on importe, pas de ce
+ * qu'on continue de suivre.
+ */
+export async function importableVersionIds(
+  ctx: PullContext,
+  onlySgIds: readonly { sgType: string; sgId: number }[],
+): Promise<number[]> {
+  const statusFilter = ctx.settings.media.statusFilter;
+  const kept: number[] = [];
+  for (const sgId of sgIdsOfType(onlySgIds, 'Version')) {
+    if (await findBySg(ctx.connection.id, 'Version', sgId)) {
+      kept.push(sgId);
+      continue;
+    }
+    const record = await ctx.client.findById('Version', sgId, ['id', 'sg_status_list', 'project']);
+    if (!record) continue;
+
+    const verdict = belongsToProject(record, ctx.scope);
+    if (!verdict.ok) {
+      ctx.journal.count('guard', 'skipped');
+      await ctx.journal.log(
+        'error',
+        'shotgrid.log.wrongProject',
+        {
+          sgType: 'Version',
+          sgId,
+          expected: ctx.scope.sgProjectId,
+          found: verdict.foundProjectId ?? null,
+        },
+        { sgType: 'Version', sgId },
+      );
+      continue;
+    }
+
+    const statusCode = asString(record.sg_status_list);
+    if (statusFilter.length > 0 && statusCode && !statusFilter.includes(statusCode)) {
+      ctx.journal.count('versions', 'skipped');
+      continue;
+    }
+    kept.push(sgId);
+  }
+  return kept;
 }
 
 export async function runSync(projectId: number, options: SyncOptions = {}): Promise<SyncResult> {
@@ -114,12 +178,21 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
   await markStatus(ctx.connection.id, 'syncing', null);
   const startedAt = new Date();
 
+  // Un événement ne doit toucher que ce qu'il désigne : le collecteur retient les
+  // entités réalignées et la décision d'émettre est prise en fin de passe.
+  const touched = new TouchedEntities();
   const pullCtx: PullContext = {
     ...ctx,
     journal,
     scope: { sgProjectId: ctx.connection.sgProjectId, sgProjectName: ctx.connection.sgProjectName },
+    touched,
   };
   const pullOptions: PullOptions = { since: options.since ?? null, onlySgIds: options.onlySgIds };
+  const passes = resolvePasses(options);
+  const wants = (pass: SyncPass): boolean => passes.has(pass);
+  // Demande ciblée : une passe dont aucun identifiant n'est cité n'a rien à faire — la
+  // laisser partir sans filtre, c'est rejouer le projet entier pour une entité.
+  const targeted = (options.onlySgIds?.length ?? 0) > 0;
 
   try {
     await journal.log('info', 'shotgrid.log.runStarted', {
@@ -132,7 +205,10 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     let taskStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let shotStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let sequenceStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
-    if (can(ctx.settings, 'statuses', 'read')) {
+    // Une passe qui ne lit aucun `sg_status_list` (notes, playlists, versions) se passe
+    // du référentiel : ni lecture distante, ni repli en base.
+    const readStatuses = wants('statuses');
+    if (readStatuses && can(ctx.settings, 'statuses', 'read')) {
       const siteStatuses = await fetchSiteStatuses(ctx.client);
       taskStatuses = await syncPipelineStatuses(ctx.client, 'task', siteStatuses, journal);
       shotStatuses = await syncPipelineStatuses(ctx.client, 'shot', siteStatuses, journal);
@@ -163,7 +239,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         ctx.settings.versionStatusMap = versionMap;
         pullCtx.settings.versionStatusMap = versionMap;
       }
-    } else {
+    } else if (readStatuses) {
       // Lecture du référentiel fermée : on se rabat sur les statuts DÉJÀ importés du site
       // (`projectId: null`, `origin: 'shotgrid'`). Sans ces deux filtres, le repli
       // ramenait aussi le vocabulaire local du studio et celui des autres projets : un
@@ -180,21 +256,39 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     }
 
     // 2. Comptes (correspondance par courriel, aucune création).
-    const userMap = await buildUserMap(pullCtx);
+    const userMap = wants('users') ? await buildUserMap(pullCtx) : new Map<number, number>();
 
     // 3. Hiérarchie, dans l'ordre des dépendances.
-    await pullSequences(pullCtx, sequenceStatuses, pullOptions);
-    await pullShots(pullCtx, shotStatuses, pullOptions);
-    await pullAssets(pullCtx, pullOptions);
-    await pullTasks(pullCtx, taskStatuses, userMap, pullOptions);
+    if (wants('sequences')) await pullSequences(pullCtx, sequenceStatuses, pullOptions);
+    if (wants('shots')) await pullShots(pullCtx, shotStatuses, pullOptions);
+    if (wants('assets')) await pullAssets(pullCtx, pullOptions);
+    if (wants('tasks')) await pullTasks(pullCtx, taskStatuses, userMap, pullOptions);
 
-    // 4. Publishes et fichiers de pipeline.
-    if (options.withMedia !== false) {
-      await pullVersions(pullCtx, { since: options.since ?? null });
-      await pullPublishedFiles(pullCtx);
-      // 5. Notes et playlists : après les versions, dont les unes et les autres dépendent.
-      await pullNotes(pullCtx);
-      await pullPlaylists(pullCtx);
+    // 4. Versions. Une demande ciblée transmet enfin ses identifiants : sans eux, un seul
+    // événement Version relisait toutes les versions du projet.
+    if (wants('versions')) {
+      const versionIds = targeted ? await importableVersionIds(pullCtx, options.onlySgIds ?? []) : [];
+      // Ciblée sans version retenue : rien à relire. Appeler `pullVersions` avec une
+      // liste vide relancerait le balayage complet — l'inverse de ce qu'on cherche.
+      if (!targeted || versionIds.length > 0) {
+        await pullVersions(pullCtx, {
+          since: options.since ?? null,
+          ...(targeted ? { onlySgIds: versionIds } : {}),
+        });
+      }
+    }
+    // `PublishedFile` n'a pas de lecture ciblée : c'est un balayage de cinq mille
+    // enregistrements. Il n'a sa place que sur une passe non ciblée.
+    if (wants('publishedFiles') && !targeted) await pullPublishedFiles(pullCtx);
+
+    // 5. Notes et playlists : après les versions, dont les unes et les autres dépendent.
+    const noteIds = sgIdsOfType(options.onlySgIds, 'Note');
+    if (wants('notes') && (!targeted || noteIds.length > 0)) {
+      await pullNotes(pullCtx, targeted ? { onlySgIds: noteIds } : {});
+    }
+    const playlistIds = sgIdsOfType(options.onlySgIds, 'Playlist');
+    if (wants('playlists') && (!targeted || playlistIds.length > 0)) {
+      await pullPlaylists(pullCtx, targeted ? { onlySgIds: playlistIds } : {});
     }
 
     await journal.finish('ok');
@@ -202,7 +296,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       where: { id: ctx.connection.id },
       data: { lastSyncAt: startedAt, status: 'ok', statusMessage: null },
     });
-    emitToProject(projectId, 'shotgrid:sync', { projectId, runId: journal.runId, status: 'ok' });
+    flushTouched(projectId, journal.runId, 'ok', touched);
     const run = await prisma.shotgridSyncRun.findUnique({ where: { id: journal.runId } });
     return {
       runId: journal.runId,
@@ -217,7 +311,9 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       err instanceof ShotgridApiError && err.isAuth ? 'auth_error' : 'error',
       message,
     );
-    emitToProject(projectId, 'shotgrid:sync', { projectId, runId: journal.runId, status: 'error' });
+    // Une passe interrompue a tout de même réaligné une partie du projet : le résumé
+    // part quand même, sans quoi les écrans resteraient sur l'état d'avant.
+    flushTouched(projectId, journal.runId, 'error', touched);
     return { runId: journal.runId, status: 'error', stats: { error: message } };
   } finally {
     running.delete(ctx.connection.id);

@@ -16,7 +16,7 @@ import { asDate, asEntityRef, asString, type SgRecord } from './shotgridMapper';
 import { findByLocal, mapSgToLocal, upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
 import { importNoteAttachments } from './ShotgridNoteAttachments';
-import type { PullContext } from './ShotgridPullService';
+import { touch, type PullContext } from './ShotgridPullService';
 
 /**
  * Notes ShotGrid ↔ commentaires ReView.
@@ -48,6 +48,14 @@ export function isFromReview(content: string | null | undefined): boolean {
   return typeof content === 'string' && content.includes(FROM_REVIEW);
 }
 
+export interface NotePullOptions {
+  /**
+   * Notes précises à relire (traitement d'un événement). Le filtre de projet reste
+   * posé : un identifiant reçu par webhook ne prouve rien sur son appartenance.
+   */
+  onlySgIds?: number[];
+}
+
 /**
  * Import des notes en commentaires.
  *
@@ -56,14 +64,20 @@ export function isFromReview(content: string | null | undefined): boolean {
  * a un sens ici. Les notes créées par ReView sont ignorées — elles reviendraient en
  * double de leur propre commentaire.
  */
-export async function pullNotes(ctx: PullContext): Promise<void> {
+export async function pullNotes(ctx: PullContext, options: NotePullOptions = {}): Promise<void> {
   if (!can(ctx.settings, 'notes', 'read')) return;
+
+  // Le filtre de projet vient toujours en premier et n'est jamais remplacé par la
+  // restriction d'identifiants : les deux se cumulent, et chaque enregistrement reçu
+  // repasse ensuite par `belongsToProject`.
+  const filters: Array<[string, string, unknown]> = [projectFilter(ctx.scope.sgProjectId)];
+  if (options.onlySgIds?.length) filters.push(['id', 'in', options.onlySgIds]);
 
   const records = await ctx.client.search('Note', {
     fields: NOTE_FIELDS,
-    filters: [projectFilter(ctx.scope.sgProjectId)],
+    filters,
     sort: '-id',
-    maxRecords: 500,
+    maxRecords: options.onlySgIds?.length ?? 500,
   });
 
   const versionLinks = await mapSgToLocal(ctx.connection.id, 'version');
@@ -148,6 +162,7 @@ export async function pullNotes(ctx: PullContext): Promise<void> {
       sgUpdatedAt: asDate(record.updated_at),
       data: { fromShotgrid: true, attachmentsImported: true, attachmentCount: attachments },
     });
+    touch(ctx, 'comment', created.id);
     ctx.journal.count('notes', 'created');
   }
 }
@@ -195,7 +210,10 @@ async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number
     sgUpdatedAt: asDate(record.updated_at),
     data: { fromShotgrid: true, attachmentsImported: true, attachmentCount: count },
   });
-  if (count > 0 || authorName) ctx.journal.count('notes', 'updated');
+  if (count > 0 || authorName) {
+    touch(ctx, 'comment', commentId);
+    ctx.journal.count('notes', 'updated');
+  }
 }
 
 export interface PushNoteContext {

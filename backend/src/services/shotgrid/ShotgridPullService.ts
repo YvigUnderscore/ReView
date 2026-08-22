@@ -34,6 +34,7 @@ import type { SyncJournal } from './ShotgridSyncJournal';
 import { can } from './shotgridSettings';
 import { enqueuePush } from './ShotgridPushService';
 import { emitToProject } from '../SocketService';
+import { isReplayable, TOUCHED_EVENT_NAME, type TouchedEntities, type TouchedKind } from './ShotgridTouched';
 import { resolveForTask, type TaskDepartment } from '../DepartmentService';
 
 /**
@@ -94,6 +95,39 @@ export interface PullOptions {
 interface PullContext extends ConnectionContext {
   journal: SyncJournal;
   scope: ProjectScope;
+  /**
+   * Accumulateur des entités réalignées. Absent, chaque entité émet son événement tout
+   * de suite — c'est le comportement attendu des appelants qui n'orchestrent qu'une
+   * passe isolée (import manuel de versions).
+   */
+  touched?: TouchedEntities;
+}
+
+/**
+ * Signale qu'une entité vient d'être réalignée.
+ *
+ * Avec collecteur, l'entité est retenue et la décision d'émettre est prise en fin de
+ * passe (voir `ShotgridTouched`). Sans collecteur, on émet comme avant : un appelant
+ * isolé n'a personne pour vider l'accumulateur derrière lui. Les familles sans événement
+ * fin côté client (notes, playlists) ne comptent alors pour rien — elles n'ont jamais
+ * rien émis.
+ */
+export function touch(
+  ctx: PullContext,
+  kind: TouchedKind,
+  id: number,
+  extra?: Record<string, unknown>,
+): void {
+  if (ctx.touched) {
+    ctx.touched.add(kind, id, extra);
+    return;
+  }
+  if (!isReplayable(kind)) return;
+  emitToProject(ctx.connection.projectId, TOUCHED_EVENT_NAME[kind], {
+    projectId: ctx.connection.projectId,
+    id,
+    ...extra,
+  });
 }
 
 /** Filtres d'une recherche : projet obligatoire, plus la fenêtre temporelle éventuelle. */
@@ -480,15 +514,12 @@ export async function pullSequences(
         where: { id: existing.id },
         data: withoutStatus(data, verdict),
       });
-      // Sans cet événement, un statut lu depuis le site n'atteint jamais un écran ouvert :
-      // il fallait recharger la page pour le voir apparaître.
-      emitToProject(ctx.connection.projectId, 'sequence:update', {
-        projectId: ctx.connection.projectId,
-        id: saved.id,
-      });
     } else {
       saved = await prisma.sequence.create({ data });
     }
+    // Sans ce signal, un statut lu depuis le site n'atteint jamais un écran ouvert :
+    // il fallait recharger la page pour le voir apparaître.
+    touch(ctx, 'sequence', saved.id);
 
     await upsertLink({
       connectionId: ctx.connection.id,
@@ -567,10 +598,6 @@ export async function pullShots(
         where: { id: existing.id },
         data: withoutStatus(data, verdict),
       });
-      emitToProject(ctx.connection.projectId, 'shot:update', {
-        projectId: ctx.connection.projectId,
-        id: updated.id,
-      });
       savedId = updated.id;
       ctx.journal.count('shots', 'updated');
     } else {
@@ -578,6 +605,7 @@ export async function pullShots(
       savedId = created.id;
       ctx.journal.count('shots', 'created');
     }
+    touch(ctx, 'shot', savedId);
 
     const linkData: ShotLinkData = {
       sgStatusCode: statusCode,
@@ -668,6 +696,9 @@ export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
       sgUpdatedAt: asDate(record.updated_at),
       data: linkData,
     });
+    // L'asset n'émettait rien : un asset créé ou renommé depuis le site n'atteignait pas
+    // un écran ouvert, alors même que le client sait traiter `asset:update`.
+    touch(ctx, 'asset', saved.id);
     ctx.journal.count('assets', existing ? 'updated' : 'created');
   }
 }
@@ -828,12 +859,6 @@ export async function pullTasks(
         await enqueuePush(ctx.connection.projectId, { type: 'task-status', taskId: existing.id });
       }
       await prisma.task.update({ where: { id: existing.id }, data: withoutStatus(data, verdict) });
-      emitToProject(ctx.connection.projectId, 'task:update', {
-        projectId: ctx.connection.projectId,
-        id: existing.id,
-        shotId: data.shotId ?? null,
-        assetId: data.assetId ?? null,
-      });
       savedId = existing.id;
       ctx.journal.count('tasks', 'updated');
     } else {
@@ -841,6 +866,7 @@ export async function pullTasks(
       savedId = created.id;
       ctx.journal.count('tasks', 'created');
     }
+    touch(ctx, 'task', savedId, { shotId: data.shotId ?? null, assetId: data.assetId ?? null });
 
     const linkData: TaskLinkData = {
       durationMinutes: asNumber(record.duration),

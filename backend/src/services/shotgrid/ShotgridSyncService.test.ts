@@ -52,4 +52,16 @@ describe('mergeSyncOptions', () => {
   it('conserve le média dès qu’une des deux le demande', () => {
     expect(mergeSyncOptions({ withMedia: false }, { withMedia: true }).withMedia).toBe(true);
   });
+
+  it('unit les passes de deux demandes ciblées', () => {
+    // Une note et une version arrivées coup sur coup doivent être relues toutes les
+    // deux : ne garder que la dernière perdrait l'autre en silence.
+    const merged = mergeSyncOptions({ passes: ['notes'] }, { passes: ['versions'] });
+    expect(merged.passes).toEqual(['versions', 'notes']);
+  });
+
+  it('élargit à toutes les passes dès qu’une demande n’en nomme aucune', () => {
+    expect(mergeSyncOptions({ passes: ['notes'] }, {}).passes).toBeUndefined();
+    expect(mergeSyncOptions({}, { passes: ['notes'] }).passes).toBeUndefined();
+  });
 });

@@ -7,7 +7,7 @@ import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import { asDate, asEntityRefs, asString } from './shotgridMapper';
 import { findByLocal, mapSgToLocal, upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
-import type { PullContext } from './ShotgridPullService';
+import { touch, type PullContext } from './ShotgridPullService';
 
 /**
  * Playlists ShotGrid ↔ playlists de dailies.
@@ -19,6 +19,11 @@ import type { PullContext } from './ShotgridPullService';
 
 const PLAYLIST_FIELDS = ['code', 'description', 'versions', 'created_at', 'updated_at', 'project'];
 
+export interface PlaylistPullOptions {
+  /** Playlists précises à relire (traitement d'un événement). */
+  onlySgIds?: number[];
+}
+
 /**
  * Import des playlists du projet.
  *
@@ -26,14 +31,19 @@ const PLAYLIST_FIELDS = ['code', 'description', 'versions', 'created_at', 'updat
  * des versions que le filtre de statuts a écartées à l'import, et les inventer ici
  * fabriquerait des entrées qui ne mènent nulle part. L'ordre de ShotGrid est conservé.
  */
-export async function pullPlaylists(ctx: PullContext): Promise<void> {
+export async function pullPlaylists(ctx: PullContext, options: PlaylistPullOptions = {}): Promise<void> {
   if (!can(ctx.settings, 'playlists', 'read')) return;
+
+  // Restriction cumulative : le filtre de projet reste posé même quand on ne relit
+  // qu'une playlist désignée par un événement, et chaque enregistrement est revérifié.
+  const filters: Array<[string, string, unknown]> = [projectFilter(ctx.scope.sgProjectId)];
+  if (options.onlySgIds?.length) filters.push(['id', 'in', options.onlySgIds]);
 
   const records = await ctx.client.search('Playlist', {
     fields: PLAYLIST_FIELDS,
-    filters: [projectFilter(ctx.scope.sgProjectId)],
+    filters,
     sort: '-id',
-    maxRecords: 200,
+    maxRecords: options.onlySgIds?.length ?? 200,
   });
 
   const versionLinks = await mapSgToLocal(ctx.connection.id, 'version');
@@ -81,6 +91,7 @@ export async function pullPlaylists(ctx: PullContext): Promise<void> {
       sgUpdatedAt: asDate(record.updated_at),
       data: { versionCount: versionIds.length },
     });
+    touch(ctx, 'playlist', playlist.id);
     ctx.journal.count('playlists', existing ? 'updated' : 'created');
   }
 }

@@ -7,6 +7,7 @@ import { shotgridQueue } from '../JobService';
 import { asEntityRef, asString } from './shotgridMapper';
 import { eventBelongsToProject } from './shotgridProjectGuard';
 import { parseSettings } from './shotgridSettings';
+import { eventIsGlobal, HANDLED_ENTITIES, passesForEvent } from './ShotgridSyncPasses';
 import { runSync } from './ShotgridSyncService';
 
 /**
@@ -31,19 +32,6 @@ const ENTITY_FROM_EVENT = /^Shotgun_([A-Za-z]+)_(New|Change|Retirement|Revival)$
 
 /** Fenêtre de regroupement des événements portant sur une même entité. */
 const COALESCE_MS = 5_000;
-
-/** Entités que ReView sait traiter — le reste est ignoré sans bruit. */
-const HANDLED = new Set([
-  'Shot',
-  'Sequence',
-  'Asset',
-  'Task',
-  'Version',
-  'Note',
-  'Playlist',
-  'Status',
-  'HumanUser',
-]);
 
 export function parseEventType(eventType: string | undefined): { entity: string; action: string } | null {
   if (!eventType) return null;
@@ -70,7 +58,7 @@ export async function enqueueShotgridEvent(
     const parsed = parseEventType(data?.event_type);
     const entityRef = asEntityRef(data?.entity);
     if (!parsed || !entityRef) continue;
-    if (!HANDLED.has(parsed.entity)) continue;
+    if (!HANDLED_ENTITIES.has(parsed.entity)) continue;
 
     await shotgridQueue.add(
       'event',
@@ -138,17 +126,22 @@ export async function handleEvent(connectionId: number, event: ShotgridEventPayl
   const settings = parseSettings(connection.settings);
   if (settings.eventMode === 'manual') return;
 
-  // Une entité globale (statut, compte) touche tout le projet : passe complète, mais
-  // sans les médias, qui n'ont pas pu changer.
-  const isGlobal = parsed.entity === 'Status' || parsed.entity === 'HumanUser';
+  /**
+   * À chaque type d'événement ses passes.
+   *
+   * L'ancien code n'avait qu'un interrupteur, `withMedia`, calé sur
+   * `entity === 'Version'`. Conséquence : un événement Note ou Playlist était accepté,
+   * mis en file, traité — et ne déclenchait aucun import, puisque les deux seules passes
+   * capables de les lire étaient derrière ce `false`. Le sens sortant marchait, le sens
+   * entrant était mort. Une entité globale (statut, compte) reste une relecture de toute
+   * la hiérarchie ; les autres ne relisent qu'elles-mêmes.
+   */
+  const passes = passesForEvent(parsed.entity);
+  if (!passes) return;
   await runSync(connection.projectId, {
     kind: 'webhook',
-    ...(isGlobal
-      ? { withMedia: false }
-      : {
-          onlySgIds: [{ sgType: parsed.entity, sgId: entityRef.id }],
-          withMedia: parsed.entity === 'Version',
-        }),
+    passes: [...passes],
+    ...(eventIsGlobal(parsed.entity) ? {} : { onlySgIds: [{ sgType: parsed.entity, sgId: entityRef.id }] }),
   });
 }
 
