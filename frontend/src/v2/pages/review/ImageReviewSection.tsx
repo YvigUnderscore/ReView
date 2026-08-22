@@ -9,6 +9,8 @@ import ImageComparePane from './ImageComparePane';
 import ImageWipeOverlay from './ImageWipeOverlay';
 import { ImageDiffOverlay } from './DiffOverlay';
 import MediaChrome from './MediaChrome';
+import DisplayTransformOverlay from './color/DisplayTransformOverlay';
+import { useDisplayTransform } from './color/useDisplayTransform';
 import { VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useImageCompareSync } from './useImageCompareSync';
 import type { Annotations } from './useAnnotations';
@@ -62,6 +64,9 @@ export default function ImageReviewSection({
   sharedWipe?: ComponentProps<typeof ImageWipeOverlay>['sharedWipe'];
 }) {
   const compareId = compareIds[0] ?? null;
+  // Transformée d'affichage (OCIO) de l'image A. Les surcouches de comparaison gardent
+  // l'image brute : comparer deux versions suppose de les regarder dans le même état.
+  const display = useDisplayTransform(data.url, data.projectColor);
 
   // Le wipe et la différence remplacent la visionneuse : le zoom y est suspendu.
   if (compareId != null && compareMode === 'wipe')
@@ -134,13 +139,19 @@ export default function ImageReviewSection({
                 onUserView={onImageUserView}
                 onViewChange={compareId != null ? imageSync.onMasterView : undefined}
                 pinned={
-                  <ReviewCanvasRefs
-                    mediaId={data.media.id}
-                    references={data.references ?? []}
-                    selectedCommentId={selectedCommentId}
-                    canManage={canManage}
-                    ann={ann}
-                  />
+                  <>
+                    {/* Gestion de couleur : l'image transformée se pose **au-dessus** de
+                        l'originale dans le plan zoomé. Passer par `src` referait le cadrage
+                        à chaque cran d'exposition. */}
+                    <DisplayTransformOverlay url={display.url} />
+                    <ReviewCanvasRefs
+                      mediaId={data.media.id}
+                      references={data.references ?? []}
+                      selectedCommentId={selectedCommentId}
+                      canManage={canManage}
+                      ann={ann}
+                    />
+                  </>
                 }
               />
             </div>

@@ -9,6 +9,7 @@ import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as OcioService from '../services/OcioService';
 import { logAudit } from '../services/AuditService';
+import { enqueueOcioBake } from '../workers/ocio/queue';
 
 /**
  * Catalogue couleur OCIO (39.B). Récupération des configs ACES depuis les releases GitHub de
@@ -30,6 +31,38 @@ router.get(
   validate({ params: z.object({ id: z.string().uuid() }) }),
   async (req, res) => {
     res.json({ displays: await OcioService.getConfigDisplays(req.params.id as string) });
+  },
+);
+
+// GET /api/studio/ocio/configs/:id/lut — LUT 3D cuite d'un couple display/view (viewer).
+// Cuisson paresseuse du repli colorimétrique si elle manque ; `url: null` si seule la voie
+// OCIO peut la produire (vue tone-mappée + outillage absent du worker).
+router.get(
+  '/configs/:id/lut',
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    query: z.object({ display: z.string().min(1).max(160), view: z.string().min(1).max(160) }),
+  }),
+  async (req, res) => {
+    const { display, view } = req.query as unknown as { display: string; view: string };
+    res.json({ lut: await OcioService.getLut(req.params.id as string, display, view) });
+  },
+);
+
+// POST /api/studio/ocio/configs/:id/bake — (re)cuisson des LUT de la config (admin).
+router.post(
+  '/configs/:id/bake',
+  requireRole(Role.ADMIN),
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    body: z.object({ force: z.boolean().optional() }).default({}),
+  }),
+  async (req, res) => {
+    const id = req.params.id as string;
+    const { force } = req.body as { force?: boolean };
+    await enqueueOcioBake({ configId: id, force });
+    logAudit({ userId: req.user!.id, action: 'OCIO_BAKE', entityType: 'Setting', metadata: { id } });
+    res.status(202).json({ queued: true });
   },
 );
 

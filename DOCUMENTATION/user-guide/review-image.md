@@ -1,6 +1,6 @@
 # Image review
 
-> Updated: 2026-08-21
+> Updated: 2026-08-22
 
 ![Image review: zoom controls under the canvas, reference paste in the top-left corner.](../assets/user-guide/review-image.png)
 
@@ -82,9 +82,36 @@ two modes: go back to side by side to inspect a detail.
 
 ## Colour management
 
-The **Image** panel of the dock shows the OCIO **display** and **view** configured for the
-project. It is a readout, not a control: the media itself is never modified, and every
-reviewer of the project sees the same transform.
+The **Image** panel of the dock is the colour panel, and on a still image it changes the
+pixels you see:
+
+| Control | What it does |
+|---------|--------------|
+| **Display** / **View** | The couple taken from the project's OCIO config. It defaults to the project setting; picking another one here only affects your screen. |
+| **Exposure** | A gain in stops, applied in linear light **before** the display transform. Drag the `EV` label to scrub, or type a value. |
+| **Gamma** | A viewing gamma applied **after** the display transform, to read into the shadows. |
+| **Display transform** | The on/off switch. Turn it off to see the raw file and compare. |
+| **Reset** | Back to the project's display and view, exposure 0, gamma 1. |
+
+**These are reading preferences.** Nothing is sent to the server, the media file is never
+rewritten, and other reviewers keep their own settings — the panel says so under the
+controls. The settings follow you from one media to the next in this browser.
+
+What is actually applied, and what is not:
+
+- **Still images only.** Video, 3D and Gaussian splat keep their own display; the panel
+  says so when you open it on those media.
+- The transform runs on the GPU (WebGL) over the image you are looking at, so zoom, pan,
+  annotations and pinned references are unaffected.
+- **Exports keep the original.** *Export the view as PNG*, *Download the image* and the
+  contact sheet all use the untransformed file.
+- The **comparison overlays** (wipe, difference, side by side) show raw images: comparing
+  two versions means looking at both in the same state.
+- The panel reports where the transform comes from — *LUT baked from the studio OCIO
+  config* (exact) or *Colorimetric conversion only* (gamut and transfer function, without
+  the rendering curve). If it says no LUT is baked, exposure and gamma still work, but the
+  display/view itself is not applied; see
+  [Colour management (admin)](../admin-guide/color-management.md).
 
 ## Right-click in the viewer
 
@@ -144,6 +171,16 @@ reference belongs to its comment and is only drawn when that comment is selected
 
 **The dock has a Guides panel but nothing appears on the image.** The composition guide
 overlay is drawn on the video viewer only.
+
+**The colour panel says no LUT is baked.** The display and view you picked need a
+rendering curve (an ACES output transform), and the worker of this instance has no
+OpenColorIO tooling installed, so ReView refuses to guess the curve. An administrator can
+enable it — see [Colour management](../admin-guide/color-management.md#enabling-exact-ocio-baking).
+Until then, `Raw` and `Un-tone-mapped` views, exposure and gamma still work.
+
+**Moving the exposure takes a moment to show.** The transformed image is re-encoded after
+each change; on a 6K plate that is a fraction of a second, and the previous image stays on
+screen meanwhile.
 
 **`F` and `H` do nothing.** Fit and 1:1 are in the control cluster on images; the rail's
 view actions and their shortcuts only exist on 3D and splat media.

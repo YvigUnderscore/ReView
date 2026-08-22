@@ -12,7 +12,16 @@ import {
   type AcesAssetInfo,
   type AcesConfigKind,
 } from '../lib/ocioAces';
-import { parseOcioDisplays, type OcioDisplay } from '../lib/ocioDisplays';
+import { isValidDisplayView, parseOcioDisplays, type OcioDisplay } from '../lib/ocioDisplays';
+import {
+  bakeBuiltinLut,
+  BUILTIN_SOURCE,
+  LUT_SIZE,
+  lutPrefix,
+  lutStorageKey,
+  serializeCube,
+} from '../lib/ocioBake';
+import { enqueueOcioBake } from '../workers/ocio/queue';
 
 /**
  * Catalogue des configs couleur OCIO (39.B). Les configs ACES officielles sont récupérées depuis
@@ -173,6 +182,11 @@ export async function getDefault(): Promise<OcioEntry | null> {
   return entries.find((e) => e.isDefault) ?? entries[0] ?? null;
 }
 
+/** Une config installée par son identifiant, ou `null` (utilisé par le worker de cuisson). */
+export async function getEntry(id: string): Promise<OcioEntry | null> {
+  return (await readLibrary()).find((e) => e.id === id) ?? null;
+}
+
 // Displays/views d'une config sont immuables une fois installée → cache par clé de stockage.
 const displaysCache = new Map<string, OcioDisplay[]>();
 
@@ -189,6 +203,50 @@ export async function getConfigDisplays(id: string): Promise<OcioDisplay[]> {
   const displays = parseOcioDisplays(Buffer.concat(chunks).toString('utf-8'));
   displaysCache.set(entry.storageKey, displays);
   return displays;
+}
+
+/** État d'une LUT d'affichage pour un couple display/view d'une config. */
+export interface LutInfo {
+  display: string;
+  view: string;
+  size: number;
+  /** URL présignée du `.cube`, ou `null` si aucune LUT n'existe (ni cuite, ni cuisinable ici). */
+  url: string | null;
+  /** Pourquoi il n'y en a pas : la vue demande une courbe de rendu que seul OCIO sait cuire. */
+  reason: 'OCIO_TOOLING_REQUIRED' | null;
+}
+
+/**
+ * LUT d'affichage d'un couple display/view. Sert le `.cube` déjà cuit ; sinon, cuit **à la
+ * demande** le repli colorimétrique (immédiat, exact) et demande au worker la version OCIO
+ * pour les vues tone-mappées, qu'on ne fabrique jamais par approximation.
+ *
+ * Le couple est vérifié contre la config : sans cela, n'importe quel authentifié pourrait
+ * faire écrire dans MinIO une clé de son choix.
+ */
+export async function getLut(configId: string, display: string, view: string): Promise<LutInfo> {
+  const displays = await getConfigDisplays(configId);
+  if (!isValidDisplayView(displays, display, view))
+    throw badRequest('Unknown display/view for this config', 'OCIO_BAD_DISPLAY_VIEW');
+
+  const key = lutStorageKey(configId, display, view);
+  const base = { display, view, size: LUT_SIZE };
+  try {
+    await storage.statObject(key);
+    return { ...base, url: await storage.getPresignedGetUrl(key), reason: null };
+  } catch {
+    // Pas encore cuite : on tente le repli intégré, sinon c'est l'affaire du worker.
+  }
+
+  const lut = bakeBuiltinLut(display, view);
+  if (lut) {
+    const text = serializeCube(lut, `${display} / ${view}`, BUILTIN_SOURCE);
+    await storage.putObject(key, Buffer.from(text, 'utf-8'), 'text/plain; charset=utf-8');
+    return { ...base, url: await storage.getPresignedGetUrl(key), reason: null };
+  }
+
+  await enqueueOcioBake({ configId, display, view });
+  return { ...base, url: null, reason: 'OCIO_TOOLING_REQUIRED' };
 }
 
 /**
@@ -236,6 +294,9 @@ export async function install(
     isDefault: makeDefault,
   };
   await writeLibrary([...entries, entry]);
+  // Les LUT d'affichage sont cuites en tâche de fond : la review n'attend pas la première
+  // lecture. L'échec de la file ne remet pas l'installation en cause (cf. enqueueOcioBake).
+  await enqueueOcioBake({ configId: entry.id });
   return entry;
 }
 
@@ -259,4 +320,7 @@ export async function remove(id: string): Promise<void> {
   }
   await writeLibrary(rest);
   await storage.deleteObject(target.storageKey).catch(() => undefined);
+  // Les LUT cuites n'ont plus d'objet : sans cette purge elles resteraient orphelines et
+  // une réinstallation de la même config (nouvel id) n'y toucherait jamais.
+  await storage.deletePrefix(lutPrefix(id)).catch(() => undefined);
 }

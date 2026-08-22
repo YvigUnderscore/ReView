@@ -10,6 +10,7 @@ import type { MediaKind } from '../../../types/api';
 import type { PanelId } from '../chrome/panels';
 import { Group, Row } from '../chrome/DockGroup';
 import GuidesPanel from './GuidesPanel';
+import ColorPanel from '../color/ColorPanel';
 import { sheetRows } from './mediaSheet';
 import InfoPanel from './InfoPanel';
 import ExportPanel from './ExportPanel';
@@ -67,18 +68,9 @@ export default function MediaPanels({
       </Group>
     );
 
-  if (panel === 'image')
-    return (
-      <Group title={t('viewer.color.title')}>
-        <Row label={t('ocio.display')}>
-          <Badge variant="secondary">{data.projectColor?.display ?? 'sRGB'}</Badge>
-        </Row>
-        <Row label={t('ocio.view')}>
-          <Badge variant="secondary">{data.projectColor?.view ?? t('common.none')}</Badge>
-        </Row>
-        <span className="rv-optbar__hint whitespace-normal">{t('review.projectOcio')}</span>
-      </Group>
-    );
+  // Panneau Color : agissant sur l'image fixe (transformée d'affichage appliquée aux pixels),
+  // encore en lecture seule ailleurs — la vidéo garde son décodage natif.
+  if (panel === 'image') return <ColorPanel projectColor={data.projectColor} applies={kind === 'IMAGE'} />;
 
   if (panel === 'guides') return <GuidesPanel />;
 
