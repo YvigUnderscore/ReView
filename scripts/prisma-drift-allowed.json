@@ -1,0 +1,21 @@
+{
+  "$comment": [
+    "Divergences ADMISES entre prisma/migrations et prisma/schema.prisma, telles que",
+    "`prisma migrate diff --from-migrations --to-schema-datamodel --script` les écrit.",
+    "Une seule raison d'y figurer : l'objet SQL ne s'exprime pas dans le langage de schéma",
+    "Prisma. Toute autre divergence est un `migrate dev` oublié — et doit rester rouge.",
+    "La liste est stricte dans les deux sens : une entrée qui ne se produit plus fait",
+    "échouer le contrôle, pour qu'elle soit retirée plutôt que de couvrir un futur écart.",
+    "Contrôle : scripts/check-prisma-drift.mjs"
+  ],
+  "allowed": [
+    {
+      "statement": "DROP INDEX \"MediaObject_originalName_trgm_idx\"",
+      "why": "Index GIN trigramme (pg_trgm) posé en SQL brut par la migration 20260822120000_recherche_plein_texte_commentaires : la recherche par motif non ancré sur un nom de fichier ne peut pas s'appuyer sur un index B-tree, et Prisma ne sait pas déclarer gin_trgm_ops."
+    },
+    {
+      "statement": "DROP INDEX \"Version_name_trgm_idx\"",
+      "why": "Même index trigramme, sur le nom de version — même migration, même raison."
+    }
+  ]
+}

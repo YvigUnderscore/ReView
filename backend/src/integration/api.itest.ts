@@ -1,17 +1,21 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app';
 import { MediaStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { MAX_PAGE_SIZE } from '../lib/pagination';
 
 /**
  * Tests d'intégration API (nécessitent Postgres/Redis/MinIO).
- * Robuste en local (DB seedée) comme en CI (DB vierge après migrate).
+ *
+ * La base est jetable et remise à neuf avant chaque exécution (`globalSetup`) : ce fichier
+ * y exécute l'installation initiale du studio. Il reste néanmoins écrit pour une base déjà
+ * peuplée — c'est ce qui permet de le rejouer sans reset pendant une mise au point.
  */
-const app = createApp();
+const app = createApp({ rateLimit: false });
 let token = '';
 let artistToken = '';
 let artistId = 0;
@@ -45,6 +49,13 @@ beforeAll(async () => {
   artistId = created.body.user?.id ?? 0;
   const login = await request(app).post('/api/auth/login').send({ email, password: 'artist1234' });
   artistToken = login.body.token;
+});
+
+// La base est jetée entre deux exécutions, mais un fichier de test reste responsable de ce
+// qu'il crée : sans cela, rejouer la suite deux fois sans reset (mise au point) accumulerait
+// un ARTIST orphelin par passage — le défaut d'origine.
+afterAll(async () => {
+  if (artistId) await prisma.user.deleteMany({ where: { id: artistId } });
 });
 
 describe('API — santé & setup', () => {
@@ -92,8 +103,16 @@ describe('API — auth & RBAC', () => {
     expect(r.body.pageSize).toBe(1);
     expect(r.body.items.length).toBeLessThanOrEqual(1);
     expect(r.body.total).toBeGreaterThanOrEqual(2);
-    // pageSize hors borne (> 100) → rejeté par Zod (400).
-    const bad = await request(app).get('/api/projects?pageSize=500').set('Authorization', `Bearer ${token}`);
+    // Le plafond dur est MAX_PAGE_SIZE (500) : il est servable, au-delà Zod refuse (400).
+    // Défaut et plafond ne sont plus confondus depuis que la pagination existe vraiment.
+    const ceiling = await request(app)
+      .get(`/api/projects?pageSize=${MAX_PAGE_SIZE}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(ceiling.status).toBe(200);
+    expect(ceiling.body.pageSize).toBe(MAX_PAGE_SIZE);
+    const bad = await request(app)
+      .get(`/api/projects?pageSize=${MAX_PAGE_SIZE + 1}`)
+      .set('Authorization', `Bearer ${token}`);
     expect(bad.status).toBe(400);
   });
   it('GET /api/auth/me → utilisateur courant', async () => {
@@ -125,10 +144,19 @@ describe('API — auth & RBAC', () => {
   });
 
   it("tokens d'API (36.C) : scope read → GET ok, écriture 403 ; révocation immédiate", async () => {
+    // Fabriquer un `rvk_` exige de re-saisir le mot de passe : un jeton d'accès volé ne
+    // suffit pas à se donner un accès de 3650 jours que « se déconnecter partout » ignore.
+    const noPassword = await request(app)
+      .post('/api/auth/tokens')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'IT no password', scopes: ['read'] });
+    expect(noPassword.status).toBe(401);
+    expect(noPassword.body.code).toBe('CURRENT_PASSWORD_REQUIRED');
+
     const created = await request(app)
       .post('/api/auth/tokens')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'IT read', scopes: ['read'] });
+      .send({ name: 'IT read', scopes: ['read'], currentPassword: 'admin1234' });
     expect(created.status).toBe(201);
     const apiTok = created.body.token as string;
     expect(apiTok).toMatch(/^rvk_/);

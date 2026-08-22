@@ -14,7 +14,7 @@ import { prisma } from '../lib/prisma';
  * à deux étapes du pipe (la plus récente n'étant pas la plus avancée), un plan à une
  * seule étape, un plan sans rien, et un plan coupé au montage.
  */
-const app = createApp();
+const app = createApp({ rateLimit: false });
 let token = '';
 let projectId = 0;
 let sequenceId = 0;

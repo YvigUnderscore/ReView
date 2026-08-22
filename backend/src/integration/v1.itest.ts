@@ -14,7 +14,7 @@ import { prisma } from '../lib/prisma';
  * Aucun octet n'est déposé sur le stockage : la publication s'arrête à l'URL présignée,
  * ce qui suffit à valider la chaîne côté serveur.
  */
-const app = createApp();
+const app = createApp({ rateLimit: false });
 
 let adminToken = '';
 let projectCode = '';

@@ -9,6 +9,9 @@
 #   bash scripts/validate.sh                 # checks sans services (typecheck, build, lint, tests unit)
 #   bash scripts/validate.sh --with-integration   # ajoute les tests d'intégration (nécessite Postgres+Redis+MinIO)
 #   bash scripts/validate.sh --with-e2e            # intégration + smoke Playwright (navigateur requis ; E2E_CHANNEL=msedge en local)
+#   bash scripts/validate.sh --with-shotgrid       # + harnais ShotGrid bout-en-bout (backend ReView démarré requis)
+#
+# Les options se cumulent : `--with-integration --with-shotgrid` est valide.
 #
 # Sortie : échoue (exit 1) au premier check rouge. Tout vert = code validable.
 #
@@ -17,10 +20,18 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WITH_INTEGRATION=0
 WITH_E2E=0
-[[ "${1:-}" == "--with-integration" ]] && WITH_INTEGRATION=1
-[[ "${1:-}" == "--with-e2e" ]] && { WITH_INTEGRATION=1; WITH_E2E=1; }
+WITH_SHOTGRID=0
+for arg in "$@"; do
+  case "$arg" in
+    --with-integration) WITH_INTEGRATION=1 ;;
+    --with-e2e) WITH_INTEGRATION=1; WITH_E2E=1 ;;
+    --with-shotgrid) WITH_SHOTGRID=1 ;;
+    *) printf '\033[0;31m✗ Option inconnue : %s\033[0m\n' "$arg"; exit 1 ;;
+  esac
+done
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$1"; }
+skip() { printf '\033[0;33m⏭  %s\033[0m\n' "$1"; }
 
 # ---------- Licence ----------
 # Chaque fichier source porte son en-tête SPDX (AGPL-3.0-or-later) : un fichier extrait
@@ -81,6 +92,31 @@ step "Outillage — format des scripts racine (prettier --check)"
 step "Outillage — syntaxe des scripts shell (bash -n)"
 for f in "$ROOT"/scripts/*.sh; do bash -n "$f"; done
 
+# Les workers appellent quatre scripts Python en production (analyse USD, conversion GLB,
+# miniature, cuisson de LUT) que rien ne compilait ni ne lintait : une faute de syntaxe ne
+# se découvrait qu'au premier upload USD d'un studio. `compileall` la voit sans exécuter le
+# code, et sans exiger les dépendances (usd-core, PyOpenColorIO) qu'un poste n'a pas.
+# `PYTHONPYCACHEPREFIX` renvoie les `__pycache__` hors du dépôt : le contrôle ne salit rien.
+step "Outillage — syntaxe des scripts Python des workers (compileall)"
+PY=""
+for candidate in python3 python; do
+  if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c 'import sys' >/dev/null 2>&1; then
+    PY="$candidate"; break
+  fi
+done
+if [ -z "$PY" ]; then
+  # Sauter proprement : la suite doit rester exécutable sur un poste sans interpréteur.
+  skip "Python absent : contrôle des scripts des workers sauté."
+else
+  PYTHONPYCACHEPREFIX="$(mktemp -d)" "$PY" -m compileall -q \
+    "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
+  # `ruff` n'est pas une dépendance du dépôt : présent, on s'en sert ; absent, on continue.
+  if command -v ruff >/dev/null 2>&1; then
+    step "Outillage — lint des scripts Python (ruff)"
+    ruff check "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
+  fi
+fi
+
 # ---------- Budget de taille (10.F4) ----------
 # Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Côté
 # backend, on garde-fou ici la taille des routes (≤ 200 lignes ; la logique métier vit
@@ -116,6 +152,14 @@ step "Backend — lint (eslint, zéro warning)"
 step "Backend — schéma Prisma (prisma validate)"
 ( cd "$ROOT/backend" && DATABASE_URL="${DATABASE_URL:-postgresql://validate:validate@localhost:5432/validate}" npx prisma validate )
 
+# `prisma validate` ne dit que « le fichier se parse ». Un modèle modifié sans `migrate dev`
+# passait donc au vert, jusqu'à ce que `migrate deploy` serve en production une base sans la
+# colonne attendue. Ce contrôle rejoue les migrations sur une base fantôme et les confronte
+# au modèle. Il exige Postgres : sans base joignable il se saute (poste sans docker), sauf
+# quand REVIEW_REQUIRE_DRIFT_CHECK=1 — ce que pose le job CI qui, lui, a la base.
+step "Backend — dérive schema.prisma ↔ migrations (prisma migrate diff)"
+node "$ROOT/scripts/check-prisma-drift.mjs"
+
 # Le tsconfig de lint étend le typecheck aux tests, à prisma/ et aux scripts — le build,
 # lui, ne compile que src/.
 step "Backend — typecheck (tsc --noEmit, tests inclus)"
@@ -124,14 +168,27 @@ step "Backend — typecheck (tsc --noEmit, tests inclus)"
 step "Backend — build (prisma generate + tsc)"
 ( cd "$ROOT/backend" && npm run build )
 
+# Couverture : mesurée quand le provider est installé, et confrontée aux planchers par
+# dossier (`scripts/coverage-floors.json`, cliquet — on monte, jamais on ne descend).
+# Le provider est une dépendance de développement à part ; tant qu'il manque, les tests
+# tournent sans mesure et la suite le dit haut et fort plutôt que de faire semblant.
+has_coverage_provider() { [ -d "$1/node_modules/@vitest/coverage-v8" ]; }
+
 step "Backend — tests unitaires (vitest)"
-( cd "$ROOT/backend" && npm test )
+if has_coverage_provider "$ROOT/backend"; then
+  ( cd "$ROOT/backend" && npx vitest run --coverage )
+  step "Backend — couverture (planchers par dossier, à cliquet)"
+  node "$ROOT/scripts/check-coverage.mjs" backend
+else
+  ( cd "$ROOT/backend" && npm test )
+  skip "Couverture backend non mesurée : installer @vitest/coverage-v8 (npm i -D @vitest/coverage-v8)."
+fi
 
 if [[ "$WITH_INTEGRATION" == "1" ]]; then
   step "Backend — tests d'intégration (vitest, nécessite Postgres+Redis+MinIO)"
   ( cd "$ROOT/backend" && npm run test:integration )
 else
-  printf '\033[0;33m⏭  Tests d'\''intégration ignorés (relancer avec --with-integration + stack docker).\033[0m\n'
+  skip "Tests d'intégration ignorés (relancer avec --with-integration + stack docker)."
 fi
 
 # ---------- Frontend ----------
@@ -145,7 +202,14 @@ step "Frontend — typecheck (tsc --noEmit)"
 ( cd "$ROOT/frontend" && npm run typecheck )
 
 step "Frontend — tests unitaires (vitest)"
-( cd "$ROOT/frontend" && npm test )
+if has_coverage_provider "$ROOT/frontend"; then
+  ( cd "$ROOT/frontend" && npx vitest run --coverage )
+  step "Frontend — couverture (planchers par dossier, à cliquet)"
+  node "$ROOT/scripts/check-coverage.mjs" frontend
+else
+  ( cd "$ROOT/frontend" && npm test )
+  skip "Couverture frontend non mesurée : installer @vitest/coverage-v8 (npm i -D @vitest/coverage-v8)."
+fi
 
 step "Frontend — build (vite build)"
 ( cd "$ROOT/frontend" && npm run build )
@@ -157,6 +221,21 @@ node "$ROOT/scripts/check-bundle-budget.mjs"
 if [[ "$WITH_E2E" == "1" ]]; then
   step "E2E — smoke Playwright (parcours critique, lance backend+frontend)"
   ( cd "$ROOT/frontend" && npm run test:e2e )
+fi
+
+# Harnais ShotGrid : 1 212 lignes de simulateur et de scénario qui n'avaient jamais tourné
+# autrement qu'à la main. Il vérifie l'invariant le plus coûteux de l'intégration — ne
+# jamais déborder sur le projet voisin — contre un site simulé qui héberge exprès trois
+# projets aux codes identiques.
+#
+# Hors de `--with-integration` sciemment : le scénario parle au backend ReView **par HTTP**
+# (stack docker démarrée), là où les tests d'intégration montent l'app en mémoire. Il écrit
+# donc dans la base de développement et y laisse son projet de test.
+if [[ "$WITH_SHOTGRID" == "1" ]]; then
+  step "ShotGrid — harnais bout-en-bout (simulateur + scénario)"
+  node "$ROOT/scripts/run-shotgrid-e2e.mjs"
+else
+  skip "Harnais ShotGrid ignoré (relancer avec --with-shotgrid + backend ReView démarré)."
 fi
 
 printf '\n\033[1;32m✅ Validation complète : tout est vert. Code validable.\033[0m\n'

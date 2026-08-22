@@ -1,0 +1,15 @@
+{
+  "$comment": [
+    "Planchers de couverture par dossier — cliquet : on monte, jamais on ne descend.",
+    "Vides tant que le provider @vitest/coverage-v8 n'est pas installé : aucun chiffre n'a",
+    "pu être mesuré, et inventer un plancher rendrait la suite rouge ou complaisante.",
+    "Une fois le provider installé, poser les planchers d'un coup :",
+    "  cd backend  && npx vitest run --coverage && node ../scripts/check-coverage.mjs backend --update",
+    "  cd frontend && npx vitest run --coverage && node ../scripts/check-coverage.mjs frontend --update",
+    "puis les relever au fil des progrès (le contrôle signale les dossiers qui dépassent).",
+    "Contrôle : scripts/check-coverage.mjs — planchers volontairement hors de vitest.config,",
+    "qui ne sait pas refuser une baisse."
+  ],
+  "backend": {},
+  "frontend": {}
+}
