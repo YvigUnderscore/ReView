@@ -178,7 +178,13 @@ export default function EntityCard({
         {selection && <SelectBox selection={selection} />}
         <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-secondary/60">
           {thumbnailUrl ? (
-            <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+            <img
+              src={thumbnailUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <ImageIcon size={14} className="text-muted-foreground" />
           )}
@@ -203,7 +209,15 @@ export default function EntityCard({
     >
       <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-secondary/40">
         {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+          // Chargement paresseux : une grille de cent plans demandait cent JPEG de 640 px
+          // dès le montage (4 à 8 Mo), pour n'en afficher qu'une douzaine à l'écran.
+          <img
+            src={thumbnailUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <ImageIcon size={28} className="text-muted-foreground/50" />
         )}

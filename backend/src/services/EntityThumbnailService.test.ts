@@ -12,7 +12,10 @@ vi.mock('../lib/prisma', () => ({
 }));
 
 vi.mock('./StorageService', () => ({
-  storage: { getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put') },
+  storage: {
+    getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put'),
+    forgetPresignedUrl: vi.fn(),
+  },
   StorageService: {
     entityThumbnailKey: (holder: string, id: number, ext: string) => `entity-thumbs/${holder}/${id}${ext}`,
   },
@@ -20,6 +23,7 @@ vi.mock('./StorageService', () => ({
 
 import { presign, resolveProject, set } from './EntityThumbnailService';
 import { prisma } from '../lib/prisma';
+import { storage } from './StorageService';
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -90,5 +94,18 @@ describe('set', () => {
   it('refuse un préfixe qui n’est qu’un début d’identifiant', async () => {
     // Sans le point final, « shot/1 » couvrirait « shot/12 », « shot/123 »…
     await expect(set('shot', 1, 'entity-thumbs/shot/12.jpg')).rejects.toThrow();
+  });
+
+  it('oublie l’URL mémorisée : remplacer une vignette réécrit le même objet', async () => {
+    // Même entité, même extension ⇒ même clé. Sans cet oubli, l'URL présignée resterait
+    // identique pendant toute la tranche et la carte afficherait l'ancienne image.
+    await set('shot', 12, 'entity-thumbs/shot/12.jpg');
+    expect(storage.forgetPresignedUrl).toHaveBeenCalledWith('entity-thumbs/shot/12.jpg');
+  });
+
+  it('n’oublie rien quand la clé est refusée ou effacée', async () => {
+    await expect(set('shot', 12, 'derived/99/thumbnail.webp')).rejects.toThrow();
+    await set('shot', 12, null);
+    expect(storage.forgetPresignedUrl).not.toHaveBeenCalled();
   });
 });

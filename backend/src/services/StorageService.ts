@@ -28,6 +28,21 @@ import { logger } from '../lib/logger';
 import { safeUploadContentType } from '../lib/uploadContentType';
 
 /**
+ * Largeur de la tranche pendant laquelle une URL présignée de lecture ne bouge pas.
+ *
+ * Sans elle, chaque réponse portait une signature neuve : le navigateur voyait une URL
+ * différente et retéléchargeait la vignette ou l'avatar qu'il avait déjà en cache. Une
+ * page de cent plans rechargeait donc cent JPEG à chaque navigation.
+ */
+export const PRESIGN_WINDOW_SECONDS = 600;
+
+/**
+ * Plafond d'URL mémorisées (éviction FIFO). Borne la mémoire d'un pic de listes : au-delà,
+ * on perd le bénéfice de cache sur les plus anciennes, jamais la justesse.
+ */
+export const PRESIGN_CACHE_MAX = 5000;
+
+/**
  * Abstraction du stockage objet (MinIO, S3-compatible).
  *
  * Principe v2 : aucun fichier ne touche le filesystem du serveur applicatif.
@@ -40,6 +55,13 @@ class StorageService {
   // Client séparé signant avec l'endpoint public (vu par le navigateur), souvent ≠ endpoint interne.
   private publicClient: S3Client;
   private bucket: string;
+  /**
+   * URL présignées de lecture déjà calculées pour la tranche en cours.
+   * On mémorise la promesse : deux listes concurrentes qui demandent la même vignette
+   * partagent la même signature au lieu d'en calculer deux.
+   */
+  private presignCache = new Map<string, { objectKey: string; url: Promise<string> }>();
+  private presignSlot = -1;
 
   constructor() {
     this.bucket = env.S3_BUCKET;
@@ -215,6 +237,7 @@ class StorageService {
         },
       }),
     );
+    this.forgetPresignedUrl(key);
   }
 
   async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
@@ -232,6 +255,7 @@ class StorageService {
         CopySource: `${this.bucket}/${encodeURIComponent(srcKey).replace(/%2F/g, '/')}`,
       }),
     );
+    this.forgetPresignedUrl(destKey);
   }
 
   /**
@@ -254,6 +278,7 @@ class StorageService {
         MetadataDirective: 'REPLACE',
       }),
     );
+    this.forgetPresignedUrl(key);
   }
 
   /**
@@ -264,14 +289,86 @@ class StorageService {
    * (pièces jointes, avatars, logo, PDF de documentation) : le type déposé y vient du
    * navigateur et n'est donc pas fiable. Le paramètre voyage dans la signature — le client
    * ne peut ni le retirer ni le changer sans invalider l'URL.
+   *
+   * L'URL est **stable pendant une tranche de `PRESIGN_WINDOW_SECONDS`** : à clé, type
+   * imposé et durée identiques, deux appels rendent la même chaîne, donc le navigateur
+   * réutilise son cache au lieu de retélécharger. La stabilité vaut aussi entre processus
+   * (API et worker) parce que la date de signature est épinglée au début de la tranche et
+   * non prise à l'instant de l'appel.
    */
   async getPresignedGetUrl(key: string, ttlSeconds = 3600, contentTypeOverride?: string): Promise<string> {
+    const slot = Math.floor(Date.now() / 1000 / PRESIGN_WINDOW_SECONDS);
+    // Changement de tranche : plus aucune de ces URL ne sera reproduite, on repart à vide.
+    if (slot !== this.presignSlot) {
+      this.presignCache.clear();
+      this.presignSlot = slot;
+    }
+    // Clé non ambiguë : un type imposé ou un nom de fichier peut contenir n'importe quel
+    // caractère, on sérialise donc les trois champs plutôt que de les coller bout à bout.
+    const cacheKey = JSON.stringify([ttlSeconds, contentTypeOverride ?? '', key]);
+    const hit = this.presignCache.get(cacheKey);
+    if (hit) return hit.url;
+
+    const url = this.signGetUrl(key, ttlSeconds, slot, contentTypeOverride);
+    this.presignCache.set(cacheKey, { objectKey: key, url });
+    // Une signature en échec ne doit pas rester mémorisée — et l'attente de ce rejet ici
+    // évite un « unhandled rejection » si l'appelant, lui, a déjà traité l'erreur.
+    void url.catch(() => {
+      if (this.presignCache.get(cacheKey)?.url === url) this.presignCache.delete(cacheKey);
+    });
+    while (this.presignCache.size > PRESIGN_CACHE_MAX) {
+      const oldest = this.presignCache.keys().next();
+      if (oldest.done) break;
+      this.presignCache.delete(oldest.value);
+    }
+    return url;
+  }
+
+  /**
+   * Signature d'une lecture, datée du début de la tranche `slot`.
+   *
+   * La validité demandée est majorée de la largeur de la tranche : une URL rendue à la
+   * toute fin d'une tranche reste valable au moins aussi longtemps que ce que l'appelant
+   * a demandé — la mémoïsation ne raccourcit donc jamais la durée de vie d'un lien.
+   */
+  private signGetUrl(
+    key: string,
+    ttlSeconds: number,
+    slot: number,
+    contentTypeOverride?: string,
+  ): Promise<string> {
     const cmd = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
       ...(contentTypeOverride ? { ResponseContentType: safeUploadContentType(contentTypeOverride) } : {}),
     });
-    return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
+    return getSignedUrl(this.publicClient, cmd, {
+      expiresIn: ttlSeconds + PRESIGN_WINDOW_SECONDS,
+      signingDate: new Date(slot * PRESIGN_WINDOW_SECONDS * 1000),
+    });
+  }
+
+  /**
+   * Oublie l'URL mémorisée d'un objet.
+   *
+   * À appeler après toute réécriture d'un objet **sous la même clé** faite hors de ce
+   * service — typiquement un dépôt navigateur par URL présignée (avatar, vignette
+   * d'entité). Sans cela, l'URL rendue resterait identique jusqu'à la fin de la tranche,
+   * donc le navigateur continuerait d'afficher l'ancienne image depuis son cache.
+   * Les écritures qui passent par ce service (`putObject`, `copyObject`,
+   * `setObjectContentType`, suppressions) s'oublient toutes seules.
+   */
+  forgetPresignedUrl(key: string): void {
+    for (const [cacheKey, entry] of this.presignCache) {
+      if (entry.objectKey === key) this.presignCache.delete(cacheKey);
+    }
+  }
+
+  /** Variante préfixe, pour les suppressions en masse (tout un média, toute une version). */
+  private forgetPresignedPrefix(prefix: string): void {
+    for (const [cacheKey, entry] of this.presignCache) {
+      if (entry.objectKey.startsWith(prefix)) this.presignCache.delete(cacheKey);
+    }
   }
 
   /**
@@ -294,6 +391,9 @@ class StorageService {
         ContentType: safeUploadContentType(contentType),
       }),
     );
+    // Le worker réécrit une miniature sous la même clé : sans cet oubli, la carte
+    // continuerait d'afficher l'ancienne image jusqu'à la fin de la tranche.
+    this.forgetPresignedUrl(key);
   }
 
   /** Lecture d'un objet en flux. */
@@ -344,6 +444,7 @@ class StorageService {
 
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    this.forgetPresignedUrl(key);
   }
 
   /** Itère tous les objets du bucket (clé + taille) — cartographie stockage (admin). */
@@ -381,6 +482,7 @@ class StorageService {
       }
       continuationToken = list.IsTruncated ? list.NextContinuationToken : undefined;
     } while (continuationToken);
+    this.forgetPresignedPrefix(prefix);
   }
 
   // ── Conventions de clés ────────────────────────────────────────────────────

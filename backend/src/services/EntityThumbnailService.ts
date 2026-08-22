@@ -63,6 +63,11 @@ export async function set(holder: ThumbnailHolder, id: number, key: string | nul
   if (key !== null) {
     const prefix = `entity-thumbs/${holder}/${id}.`;
     if (!key.startsWith(prefix)) throw badRequest('Thumbnail key does not match the entity', 'BAD_KEY');
+    // Le navigateur vient de déposer l'image directement dans MinIO, sous une clé qui ne
+    // dépend que de l'entité et de l'extension : remplacer une vignette réécrit donc le
+    // même objet. Il faut oublier l'URL mémorisée, sinon les cartes continueraient de
+    // servir l'ancienne image depuis le cache navigateur (URL inchangée).
+    storage.forgetPresignedUrl(key);
   }
   const data = { thumbnailKey: key };
   if (holder === 'sequence') await prisma.sequence.update({ where: { id }, data });
