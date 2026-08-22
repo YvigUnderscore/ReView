@@ -72,8 +72,10 @@ export default function ClientSharePage() {
   }
 
   const media = p.media ?? [];
+  // Le repli du libellé s'affiche dans le filigrane : il passe par `t()` comme le reste
+  // (il était écrit en français en dur — le détecteur AST ne lit pas dans les gabarits).
   const watermarkText = p.watermark?.enabled
-    ? `${p.label ?? 'Partage client'} — ${p.studio.name} — ${new Date().toLocaleDateString(intlLocale())}`
+    ? `${p.label ?? t('client.review')} — ${p.studio.name} — ${new Date().toLocaleDateString(intlLocale())}`
     : null;
 
   return (

@@ -1,25 +1,34 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Clock, Send } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { clientApi } from './clientApi';
+import ClientComments from './ClientComments';
+import ClientModel3DView from './ClientModel3DView';
+import ClientSplatView from './ClientSplatView';
+import ClientUnavailable from './ClientUnavailable';
+import ClientVideoPlayer from './ClientVideoPlayer';
+import { mediaTimeOf, playerTimeOf, toPlayerComments } from './clientViewerModel';
+import type { ClientMediaSource } from './clientTypes';
 import WatermarkOverlay from '../../components/WatermarkOverlay';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
+import { VIEWER_ZONE } from '../review/reviewTypes';
 import type { ClientComment, ClientMedia } from '../../types/api';
 import { useT } from '../../i18n';
 
-const fmtTime = (sec: number) => {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
-};
+/** Cadence de repli quand le partage n'annonce pas celle du média. */
+const FALLBACK_FPS = 24;
+/** Première frame de repli — même convention que le backend (`project.startFrame`). */
+const FALLBACK_START_FRAME = 1001;
 
-/** Lecteur épuré de la page client (35.D) : vidéo/image + commentaires visibles client. */
+/**
+ * Viewer de la page client (35.D) — **les quatre types de médias**, pas seulement la 2D.
+ * Vidéo et image gardent leur lecteur, la 3D et le splat montent les viewers de la review en
+ * lecture seule : ce que ReView sait faire de spécifique est désormais ce que le client voit.
+ * Le filigrane par spectateur (35.B) couvre les quatre.
+ */
 export default function ClientMediaViewer({
   token,
   media,
@@ -38,58 +47,64 @@ export default function ClientMediaViewer({
   const t = useT();
   const qc = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playable = media.kind === 'VIDEO' || media.kind === 'IMAGE';
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [fpsOverride, setFpsOverride] = useState<number | null>(null);
 
-  const urlQ = useQuery({
+  const sourceQ = useQuery({
     queryKey: ['client-share', token, 'media', media.id, 'url'],
-    queryFn: () => clientApi.get<{ url: string; slateSec?: number }>(token, `/media/${media.id}/url`),
-    enabled: playable,
+    queryFn: () => clientApi.get<ClientMediaSource>(token, `/media/${media.id}/url`),
     staleTime: 5 * 60 * 1000,
   });
+  const source = sourceQ.data;
   // Slate en tête du dérivé client (35.A) : les timestamps de commentaires restent exprimés
-  // dans le référentiel du média (sans slate) — on décale à l'envoi et au seek.
-  const slateSec = urlQ.data?.slateSec ?? 0;
+  // dans le référentiel du média — on décale à l'affichage, au seek et à l'envoi.
+  const slateSec = source?.slateSec ?? 0;
+
   const commentsQ = useQuery({
     queryKey: ['client-share', token, 'media', media.id, 'comments'],
     queryFn: () => clientApi.get<{ comments: ClientComment[] }>(token, `/media/${media.id}/comments`),
   });
-  const comments = commentsQ.data?.comments ?? [];
+  const comments = useMemo(() => commentsQ.data?.comments ?? [], [commentsQ.data]);
+  const playerComments = useMemo(() => toPlayerComments(comments, slateSec), [comments, slateSec]);
 
-  const [guestName, setGuestName] = useState(() => localStorage.getItem('client-guest-name') ?? '');
-  const [content, setContent] = useState('');
-  const [busy, setBusy] = useState(false);
+  const isVideo = media.kind === 'VIDEO';
+  const fps = fpsOverride ?? source?.fps ?? FALLBACK_FPS;
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!guestName.trim() || !content.trim()) return;
-    setBusy(true);
-    try {
-      localStorage.setItem('client-guest-name', guestName.trim());
-      const timestamp =
-        media.kind === 'VIDEO' && videoRef.current
-          ? Math.max(0, videoRef.current.currentTime - slateSec)
-          : undefined;
-      await clientApi.post(token, `/media/${media.id}/comments`, {
-        guestName: guestName.trim(),
-        content: content.trim(),
-        ...(timestamp !== undefined ? { timestamp } : {}),
-      });
-      setContent('');
-      toast.success(t('comments.sent'));
-      void qc.invalidateQueries({ queryKey: ['client-share', token, 'media', media.id, 'comments'] });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const seekMedia = useCallback(
+    (mediaSeconds: number) => {
+      const v = videoRef.current;
+      if (!v) return;
+      v.currentTime = playerTimeOf(mediaSeconds, slateSec);
+      void v.play().catch(() => undefined);
+    },
+    [slateSec],
+  );
 
-  const seek = (sec: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = sec + slateSec;
-      videoRef.current.play().catch(() => undefined);
-    }
-  };
+  const submitComment = useCallback(
+    async (guestName: string, content: string) => {
+      try {
+        localStorage.setItem('client-guest-name', guestName);
+        const timestamp =
+          isVideo && videoRef.current ? mediaTimeOf(videoRef.current.currentTime, slateSec) : undefined;
+        await clientApi.post(token, `/media/${media.id}/comments`, {
+          guestName,
+          content,
+          ...(timestamp !== undefined ? { timestamp } : {}),
+        });
+        toast.success(t('comments.sent'));
+        void qc.invalidateQueries({ queryKey: ['client-share', token, 'media', media.id, 'comments'] });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t('common.error.generic'));
+      }
+    },
+    [isVideo, media.id, qc, slateSec, t, token],
+  );
+
+  const watermark = watermarkText ? (
+    <WatermarkOverlay text={watermarkText} opacity={watermarkOpacity} />
+  ) : null;
+  const loading = sourceQ.isPending;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
@@ -100,86 +115,61 @@ export default function ClientMediaViewer({
         >
           <ArrowLeft size={15} /> {t('versions.allMedia')}
         </button>
-        <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/60">
-          {media.kind === 'VIDEO' && urlQ.data && (
-            <video
-              ref={videoRef}
-              src={urlQ.data.url}
-              // Sans mode CORS, l'ORB de Chrome bloque le mp4 presigné cross-origin (MinIO)
-              // en sous-ressource no-cors — découvert en vérification navigateur.
-              crossOrigin="anonymous"
-              controls
-              controlsList="nodownload"
-              className="max-h-[70vh] w-full"
-            />
-          )}
-          {media.kind === 'IMAGE' && urlQ.data && (
-            <img src={urlQ.data.url} alt={media.originalName} className="max-h-[70vh] object-contain" />
-          )}
-          {playable && !urlQ.data && (
-            <p className="p-10 text-sm text-muted-foreground">
-              {urlQ.error ? urlQ.error.message : t('common.loading')}
-            </p>
-          )}
-          {!playable && (
-            <p className="p-10 text-center text-sm text-muted-foreground">
-              {t('client.noPreview', { kind: media.kind })}
-              <br />
-              {t('client.contactStudio')}
-            </p>
-          )}
-          {watermarkText && <WatermarkOverlay text={watermarkText} opacity={watermarkOpacity} />}
-        </div>
+
+        {media.kind === 'MODEL_3D' ? (
+          <ClientModel3DView source={source} loading={loading} watermark={watermark} />
+        ) : media.kind === 'SPLAT' ? (
+          <ClientSplatView
+            source={source}
+            originalName={media.originalName}
+            loading={loading}
+            watermark={watermark}
+          />
+        ) : isVideo && source ? (
+          <ClientVideoPlayer
+            src={source.url}
+            videoRef={videoRef}
+            comments={playerComments}
+            selectedId={selectedId}
+            onSelectComment={(c) => {
+              setSelectedId(c.id);
+              if (c.timestamp != null) seekMedia(mediaTimeOf(c.timestamp, slateSec));
+            }}
+            onMarker={() => composerRef.current?.focus()}
+            fps={fps}
+            fpsDetected={source.fps != null}
+            setFpsOverride={setFpsOverride}
+            startFrame={source.startFrame ?? FALLBACK_START_FRAME}
+            watermark={watermark}
+          />
+        ) : (
+          <div className={VIEWER_ZONE}>
+            {media.kind === 'IMAGE' && source ? (
+              <img
+                src={source.url}
+                alt={media.originalName}
+                className="max-h-[70vh] max-w-full object-contain"
+              />
+            ) : sourceQ.error ? (
+              <ClientUnavailable />
+            ) : (
+              <p className="p-10 text-sm text-muted-foreground">{t('common.loading')}</p>
+            )}
+            {watermark}
+          </div>
+        )}
+
         <p className="mt-2 truncate text-sm text-muted-foreground">{media.originalName}</p>
       </div>
 
-      <aside className="flex w-full flex-col rounded-lg border border-border bg-card lg:w-80">
-        <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">{t('admin.tab.comments')}</h2>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-          {comments.length === 0 && <p className="text-sm text-muted-foreground">{t('comments.empty')}</p>}
-          {comments.map((c) => (
-            <div key={c.id} className="rounded-md bg-secondary/40 p-2.5 text-sm">
-              <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">
-                  {c.author?.name ?? c.guestName ?? t('comments.anonymous')}
-                </span>
-                {c.timestamp != null && media.kind === 'VIDEO' && (
-                  <button
-                    onClick={() => seek(c.timestamp!)}
-                    className="flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 text-primary hover:bg-primary/25"
-                  >
-                    <Clock size={11} /> {fmtTime(c.timestamp)}
-                  </button>
-                )}
-              </div>
-              {/* Contenu déjà assaini côté serveur (sanitizeHtml) — affiché en texte brut. */}
-              <p className="whitespace-pre-wrap break-words">{c.content.replace(/<[^>]+>/g, '')}</p>
-            </div>
-          ))}
-        </div>
-        {canComment && (
-          <form onSubmit={submit} className="space-y-2 border-t border-border p-3">
-            <Input
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              placeholder={t('setup.adminName')}
-              maxLength={80}
-              required
-            />
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={media.kind === 'VIDEO' ? t('client.commentAtFrame') : t('client.yourComment')}
-              rows={3}
-              maxLength={10000}
-              required
-            />
-            <Button type="submit" size="sm" disabled={busy} className="w-full">
-              <Send size={13} className="mr-1" /> {t('common.send')}
-            </Button>
-          </form>
-        )}
-      </aside>
+      <ClientComments
+        comments={comments}
+        canComment={canComment}
+        timed={isVideo}
+        onSeek={seekMedia}
+        onSubmit={submitComment}
+        composerRef={composerRef}
+      />
     </div>
   );
 }
