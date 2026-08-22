@@ -3,37 +3,30 @@
 
 import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
-import { api } from '../../lib/apiClient';
-import { qk } from '../lib/query';
 import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { useTheme } from '../stores/useTheme';
 import { parseIdParam } from '../lib/slug';
-import type { MediaRef } from '../types/api';
 import { useT } from '../i18n';
+import BoardLibrary, { type MediaLite } from './board/BoardLibrary';
+import { blobToDataURL } from './board/boardFiles';
+import { useBoardDocument } from './board/useBoardDocument';
+import type { BoardScope } from './board/boardApi';
 
 /**
  * Board mood/reference (Excalidraw, MIT) — un board par Projet et un par Asset (9.B).
- * Persistance API (sauvegarde debouncée + reload). Drag-drop d'images natif + insertion
- * depuis la bibliothèque média (médias publiés du projet).
+ * Le chargement, l'autosave et l'édition concurrente vivent dans `useBoardDocument` ; les
+ * images collées sont déposées dans MinIO plutôt qu'embarquées en base64 dans le document
+ * (cf. `board/boardFiles`). Drag-drop d'images natif + insertion depuis la bibliothèque
+ * média (médias publiés du projet).
  */
-type Scope = 'project' | 'asset';
-type MediaLite = MediaRef & { thumbnailUrl: string | null; url: string };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawApi = any;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const blobToDataURL = (b: Blob) =>
-  new Promise<string>((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result as string);
-    r.onerror = rej;
-    r.readAsDataURL(b);
-  });
 // Fichier Excalidraw construit hors du composant (règle react-hooks/purity : Date.now)
 const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
   id: fileId,
@@ -42,62 +35,15 @@ const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
   created: Date.now(),
 });
 
-export default function BoardPage({ scope }: { scope: Scope }) {
+export default function BoardPage({ scope }: { scope: BoardScope }) {
   const t = useT();
   const { id } = useParams();
   const theme = useTheme((s) => s.theme);
   const targetId = parseIdParam(id);
-  const base = `/api/boards/${scope}/${targetId}`;
-  const [saved, setSaved] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showLib, setShowLib] = useState(false);
+  const [insertError, setInsertError] = useState<string | null>(null);
   const apiRef = useRef<ExcalidrawApi>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Pas de cache (staleTime/gcTime 0) : Excalidraw ne lit `initialData` qu'au
-  // montage — servir un board périmé serait invisible pour l'utilisateur.
-  const boardQ = useQuery({
-    queryKey: qk.board(scope, targetId),
-    queryFn: () => api.get<{ board: { document: { elements?: unknown[]; files?: unknown } } }>(base),
-    staleTime: 0,
-    gcTime: 0,
-  });
-  const initial = boardQ.data
-    ? { elements: boardQ.data.board.document?.elements ?? [], files: boardQ.data.board.document?.files ?? {} }
-    : boardQ.isError
-      ? { elements: [], files: {} }
-      : null;
-  const loadError = boardQ.error?.message ?? null;
-
-  const save = (elements: readonly unknown[], _appState: unknown, files: unknown) => {
-    setSaved(false);
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      void (async () => {
-        try {
-          await api.put(base, { document: { elements, files } });
-          setSaved(true);
-        } catch (e) {
-          setError(e instanceof Error ? e.message : t('common.error.generic'));
-        }
-      })();
-    }, 1200);
-  };
-
-  // Bibliothèque d'images publiées : le projectId d'un board asset se résout via l'asset
-  const assetQ = useQuery({
-    queryKey: qk.asset(targetId),
-    queryFn: () => api.get<{ asset: { projectId: number } }>(`/api/assets/${targetId}`),
-    enabled: showLib && scope === 'asset',
-  });
-  const projectId = scope === 'project' ? targetId : assetQ.data?.asset.projectId;
-  const libraryQ = useQuery({
-    queryKey: qk.projectMedia(projectId ?? 0, 'IMAGE'),
-    queryFn: () =>
-      api.get<{ items: MediaLite[] }>(`/api/media?projectId=${projectId}&kind=IMAGE`).then((d) => d.items),
-    enabled: showLib && projectId != null,
-  });
-  const library = libraryQ.data ?? [];
+  const board = useBoardDocument(scope, targetId);
 
   const insert = async (m: MediaLite) => {
     const ex = apiRef.current;
@@ -112,16 +58,19 @@ export default function BoardPage({ scope }: { scope: Scope }) {
       ]);
       ex.updateScene({ elements: [...ex.getSceneElements(), ...els] });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('board.insertFailed'));
+      setInsertError(e instanceof Error ? e.message : t('board.insertFailed'));
     }
   };
 
+  const initial = board.initial;
   if (!initial)
     return (
       <PageShell title="Board">
         <p className="text-sm text-muted-foreground">{t('board.loading')}</p>
       </PageShell>
     );
+
+  const error = insertError ?? board.saveError ?? board.loadError;
 
   return (
     <PageShell
@@ -140,7 +89,7 @@ export default function BoardPage({ scope }: { scope: Scope }) {
             {t('board.mediaLibrary')}
           </button>
           <span className="text-xs text-muted-foreground">
-            {saved ? t('board.saved') : t('board.savingShort')}
+            {board.saved ? t('board.saved') : t('board.savingShort')}
           </span>
         </div>
         <Link
@@ -150,42 +99,34 @@ export default function BoardPage({ scope }: { scope: Scope }) {
           {t('common.back')}
         </Link>
       </div>
-      {(error ?? loadError) && <p className="mb-2 text-sm text-destructive">{error ?? loadError}</p>}
-      <div className="flex gap-3">
-        {showLib && (
-          <div
-            className="custom-scrollbar w-44 shrink-0 space-y-2 overflow-auto rounded-lg border border-border bg-card p-2"
-            style={{ height: '78vh' }}
+      {board.conflict && (
+        <div className="mb-2 flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+          <p className="text-sm text-foreground">{t('board.conflictMessage')}</p>
+          <button
+            onClick={board.reload}
+            className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted"
           >
-            <div className="text-xs font-medium text-muted-foreground">{t('board.publishedImages')}</div>
-            {library.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => insert(m)}
-                title={t('board.insert', { name: m.originalName })}
-                className="block w-full overflow-hidden rounded border border-border hover:border-primary"
-              >
-                {m.thumbnailUrl ? (
-                  <img src={m.thumbnailUrl} alt={m.originalName} className="h-20 w-full object-cover" />
-                ) : (
-                  <div className="flex h-20 items-center justify-center text-2xs text-muted-foreground">
-                    {m.originalName}
-                  </div>
-                )}
-              </button>
-            ))}
-            {library.length === 0 && (
-              <p className="text-xs text-muted-foreground">{t('board.noPublishedImage')}</p>
-            )}
-          </div>
-        )}
+            {t('board.conflictReload')}
+          </button>
+          <button
+            onClick={board.overwrite}
+            className="rounded-md border border-border px-3 py-1 text-sm hover:bg-muted"
+          >
+            {t('board.conflictOverwrite')}
+          </button>
+        </div>
+      )}
+      {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
+      <div className="flex gap-3">
+        {showLib && <BoardLibrary scope={scope} targetId={targetId} onInsert={(m) => void insert(m)} />}
         <div style={{ height: '78vh' }} className="flex-1 overflow-hidden rounded-lg border border-border">
           <Excalidraw
+            key={board.mountKey}
             excalidrawAPI={(a: ExcalidrawApi) => {
               apiRef.current = a;
             }}
             initialData={{ elements: initial.elements as never, files: initial.files as never }}
-            onChange={save}
+            onChange={board.onChange}
             theme={theme}
           />
         </div>
