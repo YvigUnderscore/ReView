@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { basename, dirname, extname, join, relative } from 'node:path';
 import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { inflateRawSync } from 'node:zlib';
 
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
@@ -56,15 +57,51 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-/**
- * Taux d'expansion maximal du format DEFLATE (~1032:1). Borne *physique*, contrairement à
- * `ARCHIVE_MAX_COMPRESSION_RATIO` qui est un réglage de politique : c'est elle qu'il faut
- * pour estimer le pire cas d'une entrée AVANT de la décompresser.
- */
-const DEFLATE_MAX_RATIO = 1032;
-
 /** Un fichier réellement vide tient en un bloc DEFLATE vide ; au-delà, la déclaration ment. */
 const EMPTY_ENTRY_MAX_COMPRESSED = 16;
+
+/** Méthodes de compression zip acceptées : 0 = stocké, 8 = DEFLATE. Le reste est refusé. */
+const METHOD_STORED = 0;
+const METHOD_DEFLATE = 8;
+
+/**
+ * Lit une entrée en **bornant la sortie à la taille déclarée**, sans jamais allouer davantage.
+ *
+ * C'est le point clé de la protection anti-bombe : la déclaration du catalogue ne sert pas de
+ * laissez-passer, elle sert de plafond. Une entrée qui annonce 16 octets et se détend en
+ * gigaoctets fait échouer `inflateRawSync` sur `maxOutputLength` — la mémoire du worker n'est
+ * jamais engagée au-delà de ce que le budget cumulé a déjà autorisé.
+ *
+ * Estimer le pire cas à `compressedSize × 1032` (taux d'expansion physique de DEFLATE) serait
+ * plus simple mais rejette tout fichier légitimement peu compressible : un PNG de 16 Mo stocké
+ * tel quel « pèserait » 16 Go et condamnerait l'archive entière.
+ */
+function readEntryBounded(entry: {
+  entryName: string;
+  header: { size: number; method: number };
+  getCompressedData: () => Buffer;
+}): Buffer {
+  const declared = Math.max(0, entry.header.size);
+  const raw = entry.getCompressedData();
+
+  if (entry.header.method === METHOD_STORED) {
+    if (raw.length !== declared)
+      throw new Error(
+        `Archive refusée : l'entrée « ${entry.entryName} » annonce ${declared} octets et en contient ${raw.length}`,
+      );
+    return raw;
+  }
+  if (entry.header.method !== METHOD_DEFLATE)
+    throw new Error(
+      `Archive refusée : l'entrée « ${entry.entryName} » utilise une compression non supportée (${entry.header.method})`,
+    );
+  if (declared === 0) {
+    // `maxOutputLength: 0` n'est pas une borne exploitable ; on borne à un octet et on refuse
+    // toute sortie non vide via la confrontation faite par l'appelant.
+    return inflateRawSync(raw, { maxOutputLength: 1 });
+  }
+  return inflateRawSync(raw, { maxOutputLength: declared });
+}
 
 /** Options d'exécution communes : timeout obligatoire, sortie bornée, pas de fenêtre Windows. */
 const runOpts = () => ({
@@ -513,22 +550,21 @@ export async function extractArchive(input: string, extractDir: string): Promise
       const declared = Math.max(0, entry.header.size);
       const compressed = Math.max(0, entry.header.compressedSize);
 
-      // ⚠ L'ordre compte. `getData()` décompresse l'entrée ENTIÈRE en mémoire avant qu'on
-      // puisse mesurer quoi que ce soit : confronter la taille réelle à la déclaration ne
-      // sert à rien si la déclaration a déjà servi de laissez-passer. Une entrée annonçant
-      // zéro octet passait ainsi tous les contrôles puis se détendait sans borne.
-      // On borne donc AVANT de décompresser, sur ce que le format autorise au pire.
+      // ⚠ L'ordre compte. Décompresser l'entrée ENTIÈRE puis mesurer ne sert à rien si la
+      // déclaration a déjà servi de laissez-passer : une entrée annonçant zéro octet
+      // franchissait ainsi le budget puis se détendait sans borne. On borne donc AVANT de
+      // décompresser — le budget cumulé sur la déclaration, la mémoire sur cette même
+      // déclaration (`readEntryBounded`), qui devient un plafond au lieu d'une promesse.
       if (declared === 0 && compressed > EMPTY_ENTRY_MAX_COMPRESSED)
         throw new Error(
           `Archive refusée : l'entrée « ${entry.entryName} » se déclare vide mais pèse ${compressed} octets compressés`,
         );
-      const worstCase = Math.max(declared, compressed * DEFLATE_MAX_RATIO);
-      if (written + worstCase > maxTotalBytes)
+      if (written + declared > maxTotalBytes)
         throw new Error(
-          describeRejection({ code: 'TOO_LARGE', limit: maxTotalBytes, actual: written + worstCase }),
+          describeRejection({ code: 'TOO_LARGE', limit: maxTotalBytes, actual: written + declared }),
         );
 
-      const data = entry.getData();
+      const data = readEntryBounded(entry);
       // La déclaration est un engagement : s'en écarter est la signature d'une bombe.
       if (data.length !== declared)
         throw new Error(
@@ -545,7 +581,7 @@ export async function extractArchive(input: string, extractDir: string): Promise
     // Extraction partielle = scène USD silencieusement incomplète : on efface tout.
     await rm(extractDir, { recursive: true, force: true }).catch(() => undefined);
     const e = err as { message?: string };
-    throw new Error(`Extracting the'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
+    throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
       cause: err,
     });
   }

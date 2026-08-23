@@ -54,7 +54,7 @@ describe('extractArchive', () => {
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-liar');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extracting the'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
   });
 
   // Variante la plus vicieuse : annoncer ZÉRO. La confrontation taille réelle / déclarée
@@ -70,7 +70,7 @@ describe('extractArchive', () => {
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-zero');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extracting the'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
     await expect(readdir(dest)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
@@ -82,6 +82,34 @@ describe('extractArchive', () => {
     const dest = join(dir, 'out-empty');
     await extractArchive(src, dest);
     expect((await readFile(join(dest, 'vide.txt'))).length).toBe(0);
+  });
+
+  // Régression : le pire cas était estimé à `compressedSize × 1032` (expansion physique de
+  // DEFLATE). Un fichier déjà compressé — un PNG de texture stocké tel quel — « pesait » alors
+  // mille fois son poids et faisait refuser l'archive entière : une scène glTF ordinaire avec
+  // ses textures était rejetée pour « contenu décompressé supérieur à 8192 Mo ».
+  it('accepte une entrée volumineuse et incompressible (texture stockée)', async () => {
+    const src = await archivePath('stored.zip', (zip) => {
+      // `Buffer` aléatoire : incompressible, donc stocké tel quel par adm-zip.
+      const noise = Buffer.alloc(12 * 1024 * 1024);
+      for (let i = 0; i < noise.length; i += 1) noise[i] = (i * 2654435761) % 251;
+      zip.addFile('textures/albedo.png', noise);
+      zip.addFile('scene.gltf', Buffer.from('{}'));
+    });
+    const dest = join(dir, 'out-stored');
+    await extractArchive(src, dest);
+    expect((await readFile(join(dest, 'textures/albedo.png'))).length).toBe(12 * 1024 * 1024);
+  });
+
+  it('refuse une méthode de compression non supportée', async () => {
+    const honest = new AdmZip();
+    honest.addFile('x.bin', Buffer.alloc(1024, 3));
+    const forged = new AdmZip(honest.toBuffer());
+    forged.getEntries()[0]!.header.method = 12; // bzip2 : hors de ce que nous savons borner
+    const src = join(dir, 'method.zip');
+    await writeFile(src, forged.toBuffer());
+
+    await expect(extractArchive(src, join(dir, 'out-method'))).rejects.toThrow(/compression non supportée/);
   });
 
   it('ne laisse aucune extraction partielle derrière un refus', async () => {
