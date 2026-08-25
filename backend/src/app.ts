@@ -47,6 +47,8 @@ import pipelineStatusesRoutes from './routes/pipeline-statuses.routes';
 import departmentsRoutes from './routes/departments.routes';
 import entityThumbnailsRoutes from './routes/entity-thumbnails.routes';
 import assignmentsRoutes from './routes/assignments.routes';
+import entityExtrasRoutes from './routes/entity-extras.routes';
+import visibilityRoutes from './routes/visibility.routes';
 import unsubscribeRoutes from './routes/unsubscribe.routes';
 import commentsRoutes from './routes/comments.routes';
 import boardsRoutes from './routes/boards.routes';
@@ -240,6 +242,10 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use('/api', entityThumbnailsRoutes);
   // Assignation (assets et plans) : même montage à la racine, deux préfixes.
   app.use('/api', assignmentsRoutes);
+  // Personnes responsables et fiche markdown d'une entité : quatre préfixes, racine aussi.
+  app.use('/api', entityExtrasRoutes);
+  // Masquage d'éléments (admin).
+  app.use('/api', visibilityRoutes);
   // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);

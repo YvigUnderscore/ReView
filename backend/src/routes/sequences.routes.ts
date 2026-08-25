@@ -17,8 +17,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
 import { MAX_PAGE_SIZE, paginate, pageArgs, paginationQuery, readPagination } from '../lib/pagination';
 import * as SequenceService from '../services/SequenceService';
-import * as PipelineStatusService from '../services/PipelineStatusService';
-import { enqueuePush } from '../services/shotgrid/ShotgridPushService';
+import { CARD_ASSIGNEE_SELECT, awaitingReviewBySequence } from '../lib/entityCardData';
 
 const router = Router();
 router.use(authenticate);
@@ -61,21 +60,29 @@ router.get(
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     const p = readPagination(req.query, { defaultPageSize: MAX_PAGE_SIZE });
-    const where = { projectId, deletedAt: null };
+    // `hiddenAt` : une séquence masquée disparaît de l'arbre comme des listes.
+    const where = { projectId, deletedAt: null, hiddenAt: null };
     const [sequences, total, unsequencedShots] = await Promise.all([
       prisma.sequence.findMany({
         where,
         // Départage sur `id` : les séquences importées partagent toutes `order = 0`.
         orderBy: [{ order: 'asc' }, { id: 'asc' }],
         ...pageArgs(p),
-        include: { _count: { select: { shots: true } } },
+        include: {
+          _count: { select: { shots: true } },
+          // Personnes responsables : la carte les montre en photos (comme un plan).
+          assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
+        },
       }),
       prisma.sequence.count({ where }),
-      prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null } }),
+      prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null, hiddenAt: null } }),
     ]);
     const { pageCount, hasMore } = paginate(sequences, total, p);
+    // Pastille « attend une review » : ce qui attend une séquence, ce sont les
+    // livraisons publiées de ses plans qu'aucune décision n'a encore tranchées.
+    const awaiting = await awaitingReviewBySequence(sequences.map((s) => s.id));
     res.json({
-      sequences,
+      sequences: sequences.map((s) => ({ ...s, awaitingReview: awaiting.get(s.id) ?? 0 })),
       unsequencedShots,
       total,
       page: p.page,
@@ -153,19 +160,8 @@ router.patch(
     const projectId = await resolveProjectIdForSequence(id);
     if (!projectId) throw notFound('Sequence not found');
     await assertProjectAccess(req, projectId);
-    await assertProjectWritable(projectId); // 38.B
     const body = req.body as z.infer<typeof sequencePatchBody>;
-    // Le statut doit appartenir au vocabulaire de CE projet, comme pour une tâche.
-    if (body.pipelineStatusId !== undefined) {
-      await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
-    }
-    const sequence = await prisma.sequence.update({ where: { id }, data: body });
-    // Le statut repart vers ShotGrid : sans cela, le site garde l'ancien et la
-    // synchronisation suivante ramène sa valeur, effaçant le changement.
-    if (body.pipelineStatusId !== undefined) {
-      await enqueuePush(projectId, { type: 'sequence-status', sequenceId: id, actorId: req.user!.id });
-    }
-    res.json({ sequence });
+    res.json({ sequence: await SequenceService.update(id, projectId, body, req.user!.id) });
   },
 );
 

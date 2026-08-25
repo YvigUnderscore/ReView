@@ -75,9 +75,9 @@ function versionScope(project: Prisma.ProjectWhereInput): Prisma.VersionWhereInp
   return {
     deletedAt: null,
     OR: [
-      { task: { shot: { deletedAt: null, project } } },
-      { task: { asset: { deletedAt: null, project } } },
-      { asset: { deletedAt: null, project } },
+      { task: { shot: { deletedAt: null, hiddenAt: null, project } } },
+      { task: { asset: { deletedAt: null, hiddenAt: null, project } } },
+      { asset: { deletedAt: null, hiddenAt: null, project } },
     ],
   };
 }
@@ -148,19 +148,19 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
       take: SEARCH_LIMITS.projects,
     }),
     prisma.sequence.findMany({
-      where: { deletedAt: null, project, OR: [{ name: contains }, { code: contains }] },
+      where: { deletedAt: null, hiddenAt: null, project, OR: [{ name: contains }, { code: contains }] },
       select: { id: true, code: true, name: true, projectId: true },
       orderBy: { id: 'desc' },
       take: SEARCH_LIMITS.sequences,
     }),
     prisma.shot.findMany({
-      where: { deletedAt: null, project, OR: [{ name: contains }, { code: contains }] },
+      where: { deletedAt: null, hiddenAt: null, project, OR: [{ name: contains }, { code: contains }] },
       select: { id: true, code: true, name: true, projectId: true },
       orderBy: { id: 'desc' },
       take: SEARCH_LIMITS.shots,
     }),
     prisma.asset.findMany({
-      where: { deletedAt: null, project, name: contains },
+      where: { deletedAt: null, hiddenAt: null, project, name: contains },
       select: { id: true, name: true, type: true, projectId: true },
       orderBy: { id: 'desc' },
       take: SEARCH_LIMITS.assets,
@@ -168,7 +168,10 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
     prisma.task.findMany({
       where: {
         name: contains,
-        OR: [{ shot: { deletedAt: null, project } }, { asset: { deletedAt: null, project } }],
+        OR: [
+          { shot: { deletedAt: null, hiddenAt: null, project } },
+          { asset: { deletedAt: null, hiddenAt: null, project } },
+        ],
       },
       select: { id: true, name: true, type: true, shotId: true, assetId: true },
       orderBy: { updatedAt: 'desc' },

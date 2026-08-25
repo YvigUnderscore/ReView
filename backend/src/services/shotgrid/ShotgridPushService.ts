@@ -38,6 +38,12 @@ export type PushJob =
   | { type: 'version-status'; versionId: number; actorId?: number | null }
   | { type: 'version-publish'; versionId: number; actorId?: number | null }
   | { type: 'asset-links'; assetId: number; actorId?: number | null }
+  | {
+      type: 'description';
+      kind: 'sequence' | 'shot' | 'asset';
+      id: number;
+      actorId?: number | null;
+    }
   | { type: 'comment'; commentId: number; actorId?: number | null }
   | { type: 'playlist'; playlistId: number; actorId?: number | null };
 
@@ -122,6 +128,7 @@ const JOB_DOMAIN: Record<PushJob['type'], 'tasks' | 'hierarchy' | 'versions' | '
   'shot-status': 'hierarchy',
   'sequence-status': 'hierarchy',
   'asset-links': 'hierarchy',
+  description: 'hierarchy',
   'version-status': 'versions',
   'version-publish': 'versions',
   comment: 'notes',
@@ -201,6 +208,9 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
         break;
       case 'asset-links':
         await pushAssetLinks(ctx, job);
+        break;
+      case 'description':
+        await pushDescription(ctx, job);
         break;
       case 'comment':
         await pushCommentJob(ctx, job);
@@ -331,6 +341,52 @@ async function pushSequenceStatus(ctx: PushContext, job: Extract<PushJob, { type
     { asUserLogin: await actorLogin(ctx, job.actorId) },
   );
   logger.info({ sequenceId: sequence.id, sgId, code }, 'Statut de séquence poussé vers ShotGrid');
+}
+
+/**
+ * Description ReView → ShotGrid, quand le studio a ouvert l'aller-retour.
+ *
+ * Deux verrous, et il en faut deux : le domaine `hierarchy` doit être ouvert en écriture
+ * (le réglage général), et `descriptions.writeBack` doit l'être aussi (le réglage précis).
+ * Le premier seul ne suffit pas — un studio peut vouloir renvoyer les statuts sans
+ * renvoyer les briefs, que sa production rédige côté site.
+ *
+ * Une description vidée dans ReView est envoyée comme chaîne vide, pas ignorée : effacer
+ * est une modification comme une autre, et ne rien envoyer laisserait le site afficher un
+ * texte que ReView ne montre plus.
+ */
+async function pushDescription(ctx: PushContext, job: Extract<PushJob, { type: 'description' }>) {
+  if (!can(ctx.settings, 'hierarchy', 'write')) return;
+  if (!ctx.settings.descriptions.writeBack) return;
+
+  const description = await readDescription(job.kind, job.id);
+  if (description === undefined) return;
+  const sgType = job.kind === 'sequence' ? 'Sequence' : job.kind === 'shot' ? 'Shot' : 'Asset';
+  const sgId = await resolveTarget(ctx, job.kind, job.id, sgType);
+  if (!sgId) return;
+
+  await ctx.client.update(
+    sgType,
+    sgId,
+    { description: description ?? '' },
+    { asUserLogin: await actorLogin(ctx, job.actorId) },
+  );
+  logger.info({ kind: job.kind, id: job.id, sgId }, 'Description poussée vers ShotGrid');
+}
+
+/** La description locale, ou `undefined` quand l'entité n'existe plus. */
+async function readDescription(
+  kind: 'sequence' | 'shot' | 'asset',
+  id: number,
+): Promise<string | null | undefined> {
+  const select = { description: true };
+  const row =
+    kind === 'sequence'
+      ? await prisma.sequence.findUnique({ where: { id }, select })
+      : kind === 'shot'
+        ? await prisma.shot.findUnique({ where: { id }, select })
+        : await prisma.asset.findUnique({ where: { id }, select });
+  return row?.description;
 }
 
 /** Décision de review ReView → statut de la Version ShotGrid. */

@@ -41,9 +41,9 @@ const accessWhere = (user: SessionUser): Prisma.ProjectWhereInput =>
 /** Sélecteur des versions rattachées à un projet accessible (3 chemins de rattachement). */
 const versionInAccess = (access: Prisma.ProjectWhereInput): Prisma.VersionWhereInput => ({
   OR: [
-    { task: { shot: { deletedAt: null, project: access } } },
-    { task: { asset: { deletedAt: null, project: access } } },
-    { asset: { deletedAt: null, project: access } },
+    { task: { shot: { deletedAt: null, hiddenAt: null, project: access } } },
+    { task: { asset: { deletedAt: null, hiddenAt: null, project: access } } },
+    { asset: { deletedAt: null, hiddenAt: null, project: access } },
   ],
 });
 
@@ -105,8 +105,8 @@ async function taskCountsByProject(
            ps."legacyStatus"::text AS "legacyStatus",
            COUNT(*)::int           AS "count"
     FROM "Task" t
-    LEFT JOIN "Shot" sh  ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL
-    LEFT JOIN "Asset" a  ON a.id  = t."assetId" AND a."deletedAt" IS NULL
+    LEFT JOIN "Shot" sh  ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL AND sh."hiddenAt" IS NULL
+    LEFT JOIN "Asset" a  ON a.id  = t."assetId" AND a."deletedAt" IS NULL AND a."hiddenAt" IS NULL
     LEFT JOIN "PipelineStatus" ps ON ps.id = t."pipelineStatusId"
     WHERE COALESCE(sh."projectId", a."projectId") IN (${Prisma.join(projectIds)})
     GROUP BY 1, 2, 3, 4, 5
@@ -135,12 +135,15 @@ export async function getDashboard(user: SessionUser) {
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
   // Tâche vivante rattachée à un projet accessible (les deux chemins de rattachement).
   const taskInAccess: Prisma.TaskWhereInput = {
-    OR: [{ shot: { deletedAt: null, project: access } }, { asset: { deletedAt: null, project: access } }],
+    OR: [
+      { shot: { deletedAt: null, hiddenAt: null, project: access } },
+      { asset: { deletedAt: null, hiddenAt: null, project: access } },
+    ],
   };
   const myTaskInProject: Prisma.TaskWhereInput = {
     OR: [
-      { shot: { deletedAt: null, project: { deletedAt: null } } },
-      { asset: { deletedAt: null, project: { deletedAt: null } } },
+      { shot: { deletedAt: null, hiddenAt: null, project: { deletedAt: null } } },
+      { asset: { deletedAt: null, hiddenAt: null, project: { deletedAt: null } } },
     ],
   };
 

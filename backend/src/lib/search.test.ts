@@ -89,9 +89,9 @@ describe('searchEntities — un ARTIST ne voit que ses projets', () => {
     expect(where.AND[0]).toEqual({
       deletedAt: null,
       OR: [
-        { task: { shot: { deletedAt: null, project: MEMBER_SCOPE } } },
-        { task: { asset: { deletedAt: null, project: MEMBER_SCOPE } } },
-        { asset: { deletedAt: null, project: MEMBER_SCOPE } },
+        { task: { shot: { deletedAt: null, hiddenAt: null, project: MEMBER_SCOPE } } },
+        { task: { asset: { deletedAt: null, hiddenAt: null, project: MEMBER_SCOPE } } },
+        { asset: { deletedAt: null, hiddenAt: null, project: MEMBER_SCOPE } },
       ],
     });
   });

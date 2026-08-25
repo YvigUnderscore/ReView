@@ -10,7 +10,8 @@ vi.mock('./ShotgridClient', () => ({ clientForSiteRecord: vi.fn() }));
 vi.mock('../JobService', () => ({ shotgridQueue: { add: vi.fn() } }));
 vi.mock('../StorageService', () => ({ storage: {}, StorageService: {} }));
 
-import { arbitrate, isRealConflict, statusPatch } from './ShotgridPullService';
+import { arbitrate, descriptionPatch, isRealConflict, statusPatch } from './ShotgridPullService';
+import type { PullContext } from './ShotgridPullService';
 
 const T = (iso: string) => new Date(iso);
 const SYNC = T('2026-08-20T10:00:00Z');
@@ -140,5 +141,29 @@ describe('arbitrate', () => {
   it('retombe sur ShotGrid quand la politique est absente ou inconnue', () => {
     expect(arbitrate(undefined)).toBe('overwrite');
     expect(arbitrate('nawak')).toBe('overwrite');
+  });
+});
+
+describe('descriptionPatch', () => {
+  /** Un contexte réduit à ce que la fonction lit : le réglage de source. */
+  const ctx = (source: 'shotgrid' | 'review') =>
+    ({ settings: { descriptions: { source, writeBack: false } } }) as unknown as PullContext;
+
+  it('recopie la description du site quand le site fait foi', () => {
+    expect(descriptionPatch(ctx('shotgrid'), 'Le héros entre par la gauche')).toEqual({
+      description: 'Le héros entre par la gauche',
+    });
+  });
+
+  it("traduit le vide du site en null plutôt qu'en chaîne vide", () => {
+    // Les deux cohabiteraient sinon dans la colonne, et « pas de description » cesserait
+    // d'être une question à laquelle on sait répondre.
+    expect(descriptionPatch(ctx('shotgrid'), '   ')).toEqual({ description: null });
+    expect(descriptionPatch(ctx('shotgrid'), null)).toEqual({ description: null });
+    expect(descriptionPatch(ctx('shotgrid'), undefined)).toEqual({ description: null });
+  });
+
+  it("n'écrit rien quand ReView fait foi — sinon l'import écraserait le brief local", () => {
+    expect(descriptionPatch(ctx('review'), 'texte du site')).toEqual({});
   });
 });

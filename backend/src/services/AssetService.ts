@@ -10,6 +10,7 @@ import {
   effectiveThumbnailUrl,
 } from '../lib/thumbnails';
 import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../lib/pagination';
+import { CARD_ASSIGNEE_SELECT, awaitingReviewByAsset } from '../lib/entityCardData';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /** Logique métier des assets. L'accès projet (RBAC) est asserté dans la route (10.D8). */
@@ -31,7 +32,8 @@ const DETAIL_LIMIT = 200;
  * d'unicité du modèle. Le curseur suit le couple `(name, id)`.
  */
 export async function list(projectId: number, p: PaginationParams) {
-  const where = { projectId, deletedAt: null };
+  // `hiddenAt` : un asset masqué n'apparaît dans aucune liste — cf. ShotService.list.
+  const where = { projectId, deletedAt: null, hiddenAt: null };
   const [assets, total] = await Promise.all([
     prisma.asset.findMany({
       where: withCursor(where, p, 'name', 'asc'),
@@ -55,16 +57,22 @@ export async function list(projectId: number, p: PaginationParams) {
             assignee: { select: { id: true, name: true } },
           },
         },
+        assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
       },
     }),
     prisma.asset.count({ where }),
   ]);
   // Requête groupée (B3) — cf. ShotService.list.
-  const fallbacks = await firstMediaThumbKeysForAssets(assets.map((a) => a.id));
+  const ids = assets.map((a) => a.id);
+  const [fallbacks, awaiting] = await Promise.all([
+    firstMediaThumbKeysForAssets(ids),
+    awaitingReviewByAsset(ids),
+  ]);
   const items = await Promise.all(
     assets.map(async (a) => ({
       ...a,
       thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, fallbacks.get(a.id) ?? null),
+      awaitingReview: awaiting.get(a.id) ?? 0,
     })),
   );
   return paginateCursor(items, total, p, (a) => a.name);
@@ -82,8 +90,11 @@ export async function getDetail(id: number) {
         take: DETAIL_LIMIT,
         include: { assignee: { select: { id: true, name: true } } },
       },
-      shots: { where: { deletedAt: null }, select: { id: true, code: true, name: true, sequenceId: true } },
-      sequences: { where: { deletedAt: null }, select: { id: true, code: true, name: true } },
+      shots: {
+        where: { deletedAt: null, hiddenAt: null },
+        select: { id: true, code: true, name: true, sequenceId: true },
+      },
+      sequences: { where: { deletedAt: null, hiddenAt: null }, select: { id: true, code: true, name: true } },
       // Départements traversés (B1) : le panneau de réglages les coche (C3).
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
@@ -154,8 +165,11 @@ export async function update(projectId: number, id: number, body: UpdateAssetInp
       ...(sequenceIds ? { sequences: { set: sequenceIds.map((sid) => ({ id: sid })) } } : {}),
     },
     include: {
-      shots: { where: { deletedAt: null }, select: { id: true, code: true, name: true, sequenceId: true } },
-      sequences: { where: { deletedAt: null }, select: { id: true, code: true, name: true } },
+      shots: {
+        where: { deletedAt: null, hiddenAt: null },
+        select: { id: true, code: true, name: true, sequenceId: true },
+      },
+      sequences: { where: { deletedAt: null, hiddenAt: null }, select: { id: true, code: true, name: true } },
     },
   });
   // 48 : les rattachements remontent à ShotGrid, qui porte ces liens sur l'asset.

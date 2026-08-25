@@ -41,7 +41,14 @@ export interface Candidate {
 
 function ownedByProject(projectId: number): Prisma.VersionWhereInput {
   return {
-    OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
+    // `hiddenAt` : le travail d'un élément masqué ne se propose pas aux dailies. Sans ce
+    // filtre, un plan retiré de tous les écrans réapparaissait dans le choix des versions
+    // d'une playlist — c'est-à-dire à la projection, devant le client.
+    OR: [
+      { task: { shot: { projectId, hiddenAt: null } } },
+      { task: { asset: { projectId, hiddenAt: null } } },
+      { asset: { projectId, hiddenAt: null } },
+    ],
   };
 }
 

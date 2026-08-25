@@ -119,7 +119,9 @@ describe('getDetail', () => {
     };
     expect(include.shots.take).toBe(500);
     expect(include.assets.take).toBe(500);
-    expect(include._count).toEqual({ select: { shots: { where: { deletedAt: null } } } });
+    expect(include._count).toEqual({
+      select: { shots: { where: { deletedAt: null, hiddenAt: null } } },
+    });
   });
 
   it('départage l’ordre des plans par id', async () => {

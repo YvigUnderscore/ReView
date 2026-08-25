@@ -5,17 +5,10 @@
 #
 # Prérequis :
 #   - Certificats TLS dans ./nginx/certs/ (fullchain.pem + privkey.pem)
-#     (ex. Certbot : /etc/letsencrypt/live/<domaine>/ ; auto-signés possibles pour un essai)
-#   - .env renseigné avec des secrets forts (voir .env.example) — les variables critiques
-#     sont REQUISES ici (${VAR:?…} : compose refuse de démarrer sans) et re-vérifiées par
-#     backend/config/env.ts qui refuse les valeurs faibles/défaut en production (10.D5).
+#   - .env renseigné avec des secrets forts (voir .env.example)
 #
-# Ce fichier :
-#   - Ajoute nginx en reverse-proxy HTTPS devant frontend + backend + MinIO
-#   - Retire TOUS les ports hôte de frontend/backend/minio (`!reset` — compose ≥ 2.24) :
-#     seul nginx est exposé ; MinIO est servi via https://<domaine>/<bucket>/…
-#     (poser S3_PUBLIC_ENDPOINT=https://<domaine>) ; console MinIO accessible
-#     uniquement par tunnel ssh/VPN.
+# Ce fichier ajoute nginx en reverse-proxy HTTPS devant frontend + backend + MinIO, et
+# retire TOUS les ports hôte de frontend/backend/minio (`!reset` — compose ≥ 2.24).
 services:
   # ── Nginx reverse-proxy TLS (seul service exposé) ───────────────────────────
   nginx:
@@ -33,9 +26,6 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
-    # Même rotation que les services du fichier de base : les ancres YAML ne traversent
-    # pas les fichiers compose, le bloc est donc redonné ici. Le journal d'accès de nginx
-    # est le plus bavard de la pile — c'est celui qui saturerait le pool en premier.
     logging:
       driver: json-file
       options:

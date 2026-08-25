@@ -20,8 +20,9 @@ type Draft = Pick<Media, 'id' | 'originalName' | 'kind' | 'status'> & {
 };
 
 /**
- * Pastille flottante « Brouillons en attente » (bas-gauche). Liste les médias non
- * publiés de l'utilisateur courant ; permet de les publier ou supprimer rapidement.
+ * Pastille « Brouillons en attente » posée dans la barre du haut, à gauche de la
+ * recherche. Liste les médias non publiés de l'utilisateur courant ; permet de les
+ * publier ou supprimer rapidement depuis un panneau ancré sous la pastille.
  */
 export default function PendingDrafts() {
   const t = useT();
@@ -70,9 +71,17 @@ export default function PendingDrafts() {
   if (drafts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-40">
-      {open ? (
-        <div className="flex max-h-[60vh] w-80 flex-col rounded-lg border border-border bg-card shadow-xl">
+    <div className="relative shrink-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title={t('drafts.title')}
+        className="flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3 py-1.5 text-sm text-warning transition-colors hover:bg-warning/25"
+      >
+        <FileClock size={16} />
+        <span className="hidden sm:inline">{t('drafts.count', { count: drafts.length })}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 flex max-h-[60vh] w-80 flex-col rounded-lg border border-border bg-card shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <FileClock size={15} className="text-warning" /> {t('drafts.title')}
@@ -127,14 +136,6 @@ export default function PendingDrafts() {
             ))}
           </div>
         </div>
-      ) : (
-        <button
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3 py-2 text-sm text-warning shadow-lg backdrop-blur transition-colors hover:bg-warning/25"
-        >
-          <FileClock size={16} />
-          {t('drafts.count', { count: drafts.length })}
-        </button>
       )}
     </div>
   );

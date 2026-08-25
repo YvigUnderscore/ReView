@@ -191,6 +191,7 @@ export default function Shell() {
           )}
           {/* Titre / fil d'Ariane projeté par la page courante (PageShell). */}
           <div ref={headerRef} className="flex min-w-0 flex-1 items-center gap-3" />
+          <PendingDrafts />
           {/* Recherche permanente (12.D) : ouvre la palette Ctrl+K. Réduite à une icône en
               fenêtre étroite — un champ de 20rem y mangerait le fil d'Ariane. */}
           {narrow ? (
@@ -250,7 +251,6 @@ export default function Shell() {
       <ContextMenuGuard />
       <OnboardingTour />
       <UploadWidget />
-      <PendingDrafts />
       {/* Conversation ouverte : ancrée au bord de la sidebar, elle survit à la navigation. */}
       <ChatDock sidebarHidden={sidebarHidden} />
     </div>

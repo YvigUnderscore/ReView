@@ -401,6 +401,25 @@ async function arbitrateConflict(
  * - code connu        → on écrit le statut.
  * - code inconnu      → **rien** : on garde la valeur locale, et on le dit au journal.
  */
+/**
+ * La description reçue du site, quand c'est lui qui fait foi.
+ *
+ * Elle était demandée dans `SEQUENCE_FIELDS` et `SHOT_FIELDS` depuis toujours, puis jetée :
+ * seul l'asset l'écrivait. Un plan importé de ShotGrid arrivait donc sans son brief, et la
+ * production le ressaisissait à la main dans ReView — pour le voir diverger aussitôt.
+ *
+ * Quand le studio a choisi que ReView fasse foi (`descriptions.source = 'review'`), on
+ * n'écrit rien : recopier écraserait ce qu'un superviseur vient d'y écrire.
+ *
+ * Le vide du site est traduit en `null` plutôt qu'en chaîne vide — c'est ce que porte la
+ * colonne quand personne n'a rien écrit, et les deux ne doivent pas cohabiter.
+ */
+export function descriptionPatch(ctx: PullContext, raw: unknown): { description?: string | null } {
+  if (ctx.settings.descriptions.source !== 'shotgrid') return {};
+  const value = asString(raw);
+  return { description: value && value.trim() ? value : null };
+}
+
 export function statusPatch(
   statusCode: string | null | undefined,
   statuses: Map<string, PipelineStatus>,
@@ -480,6 +499,7 @@ export async function pullSequences(
       code: localCode,
       ...(fullPass ? { order: index } : {}),
       projectId: ctx.connection.projectId,
+      ...descriptionPatch(ctx, record.description),
       ...seqStatus.patch,
       deletedAt: null,
     };
@@ -569,6 +589,7 @@ export async function pullShots(
       startFrame: cutIn,
       endFrame: cutOut,
       ...(fullPass ? { order: index } : {}),
+      ...descriptionPatch(ctx, record.description),
       ...shotStatus.patch,
       deletedAt: null,
     };
@@ -625,7 +646,11 @@ export async function pullShots(
 
 // ───────────────────────────── Assets ─────────────────────────────
 
-export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
+export async function pullAssets(
+  ctx: PullContext,
+  statuses: Map<string, PipelineStatus> = new Map(),
+  options: PullOptions = {},
+) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Asset', ASSET_FIELDS, options);
   if (!options.since && !options.onlySgIds)
@@ -653,13 +678,17 @@ export async function pullAssets(ctx: PullContext, options: PullOptions = {}) {
     });
 
     const sgType = asString(record.sg_asset_type);
+    const statusCode = asString(record.sg_status_list);
+    const assetStatus = statusPatch(statusCode, statuses);
+    await noteUnknownStatus(ctx, 'asset', assetStatus.unknownCode, localName);
     const data = {
       projectId: ctx.connection.projectId,
       name: localName,
       // L'énumération sert aux filtres ; le libellé exact du studio est ce qui s'affiche.
       type: sgAssetType(sgType),
       typeLabel: sgType,
-      description: asString(record.description),
+      ...descriptionPatch(ctx, record.description),
+      ...assetStatus.patch,
       deletedAt: null,
     };
     const saved = existing

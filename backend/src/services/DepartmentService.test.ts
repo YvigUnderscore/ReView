@@ -90,7 +90,9 @@ describe('listForProject', () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 3 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never);
     const list = await listForProject(7);
-    expect(list).toEqual([dept()]);
+    // `imageUrl` accompagne désormais chaque département : la liste est signée une fois
+    // pour toutes plutôt qu'une requête par pastille affichée.
+    expect(list).toEqual([{ ...dept(), imageUrl: null }]);
     expect(prisma.department.findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({ where: { studioId: 3, projectId: null, deletedAt: null } }),
     );

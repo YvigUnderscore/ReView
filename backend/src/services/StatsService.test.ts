@@ -385,6 +385,8 @@ describe('StatsService — getProjectStats', () => {
     expect(vi.mocked(prisma.sequence.findMany).mock.calls[0]![0]!.where).toEqual({
       projectId: 42,
       deletedAt: null,
+      // Une séquence masquée ne compte pas dans les statistiques du projet.
+      hiddenAt: null,
     });
   });
 

@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { db, thumbs } = vi.hoisted(() => ({
   db: {
     shot: { findMany: vi.fn(), count: vi.fn() },
+    // Pastille « attend une review » : un agrégat SQL groupé pour la page entière.
+    $queryRaw: vi.fn(),
   },
   thumbs: {
     firstMediaThumbKeysForShots: vi.fn(),
@@ -31,6 +33,7 @@ const page = { page: 1, pageSize: 100, order: 'desc' as const };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  db.$queryRaw.mockResolvedValue([]);
   db.shot.findMany.mockResolvedValue([
     {
       id: 7,
@@ -95,7 +98,9 @@ describe('ShotService.list — pagination de deux mille plans', () => {
       { OR: [{ order: { gt: 0 } }, { AND: [{ order: 0 }, { id: { gt: 812 } }] }] },
     ]);
     // Le total reste celui du projet entier : c'est lui qu'affiche « 2 000 plans ».
-    expect(db.shot.count).toHaveBeenCalledWith({ where: { projectId: 461, deletedAt: null } });
+    expect(db.shot.count).toHaveBeenCalledWith({
+      where: { projectId: 461, deletedAt: null, hiddenAt: null },
+    });
   });
 
   it('rend un curseur de suite quand la page est pleine', async () => {

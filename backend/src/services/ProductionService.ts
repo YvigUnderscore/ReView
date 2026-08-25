@@ -297,7 +297,12 @@ const familyOfAggregate = (row: StatusColumns & { status: TaskStatus }): FamilyO
 
 /** Une tâche appartient au projet par son plan OU par son asset — jamais les deux. */
 const taskInProject = (projectId: number): Prisma.TaskWhereInput => ({
-  OR: [{ shot: { projectId, deletedAt: null } }, { asset: { projectId, deletedAt: null } }],
+  // Le travail d'un élément masqué ne compte plus dans les statistiques de production :
+  // il fausserait l'avancement d'un projet avec des plans que personne ne voit.
+  OR: [
+    { shot: { projectId, deletedAt: null, hiddenAt: null } },
+    { asset: { projectId, deletedAt: null, hiddenAt: null } },
+  ],
 });
 
 const attentionSelect = {
@@ -378,8 +383,8 @@ function queryMatrix(projectId: number): Promise<MatrixAggregate[]> {
            ps."legacyStatus"::text AS "legacyStatus",
            COUNT(*)::int          AS "count"
     FROM "Task" t
-    LEFT JOIN "Shot" sh  ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL
-    LEFT JOIN "Asset" a  ON a.id  = t."assetId" AND a."deletedAt" IS NULL
+    LEFT JOIN "Shot" sh  ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL AND sh."hiddenAt" IS NULL
+    LEFT JOIN "Asset" a  ON a.id  = t."assetId" AND a."deletedAt" IS NULL AND a."hiddenAt" IS NULL
     LEFT JOIN "PipelineStatus" ps ON ps.id = t."pipelineStatusId"
     WHERE sh."projectId" = ${projectId} OR a."projectId" = ${projectId}
     GROUP BY 1, 2, 3, 4, 5, 6
@@ -406,8 +411,8 @@ function queryWorkload(projectId: number, now: Date): Promise<WorkloadAggregate[
              WHERE t."dueDate" IS NOT NULL AND t."dueDate" < ${now.toISOString()}::timestamp
            )::int AS "overdue"
     FROM "Task" t
-    LEFT JOIN "Shot" sh  ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL
-    LEFT JOIN "Asset" a  ON a.id  = t."assetId" AND a."deletedAt" IS NULL
+    LEFT JOIN "Shot" sh  ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL AND sh."hiddenAt" IS NULL
+    LEFT JOIN "Asset" a  ON a.id  = t."assetId" AND a."deletedAt" IS NULL AND a."hiddenAt" IS NULL
     LEFT JOIN "User" u   ON u.id  = t."assigneeId"
     LEFT JOIN "PipelineStatus" ps ON ps.id = t."pipelineStatusId"
     WHERE sh."projectId" = ${projectId} OR a."projectId" = ${projectId}
@@ -426,9 +431,9 @@ function queryPace(projectId: number, since: Date): Promise<WeekPoint[]> {
     FROM "MediaObject" m
     JOIN "Version" v      ON v.id = m."versionId"
     LEFT JOIN "Task" t    ON t.id = v."taskId"
-    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"
-    LEFT JOIN "Asset" ta  ON ta.id = t."assetId"
-    LEFT JOIN "Asset" va  ON va.id = v."assetId"
+    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"  AND sh."hiddenAt" IS NULL
+    LEFT JOIN "Asset" ta  ON ta.id = t."assetId" AND ta."hiddenAt" IS NULL
+    LEFT JOIN "Asset" va  ON va.id = v."assetId" AND va."hiddenAt" IS NULL
     WHERE m.published = true
       AND m."deletedAt" IS NULL
       AND m."createdAt" >= ${since.toISOString()}::timestamp
@@ -448,7 +453,7 @@ export async function getOverview(
     queryMatrix(projectId),
     queryWorkload(projectId, now),
     prisma.sequence.findMany({
-      where: { projectId, deletedAt: null },
+      where: { projectId, deletedAt: null, hiddenAt: null },
       orderBy: { order: 'asc' },
       select: { id: true, code: true },
     }),

@@ -523,6 +523,15 @@ class StorageService {
   static entityThumbnailKey(holder: 'sequence' | 'shot' | 'asset', id: number, ext: string): string {
     return `entity-thumbs/${holder}/${id}${ext}`;
   }
+
+  /**
+   * Image d'un département. Même forme de clé, même préfixe réservé : elle ne dépend
+   * que de l'identifiant et de l'extension, donc remplacer l'image réécrit le même
+   * objet — et le client ne peut pas faire pointer un département ailleurs.
+   */
+  static departmentImageKey(id: number, ext: string): string {
+    return `entity-thumbs/department/${id}${ext}`;
+  }
 }
 
 export const storage = new StorageService();

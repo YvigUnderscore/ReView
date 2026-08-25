@@ -66,8 +66,10 @@ export interface EpisodeSettings {
 export async function readSettings(projectId: number): Promise<EpisodeSettings> {
   const [project, episodeCount, linkedSequenceCount] = await Promise.all([
     prisma.project.findUnique({ where: { id: projectId }, select: { episodesEnabled: true } }),
-    prisma.episode.count({ where: { projectId, deletedAt: null } }),
-    prisma.sequence.count({ where: { projectId, deletedAt: null, episodeId: { not: null } } }),
+    prisma.episode.count({ where: { projectId, deletedAt: null, hiddenAt: null } }),
+    prisma.sequence.count({
+      where: { projectId, deletedAt: null, hiddenAt: null, episodeId: { not: null } },
+    }),
   ]);
   if (!project) throw notFound('Project not found');
   return { enabled: project.episodesEnabled, episodeCount, linkedSequenceCount };
@@ -83,7 +85,8 @@ export async function setEnabled(projectId: number, enabled: boolean): Promise<E
 
 /** Liste paginée des épisodes d'un projet, triée comme les séquences (`order`, puis `id`). */
 export async function list(projectId: number, p: PaginationParams) {
-  const where = { projectId, deletedAt: null };
+  // `hiddenAt` : un épisode masqué disparaît des listes — cf. ShotService.list.
+  const where = { projectId, deletedAt: null, hiddenAt: null };
   const [episodes, total] = await Promise.all([
     prisma.episode.findMany({
       where,
@@ -91,7 +94,9 @@ export async function list(projectId: number, p: PaginationParams) {
       // départage la page 2 réafficherait des lignes de la page 1.
       orderBy: [{ order: 'asc' }, { id: 'asc' }],
       ...pageArgs(p),
-      include: { _count: { select: { sequences: { where: { deletedAt: null } } } } },
+      include: {
+        _count: { select: { sequences: { where: { deletedAt: null, hiddenAt: null } } } },
+      },
     }),
     prisma.episode.count({ where }),
   ]);
@@ -99,7 +104,7 @@ export async function list(projectId: number, p: PaginationParams) {
   // Séquences du projet qu'aucun épisode ne réclame : un découpage en cours en laisse
   // toujours, et les taire ferait croire que le projet est vide.
   const unassignedSequences = await prisma.sequence.count({
-    where: { projectId, deletedAt: null, episodeId: null },
+    where: { projectId, deletedAt: null, hiddenAt: null, episodeId: null },
   });
   return { episodes, unassignedSequences, total, page: p.page, pageSize: p.pageSize, pageCount, hasMore };
 }
@@ -110,18 +115,20 @@ export async function getDetail(id: number) {
     where: { id },
     include: {
       sequences: {
-        where: { deletedAt: null },
+        where: { deletedAt: null, hiddenAt: null },
         orderBy: [{ order: 'asc' }, { code: 'asc' }, { id: 'asc' }],
         take: DETAIL_LIMIT,
-        include: { _count: { select: { shots: { where: { deletedAt: null } } } } },
+        include: {
+          _count: { select: { shots: { where: { deletedAt: null, hiddenAt: null } } } },
+        },
       },
-      _count: { select: { sequences: { where: { deletedAt: null } } } },
+      _count: { select: { sequences: { where: { deletedAt: null, hiddenAt: null } } } },
     },
   });
   if (!episode) throw notFound('Episode not found');
 
   const shots = await prisma.shot.findMany({
-    where: { deletedAt: null, sequence: { episodeId: id, deletedAt: null } },
+    where: { deletedAt: null, hiddenAt: null, sequence: { episodeId: id, deletedAt: null } },
     orderBy: [{ sequenceId: 'asc' }, { order: 'asc' }, { id: 'asc' }],
     take: DETAIL_LIMIT,
     select: {

@@ -21,6 +21,7 @@ const { db, services } = vi.hoisted(() => ({
     shotUpdate: vi.fn(),
     assetUpdate: vi.fn(),
     projectUpdate: vi.fn(),
+    sequenceUpdate: vi.fn(),
   },
 }));
 
@@ -66,7 +67,7 @@ vi.mock('../lib/thumbnails', () => ({
 vi.mock('../services/ShotService', () => ({ update: services.shotUpdate }));
 vi.mock('../services/AssetService', () => ({ update: services.assetUpdate }));
 vi.mock('../services/ProjectService', () => ({ updateProject: services.projectUpdate }));
-vi.mock('../services/SequenceService', () => ({}));
+vi.mock('../services/SequenceService', () => ({ update: services.sequenceUpdate }));
 vi.mock('../services/PipelineLatestService', () => ({}));
 vi.mock('../services/PipelineStatusService', () => ({ assertBelongsToProject: vi.fn() }));
 vi.mock('../services/shotgrid/ShotgridGuardService', () => ({ assertLocalCreationAllowed: vi.fn() }));
@@ -119,9 +120,11 @@ describe('PATCH d’entité — la vignette ne se choisit pas par la clé', () =
   it('PATCH /api/sequences/:id écrit le nom, jamais la clé reçue', async () => {
     const res = await request(app).patch('/api/sequences/1').send({ name: 'SQ01', thumbnailKey: STOLEN });
     expect(res.status).toBe(200);
-    const args = db.sequence.update.mock.calls[0]![0] as { data: Record<string, unknown> };
-    expect(args.data).toEqual({ name: 'SQ01' });
-    expect(args.data).not.toHaveProperty('thumbnailKey');
+    // Le corps passe désormais par `SequenceService.update` : c'est là qu'on vérifie ce
+    // que la route a laissé entrer, la porte à garder n'ayant pas changé de place.
+    const body = services.sequenceUpdate.mock.calls[0]![2] as Record<string, unknown>;
+    expect(body).toEqual({ name: 'SQ01' });
+    expect(body).not.toHaveProperty('thumbnailKey');
   });
 
   it('PATCH /api/projects/:projectId écrit le nom, jamais la clé reçue', async () => {

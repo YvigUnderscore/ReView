@@ -1,10 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
+import { assertProjectWritable } from '../lib/projectGuard';
+import * as PipelineStatusService from './PipelineStatusService';
+import { assertDescriptionWritable } from './shotgrid/ShotgridGuardService';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { effectiveThumbnailUrl, firstMediaThumbKeysForShots } from '../lib/thumbnails';
 import { storage } from './StorageService';
+import { CARD_ASSIGNEE_SELECT } from '../lib/entityCardData';
 
 /**
  * Logique métier des séquences (C3).
@@ -84,30 +90,76 @@ export async function createBulk(projectId: number, items: BulkSequenceItem[]) {
   );
 }
 
+/** Ce qu'un PATCH de séquence peut porter — la route l'a déjà validé (Zod). */
+export interface UpdateSequenceInput {
+  name?: string;
+  code?: string;
+  order?: number;
+  episodeId?: number | null;
+  description?: string | null;
+  pipelineStatusId?: number | null;
+  settings?: Prisma.InputJsonValue;
+}
+
+/**
+ * Modifie une séquence, avec les deux allers-retours ShotGrid qu'elle entraîne.
+ *
+ * La route se contentait d'écrire en base : le statut restait local — le site gardait
+ * l'ancien et la synchronisation suivante ramenait sa valeur, si bien que le changement
+ * s'annulait tout seul — et la description n'était protégée par rien.
+ */
+export async function update(
+  id: number,
+  projectId: number,
+  body: UpdateSequenceInput,
+  actorId?: number | null,
+) {
+  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+  // La description peut être tenue par ShotGrid : l'écrire ici la ferait diverger jusqu'à
+  // ce que la synchronisation suivante l'écrase, sans rien dire à personne.
+  if (body.description !== undefined) await assertDescriptionWritable(projectId);
+  // Le statut doit venir du vocabulaire de CE projet, comme pour une tâche.
+  if (body.pipelineStatusId !== undefined) {
+    await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
+  }
+  const sequence = await prisma.sequence.update({ where: { id }, data: body });
+  if (body.pipelineStatusId !== undefined) {
+    await enqueuePush(projectId, { type: 'sequence-status', sequenceId: id, actorId });
+  }
+  if (body.description !== undefined) {
+    await enqueuePush(projectId, { type: 'description', kind: 'sequence', id, actorId });
+  }
+  return sequence;
+}
+
 /** Fiche complète d'une séquence : ses plans, ses assets, sa vignette, ses départements. */
 export async function getDetail(id: number) {
   const sequence = await prisma.sequence.findUnique({
     where: { id },
     include: {
       shots: {
-        where: { deletedAt: null },
+        where: { deletedAt: null, hiddenAt: null },
         // `id` en dernier départage : les plans d'un import partagent `order = 0`, et le
         // code ne suffit pas quand deux séquences fusionnées portent la même numérotation.
         orderBy: [{ order: 'asc' }, { code: 'asc' }, { id: 'asc' }],
         take: DETAIL_LIMIT,
         include: {
           _count: { select: { tasks: true } },
-          assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
+          assets: {
+            where: { deletedAt: null, hiddenAt: null },
+            select: { id: true, name: true, type: true },
+          },
         },
       },
       assets: {
-        where: { deletedAt: null },
+        where: { deletedAt: null, hiddenAt: null },
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
         take: DETAIL_LIMIT,
         select: { id: true, name: true, type: true, typeLabel: true, thumbnailKey: true },
       },
-      _count: { select: { shots: { where: { deletedAt: null } } } },
+      _count: { select: { shots: { where: { deletedAt: null, hiddenAt: null } } } },
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
+      assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
       // Épisode d'appartenance (niveau facultatif) : la page de séquence en fait un lien
       // de remontée. `null` sur un long-métrage — la fiche ne montre alors rien de plus.
       episode: { select: { id: true, code: true, name: true } },

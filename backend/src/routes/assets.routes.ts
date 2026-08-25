@@ -14,7 +14,11 @@ import { notFound } from '../lib/errors';
 import { cursorPaginationQuery, readPagination } from '../lib/pagination';
 import * as PipelineLatestService from '../services/PipelineLatestService';
 import * as AssetService from '../services/AssetService';
-import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
+import {
+  assertDescriptionWritable,
+  assertLocalCreationAllowed,
+} from '../services/shotgrid/ShotgridGuardService';
+import { enqueuePush } from '../services/shotgrid/ShotgridPushService';
 
 const router = Router();
 router.use(authenticate);
@@ -86,7 +90,13 @@ router.patch(
     const projectId = await resolveProjectIdForAsset(id);
     if (!projectId) throw notFound('Asset not found');
     await assertProjectAccess(req, projectId);
+    // Description tenue par ShotGrid : cf. la route équivalente des séquences.
+    if (req.body.description !== undefined) await assertDescriptionWritable(projectId);
     const asset = await AssetService.update(projectId, id, req.body as AssetService.UpdateAssetInput);
+    // Aller-retour de description : cf. la route équivalente des séquences.
+    if (req.body.description !== undefined) {
+      await enqueuePush(projectId, { type: 'description', kind: 'asset', id, actorId: req.user!.id });
+    }
     res.json({ asset });
   },
 );

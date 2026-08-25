@@ -15,6 +15,8 @@ const { db, shots, tasks } = vi.hoisted(() => ({
   db: {
     sequence: { findMany: vi.fn(), count: vi.fn() },
     shot: { count: vi.fn() },
+    // Pastille « attend une review » d'une séquence : agrégat SQL groupé.
+    $queryRaw: vi.fn(),
   },
   shots: { list: vi.fn() },
   tasks: { list: vi.fn(), listForBoard: vi.fn(), listForProject: vi.fn() },
@@ -133,6 +135,7 @@ describe('GET /api/sequences — liste bornée', () => {
     db.sequence.findMany.mockResolvedValue([{ id: 1, code: 'SQ01', _count: { shots: 12 } }]);
     db.sequence.count.mockResolvedValue(640);
     db.shot.count.mockResolvedValue(4);
+    db.$queryRaw.mockResolvedValue([]);
     const res = await request(app).get('/api/sequences?projectId=1');
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({

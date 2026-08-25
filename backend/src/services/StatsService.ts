@@ -201,7 +201,7 @@ function queryShotAggregates(projectId: number): Promise<ShotAggregateRow[]> {
     WITH shots AS (
       SELECT s.id, s.code, s.name, s."sequenceId"
       FROM "Shot" s
-      WHERE s."projectId" = ${projectId} AND s."deletedAt" IS NULL
+      WHERE s."projectId" = ${projectId} AND s."deletedAt" IS NULL AND s."hiddenAt" IS NULL
     ),
     versions AS (
       SELECT t."shotId" AS shot_id,
@@ -283,7 +283,7 @@ export async function getProjectStats(projectId: number): Promise<ProjectStats> 
   const [rows, sequences] = await Promise.all([
     queryShotAggregates(projectId),
     prisma.sequence.findMany({
-      where: { projectId, deletedAt: null },
+      where: { projectId, deletedAt: null, hiddenAt: null },
       orderBy: { order: 'asc' },
       select: { id: true, code: true, name: true },
     }),

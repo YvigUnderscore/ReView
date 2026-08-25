@@ -100,6 +100,14 @@ async function orderedShots(
       projectId,
       deletedAt: null,
       omitted: false,
+      // Un plan masqué ne monte pas au cut. Distinct d'`omitted`, qui est une décision
+      // éditoriale visible de tous : le masquage, lui, retire l'élément de partout.
+      hiddenAt: null,
+      // Une séquence masquée emporte ses plans : sans cette condition, le montage du film
+      // entier rejouerait les plans d'une séquence qui n'apparaît plus nulle part. La
+      // branche `sequenceId: null` est indispensable — un filtre de relation seul écarte
+      // les plans qui n'ont pas de séquence du tout, qui sont pourtant au montage.
+      OR: [{ sequenceId: null }, { sequence: { hiddenAt: null } }],
       ...(sequenceId !== null ? { sequenceId } : {}),
     },
     // Les plans hors séquence partent en fin de liste : Postgres range les NULL en

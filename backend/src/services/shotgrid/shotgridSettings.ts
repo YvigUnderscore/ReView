@@ -103,6 +103,26 @@ export const shotgridSettingsSchema = z.object({
       attachAnnotations: z.boolean().default(true),
     })
     .default({}),
+  /**
+   * Qui écrit la description d'une séquence, d'un plan ou d'un asset.
+   *
+   * Par défaut, ShotGrid : c'est le registre de production, la description y est saisie et
+   * ReView la recopie. Elle est alors **en lecture seule ici** — laisser un artiste la
+   * modifier dans ReView produirait une divergence qu'aucune synchronisation ne saurait
+   * arbitrer, et que la passe suivante écraserait sans le dire.
+   *
+   * `writeBack` ouvre l'aller-retour : ReView redevient éditable, et la description
+   * modifiée remonte au site. C'est un choix explicite du studio, pas un défaut — écrire
+   * dans un site de production ne se décide pas à sa place.
+   */
+  descriptions: z
+    .object({
+      /** `shotgrid` = le site fait foi (lecture seule ici) ; `review` = ReView fait foi. */
+      source: z.enum(['shotgrid', 'review']).default('shotgrid'),
+      /** Renvoyer vers le site la description modifiée dans ReView. */
+      writeBack: z.boolean().default(false),
+    })
+    .default({}),
   /** Correspondance code de statut SG (Version) → id de ReviewStatus ReView. */
   versionStatusMap: z.record(z.string(), z.number().int()).default({}),
   /**
@@ -138,12 +158,15 @@ export function parseSettings(raw: unknown): ShotgridSettings {
   if (raw && typeof raw === 'object') {
     // Section par section : ce qui se valide seul est conservé, le reste garde le repli.
     const source = raw as Record<string, unknown>;
-    for (const key of ['media', 'push', 'reconcile', 'steps', 'versionStatusMap'] as const) {
+    for (const key of ['media', 'push', 'reconcile', 'steps', 'versionStatusMap', 'descriptions'] as const) {
       const section = shotgridSettingsSchema.shape[key].safeParse(source[key]);
       if (section.success) (safe as Record<string, unknown>)[key] = section.data;
     }
     const policy = shotgridSettingsSchema.shape.conflictPolicy.safeParse(source.conflictPolicy);
     if (policy.success) safe.conflictPolicy = policy.data;
+    // Le repli est fermé en écriture, sans exception : la section `descriptions` peut être
+    // récupérée pour sa `source`, jamais pour rouvrir le renvoi vers le site.
+    safe.descriptions = { ...safe.descriptions, writeBack: false };
     // `domains` est réintégré domaine par domaine, et jamais au-delà de ce que le repli
     // autorise : une section douteuse ne doit pas rouvrir une écriture.
     const domains = source.domains;

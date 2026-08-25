@@ -73,3 +73,43 @@ export async function assertLocalCreationAllowed(projectId: number, kind: Creata
     state.sgProjectName!,
   );
 }
+
+/**
+ * La description de ce projet est-elle éditable dans ReView ?
+ *
+ * Non, par défaut, dès que le projet est relié : la description vient du site, et la
+ * modifier ici produirait une divergence que la synchronisation suivante écraserait sans
+ * le dire. Le studio ouvre l'édition en choisissant `descriptions.source = 'review'`, ou
+ * en activant le renvoi vers le site (`writeBack`) — c'est alors un aller-retour assumé.
+ */
+export interface DescriptionPolicy {
+  editable: boolean;
+  /** Où la modifier quand elle est verrouillée : le lien direct vers la fiche du site. */
+  sgProjectName?: string;
+  /** `true` quand une modification locale repart vers le site. */
+  writeBack: boolean;
+}
+
+export async function descriptionPolicy(projectId: number): Promise<DescriptionPolicy> {
+  const conn = await prisma.shotgridConnection.findUnique({ where: { projectId } });
+  if (!conn?.active) return { editable: true, writeBack: false };
+  const settings = parseSettings(conn.settings);
+  const { source, writeBack } = settings.descriptions;
+  return {
+    editable: source === 'review' || writeBack,
+    sgProjectName: conn.sgProjectName,
+    writeBack: writeBack && source === 'review',
+  };
+}
+
+/** Refuse une écriture de description quand le site fait foi. */
+export async function assertDescriptionWritable(projectId: number): Promise<void> {
+  const policy = await descriptionPolicy(projectId);
+  if (policy.editable) return;
+  throw new AppError(
+    `La description est tenue par ShotGrid (« ${policy.sgProjectName} ») — la modifier là-bas, ou ouvrir l'édition dans les réglages du projet`,
+    409,
+    'SHOTGRID_DESCRIPTION_LOCKED',
+    { sgProjectName: policy.sgProjectName },
+  );
+}

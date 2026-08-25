@@ -83,6 +83,33 @@ router.patch(
   },
 );
 
+/**
+ * Image d'un département : dépôt direct dans MinIO, puis enregistrement de la clé.
+ *
+ * Même chemin qu'une vignette d'entité — c'est la seule façon de ne pas faire transiter
+ * l'image par le serveur d'API, et la clé est reconstruite côté serveur pour qu'un
+ * appelant ne puisse pas faire pointer un département vers un objet quelconque du bucket.
+ */
+router.post(
+  '/departments/:id/image/presign',
+  auth,
+  manage,
+  validate({ params: idParam, body: z.object({ contentType: z.string().min(3).max(100) }) }),
+  async (req, res) => {
+    res.json(await DepartmentService.presignImage(Number(req.params.id), req.body.contentType));
+  },
+);
+
+router.put(
+  '/departments/:id/image',
+  auth,
+  manage,
+  validate({ params: idParam, body: z.object({ key: z.string().max(300).nullable() }) }),
+  async (req, res) => {
+    res.json({ department: await DepartmentService.setImage(Number(req.params.id), req.body.key) });
+  },
+);
+
 router.delete('/departments/:id', auth, manage, validate({ params: idParam }), async (req, res) => {
   await DepartmentService.remove(Number(req.params.id));
   res.status(204).end();

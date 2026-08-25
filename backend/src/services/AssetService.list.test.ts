@@ -4,7 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { db, thumbs } = vi.hoisted(() => ({
-  db: { asset: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn() } },
+  db: {
+    asset: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn() },
+    // Pastille « attend une review » : un agrégat SQL groupé pour la page entière.
+    $queryRaw: vi.fn(),
+  },
   thumbs: {
     firstMediaThumbKeysForAssets: vi.fn(),
     firstMediaThumbKeyForAsset: vi.fn(),
@@ -23,6 +27,7 @@ const page = { page: 1, pageSize: 100, order: 'desc' as const };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  db.$queryRaw.mockResolvedValue([]);
   db.asset.findMany.mockResolvedValue([{ id: 4, name: 'Ship', thumbnailKey: null }]);
   db.asset.count.mockResolvedValue(1);
   thumbs.firstMediaThumbKeysForAssets.mockResolvedValue(new Map());

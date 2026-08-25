@@ -137,8 +137,10 @@ model Studio {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  projects    Project[]
-  departments Department[]
+  projects         Project[]
+  departments      Department[]
+  visibilityRules  VisibilityRule[]
+  noteTemplates    NoteTemplate[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,6 +170,10 @@ model Department {
   order     Int       @default(0)
   // Teinte d'affichage (hex #RRGGBB). Normalisée à l'écran par `statusSwatch`.
   color     String?
+  // Image du département (clé objet MinIO) : une pastille de couleur ne se distingue plus
+  // au-delà de six étapes, et une grille d'assets en montre vingt à la fois. Le logo du
+  // studio pour « Compositing » se reconnaît d'un coup d'œil là où « #7C3AED » ne dit rien.
+  imageKey  String?
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -278,6 +284,16 @@ model User {
   conversations        ConversationMember[]
   createdConversations Conversation[]       @relation("ConversationCreator")
   chatMessages         ChatMessage[]        @relation("ChatAuthor")
+  // Assignation directe sur une entité de pipeline. Elle ne remplace pas l'assigné d'une
+  // tâche — qui reste la donnée du travail — mais dit « ce plan est à Alice », ce qu'une
+  // production énonce couramment et que ReView ne savait pas écrire.
+  assignedSequences Sequence[] @relation("SequenceAssignees")
+  assignedShots     Shot[]     @relation("ShotAssignees")
+  assignedAssets    Asset[]    @relation("AssetAssignees")
+  assignedEpisodes  Episode[]  @relation("EpisodeAssignees")
+  entityNotes       EntityNote[]     @relation("EntityNoteAuthor")
+  noteTemplates     NoteTemplate[]   @relation("NoteTemplateAuthor")
+  visibilityRules   VisibilityRule[] @relation("VisibilityRuleAuthor")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -542,6 +558,9 @@ model Project {
   shotgrid      ShotgridConnection?
   // Vocabulaire de statuts propre au projet (B2) — vide = celui du studio.
   pipelineStatuses PipelineStatus[]
+  visibilityRules  VisibilityRule[]
+  entityNotes      EntityNote[]
+  noteTemplates    NoteTemplate[]
 
   @@unique([studioId, slug])
 }
@@ -576,8 +595,18 @@ model Episode {
   pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
   pipelineStatusId Int?
   deletedAt DateTime?
+  // Masquage (voir VisibilityRule) : l'élément existe, il ne s'affiche plus. Distinct de
+  // `deletedAt` — rien n'est mis à la corbeille, la synchronisation ShotGrid continue de
+  // l'alimenter, mais aucun écran ne le propose.
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
 
   sequences Sequence[]
+  assignees User[]       @relation("EpisodeAssignees")
+  notes     EntityNote[]
 
   @@unique([projectId, code])
   // Même raison que sur Sequence : la liste d'un projet se lit triée par `order` puis
@@ -611,10 +640,17 @@ model Sequence {
   pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
   pipelineStatusId Int?
   deletedAt DateTime?
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
 
   shots     Shot[]
   assets    Asset[]    @relation("AssetSequences")
   timelines Timeline[]
+  assignees User[]     @relation("SequenceAssignees")
+  notes     EntityNote[] @relation("SequenceNotes")
   // Départements que traverse cette séquence (B1) : sert de gabarit à la création de ses
   // tâches et de filtre d'affichage.
   departments Department[] @relation("SequenceDepartments")
@@ -658,11 +694,18 @@ model Shot {
   // automatiques le sautent — supprimer le shot ferait perdre tout le reste.
   omitted      Boolean   @default(false)
   deletedAt    DateTime?
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
 
   tasks  Task[]
   assets Asset[] @relation("AssetShots")
   // Départements que traverse ce plan (B1).
   departments Department[] @relation("ShotDepartments")
+  assignees   User[]       @relation("ShotAssignees")
+  notes       EntityNote[] @relation("ShotNotes")
 
   // Un code de shot (ex: SH001) est unique par séquence : SH001 peut exister
   // dans SQ001 ET SQ002.
@@ -695,7 +738,21 @@ model Asset {
   typeLabel    String?
   description  String?
   thumbnailKey String?
+  // Marqueur de dernière modification : la carte d'un asset affiche « mis à jour il y a
+  // deux jours » comme celle d'un plan, et la synchronisation ShotGrid a besoin du même
+  // repère local pour arbitrer un conflit de description.
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
+  // Statut d'asset : ShotGrid en a un (`sg_status_list` sur Asset) et il était lu sans
+  // jamais être écrit — la carte d'un asset restait muette là où celle d'un plan parlait.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
 
   tasks     Task[]
   versions  Version[]  @relation("AssetVersions")
@@ -705,9 +762,12 @@ model Asset {
   // Départements que traverse cet asset (B1) : « cet asset passe par modélisation,
   // texturing et rig » — ce que l'interface ne permettait pas de dire.
   departments Department[] @relation("AssetDepartments")
+  assignees   User[]       @relation("AssetAssignees")
+  notes       EntityNote[] @relation("AssetNotes")
 
   @@unique([projectId, name])
   @@index([projectId, deletedAt])
+  @@index([pipelineStatusId])
 }
 
 model Task {
@@ -1473,7 +1533,9 @@ model PipelineStatus {
   // `legacyStatus` des codes homonymes du premier — sans que rien ne le signale.
   project      Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId    Int?
-  // « task » ou « shot » : ShotGrid a deux listes distinctes, ReView aussi.
+  // « task », « shot », « sequence » ou « asset » : ShotGrid tient une liste par entité —
+  // quatre valeurs sur une séquence, quinze sur un plan — et ReView fait de même. Les
+  // confondre proposait à l'écran des états que le site refusait à l'écriture.
   scope        String
   // Code court et stable (repris tel quel de ShotGrid : "ip", "fin", "rev"…).
   code         String
@@ -1497,6 +1559,7 @@ model PipelineStatus {
   tasks     Task[]
   shots     Shot[]
   sequences Sequence[]
+  assets    Asset[]
   // Un épisode porte un statut du même périmètre (`sequence`) — voir le modèle Episode.
   episodes  Episode[]
 
@@ -1504,6 +1567,114 @@ model PipelineStatus {
   // migration : Postgres tient les NULL pour distincts, un `@@unique` ordinaire laisserait
   // donc passer deux statuts de studio de même code.
   @@index([projectId, scope, order])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Masquage d'éléments (admin)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Règle de masquage : « ne montre plus ce qui s'appelle ainsi ».
+//
+// Masquer n'est pas supprimer. La séquence de test qu'un studio traîne dans son site
+// ShotGrid, le plan « SH999_TMP » ou l'asset de recette n'ont rien à faire à l'écran, mais
+// les mettre à la corbeille les ferait revenir à la synchronisation suivante — et perdrait
+// leur travail. Une règle est donc **déclarative** et rejouée : elle vaut pour ce qui
+// existe comme pour ce qui arrivera.
+//
+// Deux formes de motif, et c'est délibéré : `exact` couvre le cas courant sans risque, et
+// `regex` le studio qui a une convention (« tout ce qui finit par _TMP »). Une expression
+// invalide est refusée à l'écriture — jamais silencieusement ignorée, sinon la règle
+// paraîtrait active en ne masquant rien.
+model VisibilityRule {
+  id        Int      @id @default(autoincrement())
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId  Int
+  // Null = règle du studio, appliquée à tous ses projets. Renseigné = règle de ce projet.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+  // episode | sequence | shot | asset | all
+  entityType String
+  // exact | regex — sur le code de l'entité, et sur son nom à défaut de code.
+  matchType  String  @default("exact")
+  pattern    String
+  // Motif insensible à la casse (le défaut : les conventions de nommage le sont rarement).
+  ignoreCase Boolean @default(true)
+  // Ce que l'admin veut se rappeler dans six mois. Jamais montré à l'artiste.
+  reason     String?
+  enabled    Boolean @default(true)
+  createdBy   User?    @relation("VisibilityRuleAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId, projectId, enabled])
+  @@index([projectId])
+  @@index([createdById])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fiche markdown d'une entité & modèles de fiche
+// ─────────────────────────────────────────────────────────────────────────────
+
+// La fiche d'un plan, d'une séquence ou d'un asset : du markdown enrichi (titres
+// dépliables, jauges de pourcentage, séparateurs, carrousel de références).
+//
+// `description` reste ce que ShotGrid dicte — une ligne, souvent en lecture seule ici.
+// La fiche est l'inverse : elle appartient à ReView, personne ne l'écrase, et c'est là que
+// vit le brief. Les deux devaient donc rester deux champs.
+//
+// Une seule fiche par entité (les index partiels de la migration le garantissent), et un
+// XOR de cible posé en CHECK comme sur `Task` : une note rattachée à rien n'apparaîtrait
+// dans aucun écran sans qu'aucune erreur ne le signale.
+model EntityNote {
+  id        Int      @id @default(autoincrement())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+
+  episode    Episode?  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  episodeId  Int?
+  sequence   Sequence? @relation("SequenceNotes", fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId Int?
+  shot       Shot?     @relation("ShotNotes", fields: [shotId], references: [id], onDelete: Cascade)
+  shotId     Int?
+  asset      Asset?    @relation("AssetNotes", fields: [assetId], references: [id], onDelete: Cascade)
+  assetId    Int?
+
+  body      String   @default("")
+  updatedBy   User?  @relation("EntityNoteAuthor", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([episodeId])
+  @@index([sequenceId])
+  @@index([shotId])
+  @@index([assetId])
+  @@index([updatedById])
+}
+
+// Modèle de fiche réutilisable : le brief d'un plan a la même forme d'un plan à l'autre.
+// Recopier trente lignes de markdown à chaque nouveau plan revenait à ne pas les écrire.
+model NoteTemplate {
+  id        Int      @id @default(autoincrement())
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId  Int
+  // Null = modèle du studio, proposé partout. Renseigné = modèle propre à ce projet.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+  // Périmètre proposé : episode | sequence | shot | asset | all.
+  scope     String   @default("all")
+  name      String
+  body      String
+  createdBy   User?  @relation("NoteTemplateAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId, projectId, scope])
+  @@index([projectId])
+  @@index([createdById])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

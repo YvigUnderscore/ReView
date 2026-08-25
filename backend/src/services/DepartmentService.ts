@@ -4,6 +4,7 @@
 import { Prisma, type Department } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
+import { storage, StorageService } from './StorageService';
 
 /**
  * Départements du pipeline (B1).
@@ -25,6 +26,8 @@ export interface DepartmentInput {
   name: string;
   order?: number;
   color?: string | null;
+  /** Clé objet de l'image du département (déposée comme une vignette d'entité). */
+  imageKey?: string | null;
 }
 
 /** Entités qui peuvent déclarer les départements qu'elles traversent. */
@@ -32,24 +35,79 @@ export type DepartmentHolder = 'asset' | 'shot' | 'sequence';
 
 const ORDER_BY = [{ order: 'asc' as const }, { key: 'asc' as const }];
 
+/**
+ * Un département tel que les écrans le lisent : son image déjà signée.
+ *
+ * Les départements se comptent en dizaines, jamais en milliers : signer la liste
+ * entière coûte moins qu'un aller-retour par pastille affichée, et le cache de
+ * `StorageService` mémoïse déjà les URL identiques.
+ */
+export type DepartmentView = Department & { imageUrl: string | null };
+
+async function withImages(departments: Department[]): Promise<DepartmentView[]> {
+  return Promise.all(
+    departments.map(async (d) => ({
+      ...d,
+      imageUrl: d.imageKey ? await storage.getPresignedGetUrl(d.imageKey) : null,
+    })),
+  );
+}
+
+/** Types d'image acceptés pour un département — les mêmes qu'une vignette d'entité. */
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg',
+};
+
+/** URL de dépôt à durée courte pour l'image d'un département, et sa clé. */
+export async function presignImage(id: number, contentType: string) {
+  const ext = IMAGE_EXTENSIONS[contentType];
+  if (!ext) throw badRequest('Unsupported image type', 'BAD_CONTENT_TYPE');
+  const department = await prisma.department.findUnique({ where: { id }, select: { id: true } });
+  if (!department) throw notFound('Department not found');
+  const key = StorageService.departmentImageKey(id, ext);
+  return { url: await storage.getPresignedPutUrl(key, contentType, 900), key };
+}
+
+/**
+ * Enregistre l'image. La clé est vérifiée contre le préfixe du département : sans ce
+ * contrôle, un PATCH suffirait à afficher n'importe quel objet du bucket.
+ */
+export async function setImage(id: number, key: string | null): Promise<DepartmentView> {
+  if (key !== null) {
+    if (!key.startsWith(`entity-thumbs/department/${id}.`))
+      throw badRequest('Image key does not match the department', 'BAD_KEY');
+    // La clé ne dépend que de l'identifiant : remplacer l'image réécrit le même objet,
+    // et l'URL mémoïsée servirait l'ancienne depuis le cache du navigateur.
+    storage.forgetPresignedUrl(key);
+  }
+  const updated = await prisma.department.update({ where: { id }, data: { imageKey: key } });
+  return (await withImages([updated]))[0]!;
+}
+
 /** Départements du studio, hérités par les projets qui n'en redéfinissent pas. */
-export async function listForStudio(studioId: number): Promise<Department[]> {
-  return prisma.department.findMany({
-    where: { studioId, projectId: null, deletedAt: null },
-    orderBy: ORDER_BY,
-  });
+export async function listForStudio(studioId: number): Promise<DepartmentView[]> {
+  return withImages(
+    await prisma.department.findMany({
+      where: { studioId, projectId: null, deletedAt: null },
+      orderBy: ORDER_BY,
+    }),
+  );
 }
 
 /**
  * Départements applicables à un projet : les siens s'il en a, sinon ceux du studio.
  * C'est cette liste que lit le pipe (`lib/pipelineOrder.ts`) pour ordonner les étapes.
  */
-export async function listForProject(projectId: number): Promise<Department[]> {
+export async function listForProject(projectId: number): Promise<DepartmentView[]> {
   const own = await prisma.department.findMany({
     where: { projectId, deletedAt: null },
     orderBy: ORDER_BY,
   });
-  if (own.length > 0) return own;
+  if (own.length > 0) return withImages(own);
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
   if (!project) return [];
   return listForStudio(project.studioId);
@@ -110,6 +168,7 @@ export async function update(id: number, input: Partial<DepartmentInput>): Promi
       ...(input.name !== undefined ? { name: input.name.trim() } : {}),
       ...(input.order !== undefined ? { order: input.order } : {}),
       ...(input.color !== undefined ? { color: input.color } : {}),
+      ...(input.imageKey !== undefined ? { imageKey: input.imageKey } : {}),
     },
   });
 }

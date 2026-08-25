@@ -14,8 +14,18 @@ import { badRequest, conflict, notFound } from '../lib/errors';
  * six statuts d'origine ; un studio connecté voit ceux de son site.
  */
 
-/** Les trois périmètres qui portent un statut. Seuls les deux premiers sont éditables. */
-export type Scope = 'task' | 'shot' | 'sequence';
+/**
+ * Les quatre périmètres qui portent un statut.
+ *
+ * ShotGrid tient une liste **par entité** (`sg_status_list` sur Task, Shot, Sequence et
+ * Asset), et elles ne coïncident pas : quatre valeurs sur une séquence, quinze sur un
+ * plan. Les confondre proposait à l'écran des états que le site refusait à l'écriture —
+ * et l'asset, lui, empruntait le vocabulaire des tâches faute d'en avoir un.
+ */
+export type Scope = 'task' | 'shot' | 'sequence' | 'asset';
+
+/** Les périmètres proposés dans les écrans de réglage, dans l'ordre du pipe. */
+export const SCOPES: readonly Scope[] = ['task', 'shot', 'sequence', 'asset'];
 
 export interface StatusInput {
   scope: Scope;

@@ -14,6 +14,8 @@ import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { badRequest, notFound } from '../lib/errors';
 import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
+import { assertDescriptionWritable } from './shotgrid/ShotgridGuardService';
+import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot } from '../lib/entityCardData';
 
 /**
  * Logique métier des shots (liste + miniatures, création simple/lot avec unicité de
@@ -52,7 +54,12 @@ export async function list(
 ) {
   const seqFilter =
     seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
-  const where = { projectId, deletedAt: null, ...seqFilter, ...episodeWhere(episode) };
+  // `hiddenAt` : un plan masqué (VisibilityService) n'apparaît dans aucune liste, pour
+  // personne. Le filtre est inconditionnel — y compris pour un admin, qui gère les
+  // éléments masqués depuis l'écran d'administration prévu pour ça et nulle part ailleurs.
+  // Le laisser paraître « seulement pour l'admin » aurait rendu tous les décomptes faux
+  // selon qui regarde.
+  const where = { projectId, deletedAt: null, hiddenAt: null, ...seqFilter, ...episodeWhere(episode) };
   const [shots, total] = await Promise.all([
     prisma.shot.findMany({
       where: withCursor(where, p, 'order', 'asc'),
@@ -60,7 +67,7 @@ export async function list(
       ...pageArgs(p),
       include: {
         _count: { select: { tasks: true } },
-        assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
+        assets: { where: { deletedAt: null, hiddenAt: null }, select: { id: true, name: true, type: true } },
         // Étapes traversées (B1) : le filtre par département de l'onglet Shots s'appuie
         // dessus. La fiche d'un plan les renvoyait, la liste non — choisir un département
         // vidait donc l'écran, faute d'étape à comparer sur chaque carte.
@@ -80,6 +87,9 @@ export async function list(
             assignee: { select: { id: true, name: true } },
           },
         },
+        // Personnes responsables du plan : la carte les montre en photos. Sans elles
+        // ici, chaque carte aurait demandé sa propre requête.
+        assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
       },
     }),
     prisma.shot.count({ where }),
@@ -87,11 +97,16 @@ export async function list(
   // Une requête groupée pour toute la page (B3) : la variante unitaire dans un `.map`
   // envoyait une requête et une signature MinIO par plan, soit deux cents allers-retours
   // pour une page de cent.
-  const fallbacks = await firstMediaThumbKeysForShots(shots.map((s) => s.id));
+  const ids = shots.map((s) => s.id);
+  const [fallbacks, awaiting] = await Promise.all([
+    firstMediaThumbKeysForShots(ids),
+    awaitingReviewByShot(ids),
+  ]);
   const items = await Promise.all(
     shots.map(async (s) => ({
       ...s,
       thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
+      awaitingReview: awaiting.get(s.id) ?? 0,
     })),
   );
   return paginateCursor(items, total, p, (s) => s.order);
@@ -235,6 +250,9 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
   if (body.pipelineStatusId !== undefined) {
     await PipelineStatusService.assertBelongsToProject(projectId, 'shot', body.pipelineStatusId);
   }
+  // La description peut être tenue par ShotGrid : l'écrire ici la ferait diverger
+  // jusqu'à ce que la synchronisation suivante l'écrase, sans rien dire à personne.
+  if (body.description !== undefined) await assertDescriptionWritable(projectId);
   // Si le code ou la séquence change, vérifier l'unicité (code unique par séquence).
   if (body.code !== undefined || body.sequenceId !== undefined) {
     const current = await prisma.shot.findUnique({ where: { id }, select: { code: true, sequenceId: true } });
@@ -255,6 +273,11 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
   // celui du site. L'artiste voyait son changement s'annuler tout seul.
   if (body.pipelineStatusId !== undefined) {
     await enqueuePush(projectId, { type: 'shot-status', shotId: id, actorId });
+  }
+  // Aller-retour de description, quand le studio l'a ouvert : sans cet envoi, la
+  // modification locale serait effacée par la synchronisation suivante.
+  if (body.description !== undefined) {
+    await enqueuePush(projectId, { type: 'description', kind: 'shot', id, actorId });
   }
   return shot;
 }

@@ -206,6 +206,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     let taskStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let shotStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let sequenceStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
+    let assetStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     // Une passe qui ne lit aucun `sg_status_list` (notes, playlists, versions) se passe
     // du référentiel : ni lecture distante, ni repli en base.
     const readStatuses = wants('statuses');
@@ -214,6 +215,9 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       taskStatuses = await syncPipelineStatuses(ctx.client, 'task', siteStatuses, journal);
       shotStatuses = await syncPipelineStatuses(ctx.client, 'shot', siteStatuses, journal);
       sequenceStatuses = await syncPipelineStatuses(ctx.client, 'sequence', siteStatuses, journal);
+      // L'asset a sa propre liste côté site : il empruntait celle des tâches, donc il
+      // affichait des états qu'aucun asset ne peut porter.
+      assetStatuses = await syncPipelineStatuses(ctx.client, 'asset', siteStatuses, journal);
       const versionMap = await syncVersionStatuses(
         ctx.client,
         siteStatuses,
@@ -246,14 +250,16 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       // ramenait aussi le vocabulaire local du studio et celui des autres projets : un
       // code commun comme « ip » suffisait à coller à un plan le statut d'un voisin.
       const importedFromSite = { projectId: null, origin: 'shotgrid' } as const;
-      const [t, s, q] = await Promise.all([
+      const [t, s, q, a] = await Promise.all([
         prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'task' } }),
         prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'shot' } }),
         prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'sequence' } }),
+        prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'asset' } }),
       ]);
       taskStatuses = new Map(t.map((x) => [x.code, x]));
       shotStatuses = new Map(s.map((x) => [x.code, x]));
       sequenceStatuses = new Map(q.map((x) => [x.code, x]));
+      assetStatuses = new Map(a.map((x) => [x.code, x]));
     }
 
     // 2. Comptes (correspondance par courriel, aucune création).
@@ -267,7 +273,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     if (wants('sequences')) await pullSequences(pullCtx, sequenceStatuses, pullOptions);
     if (wants('episodes')) await pullSequenceEpisodes(pullCtx, pullOptions);
     if (wants('shots')) await pullShots(pullCtx, shotStatuses, pullOptions);
-    if (wants('assets')) await pullAssets(pullCtx, pullOptions);
+    if (wants('assets')) await pullAssets(pullCtx, assetStatuses, pullOptions);
     if (wants('tasks')) await pullTasks(pullCtx, taskStatuses, userMap, pullOptions);
 
     // 4. Versions. Une demande ciblée transmet enfin ses identifiants : sans eux, un seul

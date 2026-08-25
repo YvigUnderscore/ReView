@@ -79,15 +79,15 @@ async function loadEntities(rows: readonly FavoriteRow[]): Promise<Map<string, R
       select: { id: true, name: true },
     }),
     prisma.sequence.findMany({
-      where: { id: { in: idsOf(rows, EntityType.SEQUENCE) }, deletedAt: null },
+      where: { id: { in: idsOf(rows, EntityType.SEQUENCE) }, deletedAt: null, hiddenAt: null },
       select: { id: true, code: true, name: true, projectId: true },
     }),
     prisma.shot.findMany({
-      where: { id: { in: idsOf(rows, EntityType.SHOT) }, deletedAt: null },
+      where: { id: { in: idsOf(rows, EntityType.SHOT) }, deletedAt: null, hiddenAt: null },
       select: { id: true, code: true, name: true, projectId: true },
     }),
     prisma.asset.findMany({
-      where: { id: { in: idsOf(rows, EntityType.ASSET) }, deletedAt: null },
+      where: { id: { in: idsOf(rows, EntityType.ASSET) }, deletedAt: null, hiddenAt: null },
       select: { id: true, name: true, projectId: true },
     }),
   ]);
