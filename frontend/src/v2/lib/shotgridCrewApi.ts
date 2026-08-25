@@ -23,6 +23,24 @@ export function useSgCrew(projectId: number, enabled: boolean) {
   });
 }
 
+/**
+ * Relie à la main un compte du site à un compte ReView (ou défait le lien).
+ *
+ * Le rapprochement automatique passe par l'adresse ; celui-ci sert aux personnes dont
+ * l'adresse diffère d'un outil à l'autre, et que rien ne pouvait donc relier.
+ */
+export function useLinkSgAccount(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sgId, userId }: { sgId: number; userId: number | null }) =>
+      api.put(`/api/shotgrid/projects/${projectId}/crew/${sgId}/link`, { userId }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: sgKeys.crew(projectId) });
+      void qc.invalidateQueries({ queryKey: qk.project(projectId) });
+    },
+  });
+}
+
 export function useInviteSgCrew(projectId: number) {
   const qc = useQueryClient();
   return useMutation({

@@ -6,6 +6,7 @@ import { Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { SkeletonRows } from './ui/skeleton';
 import DepartmentsEditor from './DepartmentsEditor';
+import DepartmentImages from './DepartmentImages';
 import ProjectBurninSection from './ProjectBurninSection';
 import ProjectStorageSection from './ProjectStorageSection';
 import ProjectNamingSection from './ProjectNamingSection';
@@ -255,6 +256,11 @@ export default function ProjectSettingsTab({
             onChange={(departments) => setDraft((d) => d && { ...d, departments })}
           />
         )}
+        {/* Images : elles s'enregistrent seules, département par département — elles ne
+            font pas partie du brouillon de réglages, qui ne porte que clés et noms. */}
+        <div className="mt-4 border-t border-border pt-3">
+          <DepartmentImages projectId={projectId} />
+        </div>
       </section>
 
       {/* Convention de nommage (38.C) : éditée dans le draft, enregistrée avec les réglages. */}

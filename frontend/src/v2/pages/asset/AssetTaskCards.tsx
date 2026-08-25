@@ -3,16 +3,19 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ExternalLink, FileStack, Layers } from 'lucide-react';
-import { reviewPath } from '../../lib/slug';
+import { ChevronLeft, ExternalLink, FileStack } from 'lucide-react';
 import EmptyState from '../../components/ui/empty-state';
+import ViewToggle from '../../components/ViewToggle';
+import { useViewMode } from '../../stores/useViewPref';
+import AssetTaskColumns from './AssetTaskColumns';
+import VersionCard from './VersionCard';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import { useSgSteps } from '../../lib/shotgridTasksApi';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 import { useT, intlLocale } from '../../i18n';
 import { scheduleLabel } from './taskSchedule';
-import type { AssetTreeTask, AssetTreeVersion, DepartmentGroup } from '../../types/api';
+import type { AssetTreeTask, DepartmentGroup } from '../../types/api';
 
 /**
  * Tâches d'un asset, en cartes.
@@ -42,6 +45,8 @@ export default function AssetTaskCards({
   const colourOf = (task: AssetTreeTask): string | null =>
     steps.find((s) => s.code.toLowerCase() === (task.department ?? task.name).toLowerCase())?.color ?? null;
   const [openTaskId, setOpenTaskId] = useState<number | 'loose' | null>(null);
+  // Colonnes ou pile : le réglage suit la personne, comme toutes les listes.
+  const view = useViewMode(`asset-tasks:${projectId}`);
 
   const allTasks = groups.flatMap((g) => g.items.map((task) => ({ task, group: g })));
   if (allTasks.length === 0)
@@ -65,33 +70,40 @@ export default function AssetTaskCards({
       />
     );
 
+  /** Une tâche a sa page : c'est là qu'on dépose un média, qu'on publie et qu'on voit les
+   *  brouillons. La vue repliée dans cette page ne savait rien faire de tout cela — un
+   *  brouillon vide y devenait un cul-de-sac. */
+  const cardsOf = (group: DepartmentGroup<AssetTreeTask>) =>
+    group.items.map((task) => (
+      <TaskCard
+        key={task.id ?? 'loose'}
+        task={task}
+        projectId={projectId}
+        colour={colourOf(task)}
+        onOpen={() => (task.id ? navigate(`/tasks/${task.id}`) : setOpenTaskId('loose'))}
+      />
+    ));
+
   return (
-    <div className="space-y-5">
-      {groups.map((group) => (
-        <section key={group.key ?? '__none__'}>
-          <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <Layers size={13} />
-            {group.name || t('pipeline.dept.none')}
-            <span className="font-normal normal-case">
-              {t('asset.tree.taskCount', { count: group.items.length })}
-            </span>
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {group.items.map((task) => (
-              <TaskCard
-                key={task.id ?? 'loose'}
-                task={task}
-                projectId={projectId}
-                colour={colourOf(task)}
-                // Une tâche a sa page : c'est là qu'on dépose un média, qu'on publie et
-                // qu'on voit les brouillons. La vue repliée dans cette page ne savait rien
-                // faire de tout cela — un brouillon vide y devenait un cul-de-sac.
-                onOpen={() => (task.id ? navigate(`/tasks/${task.id}`) : setOpenTaskId('loose'))}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-end">
+        <ViewToggle contextKey={`asset-tasks:${projectId}`} />
+      </div>
+      <AssetTaskColumns
+        projectId={projectId}
+        view={view}
+        groups={groups.map((group) => ({
+          key: group.key,
+          name: group.name,
+          count: group.items.length,
+          children:
+            view === 'compact' ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{cardsOf(group)}</div>
+            ) : (
+              cardsOf(group)
+            ),
+        }))}
+      />
     </div>
   );
 }
@@ -246,86 +258,6 @@ function TaskVersions({
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function VersionCard({ version, sgUrl }: { version: AssetTreeVersion; sgUrl: string | null }) {
-  const t = useT();
-  const media = version.media[0];
-
-  return (
-    <div className="overflow-hidden rounded-md border border-border bg-card">
-      {media ? (
-        <Link to={reviewPath(media)} className="block h-28 overflow-hidden bg-secondary/30">
-          {media.thumbnailUrl ? (
-            <img src={media.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="flex h-full items-center justify-center text-xs text-muted-foreground">
-              {media.kind}
-            </span>
-          )}
-        </Link>
-      ) : (
-        <div className="flex h-28 items-center justify-center bg-secondary/20 text-xs text-muted-foreground">
-          {t('asset.card.noMedia')}
-        </div>
-      )}
-      <div className="space-y-1.5 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium">{version.name}</span>
-          {sgUrl && (
-            <a
-              href={sgUrl}
-              target="_blank"
-              rel="noreferrer"
-              title={t('shotgrid.openIn.version')}
-              className="shrink-0 text-muted-foreground hover:text-foreground"
-            >
-              <ExternalLink size={12} />
-            </a>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {version.reviewStatus && (
-            <span
-              className="rounded px-1.5 py-0.5 text-2xs"
-              style={{
-                backgroundColor: `${version.reviewStatus.color}22`,
-                color: version.reviewStatus.color,
-              }}
-            >
-              {version.reviewStatus.name}
-            </span>
-          )}
-          {!version.published && (
-            <span className="rounded bg-secondary px-1.5 py-0.5 text-2xs text-muted-foreground">
-              {t('media.draft')}
-            </span>
-          )}
-          <span className="text-2xs text-muted-foreground">
-            {new Date(version.createdAt).toLocaleDateString(intlLocale())}
-          </span>
-        </div>
-        {version.media.length > 1 && (
-          <div className="flex flex-wrap gap-1">
-            {version.media.slice(1).map((m) => (
-              <Link
-                key={m.id}
-                to={reviewPath(m)}
-                title={m.originalName}
-                className="flex h-7 w-10 items-center justify-center overflow-hidden rounded border border-border hover:border-primary"
-              >
-                {m.thumbnailUrl ? (
-                  <img src={m.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-2xs text-muted-foreground">{m.kind}</span>
-                )}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

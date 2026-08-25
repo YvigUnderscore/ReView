@@ -54,4 +54,25 @@ router.post(
   },
 );
 
+/**
+ * Relier à la main un compte du site à un compte ReView.
+ *
+ * La correspondance automatique passe par l'adresse, ce qui couvre le cas courant mais
+ * laisse de côté les personnes dont l'adresse diffère d'un outil à l'autre. `userId: null`
+ * défait le lien.
+ */
+router.put(
+  '/projects/:projectId/crew/:sgId/link',
+  validate({
+    params: projectParam.extend({ sgId: z.coerce.number().int().positive() }),
+    body: z.object({ userId: z.number().int().positive().nullable() }),
+  }),
+  async (req, res) => {
+    const projectId = Number(req.params.projectId);
+    await assertProjectManager(req.user!, projectId);
+    await Crew.linkCrewMember(projectId, Number(req.params.sgId), req.body.userId);
+    res.status(204).end();
+  },
+);
+
 export default router;

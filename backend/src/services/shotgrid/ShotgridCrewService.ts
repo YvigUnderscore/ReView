@@ -4,7 +4,7 @@
 import { Role } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
-import { badRequest, forbidden } from '../../lib/errors';
+import { badRequest, forbidden, notFound } from '../../lib/errors';
 import { asString, type SgRecord } from './shotgridMapper';
 import { openConnection } from './ShotgridConfigService';
 import { upsertLink } from './shotgridLinks';
@@ -45,6 +45,11 @@ export interface CrewPerson {
   sgStatus: string | null;
   state: CrewState;
   userId: number | null;
+  /**
+   * Vrai quand le rapprochement vient d'un lien **posé à la main**, pas de l'adresse.
+   * L'écran le dit : une correspondance choisie ne se défait pas par accident.
+   */
+  linkedByHand: boolean;
   /** Rôle sur ce projet, quand la personne y est déjà. */
   projectRole: Role | null;
   userRole: Role | null;
@@ -126,14 +131,37 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
     : [];
   const byEmail = new Map(locals.map((u) => [u.email.toLowerCase(), u]));
 
+  // Liens explicites : ils priment sur la correspondance par adresse, qui n'est qu'une
+  // déduction. Sans eux, une personne reliée à la main réapparaissait « sans compte » à
+  // chaque lecture, faute d'adresse commune.
+  const links = await prisma.shotgridLink.findMany({
+    where: { connection: { projectId }, localType: 'user', sgType: 'HumanUser' },
+    select: { localId: true, sgId: true },
+  });
+  const linkedBySgId = new Map(links.map((l) => [l.sgId, l.localId]));
+
+  const candidateIds = [...new Set([...locals.map((u) => u.id), ...links.map((l) => l.localId)])];
+  const linkedUsers = candidateIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: candidateIds } },
+        select: { id: true, email: true, role: true },
+      })
+    : [];
+  const byId = new Map(linkedUsers.map((u) => [u.id, u]));
+
   const memberships = await prisma.projectMembership.findMany({
-    where: { projectId, userId: { in: locals.map((u) => u.id) } },
+    where: { projectId, userId: { in: candidateIds } },
     select: { userId: true, role: true },
   });
   const byUser = new Map(memberships.map((m) => [m.userId, m.role]));
 
   return raw.map((person): CrewPerson => {
-    const local = person.email ? byEmail.get(person.email.toLowerCase()) : undefined;
+    const handLinked = linkedBySgId.get(person.sgId);
+    const local = handLinked
+      ? byId.get(handLinked)
+      : person.email
+        ? byEmail.get(person.email.toLowerCase())
+        : undefined;
     const isMember = local ? byUser.has(local.id) : false;
     return {
       sgId: person.sgId,
@@ -143,9 +171,64 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
       sgStatus: person.sgStatus,
       state: crewState(person, { userId: local?.id ?? null, isMember }),
       userId: local?.id ?? null,
+      linkedByHand: handLinked !== undefined,
       projectRole: local && isMember ? (byUser.get(local.id) ?? null) : null,
       userRole: local?.role ?? null,
     };
+  });
+}
+
+/**
+ * Relie **à la main** un compte ShotGrid à un compte ReView.
+ *
+ * La correspondance automatique se fait par adresse, et c'est le cas courant. Mais un
+ * studio a toujours quelques personnes dont l'adresse diffère d'un outil à l'autre —
+ * `prenom.nom@studio.com` d'un côté, l'adresse personnelle de l'autre. Sans ce geste,
+ * ces comptes restaient à jamais non reliés : leurs écritures repartaient vers le site en
+ * « ReView » anonyme, et l'équipe importée les proposait indéfiniment.
+ *
+ * `userId` à null défait le lien — pour corriger une association posée par erreur, qui
+ * attribuerait sinon le travail de quelqu'un à quelqu'un d'autre.
+ */
+export async function linkCrewMember(projectId: number, sgId: number, userId: number | null): Promise<void> {
+  const connection = await prisma.shotgridConnection.findUnique({
+    where: { projectId },
+    select: { id: true },
+  });
+  if (!connection) throw badRequest('This project is not connected to ShotGrid', 'NOT_CONNECTED');
+
+  if (userId === null) {
+    await prisma.shotgridLink.deleteMany({
+      where: { connectionId: connection.id, sgType: 'HumanUser', sgId },
+    });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } });
+  if (!user) throw notFound('User not found');
+
+  // Un compte ReView ne peut pointer qu'un seul compte du site, et réciproquement : les
+  // deux unicités de `ShotgridLink` le garantissent, mais un lien préexistant ferait
+  // échouer l'écriture au lieu de la remplacer. On nettoie donc les deux côtés d'abord.
+  await prisma.shotgridLink.deleteMany({
+    where: {
+      connectionId: connection.id,
+      OR: [
+        { sgType: 'HumanUser', sgId },
+        { localType: 'user', localId: userId },
+      ],
+    },
+  });
+
+  const crew = await listCrew(projectId);
+  const person = crew.find((p) => p.sgId === sgId);
+  await upsertLink({
+    connectionId: connection.id,
+    localType: 'user',
+    localId: userId,
+    sgType: 'HumanUser',
+    sgId,
+    data: { login: person?.login ?? null, email: person?.email ?? user.email },
   });
 }
 

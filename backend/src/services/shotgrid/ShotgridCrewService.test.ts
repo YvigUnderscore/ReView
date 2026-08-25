@@ -17,6 +17,7 @@ const person = (over: Partial<CrewPerson> & { sgId: number }): CrewPerson => ({
   sgStatus: 'act',
   state: 'none',
   userId: null,
+  linkedByHand: false,
   projectRole: null,
   userRole: null,
   ...over,

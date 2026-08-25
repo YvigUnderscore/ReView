@@ -233,6 +233,8 @@
   "trash.deleteMany.message": {
     "other": "항목 {count}개가 데이터베이스와 스토리지에서 삭제됩니다. 되돌릴 수 없습니다."
   },
+  "trash.selectEverything": "전체 선택",
+  "trash.group.versions": "version",
   "assets.title": "재사용 asset",
   "assets.new": "새 asset",
   "assets.name": "asset 이름",
@@ -1274,6 +1276,7 @@
   "pipeline.status.set": "상태를 「{name}」(으)로 변경했습니다",
   "pipeline.status.cleared": "상태를 해제했습니다",
   "pipeline.status.changeFailed": "상태를 변경할 수 없습니다",
+  "pipeline.dept.imageHint": "부서마다 이미지 하나. 단계가 여섯을 넘으면 카드 스무 장이 놓인 화면에서 색 점은 구분되지 않습니다.",
   "lighting.hint": "자체 조명이 없는 이 프로젝트의 3D 미디어를 열 때 적용되는 HDRI 환경입니다. 보는 사람은 세션 중에 조정할 수 있지만 원본은 바뀌지 않습니다.",
   "storage.usedUnlimited": "{used} 사용(무제한)",
   "storage.quotaLabel": "할당량(GB)",
@@ -2733,6 +2736,11 @@
   "shotgrid.crew.skipped": { "other": "{count}명을 건너뛰었습니다" },
   "shotgrid.crew.plan": "만들 계정 {create}개, 프로젝트에 추가할 인원 {add}명",
   "shotgrid.sync.queued": "동기화가 이미 실행 중입니다. 이번 동기화는 대기열에 들어갔습니다.",
+  "shotgrid.link.open": "ShotGrid 계정",
+  "shotgrid.link.none": "연결되지 않음",
+  "shotgrid.link.done": "계정을 연결했습니다. 이제 사이트 기록에 이 사람의 이름이 남습니다.",
+  "shotgrid.link.cleared": "연결을 해제했습니다",
+  "shotgrid.link.byHand": "직접 연결함 — 두 도구의 주소가 다릅니다",
   "upload.pickTask.title": "이 version은 어떤 task의 것인가요?",
   "upload.pickTask.hint": "만든 단계 아래 두면 파이프라인이 읽기 쉬워지고, ShotGrid에서도 올바른 위치로 갑니다.",
   "upload.pickTask.none": "task 없이 — asset에 직접 첨부",

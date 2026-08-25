@@ -174,6 +174,8 @@ export interface SgCrewPerson {
   sgStatus: string | null;
   state: SgCrewState;
   userId: number | null;
+  /** Vrai quand le rapprochement vient d'un lien posé à la main, pas de l'adresse. */
+  linkedByHand: boolean;
   projectRole: Role | null;
   userRole: Role | null;
 }

@@ -15,6 +15,7 @@ import type { Role } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
 import { useSgConnection } from '../../lib/shotgridApi';
 import SgCrewPanel from '../../components/shotgrid/SgCrewPanel';
+import SgAccountLink from '../../components/shotgrid/SgAccountLink';
 
 // Rôle projet : override facultatif du rôle global (38.E). '' = hérite du rôle global.
 const projectRoles = (t: (k: MessageKey) => string): { value: string; label: string }[] => [
@@ -118,7 +119,12 @@ export default function MembersTab({ projectId }: { projectId: number }) {
             className="group flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
           >
             <div className="flex items-center gap-2">
-              <Avatar seed={m.user.id} initials={initialsFrom(m.user.name)} size={28} />
+              <Avatar
+                seed={m.user.id}
+                initials={initialsFrom(m.user.name)}
+                avatarUrl={m.user.avatarUrl}
+                size={28}
+              />
               <div>
                 <span className="text-sm font-medium">{m.user.name ?? m.user.email}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
@@ -127,6 +133,8 @@ export default function MembersTab({ projectId }: { projectId: number }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Compte ShotGrid : l'adresse ne suffit pas toujours à rapprocher les deux. */}
+              {connection?.active && <SgAccountLink projectId={projectId} userId={m.user.id} />}
               <select
                 className="rounded border border-input bg-background px-2 py-1 text-xs"
                 value={m.role ?? ''}

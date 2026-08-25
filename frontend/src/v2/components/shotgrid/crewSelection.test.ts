@@ -13,6 +13,7 @@ const person = (sgId: number, state: SgCrewState): SgCrewPerson => ({
   sgStatus: 'act',
   state,
   userId: state === 'none' ? null : sgId,
+  linkedByHand: false,
   projectRole: null,
   userRole: null,
 });

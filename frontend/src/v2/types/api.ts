@@ -307,6 +307,11 @@ export interface Department {
   order: number;
   /** Teinte d'affichage (hex #RRGGBB), normalisée à l'écran par `statusSwatch`. */
   color: string | null;
+  /**
+   * Image du département, déjà signée par le serveur. Au-delà de six étapes, une pastille
+   * de couleur ne se distingue plus — le logo du studio pour « Compositing », si.
+   */
+  imageUrl?: string | null;
 }
 /**
  * Le pipe tel que les réglages et les vues qui en dérivent le renvoient : la table
