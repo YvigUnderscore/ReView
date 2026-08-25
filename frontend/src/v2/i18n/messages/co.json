@@ -851,6 +851,8 @@
   "asset.card.latest": "ultima : {name} · {date}",
   "asset.card.openTask": "Apre u cumpitu sanu",
   "asset.card.noMedia": "senza media",
+  "asset.assign.searchPlaceholder": "Filtrà per codice o nome…",
+  "asset.assign.picked": "{sequences} sequences · {shots} shots selezziunati",
   "docs.filter": "Filtrà e pagine…",
   "docs.noMatch": "Nisuna pagina currisponde.",
   "docs.buildHint": "Ducumentazione micca dispunibule — lancià",

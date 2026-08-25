@@ -854,6 +854,8 @@
   "asset.card.latest": "letschti: {name} · {date}",
   "asset.card.openTask": "Ganzi Ufgab uufmache",
   "asset.card.noMedia": "kei Media",
+  "asset.assign.searchPlaceholder": "Noch Code oder Name filtere …",
+  "asset.assign.picked": "{sequences} sequences · {shots} shots uusgwählt",
   "docs.filter": "Sitte filtre…",
   "docs.noMatch": "Kei Sitt passt.",
   "docs.buildHint": "Dokumentation nit verfüegbar — starte",

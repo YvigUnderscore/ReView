@@ -825,6 +825,8 @@
   "asset.card.latest": "最新：{name} · {date}",
   "asset.card.openTask": "タスク全体を開く",
   "asset.card.noMedia": "メディアなし",
+  "asset.assign.searchPlaceholder": "コードまたは名前で絞り込む…",
+  "asset.assign.picked": "sequence {sequences} 件・shot {shots} 件を選択",
   "docs.filter": "ページを絞り込む…",
   "docs.noMatch": "該当するページがありません。",
   "docs.buildHint": "ドキュメントを利用できません — 次を実行してください",

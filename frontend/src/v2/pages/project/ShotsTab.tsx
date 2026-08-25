@@ -242,6 +242,7 @@ export default function ShotsTab({
                     assignees: shot.assignees,
                     awaitingReview: shot.awaitingReview,
                     updatedAt: shot.updatedAt,
+                    departments: shot.departments,
                   }}
                   badge={
                     <span className="flex items-center gap-1">

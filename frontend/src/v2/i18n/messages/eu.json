@@ -854,6 +854,8 @@
   "asset.card.latest": "azkena: {name} · {date}",
   "asset.card.openTask": "Ireki zeregin osoa",
   "asset.card.noMedia": "mediarik ez",
+  "asset.assign.searchPlaceholder": "Iragazi kodearen edo izenaren arabera…",
+  "asset.assign.picked": "{sequences} sequence · {shots} shot hautatuta",
   "docs.filter": "Iragazi orriak…",
   "docs.noMatch": "Ez dago bat datorren orririk.",
   "docs.buildHint": "Dokumentazioa ez dago erabilgarri — exekutatu",

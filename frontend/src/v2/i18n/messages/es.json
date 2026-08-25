@@ -851,6 +851,8 @@
   "asset.card.latest": "última: {name} · {date}",
   "asset.card.openTask": "Abrir la tarea completa",
   "asset.card.noMedia": "sin media",
+  "asset.assign.searchPlaceholder": "Filtrar por código o nombre…",
+  "asset.assign.picked": "{sequences} sequences · {shots} shots seleccionados",
   "docs.filter": "Filtrar las páginas…",
   "docs.noMatch": "Ninguna página coincide.",
   "docs.buildHint": "Documentación no disponible: ejecuta",

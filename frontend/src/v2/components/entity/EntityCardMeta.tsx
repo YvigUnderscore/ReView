@@ -4,7 +4,8 @@
 import { Eye } from 'lucide-react';
 import AssigneeStack from './AssigneeStack';
 import { timeAgo } from '../../lib/time';
-import type { AssigneeRef } from '../../types/entities';
+import DepartmentChips from './DepartmentChips';
+import type { AssigneeRef, DepartmentRef } from '../../types/entities';
 import { useT } from '../../i18n';
 
 /**
@@ -23,6 +24,8 @@ import { useT } from '../../i18n';
 export interface EntityMeta {
   description?: string | null;
   assignees?: AssigneeRef[];
+  /** Étapes que traverse l'entité — déclarées nulle part visible jusqu'ici. */
+  departments?: DepartmentRef[];
   /** Livraisons publiées qu'aucune décision de review n'a tranchées. */
   awaitingReview?: number;
   updatedAt?: string;
@@ -57,11 +60,14 @@ export default function EntityCardMeta({ meta, compact }: { meta: EntityMeta; co
   const t = useT();
   const people = meta.assignees ?? [];
   const awaiting = meta.awaitingReview ?? 0;
-  if (people.length === 0 && awaiting === 0 && !meta.updatedAt) return null;
+  const departments = meta.departments ?? [];
+  if (people.length === 0 && awaiting === 0 && !meta.updatedAt && departments.length === 0) return null;
 
   return (
     <div className={`flex items-center gap-2 ${compact ? '' : 'mt-2'}`}>
       <AssigneeStack people={people} size={compact ? 20 : 22} max={compact ? 3 : 4} />
+      {/* Les étapes en compact tiendraient rarement : la ligne EST la carte. */}
+      {!compact && <DepartmentChips departments={departments} />}
       <span className="ml-auto flex shrink-0 items-center gap-1.5">
         {awaiting > 0 && <AwaitingBadge count={awaiting} />}
         {meta.updatedAt && (

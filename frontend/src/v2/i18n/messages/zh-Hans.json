@@ -819,6 +819,8 @@
   "asset.card.latest": "最新：{name} · {date}",
   "asset.card.openTask": "打开完整任务",
   "asset.card.noMedia": "无媒体",
+  "asset.assign.searchPlaceholder": "按代码或名称筛选…",
+  "asset.assign.picked": "已选 {sequences} 个 sequence · {shots} 个 shot",
   "docs.filter": "筛选页面…",
   "docs.noMatch": "没有匹配的页面。",
   "docs.buildHint": "文档不可用 — 请运行",

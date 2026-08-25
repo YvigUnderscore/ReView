@@ -848,6 +848,8 @@
   "asset.card.latest": "नवीनतम: {name} · {date}",
   "asset.card.openTask": "पूरा कार्य खोलें",
   "asset.card.noMedia": "मीडिया नहीं",
+  "asset.assign.searchPlaceholder": "कोड या नाम से छाँटें…",
+  "asset.assign.picked": "{sequences} sequence · {shots} shot चुने गए",
   "docs.filter": "पृष्ठ छाँटें…",
   "docs.noMatch": "कोई पृष्ठ मेल नहीं खाता।",
   "docs.buildHint": "दस्तावेज़ उपलब्ध नहीं — चलाएँ",

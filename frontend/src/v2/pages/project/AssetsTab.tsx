@@ -196,6 +196,7 @@ export default function AssetsTab({
                   assignees: a.assignees,
                   awaitingReview: a.awaitingReview,
                   updatedAt: a.updatedAt,
+                  departments: a.departments,
                 }}
                 badge={
                   <span className="flex items-center gap-1">

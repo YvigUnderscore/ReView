@@ -3,12 +3,15 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useSequencesQuery, useShotsQuery } from '../lib/queries';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import PickGrid from './entity/PickGrid';
 import { SkeletonRows } from './ui/skeleton';
 import type { ShotSummary } from '../types/api';
 import { useT } from '../i18n';
@@ -56,6 +59,11 @@ export default function AssetAssignDialog({
   const sequenceIds = edits?.sequenceIds ?? new Set(assetQ.data?.asset.sequences.map((s) => s.id) ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Un long-métrage porte deux mille plans : sans filtre, la grille est un mur d'images.
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLocaleLowerCase();
+  const matches = (...values: (string | null | undefined)[]) =>
+    !needle || values.some((v) => (v ?? '').toLocaleLowerCase().includes(needle));
 
   const toggle = (kind: 'shotIds' | 'sequenceIds', id: number) => {
     const next = { shotIds: new Set(shotIds), sequenceIds: new Set(sequenceIds) };
@@ -81,6 +89,13 @@ export default function AssetAssignDialog({
     }
   };
 
+  const visibleSequences = useMemo(
+    () => sequences.filter((s) => matches(s.code, s.name)),
+    // `matches` se reconstruit à chaque rendu : c'est `needle` qui décide du résultat.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sequences, needle],
+  );
+
   // Regroupe les shots par séquence (codes triés numériquement), « Sans séquence » en dernier.
   const groups = useMemo(() => {
     const sortedSeq = [...sequences].sort((a, b) =>
@@ -91,15 +106,14 @@ export default function AssetAssignDialog({
     const list: { seq: { id: number; code: string; name: string }; shots: ShotSummary[] }[] = sortedSeq.map(
       (seq) => ({
         seq,
-        shots: shots.filter((s) => s.sequenceId === seq.id).sort(byCode),
+        shots: shots.filter((s) => s.sequenceId === seq.id && matches(s.code, s.name)).sort(byCode),
       }),
     );
-    const orphans = shots.filter((s) => s.sequenceId === null).sort(byCode);
+    const orphans = shots.filter((s) => s.sequenceId === null && matches(s.code, s.name)).sort(byCode);
     if (orphans.length) list.push({ seq: { id: -1, code: t('shots.noSequence'), name: '' }, shots: orphans });
     return list.filter((g) => g.shots.length > 0);
-  }, [shots, sequences, t]);
-
-  const seqById = useMemo(() => new Map(sequences.map((s) => [s.id, s])), [sequences]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shots, sequences, needle, t]);
 
   return (
     <Dialog
@@ -115,82 +129,78 @@ export default function AssetAssignDialog({
         {(error ?? loadError?.message) && (
           <p className="px-4 pt-3 text-xs text-destructive">{error ?? loadError?.message}</p>
         )}
+        <div className="border-b border-border px-4 py-2">
+          <div className="relative">
+            <Search
+              size={13}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              className="h-8 pl-8 text-xs"
+              placeholder={t('asset.assign.searchPlaceholder')}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <SkeletonRows count={4} />
           ) : (
             <div className="space-y-5">
-              {/* Séquences entières */}
               <div>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {t('batch.wholeSequences')}
                 </div>
-                <div className="grid grid-cols-2 gap-1">
-                  {sequences.length === 0 && (
-                    <p className="text-xs text-muted-foreground">{t('tree.noSequence')}</p>
-                  )}
-                  {sequences.map((s) => (
-                    <label
-                      key={s.id}
-                      className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={sequenceIds.has(s.id)}
-                        onChange={() => toggle('sequenceIds', s.id)}
-                      />
-                      <span className="font-medium">{s.code}</span>
-                      {s.name && <span className="truncate text-muted-foreground">· {s.name}</span>}
-                    </label>
-                  ))}
-                </div>
+                <PickGrid
+                  items={visibleSequences.map((s) => ({
+                    id: s.id,
+                    label: s.code,
+                    hint: s.name !== s.code ? s.name : null,
+                    thumbnailUrl: s.thumbnailUrl,
+                  }))}
+                  selected={sequenceIds}
+                  onToggle={(id) => toggle('sequenceIds', id)}
+                  emptyLabel={t('tree.noSequence')}
+                />
               </div>
 
-              {/* Shots regroupés par séquence */}
               <div>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {t('shots.title')}
                 </div>
-                {groups.length === 0 && (
+                {groups.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t('sequences.noShot')}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {groups.map((g) => (
+                      <div key={g.seq.id}>
+                        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary/80">
+                          {g.seq.code}
+                        </div>
+                        <PickGrid
+                          items={g.shots.map((sh) => ({
+                            id: sh.id,
+                            label: sh.code,
+                            hint: sh.name !== sh.code ? sh.name : null,
+                            thumbnailUrl: sh.thumbnailUrl,
+                          }))}
+                          selected={shotIds}
+                          onToggle={(id) => toggle('shotIds', id)}
+                          emptyLabel={t('sequences.noShot')}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 )}
-                <div className="space-y-3">
-                  {groups.map((g) => (
-                    <div key={g.seq.id}>
-                      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary/80">
-                        {g.seq.code}
-                      </div>
-                      <div className="grid grid-cols-2 gap-1">
-                        {g.shots.map((sh) => {
-                          const seqCode = sh.sequenceId != null ? seqById.get(sh.sequenceId)?.code : null;
-                          return (
-                            <label
-                              key={sh.id}
-                              className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-secondary/50"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={shotIds.has(sh.id)}
-                                onChange={() => toggle('shotIds', sh.id)}
-                              />
-                              <span className="font-medium">
-                                {seqCode ? `${seqCode} · ${sh.code}` : sh.code}
-                              </span>
-                              {sh.name && sh.name !== sh.code && (
-                                <span className="truncate text-muted-foreground">· {sh.name}</span>
-                              )}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
+          <span className="mr-auto text-2xs text-muted-foreground">
+            {t('asset.assign.picked', { sequences: sequenceIds.size, shots: shotIds.size })}
+          </span>
           <Button variant="outline" size="sm" onClick={onClose}>
             {t('common.undo')}
           </Button>

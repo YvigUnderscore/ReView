@@ -834,6 +834,8 @@
   "asset.card.latest": "diwezhañ : {name} · {date}",
   "asset.card.openTask": "Digeriñ an trevell a-bezh",
   "asset.card.noMedia": "media ebet",
+  "asset.assign.searchPlaceholder": "Silañ dre god pe anv…",
+  "asset.assign.picked": "{sequences} sequences · {shots} shots dibabet",
   "docs.filter": "Silañ ar pajennoù…",
   "docs.noMatch": "Pajenn ebet a glot.",
   "docs.buildHint": "Teulioù dihegerz — lañsañ",

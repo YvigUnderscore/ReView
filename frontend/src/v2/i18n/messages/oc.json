@@ -851,6 +851,8 @@
   "asset.card.latest": "darrièra : {name} · {date}",
   "asset.card.openTask": "Dobrir lo prètzfach complet",
   "asset.card.noMedia": "sens mèdia",
+  "asset.assign.searchPlaceholder": "Filtrar per còdi o nom…",
+  "asset.assign.picked": "{sequences} sequences · {shots} shots seleccionats",
   "docs.filter": "Filtrar las paginas…",
   "docs.noMatch": "Cap de pagina correspond pas.",
   "docs.buildHint": "Documentacion pas disponibla — lançar",

@@ -825,6 +825,8 @@
   "asset.card.latest": "최신: {name} · {date}",
   "asset.card.openTask": "전체 작업 열기",
   "asset.card.noMedia": "미디어 없음",
+  "asset.assign.searchPlaceholder": "코드 또는 이름으로 거르기…",
+  "asset.assign.picked": "sequence {sequences}개 · shot {shots}개 선택됨",
   "docs.filter": "페이지 필터…",
   "docs.noMatch": "일치하는 페이지가 없습니다.",
   "docs.buildHint": "문서를 사용할 수 없습니다 — 다음을 실행하세요",
