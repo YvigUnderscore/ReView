@@ -19,6 +19,7 @@ import { entriesOf, separator, type EntityItemAction, type MenuEntry } from '../
 import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import { useStatusMenu } from '../../lib/useStatusMenu';
+import { useEntityMenus } from '../../lib/useEntityMenus';
 import TimelineCard from '../timeline/TimelineCard';
 import { sortByCode, type Nomenclature, type Sequence } from './projectTypes';
 import { useT } from '../../i18n';
@@ -61,6 +62,7 @@ export default function SequencesTab({
   const sel = useMultiSelect(sorted.map((s) => s.id));
   // Statut par clic droit — même vocabulaire que sur les plans et le kanban.
   const { entry: statusEntry } = useStatusMenu(projectId, 'sequence');
+  const { peopleEntry, hideEntry, dialog: entityDialog } = useEntityMenus(projectId, 'sequences');
 
   const createBulk = async (rows: Record<string, string>[]) => {
     await api.post('/api/sequences/bulk', {
@@ -110,7 +112,11 @@ export default function SequencesTab({
     const sgUrl = sgLinks.linkFor('sequence', s.id);
     return [
       { id: 'open', label: t('sequences.open'), onSelect: () => void navigate(`/sequences/${s.id}`) },
-      ...entriesOf(statusEntry(s, { canEdit: canManage })),
+      ...entriesOf(
+        statusEntry(s, { canEdit: canManage }),
+        peopleEntry({ id: s.id, label: s.code, assignees: s.assignees }, canManage),
+        hideEntry({ id: s.id, label: s.code }),
+      ),
       ...(sgUrl
         ? [
             {
@@ -232,6 +238,7 @@ export default function SequencesTab({
         />
       )}
 
+      {entityDialog}
       <ConfirmDialog
         open={bulkDeleting}
         title={t('sequences.deleteMany.title')}

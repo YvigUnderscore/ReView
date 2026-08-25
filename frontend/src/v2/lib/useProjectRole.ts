@@ -53,11 +53,20 @@ export interface AssignableMember {
   id: number;
   name: string;
   role: Role;
+  /** Photo déjà signée par le serveur — cf. `ProjectService.getProject`. */
+  avatarUrl: string | null;
 }
 
 interface MembershipRow {
   role: Role | null;
-  user: { id: number; name: string | null; email: string; role: Role; isService?: boolean };
+  user: {
+    id: number;
+    name: string | null;
+    email: string;
+    role: Role;
+    isService?: boolean;
+    avatarUrl?: string | null;
+  };
 }
 
 /**
@@ -78,6 +87,11 @@ export function useProjectMembers(projectId: number): AssignableMember[] {
   const rows = data?.project.memberships ?? [];
   return rows
     .filter((m) => !m.user.isService && (m.role ?? m.user.role) !== 'CLIENT')
-    .map((m) => ({ id: m.user.id, name: m.user.name ?? m.user.email, role: m.role ?? m.user.role }))
+    .map((m) => ({
+      id: m.user.id,
+      name: m.user.name ?? m.user.email,
+      role: m.role ?? m.user.role,
+      avatarUrl: m.user.avatarUrl ?? null,
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -27,6 +27,7 @@ import { bulkDelete } from '../../lib/bulkApi';
 import { useShotsQuery } from '../../lib/queries';
 import { usePipelineStatuses } from '../../lib/shotgridApi';
 import { useDepartments } from '../../lib/departmentsApi';
+import { useEntityMenus } from '../../lib/useEntityMenus';
 import { shotCardActions } from './shotCardActions';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
 import { useT } from '../../i18n';
@@ -76,6 +77,8 @@ export default function ShotsTab({
   // Omission du montage : décision de production, elle aussi au clic droit (UI simple).
   const { entry: omitEntry } = useOmitMenu(projectId);
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
+  // Personnes responsables et masquage : deux gestes de carte, au clic droit.
+  const { peopleEntry, hideEntry, dialog: entityDialog } = useEntityMenus(projectId, 'shots');
 
   // Drawer piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
 
@@ -262,7 +265,9 @@ export default function ShotsTab({
                   actions={manageActions}
                   contextEntries={entriesOf(
                     statusEntry(shot, { canEdit: canManage }),
+                    peopleEntry({ id: shot.id, label: shot.code, assignees: shot.assignees }, canManage),
                     omitEntry(shot, { canEdit: canManage }),
+                    hideEntry({ id: shot.id, label: shot.code }),
                   )}
                   contextActions={contextActions}
                 />
@@ -310,6 +315,7 @@ export default function ShotsTab({
         />
       )}
 
+      {entityDialog}
       <ShotDialogs
         projectId={projectId}
         editing={editing}

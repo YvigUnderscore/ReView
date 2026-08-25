@@ -28,6 +28,7 @@ import {
   Share2,
   Video,
   Settings as SettingsIcon,
+  EyeOff,
   Trash2,
   Users as UsersIcon,
 } from 'lucide-react';
@@ -41,6 +42,7 @@ import UserDetailTab from './admin/UserDetailTab';
 import ProjectsAdminTab from './admin/ProjectsAdminTab';
 import ProjectAdminDetailTab from './admin/ProjectAdminDetailTab';
 import VersionsTab from './admin/VersionsTab';
+import VisibilityTab from './admin/VisibilityTab';
 import CommentsTab from './admin/CommentsTab';
 import StorageTab from './admin/StorageTab';
 import SettingsTab from './admin/SettingsTab';
@@ -205,6 +207,15 @@ const sections = (t: Tr) =>
       Component: ShotgridSitesTab,
     },
     { key: 'jobs', group: 'maintenance', label: t('admin.tab.jobs'), icon: ListChecks, Component: JobsTab },
+    {
+      // Le masquage vit avec le contenu, pas avec la maintenance : c'est une décision de
+      // production sur ce qui s'affiche, pas une opération d'exploitation.
+      key: 'visibility',
+      group: 'content',
+      label: t('admin.tab.visibility'),
+      icon: EyeOff,
+      Component: VisibilityTab,
+    },
     { key: 'trash', group: 'maintenance', label: t('admin.tab.trash'), icon: Trash2, Component: TrashTab },
     {
       key: 'retention',

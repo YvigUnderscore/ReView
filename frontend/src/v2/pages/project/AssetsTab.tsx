@@ -14,6 +14,7 @@ import { useViewMode } from '../../stores/useViewPref';
 import { entriesOf } from '../../lib/menuSpec';
 import { assetCardActions } from './assetCardActions';
 import { useAssignMenu } from '../../lib/useAssignMenu';
+import { useEntityMenus } from '../../lib/useEntityMenus';
 import BulkAssignDialog from '../../components/entity/BulkAssignDialog';
 import EntityCard, { EntityContainer } from '../../components/EntityCard';
 import ListSentinel, { ListCount } from '../../components/ListSentinel';
@@ -83,6 +84,7 @@ export default function AssetsTab({
   // Assignation par clic droit : confier un asset demandait d'ouvrir chacune de ses
   // tâches, une par une.
   const { assignEntry } = useAssignMenu(projectId, 'asset');
+  const { peopleEntry, hideEntry, dialog: entityDialog } = useEntityMenus(projectId, 'assets');
 
   const confirmBulkDelete = async () => {
     try {
@@ -208,7 +210,11 @@ export default function AssetsTab({
                 }
                 favorite={{ type: 'ASSET', entityId: a.id }}
                 actions={manageActions}
-                contextEntries={entriesOf(assignEntry(a, canManage))}
+                contextEntries={entriesOf(
+                  assignEntry(a, canManage),
+                  peopleEntry({ id: a.id, label: a.name, assignees: a.assignees }, canManage),
+                  hideEntry({ id: a.id, label: a.name }),
+                )}
                 contextActions={contextActions}
               />
             );
@@ -252,6 +258,7 @@ export default function AssetsTab({
           }}
         />
       )}
+      {entityDialog}
       <ConfirmDialog
         open={bulkDeleting}
         title={t('assets.deleteMany.title')}
