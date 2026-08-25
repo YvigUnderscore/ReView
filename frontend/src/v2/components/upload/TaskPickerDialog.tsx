@@ -91,7 +91,12 @@ export default function TaskPickerDialog({
     () =>
       linked
         ? sgSteps.map((s) => ({ key: `sg-${s.sgId}`, code: s.code, color: s.color, sgId: s.sgId }))
-        : departments.map((d) => ({ key: `dept-${d.id}`, code: d.key, color: d.color })),
+        : // Politique de département : la liste se réduit aux étapes où la personne peut
+          // écrire — deux entrées plutôt que douze. `writable` absent = ancienne réponse
+          // du serveur, on ne masque alors rien.
+          departments
+            .filter((d) => d.writable !== false)
+            .map((d) => ({ key: `dept-${d.id}`, code: d.key, color: d.color })),
     [linked, sgSteps, departments],
   );
   const { data: members = [] } = useSgProjectMembers(projectId, open && Boolean(parent) && linked);

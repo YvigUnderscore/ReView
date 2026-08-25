@@ -10,6 +10,9 @@ vi.mock('../lib/prisma', () => ({
     // Les droits se lisent sur le rôle EFFECTIF (38.E) : par défaut, membre sans rôle local
     // (donc jugé sur son rôle global), ce que testaient déjà les cas ci-dessous.
     projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
+    // Politique de département (réglage studio) : absente = « open », la règle historique.
+    setting: { findUnique: vi.fn().mockResolvedValue(null) },
+    user: { findUnique: vi.fn().mockResolvedValue({ departments: [] }) },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));

@@ -14,6 +14,9 @@ vi.mock('../lib/prisma', () => ({
   prisma: {
     task: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     comment: { findUnique: vi.fn() },
+    // Politique de département (réglage studio) : absente = « open », la règle historique.
+    setting: { findUnique: vi.fn().mockResolvedValue(null) },
+    user: { findUnique: vi.fn().mockResolvedValue({ departments: [] }) },
   },
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));

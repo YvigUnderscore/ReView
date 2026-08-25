@@ -41,9 +41,20 @@ const departmentBody = z.object({
   color: colorSchema.nullish(),
 });
 
-/** Départements applicables à un projet : les siens, sinon ceux du studio. */
+/**
+ * Départements applicables à un projet : les siens, sinon ceux du studio.
+ *
+ * Chaque étape porte `writable` — la personne peut-elle y créer une tâche ? C'est ce qui
+ * permet à l'écran de proposer deux entrées plutôt que douze, sous la politique de
+ * département (cf. `lib/taskDepartmentPolicy`). Le drapeau est **consultatif** : le serveur
+ * revérifie à l'écriture, un client ne se contrôle pas lui-même.
+ */
 router.get('/projects/:projectId/departments', auth, validate({ params: projectParam }), async (req, res) => {
-  res.json({ departments: await DepartmentService.listForProject(Number(req.params.projectId)) });
+  const departments = await DepartmentService.listForProjectWithRights(
+    Number(req.params.projectId),
+    req.user!,
+  );
+  res.json({ departments });
 });
 
 /** Référentiel du studio, celui que les projets héritent par défaut. */

@@ -312,6 +312,12 @@ export interface Department {
    * de couleur ne se distingue plus — le logo du studio pour « Compositing », si.
    */
   imageUrl?: string | null;
+  /**
+   * La personne peut-elle créer une tâche dans cette étape ? Consultatif : c'est ce qui
+   * permet de proposer deux entrées plutôt que douze, mais le serveur revérifie à
+   * l'écriture — un client ne se contrôle pas lui-même.
+   */
+  writable?: boolean;
 }
 /**
  * Le pipe tel que les réglages et les vues qui en dérivent le renvoient : la table

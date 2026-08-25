@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Prisma, type Department } from '@prisma/client';
+import { Prisma, type Department, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
 import { storage, StorageService } from './StorageService';
+import { isProjectManager } from '../lib/projectRoles';
+import { parseTaskPolicy, writableDepartments } from '../lib/taskDepartmentPolicy';
+import { SETTING_KEYS } from '../lib/settings';
 
 /**
  * Départements du pipeline (B1).
@@ -111,6 +114,37 @@ export async function listForProject(projectId: number): Promise<DepartmentView[
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { studioId: true } });
   if (!project) return [];
   return listForStudio(project.studioId);
+}
+
+/**
+ * Les départements d'un projet, chacun accompagné de « la personne peut-elle y créer une
+ * tâche ? ».
+ *
+ * Le drapeau est **consultatif** : il permet à l'écran de proposer deux entrées plutôt que
+ * douze sous la politique de département, mais le serveur revérifie à l'écriture — un
+ * client ne se contrôle pas lui-même (`TaskService.create`).
+ */
+export async function listForProjectWithRights(
+  projectId: number,
+  user: { id: number; role: Role },
+): Promise<(DepartmentView & { writable: boolean })[]> {
+  const departments = await listForProject(projectId);
+  const [setting, manager, me] = await Promise.all([
+    prisma.setting.findUnique({ where: { key: SETTING_KEYS.TASK_DEPARTMENT_POLICY } }),
+    isProjectManager(user.id, user.role, projectId),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { departments: { select: { id: true } } },
+    }),
+  ]);
+  const allowed = new Set(
+    writableDepartments(departments, {
+      policy: parseTaskPolicy(setting?.value),
+      isManager: manager,
+      userDepartmentIds: (me?.departments ?? []).map((d) => d.id),
+    }),
+  );
+  return departments.map((d) => ({ ...d, writable: allowed.has(d.id) }));
 }
 
 /**

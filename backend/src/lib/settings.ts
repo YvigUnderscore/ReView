@@ -28,6 +28,9 @@ export const SETTING_KEYS = {
   // Langue par défaut du studio : sert aux comptes qui n'ont rien choisi, et à tout ce
   // que le serveur rend sans navigateur en face (emails, notifications).
   STUDIO_DEFAULT_LOCALE: 'studio_default_locale',
+  // Qui écrit sur une tâche : « open » (l'assigné, règle historique) ou « department »
+  // (l'assigné et les membres de l'étape). Cf. lib/taskDepartmentPolicy.
+  TASK_DEPARTMENT_POLICY: 'task_department_policy',
 } as const;
 
 /** Dépôt amont — valeur par défaut du lien « code source » (AGPL §13). */

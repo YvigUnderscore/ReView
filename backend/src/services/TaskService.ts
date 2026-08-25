@@ -16,6 +16,8 @@ import {
 } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute, assertProjectManage, isProjectManager } from '../lib/projectRoles';
+import { canWriteTask, parseTaskPolicy, writableDepartments } from '../lib/taskDepartmentPolicy';
+import { SETTING_KEYS } from '../lib/settings';
 import { taskSelect, toTask } from '../lib/v1Resources';
 import * as ApiEventService from './ApiEventService';
 import * as DepartmentService from './DepartmentService';
@@ -310,6 +312,14 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
   // que les départements par défaut, et une tâche sans étape se range en fourre-tout.
   const key = body.department ?? (body.type === TaskType.OTHER ? null : body.type);
   const department = await resolveDepartment(projectId, key);
+  // Politique de département (réglage studio) : un artiste crée dans ses étapes, et
+  // nulle part ailleurs. Sans elle, la liste proposée à l'écran valait promesse — mais
+  // rien n'empêchait un appel direct de la contourner.
+  const ctx = await taskWriteContext(user, projectId);
+  if (department.departmentId !== null) {
+    const allowed = writableDepartments([{ id: department.departmentId }], ctx);
+    if (allowed.length === 0) throw forbidden('This task belongs to a department you are not part of');
+  }
   const task = await prisma.task.create({
     data: {
       name: body.name,
@@ -437,6 +447,32 @@ export interface UpdateTaskInput {
  * projet — un `step` importé de ShotGrid, un chemin DCC — est créée plutôt que perdue :
  * elle existe puisque quelqu'un travaille dessus.
  */
+/**
+ * Le contexte de droits d'une personne sur une tâche : politique du studio, rôle effectif,
+ * ses départements.
+ *
+ * Une seule lecture pour les deux appelants (création et mise à jour) : les laisser
+ * interroger la base chacun de son côté les aurait fait diverger au premier changement.
+ */
+async function taskWriteContext(
+  user: SessionUser,
+  projectId: number,
+): Promise<{ policy: ReturnType<typeof parseTaskPolicy>; isManager: boolean; userDepartmentIds: number[] }> {
+  const [row, isManager, departments] = await Promise.all([
+    prisma.setting.findUnique({ where: { key: SETTING_KEYS.TASK_DEPARTMENT_POLICY } }),
+    isProjectManager(user.id, user.role, projectId),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { departments: { select: { id: true } } },
+    }),
+  ]);
+  return {
+    policy: parseTaskPolicy(row?.value),
+    isManager,
+    userDepartmentIds: (departments?.departments ?? []).map((d) => d.id),
+  };
+}
+
 async function resolveDepartment(
   projectId: number,
   key: string | null | undefined,
@@ -513,16 +549,23 @@ export async function setAssignee(
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateTaskInput) {
   const task = await prisma.task.findUnique({
     where: { id },
-    select: { assigneeId: true, status: true, pipelineStatusId: true },
+    select: { assigneeId: true, status: true, pipelineStatusId: true, departmentId: true },
   });
   if (!task) throw notFound('Task not found');
-  const manager = await isProjectManager(user.id, user.role, projectId);
-  const isAssignee = task.assigneeId === user.id;
+  const ctx = await taskWriteContext(user, projectId);
+  const manager = ctx.isManager;
   if (!manager) {
-    // Un non-manager (artiste assigné) ne peut changer que le statut et la checklist de sa tâche.
+    // À quelles tâches la personne a accès : l'assigné toujours, et — sous la politique de
+    // département — les membres de l'étape. Ce qu'elle peut y *changer* reste borné au
+    // statut et à la checklist : la responsabilité d'une étape n'est pas celle du planning.
+    const reachable = canWriteTask({
+      ...ctx,
+      taskDepartmentId: task.departmentId,
+      isAssignee: task.assigneeId === user.id,
+    });
     const keys = Object.keys(body);
     const allowed = ['status', 'pipelineStatusId', 'checklist'];
-    if (!isAssignee || keys.some((k) => !allowed.includes(k)))
+    if (!reachable || keys.some((k) => !allowed.includes(k)))
       throw forbidden('On a task assigned to you, only the status and the checklist can change');
   }
   const { checklist, department, ...rest } = body;

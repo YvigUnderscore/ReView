@@ -11,6 +11,7 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import TranslationNotice from '../../components/TranslationNotice';
+import TaskPolicyField from './TaskPolicyField';
 import { BASE_LOCALE, LOCALES, isLocale, type Locale } from '../../i18n';
 import { useT } from '../../i18n';
 import {
@@ -133,6 +134,7 @@ export default function SettingsTab() {
           ),
         )}
       </div>
+      <TaskPolicyField stored={data.task_department_policy ?? ''} onSave={persist} />
       <DefaultLocaleField stored={data.studio_default_locale ?? ''} onSave={persist} />
       <AccentField stored={data.studio_accent ?? ''} onSave={persist} />
     </div>
