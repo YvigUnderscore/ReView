@@ -43,6 +43,14 @@ export interface SgSettings {
     naming: 'sgCode' | 'filename';
   };
   push: { publishMode: 'link' | 'upload' | 'off'; attributeToUser: boolean; attachAnnotations: boolean };
+  /**
+   * Qui écrit la description d'une séquence, d'un plan ou d'un asset.
+   *
+   * `shotgrid` (le défaut) : le site fait foi, et le champ est **en lecture seule** dans
+   * ReView — l'y modifier produirait une divergence que la synchronisation suivante
+   * écraserait sans le dire. `writeBack` ouvre l'aller-retour.
+   */
+  descriptions: { source: 'shotgrid' | 'review'; writeBack: boolean };
   versionStatusMap: Record<string, number>;
   conflictPolicy: 'sg_wins' | 'review_wins' | 'manual';
 }
