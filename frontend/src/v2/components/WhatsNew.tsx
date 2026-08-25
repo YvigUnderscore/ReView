@@ -7,6 +7,7 @@ import { Sparkles } from 'lucide-react';
 import { qk } from '../lib/query';
 import { parseChangelog } from '../lib/changelog';
 import { renderDocHtml } from '../pages/docs/docsRender';
+import { useCalloutLabels } from '../pages/docs/useCalloutLabels';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { useT } from '../i18n';
 
@@ -19,6 +20,7 @@ const SEEN_KEY = 'review:changelog-seen';
 
 export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
   const t = useT();
+  const calloutLabels = useCalloutLabels();
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<string | null>(() => {
     try {
@@ -83,7 +85,7 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
                 <article
                   className="prose-doc max-w-none text-sm text-card-foreground"
                   // Markdown du repo (CHANGELOG.md) ; le HTML brut est échappé par renderDocHtml.
-                  dangerouslySetInnerHTML={{ __html: renderDocHtml(e.body, 'CHANGELOG.md') }}
+                  dangerouslySetInnerHTML={{ __html: renderDocHtml(e.body, 'CHANGELOG.md', calloutLabels) }}
                 />
               </div>
             ))}

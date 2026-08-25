@@ -2,7 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { renderDocHtml, isUnsafeHref, isUnsafeSrc } from './docsRender';
+import { renderDocHtml, isUnsafeHref, isUnsafeSrc, type CalloutLabels } from './docsRender';
+
+const LABELS: CalloutLabels = {
+  note: 'Note',
+  tip: 'Astuce',
+  important: 'Important',
+  warning: 'Avertissement',
+  caution: 'Attention',
+};
+const render = (markdown: string, path: string) => renderDocHtml(markdown, path, LABELS);
 
 /**
  * Le HTML brut du markdown est échappé par le renderer, mais pas les URLs que marked
@@ -34,18 +43,18 @@ describe('isUnsafeHref', () => {
 
 describe('renderDocHtml', () => {
   it('retire un href javascript: produit par le markdown', () => {
-    const html = renderDocHtml('[clic](javascript:alert(1))', 'guide.md');
+    const html = render('[clic](javascript:alert(1))', 'guide.md');
     expect(html).not.toMatch(/href="javascript:/i);
     expect(html).toContain('clic');
   });
 
   it('retire un src d’image exécutable', () => {
-    const html = renderDocHtml('![x](javascript:alert(1))', 'guide.md');
+    const html = render('![x](javascript:alert(1))', 'guide.md');
     expect(html).not.toMatch(/src="javascript:/i);
   });
 
   it('conserve les liens externes avec noopener', () => {
-    const html = renderDocHtml('[site](https://exemple.com)', 'guide.md');
+    const html = render('[site](https://exemple.com)', 'guide.md');
     expect(html).toContain('href="https://exemple.com"');
     expect(html).toContain('rel="noopener noreferrer"');
   });

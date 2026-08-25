@@ -1,20 +1,25 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
 import { qk } from '../lib/query';
 import PageShell from '../components/PageShell';
-import { filterSections, type DocsManifest } from './docs/docsManifest';
-import { renderDocHtml } from './docs/docsRender';
+import DocsArticle from './docs/DocsArticle';
+import DocsNav from './docs/DocsNav';
+import { useActiveChapter } from './docs/useActiveChapter';
+import { filterSections, neighbours, sectionLabel, sectionOf, type DocsManifest } from './docs/docsManifest';
+import { extractChapters, renderDocHtml } from './docs/docsRender';
+import { useCalloutLabels } from './docs/useCalloutLabels';
 import { t, useT } from '../i18n';
 
 /**
- * Documentation produit (/docs) : rendu du dossier DOCUMENTATION/ du repo,
- * copié dans public/docs + manifest.json par frontend/scripts/build-docs.mjs.
- * Arbre latéral par section, recherche client, markdown rendu localement.
+ * Documentation produit (/docs) : rendu du dossier DOCUMENTATION/ du repo, copié dans
+ * public/docs + manifest.json par frontend/scripts/build-docs.mjs.
+ *
+ * Sommaire replié par section à gauche, chapitres de la page ouverte dessous, colonne de
+ * lecture au centre avec ses deux pages voisines en pied. Le markdown est rendu localement.
  */
 
 const fetchText = async (url: string): Promise<string> => {
@@ -28,6 +33,7 @@ export default function DocsPage() {
   const [params, setParams] = useSearchParams();
   const page = params.get('p') ?? 'README.md';
   const [query, setQuery] = useState('');
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const manifestQ = useQuery({
     queryKey: qk.docsManifest(),
@@ -40,19 +46,35 @@ export default function DocsPage() {
     staleTime: Infinity,
   });
 
-  const sections = useMemo(
-    () => filterSections(manifestQ.data?.sections ?? [], query),
-    [manifestQ.data, query],
+  const calloutLabels = useCalloutLabels();
+
+  const allSections = useMemo(() => manifestQ.data?.sections ?? [], [manifestQ.data]);
+  const sections = useMemo(() => filterSections(allSections, query), [allSections, query]);
+  const html = useMemo(
+    () => (pageQ.data ? renderDocHtml(pageQ.data, page, calloutLabels) : ''),
+    [pageQ.data, page, calloutLabels],
   );
-  const html = useMemo(() => (pageQ.data ? renderDocHtml(pageQ.data, page) : ''), [pageQ.data, page]);
+  const chapters = useMemo(() => extractChapters(html), [html]);
+  const activeChapter = useActiveChapter(contentRef, chapters);
+
+  const section = useMemo(() => sectionOf(allSections, page), [allSections, page]);
+  const current = section?.pages.find((p) => p.path === page);
+  const { previous, next } = useMemo(() => neighbours(allSections, page), [allSections, page]);
+
+  const scrollToChapter = (id: string) => document.getElementById(id)?.scrollIntoView({ block: 'start' });
 
   const openPage = (path: string) => {
     const [p, hash] = path.split('#');
     setParams(p === 'README.md' ? {} : { p });
-    // Ancre : laisser le rendu se faire puis scroller vers l'id correspondant.
-    if (hash) requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView());
-    else document.getElementById('doc-content')?.scrollTo?.(0, 0);
+    // Ancre : laisser le rendu se faire puis rejoindre le titre correspondant.
+    if (hash) requestAnimationFrame(() => scrollToChapter(hash));
+    else contentRef.current?.scrollTo?.(0, 0);
   };
+
+  // Une page qui vient d'arriver commence en haut, quel que soit le défilement précédent.
+  useEffect(() => {
+    contentRef.current?.scrollTo?.(0, 0);
+  }, [page]);
 
   // Liens internes du markdown (data-doc posé par renderDocHtml) → navigation SPA.
   const onContentClick = (e: MouseEvent<HTMLDivElement>) => {
@@ -65,75 +87,31 @@ export default function DocsPage() {
   };
 
   return (
-    <PageShell title={t('nav.documentation')}>
-      <div className="flex h-full min-h-0 gap-4 p-4">
-        <aside className="flex w-64 shrink-0 flex-col gap-3 overflow-y-auto pr-1">
-          <div className="relative">
-            <Search
-              size={14}
-              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('docs.filter')}
-              className="w-full rounded-md border border-border bg-secondary py-1.5 pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
-            />
-          </div>
-          {manifestQ.isError && (
-            <p className="text-sm text-muted-foreground">
-              {t('docs.buildHint')} <code>npm run dev</code> {t('client.regenerates')}
-              <code> public/docs</code>.
-            </p>
-          )}
-          {sections.map((section) => (
-            <div key={section.dir}>
-              <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {section.label}
-              </p>
-              <ul>
-                {section.pages.map((p) => (
-                  <li key={p.path}>
-                    <button
-                      onClick={() => openPage(p.path)}
-                      className={`w-full truncate rounded-md px-2 py-1 text-left text-sm transition-colors ${
-                        p.path === page
-                          ? 'bg-secondary text-foreground'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                      title={p.title}
-                    >
-                      {p.title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          {query.trim() && sections.length === 0 && !manifestQ.isError && (
-            <p className="px-1 text-sm text-muted-foreground">{t('docs.noMatch')}</p>
-          )}
-        </aside>
-
-        {/* Le clic est délégué aux liens <a data-doc> du markdown, eux-mêmes accessibles
-            au clavier (Entrée déclenche un clic qui remonte ici) : le conteneur, lui,
-            n'est pas un contrôle. */}
-        <div
-          id="doc-content"
-          role="presentation"
-          className="min-w-0 flex-1 overflow-y-auto rounded-lg border border-border bg-card px-6 py-4"
-          onClick={onContentClick}
-        >
-          {pageQ.isError ? (
-            <p className="text-sm text-muted-foreground">{t('docs.pageNotFound')}</p>
-          ) : (
-            <article
-              className="prose-doc max-w-3xl text-sm text-card-foreground"
-              // Markdown du repo ; le HTML brut est échappé dans renderDocHtml.
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          )}
-        </div>
+    <PageShell title={t('nav.documentation')} width="flush">
+      <div className="flex h-full min-h-0 gap-0 pl-5">
+        <DocsNav
+          sections={sections}
+          page={page}
+          chapters={chapters}
+          activeChapter={activeChapter}
+          query={query}
+          filtering={query.trim().length > 0}
+          unavailable={manifestQ.isError}
+          onQueryChange={setQuery}
+          onOpenPage={openPage}
+          onOpenChapter={scrollToChapter}
+        />
+        <DocsArticle
+          page={current}
+          sectionLabel={section ? sectionLabel(section, t) : ''}
+          html={html}
+          notFound={pageQ.isError}
+          previous={previous}
+          next={next}
+          containerRef={contentRef}
+          onOpenPage={openPage}
+          onContentClick={onContentClick}
+        />
       </div>
     </PageShell>
   );

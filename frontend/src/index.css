@@ -312,4 +312,141 @@
   .prose-doc img {
     @apply my-3 max-w-full rounded-md border border-border;
   }
+
+  /*
+   * Page /docs — la documentation produit se lit en continu, là où `.prose-doc` sert aussi
+   * aux commentaires et à l'éditeur de texte riche, qui eux doivent rester denses. Ces
+   * règles se posent par-dessus, sur le seul article de documentation : interligne plus
+   * large, titres qui découpent visiblement la page en chapitres, tableaux et blocs de code
+   * présentés comme des objets à part entière.
+   */
+  .doc-article {
+    @apply leading-7;
+  }
+  .doc-article > :first-child {
+    @apply mt-0;
+  }
+  .doc-article h2 {
+    @apply mb-3 mt-8 scroll-mt-6 border-b border-border pb-2 text-lg font-semibold tracking-tight;
+  }
+  .doc-article h3 {
+    @apply mb-2 mt-6 scroll-mt-6 text-base font-semibold;
+  }
+  .doc-article h4 {
+    @apply mb-1 mt-4 scroll-mt-6 text-sm font-semibold text-muted-foreground;
+  }
+  .doc-article p {
+    @apply my-3 leading-7;
+  }
+  .doc-article ul,
+  .doc-article ol {
+    @apply my-3 space-y-1.5;
+  }
+  .doc-article li::marker {
+    @apply text-muted-foreground;
+  }
+  .doc-article a {
+    @apply font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:decoration-primary;
+  }
+  /* Le lien sortant s'annonce : on ne clique pas de la même façon vers l'extérieur. */
+  .doc-article a[data-external]::after {
+    content: '↗';
+    @apply ml-0.5 align-super text-2xs no-underline;
+  }
+  .doc-article hr {
+    @apply my-8 border-border;
+  }
+
+  /* Tableaux : cadre défilant, en-tête posé sur une surface, dernière ligne sans trait. */
+  .doc-article .doc-table {
+    @apply my-4 overflow-x-auto rounded-lg border border-border;
+  }
+  .doc-article table {
+    @apply my-0 w-full border-collapse text-left;
+  }
+  .doc-article thead {
+    @apply bg-secondary;
+  }
+  .doc-article th {
+    @apply border-b border-border px-3 py-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .doc-article td {
+    @apply border-b border-border/60 px-3 py-2 align-top;
+  }
+  .doc-article tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* Blocs de code : le langage annoncé au-dessus, en petit. */
+  .doc-article pre {
+    @apply my-4 rounded-lg border border-border bg-secondary p-4 text-xs leading-6;
+  }
+  .doc-article pre[data-lang]::before {
+    content: attr(data-lang);
+    @apply mb-2 block text-2xs uppercase tracking-wide text-muted-foreground;
+  }
+  .doc-article code {
+    @apply rounded border border-border/60 bg-secondary px-1.5 py-0.5;
+  }
+  .doc-article pre code {
+    @apply border-0 bg-transparent p-0;
+  }
+
+  /* Figures : l'image et sa légende forment un bloc, la légende sous l'image. */
+  .doc-article figure {
+    @apply my-5;
+  }
+  .doc-article figure img {
+    @apply my-0 w-full rounded-lg border border-border;
+  }
+  .doc-article figcaption {
+    @apply mt-2 text-center text-xs text-muted-foreground;
+  }
+
+  /*
+   * Encarts `> [!NOTE]` (syntaxe des alertes GitHub) : un filet coloré à gauche et un
+   * libellé, dans la langue du lecteur — le markdown, lui, reste en anglais.
+   */
+  .doc-article .doc-callout {
+    @apply my-4 rounded-lg border border-l-4 border-border bg-secondary/40 px-4 py-3;
+  }
+  .doc-article .doc-callout > :first-child {
+    @apply mt-0;
+  }
+  .doc-article .doc-callout > :last-child {
+    @apply mb-0;
+  }
+  .doc-article .doc-callout-label {
+    @apply mb-1 mt-0 text-2xs font-semibold uppercase tracking-wide;
+  }
+  .doc-article .doc-callout[data-callout='note'] {
+    @apply border-l-info;
+  }
+  .doc-article .doc-callout[data-callout='note'] .doc-callout-label {
+    @apply text-info;
+  }
+  .doc-article .doc-callout[data-callout='tip'] {
+    @apply border-l-success;
+  }
+  .doc-article .doc-callout[data-callout='tip'] .doc-callout-label {
+    @apply text-success;
+  }
+  .doc-article .doc-callout[data-callout='important'] {
+    @apply border-l-primary;
+  }
+  .doc-article .doc-callout[data-callout='important'] .doc-callout-label {
+    @apply text-primary;
+  }
+  .doc-article .doc-callout[data-callout='warning'] {
+    @apply border-l-warning;
+  }
+  .doc-article .doc-callout[data-callout='warning'] .doc-callout-label {
+    @apply text-warning;
+  }
+  .doc-article .doc-callout[data-callout='caution'] {
+    @apply border-l-destructive;
+  }
+  .doc-article .doc-callout[data-callout='caution'] .doc-callout-label {
+    @apply text-destructive;
+  }
 }
