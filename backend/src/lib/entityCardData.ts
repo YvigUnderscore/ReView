@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { prisma } from './prisma';
+import { avatarUrl } from './userView';
 
 /**
  * Ce qu'une carte de plan, de séquence ou d'asset affiche en plus de son nom.
@@ -27,6 +28,43 @@ export const CARD_ASSIGNEE_SELECT = {
   username: true,
   avatarKey: true,
 } as const;
+
+/** Une personne telle qu'elle est lue en base pour une carte. */
+export interface RawCardAssignee {
+  id: number;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+  avatarKey: string | null;
+}
+
+/** La même, prête à afficher : la clé objet est devenue une URL signée. */
+export type CardAssignee = Omit<RawCardAssignee, 'avatarKey'> & { avatarUrl: string | null };
+
+/**
+ * Signe les avatars d'une page entière, **une fois par personne**.
+ *
+ * Une grille de deux cents plans porte deux cents fois les mêmes dix visages. Signer carte
+ * par carte demandait donc deux cents signatures pour dix objets distincts ; la carte de
+ * clés dédoublonne avant de signer, et le cache de `StorageService` fait le reste.
+ */
+export async function signAssignees<T extends { assignees: RawCardAssignee[] }>(
+  rows: T[],
+): Promise<(Omit<T, 'assignees'> & { assignees: CardAssignee[] })[]> {
+  const keys = new Set<string>();
+  for (const row of rows) for (const a of row.assignees) if (a.avatarKey) keys.add(a.avatarKey);
+  const urls = new Map<string, string | null>();
+  await Promise.all([...keys].map(async (key) => urls.set(key, await avatarUrl(key))));
+
+  return rows.map((row) => ({
+    ...row,
+    assignees: row.assignees.map(({ avatarKey, ...person }) => ({
+      ...person,
+      avatarUrl: avatarKey ? (urls.get(avatarKey) ?? null) : null,
+    })),
+  }));
+}
 
 /**
  * Combien de livraisons attendent une décision de review, par entité.

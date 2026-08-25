@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Clapperboard, EyeOff, Trash2, UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowUpRight, Clapperboard, EyeOff, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
@@ -13,12 +14,11 @@ import ListSentinel, { ListCount } from '../../components/ListSentinel';
 import { useStatusMenu } from '../../lib/useStatusMenu';
 import { useOmitMenu } from '../../lib/useOmitMenu';
 import { entriesOf } from '../../lib/menuSpec';
-import ConfirmDialog from '../../components/ConfirmDialog';
-import BatchGenerator from '../../components/BatchGenerator';
+import CreateEntityButton from '../../components/entity/CreateEntityButton';
 import EmptyState from '../../components/ui/empty-state';
 import SelectionBar from '../../components/ui/selection-bar';
 import BulkAssignDialog from '../../components/entity/BulkAssignDialog';
-import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
+import ShotDialogs from './ShotDialogs';
 import EntityFilters from '../../components/EntityFilters';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
 import { EMPTY_FILTERS, activeCount, applyFilters } from '../../lib/entityFilters';
@@ -30,7 +30,6 @@ import { useDepartments } from '../../lib/departmentsApi';
 import { shotCardActions } from './shotCardActions';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
 import { useT } from '../../i18n';
-import SgCreationLock from '../../components/shotgrid/SgCreationLock';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
@@ -153,32 +152,32 @@ export default function ShotsTab({
             departments={departments.map((d) => ({ value: String(d.id), label: d.name }))}
             searchPlaceholder={t('shots.searchPlaceholder')}
           />
+          {canManage && (
+            <CreateEntityButton
+              projectId={projectId}
+              kind="shot"
+              defaults={{
+                prefix: nomenclature.shotPrefix,
+                step: nomenclature.step,
+                padding: nomenclature.padding,
+              }}
+              sequences={sortedSequences}
+              onSubmit={(items) =>
+                createBulk(
+                  items.map((it) => ({
+                    code: it.code,
+                    name: it.name,
+                    sequenceId: it.sequenceId != null ? String(it.sequenceId) : '',
+                  })),
+                )
+              }
+            />
+          )}
           <ViewToggle contextKey={`shots:${projectId}`} />
         </div>
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
-      {canManage && (
-        <SgCreationLock projectId={projectId} kind="shot">
-          <BatchGenerator
-            defaults={{
-              prefix: nomenclature.shotPrefix,
-              step: nomenclature.step,
-              padding: nomenclature.padding,
-            }}
-            sequences={sortedSequences}
-            onSubmit={(items) =>
-              createBulk(
-                items.map((it) => ({
-                  code: it.code,
-                  name: it.name,
-                  sequenceId: it.sequenceId != null ? String(it.sequenceId) : '',
-                })),
-              )
-            }
-          />
-        </SgCreationLock>
-      )}
       {shots.length === 0 ? (
         <EmptyState
           compact
@@ -197,7 +196,19 @@ export default function ShotsTab({
       {groups.map((g) => (
         <section key={g.seq?.id ?? 'none'} className="mb-6">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {g.seq ? `${g.seq.code} · ${g.seq.name}` : t('shots.noSequence')}
+            {/* Le titre du groupe mène à la séquence : c'est le chemin qu'on cherche en
+                regardant ses plans, et il n'existait nulle part depuis cet onglet. */}
+            {g.seq ? (
+              <Link
+                to={`/sequences/${g.seq.id}`}
+                className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+              >
+                {g.seq.code} · {g.seq.name}
+                <ArrowUpRight size={12} />
+              </Link>
+            ) : (
+              t('shots.noSequence')
+            )}
           </h3>
           <EntityContainer view={view}>
             {g.list.map((shot) => {
@@ -223,6 +234,12 @@ export default function ShotsTab({
                     (shot.assets?.length ? ` · ${t('assets.count', { count: shot.assets.length })}` : '')
                   }
                   thumbnailUrl={shot.thumbnailUrl}
+                  meta={{
+                    description: shot.description,
+                    assignees: shot.assignees,
+                    awaitingReview: shot.awaitingReview,
+                    updatedAt: shot.updatedAt,
+                  }}
                   badge={
                     <span className="flex items-center gap-1">
                       {/* Coupé au montage : la carte le dit, sinon la case cochée du clic
@@ -293,36 +310,18 @@ export default function ShotsTab({
         />
       )}
 
-      <ConfirmDialog
-        open={bulkDeleting}
-        title={t('shots.deleteMany.title')}
-        message={t('shots.deleteMany.message', { count: sel.count })}
-        confirmLabel={t('common.moveToTrash')}
-        danger
-        onConfirm={confirmBulkDelete}
-        onCancel={() => setBulkDeleting(false)}
-      />
-
-      {editing && (
-        <EntitySettingsDialog
-          kind="shot"
-          id={editing.id}
-          projectId={projectId}
-          entity={editing}
-          thumbnailUrl={editing.thumbnailUrl}
-          onClose={() => setEditing(null)}
-          onSaved={() => void reload()}
-        />
-      )}
-
-      <ConfirmDialog
-        open={!!deleting}
-        title={t('shots.delete.title')}
-        message={t('shots.delete.message', { code: deleting?.code ?? '' })}
-        confirmLabel={t('common.moveToTrash')}
-        danger
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleting(null)}
+      <ShotDialogs
+        projectId={projectId}
+        editing={editing}
+        deleting={deleting}
+        bulkDeleting={bulkDeleting}
+        bulkCount={sel.count}
+        onCloseEditing={() => setEditing(null)}
+        onCancelDelete={() => setDeleting(null)}
+        onCancelBulk={() => setBulkDeleting(false)}
+        onConfirmDelete={() => void confirmDelete()}
+        onConfirmBulk={() => void confirmBulkDelete()}
+        onSaved={() => void reload()}
       />
     </div>
   );

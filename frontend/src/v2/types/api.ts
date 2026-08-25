@@ -220,7 +220,15 @@ export type MediaSummary = Pick<Media, 'id' | 'kind' | 'originalName' | 'status'
 export interface Membership {
   id: number;
   role: Role | null;
-  user: Pick<User, 'id' | 'name' | 'email' | 'role' | 'username'>;
+  // `avatarUrl` : les écrans d'assignation montrent des visages, pas des lignes de
+  // texte — sur vingt noms qui se ressemblent, c'est ce qui rend quelqu'un
+  // reconnaissable du premier coup d'œil.
+  user: Pick<User, 'id' | 'name' | 'email' | 'role' | 'username'> & {
+    firstName?: string | null;
+    lastName?: string | null;
+    avatarUrl?: string | null;
+    isService?: boolean;
+  };
 }
 
 // ── Commentaires de review ────────────────────────────────────────────────────

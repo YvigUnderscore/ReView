@@ -21,6 +21,8 @@ vi.mock('../lib/projectRoles', () => ({
   effectiveProjectRole: vi.fn(async (_id: number, role: Role) => role),
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
+// La photo est signée par le service : le test vérifie la forme rendue, pas la signature.
+vi.mock('../lib/userView', () => ({ avatarUrl: vi.fn(async (key: string | null) => key && `url:${key}`) }));
 
 import { setAssignees, scopeAssignees } from './EntityAssigneeService';
 import { prisma } from '../lib/prisma';
@@ -54,7 +56,10 @@ describe('setAssignees', () => {
 
     const result = await setAssignees(actor, 'shot', 42, [2]);
 
-    expect(result).toEqual([person(2, 'alice')]);
+    // La clé objet devient une URL signée : les listes rendent déjà cette forme, et deux
+    // formes pour la même personne feraient clignoter la photo après l'assignation.
+    const { avatarKey: _key, ...expected } = person(2, 'alice');
+    expect(result).toEqual([{ ...expected, avatarUrl: null }]);
     expect(prisma.shot.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { assignees: { set: [{ id: 2 }] } } }),
     );

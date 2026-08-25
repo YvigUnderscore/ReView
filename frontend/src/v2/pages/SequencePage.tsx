@@ -32,7 +32,7 @@ export default function SequencePage() {
   const { id } = useParams();
   const sequenceId = parseIdParam(id);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: qk.sequence(sequenceId),
     queryFn: () =>
       api.get<{ sequence: SequenceDetailData }>(`/api/sequences/${sequenceId}`).then((d) => d.sequence),
@@ -89,7 +89,12 @@ export default function SequencePage() {
           <div className="space-y-6">
             {/* Le montage se met à jour à chaque publication : il est en tête, pas en annexe. */}
             <TimelineCard projectId={projectId} sequenceId={sequenceId} />
-            <SequenceShotGrid shots={data.shots} />
+            <SequenceShotGrid
+              shots={data.shots}
+              projectId={projectId}
+              canManage={canManage}
+              onChanged={() => void refetch()}
+            />
             <SequenceAssets assets={data.assets} />
           </div>
         )

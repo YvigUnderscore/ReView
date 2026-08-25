@@ -10,7 +10,8 @@ import {
   effectiveThumbnailUrl,
 } from '../lib/thumbnails';
 import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../lib/pagination';
-import { CARD_ASSIGNEE_SELECT, awaitingReviewByAsset } from '../lib/entityCardData';
+import { CARD_ASSIGNEE_SELECT, awaitingReviewByAsset, signAssignees } from '../lib/entityCardData';
+import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /** Logique métier des assets. L'accès projet (RBAC) est asserté dans la route (10.D8). */
@@ -68,8 +69,9 @@ export async function list(projectId: number, p: PaginationParams) {
     firstMediaThumbKeysForAssets(ids),
     awaitingReviewByAsset(ids),
   ]);
+  const signed = await signAssignees(assets);
   const items = await Promise.all(
-    assets.map(async (a) => ({
+    signed.map(async (a) => ({
       ...a,
       thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, fallbacks.get(a.id) ?? null),
       awaitingReview: awaiting.get(a.id) ?? 0,
@@ -136,6 +138,7 @@ export interface UpdateAssetInput {
    */
   typeLabel?: string | null;
   description?: string | null;
+  pipelineStatusId?: number | null;
   thumbnailKey?: string | null;
   shotIds?: number[];
   sequenceIds?: number[];
@@ -148,6 +151,11 @@ export interface UpdateAssetInput {
  */
 export async function update(projectId: number, id: number, body: UpdateAssetInput) {
   const { shotIds, sequenceIds, ...scalar } = body;
+  // Le statut doit venir du vocabulaire de CE projet, comme pour une tâche ou un plan :
+  // l'identifiant d'un statut importé du site d'un autre projet passerait sans bruit.
+  if (body.pipelineStatusId !== undefined) {
+    await PipelineStatusService.assertBelongsToProject(projectId, 'asset', body.pipelineStatusId);
+  }
   if (shotIds && shotIds.length > 0) {
     const ok = await prisma.shot.count({ where: { id: { in: shotIds }, projectId } });
     if (ok !== shotIds.length) throw badRequest('This shot does not belong to this project', 'BAD_SHOT');
@@ -174,5 +182,10 @@ export async function update(projectId: number, id: number, body: UpdateAssetInp
   });
   // 48 : les rattachements remontent à ShotGrid, qui porte ces liens sur l'asset.
   if (shotIds || sequenceIds) await enqueuePush(projectId, { type: 'asset-links', assetId: id });
+  // Le statut repart vers le site : sans cela, la synchronisation suivante ramènerait
+  // l'ancien et le changement s'annulerait tout seul.
+  if (body.pipelineStatusId !== undefined) {
+    await enqueuePush(projectId, { type: 'asset-status', assetId: id });
+  }
   return updated;
 }

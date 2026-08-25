@@ -7,6 +7,7 @@ import { assertProjectWritable } from '../lib/projectGuard';
 import { assertProjectManage, canContribute, effectiveProjectRole } from '../lib/projectRoles';
 import type { SessionUser } from '../lib/shotgridAccess';
 import { emitToProject } from './SocketService';
+import { avatarUrl } from '../lib/userView';
 
 /**
  * Qui est sur ce plan, cette séquence, cet asset.
@@ -37,7 +38,8 @@ export const ASSIGNEE_SELECT = {
   jobTitle: true,
 } as const;
 
-export interface AssigneeView {
+/** Une personne lue en base : la clé objet de sa photo, pas encore signée. */
+interface RawAssignee {
   id: number;
   name: string | null;
   firstName: string | null;
@@ -46,6 +48,26 @@ export interface AssigneeView {
   email: string;
   avatarKey: string | null;
   jobTitle: string | null;
+}
+
+/**
+ * La même, telle que l'API la rend : photo signée.
+ *
+ * Les listes de plans et d'assets rendent déjà `avatarUrl` ; rendre `avatarKey` ici
+ * aurait donné deux formes pour la même personne selon qu'on lit une liste ou qu'on
+ * vient d'écrire — et l'écran aurait affiché la pastille à initiales juste après
+ * l'assignation, puis la vraie photo au rechargement.
+ */
+export type AssigneeView = Omit<RawAssignee, 'avatarKey'> & { avatarUrl: string | null };
+
+/** Signe les photos d'un lot, une fois par personne. */
+async function signed(people: RawAssignee[]): Promise<AssigneeView[]> {
+  return Promise.all(
+    people.map(async ({ avatarKey, ...person }) => ({
+      ...person,
+      avatarUrl: await avatarUrl(avatarKey),
+    })),
+  );
 }
 
 /** Le projet de l'entité porteuse, et son existence. */
@@ -118,7 +140,7 @@ export async function setAssignees(
   const include = { assignees: { select: ASSIGNEE_SELECT, orderBy: { id: 'asc' as const } } };
   const updated = await writeAssignees(kind, id, data, include);
   emitToProject(projectId, `${kind}:update`, { id });
-  return updated;
+  return signed(updated);
 }
 
 async function writeAssignees(
@@ -126,7 +148,7 @@ async function writeAssignees(
   id: number,
   data: { assignees: { set: { id: number }[] } },
   include: { assignees: { select: typeof ASSIGNEE_SELECT; orderBy: { id: 'asc' } } },
-): Promise<AssigneeView[]> {
+): Promise<RawAssignee[]> {
   switch (kind) {
     case 'episode':
       return (await prisma.episode.update({ where: { id }, data, include })).assignees;
@@ -147,16 +169,19 @@ async function writeAssignees(
  * et sur les tâches de ses plans. Trois sources donc, fusionnées et dédoublonnées, avec
  * l'origine de chacune pour que l'écran puisse la dire.
  */
-export interface ScopeAssignee extends AssigneeView {
+export interface ScopeAssignee extends RawAssignee {
   /** `direct` = posé sur l'entité ; `child` = sur un enfant ; `task` = sur une tâche. */
   origins: ('direct' | 'child' | 'task')[];
   /** Nombre d'éléments qui rattachent cette personne au périmètre (pour trier). */
   count: number;
 }
 
-export async function scopeAssignees(kind: AssigneeKind, id: number): Promise<ScopeAssignee[]> {
+export async function scopeAssignees(
+  kind: AssigneeKind,
+  id: number,
+): Promise<(AssigneeView & { origins: ScopeAssignee['origins']; count: number })[]> {
   const collected = new Map<number, ScopeAssignee>();
-  const add = (user: AssigneeView, origin: 'direct' | 'child' | 'task') => {
+  const add = (user: RawAssignee, origin: 'direct' | 'child' | 'task') => {
     const existing = collected.get(user.id);
     if (existing) {
       if (!existing.origins.includes(origin)) existing.origins.push(origin);
@@ -172,13 +197,19 @@ export async function scopeAssignees(kind: AssigneeKind, id: number): Promise<Sc
 
   // Les responsables directs d'abord, puis le plus impliqué : c'est l'ordre dans lequel on
   // cherche quelqu'un quand on ouvre une séquence.
-  return [...collected.values()].sort((a, b) => {
+  const ordered = [...collected.values()].sort((a, b) => {
     const direct = Number(b.origins.includes('direct')) - Number(a.origins.includes('direct'));
     return direct !== 0 ? direct : b.count - a.count;
   });
+  const photos = await signed(ordered);
+  return ordered.map((person, index) => ({
+    ...photos[index]!,
+    origins: person.origins,
+    count: person.count,
+  }));
 }
 
-async function directAssignees(kind: AssigneeKind, id: number): Promise<AssigneeView[]> {
+async function directAssignees(kind: AssigneeKind, id: number): Promise<RawAssignee[]> {
   const select = { assignees: { select: ASSIGNEE_SELECT } };
   switch (kind) {
     case 'episode':
@@ -193,7 +224,7 @@ async function directAssignees(kind: AssigneeKind, id: number): Promise<Assignee
 }
 
 /** Les responsables posés sur les enfants — un plan n'en a pas, un asset non plus. */
-async function childAssignees(kind: AssigneeKind, id: number): Promise<AssigneeView[]> {
+async function childAssignees(kind: AssigneeKind, id: number): Promise<RawAssignee[]> {
   if (kind === 'shot' || kind === 'asset') return [];
   const shots = await prisma.shot.findMany({
     where:
@@ -213,7 +244,7 @@ async function childAssignees(kind: AssigneeKind, id: number): Promise<AssigneeV
 }
 
 /** Les assignés des tâches du périmètre : le travail réel, celui qui a un statut. */
-async function taskAssignees(kind: AssigneeKind, id: number): Promise<AssigneeView[]> {
+async function taskAssignees(kind: AssigneeKind, id: number): Promise<RawAssignee[]> {
   const where =
     kind === 'asset'
       ? { assetId: id }
@@ -226,5 +257,5 @@ async function taskAssignees(kind: AssigneeKind, id: number): Promise<AssigneeVi
     where: { ...where, assigneeId: { not: null } },
     select: { assignee: { select: ASSIGNEE_SELECT } },
   });
-  return tasks.map((t) => t.assignee).filter((u): u is AssigneeView => u !== null);
+  return tasks.map((t) => t.assignee).filter((u): u is RawAssignee => u !== null);
 }

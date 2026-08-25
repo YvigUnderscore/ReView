@@ -22,11 +22,12 @@ import NotificationBell from './NotificationBell';
 import ShortcutsHelp from './ShortcutsHelp';
 import OnboardingTour from './OnboardingTour';
 import { useGlobalShortcuts } from '../lib/shortcuts';
-import { usePreferences } from '../lib/usePreferences';
+import { usePreferences, useUpdatePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
 import { useIsNarrowViewport } from '../lib/useMediaQuery';
 import { useStickyProjectId } from '../lib/stickyProject';
 import { syncAccountDensity } from '../stores/useDensity';
+import { useViewPref } from '../stores/useViewPref';
 import { syncAccountLocale, useT } from '../i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
@@ -120,6 +121,18 @@ export default function Shell() {
   useEffect(() => {
     syncAccountDensity(accountDensity);
   }, [accountDensity]);
+  // Vue des listes : le compte fait foi, le miroir localStorage ne sert qu'au premier
+  // rendu. `setPersist` referme la boucle — chaque bascule repart vers le serveur, sinon
+  // le réglage ne suivrait pas d'un poste à l'autre.
+  const accountViewMode = prefsQ.data?.viewMode;
+  const accountViewModes = prefsQ.data?.viewModes;
+  const updatePrefs = useUpdatePreferences();
+  useEffect(() => {
+    useViewPref.getState().hydrate({ viewMode: accountViewMode, viewModes: accountViewModes });
+  }, [accountViewMode, accountViewModes]);
+  useEffect(() => {
+    useViewPref.getState().setPersist((patch) => updatePrefs.mutate(patch));
+  }, [updatePrefs]);
   const bindings = useMemo(() => resolveBindings(prefsQ.data?.shortcuts), [prefsQ.data?.shortcuts]);
   useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp, bindings });
   // Temps réel : room du projet courant → invalidations de cache ciblées (10.E3)

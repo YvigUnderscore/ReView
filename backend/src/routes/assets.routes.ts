@@ -78,6 +78,9 @@ router.patch(
       // C3 : le libellé de type n'était écrit que par la synchronisation ShotGrid.
       typeLabel: z.string().max(120).nullable().optional(),
       description: z.string().max(2000).nullable().optional(),
+      // Statut d'asset : le site en tient une liste propre, distincte de celle des
+      // tâches — l'asset empruntait jusqu'ici le vocabulaire des tâches.
+      pipelineStatusId: z.number().int().nullable().optional(),
       // Pas de `thumbnailKey` ici : la clé est écrite par `PUT /api/assets/:id/thumbnail`,
       // qui la reconstruit et vérifie qu'elle désigne bien CET asset. Reçue du client, elle
       // faisait présigner n'importe quel objet du bucket — pièce jointe d'autrui comprise.

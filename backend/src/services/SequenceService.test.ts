@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: {
     sequence: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    // Pastille « attend une review » des plans : un agrégat SQL groupé pour la fiche.
+    $queryRaw: vi.fn().mockResolvedValue([]),
     $transaction: vi.fn((ops: unknown[]) => Promise.resolve(ops)),
   },
 }));
@@ -25,7 +27,10 @@ import { createBulk, getDetail } from './SequenceService';
 import { prisma } from '../lib/prisma';
 import { firstMediaThumbKeysForShots } from '../lib/thumbnails';
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
+});
 
 describe('createBulk', () => {
   it('refuse un doublon interne au lot, avant toute écriture', async () => {
@@ -72,10 +77,18 @@ describe('getDetail', () => {
     projectId: 1,
     code: 'SQ01',
     thumbnailKey: 'entity-thumbs/sequence/5.jpg',
+    // `assignees` : Prisma rend toujours la relation demandée dans `include`.
     shots: [
-      { id: 1, code: 'SH010', thumbnailKey: 'entity-thumbs/shot/1.jpg', assets: [], _count: { tasks: 2 } },
-      { id: 2, code: 'SH020', thumbnailKey: null, assets: [], _count: { tasks: 0 } },
-      { id: 3, code: 'SH030', thumbnailKey: null, assets: [], _count: { tasks: 1 } },
+      {
+        id: 1,
+        code: 'SH010',
+        thumbnailKey: 'entity-thumbs/shot/1.jpg',
+        assets: [],
+        assignees: [],
+        _count: { tasks: 2 },
+      },
+      { id: 2, code: 'SH020', thumbnailKey: null, assets: [], assignees: [], _count: { tasks: 0 } },
+      { id: 3, code: 'SH030', thumbnailKey: null, assets: [], assignees: [], _count: { tasks: 1 } },
     ],
     assets: [{ id: 8, name: 'Ship', type: 'PROP', typeLabel: null, thumbnailKey: null }],
     departments: [{ id: 4, key: 'comp', name: 'Compositing', color: null }],

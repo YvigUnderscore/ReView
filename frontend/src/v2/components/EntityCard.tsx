@@ -13,6 +13,7 @@ import HoverSprite, { type SpriteData } from './HoverSprite';
 import { Checkbox } from './ui/checkbox';
 import EntityContextMenu from './ui/entity-menu';
 import { toMenuEntries, type EntityItemAction, type MenuEntry } from '../lib/menuSpec';
+import EntityCardMeta, { MetaDescription, type EntityMeta } from './entity/EntityCardMeta';
 import { useT } from '../i18n';
 
 /** État de multi-sélection d'une carte (13.A). */
@@ -45,6 +46,11 @@ export interface EntityCardProps {
   favorite?: { type: FavType; entityId: number };
   /** Aperçu animé au survol (42.A — №78) : sprite de miniatures (vue cartes). */
   hoverSprite?: SpriteData | null;
+  /**
+   * Ce que la carte dit de l'entité au-delà de son nom : description, visages des
+   * responsables, attente de review, dernière modification. Absent = carte d'avant.
+   */
+  meta?: EntityMeta;
 }
 
 function Actions({ actions }: { actions?: EntityItemAction[] }) {
@@ -125,6 +131,7 @@ export default function EntityCard({
   contextEntries,
   favorite,
   hoverSprite,
+  meta,
 }: EntityCardProps) {
   const t = useT();
   const highlighted = active || selection?.selected;
@@ -195,7 +202,12 @@ export default function EntityCard({
             <span className="truncate text-sm font-medium">{title}</span>
           </div>
           {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
+          {/* La description n'a droit qu'à une ligne en compact : la ligne EST la carte. */}
+          {meta?.description && (
+            <div className="truncate text-2xs text-muted-foreground/80">{meta.description}</div>
+          )}
         </div>
+        {meta && <EntityCardMeta meta={meta} compact />}
         {badge}
         <Actions actions={actions} />
       </div>,
@@ -227,15 +239,23 @@ export default function EntityCard({
           <Actions actions={actions} />
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2 p-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            {favStar}
-            <span className="truncate text-sm font-medium">{title}</span>
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              {favStar}
+              <span className="truncate text-sm font-medium">{title}</span>
+            </div>
+            {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
           </div>
-          {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
+          {badge}
         </div>
-        {badge}
+        {meta?.description && (
+          <div className="mt-1.5">
+            <MetaDescription text={meta.description} />
+          </div>
+        )}
+        {meta && <EntityCardMeta meta={meta} />}
       </div>
     </div>,
   );

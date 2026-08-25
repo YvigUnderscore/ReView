@@ -140,9 +140,19 @@ export interface SgImportableVersion {
   updatedAt: string | null;
 }
 
+/**
+ * Les quatre périmètres qui portent un statut de pipeline.
+ *
+ * ShotGrid tient une liste par entité (`sg_status_list` sur Task, Shot, Sequence et Asset),
+ * et elles ne coïncident pas : quatre valeurs sur une séquence, quinze sur un plan. Les
+ * confondre proposait à l'écran des états que le site refuse à l'écriture — et l'asset
+ * empruntait le vocabulaire des tâches faute d'en avoir un.
+ */
+export type StatusScope = 'task' | 'shot' | 'sequence' | 'asset';
+
 export interface PipelineStatus {
   id: number;
-  scope: 'task' | 'shot' | 'sequence';
+  scope: StatusScope;
   code: string;
   name: string;
   color: string;

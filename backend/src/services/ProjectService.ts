@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
 import { softDeleteProject, restoreProject, purgeProject } from '../lib/trash';
 import { effectiveThumbnailUrl } from '../lib/thumbnails';
+import { avatarUrl } from '../lib/userView';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import {
   getStudioProjectDefaults,
@@ -394,6 +395,12 @@ export async function getProject(projectId: number) {
               role: true,
               username: true,
               isService: true,
+              // Photo de profil : les écrans d'assignation montrent des visages, pas des
+              // lignes de texte — sur vingt noms qui se ressemblent, c'est la seule façon
+              // de reconnaître quelqu'un du premier coup d'œil.
+              firstName: true,
+              lastName: true,
+              avatarKey: true,
             },
           },
         },
@@ -401,7 +408,15 @@ export async function getProject(projectId: number) {
     },
   });
   if (!project) throw notFound('Project not found');
-  return project;
+  // Les photos sont signées ici, une fois par personne : la fiche du projet est la source
+  // des listes d'assignation, et chacune aurait sinon signé les mêmes avatars de son côté.
+  const memberships = await Promise.all(
+    project.memberships.map(async ({ user, ...m }) => {
+      const { avatarKey, ...rest } = user;
+      return { ...m, user: { ...rest, avatarUrl: await avatarUrl(avatarKey) } };
+    }),
+  );
+  return { ...project, memberships };
 }
 
 export interface UpdateProjectInput {

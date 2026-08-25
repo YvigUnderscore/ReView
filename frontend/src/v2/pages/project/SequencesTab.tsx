@@ -7,7 +7,7 @@ import { ExternalLink, Film, Settings2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import BatchGenerator from '../../components/BatchGenerator';
+import CreateEntityButton from '../../components/entity/CreateEntityButton';
 import EmptyState from '../../components/ui/empty-state';
 import SelectionBar from '../../components/ui/selection-bar';
 import ViewToggle from '../../components/ViewToggle';
@@ -157,19 +157,23 @@ export default function SequencesTab({
 
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('sequences.title')}</h2>
-        <ViewToggle contextKey={`sequences:${projectId}`} />
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <CreateEntityButton
+              projectId={projectId}
+              kind="sequence"
+              defaults={{
+                prefix: nomenclature.sequencePrefix,
+                step: nomenclature.step,
+                padding: nomenclature.padding,
+              }}
+              onSubmit={(items) => createBulk(items.map((it) => ({ code: it.code, name: it.name })))}
+            />
+          )}
+          <ViewToggle contextKey={`sequences:${projectId}`} />
+        </div>
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
-      {canManage && (
-        <BatchGenerator
-          defaults={{
-            prefix: nomenclature.sequencePrefix,
-            step: nomenclature.step,
-            padding: nomenclature.padding,
-          }}
-          onSubmit={(items) => createBulk(items.map((it) => ({ code: it.code, name: it.name })))}
-        />
-      )}
       {sequences.length === 0 ? (
         <EmptyState
           compact
@@ -187,6 +191,12 @@ export default function SequencesTab({
               title={s.code}
               subtitle={subtitleFor(s)}
               thumbnailUrl={s.thumbnailUrl}
+              meta={{
+                description: s.description,
+                assignees: s.assignees,
+                awaitingReview: s.awaitingReview,
+                updatedAt: s.updatedAt,
+              }}
               badge={
                 <span className="flex items-center gap-1">
                   <PipelineStatusBadge statusId={s.pipelineStatusId} scope="sequence" size="xs" />

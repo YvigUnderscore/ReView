@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Monitor, Moon, Sun, Rows3, Rows4, type LucideIcon } from 'lucide-react';
+import { LayoutGrid, List, Monitor, Moon, Sun, Rows3, Rows4, type LucideIcon } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../stores/useTheme';
 import { useDensity, type Density } from '../stores/useDensity';
+import { useViewPref, type ViewMode } from '../stores/useViewPref';
 import { useT } from '../i18n';
 import { useUpdatePreferences } from '../lib/usePreferences';
 import LanguagePicker from './LanguagePicker';
@@ -83,6 +84,10 @@ export default function DisplaySettings() {
   // la densité suivent le compte — le serveur se sert de la langue pour les emails, et
   // repartir en confortable sur chaque nouveau poste était une contrariété inutile (A2).
   const updatePrefs = useUpdatePreferences();
+  // Vue par défaut de toutes les listes. Une liste qui a son propre réglage garde le
+  // sien : c'est ce qu'un écart veut dire, et le lever se fait depuis la liste.
+  const viewGlobal = useViewPref((s) => s.global);
+  const setViewGlobal = useViewPref((s) => s.setGlobal);
 
   const themeOpts: readonly Opt<ThemeMode>[] = [
     { value: 'system', label: t('display.theme.system'), icon: Monitor },
@@ -92,6 +97,10 @@ export default function DisplaySettings() {
   const densityOpts: readonly Opt<Density>[] = [
     { value: 'comfortable', label: t('display.density.comfortable'), icon: Rows3 },
     { value: 'compact', label: t('display.density.compact'), icon: Rows4 },
+  ];
+  const viewOpts: readonly Opt<ViewMode>[] = [
+    { value: 'cards', label: t('view.cards'), icon: LayoutGrid },
+    { value: 'compact', label: t('view.compact'), icon: List },
   ];
   return (
     <section className="space-y-4 rounded-lg border border-border bg-card p-4">
@@ -108,6 +117,14 @@ export default function DisplaySettings() {
             updatePrefs.mutate({ density: d });
           }}
           ariaLabel={t('display.density')}
+        />
+      </Row>
+      <Row label={t('display.view')} hint={t('display.view.hint')}>
+        <Segmented
+          value={viewGlobal ?? 'cards'}
+          options={viewOpts}
+          onChange={setViewGlobal}
+          ariaLabel={t('display.view')}
         />
       </Row>
       <Row label={t('display.language')} hint={t('display.language.hint')}>

@@ -5,6 +5,7 @@ import { usePipelineStatuses } from '../../lib/shotgridApi';
 import { useT } from '../../i18n';
 import { TASK_STATUSES, TASK_STATUS_LABEL_KEY, TASK_STATUS_COLOR } from '../../lib/taskStatus';
 import type { TaskStatus } from '../../types/api';
+import type { StatusScope } from '../../types/shotgrid';
 
 /**
  * Sélecteur de statut, dans le vocabulaire du projet.
@@ -29,7 +30,7 @@ export default function PipelineStatusSelect({
 }: {
   projectId: number;
   /** Une séquence porte son propre vocabulaire de statuts, distinct de celui d'un plan (C3). */
-  scope: 'task' | 'shot' | 'sequence';
+  scope: StatusScope;
   /** Statut du référentiel, quand l'entité en porte un. */
   statusId: number | null | undefined;
   /** Valeur de l'énumération, seule information disponible sur les entités anciennes. */

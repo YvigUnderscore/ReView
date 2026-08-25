@@ -10,7 +10,7 @@ import { assertDescriptionWritable } from './shotgrid/ShotgridGuardService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { effectiveThumbnailUrl, firstMediaThumbKeysForShots } from '../lib/thumbnails';
 import { storage } from './StorageService';
-import { CARD_ASSIGNEE_SELECT } from '../lib/entityCardData';
+import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot, signAssignees } from '../lib/entityCardData';
 
 /**
  * Logique métier des séquences (C3).
@@ -149,6 +149,9 @@ export async function getDetail(id: number) {
             where: { deletedAt: null, hiddenAt: null },
             select: { id: true, name: true, type: true },
           },
+          // La page de séquence affiche ses plans avec la carte de l'onglet Plans :
+          // elle a donc besoin des mêmes visages.
+          assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
         },
       },
       assets: {
@@ -172,11 +175,16 @@ export async function getDetail(id: number) {
   if (!sequence) throw notFound('Sequence not found');
 
   const shotIds = sequence.shots.map((s) => s.id);
-  const fallbacks = await firstMediaThumbKeysForShots(shotIds);
+  const [fallbacks, awaiting, signedShots] = await Promise.all([
+    firstMediaThumbKeysForShots(shotIds),
+    awaitingReviewByShot(shotIds),
+    signAssignees(sequence.shots),
+  ]);
   const shots = await Promise.all(
-    sequence.shots.map(async (s) => ({
+    signedShots.map(async (s) => ({
       ...s,
       thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
+      awaitingReview: awaiting.get(s.id) ?? 0,
     })),
   );
   const assets = await Promise.all(

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import type {
   PipelineStatus,
+  StatusScope,
   SgConnection,
   SgDiffReport,
   SgImportableVersion,
@@ -303,7 +304,7 @@ export function useResolveConflict(projectId: number) {
  * site sur un projet relié à ShotGrid, le nôtre sinon. Sans lui, on reçoit le référentiel
  * du studio entier — ce qu'il faut à l'écran d'administration, jamais à un sélecteur.
  */
-export function usePipelineStatuses(scope?: 'task' | 'shot' | 'sequence', projectId?: number) {
+export function usePipelineStatuses(scope?: StatusScope, projectId?: number) {
   return useQuery({
     queryKey: sgKeys.pipelineStatuses(scope, projectId),
     queryFn: () => {

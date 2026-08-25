@@ -35,6 +35,7 @@ const ENDPOINT: Record<StatusScope, string> = {
   task: '/api/tasks',
   shot: '/api/shots',
   sequence: '/api/sequences',
+  asset: '/api/assets',
 };
 
 export function useStatusMenu(projectId: number, scope: StatusScope) {

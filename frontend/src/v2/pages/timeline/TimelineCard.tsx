@@ -1,27 +1,28 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Check, Clapperboard, Download, Pencil, Play, X } from 'lucide-react';
+import { Clapperboard, Download, MoreHorizontal, Play } from 'lucide-react';
 import { useAuth } from '../../stores/useAuth';
-import { SkeletonRows } from '../../components/ui/skeleton';
 import { formatDuration } from '../review/timelineNav';
 import { useTimelineData } from './useTimelineData';
-import TimelineTrack from './TimelineTrack';
+import { useTimelineCardMenu } from './TimelineCardMenu';
 import TimelineExportButton from './TimelineExportButton';
+import EntityContextMenu from '../../components/ui/entity-menu';
 import { useT } from '../../i18n';
 
 /**
- * Carte « Montage » en tête d'une séquence ou d'un projet (Phase 45).
+ * Le montage, en une ligne.
  *
- * Elle se met à jour toute seule : le contenu est recalculé côté serveur à chaque lecture,
- * et une publication invalide la requête par socket. Personne n'a à « régénérer » quoi que
- * ce soit — c'était la demande d'origine.
+ * La carte occupait le haut de chaque page de séquence et de l'onglet Séquences avec une
+ * bande de plans, un sélecteur d'étape, un bouton d'instantané, un export et un champ de
+ * renommage — plus de place que la liste qu'on venait consulter. Or on ne monte pas depuis
+ * cette carte : on va **voir le film**, et le montage se regarde sur sa propre page avec
+ * l'outillage de review complet.
  *
- * La carte montre le film en entier sur sa bande, mais ne le joue pas : le montage se
- * regarde sur sa propre page, avec l'outillage de review complet (Phase 46). Cliquer un
- * plan de la bande y entre directement au bon endroit.
+ * Il reste donc un bouton — « Jouer le film » ou « Jouer la sequence » selon le contexte —
+ * et une ligne de repères. Tout le reste (renommer, choisir l'étape, prendre une révision,
+ * exporter) passe au clic droit, comme partout ailleurs dans ReView.
  */
 export default function TimelineCard({
   projectId,
@@ -34,125 +35,64 @@ export default function TimelineCard({
   const navigate = useNavigate();
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
-  const { timeline, isLoading, rename, setDepartment, snapshot } = useTimelineData(projectId, sequenceId);
-  const [editing, setEditing] = useState<string | null>(null);
+  const data = useTimelineData(projectId, sequenceId);
+  const { timeline, isLoading } = data;
+  // Le hook est appelé sans condition (règle des hooks) : il rend une liste vide tant
+  // qu'aucun montage n'est résolu.
+  const { entries, dialog } = useTimelineCardMenu(data, canManage);
 
-  if (isLoading) return <SkeletonRows count={2} />;
-  if (!timeline) return null;
-
-  const label = timeline.name ?? t('timeline.defaultName');
+  // Rien à jouer, rien à dire : une carte vide en tête de page coûterait la place qu'on
+  // cherche précisément à rendre.
+  if (isLoading || !timeline) return null;
   const firstPlayable = timeline.items.find((it) => it.mediaId !== null);
-  const open = (at = 0) => navigate(`/timelines/${timeline.id}/play${at > 0 ? `?t=${at.toFixed(2)}` : ''}`);
+  const open = () => navigate(`/timelines/${timeline.id}/play`);
 
   return (
-    <section className="mb-4 rounded-lg border border-border bg-card p-3">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <Clapperboard size={15} className="shrink-0 text-primary" />
-        {editing === null ? (
-          <>
-            <h3 className="text-sm font-medium">{label}</h3>
-            {canManage && (
-              <button
-                onClick={() => setEditing(timeline.name ?? '')}
-                title={t('common.rename')}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Pencil size={12} />
-              </button>
-            )}
-          </>
-        ) : (
-          <form
-            className="flex items-center gap-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void rename(editing.trim() || null);
-              setEditing(null);
-            }}
-          >
-            <input
-              autoFocus
-              value={editing}
-              onChange={(e) => setEditing(e.target.value)}
-              placeholder={t('timeline.defaultName')}
-              className="w-40 rounded border border-input bg-background px-2 py-1 text-xs"
-            />
-            <button type="submit" className="text-primary" title={t('common.save')}>
-              <Check size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditing(null)}
-              className="text-muted-foreground"
-              title={t('common.cancel')}
-            >
-              <X size={14} />
-            </button>
-          </form>
-        )}
-
-        <span className="text-xs text-muted-foreground">
-          {t('timeline.shotCount', { count: timeline.items.length })} ·{' '}
-          {formatDuration(timeline.totalDuration)}
-        </span>
-        {timeline.gapCount > 0 && (
-          <span className="rounded bg-warning/15 px-1.5 py-0.5 text-2xs text-warning">
-            {t('timeline.gapCount', { count: timeline.gapCount })}
-          </span>
-        )}
-        {timeline.latestRevision !== null && (
-          <span className="rounded border border-border px-1.5 py-0.5 text-2xs text-muted-foreground">
-            {t('timeline.revision', { revision: timeline.latestRevision })}
-          </span>
-        )}
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <select
-            value={timeline.department ?? ''}
-            onChange={(e) => void setDepartment(e.target.value || null)}
-            disabled={!canManage}
-            title={t('timeline.departmentHint')}
-            className="rounded border border-input bg-background px-1.5 py-1 text-xs disabled:opacity-60"
-          >
-            <option value="">{t('timeline.departmentAuto')}</option>
-            {timeline.departments.map((d) => (
-              <option key={d.key} value={d.key}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          {canManage && (
-            <button
-              onClick={() => void snapshot()}
-              title={t('timeline.snapshotHint')}
-              className="flex items-center gap-1 rounded border border-border px-2 py-1 text-xs hover:bg-secondary/60"
-            >
-              <Camera size={13} /> {t('timeline.snapshot')}
-            </button>
-          )}
-          <TimelineExportButton
-            timelineId={timeline.id}
-            disabled={!firstPlayable}
-            icon={<Download size={13} />}
-          />
+    <>
+      <EntityContextMenu entries={entries}>
+        <section className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+          <Clapperboard size={15} className="shrink-0 text-primary" />
           <button
-            onClick={() => open()}
+            onClick={open}
             disabled={!firstPlayable}
-            className="flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
-            <Play size={13} /> {t('timeline.play')}
+            <Play size={14} />
+            {sequenceId === null ? t('timeline.playFilm') : t('timeline.playSequence')}
           </button>
-        </div>
-      </div>
 
-      <TimelineTrack
-        items={timeline.items}
-        total={timeline.totalDuration}
-        time={0}
-        currentIndex={-1}
-        onSeek={open}
-        timelineId={timeline.id}
-      />
-    </section>
+          <span className="text-xs text-muted-foreground">
+            {t('timeline.shotCount', { count: timeline.items.length })} ·{' '}
+            {formatDuration(timeline.totalDuration)}
+          </span>
+          {/* Les deux seuls signaux qui demandent une décision : un trou dans le montage, et
+            la révision courante. Le reste vit dans le menu. */}
+          {timeline.gapCount > 0 && (
+            <span className="rounded bg-warning/15 px-1.5 py-0.5 text-2xs text-warning">
+              {t('timeline.gapCount', { count: timeline.gapCount })}
+            </span>
+          )}
+          {timeline.latestRevision !== null && (
+            <span className="rounded border border-border px-1.5 py-0.5 text-2xs text-muted-foreground">
+              {t('timeline.revision', { revision: timeline.latestRevision })}
+            </span>
+          )}
+
+          <span className="ml-auto flex items-center gap-2">
+            <TimelineExportButton
+              timelineId={timeline.id}
+              disabled={!firstPlayable}
+              icon={<Download size={13} />}
+            />
+            {/* Rappel discret : tout le reste du montage vit au clic droit. */}
+            <span className="flex items-center gap-1 text-2xs text-muted-foreground">
+              <MoreHorizontal size={14} />
+              {t('timeline.moreHint')}
+            </span>
+          </span>
+        </section>
+      </EntityContextMenu>
+      {dialog}
+    </>
   );
 }

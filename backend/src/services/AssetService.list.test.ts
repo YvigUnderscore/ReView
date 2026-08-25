@@ -28,7 +28,10 @@ const page = { page: 1, pageSize: 100, order: 'desc' as const };
 beforeEach(() => {
   vi.clearAllMocks();
   db.$queryRaw.mockResolvedValue([]);
-  db.asset.findMany.mockResolvedValue([{ id: 4, name: 'Ship', thumbnailKey: null }]);
+  db.asset.findMany.mockResolvedValue([
+    // `include.assignees` : Prisma rend toujours la relation demandée.
+    { id: 4, name: 'Ship', thumbnailKey: null, assignees: [] },
+  ]);
   db.asset.count.mockResolvedValue(1);
   thumbs.firstMediaThumbKeysForAssets.mockResolvedValue(new Map());
   thumbs.firstMediaThumbKeyForAsset.mockResolvedValue(null);
@@ -68,8 +71,8 @@ describe('AssetService.list', () => {
 
   it('rend un curseur de suite quand la page est pleine', async () => {
     db.asset.findMany.mockResolvedValue([
-      { id: 4, name: 'Ship', thumbnailKey: null },
-      { id: 9, name: 'Tank', thumbnailKey: null },
+      { id: 4, name: 'Ship', thumbnailKey: null, assignees: [] },
+      { id: 9, name: 'Tank', thumbnailKey: null, assignees: [] },
     ]);
     db.asset.count.mockResolvedValue(1000);
     const res = await list(3, { ...page, pageSize: 2 });

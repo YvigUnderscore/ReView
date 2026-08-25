@@ -22,10 +22,7 @@ import SelectionBar from '../../components/ui/selection-bar';
 import AssetAssignDialog from '../../components/AssetAssignDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Select } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import AssetCreateDialog from './AssetCreateDialog';
 import EntityFilters from '../../components/EntityFilters';
 import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
 import { EMPTY_FILTERS, activeCount, applyFilters } from '../../lib/entityFilters';
@@ -33,9 +30,11 @@ import { useAssetsQuery } from '../../lib/queries';
 import { useDepartments } from '../../lib/departmentsApi';
 import { ASSET_TYPES } from './projectTypes';
 import type { AssetListItem } from '../../types/entities';
+import type { AssetType } from '../../types/api';
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
+import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
 
 /**
  * Onglet Assets réutilisables : création, cartes, assignation, filtres partagés (C4).
@@ -59,7 +58,6 @@ export default function AssetsTab({
   const navigate = useNavigate();
   // Suivi de notifications par asset (32.G, clic droit).
   const watch = useWatch();
-  const [newAsset, setNewAsset] = useState({ name: '', type: 'CHARACTER' });
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<AssetListItem | null>(null);
   const [assigning, setAssigning] = useState<AssetListItem | null>(null);
@@ -98,12 +96,10 @@ export default function AssetsTab({
     }
   };
 
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const create = async (asset: { name: string; type: AssetType }) => {
     try {
-      await api.post('/api/assets', { projectId, ...newAsset });
-      toast.success(t('assets.created', { name: newAsset.name }));
-      setNewAsset({ name: '', type: 'CHARACTER' });
+      await api.post('/api/assets', { projectId, ...asset });
+      toast.success(t('assets.created', { name: asset.name }));
       setCreating(false);
       void reload();
     } catch (err) {
@@ -147,47 +143,13 @@ export default function AssetsTab({
       </div>
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
-      <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent>
-          <form onSubmit={create} className="space-y-3">
-            <DialogHeader>
-              <DialogTitle>{t('assets.new')}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-1">
-              <Label>{t('assets.name')}</Label>
-              <Input
-                autoFocus
-                placeholder={t('assets.type.placeholder')}
-                value={newAsset.name}
-                onChange={(e) => setNewAsset((s) => ({ ...s, name: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>{t('assets.type')}</Label>
-              <Select
-                className="w-full"
-                value={newAsset.type}
-                onChange={(e) => setNewAsset((s) => ({ ...s, type: e.target.value }))}
-              >
-                {ASSET_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" size="sm" onClick={() => setCreating(false)}>
-                {t('common.undo')}
-              </Button>
-              <Button type="submit" size="sm">
-                {t('common.create')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <AssetCreateDialog
+        open={creating}
+        onOpenChange={setCreating}
+        onSubmit={async (asset) => {
+          await create(asset);
+        }}
+      />
       {assets.length > 0 && (
         <ListCount
           loaded={paging.loaded}
@@ -227,7 +189,18 @@ export default function AssetsTab({
                 title={a.name}
                 subtitle={a.typeLabel ?? a.type}
                 thumbnailUrl={a.thumbnailUrl}
-                badge={<SgSyncDot projectId={projectId} type="asset" localId={a.id} canRealign={canManage} />}
+                meta={{
+                  description: a.description,
+                  assignees: a.assignees,
+                  awaitingReview: a.awaitingReview,
+                  updatedAt: a.updatedAt,
+                }}
+                badge={
+                  <span className="flex items-center gap-1">
+                    <PipelineStatusBadge statusId={a.pipelineStatusId} scope="asset" size="xs" />
+                    <SgSyncDot projectId={projectId} type="asset" localId={a.id} canRealign={canManage} />
+                  </span>
+                }
                 selection={
                   canManage
                     ? { selected: sel.isSelected(a.id), onSelect: (m) => sel.onSelect(a.id, m) }

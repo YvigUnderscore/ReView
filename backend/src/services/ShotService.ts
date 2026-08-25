@@ -15,7 +15,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../lib/pagination';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertDescriptionWritable } from './shotgrid/ShotgridGuardService';
-import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot } from '../lib/entityCardData';
+import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot, signAssignees } from '../lib/entityCardData';
 
 /**
  * Logique métier des shots (liste + miniatures, création simple/lot avec unicité de
@@ -102,8 +102,9 @@ export async function list(
     firstMediaThumbKeysForShots(ids),
     awaitingReviewByShot(ids),
   ]);
+  const signed = await signAssignees(shots);
   const items = await Promise.all(
-    shots.map(async (s) => ({
+    signed.map(async (s) => ({
       ...s,
       thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
       awaitingReview: awaiting.get(s.id) ?? 0,

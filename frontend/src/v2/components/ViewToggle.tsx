@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useT } from '../i18n';
-import { LayoutGrid, List } from 'lucide-react';
-import { useViewPref, type ViewMode } from '../stores/useViewPref';
+import { LayoutGrid, List, RotateCcw } from 'lucide-react';
+import { useHasOverride, useViewMode, useViewPref } from '../stores/useViewPref';
 
 /**
- * Bascule cartes ↔ compact pour une liste donnée. La préférence est mémorisée
- * par `contextKey` (ex. « projects », « assets:42 »).
+ * Bascule cartes ↔ compact d'une liste.
+ *
+ * Cliquer pose un **écart propre à cette liste** : une grille de plans se lit en vignettes,
+ * une liste de tâches en lignes, et un réglage unique ne peut pas répondre pour les deux.
+ * Tant qu'aucun écart n'est posé, la liste suit le réglage du compte — le troisième bouton
+ * apparaît alors pour l'y ramener, sans quoi rien n'indiquerait qu'un écart existe ni
+ * comment le lever.
  */
 
 // Hissé hors du render (règle react-hooks/static-components)
@@ -26,6 +31,7 @@ function ModeButton({
     <button
       title={label}
       aria-label={label}
+      aria-pressed={active}
       onClick={onClick}
       className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
         active ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/60'
@@ -38,10 +44,10 @@ function ModeButton({
 
 export default function ViewToggle({ contextKey }: { contextKey: string }) {
   const t = useT();
-  const mode = useViewPref(
-    (s) => s.modes[contextKey] ?? (localStorage.getItem('review:view:' + contextKey) as ViewMode) ?? 'cards',
-  );
+  const mode = useViewMode(contextKey);
+  const overridden = useHasOverride(contextKey);
   const set = useViewPref((s) => s.set);
+  const clear = useViewPref((s) => s.clear);
 
   return (
     <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
@@ -57,6 +63,14 @@ export default function ViewToggle({ contextKey }: { contextKey: string }) {
         label={t('view.compact')}
         onClick={() => set(contextKey, 'compact')}
       />
+      {overridden && (
+        <ModeButton
+          active={false}
+          icon={<RotateCcw size={14} />}
+          label={t('view.followAccount')}
+          onClick={() => clear(contextKey)}
+        />
+      )}
     </div>
   );
 }

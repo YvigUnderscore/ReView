@@ -17,7 +17,7 @@ import { badRequest, notFound } from '../lib/errors';
 import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardService';
 import { MAX_PAGE_SIZE, paginate, pageArgs, paginationQuery, readPagination } from '../lib/pagination';
 import * as SequenceService from '../services/SequenceService';
-import { CARD_ASSIGNEE_SELECT, awaitingReviewBySequence } from '../lib/entityCardData';
+import { CARD_ASSIGNEE_SELECT, awaitingReviewBySequence, signAssignees } from '../lib/entityCardData';
 
 const router = Router();
 router.use(authenticate);
@@ -81,8 +81,9 @@ router.get(
     // Pastille « attend une review » : ce qui attend une séquence, ce sont les
     // livraisons publiées de ses plans qu'aucune décision n'a encore tranchées.
     const awaiting = await awaitingReviewBySequence(sequences.map((s) => s.id));
+    const signed = await signAssignees(sequences);
     res.json({
-      sequences: sequences.map((s) => ({ ...s, awaitingReview: awaiting.get(s.id) ?? 0 })),
+      sequences: signed.map((s) => ({ ...s, awaitingReview: awaiting.get(s.id) ?? 0 })),
       unsequencedShots,
       total,
       page: p.page,

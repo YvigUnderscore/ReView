@@ -132,7 +132,7 @@ describe('GET /api/shots — plafond et curseur', () => {
 
 describe('GET /api/sequences — liste bornée', () => {
   it('garde la forme historique et y ajoute de quoi savoir ce qui manque', async () => {
-    db.sequence.findMany.mockResolvedValue([{ id: 1, code: 'SQ01', _count: { shots: 12 } }]);
+    db.sequence.findMany.mockResolvedValue([{ id: 1, code: 'SQ01', _count: { shots: 12 }, assignees: [] }]);
     db.sequence.count.mockResolvedValue(640);
     db.shot.count.mockResolvedValue(4);
     db.$queryRaw.mockResolvedValue([]);

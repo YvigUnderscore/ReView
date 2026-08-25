@@ -17,10 +17,11 @@ const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
-// Les séquences portent un statut depuis la phase 48 et le référentiel en contient
-// (4 lignes en base) : les refuser ici renvoyait un 400 à chaque badge de séquence,
-// qui restait donc invisible. La création reste réservée aux deux périmètres éditables.
-const scopeSchema = z.enum(['task', 'shot', 'sequence']);
+// Les séquences et les assets portent un statut depuis la phase 48 et le référentiel en
+// contient : les refuser ici renvoyait un 400 à chaque badge, qui restait donc invisible.
+// La création à la main reste réservée aux deux périmètres éditables — les statuts de
+// séquence et d'asset viennent du site, qui en tient la liste de référence.
+const scopeSchema = z.enum(['task', 'shot', 'sequence', 'asset']);
 const editableScope = z.enum(['task', 'shot']);
 const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale attendue (#RRGGBB)');
 

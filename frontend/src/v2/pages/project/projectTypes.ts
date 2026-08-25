@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { AssetRef, AssetType, EpisodeRef, SequenceRef, ShotRef, TaskType } from '../../types/api';
+import type { EntityCardExtras } from '../../types/entities';
 
 /** Types et constantes partagés des onglets de ProjectPage (découpage 10.C1). */
 
@@ -35,15 +36,17 @@ export type SequenceDetailData = SequenceRef & {
   description?: string | null;
   thumbnailUrl?: string | null;
   pipelineStatusId?: number | null;
-  shots: (ShotRef & {
-    assets: AssetRef[];
-    thumbnailUrl?: string | null;
-    pipelineStatusId?: number | null;
-    startFrame?: number | null;
-    endFrame?: number | null;
-    omitted?: boolean;
-    _count?: { tasks: number };
-  })[];
+  shots: (ShotRef &
+    EntityCardExtras & {
+      assets: AssetRef[];
+      thumbnailUrl?: string | null;
+      pipelineStatusId?: number | null;
+      startFrame?: number | null;
+      endFrame?: number | null;
+      description?: string | null;
+      omitted?: boolean;
+      _count?: { tasks: number };
+    })[];
   assets: (AssetRef & { typeLabel?: string | null; thumbnailUrl?: string | null })[];
   departments?: { id: number; key: string; name: string; color?: string | null }[];
 };

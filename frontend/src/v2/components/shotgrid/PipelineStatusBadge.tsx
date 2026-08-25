@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { usePipelineStatuses } from '../../lib/shotgridApi';
+import type { StatusScope } from '../../types/shotgrid';
 import { statusSwatch } from '../../lib/contrast';
 import { useTheme } from '../../stores/useTheme';
 
@@ -22,7 +23,7 @@ export default function PipelineStatusBadge({
   size = 'sm',
 }: {
   statusId: number | null | undefined;
-  scope: 'task' | 'shot' | 'sequence';
+  scope: StatusScope;
   size?: 'sm' | 'xs';
 }) {
   const { data: statuses = [] } = usePipelineStatuses(scope);

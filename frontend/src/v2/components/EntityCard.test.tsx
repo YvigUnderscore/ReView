@@ -53,3 +53,53 @@ describe('EntityCard — vignette', () => {
     expect(markup({ thumbnailUrl: 'https://minio/thumb.jpg' })).toContain('alt=""');
   });
 });
+
+/**
+ * La bande d'informations : ce qu'une carte dit d'une entité au-delà de son nom.
+ *
+ * Elle a été ajoutée pour répondre en un coup d'œil aux quatre questions qu'on se pose en
+ * balayant une grille de deux cents plans. Deux invariants la tiennent : elle ne s'affiche
+ * que si elle a quelque chose à dire, et elle dit la même chose dans les deux vues.
+ */
+describe('EntityCard — bande d’informations', () => {
+  const alice = {
+    id: 2,
+    name: 'Alice Martin',
+    firstName: 'Alice',
+    lastName: 'Martin',
+    username: null,
+    avatarUrl: null,
+  };
+
+  it('montre la description, les visages et la pastille d’attente', () => {
+    const html = markup({
+      meta: { description: 'Le héros entre par la gauche', assignees: [alice], awaitingReview: 3 },
+    });
+    expect(html).toContain('Le héros entre par la gauche');
+    // Pas d'avatar déposé : la pastille à initiales tient lieu de visage.
+    expect(html).toContain('AM');
+    expect(html).toContain('>3<');
+  });
+
+  it('ne réserve aucune hauteur quand il n’y a rien à dire', () => {
+    // Une bande vide sur une carte neuve coûterait la densité de la grille entière.
+    const withMeta = markup({ meta: {} });
+    const without = markup({});
+    expect(withMeta).toBe(without);
+  });
+
+  it('tait la pastille d’attente à zéro — « rien à regarder » n’est pas une information', () => {
+    expect(markup({ meta: { awaitingReview: 0, assignees: [alice] } })).not.toContain('>0<');
+  });
+
+  it('dit la même chose en vue compacte', () => {
+    const html = markup({ view: 'compact', meta: { description: 'Brief du plan', assignees: [alice] } });
+    expect(html).toContain('Brief du plan');
+    expect(html).toContain('AM');
+  });
+
+  it('borne la description à deux lignes en vue cartes, une seule en compact', () => {
+    expect(markup({ meta: { description: 'x' } })).toContain('line-clamp-2');
+    expect(markup({ view: 'compact', meta: { description: 'x' } })).toContain('truncate');
+  });
+});

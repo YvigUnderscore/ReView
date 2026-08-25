@@ -38,6 +38,7 @@ export type PushJob =
   | { type: 'version-status'; versionId: number; actorId?: number | null }
   | { type: 'version-publish'; versionId: number; actorId?: number | null }
   | { type: 'asset-links'; assetId: number; actorId?: number | null }
+  | { type: 'asset-status'; assetId: number; actorId?: number | null }
   | {
       type: 'description';
       kind: 'sequence' | 'shot' | 'asset';
@@ -128,6 +129,7 @@ const JOB_DOMAIN: Record<PushJob['type'], 'tasks' | 'hierarchy' | 'versions' | '
   'shot-status': 'hierarchy',
   'sequence-status': 'hierarchy',
   'asset-links': 'hierarchy',
+  'asset-status': 'hierarchy',
   description: 'hierarchy',
   'version-status': 'versions',
   'version-publish': 'versions',
@@ -208,6 +210,9 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
         break;
       case 'asset-links':
         await pushAssetLinks(ctx, job);
+        break;
+      case 'asset-status':
+        await pushAssetStatus(ctx, job);
         break;
       case 'description':
         await pushDescription(ctx, job);
@@ -341,6 +346,31 @@ async function pushSequenceStatus(ctx: PushContext, job: Extract<PushJob, { type
     { asUserLogin: await actorLogin(ctx, job.actorId) },
   );
   logger.info({ sequenceId: sequence.id, sgId, code }, 'Statut de séquence poussé vers ShotGrid');
+}
+
+/**
+ * Statut d'asset ReView → ShotGrid.
+ *
+ * L'asset n'avait pas de statut propre : il empruntait le vocabulaire des tâches, et
+ * rien ne remontait donc au site. Le chemin est celui du plan et de la séquence, à
+ * l'entité près.
+ */
+async function pushAssetStatus(ctx: PushContext, job: Extract<PushJob, { type: 'asset-status' }>) {
+  if (!can(ctx.settings, 'hierarchy', 'write')) return;
+  const asset = await prisma.asset.findUnique({
+    where: { id: job.assetId },
+    include: { pipelineStatus: true },
+  });
+  if (!asset?.pipelineStatus) return;
+  const sgId = await resolveTarget(ctx, 'asset', asset.id, 'Asset');
+  if (!sgId) return;
+
+  await ctx.client.update(
+    'Asset',
+    sgId,
+    { sg_status_list: asset.pipelineStatus.code },
+    { asUserLogin: await actorLogin(ctx, job.actorId) },
+  );
 }
 
 /**

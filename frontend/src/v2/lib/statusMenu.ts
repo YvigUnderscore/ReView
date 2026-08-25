@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { MessageKey } from '../i18n';
-import type { PipelineStatus } from '../types/shotgrid';
+import type { PipelineStatus, StatusScope } from '../types/shotgrid';
 import type { TaskStatus } from '../types/api';
 import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from './taskStatus';
 
@@ -30,7 +30,7 @@ export interface StatusChoice {
   legacyStatus: TaskStatus | null;
 }
 
-export type StatusScope = 'task' | 'shot' | 'sequence';
+export type { StatusScope };
 
 /**
  * Les choix offerts pour un périmètre donné.

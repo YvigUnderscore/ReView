@@ -40,6 +40,8 @@ beforeEach(() => {
       code: 'SH010',
       thumbnailKey: null,
       departments: [{ id: 3, key: 'comp', name: 'Compositing', color: null }],
+      // `include.assignees` : Prisma rend toujours la relation demandée.
+      assignees: [],
     },
   ]);
   db.shot.count.mockResolvedValue(1);
@@ -105,8 +107,8 @@ describe('ShotService.list — pagination de deux mille plans', () => {
 
   it('rend un curseur de suite quand la page est pleine', async () => {
     db.shot.findMany.mockResolvedValue([
-      { id: 7, order: 0, code: 'SH010', thumbnailKey: null, departments: [] },
-      { id: 9, order: 0, code: 'SH020', thumbnailKey: null, departments: [] },
+      { id: 7, order: 0, code: 'SH010', thumbnailKey: null, departments: [], assignees: [] },
+      { id: 9, order: 0, code: 'SH020', thumbnailKey: null, departments: [], assignees: [] },
     ]);
     db.shot.count.mockResolvedValue(2000);
     const res = await list(461, undefined, { ...page, pageSize: 2 });

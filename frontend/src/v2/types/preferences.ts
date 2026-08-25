@@ -42,6 +42,17 @@ export interface UserPreferences {
    * réglage. Un choix explicite fait sur l'appareil reste prioritaire.
    */
   density?: 'comfortable' | 'compact';
+  /**
+   * Vue par défaut des listes (cartes ou compact), attachée au compte : elle suit d'un
+   * poste à l'autre, là où le miroir localStorage ne sert qu'au premier rendu.
+   */
+  viewMode?: 'cards' | 'compact';
+  /**
+   * Écarts par liste, clé = portée (« shots:12 », « assets:12 »). Absent = la liste suit
+   * `viewMode`. Une grille de plans se lit en vignettes, une liste de tâches en lignes :
+   * un réglage unique ne peut pas répondre pour les deux.
+   */
+  viewModes?: Record<string, 'cards' | 'compact'>;
   [key: string]: unknown;
 }
 
