@@ -11,6 +11,8 @@ import SgSyncDot from '../shotgrid/SgSyncDot';
 import EntityContextMenu from '../ui/entity-menu';
 import { separator, type MenuEntry } from '../../lib/menuSpec';
 import EntitySettingsDialog from './EntitySettingsDialog';
+import EntityHeaderPanel from './EntityHeaderPanel';
+import type { NoteKind } from '../../lib/notesApi';
 import type { EntityKind, EntitySource } from './entitySettings';
 import { useT } from '../../i18n';
 
@@ -27,6 +29,13 @@ const FAVORITE_TYPE: Record<EntityKind, 'SEQUENCE' | 'SHOT' | 'ASSET'> = {
   sequence: 'SEQUENCE',
   shot: 'SHOT',
   asset: 'ASSET',
+};
+
+/** Le segment d'URL de l'entité : l'API parle au pluriel, le composant au singulier. */
+const NOTE_KIND: Record<EntityKind, NoteKind> = {
+  sequence: 'sequences',
+  shot: 'shots',
+  asset: 'assets',
 };
 
 export default function EntityWorkPage({
@@ -115,6 +124,10 @@ export default function EntityWorkPage({
               )}
             </div>
           </header>
+
+          {/* Équipe du périmètre et brief markdown — replié par défaut : on ouvre une
+              page de plan pour voir son travail, pas sa fiche administrative. */}
+          <EntityHeaderPanel kind={NOTE_KIND[kind]} id={id} projectId={projectId} canManage={canManage} />
 
           {children}
         </div>
