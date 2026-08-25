@@ -260,3 +260,56 @@ describe('searchEntities — mise en forme des résultats', () => {
     expect(JSON.stringify(res.people)).not.toContain('@');
   });
 });
+
+/**
+ * Ce que la recherche trouve, et dans quel ordre.
+ *
+ * Deux promesses distinctes : chercher **au-delà du nom** (un plan se retrouve par ce qu'il
+ * raconte, pas seulement par son code), et **classer** — chaque liste sortait dans l'ordre
+ * de la base, si bien que taper « SH0120 » plaçait le plan SH0120 après trois médias dont
+ * le nom de fichier le contient.
+ */
+describe('searchEntities — portée et classement', () => {
+  it('cherche aussi dans la description d’un plan, d’une séquence et d’un asset', async () => {
+    await searchEntities('pluie', ARTIST_ID, Role.ARTIST);
+    for (const delegate of [prisma.shot, prisma.sequence, prisma.asset]) {
+      const where = whereOf(delegate.findMany) as { OR: Record<string, unknown>[] };
+      expect(where.OR.some((clause) => 'description' in clause)).toBe(true);
+    }
+  });
+
+  it('remonte la correspondance la plus nette, pas la plus récente', async () => {
+    vi.mocked(prisma.shot.findMany).mockResolvedValueOnce([
+      // Ordre de la base : le plus récent d'abord. Le second est pourtant ce qu'on cherche.
+      { id: 1, code: 'SH0121', name: 'SH0121', description: null, projectId: 1 },
+      { id: 2, code: 'SH0120', name: 'SH0120', description: null, projectId: 1 },
+      { id: 3, code: 'EP01_SH0120_old', name: 'x', description: null, projectId: 1 },
+    ] as never);
+
+    const results = await searchEntities('SH0120', ARTIST_ID, Role.ARTIST);
+
+    expect(results.shots.map((s) => s.id)).toEqual([2, 3, 1]);
+  });
+
+  it('préfère une description exacte à un fragment perdu dans un code', async () => {
+    vi.mocked(prisma.asset.findMany).mockResolvedValueOnce([
+      { id: 1, name: 'xpluiex', description: null, type: 'PROP', projectId: 1 },
+      { id: 2, name: 'Robot', description: 'pluie', type: 'PROP', projectId: 1 },
+    ] as never);
+
+    const results = await searchEntities('pluie', ARTIST_ID, Role.ARTIST);
+
+    expect(results.assets[0]!.id).toBe(2);
+  });
+
+  it('ne perd aucun résultat en classant', async () => {
+    vi.mocked(prisma.shot.findMany).mockResolvedValueOnce([
+      { id: 1, code: 'A', name: 'A', description: null, projectId: 1 },
+      { id: 2, code: 'B', name: 'B', description: null, projectId: 1 },
+    ] as never);
+
+    const results = await searchEntities('néant', ARTIST_ID, Role.ARTIST);
+
+    expect(results.shots).toHaveLength(2);
+  });
+});

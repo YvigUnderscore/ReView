@@ -3,6 +3,7 @@
 
 import { Role, MediaKind, MediaStatus, Prisma } from '@prisma/client';
 import { prisma } from './prisma';
+import { bestScore, rankBy } from './searchRank';
 import { searchComments, type CommentHit } from './searchComments';
 
 /**
@@ -148,20 +149,37 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
       take: SEARCH_LIMITS.projects,
     }),
     prisma.sequence.findMany({
-      where: { deletedAt: null, hiddenAt: null, project, OR: [{ name: contains }, { code: contains }] },
-      select: { id: true, code: true, name: true, projectId: true },
+      // La description entre dans le champ de recherche : c'est là que vit ce qu'un plan
+      // raconte, et le chercher par son code suppose de déjà le connaître.
+      where: {
+        deletedAt: null,
+        hiddenAt: null,
+        project,
+        OR: [{ name: contains }, { code: contains }, { description: contains }],
+      },
+      select: { id: true, code: true, name: true, description: true, projectId: true },
       orderBy: { id: 'desc' },
       take: SEARCH_LIMITS.sequences,
     }),
     prisma.shot.findMany({
-      where: { deletedAt: null, hiddenAt: null, project, OR: [{ name: contains }, { code: contains }] },
-      select: { id: true, code: true, name: true, projectId: true },
+      where: {
+        deletedAt: null,
+        hiddenAt: null,
+        project,
+        OR: [{ name: contains }, { code: contains }, { description: contains }],
+      },
+      select: { id: true, code: true, name: true, description: true, projectId: true },
       orderBy: { id: 'desc' },
       take: SEARCH_LIMITS.shots,
     }),
     prisma.asset.findMany({
-      where: { deletedAt: null, hiddenAt: null, project, name: contains },
-      select: { id: true, name: true, type: true, projectId: true },
+      where: {
+        deletedAt: null,
+        hiddenAt: null,
+        project,
+        OR: [{ name: contains }, { description: contains }],
+      },
+      select: { id: true, name: true, description: true, type: true, projectId: true },
       orderBy: { id: 'desc' },
       take: SEARCH_LIMITS.assets,
     }),
@@ -226,13 +244,33 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
     searchPeople(userId, role, contains),
   ]);
 
+  // Classement : chaque liste sortait dans l'ordre de la base — le plus récent d'abord —
+  // si bien que taper « SH0120 » plaçait le plan SH0120 après trois médias dont le nom de
+  // fichier le contient. Le score répond à « à quel point est-ce ce qui a été tapé ? ».
   return {
-    projects,
-    sequences,
-    shots,
-    assets,
-    tasks,
-    versions: versions.map((v) => ({
+    projects: rankBy(projects, (p) => bestScore(q, [{ value: p.name, field: 'name' }])),
+    sequences: rankBy(sequences, (row) =>
+      bestScore(q, [
+        { value: row.code, field: 'code' },
+        { value: row.name, field: 'name' },
+        { value: row.description, field: 'description' },
+      ]),
+    ),
+    shots: rankBy(shots, (row) =>
+      bestScore(q, [
+        { value: row.code, field: 'code' },
+        { value: row.name, field: 'name' },
+        { value: row.description, field: 'description' },
+      ]),
+    ),
+    assets: rankBy(assets, (row) =>
+      bestScore(q, [
+        { value: row.name, field: 'name' },
+        { value: row.description, field: 'description' },
+      ]),
+    ),
+    tasks: rankBy(tasks, (row) => bestScore(q, [{ value: row.name, field: 'name' }])),
+    versions: rankBy(versions, (v) => bestScore(q, [{ value: v.name, field: 'code' }])).map((v) => ({
       id: v.id,
       name: v.name,
       mediaId: v.media[0]?.id ?? null,
@@ -240,7 +278,7 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
       assetId: v.assetId,
       context: contextOf(v),
     })),
-    media: mediaRows.map((m) => ({
+    media: rankBy(mediaRows, (m) => bestScore(q, [{ value: m.originalName, field: 'name' }])).map((m) => ({
       id: m.id,
       name: m.originalName,
       kind: m.kind,
