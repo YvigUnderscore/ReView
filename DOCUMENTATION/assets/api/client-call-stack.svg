@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 680" width="800" height="680" role="img" aria-labelledby="stack-title stack-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="stack-title">What sits between a shelf button and object storage</title>
+  <desc id="stack-desc">Five layers: the DCC integration, the pure guess_pipeline_path function, publish_file, ReviewClient, and the two HTTPS destinations — the v1 API with a bearer token, and object storage with a presigned PUT that carries no Authorization header.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .conn { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="680" rx="10"/>
+
+  <text class="d" x="40" y="32">WHAT SITS BETWEEN A SHELF BUTTON AND OBJECT STORAGE</text>
+
+  <rect class="panel" x="40" y="56" width="720" height="78" rx="9"/>
+  <text class="l" x="56" y="78">DCC integration</text>
+  <text class="d" x="56" y="98">Blender add-on in Properties, Output, ReView · Nuke menu Ctrl+Alt+P and addAfterRender</text>
+  <text class="d" x="56" y="116">Maya shelf button · Houdini ROP post-render script · Prism publish hook</text>
+
+  <path class="conn" d="M400 134 L400 154" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="40" y="158" width="720" height="78" rx="9"/>
+  <text class="l" x="56" y="180">review.dcc.guess_pipeline_path</text>
+  <text class="d" x="56" y="200">A pure function: filename to PROJ/SQ010/SH0100/anim.</text>
+  <text class="d" x="56" y="218">Replace THIS ONE function if your studio names files differently — do not fork the add-ons.</text>
+
+  <path class="conn" d="M400 236 L400 256" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="40" y="260" width="720" height="78" rx="9"/>
+  <text class="l" x="56" y="282">review.publish.publish_file</text>
+  <text class="d" x="56" y="302">sha256 read in 1 MB chunks · one uuid reused across both API calls</text>
+  <text class="d" x="56" y="320">returns PublishResult(media_id, version_path, published, created)</text>
+
+  <path class="conn" d="M400 338 L400 358" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="40" y="362" width="720" height="96" rx="9"/>
+  <text class="l" x="56" y="384">review.client.ReviewClient</text>
+  <text class="d" x="56" y="404">urllib only · 60 s default timeout, 3600 s for transfers</text>
+  <text class="d" x="56" y="422">retries 429, 500, 502, 503, 504 — 4 attempts, 0.5 s base, 30 s ceiling, 25 % jitter, Retry-After honoured</text>
+  <text class="d" x="56" y="440">writes replayed only when they carry an Idempotency-Key</text>
+
+  <path class="conn" d="M400 458 L400 474 L216 474 L216 492" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 458 L400 474 L584 474 L584 492" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="40" y="494" width="352" height="64" rx="9"/>
+  <text class="l" x="56" y="516">HTTPS to /api/v1</text>
+  <text class="d" x="56" y="536">Authorization: Bearer rvk_...</text>
+
+  <rect class="panel-a" x="408" y="494" width="352" height="64" rx="9"/>
+  <text class="l" x="424" y="516">HTTPS to object storage</text>
+  <text class="d" x="424" y="536">presigned PUT · no Authorization header</text>
+
+  <rect class="panel-o" x="40" y="578" width="720" height="76" rx="9"/>
+  <text class="l" x="56" y="600">Zero third-party dependency</text>
+  <text class="d" x="56" y="622">The interpreter inside Maya, Nuke, Houdini or Blender cannot be asked to pip install anything.</text>
+  <text class="d" x="56" y="640">Errors: ReviewApiError (.status, .code) · ReviewTransportError · ReviewConfigError — branch on .code.</text>
+</svg>

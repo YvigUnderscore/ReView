@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 438" width="800" height="438" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">How one run of scripts/backup.sh is built</title>
+  <desc id="fig-desc">The database is dumped inside the postgres container and aborts if the dump is empty. The bucket is mirrored incrementally into a living copy, so only changed objects cross the network, and that copy is then frozen as a hard-link snapshot that costs only its own differences. A manifest records the date, mode, bucket, application version and dump size. Rotation keeps the newest stamped directories and never touches the living mirror.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="438" rx="10"/>
+
+  <text class="d" x="28" y="30">WHAT IS READ</text>
+  <text class="d" x="398" y="30">WHAT ONE RUN WRITES</text>
+
+  <!-- Moitié base : dump d'abord, pour ne jamais produire une ligne sans objet -->
+  <rect class="panel" x="20" y="44" width="160" height="46" rx="9"/>
+  <text class="l" x="100" y="66" text-anchor="middle">postgres</text>
+  <text class="d" x="100" y="82" text-anchor="middle">the metadata</text>
+
+  <path class="conn-a" d="M180 67 L390 67" marker-end="url(#arrow-a)"/>
+  <text class="a" x="285" y="59" text-anchor="middle">docker exec pg_dump -Fc</text>
+  <text class="d" x="285" y="84" text-anchor="middle">aborts on an empty dump</text>
+
+  <rect class="panel" x="390" y="44" width="300" height="46" rx="9"/>
+  <text class="m" x="540" y="66" text-anchor="middle">backups/&lt;stamp&gt;/db.dump</text>
+  <text class="d" x="540" y="82" text-anchor="middle">PostgreSQL custom format</text>
+
+  <!-- Moitié objets : miroir incrémental, puis instantané par liens durs -->
+  <rect class="panel" x="20" y="140" width="160" height="46" rx="9"/>
+  <text class="l" x="100" y="162" text-anchor="middle">MinIO bucket</text>
+  <text class="d" x="100" y="178" text-anchor="middle">the media objects</text>
+
+  <path class="conn-a" d="M180 163 L390 163" marker-end="url(#arrow-a)"/>
+  <text class="a" x="285" y="155" text-anchor="middle">mc mirror --overwrite --remove</text>
+  <text class="d" x="285" y="180" text-anchor="middle">only changed objects move</text>
+
+  <rect class="panel-a" x="390" y="140" width="300" height="46" rx="9"/>
+  <text class="m" x="540" y="162" text-anchor="middle">backups/minio-current/</text>
+  <text class="d" x="540" y="178" text-anchor="middle">a living copy, never rotated</text>
+
+  <path class="conn" d="M540 186 L540 214" marker-end="url(#arrow)"/>
+  <text class="a" x="552" y="204">cp -al, hard links</text>
+
+  <rect class="panel" x="390" y="218" width="300" height="46" rx="9"/>
+  <text class="m" x="540" y="240" text-anchor="middle">backups/&lt;stamp&gt;/minio/</text>
+  <text class="d" x="540" y="256" text-anchor="middle">frozen snapshot: costs only its deltas</text>
+
+  <path class="conn" d="M540 264 L540 290" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="390" y="294" width="300" height="46" rx="9"/>
+  <text class="m" x="540" y="316" text-anchor="middle">backups/&lt;stamp&gt;/manifest.txt</text>
+  <text class="d" x="540" y="332" text-anchor="middle">date, mode, bucket, app_version, db_bytes</text>
+
+  <!-- Le mode décide de la forme de la moitié objets -->
+  <rect class="panel-o" x="20" y="218" width="160" height="72" rx="9"/>
+  <text class="l" x="100" y="240" text-anchor="middle">BACKUP_MODE</text>
+  <text class="d" x="100" y="258" text-anchor="middle">mirror (default)</text>
+  <text class="d" x="100" y="274" text-anchor="middle">archive (full tar)</text>
+
+  <!-- Rotation et coût -->
+  <rect class="panel" x="20" y="356" width="340" height="68" rx="9"/>
+  <text class="l" x="34" y="378">Rotation</text>
+  <text class="d" x="34" y="396">keeps the BACKUP_KEEP newest stamped</text>
+  <text class="d" x="34" y="412">directories; minio-current is never touched.</text>
+
+  <rect class="panel" x="380" y="356" width="400" height="68" rx="9"/>
+  <text class="l" x="394" y="378">A week of retention, on a 300 GB bucket</text>
+  <text class="d no" x="394" y="396">archive: 7 x 300 GB = 2.1 TB</text>
+  <text class="d ok" x="394" y="412">mirror: 300 GB + 7 deltas = about 312 GB</text>
+</svg>

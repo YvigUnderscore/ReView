@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 526" width="800" height="526" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What a container must pass before it serves</title>
+  <desc id="fig-desc">The backend container waits for the three native healthchecks, runs prisma generate, then either the explicit db push path or prisma migrate deploy, and only then starts the application. Each gate has an explicit refusal on the right, and the container healthcheck can be pointed at the readiness route.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="526" rx="10"/>
+
+  <text class="d" x="60" y="32">THE BACKEND CONTAINER, GATE BY GATE</text>
+  <text class="d" x="470" y="32">REFUSALS AND OPTIONS</text>
+
+  <rect class="panel" x="60" y="52" width="340" height="46" rx="9"/>
+  <text class="l" x="230" y="73" text-anchor="middle">docker compose up -d</text>
+  <text class="d" x="230" y="89" text-anchor="middle">postgres, redis and minio start first</text>
+  <path class="conn" d="M230 98 L230 116" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="60" y="120" width="340" height="46" rx="9"/>
+  <text class="l" x="230" y="141" text-anchor="middle">condition: service_healthy</text>
+  <text class="d" x="230" y="157" text-anchor="middle">pg_isready, redis-cli ping, mc ready local</text>
+  <path class="conn" d="M230 166 L230 184" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="60" y="188" width="340" height="46" rx="9"/>
+  <text class="l" x="230" y="209" text-anchor="middle">backend/start.sh — prisma generate</text>
+  <text class="d" x="230" y="225" text-anchor="middle">then one of the two schema paths below</text>
+  <path class="conn" d="M230 234 L230 252" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="60" y="256" width="340" height="46" rx="9"/>
+  <text class="t" x="230" y="277" text-anchor="middle">PRISMA_DB_PUSH=1 ?</text>
+  <text class="d" x="230" y="293" text-anchor="middle">empty by default — set it only on an empty database</text>
+  <path class="conn" d="M400 279 L466 279" marker-end="url(#arrow)"/>
+  <path class="conn" d="M230 302 L230 320" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="60" y="324" width="340" height="46" rx="9"/>
+  <text class="l" x="230" y="345" text-anchor="middle">prisma migrate deploy</text>
+  <text class="d" x="230" y="361" text-anchor="middle">versioned migrations, no destructive fallback</text>
+  <path class="conn" d="M400 347 L466 347" marker-end="url(#arrow)"/>
+  <path class="conn" d="M230 370 L230 388" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="60" y="392" width="340" height="46" rx="9"/>
+  <text class="t" x="230" y="413" text-anchor="middle">node dist/server.js</text>
+  <text class="d" x="230" y="429" text-anchor="middle">application boot — see Architecture</text>
+  <path class="conn" d="M230 438 L230 456" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="60" y="460" width="340" height="46" rx="9"/>
+  <text class="l" x="230" y="481" text-anchor="middle">healthcheck: GET $HEALTH_PATH</text>
+  <text class="d" x="230" y="497" text-anchor="middle">default /health — liveness, checks nothing</text>
+  <path class="conn-a" d="M400 483 L466 483" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-d" x="470" y="256" width="310" height="46" rx="9"/>
+  <text class="t" x="625" y="277" text-anchor="middle">Refused in production</text>
+  <text class="d" x="625" y="293" text-anchor="middle">NODE_ENV=production, exit 1, no db push</text>
+
+  <rect class="panel-d" x="470" y="324" width="310" height="46" rx="9"/>
+  <text class="t" x="625" y="345" text-anchor="middle">Migration failed</text>
+  <text class="d" x="625" y="361" text-anchor="middle">exit 1, stderr kept, database untouched</text>
+
+  <rect class="panel-a" x="470" y="460" width="310" height="46" rx="9"/>
+  <text class="t" x="625" y="481" text-anchor="middle">HEALTH_PATH=/health/ready</text>
+  <text class="d" x="625" y="497" text-anchor="middle">gates on PostgreSQL, Redis and MinIO</text>
+</svg>

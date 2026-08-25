@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">How each source format reaches the GLB the viewer loads</title>
+  <desc id="fig-desc">Five source families are routed to a converter — copy, JS packer, archive guard, Blender or assimp — and all of them produce one model.glb plus a technical sheet, after which a thumbnail job is queued. When Blender is absent or fails, USD falls back to guc, then to assimp.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="480" rx="10"/>
+
+  <text class="d" x="20" y="26">1 — ROUTING, BY THE EXTENSION OF THE UPLOADED FILE</text>
+
+  <!-- Sources -->
+  <rect class="panel" x="20" y="46" width="180" height="34" rx="9"/>
+  <text class="m" x="110" y="67" text-anchor="middle">.glb</text>
+
+  <rect class="panel" x="20" y="102" width="180" height="34" rx="9"/>
+  <text class="m" x="110" y="123" text-anchor="middle">.gltf</text>
+
+  <rect class="panel" x="20" y="158" width="180" height="34" rx="9"/>
+  <text class="m" x="110" y="179" text-anchor="middle">.zip</text>
+
+  <rect class="panel" x="20" y="214" width="180" height="34" rx="9"/>
+  <text class="m" x="110" y="235" text-anchor="middle">.usd .usdc .usda .usdz</text>
+
+  <rect class="panel" x="20" y="270" width="180" height="34" rx="9"/>
+  <text class="m" x="110" y="291" text-anchor="middle">.fbx .obj .dae .stl</text>
+
+  <!-- Sources vers convertisseurs -->
+  <path class="conn" d="M200 63 L300 63" marker-end="url(#arrow)"/>
+  <path class="conn" d="M200 119 L300 119" marker-end="url(#arrow)"/>
+  <path class="conn" d="M200 175 L300 175" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M200 231 L300 231" marker-end="url(#arrow-a)"/>
+  <path class="conn" d="M200 287 L300 287" marker-end="url(#arrow)"/>
+
+  <!-- Convertisseurs -->
+  <rect class="panel" x="300" y="40" width="230" height="46" rx="9"/>
+  <text class="l" x="415" y="62" text-anchor="middle">copy</text>
+  <text class="d" x="415" y="78" text-anchor="middle">served as-is, nothing is re-encoded</text>
+
+  <rect class="panel" x="300" y="96" width="230" height="46" rx="9"/>
+  <text class="l" x="415" y="118" text-anchor="middle">JS packer</text>
+  <text class="d" x="415" y="134" text-anchor="middle">resolves .bin and relative textures</text>
+
+  <rect class="panel-w" x="300" y="152" width="230" height="46" rx="9"/>
+  <text class="l" x="415" y="174" text-anchor="middle">Archive guard</text>
+  <text class="d" x="415" y="190" text-anchor="middle">checked whole, then routed again</text>
+
+  <rect class="panel-a" x="300" y="208" width="230" height="46" rx="9"/>
+  <text class="t" x="415" y="230" text-anchor="middle">Blender (OpenUSD)</text>
+  <text class="d" x="415" y="246" text-anchor="middle">composition, materials, animation</text>
+
+  <rect class="panel" x="300" y="264" width="230" height="46" rx="9"/>
+  <text class="l" x="415" y="286" text-anchor="middle">assimp</text>
+  <text class="d" x="415" y="302" text-anchor="middle">no USD importer at all</text>
+
+  <!-- Bus de sortie -->
+  <path class="conn" d="M530 63 L565 63"/>
+  <path class="conn" d="M530 119 L565 119"/>
+  <path class="conn" d="M530 175 L565 175"/>
+  <path class="conn" d="M530 231 L565 231"/>
+  <path class="conn" d="M530 287 L565 287"/>
+  <path class="conn" d="M565 63 L565 287"/>
+  <path class="conn-a" d="M565 175 L590 175" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="590" y="105" width="190" height="140" rx="9"/>
+  <text class="t" x="685" y="129" text-anchor="middle">model.glb</text>
+  <text class="d" x="685" y="147" text-anchor="middle">what the viewer loads</text>
+  <text class="d" x="685" y="167" text-anchor="middle">+ technical sheet:</text>
+  <text class="d" x="685" y="183" text-anchor="middle">converter, root layer,</text>
+  <text class="d" x="685" y="199" text-anchor="middle">up axis, unit scale,</text>
+  <text class="d" x="685" y="215" text-anchor="middle">animation range, variants,</text>
+  <text class="d" x="685" y="231" text-anchor="middle">unresolved assets</text>
+
+  <path class="conn-o" d="M685 245 L685 259" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="590" y="259" width="190" height="46" rx="9"/>
+  <text class="l" x="685" y="281" text-anchor="middle">spatial-thumb queue</text>
+  <text class="d" x="685" y="297" text-anchor="middle">Cycles thumbnail, once done</text>
+
+  <text class="d" x="20" y="344">2 — WHEN BLENDER IS ABSENT OR FAILS, USD FALLS BACK</text>
+
+  <rect class="panel-a" x="40" y="358" width="190" height="46" rx="9"/>
+  <text class="t" x="135" y="380" text-anchor="middle">Blender</text>
+  <text class="d" x="135" y="396" text-anchor="middle">composition and animation</text>
+
+  <path class="conn" d="M230 381 L310 381" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="310" y="358" width="150" height="46" rx="9"/>
+  <text class="l" x="385" y="380" text-anchor="middle">guc</text>
+  <text class="d" x="385" y="396" text-anchor="middle">materials, static</text>
+
+  <path class="conn" d="M460 381 L540 381" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="540" y="358" width="190" height="46" rx="9"/>
+  <text class="l" x="635" y="380" text-anchor="middle">assimp</text>
+  <text class="d" x="635" y="396" text-anchor="middle">last resort, geometry only</text>
+
+  <text class="d" x="270" y="424" text-anchor="middle">unavailable or failed</text>
+  <text class="d" x="500" y="424" text-anchor="middle">unavailable or failed</text>
+
+  <text class="m" x="400" y="454" text-anchor="middle">every external converter runs under MODEL_CONVERT_TIMEOUT_MS — 900 000 ms by default</text>
+</svg>

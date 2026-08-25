@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 512" width="800" height="512" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Comparing versions: what each choice gives you</title>
+  <desc id="fig-desc">Checking one version in the Compare selector opens A/B, with side-by-side, wipe and diff sub-modes; checking two or three opens a two-by-two grid where wipe and diff are unavailable. Frame offsets and live replication apply to the whole comparison.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="512" rx="10"/>
+
+  <rect class="panel-a" x="24" y="24" width="752" height="52" rx="9"/>
+  <text class="t" x="36" y="48">Compare… — the checkbox list of the other versions of the task or asset</text>
+  <text class="d" x="36" y="66">in the review header on video and image; in the workspace header on 3D and splat</text>
+
+  <path class="conn" d="M400 76 L400 92 L239 92 L239 110" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 76 L400 92 L623 92 L623 110" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="112" width="430" height="46" rx="9"/>
+  <text class="l" x="36" y="134">One version checked — A/B</text>
+  <text class="d" x="36" y="150">B plays muted, slaved to the master transport</text>
+
+  <rect class="panel" x="470" y="112" width="306" height="46" rx="9"/>
+  <text class="l" x="482" y="134">Two or three checked — 2×2 grid</text>
+  <text class="d" x="482" y="150">three B panes at most, each with its own ×</text>
+
+  <path class="conn" d="M40 158 L40 398"/>
+  <path class="conn" d="M40 218 L58 218" marker-end="url(#arrow)"/>
+  <path class="conn" d="M40 282 L58 282" marker-end="url(#arrow)"/>
+  <path class="conn" d="M40 398 L58 398" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="60" y="190" width="394" height="56" rx="9"/>
+  <text class="l" x="72" y="212">Side by side</text>
+  <text class="d" x="72" y="230">two panes on one transport — also what the grid gives</text>
+
+  <rect class="panel-a" x="60" y="262" width="394" height="80" rx="9"/>
+  <text class="l" x="72" y="284">Wipe — arm the tool with W</text>
+  <text class="d" x="72" y="302">the centre grip slides the bar, the second handle</text>
+  <text class="d" x="72" y="318">rotates it and shows the angle; double-click the</text>
+  <text class="d" x="72" y="334">grip to return to vertical and centred</text>
+
+  <rect class="panel-a" x="60" y="358" width="394" height="80" rx="9"/>
+  <text class="l" x="72" y="380">Diff</text>
+  <text class="d" x="72" y="398">|A − B| on a canvas; the ×n chip cycles the gain</text>
+  <text class="d" x="72" y="414">1 → 2 → 4 → 8 → 16, and the flame icon gives a</text>
+  <text class="d" x="72" y="430">heatmap running dark → blue → green → red</text>
+
+  <path class="conn" d="M623 158 L623 184" marker-end="url(#arrow)"/>
+  <rect class="panel-w" x="470" y="186" width="306" height="60" rx="9"/>
+  <text class="l" x="482" y="208">Wipe and diff are unavailable</text>
+  <text class="d" x="482" y="226">a grid only shows panes side by side</text>
+
+  <rect class="panel-o" x="470" y="262" width="306" height="80" rx="9"/>
+  <text class="l" x="482" y="284">Retimed versions</text>
+  <text class="d" x="482" y="302">[ and ] shift B by one frame, Shift</text>
+  <text class="d" x="482" y="318">for ten, Shift+\ back to zero; the</text>
+  <text class="d" x="482" y="334">offset dies with the media</text>
+
+  <rect class="panel-o" x="470" y="358" width="306" height="80" rx="9"/>
+  <text class="l" x="482" y="380">In a live session</text>
+  <text class="d" x="482" y="398">the driver's checked version, sub-</text>
+  <text class="d" x="482" y="414">mode, wipe position and mouse</text>
+  <text class="d" x="482" y="430">cursor reach every participant</text>
+
+  <rect class="panel-d" x="24" y="454" width="752" height="34" rx="9"/>
+  <text class="l" x="36" y="476">A version that carries no video media raises an explicit error instead of opening an empty pane.</text>
+</svg>

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The eight job queues, and which of them the Jobs screen shows</title>
+  <desc id="fig-desc">Eight queues run work in ReView. Only media, storage-cleanup and webhooks appear in Admin, Maintenance, Jobs with counters and a retry button. The five shaded rows — timeline-export, shotgrid, maintenance, spatial-thumb and ocio-bake — have no screen and no retry button anywhere in the admin area.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="400" rx="10"/>
+
+  <text class="d" x="30" y="32">DECLARED QUEUES VS WHAT THE JOBS SCREEN SHOWS</text>
+
+  <rect class="panel" x="30" y="56" width="750" height="286" rx="9"/>
+  <rect class="band" x="30" y="182" width="750" height="160"/>
+  <rect class="band" x="30" y="56" width="750" height="30"/>
+
+  <path class="conn" d="M558 56 L558 342"/>
+  <path class="conn" d="M670 56 L670 342"/>
+
+  <text class="l" x="46" y="76">Queue</text>
+  <text class="l" x="236" y="76">What runs on it</text>
+  <text class="l" x="614" y="76" text-anchor="middle">Jobs screen</text>
+  <text class="l" x="725" y="76" text-anchor="middle">Retry button</text>
+
+  <text class="m" x="46" y="107">media (media-processing)</text>
+  <text class="d" x="236" y="107">transcode, thumbnail, 3D convert, trim, scan — 2 at once</text>
+  <text class="d ok" x="614" y="107" text-anchor="middle">Yes</text>
+  <text class="d ok" x="725" y="107" text-anchor="middle">Yes</text>
+
+  <text class="m" x="46" y="139">storage-cleanup</text>
+  <text class="d" x="236" y="139">orphan object cleanup — 2 at once</text>
+  <text class="d ok" x="614" y="139" text-anchor="middle">Yes</text>
+  <text class="d ok" x="725" y="139" text-anchor="middle">Yes</text>
+
+  <text class="m" x="46" y="171">webhooks</text>
+  <text class="d" x="236" y="171">outgoing deliveries — 3 at once</text>
+  <text class="d ok" x="614" y="171" text-anchor="middle">Yes</text>
+  <text class="d ok" x="725" y="171" text-anchor="middle">Yes</text>
+
+  <text class="m" x="46" y="203">timeline-export</text>
+  <text class="d" x="236" y="203">auto cut timeline renders — 1 at once</text>
+  <text class="d no" x="614" y="203" text-anchor="middle">No</text>
+  <text class="d no" x="725" y="203" text-anchor="middle">No</text>
+
+  <text class="m" x="46" y="235">shotgrid</text>
+  <text class="d" x="236" y="235">event apply, poll, reconcile, push — 2 at once</text>
+  <text class="d no" x="614" y="235" text-anchor="middle">No</text>
+  <text class="d no" x="725" y="235" text-anchor="middle">No</text>
+
+  <text class="m" x="46" y="267">maintenance</text>
+  <text class="d" x="236" y="267">daily digest, weekly report, nightly purge — 1 at once</text>
+  <text class="d no" x="614" y="267" text-anchor="middle">No</text>
+  <text class="d no" x="725" y="267" text-anchor="middle">No</text>
+
+  <text class="m" x="46" y="299">spatial-thumb</text>
+  <text class="d" x="236" y="299">3D and splat card renders — 1 at once</text>
+  <text class="d no" x="614" y="299" text-anchor="middle">No</text>
+  <text class="d no" x="725" y="299" text-anchor="middle">No</text>
+
+  <text class="m" x="46" y="331">ocio-bake</text>
+  <text class="d" x="236" y="331">display LUT baking — 1 at once</text>
+  <text class="d no" x="614" y="331" text-anchor="middle">No</text>
+  <text class="d no" x="725" y="331" text-anchor="middle">No</text>
+
+  <text class="d" x="30" y="364">The first seven report to Prometheus as review_queue_jobs; ocio-bake is declared outside that set.</text>
+  <text class="d" x="30" y="382">A failure on a shaded row is silent in the admin area — read the worker logs, or the Grafana panel.</text>
+</svg>

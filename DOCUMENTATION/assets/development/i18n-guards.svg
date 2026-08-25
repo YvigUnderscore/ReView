@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 376" width="800" height="376" role="img" aria-labelledby="ig-title ig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="ig-title">The i18n checks and the fault each one catches</title>
+  <desc id="ig-desc">Four checks run inside the validation suite and fail the build: catalogue consistency, hardcoded interface text, translation keys printed raw, and French left in a thrown backend message. A fifth, check-unused-keys.mjs, counts dead catalogue keys but no pipeline calls it.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-o { stroke: #4a5872; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="800" height="376" rx="10"/>
+
+  <text class="d" x="20" y="30">WHAT EACH i18n CHECK REFUSES</text>
+
+  <rect class="band" x="20" y="40" width="760" height="26" rx="8"/>
+  <text class="a" x="32" y="58">CHECK</text>
+  <text class="a" x="232" y="58">THE FAULT IT CATCHES</text>
+  <text class="a" x="630" y="58">VERDICT</text>
+
+  <!-- 1 — cohérence des catalogues -->
+  <rect class="panel" x="20" y="74" width="760" height="50" rx="9"/>
+  <path class="conn" d="M220 83 L220 115"/>
+  <path class="conn" d="M618 83 L618 115"/>
+  <text class="m" x="32" y="95">check-translations.mjs</text>
+  <text class="d" x="32" y="111">catalogues consistent?</text>
+  <text class="l" x="232" y="95">{name} lost, a plural form the language lacks,</text>
+  <text class="d" x="232" y="111">a glossary term translated, registries diverging</text>
+  <text class="l ok" x="630" y="95">blocks</text>
+  <text class="d" x="630" y="111">coverage reported</text>
+
+  <!-- 2 — texte en dur -->
+  <rect class="panel" x="20" y="132" width="760" height="50" rx="9"/>
+  <path class="conn" d="M220 141 L220 173"/>
+  <path class="conn" d="M618 141 L618 173"/>
+  <text class="m" x="32" y="153">check-untranslated.mjs</text>
+  <text class="d" x="32" y="169">does the UI use them?</text>
+  <text class="l" x="232" y="153">text on screen without t() — Save, toast('Done')</text>
+  <text class="d" x="232" y="169">a label table frozen at module load time</text>
+  <text class="l ok" x="630" y="153">blocks</text>
+  <text class="d" x="630" y="169">ceiling 0</text>
+
+  <!-- 3 — clés nues -->
+  <rect class="panel" x="20" y="190" width="760" height="50" rx="9"/>
+  <path class="conn" d="M220 199 L220 231"/>
+  <path class="conn" d="M618 199 L618 231"/>
+  <text class="m" x="32" y="211">check-raw-keys.mjs</text>
+  <text class="d" x="32" y="227">a key shown as-is?</text>
+  <text class="l" x="232" y="211">a key printed raw — task.status.todo on screen</text>
+  <text class="d" x="232" y="227">instead of To do; the typed indirection too</text>
+  <text class="l ok" x="630" y="211">blocks</text>
+  <text class="d" x="630" y="227">ceiling 0</text>
+
+  <!-- 4 — messages backend -->
+  <rect class="panel" x="20" y="248" width="760" height="50" rx="9"/>
+  <path class="conn" d="M220 257 L220 289"/>
+  <path class="conn" d="M618 257 L618 289"/>
+  <text class="m" x="32" y="269">check-backend-english.mjs</text>
+  <text class="d" x="32" y="285">server message French?</text>
+  <text class="l" x="232" y="269">a thrown message still written in French</text>
+  <text class="d" x="232" y="285">read verbatim on a public share page</text>
+  <text class="l ok" x="630" y="269">blocks</text>
+  <text class="d" x="630" y="285">no ceiling</text>
+
+  <!-- 5 — clés mortes, branché nulle part -->
+  <rect class="panel-o" x="20" y="306" width="760" height="50" rx="9"/>
+  <path class="conn-o" d="M220 315 L220 347"/>
+  <path class="conn-o" d="M618 315 L618 347"/>
+  <text class="m" x="32" y="327">check-unused-keys.mjs</text>
+  <text class="d" x="32" y="343">which keys are dead?</text>
+  <text class="l" x="232" y="327">85 keys nobody cites, written fourteen times</text>
+  <text class="d" x="232" y="343">cost, not breakage — but the cost is real</text>
+  <text class="l no" x="630" y="327">not run</text>
+  <text class="d" x="630" y="343">no pipeline calls it</text>
+</svg>

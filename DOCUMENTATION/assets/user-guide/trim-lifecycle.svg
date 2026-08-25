@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 456" width="800" height="456" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What happens to a video when you trim it</title>
+  <desc id="fig-desc">Trimming is offered on unpublished media only; the bounds are placed from the options bar and saved, a worker builds a trimmed MP4 proxy, and once that proxy is ready the HLS quality ladder is bypassed because it carries no trim.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="456" rx="10"/>
+
+  <text class="d" x="24" y="30">WHAT HAPPENS TO A VIDEO WHEN YOU TRIM IT</text>
+
+  <rect class="panel-a" x="24" y="44" width="470" height="64" rx="9"/>
+  <text class="l" x="36" y="66">1 — Unpublished media, and you may manage it</text>
+  <text class="d" x="36" y="84">the Trim mode appears in the switch (key 3); the rail offers In point</text>
+  <text class="d" x="36" y="100">(I), Out point (O) and Annotation range (P)</text>
+
+  <path class="conn-o" d="M494 76 L512 76" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="514" y="44" width="262" height="64" rx="9"/>
+  <text class="l" x="526" y="66">Published media — refused</text>
+  <text class="d" x="526" y="84">trim, reprocess and thumbnail</text>
+  <text class="d" x="526" y="100">answer 403; publish a new version</text>
+
+  <path class="conn" d="M259 108 L259 130" marker-end="url(#arrow)"/>
+  <rect class="panel" x="24" y="132" width="470" height="64" rx="9"/>
+  <text class="l" x="36" y="154">2 — Place the bounds, then save</text>
+  <text class="d" x="36" y="172">Marker here / Out here in the options bar write them at the current</text>
+  <text class="d" x="36" y="188">frame; Save sits in the commit group at the right end of that bar</text>
+
+  <path class="conn" d="M259 196 L259 218" marker-end="url(#arrow)"/>
+  <rect class="panel" x="24" y="220" width="470" height="48" rx="9"/>
+  <text class="l" x="36" y="242">3 — A worker builds a trimmed MP4 proxy</text>
+  <text class="d" x="36" y="258">the uploaded file itself is never modified</text>
+
+  <path class="conn" d="M259 268 L259 280 L139 280 L139 292" marker-end="url(#arrow)"/>
+  <path class="conn" d="M259 268 L259 280 L379 280 L379 292" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="24" y="292" width="230" height="80" rx="9"/>
+  <text class="l" x="36" y="314">Until it is ready</text>
+  <text class="d" x="36" y="332">the whole clip still</text>
+  <text class="d" x="36" y="348">plays, and the timeline</text>
+  <text class="d" x="36" y="364">shades what will go</text>
+
+  <rect class="panel-a" x="264" y="292" width="230" height="80" rx="9"/>
+  <text class="l" x="276" y="314">Once it is ready</text>
+  <text class="d" x="276" y="332">everyone gets the</text>
+  <text class="d" x="276" y="348">trimmed proxy on</text>
+  <text class="d" x="276" y="364">their next load</text>
+
+  <path class="conn" d="M494 332 L512 332" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="514" y="292" width="262" height="96" rx="9"/>
+  <text class="l" x="526" y="314">The quality ladder goes</text>
+  <text class="d" x="526" y="332">the HLS renditions are built from</text>
+  <text class="d" x="526" y="348">the whole master and carry no</text>
+  <text class="d" x="526" y="364">trim, so the player bypasses them:</text>
+  <text class="d" x="526" y="380">a single Original entry remains</text>
+
+  <rect class="panel-o" x="24" y="404" width="752" height="34" rx="9"/>
+  <text class="l" x="36" y="426">Clearing the trim returns the full video, and saving new bounds discards the previous proxy.</text>
+</svg>

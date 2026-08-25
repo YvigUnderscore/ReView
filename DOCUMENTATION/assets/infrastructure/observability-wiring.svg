@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 388" width="800" height="388" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What Prometheus scrapes today, and the two pieces that are not wired</title>
+  <desc id="fig-desc">The backend exporter works and feeds Prometheus, which feeds the provisioned Grafana dashboard. The worker exporter is fully written but never started, so no review_worker series is ever produced and three panels stay empty. The rules directory is not mounted by the shipped compose file, so the alert glob matches nothing and no rule is loaded.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="388" rx="10"/>
+
+  <text class="d" x="28" y="32">EXPORTED BY THE PROCESSES</text>
+  <text class="d" x="398" y="32">SCRAPED AND EVALUATED</text>
+  <text class="d" x="638" y="32">READ BY HUMANS</text>
+
+  <!-- Exportateur de l'API : le seul qui produise réellement des séries -->
+  <rect class="panel" x="20" y="44" width="320" height="124" rx="9"/>
+  <text class="t" x="34" y="68">backend:3000/metrics</text>
+  <text class="m" x="34" y="87">process_*, nodejs_*</text>
+  <text class="m" x="34" y="103">review_http_request_duration_seconds</text>
+  <text class="d" x="34" y="119">method / route / status, buckets 0.01 to 10 s</text>
+  <text class="m" x="34" y="135">review_queue_jobs{queue,state}</text>
+  <text class="d" x="34" y="151">all seven queues, refreshed every 15 s</text>
+
+  <!-- Exportateur du worker : écrit, jamais démarré -->
+  <rect class="panel-d" x="20" y="180" width="320" height="144" rx="9" stroke-dasharray="5 4"/>
+  <text class="t" x="34" y="204">worker:9101/metrics</text>
+  <text class="m" x="34" y="223">review_worker_jobs_total{queue,kind,outcome}</text>
+  <text class="m" x="34" y="239">review_worker_job_duration_seconds</text>
+  <text class="d" x="34" y="255">buckets stretched to one hour</text>
+  <text class="m" x="34" y="271">review_worker_info{version,commit}</text>
+  <text class="d no" x="34" y="291">Never started: startWorkerMetricsServer()</text>
+  <text class="d no" x="34" y="307">has no caller, nothing listens on 9101.</text>
+
+  <path class="conn-a" d="M340 106 L358 106 L358 78 L390 78" marker-end="url(#arrow-a)"/>
+  <path class="conn-o" d="M340 250 L372 250 L372 95 L390 95" marker-end="url(#arrow)"/>
+
+  <!-- Prometheus -->
+  <rect class="panel-a" x="390" y="44" width="200" height="68" rx="9"/>
+  <text class="t" x="402" y="68">Prometheus</text>
+  <text class="d" x="402" y="85">profile: monitoring</text>
+  <text class="d" x="402" y="101">scrape interval 15 s</text>
+
+  <path class="conn" d="M490 112 L490 132" marker-end="url(#arrow)"/>
+
+  <!-- Règles d'alerte : le glob ne trouve rien tant que le volume n'est pas monté -->
+  <rect class="panel-w" x="390" y="132" width="200" height="136" rx="9" stroke-dasharray="5 4"/>
+  <text class="l" x="402" y="154">rule_files glob</text>
+  <text class="m" x="402" y="171">/etc/prometheus/</text>
+  <text class="m" x="402" y="187">rules/*.yml</text>
+  <text class="d" x="402" y="207">./monitoring/rules is</text>
+  <text class="d" x="402" y="223">not mounted by the</text>
+  <text class="d" x="402" y="239">shipped compose, so</text>
+  <text class="d" x="402" y="255">no alert is loaded.</text>
+
+  <path class="conn-a" d="M590 78 L610 78 L610 90 L630 90" marker-end="url(#arrow-a)"/>
+  <path class="conn-o" d="M590 205 L630 205" marker-end="url(#arrow)"/>
+
+  <!-- Consommateurs -->
+  <rect class="panel" x="630" y="44" width="150" height="104" rx="9"/>
+  <text class="t" x="642" y="68">Grafana</text>
+  <text class="m" x="642" y="85">127.0.0.1:3431</text>
+  <text class="d" x="642" y="101">loopback only</text>
+  <text class="d" x="642" y="117">8 provisioned</text>
+  <text class="d" x="642" y="133">panels, 3 empty</text>
+
+  <rect class="panel-o" x="630" y="168" width="150" height="86" rx="9"/>
+  <text class="l" x="642" y="190">Alertmanager</text>
+  <text class="d" x="642" y="207">optional, and</text>
+  <text class="d" x="642" y="223">commented out in</text>
+  <text class="d" x="642" y="239">prometheus.yml</text>
+
+  <!-- Légende -->
+  <rect class="panel-a" x="28" y="338" width="14" height="14" rx="3"/>
+  <text class="d" x="50" y="350">works today</text>
+  <rect class="panel-d" x="170" y="338" width="14" height="14" rx="3" stroke-dasharray="5 4"/>
+  <text class="d" x="192" y="350">defined but never wired</text>
+  <rect class="panel-w" x="400" y="338" width="14" height="14" rx="3" stroke-dasharray="5 4"/>
+  <text class="d" x="422" y="350">one compose line away</text>
+
+  <text class="d" x="28" y="372">METRICS_TOKEN is optional on both endpoints; without it /metrics is open, and it is never rate-limited.</text>
+</svg>

@@ -79,6 +79,15 @@ node "$ROOT/scripts/check-color-tokens.mjs"
 step "Thème — tailles de texte en pixels"
 node "$ROOT/scripts/check-text-sizes.mjs"
 
+# ---------- Documentation ----------
+# `DOCUMENTATION/` est du livrable : commité, servi in-app sur /docs, lu sur GitHub. Un lien
+# mort ou une figure manquante n'y font pas échouer un build — ils ne se voient qu'en
+# cliquant dessus, c'est-à-dire trop tard. Le contrôle vérifie le préambule de chaque page
+# (titre, sous-titre, date), la résolution de chaque lien interne et de chaque ancre, la
+# présence de chaque image, et la conformité des figures SVG (viewBox, titre, thème sombre).
+step "Documentation — préambules, liens, images et figures"
+node "$ROOT/scripts/check-docs.mjs"
+
 # ---------- Outillage racine ----------
 # Les scripts de la racine (contrôles de la suite, simulateur ShotGrid, i18n) sont du code
 # comme un autre : lintés (via l'ESLint du backend) et formatés comme le reste.

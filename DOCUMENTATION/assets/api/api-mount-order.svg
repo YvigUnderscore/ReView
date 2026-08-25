@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 554" width="800" height="554" role="img" aria-labelledby="mount-title mount-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="mount-title">Mount order in createApp(), and the surprises it explains</title>
+  <desc id="mount-desc">Nine layers, from the ShotGrid webhook mounted before the JSON parser down to the error handler mounted last. Each layer states why it must sit where it does.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .conn { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="554" rx="10"/>
+
+  <text class="d" x="34" y="30">WHAT IS MOUNTED</text>
+  <text class="d" x="330" y="30">WHY IT MUST BE HERE</text>
+
+  <path class="conn" d="M18 46 L18 526" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="34" y="46" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="68">1  /api/shotgrid/webhook</text>
+  <text class="d" x="330" y="60">Mounted before express.json — the HMAC signature covers the</text>
+  <text class="d" x="330" y="75">raw bytes, which a reparsed body no longer reproduces (5 MB).</text>
+
+  <rect class="panel" x="34" y="94" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="116">2  express.json — 2 MB body cap</text>
+  <text class="d" x="330" y="115">Media bytes never transit the API: they go straight to MinIO.</text>
+
+  <rect class="panel" x="34" y="142" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="164">3  httpMetrics · GET /metrics</text>
+  <text class="d" x="330" y="163">Guarded by METRICS_TOKEN when set; reads its own ?token= query.</text>
+
+  <rect class="panel" x="34" y="190" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="212">4  rate limiter on /api</text>
+  <text class="d" x="330" y="204">Keyed by signed-in account (6 000 per 15 min), IP as fallback</text>
+  <text class="d" x="330" y="219">(5 000) — a studio behind one NAT no longer shares one budget.</text>
+
+  <rect class="panel" x="34" y="238" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="260">5  /health and /api/health</text>
+  <text class="d" x="330" y="252">Mounted twice on purpose: the production nginx proxies only</text>
+  <text class="d" x="330" y="267">/api/, /socket.io/ and /review/, so /health was served by the SPA.</text>
+
+  <rect class="panel-a" x="34" y="286" width="732" height="96" rx="9"/>
+  <text class="t" x="50" y="310">6  Domain routers — one file per domain, several sharing one prefix</text>
+  <text class="d" x="50" y="332">/api/media is seven routers; multipart/* and sequence/* are declared before /:id.</text>
+  <text class="d" x="50" y="350">departments, entity thumbnails and assignments mount on /api itself — several prefixes each.</text>
+  <text class="d" x="50" y="368">So never router.use(authenticate) there: Express runs it for every request crossing /api.</text>
+
+  <rect class="panel" x="34" y="396" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="418">7  /api/v1 + its own limiter</text>
+  <text class="d" x="330" y="417">10 000 per 15 min — a polling daemon cannot starve the interface.</text>
+
+  <rect class="panel" x="34" y="444" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="466">8  /api/docs · /api/openapi.json</text>
+  <text class="d" x="330" y="458">Public. The spec hand-registers /health, login and projects, then</text>
+  <text class="d" x="330" y="473">auto-describes every /api/v1 route. Other web routers are absent.</text>
+
+  <rect class="panel" x="34" y="492" width="280" height="34" rx="9"/>
+  <text class="l" x="50" y="514">9  errorHandler</text>
+  <text class="d" x="330" y="513">Always last: it is what turns a thrown error into the JSON envelope.</text>
+</svg>

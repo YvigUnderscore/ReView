@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The two continuous-integration jobs</title>
+  <desc id="fig-desc">Every push to dev or main, every pull request and every manual dispatch starts two jobs: one runs validate.sh with placeholder environment values and no reachable service, the other runs it with the integration flag against real Postgres, Redis and MinIO containers. Both block a merge.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="500" rx="10"/>
+
+  <text class="d" x="28" y="26">THE SAME SUITE, RUN TWICE, OFF YOUR MACHINE</text>
+
+  <rect class="panel" x="180" y="40" width="440" height="46" rx="9"/>
+  <text class="t" x="400" y="62" text-anchor="middle">push to dev or main · pull request · manual dispatch</text>
+  <text class="d" x="400" y="78" text-anchor="middle">one run per ref — a new push cancels the previous</text>
+
+  <path class="conn" d="M400 86 L400 104 L215 104 L215 126" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M400 86 L400 104 L585 104 L585 126" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="40" y="130" width="350" height="46" rx="9"/>
+  <text class="t" x="215" y="152" text-anchor="middle">job: validate</text>
+  <text class="d" x="215" y="168" text-anchor="middle">ubuntu-latest, 45 min, no service reachable</text>
+
+  <rect class="panel" x="40" y="190" width="350" height="34" rx="9"/>
+  <text class="l" x="215" y="211" text-anchor="middle">checkout · setup-node 22 (npm cache)</text>
+  <rect class="panel" x="40" y="232" width="350" height="34" rx="9"/>
+  <text class="l" x="215" y="253" text-anchor="middle">npm ci — backend, then frontend</text>
+  <rect class="panel" x="40" y="274" width="350" height="34" rx="9"/>
+  <text class="m" x="215" y="295" text-anchor="middle">bash scripts/validate.sh</text>
+  <rect class="panel" x="40" y="316" width="350" height="34" rx="9"/>
+  <text class="l" x="215" y="337" text-anchor="middle">no service answers in this job</text>
+  <rect class="panel-w" x="40" y="358" width="350" height="46" rx="9"/>
+  <text class="l" x="215" y="380" text-anchor="middle">Placeholder environment</text>
+  <text class="d" x="215" y="396" text-anchor="middle">DATABASE_URL, JWT_SECRET, S3_*, REDIS_URL</text>
+
+  <rect class="panel-a" x="410" y="130" width="350" height="46" rx="9"/>
+  <text class="t" x="585" y="152" text-anchor="middle">job: integration</text>
+  <text class="d" x="585" y="168" text-anchor="middle">ubuntu-latest, 60 min, real Postgres, Redis, MinIO</text>
+
+  <rect class="panel" x="410" y="190" width="350" height="34" rx="9"/>
+  <text class="l" x="585" y="211" text-anchor="middle">services: postgres:16 + redis:7, health-checked</text>
+  <rect class="panel" x="410" y="232" width="350" height="34" rx="9"/>
+  <text class="l" x="585" y="253" text-anchor="middle">docker run minio (a service takes no command)</text>
+  <rect class="panel" x="410" y="274" width="350" height="34" rx="9"/>
+  <text class="l" x="585" y="295" text-anchor="middle">mc mb ci/review · npm ci twice · migrate deploy</text>
+  <rect class="panel" x="410" y="316" width="350" height="34" rx="9"/>
+  <text class="m" x="585" y="337" text-anchor="middle">bash scripts/validate.sh --with-integration</text>
+  <rect class="panel-w" x="410" y="358" width="350" height="46" rx="9"/>
+  <text class="l" x="585" y="380" text-anchor="middle">REVIEW_REQUIRE_DRIFT_CHECK=1</text>
+  <text class="d" x="585" y="396" text-anchor="middle">the drift check may not skip where a database exists</text>
+
+  <path class="conn" d="M215 404 L215 422" marker-end="url(#arrow)"/>
+  <path class="conn" d="M585 404 L585 422" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="40" y="426" width="720" height="46" rx="9"/>
+  <text class="t" x="400" y="448" text-anchor="middle">Both jobs block a merge</text>
+  <text class="d" x="400" y="464" text-anchor="middle">no continue-on-error — a job that never fails stops being read</text>
+</svg>

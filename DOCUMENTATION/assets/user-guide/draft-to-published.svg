@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400" role="img" aria-labelledby="dtp-title dtp-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="dtp-title">Draft, review, published — and what the lock closes</title>
+  <desc id="dtp-desc">A media is a draft private to its uploader until it is published; a version turns published as soon as it has no draft media left, and only a supervisor or an administrator can move it back. After publication the content is locked, while the splat presentation and the thumbnail stay editable.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="400" rx="10"/>
+
+  <text class="d" x="24" y="30">THE MEDIA, THE VERSION, AND WHAT THE LOCK CLOSES</text>
+
+  <!-- Voie du média -->
+  <text class="d" x="24" y="62">MEDIA</text>
+  <rect class="panel-w" x="90" y="68" width="240" height="46" rx="9"/>
+  <text class="l" x="210" y="90" text-anchor="middle">Draft</text>
+  <text class="d" x="210" y="106" text-anchor="middle">private to its uploader alone</text>
+
+  <path class="conn-a" d="M330 91 L406 91" marker-end="url(#arrow-a)"/>
+  <text class="a" x="368" y="82" text-anchor="middle">Publish</text>
+
+  <rect class="panel-a" x="406" y="68" width="240" height="46" rx="9"/>
+  <text class="t" x="526" y="90" text-anchor="middle">Published</text>
+  <text class="d" x="526" y="106" text-anchor="middle">visible to the whole project</text>
+
+  <!-- Voie de la version -->
+  <text class="d" x="24" y="152">VERSION</text>
+  <rect class="panel" x="90" y="158" width="150" height="46" rx="9"/>
+  <text class="l" x="165" y="180" text-anchor="middle">DRAFT</text>
+  <text class="d" x="165" y="196" text-anchor="middle">nothing shown yet</text>
+
+  <path class="conn" d="M240 181 L268 181" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="268" y="158" width="150" height="46" rx="9"/>
+  <text class="l" x="343" y="180" text-anchor="middle">REVIEW</text>
+  <text class="d" x="343" y="196" text-anchor="middle">submitted, not validated</text>
+
+  <path class="conn" d="M418 181 L446 181" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="446" y="158" width="200" height="46" rx="9"/>
+  <text class="t" x="546" y="180" text-anchor="middle">PUBLISHED</text>
+  <text class="d" x="546" y="196" text-anchor="middle">no draft media left</text>
+
+  <path class="conn-o" d="M526 114 L526 138 L546 138 L546 158" marker-end="url(#arrow)"/>
+  <text class="d" x="556" y="136">the version follows its media</text>
+
+  <path class="conn" d="M546 204 L546 224 L343 224 L343 204" marker-end="url(#arrow)"/>
+  <text class="d" x="445" y="244" text-anchor="middle">supervisor or administrator only — an author cannot</text>
+
+  <!-- Ce que ferme le verrou -->
+  <text class="d" x="24" y="274">AFTER PUBLICATION</text>
+
+  <rect class="panel-d" x="24" y="286" width="368" height="46" rx="9"/>
+  <text class="l" x="40" y="308">403 PUBLISHED_LOCKED</text>
+  <text class="d" x="40" y="324">splat edits and masks, trim, reprocess, 3D transform</text>
+
+  <rect class="panel" x="408" y="286" width="368" height="46" rx="9"/>
+  <text class="l" x="424" y="308">Still editable</text>
+  <text class="d" x="424" y="324">splat presentation (camera, DoF, reveal) and thumbnail</text>
+
+  <text class="d" x="24" y="358">Publishing notifies the watchers, pushes to ShotGrid on a linked project and fires a webhook.</text>
+  <text class="d" x="24" y="378">To fix a published version, upload the next one — the history keeps both, which is what makes A/B possible.</text>
+</svg>

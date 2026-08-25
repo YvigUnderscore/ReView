@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="stg-title stg-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="stg-title">The Staging workshop of a spatial review</title>
+  <desc id="stg-desc">Entering Staging lights up a tool rail for the camera, puts the camera object and its picture-in-picture frame in the viewer, adds the Camera panel entries to the dock, and fills the bottom transport with the key controls and the Curves drawer.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="500" rx="10"/>
+
+  <text class="d" x="28" y="26">WHAT ENTERING STAGING TURNS ON — the accented parts are new to the mode</text>
+
+  <!-- En-tête : bascule de mode -->
+  <rect class="panel" x="20" y="40" width="760" height="44" rx="9"/>
+  <text class="d" x="34" y="59">REVIEW HEADER</text>
+  <text class="d" x="34" y="75">keys 1 · 2 · 3</text>
+  <rect class="panel" x="300" y="49" width="100" height="26" rx="9"/>
+  <text class="l" x="350" y="66" text-anchor="middle">Explore</text>
+  <rect class="panel-a" x="406" y="49" width="100" height="26" rx="9"/>
+  <text class="t" x="456" y="66" text-anchor="middle">Staging</text>
+  <rect class="panel" x="512" y="49" width="100" height="26" rx="9"/>
+  <text class="l" x="562" y="66" text-anchor="middle">Clean up</text>
+
+  <!-- Rail d'outils -->
+  <rect class="panel" x="20" y="96" width="150" height="210" rx="9"/>
+  <text class="d" x="30" y="116">TOOL RAIL</text>
+  <rect class="panel" x="28" y="126" width="134" height="30" rx="9"/>
+  <text class="l" x="38" y="145">V   Navigate</text>
+  <rect class="panel-a" x="28" y="160" width="134" height="30" rx="9"/>
+  <text class="l" x="38" y="179">T   Place camera</text>
+  <rect class="panel-a" x="28" y="194" width="134" height="30" rx="9"/>
+  <text class="l" x="38" y="213">R   Aim camera</text>
+  <rect class="panel-a" x="28" y="228" width="134" height="30" rx="9"/>
+  <text class="l" x="38" y="247">C   Focus (splat)</text>
+  <text class="d" x="30" y="282">Esc back to Navigate</text>
+
+  <!-- Viewer, cerné par la bordure d'enregistrement -->
+  <rect class="panel-d" x="176" y="92" width="428" height="218" rx="12"/>
+  <rect class="panel" x="180" y="96" width="420" height="210" rx="9"/>
+  <text class="d" x="192" y="116">VIEWER</text>
+  <path class="conn-a" d="M232 252 L300 196 L382 176 L456 204"/>
+  <path class="head-a" d="M232 246 l6 6 l-6 6 l-6 -6 z"/>
+  <path class="head-a" d="M300 190 l6 6 l-6 6 l-6 -6 z"/>
+  <path class="head-a" d="M382 170 l6 6 l-6 6 l-6 -6 z"/>
+  <path class="head-a" d="M456 198 l6 6 l-6 6 l-6 -6 z"/>
+  <rect class="panel-a" x="196" y="222" width="30" height="20" rx="3"/>
+  <path class="panel-a" d="M226 227 L238 222 L238 242 L226 237 z"/>
+  <text class="d" x="192" y="286">camera object · trajectory · keys</text>
+  <rect class="panel-a" x="466" y="214" width="124" height="70" rx="9"/>
+  <text class="l" x="528" y="244" text-anchor="middle">PiP</text>
+  <text class="d" x="528" y="262" text-anchor="middle">delivery aspect</text>
+
+  <!-- Dock inspecteur -->
+  <rect class="panel" x="610" y="96" width="170" height="210" rx="9"/>
+  <text class="d" x="620" y="116">INSPECTOR DOCK</text>
+  <rect class="panel-a" x="618" y="126" width="154" height="30" rx="9"/>
+  <text class="l" x="628" y="145">Camera — focal, tilt</text>
+  <rect class="panel-a" x="618" y="160" width="154" height="30" rx="9"/>
+  <text class="l" x="628" y="179">PiP switch</text>
+  <rect class="panel-a" x="618" y="194" width="154" height="30" rx="9"/>
+  <text class="l" x="628" y="213">Clear presentation</text>
+  <text class="d" x="620" y="282">Tab folds the dock</text>
+
+  <text class="d" x="180" y="326">A red border around the viewer means auto-key is armed: every camera move writes a key.</text>
+
+  <!-- Transport -->
+  <rect class="panel" x="20" y="336" width="144" height="46" rx="9"/>
+  <text class="l" x="92" y="358" text-anchor="middle">Transport</text>
+  <text class="d" x="92" y="374" text-anchor="middle">play · prev · next</text>
+  <rect class="panel" x="174" y="336" width="144" height="46" rx="9"/>
+  <text class="l" x="246" y="358" text-anchor="middle">Key track</text>
+  <text class="d" x="246" y="374" text-anchor="middle">diamonds + playhead</text>
+  <rect class="panel" x="328" y="336" width="144" height="46" rx="9"/>
+  <text class="l" x="400" y="358" text-anchor="middle">Time · Duration</text>
+  <text class="d" x="400" y="374" text-anchor="middle">s:ff and loop length</text>
+  <rect class="panel-w" x="482" y="336" width="144" height="46" rx="9"/>
+  <text class="l" x="554" y="358" text-anchor="middle">Auto-key</text>
+  <text class="d" x="554" y="374" text-anchor="middle">loop · undo · redo</text>
+  <rect class="panel-a" x="636" y="336" width="144" height="46" rx="9"/>
+  <text class="l" x="708" y="358" text-anchor="middle">Attach · Curves</text>
+  <text class="d" x="708" y="374" text-anchor="middle">to a comment · drawer</text>
+
+  <!-- Tiroir des courbes -->
+  <text class="d" x="28" y="400">CURVES DRAWER — docked under the transport, resizable by its top edge</text>
+  <rect class="panel" x="20" y="408" width="760" height="56" rx="9"/>
+  <rect class="band" x="28" y="416" width="744" height="18" rx="6"/>
+  <text class="d" x="36" y="429">time ruler + dopesheet — drag a key column to retime it, Alt+click to delete it</text>
+  <rect class="band" x="28" y="438" width="744" height="18" rx="6"/>
+  <text class="d" x="36" y="451">graph editor — one curve per channel, on the same horizontal scale as the ruler</text>
+
+  <text class="d" x="28" y="484">Leaving Staging turns the workshop off again — the animation itself is untouched.</text>
+</svg>

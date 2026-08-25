@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 470" width="800" height="470" role="img" aria-labelledby="rows-title rows-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="rows-title">How CSV rows collapse into sequences, shots and tasks</title>
+  <desc id="rows-desc">Two rows naming the same shot are merged into one shot carrying two tasks; a single cell holding several task names separated by a vertical bar fans out into one task each; and a row that names no shot is rejected. Identity is the sequence code, the pair sequence and shot code, and the task name inside its shot, all case-insensitive.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="470" rx="10"/>
+
+  <text class="d" x="30" y="30">FOUR ROWS OF YOUR FILE</text>
+  <text class="d" x="400" y="30">WHAT THE IMPORT CREATES</text>
+
+  <!-- Le fichier -->
+  <rect class="panel" x="24" y="48" width="310" height="150" rx="9"/>
+  <text class="m" x="38" y="96">sequence,shot,name,task,assignee</text>
+  <path class="conn" d="M38 104 L320 104"/>
+  <text class="m" x="38" y="126">SQ010,SH0010,Rooftop,Anim,mia@…</text>
+  <text class="m" x="38" y="148">SQ010,SH0010,,Comp,leo@…</text>
+  <text class="m" x="38" y="170">SQ010,SH0020,Alley,Anim|Comp,</text>
+  <text class="m" x="38" y="192">,,Orphan,,</text>
+
+  <!-- Ligne sans plan : le rejet -->
+  <path class="conn" d="M180 198 L180 226" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="24" y="230" width="310" height="52" rx="9"/>
+  <text class="t no" x="179" y="254" text-anchor="middle">No shot code — the row is rejected</text>
+  <text class="d" x="179" y="272" text-anchor="middle">one of only two row-level rejections</text>
+
+  <!-- Ce que la fusion fait -->
+  <rect class="panel-o" x="24" y="300" width="310" height="88" rx="9"/>
+  <text class="d" x="38" y="324">Rows naming the same (sequence, code)</text>
+  <text class="d" x="38" y="340">are merged into one shot.</text>
+  <text class="d" x="38" y="356">The first non-empty value wins; a later</text>
+  <text class="d" x="38" y="372">row that disagrees is a warning, not an error.</text>
+
+  <!-- L'arbre créé -->
+  <rect class="panel-a" x="400" y="48" width="180" height="46" rx="9"/>
+  <text class="t" x="490" y="70" text-anchor="middle">Sequence SQ010</text>
+  <text class="d" x="490" y="86" text-anchor="middle">created if missing</text>
+
+  <path class="conn" d="M490 94 L490 120" marker-end="url(#arrow)"/>
+  <path class="conn" d="M490 94 L490 108 L368 108 L368 273 L394 273" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="400" y="124" width="180" height="46" rx="9"/>
+  <text class="t" x="490" y="146" text-anchor="middle">Shot SH0010</text>
+  <text class="d" x="490" y="162" text-anchor="middle">Rooftop — two rows, one shot</text>
+
+  <rect class="panel" x="400" y="250" width="180" height="46" rx="9"/>
+  <text class="t" x="490" y="272" text-anchor="middle">Shot SH0020</text>
+  <text class="d" x="490" y="288" text-anchor="middle">Alley — one row, one shot</text>
+
+  <path class="conn" d="M580 147 L600 147 L600 135 L614 135" marker-end="url(#arrow)"/>
+  <path class="conn" d="M580 147 L600 147 L600 175 L614 175" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M580 273 L600 273 L600 261 L614 261" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M580 273 L600 273 L600 301 L614 301" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="620" y="118" width="156" height="34" rx="9"/>
+  <text class="l" x="698" y="139" text-anchor="middle">Task Anim → mia</text>
+  <rect class="panel" x="620" y="158" width="156" height="34" rx="9"/>
+  <text class="l" x="698" y="179" text-anchor="middle">Task Comp → leo</text>
+  <rect class="panel" x="620" y="244" width="156" height="34" rx="9"/>
+  <text class="l" x="698" y="265" text-anchor="middle">Task Anim</text>
+  <rect class="panel" x="620" y="284" width="156" height="34" rx="9"/>
+  <text class="l" x="698" y="305" text-anchor="middle">Task Comp</text>
+
+  <text class="a" x="400" y="336">several tasks in one cell, separated by |</text>
+
+  <rect class="band" x="24" y="400" width="752" height="46" rx="9"/>
+  <text class="d" x="400" y="422" text-anchor="middle">sequence = code · shot = (sequence, code) · task = its name inside the shot — all case-insensitive</text>
+  <text class="d" x="400" y="440" text-anchor="middle">the database’s own uniqueness rules, which is what makes replaying the same file write nothing</text>
+</svg>

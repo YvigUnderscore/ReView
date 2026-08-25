@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 624" width="800" height="624" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What a key press does in the review workspace, and in what order</title>
+  <desc id="fig-desc">A key press is tested in order: text field or dialog first, then Tab and Escape, then the mode digits, then the video transport keys, then the tool letters of the current mode and of the other modes. Anything left over reaches the viewer.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="624" rx="10"/>
+
+  <text class="d" x="24" y="30">THE TESTS A KEY PRESS GOES THROUGH, IN ORDER</text>
+
+  <rect class="panel-a" x="24" y="46" width="310" height="34" rx="9"/>
+  <text class="t" x="179" y="68" text-anchor="middle">A key is pressed</text>
+
+  <path class="conn" d="M179 80 L179 102" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="104" width="310" height="46" rx="9"/>
+  <text class="l" x="36" y="132">Caret in a text field, or a dialog open?</text>
+  <path class="conn" d="M334 127 L376 127" marker-end="url(#arrow)"/>
+  <text class="a" x="355" y="119" text-anchor="middle">yes</text>
+  <rect class="panel" x="380" y="104" width="396" height="46" rx="9"/>
+  <text class="l" x="392" y="126">Nothing fires at all</text>
+  <text class="d" x="392" y="142">typing a comment never arms a tool by accident</text>
+
+  <path class="conn" d="M179 150 L179 172" marker-end="url(#arrow)"/>
+  <text class="d" x="188" y="166">no</text>
+
+  <rect class="panel" x="24" y="174" width="310" height="46" rx="9"/>
+  <text class="l" x="36" y="202">Tab or Esc?</text>
+  <path class="conn" d="M334 197 L376 197" marker-end="url(#arrow)"/>
+  <text class="a" x="355" y="189" text-anchor="middle">yes</text>
+  <rect class="panel" x="380" y="174" width="396" height="46" rx="9"/>
+  <text class="l" x="392" y="196">Tab: collapse or reopen the dock</text>
+  <text class="d" x="392" y="212">Esc: drop the armed tool, back to Navigate</text>
+
+  <path class="conn" d="M179 220 L179 242" marker-end="url(#arrow)"/>
+  <text class="d" x="188" y="236">no</text>
+
+  <rect class="panel" x="24" y="244" width="310" height="46" rx="9"/>
+  <text class="l" x="36" y="272">A bare digit inside the switch range?</text>
+  <path class="conn" d="M334 267 L376 267" marker-end="url(#arrow)"/>
+  <text class="a" x="355" y="259" text-anchor="middle">yes</text>
+  <rect class="panel-w" x="380" y="244" width="396" height="46" rx="9"/>
+  <text class="l" x="392" y="266">Switch mode</text>
+  <text class="d" x="392" y="282">on a video, 1 also snaps the picture to 100 %</text>
+
+  <path class="conn" d="M179 290 L179 312" marker-end="url(#arrow)"/>
+  <text class="d" x="188" y="306">no</text>
+
+  <rect class="panel" x="24" y="314" width="310" height="46" rx="9"/>
+  <text class="l" x="36" y="342">A video transport key: I, O, J, K, L, M?</text>
+  <path class="conn" d="M334 337 L376 337" marker-end="url(#arrow)"/>
+  <text class="a" x="355" y="329" text-anchor="middle">yes</text>
+  <rect class="panel" x="380" y="314" width="396" height="46" rx="9"/>
+  <text class="l" x="392" y="336">The transport wins</text>
+  <text class="d" x="392" y="352">I sets a loop in point; it does not jump to Trim</text>
+
+  <path class="conn" d="M179 360 L179 382" marker-end="url(#arrow)"/>
+  <text class="d" x="188" y="376">no</text>
+
+  <rect class="panel" x="24" y="384" width="310" height="46" rx="9"/>
+  <text class="l" x="36" y="412">A tool letter of the current mode?</text>
+  <path class="conn" d="M334 407 L376 407" marker-end="url(#arrow)"/>
+  <text class="a" x="355" y="399" text-anchor="middle">yes</text>
+  <rect class="panel" x="380" y="384" width="396" height="46" rx="9"/>
+  <text class="l" x="392" y="406">Arm the tool</text>
+  <text class="d" x="392" y="422">the mode does not move</text>
+
+  <path class="conn" d="M179 430 L179 452" marker-end="url(#arrow)"/>
+  <text class="d" x="188" y="446">no</text>
+
+  <rect class="panel" x="24" y="454" width="310" height="46" rx="9"/>
+  <text class="l" x="36" y="482">A tool letter of another mode?</text>
+  <path class="conn-a" d="M334 477 L376 477" marker-end="url(#arrow-a)"/>
+  <text class="a" x="355" y="469" text-anchor="middle">yes</text>
+  <rect class="panel-a" x="380" y="454" width="396" height="46" rx="9"/>
+  <text class="t" x="392" y="476">Switch to that mode and arm the tool</text>
+  <text class="d" x="392" y="492">T / R / S always reach Clean up on spatial media</text>
+
+  <path class="conn" d="M179 500 L179 522" marker-end="url(#arrow)"/>
+  <text class="d" x="188" y="516">no</text>
+
+  <rect class="panel-o" x="24" y="524" width="752" height="80" rx="9"/>
+  <text class="l" x="36" y="546">Everything else reaches the viewer</text>
+  <text class="d" x="36" y="562">Space and the arrow keys · F and H on 3D and splat · Alt+1 to 9 saved 3D views</text>
+  <text class="d" x="36" y="578">video only: 0 fits, + and − step the zoom, 1 goes to 100 % · [ and ] shift the A/B pane</text>
+  <text class="d" x="36" y="594">Ctrl+K opens the command palette · ? opens the shortcut panel</text>
+</svg>

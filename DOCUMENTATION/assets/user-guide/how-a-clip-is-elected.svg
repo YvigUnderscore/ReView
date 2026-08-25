@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="elect-title elect-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="elect-title">How each shot picks the version the cut plays</title>
+  <desc id="elect-desc">Every shot is taken in production order unless it is omitted; among its published versions carrying a published ready media, the cut keeps the one at the stage it targets, then the most recent at that stage, then prefers a video media. A shot with no candidate becomes a placeholder at its declared duration, and a clip whose real duration differs from the declared frame range is flagged rather than trimmed.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="500" rx="10"/>
+
+  <text class="d" x="48" y="38">FOR EACH SHOT, EVERY TIME THE CUT IS READ</text>
+
+  <!-- Colonne principale : les cinq questions, dans l'ordre -->
+  <rect class="panel" x="48" y="60" width="252" height="46" rx="9"/>
+  <text class="l" x="174" y="82" text-anchor="middle">Every shot, in production order</text>
+  <text class="d" x="174" y="98" text-anchor="middle">sequence, then shot — SH9 before SH10</text>
+
+  <path class="conn" d="M174 106 L174 142" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="48" y="146" width="252" height="46" rx="9"/>
+  <text class="l" x="174" y="168" text-anchor="middle">Candidate versions</text>
+  <text class="d" x="174" y="184" text-anchor="middle">published, with a published READY media</text>
+
+  <path class="conn" d="M174 192 L174 228" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="48" y="232" width="252" height="46" rx="9"/>
+  <text class="t" x="174" y="254" text-anchor="middle">The stage the cut targets</text>
+  <text class="d" x="174" y="270" text-anchor="middle">furthest reached, or a chosen department</text>
+
+  <path class="conn" d="M174 278 L174 314" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="48" y="318" width="252" height="46" rx="9"/>
+  <text class="l" x="174" y="340" text-anchor="middle">Most recent at that stage</text>
+  <text class="d" x="174" y="356" text-anchor="middle">a later anim fix does not undo the comp</text>
+
+  <path class="conn" d="M174 364 L174 400" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="48" y="404" width="252" height="46" rx="9"/>
+  <text class="t" x="174" y="426" text-anchor="middle">The clip</text>
+  <text class="d" x="174" y="442" text-anchor="middle">video preferred, at its real duration</text>
+
+  <!-- Sorties et mises en garde, à droite -->
+  <path class="conn" d="M300 83 L356 83" marker-end="url(#arrow)"/>
+  <text class="a" x="328" y="76" text-anchor="middle">omitted</text>
+  <rect class="panel" x="360" y="60" width="412" height="46" rx="9"/>
+  <text class="l" x="376" y="82">Omitted shots are skipped entirely</text>
+  <text class="d" x="376" y="98">their tasks, versions, media and comments all stay where they are</text>
+
+  <path class="conn" d="M300 169 L356 169" marker-end="url(#arrow)"/>
+  <text class="a" x="328" y="162" text-anchor="middle">none</text>
+  <rect class="panel-w" x="360" y="146" width="412" height="46" rx="9"/>
+  <text class="l" x="376" y="168">No candidate becomes a placeholder</text>
+  <text class="d" x="376" y="184">(end − start + 1) ÷ fps, else 4 s — counted in the n gaps badge</text>
+
+  <path class="conn-o" d="M300 255 L356 255" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="360" y="232" width="412" height="62" rx="9"/>
+  <text class="l" x="376" y="254">A named department is a ceiling</text>
+  <text class="d" x="376" y="270">it shows that stage, falling back upstream when the shot has</text>
+  <text class="d" x="376" y="286">not reached it — versions whose task has no department drop out</text>
+
+  <path class="conn-o" d="M300 341 L356 341" marker-end="url(#arrow)"/>
+  <rect class="panel" x="360" y="318" width="412" height="46" rx="9"/>
+  <text class="l" x="376" y="340">Stage order comes from Pipeline settings</text>
+  <text class="d" x="376" y="356">reordering that list changes what latest means everywhere</text>
+
+  <path class="conn-o" d="M300 427 L356 427" marker-end="url(#arrow)"/>
+  <rect class="panel-w" x="360" y="404" width="412" height="46" rx="9"/>
+  <text class="l" x="376" y="426">A duration gap is flagged, never trimmed</text>
+  <text class="d" x="376" y="442">more than 0.5 s from the declared frame range — amber triangle</text>
+
+  <text class="d" x="48" y="478">Nothing is stored: the cut is recomputed from the current state of production every time it is read.</text>
+</svg>

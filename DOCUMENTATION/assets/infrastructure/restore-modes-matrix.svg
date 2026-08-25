@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" width="800" height="392" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The four restore modes, and what each one writes</title>
+  <desc id="fig-desc">verify writes nothing on the instance: it restores into a throwaway database, counts what came out and drops it. db replaces the metadata, optionally into a named scratch database. minio mirrors the snapshot back into the live bucket, stopping MinIO only in archive mode. all runs the database first, then the objects, which is the disaster-recovery order.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="392" rx="10"/>
+
+  <rect class="band" x="20" y="10" width="760" height="26" rx="8"/>
+  <text class="d" x="32" y="27">MODE</text>
+  <text class="d" x="162" y="27">TOUCHES LIVE?</text>
+  <text class="d" x="292" y="27">ARGUMENT</text>
+  <text class="d" x="442" y="27">WHAT IT RUNS</text>
+  <text class="d" x="632" y="27">WHEN TO USE IT</text>
+
+  <!-- verify : le seul mode qui n'écrit rien -->
+  <rect class="panel-a" x="20" y="44" width="760" height="66" rx="9"/>
+  <text class="m" x="32" y="68">verify</text>
+  <text class="d" x="32" y="85">the drill</text>
+  <text class="l ok" x="162" y="68">No. Nothing on</text>
+  <text class="d" x="162" y="85">the instance is</text>
+  <text class="d" x="162" y="102">written.</text>
+  <text class="m" x="292" y="68">backups/&lt;stamp&gt;</text>
+  <text class="d" x="442" y="68">Restores into a throwaway</text>
+  <text class="d" x="442" y="85">database, counts, then</text>
+  <text class="d" x="442" y="102">drops it.</text>
+  <text class="d" x="632" y="68">The monthly drill,</text>
+  <text class="d" x="632" y="85">and after any</text>
+  <text class="d" x="632" y="102">script change.</text>
+
+  <!-- db -->
+  <rect class="panel" x="20" y="118" width="760" height="66" rx="9"/>
+  <text class="m" x="32" y="142">db</text>
+  <text class="l" x="162" y="142">Yes, or a named</text>
+  <text class="d" x="162" y="159">scratch database</text>
+  <text class="d" x="162" y="176">as a 3rd argument.</text>
+  <text class="d" x="292" y="142">the snapshot dir,</text>
+  <text class="d" x="292" y="159">or a path to</text>
+  <text class="m" x="292" y="176">db.dump</text>
+  <text class="m" x="442" y="142">pg_restore --clean</text>
+  <text class="m" x="442" y="159">--if-exists --no-owner</text>
+  <text class="d" x="632" y="142">Metadata rollback</text>
+  <text class="d" x="632" y="159">after a bad</text>
+  <text class="d" x="632" y="176">update.</text>
+
+  <!-- minio -->
+  <rect class="panel" x="20" y="192" width="760" height="66" rx="9"/>
+  <text class="m" x="32" y="216">minio</text>
+  <text class="l" x="162" y="216">Yes. Stops MinIO</text>
+  <text class="d" x="162" y="233">only in archive</text>
+  <text class="d" x="162" y="250">mode.</text>
+  <text class="d" x="292" y="216">the snapshot dir</text>
+  <text class="m" x="442" y="216">mc mirror --overwrite</text>
+  <text class="m" x="442" y="233">--remove</text>
+  <text class="d" x="442" y="250">into the live bucket.</text>
+  <text class="d" x="632" y="216">Objects lost or</text>
+  <text class="d" x="632" y="233">corrupted.</text>
+
+  <!-- all -->
+  <rect class="panel" x="20" y="266" width="760" height="66" rx="9"/>
+  <text class="m" x="32" y="290">all</text>
+  <text class="l" x="162" y="290">Yes, both halves.</text>
+  <text class="d" x="292" y="290">the snapshot dir</text>
+  <text class="d" x="442" y="290">The database first,</text>
+  <text class="d" x="442" y="307">then the objects.</text>
+  <text class="d" x="632" y="290">Disaster recovery.</text>
+
+  <rect class="band" x="20" y="344" width="760" height="34" rx="8"/>
+  <text class="l" x="34" y="366">An untested backup is not a backup: schedule restore.sh verify once a month.</text>
+</svg>

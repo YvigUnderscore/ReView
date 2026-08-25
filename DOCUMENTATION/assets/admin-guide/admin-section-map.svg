@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 356" width="800" height="356" role="img" aria-labelledby="asm-title asm-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="asm-title">The twenty-seven sections of the admin area, by group</title>
+  <desc id="asm-desc">Five columns matching the sidebar groups — Studio, Content, Review contexts, Communications, Maintenance — each listing its sections with the key that addresses them. Users and Projects carry an accent tick because they also open a per-entity detail page.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="800" height="356" rx="10"/>
+
+  <text class="d" x="16" y="28">TWENTY-SEVEN SECTIONS, FIVE GROUPS, IN SIDEBAR ORDER</text>
+
+  <!-- Studio -->
+  <text class="a" x="16" y="48">STUDIO</text>
+  <rect class="panel" x="16" y="56" width="144" height="236" rx="9"/>
+  <text class="l" x="27" y="78">Dashboard</text>
+  <text class="m" x="27" y="91">overview</text>
+  <text class="l" x="27" y="110">Activity</text>
+  <text class="m" x="27" y="123">activity</text>
+  <text class="l" x="27" y="142">Identity (SSO)</text>
+  <text class="m" x="27" y="155">identity</text>
+  <text class="l" x="27" y="174">Login page</text>
+  <text class="m" x="27" y="187">login-appearance</text>
+  <text class="l" x="27" y="206">System</text>
+  <text class="m" x="27" y="219">system</text>
+  <text class="l" x="27" y="238">Settings</text>
+  <text class="m" x="27" y="251">settings</text>
+  <text class="l" x="27" y="270">Project defaults</text>
+  <text class="m" x="27" y="283">defaults</text>
+
+  <!-- Content -->
+  <text class="a" x="172" y="48">CONTENT</text>
+  <rect class="panel" x="172" y="56" width="144" height="172" rx="9"/>
+  <rect class="head-a" x="177" y="69" width="3" height="20" rx="1.5"/>
+  <rect class="head-a" x="177" y="101" width="3" height="20" rx="1.5"/>
+  <text class="l" x="186" y="78">Users</text>
+  <text class="m" x="186" y="91">users</text>
+  <text class="l" x="186" y="110">Projects</text>
+  <text class="m" x="186" y="123">projects</text>
+  <text class="l" x="183" y="142">Versions</text>
+  <text class="m" x="183" y="155">versions</text>
+  <text class="l" x="183" y="174">Comments</text>
+  <text class="m" x="183" y="187">comments</text>
+  <text class="l" x="183" y="206">Storage</text>
+  <text class="m" x="183" y="219">storage</text>
+
+  <!-- Review contexts -->
+  <text class="a" x="328" y="48">REVIEW CONTEXTS</text>
+  <rect class="panel" x="328" y="56" width="144" height="172" rx="9"/>
+  <text class="l" x="339" y="78">3D &amp; Splat</text>
+  <text class="m" x="339" y="91">hdri</text>
+  <text class="l" x="339" y="110">Colour (OCIO)</text>
+  <text class="m" x="339" y="123">ocio</text>
+  <text class="l" x="339" y="142">Video</text>
+  <text class="m" x="339" y="155">video</text>
+  <text class="l" x="339" y="174">Delivery</text>
+  <text class="m" x="339" y="187">distribution</text>
+  <text class="l" x="339" y="206">Statuses</text>
+  <text class="m" x="339" y="219">review-statuses</text>
+
+  <!-- Communications -->
+  <text class="a" x="484" y="48">COMMUNICATIONS</text>
+  <rect class="panel" x="484" y="56" width="144" height="172" rx="9"/>
+  <text class="l" x="495" y="78">Announcements</text>
+  <text class="m" x="495" y="91">announcements</text>
+  <text class="l" x="495" y="110">SMTP</text>
+  <text class="m" x="495" y="123">smtp</text>
+  <text class="l" x="495" y="142">API &amp; Webhooks</text>
+  <text class="m" x="495" y="155">api</text>
+  <text class="l" x="495" y="174">Service tokens</text>
+  <text class="m" x="495" y="187">service-tokens</text>
+  <text class="l" x="495" y="206">ShotGrid</text>
+  <text class="m" x="495" y="219">shotgrid</text>
+
+  <!-- Maintenance -->
+  <text class="a" x="640" y="48">MAINTENANCE</text>
+  <rect class="panel" x="640" y="56" width="144" height="172" rx="9"/>
+  <text class="l" x="651" y="78">Jobs</text>
+  <text class="m" x="651" y="91">jobs</text>
+  <text class="l" x="651" y="110">Trash</text>
+  <text class="m" x="651" y="123">trash</text>
+  <text class="l" x="651" y="142">Retention</text>
+  <text class="m" x="651" y="155">retention</text>
+  <text class="l" x="651" y="174">Audit</text>
+  <text class="m" x="651" y="187">audit</text>
+  <text class="l" x="651" y="206">Media access</text>
+  <text class="m" x="651" y="219">media-access</text>
+
+  <rect class="band" x="16" y="304" width="768" height="40" rx="9"/>
+  <text class="d" x="28" y="321">Every section is addressable as /admin/&lt;key&gt;. The accent tick marks the two that also open a detail page,</text>
+  <text class="d" x="28" y="337">/admin/users/&lt;id&gt; and /admin/projects/&lt;id&gt;. An unknown key falls back to the Dashboard. The whole area is global ADMIN only.</text>
+</svg>

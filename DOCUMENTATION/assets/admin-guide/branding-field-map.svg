@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" width="800" height="392" role="img" aria-labelledby="branding-map-title branding-map-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="branding-map-title">Where each branding value is set, and what a signed-out visitor sees</title>
+  <desc id="branding-map-desc">Seven values, spread over three admin screens and one API call: the studio name, the accent colour, the logo, the login page appearance and the source code URL are all public and travel with the unauthenticated branding response, while the Slack and Discord webhooks stay internal. The Discord webhook has no screen at all and is written with PATCH /api/studio.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="392" rx="10"/>
+
+  <text class="d" x="30" y="32">THE BRANDING OF ONE INSTANCE</text>
+
+  <rect class="band" x="30" y="44" width="740" height="32" rx="9"/>
+  <text class="d" x="46" y="64">SETTING</text>
+  <text class="d" x="240" y="64">WHERE YOU SET IT</text>
+  <text class="d" x="452" y="64">STORED AS</text>
+  <text class="d" x="700" y="64" text-anchor="middle">BEFORE SIGN-IN</text>
+
+  <rect class="panel" x="30" y="84" width="740" height="34" rx="9"/>
+  <text class="l" x="46" y="105">Studio name</text>
+  <text class="d" x="240" y="105">first-run setup, then API only</text>
+  <text class="m" x="452" y="105">Studio.name</text>
+  <rect class="panel-a" x="662" y="91" width="76" height="20" rx="9"/>
+  <text class="a" x="700" y="105" text-anchor="middle">public</text>
+
+  <rect class="panel" x="30" y="123" width="740" height="34" rx="9"/>
+  <text class="l" x="46" y="144">Accent colour</text>
+  <text class="d" x="240" y="144">Studio → Settings</text>
+  <text class="m" x="452" y="144">studio_accent</text>
+  <rect class="panel-a" x="662" y="130" width="76" height="20" rx="9"/>
+  <text class="a" x="700" y="144" text-anchor="middle">public</text>
+
+  <rect class="panel" x="30" y="162" width="740" height="34" rx="9"/>
+  <text class="l" x="46" y="183">Studio logo</text>
+  <text class="d" x="240" y="183">Review contexts → Delivery</text>
+  <text class="m" x="452" y="183">studio_logo_key</text>
+  <rect class="panel-a" x="662" y="169" width="76" height="20" rx="9"/>
+  <text class="a" x="700" y="183" text-anchor="middle">public</text>
+
+  <rect class="panel" x="30" y="201" width="740" height="34" rx="9"/>
+  <text class="l" x="46" y="222">Login page appearance</text>
+  <text class="d" x="240" y="222">Studio → Login page</text>
+  <text class="m" x="452" y="222">login_appearance</text>
+  <rect class="panel-a" x="662" y="208" width="76" height="20" rx="9"/>
+  <text class="a" x="700" y="222" text-anchor="middle">public</text>
+
+  <rect class="panel" x="30" y="240" width="740" height="34" rx="9"/>
+  <text class="l" x="46" y="261">Source code URL</text>
+  <text class="d" x="240" y="261">Studio → Settings</text>
+  <text class="m" x="452" y="261">studio_source_url</text>
+  <rect class="panel-a" x="662" y="247" width="76" height="20" rx="9"/>
+  <text class="a" x="700" y="261" text-anchor="middle">public</text>
+
+  <rect class="panel" x="30" y="279" width="740" height="34" rx="9"/>
+  <text class="l" x="46" y="300">Slack webhook</text>
+  <text class="d" x="240" y="300">Studio → Settings</text>
+  <text class="m" x="452" y="300">slack_webhook_url</text>
+  <text class="d" x="700" y="300" text-anchor="middle">internal</text>
+
+  <rect class="panel" x="30" y="318" width="740" height="34" rx="9"/>
+  <text class="l" x="46" y="339">Discord webhook</text>
+  <text class="d" x="240" y="339">no screen — PATCH /api/studio</text>
+  <text class="m" x="452" y="339">Studio.discordWebhookUrl</text>
+  <text class="d" x="700" y="339" text-anchor="middle">internal</text>
+
+  <text class="d" x="30" y="370">Everything marked public ships in GET /api/studio/branding, which answers without authentication.</text>
+  <text class="d" x="30" y="384">It has to: that response styles the sign-in page, which nobody has signed in to yet.</text>
+</svg>

@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 690" width="800" height="690" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The fixed places of every review screen</title>
+  <desc id="fig-desc">A wireframe of the review screen: the review header on top, then the workspace header with the mode switch, the options bar, the tool rail on the left, the viewer in the middle, the inspector dock on the right, the bottom row and the footer.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="690" rx="10"/>
+
+  <text class="d" x="24" y="30">THE FIXED PLACES OF EVERY REVIEW SCREEN</text>
+
+  <!-- Bande 1 : en-tête de la page de review -->
+  <rect class="band" x="24" y="44" width="752" height="52" rx="9"/>
+  <text class="d" x="36" y="62">REVIEW HEADER — above the workspace</text>
+  <rect class="panel" x="36" y="68" width="250" height="22" rx="6"/>
+  <text class="d" x="161" y="83" text-anchor="middle">media name · draft badge · navigators</text>
+  <rect class="panel" x="294" y="68" width="200" height="22" rx="6"/>
+  <text class="d" x="394" y="83" text-anchor="middle">Compare… — video and image</text>
+  <rect class="panel" x="502" y="68" width="266" height="22" rx="6"/>
+  <text class="d" x="635" y="83" text-anchor="middle">Live · presence · decision · theatre · PiP</text>
+
+  <!-- Bande 2 : en-tête du workspace (bascule de mode) -->
+  <rect class="band" x="24" y="104" width="752" height="46" rx="9"/>
+  <text class="d" x="36" y="130">WORKSPACE HEADER</text>
+  <rect class="panel-a" x="290" y="110" width="220" height="32" rx="9"/>
+  <text class="t" x="400" y="125" text-anchor="middle">MODE SWITCH — 1 · 2 · 3</text>
+  <text class="d" x="400" y="138" text-anchor="middle">hidden for CLIENT accounts</text>
+  <rect class="panel" x="520" y="110" width="248" height="32" rx="9"/>
+  <text class="d" x="644" y="130" text-anchor="middle">Compare… — 3D and splat</text>
+
+  <!-- Bande 3 : barre d'options -->
+  <rect class="panel" x="24" y="158" width="752" height="34" rx="9"/>
+  <text class="l" x="36" y="180">OPTIONS BAR — settings of the active tool only, scrolls sideways</text>
+  <rect class="panel-a" x="568" y="162" width="200" height="26" rx="9"/>
+  <text class="d" x="668" y="179" text-anchor="middle">undo · redo · save (pinned)</text>
+
+  <!-- Rail d'outils -->
+  <rect class="panel" x="24" y="200" width="86" height="330" rx="9"/>
+  <text class="d" x="67" y="222" text-anchor="middle">TOOL RAIL</text>
+  <rect class="panel" x="36" y="232" width="62" height="18" rx="6"/>
+  <text class="m" x="67" y="245" text-anchor="middle">V</text>
+  <rect class="panel" x="36" y="256" width="62" height="18" rx="6"/>
+  <text class="m" x="67" y="269" text-anchor="middle">D</text>
+  <rect class="panel" x="36" y="280" width="62" height="18" rx="6"/>
+  <text class="m" x="67" y="293" text-anchor="middle">R</text>
+  <rect class="panel" x="36" y="304" width="62" height="18" rx="6"/>
+  <text class="m" x="67" y="317" text-anchor="middle">E</text>
+  <path class="conn" d="M36 330 L98 330"/>
+  <rect class="panel" x="36" y="340" width="62" height="18" rx="6"/>
+  <text class="m" x="67" y="353" text-anchor="middle">F</text>
+  <rect class="panel" x="36" y="364" width="62" height="18" rx="6"/>
+  <text class="m" x="67" y="377" text-anchor="middle">H</text>
+  <text class="d" x="67" y="404" text-anchor="middle">one armed</text>
+  <text class="d" x="67" y="418" text-anchor="middle">tool at a time</text>
+  <text class="d" x="67" y="440" text-anchor="middle">F and H:</text>
+  <text class="d" x="67" y="454" text-anchor="middle">3D and splat</text>
+  <text class="d" x="67" y="476" text-anchor="middle">chevron</text>
+  <text class="d" x="67" y="490" text-anchor="middle">shows labels</text>
+
+  <!-- Viewer -->
+  <rect class="panel-a" x="118" y="200" width="482" height="330" rx="9"/>
+  <text class="t" x="359" y="228" text-anchor="middle">VIEWER — the media, plus overlays anchored to the view</text>
+
+  <rect class="panel-o" x="140" y="246" width="438" height="152" rx="9"/>
+  <text class="l" x="359" y="268" text-anchor="middle">zoom / pan layer — one transform for all of it</text>
+  <text class="d" x="359" y="290" text-anchor="middle">the video or the image, fitted to the space</text>
+  <text class="d" x="359" y="310" text-anchor="middle">annotation strokes · pins · wipe bar</text>
+  <text class="d" x="359" y="330" text-anchor="middle">composition guides · camera PiP · axis triad</text>
+  <text class="d" x="359" y="350" text-anchor="middle">live participant cursors, in the author's colour</text>
+  <text class="d" x="359" y="370" text-anchor="middle">the A/B overlay takes the very same transform</text>
+
+  <text class="a" x="359" y="422" text-anchor="middle">floating badges above it: zoom % · speed · buffering · quality</text>
+  <text class="d" x="359" y="444" text-anchor="middle">nothing else covers the picture you are asked to judge</text>
+  <text class="d" x="359" y="470" text-anchor="middle">right-click opens the review menu (video and image)</text>
+
+  <!-- Dock inspecteur -->
+  <rect class="panel" x="608" y="200" width="168" height="330" rx="9"/>
+  <text class="d" x="692" y="222" text-anchor="middle">INSPECTOR DOCK</text>
+  <rect class="panel" x="618" y="232" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="246" text-anchor="middle">Playback</text>
+  <rect class="panel" x="618" y="258" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="272" text-anchor="middle">Image</text>
+  <rect class="panel" x="618" y="284" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="298" text-anchor="middle">Guides</text>
+  <rect class="panel" x="618" y="310" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="324" text-anchor="middle">Comparison</text>
+  <rect class="panel" x="618" y="336" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="350" text-anchor="middle">Info</text>
+  <rect class="panel" x="618" y="362" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="376" text-anchor="middle">Export</text>
+  <text class="d" x="692" y="404" text-anchor="middle">one panel at a time</text>
+  <text class="d" x="692" y="422" text-anchor="middle">Tab collapses it</text>
+  <text class="d" x="692" y="440" text-anchor="middle">starts collapsed</text>
+  <text class="d" x="692" y="466" text-anchor="middle">remembered per</text>
+  <text class="d" x="692" y="484" text-anchor="middle">media type</text>
+
+  <!-- Rangée du bas -->
+  <rect class="panel" x="24" y="538" width="752" height="66" rx="9"/>
+  <text class="l" x="36" y="560">BOTTOM ROW</text>
+  <text class="d" x="36" y="578">video — timeline · audio waveform · transport · Version assets drawer</text>
+  <text class="d" x="36" y="596">3D and splat — animation transport · Curves drawer · image — Version assets only</text>
+
+  <!-- Pied de page -->
+  <rect class="band" x="24" y="612" width="752" height="28" rx="9"/>
+  <text class="d" x="36" y="630">mode hint · rail and dock state · Saved / Not saved badge</text>
+
+  <text class="a" x="400" y="666" text-anchor="middle">what am I doing (mode) · with what gesture (rail) · tuned how (options) · shown how (dock)</text>
+</svg>

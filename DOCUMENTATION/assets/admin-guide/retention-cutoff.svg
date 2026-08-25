@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520" role="img" aria-labelledby="cutoff-title cutoff-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="cutoff-title">What a retention period actually measures</title>
+  <desc id="cutoff-desc">A period is turned into a cutoff date, now minus N days, and zero skips the family entirely. Four journals are deleted purely by row age against createdAt. Four more are deleted only once the row is dead, counted from the revocation, use, acceptance or expiry date, so a live session and a share link with no expiry are never touched. The ShotGrid sync history is deleted only once a run has finished and carries no unresolved conflict.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="520" rx="10"/>
+
+  <text class="d" x="25" y="30">WHAT A RETENTION PERIOD ACTUALLY MEASURES</text>
+
+  <rect class="band" x="25" y="44" width="750" height="46" rx="9"/>
+  <text class="m" x="45" y="68">cutoff = now − N days</text>
+  <text class="d" x="210" y="68">N = 0 → the family is skipped entirely · N is capped at 3650 days (ten years)</text>
+
+  <!-- Famille 1 : par ancienneté -->
+  <rect class="panel" x="25" y="106" width="750" height="88" rx="9"/>
+  <text class="t" x="45" y="132">Deleted by age</text>
+  <text class="d" x="45" y="150">AuditLog · MediaAccessLog · Notification · ApiEvent</text>
+  <text class="d" x="755" y="150" text-anchor="end">a notification goes whether it was read or not</text>
+  <text class="m" x="45" y="176">createdAt &lt; cutoff</text>
+  <text class="d" x="210" y="176">the plain case: nothing about the state of the row is considered</text>
+
+  <!-- Famille 2 : seulement une fois morte -->
+  <rect class="panel-a" x="25" y="206" width="750" height="140" rx="9"/>
+  <text class="t" x="45" y="232">Deleted only once the row is dead</text>
+  <text class="d" x="45" y="250">the period runs from the date in the middle column — not from today, and never from a live row</text>
+
+  <text class="l" x="45" y="274">UserSession</text>
+  <text class="m" x="190" y="274">revokedAt &lt; cutoff  OR  expiresAt &lt; cutoff</text>
+  <text class="d" x="755" y="274" text-anchor="end">a live session is never touched</text>
+
+  <text class="l" x="45" y="294">PasswordReset</text>
+  <text class="m" x="190" y="294">used AND createdAt &lt; cutoff  OR  expiresAt &lt; cutoff</text>
+  <text class="d" x="755" y="294" text-anchor="end">a consumed token opens nothing</text>
+
+  <text class="l" x="45" y="314">Invitation</text>
+  <text class="m" x="190" y="314">acceptedAt &lt; cutoff  OR  expiresAt &lt; cutoff</text>
+  <text class="d" x="755" y="314" text-anchor="end">the account exists, or was re-invited</text>
+
+  <text class="l" x="45" y="334">ShareLink</text>
+  <text class="m" x="190" y="334">revoked AND createdAt &lt; cutoff  OR  expiresAt &lt; cutoff</text>
+  <text class="d" x="755" y="334" text-anchor="end">no expiry + not revoked = kept</text>
+
+  <!-- Famille 3 : seulement une fois soldée -->
+  <rect class="panel" x="25" y="358" width="750" height="88" rx="9"/>
+  <text class="t" x="45" y="384">Deleted only once settled</text>
+  <text class="d" x="45" y="402">ShotgridSyncRun — its ShotgridSyncLog rows follow by cascade</text>
+  <text class="d" x="755" y="402" text-anchor="end">a run awaiting arbitration stays for ever</text>
+  <text class="m" x="45" y="428">finishedAt &lt; cutoff  AND  no unresolved conflict log</text>
+
+  <rect class="band" x="25" y="458" width="750" height="46" rx="9"/>
+  <text class="d" x="400" y="482" text-anchor="middle">NOT CONFIGURABLE HERE — TRASH (trash_retention_days, WHICH ALSO DELETES OBJECT STORAGE) AND IDEMPOTENCYRECORD (FIXED TECHNICAL TTL)</text>
+</svg>

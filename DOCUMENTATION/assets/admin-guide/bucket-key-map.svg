@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 580" width="800" height="580" role="img" aria-labelledby="bucket-title bucket-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="bucket-title">One bucket, eight named prefixes and everything else</title>
+  <desc id="bucket-desc">The whole instance stores everything in a single bucket. Eight top-level prefixes are classified by the storage report — projects, derived, studio, avatars, branding, documents, comments, quarantine — and anything else, such as entity thumbnails, is counted as other. The projects prefix holds the untouched originals, including image-sequence frames and board images; the derived prefix holds nine kinds of generated file, one per report sub-type.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="580" rx="10"/>
+
+  <text class="d" x="25" y="30">ONE BUCKET FOR THE WHOLE INSTANCE</text>
+  <text class="d" x="325" y="30">WHAT THE TWO HEAVY PREFIXES HOLD</text>
+
+  <rect class="panel-a" x="25" y="44" width="265" height="46" rx="9"/>
+  <text class="t" x="157" y="66" text-anchor="middle">S3_BUCKET</text>
+  <text class="d" x="157" y="82" text-anchor="middle">default: review — no per-project split</text>
+
+  <path class="conn" d="M42 90 L42 463"/>
+
+  <!-- Les huit préfixes classés, puis le reste -->
+  <path class="conn" d="M42 127 L54 127" marker-end="url(#arrow)"/>
+  <rect class="panel-a" x="60" y="110" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="132">projects/{slug}/…</text>
+  <text class="d" x="288" y="132" text-anchor="end">originals</text>
+
+  <path class="conn" d="M42 169 L54 169" marker-end="url(#arrow)"/>
+  <rect class="panel-a" x="60" y="152" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="174">derived/{mediaId}/…</text>
+  <text class="d" x="288" y="174" text-anchor="end">derived</text>
+
+  <path class="conn" d="M42 211 L54 211" marker-end="url(#arrow)"/>
+  <rect class="panel" x="60" y="194" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="216">studio/</text>
+  <text class="d" x="288" y="216" text-anchor="end">hdris + ocio</text>
+
+  <path class="conn" d="M42 253 L54 253" marker-end="url(#arrow)"/>
+  <rect class="panel" x="60" y="236" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="258">avatars/</text>
+  <text class="d" x="288" y="258" text-anchor="end">avatars</text>
+
+  <path class="conn" d="M42 295 L54 295" marker-end="url(#arrow)"/>
+  <rect class="panel" x="60" y="278" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="300">branding/</text>
+  <text class="d" x="288" y="300" text-anchor="end">branding</text>
+
+  <path class="conn" d="M42 337 L54 337" marker-end="url(#arrow)"/>
+  <rect class="panel-o" x="60" y="320" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="342">documents/</text>
+  <text class="d" x="288" y="342" text-anchor="end">no writer today</text>
+
+  <path class="conn" d="M42 379 L54 379" marker-end="url(#arrow)"/>
+  <rect class="panel" x="60" y="362" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="384">comments/attachments/</text>
+  <text class="d" x="288" y="384" text-anchor="end">comments</text>
+
+  <path class="conn" d="M42 421 L54 421" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="60" y="404" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="426">quarantine/{mediaId}/</text>
+  <text class="d no" x="288" y="426" text-anchor="end">kept, not deleted</text>
+
+  <path class="conn" d="M42 463 L54 463" marker-end="url(#arrow)"/>
+  <rect class="panel-o" x="60" y="446" width="240" height="34" rx="9"/>
+  <text class="m" x="72" y="468">entity-thumbs/…</text>
+  <text class="d" x="288" y="468" text-anchor="end">unclassified → other</text>
+
+  <!-- Détail des originaux -->
+  <path class="conn-a" d="M300 127 L319 127" marker-end="url(#arrow-a)"/>
+  <rect class="panel" x="325" y="110" width="450" height="118" rx="9"/>
+  <text class="t" x="345" y="132">projects/{slug}/… — the original, never modified</text>
+  <text class="m" x="345" y="156">{parentSegment}/{versionName}/{mediaId}/{filename}</text>
+  <text class="m" x="345" y="176">{mediaId}/frames/*  +  {mediaId}/sequence.json</text>
+  <text class="d" x="345" y="196">an image sequence keeps its frames next to its manifest</text>
+  <text class="m" x="345" y="216">projects/{projectId}/boards/…</text>
+  <text class="d" x="550" y="216">boards — filed under the numeric id</text>
+
+  <!-- Détail des dérivés -->
+  <path class="conn-a" d="M300 169 L312 169 L312 300 L319 300" marker-end="url(#arrow-a)"/>
+  <rect class="panel" x="325" y="244" width="450" height="254" rx="9"/>
+  <text class="t" x="345" y="266">derived/{mediaId}/… — one row per report sub-type</text>
+
+  <text class="m" x="345" y="290">hls/</text>
+  <text class="d" x="755" y="290" text-anchor="end">hls</text>
+  <text class="m" x="345" y="310">thumbnail.jpg</text>
+  <text class="d" x="755" y="310" text-anchor="end">thumbnails</text>
+  <text class="m" x="345" y="330">proxy.mp4 · proxy-trim.mp4</text>
+  <text class="d" x="755" y="330" text-anchor="end">proxies</text>
+  <text class="m" x="345" y="350">client.mp4</text>
+  <text class="d" x="755" y="350" text-anchor="end">client</text>
+  <text class="m" x="345" y="370">timeline-sprite.jpg</text>
+  <text class="d" x="755" y="370" text-anchor="end">sprites</text>
+  <text class="m" x="345" y="390">model.glb</text>
+  <text class="d" x="755" y="390" text-anchor="end">glb</text>
+  <text class="m" x="345" y="410">reference-{uuid}.{ext}</text>
+  <text class="d" x="755" y="410" text-anchor="end">references</text>
+  <text class="m" x="345" y="430">splat-mask.bin · splat-subset.bin</text>
+  <text class="d" x="755" y="430" text-anchor="end">splat-edits</text>
+  <text class="m" x="345" y="450">everything else</text>
+  <text class="d" x="755" y="450" text-anchor="end">other</text>
+
+  <text class="d no" x="345" y="474">derived/timeline/{id}/master.mp4 lands here, under “other”</text>
+
+  <rect class="band" x="25" y="512" width="750" height="52" rx="9"/>
+  <text class="d" x="400" y="534" text-anchor="middle">DELETING A MEDIA PURGES ITS ORIGINAL FOLDER AND ITS WHOLE derived/{mediaId}/ PREFIX</text>
+  <text class="d" x="400" y="552" text-anchor="middle">the original is never rewritten — every edit produces a derived object or non-destructive metadata</text>
+</svg>

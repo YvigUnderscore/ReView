@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 660" width="800" height="660" role="img" aria-labelledby="up-title up-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="up-title">The path of a file, from the drop to READY</title>
+  <desc id="up-desc">A dropped file is hashed in the browser; the server hands out an upload URL only after the naming rule and the quota pass; small files go up in one PUT and large ones in resumable parts, with deduplication; finalize checks the magic bytes, normalises the content type and weighs the real object before the processing job runs. A checksum mismatch or an antivirus detection turns the media FAILED.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="660" rx="10"/>
+
+  <text class="d" x="24" y="30">FROM THE DROP TO READY</text>
+
+  <!-- Étapes, colonne de gauche -->
+  <text class="d" x="24" y="69">DROP</text>
+  <text class="d" x="24" y="139">HASH</text>
+  <text class="d" x="24" y="209">ASK</text>
+  <text class="d" x="24" y="288">TRANSFER</text>
+  <text class="d" x="24" y="364">FINALIZE</text>
+  <text class="d" x="24" y="519">PROCESS</text>
+
+  <rect class="panel-a" x="180" y="42" width="360" height="46" rx="9"/>
+  <text class="t" x="360" y="64" text-anchor="middle">A file dropped on a version</text>
+  <text class="d" x="360" y="80" text-anchor="middle">task page, asset page, shot page, or a version card</text>
+
+  <path class="conn" d="M360 88 L360 108" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="180" y="112" width="360" height="46" rx="9"/>
+  <text class="l" x="360" y="134" text-anchor="middle">sha256, computed in the browser</text>
+  <text class="d" x="360" y="150" text-anchor="middle">streaming, before anything is sent</text>
+
+  <path class="conn" d="M360 158 L360 178" marker-end="url(#arrow)"/>
+
+  <!-- Demande d'URL : tout ce qui peut refuser AVANT le transfert -->
+  <rect class="panel" x="180" y="182" width="360" height="46" rx="9"/>
+  <text class="l" x="360" y="204" text-anchor="middle">The server hands out an upload URL</text>
+  <text class="d" x="360" y="220" text-anchor="middle">archived project, quotas and naming rule, checked here</text>
+
+  <path class="conn" d="M540 205 L576 205" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="576" y="182" width="200" height="46" rx="9"/>
+  <text class="m" x="676" y="204" text-anchor="middle">NAMING_REJECTED</text>
+  <text class="d" x="676" y="220" text-anchor="middle">nothing was transferred</text>
+
+  <path class="conn" d="M360 228 L360 248" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="180" y="252" width="360" height="64" rx="9"/>
+  <text class="l" x="360" y="274" text-anchor="middle">Straight to object storage</text>
+  <text class="d" x="360" y="290" text-anchor="middle">under 16 MB: a single presigned PUT</text>
+  <text class="d" x="360" y="306" text-anchor="middle">16 MB and over: resumable parts, four in flight</text>
+
+  <path class="conn-a" d="M540 284 L576 284" marker-end="url(#arrow-a)"/>
+  <rect class="panel-a" x="576" y="261" width="200" height="46" rx="9"/>
+  <text class="t" x="676" y="283" text-anchor="middle">Deduplicated</text>
+  <text class="d" x="676" y="299" text-anchor="middle">same sha256, no transfer</text>
+
+  <path class="conn" d="M360 316 L360 336" marker-end="url(#arrow)"/>
+
+  <!-- Finalisation : trois contrôles côté serveur -->
+  <rect class="band" x="180" y="340" width="360" height="128" rx="10"/>
+  <text class="t" x="200" y="364">Finalize — three checks</text>
+  <text class="l" x="200" y="390">magic bytes match the declared kind</text>
+  <text class="l" x="200" y="414">content type normalised to an inert value</text>
+  <text class="l" x="200" y="438">the real size, against the limit and the quota</text>
+
+  <path class="conn" d="M540 379 L576 379" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="576" y="356" width="200" height="46" rx="9"/>
+  <text class="m" x="676" y="378" text-anchor="middle">400 INVALID_FILE</text>
+  <text class="d" x="676" y="394" text-anchor="middle">FAILED, the object is deleted</text>
+
+  <path class="conn" d="M540 445 L576 445" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="576" y="422" width="200" height="46" rx="9"/>
+  <text class="m" x="676" y="444" text-anchor="middle">FILE_TOO_LARGE</text>
+  <text class="d" x="676" y="460" text-anchor="middle">or the project quota</text>
+
+  <path class="conn" d="M360 468 L360 488" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="180" y="492" width="360" height="46" rx="9"/>
+  <text class="t" x="360" y="514" text-anchor="middle">UPLOADING → PROCESSING → READY</text>
+  <text class="d" x="360" y="530" text-anchor="middle">the widget follows it while you navigate away</text>
+
+  <path class="conn" d="M540 515 L576 515" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="576" y="492" width="200" height="46" rx="9"/>
+  <text class="l" x="676" y="514" text-anchor="middle">Checksum mismatch</text>
+  <text class="d" x="676" y="530" text-anchor="middle">re-hashed, then FAILED</text>
+
+  <path class="conn" d="M360 538 L360 558" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="180" y="562" width="360" height="46" rx="9"/>
+  <text class="l" x="360" y="584" text-anchor="middle">Antivirus detection, when configured</text>
+  <text class="d" x="360" y="600" text-anchor="middle">quarantined, FAILED, logged in the audit trail</text>
+
+  <text class="d" x="24" y="636">Nothing lands on a server disk: the browser talks straight to object storage through presigned URLs.</text>
+</svg>

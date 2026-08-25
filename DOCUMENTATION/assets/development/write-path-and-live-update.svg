@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 496" width="800" height="496" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">A write, and how the other open screens learn about it</title>
+  <desc id="fig-desc">A component calls a mutation, the mutation calls a route, the route validates and hands over to a service that writes in a transaction and emits a socket event. The bridge turns that event into a targeted invalidation on every other open screen, while the mutation invalidates and gives feedback locally.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="496" rx="10"/>
+
+  <text class="d" x="28" y="26">ONE WRITE, AND WHAT IT WAKES UP</text>
+
+  <rect class="panel" x="15" y="40" width="170" height="46" rx="9"/>
+  <text class="t" x="100" y="62" text-anchor="middle">Component</text>
+  <text class="d" x="100" y="78" text-anchor="middle">a page, a card, a menu</text>
+
+  <rect class="panel" x="215" y="40" width="170" height="46" rx="9"/>
+  <text class="t" x="300" y="62" text-anchor="middle">useMutation</text>
+  <text class="d" x="300" y="78" text-anchor="middle">lib/queries.ts, qk keys</text>
+
+  <rect class="panel-a" x="415" y="40" width="170" height="46" rx="9"/>
+  <text class="t" x="500" y="62" text-anchor="middle">Server</text>
+  <text class="d" x="500" y="78" text-anchor="middle">route, service, Prisma</text>
+
+  <rect class="panel" x="615" y="40" width="170" height="46" rx="9"/>
+  <text class="t" x="700" y="62" text-anchor="middle">Every other screen</text>
+  <text class="d" x="700" y="78" text-anchor="middle">socketBridge.ts</text>
+
+  <path class="conn-o" d="M100 86 L100 386"/>
+  <path class="conn-o" d="M300 86 L300 386"/>
+  <path class="conn-o" d="M500 86 L500 386"/>
+  <path class="conn-o" d="M700 86 L700 268"/>
+
+  <text class="m" x="200" y="110" text-anchor="middle">setStatus.mutate(body)</text>
+  <path class="conn" d="M104 118 L296 118" marker-end="url(#arrow)"/>
+
+  <text class="m" x="400" y="150" text-anchor="middle">PATCH /api/shots/:id</text>
+  <path class="conn" d="M304 158 L496 158" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="385" y="178" width="230" height="46" rx="9"/>
+  <text class="l" x="500" y="200" text-anchor="middle">Zod validate, then service</text>
+  <text class="d" x="500" y="216" text-anchor="middle">$transaction, MinIO after commit</text>
+
+  <text class="d" x="600" y="242" text-anchor="middle">emitToProject — 'shot:updated'</text>
+  <path class="conn-a" d="M504 250 L696 250" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="612" y="268" width="176" height="46" rx="9"/>
+  <text class="l" x="700" y="290" text-anchor="middle">invalidateQueries</text>
+  <text class="d" x="700" y="306" text-anchor="middle">qk.project(id) subtree</text>
+  <text class="d" x="700" y="330" text-anchor="middle">only mounted queries refetch</text>
+
+  <text class="d" x="400" y="322" text-anchor="middle">200 { shot }</text>
+  <path class="conn" d="M496 330 L304 330" marker-end="url(#arrow)"/>
+
+  <text class="d" x="200" y="358" text-anchor="middle">onSuccess: invalidate + toast</text>
+  <path class="conn" d="M296 366 L104 366" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="40" y="406" width="350" height="46" rx="9"/>
+  <text class="t" x="215" y="428" text-anchor="middle">Route emits, bridge silent</text>
+  <text class="d" x="215" y="444" text-anchor="middle">the database is right, the screen is stale</text>
+
+  <rect class="panel-d" x="410" y="406" width="350" height="46" rx="9"/>
+  <text class="t" x="585" y="428" text-anchor="middle">Bridge listens, route silent</text>
+  <text class="d" x="585" y="444" text-anchor="middle">same stale screen, opposite cause</text>
+
+  <text class="a" x="400" y="478" text-anchor="middle">both halves, or neither</text>
+</svg>

@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" width="800" height="430" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Which screen writes which field of a task</title>
+  <desc id="fig-desc">Seven surfaces in rows, five task fields in columns. The status is the only field an artist can write, from the kanban or from the task page; the assignee is never written from the task page; dates are reserved to supervisors and admins.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="430" rx="10"/>
+
+  <text class="d" x="24" y="30">WHO WRITES WHAT, AND FROM WHERE</text>
+
+  <!-- Colonne des surfaces, et bandeau des champs -->
+  <rect class="band" x="24" y="42" width="240" height="318" rx="10"/>
+  <rect class="band" x="268" y="42" width="516" height="36" rx="10"/>
+
+  <text class="d" x="318" y="66" text-anchor="middle">Status</text>
+  <text class="d" x="422" y="66" text-anchor="middle">Assignee</text>
+  <text class="d" x="526" y="66" text-anchor="middle">Checklist</text>
+  <text class="d" x="630" y="66" text-anchor="middle">Dates</text>
+  <text class="d" x="734" y="66" text-anchor="middle">New version</text>
+
+  <!-- Ligne 1 — kanban, glisser -->
+  <text class="l" x="34" y="107">Kanban — drag a card</text>
+  <rect class="panel-a" x="268" y="86" width="100" height="34" rx="9"/>
+  <text class="d" x="318" y="100" text-anchor="middle">managers</text>
+  <text class="d" x="318" y="113" text-anchor="middle">+ assignee</text>
+  <text class="d" x="422" y="107" text-anchor="middle">—</text>
+  <text class="d" x="526" y="107" text-anchor="middle">—</text>
+  <text class="d" x="630" y="107" text-anchor="middle">—</text>
+  <text class="d" x="734" y="107" text-anchor="middle">—</text>
+
+  <!-- Ligne 2 — kanban, clic droit -->
+  <text class="l" x="34" y="147">Kanban — right-click a card</text>
+  <rect class="panel-a" x="268" y="126" width="100" height="34" rx="9"/>
+  <text class="d" x="318" y="140" text-anchor="middle">managers</text>
+  <text class="d" x="318" y="153" text-anchor="middle">+ assignee</text>
+  <text class="d" x="422" y="147" text-anchor="middle">—</text>
+  <text class="d" x="526" y="147" text-anchor="middle">—</text>
+  <text class="d" x="630" y="147" text-anchor="middle">—</text>
+  <text class="d" x="734" y="147" text-anchor="middle">—</text>
+
+  <!-- Ligne 3 — page de la tâche -->
+  <text class="l" x="34" y="187">Task page</text>
+  <rect class="panel-a" x="268" y="166" width="100" height="34" rx="9"/>
+  <text class="d" x="318" y="180" text-anchor="middle">managers</text>
+  <text class="d" x="318" y="193" text-anchor="middle">+ assignee</text>
+  <text class="d" x="422" y="187" text-anchor="middle">—</text>
+  <rect class="panel-a" x="476" y="166" width="100" height="34" rx="9"/>
+  <text class="d" x="526" y="180" text-anchor="middle">assignee ticks</text>
+  <text class="d" x="526" y="193" text-anchor="middle">managers edit</text>
+  <rect class="panel" x="580" y="166" width="100" height="34" rx="9"/>
+  <text class="d" x="630" y="180" text-anchor="middle">supervisors</text>
+  <text class="d" x="630" y="193" text-anchor="middle">&amp; admins</text>
+  <rect class="panel" x="684" y="166" width="100" height="34" rx="9"/>
+  <text class="d" x="734" y="180" text-anchor="middle">anyone but</text>
+  <text class="d" x="734" y="193" text-anchor="middle">a client</text>
+
+  <!-- Ligne 4 — panneau « Task progress » de l'onglet Overview -->
+  <text class="l" x="34" y="227">Overview — Task progress</text>
+  <rect class="panel" x="268" y="206" width="100" height="34" rx="9"/>
+  <text class="d" x="318" y="227" text-anchor="middle">managers</text>
+  <rect class="panel" x="372" y="206" width="100" height="34" rx="9"/>
+  <text class="d" x="422" y="227" text-anchor="middle">managers</text>
+  <text class="d" x="526" y="227" text-anchor="middle">—</text>
+  <text class="d" x="630" y="227" text-anchor="middle">—</text>
+  <text class="d" x="734" y="227" text-anchor="middle">—</text>
+
+  <!-- Ligne 5 — clic droit sur un asset -->
+  <text class="l" x="34" y="267">Asset right-click: Assign</text>
+  <text class="d" x="318" y="267" text-anchor="middle">—</text>
+  <rect class="panel" x="372" y="246" width="100" height="34" rx="9"/>
+  <text class="d" x="422" y="267" text-anchor="middle">managers</text>
+  <text class="d" x="526" y="267" text-anchor="middle">—</text>
+  <text class="d" x="630" y="267" text-anchor="middle">—</text>
+  <text class="d" x="734" y="267" text-anchor="middle">—</text>
+
+  <!-- Ligne 6 — barre de sélection des onglets Assets et Shots -->
+  <text class="l" x="34" y="307">Assets / Shots selection bar</text>
+  <text class="d" x="318" y="307" text-anchor="middle">—</text>
+  <rect class="panel" x="372" y="286" width="100" height="34" rx="9"/>
+  <text class="d" x="422" y="307" text-anchor="middle">managers</text>
+  <text class="d" x="526" y="307" text-anchor="middle">—</text>
+  <text class="d" x="630" y="307" text-anchor="middle">—</text>
+  <text class="d" x="734" y="307" text-anchor="middle">—</text>
+
+  <!-- Ligne 7 — API -->
+  <text class="l" x="34" y="347">API — PATCH /api/tasks/:id</text>
+  <rect class="panel" x="268" y="326" width="100" height="34" rx="9"/>
+  <text class="d" x="318" y="340" text-anchor="middle">managers</text>
+  <text class="d" x="318" y="353" text-anchor="middle">+ assignee</text>
+  <rect class="panel" x="372" y="326" width="100" height="34" rx="9"/>
+  <text class="d" x="422" y="347" text-anchor="middle">managers</text>
+  <rect class="panel" x="476" y="326" width="100" height="34" rx="9"/>
+  <text class="d" x="526" y="340" text-anchor="middle">managers</text>
+  <text class="d" x="526" y="353" text-anchor="middle">+ assignee</text>
+  <rect class="panel" x="580" y="326" width="100" height="34" rx="9"/>
+  <text class="d" x="630" y="347" text-anchor="middle">managers</text>
+  <text class="d" x="734" y="347" text-anchor="middle">—</text>
+
+  <text class="d" x="400" y="386" text-anchor="middle">Managers = admins, and supervisors of this project. Assignee = the person the task is on.</text>
+  <text class="d" x="400" y="404" text-anchor="middle">From an assignee the server accepts the status and the checklist, and refuses every other field with a 403.</text>
+</svg>

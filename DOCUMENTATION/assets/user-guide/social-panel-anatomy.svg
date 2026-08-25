@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 470" width="800" height="470" role="img" aria-labelledby="social-panel-title social-panel-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="social-panel-title">The People and messages panel, part by part</title>
+  <desc id="social-panel-desc">One button in the sidebar footer shows how many people are online and carries the total unread badge. It opens a single panel holding a search field, the Messages list first, then the People list; clicking a person opens the direct conversation, the icon at the end of the row opens their member page.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="470" rx="10"/>
+
+  <text class="d" x="20" y="30">SIDEBAR FOOTER</text>
+  <text class="d" x="240" y="30">THE PANEL IT OPENS</text>
+  <text class="d" x="620" y="30">WHAT EACH PART DOES</text>
+
+  <rect class="band" x="240" y="42" width="360" height="410" rx="10"/>
+
+  <!-- Colonne de gauche : le pied de sidebar -->
+  <rect class="panel-a" x="20" y="54" width="180" height="46" rx="9"/>
+  <text class="t" x="34" y="76">Online · 4</text>
+  <rect class="panel-w" x="160" y="64" width="26" height="16" rx="8"/>
+  <text class="l" x="173" y="77" text-anchor="middle">3</text>
+  <text class="d" x="34" y="92">one button, both lists</text>
+
+  <path class="conn-a" d="M200 77 L232 77" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="20" y="130" width="180" height="46" rx="9"/>
+  <text class="l" x="34" y="152">Your avatar</text>
+  <text class="d" x="34" y="168">status dot, click to change</text>
+
+  <rect class="panel-o" x="20" y="190" width="180" height="46" rx="9"/>
+  <text class="l" x="34" y="212">Available</text>
+  <text class="d" x="34" y="228">Away · Do not disturb</text>
+
+  <!-- Le panneau -->
+  <rect class="panel" x="254" y="58" width="270" height="34" rx="9"/>
+  <text class="l" x="268" y="80">Search people or threads</text>
+  <rect class="panel" x="534" y="58" width="52" height="34" rx="9"/>
+  <text class="t" x="560" y="80" text-anchor="middle">+</text>
+
+  <text class="d" x="254" y="116">MESSAGES</text>
+
+  <rect class="panel" x="254" y="124" width="332" height="46" rx="9"/>
+  <text class="l" x="268" y="146">Retake · SH0420</text>
+  <text class="d" x="268" y="162">3 members · on it, v004 tonight</text>
+  <rect class="panel-w" x="546" y="136" width="26" height="16" rx="8"/>
+  <text class="l" x="559" y="149" text-anchor="middle">2</text>
+
+  <rect class="panel" x="254" y="178" width="332" height="46" rx="9"/>
+  <text class="l" x="268" y="200">Nina Bertrand</text>
+  <text class="d" x="268" y="216">you: sending the EXR sequence</text>
+
+  <text class="d" x="254" y="246">PEOPLE</text>
+
+  <rect class="panel" x="254" y="254" width="332" height="46" rx="9"/>
+  <text class="l" x="268" y="276">Marc Oliveira</text>
+  <text class="d" x="268" y="292">compositing · online</text>
+  <rect class="panel-a" x="532" y="262" width="46" height="30" rx="9"/>
+  <text class="m" x="555" y="281" text-anchor="middle">/users</text>
+
+  <rect class="panel" x="254" y="308" width="332" height="46" rx="9"/>
+  <text class="l" x="268" y="330">Aya Tanaka</text>
+  <text class="d" x="268" y="346">layout · active 2 h ago</text>
+
+  <text class="d" x="254" y="384">The icon at the end of a row opens the member page.</text>
+  <text class="d" x="254" y="402">Threads come first — that is what you reopen.</text>
+  <text class="d" x="254" y="420">Email addresses never appear in this list, for any role.</text>
+
+  <!-- Légendes de droite -->
+  <path class="conn" d="M586 79 L612 79" marker-end="url(#arrow)"/>
+  <text class="d" x="620" y="72">Filters threads and people</text>
+  <text class="d" x="620" y="86">in the same pass</text>
+
+  <path class="conn" d="M586 92 L604 92 L604 116 L612 116" marker-end="url(#arrow)"/>
+  <text class="d" x="620" y="110">The + names a group</text>
+  <text class="d" x="620" y="124">and picks its members</text>
+
+  <path class="conn" d="M586 147 L612 147" marker-end="url(#arrow)"/>
+  <text class="d" x="620" y="141">Unread badge, also summed</text>
+  <text class="d" x="620" y="155">on the sidebar button</text>
+
+  <path class="conn" d="M586 201 L612 201" marker-end="url(#arrow)"/>
+  <text class="d" x="620" y="195">Right-click a thread</text>
+  <text class="d" x="620" y="209">to leave it</text>
+
+  <path class="conn-a" d="M586 277 L612 277" marker-end="url(#arrow-a)"/>
+  <text class="d" x="620" y="271">Click a name and the</text>
+  <text class="d" x="620" y="285">direct thread opens</text>
+
+  <path class="conn" d="M586 331 L612 331" marker-end="url(#arrow)"/>
+  <text class="d" x="620" y="325">Right-click a person</text>
+  <text class="d" x="620" y="339">for Send a message</text>
+</svg>

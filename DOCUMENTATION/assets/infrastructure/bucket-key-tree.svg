@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 688" width="800" height="688" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">One bucket, three families of key</title>
+  <desc id="fig-desc">The single bucket holds the untouched originals under projects/, everything a machine produced under derived/ keyed by media id, and the studio-wide, per-user and incident objects under their own prefixes. Each key is tagged with the process that writes it.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="688" rx="10"/>
+
+  <rect class="panel-a" x="20" y="30" width="340" height="46" rx="9"/>
+  <text class="t" x="190" y="52" text-anchor="middle">s3://&lt;S3_BUCKET&gt;/</text>
+  <text class="d" x="190" y="68" text-anchor="middle">default review — no bucket per project</text>
+  <path class="conn" d="M190 76 L190 92" marker-end="url(#arrow)"/>
+
+  <text class="d" x="764" y="50" text-anchor="end">written by: browser · worker · API</text>
+  <text class="d" x="764" y="66" text-anchor="end">browser = presigned PUT, straight to MinIO</text>
+
+  <!-- Famille 1 : originaux -->
+  <rect class="band" x="20" y="96" width="760" height="112" rx="10"/>
+  <text class="t" x="40" y="120">Originals</text>
+  <text class="m" x="120" y="120">projects/{slug}/{shots/{seq}/{shot} | assets/{asset}}/{version}/{mediaId}/</text>
+
+  <text class="m" x="56" y="140">&lt;filename&gt;</text>
+  <text class="d" x="330" y="140">the uploaded file — never modified afterwards</text>
+  <text class="d" x="764" y="140" text-anchor="end">browser</text>
+
+  <text class="m" x="56" y="158">frames/&lt;frame&gt;</text>
+  <text class="d" x="330" y="158">image-sequence frames, up to 10 000 per media</text>
+  <text class="d" x="764" y="158" text-anchor="end">browser</text>
+
+  <text class="m" x="56" y="176">sequence.json</text>
+  <text class="d" x="330" y="176">delivery manifest — finds the delivery without the DB</text>
+  <text class="d" x="764" y="176" text-anchor="end">API</text>
+
+  <text class="m" x="56" y="194">boards/project/… , boards/asset/…</text>
+  <text class="d" x="330" y="194">board images, filed under the numeric project id</text>
+  <text class="d" x="764" y="194" text-anchor="end">browser</text>
+
+  <!-- Famille 2 : dérivés -->
+  <rect class="band" x="20" y="224" width="760" height="220" rx="10"/>
+  <text class="t" x="40" y="248">Derived</text>
+  <text class="m" x="120" y="248">derived/{mediaId}/</text>
+
+  <text class="m" x="56" y="268">hls/master.m3u8 , &lt;h&gt;p.m3u8 , *.ts</text>
+  <text class="d" x="330" y="268">the adaptive ladder — segments bypass the API</text>
+  <text class="d" x="764" y="268" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="286">proxy.mp4 , proxy-trim.mp4</text>
+  <text class="d" x="330" y="286">MP4 fallback, and the trimmed variant</text>
+  <text class="d" x="764" y="286" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="304">proxy.jpg</text>
+  <text class="d" x="330" y="304">full-size web proxy for EXR, DPX, TIFF, TGA</text>
+  <text class="d" x="764" y="304" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="322">thumbnail.jpg | .png | .webp</text>
+  <text class="d" x="330" y="322">worker writes .jpg; a chosen still keeps its type</text>
+  <text class="d" x="764" y="322" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="340">timeline-sprite.jpg</text>
+  <text class="d" x="330" y="340">hover-scrub sprite sheet</text>
+  <text class="d" x="764" y="340" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="358">client.mp4</text>
+  <text class="d" x="330" y="358">slate and burn-ins — hardened shares only</text>
+  <text class="d" x="764" y="358" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="376">model.glb</text>
+  <text class="d" x="330" y="376">converted 3D: USD, FBX, OBJ, DAE, STL, glTF</text>
+  <text class="d" x="764" y="376" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="394">splat-mask.bin , splat-subset.bin</text>
+  <text class="d" x="330" y="394">non-destructive splat edits, replayed for everyone</text>
+  <text class="d" x="764" y="394" text-anchor="end">API</text>
+
+  <text class="m" x="56" y="412">reference-&lt;uuid&gt;.&lt;ext&gt;</text>
+  <text class="d" x="330" y="412">review reference images</text>
+  <text class="d" x="764" y="412" text-anchor="end">API</text>
+
+  <text class="m" x="56" y="430">derived/timeline/{id}/master.mp4</text>
+  <text class="d" x="330" y="430">auto-cut timeline export</text>
+  <text class="d" x="764" y="430" text-anchor="end">worker</text>
+
+  <!-- Famille 3 : studio, personnes, incidents -->
+  <rect class="band" x="20" y="460" width="760" height="184" rx="10"/>
+  <text class="t" x="40" y="484">Studio, people, incidents</text>
+  <text class="m" x="232" y="484">studio/ · branding/ · avatars/ · entity-thumbs/ · comments/ · quarantine/</text>
+
+  <text class="m" x="56" y="504">studio/hdris/&lt;uuid&gt;.exr|.hdr</text>
+  <text class="d" x="330" y="504">HDRI library, shared by every 3D review</text>
+  <text class="d" x="764" y="504" text-anchor="end">API</text>
+
+  <text class="m" x="56" y="522">studio/ocio/&lt;uuid&gt;.ocio</text>
+  <text class="d" x="330" y="522">the installed colour-management config</text>
+  <text class="d" x="764" y="522" text-anchor="end">API</text>
+
+  <text class="m" x="56" y="540">studio/ocio/luts/{configId}/&lt;view&gt;.cube</text>
+  <text class="d" x="330" y="540">display LUTs baked by the ocio-bake job</text>
+  <text class="d" x="764" y="540" text-anchor="end">worker</text>
+
+  <text class="m" x="56" y="558">branding/logo-… , login-bg-… , sso-…</text>
+  <text class="d" x="330" y="558">studio identity, login page, SSO button</text>
+  <text class="d" x="764" y="558" text-anchor="end">API</text>
+
+  <text class="m" x="56" y="576">avatars/{userId}.&lt;ext&gt;</text>
+  <text class="d" x="330" y="576">profile picture</text>
+  <text class="d" x="764" y="576" text-anchor="end">browser</text>
+
+  <text class="m" x="56" y="594">entity-thumbs/{kind}/{id}.&lt;ext&gt;</text>
+  <text class="d" x="330" y="594">hand-picked sequence, shot and asset stills</text>
+  <text class="d" x="764" y="594" text-anchor="end">browser</text>
+
+  <text class="m" x="56" y="612">comments/attachments/{userId}/…</text>
+  <text class="d" x="330" y="612">images and voice notes on review threads</text>
+  <text class="d" x="764" y="612" text-anchor="end">browser</text>
+
+  <text class="m" x="56" y="630">quarantine/{mediaId}/&lt;name&gt;</text>
+  <text class="d" x="330" y="630">moved aside by an antivirus detection</text>
+  <text class="d" x="764" y="630" text-anchor="end">worker</text>
+
+  <text class="d" x="400" y="668" text-anchor="middle">Derived objects are keyed by media id, never beside the original — renaming a project never orphans a derivative.</text>
+</svg>

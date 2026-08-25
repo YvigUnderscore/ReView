@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 356" width="800" height="356" role="img" aria-labelledby="afr-title afr-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="afr-title">When a form control counts as anonymous</title>
+  <desc id="afr-desc">Any of aria-label, an id, a title, a placeholder, an enclosing label or spread props gives a control a name, and the check ignores it. A control with none of them is counted: twenty-four remain today, eleven of them in the ShotGrid panels, and the cap may only go down.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="800" height="356" rx="10"/>
+
+  <text class="d" x="20" y="30">WHEN A FIELD COUNTS AS ANONYMOUS</text>
+
+  <!-- Nommés : ignorés par le compte -->
+  <rect class="band" x="16" y="42" width="386" height="208" rx="10"/>
+  <text class="a ok" x="32" y="64">NAMED — NOT COUNTED</text>
+
+  <rect class="panel" x="28" y="76" width="362" height="28" rx="9"/>
+  <text class="m" x="40" y="94">&lt;select aria-label="Status"&gt;</text>
+  <text class="d" x="378" y="94" text-anchor="end">Status, combo box</text>
+
+  <rect class="panel" x="28" y="109" width="362" height="28" rx="9"/>
+  <text class="m" x="40" y="127">&lt;input id="smtpHost"&gt;</text>
+  <text class="d" x="378" y="127" text-anchor="end">the associated label is read</text>
+
+  <rect class="panel" x="28" y="142" width="362" height="28" rx="9"/>
+  <text class="m" x="40" y="160">&lt;input {...props}&gt;</text>
+  <text class="d" x="378" y="160" text-anchor="end">the primitive forwards the name</text>
+
+  <rect class="panel" x="28" y="175" width="362" height="28" rx="9"/>
+  <text class="m" x="40" y="193">&lt;label&gt;Name&lt;input/&gt;</text>
+  <text class="d" x="378" y="193" text-anchor="end">the enclosing label names it</text>
+
+  <rect class="panel" x="28" y="208" width="362" height="28" rx="9"/>
+  <text class="m" x="40" y="226">&lt;input type="hidden"&gt;</text>
+  <text class="d" x="378" y="226" text-anchor="end">removed from the a11y tree</text>
+
+  <!-- Anonyme : compté -->
+  <rect class="band" x="414" y="42" width="370" height="208" rx="10"/>
+  <text class="a no" x="430" y="64">ANONYMOUS — COUNTED</text>
+
+  <rect class="panel-d" x="426" y="76" width="344" height="46" rx="9"/>
+  <text class="m" x="438" y="98">&lt;select&gt;</text>
+  <text class="d" x="438" y="114">announced as combo box, and nothing else</text>
+
+  <text class="d" x="430" y="146">Eight anonymous selects in one ShotGrid panel</text>
+  <text class="d" x="430" y="162">are announced identically: nothing tells them apart.</text>
+
+  <text class="d" x="430" y="190">jsx-a11y does not see it: label-has-associated-control</text>
+  <text class="d" x="430" y="206">only fires when a label already exists, and</text>
+  <text class="d" x="430" y="222">control-has-associated-label is in the strict preset.</text>
+
+  <!-- Cliquet -->
+  <rect class="panel" x="16" y="264" width="768" height="76" rx="10"/>
+  <text class="l" x="32" y="286">The cap: 24 anonymous fields today, and it may only go down.</text>
+
+  <rect class="band" x="32" y="300" width="150" height="30" rx="9"/>
+  <text class="d" x="44" y="319">ShotGrid panels</text>
+  <text class="l" x="170" y="319" text-anchor="end">11</text>
+
+  <rect class="band" x="190" y="300" width="150" height="30" rx="9"/>
+  <text class="d" x="202" y="319">project &amp; shot</text>
+  <text class="l" x="328" y="319" text-anchor="end">5</text>
+
+  <rect class="band" x="348" y="300" width="268" height="30" rx="9"/>
+  <text class="d" x="360" y="319">comments, colour, upload, timeline</text>
+  <text class="l" x="604" y="319" text-anchor="end">5</text>
+
+  <rect class="band" x="624" y="300" width="150" height="30" rx="9"/>
+  <text class="d" x="636" y="319">admin</text>
+  <text class="l" x="762" y="319" text-anchor="end">3</text>
+</svg>

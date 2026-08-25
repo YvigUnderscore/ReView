@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 620" width="800" height="620" role="img" aria-labelledby="qvc-title qvc-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="qvc-title">Queues declared, consumers started</title>
+  <desc id="qvc-desc">Eight queues are declared in the backend, but the worker container starts only six consumers: spatial-thumb and ocio-bake have no consumer, so their jobs stay in the waiting state.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="620" rx="10"/>
+
+  <text class="d" x="30" y="30">DECLARED — services/JobService.ts</text>
+  <text class="d" x="440" y="30">STARTED — node dist/workers/ffmpeg.worker.js</text>
+
+  <!-- Ligne 1 : media-processing -->
+  <rect class="panel-a" x="30" y="44" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="64">media-processing</text>
+  <text class="d" x="44" y="80">transcode, thumbnail, convert3d, trim, scan</text>
+  <path class="conn-a" d="M330 67 L440 67" marker-end="url(#arrow-a)"/>
+  <rect class="panel-a" x="440" y="44" width="330" height="46" rx="9"/>
+  <text class="m" x="454" y="64">ffmpeg.worker</text>
+  <text class="d" x="454" y="80">concurrency 2 — two transcodes at once</text>
+
+  <!-- Ligne 2 : storage-cleanup -->
+  <rect class="panel" x="30" y="102" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="122">storage-cleanup</text>
+  <text class="d" x="44" y="138">retry of MinIO deletions that failed</text>
+  <path class="conn" d="M330 125 L440 125" marker-end="url(#arrow)"/>
+  <rect class="panel" x="440" y="102" width="330" height="46" rx="9"/>
+  <text class="m" x="454" y="122">storageCleanup.worker</text>
+  <text class="d" x="454" y="138">concurrency 2 — 8 attempts per job</text>
+
+  <!-- Ligne 3 : webhooks -->
+  <rect class="panel" x="30" y="160" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="180">webhooks</text>
+  <text class="d" x="44" y="196">outgoing HTTP deliveries</text>
+  <path class="conn" d="M330 183 L440 183" marker-end="url(#arrow)"/>
+  <rect class="panel" x="440" y="160" width="330" height="46" rx="9"/>
+  <text class="m" x="454" y="180">webhook.worker</text>
+  <text class="d" x="454" y="196">concurrency 3 — 5 attempts per job</text>
+
+  <!-- Ligne 4 : timeline-export -->
+  <rect class="panel" x="30" y="218" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="238">timeline-export</text>
+  <text class="d" x="44" y="254">one cut rendered to a single file</text>
+  <path class="conn" d="M330 241 L440 241" marker-end="url(#arrow)"/>
+  <rect class="panel" x="440" y="218" width="330" height="46" rx="9"/>
+  <text class="m" x="454" y="238">timelineExport.worker</text>
+  <text class="d" x="454" y="254">concurrency 1 — deterministic job id</text>
+
+  <!-- Ligne 5 : shotgrid -->
+  <rect class="panel" x="30" y="276" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="296">shotgrid</text>
+  <text class="d" x="44" y="312">events, polling, reconcile, writes</text>
+  <path class="conn" d="M330 299 L440 299" marker-end="url(#arrow)"/>
+  <rect class="panel" x="440" y="276" width="330" height="46" rx="9"/>
+  <text class="m" x="454" y="296">shotgrid.worker</text>
+  <text class="d" x="454" y="312">concurrency 2 — poses its repeatables</text>
+
+  <!-- Ligne 6 : maintenance -->
+  <rect class="panel" x="30" y="334" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="354">maintenance</text>
+  <text class="d" x="44" y="370">digest, weekly report, purges</text>
+  <path class="conn" d="M330 357 L440 357" marker-end="url(#arrow)"/>
+  <rect class="panel" x="440" y="334" width="330" height="46" rx="9"/>
+  <text class="m" x="454" y="354">maintenance.worker</text>
+  <text class="d" x="454" y="370">concurrency 1 — one sweep at a time</text>
+
+  <!-- Lignes 7 et 8 : les deux files sans consommateur -->
+  <rect class="panel-d" x="30" y="392" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="412">spatial-thumb</text>
+  <text class="d" x="44" y="428">enqueued for every 3D and splat media</text>
+  <path class="conn-o" d="M330 415 L440 415" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="30" y="450" width="300" height="46" rx="9"/>
+  <text class="m" x="44" y="470">ocio-bake</text>
+  <text class="d" x="44" y="486">declared in workers/ocio/queue.ts</text>
+  <path class="conn-o" d="M330 473 L440 473" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="440" y="392" width="330" height="104" rx="9"/>
+  <text class="t" x="454" y="418">Nothing starts them</text>
+  <text class="d" x="454" y="438">startSpatialThumbWorker() and startOcioBakeWorker()</text>
+  <text class="d" x="454" y="454">are exported but never called outside tests.</text>
+  <text class="d no" x="454" y="476">Jobs pile up in the waiting state for ever.</text>
+
+  <!-- Bandeau : où ces files se voient, et où elles ne se voient pas -->
+  <rect class="band" x="30" y="516" width="740" height="88" rx="10"/>
+  <text class="l" x="48" y="544">Prometheus gauges</text>
+  <text class="d" x="48" y="562">all 7 declared queues;</text>
+  <text class="d" x="48" y="578">ocio-bake has none</text>
+
+  <text class="l" x="298" y="544">Admin, Maintenance, Jobs</text>
+  <text class="d" x="298" y="562">media, storage-cleanup</text>
+  <text class="d" x="298" y="578">and webhooks only</text>
+
+  <text class="l" x="548" y="544">Worker /metrics</text>
+  <text class="d" x="548" y="562">worker:9101 is never</text>
+  <text class="d" x="548" y="578">opened by the worker</text>
+</svg>

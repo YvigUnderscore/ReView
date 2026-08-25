@@ -3,6 +3,29 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08-23 — The manual, rewritten and illustrated
+
+- **Documentation you can read by chapter.** The `/docs` page no longer lists seventy pages
+  in one column: sections fold and unfold, the one you are in opens by itself, and the
+  chapters of the open page appear underneath — the one you are reading highlights as you
+  scroll. Each page opens on a proper header (title, one-line summary, date in your own
+  language) and closes on the previous and next page, so the manual can be read straight
+  through.
+- **144 diagrams.** Every page now carries one to three drawings: the shape of a show, the
+  anatomy of the video player, what a share link exposes, how a job travels through the
+  workers, which value actually reaches the mail relay. They follow the dark theme, and they
+  are checked — a figure that does not scale, has no title for a screen reader, or is missing
+  its dark variant fails the build.
+- **Notes, warnings and cautions stand out.** The manual now uses coloured callouts for the
+  thing you must know before acting, and the label is in your language.
+- **Every page was re-read against the code.** Seventy pages, one by one: 191 statements that
+  no longer matched the product were corrected, and what shipped without being written down —
+  cursor pagination, EXR and DPX sequences, colour management on the pixels, the public API
+  v1 and its Python client, the installer and its rollback, per-project webhooks, note export
+  to CSV, EDL and OTIO — is documented.
+- **The manual checks itself.** Broken internal links, dead anchors, missing images and
+  malformed figures now fail the validation suite instead of waiting for a reader to click.
+
 ## 2026-08-21 — ShotGrid statuses, assignment by right-click, better emails
 
 - **Statuses travel again, both ways.** Twenty confirmed defects were breaking the chain

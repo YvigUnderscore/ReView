@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 490" width="800" height="490" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The life of one outgoing webhook delivery</title>
+  <desc id="fig-desc">An event emitted in the service layer is matched against the subscribers by name and by project scope, opens a delivery row, and is posted signed. A success stores the status and resets the failure streak; a failure is retried up to five times, and five exhausted deliveries in a row deactivate the webhook until an administrator re-enables it.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="490" rx="10"/>
+
+  <rect class="panel" x="24" y="52" width="180" height="56" rx="9"/>
+  <text class="l" x="114" y="76" text-anchor="middle">Event emitted</text>
+  <text class="d" x="114" y="92" text-anchor="middle">in the service layer</text>
+
+  <path class="conn" d="M204 80 L232 80" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="236" y="52" width="212" height="56" rx="9"/>
+  <text class="l" x="342" y="76" text-anchor="middle">Subscriber match</text>
+  <text class="d" x="342" y="92" text-anchor="middle">event name and project scope</text>
+
+  <path class="conn" d="M448 80 L476 80" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="480" y="52" width="180" height="56" rx="9"/>
+  <text class="l" x="570" y="76" text-anchor="middle">Delivery row opened</text>
+  <text class="d" x="570" y="92" text-anchor="middle">then queued on the worker</text>
+
+  <path class="conn" d="M570 108 L570 124 L400 124 L400 136" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="140" y="140" width="520" height="84" rx="9"/>
+  <text class="t" x="400" y="164" text-anchor="middle">Signed POST to the endpoint</text>
+  <text class="m" x="400" y="182" text-anchor="middle">X-ReView-Signature: sha256=HMAC(secret, timestamp.body)</text>
+  <text class="d" x="400" y="198" text-anchor="middle">plus X-ReView-Event, X-ReView-Timestamp and X-ReView-Delivery</text>
+  <text class="d" x="400" y="214" text-anchor="middle">10 s timeout · no redirects · hostname resolved again, refused if private</text>
+
+  <path class="conn" d="M280 224 L280 240 L174 240 L174 248" marker-end="url(#arrow)"/>
+  <text class="a" x="256" y="234" text-anchor="middle">2xx</text>
+
+  <path class="conn" d="M520 224 L520 240 L626 240 L626 248" marker-end="url(#arrow)"/>
+  <text class="a" x="560" y="234" text-anchor="middle">otherwise</text>
+
+  <rect class="panel" x="24" y="252" width="300" height="56" rx="9"/>
+  <text class="t ok" x="174" y="276" text-anchor="middle">Delivered</text>
+  <text class="d" x="174" y="292" text-anchor="middle">lastStatus stored · failureStreak back to 0</text>
+
+  <rect class="panel-w" x="476" y="252" width="300" height="56" rx="9"/>
+  <text class="t" x="626" y="276" text-anchor="middle">Retry, up to 5 attempts</text>
+  <text class="d" x="626" y="292" text-anchor="middle">exponential backoff from 10 s</text>
+
+  <path class="conn" d="M776 280 L788 280 L788 182 L664 182" marker-end="url(#arrow)"/>
+  <text class="d" x="740" y="176" text-anchor="end">next attempt</text>
+
+  <path class="conn" d="M626 308 L626 332" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="476" y="336" width="300" height="52" rx="9"/>
+  <text class="l" x="626" y="358" text-anchor="middle">Exhausted</text>
+  <text class="d" x="626" y="374" text-anchor="middle">the fifth attempt failed · failureStreak + 1</text>
+
+  <path class="conn" d="M626 388 L626 404" marker-end="url(#arrow)"/>
+  <text class="a" x="638" y="401" text-anchor="start">failureStreak ≥ 5</text>
+
+  <rect class="panel-d" x="476" y="408" width="300" height="56" rx="9"/>
+  <text class="t no" x="626" y="432" text-anchor="middle">Webhook deactivated</text>
+  <text class="d" x="626" y="448" text-anchor="middle">nothing leaves until an admin re-enables it</text>
+
+  <rect class="panel-o" x="24" y="340" width="420" height="124" rx="9"/>
+  <text class="l" x="42" y="366">Every attempt leaves a row</text>
+  <text class="d" x="42" y="388">GET /api/admin/webhooks/:id/deliveries — cursor, 1 to 100</text>
+  <text class="d" x="42" y="406">A lost delivery can be replayed: a new row, the same event</text>
+  <text class="d" x="42" y="424">and payload, audited as WEBHOOK_REPLAY.</text>
+  <text class="d" x="42" y="442">Replay is refused while the webhook is inactive, and</text>
+  <text class="d" x="42" y="460">re-enabling it resets the failure streak.</text>
+</svg>

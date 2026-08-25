@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 376" width="800" height="376" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Where a pasted image lands in an image review, and when it is visible</title>
+  <desc id="fig-desc">The same paste takes two routes. With the focus outside a text field it becomes a staged reference, movable and resizable until the comment is sent, then frozen and drawn only while that comment is selected; historical references carrying no comment stay visible. With the caret in the composer it becomes an ordinary attachment on the comment.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="376" rx="10"/>
+
+  <!-- Le geste unique dont tout part -->
+  <rect class="panel" x="30" y="170" width="200" height="46" rx="9"/>
+  <text class="l" x="48" y="190">Ctrl+V, or the button</text>
+  <text class="d" x="48" y="206">Reference (Ctrl+V), top left</text>
+
+  <path class="conn-a" d="M230 193 L240 193 L240 83 L250 83" marker-end="url(#arrow-a)"/>
+  <path class="conn" d="M230 193 L240 193 L240 285 L250 285" marker-end="url(#arrow)"/>
+
+  <!-- Voie haute : référence épinglée dans le plan de l'image -->
+  <text class="a" x="250" y="48">FOCUS OUTSIDE A TEXT FIELD</text>
+
+  <rect class="panel-a" x="250" y="60" width="190" height="46" rx="9"/>
+  <text class="t" x="268" y="80">Staged reference</text>
+  <text class="d" x="268" y="96">yours until you send</text>
+  <text class="d" x="250" y="122">up to twelve per comment</text>
+  <text class="d" x="250" y="136">drag its body, resize by the</text>
+  <text class="d" x="250" y="150">bottom-right handle</text>
+
+  <path class="conn-a" d="M440 83 L560 83" marker-end="url(#arrow-a)"/>
+  <text class="a" x="500" y="76" text-anchor="middle">Send the comment</text>
+
+  <rect class="panel-a" x="560" y="60" width="210" height="46" rx="9"/>
+  <text class="t" x="578" y="80">Frozen reference</text>
+  <text class="d" x="578" y="96">position fixed server-side</text>
+  <text class="d" x="560" y="122">drawn only while its comment</text>
+  <text class="d" x="560" y="136">is selected; a manager can</text>
+  <text class="d" x="560" y="150">delete it with the bin icon</text>
+
+  <path class="conn-o" d="M770 83 L788 83 L788 191 L770 191"/>
+  <rect class="panel-o" x="560" y="168" width="210" height="46" rx="9"/>
+  <text class="l" x="578" y="188">Historical reference</text>
+  <text class="d" x="578" y="204">no comment — always visible</text>
+
+  <!-- Voie basse : pièce jointe ordinaire du commentaire -->
+  <text class="a" x="250" y="250">CARET INSIDE THE COMPOSER</text>
+
+  <rect class="panel" x="250" y="262" width="280" height="46" rx="9"/>
+  <text class="l" x="268" y="282">Attachment on the comment</text>
+  <text class="d" x="268" y="298">a thumbnail in the thread, not on the picture</text>
+  <text class="d" x="250" y="324">eight attachments at most; a clipboard format the server does not accept</text>
+  <text class="d" x="250" y="338">(BMP, AVIF, an empty type) is re-encoded to PNG before it is sent</text>
+
+  <text class="d" x="30" y="356">The two gestures are distinct on purpose: the ceiling, the ownership and the visibility rule all differ.</text>
+</svg>

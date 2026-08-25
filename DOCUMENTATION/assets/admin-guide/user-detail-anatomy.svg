@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640" role="img" aria-labelledby="userdetail-title userdetail-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="userdetail-title">The admin account page, panel by panel</title>
+  <desc id="userdetail-desc">The account page stacks a profile header over six panels: metrics, projects, active sessions, API tokens, recent activity and actions. Each panel is annotated with what it can and cannot do — the storage figure is shown against the account's own limit only, session revocation does not touch API tokens, and the Delete button disables the account rather than erasing it.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="640" rx="10"/>
+
+  <text class="d" x="25" y="30">/admin/users/{id} — PANEL BY PANEL</text>
+
+  <rect class="panel-a" x="25" y="44" width="420" height="56" rx="9"/>
+  <text class="t" x="45" y="68">Display name · role · online · 2FA</text>
+  <text class="d" x="45" y="86">email · job title · phone · sign-up · last activity</text>
+  <path class="conn-o" d="M445 72 L459 72"/>
+  <text class="d" x="465" y="62">identity as the studio directory shows it;</text>
+  <text class="d" x="465" y="78">the 2FA badge is a boolean, never the secret</text>
+
+  <rect class="panel" x="25" y="112" width="420" height="46" rx="9"/>
+  <text class="t" x="45" y="134">Metrics</text>
+  <text class="d" x="45" y="150">storage · media · versions · comments · tasks</text>
+  <path class="conn-o" d="M445 135 L459 135"/>
+  <text class="d" x="465" y="128">shown against the account’s OWN storageLimit;</text>
+  <text class="d" x="465" y="144">with none set the panel reads “no quota”.</text>
+  <text class="d" x="465" y="160">the studio default (storage_limit_user, 10 GB)</text>
+  <text class="d" x="465" y="176">applies at upload — admins are exempt from both</text>
+
+  <rect class="panel" x="25" y="188" width="420" height="46" rx="9"/>
+  <text class="t" x="45" y="210">Projects</text>
+  <text class="d" x="45" y="226">one row per membership · effective role · joined</text>
+  <path class="conn-o" d="M445 211 L459 211"/>
+  <text class="d" x="465" y="204">the override badge means the membership carries</text>
+  <text class="d" x="465" y="220">its own role; otherwise it is the global one.</text>
+  <text class="d" x="465" y="236">global ADMIN and SUPERVISOR reach every project</text>
+
+  <rect class="panel" x="25" y="264" width="420" height="46" rx="9"/>
+  <text class="t" x="45" y="286">Active sessions</text>
+  <text class="d" x="45" y="302">user agent · IP · last seen · Revoke / Revoke all</text>
+  <path class="conn-o" d="M445 287 L459 287"/>
+  <text class="d" x="465" y="280">revocation is effective in 30 s or less</text>
+  <text class="d no" x="465" y="296">sessions only — API tokens survive a revoke</text>
+  <text class="d" x="465" y="312">revoke those in API and Webhooks</text>
+
+  <rect class="panel" x="25" y="340" width="420" height="46" rx="9"/>
+  <text class="t" x="45" y="362">API tokens</text>
+  <text class="d" x="45" y="378">name · scopes · last use · expiry — read-only</text>
+  <path class="conn-o" d="M445 363 L459 363"/>
+  <text class="d" x="465" y="356">listed here, revoked elsewhere:</text>
+  <text class="d" x="465" y="372">Communications → API and Webhooks</text>
+
+  <rect class="panel" x="25" y="416" width="420" height="46" rx="9"/>
+  <text class="t" x="45" y="438">Recent activity</text>
+  <text class="d" x="45" y="454">the last 20 audit entries of this account</text>
+  <path class="conn-o" d="M445 439 L459 439"/>
+  <text class="d" x="465" y="432">linked to the entity when the type allows it</text>
+
+  <rect class="panel-d" x="25" y="492" width="420" height="46" rx="9"/>
+  <text class="t" x="45" y="514">Actions</text>
+  <text class="d" x="45" y="530">Edit · Delete</text>
+  <path class="conn-o" d="M445 515 L459 515"/>
+  <text class="d no" x="465" y="508">Delete sends DELETE /api/users/:id with no</text>
+  <text class="d no" x="465" y="524">?hard=true: the account is DISABLED — sessions</text>
+  <text class="d no" x="465" y="540">and tokens revoked, the history kept.</text>
+  <text class="d" x="465" y="556">permanent deletion is an explicit API gesture</text>
+
+  <rect class="band" x="25" y="576" width="750" height="46" rx="9"/>
+  <text class="d" x="400" y="600" text-anchor="middle">READ-ONLY EXCEPT SESSION REVOCATION — EVERY OTHER ACTION REUSES THE ORDINARY ENDPOINT, ITS RULES AND ITS AUDIT ENTRY</text>
+</svg>

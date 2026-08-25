@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650" width="800" height="650" role="img" aria-labelledby="visit-title visit-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="visit-title">One visit, one view: what happens when a client opens a share link</title>
+  <desc id="visit-desc">The browser calls /client/:token; a revoked, expired or unknown link answers the same 404. When a password is set, the unlock call is rate-limited to ten wrong tries per quarter of an hour. A share session valid for twenty-four hours is then issued, and issuing it consumes one view, counted atomically against the view limit. Every later request re-checks the link scope before a presigned URL is handed out.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="650" rx="10"/>
+
+  <text class="d" x="25" y="30">ONE VISIT, ONE VIEW</text>
+
+  <!-- Lignes de vie -->
+  <path class="conn-o" d="M105 78 L105 560"/>
+  <path class="conn-o" d="M305 78 L305 560"/>
+  <path class="conn-o" d="M505 78 L505 560"/>
+  <path class="conn-o" d="M700 78 L700 560"/>
+
+  <rect class="panel-a" x="25" y="44" width="160" height="34" rx="9"/>
+  <text class="l" x="105" y="66" text-anchor="middle">Client browser</text>
+  <rect class="panel" x="225" y="44" width="160" height="34" rx="9"/>
+  <text class="m" x="305" y="66" text-anchor="middle">/client/:token</text>
+  <rect class="panel" x="425" y="44" width="160" height="34" rx="9"/>
+  <text class="l" x="505" y="66" text-anchor="middle">ShareLink row</text>
+  <rect class="panel" x="620" y="44" width="160" height="34" rx="9"/>
+  <text class="l" x="700" y="66" text-anchor="middle">MinIO</text>
+
+  <text class="m" x="205" y="104" text-anchor="middle">GET /client/:token</text>
+  <path class="conn" d="M105 110 L299 110" marker-end="url(#arrow)"/>
+
+  <text class="l" x="405" y="140" text-anchor="middle">look up by token</text>
+  <path class="conn" d="M305 146 L499 146" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="200" y="158" width="430" height="48" rx="9"/>
+  <text class="t no" x="415" y="180" text-anchor="middle">revoked · expired · unknown → the same 404</text>
+  <text class="d" x="415" y="198" text-anchor="middle">an attacker cannot tell a live token from a dead one</text>
+
+  <text class="l" x="205" y="226" text-anchor="middle">POST /unlock — bcrypt compare</text>
+  <path class="conn" d="M105 232 L299 232" marker-end="url(#arrow)"/>
+  <text class="a" x="205" y="250" text-anchor="middle">only if the link carries a password</text>
+
+  <path class="conn" d="M305 268 L360 268 L360 292 L311 292" marker-end="url(#arrow)"/>
+  <text class="d" x="370" y="274">10 wrong tries / 15 min per IP and link</text>
+  <text class="d" x="370" y="290">→ SHARE_UNLOCK_FAIL in the audit log</text>
+
+  <text class="l" x="205" y="316" text-anchor="middle">share session — X-Share-Auth, 24 h</text>
+  <path class="conn" d="M305 322 L111 322" marker-end="url(#arrow)"/>
+  <text class="a" x="205" y="340" text-anchor="middle">one session = one view</text>
+
+  <text class="l" x="405" y="362" text-anchor="middle">viewCount + 1, capped by maxViews</text>
+  <path class="conn" d="M305 368 L499 368" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="545" y="380" width="235" height="48" rx="9"/>
+  <text class="t no" x="662" y="402" text-anchor="middle">limit reached → 410</text>
+  <text class="d" x="662" y="420" text-anchor="middle">open sessions keep working</text>
+
+  <text class="l" x="205" y="440" text-anchor="middle">media list, filtered by scope</text>
+  <path class="conn" d="M305 446 L111 446" marker-end="url(#arrow)"/>
+
+  <text class="m" x="205" y="472" text-anchor="middle">GET /media/:id/url</text>
+  <path class="conn" d="M105 478 L299 478" marker-end="url(#arrow)"/>
+  <text class="a" x="205" y="496" text-anchor="middle">the scope is checked again here</text>
+
+  <text class="l" x="500" y="516" text-anchor="middle">presign, read-only</text>
+  <path class="conn" d="M305 522 L694 522" marker-end="url(#arrow)"/>
+
+  <text class="l" x="400" y="542" text-anchor="middle">the file — no download route, no download button</text>
+  <path class="conn" d="M700 548 L111 548" marker-end="url(#arrow)"/>
+
+  <rect class="band" x="25" y="576" width="755" height="54" rx="9"/>
+  <text class="d" x="402" y="598" text-anchor="middle">AUDIT TRAIL — PUBLIC EVENTS CARRY THE IP AND THE LINK, NEVER A USER ID</text>
+  <text class="m" x="402" y="618" text-anchor="middle">SHARE_CREATE · SHARE_EMAIL · SHARE_VIEW · SHARE_UNLOCK_FAIL · SHARE_REVOKE</text>
+</svg>

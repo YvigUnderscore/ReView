@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" width="800" height="392" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">From a task's status to the family the gauges count</title>
+  <desc id="fig-desc">A task with no studio status is classified by its built-in value. A task with one is tested in order: isInactive puts it in a classification no gauge counts, isDone puts it in Done whatever its bridge says, and only then does the legacyStatus bridge decide — with an APPROVED bridge that is not terminal demoted to In review.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="392" rx="10"/>
+
+  <text class="d" x="24" y="30">HOW A STATUS PICKS ITS FAMILY</text>
+
+  <!-- La question posée à chaque tâche -->
+  <rect class="panel-a" x="24" y="140" width="166" height="46" rx="9"/>
+  <text class="t" x="107" y="162" text-anchor="middle">A task</text>
+  <text class="d" x="107" y="178" text-anchor="middle">status + pipelineStatusId</text>
+
+  <path class="conn" d="M190 163 L230 163" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="230" y="140" width="200" height="46" rx="9"/>
+  <text class="l" x="330" y="162" text-anchor="middle">A studio status?</text>
+  <text class="d" x="330" y="178" text-anchor="middle">pipelineStatusId set</text>
+
+  <text class="a" x="436" y="144">no</text>
+  <path class="conn" d="M430 150 L458 150 L458 71 L490 71" marker-end="url(#arrow)"/>
+  <text class="a" x="436" y="172">yes</text>
+  <path class="conn-a" d="M430 176 L468 176 L468 153 L490 153" marker-end="url(#arrow-a)"/>
+
+  <!-- Sans référentiel : l'énumération fait foi, comme avant -->
+  <rect class="panel" x="490" y="40" width="286" height="62" rx="9"/>
+  <text class="t" x="510" y="64">The built-in value decides</text>
+  <text class="m" x="510" y="82">TODO · IN_PROGRESS · PENDING_REVIEW</text>
+  <text class="m" x="510" y="96">APPROVED · RETAKE · REJECTED</text>
+
+  <!-- Avec référentiel : trois tests, dans cet ordre -->
+  <rect class="panel-w" x="490" y="130" width="286" height="46" rx="9"/>
+  <text class="t" x="510" y="152">isInactive?</text>
+  <text class="d" x="510" y="168">yes — inactive, counted in no gauge</text>
+
+  <path class="conn" d="M633 176 L633 196" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="490" y="196" width="286" height="46" rx="9"/>
+  <text class="t" x="510" y="218">isDone?</text>
+  <text class="d" x="510" y="234">yes — Done, whatever the bridge says</text>
+
+  <path class="conn" d="M633 242 L633 262" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="490" y="262" width="286" height="62" rx="9"/>
+  <text class="t" x="510" y="286">otherwise, the legacyStatus bridge</text>
+  <text class="d" x="510" y="304">an APPROVED bridge that is not isDone</text>
+  <text class="d" x="510" y="318">is demoted to In review</text>
+
+  <!-- D'où vient « inactive » -->
+  <rect class="panel-o" x="24" y="232" width="406" height="62" rx="9"/>
+  <text class="t" x="44" y="256">What inactive means</text>
+  <text class="m" x="44" y="274">omt · dis · ign · na · dcl</text>
+  <text class="d" x="44" y="288">written by the ShotGrid sync — a standalone studio never has one</text>
+
+  <text class="d" x="400" y="352" text-anchor="middle">Five families feed the gauges: To do, In progress, In review, Done, Set aside. The sixth classification, inactive, feeds none.</text>
+  <text class="d" x="400" y="370" text-anchor="middle">Without a studio status nothing changes — the built-in value has always decided, and still does.</text>
+</svg>

@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" width="800" height="430" role="img" aria-labelledby="h3t-title h3t-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="h3t-title">One playback, three tiers of authorization</title>
+  <desc id="h3t-desc">The player asks the API for the master playlist, which costs a full access check; the rendition playlist is authorized by a playback token and costs no query; segments are fetched from MinIO through nginx and never reach Node.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="430" rx="10"/>
+
+  <!-- Participants -->
+  <rect class="panel" x="16" y="26" width="146" height="34" rx="9"/>
+  <text class="t" x="89" y="48" text-anchor="middle">Player (hls.js)</text>
+  <rect class="panel" x="224" y="26" width="146" height="34" rx="9"/>
+  <text class="t" x="297" y="48" text-anchor="middle">API (Express)</text>
+  <rect class="panel" x="432" y="26" width="146" height="34" rx="9"/>
+  <text class="t" x="505" y="48" text-anchor="middle">nginx</text>
+  <rect class="panel-a" x="638" y="26" width="146" height="34" rx="9"/>
+  <text class="t" x="711" y="48" text-anchor="middle">MinIO</text>
+
+  <!-- Lignes de vie ; celles de l'API et de nginx sont interrompues là où un message les traverse -->
+  <path class="conn-o" d="M89 60 L89 344"/>
+  <path class="conn-o" d="M297 60 L297 238"/>
+  <path class="conn-o" d="M297 272 L297 306"/>
+  <path class="conn-o" d="M505 60 L505 306"/>
+  <path class="conn-o" d="M711 60 L711 344"/>
+
+  <!-- 1. Manifeste maître : le seul contrôle en base -->
+  <text class="a" x="193" y="84" text-anchor="middle">GET hls/master.m3u8</text>
+  <path class="conn" d="M89 92 L297 92" marker-end="url(#arrow)"/>
+  <text class="d" x="193" y="108" text-anchor="middle">3 queries + access log</text>
+
+  <text class="d" x="193" y="124" text-anchor="middle">master + ?pt= on each rendition</text>
+  <path class="conn" d="M297 132 L89 132" marker-end="url(#arrow)"/>
+
+  <!-- 2. Sous-playlist : jeton de lecture, zéro requête -->
+  <text class="a" x="193" y="164" text-anchor="middle">GET 720p.m3u8?pt=…</text>
+  <path class="conn" d="M89 172 L297 172" marker-end="url(#arrow)"/>
+  <text class="d" x="193" y="188" text-anchor="middle">token verified, zero queries</text>
+
+  <text class="d" x="193" y="204" text-anchor="middle">segment URIs become presigned URLs</text>
+  <path class="conn" d="M297 212 L89 212" marker-end="url(#arrow)"/>
+
+  <!-- 3. Segments : le stockage, à travers le cache du frontal -->
+  <text class="a" x="297" y="244" text-anchor="middle">GET …/hls/720p_000.ts?X-Amz-…</text>
+  <path class="conn-a" d="M89 252 L505 252" marker-end="url(#arrow-a)"/>
+  <text class="d" x="297" y="266" text-anchor="middle">the session token is never attached here</text>
+
+  <text class="a" x="608" y="284" text-anchor="middle">cache MISS: one read for all</text>
+  <path class="conn-a" d="M505 292 L711 292" marker-end="url(#arrow-a)"/>
+
+  <text class="d" x="400" y="318" text-anchor="middle">200 + immutable, cached 2 h, X-Cache-Status</text>
+  <path class="conn-a" d="M711 326 L89 326" marker-end="url(#arrow-a)"/>
+
+  <rect class="band" x="16" y="360" width="768" height="54" rx="10"/>
+  <text class="t" x="32" y="386">About 5 API requests per viewer for a ten-minute shot, instead of about 1 200.</text>
+  <text class="d" x="32" y="404">No video byte goes through Node; proxy_cache_lock turns twenty players starting together into one read from MinIO.</text>
+</svg>

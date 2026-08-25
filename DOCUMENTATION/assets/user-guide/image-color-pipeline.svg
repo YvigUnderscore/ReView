@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 404" width="800" height="404" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What the colour panel does to the pixels of a still image</title>
+  <desc id="fig-desc">A stack read from bottom to top: the original file in storage, the decoded image or its JPEG proxy, exposure, the display transform, viewing gamma, and the GPU render laid over the original. A side panel lists what the panel does not touch, and the three messages the panel can report about where the transform comes from.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="404" rx="10"/>
+
+  <text class="d" x="28" y="30">WHAT YOU END UP LOOKING AT</text>
+  <text class="d" x="496" y="30">WHAT IT DOES NOT TOUCH</text>
+
+  <!-- Sens de lecture de la pile : du fichier d'origine à l'image affichée -->
+  <path class="conn-a" d="M46 380 L46 40" marker-end="url(#arrow-a)"/>
+
+  <!-- Couche 6 (sommet) : rendu GPU superposé dans le plan zoomé -->
+  <rect class="panel-a" x="70" y="44" width="400" height="46" rx="9"/>
+  <text class="t" x="88" y="64">GPU (WebGL) render</text>
+  <text class="d" x="88" y="80">laid over the original — zoom, pan and notes stay untouched</text>
+
+  <rect class="panel" x="70" y="102" width="400" height="46" rx="9"/>
+  <text class="l" x="88" y="122">Viewing gamma</text>
+  <text class="d" x="88" y="138">applied after the display transform, to read into the shadows</text>
+
+  <rect class="panel-a" x="70" y="160" width="400" height="46" rx="9"/>
+  <text class="t" x="88" y="180">Display transform</text>
+  <text class="d" x="88" y="196">from the project OCIO couple — the switch turns the stack off</text>
+
+  <rect class="panel" x="70" y="218" width="400" height="46" rx="9"/>
+  <text class="l" x="88" y="238">Exposure</text>
+  <text class="d" x="88" y="254">a gain in stops applied in linear light — drag EV to scrub</text>
+
+  <rect class="panel" x="70" y="276" width="400" height="46" rx="9"/>
+  <text class="l" x="88" y="296">Decoded image</text>
+  <text class="d" x="88" y="312">EXR, DPX, TIFF, TGA: the worker's full-resolution JPEG proxy</text>
+
+  <!-- Couche 1 (base) : le fichier déposé, jamais réécrit -->
+  <rect class="panel" x="70" y="334" width="400" height="46" rx="9"/>
+  <text class="l" x="88" y="354">Original file in object storage</text>
+  <text class="d" x="88" y="370">never rewritten, whatever you do in this panel</text>
+
+  <!-- Colonne de droite : ce que la transformée laisse intact -->
+  <rect class="panel" x="496" y="44" width="280" height="200" rx="9"/>
+  <text class="t" x="514" y="66">Not affected</text>
+  <text class="l" x="514" y="92">Comparison overlays</text>
+  <text class="d" x="514" y="106">wipe, difference and side by side show</text>
+  <text class="d" x="514" y="120">both versions raw</text>
+  <text class="l" x="514" y="142">Download the image</text>
+  <text class="d" x="514" y="156">you get the file the viewer is served,</text>
+  <text class="d" x="514" y="170">untransformed</text>
+  <text class="l" x="514" y="192">Other reviewers</text>
+  <text class="d" x="514" y="206">the settings live in your browser and</text>
+  <text class="d" x="514" y="220">never reach the server</text>
+
+  <!-- Les trois états que le panneau affiche sous ses réglages -->
+  <rect class="panel" x="496" y="260" width="280" height="110" rx="9"/>
+  <text class="t" x="514" y="282">Where the transform comes from</text>
+  <circle class="ok" cx="520" cy="302" r="4"/>
+  <text class="l" x="534" y="306">LUT baked from the OCIO config</text>
+  <circle class="head" cx="520" cy="324" r="4"/>
+  <text class="l" x="534" y="328">Colorimetric conversion only</text>
+  <circle class="no" cx="520" cy="346" r="4"/>
+  <text class="l" x="534" y="350">No colour config on the project</text>
+</svg>

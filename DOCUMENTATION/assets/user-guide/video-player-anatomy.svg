@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 570" width="800" height="570" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Anatomy of the video player</title>
+  <desc id="fig-desc">Four stacked bands: the viewer zone with its zoom and pan layer and its corner badges, the timeline with comment avatars, ranges, markers and the loop segment, the audio waveform strip, and the transport divided into eleven cells.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="570" rx="10"/>
+
+  <text class="d" x="24" y="30">THE FOUR BANDS OF THE VIDEO PLAYER</text>
+
+  <!-- Bande 1 : zone du viewer -->
+  <rect class="panel-a" x="24" y="44" width="496" height="250" rx="9"/>
+  <rect class="panel" x="36" y="54" width="52" height="20" rx="6"/>
+  <text class="m" x="62" y="68" text-anchor="middle">145 %</text>
+  <rect class="panel" x="96" y="54" width="68" height="20" rx="6"/>
+  <text class="m" x="130" y="68" text-anchor="middle">speed x4</text>
+  <rect class="panel" x="172" y="54" width="70" height="20" rx="6"/>
+  <text class="m" x="207" y="68" text-anchor="middle">buffering</text>
+  <rect class="panel" x="250" y="54" width="76" height="20" rx="6"/>
+  <text class="m" x="288" y="68" text-anchor="middle">switching</text>
+
+  <rect class="panel-o" x="36" y="86" width="472" height="170" rx="9"/>
+  <text class="l" x="272" y="106" text-anchor="middle">zoom / pan layer — one transform</text>
+  <rect class="panel" x="48" y="116" width="448" height="26" rx="9"/>
+  <text class="d" x="60" y="133">the video element</text>
+  <rect class="panel" x="48" y="148" width="448" height="26" rx="9"/>
+  <text class="d" x="60" y="165">range annotations — visible for the whole in-to-out span</text>
+  <rect class="panel" x="48" y="180" width="448" height="26" rx="9"/>
+  <text class="d" x="60" y="197">composition guides — thirds, cross, 90 % and 80 % safe</text>
+  <rect class="panel" x="48" y="212" width="448" height="26" rx="9"/>
+  <text class="d" x="60" y="229">live participant cursors, in their author's colour</text>
+  <text class="a" x="272" y="278" text-anchor="middle">the A/B overlay takes the same transform, so both pictures stay superimposed</text>
+
+  <text class="t" x="540" y="62">VIEWER ZONE</text>
+  <text class="d" x="540" y="84">wheel zooms under the cursor</text>
+  <text class="d" x="540" y="102">middle-drag pans; left-drag</text>
+  <text class="d" x="540" y="120">pans once you are zoomed</text>
+  <text class="d" x="540" y="144">0 fits · 1 shows 100 %</text>
+  <text class="d" x="540" y="162">+ and − step the zoom</text>
+  <text class="d" x="540" y="186">a corner badge gives the rate</text>
+  <text class="d" x="540" y="204">and returns to fit in one click</text>
+  <text class="d" x="540" y="228">right-click opens the review</text>
+  <text class="d" x="540" y="246">menu, not the browser's</text>
+
+  <!-- Bande 2 : timeline -->
+  <rect class="panel" x="24" y="302" width="496" height="64" rx="9"/>
+  <rect class="band" x="36" y="322" width="472" height="28" rx="6"/>
+  <rect class="panel-o" x="36" y="322" width="44" height="28" rx="6"/>
+  <rect class="panel-o" x="470" y="322" width="38" height="28" rx="6"/>
+  <rect class="panel-a" x="180" y="324" width="96" height="24" rx="6"/>
+  <path class="conn-a" d="M160 320 L160 352"/>
+  <path class="conn-a" d="M330 320 L330 352"/>
+  <path class="conn-a" d="M430 320 L430 352"/>
+  <circle class="head" cx="140" cy="336" r="7"/>
+  <circle class="head" cx="300" cy="336" r="7"/>
+  <circle class="head-a" cx="390" cy="336" r="7"/>
+  <path class="conn-a" d="M236 314 L236 358"/>
+
+  <text class="t" x="540" y="316">TIMELINE</text>
+  <text class="d" x="540" y="336">comment avatars · ranges</text>
+  <text class="d" x="540" y="354">named markers · I/O segment</text>
+  <text class="d" x="540" y="372">shaded out-of-trim regions</text>
+
+  <!-- Bande 3 : forme d'onde -->
+  <rect class="panel" x="24" y="374" width="496" height="40" rx="9"/>
+  <rect class="head-a" x="40" y="391" width="7" height="6" rx="2"/>
+  <rect class="head-a" x="61" y="389" width="7" height="10" rx="2"/>
+  <rect class="head-a" x="82" y="386" width="7" height="16" rx="2"/>
+  <rect class="head-a" x="103" y="383" width="7" height="22" rx="2"/>
+  <rect class="head-a" x="124" y="387" width="7" height="14" rx="2"/>
+  <rect class="head-a" x="145" y="390" width="7" height="8" rx="2"/>
+  <rect class="head-a" x="166" y="385" width="7" height="18" rx="2"/>
+  <rect class="head-a" x="187" y="381" width="7" height="26" rx="2"/>
+  <rect class="head-a" x="208" y="384" width="7" height="20" rx="2"/>
+  <rect class="head-a" x="229" y="388" width="7" height="12" rx="2"/>
+  <rect class="head" x="250" y="389" width="7" height="9" rx="2"/>
+  <rect class="head" x="271" y="386" width="7" height="15" rx="2"/>
+  <rect class="head" x="292" y="382" width="7" height="24" rx="2"/>
+  <rect class="head" x="313" y="379" width="7" height="30" rx="2"/>
+  <rect class="head" x="334" y="385" width="7" height="18" rx="2"/>
+  <rect class="head" x="355" y="389" width="7" height="10" rx="2"/>
+  <rect class="head" x="376" y="387" width="7" height="14" rx="2"/>
+  <rect class="head" x="397" y="383" width="7" height="22" rx="2"/>
+  <rect class="head" x="418" y="386" width="7" height="16" rx="2"/>
+  <rect class="head" x="439" y="390" width="7" height="8" rx="2"/>
+  <rect class="head" x="460" y="388" width="7" height="12" rx="2"/>
+  <rect class="head" x="481" y="384" width="7" height="20" rx="2"/>
+  <rect class="head" x="502" y="389" width="7" height="10" rx="2"/>
+  <path class="conn-a" d="M247 378 L247 410"/>
+
+  <text class="t" x="540" y="396">WAVEFORM</text>
+  <text class="d" x="540" y="416">peaks computed at transcode</text>
+  <text class="d" x="540" y="434">time · click or drag to scrub</text>
+
+  <!-- Bande 4 : transport -->
+  <text class="d" x="24" y="460">TRANSPORT — left to right</text>
+  <rect class="panel" x="24" y="470" width="752" height="56" rx="9"/>
+  <path class="conn" d="M88 476 L88 520"/>
+  <path class="conn" d="M156 476 L156 520"/>
+  <path class="conn" d="M218 476 L218 520"/>
+  <path class="conn" d="M292 476 L292 520"/>
+  <path class="conn" d="M372 476 L372 520"/>
+  <path class="conn" d="M446 476 L446 520"/>
+  <path class="conn" d="M508 476 L508 520"/>
+  <path class="conn" d="M576 476 L576 520"/>
+  <path class="conn" d="M640 476 L640 520"/>
+  <path class="conn" d="M708 476 L708 520"/>
+  <text class="l" x="57" y="494" text-anchor="middle">play</text>
+  <text class="d" x="57" y="510" text-anchor="middle">pause</text>
+  <text class="l" x="122" y="494" text-anchor="middle">−1  +1</text>
+  <text class="d" x="122" y="510" text-anchor="middle">frame</text>
+  <text class="l" x="187" y="494" text-anchor="middle">loop</text>
+  <text class="d" x="187" y="510" text-anchor="middle">whole clip</text>
+  <text class="l" x="255" y="494" text-anchor="middle">frame</text>
+  <text class="m" x="255" y="510" text-anchor="middle">1012 / 1200</text>
+  <text class="l" x="332" y="494" text-anchor="middle">TC</text>
+  <text class="m" x="332" y="510" text-anchor="middle">00:00:42:11</text>
+  <text class="l" x="409" y="494" text-anchor="middle">I/O loop</text>
+  <text class="d" x="409" y="510" text-anchor="middle">chip and ×</text>
+  <text class="l" x="477" y="494" text-anchor="middle">fps</text>
+  <text class="d" x="477" y="510" text-anchor="middle">read-only</text>
+  <text class="l" x="542" y="494" text-anchor="middle">quality</text>
+  <text class="d" x="542" y="510" text-anchor="middle">1080p</text>
+  <text class="l" x="608" y="494" text-anchor="middle">volume</text>
+  <text class="d" x="608" y="510" text-anchor="middle">mute</text>
+  <text class="l" x="674" y="494" text-anchor="middle">expand</text>
+  <text class="d" x="674" y="510" text-anchor="middle">video only</text>
+  <text class="l" x="741" y="494" text-anchor="middle">maximize</text>
+  <text class="d" x="741" y="510" text-anchor="middle">whole block</text>
+
+  <text class="d" x="400" y="548" text-anchor="middle">The frame counter, the timecode and the fps field read the media — there is no native browser control bar.</text>
+</svg>

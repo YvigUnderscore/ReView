@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="token-scope-title token-scope-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="token-scope-title">What you tick when you create a personal API token</title>
+  <desc id="token-scope-desc">One row per domain served by the catalogue, with a read box and a write box; projects and events are read-only, and the standalone admin scope covers everything and clears the rest. Alongside the grid, the same form asks for a name, an optional project the token can never leave, an expiry, and your current password. The secret is shown once and opens the v1 integration API only.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="480" rx="10"/>
+
+  <text class="d" x="30" y="32">THE SCOPE GRID</text>
+  <text class="d" x="490" y="32">AND THE REST OF THE SAME FORM</text>
+
+  <rect class="panel" x="30" y="48" width="430" height="284" rx="9"/>
+  <text class="d" x="46" y="70">domain</text>
+  <text class="d" x="330" y="70" text-anchor="middle">read</text>
+  <text class="d" x="400" y="70" text-anchor="middle">write</text>
+
+  <text class="m" x="46" y="96">projects</text>
+  <rect class="panel" x="324" y="85" width="12" height="12" rx="3"/>
+  <text class="d" x="400" y="96" text-anchor="middle">—</text>
+
+  <text class="m" x="46" y="122">sequences</text>
+  <rect class="panel" x="324" y="111" width="12" height="12" rx="3"/>
+  <rect class="panel" x="394" y="111" width="12" height="12" rx="3"/>
+
+  <text class="m" x="46" y="148">shots</text>
+  <rect class="panel" x="324" y="137" width="12" height="12" rx="3"/>
+  <rect class="panel" x="394" y="137" width="12" height="12" rx="3"/>
+
+  <text class="m" x="46" y="174">assets</text>
+  <rect class="panel" x="324" y="163" width="12" height="12" rx="3"/>
+  <rect class="panel" x="394" y="163" width="12" height="12" rx="3"/>
+
+  <text class="m" x="46" y="200">tasks</text>
+  <rect class="panel" x="324" y="189" width="12" height="12" rx="3"/>
+  <rect class="panel" x="394" y="189" width="12" height="12" rx="3"/>
+
+  <text class="m" x="46" y="226">versions</text>
+  <rect class="panel" x="324" y="215" width="12" height="12" rx="3"/>
+  <rect class="panel" x="394" y="215" width="12" height="12" rx="3"/>
+
+  <text class="m" x="46" y="252">media</text>
+  <rect class="panel" x="324" y="241" width="12" height="12" rx="3"/>
+  <rect class="panel" x="394" y="241" width="12" height="12" rx="3"/>
+
+  <text class="m" x="46" y="278">comments</text>
+  <rect class="panel" x="324" y="267" width="12" height="12" rx="3"/>
+  <rect class="panel" x="394" y="267" width="12" height="12" rx="3"/>
+
+  <text class="m" x="46" y="304">events</text>
+  <rect class="panel" x="324" y="293" width="12" height="12" rx="3"/>
+  <text class="d" x="400" y="304" text-anchor="middle">—</text>
+
+  <rect class="panel-w" x="30" y="342" width="430" height="46" rx="9"/>
+  <rect class="panel" x="46" y="356" width="12" height="12" rx="3"/>
+  <text class="m" x="66" y="366">admin</text>
+  <text class="d" x="66" y="382">covers every domain, and nothing else may be ticked with it</text>
+
+  <rect class="panel-o" x="30" y="398" width="430" height="62" rx="9"/>
+  <text class="d" x="46" y="418">tick write → read of the same domain follows</text>
+  <text class="d" x="46" y="434">untick read → write goes with it</text>
+  <text class="d" x="46" y="450">tick admin → everything else is cleared</text>
+
+  <rect class="panel" x="490" y="48" width="280" height="60" rx="9"/>
+  <text class="l" x="506" y="72">Name</text>
+  <text class="d" x="506" y="90">what the token is for, up to 80 characters</text>
+
+  <rect class="panel" x="490" y="120" width="280" height="60" rx="9"/>
+  <text class="l" x="506" y="144">Project</text>
+  <text class="d" x="506" y="162">all projects, or one it can never leave</text>
+
+  <rect class="panel" x="490" y="192" width="280" height="60" rx="9"/>
+  <text class="l" x="506" y="216">Expiry</text>
+  <text class="d" x="506" y="234">30, 90 or 365 days — or never</text>
+
+  <rect class="panel-a" x="490" y="264" width="280" height="68" rx="9"/>
+  <text class="t" x="506" y="288">Current password</text>
+  <text class="d" x="506" y="306">required — without it the server answers</text>
+  <text class="m" x="506" y="322">401 CURRENT_PASSWORD_REQUIRED</text>
+
+  <rect class="panel-w" x="490" y="342" width="280" height="118" rx="9"/>
+  <text class="t" x="506" y="368">Shown once, then never again</text>
+  <text class="d" x="506" y="388">the server keeps only its SHA-256 hash</text>
+  <text class="d" x="506" y="406">a lost token is replaced, not recovered</text>
+  <text class="d" x="506" y="430">and it opens /api/v1 only, never /api</text>
+</svg>

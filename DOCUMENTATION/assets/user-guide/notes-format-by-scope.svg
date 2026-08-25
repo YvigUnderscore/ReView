@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 428" width="800" height="428" role="img" aria-labelledby="fmt-title fmt-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fmt-title">Which notes format each scope can produce, and where the control lives</title>
+  <desc id="fmt-desc">A single media exports a spreadsheet and a printable sheet; a playlist and an auto-cut timeline export those two plus an EDL and an OpenTimelineIO file. Asking for an EDL or an OTIO on a single media answers 400. The version and shot scopes exist on the REST route but no screen offers them today.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="428" rx="10"/>
+
+  <text class="d" x="30" y="30">WHICH FORMAT EACH SCOPE PRODUCES, AND WHERE THE CONTROL LIVES</text>
+
+  <rect class="band" x="224" y="48" width="364" height="44" rx="9"/>
+  <text class="d" x="268" y="68" text-anchor="middle">Spreadsheet</text>
+  <text class="d" x="268" y="84" text-anchor="middle">(CSV)</text>
+  <text class="d" x="360" y="68" text-anchor="middle">Printable</text>
+  <text class="d" x="360" y="84" text-anchor="middle">sheet</text>
+  <text class="d" x="452" y="68" text-anchor="middle">Edit list</text>
+  <text class="d" x="452" y="84" text-anchor="middle">(EDL)</text>
+  <text class="d" x="544" y="68" text-anchor="middle">OpenTimelineIO</text>
+  <text class="d" x="544" y="84" text-anchor="middle">(.otio)</text>
+  <text class="d" x="604" y="76">WHERE THE CONTROL LIVES</text>
+
+  <path class="conn" d="M316 96 L316 266"/>
+  <path class="conn" d="M408 96 L408 266"/>
+  <path class="conn" d="M500 96 L500 266"/>
+
+  <!-- Média isolé -->
+  <rect class="panel-a" x="30" y="96" width="190" height="54" rx="9"/>
+  <text class="l" x="44" y="120">Media</text>
+  <text class="d" x="44" y="137">one clip in review</text>
+  <rect class="panel" x="224" y="96" width="364" height="54" rx="9"/>
+  <circle class="ok" cx="268" cy="123" r="6"/>
+  <circle class="ok" cx="360" cy="123" r="6"/>
+  <path class="no" d="M446 119 L448 117 L452 121 L456 117 L458 119 L454 123 L458 127 L456 129 L452 125 L448 129 L446 127 L450 123 Z"/>
+  <path class="no" d="M538 119 L540 117 L544 121 L548 117 L550 119 L546 123 L550 127 L548 129 L544 125 L540 129 L538 127 L542 123 Z"/>
+  <text class="d" x="604" y="118">Review dock → Export panel,</text>
+  <text class="d" x="604" y="134">or right-click in the review</text>
+
+  <!-- Playlist -->
+  <rect class="panel" x="30" y="154" width="190" height="54" rx="9"/>
+  <text class="l" x="44" y="178">Playlist</text>
+  <text class="d" x="44" y="195">dailies, in order</text>
+  <rect class="panel" x="224" y="154" width="364" height="54" rx="9"/>
+  <circle class="ok" cx="268" cy="181" r="6"/>
+  <circle class="ok" cx="360" cy="181" r="6"/>
+  <circle class="ok" cx="452" cy="181" r="6"/>
+  <circle class="ok" cx="544" cy="181" r="6"/>
+  <text class="d" x="604" y="176">Right-click the playlist</text>
+  <text class="d" x="604" y="192">page header</text>
+
+  <!-- Montage -->
+  <rect class="panel" x="30" y="212" width="190" height="54" rx="9"/>
+  <text class="l" x="44" y="236">Auto-cut timeline</text>
+  <text class="d" x="44" y="253">the montage</text>
+  <rect class="panel" x="224" y="212" width="364" height="54" rx="9"/>
+  <circle class="ok" cx="268" cy="239" r="6"/>
+  <circle class="ok" cx="360" cy="239" r="6"/>
+  <circle class="ok" cx="452" cy="239" r="6"/>
+  <circle class="ok" cx="544" cy="239" r="6"/>
+  <text class="d" x="604" y="234">Montage dock →</text>
+  <text class="d" x="604" y="250">Review notes</text>
+
+  <!-- Portées sans commande -->
+  <rect class="panel-o" x="30" y="270" width="190" height="54" rx="9"/>
+  <text class="l" x="44" y="294">Version · Shot</text>
+  <text class="d" x="44" y="311">no control today</text>
+  <rect class="panel-o" x="224" y="270" width="364" height="54" rx="9"/>
+  <text class="d" x="406" y="302" text-anchor="middle">REST route only — no button today</text>
+  <text class="m" x="604" y="298">GET /api/comments</text>
+  <text class="m" x="604" y="314">/export</text>
+
+  <rect class="band" x="30" y="344" width="740" height="64" rx="9"/>
+  <text class="d" x="44" y="366">EDL and OTIO answer 400 on a single media: they describe a run of clips carrying continuous timecode.</text>
+  <text class="d" x="44" y="384">Caps: 5 000 notes for CSV, EDL and OTIO; 200 for the printable sheet — truncation is announced by X-Notes-Truncated.</text>
+  <text class="d" x="44" y="402">Exports are rate-limited to 20 per minute per account.</text>
+</svg>

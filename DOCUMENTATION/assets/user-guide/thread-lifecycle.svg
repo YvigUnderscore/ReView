@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" width="800" height="340" role="img" aria-labelledby="thread-life-title thread-life-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="thread-life-title">How a thread becomes a group, and how it ends</title>
+  <desc id="thread-life-desc">A direct thread holds exactly two people and no name; adding someone or naming it turns it into a group. Leaving removes your access and the thread carries on for the others, but when the last member leaves it is deleted with its messages.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="340" rx="10"/>
+
+  <!-- Boucle sur le groupe : les gestes qui laissent une ligne de service -->
+  <path class="conn-a" d="M410 48 L410 24 L530 24 L530 46" marker-end="url(#arrow-a)"/>
+  <text class="a" x="546" y="20">Rename · Mute · Remove</text>
+  <text class="d" x="546" y="36">each posts a service line</text>
+
+  <!-- Les deux formes d'un fil -->
+  <rect class="panel-a" x="60" y="48" width="200" height="46" rx="9"/>
+  <text class="t" x="160" y="70" text-anchor="middle">Direct</text>
+  <text class="d" x="160" y="86" text-anchor="middle">two people, no name</text>
+
+  <rect class="panel-a" x="360" y="48" width="220" height="46" rx="9"/>
+  <text class="t" x="470" y="70" text-anchor="middle">Group</text>
+  <text class="d" x="470" y="86" text-anchor="middle">three or more, or one you named</text>
+
+  <path class="conn-a" d="M260 71 L352 71" marker-end="url(#arrow-a)"/>
+  <text class="a" x="306" y="64" text-anchor="middle">Add someone</text>
+  <text class="d" x="306" y="88" text-anchor="middle">or name it</text>
+
+  <!-- Comment un fil se termine -->
+  <rect class="band" x="40" y="140" width="720" height="120" rx="10"/>
+  <text class="d" x="56" y="162">HOW IT ENDS</text>
+
+  <rect class="panel" x="110" y="180" width="240" height="46" rx="9"/>
+  <text class="l" x="230" y="202" text-anchor="middle">Gone for you</text>
+  <text class="d" x="230" y="218" text-anchor="middle">the others keep the thread</text>
+
+  <rect class="panel-d" x="430" y="180" width="280" height="46" rx="9"/>
+  <text class="l" x="570" y="202" text-anchor="middle">Deleted with its messages</text>
+  <text class="d" x="570" y="218" text-anchor="middle">nobody was left to read it</text>
+
+  <path class="conn" d="M160 94 L160 174" marker-end="url(#arrow)"/>
+  <text class="a" x="168" y="124">You leave</text>
+
+  <path class="conn" d="M420 94 L420 120 L300 120 L300 174" marker-end="url(#arrow)"/>
+  <text class="a" x="360" y="112" text-anchor="middle">You leave</text>
+
+  <path class="conn" d="M540 94 L540 174" marker-end="url(#arrow)"/>
+  <text class="a" x="548" y="124">The last member leaves</text>
+
+  <text class="d" x="40" y="292">Only the author can delete a message; it then disappears for everyone, live.</text>
+  <text class="d" x="40" y="312">On a direct thread, renaming it or removing the other person is refused (NOT_A_GROUP).</text>
+</svg>

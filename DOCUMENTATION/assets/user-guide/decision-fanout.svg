@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 590" width="800" height="590" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Everything one review decision sets off</title>
+  <desc id="fig-desc">A single decision, taken by a supervisor or an admin, appends to the version history, updates the current decision badge, writes an audit entry, notifies the author and the watchers, fires the review.decision webhook, posts a line in team messaging, and queues a push to ShotGrid on a linked project.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="590" rx="10"/>
+  <rect class="band" x="286" y="50" width="494" height="494" rx="10"/>
+
+  <text class="d" x="20" y="44">THE ACT</text>
+  <text class="d" x="300" y="44">WHAT IT SETS OFF, IN ONE GO</text>
+
+  <!-- L'acte -->
+  <rect class="panel-a" x="20" y="250" width="230" height="110" rx="9"/>
+  <text class="t" x="135" y="276" text-anchor="middle">Set the decision</text>
+  <text class="d" x="135" y="294" text-anchor="middle">SUPERVISOR or ADMIN</text>
+  <text class="d" x="135" y="316" text-anchor="middle">right-click a version card,</text>
+  <text class="d" x="135" y="332" text-anchor="middle">or the clipboard button</text>
+  <text class="d" x="135" y="348" text-anchor="middle">in the review header</text>
+  <text class="m" x="135" y="382" text-anchor="middle">status chip + comment</text>
+  <text class="m" x="135" y="398" text-anchor="middle">2000 characters max</text>
+
+  <!-- Distribution -->
+  <path class="conn-a" d="M250 305 L270 305"/>
+  <path class="conn-a" d="M270 87 L270 507"/>
+  <path class="conn-a" d="M270 87 L300 87" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M270 147 L300 147" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M270 207 L300 207" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M270 267 L300 267" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M270 327 L300 327" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M270 387 L300 387" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M270 447 L300 447" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M270 507 L300 507" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="300" y="64" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="86">Version history</text>
+  <text class="d" x="312" y="102">who, when, which status, which comment — newest first, kept forever</text>
+
+  <rect class="panel" x="300" y="124" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="146">Current decision</text>
+  <text class="d" x="312" y="162">the badge on version cards, in the review header, in the Reviews list</text>
+
+  <rect class="panel" x="300" y="184" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="206">Audit log entry</text>
+  <text class="m" x="312" y="222">version.decision — status name and comment</text>
+
+  <rect class="panel" x="300" y="244" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="266">The version author is notified</text>
+  <text class="d" x="312" y="282">unless they took the decision themselves</text>
+
+  <rect class="panel" x="300" y="304" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="326">The watchers are notified</text>
+  <text class="d" x="312" y="342">of the version, its shot or its asset — actor and author excluded</text>
+
+  <rect class="panel" x="300" y="364" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="386">Webhook review.decision</text>
+  <text class="d" x="312" y="402">status name, approval and retake flags — on the project's event feed</text>
+
+  <rect class="panel" x="300" y="424" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="446">Team messaging</text>
+  <text class="d" x="312" y="462">one line in the studio channel</text>
+
+  <rect class="panel-o" x="300" y="484" width="480" height="46" rx="9"/>
+  <text class="t" x="312" y="506">Push to ShotGrid — linked projects only</text>
+  <text class="d" x="312" y="522">queued, never awaited: a remote outage must not fail the review</text>
+
+  <text class="d" x="400" y="564" text-anchor="middle">nothing in this fan-out touches an earlier version — a retake decision, its comment and its date stay on v01 forever</text>
+</svg>

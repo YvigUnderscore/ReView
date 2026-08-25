@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 492" width="800" height="492" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What the nightly maintenance job deletes, and in which order</title>
+  <desc id="fig-desc">A repeatable job on the maintenance queue fires sixty seconds after the API starts and then every twenty-four hours. It runs four stations in order: the trash purge, which leaves no audit entry; the derived-files purge, only when enabled, which writes DERIVED_PURGE_RUN; the idempotency purge, silent; and the retention sweep over the nine journals, which writes RETENTION_SWEEP.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="492" rx="10"/>
+
+  <text class="d" x="30" y="32">WHEN IT FIRES</text>
+  <text class="d" x="250" y="32">WHAT IT DELETES, IN THIS ORDER</text>
+  <text class="d" x="660" y="32">TRACE</text>
+
+  <rect class="panel-a" x="30" y="60" width="180" height="34" rx="9"/>
+  <text class="l" x="120" y="82" text-anchor="middle">API start + 60 s</text>
+
+  <rect class="panel-a" x="30" y="104" width="180" height="34" rx="9"/>
+  <text class="l" x="120" y="126" text-anchor="middle">then every 24 h</text>
+
+  <rect class="panel-o" x="30" y="148" width="180" height="100" rx="9"/>
+  <text class="d" x="120" y="172" text-anchor="middle">repeatable BullMQ job</text>
+  <text class="d" x="120" y="188" text-anchor="middle">on the maintenance queue:</text>
+  <text class="d" x="120" y="204" text-anchor="middle">survives restarts, fires</text>
+  <text class="d" x="120" y="220" text-anchor="middle">once across replicas,</text>
+  <text class="d" x="120" y="236" text-anchor="middle">visible like any job</text>
+
+  <path class="conn-a" d="M210 77 L230 77"/>
+  <path class="conn-a" d="M210 121 L230 121"/>
+  <path class="conn-a" d="M230 77 L230 402"/>
+  <path class="conn-a" d="M230 102 L250 102" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M230 202 L250 202" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M230 302 L250 302" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M230 402 L250 402" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-w" x="250" y="60" width="398" height="84" rx="9"/>
+  <text class="t" x="266" y="84">1 · Trash purge</text>
+  <text class="d" x="266" y="102">everything soft-deleted longer than trash_retention_days (30 days)</text>
+  <text class="d" x="266" y="118">media → versions → shots → sequences → episodes → assets → projects</text>
+  <text class="d" x="266" y="134">database rows and MinIO objects, at most 2000 items per pass</text>
+
+  <rect class="panel-d" x="660" y="85" width="120" height="34" rx="9"/>
+  <text class="d no" x="720" y="97" text-anchor="middle">no audit</text>
+  <text class="d no" x="720" y="113" text-anchor="middle">no notice</text>
+
+  <rect class="panel" x="250" y="160" width="398" height="84" rx="9"/>
+  <text class="t" x="266" y="184">2 · Derived purge — only when enabled</text>
+  <text class="d" x="266" y="202">per task and per asset, keeps the newest keepVersions (3)</text>
+  <text class="d" x="266" y="218">on older video media, deletes the HLS folder and the sprite</text>
+  <text class="d" x="266" y="234">keeps proxy.mp4 and thumbnail — old versions stay watchable</text>
+
+  <rect class="panel" x="660" y="185" width="120" height="34" rx="9"/>
+  <text class="d" x="720" y="197" text-anchor="middle">audit</text>
+  <text class="d ok" x="720" y="213" text-anchor="middle">DERIVED_PURGE_RUN</text>
+
+  <rect class="panel" x="250" y="260" width="398" height="84" rx="9"/>
+  <text class="t" x="266" y="284">3 · Idempotency purge</text>
+  <text class="d" x="266" y="302">expired API v1 replay records — a buffer, never an archive</text>
+  <text class="d" x="266" y="318">nothing a person can see is removed</text>
+
+  <rect class="panel" x="660" y="285" width="120" height="34" rx="9"/>
+  <text class="d" x="720" y="306" text-anchor="middle">no audit</text>
+
+  <rect class="panel" x="250" y="360" width="398" height="84" rx="9"/>
+  <text class="t" x="266" y="384">4 · Retention sweep</text>
+  <text class="d" x="266" y="402">the nine journals, deleted in batches: audit, media access,</text>
+  <text class="d" x="266" y="418">notifications, sessions, resets, invitations, share links,</text>
+  <text class="d" x="266" y="434">ShotGrid syncs, API events — 400 000 rows per family, per pass</text>
+
+  <rect class="panel" x="660" y="385" width="120" height="34" rx="9"/>
+  <text class="d" x="720" y="397" text-anchor="middle">audit</text>
+  <text class="d ok" x="720" y="413" text-anchor="middle">RETENTION_SWEEP</text>
+
+  <text class="l no" x="400" y="470" text-anchor="middle">The trash purge is the single most common answer to: it disappeared on its own.</text>
+</svg>

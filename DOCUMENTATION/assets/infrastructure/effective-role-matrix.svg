@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" width="800" height="430" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Who can do what, and where the decision is made</title>
+  <desc id="fig-desc">A global administrator or supervisor works on every project without a membership; an artist or a client sees nothing until a membership exists. On a project, the membership role overrides the global one: a supervisor named there can publish and decide, an artist can upload and publish, and a client can only look and comment.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="430" rx="10"/>
+
+  <rect class="band" x="20" y="8" width="756" height="48" rx="8"/>
+  <text class="d" x="32" y="43">ROLE</text>
+  <text class="d" x="248" y="27" text-anchor="middle">See the</text>
+  <text class="d" x="248" y="43" text-anchor="middle">project</text>
+  <text class="d" x="344" y="43" text-anchor="middle">Comment</text>
+  <text class="d" x="440" y="27" text-anchor="middle">Upload a</text>
+  <text class="d" x="440" y="43" text-anchor="middle">version</text>
+  <text class="d" x="536" y="27" text-anchor="middle">Publish a</text>
+  <text class="d" x="536" y="43" text-anchor="middle">version</text>
+  <text class="d" x="632" y="27" text-anchor="middle">Manage the</text>
+  <text class="d" x="632" y="43" text-anchor="middle">project</text>
+  <text class="d" x="728" y="27" text-anchor="middle">Studio</text>
+  <text class="d" x="728" y="43" text-anchor="middle">administration</text>
+
+  <!-- Bande 1 : le rôle global, sans appartenance au projet -->
+  <text class="d" x="32" y="76">GLOBAL ROLE, WITH NO MEMBERSHIP ON THE PROJECT</text>
+
+  <rect class="panel" x="20" y="84" width="756" height="30" rx="9"/>
+  <text class="l" x="32" y="104">ADMIN</text>
+  <text class="d ok" x="248" y="104" text-anchor="middle">yes</text>
+  <text class="d ok" x="344" y="104" text-anchor="middle">yes</text>
+  <text class="d ok" x="440" y="104" text-anchor="middle">yes</text>
+  <text class="d ok" x="536" y="104" text-anchor="middle">yes</text>
+  <text class="d ok" x="632" y="104" text-anchor="middle">yes</text>
+  <text class="d ok" x="728" y="104" text-anchor="middle">yes</text>
+
+  <rect class="panel" x="20" y="120" width="756" height="30" rx="9"/>
+  <text class="l" x="32" y="140">SUPERVISOR</text>
+  <text class="d ok" x="248" y="140" text-anchor="middle">yes</text>
+  <text class="d ok" x="344" y="140" text-anchor="middle">yes</text>
+  <text class="d ok" x="440" y="140" text-anchor="middle">yes</text>
+  <text class="d ok" x="536" y="140" text-anchor="middle">yes</text>
+  <text class="d ok" x="632" y="140" text-anchor="middle">yes</text>
+  <text class="d no" x="728" y="140" text-anchor="middle">no</text>
+
+  <rect class="panel" x="20" y="156" width="756" height="30" rx="9"/>
+  <text class="l" x="32" y="176">ARTIST</text>
+  <text class="d no" x="248" y="176" text-anchor="middle">no</text>
+  <text class="d no" x="344" y="176" text-anchor="middle">no</text>
+  <text class="d no" x="440" y="176" text-anchor="middle">no</text>
+  <text class="d no" x="536" y="176" text-anchor="middle">no</text>
+  <text class="d no" x="632" y="176" text-anchor="middle">no</text>
+  <text class="d no" x="728" y="176" text-anchor="middle">no</text>
+
+  <rect class="panel" x="20" y="192" width="756" height="30" rx="9"/>
+  <text class="l" x="32" y="212">CLIENT</text>
+  <text class="d no" x="248" y="212" text-anchor="middle">no</text>
+  <text class="d no" x="344" y="212" text-anchor="middle">no</text>
+  <text class="d no" x="440" y="212" text-anchor="middle">no</text>
+  <text class="d no" x="536" y="212" text-anchor="middle">no</text>
+  <text class="d no" x="632" y="212" text-anchor="middle">no</text>
+  <text class="d no" x="728" y="212" text-anchor="middle">no</text>
+
+  <!-- Bande 2 : l'appartenance décide, et elle prime -->
+  <text class="d" x="32" y="248">MEMBERSHIP ROLE ON THE PROJECT, WHICH OVERRIDES THE GLOBAL ONE</text>
+
+  <rect class="panel-a" x="20" y="256" width="756" height="30" rx="9"/>
+  <text class="l" x="32" y="276">supervisor on the project</text>
+  <text class="d ok" x="248" y="276" text-anchor="middle">yes</text>
+  <text class="d ok" x="344" y="276" text-anchor="middle">yes</text>
+  <text class="d ok" x="440" y="276" text-anchor="middle">yes</text>
+  <text class="d ok" x="532" y="276" text-anchor="middle">yes</text>
+  <text class="a" x="551" y="272">1</text>
+  <text class="d ok" x="632" y="276" text-anchor="middle">yes</text>
+  <text class="d no" x="728" y="276" text-anchor="middle">no</text>
+
+  <rect class="panel" x="20" y="292" width="756" height="30" rx="9"/>
+  <text class="l" x="32" y="312">artist on the project</text>
+  <text class="d ok" x="248" y="312" text-anchor="middle">yes</text>
+  <text class="d ok" x="344" y="312" text-anchor="middle">yes</text>
+  <text class="d ok" x="440" y="312" text-anchor="middle">yes</text>
+  <text class="d ok" x="536" y="312" text-anchor="middle">yes</text>
+  <text class="d no" x="632" y="312" text-anchor="middle">no</text>
+  <text class="d no" x="728" y="312" text-anchor="middle">no</text>
+
+  <rect class="panel-a" x="20" y="328" width="756" height="30" rx="9"/>
+  <text class="l" x="32" y="348">client on the project</text>
+  <text class="d ok" x="248" y="348" text-anchor="middle">yes</text>
+  <text class="d ok" x="344" y="348" text-anchor="middle">yes</text>
+  <text class="d no" x="440" y="348" text-anchor="middle">no</text>
+  <text class="d no" x="534" y="348" text-anchor="middle">no</text>
+  <text class="a" x="549" y="344">2</text>
+  <text class="d no" x="632" y="348" text-anchor="middle">no</text>
+  <text class="d no" x="728" y="348" text-anchor="middle">no</text>
+
+  <text class="d" x="32" y="376">1  An artist promoted supervisor on a project can publish and decide there. The old global-role test refused it.</text>
+  <text class="d" x="32" y="392">2  An artist demoted to client on a project loses upload and publish there, whatever the global role says.</text>
+  <text class="d" x="32" y="412">Enforced by requireRole, requireProjectAccess and effectiveProjectRole; a cross-project id answers not-found, never 403.</text>
+</svg>

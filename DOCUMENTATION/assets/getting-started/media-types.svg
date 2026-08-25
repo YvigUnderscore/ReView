@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 306" width="800" height="306" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Four viewers, one workspace</title>
+  <desc id="fig-desc">Video, image and image sequences, 3D and USD, and Gaussian splats each have their own tools, and all four share the same annotations, comments, approval decisions and share links.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="306" rx="10"/>
+  <text class="d" x="24" y="30">FOUR VIEWERS, ONE WORKSPACE</text>
+
+  <rect class="panel" x="24" y="44" width="176" height="164" rx="9"/>
+  <text class="t" x="112" y="70" text-anchor="middle">Video</text>
+  <text class="d" x="112" y="96" text-anchor="middle">adaptive HLS playback</text>
+  <text class="d" x="112" y="116" text-anchor="middle">frame stepping, J / K / L</text>
+  <text class="d" x="112" y="136" text-anchor="middle">wipe · diff · 2×2 grid</text>
+  <text class="d" x="112" y="156" text-anchor="middle">markers, audio waveform</text>
+  <text class="d" x="112" y="176" text-anchor="middle">letterbox and safe areas</text>
+
+  <rect class="panel" x="216" y="44" width="176" height="164" rx="9"/>
+  <text class="t" x="304" y="70" text-anchor="middle">Image</text>
+  <text class="d" x="304" y="96" text-anchor="middle">overlay drawing</text>
+  <text class="d" x="304" y="116" text-anchor="middle">A/B and reference</text>
+  <text class="d" x="304" y="136" text-anchor="middle">lightbox, fullscreen</text>
+  <text class="d" x="304" y="156" text-anchor="middle">EXR / DPX sequence</text>
+  <text class="d" x="304" y="176" text-anchor="middle">read as one media</text>
+
+  <rect class="panel" x="408" y="44" width="176" height="164" rx="9"/>
+  <text class="t" x="496" y="70" text-anchor="middle">3D and USD</text>
+  <text class="d" x="496" y="96" text-anchor="middle">orbit / fly, HDRI lighting</text>
+  <text class="d" x="496" y="116" text-anchor="middle">scenegraph and variants</text>
+  <text class="d" x="496" y="136" text-anchor="middle">sections, measurement</text>
+  <text class="d" x="496" y="156" text-anchor="middle">inspection modes</text>
+  <text class="d" x="496" y="176" text-anchor="middle">F-curve camera</text>
+
+  <rect class="panel" x="600" y="44" width="176" height="164" rx="9"/>
+  <text class="t" x="688" y="70" text-anchor="middle">Gaussian splat</text>
+  <text class="d" x="688" y="96" text-anchor="middle">Spark viewer in scene</text>
+  <text class="d" x="688" y="116" text-anchor="middle">PLY · SPZ · SOG</text>
+  <text class="d" x="688" y="136" text-anchor="middle">brush, mask, tint</text>
+  <text class="d" x="688" y="156" text-anchor="middle">edits never touch</text>
+  <text class="d" x="688" y="176" text-anchor="middle">the original file</text>
+
+  <path class="conn" d="M112 208 L112 230" marker-end="url(#arrow)"/>
+  <path class="conn" d="M304 208 L304 230" marker-end="url(#arrow)"/>
+  <path class="conn" d="M496 208 L496 230" marker-end="url(#arrow)"/>
+  <path class="conn" d="M688 208 L688 230" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="24" y="234" width="752" height="56" rx="9"/>
+  <text class="a" x="400" y="258" text-anchor="middle">THE SAME REVIEW, WHATEVER THE MEDIA</text>
+  <text class="l" x="400" y="278" text-anchor="middle">annotations · comment threads · approval decisions · playlists · client shares</text>
+</svg>

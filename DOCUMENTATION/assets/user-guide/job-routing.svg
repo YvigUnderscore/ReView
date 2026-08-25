@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 860" width="800" height="860" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">How the worker decides what to make of an uploaded file</title>
+  <desc id="fig-desc">Every finalised upload goes through the same preamble — header validation, sequence assembly, checksum, antivirus — then takes one of five job routes, each with its own list of derivatives, before the media becomes READY.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="860" rx="10"/>
+
+  <text class="d" x="28" y="30">EVERY FILE TAKES THE SAME PREAMBLE, THEN ONE OF FIVE ROUTES</text>
+
+  <!-- Bande des sorties d'échec, à droite -->
+  <rect class="band" x="556" y="238" width="232" height="212" rx="10"/>
+  <text class="d" x="566" y="230">WHEN IT STOPS</text>
+
+  <!-- Préambule commun -->
+  <rect class="panel-a" x="120" y="46" width="420" height="46" rx="9"/>
+  <text class="t" x="330" y="68" text-anchor="middle">Upload finalised</text>
+  <text class="d" x="330" y="84" text-anchor="middle">the object is in MinIO, the media is still UPLOADING</text>
+
+  <path class="conn" d="M330 92 L330 112" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="120" y="116" width="420" height="46" rx="9"/>
+  <text class="l" x="330" y="138" text-anchor="middle">Read the file header</text>
+  <text class="d" x="330" y="154" text-anchor="middle">the extension and the announced content type are not trusted</text>
+
+  <path class="conn" d="M330 162 L330 182" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="120" y="186" width="420" height="46" rx="9"/>
+  <text class="l" x="330" y="208" text-anchor="middle">If the media is an image sequence</text>
+  <text class="d" x="330" y="224" text-anchor="middle">download the frames, renumber locally, assemble a CRF 12 master</text>
+
+  <path class="conn" d="M330 232 L330 252" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="120" y="256" width="420" height="46" rx="9"/>
+  <text class="l" x="330" y="278" text-anchor="middle">Re-hash and compare with the announced sha256</text>
+  <text class="d" x="330" y="294" text-anchor="middle">a corrupted transfer never produces derivatives</text>
+
+  <path class="conn" d="M540 279 L560 279" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="566" y="256" width="214" height="46" rx="9"/>
+  <text class="l" x="673" y="278" text-anchor="middle">FAILED</text>
+  <text class="d" x="673" y="294" text-anchor="middle">checksum mismatch</text>
+
+  <path class="conn" d="M330 302 L330 322" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="120" y="326" width="420" height="46" rx="9"/>
+  <text class="l" x="330" y="348" text-anchor="middle">ClamAV, when it is enabled</text>
+  <text class="d" x="330" y="364" text-anchor="middle">nothing else is produced until the scan comes back clean</text>
+
+  <path class="conn" d="M540 349 L560 349" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="566" y="326" width="214" height="46" rx="9"/>
+  <text class="l" x="673" y="348" text-anchor="middle">Quarantined</text>
+  <text class="d" x="673" y="364" text-anchor="middle">moved to quarantine/, audited</text>
+
+  <path class="conn" d="M330 372 L330 392" marker-end="url(#arrow)"/>
+
+  <!-- Aiguillage -->
+  <path class="conn-a" d="M330 396 L390 418 L330 440 L270 418 z"/>
+  <text class="a" x="330" y="422" text-anchor="middle">which job?</text>
+
+  <path class="conn" d="M390 418 L560 418" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="566" y="396" width="214" height="46" rx="9"/>
+  <text class="l" x="673" y="418" text-anchor="middle">Any job error: FAILED</text>
+  <text class="d" x="673" y="434" text-anchor="middle">the reason is shown in the review</text>
+
+  <!-- Rail des cinq routes -->
+  <path class="conn" d="M330 440 L330 462 L60 462 L60 807"/>
+
+  <path class="conn" d="M60 518 L86 518" marker-end="url(#arrow)"/>
+  <rect class="panel-a" x="90" y="486" width="690" height="64" rx="9"/>
+  <text class="t" x="104" y="508">transcode — every video, and every image sequence</text>
+  <text class="d" x="104" y="526">probe · MP4 proxy · adaptive HLS ladder, lowest rendition first · poster at the midpoint</text>
+  <text class="d" x="104" y="542">timeline sprite · audio waveform · scene markers · client slate — then the source object is deleted</text>
+
+  <path class="conn" d="M60 583 L86 583" marker-end="url(#arrow)"/>
+  <rect class="panel" x="90" y="560" width="690" height="46" rx="9"/>
+  <text class="l" x="104" y="582">thumbnail — browser image (jpg, jpeg, png, webp, gif, bmp)</text>
+  <text class="d" x="104" y="598">probe · JPEG thumbnail — the uploaded file itself is what the viewer receives</text>
+
+  <path class="conn" d="M60 639 L86 639" marker-end="url(#arrow)"/>
+  <rect class="panel" x="90" y="616" width="690" height="46" rx="9"/>
+  <text class="l" x="104" y="638">thumbnail — production image (exr, dpx, tif, tiff, tga…)</text>
+  <text class="d" x="104" y="654">probe · full-resolution JPEG web proxy · JPEG thumbnail — the proxy is what the viewer receives</text>
+
+  <path class="conn" d="M60 695 L86 695" marker-end="url(#arrow)"/>
+  <rect class="panel" x="90" y="672" width="690" height="46" rx="9"/>
+  <text class="l" x="104" y="694">convert3d — fbx, obj, dae, stl, gltf, usd, usda, usdc, usdz, zip</text>
+  <text class="d" x="104" y="710">a GLB the Three.js viewer can open · conversion provenance — the original is kept</text>
+
+  <path class="conn" d="M60 751 L86 751" marker-end="url(#arrow)"/>
+  <rect class="panel-o" x="90" y="728" width="690" height="46" rx="9"/>
+  <text class="l" x="104" y="750">scan only — native .glb, Gaussian splat</text>
+  <text class="d" x="104" y="766">READY at once; a scan job runs behind it when ClamAV is enabled</text>
+
+  <path class="conn" d="M60 807 L86 807" marker-end="url(#arrow)"/>
+  <rect class="panel-a" x="90" y="790" width="690" height="34" rx="9"/>
+  <text class="t" x="104" y="811">READY — the derivatives live under derived/&lt;mediaId&gt;/ and the media is reviewable</text>
+
+  <text class="d" x="400" y="846" text-anchor="middle">Best-effort steps never fail the job: sprite, waveform, scene detection, burn-in resolution, client slate.</text>
+</svg>

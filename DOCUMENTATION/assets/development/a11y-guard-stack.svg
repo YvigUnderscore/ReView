@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 416" width="800" height="416" role="img" aria-labelledby="ags-title ags-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="ags-title">What holds each accessibility guarantee up</title>
+  <desc id="ags-desc">Five guarantees — text and status contrast, control boundaries, text size and zoom, names and roles, language of the message — each paired with the script or test that enforces it inside the validation suite, and the WCAG 2.1 criterion it answers.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="800" height="416" rx="10"/>
+
+  <text class="d" x="20" y="30">EACH GUARANTEE, AND WHAT HOLDS IT UP</text>
+  <text class="d" x="780" y="30" text-anchor="end">every band fails the build</text>
+
+  <rect class="band" x="20" y="40" width="760" height="26" rx="8"/>
+  <text class="a" x="32" y="58">GUARANTEE</text>
+  <text class="a" x="244" y="58">MECHANISM</text>
+  <text class="a" x="674" y="58">WCAG</text>
+
+  <!-- 1 — contraste -->
+  <rect class="panel" x="20" y="74" width="760" height="58" rx="9"/>
+  <path class="conn" d="M220 83 L220 123"/>
+  <path class="conn" d="M650 83 L650 123"/>
+  <text class="l" x="32" y="95">Text and status contrast</text>
+  <text class="d" x="32" y="111">both themes</text>
+  <text class="l" x="244" y="95">check-color-tokens.mjs + theme.a11y.test.ts</text>
+  <text class="d" x="244" y="111">only theme tokens, so a ratio can be measured at all</text>
+  <text class="d" x="244" y="126">ratios recomputed from index.css, in both themes</text>
+  <text class="a" x="674" y="95">1.4.3</text>
+  <text class="d" x="674" y="111">4.5:1</text>
+
+  <!-- 2 — limite des contrôles -->
+  <rect class="panel" x="20" y="140" width="760" height="58" rx="9"/>
+  <path class="conn" d="M220 149 L220 189"/>
+  <path class="conn" d="M650 149 L650 189"/>
+  <text class="l" x="32" y="161">Control boundaries</text>
+  <text class="d" x="32" y="177">the only edge a field has</text>
+  <text class="l" x="244" y="161">theme.a11y.test.ts, on five surfaces</text>
+  <text class="d" x="244" y="177">--input measured against background, card, popover,</text>
+  <text class="d" x="244" y="192">secondary and muted — --border is decoration, exempt</text>
+  <text class="a" x="674" y="161">1.4.11</text>
+  <text class="d" x="674" y="177">3:1</text>
+
+  <!-- 3 — taille de texte et zoom -->
+  <rect class="panel" x="20" y="206" width="760" height="58" rx="9"/>
+  <path class="conn" d="M220 215 L220 255"/>
+  <path class="conn" d="M650 215 L650 255"/>
+  <text class="l" x="32" y="227">Text size and zoom</text>
+  <text class="d" x="32" y="243">density-aware</text>
+  <text class="l" x="244" y="227">check-text-sizes.mjs + theme.a11y.test.ts</text>
+  <text class="d" x="244" y="243">rem ramp bottoming at 0.6875rem, no pixel sizes anywhere</text>
+  <text class="d" x="244" y="258">viewport carries width=device-width and nothing else</text>
+  <text class="a" x="674" y="227">1.4.4</text>
+  <text class="d" x="674" y="243">and 1.4.12</text>
+
+  <!-- 4 — noms accessibles -->
+  <rect class="panel" x="20" y="272" width="760" height="58" rx="9"/>
+  <path class="conn" d="M220 281 L220 321"/>
+  <path class="conn" d="M650 281 L650 321"/>
+  <text class="l" x="32" y="293">Names and roles</text>
+  <text class="d" x="32" y="309">what a screen reader says</text>
+  <text class="l" x="244" y="293">eslint-plugin-jsx-a11y + a11y.names.test.ts</text>
+  <text class="d" x="244" y="309">jsx-a11y as errors, plus a count of fields with no name</text>
+  <text class="d" x="244" y="324">source — the cap is 24 today and may only go down</text>
+  <text class="a" x="674" y="293">4.1.2</text>
+  <text class="d" x="674" y="309">cap 24</text>
+
+  <!-- 5 — langue du message -->
+  <rect class="panel" x="20" y="338" width="760" height="58" rx="9"/>
+  <path class="conn" d="M220 347 L220 387"/>
+  <path class="conn" d="M650 347 L650 387"/>
+  <text class="l" x="32" y="359">Language of the message</text>
+  <text class="d" x="32" y="375">including errors</text>
+  <text class="l" x="244" y="359">check-untranslated.mjs + error codes</text>
+  <text class="d" x="244" y="375">no hardcoded string reaches the screen, and API errors</text>
+  <text class="d" x="244" y="390">are keyed by code, so they arrive already translated</text>
+  <text class="a" x="674" y="359">3.1.1</text>
+  <text class="d" x="674" y="375">and 3.1.2</text>
+</svg>

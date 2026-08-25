@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 578" width="800" height="578" role="img" aria-labelledby="medialife-title medialife-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="medialife-title">One media under /api/media, from presign to publish lock</title>
+  <desc id="medialife-desc">Three upload entry points lead to an UPLOADING media; finalize moves it to PROCESSING, the worker to READY, publish to PUBLISHED, where the content is locked. A failed job returns through reprocess, and the trash path is available at any state.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="578" rx="10"/>
+
+  <text class="d" x="28" y="30">ONE MEDIA, AND THE ROUTE THAT DRIVES EACH TRANSITION</text>
+
+  <rect class="panel" x="28" y="52" width="228" height="118" rx="9"/>
+  <text class="l" x="42" y="74">Three ways in</text>
+  <text class="d" x="42" y="96">POST /media/upload-url</text>
+  <text class="d" x="42" y="114">POST /media/multipart/init</text>
+  <text class="d" x="42" y="132">POST /media/sequence/init</text>
+  <text class="d" x="42" y="154">then PUT to MinIO (15 min)</text>
+
+  <path class="conn" d="M256 111 L298 111" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="300" y="88" width="250" height="46" rx="9"/>
+  <text class="l" x="425" y="110" text-anchor="middle">UPLOADING</text>
+  <text class="d" x="425" y="126" text-anchor="middle">the slot exists, no bytes checked</text>
+
+  <path class="conn-a" d="M425 134 L425 170" marker-end="url(#arrow-a)"/>
+  <text class="a" x="562" y="157">POST /media/:id/finalize</text>
+
+  <rect class="panel" x="300" y="174" width="250" height="46" rx="9"/>
+  <text class="l" x="425" y="196" text-anchor="middle">PROCESSING</text>
+  <text class="d" x="425" y="212" text-anchor="middle">HLS ladder · proxy · thumbnail · GLB</text>
+
+  <path class="conn" d="M300 197 L278 197 L278 219 L258 219" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="28" y="196" width="228" height="46" rx="9"/>
+  <text class="l" x="142" y="218" text-anchor="middle">FAILED</text>
+  <text class="d" x="142" y="234" text-anchor="middle">POST /media/:id/reprocess</text>
+
+  <path class="conn-a" d="M425 220 L425 256" marker-end="url(#arrow-a)"/>
+  <text class="a" x="562" y="244">the worker finishes</text>
+
+  <rect class="panel" x="300" y="260" width="250" height="46" rx="9"/>
+  <text class="l" x="425" y="282" text-anchor="middle">READY</text>
+  <text class="d" x="425" y="298" text-anchor="middle">playable — published or a draft</text>
+
+  <path class="conn-a" d="M425 306 L425 342" marker-end="url(#arrow-a)"/>
+  <text class="a" x="562" y="330">POST /media/:id/publish</text>
+
+  <rect class="panel-a" x="300" y="346" width="250" height="46" rx="9"/>
+  <text class="t" x="425" y="368" text-anchor="middle">PUBLISHED</text>
+  <text class="d" x="425" y="384" text-anchor="middle">content locked for good</text>
+
+  <text class="d" x="300" y="414">Still allowed: splatPresentation (staging) and the thumbnail.</text>
+
+  <path class="conn" d="M300 369 L258 369" marker-end="url(#arrow)"/>
+  <rect class="panel-w" x="28" y="340" width="228" height="124" rx="9"/>
+  <text class="l" x="42" y="362">The lock refuses</text>
+  <text class="d" x="42" y="384">trim · reprocess</text>
+  <text class="d" x="42" y="402">splat-edits · splat-mask</text>
+  <text class="d" x="42" y="420">splat-subset · transform</text>
+  <text class="d" x="42" y="442">403 PUBLISHED_LOCKED</text>
+
+  <rect class="panel-o" x="28" y="486" width="744" height="64" rx="9"/>
+  <text class="l" x="44" y="508">Trash path — available at any state</text>
+  <text class="d" x="44" y="530">DELETE /media/:id (soft, deletedAt)  ·  POST /media/:id/restore  ·  DELETE /media/:id/purge (permanent)</text>
+</svg>

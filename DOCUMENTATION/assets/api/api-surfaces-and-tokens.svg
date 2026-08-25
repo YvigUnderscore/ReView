@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 548" width="800" height="548" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Two surfaces, three credentials, one request path</title>
+  <desc id="fig-desc">Three kinds of caller reach the same Express application. The request crosses the HTTP logger, helmet and CORS, the raw-body ShotGrid receiver, the 2 MB JSON parser, the metrics endpoint and the global rate limiter, then lands on the web API, on the versioned integration API, or on the unauthenticated probes that sit outside /api.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="548" rx="10"/>
+
+  <text class="d" x="24" y="26">WHO IS CALLING</text>
+
+  <rect class="panel" x="24" y="40" width="236" height="46" rx="9"/>
+  <text class="t" x="142" y="62" text-anchor="middle">Browser SPA</text>
+  <text class="m" x="142" y="78" text-anchor="middle">Authorization: Bearer &lt;jwt&gt;</text>
+
+  <rect class="panel-a" x="282" y="40" width="236" height="46" rx="9"/>
+  <text class="t" x="400" y="62" text-anchor="middle">Pipeline tool, farm, bot</text>
+  <text class="m" x="400" y="78" text-anchor="middle">Authorization: Bearer rvk_…</text>
+
+  <rect class="panel" x="540" y="40" width="236" height="46" rx="9"/>
+  <text class="t" x="658" y="62" text-anchor="middle">Client share page</text>
+  <text class="m" x="658" y="78" text-anchor="middle">X-Share-Auth: &lt;jwt&gt;</text>
+
+  <path class="conn" d="M142 86 L142 108" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M400 86 L400 108" marker-end="url(#arrow-a)"/>
+  <path class="conn" d="M658 86 L658 108" marker-end="url(#arrow)"/>
+
+  <rect class="band" x="24" y="110" width="752" height="240" rx="10"/>
+  <text class="t" x="44" y="134">Express 5 app — what every call crosses, in mount order</text>
+
+  <rect class="panel" x="44" y="150" width="346" height="46" rx="9"/>
+  <text class="l" x="58" y="172">1 · httpLogger</text>
+  <text class="d" x="58" y="188">a request id on every response</text>
+
+  <rect class="panel" x="410" y="150" width="346" height="46" rx="9"/>
+  <text class="l" x="424" y="172">2 · helmet + CORS</text>
+  <text class="d" x="424" y="188">exact origins required in production</text>
+
+  <rect class="panel" x="44" y="216" width="346" height="46" rx="9"/>
+  <text class="l" x="58" y="238">3 · /api/shotgrid/webhook</text>
+  <text class="d" x="58" y="254">raw body, 5 MB — the HMAC signs the bytes</text>
+
+  <rect class="panel" x="410" y="216" width="346" height="46" rx="9"/>
+  <text class="l" x="424" y="238">4 · express.json</text>
+  <text class="d" x="424" y="254">2 MB — media bytes never transit here</text>
+
+  <rect class="panel" x="44" y="282" width="346" height="46" rx="9"/>
+  <text class="l" x="58" y="304">5 · GET /metrics</text>
+  <text class="d" x="58" y="320">Prometheus text · METRICS_TOKEN optional</text>
+
+  <rect class="panel" x="410" y="282" width="346" height="46" rx="9"/>
+  <text class="l" x="424" y="304">6 · rate limit, mounted on /api</text>
+  <text class="d" x="424" y="320">6 000 per account · 5 000 per anonymous IP</text>
+
+  <text class="d" x="24" y="372">WHERE IT LANDS</text>
+
+  <path class="conn" d="M129 350 L129 382" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M372 350 L372 382" marker-end="url(#arrow-a)"/>
+  <path class="conn" d="M643 350 L643 382" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="384" width="210" height="64" rx="9"/>
+  <text class="t" x="129" y="406" text-anchor="middle">/api</text>
+  <text class="d" x="129" y="424" text-anchor="middle">the web surface</text>
+  <text class="d" x="129" y="442" text-anchor="middle">follows the product</text>
+
+  <rect class="panel-a" x="256" y="384" width="232" height="64" rx="9"/>
+  <text class="t" x="372" y="406" text-anchor="middle">/api/v1</text>
+  <text class="d" x="372" y="424" text-anchor="middle">the stable contract for tools</text>
+  <text class="d" x="372" y="442" text-anchor="middle">own 10 000 / 15 min budget</text>
+
+  <rect class="panel" x="510" y="384" width="266" height="64" rx="9"/>
+  <text class="t" x="643" y="406" text-anchor="middle">Outside /api</text>
+  <text class="d" x="643" y="424" text-anchor="middle">/health, /health/live, /health/ready</text>
+  <text class="d" x="643" y="442" text-anchor="middle">/api/health, /api/version, /metrics</text>
+
+  <path class="conn-o" d="M129 448 L129 460" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="24" y="462" width="752" height="46" rx="9"/>
+  <text class="l" x="38" y="484">An API token on /api should get 403 API_TOKEN_V1_ONLY — the guard exists, but is not mounted.</text>
+  <text class="d" x="38" y="500">So an rvk_ token currently reaches /api/projects and /api/admin/*, where its project binding is never checked.</text>
+
+  <text class="d" x="24" y="530">Socket.io lives on /socket.io, same origin, credential in the handshake, Redis adapter shared by every replica.</text>
+</svg>

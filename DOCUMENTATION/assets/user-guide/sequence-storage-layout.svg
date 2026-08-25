@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What an image sequence keeps in storage, and what each part is for</title>
+  <desc id="fig-desc">Under the media folder sit three things: the delivered frames under their own file names, a sequence.json manifest served as the media's original file, and the derived proxy, HLS renditions, thumbnail and hover sprite. The assembled master is not stored. A dedicated endpoint returns the manifest plus one presigned URL per frame.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="440" rx="10"/>
+
+  <text class="d" x="30" y="32">WHAT IS KEPT</text>
+  <text class="d" x="470" y="32">AND WHAT IT IS FOR</text>
+
+  <rect class="panel" x="30" y="48" width="420" height="46" rx="9"/>
+  <text class="l" x="48" y="68">The media folder</text>
+  <text class="m" x="48" y="84">projects/{project}/{parent}/{version}/{mediaId}/</text>
+
+  <path class="conn" d="M48 94 L48 269"/>
+  <path class="conn" d="M48 137 L70 137" marker-end="url(#arrow)"/>
+  <path class="conn" d="M48 203 L70 203" marker-end="url(#arrow)"/>
+  <path class="conn" d="M48 269 L70 269" marker-end="url(#arrow)"/>
+
+  <!-- La livraison elle-même : jamais supprimée, relue à chaque retraitement -->
+  <rect class="panel-a" x="70" y="114" width="380" height="46" rx="9"/>
+  <text class="m" x="88" y="134">frames/</text>
+  <text class="d" x="88" y="150">SH0100_comp_v003.1001.exr … .1200.exr</text>
+  <text class="d" x="470" y="130">The delivery itself, under the artist's own file</text>
+  <text class="d" x="470" y="144">names. Nothing is ever deleted, and a reprocess</text>
+  <text class="d" x="470" y="158">re-reads these frames — never the proxy.</text>
+
+  <rect class="panel-a" x="70" y="180" width="380" height="46" rx="9"/>
+  <text class="m" x="88" y="200">sequence.json</text>
+  <text class="d" x="88" y="216">the manifest, served as the media's original file</text>
+  <text class="d" x="470" y="196">Pattern, extension, digit width, first and last frame,</text>
+  <text class="d" x="470" y="210">frame count, frame rate, total size, prefix, and every</text>
+  <text class="d" x="470" y="224">file name with its size. The delivery can be rebuilt</text>
+  <text class="d" x="470" y="238">years later without the database.</text>
+
+  <rect class="panel" x="70" y="246" width="380" height="46" rx="9"/>
+  <text class="m" x="88" y="266">derived/</text>
+  <text class="d" x="88" y="282">proxy, HLS renditions, thumbnail, hover sprite</text>
+  <text class="d" x="470" y="262">Everything the video workspace reads. The assembled</text>
+  <text class="d" x="470" y="276">master is not here: it lives in the worker's temp</text>
+  <text class="d" x="470" y="290">directory and dies with it.</text>
+
+  <rect class="panel" x="30" y="316" width="740" height="46" rx="9"/>
+  <text class="l" x="48" y="336">Getting the original delivery back</text>
+  <text class="d" x="48" y="352">GET /api/media/sequence/:id/frames — the delivered bounds plus one presigned URL per frame, valid six hours, served opaque</text>
+
+  <rect class="band" x="30" y="376" width="740" height="46" rx="9"/>
+  <text class="d" x="48" y="396">2 frames minimum · 10 000 maximum, refused rather than truncated · frame names of 200 characters at most</text>
+  <text class="d" x="48" y="412">Frame rate inherited studio → project → sequence → shot · with antivirus on, every frame is scanned</text>
+</svg>

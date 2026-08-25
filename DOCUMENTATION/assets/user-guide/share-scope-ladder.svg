@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" role="img" aria-labelledby="scope-title scope-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="scope-title">What a share link opens: four scopes over one filter</title>
+  <desc id="scope-desc">Every share link starts from the same filter — published media, status READY, published version, not in the trash — and then narrows it to the whole project, one playlist, one version, or an explicit selection of at most 200 media. The scope is re-applied on every read, and a scope whose target has been deleted matches nothing rather than falling back to the whole project.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="420" rx="10"/>
+
+  <text class="d" x="40" y="30">WHAT A LINK OPENS</text>
+
+  <!-- Filtre de base : ce qui est partageable, quelle que soit la portée -->
+  <rect class="panel-a" x="40" y="42" width="720" height="76" rx="9"/>
+  <text class="t" x="60" y="66">Shareable media of the project</text>
+  <rect class="panel" x="60" y="78" width="80" height="22" rx="6"/>
+  <text class="m" x="100" y="93" text-anchor="middle">published</text>
+  <rect class="panel" x="150" y="78" width="118" height="22" rx="6"/>
+  <text class="m" x="209" y="93" text-anchor="middle">status = READY</text>
+  <rect class="panel" x="278" y="78" width="136" height="22" rx="6"/>
+  <text class="m" x="346" y="93" text-anchor="middle">version published</text>
+  <rect class="panel" x="424" y="78" width="130" height="22" rx="6"/>
+  <text class="m" x="489" y="93" text-anchor="middle">not in the trash</text>
+  <text class="d" x="572" y="93">applies first, whatever the scope</text>
+
+  <path class="conn" d="M400 118 L400 142 L123 142 L123 172" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 118 L400 142 L308 142 L308 172" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 118 L400 142 L493 142 L493 172" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 118 L400 142 L678 142 L678 172" marker-end="url(#arrow)"/>
+
+  <!-- Les quatre portées, de la plus large à la plus étroite -->
+  <rect class="panel" x="40" y="176" width="165" height="86" rx="9"/>
+  <text class="t" x="123" y="200" text-anchor="middle">PROJECT</text>
+  <text class="d" x="123" y="220" text-anchor="middle">every shareable media</text>
+  <text class="d" x="123" y="236" text-anchor="middle">of the project</text>
+
+  <rect class="panel" x="225" y="176" width="165" height="86" rx="9"/>
+  <text class="t" x="308" y="200" text-anchor="middle">PLAYLIST</text>
+  <text class="d" x="308" y="220" text-anchor="middle">only media whose version</text>
+  <text class="d" x="308" y="236" text-anchor="middle">is in that playlist</text>
+
+  <rect class="panel" x="410" y="176" width="165" height="86" rx="9"/>
+  <text class="t" x="493" y="200" text-anchor="middle">VERSION</text>
+  <text class="d" x="493" y="220" text-anchor="middle">only the media of</text>
+  <text class="d" x="493" y="236" text-anchor="middle">that one version</text>
+
+  <rect class="panel" x="595" y="176" width="165" height="86" rx="9"/>
+  <text class="t" x="678" y="200" text-anchor="middle">MEDIA</text>
+  <text class="d" x="678" y="220" text-anchor="middle">an explicit list, 200 max</text>
+  <text class="d" x="678" y="236" text-anchor="middle">picked among the</text>
+  <text class="d" x="678" y="252" text-anchor="middle">published media</text>
+
+  <path class="conn-a" d="M123 262 L123 272" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M308 262 L308 272" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M493 262 L493 272" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M678 262 L678 272" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="40" y="276" width="720" height="52" rx="9"/>
+  <text class="t" x="400" y="300" text-anchor="middle">Re-applied on every read: the grid, the presigned URL, the comment thread</text>
+  <text class="d" x="400" y="318" text-anchor="middle">the target is resolved and re-verified against the project when the link is created</text>
+
+  <path class="conn-o" d="M400 328 L400 344" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="40" y="348" width="720" height="52" rx="9"/>
+  <text class="t no" x="400" y="372" text-anchor="middle">If the target is deleted, the link matches nothing</text>
+  <text class="d" x="400" y="390" text-anchor="middle">it never falls back to the whole project — that silent widening is what the scope prevents</text>
+</svg>

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" width="800" height="340" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The shape of a show in ReView</title>
+  <desc id="fig-desc">A project contains an optional episode level, then sequences and shots; assets hang off the project directly. Every shot and every asset carries tasks, a task carries versions, and a version carries the media that is reviewed.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="340" rx="10"/>
+
+  <text class="d" x="28" y="30">WHERE THE WORK LIVES</text>
+  <text class="d" x="482" y="30">WHAT IS REVIEWED</text>
+  <rect class="band" x="460" y="42" width="316" height="272" rx="10"/>
+
+  <!-- Arbre : projet, épisode optionnel, séquence/shot, asset -->
+  <rect class="panel-a" x="138" y="48" width="150" height="46" rx="9"/>
+  <text class="t" x="213" y="70" text-anchor="middle">Project</text>
+  <text class="d" x="213" y="86" text-anchor="middle">one show, one client</text>
+
+  <path class="conn" d="M213 94 L213 116" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="138" y="120" width="150" height="46" rx="9"/>
+  <text class="l" x="213" y="142" text-anchor="middle">Episode</text>
+  <text class="d" x="213" y="158" text-anchor="middle">optional level</text>
+
+  <path class="conn" d="M213 166 L213 184 L88 184 L88 200" marker-end="url(#arrow)"/>
+  <path class="conn" d="M213 166 L213 184 L338 184 L338 200" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="18" y="204" width="140" height="46" rx="9"/>
+  <text class="l" x="88" y="226" text-anchor="middle">Sequence</text>
+  <text class="d" x="88" y="242" text-anchor="middle">a scene</text>
+
+  <rect class="panel" x="268" y="204" width="140" height="46" rx="9"/>
+  <text class="l" x="338" y="226" text-anchor="middle">Asset</text>
+  <text class="d" x="338" y="242" text-anchor="middle">character, prop, set</text>
+
+  <path class="conn" d="M88 250 L88 272" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="18" y="276" width="140" height="46" rx="9"/>
+  <text class="l" x="88" y="298" text-anchor="middle">Shot</text>
+  <text class="d" x="88" y="314" text-anchor="middle">frame range, fps</text>
+
+  <!-- Passerelle : shots et assets portent tous les deux des tasks -->
+  <path class="conn-a" d="M408 227 L430 227 L430 94 L486 94" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M158 299 L452 299 L452 110 L486 110" marker-end="url(#arrow-a)"/>
+  <text class="a" x="300" y="292" text-anchor="middle">both carry tasks</text>
+
+  <!-- Chaîne de review -->
+  <rect class="panel" x="486" y="78" width="264" height="46" rx="9"/>
+  <text class="l" x="618" y="100" text-anchor="middle">Task</text>
+  <text class="d" x="618" y="116" text-anchor="middle">animation, lighting, comp — one department</text>
+
+  <path class="conn" d="M618 124 L618 152" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="486" y="156" width="264" height="46" rx="9"/>
+  <text class="l" x="618" y="178" text-anchor="middle">Version</text>
+  <text class="d" x="618" y="194" text-anchor="middle">v001, v002 — a delivery, and a decision</text>
+
+  <path class="conn" d="M618 202 L618 230" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="486" y="234" width="264" height="46" rx="9"/>
+  <text class="t" x="618" y="256" text-anchor="middle">Media</text>
+  <text class="d" x="618" y="272" text-anchor="middle">video, image, sequence, 3D, splat</text>
+
+  <text class="d" x="618" y="300" text-anchor="middle">a published media is locked — you fix it with a new version</text>
+</svg>

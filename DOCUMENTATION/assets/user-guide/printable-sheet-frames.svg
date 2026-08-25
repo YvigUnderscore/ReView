@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 428" width="800" height="428" role="img" aria-labelledby="sheet-title sheet-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="sheet-title">How the printable sheet finds a picture for every note</title>
+  <desc id="sheet-desc">For a note written on a video, the sheet picks the nearest tile of the timeline sprite the worker already built for the player hover preview, crops it, and embeds it as a data URI. For an image, a 3D model or a splat there is no sprite, so the media thumbnail is used instead. The result is a self-contained HTML document that prints to PDF without splitting a note across pages.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="428" rx="10"/>
+
+  <text class="d" x="30" y="28">HOW EVERY NOTE GETS A PICTURE</text>
+
+  <rect class="panel-a" x="30" y="106" width="170" height="52" rx="9"/>
+  <text class="t" x="115" y="130" text-anchor="middle">A note at t = 12.4 s</text>
+  <text class="d" x="115" y="146" text-anchor="middle">on media #318</text>
+
+  <path class="conn" d="M200 132 L228 132" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="232" y="100" width="150" height="64" rx="9"/>
+  <text class="l" x="307" y="124" text-anchor="middle">Does this media</text>
+  <text class="l" x="307" y="140" text-anchor="middle">have a timeline</text>
+  <text class="l" x="307" y="156" text-anchor="middle">sprite?</text>
+
+  <path class="conn" d="M382 116 L404 116 L404 78 L432 78" marker-end="url(#arrow)"/>
+  <text class="a" x="408" y="70">yes</text>
+  <path class="conn" d="M382 148 L404 148 L404 212 L432 212" marker-end="url(#arrow)"/>
+  <text class="d" x="410" y="170">no — image, 3D, splat</text>
+
+  <rect class="panel" x="436" y="52" width="150" height="52" rx="9"/>
+  <text class="l" x="511" y="76" text-anchor="middle">Nearest sprite tile</text>
+  <text class="m" x="511" y="92" text-anchor="middle">floor(t / intervalSec)</text>
+
+  <path class="conn" d="M586 78 L614 78" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="618" y="52" width="160" height="52" rx="9"/>
+  <text class="l" x="698" y="76" text-anchor="middle">Crop tile (col, row)</text>
+  <text class="d" x="698" y="92" text-anchor="middle">out of the sprite sheet</text>
+
+  <rect class="panel" x="436" y="186" width="150" height="52" rx="9"/>
+  <text class="l" x="511" y="210" text-anchor="middle">The media thumbnail</text>
+  <text class="d" x="511" y="226" text-anchor="middle">160 px wide</text>
+
+  <path class="conn" d="M698 104 L698 182" marker-end="url(#arrow)"/>
+  <path class="conn" d="M586 212 L614 212" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="618" y="186" width="160" height="52" rx="9"/>
+  <text class="t" x="698" y="210" text-anchor="middle">Embed as a data URI</text>
+  <text class="d" x="698" y="226" text-anchor="middle">no expiring URL inside</text>
+
+  <path class="conn-a" d="M698 238 L698 276" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-o" x="30" y="190" width="250" height="84" rx="9"/>
+  <text class="d" x="44" y="214">The sprite is the one the worker</text>
+  <text class="d" x="44" y="230">already builds for the player&#39;s hover</text>
+  <text class="d" x="44" y="246">preview — one request instead of one</text>
+  <text class="d" x="44" y="262">video seek per note.</text>
+
+  <rect class="panel-a" x="300" y="280" width="478" height="56" rx="9"/>
+  <text class="t" x="539" y="304" text-anchor="middle">A self-contained HTML sheet</text>
+  <text class="d" x="539" y="322" text-anchor="middle">print it to PDF — a page break never splits a note</text>
+
+  <rect class="band" x="30" y="356" width="748" height="52" rx="9"/>
+  <text class="d" x="44" y="378">200 notes maximum per sheet — each one carries an image.</text>
+  <text class="d" x="44" y="396">An image over 2 MB, or past a 24 MB budget for the whole document, is skipped: that note prints without its frame.</text>
+</svg>

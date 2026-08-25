@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 350" width="800" height="350" role="img" aria-labelledby="vapid-life-title vapid-life-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="vapid-life-title">Where the push signing key comes from, and how a restore silences it</title>
+  <desc id="vapid-life-desc">When the two VAPID variables are set in the environment, the same key pair survives every restore and every replica. When they are not, a pair is generated on first use and kept in the vapid_keys setting row; restoring the database, or pointing a second instance at another database, changes that pair and silently invalidates every browser subscription. There is no server-side repair: each user has to turn push off and on again.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="350" rx="10"/>
+
+  <text class="d" x="30" y="32">WHERE THE PUSH SIGNING KEY COMES FROM</text>
+
+  <rect class="panel" x="180" y="46" width="440" height="46" rx="9"/>
+  <text class="t" x="400" y="68" text-anchor="middle">Are both VAPID keys set in the environment?</text>
+  <text class="m" x="400" y="85" text-anchor="middle">VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY</text>
+
+  <path class="conn" d="M350 92 L350 108 L205 108 L205 124" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M450 92 L450 108 L595 108 L595 124" marker-end="url(#arrow-a)"/>
+  <text class="d" x="300" y="104" text-anchor="middle">no</text>
+  <text class="a" x="500" y="104" text-anchor="middle">yes</text>
+
+  <rect class="panel" x="40" y="124" width="330" height="46" rx="9"/>
+  <text class="t" x="56" y="146">Generated on first use</text>
+  <text class="d" x="56" y="163">kept in the vapid_keys setting row</text>
+
+  <rect class="panel-a" x="430" y="124" width="330" height="46" rx="9"/>
+  <text class="t" x="446" y="146">Taken from the environment</text>
+  <text class="d" x="446" y="163">the same pair on every replica</text>
+
+  <path class="conn" d="M205 170 L205 198" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="40" y="202" width="330" height="46" rx="9"/>
+  <text class="t" x="56" y="224">Database restored or replaced</text>
+  <text class="d" x="56" y="241">the pair changes, subscriptions go stale</text>
+
+  <text class="d" x="446" y="226">A restore changes nothing — the pair lives outside.</text>
+
+  <path class="conn" d="M205 248 L205 272" marker-end="url(#arrow)"/>
+  <text class="l" x="205" y="290" text-anchor="middle">Each user re-subscribes from Profile → Notifications</text>
+
+  <text class="a" x="30" y="326">Read the pair out of vapid_keys once, put it in the two variables, restart — and restores stop mattering.</text>
+</svg>

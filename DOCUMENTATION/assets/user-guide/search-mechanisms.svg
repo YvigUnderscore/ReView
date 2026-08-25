@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 416" width="800" height="416" role="img" aria-labelledby="sm-title sm-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="sm-title">Three places you can type, three different mechanisms</title>
+  <desc id="sm-desc">The command palette sends a server query across every project you belong to. The filter bar of the Shots, Assets and Kanban lists pulls the whole list down first, then filters it in the browser. The Reviews list has no free-text field at all: its four dropdowns become query parameters.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="416" rx="10"/>
+
+  <text class="d" x="24" y="30">THREE PLACES YOU CAN TYPE — THREE DIFFERENT MECHANISMS</text>
+
+  <!-- Voie 1 : la palette -->
+  <text class="t" x="24" y="62">1 · The command palette</text>
+  <rect class="panel" x="24" y="72" width="228" height="46" rx="9"/>
+  <text class="l" x="40" y="94">You type</text>
+  <text class="d" x="40" y="110">two characters minimum</text>
+  <path class="conn-a" d="M252 95 L276 95" marker-end="url(#arrow-a)"/>
+  <rect class="panel" x="276" y="72" width="228" height="46" rx="9"/>
+  <text class="l" x="292" y="94">One server query</text>
+  <text class="d" x="292" y="110">ten queries in parallel</text>
+  <path class="conn-a" d="M504 95 L528 95" marker-end="url(#arrow-a)"/>
+  <rect class="panel-a" x="528" y="72" width="248" height="46" rx="9"/>
+  <text class="t" x="544" y="94">5 or 8 rows per family</text>
+  <text class="d" x="544" y="110">across every project you belong to</text>
+  <text class="d" x="24" y="140">Spans the whole studio you have access to, not the page you happen to be on.</text>
+
+  <!-- Voie 2 : la barre de filtres -->
+  <text class="t" x="24" y="176">2 · The filter bar of Shots, Assets and Kanban</text>
+  <rect class="panel" x="24" y="186" width="228" height="46" rx="9"/>
+  <text class="l" x="40" y="208">You type or pick</text>
+  <text class="d" x="40" y="224">text and four criteria</text>
+  <path class="conn" d="M252 209 L276 209" marker-end="url(#arrow)"/>
+  <rect class="panel-w" x="276" y="186" width="228" height="46" rx="9"/>
+  <text class="l" x="292" y="208">The list goes eager</text>
+  <text class="d" x="292" y="224">every remaining page is fetched</text>
+  <path class="conn" d="M504 209 L528 209" marker-end="url(#arrow)"/>
+  <rect class="panel" x="528" y="186" width="248" height="46" rx="9"/>
+  <text class="l" x="544" y="208">Filtered in the browser</text>
+  <text class="d" x="544" y="224">name, code and parent</text>
+  <text class="d" x="24" y="254">A filter — but it pulls the whole list first, so it never answers "no result" for a shot that exists.</text>
+
+  <!-- Voie 3 : la liste Reviews -->
+  <text class="t" x="24" y="290">3 · The Reviews list</text>
+  <rect class="panel" x="24" y="300" width="228" height="46" rx="9"/>
+  <text class="l" x="40" y="322">You pick</text>
+  <text class="d" x="40" y="338">four dropdowns, no text field</text>
+  <path class="conn" d="M252 323 L276 323" marker-end="url(#arrow)"/>
+  <rect class="panel" x="276" y="300" width="228" height="46" rx="9"/>
+  <text class="l" x="292" y="322">Values become parameters</text>
+  <text class="m" x="292" y="338">/api/media/reviews?…</text>
+  <path class="conn" d="M504 323 L528 323" marker-end="url(#arrow)"/>
+  <rect class="panel" x="528" y="300" width="248" height="46" rx="9"/>
+  <text class="l" x="544" y="322">Paged results</text>
+  <text class="d" x="544" y="338">loaded of total, scroll for more</text>
+  <text class="d" x="24" y="368">Filtered by the server. To find a media by name, use the palette.</text>
+
+  <text class="d" x="24" y="398">Lanes 2 and 3 remember their values: a saved view is stored on your account, per list and per project.</text>
+</svg>

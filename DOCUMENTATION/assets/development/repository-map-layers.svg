@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 706" width="800" height="706" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The five layers of the ReView repository</title>
+  <desc id="fig-desc">From the workstation clients down to the infrastructure: clients/, frontend/, backend/, scripts/ split between validation and operations, and the infrastructure files. Each band lists the folders it contains.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="706" rx="10"/>
+
+  <text class="d" x="28" y="26">CLOSEST TO THE USER</text>
+  <path class="conn-a" d="M14 44 L14 664" marker-end="url(#arrow-a)"/>
+
+  <!-- Bande 1 : clients installés sur un poste -->
+  <rect class="band" x="28" y="40" width="744" height="84" rx="10"/>
+  <text class="t" x="44" y="66">clients/ — what a studio installs on a workstation</text>
+  <text class="a" x="756" y="66" text-anchor="end">speaks /api/v1 only</text>
+  <rect class="panel" x="44" y="78" width="210" height="30" rx="9"/>
+  <text class="l" x="149" y="98" text-anchor="middle">python/ — review CLI, publish</text>
+  <rect class="panel" x="270" y="78" width="236" height="30" rx="9"/>
+  <text class="l" x="388" y="98" text-anchor="middle">dcc/ — Blender add-on, Nuke hook</text>
+
+  <!-- Bande 2 : frontend -->
+  <rect class="band" x="28" y="138" width="744" height="122" rx="10"/>
+  <text class="t" x="44" y="164">frontend/ — React 19, Vite 7, Tailwind</text>
+  <text class="d" x="756" y="164" text-anchor="end">one bundle, fourteen languages</text>
+  <rect class="panel" x="44" y="176" width="224" height="30" rx="9"/>
+  <text class="l" x="156" y="196" text-anchor="middle">v2/pages/ (one folder per area)</text>
+  <rect class="panel" x="284" y="176" width="240" height="30" rx="9"/>
+  <text class="l" x="404" y="196" text-anchor="middle">v2/components/ (+ ui/ primitives)</text>
+  <rect class="panel" x="540" y="176" width="206" height="30" rx="9"/>
+  <text class="l" x="643" y="196" text-anchor="middle">v2/lib/ (qk, queries, menus)</text>
+  <rect class="panel" x="44" y="214" width="182" height="30" rx="9"/>
+  <text class="l" x="135" y="234" text-anchor="middle">v2/i18n/ (14 catalogues)</text>
+  <rect class="panel" x="242" y="214" width="156" height="30" rx="9"/>
+  <text class="l" x="320" y="234" text-anchor="middle">v2/stores/ (Zustand)</text>
+  <rect class="panel" x="414" y="214" width="220" height="30" rx="9"/>
+  <text class="l" x="524" y="234" text-anchor="middle">lib/ (apiClient, uploadClient)</text>
+
+  <!-- Bande 3 : backend -->
+  <rect class="band" x="28" y="274" width="744" height="160" rx="10"/>
+  <text class="t" x="44" y="300">backend/ — Express 5, Socket.io, Prisma</text>
+  <text class="d" x="756" y="300" text-anchor="end">two HTTP surfaces, one services layer</text>
+  <rect class="panel" x="44" y="312" width="194" height="30" rx="9"/>
+  <text class="l" x="141" y="332" text-anchor="middle">routes/ (a domain each)</text>
+  <rect class="panel-a" x="254" y="312" width="226" height="30" rx="9"/>
+  <text class="l" x="367" y="332" text-anchor="middle">routes/v1/ (the contract)</text>
+  <rect class="panel" x="496" y="312" width="194" height="30" rx="9"/>
+  <text class="l" x="593" y="332" text-anchor="middle">services/ (business logic)</text>
+  <rect class="panel" x="44" y="350" width="200" height="30" rx="9"/>
+  <text class="l" x="144" y="370" text-anchor="middle">lib/ (pure, testable rules)</text>
+  <rect class="panel" x="260" y="350" width="226" height="30" rx="9"/>
+  <text class="l" x="373" y="370" text-anchor="middle">middleware/ (auth, rbac, scope)</text>
+  <rect class="panel" x="502" y="350" width="212" height="30" rx="9"/>
+  <text class="l" x="608" y="370" text-anchor="middle">i18n/ (emails, notifications)</text>
+  <rect class="panel" x="44" y="388" width="246" height="30" rx="9"/>
+  <text class="l" x="167" y="408" text-anchor="middle">workers/ (+ usd/ and ocio/ Python)</text>
+  <rect class="panel" x="306" y="388" width="212" height="30" rx="9"/>
+  <text class="l" x="412" y="408" text-anchor="middle">prisma/ (schema + migrations)</text>
+
+  <!-- Bande 4 : scripts, deux familles -->
+  <rect class="band" x="28" y="448" width="744" height="84" rx="10"/>
+  <text class="t" x="44" y="474">scripts/ — two families under one name</text>
+  <text class="a" x="756" y="474" text-anchor="end">run by hand, and by CI</text>
+  <rect class="panel-a" x="44" y="486" width="264" height="30" rx="9"/>
+  <text class="l" x="176" y="506" text-anchor="middle">validation: validate.sh + check-*.mjs</text>
+  <rect class="panel" x="324" y="486" width="308" height="30" rx="9"/>
+  <text class="l" x="478" y="506" text-anchor="middle">operations: install, update, backup, restore</text>
+
+  <!-- Bande 5 : infrastructure -->
+  <rect class="band" x="28" y="546" width="744" height="122" rx="10"/>
+  <text class="t" x="44" y="572">infrastructure — what actually runs the instance</text>
+  <text class="d" x="756" y="572" text-anchor="end">committed, not improvised</text>
+  <rect class="panel" x="44" y="584" width="226" height="30" rx="9"/>
+  <text class="l" x="157" y="604" text-anchor="middle">docker-compose (.prod, .release)</text>
+  <rect class="panel" x="286" y="584" width="194" height="30" rx="9"/>
+  <text class="l" x="383" y="604" text-anchor="middle">nginx/ (TLS, HLS off-Node)</text>
+  <rect class="panel" x="496" y="584" width="240" height="30" rx="9"/>
+  <text class="l" x="616" y="604" text-anchor="middle">monitoring/ (Prometheus, Grafana)</text>
+  <rect class="panel" x="44" y="622" width="270" height="30" rx="9"/>
+  <text class="l" x="179" y="642" text-anchor="middle">.github/workflows/ (validate, release)</text>
+  <rect class="panel" x="330" y="622" width="206" height="30" rx="9"/>
+  <text class="l" x="433" y="642" text-anchor="middle">DOCUMENTATION/ (this manual)</text>
+
+  <text class="d" x="28" y="692">CLOSEST TO THE MACHINE</text>
+</svg>

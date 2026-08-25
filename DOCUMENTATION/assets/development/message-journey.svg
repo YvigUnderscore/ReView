@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 312" width="800" height="312" role="img" aria-labelledby="mj-title mj-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="mj-title">Two roads to a translated sentence</title>
+  <desc id="mj-desc">An interface string is written in en.json, pushed into the fourteen catalogues by i18n-add.mjs, then read by t() at runtime, where English is bundled and the chosen language is fetched on demand. A server error takes the other road: the route throws an English message plus a stable code, and the client looks that code up in its own catalogue.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="312" rx="10"/>
+
+  <!-- Voie 1 : une chaîne d'interface -->
+  <rect class="band" x="16" y="14" width="768" height="134" rx="10"/>
+  <text class="d" x="32" y="34">AN INTERFACE STRING</text>
+
+  <rect class="panel" x="35" y="44" width="150" height="46" rx="9"/>
+  <text class="l" x="110" y="66" text-anchor="middle">en.json</text>
+  <text class="d" x="110" y="82" text-anchor="middle">defines every key</text>
+
+  <path class="conn" d="M185 67 L215 67" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="215" y="44" width="170" height="46" rx="9"/>
+  <text class="l" x="300" y="66" text-anchor="middle">i18n-add.mjs</text>
+  <text class="d" x="300" y="82" text-anchor="middle">one batch, 14 catalogues</text>
+
+  <path class="conn" d="M385 67 L415 67" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="415" y="44" width="180" height="46" rx="9"/>
+  <text class="l" x="505" y="66" text-anchor="middle">t('jobs.purgeNow')</text>
+  <text class="d" x="505" y="82" text-anchor="middle">others fetched on demand</text>
+
+  <path class="conn-a" d="M595 67 L625 67" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="625" y="44" width="140" height="46" rx="9"/>
+  <text class="t" x="695" y="66" text-anchor="middle">Screen</text>
+  <text class="d" x="695" y="82" text-anchor="middle">reader's language</text>
+
+  <text class="d" x="35" y="118">en.json is bundled; the rest is fetched on demand</text>
+  <text class="d" x="35" y="134">46 to 57 kB gzipped per language</text>
+
+  <path class="conn-o" d="M505 90 L505 104" marker-end="url(#arrow)"/>
+  <rect class="panel-o" x="415" y="104" width="350" height="34" rx="9"/>
+  <text class="d" x="590" y="125" text-anchor="middle">a key absent here falls back to English, key by key</text>
+
+  <!-- Voie 2 : une erreur du serveur -->
+  <rect class="band" x="16" y="164" width="768" height="134" rx="10"/>
+  <text class="d" x="32" y="184">A SERVER ERROR</text>
+
+  <rect class="panel" x="35" y="194" width="150" height="46" rx="9"/>
+  <text class="l" x="110" y="216" text-anchor="middle">Route throws</text>
+  <text class="d" x="110" y="232" text-anchor="middle">English text + code</text>
+
+  <path class="conn" d="M185 217 L215 217" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="215" y="194" width="170" height="46" rx="9"/>
+  <text class="l" x="300" y="216" text-anchor="middle">Error middleware</text>
+  <text class="d" x="300" y="232" text-anchor="middle">answers { error, code }</text>
+
+  <path class="conn" d="M385 217 L415 217" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="415" y="194" width="180" height="46" rx="9"/>
+  <text class="l" x="505" y="216" text-anchor="middle">apiClient</text>
+  <text class="d" x="505" y="232" text-anchor="middle">looks up error.CODE</text>
+
+  <path class="conn-a" d="M595 217 L625 217" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="625" y="194" width="140" height="46" rx="9"/>
+  <text class="t" x="695" y="216" text-anchor="middle">Toast</text>
+  <text class="d" x="695" y="232" text-anchor="middle">reader's language</text>
+
+  <text class="d" x="400" y="272" text-anchor="middle">the English message is a trace, the code is the contract — 46 error.* keys today</text>
+  <text class="d" x="400" y="288" text-anchor="middle">a code with no key in the catalogue keeps its English text: degraded, never wrong</text>
+</svg>

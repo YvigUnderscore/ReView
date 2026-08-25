@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 428" width="800" height="428" role="img" aria-labelledby="avp-title avp-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="avp-title">Studio admin against the project page: where each power lives</title>
+  <desc id="avp-desc">Two facing lists. On the left, the powers that only exist inside the admin area and only for a global ADMIN. On the right, the powers reached from a project page, split by an accent bracket into those a project supervisor may use and a red bracket over those that still demand a global ADMIN or SUPERVISOR.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="800" height="428" rx="10"/>
+
+  <text class="d" x="20" y="28">TWO SCREENS, TWO AUTHORITIES</text>
+
+  <text class="t" x="20" y="54">Studio admin — /admin</text>
+  <text class="d" x="20" y="72">global ADMIN only, no exception</text>
+  <text class="t" x="410" y="54">The project page</text>
+  <text class="d" x="410" y="72">your effective role on that project</text>
+
+  <rect class="panel-a" x="20" y="84" width="370" height="282" rx="9"/>
+  <rect class="panel" x="410" y="84" width="370" height="282" rx="9"/>
+
+  <text class="l" x="32" y="111">Studio limits: file size, per-user quota, uploads</text>
+  <text class="l" x="32" y="141">Log retention, and the nightly trash sweep</text>
+  <text class="l" x="32" y="171">Accounts: create, invite, disable, delete</text>
+  <text class="l" x="32" y="201">Global roles: ADMIN, SUPERVISOR, ARTIST, CLIENT</text>
+  <text class="l" x="32" y="231">Project defaults every new project inherits</text>
+  <text class="l" x="32" y="261">Transcoding ladder, OCIO configs, HDRI library</text>
+  <text class="l" x="32" y="291">Delivery: studio logo, watermark, burn-ins</text>
+  <text class="l" x="32" y="321">SMTP, announcements, webhooks, service tokens</text>
+  <text class="l" x="32" y="351">Audit log, media access log, job queues, trash</text>
+
+  <rect class="head-a" x="768" y="98" width="3" height="108" rx="1.5"/>
+  <rect class="no" x="768" y="248" width="3" height="108" rx="1.5"/>
+
+  <text class="l" x="422" y="111">Members, and their role on this project</text>
+  <text class="a" x="758" y="111" text-anchor="end">local</text>
+  <text class="l" x="422" y="141">Settings: departments, nomenclature, naming</text>
+  <text class="a" x="758" y="141" text-anchor="end">local</text>
+  <text class="l" x="422" y="171">Colour intent, burn-in, default 3D lighting</text>
+  <text class="a" x="758" y="171" text-anchor="end">local</text>
+  <text class="l" x="422" y="201">CSV import</text>
+  <text class="a" x="758" y="201" text-anchor="end">local</text>
+  <text class="l" x="422" y="231">CSV export</text>
+  <text class="d" x="758" y="231" text-anchor="end">any member</text>
+  <text class="l" x="422" y="261">Storage quota</text>
+  <text class="d no" x="758" y="261" text-anchor="end">global</text>
+  <text class="l" x="422" y="291">Archive, delete, restore, duplicate, purge</text>
+  <text class="d no" x="758" y="291" text-anchor="end">global</text>
+  <text class="l" x="422" y="321">Sequences, shots, assets, episodes</text>
+  <text class="d no" x="758" y="321" text-anchor="end">global</text>
+  <text class="l" x="422" y="351">Client share links</text>
+  <text class="d no" x="758" y="351" text-anchor="end">global</text>
+
+  <text class="a" x="20" y="392">local — a membership carrying SUPERVISOR on this project is enough.</text>
+  <text class="d no" x="20" y="410">global — reached from the project page, yet refused to anyone who is not a global ADMIN or SUPERVISOR.</text>
+</svg>

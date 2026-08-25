@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 470" width="800" height="470" role="img" aria-labelledby="mjl-title mjl-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="mjl-title">A media through the processing pipeline, and its ways out</title>
+  <desc id="mjl-desc">A media goes from UPLOADING to PROCESSING at finalize, then to READY or FAILED. BullMQ retries three times. When the worker is killed mid-job the media can stay in PROCESSING with no error, and the boot reconciliation turns it into an explicit failure.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="470" rx="10"/>
+
+  <!-- Boucle de reprise BullMQ -->
+  <text class="a" x="380" y="24" text-anchor="middle">3 attempts, exponential backoff from 5 s</text>
+  <path class="conn" d="M340 52 L340 30 L420 30 L420 52" marker-end="url(#arrow)"/>
+
+  <!-- Chemin nominal -->
+  <rect class="panel" x="30" y="52" width="140" height="46" rx="9"/>
+  <text class="l" x="100" y="74" text-anchor="middle">UPLOADING</text>
+  <text class="d" x="100" y="90" text-anchor="middle">PUT in flight</text>
+
+  <path class="conn" d="M170 75 L300 75" marker-end="url(#arrow)"/>
+  <text class="a" x="235" y="66" text-anchor="middle">finalize</text>
+  <text class="d" x="235" y="114" text-anchor="middle">magic bytes, size, quota</text>
+
+  <rect class="panel-a" x="300" y="52" width="160" height="46" rx="9"/>
+  <text class="t" x="380" y="74" text-anchor="middle">PROCESSING</text>
+  <text class="d" x="380" y="90" text-anchor="middle">a job is queued</text>
+
+  <path class="conn" d="M460 75 L630 75" marker-end="url(#arrow)"/>
+  <text class="a" x="545" y="66" text-anchor="middle">job ok</text>
+  <text class="d" x="545" y="114" text-anchor="middle">proxy, HLS ladder, thumbnail, sprite</text>
+
+  <rect class="panel-a" x="630" y="52" width="140" height="46" rx="9"/>
+  <text class="t" x="700" y="74" text-anchor="middle">READY</text>
+  <text class="d" x="700" y="90" text-anchor="middle">derivatives live</text>
+
+  <!-- Sortie en échec -->
+  <path class="conn" d="M380 98 L380 172" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="300" y="172" width="160" height="46" rx="9"/>
+  <text class="t" x="380" y="194" text-anchor="middle">FAILED</text>
+  <text class="d" x="380" y="210" text-anchor="middle">the reason is stored</text>
+
+  <text class="a" x="480" y="134">job error</text>
+  <text class="d" x="480" y="152">markFailed runs on every attempt:</text>
+  <text class="d" x="480" y="168">a media can read FAILED after try 1,</text>
+  <text class="d" x="480" y="184">then flip back to READY on try 2.</text>
+
+  <text class="d" x="30" y="250">trim and scan failures never mark the media FAILED — a failed trim still leaves a playable proxy.</text>
+  <text class="d" x="30" y="268">processingError is only cleared on the convert3d success path: a video that failed once keeps a stale message.</text>
+
+  <!-- Ce que fait un worker tué en plein travail -->
+  <rect class="band" x="30" y="290" width="740" height="162" rx="10"/>
+  <text class="d" x="48" y="316">WHEN THE WORKER IS KILLED MID-JOB</text>
+
+  <rect class="panel" x="48" y="332" width="215" height="46" rx="9"/>
+  <text class="l" x="62" y="352">Lock expires 30 s later</text>
+  <text class="d" x="62" y="368">no renewal from a dead worker</text>
+
+  <path class="conn" d="M263 355 L287 355" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="287" y="332" width="215" height="46" rx="9"/>
+  <text class="l" x="301" y="352">Stalled scan replays it</text>
+  <text class="d" x="301" y="368">from the top — no checkpoint</text>
+
+  <path class="conn" d="M502 355 L526 355" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="526" y="332" width="215" height="46" rx="9"/>
+  <text class="l" x="540" y="352">Second stall ends it</text>
+  <text class="d" x="540" y="368">failed outside the app handler</text>
+
+  <text class="a" x="48" y="404">reconcileStuckMedia(), 20 s after every API boot</text>
+  <text class="d" x="48" y="422">PROCESSING for over 15 min with no live job in the queue becomes FAILED, with a message naming the interruption.</text>
+  <text class="d" x="48" y="438">Requeuing is never automatic: relaunch it from the media menu.</text>
+</svg>

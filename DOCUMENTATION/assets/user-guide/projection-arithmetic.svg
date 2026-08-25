@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 396" width="800" height="396" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">How the projected end date is built, and why it is never shown alone</title>
+  <desc id="fig-desc">Published media are counted week by week over an observation window of 4, 8, 13 or 26 ISO weeks, empty weeks included. The average gives a rate in media per week; the tasks that are not done give a remainder. The projected end is now plus the ceiling of remaining divided by the rate, times seven, in days. With nothing remaining or a rate of zero, no date is invented.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="396" rx="10"/>
+
+  <text class="d" x="24" y="30">HOW THE PROJECTED END DATE IS BUILT</text>
+
+  <!-- La fenêtre d'observation, semaine par semaine -->
+  <text class="d" x="231" y="88" text-anchor="middle">observation window — 4, 8, 13 or 26 ISO weeks (default 8)</text>
+  <path class="conn" d="M60 104 L60 96 L402 96 L402 104"/>
+
+  <rect class="panel-a" x="60" y="162" width="34" height="38" rx="3"/>
+  <rect class="panel-a" x="104" y="176" width="34" height="24" rx="3"/>
+  <text class="d" x="165" y="194" text-anchor="middle">0</text>
+  <rect class="panel-a" x="192" y="168" width="34" height="32" rx="3"/>
+  <rect class="panel-a" x="236" y="154" width="34" height="46" rx="3"/>
+  <rect class="panel-a" x="280" y="184" width="34" height="16" rx="3"/>
+  <rect class="panel-a" x="324" y="158" width="34" height="42" rx="3"/>
+  <rect class="panel-a" x="368" y="172" width="34" height="28" rx="3"/>
+
+  <path class="conn" d="M52 200 L440 200"/>
+  <text class="d" x="262" y="216" text-anchor="middle">published media, week by week — an empty week stays an empty week</text>
+  <path class="conn-o" d="M60 224 L60 246" marker-end="url(#arrow)"/>
+
+  <!-- Le présent -->
+  <text class="a" x="430" y="52" text-anchor="middle">now</text>
+  <path class="conn-a" d="M430 60 L430 312"/>
+
+  <!-- Les deux termes du calcul -->
+  <rect class="panel" x="24" y="246" width="276" height="46" rx="9"/>
+  <text class="t" x="44" y="268">rate = media ÷ weeks</text>
+  <text class="d" x="44" y="284">the bars above, averaged</text>
+
+  <rect class="panel" x="24" y="302" width="276" height="46" rx="9"/>
+  <text class="t" x="44" y="324">remaining = tasks not done</text>
+  <text class="d" x="44" y="340">inactive statuses excluded</text>
+
+  <path class="conn" d="M300 269 L380 269 L380 301"/>
+  <path class="conn" d="M300 325 L380 325 L380 301"/>
+  <path class="conn" d="M380 301 L430 301"/>
+  <path class="conn-a" d="M430 301 L640 301" marker-end="url(#arrow-a)"/>
+  <text class="m" x="515" y="320" text-anchor="middle">now + ceil(remaining ÷ rate × 7) days</text>
+
+  <rect class="panel-a" x="640" y="278" width="136" height="46" rx="9"/>
+  <text class="t" x="708" y="300" text-anchor="middle">Projected end</text>
+  <text class="d" x="708" y="316" text-anchor="middle">a date, not a promise</text>
+
+  <!-- Les deux cas où aucune date n'est inventée -->
+  <rect class="panel-d" x="470" y="180" width="306" height="46" rx="9"/>
+  <text class="t" x="490" y="202">remaining = 0, or rate = 0</text>
+  <text class="d" x="490" y="218">Not enough pace to project an end</text>
+
+  <text class="d" x="400" y="372" text-anchor="middle">The rate counts media and the remainder counts tasks: read the date as an order of magnitude, never without the rate.</text>
+</svg>

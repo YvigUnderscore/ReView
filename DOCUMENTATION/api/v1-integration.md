@@ -1,18 +1,20 @@
 # API v1 — pipeline integration
 
-> Updated: 2026-08-22
+*The stable contract for pipeline tools: pipeline paths, idempotent publish, reading back, scopes and events.*
 
-**`/api/v1`** is the stable surface meant for tools: DCCs (Maya, Blender, Houdini,
-Nuke), pipeline managers (Prism), bots and third-party synchronisations. It sits
-next to `/api`, which serves the web interface and follows the product.
+> Updated: 2026-08-23
 
-The separation is deliberate: the web API changes at the pace of the screens, while
-an integration installed on a studio's workstations cannot be updated at every
-release. What is published here does not move without a version bump.
+**`/api/v1`** is the surface meant for tools: DCCs (Maya, Blender, Houdini, Nuke), pipeline
+managers (Prism), bots and third-party synchronisations. It sits next to `/api`, which
+serves the web interface and follows the product.
 
-Interactive reference: **`/api/docs`** (spec: `/api/openapi.json`). Every v1 endpoint
-is generated from its own Zod validation schemas, so the documentation cannot drift
-from the code.
+The separation is deliberate. The web API changes at the pace of the screens, while an
+integration installed on a studio's workstations cannot be updated at every release. What
+is published here does not move without a version bump.
+
+Interactive reference: **`/api/docs`** (spec: `/api/openapi.json`). Every v1 endpoint is
+generated from its own Zod validation schemas and from the mount table in
+`backend/src/routes/v1/index.ts`, so an endpoint cannot exist without appearing there.
 
 All examples below assume:
 
@@ -31,47 +33,42 @@ export TOKEN="rvk_0123456789abcdef0123456789abcdef01234567"
 | Authorisation | role + membership | role + membership + **scopes** + project binding |
 | Stability | follows the product | frozen within `v1` |
 
-Every `/api/v1` route requires authentication — there is no public v1 endpoint.
+Every `/api/v1` route requires authentication — `router.use(authenticate)` sits at the
+mount point, and there is no public v1 endpoint.
 
 A ready-made client lives in the repository: [`clients/python/`](../../clients/python/README.md),
 plus Blender and Nuke integrations built on it — see
-[Python client & DCC integrations](python-client.md). Everything below is the HTTP
-contract it speaks, for the languages it does not cover.
+[Python client & DCC integrations](python-client.md). Everything below is the HTTP contract
+it speaks, for the languages it does not cover.
 
 ## Authentication
 
-Send `Authorization: Bearer <token>` — either a session JWT or an API token
-(`rvk_…`). See [Authentication & API access](authentication.md).
-
-**An API token opens `/api/v1` and nothing else.** Pointed at the web API it gets:
-
-```json
-{ "error": "API tokens only open the /api/v1 integration API — use a session token for /api",
-  "code": "API_TOKEN_V1_ONLY" }
-```
-
-That is deliberate: project binding and fine-grained scopes are enforced by the v1
-routes, so a token loose on `/api` would carry the full power of its bearer over every
-project. Whatever an integration needs exists here — identity (`/api/v1/me`), accepted
-values (`/api/v1/schema`), reading files (`/api/v1/media/:id/url`). The public
-documentation endpoints (`/api/docs`, `/api/openapi.json`) remain reachable with a token,
-since they serve the same bytes to everyone.
+Send `Authorization: Bearer <token>` — either a session JWT or an API token (`rvk_…`).
+See [Authentication & API access](authentication.md).
 
 Two kinds of API token:
 
 - **Personal** (`POST /api/auth/tokens`) — acts as its bearer, with their role.
-- **Service** (`POST /api/admin/service-tokens`, admin only) — backed by a service
-  account that cannot log in and never appears in the directory. Meant for a render
-  farm, a daemon or a bot.
+- **Service** (`POST /api/admin/service-tokens`, admin only) — backed by a service account
+  that cannot log in and never appears in the directory. Meant for a render farm, a daemon
+  or a bot.
 
-Both may be **bound to a single project** (`projectId`). A bound token cannot reach
-another project, even if its bearer could — which is what makes a token safe to
-deploy on a farm working on one film.
+Both may be **bound to a single project** (`projectId`), which the v1 routes enforce on
+every resolved project id. That binding is what makes a token safe to deploy on a farm
+working on one film.
+
+> [!CAUTION]
+> The binding, and the "v1 only" rule, hold **inside `/api/v1`**. The middleware written to
+> confine an `rvk_` token to that prefix (`apiTokenSurface`) is not mounted in
+> `createApp()`: an API token pointed at `/api` is accepted there, and the web API consults
+> neither the fine-grained scopes nor the project binding. Until that changes, assume a
+> leaked token carries the **full power of its bearer over every project they can see** —
+> so give it a non-`ADMIN` role, the minimum scopes, and an expiry date.
 
 ### Issuing a service token
 
-An administrator, signed in with a **session JWT** (an API token may not create
-identities — the request is refused with `400`):
+An administrator, signed in with a **session JWT** (an API token may not create identities
+— the request is refused with `400`):
 
 ```bash
 curl -s -X POST "$REVIEW/api/admin/service-tokens" \
@@ -106,63 +103,73 @@ curl -s -X POST "$REVIEW/api/admin/service-tokens" \
 }
 ```
 
-The plaintext `token` is returned **once**; only its SHA-256 hash is stored. Field
-rules: `name` 1–80 characters, `description` ≤ 300, `scopes` at least one entry of
-≤ 40 characters each, `role` one of `SUPERVISOR` / `ARTIST` / `CLIENT` (never `ADMIN`
-— a robot does not administer the studio; the default is `ARTIST`),
-`expiresInDays` 1–3650. Binding a token to a project also makes the service account a
-member of that project, otherwise an `ARTIST` service account would see nothing.
+The plaintext `token` is returned **once**; only its SHA-256 hash is stored. Field rules:
+`name` 1–80 characters, `description` ≤ 300, `scopes` at least one entry of ≤ 40 characters
+each, `role` one of `SUPERVISOR` / `ARTIST` / `CLIENT` (never `ADMIN` — a robot does not
+administer the studio; the default is `ARTIST`), `expiresInDays` 1–3650.
 
-Revoke with `DELETE /api/admin/service-tokens/:id` (`204`, immediate).
+The service account's address is derived from the name: `farm-publisher` becomes
+`svc-farm-publisher@service.review.invalid`. Binding the token to a project also makes that
+account a member of the project — otherwise an `ARTIST` service account would see nothing.
+Reusing the same name reuses the same account, and re-issuing with a different `role`
+adjusts it.
 
-### Scopes
+Revoke with `DELETE /api/admin/service-tokens/:id` (`204`, immediate — the token hash is
+looked up on every request).
 
-Tokens carry fine-grained scopes, `domain:action`, over twelve domains:
+## Scopes, and the gates a request crosses
 
-```
-projects  sequences  shots  assets  tasks  versions
-media     comments   playlists  events  webhooks  users
-```
+Scopes are `domain:action`, over **nine domains**, and the catalogue only declares what a
+route actually guards. A scope that protects nothing is worse than a missing one: it gets
+ticked when a token is created, it gets read in the documentation, and it suggests a
+confinement that does not exist.
 
-…each with `:read` and `:write`, plus `admin` which covers everything — 25 grantable
-strings in total. Granting `x:write` implies `x:read`. A token reads the list from
-`GET /api/v1/schema`, under `scopes` (`GET /api/auth/scopes` returns the same list but
-lives on the web API, so it needs a session JWT):
+| Domain | `:read` | `:write` |
+|--------|:-------:|:--------:|
+| `projects` | yes | — creating a project is not the integration API's business |
+| `sequences` | yes | yes |
+| `shots` | yes | yes |
+| `assets` | yes | yes |
+| `tasks` | yes | yes |
+| `versions` | yes | yes |
+| `media` | yes | yes |
+| `comments` | yes | yes |
+| `events` | yes | — the journal writes itself |
+
+Sixteen fine-grained strings, plus **`admin`**, which covers everything: **17 grantable
+values**. Granting `x:write` implies `x:read`. Playlists, webhooks and the user directory
+have no scope because they are not exposed by `/api/v1` at all — they live on the web API.
+
+Read the list from `GET /api/v1/schema`, under `scopes`. The web API serves the same list
+plus the legacy names at `GET /api/auth/scopes`, which needs a session JWT:
 
 ```bash
 curl -s -H "Authorization: Bearer $TOKEN" "$REVIEW/api/v1/schema" # → .scopes
+curl -s -H "Authorization: Bearer $JWT"   "$REVIEW/api/auth/scopes"
+# → { "scopes": ["projects:read", "sequences:read", "…", "admin"], "legacy": ["read", "write"] }
 ```
 
-```json
-{
-  "scopes": ["projects:read", "projects:write", "sequences:read", "…", "admin"],
-  "legacy": ["read", "write"]
-}
-```
+Tokens issued before scopes existed carry `read` / `write` and keep working: they are
+expanded on the fly — `read` to every `*:read`, `write` to every `*:read` **and** every
+declared `*:write`. A stored scope that has since left the catalogue (an old
+`playlists:read`) is ignored like any unknown string: the token stays valid and loses
+nothing, since no route ever consulted it.
 
-Tokens issued before scopes existed carry `read`/`write` and keep working: they are
-expanded on the fly. Note that legacy `read`/`write` does **not** grant `webhooks:*`
-or `users:*` — an old general-purpose token must not silently gain the ability to
-create webhooks or read the directory.
+![The five gates a v1 request crosses — authentication, the coarse write-scope gate, the route scope, role and project membership, then the token project binding — each with its own refusal code.](../assets/api/v1-request-gates.svg)
 
-A scope never grants more than its bearer already has: role and project membership
-are still enforced. **Scopes are only checked when the caller presents an API token**;
-a session JWT is governed by role and membership alone.
+A scope never grants more than its bearer already has: role and project membership are
+still enforced behind it. **Scopes are only checked when the caller presents an API
+token**; a session JWT is governed by role and membership alone.
 
-Two related refusals, both `403`:
-
-```json
-{ "error": "Scope « versions:write » is required", "code": "SCOPE_REQUIRED" }
-{ "error": "This token is scoped to another project", "code": "TOKEN_PROJECT_SCOPE" }
-```
-
-There is also a coarse gate applied before any route: an API token without *any*
-write scope gets `403 SCOPE_WRITE_REQUIRED` on every non-`GET`/`HEAD`/`OPTIONS`
-request.
+`requireScope` may name several scopes, and a route that touches two families names both.
+The refusal reports the **first** missing one, in declaration order — so a token missing
+two scopes needs two round trips to discover both.
 
 ## Pipeline paths
 
-A DCC knows names, not database ids. A path spells them out and becomes an address:
+A DCC knows names, not database ids. A path spells them out and becomes an address.
+
+![The five segments of a pipeline path, what each matches, the limits that bound it, and the two families of refusal: 400 while parsing, 404 naming the segment that is missing.](../assets/api/pipeline-path-anatomy.svg)
 
 ```
 PROJ                              project
@@ -175,26 +182,35 @@ PROJ/shots/SH0100                 shot with no sequence
 PROJ/assets/hero/model/v002       asset branch
 ```
 
-`shots` and `assets` are reserved keywords **in second position only**; they
-disambiguate "a sequence named X" from "a shot named X with no sequence". A path has
-at most **6 segments**, each at most **200 characters**; empty segments and stray
-slashes are dropped. Resolution is **case-insensitive** — a DCC writes `sh0100` where
-production typed `SH0100`. A segment made only of digits is read as a numeric id
-rather than a code.
+`shots` and `assets` are reserved keywords **in second position only**; they disambiguate
+"a sequence named X" from "a shot named X with no sequence". A path has at most **6
+segments**, each at most **200 characters**; empty segments and stray slashes are dropped.
+Resolution is **case-insensitive** — a DCC writes `sh0100` where production typed `SH0100`.
+A segment made only of digits is read as a numeric id rather than a code.
 
-The `PROJ/shots/<code>` branch matches **only shots with no sequence**. To reach a
-shot whose sequence you do not know, use the `?shot=` query filter on the collection
-endpoints instead, which searches the whole project.
+The `PROJ/shots/<code>` branch matches **only shots with no sequence**. To reach a shot
+whose sequence you do not know, use the `?shot=` query filter on the collection endpoints
+instead, which searches the whole project.
 
-The department is **prefixed to the task name** rather than taking a segment of
-its own: pipelines commonly name `main` the task of every department, and one
-more positional segment would make `.../modeling/main` indistinguishable from
-`.../anim/v003`. The split happens at the **first** colon. Without the colon, the
-segment is read as a task name (the historical form), and the department is deduced
-from that name. The department takes part in a task's identity: `modeling:main` and
-`lookdev:main` are two tasks, and replaying a publish finds the right one. It also
-decides what "latest version" means — see
-[Pipeline settings](../admin-guide/pipeline-settings.md).
+The department is **prefixed to the task name** rather than taking a segment of its own:
+pipelines commonly name `main` the task of every department, and one more positional
+segment would make `.../modeling/main` indistinguishable from `.../anim/v003`. The split
+happens at the **first** colon. Without a colon, the segment is read as a task name (the
+historical form) and the department is deduced from that name. Supplying it narrows the
+lookup: `modeling:main` and `lookdev:main` resolve to two different tasks. It also decides
+what "latest version" means — see [Pipeline settings](../admin-guide/pipeline-settings.md).
+
+> [!WARNING]
+> The department is **not** written back into the `path` a resource carries. `toTask`
+> builds it as `parent.path + "/" + task.name`, so `modeling:main` and `lookdev:main` both
+> serialise to `proj/SQ010/SH0100/main`. Feed that value back to `/resolve` or `/publish`
+> and it matches by name alone — which may land on the other department's task. Keep the
+> prefixed form your own tool built; do not round-trip the returned `path` for a task whose
+> name is shared across departments.
+
+There is no **Episode** segment. The level exists in the product and can be enabled per
+project (`/api/episodes`), but a path addresses an episode-organised show through its
+sequence exactly like any other: `SHOW/<sequence>/<shot>/<task>`.
 
 ### Resolving a path
 
@@ -215,32 +231,48 @@ curl -s -H "Authorization: Bearer $TOKEN" \
     "description": null, "startFrame": 1001, "path": "proj",
     "createdAt": "2026-05-04T08:00:00.000Z", "updatedAt": "2026-08-19T15:22:41.006Z"
   },
-  "sequence": { "id": 11, "code": "SQ010", "name": "SQ010", "order": 0, "projectId": 3, "path": "proj/SQ010" },
+  "sequence": {
+    "id": 11, "code": "SQ010", "name": "SQ010", "order": 0,
+    "projectId": 3, "project": { "slug": "proj" }
+  },
   "shot": {
     "id": 42, "code": "SH0100", "name": "SH0100", "startFrame": 1001, "endFrame": 1096,
-    "order": 0, "projectId": 3, "sequence": { "id": 11, "code": "SQ010" },
-    "path": "proj/SQ010/SH0100"
+    "order": 0, "projectId": 3, "project": { "slug": "proj" },
+    "sequence": { "id": 11, "code": "SQ010" }
   },
   "asset": null,
   "task": {
-    "id": 87, "name": "anim", "type": "ANIMATION", "status": "IN_PROGRESS", "order": 0,
-    "startDate": null, "dueDate": null,
-    "assignee": { "id": 5, "name": "nina" },
-    "parent": { "kind": "shot", "id": 42, "code": "SH0100", "projectId": 3, "path": "proj/SQ010/SH0100" },
-    "projectId": 3, "path": "proj/SQ010/SH0100/anim",
+    "id": 87, "name": "anim", "type": "ANIMATION", "department": "anim",
+    "status": "IN_PROGRESS", "order": 0, "startDate": null, "dueDate": null,
+    "assignee": { "id": 5, "name": "Nina Roy", "username": "nina", "email": "nina@studio.example" },
+    "shot": { "id": 42, "code": "SH0100", "projectId": 3,
+              "project": { "slug": "proj" }, "sequence": { "code": "SQ010" } },
+    "asset": null,
     "createdAt": "2026-06-01T10:12:00.000Z", "updatedAt": "2026-08-20T17:03:12.884Z"
   },
   "version": null
 }
 ```
 
-`kind` is one of `project`, `sequence`, `shot`, `asset`, `task`, `version`. The
-returned `path` is the **canonical** form, and every resource carries its own `path`,
-so a client can chain calls without ever handling an id.
+Two things to read carefully here, because `/resolve` is the one v1 endpoint that does
+**not** serialise through the shared resource shapes:
+
+- Only `project` goes through them, which is why it alone carries `code` and `path`. The
+  `sequence`, `shot`, `asset`, `task` and `version` objects are the database rows as
+  selected: they expose `project: { slug }` instead of a `path`, `task.assignee` carries
+  `username` and `email`, and `task` carries its `shot` or `asset` directly rather than a
+  `parent`. A client written against the shapes returned by `/latest` or `/versions/:id`
+  will find `undefined` where it expects `path` here.
+- The top-level `path` is your own input, **normalised** — parsed and re-joined, so empty
+  segments disappear and the `shots` / `assets` keyword and the `department:` prefix are
+  put back. It is not read from the database, so its case is the case you sent.
+
+`kind` is one of `project`, `sequence`, `shot`, `asset`, `task`, `version`, and names the
+last entity the path designates.
 
 A malformed path returns `400` with one of `PATH_EMPTY`, `PATH_TOO_DEEP`,
-`PATH_SEGMENT_TOO_LONG`, `PATH_TASK_MALFORMED`, `PATH_INCOMPLETE`. A missing link
-returns `404` naming the offending segment, so a script can say *what* is missing:
+`PATH_SEGMENT_TOO_LONG`, `PATH_TASK_MALFORMED`, `PATH_INCOMPLETE`. A missing link returns
+`404` naming the offending segment, so a script can say *what* is missing:
 
 ```json
 { "error": "Shot « SH0999 » not found", "code": "SHOT_NOT_FOUND" }
@@ -251,11 +283,16 @@ The complete family is `PROJECT_NOT_FOUND`, `SEQUENCE_NOT_FOUND`, `SHOT_NOT_FOUN
 
 ## Publishing from a DCC
 
-Two calls. The file never transits through the API — it goes straight to object
-storage, which is what makes a multi-gigabyte render viable.
+Two calls. The file never transits through the API — it goes straight to object storage,
+which is what makes a multi-gigabyte render viable.
 
-**1. Open the publication.** Missing links in the path are created (sequence, shot,
-task); the version number is computed unless you impose one. Scope: `versions:write`.
+![Publishing from a DCC: the publish call opens the version and returns a presigned URL, the file goes straight to object storage, the complete call finalises and publishes — all under one idempotency key.](../assets/api/publish-two-calls.svg)
+
+**1. Open the publication.** Missing links in the path are created (sequence, shot, task);
+the version number is computed unless you impose one. Scopes: **`versions:write` *and*
+`media:write`** — the call creates a version, but it also opens a slot in storage and
+attaches a media there. A token holding only the first is refused with
+`403 SCOPE_REQUIRED` naming `media:write`.
 
 ```bash
 curl -s -X POST "$REVIEW/api/v1/publish" \
@@ -284,14 +321,13 @@ curl -s -X POST "$REVIEW/api/v1/publish" \
     "asset": null,
     "projectId": 3,
     "path": "proj/SQ010/SH0100/anim/V01",
-    "media": [],
     "createdAt": "2026-08-21T09:31:44.201Z",
     "updatedAt": "2026-08-21T09:31:44.201Z"
   },
   "versionCreated": true,
   "created": ["shot", "task"],
   "mediaId": 128,
-  "uploadUrl": "https://review.mystudio.com/review/projects/proj/shots/SQ010/SH0100/V01/128/SH0100_anim_v001.mov?X-Amz-Algorithm=…",
+  "uploadUrl": "https://minio.mystudio.com/review/projects/proj/shots/SQ010/SH0100/V01/128/SH0100_anim_v001.mov?X-Amz-Algorithm=…",
   "uploadMethod": "PUT",
   "contentType": "video/mp4",
   "namingWarning": false
@@ -305,7 +341,7 @@ Request fields:
 | `path` | string, 1–1200 | Must reach at least a shot or an asset |
 | `filename` | string, 1–255 | Drives kind inference and the storage key |
 | `contentType` | string, 1–160, optional | Falls back to `video/mp4` / `image/png` / `application/octet-stream` per kind |
-| `kind` | `VIDEO`\|`IMAGE`\|`MODEL_3D`\|`SPLAT`, optional | Overrides inference |
+| `kind` | `VIDEO`\|`IMAGE`\|`MODEL_3D`\|`SPLAT`, optional | Overrides inference — but the extension is still checked against it |
 | `size` | integer ≥ 0, optional | Checked against the file-size limit and quotas |
 | `contentHash` | 64 hex chars, optional | Client-side sha256, re-checked by the worker |
 | `versionName` | string, 1–60, optional | Imposes a version name instead of the computed one |
@@ -314,12 +350,13 @@ Request fields:
 | `shot.name` / `shot.startFrame` / `shot.endFrame` | optional | Applied when the shot is created |
 | `usd` | object, optional | See below; `MODEL_3D` only |
 
-Without `versionName`, the next name is `V01`, `V02`, … derived from the highest
-trailing number among existing names — not from their count.
+Without `versionName`, the next name is `V01`, `V02`, … derived from the highest trailing
+number among existing names — not from their count.
 
-`created` is a subset of `["asset","sequence","shot","task","version"]` and is `[]`
-when `createMissing` is `false`. `namingWarning` is `true` when the filename does not
-follow the studio's naming convention; the publication still proceeds.
+`created` is a subset of `["asset","sequence","shot","task","version"]` and is `[]` when
+`createMissing` is `false`. `namingWarning` is `true` when the filename does not follow the
+studio's naming convention; the publication still proceeds. Note that the `version` object
+returned here carries **no** `media` key: nothing has been attached yet.
 
 **2. Upload, then close it.**
 
@@ -349,46 +386,60 @@ curl -s -X POST "$REVIEW/api/v1/publish/128/complete" \
 }
 ```
 
-The path segment is the **media id** returned by step 1. `complete` validates the
-file (magic bytes → `detectedExtension`, size, quotas), triggers transcoding or
-thumbnailing, and publishes the media. Two body fields, both optional booleans:
-`publish` (**omitting it publishes** — only `publish: false` holds the media back)
-and `submitForReview`.
+The path segment is the **media id** returned by step 1, and `complete` requires the same
+two scopes. It validates the file (magic bytes → `detectedExtension`, size, quotas),
+triggers transcoding or thumbnailing, and publishes the media. Two body fields, both
+optional booleans: `publish` (**omitting it publishes** — only `publish: false` holds the
+media back) and `submitForReview`.
 
-The **version** is only moved to `PUBLISHED` if the caller is a supervisor or
-administrator; otherwise it lands in `REVIEW`. An artist publishes their media
-without the call failing over a decision that is not theirs to make — and a version
-update refused by the publish lock is swallowed rather than turned into an error, so
-check `version.status` in the response if it matters to you.
+The **version** is only moved to `PUBLISHED` if the caller is a supervisor or an
+administrator; otherwise it lands in `REVIEW`. An artist publishes their media without the
+call failing over a decision that is not theirs to make — and a version update refused by
+the publish lock is swallowed rather than turned into an error, so read `version.status` in
+the response if it matters to you.
 
-The media type is inferred from the extension, case-insensitively, first match wins:
+### Accepted formats, and the refusals that come before the upload
+
+The media kind is inferred from the extension, case-insensitively, in the order
+`VIDEO`, `IMAGE`, `MODEL_3D`, `SPLAT` — first match wins. This table is the single source
+of truth (`lib/fileSignatures`), and it is the same list the header validation knows how to
+recognise: nothing is advertised here that would be refused after the transfer.
 
 | Kind | Extensions |
 |------|------------|
-| `VIDEO` | `mov` `mp4` `mkv` `avi` `webm` `mxf` `m4v` |
-| `IMAGE` | `jpg` `jpeg` `png` `tif` `tiff` `exr` `dpx` `webp` `gif` `bmp` `tga` |
-| `MODEL_3D` | `glb` `gltf` `fbx` `obj` `usd` `usda` `usdc` `usdz` `dae` `stl` `abc` `zip` |
-| `SPLAT` | `splat` `ply` `ksplat` `spz` |
+| `VIDEO` | `mp4` `m4v` `mov` `mkv` `webm` `avi` `mxf` `ts` `m2ts` `mts` |
+| `IMAGE` | `jpg` `jpeg` `png` `webp` `gif` `bmp` `exr` `dpx` `tif` `tiff` `tga` |
+| `MODEL_3D` | `glb` `gltf` `fbx` `obj` `usd` `usda` `usdc` `usdz` `dae` `stl` `zip` |
+| `SPLAT` | `ply` `splat` `spz` `ksplat` `sog` `sogs` |
 
-An unknown extension is refused rather than guessed:
+`.abc` (Alembic) is **deliberately absent**: no signature is recognised for it and no
+converter produces a GLB from one, so `cam.abc` gets `400 KIND_UNKNOWN` rather than a 3D
+media that never converts. Alembic *cameras* are handled elsewhere — see
+[3D & Alembic](../admin-guide/3d-alembic.md).
 
-```json
-{ "error": "Cannot tell the media kind of « render.foo » — pass « kind »", "code": "KIND_UNKNOWN" }
-```
+Three refusals happen at step 1, before you transfer a byte. That is the whole point of the
+two-call flow: a format rejected here costs one round trip, rejected at `complete` it costs
+the whole master.
 
-Errors worth handling on `publish`: `PATH_TOO_SHALLOW` (the path stops at a project or
-a sequence), `PATH_INCLUDES_VERSION` (pass `versionName` instead), `PATH_NO_TARGET`,
-`VERSION_EXISTS`, `FILE_TOO_LARGE` (400), `TOO_MANY_UPLOADS` (**429**),
-`STORAGE_LIMIT` and `PROJECT_QUOTA` (403), `NAMING_REJECTED` (400),
-`PROJECT_ARCHIVED` (403), `ROLE_FORBIDDEN` (403), and
-`SEQUENCE_IN_TRASH` / `SHOT_IN_TRASH` / `ASSET_IN_TRASH` (409).
-On `complete`: `INVALID_FILE`, `NOT_FINALIZED`, `FILE_TOO_LARGE`, `PROJECT_QUOTA`.
+| Code | Status | When |
+|------|--------|------|
+| `KIND_UNKNOWN` | 400 | No kind claims the extension — `Cannot tell the media kind of « render.foo » — pass « kind »` |
+| `UNSUPPORTED_FORMAT` | 400 | The extension is not readable as the `kind` you passed; the message lists what is accepted for that kind |
+| `SEQUENCE_NOT_SUPPORTED_HERE` | 400 | The filename is a `%04d`-style pattern — it must go through `POST /api/media/sequence/init` |
+
+> [!IMPORTANT]
+> There is **no v1 route that publishes an image sequence**. A `SH0100_comp_v003.%04d.exr`
+> delivery is N files that must become one media, which needs N presigned URLs, a resumable
+> manifest and an assembly job — the three-call family on the web API
+> (`/api/media/sequence/*`). A DCC integration that renders EXR therefore publishes the
+> encoded movie its pipeline produces afterwards, or drives those web routes with a session
+> token. See [Image sequences](../user-guide/image-sequences.md).
 
 ### Publishing a USD scene with a variant selection
 
-A DCC knows which variants and which purpose the scene should be shown with — it
-knew before it wrote the file. Pass that selection as `usd` and the **first**
-conversion is already the right one:
+A DCC knows which variants and which purpose the scene should be shown with — it knew
+before it wrote the file. Pass that selection as `usd` and the **first** conversion is
+already the right one:
 
 ```bash
 curl -s -X POST "$REVIEW/api/v1/publish" \
@@ -405,29 +456,29 @@ curl -s -X POST "$REVIEW/api/v1/publish" \
 ```
 
 - `variants` — the chosen option per variant set, keyed by USD prim path. Optional,
-  defaults to `{}` (each variant set keeps the selection authored in the scene).
-  At most 64 prims; a prim path is at most 1024 characters, a variant set name and a
-  variant name at most 200.
+  defaults to `{}` (each variant set keeps the selection authored in the scene). At most 64
+  prims; a prim path is at most 1024 characters, a variant set name and a variant name at
+  most 200.
 - `purpose` — `render`, `proxy` or `guide`. Optional, defaults to `render`.
 
-Without it the conversion runs with the defaults, and matching the intended look
-then costs a `POST /api/media/{id}/usd/recompose` — a **full Blender conversion run
-a second time** for a selection the client already knew. The selection is stored on
-the media, so it also survives job retries and later reprocessing.
+Without it the conversion runs with the defaults, and matching the intended look then costs
+a `POST /api/media/{id}/usd/recompose` — a **full Blender conversion run a second time** for
+a selection the client already knew. The selection is stored on the media, so it also
+survives job retries and later reprocessing.
 
-Prim paths and variant names are **not** validated against the scene at this point:
-it has not been analysed yet. They are filtered at conversion time against the
-variant sets actually found, so an invented value is dropped rather than breaking
-the job. The field only applies to `MODEL_3D`; sending it with a video or an image
-is refused (`USD_NOT_3D`) rather than silently ignored.
+Prim paths and variant names are **not** validated against the scene at this point: it has
+not been analysed yet. They are filtered at conversion time against the variant sets
+actually found, so an invented value is dropped rather than breaking the job. The field
+only applies to `MODEL_3D`; sending it with a video or an image is refused (`USD_NOT_3D`)
+rather than silently ignored.
 
-See [3D & USD](../admin-guide/3d-usd.md) for what the conversion does with it.
+See [USD & 3D conversion](../admin-guide/3d-usd.md) for what the conversion does with it.
 
 ## Reading back — the version to open, and the file behind it
 
-Publishing is half a pipeline. The other half is *fetching*: a Nuke script that needs
-the approved plate, a farm node that needs the layout, a tool that shows what the
-review is looking at. Three endpoints cover it.
+Publishing is half a pipeline. The other half is *fetching*: a Nuke script that needs the
+approved plate, a farm node that needs the layout, a tool that shows what the review is
+looking at. Three endpoints cover it.
 
 ### The version to open
 
@@ -467,20 +518,24 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 | Query | Default | Meaning |
 |---|---|---|
 | `path` | — | Pipeline path down to a shot, an asset or a task (**not** a version) |
-| `published` | `true` | `false` includes drafts — an artist reading back their own work |
-| `urls` | `false` | `true` adds a presigned `url` to every media of the version |
+| `published` | `true` | `false` includes drafts — but only **your own**: an unpublished media belongs to whoever uploaded it |
+| `urls` | `false` | `true` adds a presigned `url` to every media of the version — always the `source` variant |
 | `expiresIn` | `3600` | Validity of those URLs, 60 – 86 400 seconds |
-| `department` | — | Restrict the election to one pipeline step (`comp`, `anim`…) |
+| `department` | — | Restrict the election to one pipeline step (`comp`, `anim`…), matched on the task's department key |
 
-On a **shot or an asset**, "latest" is the *most advanced pipeline step* that has
-something to show, then the most recent version at that step — the same rule the web
-interface applies, so the API and the screen never disagree. An animation published
-after a compositing does not win. On a **task**, where the step is constant, it reduces
-to the most recent. The elected version always carries at least one readable media;
-when nothing qualifies the answer is `404 NO_LATEST_VERSION`.
+On a **shot or an asset**, "latest" is the *most advanced pipeline step* that has something
+to show, then the most recent version at that step — the same rule the web interface
+applies, so the API and the screen never disagree. An animation published after a
+compositing does not win. On a **task**, where the step is constant, it reduces to the most
+recent. The elected version always carries at least one readable media; when nothing
+qualifies the answer is `404 NO_LATEST_VERSION`.
 
-`GET /api/v1/tasks/:id/versions/latest` is the same answer for a task you already hold
-the id of (same query parameters, minus `path`).
+A `path` that names a version is refused with `400 PATH_INCLUDES_VERSION` — there is
+nothing to elect; read it with `GET /api/v1/versions/{id}`. A path that stops at a project
+or a sequence gets `400 PATH_TOO_SHALLOW`.
+
+`GET /api/v1/tasks/:id/versions/latest` is the same answer for a task you already hold the
+id of (same query parameters, minus `path`).
 
 ### The file behind it
 
@@ -502,7 +557,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$REVIEW/api/v1/media/128/url?variant=
 }
 ```
 
-Three variants:
+Three variants, and `expiresIn` is bounded to 60 – 86 400 seconds (default 3 600):
 
 | `variant` | What you get |
 |---|---|
@@ -510,9 +565,9 @@ Three variants:
 | `proxy` | The review MP4, **including the non-destructive trim** when one exists: what the review actually plays |
 | `thumbnail` | The still used in lists and playlists |
 
-A variant the media does not carry answers `404 VARIANT_UNAVAILABLE` rather than a URL
-that would fetch nothing. Then `GET` the URL **without** the `Authorization` header:
-object storage refuses a request that carries two authentication mechanisms.
+A variant the media does not carry answers `404 VARIANT_UNAVAILABLE` rather than a URL that
+would fetch nothing. Then `GET` the URL **without** the `Authorization` header: object
+storage refuses a request that carries two authentication mechanisms.
 
 `GET /api/v1/media/:id` returns the media resource alone (`{ media, versionId }`), for a
 tool that needs the metadata without minting a URL.
@@ -520,20 +575,20 @@ tool that needs the metadata without minting a URL.
 Adaptive playback (HLS) stays on the web API: it is a player concern, and a workstation
 wants the file, not a manifest.
 
-Visibility follows the rest of the product: a media in the trash, or an unpublished one
-uploaded by somebody else, answers `404` — not `403`, which would confirm it exists.
+> [!NOTE]
+> Visibility follows the rest of the product: a media in the trash, or an unpublished one
+> uploaded by somebody else, answers `404` — not `403`, which would confirm it exists.
 
 ## Use case 1 — a publish shelf button in a DCC
 
-Maya, Houdini and Nuke all ship a Python 3 interpreter, but none guarantees
-`requests`. The script below uses only the standard library, so it runs from a shelf
-button, a ROP post-render script or a Nuke write callback without installing
-anything.
+Maya, Houdini and Nuke all ship a Python 3 interpreter, but none guarantees `requests`. The
+script below uses only the standard library, so it runs from a shelf button, a ROP
+post-render script or a Nuke write callback without installing anything.
 
 > In Python, prefer the shipped client — `review.ReviewClient().publish(path, file)` does
 > exactly this, with retries and an idempotency key handled for you. See
-> [Python client & DCC integrations](python-client.md). The script below is the same
-> three calls written out, for the languages the client does not cover.
+> [Python client & DCC integrations](python-client.md). The script below is the same three
+> calls written out, for the languages the client does not cover.
 
 ```python
 # review_publish.py — publish the file the DCC just wrote.
@@ -604,20 +659,19 @@ if __name__ == "__main__":
 
 Notes that matter in production:
 
-- Read the file **once** for the hash and once for the upload; for multi-gigabyte
-  renders, stream the PUT from the file object instead of `handle.read()`.
-- Reuse the same `Idempotency-Key` on a retry after a network timeout: the second
-  call returns the original response with `Idempotency-Replayed: true` instead of
-  creating a second version.
+- Read the file **once** for the hash and once for the upload; for multi-gigabyte renders,
+  stream the PUT from the file object instead of `handle.read()`.
+- Reuse the same `Idempotency-Key` on a retry after a network timeout: the second call
+  returns the original response with `Idempotency-Replayed: true` instead of creating a
+  second version.
 - Catch `SHOT_NOT_FOUND` only if you run with `createMissing: false`; by default the
   structure is created for you.
-- Bind the token to the project the farm works on. A stolen token then cannot touch
-  another show.
+- Bind the token to the project the farm works on, and give it a `role` of `ARTIST`.
 
 ## Use case 2 — a bot that follows status changes
 
-A bot behind a studio firewall cannot receive webhooks. It polls the event journal,
-keeps the cursor, and never loses or replays an event across restarts.
+A bot behind a studio firewall cannot receive webhooks. It polls the event journal, keeps
+the cursor, and never loses or replays an event across restarts.
 
 ```python
 # review_bot.py — relay task status changes to an internal chat.
@@ -681,11 +735,12 @@ curl -s -H "Authorization: Bearer $TOKEN" \
       "id": 8124,
       "event": "task.status_changed",
       "projectId": 3,
-      "entityType": "Task",
+      "entityType": "task",
       "entityId": 87,
-      "payload": { "taskId": 87, "status": "PENDING_REVIEW" },
+      "payload": { "task": { "id": 87, "name": "anim", "…": "…" },
+                   "from": "IN_PROGRESS", "to": "PENDING_REVIEW" },
       "createdAt": "2026-08-21T09:40:02.117Z",
-      "actor": { "id": 5, "name": "nina" }
+      "actor": { "id": 5, "name": "Nina Roy", "username": "nina" }
     }
   ],
   "cursor": 8124,
@@ -698,36 +753,49 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 - `limit` defaults to `100`, minimum `1`, maximum `500`.
 - A call **without** `since` returns `{ "events": [], "cursor": <head>, "hasMore": false }` —
   the current head, not a month of history. `cursor` is `0` on an empty journal.
-- `events` is a comma-separated filter; entries outside the catalogue are dropped
-  silently, so a client written against a newer catalogue degrades instead of failing.
+- `events` is a comma-separated filter; entries outside the catalogue are dropped silently,
+  so a client written against a newer catalogue degrades instead of failing.
 - `project` accepts an id, a slug or a name and restricts the page to that project;
   otherwise the page is limited to what the caller can see (all projects for
   `ADMIN`/`SUPERVISOR`, the token's project when it is bound, the caller's memberships
   otherwise).
-- Events are retained **30 days**, then purged by the daily sweep. A daemon that stays
-  down longer than that loses the gap — reconcile with the collection endpoints.
+- `entityType` is lower-case (`task`, `version`, `comment`), and the payload shape depends
+  on the event: task events carry the whole `task` resource, `task.status_changed` adds
+  `from` and `to`, `task.assigned` adds `assigneeId`.
+- Events are retained **30 days** by default (an administrator can change it), then purged
+  in batches by the daily sweep. A daemon that stays down longer than that loses the gap —
+  reconcile with the collection endpoints.
 
-The catalogue (also served by `GET /api/v1/schema` as `events`) is 18 strings:
+### The catalogue, and the ten names that actually fire
+
+`GET /api/v1/schema` returns eighteen event names under `events`. They are the vocabulary,
+and the `?events=` filter accepts all of them — but **only ten have an emission point in
+the code**:
 
 ```
-project.created     project.updated
-sequence.created    shot.created        shot.updated       asset.created
-task.created        task.updated        task.status_changed  task.assigned
-version.created     version.published
-media.uploaded      media.published     media.failed
-review.decision     comment.created     comment.resolved
+media.published    review.decision     comment.created    comment.resolved
+task.created       task.updated        task.status_changed  task.assigned
+version.created    version.published
 ```
 
-The same catalogue drives **push** delivery through outgoing webhooks
-(`POST /api/admin/webhooks`, signed HMAC-SHA256) for a bot that *is* reachable from
-the internet — see [Authentication & API access](authentication.md#outgoing-webhooks)
-and [Identity & API](../admin-guide/identity-and-api.md).
+The eight others — `project.created`, `project.updated`, `sequence.created`,
+`shot.created`, `shot.updated`, `asset.created`, `media.uploaded`, `media.failed` — are
+declared but never published. Wiring them means touching the corresponding write services,
+and a unit test re-reads the sources so the list cannot quietly drift.
+
+> [!WARNING]
+> Filtering the pull journal on one of those eight returns an empty page, forever, with no
+> error to tell you why. On the push side the refusal is explicit: `POST /api/admin/webhooks`
+> validates its `events` array against the **ten**, so subscribing to `media.failed` is
+> rejected with a `400`. An alert you cannot honour is worse than a missing event — see
+> [Identity, API & audit](../admin-guide/identity-and-api.md) and
+> [Authentication & API access](authentication.md#outgoing-webhooks).
 
 ## Use case 3 — a pipeline tool that creates its own tasks
 
-A production tool that owns the breakdown declares the structure itself. Every
-creation endpoint is an `ensure`: `201` with `created: true` the first time, `200`
-with `created: false` afterwards, so the whole script is safe to re-run.
+A production tool that owns the breakdown declares the structure itself. Every creation
+endpoint is an `ensure`: `201` with `created: true` the first time, `200` with
+`created: false` afterwards, so the whole script is safe to re-run.
 
 ```bash
 # 1. sequence
@@ -767,8 +835,8 @@ done
   "created": true }
 ```
 
-`type` is optional: when omitted it is inferred from the task name, case-insensitively
-— `anim`/`animation` → `ANIMATION`, `model`/`modeling`/`modelling`/`mod` → `MODELING`,
+`type` is optional: when omitted it is inferred from the task name, case-insensitively —
+`anim`/`animation` → `ANIMATION`, `model`/`modeling`/`modelling`/`mod` → `MODELING`,
 `rig`/`rigging` → `RIGGING`, `fx`/`effects`/`vfx` → `FX`, `light`/`lighting`/`lgt` →
 `LIGHTING`, `comp`/`compositing` → `COMPOSITING`, `look`/`lookdev`/`shading`/`surf` →
 `LOOKDEV`, `layout`/`lay`/`blocking` → `LAYOUT`, anything else → `OTHER`.
@@ -780,16 +848,46 @@ curl -s -X PATCH "$REVIEW/api/v1/tasks/91" \
   -d '{ "status": "IN_PROGRESS", "assigneeId": 5, "dueDate": "2026-09-15" }'
 ```
 
-`PATCH` accepts `status`, `assigneeId` (nullable) and `dueDate` (nullable, coerced to
-a date) and returns `{ "task": { … } }`. It emits `task.status_changed` (only when the
-status actually changed), `task.assigned` (when `assigneeId` is present) and always
-`task.updated` — which is exactly what the bot in use case 2 consumes.
+`PATCH` accepts `status`, `assigneeId` (nullable) and `dueDate` (nullable, coerced to a
+date) and returns `{ "task": { … } }`. It emits `task.status_changed` (only when the status
+actually changed), `task.assigned` (when `assigneeId` is present) and always `task.updated`
+— which is exactly what the bot in use case 2 consumes.
 
-Everything the tool needs to read back:
+### The write surface, in full
+
+| Endpoint | Scope | What it does |
+|----------|-------|--------------|
+| `POST /api/v1/projects/:ref/sequences` | `sequences:write` | Ensure a sequence |
+| `POST /api/v1/projects/:ref/shots` | `shots:write` | Ensure a shot (`sequenceCode` optional) |
+| `POST /api/v1/projects/:ref/assets` | `assets:write` | Ensure an asset |
+| `POST /api/v1/shots/:id/tasks` · `POST /api/v1/assets/:id/tasks` | `tasks:write` | Ensure a task on a shot or an asset |
+| `PATCH /api/v1/tasks/:id` | `tasks:write` | Status, assignee, due date |
+| `POST /api/v1/tasks/:id/versions` | `versions:write` | Ensure a version (`name`, `reuseExisting`) |
+| `PATCH /api/v1/versions/:id` | `versions:write` | Rename, or move the status. Goes through `VersionService`, so the publish lock and the supervisor rule apply; moving to `PUBLISHED` emits `version.published` |
+| `POST /api/v1/versions/:id/decision` | `versions:write` | A review decision — supervisors and administrators only, always `201` |
+| `POST /api/v1/media/:id/comments` | `comments:write` | Leave a note: `content` (1–10 000), `timestamp` and `duration` in seconds, `parentId` to reply. `201 { comment }` |
+| `POST /api/v1/comments/:id/resolve` | `comments:write` | `{ resolved: true }` by default; emits `comment.resolved` when it closes a note |
+| `POST /api/v1/publish`, `POST /api/v1/publish/:id/complete` | `versions:write` **+** `media:write` | The two-call publish flow |
+
+Graphical annotations and attachments stay out of this API: they need a file upload and an
+image geometry that only the interface produces correctly.
+
+Writing back a review decision:
+
+```bash
+curl -s -X POST "$REVIEW/api/v1/versions/512/decision" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{ "statusId": 4, "comment": "Retake on the last 20 frames." }'
+```
+
+`statusId` references one of the studio's custom review statuses — read them from
+`GET /api/v1/schema` rather than hard-coding ids.
+
+### Everything the tool needs to read back
 
 | Endpoint | Scope | Returns |
 |----------|-------|---------|
-| `GET /api/v1/projects` | `projects:read` | `{ items, total, page, pageSize }`, ordered by name |
+| `GET /api/v1/projects` | `projects:read` | paginated, ordered by name; `?status=` filter. A bound token sees only its project, even if its bearer is an admin |
 | `GET /api/v1/projects/:ref` | `projects:read` | `{ project }` |
 | `GET /api/v1/projects/:ref/sequences` | `sequences:read` | `{ sequences }` — not paginated |
 | `GET /api/v1/projects/:ref/shots` | `shots:read` | paginated; `?sequence=` filter |
@@ -803,51 +901,46 @@ Everything the tool needs to read back:
 | `GET /api/v1/media/:id/comments` | `comments:read` | paginated; `?resolved=true\|false` |
 | `GET /api/v1/versions/:id/comments` | `comments:read` | `{ comments }` — not paginated |
 
-Paginated collections take `page` (≥ 1, default 1) and `pageSize` (1–100, default 100)
-and answer `{ "items": [...], "total": 0, "page": 1, "pageSize": 100 }`. `sort` and
-`order` are accepted and validated but each collection has a fixed ordering; do not
-rely on them. Note that `published` and `resolved` are the **strings** `"true"` /
-`"false"`, not JSON booleans.
+Paginated collections take `page` (≥ 1, default 1) and `pageSize` (1–100, default 100) and
+answer with the shared envelope:
 
-Writing back a review decision (supervisors and administrators only, scope
-`versions:write`) always answers `201`:
-
-```bash
-curl -s -X POST "$REVIEW/api/v1/versions/512/decision" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{ "statusId": 4, "comment": "Retake on the last 20 frames." }'
+```json
+{ "items": [], "total": 0, "page": 1, "pageSize": 100, "pageCount": 1, "hasMore": false }
 ```
 
-`statusId` references one of the studio's custom review statuses — read them from
-`GET /api/v1/schema` rather than hard-coding ids.
+`pageCount` and `hasMore` are the two fields a client needs to stop looping — do not
+recompute them from `total`. `sort` and `order` are accepted and validated but each
+collection has a fixed ordering; do not rely on them. Note that `published` and `resolved`
+are the **strings** `"true"` / `"false"`, not JSON booleans.
 
 ## Idempotency
 
-`POST /api/v1/publish` and `POST /api/v1/publish/:id/complete` accept an
-`Idempotency-Key` header. **No other v1 route honours it**; the ensure endpoints do
-not need it because they converge by nature.
+`POST /api/v1/publish` and `POST /api/v1/publish/:id/complete` accept an `Idempotency-Key`
+header. **No other v1 route honours it**; the ensure endpoints do not need it because they
+converge by nature.
 
 The key is trimmed and must be 1–200 characters — an out-of-range value is treated as
-absent rather than rejected. It is **reserved before** the request runs, so a fast
-retry (or a second farm worker) cannot slip through and create a duplicate:
+absent rather than rejected. It is **reserved before** the request runs, not recorded
+after, so a fast retry (or a second farm worker) cannot slip through the window between
+handling and recording and create the duplicate the key exists to prevent:
 
 - replay of a completed request → the original status code and body, with the response
   header `Idempotency-Replayed: true`;
 - replay while the first is still running →
   `409 { "error": "…", "code": "IDEMPOTENCY_IN_PROGRESS" }`;
-- **only 2xx responses are memoised**; a failed request releases the key, so a
-  legitimate retry can succeed.
+- **only 2xx responses are memoised**; a failed request releases the key, so a legitimate
+  retry can succeed instead of being frozen for 24 hours.
 
 Keys are kept **24 hours** and fingerprinted over
-`(API token id, or the literal "session" for a JWT) × HTTP method × path × your key`.
-Two tokens, or the same token on two endpoints, cannot collide — but all JWT sessions
-share one bucket, so prefer a token for automated writes.
+`(API token id, or the literal "session" for a JWT) × HTTP method × path × your key`. Two
+tokens, or the same token on two endpoints, cannot collide — but all JWT sessions share one
+bucket, so prefer a token for automated writes.
 
-Creation endpoints (`ensure`) are idempotent by nature: they return `201` with
-`created: true` on first call, `200` with `created: false` afterwards. One case
-cannot converge: when the name is held by an entity sitting in the trash, the
-ensure answers `409` with a named code (`SEQUENCE_IN_TRASH`, `SHOT_IN_TRASH`,
-`ASSET_IN_TRASH`) — restore or purge the entity, then replay.
+Creation endpoints (`ensure`) are idempotent by nature: `201` with `created: true` on the
+first call, `200` with `created: false` afterwards. One case cannot converge: when the name
+is held by an entity sitting in the trash, the ensure answers `409` with a named code
+(`SEQUENCE_IN_TRASH`, `SHOT_IN_TRASH`, `ASSET_IN_TRASH`, `VERSION_IN_TRASH`) — restore or
+purge the entity, then replay.
 
 ## Discovering an instance
 
@@ -870,10 +963,9 @@ ensure answers `409` with a named code (`SEQUENCE_IN_TRASH`, `SHOT_IN_TRASH`,
 }
 ```
 
-`GET /api/v1/schema` (scope `projects:read`) returns the enumerations this instance
-accepts *and* the studio's custom review statuses — which is what a review decision
-references. Read it at startup instead of hard-coding values that diverge at the first
-change:
+`GET /api/v1/schema` (scope `projects:read`) returns the enumerations this instance accepts
+*and* the studio's custom review statuses — which is what a review decision references.
+Read it at startup instead of hard-coding values that diverge at the first change:
 
 ```json
 {
@@ -895,8 +987,8 @@ change:
 }
 ```
 
-`GET /api/v1/me` (no scope required) returns the effective identity, the **expanded**
-scopes of the presented token, and the project it is bound to:
+`GET /api/v1/me` (no scope required) returns the effective identity, the **expanded** scopes
+of the presented token, and the project it is bound to:
 
 ```json
 {
@@ -915,10 +1007,11 @@ scopes of the presented token, and the project it is bound to:
 With a session JWT, `auth` is `{ "kind": "session", "scopes": null, "projectId": null }`.
 `projects` is the string `"all"` for an `ADMIN` or a `SUPERVISOR`.
 
-Call it at startup and fail loudly if a scope you rely on is missing — better than
-discovering it on the first write of a render night.
+> [!TIP]
+> Call `/api/v1/me` at startup and fail loudly if a scope you rely on is missing — better
+> than discovering it on the first write of a render night.
 
-## Errors
+## Errors and limits
 
 Same envelope as the rest of the API: `{ "error": "…", "code": "…" }`. Zod validation
 failures are the exception — they answer `400` with `details` and **no `code`**:
@@ -927,23 +1020,28 @@ failures are the exception — they answer `400` with `details` and **no `code`*
 { "error": "Validation échouée", "details": { "path": ["Required"] } }
 ```
 
-**Branch on `code`, never on `error`** — the message is human-facing and part of it is
-still French. A few `404`/`403` responses raised by the shared ownership guard carry
-no `code` at all (`"Shot not found"`, `"Version not found"`, `"Média not found"`,
-`"No access to this project"`); treat a missing `code` with a 4xx status as fatal for
-that item rather than retrying.
+**Branch on `code`, never on `error`** — the message is human-facing and part of it is still
+French. A few `404`/`403` responses raised by the shared ownership guard carry no `code` at
+all (`"Shot not found"`, `"Version not found"`, `"Média not found"`, `"No access to this
+project"`); treat a missing `code` with a 4xx status as fatal for that item rather than
+retrying.
 
-Codes worth handling: `TOKEN_REQUIRED`, `TOKEN_INVALID`, `API_TOKEN_INVALID`,
-`API_TOKEN_V1_ONLY`, `SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`,
-`NO_LATEST_VERSION`, `VARIANT_UNAVAILABLE`, `VERSION_EXISTS`,
-`KIND_UNKNOWN`, `PATH_TOO_SHALLOW`, `PATH_INCLUDES_VERSION`, `USD_NOT_3D`,
-`IDEMPOTENCY_IN_PROGRESS`, `PROJECT_ARCHIVED`, `ROLE_FORBIDDEN`, `PROJECT_QUOTA`,
-`STORAGE_LIMIT`, `FILE_TOO_LARGE`, `TOO_MANY_UPLOADS`, `INVALID_FILE`,
-`NOT_FINALIZED`, the `*_IN_TRASH` family and the `*_NOT_FOUND` family.
+| Family | Codes |
+|--------|-------|
+| Authentication | `TOKEN_REQUIRED` (401), `TOKEN_INVALID`, `API_TOKEN_INVALID` (403). `API_TOKEN_V1_ONLY` exists in the code but cannot currently fire — see the caution under [Authentication](#authentication) |
+| Authorisation | `SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`, `ROLE_FORBIDDEN` (403) |
+| Path | `PATH_EMPTY`, `PATH_TOO_DEEP`, `PATH_SEGMENT_TOO_LONG`, `PATH_TASK_MALFORMED`, `PATH_INCOMPLETE`, `PATH_TOO_SHALLOW`, `PATH_INCLUDES_VERSION`, `PATH_NO_TARGET` (400), plus the `*_NOT_FOUND` family (404) |
+| Format | `KIND_UNKNOWN`, `UNSUPPORTED_FORMAT`, `SEQUENCE_NOT_SUPPORTED_HERE`, `USD_NOT_3D`, `INVALID_FILE`, `NOT_FINALIZED` (400) |
+| Quotas and size | `FILE_TOO_LARGE` (400), `STORAGE_LIMIT`, `PROJECT_QUOTA` (403), `TOO_MANY_UPLOADS` (**429**) |
+| State | `VERSION_EXISTS`, `NAMING_REJECTED` (400), `PROJECT_ARCHIVED` (403), `NO_LATEST_VERSION`, `VARIANT_UNAVAILABLE` (404), `IDEMPOTENCY_IN_PROGRESS` and the `*_IN_TRASH` family (409) |
 
-Rate limit: **10 000 requests / 15 min**, counted per IP and separate from the web
-quota (5 000 / 15 min on `/api`). Over the limit, the response is `429` with a plain
-`{ "error": "…" }` body.
+Rate limits are counted over a 15-minute window in Redis and shared by every replica.
+`/api/v1` has its own budget of **10 000 requests**, counted per IP — but a v1 request also
+crosses the global `/api` limiter mounted above it, and that one only recognises a valid
+**JWT** as an identity. An opaque `rvk_` token therefore falls back to the anonymous IP
+counter: **5 000 per 15 min is the real ceiling for an API token**, and it is shared with
+everything else leaving that address. Over the limit, the response is `429` with a plain
+`{ "error": "…" }` body. See [rate limits](overview.md#rate-limits).
 
 ## Related pages
 
@@ -951,4 +1049,5 @@ quota (5 000 / 15 min on `/api`). Over the limit, the response is `429` with a p
 - [API overview](overview.md) — conventions shared with `/api`
 - [Domains](domains.md) — route map of the web API
 - [Authentication & API access](authentication.md)
-- [Pipeline settings](../admin-guide/pipeline-settings.md)
+- [Pipeline settings](../admin-guide/pipeline-settings.md) — what "latest" means for a shot
+- [Image sequences](../user-guide/image-sequences.md) — the one delivery v1 cannot publish

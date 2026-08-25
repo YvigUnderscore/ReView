@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 570" width="800" height="570" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What an uploaded byte has to get past</title>
+  <desc id="fig-desc">Eight layers, from the outside in: the TLS front, the Redis rate limiter, authentication by kind-less token, authorization by effective project role and publish lock, admission checks on size, quota and naming, content checks on magic bytes and antivirus, archive guards against decompression bombs, and finally a presigned download served under a sandbox policy. A separate band covers outbound requests, where webhook and ShotGrid targets are re-checked after DNS resolution.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="570" rx="10"/>
+
+  <text class="d" x="28" y="30">WHAT AN UPLOADED BYTE HAS TO GET PAST, FROM THE OUTSIDE IN</text>
+  <text class="d" x="634" y="30">REFUSAL</text>
+
+  <rect class="panel" x="20" y="42" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="63">1</text>
+  <text class="l" x="52" y="63">Transport</text>
+  <text class="d" x="52" y="80">TLS-terminating nginx; every host port removed from frontend, backend and minio; helmet</text>
+  <text class="m" x="766" y="69" text-anchor="end">TLS + CSP</text>
+
+  <rect class="panel" x="20" y="94" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="115">2</text>
+  <text class="l" x="52" y="115">Rate limit</text>
+  <text class="d" x="52" y="132">Redis counters over a 15-minute window, keyed on the account with an IP fallback</text>
+  <text class="m" x="766" y="121" text-anchor="end">429</text>
+
+  <rect class="panel" x="20" y="146" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="167">3</text>
+  <text class="l" x="52" y="167">Authentication</text>
+  <text class="d" x="52" y="184">A JWT with no kind claim and a live session; revocation is effective within 30 s</text>
+  <text class="m" x="766" y="173" text-anchor="end">401 SESSION_REVOKED</text>
+
+  <rect class="panel" x="20" y="198" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="219">4</text>
+  <text class="l" x="52" y="219">Authorization</text>
+  <text class="d" x="52" y="236">Global role, project membership and effective project role; a published media is frozen</text>
+  <text class="m" x="766" y="225" text-anchor="end">403 PUBLISHED_LOCKED</text>
+
+  <rect class="panel" x="20" y="250" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="271">5</text>
+  <text class="l" x="52" y="271">Admission</text>
+  <text class="d" x="52" y="288">Zod on body, query and params; declared size against the project quota; naming rule</text>
+  <text class="m" x="766" y="277" text-anchor="end">400 NAMING_REJECTED</text>
+
+  <rect class="panel-a" x="20" y="302" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="323">6</text>
+  <text class="l" x="52" y="323">Content</text>
+  <text class="d" x="52" y="340">Magic bytes at finalize, real object size re-checked, optional ClamAV INSTREAM scan</text>
+  <text class="m" x="766" y="329" text-anchor="end">400 INVALID_FILE</text>
+
+  <rect class="panel" x="20" y="354" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="375">7</text>
+  <text class="l" x="52" y="375">Archives</text>
+  <text class="d" x="52" y="392">20 000 entries, 8 GiB uncompressed, ratio 200; the converter is killed at its timeout</text>
+  <text class="d" x="766" y="381" text-anchor="end">extraction aborted</text>
+
+  <rect class="panel" x="20" y="406" width="760" height="46" rx="9"/>
+  <text class="a" x="34" y="427">8</text>
+  <text class="l" x="52" y="427">Serving</text>
+  <text class="d" x="52" y="444">Presigned URL issued after the RBAC check, Content-Type fixed server-side, sandbox CSP</text>
+  <text class="m" x="766" y="433" text-anchor="end">sandbox</text>
+
+  <rect class="panel-w" x="20" y="464" width="760" height="88" rx="9"/>
+  <text class="l" x="34" y="486">Outbound requests, the other direction</text>
+  <text class="d" x="34" y="506">A webhook URL is validated at creation and re-checked after DNS resolution at delivery time;</text>
+  <text class="d" x="34" y="522">redirects are refused, each delivery times out at 10 s. The ShotGrid client refuses non-HTTPS</text>
+  <text class="d" x="34" y="538">and non-public addresses, and SHOTGRID_INSECURE_HOSTS is logged as a warning at every boot.</text>
+</svg>

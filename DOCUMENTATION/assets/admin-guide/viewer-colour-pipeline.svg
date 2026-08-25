@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" width="800" height="340" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What the browser actually does to the pixels of a still image</title>
+  <desc id="fig-desc">On a still image only, the viewer decodes the sRGB texture, applies the reviewer's exposure, re-encodes, runs the 33-cubed display and view LUT, then applies the viewing gamma before the screen. Video, 3D and Gaussian splat media are untouched and keep their own display. Nothing is written back to the media file.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="340" rx="10"/>
+
+  <rect class="panel-a" x="24" y="36" width="752" height="34" rx="9"/>
+  <text class="t" x="400" y="58" text-anchor="middle">STILL IMAGES ONLY — IN THE BROWSER, ON THE GPU</text>
+
+  <rect class="panel" x="24" y="96" width="128" height="64" rx="9"/>
+  <text class="l" x="88" y="120" text-anchor="middle">sRGB texture</text>
+  <text class="d" x="88" y="138" text-anchor="middle">code in [0,1]</text>
+  <text class="d" x="88" y="154" text-anchor="middle">what a JPEG holds</text>
+
+  <path class="conn" d="M152 128 L180 128" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="180" y="96" width="128" height="64" rx="9"/>
+  <text class="l" x="244" y="120" text-anchor="middle">Decode</text>
+  <text class="d" x="244" y="138" text-anchor="middle">to linear</text>
+
+  <path class="conn" d="M308 128 L336 128" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="336" y="96" width="128" height="64" rx="9"/>
+  <text class="l" x="400" y="120" text-anchor="middle">Exposure</text>
+  <text class="d" x="400" y="138" text-anchor="middle">per reviewer</text>
+  <text class="d" x="400" y="154" text-anchor="middle">in stops</text>
+
+  <path class="conn" d="M464 128 L492 128" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="492" y="96" width="128" height="64" rx="9"/>
+  <text class="t" x="556" y="120" text-anchor="middle">33³ 3D LUT</text>
+  <text class="d" x="556" y="138" text-anchor="middle">display + view</text>
+  <text class="d" x="556" y="154" text-anchor="middle">re-encoded first</text>
+
+  <path class="conn" d="M620 128 L648 128" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="648" y="96" width="128" height="64" rx="9"/>
+  <text class="l" x="712" y="120" text-anchor="middle">Viewing gamma</text>
+  <text class="d" x="712" y="138" text-anchor="middle">then the screen</text>
+
+  <text class="d no" x="400" y="182" text-anchor="middle">on an 8-bit source, a positive exposure cannot recover highlights the file does not contain</text>
+
+  <rect class="band" x="24" y="200" width="752" height="64" rx="9"/>
+  <rect class="panel-o" x="44" y="215" width="140" height="34" rx="9"/>
+  <text class="l" x="114" y="236" text-anchor="middle">Video</text>
+  <rect class="panel-o" x="200" y="215" width="140" height="34" rx="9"/>
+  <text class="l" x="270" y="236" text-anchor="middle">3D</text>
+  <rect class="panel-o" x="356" y="215" width="140" height="34" rx="9"/>
+  <text class="l" x="426" y="236" text-anchor="middle">Gaussian splat</text>
+  <text class="d" x="520" y="236">unaffected — each shows its own display</text>
+
+  <text class="d" x="400" y="292" text-anchor="middle">A reading preference: no media file is ever rewritten and no export carries the transform.</text>
+  <text class="d" x="400" y="310" text-anchor="middle">The couple a reviewer picks for their own screen never travels with a note.</text>
+</svg>

@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460" role="img" aria-labelledby="cpa-title cpa-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="cpa-title">Anatomy of the command palette</title>
+  <desc id="cpa-desc">On the left, the palette dialog: the input, the two limits applied before anything is sent, the Go to and Actions groups shown while the field is empty, and the viewer commands. On the right, the ten families of results the server returns and how many rows each one is capped at.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="460" rx="10"/>
+
+  <!-- Colonne gauche : le dialogue -->
+  <text class="d" x="24" y="30">THE PALETTE — Ctrl / Cmd + K</text>
+
+  <rect class="panel-a" x="24" y="42" width="392" height="46" rx="9"/>
+  <text class="t" x="40" y="64">Search anything</text>
+  <text class="d" x="40" y="80">the shortcut wins over whatever field has focus</text>
+
+  <path class="conn" d="M220 88 L220 106" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="24" y="110" width="392" height="46" rx="9"/>
+  <text class="l" x="40" y="132">Before anything leaves the browser</text>
+  <text class="d" x="40" y="148">200 ms debounce · under 2 characters, nothing · 120 / min</text>
+
+  <text class="d" x="24" y="186">WITH THE FIELD EMPTY</text>
+
+  <rect class="panel" x="24" y="196" width="392" height="46" rx="9"/>
+  <text class="l" x="40" y="218">Go to</text>
+  <text class="d" x="40" y="234">Projects · Kanban · Board · Documentation</text>
+
+  <text class="d" x="40" y="258">Kanban and Board appear only inside a project</text>
+
+  <rect class="panel" x="24" y="272" width="392" height="46" rx="9"/>
+  <text class="l" x="40" y="294">Actions</text>
+  <text class="d" x="40" y="310">Copy link · Refresh · Sidebar · Theme · Shortcuts</text>
+
+  <text class="d" x="24" y="348">INSIDE A VIEWER</text>
+
+  <rect class="panel-o" x="24" y="358" width="392" height="46" rx="9"/>
+  <text class="l" x="40" y="380">Review commands</text>
+  <text class="d" x="40" y="396">the viewer's own actions, filtered as you type</text>
+
+  <!-- Passerelle vers les résultats -->
+  <path class="conn-a" d="M416 65 L434 65 L434 195 L452 195" marker-end="url(#arrow-a)"/>
+
+  <!-- Colonne droite : les dix familles -->
+  <text class="d" x="452" y="30">TEN FAMILIES, EACH CAPPED</text>
+  <rect class="band" x="452" y="42" width="328" height="306" rx="10"/>
+
+  <text class="l" x="470" y="64">Projects</text>
+  <text class="d" x="580" y="64">name</text>
+  <text class="m" x="766" y="64" text-anchor="end">5</text>
+
+  <text class="l" x="470" y="94">Sequences</text>
+  <text class="d" x="580" y="94">name or code</text>
+  <text class="m" x="766" y="94" text-anchor="end">5</text>
+
+  <text class="l" x="470" y="124">Shots</text>
+  <text class="d" x="580" y="124">name or code</text>
+  <text class="m" x="766" y="124" text-anchor="end">8</text>
+
+  <text class="l" x="470" y="154">Assets</text>
+  <text class="d" x="580" y="154">name</text>
+  <text class="m" x="766" y="154" text-anchor="end">5</text>
+
+  <text class="l" x="470" y="184">Tasks</text>
+  <text class="d" x="580" y="184">name</text>
+  <text class="m" x="766" y="184" text-anchor="end">5</text>
+
+  <text class="l" x="470" y="214">Versions</text>
+  <text class="d" x="580" y="214">name</text>
+  <text class="m" x="766" y="214" text-anchor="end">8</text>
+
+  <text class="l" x="470" y="244">Media</text>
+  <text class="d" x="580" y="244">file name</text>
+  <text class="m" x="766" y="244" text-anchor="end">8</text>
+
+  <text class="l" x="470" y="274">Playlists</text>
+  <text class="d" x="580" y="274">name</text>
+  <text class="m" x="766" y="274" text-anchor="end">5</text>
+
+  <text class="l" x="470" y="304">Review notes</text>
+  <text class="d" x="580" y="304">full text</text>
+  <text class="m" x="766" y="304" text-anchor="end">8</text>
+
+  <text class="l" x="470" y="334">People</text>
+  <text class="d" x="580" y="334">name, email</text>
+  <text class="m" x="766" y="334" text-anchor="end">5</text>
+
+  <text class="d" x="452" y="374">Enter opens the result:</text>
+  <text class="d" x="452" y="392">a version opens its most recent visible media,</text>
+  <text class="d" x="452" y="410">a note opens the player at that note.</text>
+
+  <text class="d" x="24" y="440">Every family carries its own access filter — a draft is visible to its uploader alone.</text>
+</svg>

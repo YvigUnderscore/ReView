@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 550" width="800" height="550" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">From a thousand files to one reviewable media</title>
+  <desc id="fig-desc">Six stages: hand over the frame list, recognise the naming pattern, confirm the grouping, transfer the frames four at a time, assemble a master in the worker, then derive the proxy, the HLS ladder, the thumbnail and the hover sprite. The recognition and the confirmation dialog are browser-side and not yet wired to the drop zones. The result is a single media of kind VIDEO.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="550" rx="10"/>
+
+  <text class="d" x="30" y="32">SIX STAGES</text>
+  <text class="d" x="254" y="32">WHAT HAPPENS, AND WHAT IT DECIDES</text>
+
+  <!-- 1 · Remise de la liste des frames : c'est ici que tout se décide, pas au transfert -->
+  <rect class="panel" x="30" y="56" width="200" height="46" rx="9"/>
+  <text class="l" x="48" y="76">1 · Hand over</text>
+  <text class="d" x="48" y="92">the frame list, by name</text>
+  <text class="d" x="254" y="74">POST /api/media/sequence/init — the pattern and every file name, from a studio publish</text>
+  <text class="d" x="254" y="88">script. Nothing is sent yet: the shape of the batch is checked before any transfer starts.</text>
+
+  <path class="conn" d="M130 102 L130 122" marker-end="url(#arrow)"/>
+
+  <!-- 2 · Reconnaissance (client) -->
+  <rect class="panel-o" x="30" y="122" width="200" height="46" rx="9"/>
+  <text class="l" x="48" y="142">2 · Recognise</text>
+  <text class="d" x="48" y="158">browser client, names only</text>
+  <text class="d" x="254" y="140">Same base name, same numeric field width, same extension — among .exr .dpx .tif</text>
+  <text class="d" x="254" y="154">.tiff .tga .png .jpg .jpeg. The frame number is the LAST run of digits before the</text>
+  <text class="d" x="254" y="168">extension, so v003 stays a version. plan.999.exr and plan.1000.exr are two patterns.</text>
+
+  <path class="conn" d="M130 168 L130 188" marker-end="url(#arrow)"/>
+
+  <!-- 3 · Proposition : le regroupement ne s'impose jamais — dialogue non branché à ce jour -->
+  <rect class="panel-o" x="30" y="188" width="200" height="46" rx="9"/>
+  <text class="l" x="48" y="208">3 · Ask</text>
+  <text class="d" x="48" y="224">built, not wired yet</text>
+  <text class="d" x="254" y="206">One row per sequence: pattern, first and last frame, file count, total size, gaps. Every</text>
+  <text class="d" x="254" y="220">row is ticked. Cancel · Send file by file · Send as image sequences. No drop zone calls</text>
+  <text class="d" x="254" y="234">this dialog today — dropping frames on a page queues them one by one instead.</text>
+
+  <path class="conn" d="M130 234 L130 254" marker-end="url(#arrow)"/>
+
+  <!-- 4 · Transport -->
+  <rect class="panel" x="30" y="254" width="200" height="46" rx="9"/>
+  <text class="l" x="48" y="274">4 · Transfer</text>
+  <text class="d" x="48" y="290">frame by frame, resumable</text>
+  <text class="d" x="254" y="272">Presigned PUT URLs by batches of 64, then the frames straight to object storage — four at</text>
+  <text class="d" x="254" y="286">a time, each with its own retry and a fresh signature. One sequence at a time.</text>
+  <text class="d" x="254" y="300">Resuming the same pattern on the same version skips what already reached storage.</text>
+
+  <path class="conn" d="M130 300 L130 320" marker-end="url(#arrow)"/>
+
+  <!-- 5 · Assemblage du master (fichier de travail, jamais stocké) -->
+  <rect class="panel" x="30" y="320" width="200" height="46" rx="9"/>
+  <text class="l" x="48" y="340">5 · Assemble</text>
+  <text class="d" x="48" y="356">one master, in the worker</text>
+  <text class="d" x="254" y="338">Frames renumbered locally 0, 1, 2… — FFmpeg's image2 demuxer stops at the first gap,</text>
+  <text class="d" x="254" y="352">so a gapped delivery would come out truncated without a word. The sRGB transfer curve</text>
+  <text class="d" x="254" y="366">is applied on EXR read; NTSC rates written as fractions — 24000/1001, never 23.98.</text>
+
+  <path class="conn" d="M130 366 L130 386" marker-end="url(#arrow)"/>
+
+  <!-- 6 · Dérivés : à partir d'ici, tout ignore l'origine du master -->
+  <rect class="panel" x="30" y="386" width="200" height="46" rx="9"/>
+  <text class="l" x="48" y="406">6 · Derive</text>
+  <text class="d" x="48" y="422">as for any other video</text>
+  <text class="d" x="254" y="404">Web proxy, HLS ladder, thumbnail and hover sprite, all read from the master — which is</text>
+  <text class="d" x="254" y="418">encoded at CRF 12 precisely because five passes reopen it.</text>
+  <text class="d" x="254" y="432">The master dies with the worker's temp directory; the delivered frames are kept.</text>
+
+  <path class="conn-a" d="M130 432 L130 466" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="30" y="466" width="740" height="46" rx="9"/>
+  <text class="t" x="48" y="486">One media of kind VIDEO</text>
+  <text class="d" x="48" y="502">frame stepping, annotations, markers, A/B, HLS — the video workspace, unchanged</text>
+
+  <text class="d" x="30" y="532">The player numbers frames from the project's start frame (1001 by default); the delivery's own bounds stay in the manifest.</text>
+</svg>

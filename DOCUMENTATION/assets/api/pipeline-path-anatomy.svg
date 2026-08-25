@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 632" width="800" height="632" role="img" aria-labelledby="path-title path-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="path-title">Anatomy of a pipeline path</title>
+  <desc id="path-desc">The five segments of PROJ/SQ010/SH0100/layout:main/v003, what each one matches, the limits that bound a path, and the two families of refusal: 400 when the path is malformed, 404 naming the segment that is missing.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="800" height="632" rx="10"/>
+
+  <text class="d" x="44" y="30">ONE ADDRESS, FIVE SEGMENTS</text>
+
+  <rect class="panel" x="44" y="56" width="100" height="40" rx="9"/>
+  <text class="t" x="94" y="81" text-anchor="middle">PROJ</text>
+  <text class="m" x="151" y="81" text-anchor="middle">/</text>
+
+  <rect class="panel" x="158" y="56" width="110" height="40" rx="9"/>
+  <text class="t" x="213" y="81" text-anchor="middle">SQ010</text>
+  <text class="m" x="275" y="81" text-anchor="middle">/</text>
+
+  <rect class="panel" x="282" y="56" width="130" height="40" rx="9"/>
+  <text class="t" x="347" y="81" text-anchor="middle">SH0100</text>
+  <text class="m" x="419" y="81" text-anchor="middle">/</text>
+
+  <rect class="panel-a" x="426" y="56" width="200" height="40" rx="9"/>
+  <text class="t" x="526" y="81" text-anchor="middle">layout:main</text>
+  <text class="m" x="633" y="81" text-anchor="middle">/</text>
+
+  <rect class="panel" x="640" y="56" width="100" height="40" rx="9"/>
+  <text class="t" x="690" y="81" text-anchor="middle">v003</text>
+
+  <text class="a" x="94" y="112" text-anchor="middle">1</text>
+  <text class="a" x="213" y="112" text-anchor="middle">2</text>
+  <text class="a" x="347" y="112" text-anchor="middle">3</text>
+  <text class="a" x="526" y="112" text-anchor="middle">4</text>
+  <text class="a" x="690" y="112" text-anchor="middle">5</text>
+
+  <rect class="panel" x="28" y="126" width="744" height="156" rx="9"/>
+  <text class="a" x="44" y="150">1</text>
+  <text class="d" x="64" y="150">project — matched on slug or name, case-insensitive; a digits-only segment is read as an id</text>
+  <text class="a" x="44" y="172">2</text>
+  <text class="d" x="64" y="172">sequence — or a reserved keyword valid in this position only: shots, assets</text>
+  <text class="a" x="44" y="194">3</text>
+  <text class="d" x="64" y="194">shot code, or the asset name on the assets branch</text>
+  <text class="a" x="44" y="216">4</text>
+  <text class="d" x="64" y="216">task — with an optional department: prefix, split at the FIRST colon</text>
+  <text class="d" x="64" y="238">because every department calls its task main, and one more segment would blur the version</text>
+  <text class="a" x="44" y="260">5</text>
+  <text class="d" x="64" y="260">version name</text>
+
+  <rect class="panel-o" x="28" y="296" width="744" height="76" rx="9"/>
+  <text class="l" x="44" y="318">Limits</text>
+  <text class="d" x="44" y="340">at most 6 segments, each at most 200 characters; empty segments and stray slashes are dropped</text>
+  <text class="d" x="44" y="358">no Episode segment exists — an episode-organised show is still addressed through its sequence</text>
+
+  <rect class="panel-d" x="28" y="386" width="364" height="136" rx="9"/>
+  <text class="l" x="44" y="408">400 — the path is malformed</text>
+  <text class="d" x="44" y="430">PATH_EMPTY · PATH_TOO_DEEP</text>
+  <text class="d" x="44" y="448">PATH_SEGMENT_TOO_LONG · PATH_INCOMPLETE</text>
+  <text class="d" x="44" y="466">PATH_TASK_MALFORMED · PATH_NO_TARGET</text>
+  <text class="d" x="44" y="484">PATH_TOO_SHALLOW · PATH_INCLUDES_VERSION</text>
+  <text class="d" x="44" y="506">raised while parsing, before any lookup</text>
+
+  <rect class="panel-w" x="408" y="386" width="364" height="136" rx="9"/>
+  <text class="l" x="424" y="408">404 — a link is missing, and it says which</text>
+  <text class="d" x="424" y="430">PROJECT_NOT_FOUND · SEQUENCE_NOT_FOUND</text>
+  <text class="d" x="424" y="448">SHOT_NOT_FOUND · ASSET_NOT_FOUND</text>
+  <text class="d" x="424" y="466">TASK_NOT_FOUND · VERSION_NOT_FOUND</text>
+  <text class="d" x="424" y="484">each names the offending segment, so a</text>
+  <text class="d" x="424" y="506">script can report what is missing</text>
+
+  <rect class="panel" x="28" y="536" width="744" height="76" rx="9"/>
+  <text class="l" x="44" y="558">Other shapes the same grammar produces</text>
+  <text class="d" x="44" y="580">PROJ/shots/SH0100/comp — a shot attached to no sequence  ·  PROJ/assets/hero/model/v002 — the asset branch</text>
+  <text class="d" x="44" y="598">PROJ/SQ010 — a sequence: it resolves, but it is too shallow to publish to (400 PATH_TOO_SHALLOW)</text>
+</svg>
