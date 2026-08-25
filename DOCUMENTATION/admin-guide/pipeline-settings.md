@@ -2,7 +2,7 @@
 
 *How delivery format, numbering, departments and colour cascade from the studio down to a shot — and how an override is written, read and handed back.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
 Pipeline settings describe **what the studio delivers**: frame size, framerate, shot
 numbering, the ordered list of departments, the naming rule applied to uploads, the default
@@ -182,10 +182,39 @@ Two ways to edit them, with different permissions:
   **global** `ADMIN` or `SUPERVISOR`. Reading is open to any authenticated account, because
   department labels appear in badges and filters everywhere.
 
-Departments carry an optional colour (`#RRGGBB`). Sequences, shots and assets can also declare
-**which departments they traverse** — the template of their tasks — through
-`PUT`/`PATCH /api/shots/:id/departments` and its siblings; the `PATCH` form adds and removes
-one at a time so two quick clicks in a right-click menu cannot overwrite each other.
+Departments carry an optional colour (`#RRGGBB`) **and an optional image**, set one step at a
+time under *Project → Settings → Departments*. Beyond six steps a colour dot stops standing
+out on a grid of twenty cards; the studio's logo for *Compositing* does not. The image shows
+up at the head of each column on an asset page, and the colour tints the step chips on cards.
+
+Sequences, shots and assets can also declare **which departments they traverse** — the
+template of their tasks — through `PUT`/`PATCH /api/shots/:id/departments` and its siblings;
+the `PATCH` form adds and removes one at a time so two quick clicks in a right-click menu
+cannot overwrite each other. Those steps now appear **on the card**, so you can see at a
+glance which asset goes through rig and which stops at modeling.
+
+### Who may write on a task
+
+*Administration → Settings → Task rights* is a **studio** setting — how a house works does
+not change from one show to the next, and setting it per project would produce different
+rules depending on which screen you are looking at.
+
+| Mode | Who can write on a task | What creation offers |
+|---|---|---|
+| **The assignee only** (default) | The historical rule, unchanged | The whole pipe |
+| **The assignee and the department** | The assignee, plus members of the task's department | Only that person's steps |
+
+The second mode exists for the studio with twelve steps and thirty people: offering every
+artist the whole pipe is twelve entries for someone who touches one, and nothing stops the
+animator from advancing a compositing task by mistake.
+
+**In both modes everyone sees every task.** Production needs each person to know where the
+neighbouring steps stand, and hiding other people's work has never helped anyone do their
+own. What a non-manager may *change* is unaffected either way: the status and the checklist.
+
+A task with no department stays writable under the restricted mode — it belongs to no step,
+so to nobody in particular, and refusing it to everyone would make tasks born from a review
+comment impossible to update.
 
 Tasks carry a department key, set three ways:
 

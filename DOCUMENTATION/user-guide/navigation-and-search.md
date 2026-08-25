@@ -2,7 +2,7 @@
 
 *The palette, the shortcuts, the right-click menu and the bulk gestures that get you anywhere fast.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
 A studio project is two thousand shots and a thousand assets. Nothing here is meant to be
 found by scrolling: you type two characters, or you right-click the thing itself. This page
@@ -53,6 +53,29 @@ over whatever has focus, including text inputs.
 
 ![The palette dialog on the left — the input, the two limits applied before anything is sent, the Go to and Actions groups shown while the field is empty, and the viewer commands; on the right, the ten families of results and the number of rows each one is capped at.](../assets/user-guide/command-palette-anatomy.svg)
 
+### What comes first
+
+Each family used to come out in database order — most recent first. Typing `SH0120` therefore
+put the shot SH0120 after three media whose file name contains it, and the order shifted at
+every publish: that is a chronology, not a ranking.
+
+Results are now scored on how closely they match what you typed, in four degrees:
+
+1. **Exactly** what you typed;
+2. what you typed at the **beginning** of the value;
+3. what you typed at the **start of a word** inside it (`pluie` in `sous la pluie` beats
+   `parapluie`);
+4. what you typed **somewhere** in it.
+
+Where the match landed only breaks ties: a code identifies, a description evokes. That order
+matters — the other way round, a fragment lost in the middle of a code would beat a word
+found exactly in a description, and the top results would be ones nobody recognises. At equal
+score, database order wins: between two shots that match as well, the one that moved recently
+is the one you want.
+
+Accents are ignored on both sides: `heros` finds `héros`. Without that, the search simply
+feels broken.
+
 ### What it searches
 
 One keystroke fires ten queries in parallel, and each family has its own cap. The order
@@ -61,9 +84,9 @@ below is the order they appear in.
 | Family | Matches on | Rows | Enter opens |
 |--------|-----------|-----:|-------------|
 | Projects | name | 5 | The project page |
-| Sequences | name **or** code | 5 | `/sequences/:id` |
-| Shots | name **or** code | 8 | `/shots/:id` |
-| Assets | name | 5 | `/assets/:id` |
+| Sequences | name, code **or** description | 5 | `/sequences/:id` |
+| Shots | name, code **or** description | 8 | `/shots/:id` |
+| Assets | name **or** description | 5 | `/assets/:id` |
 | Tasks | name | 5 | `/tasks/:id` |
 | Versions | name | 8 | Its most recent visible media, else the task or the asset |
 | Media | file name | 8 | `/review/:id` |

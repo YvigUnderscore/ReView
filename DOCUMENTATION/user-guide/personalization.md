@@ -2,7 +2,7 @@
 
 *Theme, language, density, the Home layout, shortcuts and alerts — what each one changes, and which machine remembers it.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
 Two people never use ReView the same way. A compositor wants a dark, compact window with the
 media as large as it goes; a producer wants the Home page to open on figures and a task list.
@@ -28,6 +28,8 @@ Three layers, and they do not mean the same thing.
 | Density | **Your account** | Profile → Display |
 | Keyboard shortcut overrides | **Your account** | The `?` panel |
 | Saved list views (per list) | **Your account** | The **Saved views** menu of a filter bar |
+| Default list view (cards or compact) | **Your account** | Profile → Display |
+| Per-list view override | **Your account** | The cards/compact toggle of that list |
 | Home layout | **Your account** | Right-click the Home background |
 | Onboarding seen | **Your account** | Finishing or skipping the tour |
 | Daily digest, weekly report | **Your account** | Profile → Notifications, unsubscribe link |
@@ -45,6 +47,22 @@ in whatever the browser asks for, and receives its **emails** in the studio's la
 > *Compact* on the review workstation and it stays compact there, even if you later switch
 > the laptop back to *Comfortable*. A browser that has never been told anything is the one
 > that adopts the account setting.
+
+## Cards or compact, everywhere and per list
+
+Two levels, and they answer two different questions.
+
+- **Default list view** (Profile → Display) applies to every list. Someone who prefers dense
+  rows prefers them everywhere.
+- **An override on one list**, set by clicking the cards/compact toggle of that list. A grid
+  of shots reads in thumbnails, a task list in rows: one setting cannot answer for both.
+
+A list with no override follows the account. Once it has one, a third button appears in its
+toggle — **Follow the account setting** — because otherwise nothing would tell you an override
+exists, nor how to lift it.
+
+Both levels travel with your account, so a workstation you have never used already shows each
+list the way you left it.
 
 ## Display: theme, density and language
 

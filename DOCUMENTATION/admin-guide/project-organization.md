@@ -2,7 +2,7 @@
 
 *Archive, delete, duplicate, quota, episodes and CSV import — what each one does, and which role it really needs.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
 ![A project settings tab: pipeline defaults, status vocabulary and departments.](../assets/admin-guide/project-settings.png)
 
@@ -54,6 +54,17 @@ catches up over several nights instead of locking the database for one.
 The automatic purge writes **no audit entry and sends no notification**. What you get is a
 line in the worker log. Treat the trash as a grace period, not as an archive. See
 [System & maintenance](system-and-maintenance.md#trash-and-automatic-retention).
+
+### Emptying a project trash
+
+A project has its own trash — *Project → Trash* — listing episodes, sequences, shots, assets,
+versions and media that were soft-deleted inside it. Selection is **global**: the
+**Select everything** box covers every section at once, and the restore and delete buttons
+then work through each type in turn.
+
+That used to be one selection per section, so clearing an end-of-show trash took six passes
+and you had to remember all six. A half-ticked box now completes the selection rather than
+clearing it, which is what a *select everything* control is expected to do.
 
 ## Duplicating a project & templates
 

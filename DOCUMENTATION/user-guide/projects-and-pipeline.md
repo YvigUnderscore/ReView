@@ -2,7 +2,7 @@
 
 *The shape of a show in ReView — episodes down to media, the two status vocabularies, and who may change what, where.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
 One ReView instance is one studio, and inside it a **project** is one show. Everything a
 production needs to say about that show — how it is broken down, who is on which step, what
@@ -135,6 +135,25 @@ project's **Assets** tab and on the asset page, for project managers.
 Three people can never receive work, and the server says so instead of failing silently: a
 **service account** (a machine identity does not open Maya), a **`CLIENT`** account, and
 anyone who is **not a member of the project**. None of the three is even offered in the menu.
+
+### People on an entity, alongside task assignees
+
+Task assignment is the work; it stays. But it cannot say "Bruno follows this sequence" when
+Bruno holds no task on it — the sequence supervisor, the production coordinator, the lead
+covering three shots. That responsibility is now written directly on the episode, sequence,
+shot or asset.
+
+**Right-click → People…** opens a list of the project's members with their photographs and a
+search box: on twenty similar-looking names, the face is what makes someone recognisable at a
+glance, and the search box is what saves you scrolling a crew of fifty. Tick as many as apply.
+
+The same three people are refused here as on a task — service accounts, clients, non-members
+— because a second door with laxer rules would be no rule at all.
+
+Assigned people show up as stacked avatars on cards, and in the entity's own header, which
+gathers the **whole scope**: the entity itself, its children, and the assignees of its tasks.
+On a sequence, stopping at the sequence would show nobody in the common case — the people are
+on its shots.
 
 ### The Departments submenu
 
@@ -339,6 +358,39 @@ move it to the trash. Right-click the sequence **page** for its status, its sett
 > own *Add to a playlist*, by contrast, pushes exactly one version: the furthest step of that
 > shot that has something published to show. See
 > [Playlists & live review sessions](playlists-and-live-review.md).
+
+## The entity header: team and brief
+
+Sequence, shot and asset pages open with a folded **Team and brief** panel. Folded, it already
+shows the faces — that is what you come to it for. Unfolded, it holds two things:
+
+- **Who works on it** — the scope as described above, each person tagged with why they are
+  there (responsible for the element, for something inside it, or assigned to a task).
+- **The brief** — a markdown note that belongs to ReView. `description` comes from ShotGrid
+  and goes back there, and is often read-only here; the brief is the opposite. Nobody
+  overwrites it, and it is where the actual instructions live.
+
+The brief is plain markdown plus four things markdown cannot say, written out rather than in
+invented syntax:
+
+| Write | You get |
+|-------|---------|
+| `## Title` | A section, unfolded |
+| `##- Title` | A section, folded — for the long half of a brief |
+| `::progress Animation 60` | A gauge, readable without reading it |
+| `::small Delivered 12 March` | A sub-text, for what accompanies without counting |
+| `::refs` … `::end` | A carousel of the images between them, with a *See all* board |
+| `---` | A divider (plain markdown) |
+
+Everything else is ordinary markdown, rendered by the same engine as this documentation —
+raw HTML is escaped and executable link protocols are stripped, so a paste from any website
+is safe.
+
+**Templates.** A shot brief has the same shape from one shot to the next. Save the current
+one under a name — studio-wide or project-only — and apply it in two clicks on the next shot.
+Applying a template *replaces* the brief: merging two markdown structures would produce
+something nobody wrote. Nothing is saved until you press **Save**, so an unwanted template is
+one *Cancel* away.
 
 ## Entity settings
 

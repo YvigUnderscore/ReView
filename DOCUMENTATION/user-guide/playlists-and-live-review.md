@@ -2,7 +2,7 @@
 
 *Build a dailies playlist, play it end to end, and drive one synchronized room from a single screen.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
 ReView supports the classic **dailies** workflow in two halves that fit together: a
 **playlist** is the running order, and a **live session** is the room watching it. You can
@@ -26,6 +26,11 @@ duplicate name is refused with a `409`.
 Deleting a playlist removes references only — the versions and their media are untouched.
 Item media follow the usual draft visibility rule: an unpublished media is only playable by
 the person who uploaded it, and everybody else sees the item without being able to open it.
+
+The **Playlists** tab shows one card per playlist, carrying the strip of its four first
+thumbnails: a dailies list is identified by what it holds, not by its name — *Dailies
+Tuesday* and *Dailies Wednesday* only tell apart by the image. Hovering a card reveals the
+play button over the strip; right-click still opens, renames or deletes.
 
 ## Filling a playlist
 

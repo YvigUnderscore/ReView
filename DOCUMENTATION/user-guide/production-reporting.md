@@ -2,9 +2,9 @@
 
 *Where the show stands, what is late, who carries it, and how fast it is going — all derived, nothing typed.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
-![The Production tab: one scrolling page, from the sequence × department matrix down to the schedule.](../assets/user-guide/production-reporting.png)
+![The Production tab: the summary line on top, then the tab holding the sequence × department matrix.](../assets/user-guide/production-reporting.png)
 
 The **Production** tab answers four questions about a project — where it stands, what is
 blocked, who is carrying it, at what rhythm — and then adds a lightweight schedule. It is
@@ -13,15 +13,33 @@ comments that already exist. The only thing anyone types in is the two optional 
 
 ## Reading the tab
 
-Open a project and select **Production** (`?tab=production`). It is one scrolling page in a
-fixed order — there are no sub-views to switch between:
+Open a project and select **Production** (`?tab=production`). A **summary line** sits on top
+and stays there — four figures that answer *is this going well?* without reading anything
+else:
 
-1. **Where the project stands** — the sequences × departments matrix
-2. **What is late or blocked** — three short lists side by side
-3. **Who is doing what** — the load per person
-4. **Pace and projection** — deliveries per week, and the end date they imply
-5. **Deadline calendar** — appears only once a task carries a date
-6. **Sequence Gantt** — same condition
+| Figure | What it counts |
+|--------|----------------|
+| Percentage done | Tasks in a terminal status, out of the total that counts |
+| Awaiting review | Published deliveries no decision has settled |
+| Past due | Tasks whose due date has gone by |
+| Nobody assigned | Tasks with no assignee |
+
+The last three are alerts and only take colour above zero: a "0 past due" in red would teach
+you to ignore the colour.
+
+Under it, four tabs — the four questions do not get asked at the same time. A supervisor
+opens *What is blocking* in the morning; production opens *Schedule* at the end of the week.
+The badge on a tab carries its alert count, so you know where to go without going there.
+
+| Tab | Holds |
+|-----|-------|
+| **Where the project stands** | The sequences × departments matrix, then pace and projection |
+| **What is blocking** | Three short lists: late, unassigned, waiting for review |
+| **Who is doing what** | The load per person |
+| **Schedule** | Deadline calendar and sequence Gantt — or a line telling you to set a date |
+
+Pace sits with the matrix rather than in a tab of its own: *at what rhythm* extends *where do
+we stand*, and the two are read together.
 
 **Every project member can read the tab.** Editing is narrower: only supervisors and admins
 move a date, from the calendar or from a task page.

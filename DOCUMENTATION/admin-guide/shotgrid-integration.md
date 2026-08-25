@@ -2,7 +2,7 @@
 
 *Link a project to ShotGrid and keep both sides honest: what is exchanged, when it travels, and what cannot be undone.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-26
 
 Link a ReView project to a ShotGrid project and keep both in step. Sequences, shots,
 assets, tasks, statuses, schedule and published media flow into ReView; review decisions,
@@ -123,6 +123,38 @@ its own site, and a synchronisation never creates a ReView account — bringing 
 separate, explicit gesture (see [Bringing the crew into ReView](#bringing-the-crew-into-review)).
 
 ![Seven ShotGrid entity types map onto ReView entities, with the fields that travel between them; the Episode pair is optional and drawn dashed.](../assets/admin-guide/shotgrid-entity-mapping.svg)
+
+### Descriptions: which side holds them
+
+The description of a sequence, a shot or an asset now travels. It was already requested from
+the site and then thrown away for sequences and shots — only assets wrote it — so an imported
+shot arrived without its brief, and production retyped it in ReView only to watch it diverge.
+
+**Settings → Descriptions** decides who holds the field:
+
+| Setting | Effect |
+|---|---|
+| **ShotGrid (read-only here)** | The default. The site's description is copied in, and the field is **not editable in ReView** — editing it would create a divergence the next sync would silently overwrite. |
+| **ReView (editable here)** | ReView holds it. An import never overwrites what a supervisor just wrote. |
+| **Send edits back to the site** | Opens the round trip: every local change is written to the site, provided the `hierarchy` domain is open for writing. |
+
+Two switches guard the write-back, and both are needed: the domain (the general permission)
+and this one (the precise one). A studio may well want to send statuses back without sending
+briefs its production writes on the site.
+
+> [!NOTE]
+> The description is not the **brief**. The brief is a markdown note that belongs to ReView,
+> which no synchronisation ever touches — see
+> [The entity header](../user-guide/projects-and-pipeline.md#the-entity-header-team-and-brief).
+> Keeping them as two fields is what allows one to be read-only without losing the other.
+
+### Asset statuses
+
+ShotGrid keeps a `sg_status_list` per entity type, and the lists do not coincide: four values
+on a sequence, fifteen on a shot. ReView imports one vocabulary per type — tasks, shots,
+sequences, and now **assets**, which borrowed the task list until this release and therefore
+displayed states no asset can hold. Changing an asset status in ReView sends it back like any
+other, when the `hierarchy` domain is open for writing.
 
 ### The Episode level
 
@@ -286,6 +318,19 @@ behalf* rather than as an anonymous "ReView".
 Load the ShotGrid crew**, selects everyone with a green *No account yet* state, and clicks
 **Give ReView access**. The panel announces the plan first ("6 accounts to create, 2 to add
 to the project"), so nobody creates twenty accounts by accident.
+
+### When the addresses differ
+
+Matching by email covers the common case, but every studio has a few people whose address
+differs between the two tools — `firstname.lastname@studio.example` on one side, a personal
+address on the other. Those accounts stayed unlinked for good: their writes went back to the
+site as an anonymous "ReView", and the crew import kept offering them for ever.
+
+Each row of the **Members** tab now carries a **ShotGrid account** selector. Open it, pick
+the matching person from the site, done. A link made by hand **wins over the email
+deduction** — otherwise the person you just linked would show up as *No account yet* on the
+next read, having no address in common. Choose *Not linked* to undo a wrong pairing, which
+would otherwise credit someone's work to somebody else.
 
 ## Staying up to date
 

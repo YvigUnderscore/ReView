@@ -63,6 +63,7 @@ export const PAGE_ORDER = {
     'overview.md',
     'users-and-roles.md',
     'project-organization.md',
+    'hiding-elements.md',
     'pipeline-settings.md',
     'transcoding.md',
     'color-management.md',
