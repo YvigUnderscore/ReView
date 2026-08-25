@@ -5,6 +5,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors';
 import { storage } from './StorageService';
+import { effectiveThumbnailUrl } from '../lib/thumbnails';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 type SessionUser = { id: number; role: Role };
@@ -19,7 +20,7 @@ const assertCanEdit = (user: SessionUser, playlist: { createdById: number | null
 
 /** Playlists d'un projet (liste légère : compteur d'items, créateur). */
 export async function listForProject(projectId: number) {
-  return prisma.playlist.findMany({
+  const playlists = await prisma.playlist.findMany({
     where: { projectId },
     orderBy: { updatedAt: 'desc' },
     include: {
@@ -27,9 +28,43 @@ export async function listForProject(projectId: number) {
       // Le compteur ne comptait pas ce que la playlist montre : une version mise à la
       // corbeille restait dans le total, et la playlist annonçait « 12 » pour dix items.
       _count: { select: { items: { where: { version: { deletedAt: null } } } } },
+      // Les premières images de la playlist : une liste de dailies s'identifie à ce
+      // qu'elle contient, pas à son nom — « Dailies mardi » et « Dailies mercredi » ne se
+      // distinguent qu'à l'image. Quatre suffisent à faire une bande reconnaissable.
+      items: {
+        where: { version: { deletedAt: null } },
+        orderBy: { order: 'asc' },
+        take: PREVIEW_COUNT,
+        select: {
+          version: {
+            select: {
+              media: {
+                where: { deletedAt: null, thumbnailKey: { not: null } },
+                select: { thumbnailKey: true },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
     },
   });
+
+  return Promise.all(
+    playlists.map(async ({ items, ...playlist }) => ({
+      ...playlist,
+      previews: (
+        await Promise.all(
+          items.map((item) => effectiveThumbnailUrl(item.version.media[0]?.thumbnailKey ?? null, null)),
+        )
+      ).filter((url): url is string => url !== null),
+    })),
+  );
 }
+
+/** Vignettes montrées sur une carte de playlist. Au-delà, la bande cesse d'être lisible. */
+const PREVIEW_COUNT = 4;
 
 /**
  * Résout les versions à ajouter : `versionIds` directs et/ou `mediaIds` (chaque média

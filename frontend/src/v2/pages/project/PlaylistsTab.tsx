@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ListVideo, Pencil, Play, Radio, Trash2 } from 'lucide-react';
+import { ListVideo, Pencil, Play, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
-import { timeAgo } from '../../lib/time';
 import { useAuth } from '../../stores/useAuth';
 import { useLiveSessionsQuery } from '../../lib/queries';
 import type { PlaylistDetail, PlaylistSummary } from '../../types/api';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { itemPath } from '../review/playlistNav';
+import PlaylistCard from './PlaylistCard';
 import EmptyState from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -127,57 +127,39 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
         />
       ) : (
         <>
-          {playlists.map((p) => (
-            <ContextMenu key={p.id}>
-              <ContextMenuTrigger asChild>
-                <div className="rounded-lg border border-border bg-card">
-                  <div className="flex items-center">
-                    <Link
-                      to={`/playlists/${p.id}`}
-                      className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left"
-                    >
-                      <ListVideo size={15} className="shrink-0 text-muted-foreground" />
-                      <span className="font-medium">{p.name}</span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {t('playlists.versionCount', { count: p._count.items })}
-                        {p.createdBy?.name ? ` · ${p.createdBy.name}` : ''} · {timeAgo(p.updatedAt)}
-                      </span>
-                    </Link>
-                    {liveOf(p.id) && (
-                      <button
-                        onClick={() => void playFirst(p, true)}
-                        title={`${t('live.running')} ${t('live.participants', {
-                          count: liveOf(p.id)!.participantCount,
-                        })} ${t('live.clickToJoin')}`}
-                        className="mr-3 flex shrink-0 items-center gap-1 rounded-md border border-accent2/60 bg-accent2/10 px-1.5 py-0.5 text-xs font-semibold text-accent2 hover:bg-accent2/20"
-                      >
-                        <Radio size={12} className="animate-pulse" /> {t('live.badge')} ·{' '}
-                        {liveOf(p.id)!.participantCount}
-                      </button>
-                    )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {playlists.map((p) => (
+              <ContextMenu key={p.id}>
+                <ContextMenuTrigger asChild>
+                  <div>
+                    <PlaylistCard
+                      playlist={p}
+                      live={liveOf(p.id)}
+                      onPlay={(joinLive) => void playFirst(p, joinLive)}
+                    />
                   </div>
-                </div>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem onClick={() => void navigate(`/playlists/${p.id}`)}>
-                  <ListVideo size={14} /> {t('common.open')}
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => void playFirst(p)}>
-                  <Play size={14} /> {t('playlist.play')}
-                </ContextMenuItem>
-                {canEdit(p) && (
-                  <>
-                    <ContextMenuItem onClick={() => (setRenaming(p), setNameDraft(p.name))}>
-                      <Pencil size={14} /> {t('common.renameEllipsis')}
-                    </ContextMenuItem>
-                    <ContextMenuItem danger onClick={() => setDeleting(p)}>
-                      <Trash2 size={14} /> {t('common.deleteEllipsis')}
-                    </ContextMenuItem>
-                  </>
-                )}
-              </ContextMenuContent>
-            </ContextMenu>
-          ))}
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem onClick={() => void navigate(`/playlists/${p.id}`)}>
+                    <ListVideo size={14} /> {t('common.open')}
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => void playFirst(p)}>
+                    <Play size={14} /> {t('playlist.play')}
+                  </ContextMenuItem>
+                  {canEdit(p) && (
+                    <>
+                      <ContextMenuItem onClick={() => (setRenaming(p), setNameDraft(p.name))}>
+                        <Pencil size={14} /> {t('common.renameEllipsis')}
+                      </ContextMenuItem>
+                      <ContextMenuItem danger onClick={() => setDeleting(p)}>
+                        <Trash2 size={14} /> {t('common.deleteEllipsis')}
+                      </ContextMenuItem>
+                    </>
+                  )}
+                </ContextMenuContent>
+              </ContextMenu>
+            ))}
+          </div>
           {canWrite && (
             <Button size="sm" variant="ghost" onClick={() => (setCreating(true), setNameDraft(''))}>
               {t('playlists.new')}

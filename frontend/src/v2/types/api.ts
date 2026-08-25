@@ -160,6 +160,13 @@ export interface PlaylistSummary {
   createdAt: string;
   updatedAt: string;
   createdBy: UserRef | null;
+  /**
+   * Vignettes des premières versions (quatre au plus), déjà signées.
+   *
+   * Une liste de dailies s'identifie à ce qu'elle contient, pas à son nom : « Dailies
+   * mardi » et « Dailies mercredi » ne se distinguent qu'à l'image.
+   */
+  previews?: string[];
   _count: { items: number };
 }
 /** Item du détail : version + premier média visible (lecture enchaînée). */
