@@ -3,8 +3,8 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ListPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
@@ -16,6 +16,7 @@ import AssetLatestCard from './asset/AssetLatestCard';
 import TaskCards from './asset/AssetTaskCards';
 import ShotAssets from './shot/ShotAssets';
 import TaskPickerDialog from '../components/upload/TaskPickerDialog';
+import NewTaskDialog from '../components/entity/NewTaskDialog';
 import { Button } from '../components/ui/button';
 import { useProjectRole } from '../lib/useProjectRole';
 import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
@@ -58,7 +59,9 @@ export default function ShotPage() {
   const t = useT();
   const navigate = useNavigate();
   const enqueue = useUploadStore((s) => s.enqueue);
+  const qc = useQueryClient();
   const [pending, setPending] = useState<File[] | 'empty' | null>(null);
+  const [newTask, setNewTask] = useState(false);
 
   const shotQ = useQuery({
     queryKey: qk.shot(shotId),
@@ -130,6 +133,18 @@ export default function ShotPage() {
           },
         ]
       : []),
+    // Poser une étape sur le plan : le geste n'existait que par ricochet — en demandant
+    // une version, ou en assignant quelqu'un — et pas du tout sans ShotGrid.
+    ...(canManage
+      ? [
+          {
+            id: 'new-task',
+            label: t('task.new'),
+            icon: <ListPlus size={14} />,
+            onSelect: () => setNewTask(true),
+          },
+        ]
+      : []),
     ...(playlistEntry ? [playlistEntry] : []),
   ];
 
@@ -170,8 +185,21 @@ export default function ShotPage() {
       {treeQ.isLoading ? (
         <SkeletonRows count={3} />
       ) : (
-        <TaskCards groups={overview?.groups ?? []} projectId={projectId} entityType="Shot" />
+        <TaskCards
+          groups={overview?.groups ?? []}
+          projectId={projectId}
+          entityType="Shot"
+          onNewTask={canManage ? () => setNewTask(true) : undefined}
+        />
       )}
+
+      <NewTaskDialog
+        open={newTask}
+        onOpenChange={setNewTask}
+        projectId={projectId}
+        parent={{ kind: 'shot', id: shotId }}
+        onCreated={() => void qc.invalidateQueries({ queryKey: qk.shotTree(shotId) })}
+      />
 
       <TaskPickerDialog
         open={pending !== null}

@@ -8,8 +8,13 @@ import { assertProjectWritable } from '../lib/projectGuard';
 import * as PipelineStatusService from './PipelineStatusService';
 import { assertDescriptionWritable } from './shotgrid/ShotgridGuardService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
-import { effectiveThumbnailUrl, firstMediaThumbKeysForShots } from '../lib/thumbnails';
-import { storage } from './StorageService';
+import {
+  effectiveThumbnailUrl,
+  firstMediaThumbKeyForSequence,
+  firstMediaThumbKeysForAssets,
+  firstMediaThumbKeysForSequences,
+  firstMediaThumbKeysForShots,
+} from '../lib/thumbnails';
 import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot, signAssignees } from '../lib/entityCardData';
 
 /**
@@ -187,10 +192,13 @@ export async function getDetail(id: number) {
       awaitingReview: awaiting.get(s.id) ?? 0,
     })),
   );
+  // Les assets de la fiche n'avaient droit qu'à leur vignette choisie : ils apparaissaient
+  // vides alors que leurs versions portaient des images. Même règle que partout ailleurs.
+  const assetFallbacks = await firstMediaThumbKeysForAssets(sequence.assets.map((a) => a.id));
   const assets = await Promise.all(
     sequence.assets.map(async (a) => ({
       ...a,
-      thumbnailUrl: a.thumbnailKey ? await storage.getPresignedGetUrl(a.thumbnailKey) : null,
+      thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, assetFallbacks.get(a.id) ?? null),
     })),
   );
 
@@ -200,6 +208,23 @@ export async function getDetail(id: number) {
     episode: project.episodesEnabled ? sequence.episode : null,
     shots,
     assets,
-    thumbnailUrl: sequence.thumbnailKey ? await storage.getPresignedGetUrl(sequence.thumbnailKey) : null,
+    thumbnailUrl: await effectiveThumbnailUrl(sequence.thumbnailKey, await firstMediaThumbKeyForSequence(id)),
   };
+}
+
+/**
+ * Vignette effective d'une liste de séquences, en une passe (arbre de la sidebar, onglet
+ * Séquences, fiche d'un épisode). La liste n'en renvoyait aucune : les cartes de séquences
+ * restaient grises quoi qu'il arrive, faute d'URL signée — le champ n'était même pas là.
+ */
+export async function signSequenceThumbnails<T extends { id: number; thumbnailKey: string | null }>(
+  rows: T[],
+): Promise<(T & { thumbnailUrl: string | null })[]> {
+  const fallbacks = await firstMediaThumbKeysForSequences(rows.map((r) => r.id));
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      thumbnailUrl: await effectiveThumbnailUrl(row.thumbnailKey, fallbacks.get(row.id) ?? null),
+    })),
+  );
 }

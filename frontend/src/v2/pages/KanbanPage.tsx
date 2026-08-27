@@ -19,7 +19,7 @@ import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import EmptyState from '../components/ui/empty-state';
 import EntityFilters from '../components/EntityFilters';
-import { EMPTY_FILTERS, applyFilters } from '../lib/entityFilters';
+import { applyFilters } from '../lib/entityFilters';
 import { TASK_TYPES } from './project/projectTypes';
 import { useKanbanBoard } from './kanban/useKanbanBoard';
 import { buildColumns, columnIdOf, groupByFamily, type FamilyKey } from './kanban/kanbanColumns';
@@ -33,6 +33,7 @@ import { KanbanCardBody } from './kanban/KanbanCard';
 import { parseIdParam } from '../lib/slug';
 import { useT } from '../i18n';
 import { taskTypeLabel } from '../lib/entityTypeLabels';
+import { useUrlFilters } from '../lib/useUrlFilters';
 
 /**
  * Kanban du projet (C4).
@@ -85,7 +86,7 @@ export default function KanbanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- gouverné par `menuEpoch`, cf. ci-dessus
     [menuEpoch, applyOptimisticStatus],
   );
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useUrlFilters();
   /**
    * Le filtre appliqué suit la frappe d'un temps de retard : sur une colonne dense, la
    * saisie restait en arrière du curseur pendant que le board se recalculait à chaque

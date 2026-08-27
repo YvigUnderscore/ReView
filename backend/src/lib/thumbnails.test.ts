@@ -12,6 +12,8 @@ import {
   effectiveThumbnailUrl,
   firstMediaThumbKeysForShots,
   firstMediaThumbKeysForAssets,
+  firstMediaThumbKeysForSequences,
+  firstMediaThumbKeysForEpisodes,
 } from './thumbnails';
 import { prisma } from './prisma';
 import { storage } from '../services/StorageService';
@@ -85,6 +87,57 @@ describe('miniatures groupées', () => {
   it('n’interroge pas la base pour une page vide', async () => {
     await expect(firstMediaThumbKeysForShots([])).resolves.toEqual(new Map());
     await expect(firstMediaThumbKeysForAssets([])).resolves.toEqual(new Map());
+    await expect(firstMediaThumbKeysForSequences([])).resolves.toEqual(new Map());
+    await expect(firstMediaThumbKeysForEpisodes([])).resolves.toEqual(new Map());
     expect(findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Séquences et épisodes n'avaient aucune image de repli : leurs cartes restaient vides même
+ * une fois le travail livré, faute de règle. Ils héritent de celle des plans — le premier
+ * média publié — en la remontant d'un cran (plan → séquence) ou de deux (→ épisode).
+ */
+describe('miniatures de séquence et d’épisode', () => {
+  it('remonte au plan pour élire l’image d’une séquence', async () => {
+    findMany.mockResolvedValue([
+      { thumbnailKey: 'a.jpg', version: { task: { shot: { sequenceId: 3 } } } },
+      { thumbnailKey: 'b.jpg', version: { task: { shot: { sequenceId: 3 } } } },
+      { thumbnailKey: 'c.jpg', version: { task: { shot: { sequenceId: 4 } } } },
+    ] as never);
+    await expect(firstMediaThumbKeysForSequences([3, 4])).resolves.toEqual(
+      new Map([
+        [3, 'a.jpg'],
+        [4, 'c.jpg'],
+      ]),
+    );
+  });
+
+  it('écarte les plans supprimés ou masqués — une séquence ne porte pas l’image d’un plan qu’on n’y voit plus', async () => {
+    findMany.mockResolvedValue([] as never);
+    await firstMediaThumbKeysForSequences([3]);
+    expect(findMany.mock.calls[0]![0]).toMatchObject({
+      where: {
+        published: true,
+        version: { task: { shot: { sequenceId: { in: [3] }, deletedAt: null, hiddenAt: null } } },
+      },
+    });
+  });
+
+  it('remonte jusqu’à l’épisode à travers la séquence du plan', async () => {
+    findMany.mockResolvedValue([
+      { thumbnailKey: 'ep.jpg', version: { task: { shot: { sequence: { episodeId: 7 } } } } },
+    ] as never);
+    await expect(firstMediaThumbKeysForEpisodes([7])).resolves.toEqual(new Map([[7, 'ep.jpg']]));
+  });
+
+  it('ignore un média dont la chaîne de rattachement est rompue', async () => {
+    // Une version rattachée à un asset n'a pas de tâche, donc pas de plan : elle ne dit
+    // rien d'une séquence et ne doit pas s'y afficher.
+    findMany.mockResolvedValue([
+      { thumbnailKey: 'orphan.jpg', version: { task: null } },
+      { thumbnailKey: 'ok.jpg', version: { task: { shot: { sequenceId: 3 } } } },
+    ] as never);
+    await expect(firstMediaThumbKeysForSequences([3])).resolves.toEqual(new Map([[3, 'ok.jpg']]));
   });
 });

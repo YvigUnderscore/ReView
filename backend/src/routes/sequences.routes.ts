@@ -81,7 +81,10 @@ router.get(
     // Pastille « attend une review » : ce qui attend une séquence, ce sont les
     // livraisons publiées de ses plans qu'aucune décision n'a encore tranchées.
     const awaiting = await awaitingReviewBySequence(sequences.map((s) => s.id));
-    const signed = await signAssignees(sequences);
+    // Vignette effective : celle qu'on a choisie, sinon celle du premier média publié d'un
+    // de ses plans — sans quoi la carte d'une séquence reste vide même une fois le travail
+    // commencé.
+    const signed = await SequenceService.signSequenceThumbnails(await signAssignees(sequences));
     res.json({
       sequences: signed.map((s) => ({ ...s, awaitingReview: awaiting.get(s.id) ?? 0 })),
       unsequencedShots,

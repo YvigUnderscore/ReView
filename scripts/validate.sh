@@ -63,6 +63,13 @@ node "$ROOT/scripts/check-untranslated.mjs"
 step "i18n — clés de traduction affichées brutes"
 node "$ROOT/scripts/check-raw-keys.mjs"
 
+# La troisième faute possible : une clé qui reste au catalogue alors que plus personne ne
+# l'affiche. Elle coûte peu à l'écran mais beaucoup à la relecture — quatorze traductions à
+# maintenir pour un message mort — et brouille la mesure de couverture. Le script existait
+# depuis la migration i18n sans être branché ici ; il l'est désormais, catalogues nettoyés.
+step "i18n — clés de traduction jamais affichées"
+node "$ROOT/scripts/check-unused-keys.mjs"
+
 # Le backend ne passe pas par les catalogues : ses messages d'erreur remontent tels quels
 # à l'écran, y compris sur la page publique d'un partage client. L'arbitrage est de les
 # écrire en anglais — ce contrôle empêche le français d'y revenir (D2).

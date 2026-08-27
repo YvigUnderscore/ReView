@@ -26,7 +26,7 @@ import { Button } from '../../components/ui/button';
 import AssetCreateDialog from './AssetCreateDialog';
 import EntityFilters from '../../components/EntityFilters';
 import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
-import { EMPTY_FILTERS, activeCount, applyFilters } from '../../lib/entityFilters';
+import { activeCount, applyFilters } from '../../lib/entityFilters';
 import { useAssetsQuery } from '../../lib/queries';
 import { useDepartments } from '../../lib/departmentsApi';
 import { ASSET_TYPES } from './projectTypes';
@@ -37,6 +37,7 @@ import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
 import { assetTypeLabel } from '../../lib/entityTypeLabels';
+import { useUrlFilters } from '../../lib/useUrlFilters';
 
 /**
  * Onglet Assets réutilisables : création, cartes, assignation, filtres partagés (C4).
@@ -67,7 +68,7 @@ export default function AssetsTab({
   const [bulkAssigning, setBulkAssigning] = useState(false);
   const [editing, setEditing] = useState<AssetListItem | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useUrlFilters('assets');
   // Même liste que la page (même clé de cache) : on y lit combien d'assets existent et
   // s'il en reste à descendre. Filtrer une liste tronquée mentirait sur le résultat, donc
   // un critère posé fait descendre toutes les pages.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link } from 'react-router-dom';
-import { Box } from 'lucide-react';
+import EntityThumb from '../../components/entity/EntityThumb';
 import type { SequenceDetailData } from '../project/projectTypes';
 import { useT } from '../../i18n';
 
@@ -24,11 +24,7 @@ export default function SequenceAssets({ assets }: { assets: SequenceDetailData[
             className="group flex items-center gap-2 rounded-md border border-border p-1.5 pr-3 transition-colors hover:border-primary"
           >
             <span className="flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
-              {a.thumbnailUrl ? (
-                <img src={a.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
-              ) : (
-                <Box size={14} className="text-muted-foreground" />
-              )}
+              <EntityThumb url={a.thumbnailUrl} name={a.name} variant="mini" />
             </span>
             <span className="min-w-0">
               <span className="block truncate text-sm group-hover:text-primary">{a.name}</span>

@@ -17,15 +17,25 @@ vi.mock('../lib/thumbnails', () => ({
     Promise.resolve(key ? `url:${key}` : fallback ? `url:${fallback}` : null),
   ),
   firstMediaThumbKeysForShots: vi.fn().mockResolvedValue(new Map([[2, 'derived/9/thumbnail.webp']])),
+  // La séquence et ses assets ont désormais la même image de repli que ses plans : le
+  // premier média publié. Sans média, la carte retombe sur le nom, côté interface.
+  firstMediaThumbKeysForAssets: vi.fn().mockResolvedValue(new Map()),
+  firstMediaThumbKeysForSequences: vi.fn().mockResolvedValue(new Map()),
+  firstMediaThumbKeyForSequence: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('./StorageService', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`url:${key}`)) },
 }));
 
-import { createBulk, getDetail } from './SequenceService';
+import { createBulk, getDetail, signSequenceThumbnails } from './SequenceService';
 import { prisma } from '../lib/prisma';
-import { firstMediaThumbKeysForShots } from '../lib/thumbnails';
+import {
+  firstMediaThumbKeyForSequence,
+  firstMediaThumbKeysForAssets,
+  firstMediaThumbKeysForSequences,
+  firstMediaThumbKeysForShots,
+} from '../lib/thumbnails';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -113,6 +123,22 @@ describe('getDetail', () => {
     ]);
   });
 
+  it('donne aussi une image de repli à la séquence et à ses assets', async () => {
+    // Ni l'une ni les autres n'en avaient : leur carte restait vide même une fois les
+    // plans livrés, alors que l'image existait un cran plus bas.
+    vi.mocked(prisma.sequence.findUnique).mockResolvedValue({
+      ...sequence,
+      thumbnailKey: null,
+    } as never);
+    vi.mocked(firstMediaThumbKeyForSequence).mockResolvedValue('derived/12/thumbnail.webp');
+    vi.mocked(firstMediaThumbKeysForAssets).mockResolvedValue(new Map([[8, 'derived/13/thumbnail.webp']]));
+
+    const detail = await getDetail(5);
+    expect(detail.thumbnailUrl).toBe('url:derived/12/thumbnail.webp');
+    expect(detail.assets.map((a) => a.thumbnailUrl)).toEqual(['url:derived/13/thumbnail.webp']);
+    expect(firstMediaThumbKeysForAssets).toHaveBeenCalledWith([8]);
+  });
+
   it('demande les vignettes de plans en une seule passe, pas une par plan', async () => {
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue(sequence as never);
     await getDetail(5);
@@ -146,5 +172,30 @@ describe('getDetail', () => {
       shots: { orderBy: unknown };
     };
     expect(include.shots.orderBy).toEqual([{ order: 'asc' }, { code: 'asc' }, { id: 'asc' }]);
+  });
+});
+
+/**
+ * La liste des séquences ne portait aucune vignette : le champ n'existait pas dans la
+ * réponse, si bien que la carte d'une séquence restait grise quoi qu'il arrive. Elle suit
+ * maintenant la règle commune — vignette choisie, sinon première image de ses plans.
+ */
+describe('signSequenceThumbnails', () => {
+  it('préfère la vignette choisie, retombe sur les plans, et n’invente rien', async () => {
+    vi.mocked(firstMediaThumbKeysForSequences).mockResolvedValue(new Map([[2, 'derived/7/thumbnail.webp']]));
+    const rows = [
+      { id: 1, thumbnailKey: 'entity-thumbs/sequence/1.jpg' },
+      { id: 2, thumbnailKey: null },
+      { id: 3, thumbnailKey: null },
+    ];
+    const signed = await signSequenceThumbnails(rows);
+    expect(signed.map((s) => s.thumbnailUrl)).toEqual([
+      'url:entity-thumbs/sequence/1.jpg',
+      'url:derived/7/thumbnail.webp',
+      null,
+    ]);
+    // Une requête pour toute la page : l'arbre de la sidebar en charge deux cents d'un coup.
+    expect(firstMediaThumbKeysForSequences).toHaveBeenCalledTimes(1);
+    expect(firstMediaThumbKeysForSequences).toHaveBeenCalledWith([1, 2, 3]);
   });
 });

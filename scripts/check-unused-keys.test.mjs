@@ -80,7 +80,10 @@ describe('jeux du dépôt', () => {
     expect(catalogKeys(frontend.catalog).length).toBeGreaterThan(1000);
   });
 
+  // Ce cas relit l'intégralité de `backend/src` à la recherche de citations : quelques
+  // dizaines de millisecondes sur une machine de développement, plusieurs secondes sur un
+  // runner partagé — le plafond de cinq secondes de vitest y était atteint.
   it('ne trouve aucune clé morte côté backend', () => {
     expect(unusedKeys(SETS.find((s) => s.name === 'backend'))).toEqual([]);
-  });
+  }, 30_000);
 });

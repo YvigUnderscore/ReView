@@ -28,12 +28,19 @@ describe('EntityCard — vignette', () => {
     expect(html).toContain('decoding="async"');
   });
 
-  it('garde l’icône de repli quand aucune vignette n’est connue', () => {
-    for (const view of ['cards', 'compact'] as const) {
-      const html = markup({ view });
-      expect(html).not.toContain('<img');
-      expect(html).toContain('<svg');
-    }
+  it('met le nom à la place de l’image tant qu’aucune vignette n’est connue', () => {
+    // Une icône d'image grise répétée cent fois ne distinguait rien : sur une grille de
+    // plans neufs, seul le nom dit ce qu'on regarde.
+    const cards = markup();
+    expect(cards).not.toContain('<img');
+    // Deux fois : dans la tuile et dans le titre — la tuile est masquée au lecteur d'écran.
+    expect(cards.match(/SH010/g)).toHaveLength(2);
+    expect(cards).toContain('aria-hidden="true"');
+
+    // Vue compacte : 32 px de côté, où seul l'abrégé tient.
+    const compact = markup({ view: 'compact' });
+    expect(compact).not.toContain('<img');
+    expect(compact).toContain('>010<');
   });
 
   it('affiche toujours titre, sous-titre et badge', () => {

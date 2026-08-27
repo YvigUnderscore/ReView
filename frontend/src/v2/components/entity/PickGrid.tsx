@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Check, Image as ImageIcon } from 'lucide-react';
+import { Check } from 'lucide-react';
+import EntityThumb from './EntityThumb';
 
 /**
  * Choisir des éléments à l'image plutôt qu'à la case à cocher.
@@ -49,17 +50,7 @@ export default function PickGrid({
             }`}
           >
             <span className="relative flex aspect-video items-center justify-center overflow-hidden bg-secondary/40">
-              {item.thumbnailUrl ? (
-                <img
-                  src={item.thumbnailUrl}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <ImageIcon size={16} className="text-muted-foreground/60" />
-              )}
+              <EntityThumb url={item.thumbnailUrl} name={item.label} />
               {picked && (
                 <span className="absolute right-1 top-1 rounded-full bg-primary p-0.5 text-primary-foreground">
                   <Check size={11} />

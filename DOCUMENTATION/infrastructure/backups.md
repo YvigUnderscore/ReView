@@ -38,12 +38,23 @@ backups/
   minio-current/                  living mirror of the bucket (mirror mode)
   20260822-030000/
     db.dump                       pg_dump -Fc, taken inside the postgres container
+    env.backup                    copy of .env, mode 600 — see below
     minio/                        hard-link snapshot of the mirror  (mirror mode)
     minio.tar.gz                  full archive of the volume        (archive mode)
-    manifest.txt                  date, mode, bucket, app_version, db_bytes
+    manifest.txt                  date, mode, bucket, app_version, db_bytes, env_included
 ```
 
 ![One backup run: the database is dumped inside the postgres container, the bucket is mirrored incrementally into a living copy and then frozen as a hard-link snapshot, and a manifest records the version the snapshot came from.](../assets/infrastructure/incremental-backup-flow.svg)
+
+### Why the snapshot carries your secrets
+
+ShotGrid credentials, API tokens and 2FA secrets are stored encrypted, under a key derived
+from `JWT_SECRET`. Restoring `db.dump` on a fresh machine with a new secret gives you rows
+that are present but undecipherable — a silent failure, found on the day you need them most.
+
+The run therefore copies `.env` next to the dump, as `env.backup`, mode 600, and
+`manifest.txt` records `env_included=yes`. **Treat the backup directory as a secret store**:
+restrict it as you would restrict `.env` itself, and encrypt it before moving it off the host.
 
 The last line the script prints is machine-readable — `BACKUP_ID=20260822-030000` — which is how
 `scripts/update.sh` picks up the id of the backup it just took.

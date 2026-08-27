@@ -12,6 +12,7 @@ import EntityContextMenu from '../ui/entity-menu';
 import { separator, type MenuEntry } from '../../lib/menuSpec';
 import EntitySettingsDialog from './EntitySettingsDialog';
 import EntityHeaderPanel from './EntityHeaderPanel';
+import EntityThumb from './EntityThumb';
 import type { NoteKind } from '../../lib/notesApi';
 import type { EntityKind, EntitySource } from './entitySettings';
 import { useT } from '../../i18n';
@@ -90,15 +91,12 @@ export default function EntityWorkPage({
       <EntityContextMenu entries={entries}>
         <div className="min-h-full">
           <header className="mb-5 flex flex-wrap items-start gap-4">
-            {thumbnailUrl && (
-              <img
-                src={thumbnailUrl}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="h-24 w-40 shrink-0 rounded-lg border border-border object-cover"
-              />
-            )}
+            {/* La place de l'image est toujours tenue : à défaut de miniature, le nom —
+                la fiche garde sa forme, et le vide se voit assez pour donner envie d'en
+                déposer une. */}
+            <div className="h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-border">
+              <EntityThumb url={thumbnailUrl} name={title} />
+            </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="truncate text-xl font-semibold">{title}</h1>

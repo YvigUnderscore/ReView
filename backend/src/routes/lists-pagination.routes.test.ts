@@ -36,7 +36,14 @@ vi.mock('../middleware/rbac', () => ({
 vi.mock('./trashRoutes', () => ({ mountTrashRoutes: vi.fn() }));
 vi.mock('../services/ShotService', () => shots);
 vi.mock('../services/TaskService', () => tasks);
-vi.mock('../services/SequenceService', () => ({ createBulk: vi.fn(), getDetail: vi.fn() }));
+// `signSequenceThumbnails` : la liste rend la vignette effective de chaque séquence.
+vi.mock('../services/SequenceService', () => ({
+  createBulk: vi.fn(),
+  getDetail: vi.fn(),
+  signSequenceThumbnails: vi.fn((rows: { id: number }[]) =>
+    Promise.resolve(rows.map((r) => ({ ...r, thumbnailUrl: null }))),
+  ),
+}));
 vi.mock('../services/PipelineLatestService', () => ({ shotOverview: vi.fn(), assetOverview: vi.fn() }));
 vi.mock('../services/PipelineStatusService', () => ({ assertBelongsToProject: vi.fn() }));
 vi.mock('../services/shotgrid/ShotgridGuardService', () => ({ assertLocalCreationAllowed: vi.fn() }));
@@ -139,7 +146,8 @@ describe('GET /api/sequences — liste bornée', () => {
     const res = await request(app).get('/api/sequences?projectId=1');
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
-      sequences: [{ id: 1, code: 'SQ01' }],
+      // `thumbnailUrl` fait partie de la forme : la carte l'attendait, rien ne le rendait.
+      sequences: [{ id: 1, code: 'SQ01', thumbnailUrl: null }],
       unsequencedShots: 4,
       total: 640,
       page: 1,

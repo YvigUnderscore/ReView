@@ -41,6 +41,7 @@ import {
 } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { assertMediaManage } from './MediaService';
+import * as ShotService from './ShotService';
 import * as TaskService from './TaskService';
 import * as VersionService from './VersionService';
 
@@ -249,6 +250,58 @@ export async function bulkPatchVersions(
     await VersionService.update(user, projectId, id, { status });
   }
   return ids.length;
+}
+
+/**
+ * Statut d'une sélection de plans.
+ *
+ * C'était le manque le plus criant de la sélection multiple : elle n'offrait que
+ * « Assigner » et « Supprimer », là où le clic droit sur un seul plan propose neuf actions —
+ * et où le geste quotidien d'une production consiste précisément à passer trente plans en
+ * retake d'un coup.
+ *
+ * Chaque plan passe par `ShotService.update`, comme au singulier : mêmes garde-fous
+ * (projet inscriptible, statut appartenant bien au vocabulaire de ce projet), même
+ * arbitrage ShotGrid, même trace d'audit. Un plan qui échoue est compté à part plutôt que
+ * de faire tomber le lot — sur cinquante plans, tout perdre pour un seul serait absurde,
+ * c'est déjà la règle retenue pour l'assignation.
+ */
+export async function bulkPatchShotStatus(
+  user: SessionUser,
+  ids: number[],
+  pipelineStatusId: number | null,
+): Promise<{ updated: number; failed: number }> {
+  const shots = await prisma.shot.findMany({
+    where: { id: { in: ids }, deletedAt: null },
+    select: { id: true, projectId: true },
+  });
+  if (shots.length === 0) throw notFound('No shot to update');
+  const projectIds = new Set(shots.map((shot) => shot.projectId));
+  if (projectIds.size !== 1) throw forbidden('All shots must belong to the same project');
+  const [projectId] = projectIds;
+  if (projectId === undefined) throw notFound('No shot to update');
+  if (!(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('No access to this project');
+
+  let updated = 0;
+  let failed = 0;
+  for (const shot of shots) {
+    try {
+      await ShotService.update(shot.id, projectId, { pipelineStatusId }, user.id);
+      updated++;
+    } catch {
+      // Statut refusé par l'arbitrage ShotGrid, plan verrouillé : compté, pas jeté.
+      failed++;
+    }
+  }
+  logAudit({
+    userId: user.id,
+    action: 'SHOT_BULK_STATUS',
+    entityType: 'Shot',
+    entityId: projectId,
+    metadata: { ids: shots.map((shot) => shot.id), pipelineStatusId, updated, failed },
+  });
+  return { updated, failed };
 }
 
 /** Déplacement de shots vers une séquence (ou hors séquence si `null`) — ADMIN/SUPERVISOR. */

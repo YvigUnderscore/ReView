@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Activity,
+  Search,
   Bot,
   Box,
   CalendarClock,
@@ -63,6 +65,7 @@ import TrashTab from './admin/TrashTab';
 import RetentionTab from './admin/RetentionTab';
 import { useT, type MessageKey } from '../i18n';
 import ShotgridSitesTab from './admin/ShotgridSitesTab';
+import { sectionHaystack, sectionMatches } from './admin/settingsSearch';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
 type Tr = (key: MessageKey) => string;
@@ -239,6 +242,7 @@ export default function AdminPage() {
   const t = useT();
   const role = useAuth((s) => s.user?.role);
   const { section, id } = useParams();
+  const [query, setQuery] = useState('');
   if (role !== 'ADMIN') {
     return (
       <PageShell title={t('nav.admin')}>
@@ -253,8 +257,11 @@ export default function AdminPage() {
    * qui cherchait « qui a changé ce réglage » trouvait la mauvaise selon le groupe ouvert.
    * L'adresse continue de fonctionner : les liens et signets existants aboutissent.
    */
+  const all = sections(t);
+  const visibleSections = all.filter((s) => sectionMatches(sectionHaystack(s.key, s.label, t), query));
+
   const resolved = section === 'audit' ? 'activity' : section;
-  const active = sections(t).find((s) => s.key === resolved) ?? sections(t)[0];
+  const active = all.find((s) => s.key === resolved) ?? all[0];
   const Detail = 'Detail' in active ? active.Detail : undefined;
   const Active = id && Detail ? Detail : active.Component;
 
@@ -263,14 +270,32 @@ export default function AdminPage() {
       <h1 className="mb-4 text-xl font-semibold">{t('nav.admin')}</h1>
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-52 md:flex-col md:overflow-visible md:pb-0">
-          {GROUPS.map((group) => (
-            <div key={group} className="flex gap-1 md:flex-col">
-              <div className="hidden px-3 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-muted-foreground/70 first:pt-0 md:block">
-                {groupLabel(t, group)}
-              </div>
-              {sections(t)
-                .filter((s) => s.group === group)
-                .map((s) => {
+          {/* Chercher dans les réglages, pas seulement dans leurs titres : vingt-huit
+              sections en cinq groupes sont introuvables sans cela — on cherche
+              « watermark », pas « Diffusion ». */}
+          <div className="relative mb-2 hidden md:block">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('admin.search.placeholder')}
+              aria-label={t('admin.search.placeholder')}
+              className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          {GROUPS.map((group) => {
+            const inGroup = visibleSections.filter((s) => s.group === group);
+            if (inGroup.length === 0) return null;
+            return (
+              <div key={group} className="flex gap-1 md:flex-col">
+                <div className="hidden px-3 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-muted-foreground/70 first:pt-0 md:block">
+                  {groupLabel(t, group)}
+                </div>
+                {inGroup.map((s) => {
                   const Icon = s.icon;
                   const on = s.key === active.key;
                   return (
@@ -287,8 +312,12 @@ export default function AdminPage() {
                     </Link>
                   );
                 })}
-            </div>
-          ))}
+              </div>
+            );
+          })}
+          {visibleSections.length === 0 && (
+            <p className="px-3 py-2 text-sm text-muted-foreground">{t('admin.search.empty')}</p>
+          )}
         </nav>
         <div className="min-w-0 flex-1">
           <Active />

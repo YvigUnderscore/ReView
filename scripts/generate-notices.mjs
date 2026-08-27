@@ -228,23 +228,43 @@ export async function collectWorkspace(repoRoot, workspace) {
 
   for (const key of productionTree(lock)) {
     const dir = path.join(repoRoot, workspace.dir, key);
+    /*
+     * Binaire natif restreint à une plateforme : on ne lit rien de `node_modules`.
+     *
+     * npm n'installe que la variante de la machine courante — `@esbuild/win32-x64` ici,
+     * `@esbuild/linux-x64` sur le runner. Le générateur trouvait donc le `package.json` de
+     * l'une et pas des autres, et n'écrivait le champ « Source » que pour celle-là : le
+     * fichier produit dépendait de l'OS de build, et la comparaison de fraîcheur de
+     * `validate.sh` ne pouvait pas réussir des deux côtés à la fois. C'est ce qui faisait
+     * échouer toutes les exécutions de la CI, sur une seule ligne de différence
+     * (`@msgpackr-extract/msgpackr-extract-*`).
+     *
+     * Le lockfile, lui, décrit les 53 à 59 variantes à l'identique partout : nom, version
+     * et licence suffisent à l'attribution, et la sortie redevient déterministe.
+     */
+    const locked = lock.packages[key] ?? {};
+    const platformSpecific = Array.isArray(locked.os) || Array.isArray(locked.cpu);
     let pkg = {};
-    try {
-      pkg = JSON.parse(await readFile(path.join(dir, 'package.json'), 'utf8'));
-    } catch {
-      /* paquet non installé (binaire optionnel d'une autre plateforme) */
+    if (!platformSpecific) {
+      try {
+        pkg = JSON.parse(await readFile(path.join(dir, 'package.json'), 'utf8'));
+      } catch {
+        /* paquet non installé : on se contente de ce que dit le lockfile */
+      }
     }
     const name = packageName(key);
-    const version = pkg.version ?? lock.packages[key]?.version ?? '?';
+    const version = pkg.version ?? locked.version ?? '?';
     const id = `${name}@${version}`;
     if (seen.has(id)) continue;
     seen.set(id, {
       id,
       name,
       version,
-      license: declaredLicense(pkg) ?? lock.packages[key]?.license ?? LICENSE_OVERRIDES[id] ?? 'UNKNOWN',
+      license: declaredLicense(pkg) ?? locked.license ?? LICENSE_OVERRIDES[id] ?? 'UNKNOWN',
       repository: repositoryUrl(pkg),
-      texts: await readLicenseText(dir),
+      // Même raison que ci-dessus : le texte de licence n'existe sur disque que pour la
+      // variante installée. Le lire rendrait la sortie dépendante de la plateforme.
+      texts: platformSpecific ? null : await readLicenseText(dir),
     });
   }
   return [...seen.values()].sort((a, b) => a.id.localeCompare(b.id));

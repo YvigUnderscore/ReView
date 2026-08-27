@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Clapperboard, EyeOff, Trash2, UserPlus } from 'lucide-react';
+import { ArrowUpRight, Clapperboard, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
@@ -16,12 +16,11 @@ import { useOmitMenu } from '../../lib/useOmitMenu';
 import { entriesOf } from '../../lib/menuSpec';
 import CreateEntityButton from '../../components/entity/CreateEntityButton';
 import EmptyState from '../../components/ui/empty-state';
-import SelectionBar from '../../components/ui/selection-bar';
-import BulkAssignDialog from '../../components/entity/BulkAssignDialog';
+import ShotBulkBar from './ShotBulkBar';
 import ShotDialogs from './ShotDialogs';
 import EntityFilters from '../../components/EntityFilters';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
-import { EMPTY_FILTERS, activeCount, applyFilters } from '../../lib/entityFilters';
+import { activeCount, applyFilters } from '../../lib/entityFilters';
 import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import { useShotsQuery } from '../../lib/queries';
@@ -33,6 +32,7 @@ import { sortByCode, type Nomenclature, type Sequence, type Shot } from './proje
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
+import { useUrlFilters } from '../../lib/useUrlFilters';
 
 /**
  * Onglet Shots : création en lot, cartes groupées par séquence, filtres partagés (C4).
@@ -63,9 +63,8 @@ export default function ShotsTab({
   const [editing, setEditing] = useState<Shot | null>(null);
   const [deleting, setDeleting] = useState<Shot | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [bulkAssigning, setBulkAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useUrlFilters('shots');
   // Même liste que la page (même clé de cache), consultée ici pour ce qu'elle sait d'elle :
   // combien de plans existent, et s'il en reste à descendre. Un filtre posé sur une page
   // tronquée répondrait « aucun plan » pour un plan qui existe : on descend alors tout.
@@ -283,36 +282,13 @@ export default function ShotsTab({
       <ListSentinel hasMore={paging.hasMore} isLoading={paging.isFetchingMore} onLoadMore={paging.loadMore} />
 
       {canManage && (
-        <SelectionBar
-          count={sel.count}
-          label={t('shots.countLabel', { count: sel.count })}
-          onClear={sel.clear}
-          actions={[
-            {
-              label: t('assign.menu'),
-              icon: <UserPlus size={14} />,
-              onClick: () => setBulkAssigning(true),
-            },
-            {
-              label: t('common.delete'),
-              icon: <Trash2 size={14} />,
-              danger: true,
-              onClick: () => setBulkDeleting(true),
-            },
-          ]}
-        />
-      )}
-
-      {bulkAssigning && (
-        <BulkAssignDialog
+        <ShotBulkBar
           projectId={projectId}
-          holder="shots"
           ids={sel.ids}
-          onClose={() => setBulkAssigning(false)}
-          onDone={() => {
-            sel.clear();
-            void reload();
-          }}
+          count={sel.count}
+          onClear={sel.clear}
+          onReload={() => void reload()}
+          onDelete={() => setBulkDeleting(true)}
         />
       )}
 

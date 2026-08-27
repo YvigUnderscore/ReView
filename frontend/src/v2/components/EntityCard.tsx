@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link } from 'react-router-dom';
-import { Image as ImageIcon, Pencil, Star, Trash2 } from 'lucide-react';
+import { Pencil, Star, Trash2 } from 'lucide-react';
 import { Children, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { ViewMode } from '../stores/useViewPref';
@@ -14,6 +14,7 @@ import { Checkbox } from './ui/checkbox';
 import EntityContextMenu from './ui/entity-menu';
 import { toMenuEntries, type EntityItemAction, type MenuEntry } from '../lib/menuSpec';
 import EntityCardMeta, { MetaDescription, type EntityMeta } from './entity/EntityCardMeta';
+import EntityThumb from './entity/EntityThumb';
 import { useT } from '../i18n';
 
 /** État de multi-sélection d'une carte (13.A). */
@@ -184,17 +185,7 @@ export default function EntityCard({
       >
         {selection && <SelectBox selection={selection} />}
         <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-secondary/60">
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <ImageIcon size={14} className="text-muted-foreground" />
-          )}
+          <EntityThumb url={thumbnailUrl} name={title} variant="mini" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -220,19 +211,9 @@ export default function EntityCard({
       className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-colors`}
     >
       <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-secondary/40">
-        {thumbnailUrl ? (
-          // Chargement paresseux : une grille de cent plans demandait cent JPEG de 640 px
-          // dès le montage (4 à 8 Mo), pour n'en afficher qu'une douzaine à l'écran.
-          <img
-            src={thumbnailUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <ImageIcon size={28} className="text-muted-foreground/50" />
-        )}
+        {/* Sans miniature, la carte porte le nom : c'est ce qu'on cherche du regard, et
+            cent icônes d'image identiques ne le disaient pas. */}
+        <EntityThumb url={thumbnailUrl} name={title} />
         {hoverSprite && hoverSprite.count > 0 && <HoverSprite sprite={hoverSprite} />}
         {selection && <SelectBox selection={selection} className="absolute left-1.5 top-1.5" />}
         <div className="absolute right-1.5 top-1.5">

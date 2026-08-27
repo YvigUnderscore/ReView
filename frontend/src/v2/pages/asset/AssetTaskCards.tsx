@@ -37,11 +37,14 @@ export default function AssetTaskCards({
   groups,
   projectId,
   entityType = 'Asset',
+  onNewTask,
 }: {
   groups: DepartmentGroup<AssetTreeTask>[];
   projectId: number;
   /** Le bord auquel ces tâches appartiennent — les étapes en dépendent, et leurs couleurs. */
   entityType?: 'Asset' | 'Shot';
+  /** Créer la première tâche. Absent quand la personne n'en a pas le droit. */
+  onNewTask?: () => void;
 }) {
   const t = useT();
   const navigate = useNavigate();
@@ -60,6 +63,8 @@ export default function AssetTaskCards({
   const view = useViewMode(`asset-tasks:${projectId}`);
 
   const allTasks = groups.flatMap((g) => g.items.map((task) => ({ task, group: g })));
+  // Rien à montrer, donc rien où faire un clic droit : c'est le seul endroit du pipe où un
+  // bouton visible se justifie — sans lui, une entité sans tâche est un cul-de-sac.
   if (allTasks.length === 0)
     return (
       <EmptyState
@@ -67,6 +72,8 @@ export default function AssetTaskCards({
         icon={FileStack}
         title={t('asset.tree.empty.title')}
         description={t('asset.tree.empty.description')}
+        action={onNewTask ? t('task.new') : undefined}
+        onAction={onNewTask}
       />
     );
 

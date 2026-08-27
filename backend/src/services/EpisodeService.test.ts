@@ -27,7 +27,12 @@ const { db, thumbs, store } = vi.hoisted(() => ({
     shot: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
-  thumbs: { firstMediaThumbKeysForShots: vi.fn(), effectiveThumbnailUrl: vi.fn() },
+  thumbs: {
+    firstMediaThumbKeysForShots: vi.fn(),
+    firstMediaThumbKeysForEpisodes: vi.fn(),
+    firstMediaThumbKeyForEpisode: vi.fn(),
+    effectiveThumbnailUrl: vi.fn(),
+  },
   store: { storage: { getPresignedGetUrl: vi.fn() } },
 }));
 
@@ -116,6 +121,46 @@ describe('création', () => {
     expect(db.episode.create).toHaveBeenCalledWith({
       data: { projectId: 7, name: 'Pilote', code: 'EP101', order: 2 },
     });
+  });
+});
+
+/**
+ * L'image d'un épisode : la liste n'en renvoyait aucune — même pas celle qu'on avait
+ * choisie, faute d'URL signée — et l'épisode n'héritait de rien de ses plans. Sa carte
+ * restait donc au nom de l'épisode indéfiniment, quel que soit le travail livré.
+ */
+describe('vignette de la liste', () => {
+  const page = { page: 1, pageSize: 20, order: 'desc' as const };
+
+  it('signe la vignette choisie, et retombe sur le premier média des plans sinon', async () => {
+    db.episode.findMany.mockResolvedValue([
+      { id: 4, code: 'EP101', thumbnailKey: null },
+      { id: 5, code: 'EP102', thumbnailKey: 'entity-thumbs/episode/5.jpg' },
+    ]);
+    db.episode.count.mockResolvedValue(2);
+    thumbs.firstMediaThumbKeysForEpisodes.mockResolvedValue(new Map([[4, 'derived/9/thumbnail.webp']]));
+    thumbs.effectiveThumbnailUrl.mockImplementation((key: string | null, fallback: string | null) =>
+      Promise.resolve(key ?? fallback),
+    );
+
+    const res = await EpisodeService.list(7, page);
+    expect(res.episodes.map((e) => e.thumbnailUrl)).toEqual([
+      'derived/9/thumbnail.webp',
+      'entity-thumbs/episode/5.jpg',
+    ]);
+    // Une seule requête pour toute la page : la variante unitaire en signerait une par ligne.
+    expect(thumbs.firstMediaThumbKeysForEpisodes).toHaveBeenCalledTimes(1);
+    expect(thumbs.firstMediaThumbKeysForEpisodes).toHaveBeenCalledWith([4, 5]);
+  });
+
+  it('laisse la vignette nulle tant qu’aucune image n’existe — l’interface affiche le nom', async () => {
+    db.episode.findMany.mockResolvedValue([{ id: 4, code: 'EP101', thumbnailKey: null }]);
+    db.episode.count.mockResolvedValue(1);
+    thumbs.firstMediaThumbKeysForEpisodes.mockResolvedValue(new Map());
+    thumbs.effectiveThumbnailUrl.mockResolvedValue(null);
+
+    const res = await EpisodeService.list(7, page);
+    expect(res.episodes[0]!.thumbnailUrl).toBeNull();
   });
 });
 

@@ -3,8 +3,12 @@
 
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
-import { effectiveThumbnailUrl, firstMediaThumbKeysForShots } from '../lib/thumbnails';
-import { storage } from './StorageService';
+import {
+  effectiveThumbnailUrl,
+  firstMediaThumbKeyForEpisode,
+  firstMediaThumbKeysForEpisodes,
+  firstMediaThumbKeysForShots,
+} from '../lib/thumbnails';
 import { pageArgs, paginate, type PaginationParams } from '../lib/pagination';
 
 /**
@@ -101,12 +105,37 @@ export async function list(projectId: number, p: PaginationParams) {
     prisma.episode.count({ where }),
   ]);
   const { pageCount, hasMore } = paginate(episodes, total, p);
+  // Vignette effective de chaque épisode, en une passe : la sienne si elle a été choisie,
+  // sinon la première image venue de ses plans. Sans cela, la liste renvoyait la clé de
+  // stockage et aucune URL — les cartes d'épisodes ne pouvaient rien afficher.
+  const withThumbs = await signEpisodeThumbnails(episodes);
   // Séquences du projet qu'aucun épisode ne réclame : un découpage en cours en laisse
   // toujours, et les taire ferait croire que le projet est vide.
   const unassignedSequences = await prisma.sequence.count({
     where: { projectId, deletedAt: null, hiddenAt: null, episodeId: null },
   });
-  return { episodes, unassignedSequences, total, page: p.page, pageSize: p.pageSize, pageCount, hasMore };
+  return {
+    episodes: withThumbs,
+    unassignedSequences,
+    total,
+    page: p.page,
+    pageSize: p.pageSize,
+    pageCount,
+    hasMore,
+  };
+}
+
+/** Vignette effective d'une liste d'épisodes, en une passe (liste du projet). */
+export async function signEpisodeThumbnails<T extends { id: number; thumbnailKey: string | null }>(
+  rows: T[],
+): Promise<(T & { thumbnailUrl: string | null })[]> {
+  const fallbacks = await firstMediaThumbKeysForEpisodes(rows.map((r) => r.id));
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      thumbnailUrl: await effectiveThumbnailUrl(row.thumbnailKey, fallbacks.get(row.id) ?? null),
+    })),
+  );
 }
 
 /** Fiche complète : les séquences de l'épisode, et les plans de ces séquences. */
@@ -158,7 +187,7 @@ export async function getDetail(id: number) {
     ...episode,
     shots: shotsWithThumbs,
     shotCount: shotsWithThumbs.length,
-    thumbnailUrl: episode.thumbnailKey ? await storage.getPresignedGetUrl(episode.thumbnailKey) : null,
+    thumbnailUrl: await effectiveThumbnailUrl(episode.thumbnailKey, await firstMediaThumbKeyForEpisode(id)),
   };
 }
 

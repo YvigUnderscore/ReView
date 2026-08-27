@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Users } from 'lucide-react';
+import { ListPlus, Plus, Users } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useUploadStore } from '../../stores/useUploadStore';
@@ -20,6 +20,7 @@ import AssetLatestCard from './asset/AssetLatestCard';
 import AssetTaskCards from './asset/AssetTaskCards';
 import { SkeletonRows } from '../components/ui/skeleton';
 import TaskPickerDialog from '../components/upload/TaskPickerDialog';
+import NewTaskDialog from '../components/entity/NewTaskDialog';
 import { useProjectRole } from '../lib/useProjectRole';
 import type { MenuEntry } from '../lib/menuSpec';
 import type { AssetDetail, AssetOverview } from '../types/api';
@@ -42,6 +43,7 @@ export default function AssetPage() {
   const navigate = useNavigate();
   const [assigning, setAssigning] = useState(false);
   const [pending, setPending] = useState<File[] | 'empty' | null>(null);
+  const [newTask, setNewTask] = useState(false);
 
   const assetQ = useQuery({
     queryKey: qk.asset(assetId),
@@ -125,8 +127,16 @@ export default function AssetPage() {
           },
         ]
       : []),
+    // Poser une étape sur l'asset : le geste n'existait que par ricochet — en demandant
+    // une version, ou en assignant quelqu'un — et pas du tout sans ShotGrid.
     ...(canManage
       ? [
+          {
+            id: 'new-task',
+            label: t('task.new'),
+            icon: <ListPlus size={14} />,
+            onSelect: () => setNewTask(true),
+          },
           {
             id: 'assign',
             label: t('task.manageAssignment'),
@@ -219,8 +229,20 @@ export default function AssetPage() {
       {treeQ.isLoading ? (
         <SkeletonRows count={3} />
       ) : (
-        <AssetTaskCards groups={overview?.groups ?? []} projectId={projectId} />
+        <AssetTaskCards
+          groups={overview?.groups ?? []}
+          projectId={projectId}
+          onNewTask={canManage ? () => setNewTask(true) : undefined}
+        />
       )}
+
+      <NewTaskDialog
+        open={newTask}
+        onOpenChange={setNewTask}
+        projectId={projectId}
+        parent={{ kind: 'asset', id: assetId }}
+        onCreated={() => void qc.invalidateQueries({ queryKey: qk.assetTree(assetId) })}
+      />
 
       <div className="mb-3 mt-6 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">{t('asset.tree.direct')}</h2>

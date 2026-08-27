@@ -33,6 +33,7 @@ import { useAutoThumbnail } from './review/useAutoThumbnail';
 import { useModel3DThree } from './review/three/useModel3DThree';
 import ReviewHeader from './review/ReviewHeader';
 import ReviewViewer from './review/ReviewViewer';
+import { exactFrameRate } from './review/frameRate';
 import { ErrorBoundary } from '../components/ui/error-boundary';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
 import { useSplat } from './review/splat/useSplat';
@@ -254,7 +255,17 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const { reprocessing, publishMedia, reprocessMedia } = useMediaActions(id, model3d, publishSceneFirst);
 
   const kind = data?.media.kind;
-  const fps = data?.fps ?? fpsOverride;
+  /*
+   * Une seule cadence pour tout l'écran.
+   *
+   * La page distribuait la valeur brute de la base — 23.98, l'arrondi au centième — au
+   * panneau de commentaires, aux plages d'annotation et aux liens profonds, tandis que le
+   * viewer recalculait la fraction exacte (23.976) pour son compteur et sa timeline. Les
+   * deux divergent d'une frame toutes les quatre minutes : la même image portait deux
+   * numéros différents sur le même écran, et copier un lien vers une frame puis l'ouvrir
+   * ne rendait pas la même image.
+   */
+  const fps = data?.fps != null ? exactFrameRate(data.fps) : fpsOverride;
   const startFrame = data?.startFrame ?? 1001;
 
   // Marqueurs de timeline (34.C) en séparateurs du fil de commentaires (retours 34) —

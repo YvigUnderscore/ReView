@@ -102,7 +102,13 @@ function anonymousFields(root = 'src'): string[] {
   return found;
 }
 
-describe('noms accessibles des champs de saisie', () => {
+/**
+ * Ce contrôle parcourt l'intégralité de `src` et analyse chaque `.tsx` avec le compilateur
+ * TypeScript : quelques dizaines de millisecondes sur une machine de développement, près de
+ * quatre secondes sur un runner partagé — et davantage sous la concurrence de la suite
+ * entière, où le plafond de cinq secondes de vitest était franchi.
+ */
+describe('noms accessibles des champs de saisie', { timeout: 60_000 }, () => {
   it('ne laisse pas remonter le nombre de champs anonymes', () => {
     const found = anonymousFields();
     expect(found.length, `champs sans nom accessible :\n${found.join('\n')}`).toBeLessThanOrEqual(CEILING);

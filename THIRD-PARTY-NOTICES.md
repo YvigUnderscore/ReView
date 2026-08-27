@@ -5381,7 +5381,6 @@ _No license file shipped in the package; the `MIT` declaration in its `package.j
 ### @msgpackr-extract/msgpackr-extract-win32-x64@3.0.4
 
 - License: `MIT`
-- Source: http://github.com/kriszyp/msgpackr-extract
 
 _No license file shipped in the package; the `MIT` declaration in its `package.json` governs._
 

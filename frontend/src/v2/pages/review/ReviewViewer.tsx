@@ -9,7 +9,6 @@ import WatermarkOverlay from '../../components/WatermarkOverlay';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './reviewTypes';
-import { exactFrameRate } from './frameRate';
 import { hlsMasterUrl } from './videoSource';
 import { useMediaExport } from './useMediaExport';
 import { useAnnotationOverlay, useHotspotDisplay } from './useAnnotationOverlay';
@@ -128,7 +127,10 @@ export default function ReviewViewer({
   // viewer, pour que le compteur, la timeline et les marqueurs comptent les mêmes images
   // que le DCC de l'artiste (cf. frameRate.ts). La cadence saisie à la main, elle, reste
   // telle quelle : c'est une valeur que l'utilisateur est en train d'écrire, pas un relevé.
-  const fps = data?.fps != null ? exactFrameRate(data.fps) : storedFps;
+  // La cadence exacte est calculée une fois par ReviewPage et descend par prop : la
+  // recalculer ici avait fait diverger le compteur du viewer et les numéros de frame
+  // affichés à côté des commentaires.
+  const fps = storedFps;
   // Exports du dock (frame courante en PNG, planche contact) — les deux boutons du panneau
   // « Export » n'étaient rendus que si on leur passait leurs actions.
   const mediaExport = useMediaExport(data, videoRef);

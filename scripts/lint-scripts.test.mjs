@@ -17,7 +17,12 @@ const write = (name, source) => {
   return file;
 };
 
-describe('lintScripts', () => {
+/**
+ * Chaque cas démarre une instance ESLint, charge sa configuration et lint un fichier réel :
+ * rapide sur une machine de développement, bien plus lent sur un runner d'intégration
+ * continue, où le plafond de cinq secondes de vitest était atteint.
+ */
+describe('lintScripts', { timeout: 60_000 }, () => {
   it('signale une variable inutilisée', async () => {
     const file = write('fautif.mjs', "const inutile = 1;\nexport const ok = () => 'ok';\n");
     const { errorCount, results } = await lintScripts([file], dir);

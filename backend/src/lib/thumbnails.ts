@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { storage } from '../services/StorageService';
 
@@ -30,6 +31,21 @@ export const firstMediaThumbKeyForAsset = (assetId: number) =>
 export const firstMediaThumbKeyForShot = (shotId: number) => firstMediaThumbKey({ task: { shotId } });
 
 /**
+ * Une séquence et un épisode n'avaient, eux, aucune image de repli : seule une vignette
+ * déposée à la main leur en donnait une, si bien que leurs cartes restaient vides alors
+ * que leurs plans, eux, en avaient. Ils héritent donc de la même règle — la miniature du
+ * premier média publié d'un de leurs plans. Les plans supprimés ou masqués sont écartés :
+ * une séquence ne doit pas s'afficher avec l'image d'un plan qu'on n'y voit plus.
+ */
+export const firstMediaThumbKeyForSequence = (sequenceId: number) =>
+  firstMediaThumbKey({ task: { shot: { sequenceId, deletedAt: null, hiddenAt: null } } });
+
+export const firstMediaThumbKeyForEpisode = (episodeId: number) =>
+  firstMediaThumbKey({
+    task: { shot: { deletedAt: null, hiddenAt: null, sequence: { episodeId, deletedAt: null } } },
+  });
+
+/**
  * Variantes groupées (B3) : une seule requête pour toute une page de cartes.
  *
  * Les listes appelaient la variante unitaire dans un `.map` : cent plans, cent requêtes,
@@ -43,14 +59,15 @@ export const firstMediaThumbKeyForShot = (shotId: number) => firstMediaThumbKey(
 async function firstThumbKeysBy(
   where: object,
   pick: (media: { thumbnailKey: string | null; version: unknown }) => number | null,
+  // Ce que la requête doit ramener de la version pour retrouver le parent. Le rattachement
+  // par défaut (asset, plan) suffit aux listes de plans et d'assets ; une séquence ou un
+  // épisode se rejoint plus loin, à travers le plan.
+  versionSelect: Prisma.VersionSelect = { assetId: true, task: { select: { shotId: true, assetId: true } } },
 ): Promise<Map<number, string>> {
   const rows = await prisma.mediaObject.findMany({
     where: { published: true, deletedAt: null, thumbnailKey: { not: null }, ...where },
     orderBy: { createdAt: 'asc' },
-    select: {
-      thumbnailKey: true,
-      version: { select: { assetId: true, task: { select: { shotId: true, assetId: true } } } },
-    },
+    select: { thumbnailKey: true, version: { select: versionSelect } },
   });
   const out = new Map<number, string>();
   for (const row of rows) {
@@ -86,6 +103,48 @@ export function firstMediaThumbKeysForAssets(assetIds: number[]): Promise<Map<nu
       } | null;
       return version?.assetId ?? version?.task?.assetId ?? null;
     },
+  );
+}
+
+/** Miniature de repli de chaque séquence de la liste, en une requête. */
+export function firstMediaThumbKeysForSequences(sequenceIds: number[]): Promise<Map<number, string>> {
+  if (sequenceIds.length === 0) return Promise.resolve(new Map());
+  return firstThumbKeysBy(
+    {
+      version: {
+        task: { shot: { sequenceId: { in: sequenceIds }, deletedAt: null, hiddenAt: null } },
+      },
+    },
+    (m) => {
+      const version = m.version as { task: { shot: { sequenceId: number | null } | null } | null } | null;
+      return version?.task?.shot?.sequenceId ?? null;
+    },
+    { task: { select: { shot: { select: { sequenceId: true } } } } },
+  );
+}
+
+/** Miniature de repli de chaque épisode de la liste : le premier média d'un de ses plans. */
+export function firstMediaThumbKeysForEpisodes(episodeIds: number[]): Promise<Map<number, string>> {
+  if (episodeIds.length === 0) return Promise.resolve(new Map());
+  return firstThumbKeysBy(
+    {
+      version: {
+        task: {
+          shot: {
+            deletedAt: null,
+            hiddenAt: null,
+            sequence: { episodeId: { in: episodeIds }, deletedAt: null },
+          },
+        },
+      },
+    },
+    (m) => {
+      const version = m.version as {
+        task: { shot: { sequence: { episodeId: number | null } | null } | null } | null;
+      } | null;
+      return version?.task?.shot?.sequence?.episodeId ?? null;
+    },
+    { task: { select: { shot: { select: { sequence: { select: { episodeId: true } } } } } } },
   );
 }
 

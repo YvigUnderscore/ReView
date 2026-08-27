@@ -12,6 +12,7 @@ import PageShell from '../components/PageShell';
 import EmptyState from '../components/ui/empty-state';
 import { SkeletonRows } from '../components/ui/skeleton';
 import EntityCard, { EntityContainer } from '../components/EntityCard';
+import EntityThumb from '../components/entity/EntityThumb';
 import PipelineStatusBadge from '../components/shotgrid/PipelineStatusBadge';
 import {
   Breadcrumb,
@@ -92,15 +93,10 @@ function EpisodeBody({ episode }: { episode: EpisodeDetail }) {
   return (
     <div>
       <header className="mb-5 flex flex-wrap items-start gap-4">
-        {episode.thumbnailUrl && (
-          <img
-            src={episode.thumbnailUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-24 w-40 shrink-0 rounded-lg border border-border object-cover"
-          />
-        )}
+        {/* Comme les autres fiches : la vignette, ou le nom de l'épisode à sa place. */}
+        <div className="h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-border">
+          <EntityThumb url={episode.thumbnailUrl} name={episode.code} />
+        </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="truncate text-xl font-semibold">{episode.code}</h1>

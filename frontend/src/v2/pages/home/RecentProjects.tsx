@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link } from 'react-router-dom';
-import { ArrowRight, FolderKanban } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import EntityThumb from '../../components/entity/EntityThumb';
 import { projectPath } from '../../lib/slug';
 import type { DashboardProject } from './homeTypes';
 import type { WidgetVariant } from './homeWidgets';
@@ -68,19 +69,11 @@ export default function RecentProjects({
               {/* Bornée en hauteur : sur un projet unique, un 16/9 pleine largeur occupait
                   tout l'écran et repoussait le reste de la page hors du champ. */}
               <span className="relative block aspect-video max-h-72 w-full overflow-hidden bg-muted">
-                {p.thumbnailUrl ? (
-                  <img
-                    src={p.thumbnailUrl}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-muted-foreground">
-                    <FolderKanban size={28} />
-                  </span>
-                )}
+                <EntityThumb
+                  url={p.thumbnailUrl}
+                  name={p.name}
+                  className="transition-transform duration-300 group-hover:scale-105"
+                />
               </span>
               <span className="flex flex-col gap-1.5 p-3">
                 <span className="truncate font-medium group-hover:text-primary">{p.name}</span>
@@ -97,19 +90,9 @@ export default function RecentProjects({
               to={projectPath(p)}
               className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary/60"
             >
-              {p.thumbnailUrl ? (
-                <img
-                  src={p.thumbnailUrl}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="h-8 w-12 shrink-0 rounded object-cover"
-                />
-              ) : (
-                <span className="flex h-8 w-12 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
-                  <FolderKanban size={14} />
-                </span>
-              )}
+              <span className="block h-8 w-12 shrink-0 overflow-hidden rounded bg-muted">
+                <EntityThumb url={p.thumbnailUrl} name={p.name} variant="mini" />
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium group-hover:text-primary">{p.name}</span>
                 <Progress p={p} compact />

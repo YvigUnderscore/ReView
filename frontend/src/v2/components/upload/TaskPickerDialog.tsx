@@ -7,24 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import PipelineStatusBadge from '../shotgrid/PipelineStatusBadge';
 import { toast } from 'sonner';
 import { useProjectTasks } from '../../lib/queries';
-import { useCreateTaskFromStep, useSgProjectMembers, useSgSteps } from '../../lib/shotgridTasksApi';
-import { useSgConnection } from '../../lib/shotgridApi';
-import { useDepartments } from '../../lib/departmentsApi';
-import { useCreateTask } from '../../lib/tasksApi';
+import { useSgProjectMembers } from '../../lib/shotgridTasksApi';
+import { useCreateStepTask, useTaskSteps, type PickableStep } from '../../lib/taskSteps';
 import { useT } from '../../i18n';
-
-/**
- * Une étape proposée à la création, quelle que soit sa provenance (B2) : le référentiel du
- * site sur un projet relié, les départements du projet sinon. Le dialogue ne connaît que
- * cette forme — c'est ce qui lui permet de fonctionner sans ShotGrid.
- */
-interface PickableStep {
-  key: string;
-  code: string;
-  color?: string | null;
-  /** Renseigné seulement pour une étape venue du site. */
-  sgId?: number;
-}
 
 export interface PickableTask {
   id: number | null;
@@ -75,33 +60,12 @@ export default function TaskPickerDialog({
   // Le projet entier n'est demandé qu'une fois le dialogue ouvert : sur un gros projet,
   // ce n'est pas une liste à charger à chaque affichage de page.
   const { data: projectTasks = [] } = useProjectTasks(projectId, open);
-  const { data: connection } = useSgConnection(projectId);
-  const linked = Boolean(connection?.active);
-  // Les étapes du site : elles existent avant toute tâche, et c'est ce qui manquait pour
-  // déposer un rendu sur un asset neuf sans aller d'abord créer la tâche dans ShotGrid.
-  const { data: sgSteps = [] } = useSgSteps(
-    projectId,
-    parent?.kind === 'shot' ? 'Shot' : 'Asset',
-    open && Boolean(parent) && linked,
-  );
-  // Sans connexion, ce sont les départements du projet qui font office d'étapes (B2).
-  // Auparavant la liste restait vide et le dialogue n'offrait plus aucune sortie.
-  const { data: departments = [] } = useDepartments(projectId, open && Boolean(parent) && !linked);
-  const steps: PickableStep[] = useMemo(
-    () =>
-      linked
-        ? sgSteps.map((s) => ({ key: `sg-${s.sgId}`, code: s.code, color: s.color, sgId: s.sgId }))
-        : // Politique de département : la liste se réduit aux étapes où la personne peut
-          // écrire — deux entrées plutôt que douze. `writable` absent = ancienne réponse
-          // du serveur, on ne masque alors rien.
-          departments
-            .filter((d) => d.writable !== false)
-            .map((d) => ({ key: `dept-${d.id}`, code: d.key, color: d.color })),
-    [linked, sgSteps, departments],
-  );
+  // Les étapes du pipe, d'où qu'elles viennent : le site sur un projet relié — elles y
+  // existent avant toute tâche, et c'est ce qui manquait pour déposer un rendu sur un asset
+  // neuf — les départements du projet sinon (B2).
+  const { linked, steps } = useTaskSteps(projectId, parent?.kind ?? 'asset', open && Boolean(parent));
   const { data: members = [] } = useSgProjectMembers(projectId, open && Boolean(parent) && linked);
-  const createTask = useCreateTaskFromStep(projectId);
-  const createLocalTask = useCreateTask(projectId);
+  const createTask = useCreateStepTask(projectId);
   // Nom et personne à qui confier la tâche : proposés, jamais imposés. Le nom part du
   // code de l'étape — c'est la convention — mais un studio nomme parfois « model_hi »
   // là où l'étape s'appelle « modeling ».
@@ -141,26 +105,22 @@ export default function TaskPickerDialog({
     if (!parent) return;
     setCreating(step.key);
     try {
-      if (step.sgId !== undefined) {
-        const r = await createTask.mutateAsync({
-          stepSgId: step.sgId,
-          parentType: parent.kind,
-          parentId: parent.id,
-          name: draftName.trim() || undefined,
-          assigneeSgId: assignee ? Number(assignee) : null,
-        });
-        toast.success(t('upload.pickTask.created', { name: r.name }));
-        choose(r.taskId);
-        return;
-      }
-      // Chemin natif : la tâche est créée dans ReView, sur le département choisi.
-      const { task } = await createLocalTask.mutateAsync({
-        name: draftName.trim() || step.code,
-        department: step.code,
-        ...(parent.kind === 'shot' ? { shotId: parent.id } : { assetId: parent.id }),
+      // La tâche naît dans ShotGrid ou dans ReView selon l'étape choisie — `useCreateStepTask`
+      // tranche, le dialogue n'a pas à connaître les deux chemins.
+      const created = await createTask({
+        step,
+        parent,
+        name: draftName,
+        assigneeSgId: assignee ? Number(assignee) : null,
       });
-      toast.success(t('upload.pickTask.created', { name: task.name }));
-      choose(task.id);
+      // Le message ne promet ShotGrid que lorsque la tâche y a bien été créée : sur un
+      // projet autonome, annoncer une écriture distante serait faux.
+      toast.success(
+        step.sgId !== undefined
+          ? t('upload.pickTask.created', { name: created.name })
+          : t('task.createdNamed', { name: created.name }),
+      );
+      choose(created.taskId);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('upload.pickTask.createFailed'));
     } finally {

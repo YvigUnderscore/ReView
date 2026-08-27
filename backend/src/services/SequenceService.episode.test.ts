@@ -19,6 +19,9 @@ const { db } = vi.hoisted(() => ({
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('../lib/thumbnails', () => ({
   firstMediaThumbKeysForShots: vi.fn(),
+  firstMediaThumbKeysForAssets: vi.fn(),
+  firstMediaThumbKeysForSequences: vi.fn(),
+  firstMediaThumbKeyForSequence: vi.fn(),
   effectiveThumbnailUrl: vi.fn(),
 }));
 vi.mock('./StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));

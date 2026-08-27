@@ -79,37 +79,103 @@ export function auditEntityLink(entityType: string | null, entityId: number | nu
 export type TrashProject = Pick<Project, 'id' | 'name' | 'status'> & { deletedAt: string };
 
 export type SizeUnit = 'Mo' | 'Go';
+
+/**
+ * Familles de réglages du studio.
+ *
+ * La section les empilait en une seule boîte sans titre : frame de départ, taille de
+ * fichier, quota, uploads simultanés, rétention de la corbeille, quatre cadences de salle
+ * live, webhook Slack et URL des sources AGPL — onze réglages sans rapport, chacun avec
+ * son propre bouton « Enregistrer ». On ne pouvait ni s'y retrouver, ni savoir ce qu'on
+ * validait.
+ */
+export const SETTING_GROUPS = ['project', 'uploads', 'live', 'data', 'integrations', 'studio'] as const;
+export type SettingGroup = (typeof SETTING_GROUPS)[number];
+
+export const SETTING_GROUP_LABEL: Record<SettingGroup, MessageKey> = {
+  project: 'settings.group.project',
+  uploads: 'settings.group.uploads',
+  live: 'settings.group.live',
+  data: 'settings.group.data',
+  integrations: 'settings.group.integrations',
+  studio: 'settings.group.studio',
+};
+
 export interface SettingField {
   key: string;
   labelKey: MessageKey;
   hintKey: MessageKey;
+  /** Famille d'appartenance : c'est elle qui porte le titre et le bouton d'enregistrement. */
+  group: SettingGroup;
   /** Champ exprimé en taille (Mo/Go) — saisie convertie en octets à l'enregistrement. */
   bytes?: boolean;
 }
 export const SETTINGS_FIELDS: SettingField[] = [
-  { key: 'default_start_frame', labelKey: 'settings.defaultStartFrame', hintKey: 'settings.hint.startFrame' },
+  {
+    key: 'default_start_frame',
+    labelKey: 'settings.defaultStartFrame',
+    hintKey: 'settings.hint.startFrame',
+    group: 'project',
+  },
   {
     key: 'max_file_size',
     labelKey: 'settings.maxFileSize',
     hintKey: 'settings.hint.maxFileSize',
+    group: 'uploads',
     bytes: true,
   },
   {
     key: 'storage_limit_user',
     labelKey: 'settings.storageQuota',
     hintKey: 'settings.hint.storageQuota',
+    group: 'uploads',
     bytes: true,
   },
-  { key: 'max_concurrent_uploads', labelKey: 'settings.maxUploads', hintKey: 'settings.hint.maxUploads' },
-  { key: 'trash_retention_days', labelKey: 'settings.trashRetention', hintKey: 'settings.hint.trash' },
+  {
+    key: 'max_concurrent_uploads',
+    labelKey: 'settings.maxUploads',
+    hintKey: 'settings.hint.maxUploads',
+    group: 'uploads',
+  },
+  {
+    key: 'trash_retention_days',
+    labelKey: 'settings.trashRetention',
+    hintKey: 'settings.hint.trash',
+    group: 'data',
+  },
   // Salle de review live (33.B) : diffusions/seconde du pilote, par type de média (1–30).
-  { key: 'live_sync_hz_video', labelKey: 'settings.liveVideo', hintKey: 'settings.hint.liveVideo' },
-  { key: 'live_sync_hz_image', labelKey: 'settings.liveImage', hintKey: 'settings.hint.liveImage' },
-  { key: 'live_sync_hz_3d', labelKey: 'settings.live3d', hintKey: 'settings.hint.liveCam' },
-  { key: 'live_sync_hz_splat', labelKey: 'settings.liveSplat', hintKey: 'settings.hint.liveCamFocal' },
-  { key: 'slack_webhook_url', labelKey: 'settings.slackWebhook', hintKey: 'settings.hint.slack' },
+  {
+    key: 'live_sync_hz_video',
+    labelKey: 'settings.liveVideo',
+    hintKey: 'settings.hint.liveVideo',
+    group: 'live',
+  },
+  {
+    key: 'live_sync_hz_image',
+    labelKey: 'settings.liveImage',
+    hintKey: 'settings.hint.liveImage',
+    group: 'live',
+  },
+  { key: 'live_sync_hz_3d', labelKey: 'settings.live3d', hintKey: 'settings.hint.liveCam', group: 'live' },
+  {
+    key: 'live_sync_hz_splat',
+    labelKey: 'settings.liveSplat',
+    hintKey: 'settings.hint.liveCamFocal',
+    group: 'live',
+  },
+  {
+    key: 'slack_webhook_url',
+    labelKey: 'settings.slackWebhook',
+    hintKey: 'settings.hint.slack',
+    group: 'integrations',
+  },
   // AGPL §13 : l'instance doit offrir SES sources. Vide = dépôt amont.
-  { key: 'studio_source_url', labelKey: 'settings.sourceUrl', hintKey: 'settings.hint.sourceUrl' },
+  {
+    key: 'studio_source_url',
+    labelKey: 'settings.sourceUrl',
+    hintKey: 'settings.hint.sourceUrl',
+    group: 'studio',
+  },
 ];
 
 const UNIT_MULT: Record<SizeUnit, number> = { Mo: 1e6, Go: 1e9 };

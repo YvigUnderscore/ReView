@@ -3,12 +3,13 @@
 
 import { Router, type Request } from 'express';
 import { z } from 'zod';
-import { Role, TaskType, TaskStatus } from '@prisma/client';
+import { TaskType, TaskStatus } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForTask, resolveProjectIdForShot, resolveProjectIdForAsset } from '../lib/pipeline';
-import { forbidden, notFound } from '../lib/errors';
+import { assertProjectManage } from '../lib/projectRoles';
+import { notFound } from '../lib/errors';
 import { MAX_PAGE_SIZE, cursorPaginationQuery, readPagination } from '../lib/pagination';
 import * as TaskService from '../services/TaskService';
 
@@ -114,8 +115,6 @@ router.post(
       ),
   }),
   async (req, res) => {
-    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
-      throw forbidden('Supervisors and administrators only');
     const body = req.body as { shotId?: number; assetId?: number };
     const projectId =
       body.shotId !== undefined
@@ -123,6 +122,11 @@ router.post(
         : await resolveProjectIdForAsset(body.assetId!);
     if (!projectId) throw notFound('Parent shot or asset not found');
     await assertProjectAccess(req, projectId);
+    // Droits lus sur le rôle EFFECTIF (38.E) : le contrôle portait sur le rôle **global**,
+    // si bien qu'un lead supervisant son projet — rôle donné par membership — se voyait
+    // refuser la création d'une tâche que le service lui accorde. C'était le seul chemin
+    // de création hors ShotGrid : le pipe d'un projet autonome lui restait fermé.
+    await assertProjectManage(req.user!.id, req.user!.role, projectId);
     res.status(201).json({ task: await TaskService.create(req.user!, projectId, req.body) });
   },
 );

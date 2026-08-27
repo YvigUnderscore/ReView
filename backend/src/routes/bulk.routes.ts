@@ -113,6 +113,25 @@ router.patch(
 );
 
 /**
+ * PATCH /api/bulk/shots/status — statut d'une sélection de plans.
+ *
+ * `pipelineStatusId: null` retire le statut, comme au singulier. Le service revérifie
+ * l'accès au projet et applique le statut plan par plan : la réponse dit combien ont
+ * abouti et combien ont été refusés (verrou ShotGrid, projet archivé).
+ */
+router.patch(
+  '/shots/status',
+  validate({ body: z.object({ ids, pipelineStatusId: z.number().int().positive().nullable() }) }),
+  async (req, res) => {
+    const { ids: shotIds, pipelineStatusId } = req.body as {
+      ids: number[];
+      pipelineStatusId: number | null;
+    };
+    res.json(await BulkService.bulkPatchShotStatus(req.user!, shotIds, pipelineStatusId));
+  },
+);
+
+/**
  * Assignation d'une sélection d'assets ou de plans.
  *
  * Une entité qu'on ne peut pas assigner (droits, projet archivé, aucune tâche) est
