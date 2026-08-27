@@ -12,6 +12,7 @@ import {
   taskPriority,
 } from '../lib/statusFamily';
 import { storage } from './StorageService';
+import { effectiveThumbnailUrl, firstMediaThumbKeysForProjects } from '../lib/thumbnails';
 
 /**
  * Données de la page Accueil (12.B) : dernières reviews commentées, flux d'activité,
@@ -248,13 +249,17 @@ export async function getDashboard(user: SessionUser) {
     }),
   ]);
 
+  // Même image que dans la liste des projets : la sienne, sinon celle du premier média
+  // publié. L'accueil s'en tenait à la vignette choisie — un projet plein de travail livré
+  // y restait au nom, alors que sa carte portait une image deux écrans plus loin.
+  const projectFallbacks = await firstMediaThumbKeysForProjects(recentProjectRows.map((p) => p.id));
   const recentProjects = await Promise.all(
     recentProjectRows.map(async (p) => {
       const counts = progress.get(p.id) ?? { total: 0, done: 0 };
       return {
         id: p.id,
         name: p.name,
-        thumbnailUrl: p.thumbnailKey ? await storage.getPresignedGetUrl(p.thumbnailKey) : null,
+        thumbnailUrl: await effectiveThumbnailUrl(p.thumbnailKey, projectFallbacks.get(p.id) ?? null),
         totalTasks: counts.total,
         approvedTasks: counts.done,
       };

@@ -40,9 +40,7 @@ vi.mock('../services/TaskService', () => tasks);
 vi.mock('../services/SequenceService', () => ({
   createBulk: vi.fn(),
   getDetail: vi.fn(),
-  signSequenceThumbnails: vi.fn((rows: { id: number }[]) =>
-    Promise.resolve(rows.map((r) => ({ ...r, thumbnailUrl: null }))),
-  ),
+  signSequenceThumbnails: vi.fn((rows: { id: number }[]) => rows.map((r) => ({ ...r, thumbnailUrl: null }))),
 }));
 vi.mock('../services/PipelineLatestService', () => ({ shotOverview: vi.fn(), assetOverview: vi.fn() }));
 vi.mock('../services/PipelineStatusService', () => ({ assertBelongsToProject: vi.fn() }));

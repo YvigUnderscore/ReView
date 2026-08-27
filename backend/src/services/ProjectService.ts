@@ -5,7 +5,7 @@ import { Role, ProjectStatus, TaskType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
 import { softDeleteProject, restoreProject, purgeProject } from '../lib/trash';
-import { effectiveThumbnailUrl } from '../lib/thumbnails';
+import { effectiveThumbnailUrl, firstMediaThumbKeysForProjects } from '../lib/thumbnails';
 import { avatarUrl } from '../lib/userView';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import {
@@ -71,37 +71,6 @@ async function createManyReturning<TIn, TOut>(
 
 /** Identité d'un plan dans son projet : `(sequenceId, code)` — `code` seul ne suffit pas. */
 const shotKey = (sequenceId: number | null, code: string) => `${sequenceId ?? 'none'}::${code}`;
-
-/**
- * Miniature de repli de chaque projet de la page, en UNE requête.
- *
- * La liste appelait `firstMediaThumbKeyForProject` dans un `.map` : cent projets, cent
- * `findFirst` portant chacun un triple OR version → tâche → plan/asset → projet. Or la
- * barre latérale appelle cette route sur presque chaque écran. `DISTINCT ON` élit le
- * premier média publié de chaque projet côté PostgreSQL, sans rapatrier le reste.
- */
-async function firstMediaThumbKeysForProjects(projectIds: number[]): Promise<Map<number, string>> {
-  const out = new Map<number, string>();
-  if (projectIds.length === 0) return out;
-  const rows = await prisma.$queryRaw<{ projectId: number; thumbnailKey: string }[]>`
-    SELECT DISTINCT ON (COALESCE(sh."projectId", ta."projectId", va."projectId"))
-           COALESCE(sh."projectId", ta."projectId", va."projectId") AS "projectId",
-           m."thumbnailKey"                                        AS "thumbnailKey"
-    FROM "MediaObject" m
-    JOIN "Version" v      ON v.id  = m."versionId"
-    LEFT JOIN "Task" t    ON t.id  = v."taskId"
-    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"
-    LEFT JOIN "Asset" ta  ON ta.id = t."assetId"
-    LEFT JOIN "Asset" va  ON va.id = v."assetId"
-    WHERE m.published = true
-      AND m."deletedAt" IS NULL
-      AND m."thumbnailKey" IS NOT NULL
-      AND COALESCE(sh."projectId", ta."projectId", va."projectId") IN (${Prisma.join(projectIds)})
-    ORDER BY COALESCE(sh."projectId", ta."projectId", va."projectId"), m."createdAt" ASC
-  `;
-  for (const row of rows) out.set(row.projectId, row.thumbnailKey);
-  return out;
-}
 
 /**
  * Liste paginée des projets visibles (globale pour admin/superviseur, membership sinon) +

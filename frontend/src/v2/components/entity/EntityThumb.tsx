@@ -42,17 +42,20 @@ export default function EntityThumb({ url, name, variant = 'card', className = '
     );
   }
 
-  const label = variant === 'mini' ? thumbAbbrev(name) : name;
+  const mini = variant === 'mini';
+  const label = mini ? thumbAbbrev(name) : name;
   return (
     // `aria-hidden` : le nom est déjà porté par le titre de la carte ou de la page — le
     // répéter ferait dire deux fois la même chose au lecteur d'écran.
     <span
       aria-hidden="true"
-      className={`flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/15 to-secondary/60 px-1.5 text-center font-semibold leading-tight text-foreground/70 ${
-        variant === 'mini' ? 'text-2xs' : thumbScale(label)
+      className={`flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-primary/15 to-secondary/60 text-center font-semibold leading-tight text-foreground/70 ${
+        // Sous 40 px, ni marge ni retour à la ligne : « 020 » se coupait en « 02 » puis
+        // « 0 », deux lignes illisibles là où l'abrégé tient d'un trait.
+        mini ? 'text-2xs tracking-tight' : `px-1.5 ${thumbScale(label)}`
       } ${className}`}
     >
-      <span className="line-clamp-3 break-words">{label}</span>
+      <span className={mini ? 'truncate' : 'line-clamp-3 break-words'}>{label}</span>
     </span>
   );
 }

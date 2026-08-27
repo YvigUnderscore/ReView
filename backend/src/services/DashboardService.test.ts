@@ -16,9 +16,19 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('./StorageService', () => ({
   storage: { getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}`) },
 }));
+// L'accueil montre la même image qu'ailleurs : la vignette du projet, sinon celle de son
+// premier média publié. L'élection groupée est testée dans `lib/thumbnails`.
+vi.mock('../lib/thumbnails', () => ({
+  effectiveThumbnailUrl: vi.fn(async (key: string | null, fallback: string | null) => {
+    const chosen = key ?? fallback;
+    return chosen ? `https://minio/${chosen}` : null;
+  }),
+  firstMediaThumbKeysForProjects: vi.fn(async () => new Map<number, string>()),
+}));
 
 import { getDashboard } from './DashboardService';
 import { prisma } from '../lib/prisma';
+import { firstMediaThumbKeysForProjects } from '../lib/thumbnails';
 import { Role, TaskStatus } from '@prisma/client';
 
 const comments = vi.mocked(prisma.comment.findMany);
@@ -98,6 +108,17 @@ describe('DashboardService.getDashboard', () => {
     expect(recentProjects).toEqual([
       { id: 7, name: 'Dock', thumbnailUrl: 'https://minio/thumbs/p7.jpg', totalTasks: 10, approvedTasks: 6 },
     ]);
+  });
+
+  it('montre le premier média du projet quand aucune vignette n’a été choisie', async () => {
+    // L'accueil s'en tenait à `thumbnailKey` : un projet plein de travail livré y restait
+    // sans image, alors que sa carte en portait une dans la liste des projets.
+    vi.mocked(prisma.project.findMany).mockResolvedValue([
+      { id: 7, name: 'Dock', thumbnailKey: null },
+    ] as never);
+    vi.mocked(firstMediaThumbKeysForProjects).mockResolvedValue(new Map([[7, 'derived/9/thumb.webp']]));
+    const { recentProjects } = await getDashboard(artist);
+    expect(recentProjects[0]!.thumbnailUrl).toBe('https://minio/derived/9/thumb.webp');
   });
 
   it('ne pose plus deux comptes par projet récent : un seul agrégat, cinq projets', async () => {

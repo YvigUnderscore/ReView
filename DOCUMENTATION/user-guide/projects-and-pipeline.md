@@ -2,7 +2,7 @@
 
 *The shape of a show in ReView — episodes down to media, the two status vocabularies, and who may change what, where.*
 
-> Updated: 2026-08-26
+> Updated: 2026-08-28
 
 One ReView instance is one studio, and inside it a **project** is one show. Everything a
 production needs to say about that show — how it is broken down, who is on which step, what
@@ -402,8 +402,29 @@ would republish untouched values to ShotGrid and overwrite whatever moved in the
 | Thumbnail | yes | yes | yes |
 | Departments | yes | yes | yes |
 
-The thumbnail accepts PNG, JPEG or WebP; without one, the first published media is used. The
-name is the only field that cannot be left empty (plus the code, where the entity has one).
+The thumbnail accepts PNG, JPEG or WebP. The name is the only field that cannot be left empty
+(plus the code, where the entity has one).
+
+### What a card shows before it has an image
+
+Every element — project, episode, sequence, shot, asset — resolves its card image the same
+way, and the first rule that matches wins:
+
+1. the thumbnail chosen by hand, if there is one;
+2. otherwise the still of the **first published media** of that element: a shot inherits from
+   its tasks, a sequence and an episode from their shots, a project from anything published
+   inside it;
+3. otherwise its **name**, written across the tile.
+
+The third rule is what a freshly imported production looks like: two hundred shots, no media
+yet, and a grid where nothing but the name tells one card from another. Writing the name into
+the tile is not a placeholder waiting to be filled — it is the card doing its job until an
+image exists. Compact rows are too small for a full name, so they show the shortest part that
+still identifies the element: its last number (`SH0120` → `0120`), or two initials when the
+name carries no digits.
+
+Nothing has to be done to replace it: the moment a media is published under the element, its
+still becomes the card image everywhere the element appears.
 
 ## Versions & publication
 

@@ -3,7 +3,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./prisma', () => ({ prisma: { mediaObject: { findMany: vi.fn(), findFirst: vi.fn() } } }));
+vi.mock('./prisma', () => ({
+  prisma: { mediaObject: { findMany: vi.fn(), findFirst: vi.fn() }, $queryRaw: vi.fn() },
+}));
 vi.mock('../services/StorageService', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/${key}`)) },
 }));
@@ -14,11 +16,13 @@ import {
   firstMediaThumbKeysForAssets,
   firstMediaThumbKeysForSequences,
   firstMediaThumbKeysForEpisodes,
+  firstMediaThumbKeysForProjects,
 } from './thumbnails';
 import { prisma } from './prisma';
 import { storage } from '../services/StorageService';
 
 const findMany = vi.mocked(prisma.mediaObject.findMany);
+const queryRaw = vi.mocked(prisma.$queryRaw);
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -90,6 +94,33 @@ describe('miniatures groupées', () => {
     await expect(firstMediaThumbKeysForSequences([])).resolves.toEqual(new Map());
     await expect(firstMediaThumbKeysForEpisodes([])).resolves.toEqual(new Map());
     expect(findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Le repli d'un projet est élu par une seule requête SQL (`DISTINCT ON`) : la variante
+ * unitaire dans un `.map` faisait cent `findFirst` à triple OR par ouverture de la barre
+ * latérale. La liste des projets ET l'accueil s'en servent — les deux doivent montrer la
+ * même image du même projet.
+ */
+describe('miniatures de projet', () => {
+  it('associe chaque clé au projet qu’elle vient de, en une requête', async () => {
+    queryRaw.mockResolvedValue([
+      { projectId: 3, thumbnailKey: 'thumbs/c.jpg' },
+      { projectId: 1, thumbnailKey: 'thumbs/a.jpg' },
+    ] as never);
+    await expect(firstMediaThumbKeysForProjects([1, 2, 3])).resolves.toEqual(
+      new Map([
+        [3, 'thumbs/c.jpg'],
+        [1, 'thumbs/a.jpg'],
+      ]),
+    );
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('n’interroge rien quand la page est vide', async () => {
+    await expect(firstMediaThumbKeysForProjects([])).resolves.toEqual(new Map());
+    expect(queryRaw).not.toHaveBeenCalled();
   });
 });
 

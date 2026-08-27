@@ -3,6 +3,18 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-08-28 — Cards carry their name until they carry an image
+
+- **A card with no image now shows its name.** Projects, episodes, sequences, shots and
+  assets used to share one grey picture icon, repeated as many times as there were cards: a
+  freshly imported production was a wall of identical tiles. The name is written across the
+  tile instead, sized to fit, and compact rows show the part that actually identifies the
+  element — its last number (`SH0120` → `0120`), or two initials when it has none.
+- **The image arrives on its own.** As soon as a media is published under an element, its
+  still replaces the name everywhere. Sequences and episodes never inherited anything before
+  — their cards stayed empty however much work had been delivered — and the home page kept
+  showing a project without its image. Both now follow the same rule as shots and assets.
+
 ## 2026-08-23 — The manual, rewritten and illustrated
 
 - **Documentation you can read by chapter.** The `/docs` page no longer lists seventy pages

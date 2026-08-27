@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { storage } from '../services/StorageService';
 
@@ -146,6 +146,37 @@ export function firstMediaThumbKeysForEpisodes(episodeIds: number[]): Promise<Ma
     },
     { task: { select: { shot: { select: { sequence: { select: { episodeId: true } } } } } } },
   );
+}
+
+/**
+ * Miniature de repli de chaque projet de la page, en UNE requête.
+ *
+ * La liste appelait `firstMediaThumbKeyForProject` dans un `.map` : cent projets, cent
+ * `findFirst` portant chacun un triple OR version → tâche → plan/asset → projet. Or la
+ * barre latérale appelle cette route sur presque chaque écran. `DISTINCT ON` élit le
+ * premier média publié de chaque projet côté PostgreSQL, sans rapatrier le reste.
+ */
+export async function firstMediaThumbKeysForProjects(projectIds: number[]): Promise<Map<number, string>> {
+  const out = new Map<number, string>();
+  if (projectIds.length === 0) return out;
+  const rows = await prisma.$queryRaw<{ projectId: number; thumbnailKey: string }[]>`
+    SELECT DISTINCT ON (COALESCE(sh."projectId", ta."projectId", va."projectId"))
+           COALESCE(sh."projectId", ta."projectId", va."projectId") AS "projectId",
+           m."thumbnailKey"                                        AS "thumbnailKey"
+    FROM "MediaObject" m
+    JOIN "Version" v      ON v.id  = m."versionId"
+    LEFT JOIN "Task" t    ON t.id  = v."taskId"
+    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"
+    LEFT JOIN "Asset" ta  ON ta.id = t."assetId"
+    LEFT JOIN "Asset" va  ON va.id = v."assetId"
+    WHERE m.published = true
+      AND m."deletedAt" IS NULL
+      AND m."thumbnailKey" IS NOT NULL
+      AND COALESCE(sh."projectId", ta."projectId", va."projectId") IN (${Prisma.join(projectIds)})
+    ORDER BY COALESCE(sh."projectId", ta."projectId", va."projectId"), m."createdAt" ASC
+  `;
+  for (const row of rows) out.set(row.projectId, row.thumbnailKey);
+  return out;
 }
 
 /** URL présignée de la miniature effective (explicite ou fallback premier média). */
