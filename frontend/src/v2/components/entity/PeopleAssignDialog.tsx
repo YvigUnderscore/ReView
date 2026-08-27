@@ -96,6 +96,7 @@ export default function PeopleAssignDialog({
             autoFocus
             className="pl-8"
             placeholder={t('assignees.searchPlaceholder')}
+            aria-label={t('assignees.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

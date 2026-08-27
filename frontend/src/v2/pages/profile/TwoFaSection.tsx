@@ -122,6 +122,7 @@ export default function TwoFaSection() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder={t('twofa.code')}
+                aria-label={t('twofa.code')}
                 autoComplete="one-time-code"
                 required
               />
@@ -140,6 +141,7 @@ export default function TwoFaSection() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t('twofa.passwordToDisable')}
+            aria-label={t('twofa.passwordToDisable')}
             className="flex-1"
             required
           />

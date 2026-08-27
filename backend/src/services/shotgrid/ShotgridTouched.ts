@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { emitToProject } from '../SocketService';
+import { emitToProject, isWorkerProcess } from '../SocketService';
+import { publishWorkerEvent } from '../../lib/workerEvents';
 
 /**
  * Ce qu'une passe de synchronisation a réellement touché.
@@ -128,11 +129,27 @@ export function flushTouched(
   touched: TouchedEntities,
 ): void {
   for (const event of touched.detail()) {
-    emitToProject(projectId, TOUCHED_EVENT_NAME[event.kind], {
+    emitProject(projectId, TOUCHED_EVENT_NAME[event.kind], {
       projectId,
       id: event.id,
       ...event.extra,
     });
   }
-  emitToProject(projectId, 'shotgrid:sync', { projectId, runId, status, ...touched.summary() });
+  emitProject(projectId, 'shotgrid:sync', { projectId, runId, status, ...touched.summary() });
+}
+
+/**
+ * Émission vers la room d'un projet, quel que soit le process d'où l'on parle.
+ *
+ * La synchronisation ShotGrid tourne dans le process **worker**, où `emitToProject` fait
+ * `io?.to(...)` sur un `io` qui vaut `undefined` : l'émission était un no-op silencieux, et
+ * aucun écran ne se rafraîchissait après une passe. Le worker passe donc par le canal
+ * Redis, que le serveur relaie ; le process web, lui, émet directement.
+ */
+function emitProject(projectId: number, event: string, payload: unknown): void {
+  if (isWorkerProcess()) {
+    void publishWorkerEvent({ type: 'project', projectId, event, payload });
+    return;
+  }
+  emitToProject(projectId, event, payload);
 }

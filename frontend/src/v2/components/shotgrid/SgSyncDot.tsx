@@ -79,13 +79,22 @@ export default function SgSyncDot({
   if (!canRealign || state !== 'linked')
     return <span title={title} className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${colour}`} />;
 
+  /*
+   * La pastille reste un point de 6 px — c'est un signal, pas un bouton — mais sa zone
+   * cliquable fait 24 px, le minimum de WCAG 2.5.8. Mesuré avant correction : douze cibles
+   * de 6 × 6 px sur une seule liste de plans, impossibles à viser sans s'y reprendre.
+   *
+   * La marge négative empêche cette zone d'écarter les éléments voisins : le dessin garde
+   * exactement la place qu'il avait.
+   */
   return (
     <button
       type="button"
       onClick={realign}
       disabled={busy}
       title={`${title} · ${t('shotgrid.sync.dot.realign')}`}
-      className="group/dot inline-flex shrink-0 items-center text-muted-foreground hover:text-foreground disabled:opacity-50"
+      aria-label={`${title} · ${t('shotgrid.sync.dot.realign')}`}
+      className="group/dot -m-2 inline-flex h-6 w-6 shrink-0 items-center justify-center p-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
     >
       {busy ? (
         <Loader2 size={11} className="animate-spin" />

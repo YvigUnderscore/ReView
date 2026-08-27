@@ -36,6 +36,7 @@ export const PAGE_ORDER = {
   'user-guide': [
     'navigation-and-search.md',
     'projects-and-pipeline.md',
+    'entity-briefs.md',
     'upload-and-publishing.md',
     'media-processing.md',
     'review-workspace.md',

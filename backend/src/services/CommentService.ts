@@ -102,10 +102,19 @@ const asRawComment = (c: unknown) => c as RawComment;
  * beaucoup de notes de coupe ; les déverser d'office dans la review de l'artiste noierait
  * les retours qui lui sont adressés.
  */
-export async function listThread(mediaObjectId: number, p: PaginationParams): Promise<Paginated<unknown>> {
+export async function listThread(
+  mediaObjectId: number,
+  p: PaginationParams,
+  viewerRole?: Role,
+): Promise<Paginated<unknown>> {
+  // Un CLIENT ne voit que ce qui lui est explicitement destiné, ici comme partout ailleurs
+  // (partage public, recherche, export). C'est la seule lecture du fil qui l'omettait :
+  // un client membre du projet lisait donc toutes les notes internes depuis l'application.
+  const clientScope = viewerRole === Role.CLIENT ? { isVisibleToClient: true } : {};
   const where = {
     mediaObjectId,
     parentId: null,
+    ...clientScope,
     OR: [{ timelineId: null }, { sharedToShot: true }],
   };
   const [comments, total] = await Promise.all([
@@ -113,7 +122,14 @@ export async function listThread(mediaObjectId: number, p: PaginationParams): Pr
       where,
       orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
       ...pageArgs(p),
-      include: { ...commentInclude, replies: { orderBy: { createdAt: 'asc' }, include: commentInclude } },
+      include: {
+        ...commentInclude,
+        replies: {
+          where: clientScope,
+          orderBy: { createdAt: 'asc' },
+          include: commentInclude,
+        },
+      },
     }),
     prisma.comment.count({ where }),
   ]);

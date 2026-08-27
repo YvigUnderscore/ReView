@@ -69,7 +69,7 @@ export default function DuplicateProjectDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              {t('common.undo')}
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm" disabled={busy}>
               {t('common.duplicate')}

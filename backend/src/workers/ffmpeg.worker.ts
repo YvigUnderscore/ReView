@@ -49,6 +49,8 @@ import { startWebhookWorker } from './webhook.worker';
 import { startShotgridWorker } from './shotgrid.worker';
 import { startTimelineExportWorker } from './timelineExport.worker';
 import { startMaintenanceWorker } from './maintenance.worker';
+import { startSpatialThumbWorker } from './spatialThumb.worker';
+import { startOcioBakeWorker } from './ocio/bake.worker';
 import { registerWorkerShutdown } from './shutdown';
 import {
   FFPROBE_TIMEOUT_MS,
@@ -1273,8 +1275,14 @@ if (require.main === module) {
   // Entretien périodique (digest, rapport hebdomadaire, purges) : planifié par l'API,
   // exécuté ici — c'était trois `setInterval` du process web.
   startMaintenanceWorker();
+  // Vignettes des médias spatiaux (3D, splat) : `MediaService.requestSpatialThumb` enfilait
+  // depuis trois endroits une file que personne ne consommait.
+  startSpatialThumbWorker();
+  // Cuisson des LUT OCIO : la route admin répondait `202 { queued: true }` sur une file
+  // sans consommateur, et le viewer retombait indéfiniment sur la LUT interne.
+  startOcioBakeWorker();
 
-  // Arrêt propre : les cinq consommateurs de file d'abord (phase « cesser d'accepter »),
+  // Arrêt propre : les consommateurs de file d'abord (phase « cesser d'accepter »),
   // puis les connexions Redis du canal d'événements et la base.
   registerShutdownTask({
     name: 'worker-events',

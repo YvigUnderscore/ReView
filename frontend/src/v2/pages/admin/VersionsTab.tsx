@@ -66,6 +66,7 @@ export default function VersionsTab() {
               resetPage();
             }}
             placeholder={t('versions.namePlaceholder')}
+            aria-label={t('versions.namePlaceholder')}
             className="pl-8"
           />
         </div>

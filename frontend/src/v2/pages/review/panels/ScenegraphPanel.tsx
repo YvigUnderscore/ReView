@@ -269,6 +269,7 @@ export default function ScenegraphPanel({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('scenegraph.search')}
+          aria-label={t('scenegraph.search')}
           className="min-w-0 flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground"
         />
       </div>

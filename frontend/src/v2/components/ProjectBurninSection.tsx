@@ -72,6 +72,7 @@ export default function ProjectBurninSection({
               value={value.customText ?? ''}
               onChange={(e) => onChange({ ...value, customText: e.target.value })}
               placeholder={t('burnin.freeText.placeholder')}
+              aria-label={t('burnin.freeText.placeholder')}
               maxLength={120}
             />
           </label>

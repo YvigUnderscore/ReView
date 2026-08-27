@@ -12,6 +12,7 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { timeAgo } from '../../lib/time';
 import { auditActionLabel, auditEntityLink, type AuditRow } from './adminShared';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 interface Page {
   items: AuditRow[];
@@ -67,7 +68,7 @@ export default function ActivityTab() {
               </div>
               <time
                 className="shrink-0 text-xs text-muted-foreground"
-                title={new Date(a.createdAt).toLocaleString()}
+                title={new Date(a.createdAt).toLocaleString(intlLocale())}
               >
                 {timeAgo(a.createdAt)}
               </time>

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { parseNote, type NoteBlock } from './noteMarkdown';
 import { renderNoteHtml } from './noteRender';
+import { useNoteImageResolver } from './noteImages';
 import NoteRefs from './NoteRefs';
 
 /**
@@ -57,7 +58,8 @@ function Section({ title, open, children }: { title: string; open: boolean; chil
 
 /** Le markdown ordinaire — échappé et assaini par `renderNoteHtml`. */
 function Markdown({ source }: { source: string }) {
-  const html = useMemo(() => renderNoteHtml(source), [source]);
+  const resolve = useNoteImageResolver();
+  const html = useMemo(() => renderNoteHtml(source, resolve), [source, resolve]);
   return (
     <div
       className="prose-note text-sm leading-relaxed"
@@ -74,7 +76,7 @@ function Block({ block }: { block: NoteBlock }) {
     case 'small':
       return <p className="text-2xs text-muted-foreground">{block.text}</p>;
     case 'refs':
-      return <NoteRefs images={block.images} />;
+      return <NoteRefs images={block.images} layout={block.layout} cols={block.cols} height={block.height} />;
     case 'section':
       return (
         <Section title={block.title} open={block.open}>

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
+import { ErrorBoundary } from './ui/error-boundary';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { transition as pageTransition } from '../lib/motion';
@@ -246,7 +247,12 @@ export default function Shell() {
             <Suspense
               fallback={<div className="p-6 text-sm text-muted-foreground">{t('common.loading')}</div>}
             >
-              <Outlet />
+              {/* Frontière d'erreur au niveau de la page : la coquille — barre latérale,
+                  recherche, navigation — survit au plantage d'un écran. Remontée à chaque
+                  changement d'URL pour qu'une navigation réarme la frontière. */}
+              <ErrorBoundary key={pathname} scope="page">
+                <Outlet />
+              </ErrorBoundary>
             </Suspense>
           </ShellHeaderContext.Provider>
         </motion.main>

@@ -102,14 +102,40 @@ export function applyAccent(hex: string | null): void {
   const root = document.documentElement;
   const hsl = hex ? hexToHsl(hex) : null;
   if (hsl) {
-    root.style.setProperty('--primary', hsl);
-    root.style.setProperty('--ring', hsl);
+    const readable = readableAccent(hsl, root.classList.contains('dark'));
+    root.style.setProperty('--primary', readable);
+    root.style.setProperty('--ring', readable);
     root.style.setProperty('--primary-foreground', accentForeground(hex));
   } else {
     root.style.removeProperty('--primary');
     root.style.removeProperty('--ring');
     root.style.removeProperty('--primary-foreground');
   }
+}
+
+/**
+ * Bornes de luminosité de l'accent, par thème.
+ *
+ * Mesuré sur l'instance de démonstration : l'accent `#1ec6dc` (L = 49 %) était appliqué tel
+ * quel dans les deux thèmes. Sur le fond clair (L = 97 %) il ne tenait que **1,93:1** —
+ * en dessous des 3:1 exigés pour un élément non textuel. Deux conséquences : les liens et
+ * onglets actifs (`text-primary`) devenaient illisibles, et surtout **l'anneau de focus
+ * disparaissait**, ce qui laisse un utilisateur au clavier sans repère.
+ *
+ * `--primary` sert aussi d'aplat de bouton, mais son encre (`--primary-foreground`) est déjà
+ * dérivée de la luminance : assombrir l'accent en thème clair ne casse pas les aplats, et
+ * rend au texte comme au focus le contraste qui leur manquait.
+ *
+ * 38 % contre le fond clair donne ≈ 3,3:1, 45 % contre le fond sombre ≈ 7:1. Les tokens par
+ * défaut d'`index.css` (24 % en clair, 50 % en sombre) restent dans ces bornes : cette
+ * fonction ne corrige que les accents choisis par un administrateur.
+ */
+function readableAccent(hsl: string, isDark: boolean): string {
+  const [h, s, l] = hsl.split(' ');
+  const lightness = Number.parseFloat(l ?? '50');
+  if (!Number.isFinite(lightness)) return hsl;
+  const bounded = isDark ? Math.max(lightness, 45) : Math.min(lightness, 38);
+  return `${h} ${s} ${bounded}%`;
 }
 
 /** Encre lisible sur un aplat d'accent : blanc ou encre sombre, selon le plus contrasté. */

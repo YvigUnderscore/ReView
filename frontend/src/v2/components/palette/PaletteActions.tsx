@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { CommandGroup, CommandItem } from '../ui/command';
 import { useTheme } from '../../stores/useTheme';
 import { useT } from '../../i18n';
+import { matchDestinations } from './paletteMatch';
 
 /**
  * Actions générales de la palette (A3).
@@ -17,10 +18,13 @@ import { useT } from '../../i18n';
  * sont à leur place ici — cherchables, et accessibles au clavier.
  */
 export default function PaletteActions({
+  query,
   onRun,
   onShortcuts,
   onToggleSidebar,
 }: {
+  /** Saisie courante : les actions restent cherchables au lieu de disparaître à la frappe. */
+  query: string;
   /** Ferme la palette avant d'exécuter l'action. */
   onRun: (action: () => void) => void;
   onShortcuts: () => void;
@@ -38,37 +42,56 @@ export default function PaletteActions({
       .catch(() => toast.error(t('common.error.generic')));
   };
 
-  return (
-    <CommandGroup heading={t('palette.group.actions')}>
-      <CommandItem value="action-copy-link" onSelect={() => onRun(copyPageLink)}>
-        <Link2 size={15} className="text-muted-foreground" /> {t('gctx.copyPageLink')}
-      </CommandItem>
-      <CommandItem
-        value="action-refresh"
-        onSelect={() =>
-          onRun(() => {
-            // Ciblé sur les requêtes réellement montées : l'ancien menu invalidait tout le
-            // cache, y compris les écrans que l'on ne regardait pas.
-            void qc.invalidateQueries({ type: 'active' });
-          })
-        }
-      >
-        <RefreshCw size={15} className="text-muted-foreground" /> {t('gctx.refreshData')}
-      </CommandItem>
-      <CommandItem value="action-sidebar" onSelect={() => onRun(onToggleSidebar)}>
-        <PanelLeft size={15} className="text-muted-foreground" /> {t('gctx.toggleSidebar')}
-      </CommandItem>
-      <CommandItem value="action-theme" onSelect={() => onRun(toggleTheme)}>
-        {theme === 'dark' ? (
+  const actions = [
+    {
+      key: 'copy-link',
+      label: t('gctx.copyPageLink'),
+      icon: <Link2 size={15} className="text-muted-foreground" />,
+      run: copyPageLink,
+    },
+    {
+      key: 'refresh',
+      label: t('gctx.refreshData'),
+      icon: <RefreshCw size={15} className="text-muted-foreground" />,
+      // Ciblé sur les requêtes réellement montées : l'ancien menu invalidait tout le
+      // cache, y compris les écrans que l'on ne regardait pas.
+      run: () => void qc.invalidateQueries({ type: 'active' }),
+    },
+    {
+      key: 'sidebar',
+      label: t('gctx.toggleSidebar'),
+      icon: <PanelLeft size={15} className="text-muted-foreground" />,
+      run: onToggleSidebar,
+    },
+    {
+      key: 'theme',
+      label: theme === 'dark' ? t('gctx.lightTheme') : t('gctx.darkTheme'),
+      icon:
+        theme === 'dark' ? (
           <Sun size={15} className="text-muted-foreground" />
         ) : (
           <Moon size={15} className="text-muted-foreground" />
-        )}
-        {theme === 'dark' ? t('gctx.lightTheme') : t('gctx.darkTheme')}
-      </CommandItem>
-      <CommandItem value="action-shortcuts" onSelect={() => onRun(onShortcuts)}>
-        <Keyboard size={15} className="text-muted-foreground" /> {t('gctx.shortcuts')}
-      </CommandItem>
+        ),
+      run: toggleTheme,
+    },
+    {
+      key: 'shortcuts',
+      label: t('gctx.shortcuts'),
+      icon: <Keyboard size={15} className="text-muted-foreground" />,
+      run: onShortcuts,
+    },
+  ];
+
+  const shown = matchDestinations(actions, query);
+  if (shown.length === 0) return null;
+
+  return (
+    <CommandGroup heading={t('palette.group.actions')}>
+      {shown.map((action) => (
+        <CommandItem key={action.key} value={`action-${action.key}`} onSelect={() => onRun(action.run)}>
+          {action.icon} {action.label}
+        </CommandItem>
+      ))}
     </CommandGroup>
   );
 }

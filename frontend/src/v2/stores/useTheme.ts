@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { create } from 'zustand';
+import { applyAccent } from '../lib/branding';
 
 /**
  * Thème de l'interface (42.A1 — étend le socle clair/sombre).
@@ -29,6 +30,9 @@ function effective(mode: ThemeMode): Theme {
 
 function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle('dark', theme === 'dark');
+  // L'accent studio est borné différemment selon le thème (cf. `readableAccent`) : sans ce
+  // rappel, passer en clair gardait l'accent vif du sombre, et l'anneau de focus s'effaçait.
+  applyAccent(localStorage.getItem('review:accent'));
 }
 
 function readMode(): ThemeMode {

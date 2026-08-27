@@ -19,6 +19,8 @@ import { entriesOf } from '../lib/menuSpec';
 import { fetchSequenceCandidates } from '../lib/playlistApi';
 import type { SequenceDetailData } from './project/projectTypes';
 import { useT } from '../i18n';
+import EntityUnavailable from '../components/EntityUnavailable';
+import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 /**
  * La séquence, comme page (C3).
@@ -53,6 +55,11 @@ export default function SequencePage() {
     ...(playlistEntry ? [playlistEntry] : []),
   ];
 
+  // `/sequences/abc` ou une sequence supprimée : la page rendait sa coquille sans sujet.
+  if (isBadId(sequenceId) || (error && isMissingOrForbidden(error)))
+    return <EntityUnavailable kind="sequence" error={isBadId(sequenceId) ? undefined : error} />;
+  if (error) return <EntityUnavailable kind="sequence" error={error} onRetry={() => void refetch()} />;
+
   return (
     <EntityWorkPage
       kind="sequence"
@@ -66,7 +73,6 @@ export default function SequencePage() {
       canManage={canManage}
       menuExtras={menuExtras}
     >
-      {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
       {/* Remontée vers l'épisode — le niveau étant facultatif, ce lien n'existe que sur un
           projet qui l'a activé et une séquence qui y est rattachée. */}
       {data?.episode && (

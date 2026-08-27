@@ -76,6 +76,7 @@ export default function UsersTab() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t('users.searchPlaceholder')}
+            aria-label={t('users.searchPlaceholder')}
             className="pl-8"
           />
         </div>

@@ -7,6 +7,7 @@ import { timeAgo } from '../../lib/time';
 import DepartmentChips from './DepartmentChips';
 import type { AssigneeRef, DepartmentRef } from '../../types/entities';
 import { useT } from '../../i18n';
+import { intlLocale } from '../../i18n';
 
 /**
  * Ce qu'une carte dit d'une entité en plus de son nom.
@@ -72,7 +73,7 @@ export default function EntityCardMeta({ meta, compact }: { meta: EntityMeta; co
         {awaiting > 0 && <AwaitingBadge count={awaiting} />}
         {meta.updatedAt && (
           <span
-            title={t('cards.updatedAt', { value: new Date(meta.updatedAt).toLocaleString() })}
+            title={t('cards.updatedAt', { value: new Date(meta.updatedAt).toLocaleString(intlLocale()) })}
             className="text-2xs tabular-nums text-muted-foreground"
           >
             {timeAgo(meta.updatedAt)}

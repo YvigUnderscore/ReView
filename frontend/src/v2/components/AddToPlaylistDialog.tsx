@@ -135,6 +135,7 @@ export default function AddToPlaylistDialog({
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void createAndAdd()}
                 placeholder={t('playlist.newEllipsis')}
+                aria-label={t('playlist.newEllipsis')}
               />
               <Button size="sm" disabled={busy || !newName.trim()} onClick={() => void createAndAdd()}>
                 <Plus size={14} /> {t('common.create')}

@@ -207,7 +207,11 @@ async function readLicenseText(dir) {
     const full = path.join(dir, name);
     try {
       if (!(await stat(full)).isFile()) continue;
-      const text = (await readFile(full, 'utf8')).trim();
+      // Fins de ligne normalisées en LF : plusieurs paquets livrent leur LICENSE en CRLF
+      // (color-name, fluent-ffmpeg, tslib…). Sans cette normalisation, le fichier produit
+      // contient des CR que git retire au commit (`.gitattributes` : `text eol=lf`), et la
+      // comparaison de fraîcheur de validate.sh ne peut jamais réussir en CI.
+      const text = (await readFile(full, 'utf8')).replace(/\r\n/g, '\n').trim();
       if (text) chunks.push({ name, text });
     } catch {
       /* illisible : on garde au moins l'identifiant SPDX */

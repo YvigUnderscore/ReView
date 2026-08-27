@@ -185,6 +185,7 @@ export default function ServiceTokenDialog({ open, onClose }: { open: boolean; o
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 autoComplete="current-password"
                 placeholder={t('profile.password.currentPlaceholder')}
+                aria-label={t('profile.password.currentPlaceholder')}
                 className="w-full"
               />
             </Field>

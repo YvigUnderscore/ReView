@@ -122,7 +122,7 @@ export default function UsdRecomposeDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
-            {t('common.undo')}
+            {t('common.cancel')}
           </Button>
           <Button onClick={submit} disabled={busy}>
             {busy ? t('common.starting') : t('usd.recomposeFrom')}

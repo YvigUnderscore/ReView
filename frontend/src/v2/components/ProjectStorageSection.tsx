@@ -95,6 +95,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
                 min={0}
                 step="0.5"
                 placeholder={t('storage.unlimited.placeholder')}
+                aria-label={t('storage.unlimited.placeholder')}
                 className="w-28 rounded border border-input bg-background px-2 py-1.5 text-xs"
                 value={gbValue}
                 onChange={(e) => setQuotaGb(e.target.value)}

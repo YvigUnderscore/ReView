@@ -184,6 +184,7 @@ export default function ProfilePage() {
               value={vals.username}
               onChange={(v) => setVals((s) => ({ ...s, username: v }))}
               placeholder={t('profile.username.placeholder')}
+              aria-label={t('profile.username.placeholder')}
             />
             <Field
               label={t('login.email')}
@@ -196,12 +197,14 @@ export default function ProfilePage() {
               value={vals.jobTitle}
               onChange={(v) => setVals((s) => ({ ...s, jobTitle: v }))}
               placeholder={t('profile.jobTitle.placeholder')}
+              aria-label={t('profile.jobTitle.placeholder')}
             />
             <Field
               label={t('profile.phone')}
               value={vals.phone}
               onChange={(v) => setVals((s) => ({ ...s, phone: v }))}
               placeholder={t('profile.phone.placeholder')}
+              aria-label={t('profile.phone.placeholder')}
             />
           </div>
           <div>
@@ -212,6 +215,7 @@ export default function ProfilePage() {
               maxLength={500}
               rows={3}
               placeholder={t('profile.bio.placeholder')}
+              aria-label={t('profile.bio.placeholder')}
               className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
@@ -229,6 +233,7 @@ export default function ProfilePage() {
             onChange={setCurrentPassword}
             type="password"
             placeholder={t('profile.password.currentPlaceholder')}
+            aria-label={t('profile.password.currentPlaceholder')}
           />
           <Field
             label={t('profile.password.new')}
@@ -236,6 +241,7 @@ export default function ProfilePage() {
             onChange={setPwd}
             type="password"
             placeholder={t('profile.password.placeholder')}
+            aria-label={t('profile.password.placeholder')}
           />
           <Button onClick={savePassword} disabled={busy || !pwd || !currentPassword}>
             {t('profile.password.submit')}

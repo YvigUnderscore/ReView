@@ -3,16 +3,14 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Pencil } from 'lucide-react';
-import { toast } from 'sonner';
+import { ChevronRight, FileText, Users } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import Avatar from '../Avatar';
-import NoteView from '../note/NoteView';
-import NoteEditor from '../note/NoteEditor';
+import EntityNoteDialog from './EntityNoteDialog';
+import type { ScopePerson } from './EntityTeamList';
 import { initialsFrom } from '../../lib/initials';
 import { assigneeName } from '../../lib/assigneeName';
-import { useEntityNote, useSaveNote, type NoteKind, type NoteScope } from '../../lib/notesApi';
-import type { AssigneeRef } from '../../types/entities';
+import { useEntityNote, type NoteKind } from '../../lib/notesApi';
 import { useT } from '../../i18n';
 
 /**
@@ -25,27 +23,10 @@ import { useT } from '../../i18n';
  * cas courant. **Le brief** ensuite, qui n'avait nulle part où vivre : `description` vient
  * de ShotGrid et y retourne, souvent en lecture seule ici.
  *
- * Le panneau est replié par défaut. On ouvre une page de plan pour voir son travail, pas sa
- * fiche administrative ; l'en-tête annonce donc l'essentiel sur une ligne — les visages —
- * et se déplie quand on vient précisément pour ça.
+ * Ici, une ligne et rien de plus : les visages, et le fait qu'un brief existe. Le reste
+ * s'ouvre en fenêtre — un dépliant qui pousse le travail vers le bas de l'écran se referme
+ * aussitôt ouvert, et une planche de références n'y tenait pas.
  */
-
-/** L'origine d'une personne dans le périmètre — sert à trier, et à l'expliquer au survol. */
-type Origin = 'direct' | 'child' | 'task';
-interface ScopePerson extends AssigneeRef {
-  origins: Origin[];
-  count: number;
-}
-
-const ORIGIN_LABEL: Record<
-  Origin,
-  'assignees.origin.direct' | 'assignees.origin.child' | 'assignees.origin.task'
-> = {
-  direct: 'assignees.origin.direct',
-  child: 'assignees.origin.child',
-  task: 'assignees.origin.task',
-};
-
 export default function EntityHeaderPanel({
   kind,
   id,
@@ -59,7 +40,6 @@ export default function EntityHeaderPanel({
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
 
   const { data: people = [] } = useQuery({
     queryKey: ['assignees', kind, id],
@@ -68,39 +48,24 @@ export default function EntityHeaderPanel({
     enabled: id > 0,
   });
   const { data: note } = useEntityNote(kind, id);
-  const save = useSaveNote(kind, id);
-
-  const scope = kind.slice(0, -1) as NoteScope;
   const hasNote = Boolean(note?.body.trim());
-
-  const submit = () => {
-    if (editing === null) return;
-    save.mutate(editing, {
-      onSuccess: () => {
-        toast.success(t('note.saved'));
-        setEditing(null);
-      },
-      onError: (err: unknown) => toast.error(err instanceof Error ? err.message : t('common.error.generic')),
-    });
-  };
 
   // Rien à montrer et rien à écrire : le panneau ne coûte pas une ligne pour rien.
   if (people.length === 0 && !hasNote && !canManage) return null;
 
   return (
-    <section className="mb-4 rounded-lg border border-border bg-card">
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-        <button
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-        >
-          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group mb-4 flex w-full flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5 text-left shadow-sm transition-colors hover:border-primary hover:bg-secondary/30"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <Users size={15} className="text-primary" />
           {t('entity.header.title')}
-        </button>
+        </span>
 
-        {/* Replié, l'en-tête montre déjà les visages : c'est ce qu'on vient y chercher. */}
-        {!open && people.length > 0 && (
+        {people.length > 0 && (
           <span className="flex items-center">
             {people.slice(0, 6).map((person, i) => (
               <span key={person.id} className={i > 0 ? '-ml-1.5' : ''}>
@@ -119,77 +84,33 @@ export default function EntityHeaderPanel({
             )}
           </span>
         )}
-        {!open && hasNote && (
-          <span className="text-2xs text-muted-foreground">{t('entity.header.hasNote')}</span>
-        )}
-      </div>
+
+        {/* L'état du brief se lit à la pastille : écrit, il porte l'accent ; absent, il est
+            annoncé en creux, pour que personne ne cherche une fiche qui n'existe pas. */}
+        <span
+          className={`ml-auto flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs ${
+            hasNote ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
+          }`}
+        >
+          <FileText size={13} />
+          {hasNote ? t('entity.header.hasNote') : t('entity.header.noNote')}
+        </span>
+        <ChevronRight
+          size={16}
+          className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+        />
+      </button>
 
       {open && (
-        <div className="space-y-4 border-t border-border px-3 py-3">
-          <div>
-            <h3 className="mb-1.5 text-2xs uppercase tracking-wide text-muted-foreground">
-              {t('entity.header.people')}
-            </h3>
-            {people.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('entity.header.noPeople')}</p>
-            ) : (
-              <ul className="flex flex-wrap gap-2">
-                {people.map((person) => (
-                  <li
-                    key={person.id}
-                    title={person.origins.map((o) => t(ORIGIN_LABEL[o])).join(' · ')}
-                    className="flex items-center gap-1.5 rounded-full border border-border py-0.5 pl-0.5 pr-2.5"
-                  >
-                    <Avatar
-                      seed={person.id}
-                      initials={initialsFrom(assigneeName(person))}
-                      avatarUrl={person.avatarUrl}
-                      size={22}
-                    />
-                    <span className="text-xs">{assigneeName(person)}</span>
-                    {person.origins.includes('direct') && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div>
-            <div className="mb-1.5 flex items-center gap-2">
-              <h3 className="text-2xs uppercase tracking-wide text-muted-foreground">
-                {t('entity.header.note')}
-              </h3>
-              {canManage && editing === null && (
-                <button
-                  onClick={() => setEditing(note?.body ?? '')}
-                  title={t('common.edit')}
-                  aria-label={t('common.edit')}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil size={12} />
-                </button>
-              )}
-            </div>
-            {editing !== null ? (
-              <NoteEditor
-                value={editing}
-                onChange={setEditing}
-                projectId={projectId}
-                scope={scope}
-                busy={save.isPending}
-                onSave={submit}
-                onCancel={() => setEditing(null)}
-              />
-            ) : hasNote ? (
-              <NoteView source={note!.body} />
-            ) : (
-              <p className="text-sm text-muted-foreground">{t('entity.header.noNote')}</p>
-            )}
-          </div>
-        </div>
+        <EntityNoteDialog
+          kind={kind}
+          id={id}
+          projectId={projectId}
+          canManage={canManage}
+          people={people}
+          onClose={() => setOpen(false)}
+        />
       )}
-    </section>
+    </>
   );
 }

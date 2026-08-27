@@ -47,6 +47,8 @@ import { useEpisodesEnabled } from '../lib/episodesApi';
 import ProjectCsvActions from './project/ProjectCsvActions';
 import type { ProjectSettings } from './project/projectTypes';
 import { useT } from '../i18n';
+import EntityUnavailable from '../components/EntityUnavailable';
+import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 /** Page projet — orchestrateur des onglets (découpage 10.C1, sous-composants dans pages/project/). */
 export default function ProjectPage() {
@@ -62,10 +64,11 @@ export default function ProjectPage() {
   const setTab = (t: string) => setSearchParams(t === 'overview' ? {} : { tab: t });
 
   const qc = useQueryClient();
-  const { data: projData } = useQuery({
+  const projQ = useQuery({
     queryKey: qk.project(projectId),
     queryFn: () => api.get<{ project: { name: string; startFrame: number } }>(`/api/projects/${projectId}`),
   });
+  const projData = projQ.data;
   const name = projData?.project.name ?? '';
   // URL parlante : remplace `/projects/390` par `/projects/le-projet-390` une fois le nom connu.
   useCanonicalSlug(id, name ? entitySlug(name, projectId) : null);
@@ -129,6 +132,13 @@ export default function ProjectPage() {
       ? [{ key: 'shotgrid', label: t('shotgrid.tab.label'), icon: <Workflow size={16} /> }]
       : []),
   ];
+
+  // Projet inconnu, supprimé ou fermé : la page montait ses douze onglets sur un projet
+  // vide, et chaque onglet lançait ses propres requêtes vouées à échouer.
+  if (isBadId(projectId) || (projQ.isError && isMissingOrForbidden(projQ.error)))
+    return <EntityUnavailable kind="project" error={isBadId(projectId) ? undefined : projQ.error} />;
+  if (projQ.isError)
+    return <EntityUnavailable kind="project" error={projQ.error} onRetry={() => void projQ.refetch()} />;
 
   return (
     <PageShell

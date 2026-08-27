@@ -20,7 +20,10 @@ import { logger } from './logger';
  * Note : la restauration d'un parent restaure aussi ses descendants supprimés.
  */
 
-type MediaKeys = { storageKey: string; thumbnailKey: string | null };
+type MediaKeys = { id: number; storageKey: string; thumbnailKey: string | null };
+
+/** Ce qu'il faut lire sur un média pour pouvoir libérer tout ce qu'il occupe. */
+const MEDIA_STORAGE_SELECT = { id: true, storageKey: true, thumbnailKey: true } as const;
 
 /** Aplati les clés storage (média + miniature) d'une liste de médias. */
 function mediaStorageKeys(medias: MediaKeys[]): string[] {
@@ -30,6 +33,19 @@ function mediaStorageKeys(medias: MediaKeys[]): string[] {
     if (m.thumbnailKey) keys.push(m.thumbnailKey);
   }
   return keys;
+}
+
+/**
+ * Préfixes des dérivés d'une liste de médias.
+ *
+ * Tout ce que les workers fabriquent vit sous `derived/{mediaId}/` : renditions HLS,
+ * proxy MP4, dérivé client, sprite de timeline, GLB converti, vignettes spatiales, ops
+ * splat. Ces objets pèsent l'essentiel du bucket — une purge qui ne supprimait que
+ * `storageKey` et `thumbnailKey` ne libérait donc presque rien, et pour une vidéo rien du
+ * tout puisque l'original est déjà remplacé par son proxy à la fin du transcodage.
+ */
+function mediaDerivedPrefixes(medias: MediaKeys[]): string[] {
+  return medias.map((m) => `derived/${m.id}/`);
 }
 
 /**
@@ -254,38 +270,38 @@ export async function restoreProjects(ids: number[]): Promise<void> {
 export async function purgeMedia(id: number): Promise<void> {
   const media = await prisma.mediaObject.findUnique({
     where: { id },
-    select: { storageKey: true, thumbnailKey: true },
+    select: MEDIA_STORAGE_SELECT,
   });
   if (!media) return;
   await prisma.mediaObject.delete({ where: { id } });
-  await deleteStorageAfterCommit(mediaStorageKeys([media]));
+  await deleteStorageAfterCommit(mediaStorageKeys([media]), mediaDerivedPrefixes([media]));
 }
 
 export async function purgeVersion(id: number): Promise<void> {
   const medias = await prisma.mediaObject.findMany({
     where: { versionId: id },
-    select: { storageKey: true, thumbnailKey: true },
+    select: MEDIA_STORAGE_SELECT,
   });
   await prisma.version.delete({ where: { id } }); // cascade DB des médias
-  await deleteStorageAfterCommit(mediaStorageKeys(medias));
+  await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaDerivedPrefixes(medias));
 }
 
 export async function purgeShot(id: number): Promise<void> {
   const medias = await prisma.mediaObject.findMany({
     where: { version: { task: { shotId: id } } },
-    select: { storageKey: true, thumbnailKey: true },
+    select: MEDIA_STORAGE_SELECT,
   });
   await prisma.shot.delete({ where: { id } }); // cascade DB : tasks → versions → médias
-  await deleteStorageAfterCommit(mediaStorageKeys(medias));
+  await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaDerivedPrefixes(medias));
 }
 
 export async function purgeAsset(id: number): Promise<void> {
   const medias = await prisma.mediaObject.findMany({
     where: { version: { OR: [{ assetId: id }, { task: { assetId: id } }] } },
-    select: { storageKey: true, thumbnailKey: true },
+    select: MEDIA_STORAGE_SELECT,
   });
   await prisma.asset.delete({ where: { id } });
-  await deleteStorageAfterCommit(mediaStorageKeys(medias));
+  await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaDerivedPrefixes(medias));
 }
 
 export async function purgeSequence(id: number): Promise<void> {

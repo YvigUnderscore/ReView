@@ -9,7 +9,7 @@ import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { rateLimit } from '../middleware/rateLimit';
 import { storage } from '../services/StorageService';
-import { mediaSourceKey } from '../services/MediaService';
+import { mediaViewKey } from '../services/MediaService';
 import {
   loadShare,
   loadShareWithSession,
@@ -131,7 +131,11 @@ router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req
   const clientKey = typeof meta.clientProxyKey === 'string' ? meta.clientProxyKey : null;
   const glbKey = typeof meta.glbKey === 'string' ? meta.glbKey : null;
   const [url, glbUrl] = await Promise.all([
-    storage.getPresignedGetUrl(clientKey ?? mediaSourceKey(media)),
+    // `mediaViewKey` et non `mediaSourceKey` : le client reçoit ce qu'un navigateur sait
+    // afficher. Un EXR, un DPX ou un TIFF partagés arrivaient jusqu'ici en format d'origine,
+    // c'est-à-dire en image cassée — alors que le proxy web existe déjà et que le viewer
+    // interne s'en sert. Le dérivé client (vidéo, avec slate et burn-ins) reste prioritaire.
+    storage.getPresignedGetUrl(clientKey ?? mediaViewKey(media)),
     glbKey ? storage.getPresignedGetUrl(glbKey) : Promise.resolve(null),
   ]);
   res.json({

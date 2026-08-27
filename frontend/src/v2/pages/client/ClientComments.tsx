@@ -81,6 +81,7 @@ export default function ClientComments({
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
             placeholder={t('setup.adminName')}
+            aria-label={t('setup.adminName')}
             maxLength={80}
             required
           />
@@ -89,6 +90,7 @@ export default function ClientComments({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={timed ? t('client.commentAtFrame') : t('client.yourComment')}
+            aria-label={timed ? t('client.commentAtFrame') : t('client.yourComment')}
             rows={3}
             maxLength={10000}
             required

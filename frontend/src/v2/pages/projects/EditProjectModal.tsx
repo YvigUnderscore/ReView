@@ -88,7 +88,7 @@ export default function EditProjectModal({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              {t('common.undo')}
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm">
               {t('common.save')}

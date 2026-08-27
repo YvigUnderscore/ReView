@@ -129,6 +129,7 @@ export default function SgConnectionSetup({ projectId }: { projectId: number }) 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('shotgrid.setup.searchPlaceholder')}
+              aria-label={t('shotgrid.setup.searchPlaceholder')}
               className="w-full rounded-md border border-border bg-background py-1.5 pl-8 pr-3 text-sm"
             />
           </div>

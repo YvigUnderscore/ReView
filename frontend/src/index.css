@@ -314,6 +314,88 @@
   }
 
   /*
+   * Rendu d'une fiche d'entité (brief).
+   *
+   * La classe existait, ses règles non : un brief rendait ses listes sans puces et ses
+   * tableaux sans colonnes. Elle reprend `.prose-doc` en plus dense — une fiche se lit dans
+   * une fenêtre, pas sur une page — et ajoute ce que la documentation n'a pas : une image
+   * qu'on pose où on veut dans le fil.
+   */
+  .prose-note h1,
+  .prose-note h2,
+  .prose-note h3 {
+    @apply mb-1.5 mt-3 font-semibold;
+  }
+  .prose-note h1 {
+    @apply text-base;
+  }
+  .prose-note h2,
+  .prose-note h3 {
+    @apply text-sm;
+  }
+  .prose-note p {
+    @apply my-2;
+  }
+  .prose-note ul {
+    @apply my-2 list-disc pl-5;
+  }
+  .prose-note ol {
+    @apply my-2 list-decimal pl-5;
+  }
+  .prose-note li {
+    @apply my-0.5;
+  }
+  .prose-note a {
+    @apply text-primary underline;
+  }
+  .prose-note blockquote {
+    @apply my-2 border-l-2 border-border pl-3 text-muted-foreground;
+  }
+  .prose-note code {
+    @apply rounded bg-secondary px-1 py-0.5 font-mono text-[0.85em];
+  }
+  .prose-note pre {
+    @apply my-2 overflow-x-auto rounded-md border border-border bg-secondary p-2.5;
+  }
+  .prose-note pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-note table {
+    @apply my-2 w-full border-collapse text-left;
+  }
+  .prose-note th {
+    @apply border-b border-border px-2 py-1 font-semibold;
+  }
+  .prose-note td {
+    @apply border-b border-border/50 px-2 py-1 align-top;
+  }
+  .prose-note hr {
+    @apply my-3 border-border;
+  }
+  .prose-note img {
+    @apply my-2 max-w-full rounded-md border border-border;
+  }
+  /* Le texte revient sous une image flottée, jamais à côté du bloc suivant. */
+  .prose-note::after {
+    content: '';
+    display: block;
+    clear: both;
+  }
+  .prose-note img[data-align='center'] {
+    @apply mx-auto block;
+  }
+  .prose-note img[data-align='left'] {
+    @apply float-left mb-2 mr-3;
+  }
+  .prose-note img[data-align='right'] {
+    @apply float-right mb-2 ml-3;
+  }
+  /* Image dont l'URL de lecture n'est pas encore là : un cadre, pas une image cassée. */
+  .prose-note [data-note-image-pending] {
+    @apply my-2 block h-32 w-full rounded-md border border-dashed border-border bg-secondary/30;
+  }
+
+  /*
    * Page /docs — la documentation produit se lit en continu, là où `.prose-doc` sert aussi
    * aux commentaires et à l'éditeur de texte riche, qui eux doivent rester denses. Ces
    * règles se posent par-dessus, sur le seul article de documentation : interligne plus

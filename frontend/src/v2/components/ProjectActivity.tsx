@@ -15,7 +15,7 @@ import {
   TASK_STATUS_PRIORITY as PRIORITY,
 } from '../lib/taskStatus';
 import type { Membership, TaskStatus, TaskWithAssignee } from '../types/api';
-import { useT } from '../i18n';
+import { useT, intlLocale } from '../i18n';
 import PipelineStatusSelect from './shotgrid/PipelineStatusSelect';
 
 interface RecentItem {
@@ -154,7 +154,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                         <span className="font-medium">{r.label}</span>
                       </span>
                       <span className="shrink-0 text-2xs text-muted-foreground">
-                        {new Date(r.at).toLocaleDateString()}
+                        {new Date(r.at).toLocaleDateString(intlLocale())}
                       </span>
                     </Link>
                   </li>

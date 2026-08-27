@@ -191,6 +191,7 @@ function EditSite({ site, onDone }: { site: SgSite; onDone: () => void }) {
               type="password"
               value={form.scriptKey}
               placeholder={t('shotgrid.admin.keepSecret')}
+              aria-label={t('shotgrid.admin.keepSecret')}
               onChange={(e) => setForm({ ...form, scriptKey: e.target.value })}
               className="w-full rounded-md border border-border bg-background px-3 py-1.5"
             />
@@ -212,6 +213,7 @@ function EditSite({ site, onDone }: { site: SgSite; onDone: () => void }) {
               type="password"
               value={form.password}
               placeholder={t('shotgrid.admin.keepSecret')}
+              aria-label={t('shotgrid.admin.keepSecret')}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               className="w-full rounded-md border border-border bg-background px-3 py-1.5"
             />

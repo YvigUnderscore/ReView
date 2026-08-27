@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Role, User } from '../../types/api';
+import { intlLocale } from '../../i18n';
 
 /** Helpers purs de la page admin Utilisateurs (recherche/filtre/tri) — testés. */
 
@@ -31,10 +32,11 @@ export function sortUsers(users: User[], sort: UserSort): User[] {
   const copy = [...users];
   switch (sort) {
     case 'name':
-      return copy.sort((a, b) => userLabel(a).localeCompare(userLabel(b), 'fr'));
+      return copy.sort((a, b) => userLabel(a).localeCompare(userLabel(b), intlLocale()));
     case 'role':
       return copy.sort(
-        (a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || userLabel(a).localeCompare(userLabel(b), 'fr'),
+        (a, b) =>
+          ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || userLabel(a).localeCompare(userLabel(b), intlLocale()),
       );
     case 'storage':
       return copy.sort((a, b) => b.storageUsed - a.storageUsed);

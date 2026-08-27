@@ -4,8 +4,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // `vi.mock` est remonté en tête de fichier : la doublure doit l'être aussi.
-const { emitToProject } = vi.hoisted(() => ({ emitToProject: vi.fn() }));
-vi.mock('../SocketService', () => ({ emitToProject: (...a: unknown[]) => emitToProject(...a) }));
+const { emitToProject, isWorkerProcess, publishWorkerEvent } = vi.hoisted(() => ({
+  emitToProject: vi.fn(),
+  // Par défaut on se place dans le process web : c'est le chemin que ces cas décrivent.
+  isWorkerProcess: vi.fn(() => false),
+  publishWorkerEvent: vi.fn(),
+}));
+vi.mock('../SocketService', () => ({
+  emitToProject: (...a: unknown[]) => emitToProject(...a),
+  isWorkerProcess: () => isWorkerProcess(),
+}));
+vi.mock('../../lib/workerEvents', () => ({
+  publishWorkerEvent: (...a: unknown[]) => publishWorkerEvent(...a),
+}));
 
 import { DETAIL_LIMIT, flushTouched, TouchedEntities } from './ShotgridTouched';
 
@@ -138,5 +149,32 @@ describe('flushTouched', () => {
       total: 0,
       detailed: true,
     });
+  });
+});
+
+/**
+ * La synchronisation ShotGrid tourne dans le process worker, où `io` n'existe pas :
+ * `emitToProject` y était un no-op silencieux et aucun écran ne se rafraîchissait après
+ * une passe. Le worker doit passer par le canal Redis, que le serveur relaie.
+ */
+describe('flushTouched — selon le process', () => {
+  it('émet directement depuis le process web', () => {
+    isWorkerProcess.mockReturnValue(false);
+    const touched = new TouchedEntities();
+    touched.add('shot', 12);
+    flushTouched(461, 1, 'ok', touched);
+    expect(emitToProject).toHaveBeenCalled();
+    expect(publishWorkerEvent).not.toHaveBeenCalled();
+  });
+
+  it('publie sur le canal Redis depuis le worker', () => {
+    isWorkerProcess.mockReturnValue(true);
+    const touched = new TouchedEntities();
+    touched.add('shot', 12);
+    flushTouched(461, 1, 'ok', touched);
+    expect(emitToProject).not.toHaveBeenCalled();
+    expect(publishWorkerEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'project', projectId: 461, event: 'shotgrid:sync' }),
+    );
   });
 });

@@ -33,6 +33,7 @@ import { useAutoThumbnail } from './review/useAutoThumbnail';
 import { useModel3DThree } from './review/three/useModel3DThree';
 import ReviewHeader from './review/ReviewHeader';
 import ReviewViewer from './review/ReviewViewer';
+import { ErrorBoundary } from '../components/ui/error-boundary';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
 import { useSplat } from './review/splat/useSplat';
 import CommentsPanel from './review/CommentsPanel';
@@ -299,42 +300,46 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
 
         {/* Corps : viewer (large) + commentaires (panneau) */}
         <div className="flex min-h-0 flex-1 gap-4">
-          <ReviewViewer
-            data={data}
-            error={error}
-            ann={ann}
-            model3d={model3d}
-            splat={splat}
-            paint={paint}
-            videoRef={videoRef}
-            programmaticSeekRef={programmaticSeekRef}
-            comments={comments}
-            selectedCommentId={selectedCommentId}
-            fps={fps}
-            setFpsOverride={setFpsOverride}
-            reprocessing={reprocessing}
-            role={role}
-            canEditTransform={canEditTransform}
-            canEdit={canEditMedia}
-            canManage={canManageMedia}
-            onSplatEditsSaved={onSplatEditsSaved}
-            onClearSelection={clearSelection}
-            onSelectComment={selectComment}
-            onManualSeek={clearSelection}
-            onMarker={openComposer}
-            onReprocess={reprocessMedia}
-            onToggleAnnotate={toggleAnnotating}
-            onFullscreen={toggleFullscreen}
-            compareIds={compare.compareIds}
-            onCloseCompare={() => compare.setCompareId(null)}
-            onRemoveCompare={compare.removeCompareId}
-            compareMode={compare.compareMode}
-            onCompareModeChange={compare.setCompareMode}
-            sharedWipe={sharedWipe}
-            imageViewApiRef={imageViewApiRef}
-            onImageUserView={live.claimInteraction}
-            onLoopChange={setLoop}
-          />
+          {/* Le viewer monte Three.js, Spark ou hls.js : un plantage WebGL ne doit pas
+              emporter le panneau de commentaires ni le transport. */}
+          <ErrorBoundary scope="viewer">
+            <ReviewViewer
+              data={data}
+              error={error}
+              ann={ann}
+              model3d={model3d}
+              splat={splat}
+              paint={paint}
+              videoRef={videoRef}
+              programmaticSeekRef={programmaticSeekRef}
+              comments={comments}
+              selectedCommentId={selectedCommentId}
+              fps={fps}
+              setFpsOverride={setFpsOverride}
+              reprocessing={reprocessing}
+              role={role}
+              canEditTransform={canEditTransform}
+              canEdit={canEditMedia}
+              canManage={canManageMedia}
+              onSplatEditsSaved={onSplatEditsSaved}
+              onClearSelection={clearSelection}
+              onSelectComment={selectComment}
+              onManualSeek={clearSelection}
+              onMarker={openComposer}
+              onReprocess={reprocessMedia}
+              onToggleAnnotate={toggleAnnotating}
+              onFullscreen={toggleFullscreen}
+              compareIds={compare.compareIds}
+              onCloseCompare={() => compare.setCompareId(null)}
+              onRemoveCompare={compare.removeCompareId}
+              compareMode={compare.compareMode}
+              onCompareModeChange={compare.setCompareMode}
+              sharedWipe={sharedWipe}
+              imageViewApiRef={imageViewApiRef}
+              onImageUserView={live.claimInteraction}
+              onLoopChange={setLoop}
+            />
+          </ErrorBoundary>
 
           {commentsOpen && !theater && (
             <CommentsPanel

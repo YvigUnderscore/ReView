@@ -139,6 +139,7 @@ export function MarkerDialog({
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
           placeholder={tr('review.marker.placeholder')}
+          aria-label={tr('review.marker.placeholder')}
           autoFocus
         />
         <div className="flex items-center gap-2">
@@ -154,7 +155,7 @@ export function MarkerDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            {tr('common.undo')}
+            {tr('common.cancel')}
           </Button>
           <Button onClick={() => void submit()} disabled={!name.trim()}>
             {editing ? tr('common.edit') : tr('common.add')}

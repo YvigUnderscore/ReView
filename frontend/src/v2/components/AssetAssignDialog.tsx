@@ -138,6 +138,7 @@ export default function AssetAssignDialog({
             <Input
               className="h-8 pl-8 text-xs"
               placeholder={t('asset.assign.searchPlaceholder')}
+              aria-label={t('asset.assign.searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -202,7 +203,7 @@ export default function AssetAssignDialog({
             {t('asset.assign.picked', { sequences: sequenceIds.size, shots: shotIds.size })}
           </span>
           <Button variant="outline" size="sm" onClick={onClose}>
-            {t('common.undo')}
+            {t('common.cancel')}
           </Button>
           <Button size="sm" onClick={save} disabled={busy || loading}>
             {busy ? t('common.saving') : t('common.save')}

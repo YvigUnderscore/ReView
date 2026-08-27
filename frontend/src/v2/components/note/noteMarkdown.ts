@@ -33,9 +33,23 @@ export interface SmallBlock {
   text: string;
 }
 
+export interface NoteImage {
+  src: string;
+  alt: string;
+}
+
 export interface RefsBlock {
   kind: 'refs';
-  images: { src: string; alt: string }[];
+  images: NoteImage[];
+  /**
+   * Planche plutôt que carrousel. **Absent** pour les fiches déjà écrites, qui n'avaient
+   * que le carrousel : leur rendu ne bouge pas d'un pixel.
+   */
+  layout?: 'grid';
+  /** Colonnes de la planche, 1 à 4 — au-delà, une référence n'est plus qu'un timbre. */
+  cols?: number;
+  /** Hauteur d'une vignette, en pixels. */
+  height?: number;
 }
 
 export interface MarkdownBlock {
@@ -56,11 +70,21 @@ export type NoteBlock = ProgressBlock | SmallBlock | RefsBlock | MarkdownBlock |
 
 const PROGRESS_RE = /^::progress\s+(.*?)\s+(-?\d+(?:[.,]\d+)?)\s*%?\s*$/i;
 const SMALL_RE = /^::small\s+(.*)$/i;
-const REFS_OPEN_RE = /^::refs\s*$/i;
+/** `::refs` seul reste le carrousel ; les options qui suivent en font une planche. */
+const REFS_OPEN_RE = /^::refs(?:\s+(.*?))?\s*$/i;
 const REFS_CLOSE_RE = /^::end\s*$/i;
-const IMAGE_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+/** Le titre markdown (`![a](src "…")`) porte la disposition d'une image seule. */
+const IMAGE_RE = /!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"([^"]*)")?\s*\)/g;
 /** `## Titre` déplie, `##- Titre` reste replié : le brief long s'ouvre là où on le laisse. */
 const HEADING_RE = /^##(-)?\s+(.+)$/;
+/**
+ * Fin explicite d'une section.
+ *
+ * Sans elle, une section court jusqu'à la suivante et avale donc tout ce qui la suit —
+ * y compris ce qui n'a rien à y faire, et qu'aucun geste ne pouvait en sortir. Les fiches
+ * écrites avant n'en portent pas : leur découpage ne bouge pas d'une ligne.
+ */
+const SECTION_END_RE = /^::endsection\s*$/i;
 
 /** Le pourcentage tel qu'il s'affichera : borné, et la virgule décimale acceptée. */
 function parsePercent(raw: string): number {
@@ -70,13 +94,41 @@ function parsePercent(raw: string): number {
 }
 
 /** Les images d'un bloc `::refs`, dans l'ordre où elles sont écrites. */
-function collectImages(lines: string[]): { src: string; alt: string }[] {
-  const out: { src: string; alt: string }[] = [];
+function collectImages(lines: string[]): NoteImage[] {
+  const out: NoteImage[] = [];
   for (const line of lines) {
     for (const match of line.matchAll(IMAGE_RE)) {
       out.push({ alt: match[1] ?? '', src: match[2] ?? '' });
     }
   }
+  return out;
+}
+
+/** Bornes d'une planche : au-delà, la vignette ne montre plus rien de la référence. */
+export const REFS_COLS = { min: 1, max: 4, default: 3 } as const;
+export const REFS_HEIGHT = { min: 80, max: 600, default: 180 } as const;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+/**
+ * Les options écrites après `::refs` : `grid`, `cols=3`, `h=180`.
+ *
+ * Une option inconnue ou hors bornes est ignorée plutôt que refusée — une fiche se relit
+ * des mois plus tard, et personne ne doit perdre sa planche parce qu'un mot a changé.
+ */
+export function parseRefsOptions(raw: string): Pick<RefsBlock, 'layout' | 'cols' | 'height'> {
+  const out: Pick<RefsBlock, 'layout' | 'cols' | 'height'> = {};
+  for (const token of raw.trim().split(/\s+/)) {
+    if (!token) continue;
+    if (/^grid$/i.test(token)) out.layout = 'grid';
+    const cols = /^cols=(\d+)$/i.exec(token);
+    if (cols) out.cols = clamp(Number(cols[1]), REFS_COLS.min, REFS_COLS.max);
+    const height = /^h=(\d+)$/i.exec(token);
+    if (height) out.height = clamp(Number(height[1]), REFS_HEIGHT.min, REFS_HEIGHT.max);
+  }
+  // Régler les colonnes sans dire « grid » décrit tout de même une planche : l'option n'a
+  // aucun sens pour un carrousel, et exiger le mot n'aurait fait qu'une faute de plus.
+  if (out.cols !== undefined || out.height !== undefined) out.layout = 'grid';
   return out;
 }
 
@@ -93,7 +145,8 @@ export function parseNote(source: string): NoteBlock[] {
   /** La section ouverte, ou la racine : tout bloc s'ajoute au sommet de cette pile. */
   let current: NoteBlock[] = root;
   let buffer: string[] = [];
-  let refs: string[] | null = null;
+  /** Le bloc de références ouvert : ses lignes, et la disposition lue sur `::refs`. */
+  let refs: { lines: string[]; options: ReturnType<typeof parseRefsOptions> } | null = null;
 
   const flush = () => {
     const text = buffer.join('\n').trim();
@@ -102,13 +155,13 @@ export function parseNote(source: string): NoteBlock[] {
   };
 
   for (const line of lines) {
-    // Un carrousel avale tout jusqu'à `::end`, y compris les lignes vides.
+    // Un bloc de références avale tout jusqu'à `::end`, y compris les lignes vides.
     if (refs !== null) {
       if (REFS_CLOSE_RE.test(line)) {
-        current.push({ kind: 'refs', images: collectImages(refs) });
+        current.push({ kind: 'refs', images: collectImages(refs.lines), ...refs.options });
         refs = null;
       } else {
-        refs.push(line);
+        refs.lines.push(line);
       }
       continue;
     }
@@ -129,6 +182,13 @@ export function parseNote(source: string): NoteBlock[] {
       continue;
     }
 
+    if (SECTION_END_RE.test(line)) {
+      flush();
+      // Refermer hors de toute section ne casse rien : on est déjà à la racine.
+      current = root;
+      continue;
+    }
+
     const progress = PROGRESS_RE.exec(line);
     if (progress) {
       flush();
@@ -143,9 +203,10 @@ export function parseNote(source: string): NoteBlock[] {
       continue;
     }
 
-    if (REFS_OPEN_RE.test(line)) {
+    const refsOpen = REFS_OPEN_RE.exec(line);
+    if (refsOpen) {
       flush();
-      refs = [];
+      refs = { lines: [], options: parseRefsOptions(refsOpen[1] ?? '') };
       continue;
     }
 
@@ -154,19 +215,72 @@ export function parseNote(source: string): NoteBlock[] {
 
   // Un `::refs` jamais fermé rend tout de même ses images : perdre le contenu d'un brief
   // parce qu'une ligne manque serait le pire des choix.
-  if (refs !== null) current.push({ kind: 'refs', images: collectImages(refs) });
+  if (refs !== null) current.push({ kind: 'refs', images: collectImages(refs.lines), ...refs.options });
   flush();
   return root;
 }
 
-/** Les directives insérables par la barre d'outils, et ce qu'elles écrivent. */
-export const NOTE_SNIPPETS = {
-  section: '\n## Titre\n\n',
-  collapsed: '\n##- Titre replié\n\n',
-  progress: '\n::progress Animation 50\n',
-  small: '\n::small Précision\n',
-  divider: '\n---\n\n',
-  refs: '\n::refs\n![Référence](https://)\n::end\n\n',
-} as const;
+/**
+ * Préfixe des images déposées dans la fiche elle-même (miroir de `EntityNoteImageService`).
+ *
+ * Ce qui est écrit dans le markdown est la **clé** de stockage, jamais une URL : une URL
+ * présignée expire en une heure, un brief se relit six mois plus tard.
+ */
+export const NOTE_IMAGE_PREFIX = 'note-images/';
 
-export type SnippetKind = keyof typeof NOTE_SNIPPETS;
+export const isNoteImageKey = (src: string): boolean => src.startsWith(NOTE_IMAGE_PREFIX);
+
+/** Les clés d'images portées par une fiche — ce qu'il faut faire résoudre pour l'afficher. */
+export function noteImageKeys(source: string): string[] {
+  const keys = new Set<string>();
+  for (const match of source.matchAll(IMAGE_RE)) {
+    const src = match[2] ?? '';
+    if (isNoteImageKey(src)) keys.add(src);
+  }
+  return [...keys];
+}
+
+// ───────────────────────── Disposition d'une image seule ─────────────────────────
+
+/**
+ * Où se pose une image isolée dans le fil.
+ *
+ * Le markdown ne sait pas le dire, mais son **titre** est un champ libre : `![a](src
+ * "align=left width=40")` reste du markdown standard, lisible ailleurs, et se dégrade en
+ * simple image chez qui l'ignore. Inventer une directive `::image` aurait rendu la fiche
+ * illisible hors de ReView pour le seul plaisir d'une syntaxe propre.
+ */
+export const IMAGE_ALIGNS = ['full', 'center', 'left', 'right'] as const;
+export type ImageAlign = (typeof IMAGE_ALIGNS)[number];
+
+export interface ImageOptions {
+  align: ImageAlign;
+  /** Largeur en pourcentage de la colonne de texte. */
+  width: number;
+}
+
+export const IMAGE_DEFAULTS: ImageOptions = { align: 'full', width: 100 };
+export const IMAGE_WIDTH = { min: 10, max: 100 } as const;
+
+/** Une ligne qui ne porte qu'une image — c'est ce qui en fait un bloc, et non du texte. */
+export const IMAGE_LINE_RE = /^!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"([^"]*)")?\s*\)$/;
+
+/** Lit `align=left width=40` ; ce qui manque retombe sur la pleine largeur. */
+export function parseImageOptions(raw: string | undefined): ImageOptions {
+  const out = { ...IMAGE_DEFAULTS };
+  for (const token of (raw ?? '').trim().split(/\s+/)) {
+    const align = /^align=(\w+)$/i.exec(token);
+    if (align && (IMAGE_ALIGNS as readonly string[]).includes(align[1].toLowerCase())) {
+      out.align = align[1].toLowerCase() as ImageAlign;
+    }
+    const width = /^width=(\d+)$/i.exec(token);
+    if (width) out.width = clamp(Number(width[1]), IMAGE_WIDTH.min, IMAGE_WIDTH.max);
+  }
+  return out;
+}
+
+/** L'inverse : rien à écrire pour une image pleine largeur, qui est le cas courant. */
+export function formatImageOptions(options: ImageOptions): string {
+  if (options.align === IMAGE_DEFAULTS.align && options.width === IMAGE_DEFAULTS.width) return '';
+  return `align=${options.align} width=${Math.round(options.width)}`;
+}

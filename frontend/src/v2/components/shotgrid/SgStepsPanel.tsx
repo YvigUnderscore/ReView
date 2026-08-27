@@ -91,6 +91,7 @@ export default function SgStepsPanel({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('shotgrid.steps.search')}
+            aria-label={t('shotgrid.steps.search')}
             className="w-full bg-transparent py-1 text-sm"
           />
         </label>

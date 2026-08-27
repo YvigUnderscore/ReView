@@ -103,6 +103,7 @@ export default function VisibilityRuleForm({
               required
               value={pattern}
               placeholder={t(MATCH_EXAMPLE[matchType])}
+              aria-label={t(MATCH_EXAMPLE[matchType])}
               onChange={(e) => setPattern(e.target.value)}
               className="font-mono"
             />
@@ -119,6 +120,7 @@ export default function VisibilityRuleForm({
             <Input
               value={reason}
               placeholder={t('visibility.form.reasonHint')}
+              aria-label={t('visibility.form.reasonHint')}
               onChange={(e) => setReason(e.target.value)}
             />
           </div>

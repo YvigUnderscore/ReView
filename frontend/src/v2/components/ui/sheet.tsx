@@ -26,6 +26,9 @@ const SheetContent = forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         aria-describedby={undefined}
+        // Même règle que la modale : une fenêtre du système qui prend le focus (sélecteur
+        // de fichiers) n'est pas un clic dehors, et ne doit pas refermer le panneau.
+        onFocusOutside={(e) => e.preventDefault()}
         className={cn(
           'fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-border bg-card text-card-foreground shadow-xl outline-none',
           'data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right duration-200',

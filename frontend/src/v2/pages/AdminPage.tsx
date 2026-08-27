@@ -17,7 +17,6 @@ import {
   ListChecks,
   Workflow,
   FolderCog,
-  History,
   LayoutDashboard,
   LogIn,
   Mail,
@@ -62,7 +61,6 @@ import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
 import TrashTab from './admin/TrashTab';
 import RetentionTab from './admin/RetentionTab';
-import AuditTab from './admin/AuditTab';
 import { useT, type MessageKey } from '../i18n';
 import ShotgridSitesTab from './admin/ShotgridSitesTab';
 
@@ -224,7 +222,6 @@ const sections = (t: Tr) =>
       icon: CalendarClock,
       Component: RetentionTab,
     },
-    { key: 'audit', group: 'maintenance', label: t('admin.tab.audit'), icon: History, Component: AuditTab },
     {
       key: 'media-access',
       group: 'maintenance',
@@ -249,7 +246,15 @@ export default function AdminPage() {
       </PageShell>
     );
   }
-  const active = sections(t).find((s) => s.key === section) ?? sections(t)[0];
+  /*
+   * `/admin/audit` a disparu : il rendait `/api/studio/audit`, exactement comme « Activité »,
+   * mais sans pagination, sans auteur et sans lien vers les entités — deux sections
+   * concurrentes pour le même journal, dans deux groupes différents, et l'administrateur
+   * qui cherchait « qui a changé ce réglage » trouvait la mauvaise selon le groupe ouvert.
+   * L'adresse continue de fonctionner : les liens et signets existants aboutissent.
+   */
+  const resolved = section === 'audit' ? 'activity' : section;
+  const active = sections(t).find((s) => s.key === resolved) ?? sections(t)[0];
   const Detail = 'Detail' in active ? active.Detail : undefined;
   const Active = id && Detail ? Detail : active.Component;
 

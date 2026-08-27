@@ -73,6 +73,7 @@ export default function PlaylistCatalog({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t('playlist.catalog.search')}
+              aria-label={t('playlist.catalog.search')}
               className="h-9 w-full pl-8"
             />
           </div>

@@ -37,6 +37,7 @@ export default function ProjectsAdminTab() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t('project.searchPlaceholder')}
+            aria-label={t('project.searchPlaceholder')}
             className="pl-8"
           />
         </div>

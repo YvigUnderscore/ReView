@@ -184,7 +184,7 @@ export default function OcioTab() {
                       >
                         <Download size={14} />
                         {a.installed
-                          ? t('ocio.installed')
+                          ? t('ocio.installedBadge')
                           : busyAsset === a.assetName
                             ? t('common.installing')
                             : t('common.install')}

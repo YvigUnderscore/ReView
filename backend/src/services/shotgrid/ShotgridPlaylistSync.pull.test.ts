@@ -105,4 +105,50 @@ describe('pullPlaylists', () => {
     expect(touch).toHaveBeenCalledWith(ctx, 'playlist', 60);
     expect(journal.count).toHaveBeenCalledWith('playlists', 'created');
   });
+
+  /**
+   * Le lien survit à la playlist qu'il désigne : quelqu'un l'a supprimée ici, ShotGrid la
+   * renvoie, et la création butait alors sur la contrainte `(projectId, name)` — la passe
+   * entière s'arrêtait sur une séance effacée des mois plus tôt.
+   */
+  it('retombe sur le nom quand le lien désigne une séance supprimée', async () => {
+    links.mapSgToLocal.mockImplementation(async (_c: number, type: string) =>
+      type === 'version' ? new Map([[900, { localId: 31 }]]) : new Map([[88, { localId: 55 }]]),
+    );
+    playlist.findUnique.mockImplementation(async (args: { where: Record<string, unknown> }) =>
+      'id' in args.where ? null : { id: 61, name: 'Dailies 12/06' },
+    );
+    playlist.update.mockResolvedValue({ id: 61 });
+
+    const { ctx } = contextWith([sgPlaylist(88)]);
+    await pullPlaylists(ctx, { onlySgIds: [88] });
+
+    expect(playlist.create).not.toHaveBeenCalled();
+    expect(playlist.update).toHaveBeenCalledWith({ where: { id: 61 }, data: { name: 'Dailies 12/06' } });
+  });
+
+  /**
+   * Renommage vers un nom déjà pris localement : on garde le nom actuel et on signale le
+   * conflit. Fusionner deux séances ou en écraser une ne se décide pas tout seul.
+   */
+  it('ne renomme pas vers un nom déjà porté par une autre séance', async () => {
+    links.mapSgToLocal.mockImplementation(async (_c: number, type: string) =>
+      type === 'version' ? new Map([[900, { localId: 31 }]]) : new Map([[88, { localId: 55 }]]),
+    );
+    playlist.findUnique.mockImplementation(async (args: { where: Record<string, unknown> }) =>
+      'id' in args.where ? { id: 55, name: 'Ancien nom' } : { id: 61, name: 'Dailies 12/06' },
+    );
+    playlist.update.mockResolvedValue({ id: 55 });
+
+    const { ctx, journal } = contextWith([sgPlaylist(88)]);
+    await pullPlaylists(ctx, { onlySgIds: [88] });
+
+    expect(playlist.update).toHaveBeenCalledWith({ where: { id: 55 }, data: {} });
+    expect(journal.log).toHaveBeenCalledWith(
+      'conflict',
+      'shotgrid.log.playlistNameTaken',
+      { name: 'Dailies 12/06' },
+      expect.objectContaining({ localType: 'playlist', localId: 55 }),
+    );
+  });
 });

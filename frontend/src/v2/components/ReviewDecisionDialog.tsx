@@ -125,6 +125,7 @@ export default function ReviewDecisionDialog({
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder={t('decision.comment.placeholder')}
+              aria-label={t('decision.comment.placeholder')}
               rows={2}
             />
             <div className="flex justify-end">

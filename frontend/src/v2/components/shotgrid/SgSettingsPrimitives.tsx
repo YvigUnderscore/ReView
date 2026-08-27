@@ -135,6 +135,7 @@ export function SettingNumber({
       value={value ?? ''}
       disabled={disabled}
       placeholder={placeholder}
+      aria-label={placeholder}
       onChange={(e) => onChange(e.target.value)}
       className={`${width} rounded-md border border-border bg-background px-2 py-1 text-sm`}
     />

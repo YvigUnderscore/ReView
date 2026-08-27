@@ -15,6 +15,7 @@ import {
 } from '../lib/entityFilters';
 import type { UserRef } from '../types/api';
 import { useT } from '../i18n';
+import { titleCase } from '../lib/entityTypeLabels';
 
 /**
  * Barre de filtres partagée des listes de projet (C4) : kanban, Shots, Assets.
@@ -43,6 +44,7 @@ export default function EntityFilters({
   sequences,
   departments,
   types,
+  typeLabel,
   searchPlaceholder,
 }: {
   /** Portée des vues sauvegardées, ex. `kanban:12` — par projet et par compte. */
@@ -54,6 +56,8 @@ export default function EntityFilters({
   sequences?: FilterOption[];
   departments?: FilterOption[];
   types?: readonly string[];
+  /** Libellé lisible d'un type — sans lui, l'enum s'affichait brut (`CHARACTER`, `LOOKDEV`). */
+  typeLabel?: (value: string) => string;
   searchPlaceholder?: string;
 }) {
   const t = useT();
@@ -71,6 +75,7 @@ export default function EntityFilters({
           value={value.text}
           onChange={(e) => set({ text: e.target.value })}
           placeholder={searchPlaceholder ?? t('filters.search')}
+          aria-label={searchPlaceholder ?? t('filters.search')}
           className="h-9 w-48 pl-8"
         />
       </div>
@@ -132,7 +137,7 @@ export default function EntityFilters({
           <option value="">{t('task.allTypes')}</option>
           {types.map((ty) => (
             <option key={ty} value={ty}>
-              {ty}
+              {typeLabel ? typeLabel(ty) : titleCase(ty)}
             </option>
           ))}
         </Select>

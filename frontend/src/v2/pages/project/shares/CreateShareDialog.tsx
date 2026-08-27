@@ -148,7 +148,7 @@ export default function CreateShareDialog({
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>
-              {t('common.undo')}
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={busy}>
               {t('shares.create')}

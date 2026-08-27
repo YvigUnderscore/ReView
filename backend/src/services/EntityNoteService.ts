@@ -51,7 +51,7 @@ function targetOf(kind: NoteKind, id: number) {
 }
 
 /** Le projet de l'entité, et son existence. Une fiche sans projet ne serait lisible nulle part. */
-async function resolveProject(kind: NoteKind, id: number): Promise<number> {
+export async function resolveProject(kind: NoteKind, id: number): Promise<number> {
   const select = { projectId: true };
   const row =
     kind === 'episode'

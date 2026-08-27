@@ -21,6 +21,10 @@ const Checkbox = forwardRef<
       'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background/80 text-primary-foreground shadow-sm outline-none transition-colors',
       'focus-visible:ring-2 focus-visible:ring-ring',
       'data-[state=checked]:border-primary data-[state=checked]:bg-primary',
+      /* Zone de saisie de 24 px (WCAG 2.5.8) autour d'une case qui garde son dessin de
+         16 px : un pseudo-élément plutôt qu'une marge négative, pour ne pas déplacer la
+         case dans les grilles serrées où elle est posée. */
+      'relative before:absolute before:left-1/2 before:top-1/2 before:h-6 before:w-6 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[""]',
       className,
     )}
     {...props}

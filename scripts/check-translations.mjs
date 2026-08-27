@@ -168,6 +168,31 @@ export function localeUnionCodes(source) {
 
 const readJson = async (file) => JSON.parse(await readFile(file, 'utf8'));
 
+/**
+ * Clés déclarées deux fois dans le même catalogue.
+ *
+ * `JSON.parse` ne peut pas les voir : la dernière occurrence écrase silencieusement la
+ * première. Treize clés étaient dans ce cas, et huit d'entre elles remplaçaient un libellé
+ * par sa propre description — l'écran affichait « (marqueurs posés aux coupes…) » là où il
+ * devait lire « Détection de plans ». Seule une lecture ligne à ligne les débusque.
+ *
+ * Ne regarde que les clés de premier niveau (deux espaces d'indentation) : les formes
+ * plurielles imbriquées (`one`, `other`…) se répètent légitimement d'une clé à l'autre.
+ */
+export function duplicateKeys(source) {
+  const seen = new Set();
+  const dupes = [];
+  const lines = source.split('\n');
+  for (const [index, line] of lines.entries()) {
+    const match = /^ {2}"([^"]+)"\s*:/.exec(line);
+    if (!match) continue;
+    const key = match[1];
+    if (seen.has(key)) dupes.push({ key, line: index + 1 });
+    else seen.add(key);
+  }
+  return dupes;
+}
+
 async function checkSet(set, glossary, reference) {
   const dir = path.join(repoRoot, set.dir);
   const registry = await readJson(path.join(dir, 'locales.json'));
@@ -200,6 +225,11 @@ async function checkSet(set, glossary, reference) {
     const code = file.replace(/\.json$/, '');
     if (!declared.has(code))
       errors.push(`${set.name}: messages/${file} ne correspond à aucune langue du registre`);
+    for (const { key, line } of duplicateKeys(await readFile(path.join(messagesDir, file), 'utf8'))) {
+      errors.push(
+        `${set.name}: messages/${file}:${line} — la clé « ${key} » est déclarée deux fois ; la seconde écrase la première en silence`,
+      );
+    }
   }
 
   const base = await readJson(path.join(messagesDir, `${registry.base}.json`));

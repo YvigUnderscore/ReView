@@ -89,6 +89,7 @@ export default function CommentsTab() {
               setPage(1);
             }}
             placeholder={t('comments.search.placeholder')}
+            aria-label={t('comments.search.placeholder')}
             className="pl-8"
           />
         </div>

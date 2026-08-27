@@ -7,6 +7,7 @@ import { QUEUE_NAMES, type MaintenanceJobData } from '../services/JobService';
 import { logger } from '../lib/logger';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { purgeExpiredTrash } from '../lib/trash';
+import { purgeStaleUploads } from '../lib/staleUploads';
 import { purgeObsoleteDerived } from '../lib/derivedPurge';
 import { purgeIdempotencyRecords } from '../lib/idempotency';
 import { sweepRetention } from '../lib/retention';
@@ -38,6 +39,10 @@ async function runPurge(): Promise<void> {
   if (purged > 0) logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
   // Purge des dérivés obsolètes (37.H) — no-op si désactivée dans l'admin.
   await purgeObsoleteDerived();
+  // Envois abandonnés : sans ce passage, cinq accidents suffisaient à bloquer un compte.
+  const uploads = await purgeStaleUploads();
+  if (uploads.purged > 0)
+    logger.info(`[Uploads] purge automatique : ${uploads.purged} envoi(s) abandonné(s) nettoyé(s).`);
   const keys = await purgeIdempotencyRecords();
   if (keys > 0) logger.info(`[API v1] purge : ${keys} clé(s) d'idempotence.`);
   // Journalise lui-même son résultat (et le consigne dans l'audit quand il a supprimé).

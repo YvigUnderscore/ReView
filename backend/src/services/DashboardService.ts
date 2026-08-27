@@ -131,6 +131,11 @@ export async function getDashboard(user: SessionUser) {
     status: MediaStatus.READY,
     version: versionInAccess(access),
   };
+  // Un CLIENT ne voit que les notes qui lui sont destinées — même règle que le fil de
+  // review, le partage public, la recherche et l'export. Sans ce filtre, les notes internes
+  // remontaient jusque dans « Dernières reviews » de son Accueil.
+  const commentWhere: Prisma.CommentWhereInput =
+    user.role === Role.CLIENT ? { media: mediaWhere, isVisibleToClient: true } : { media: mediaWhere };
   // Fenêtre des tendances : ce qui s'est ajouté sur les 7 derniers jours.
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
   // Tâche vivante rattachée à un projet accessible (les deux chemins de rattachement).
@@ -163,7 +168,7 @@ export async function getDashboard(user: SessionUser) {
   ] = await Promise.all([
     // Dernier commentaire par média (distinct après tri desc = le plus récent de chacun).
     prisma.comment.findMany({
-      where: { media: mediaWhere },
+      where: commentWhere,
       orderBy: { createdAt: 'desc' },
       distinct: ['mediaObjectId'],
       take: 6,
@@ -211,10 +216,10 @@ export async function getDashboard(user: SessionUser) {
     }),
     prisma.project.count({ where: access }),
     prisma.mediaObject.count({ where: mediaWhere }),
-    prisma.comment.count({ where: { media: mediaWhere } }),
+    prisma.comment.count({ where: commentWhere }),
     // Tendances 7 jours — mêmes périmètres que les compteurs globaux.
     prisma.mediaObject.count({ where: { ...mediaWhere, createdAt: { gte: weekAgo } } }),
-    prisma.comment.count({ where: { media: mediaWhere, createdAt: { gte: weekAgo } } }),
+    prisma.comment.count({ where: { ...commentWhere, createdAt: { gte: weekAgo } } }),
     // Mes retakes/rejets : ce qui me demande une action immédiate.
     prisma.task.count({ where: { assigneeId: user.id, ...TASK_BLOCKED_FILTER } }),
     // Verdicts attendus dans mon périmètre (tâches en attente de review).
@@ -233,7 +238,12 @@ export async function getDashboard(user: SessionUser) {
     taskCountsByProject(recentProjectRows.map((p) => p.id)),
     prisma.comment.groupBy({
       by: ['mediaObjectId'],
-      where: { mediaObjectId: { in: lastComments.map((c) => c.media.id) } },
+      // Le compte affiché suit le même périmètre que ce que le lecteur peut ouvrir :
+      // annoncer « 12 notes » à un client qui n'en verra que 3 serait faux.
+      where: {
+        mediaObjectId: { in: lastComments.map((c) => c.media.id) },
+        ...(user.role === Role.CLIENT ? { isVisibleToClient: true } : {}),
+      },
       _count: { _all: true },
     }),
   ]);

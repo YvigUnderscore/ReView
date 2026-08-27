@@ -83,7 +83,7 @@ export default function ReviewStatusForm({
           </label>
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={onClose}>
-              {t('common.undo')}
+              {t('common.cancel')}
             </Button>
             <Button size="sm" onClick={submit} disabled={saving || !name.trim()}>
               {t('common.save')}

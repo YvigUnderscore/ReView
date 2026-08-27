@@ -78,6 +78,33 @@ describe('contraste des tokens (WCAG 1.4.11 et 1.4.3)', () => {
       expect(contrast(theme.foreground, theme.background)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme['muted-foreground'], theme.background)).toBeGreaterThanOrEqual(4.5);
     });
+
+    /**
+     * Le garde-fou ne regardait ni l'anneau de focus, ni l'accent, ni la couleur d'alerte —
+     * c'est-à-dire précisément les trois tokens qui se dégradaient. Mesuré sur l'instance
+     * de démonstration : `--ring` tombait à 1,93:1 en thème clair dès qu'un administrateur
+     * posait sa propre couleur d'accent, rendant le focus clavier invisible.
+     */
+    it(`thème ${name} : l'anneau de focus tient 3:1 sur toutes les surfaces`, () => {
+      for (const surface of SURFACES) {
+        expect(contrast(theme.ring, theme[surface]), `--ring sur --${surface}`).toBeGreaterThanOrEqual(3);
+      }
+    });
+
+    it(`thème ${name} : l'accent tient 3:1 sur le fond, et son encre 4,5:1 sur lui`, () => {
+      expect(contrast(theme.primary, theme.background), '--primary sur --background').toBeGreaterThanOrEqual(
+        3,
+      );
+      expect(
+        contrast(theme['primary-foreground'], theme.primary),
+        '--primary-foreground sur --primary',
+      ).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it(`thème ${name} : la couleur d'alerte reste lisible`, () => {
+      expect(contrast(theme.destructive, theme.background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(theme.destructive, theme.card)).toBeGreaterThanOrEqual(4.5);
+    });
   }
 });
 

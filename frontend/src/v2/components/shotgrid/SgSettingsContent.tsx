@@ -99,6 +99,7 @@ export default function SgSettingsContent({
             width="w-28"
             disabled={disabled}
             placeholder={t('shotgrid.settings.noLimit')}
+            aria-label={t('shotgrid.settings.noLimit')}
             onChange={(v) => onPatch({ media: { ...s.media, maxSizeMo: v ? Number(v) : null } })}
           />
         </Row>

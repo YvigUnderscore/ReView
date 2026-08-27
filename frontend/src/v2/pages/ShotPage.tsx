@@ -25,6 +25,8 @@ import { entriesOf } from '../lib/menuSpec';
 import type { MenuEntry } from '../lib/menuSpec';
 import { useT } from '../i18n';
 import type { AssetOverview } from '../types/api';
+import EntityUnavailable from '../components/EntityUnavailable';
+import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 /** Détail d'un plan tel que `GET /api/shots/:id` le renvoie. */
 interface ShotDetail {
@@ -131,6 +133,13 @@ export default function ShotPage() {
     ...(playlistEntry ? [playlistEntry] : []),
   ];
 
+  // Un identifiant inexploitable ou une entité absente rendaient jusqu'ici la coquille
+  // complète, avec des actions actives sur un sujet qui n'existe pas.
+  if (isBadId(shotId) || (shotQ.isError && isMissingOrForbidden(shotQ.error)))
+    return <EntityUnavailable kind="shot" error={isBadId(shotId) ? undefined : shotQ.error} />;
+  if (shotQ.isError)
+    return <EntityUnavailable kind="shot" error={shotQ.error} onRetry={() => void shotQ.refetch()} />;
+
   return (
     <EntityWorkPage
       kind="shot"
@@ -151,7 +160,6 @@ export default function ShotPage() {
         )
       }
     >
-      {shotQ.error && <p className="mb-4 text-sm text-destructive">{shotQ.error.message}</p>}
       {shot?.description && (
         <p className="mb-5 max-w-3xl whitespace-pre-line text-sm text-muted-foreground">{shot.description}</p>
       )}

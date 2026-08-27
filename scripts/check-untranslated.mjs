@@ -150,6 +150,18 @@ const ALLOWED = new Set(
     'A/B',
     'PiP',
     'QR',
+    // Noms de département VFX : vocabulaire de production, écrit en anglais dans tous les
+    // studios — c'est d'ailleurs ainsi que le studio les nomme dans ses propres
+    // départements (« Look Dev », « Modeling »). Les traduire ferait diverger l'enum de
+    // repli du référentiel réel.
+    'Animation',
+    'Compositing',
+    'Lighting',
+    'Modeling',
+    'Rigging',
+    'Look',
+    'Dev',
+    'Layout',
     // unités
     'px',
     'fps',

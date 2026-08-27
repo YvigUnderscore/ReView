@@ -101,6 +101,12 @@ export const initSocket = (server: HttpServer): SocketServer => {
   // Événements du worker FFmpeg (34.F, redis pub/sub) : échelle HLS progressive —
   // la review recharge son master (nouvelles qualités), le projet rafraîchit ses cartes.
   subscribeWorkerEvents((e) => {
+    if (e.type === 'project') {
+      // Relais des émissions du worker vers la room d'un projet : lui n'a pas de serveur
+      // socket, ses `emitToProject` directs ne partaient nulle part.
+      emitToProject(e.projectId, e.event, e.payload);
+      return;
+    }
     if (e.type === 'markers') {
       // Scene detection (34.H) : marqueurs « Plan n » posés → la review recharge sa liste.
       emitToReview(e.mediaId, 'markers:changed', { mediaId: e.mediaId });
@@ -390,6 +396,16 @@ export const initSocket = (server: HttpServer): SocketServer => {
 export const emitToUser = (userId: number, event: string, data: unknown): void => {
   io?.to(`user_${userId}`).emit(event, data);
 };
+
+/**
+ * Sommes-nous dans un process sans serveur socket ?
+ *
+ * `io` n'est renseigné que par `initSocket`, appelé au démarrage du serveur HTTP. Dans le
+ * process worker il reste `undefined`, et toute émission y est un no-op silencieux : c'est
+ * ce qui rendait le temps réel muet après une synchronisation ShotGrid. Les appelants qui
+ * peuvent tourner des deux côtés s'en servent pour passer par le canal Redis.
+ */
+export const isWorkerProcess = (): boolean => io === undefined;
 
 export const emitToProject = (projectId: number, event: string, data: unknown): void => {
   io?.to(`project_${projectId}`).emit(event, data);

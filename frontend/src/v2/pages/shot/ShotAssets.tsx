@@ -11,6 +11,7 @@ import { useAssetsQuery } from '../../lib/queries';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { ASSET_TYPES, type AssetRef } from '../project/projectTypes';
 import { useT } from '../../i18n';
+import { assetTypeLabel } from '../../lib/entityTypeLabels';
 
 /**
  * Assets rattachés à un plan : lister, détacher, rattacher un existant, créer + rattacher.
@@ -137,6 +138,7 @@ export default function ShotAssets({
               <input
                 className="w-40 rounded border border-input bg-background px-2 py-1 text-xs"
                 placeholder={tr('assets.name')}
+                aria-label={tr('assets.name')}
                 value={creating.name}
                 onChange={(e) => setCreating((c) => ({ ...c, name: e.target.value }))}
               />
@@ -147,7 +149,7 @@ export default function ShotAssets({
               >
                 {ASSET_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {assetTypeLabel(tr, t)}
                   </option>
                 ))}
               </select>

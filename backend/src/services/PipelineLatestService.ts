@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { pickMostAdvanced, groupByDepartment, type DepartmentGroup } from '../lib/pipelineOrder';
 import { resolveProjectSettingsById, type Department } from '../lib/projectSettings';
+import { ASSIGNEE_SELECT, toAssigneeView, type AssigneeView } from './EntityAssigneeService';
 import { storage } from './StorageService';
 
 /**
@@ -212,6 +213,14 @@ export interface AssetTreeTask {
   startDate: Date | null;
   dueDate: Date | null;
   department: string | null;
+  /**
+   * Qui en répond.
+   *
+   * L'arbre ne le disait pas : la carte d'une tâche montrait son statut et ses versions,
+   * mais pas la personne — il fallait ouvrir la tâche pour l'apprendre, et rouvrir chacune
+   * pour savoir qui manquait sur le plan.
+   */
+  assignee: AssigneeView | null;
   versions: AssetTreeVersion[];
 }
 
@@ -277,6 +286,7 @@ async function entityTree(
         startDate: true,
         dueDate: true,
         department: true,
+        assignee: { select: ASSIGNEE_SELECT },
         versions: {
           where: { deletedAt: null },
           orderBy: { createdAt: 'desc' },
@@ -309,17 +319,20 @@ async function entityTree(
     media: v.media,
   });
 
-  const entries: AssetTreeTask[] = tasks.map((t) => ({
-    id: t.id,
-    name: t.name,
-    type: t.type,
-    status: t.status,
-    pipelineStatusId: t.pipelineStatusId,
-    startDate: t.startDate,
-    dueDate: t.dueDate,
-    department: t.department,
-    versions: t.versions.map(toVersion),
-  }));
+  const entries: AssetTreeTask[] = await Promise.all(
+    tasks.map(async (t) => ({
+      id: t.id,
+      name: t.name,
+      type: t.type,
+      status: t.status,
+      pipelineStatusId: t.pipelineStatusId,
+      startDate: t.startDate,
+      dueDate: t.dueDate,
+      department: t.department,
+      assignee: t.assignee ? await toAssigneeView(t.assignee) : null,
+      versions: t.versions.map(toVersion),
+    })),
+  );
   if (looseVersions.length > 0) {
     entries.push({
       id: null,
@@ -330,6 +343,7 @@ async function entityTree(
       dueDate: null,
       status: null,
       department: null,
+      assignee: null,
       versions: looseVersions.map(toVersion),
     });
   }

@@ -24,6 +24,8 @@ import { useT } from '../i18n';
 import EntityContextMenu from '../components/ui/entity-menu';
 import { useStatusMenu } from '../lib/useStatusMenu';
 import { entriesOf } from '../lib/menuSpec';
+import EntityUnavailable from '../components/EntityUnavailable';
+import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 export default function TaskPage() {
   const t = useT();
@@ -65,6 +67,13 @@ export default function TaskPage() {
   const menuEntries = entriesOf(
     task ? statusEntry(task, { canEdit: canPublish || task.assignee?.id === userId }) : null,
   );
+
+  // Après tous les hooks : un `/tasks/abc` donnait « Tâche #NaN » avec une zone de dépôt
+  // active, et un identifiant inconnu rendait la page comme si la tâche existait.
+  if (isBadId(taskId) || (taskQ.isError && isMissingOrForbidden(taskQ.error)))
+    return <EntityUnavailable kind="task" error={isBadId(taskId) ? undefined : taskQ.error} />;
+  if (taskQ.isError)
+    return <EntityUnavailable kind="task" error={taskQ.error} onRetry={() => void taskQ.refetch()} />;
 
   return (
     <PageShell

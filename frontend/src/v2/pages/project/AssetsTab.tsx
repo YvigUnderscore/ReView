@@ -36,6 +36,7 @@ import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
+import { assetTypeLabel } from '../../lib/entityTypeLabels';
 
 /**
  * Onglet Assets réutilisables : création, cartes, assignation, filtres partagés (C4).
@@ -133,6 +134,7 @@ export default function AssetsTab({
             onChange={setFilters}
             departments={departments.map((d) => ({ value: String(d.id), label: d.name }))}
             types={ASSET_TYPES}
+            typeLabel={(value) => assetTypeLabel(t, value)}
             searchPlaceholder={t('assets.searchPlaceholder')}
           />
           {canManage && (

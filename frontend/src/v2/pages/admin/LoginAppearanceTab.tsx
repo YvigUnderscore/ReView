@@ -186,6 +186,7 @@ export default function LoginAppearanceTab() {
               className="flex-1 py-1 text-xs"
               value={draft.tagline}
               placeholder={t('auth.tagline')}
+              aria-label={t('auth.tagline')}
               onChange={(e) => set({ tagline: e.target.value })}
             />
           </Row>

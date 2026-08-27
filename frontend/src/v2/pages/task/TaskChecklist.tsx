@@ -84,6 +84,7 @@ export default function TaskChecklist({
           <input
             className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
             placeholder={t('kanban.addItem')}
+            aria-label={t('kanban.addItem')}
             value={adding}
             onChange={(e) => setAdding(e.target.value)}
           />

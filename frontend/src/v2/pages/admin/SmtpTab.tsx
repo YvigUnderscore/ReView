@@ -79,6 +79,7 @@ export default function SmtpTab() {
             value={v.host ?? ''}
             onChange={(e) => setF((s) => ({ ...s, host: e.target.value }))}
             placeholder="smtp.example.com"
+            aria-label="smtp.example.com"
           />
         </Row>
         <Row label={t('smtp.port')}>
@@ -105,6 +106,7 @@ export default function SmtpTab() {
             type="password"
             value={f.password ?? ''}
             placeholder={data.hasPassword ? t('smtp.unchanged') : t('smtp.unset')}
+            aria-label={data.hasPassword ? t('smtp.unchanged') : t('smtp.unset')}
             onChange={(e) => setF((s) => ({ ...s, password: e.target.value }))}
           />
         </Row>
@@ -113,6 +115,7 @@ export default function SmtpTab() {
             value={v.from ?? ''}
             onChange={(e) => setF((s) => ({ ...s, from: e.target.value }))}
             placeholder={t('smtp.fromPlaceholder')}
+            aria-label={t('smtp.fromPlaceholder')}
           />
         </Row>
         <div className="pt-1">
@@ -129,6 +132,7 @@ export default function SmtpTab() {
             type="email"
             value={testTo}
             placeholder={myEmail}
+            aria-label={myEmail}
             onChange={(e) => setTestTo(e.target.value)}
           />
         </label>

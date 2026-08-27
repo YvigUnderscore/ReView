@@ -123,6 +123,7 @@ export default function WebhooksPanel() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://exemple.com/hooks/review"
+          aria-label="https://exemple.com/hooks/review"
           maxLength={500}
         />
         <div className="flex flex-wrap items-center gap-3">

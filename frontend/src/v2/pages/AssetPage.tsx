@@ -24,6 +24,8 @@ import { useProjectRole } from '../lib/useProjectRole';
 import type { MenuEntry } from '../lib/menuSpec';
 import type { AssetDetail, AssetOverview } from '../types/api';
 import { useT } from '../i18n';
+import EntityUnavailable from '../components/EntityUnavailable';
+import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 /**
  * L'asset, comme page — même coquille qu'un plan et qu'une séquence (C3).
@@ -134,6 +136,13 @@ export default function AssetPage() {
         ]
       : []),
   ];
+
+  // Un identifiant inexploitable ou une entité absente rendaient jusqu'ici la coquille
+  // complète, avec des actions actives sur un sujet qui n'existe pas.
+  if (isBadId(assetId) || (assetQ.isError && isMissingOrForbidden(assetQ.error)))
+    return <EntityUnavailable kind="asset" error={isBadId(assetId) ? undefined : assetQ.error} />;
+  if (assetQ.isError)
+    return <EntityUnavailable kind="asset" error={assetQ.error} onRetry={() => void assetQ.refetch()} />;
 
   return (
     <EntityWorkPage

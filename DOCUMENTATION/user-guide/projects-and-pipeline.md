@@ -136,6 +136,14 @@ Three people can never receive work, and the server says so instead of failing s
 **service account** (a machine identity does not open Maya), a **`CLIENT`** account, and
 anyone who is **not a member of the project**. None of the three is even offered in the menu.
 
+### On the task itself
+
+In front of a shot or an asset page you are not looking for a department — it is already on
+screen, one card per task. **Right-click a task card → Assign → *person***, and the card shows
+the photograph of whoever is on it. The same menu carries **Departments**, which moves the task
+to another stage of the pipe: that is what decides its kanban column, its rank in the pipe and
+who may write on it, so it sits next to the assignment rather than in a settings panel.
+
 ### People on an entity, alongside task assignees
 
 Task assignment is the work; it stays. But it cannot say "Bruno follows this sequence" when
@@ -361,36 +369,19 @@ move it to the trash. Right-click the sequence **page** for its status, its sett
 
 ## The entity header: team and brief
 
-Sequence, shot and asset pages open with a folded **Team and brief** panel. Folded, it already
-shows the faces — that is what you come to it for. Unfolded, it holds two things:
+Sequence, shot and asset pages open with a single **Team and brief** line, showing the faces of
+everyone working in the scope — that is what you come to it for. Clicking it opens a window
+holding two things:
 
 - **Who works on it** — the scope as described above, each person tagged with why they are
   there (responsible for the element, for something inside it, or assigned to a task).
-- **The brief** — a markdown note that belongs to ReView. `description` comes from ShotGrid
-  and goes back there, and is often read-only here; the brief is the opposite. Nobody
-  overwrites it, and it is where the actual instructions live.
+- **The brief** — the note that belongs to ReView. `description` comes from ShotGrid and goes
+  back there, and is often read-only here; the brief is the opposite. Nobody overwrites it,
+  and it is where the actual instructions live.
 
-The brief is plain markdown plus four things markdown cannot say, written out rather than in
-invented syntax:
-
-| Write | You get |
-|-------|---------|
-| `## Title` | A section, unfolded |
-| `##- Title` | A section, folded — for the long half of a brief |
-| `::progress Animation 60` | A gauge, readable without reading it |
-| `::small Delivered 12 March` | A sub-text, for what accompanies without counting |
-| `::refs` … `::end` | A carousel of the images between them, with a *See all* board |
-| `---` | A divider (plain markdown) |
-
-Everything else is ordinary markdown, rendered by the same engine as this documentation —
-raw HTML is escaped and executable link protocols are stripped, so a paste from any website
-is safe.
-
-**Templates.** A shot brief has the same shape from one shot to the next. Save the current
-one under a name — studio-wide or project-only — and apply it in two clicks on the next shot.
-Applying a template *replaces* the brief: merging two markdown structures would produce
-something nobody wrote. Nothing is saved until you press **Save**, so an unwanted template is
-one *Cancel* away.
+The brief is composed in blocks — text, sections, gauges, and images uploaded into the note
+itself — and templates carry the same shape from one shot to the next. See
+[Briefs](entity-briefs.md).
 
 ## Entity settings
 

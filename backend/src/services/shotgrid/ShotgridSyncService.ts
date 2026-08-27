@@ -66,6 +66,17 @@ export interface SyncResult {
 const running = new Set<number>();
 
 /**
+ * Le même verrou, mais posé par projet et AVANT l'ouverture de la connexion.
+ *
+ * `running` est indexé par connexion, et l'identifiant de connexion n'est connu qu'après un
+ * `await` : c'est cette fenêtre qui laissait passer une rafale entière. Ce second verrou la
+ * ferme ; celui par connexion reste, il garde le cas de deux projets partageant une même
+ * connexion.
+ */
+const runningProjects = new Set<number>();
+const pendingProjects = new Map<number, SyncOptions>();
+
+/**
  * Demandes arrivées pendant qu'une synchronisation tournait (D-ShotGrid).
  *
  * Elles étaient **jetées** : `runSync` rendait `{ status: 'ok', skipped: 'already_running' }`
@@ -155,18 +166,41 @@ export async function importableVersionIds(
 
 export async function runSync(projectId: number, options: SyncOptions = {}): Promise<SyncResult> {
   const kind = options.kind ?? 'full';
+
+  /*
+   * Verrou pris AVANT toute attente.
+   *
+   * `openConnection` est asynchrone : quand il précédait le test `running.has`, une rafale
+   * d'événements ShotGrid entrait tout entière dans la fonction, attendait la connexion, et
+   * trouvait le verrou encore libre — chacun le posait ensuite à son tour. Le journal du
+   * studio le montrait sans ambiguïté : quinze synchronisations en onze secondes, chacune
+   * mettant à jour les mêmes 47 entités.
+   *
+   * Le verrou par projet suffit ici : une connexion ne dessert qu'un projet, et deux
+   * projets d'un même site peuvent se synchroniser en parallèle sans se gêner.
+   */
+  if (runningProjects.has(projectId)) {
+    const existing = pendingProjects.get(projectId);
+    pendingProjects.set(projectId, existing ? mergeSyncOptions(existing, options) : options);
+    return { runId: 0, status: 'deferred', stats: { deferred: 'already_running' } };
+  }
+  runningProjects.add(projectId);
+
   let ctx: ConnectionContext;
   try {
     ctx = await openConnection(projectId);
   } catch (err) {
+    runningProjects.delete(projectId);
     logger.warn({ projectId, err }, 'Connexion ShotGrid indisponible');
     throw err;
   }
 
   if (!ctx.connection.active) {
+    runningProjects.delete(projectId);
     return { runId: 0, status: 'ok', stats: { skipped: 'connection_inactive' } };
   }
   if (running.has(ctx.connection.id)) {
+    runningProjects.delete(projectId);
     // La demande attend son tour au lieu d'être jetée. Le statut le dit : l'appelant
     // HTTP ne doit pas afficher « synchronisé » pour un travail qui n'a pas eu lieu.
     const existing = pending.get(ctx.connection.id);
@@ -329,6 +363,14 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     return { runId: journal.runId, status: 'error', stats: { error: message } };
   } finally {
     running.delete(ctx.connection.id);
+    runningProjects.delete(projectId);
+    const deferredProject = pendingProjects.get(projectId);
+    if (deferredProject) {
+      pendingProjects.delete(projectId);
+      void runSync(projectId, deferredProject).catch((err: unknown) => {
+        logger.warn({ projectId, err }, 'Synchronisation différée en échec');
+      });
+    }
     // Rejouer ce qui est arrivé pendant la passe. Sans `await` : l'appelant courant a
     // fini son travail, et le rattrapage ne doit ni allonger sa réponse ni faire échouer
     // son job s'il échoue à son tour.

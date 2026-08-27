@@ -1,17 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { PipelineStatus, ReviewStatus } from '@prisma/client';
+import type { PipelineStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 import type { ShotgridClient } from './ShotgridClient';
 import {
   asString,
   asNumber,
   rgbToHex,
-  sgStatusIsApproval,
   sgStatusIsDone,
   sgStatusIsInactive,
-  sgStatusIsRetake,
   sgStatusToEnum,
 } from './shotgridMapper';
 import type { SyncJournal } from './ShotgridSyncJournal';
@@ -163,6 +162,7 @@ export async function syncVersionStatuses(
   const byName = new Map(all.map((s) => [s.name.toLocaleLowerCase(), s]));
   const byId = new Map(all.map((s) => [s.id, s]));
   const map: Record<string, number> = {};
+  const unmapped: string[] = [];
 
   for (const [index, code] of codes.entries()) {
     // Une correspondance déjà réglée à la main prime sur toute déduction.
@@ -177,19 +177,31 @@ export async function syncVersionStatuses(
       map[code] = sameName.id;
       continue;
     }
-    const created: ReviewStatus = await prisma.reviewStatus.create({
-      data: {
-        name: info.name,
-        color: info.color,
-        order: info.order || index,
-        isApproval: sgStatusIsApproval(code),
-        isRetake: sgStatusIsRetake(code),
-      },
-    });
-    byName.set(created.name.toLocaleLowerCase(), created);
-    map[code] = created.id;
-    journal?.count('statuses.version', 'created');
-    await journal?.log('info', 'shotgrid.log.reviewStatusCreated', { code, name: created.name });
+    /*
+     * Aucune création automatique.
+     *
+     * `fetchValidStatusCodes(client, 'Version')` rend les `valid_values` du champ statut de
+     * Version — sur un site de studio, c'est la liste de statuts du site ENTIER, partagée
+     * avec Task et Shot. En créer un `ReviewStatus` par code remplissait la table des
+     * décisions de review de statuts de tâche : le studio de démonstration en comptait
+     * vingt-deux, dont « Waiting to Start », « In Progress » et « Complete », avec cinq
+     * doublons d'approbation et « Omit » à côté de « Omitted ». Le filtre « Toutes
+     * décisions » de la page Reviews en devenait inutilisable.
+     *
+     * Une décision de review est un choix de studio, pas un import : le code inconnu est
+     * signalé au journal, et l'administrateur le rattache lui-même depuis
+     * Admin › Statuts de review. La correspondance déjà réglée à la main, elle, continue
+     * d'être respectée (voir plus haut) — c'est le chemin normal.
+     */
+    unmapped.push(code);
+    journal?.count('statuses.version', 'skipped');
+    await journal?.log('warn', 'shotgrid.log.reviewStatusUnmapped', { code, name: info.name });
+  }
+  if (unmapped.length > 0) {
+    logger.info(
+      { codes: unmapped },
+      '[ShotGrid] statuts de Version sans décision de review correspondante — à rattacher dans Admin › Statuts',
+    );
   }
   return map;
 }

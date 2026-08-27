@@ -284,6 +284,7 @@ function TextDraftInput({
       }}
       value={draft.value}
       placeholder={t('draw.textPlaceholder')}
+      aria-label={t('draw.textPlaceholder')}
       onChange={(e) => onChangeValue(e.target.value)}
       onKeyDown={(e) => {
         e.stopPropagation();

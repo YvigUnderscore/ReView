@@ -92,23 +92,27 @@ export default function UserModal({
           <div className="grid grid-cols-2 gap-2">
             <Input
               placeholder={t('profile.firstName')}
+              aria-label={t('profile.firstName')}
               value={form.firstName}
               onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
             />
             <Input
               placeholder={t('common.name')}
+              aria-label={t('common.name')}
               value={form.lastName}
               onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
             />
           </div>
           <Input
             placeholder={t('userModal.username')}
+            aria-label={t('userModal.username')}
             value={form.username}
             onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
           />
           <Input
             type="email"
             placeholder={t('login.email')}
+            aria-label={t('login.email')}
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             required
@@ -131,6 +135,7 @@ export default function UserModal({
                 <Input
                   type="password"
                   placeholder={t('user.passwordRule')}
+                  aria-label={t('user.passwordRule')}
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   required
@@ -142,6 +147,7 @@ export default function UserModal({
             <Input
               type="password"
               placeholder={t('user.newPassword')}
+              aria-label={t('user.newPassword')}
               value={form.password}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
             />
@@ -161,6 +167,7 @@ export default function UserModal({
             <Input
               type="number"
               placeholder={t('storage.quotaLabel')}
+              aria-label={t('storage.quotaLabel')}
               value={form.storageLimitGo}
               onChange={(e) => setForm((f) => ({ ...f, storageLimitGo: e.target.value }))}
             />
@@ -168,7 +175,7 @@ export default function UserModal({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              {t('common.undo')}
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm" disabled={busy}>
               {isEdit ? t('common.save') : t('common.create')}

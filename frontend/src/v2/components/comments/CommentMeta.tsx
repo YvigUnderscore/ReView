@@ -30,7 +30,9 @@ export default function CommentMeta({
       <span className="text-sm font-medium">
         {c.author?.displayName ?? c.author?.name ?? c.guestName ?? t('comments.anonymous')}
       </span>
-      <span className="text-2xs text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
+      <span className="text-2xs text-muted-foreground">
+        {new Date(c.createdAt).toLocaleString(intlLocale())}
+      </span>
       {c.isEdited && <span className="text-2xs italic text-muted-foreground">{t('common.modified')}</span>}
       {state !== 'OPEN' && (
         <span

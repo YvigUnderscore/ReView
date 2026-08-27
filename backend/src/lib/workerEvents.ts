@@ -30,15 +30,44 @@ export interface WorkerMarkersEvent {
   mediaId: number;
 }
 
-export type WorkerEvent = WorkerHlsEvent | WorkerMarkersEvent;
+/**
+ * Événement destiné à la room d'un projet, émis depuis le worker.
+ *
+ * `SocketService.emitToProject` fait `io?.to(...)`, et `io` n'existe que dans le process
+ * web : appelé depuis le worker — ce que faisait la synchronisation ShotGrid — il ne
+ * produisait rien du tout, en silence. Aucun écran ne se rafraîchissait après une
+ * synchronisation, alors que le journal, lui, affichait bien ses compteurs.
+ *
+ * La charge utile n'est pas typée plus finement : ce canal ne fait que transporter ce que
+ * le serveur relaiera tel quel à la room.
+ */
+export interface WorkerProjectEvent {
+  type: 'project';
+  projectId: number;
+  event: string;
+  payload: unknown;
+}
+
+export type WorkerEvent = WorkerHlsEvent | WorkerMarkersEvent | WorkerProjectEvent;
 
 export const encodeWorkerEvent = (e: WorkerEvent): string => JSON.stringify(e);
 
 /** Décodage défensif : un message inconnu/corrompu est ignoré (canal partagé). */
 export function decodeWorkerEvent(raw: string): WorkerEvent | null {
   try {
-    const e = JSON.parse(raw) as { type?: string; mediaId?: unknown; renditions?: unknown };
-    if (!e || typeof e.mediaId !== 'number') return null;
+    const e = JSON.parse(raw) as {
+      type?: string;
+      mediaId?: unknown;
+      renditions?: unknown;
+      projectId?: unknown;
+      event?: unknown;
+      payload?: unknown;
+    };
+    if (!e) return null;
+    if (e.type === 'project' && typeof e.projectId === 'number' && typeof e.event === 'string') {
+      return { type: 'project', projectId: e.projectId, event: e.event, payload: e.payload };
+    }
+    if (typeof e.mediaId !== 'number') return null;
     if (e.type === 'hls' && typeof e.renditions === 'number') return e as unknown as WorkerHlsEvent;
     if (e.type === 'markers') return { type: 'markers', mediaId: e.mediaId };
     return null;

@@ -251,6 +251,34 @@ describe('retours de montage (Phase 46)', () => {
     });
   });
 
+  /**
+   * Le partage public, la recherche et l'export bornaient déjà un CLIENT aux notes qui lui
+   * sont destinées ; la lecture du fil dans l'application, non — un client membre du projet
+   * y lisait donc toutes les notes internes, réponses comprises.
+   */
+  it('un CLIENT ne reçoit que les notes qui lui sont destinées, réponses comprises', async () => {
+    vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.count).mockResolvedValue(0);
+    await listThread(9, { page: 1, pageSize: 20, order: 'desc' }, Role.CLIENT);
+    const args = vi.mocked(prisma.comment.findMany).mock.calls.at(-1)?.[0] as {
+      where: Record<string, unknown>;
+      include: { replies: { where: Record<string, unknown> } };
+    };
+    expect(args.where).toMatchObject({ isVisibleToClient: true });
+    expect(args.include.replies.where).toMatchObject({ isVisibleToClient: true });
+    const countWhere = (vi.mocked(prisma.comment.count).mock.calls.at(-1)?.[0] as { where: unknown }).where;
+    expect(countWhere).toMatchObject({ isVisibleToClient: true });
+  });
+
+  it('un ARTIST reçoit le fil entier', async () => {
+    vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.count).mockResolvedValue(0);
+    await listThread(9, { page: 1, pageSize: 20, order: 'desc' }, Role.ARTIST);
+    const where = (vi.mocked(prisma.comment.findMany).mock.calls.at(-1)?.[0] as { where: unknown })
+      .where as Record<string, unknown>;
+    expect(where.isVisibleToClient).toBeUndefined();
+  });
+
   it('le fil du montage est ordonné sur la position dans le film', async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.count).mockResolvedValue(0);

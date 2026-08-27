@@ -61,15 +61,43 @@ export async function pullPlaylists(ctx: PullContext, options: PlaylistPullOptio
       .map((r) => versionLinks.get(r.id)?.localId)
       .filter((id): id is number => typeof id === 'number');
 
+    /*
+     * Retrouver la playlist locale, dans cet ordre : le lien, puis le nom.
+     *
+     * Le repli sur le nom vaut **aussi quand le lien existe** : il peut désigner une
+     * playlist supprimée depuis, et une création aveugle butait alors sur la contrainte
+     * `(projectId, name)` — la synchronisation entière s'arrêtait pour une playlist
+     * effacée à la main des mois plus tôt.
+     */
     const link = playlistLinks.get(record.id);
-    const existing = link
-      ? await prisma.playlist.findUnique({ where: { id: link.localId } })
-      : await prisma.playlist.findUnique({
-          where: { projectId_name: { projectId: ctx.connection.projectId, name } },
-        });
+    const linked = link ? await prisma.playlist.findUnique({ where: { id: link.localId } }) : null;
+    const byName = await prisma.playlist.findUnique({
+      where: { projectId_name: { projectId: ctx.connection.projectId, name } },
+    });
+    const existing = linked ?? byName;
+
+    /*
+     * Renommage côté ShotGrid vers un nom déjà porté par une AUTRE playlist locale : on
+     * garde le nom actuel plutôt que de faire échouer le lot. Fusionner deux séances ou en
+     * écraser une n'est pas une décision qu'une synchronisation prend toute seule ; le
+     * conflit se voit au journal, et se tranche à la main.
+     */
+    const renameCollides = Boolean(linked && byName && byName.id !== linked.id);
+    if (renameCollides) {
+      ctx.journal.count('playlists', 'skipped');
+      await ctx.journal.log(
+        'conflict',
+        'shotgrid.log.playlistNameTaken',
+        { name },
+        { sgType: 'Playlist', sgId: record.id, localType: 'playlist', localId: linked!.id },
+      );
+    }
 
     const playlist = existing
-      ? await prisma.playlist.update({ where: { id: existing.id }, data: { name } })
+      ? await prisma.playlist.update({
+          where: { id: existing.id },
+          data: renameCollides ? {} : { name },
+        })
       : await prisma.playlist.create({ data: { projectId: ctx.connection.projectId, name } });
 
     // Le contenu est remplacé, pas complété : une version retirée côté ShotGrid doit

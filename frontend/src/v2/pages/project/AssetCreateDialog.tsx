@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ASSET_TYPES } from './projectTypes';
 import type { AssetType } from '../../types/api';
 import { useT } from '../../i18n';
+import { assetTypeLabel } from '../../lib/entityTypeLabels';
 
 /**
  * Création d'un asset — extraite de l'onglet, qui dépassait son budget de lignes une fois
@@ -50,6 +51,7 @@ export default function AssetCreateDialog({
             <Input
               autoFocus
               placeholder={t('assets.type.placeholder')}
+              aria-label={t('assets.type.placeholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -60,14 +62,14 @@ export default function AssetCreateDialog({
             <Select className="w-full" value={type} onChange={(e) => setType(e.target.value as AssetType)}>
               {ASSET_TYPES.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {assetTypeLabel(t, value)}
                 </option>
               ))}
             </Select>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-              {t('common.undo')}
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm">
               {t('common.create')}

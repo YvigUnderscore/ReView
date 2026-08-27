@@ -132,6 +132,7 @@ export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) 
           rows={2}
           maxLength={4000}
           placeholder={t('chat.placeholder')}
+          aria-label={t('chat.placeholder')}
           className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
@@ -204,6 +205,7 @@ function RenameDialog({
           onChange={(e) => setTitle(e.target.value)}
           maxLength={120}
           placeholder={t('chat.group.namePlaceholder')}
+          aria-label={t('chat.group.namePlaceholder')}
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

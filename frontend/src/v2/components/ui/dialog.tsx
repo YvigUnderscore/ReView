@@ -27,6 +27,16 @@ const DialogContent = forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         aria-describedby={undefined}
+        /*
+         * Un focus qui sort n'est pas un clic dehors.
+         *
+         * Le sélecteur de fichiers est une fenêtre du système : elle prend le focus, le
+         * document le perd, et la modale se refermait en croyant qu'on avait cliqué
+         * ailleurs — « choisir une image » suffisait à perdre la fiche en cours, dans le
+         * brief comme dans les réglages d'une entité. Seul le clic dehors ferme désormais ;
+         * un appelant qui aurait besoin de l'autre comportement le repose lui-même.
+         */
+        onFocusOutside={(e) => e.preventDefault()}
         className={cn(
           'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-5 text-card-foreground shadow-xl outline-none',
           'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',

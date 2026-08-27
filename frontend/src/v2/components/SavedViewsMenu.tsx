@@ -92,6 +92,7 @@ export default function SavedViewsMenu({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && doSave()}
             placeholder={hasFilters ? t('savedViews.nameCurrent') : t('savedViews.filterFirst')}
+            aria-label={hasFilters ? t('savedViews.nameCurrent') : t('savedViews.filterFirst')}
             disabled={!hasFilters}
             className="h-8 text-xs"
           />

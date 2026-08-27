@@ -53,6 +53,7 @@ function SizeField({
       <Input
         className="w-24 py-1 text-xs"
         placeholder={t(field.hintKey)}
+        aria-label={t(field.hintKey)}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />
@@ -94,6 +95,7 @@ function PlainField({
       <Input
         className="flex-1 py-1 text-xs"
         placeholder={t(field.hintKey)}
+        aria-label={t(field.hintKey)}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />
@@ -170,7 +172,7 @@ function DefaultLocaleField({
         >
           {LOCALES.map((l) => (
             <option key={l.code} value={l.code}>
-              {l.native} ({l.english}){l.regional ? ` ${t('language.regional')}` : ''}
+              {l.native} ({l.english}){l.regional ? ` ${t('language.regionalSuffix')}` : ''}
             </option>
           ))}
         </Select>

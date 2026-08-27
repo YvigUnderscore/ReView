@@ -104,18 +104,21 @@ export default function IdentityTab() {
             value={draft.publicUrl}
             onChange={(v) => set({ publicUrl: v })}
             placeholder="https://review.studio.com"
+            aria-label="https://review.studio.com"
           />
           <Field
             label={t('sso.issuer')}
             value={draft.issuer}
             onChange={(v) => set({ issuer: v })}
             placeholder="https://accounts.google.com"
+            aria-label="https://accounts.google.com"
           />
           <Field
             label={t('sso.clientId')}
             value={draft.clientId}
             onChange={(v) => set({ clientId: v })}
             placeholder="xxxxx.apps.googleusercontent.com"
+            aria-label="xxxxx.apps.googleusercontent.com"
           />
           <Field
             label={`${t('sso.clientSecret')} ${draft.hasSecret ? t('identity.setKeep') : ''}`}
@@ -123,12 +126,14 @@ export default function IdentityTab() {
             onChange={(v) => set({ clientSecret: v })}
             type="password"
             placeholder={draft.hasSecret ? '••••••••' : 'GOCSPX-…'}
+            aria-label={draft.hasSecret ? '••••••••' : 'GOCSPX-…'}
           />
           <Field
             label={t('sso.buttonLabel')}
             value={draft.buttonLabel}
             onChange={(v) => set({ buttonLabel: v })}
             placeholder={t('sso.buttonDefault')}
+            aria-label={t('sso.buttonDefault')}
           />
         </div>
         <div className="mt-3">

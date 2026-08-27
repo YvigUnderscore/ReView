@@ -235,6 +235,7 @@ export default function TaskPickerDialog({
                   onChange={(e) => setDraftName(e.target.value)}
                   list="review-task-names"
                   placeholder={t('upload.pickTask.namePlaceholder')}
+                  aria-label={t('upload.pickTask.namePlaceholder')}
                   className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 />
                 {/* Les noms déjà employés ici : un pipe se lit mieux quand les tâches

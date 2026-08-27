@@ -34,28 +34,51 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
   beforeEach(() => vi.clearAllMocks());
 
   it('purgeMedia : supprime la ligne DB puis, si MinIO échoue, enfile un retry sans lever', async () => {
-    findUnique.mockResolvedValue({ storageKey: 'k/a.mp4', thumbnailKey: 'k/a.jpg' } as never);
+    findUnique.mockResolvedValue({ id: 1, storageKey: 'k/a.mp4', thumbnailKey: 'k/a.jpg' } as never);
     deleteMedia.mockResolvedValue({} as never);
     deleteObject.mockRejectedValue(new Error('MinIO down'));
+    deletePrefix.mockRejectedValue(new Error('MinIO down'));
     enqueue.mockResolvedValue(undefined as never);
 
     await expect(purgeMedia(1)).resolves.toBeUndefined();
 
     // La suppression DB a bien eu lieu (état cohérent malgré l'échec storage).
     expect(deleteMedia).toHaveBeenCalledWith({ where: { id: 1 } });
-    // Les deux clés en échec sont enfilées pour retry (journal des orphelins).
-    expect(enqueue).toHaveBeenCalledWith({ keys: ['k/a.mp4', 'k/a.jpg'], prefixes: [] });
+    // Clés ET préfixe de dérivés en échec sont enfilés pour retry (journal des orphelins).
+    expect(enqueue).toHaveBeenCalledWith({
+      keys: ['k/a.mp4', 'k/a.jpg'],
+      prefixes: ['derived/1/'],
+    });
   });
 
   it('purgeMedia : supprime aussi les objets storage quand MinIO répond (pas de retry)', async () => {
-    findUnique.mockResolvedValue({ storageKey: 'k/b.mp4', thumbnailKey: null } as never);
+    findUnique.mockResolvedValue({ id: 2, storageKey: 'k/b.mp4', thumbnailKey: null } as never);
     deleteMedia.mockResolvedValue({} as never);
     deleteObject.mockResolvedValue(undefined);
+    deletePrefix.mockResolvedValue(undefined);
 
     await purgeMedia(2);
 
     expect(deleteObject).toHaveBeenCalledWith('k/b.mp4');
     expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Le défaut réparé ici : la purge ne connaissait que `storageKey` et `thumbnailKey`.
+   * Or tout ce que les workers fabriquent vit sous `derived/{mediaId}/` (HLS, proxy,
+   * dérivé client, sprite, GLB, vignettes spatiales) — et pour une vidéo, `storageKey`
+   * pointe déjà sur le proxy. Supprimer un média ne libérait donc quasiment rien : le
+   * bucket de démonstration montrait 801 Ko d'originaux pour 3,56 Go de dérivés.
+   */
+  it('purgeMedia : libère aussi les dérivés du média', async () => {
+    findUnique.mockResolvedValue({ id: 42, storageKey: 'k/c.mp4', thumbnailKey: null } as never);
+    deleteMedia.mockResolvedValue({} as never);
+    deleteObject.mockResolvedValue(undefined);
+    deletePrefix.mockResolvedValue(undefined);
+
+    await purgeMedia(42);
+
+    expect(deletePrefix).toHaveBeenCalledWith('derived/42/');
   });
 
   it('purgeProject : commit DB avant suppression des préfixes ; préfixes en échec retentés', async () => {

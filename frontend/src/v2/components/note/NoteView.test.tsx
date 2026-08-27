@@ -38,6 +38,53 @@ describe('NoteView', () => {
     expect(html).toContain('src="a.jpg"');
     expect(html).toContain('1 / 2');
   });
+
+  it('pose une planche : toutes les images à la fois, à la hauteur demandée', () => {
+    const html = renderToStaticMarkup(
+      <NoteView source={'::refs grid cols=2 h=120\n![Une](a.jpg)\n![Deux](b.jpg)\n::end'} />,
+    );
+    expect(html).toContain('src="a.jpg"');
+    expect(html).toContain('src="b.jpg"');
+    // La planche montre tout : pas de compteur, il n'y a rien à feuilleter.
+    expect(html).not.toContain('1 / 2');
+    expect(html).toContain('height:120px');
+  });
+});
+
+describe('renderNoteHtml — disposition des images', () => {
+  it('sort la disposition du titre markdown pour ne pas la laisser en infobulle', () => {
+    const html = renderNoteHtml('![ref](a.jpg "align=left width=40")');
+    expect(html).toContain('data-align="left"');
+    expect(html).toContain('width:40%');
+    expect(html).not.toContain('title=');
+  });
+
+  it('laisse pleine largeur ce qui n’a rien demandé', () => {
+    const html = renderNoteHtml('![ref](a.jpg)');
+    expect(html).toContain('data-align="full"');
+    expect(html).not.toContain('style=');
+  });
+});
+
+describe('renderNoteHtml — images de la fiche', () => {
+  const KEY = 'note-images/shot/12/1700-planche.png';
+
+  it('remplace la clé enregistrée par l’URL de lecture', () => {
+    const html = renderNoteHtml(`![ref](${KEY})`, (src) =>
+      src === KEY ? 'https://minio/signed' : undefined,
+    );
+    expect(html).toContain('src="https://minio/signed"');
+  });
+
+  it('pose un cadre tant que l’URL n’est pas là — jamais une image cassée', () => {
+    const html = renderNoteHtml(`![ref](${KEY})`);
+    expect(html).not.toContain('<img');
+    expect(html).toContain('data-note-image-pending');
+  });
+
+  it('n’attend aucune résolution pour une image restée à l’extérieur', () => {
+    expect(renderNoteHtml('![ref](https://studio.test/a.jpg)')).toContain('src="https://studio.test/a.jpg"');
+  });
 });
 
 describe('renderNoteHtml — garde-fous', () => {

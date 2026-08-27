@@ -85,7 +85,7 @@ export default function ProjectColorSection({
               disabled={displays.length === 0}
               onChange={(e) => set({ display: e.target.value || undefined, view: undefined })}
             >
-              <option value="">{t('common.inherited')}</option>
+              <option value="">{t('common.inheritedOption')}</option>
               {displays.map((d) => (
                 <option key={d.name} value={d.name}>
                   {d.name}
@@ -100,7 +100,7 @@ export default function ProjectColorSection({
               disabled={!currentDisplay}
               onChange={(e) => set({ view: e.target.value || undefined })}
             >
-              <option value="">{t('common.inherited')}</option>
+              <option value="">{t('common.inheritedOption')}</option>
               {(currentDisplay?.views ?? []).map((v) => (
                 <option key={v} value={v}>
                   {v}

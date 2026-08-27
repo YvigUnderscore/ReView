@@ -7,7 +7,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { authenticate } from '../middleware/auth';
-import { requireRole } from '../middleware/rbac';
+import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { NOTE_KINDS, TEMPLATE_SCOPES } from '../services/EntityNoteService';
 import * as EntityNoteService from '../services/EntityNoteService';
@@ -70,12 +70,20 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [
    * elle-même n'aurait montré personne dans le cas courant.
    */
   router.get(`/${segment}/:id/assignees`, auth, validate({ params: idParam }), async (req, res) => {
-    res.json({ assignees: await EntityAssigneeService.scopeAssignees(kind, Number(req.params.id)) });
+    const id = Number(req.params.id);
+    // Lire l'équipe d'une entité, c'est lire le projet : sans ce garde, n'importe quel
+    // compte énumérait les identifiants et récupérait la composition de tout le studio.
+    await assertProjectAccess(req, await EntityNoteService.resolveProject(kind, id));
+    res.json({ assignees: await EntityAssigneeService.scopeAssignees(kind, id) });
   });
 
   // ── Fiche markdown ────────────────────────────────────────────────────────
   router.get(`/${segment}/:id/note`, auth, validate({ params: idParam }), async (req, res) => {
-    res.json({ note: await EntityNoteService.getNote(kind, Number(req.params.id)) });
+    const id = Number(req.params.id);
+    // Même garde que la lecture des images de la fiche (note-images.routes) : le texte du
+    // brief ne doit pas être plus exposé que les images qu'il contient.
+    await assertProjectAccess(req, await EntityNoteService.resolveProject(kind, id));
+    res.json({ note: await EntityNoteService.getNote(kind, id) });
   });
 
   router.put(
@@ -119,6 +127,9 @@ router.get(
   async (req, res) => {
     const studioId = await currentStudioId();
     const projectId = req.query.projectId === undefined ? null : Number(req.query.projectId);
+    // Un modèle de fiche peut être propre à un projet : demander ceux d'un projet auquel on
+    // n'appartient pas reviendrait à en lire le contenu.
+    if (projectId !== null) await assertProjectAccess(req, projectId);
     const scope = req.query.scope as (typeof TEMPLATE_SCOPES)[number] | undefined;
     res.json({ templates: await EntityNoteService.listTemplates(studioId, projectId, scope) });
   },

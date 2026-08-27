@@ -158,7 +158,7 @@ export default function CommentItem({
                 onClick={() => setEditing(false)}
                 className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
               >
-                {t('common.undo')}
+                {t('common.cancel')}
               </button>
               <button
                 onClick={saveEdit}
@@ -220,7 +220,7 @@ export default function CommentItem({
                   onClick={() => setConfirmDelete(false)}
                   className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-secondary"
                 >
-                  {t('common.undo')}
+                  {t('common.cancel')}
                 </button>
               </span>
             ) : (

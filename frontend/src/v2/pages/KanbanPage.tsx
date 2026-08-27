@@ -32,6 +32,7 @@ import type { BoardTask } from './kanban/kanbanTypes';
 import { KanbanCardBody } from './kanban/KanbanCard';
 import { parseIdParam } from '../lib/slug';
 import { useT } from '../i18n';
+import { taskTypeLabel } from '../lib/entityTypeLabels';
 
 /**
  * Kanban du projet (C4).
@@ -180,6 +181,7 @@ export default function KanbanPage() {
           sequences={board.sequences.map((s) => ({ value: String(s.id), label: s.code }))}
           departments={board.departments.map((d) => ({ value: String(d.id), label: d.name }))}
           types={TASK_TYPES}
+          typeLabel={(value) => taskTypeLabel(t, value)}
           searchPlaceholder={t('kanban.searchPlaceholder')}
         />
       </div>

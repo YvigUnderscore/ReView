@@ -102,6 +102,7 @@ export default function SocialPanel() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('social.search')}
+                aria-label={t('social.search')}
                 className="min-w-0 flex-1 bg-transparent text-sm placeholder:text-muted-foreground"
               />
             </div>

@@ -9,7 +9,7 @@ import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import { useTheme } from '../stores/useTheme';
 import { parseIdParam } from '../lib/slug';
-import { useT } from '../i18n';
+import { useLocale, useT } from '../i18n';
 import BoardLibrary, { type MediaLite } from './board/BoardLibrary';
 import { blobToDataURL } from './board/boardFiles';
 import { useBoardDocument } from './board/useBoardDocument';
@@ -26,6 +26,37 @@ import type { BoardScope } from './board/boardApi';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawApi = any;
 
+/**
+ * Nos codes de langue vers ceux d'Excalidraw, qui a son propre catalogue.
+ *
+ * Sans `langCode`, l'éditeur reste en anglais dans les quatorze langues — « To move canvas,
+ * hold mouse wheel… », « Shapes », « Library » — au milieu d'une interface traduite.
+ *
+ * Trois de nos langues n'existent pas chez lui : le breton et le corse retombent sur
+ * l'anglais, l'alsacien sur l'allemand, dont il est bien plus proche.
+ */
+/* eslint-disable no-restricted-syntax --
+   Ce ne sont pas des locales de formatage (dates, nombres) mais les identifiants du
+   catalogue d'Excalidraw, qui n'a pas le même jeu de codes que nous. `intlLocale()` n'a
+   rien à voir ici : la seule question est « quel fichier de traduction Excalidraw charger ». */
+const EXCALIDRAW_LANG: Record<string, string> = {
+  en: 'en',
+  fr: 'fr-FR',
+  es: 'es-ES',
+  de: 'de-DE',
+  pt: 'pt-PT',
+  'zh-Hans': 'zh-CN',
+  ko: 'ko-KR',
+  ja: 'ja-JP',
+  hi: 'hi-IN',
+  eu: 'eu-ES',
+  oc: 'oc-FR',
+  br: 'en',
+  co: 'en',
+  'gsw-FR': 'de-DE',
+};
+/* eslint-enable no-restricted-syntax */
+
 const uid = () => Math.random().toString(36).slice(2, 10);
 // Fichier Excalidraw construit hors du composant (règle react-hooks/purity : Date.now)
 const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
@@ -37,6 +68,7 @@ const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
 
 export default function BoardPage({ scope }: { scope: BoardScope }) {
   const t = useT();
+  const locale = useLocale();
   const { id } = useParams();
   const theme = useTheme((s) => s.theme);
   const targetId = parseIdParam(id);
@@ -128,6 +160,7 @@ export default function BoardPage({ scope }: { scope: BoardScope }) {
             initialData={{ elements: initial.elements as never, files: initial.files as never }}
             onChange={board.onChange}
             theme={theme}
+            langCode={EXCALIDRAW_LANG[locale] ?? 'en'}
           />
         </div>
       </div>

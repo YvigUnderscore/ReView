@@ -63,12 +63,14 @@ export default function DepartmentsEditor({
           <input
             className="w-32 rounded border border-input bg-background px-2 py-1.5 text-xs"
             placeholder={t('pipeline.dept.key.placeholder')}
+            aria-label={t('pipeline.dept.key.placeholder')}
             value={dep.key}
             onChange={(e) => setField(i, 'key', e.target.value)}
           />
           <input
             className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-xs"
             placeholder={t('pipeline.dept.name.placeholder')}
+            aria-label={t('pipeline.dept.name.placeholder')}
             value={dep.name}
             onChange={(e) => setField(i, 'name', e.target.value)}
           />

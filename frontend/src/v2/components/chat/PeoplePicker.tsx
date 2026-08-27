@@ -77,6 +77,7 @@ export default function PeoplePicker({
             onChange={(e) => setGroupName(e.target.value)}
             maxLength={120}
             placeholder={t('chat.group.namePlaceholder')}
+            aria-label={t('chat.group.namePlaceholder')}
             className="mb-2"
           />
         )}
@@ -84,6 +85,7 @@ export default function PeoplePicker({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('chat.search')}
+          aria-label={t('chat.search')}
           className="mb-2"
         />
         <div className="custom-scrollbar max-h-64 space-y-0.5 overflow-y-auto">

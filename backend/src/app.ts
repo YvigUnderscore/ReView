@@ -11,6 +11,7 @@ import { enableRedisTransport } from './lib/redis';
 import { rateLimit, identityRateKey, identityMax, __rateLimitTesting } from './middleware/rateLimit';
 import { errorHandler } from './middleware/error';
 import { httpLogger } from './middleware/httpLogger';
+import { apiTokenSurface } from './middleware/scope';
 
 import setupRoutes from './routes/setup.routes';
 import authRoutes from './routes/auth.routes';
@@ -48,6 +49,7 @@ import departmentsRoutes from './routes/departments.routes';
 import entityThumbnailsRoutes from './routes/entity-thumbnails.routes';
 import assignmentsRoutes from './routes/assignments.routes';
 import entityExtrasRoutes from './routes/entity-extras.routes';
+import noteImagesRoutes from './routes/note-images.routes';
 import visibilityRoutes from './routes/visibility.routes';
 import unsubscribeRoutes from './routes/unsubscribe.routes';
 import commentsRoutes from './routes/comments.routes';
@@ -153,7 +155,24 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   // octets reçus, et un corps déjà reparsé puis re-sérialisé ne redonne pas les mêmes.
   app.use('/api/shotgrid/webhook', shotgridWebhookRoutes);
 
-  // En v2 les fichiers transitent par MinIO via URLs présignées : pas de gros body.
+  /*
+   * Éditions splat : le seul corps volumineux de l'API.
+   *
+   * Le masque de suppression est un bitset base64 — un splat sur deux effacé sur un scan de
+   * quinze millions de points fait plusieurs mégaoctets — et les transformations de
+   * sous-ensembles envoient de même leurs indices en binaire. Les deux routes déclarent
+   * `z.string().max(5_400_000)` avec le commentaire « ≈ 4 Mo binaire max », mais le plafond
+   * global de 2 Mo rejetait la requête en 413 **avant** que Zod ne la voie : le plafond
+   * annoncé était inatteignable, et l'éditeur perdait le travail de l'artiste sans le dire.
+   *
+   * Posé avant le parseur global : `express.json` ne parse qu'une fois, le premier gagne.
+   */
+  const splatBodyJson = express.json({ limit: '8mb' });
+  app.use((req, res, next) =>
+    /^\/api\/media\/\d+\/splat-(mask|subset)$/.test(req.path) ? splatBodyJson(req, res, next) : next(),
+  );
+
+  // Partout ailleurs, les fichiers transitent par MinIO via URLs présignées : pas de gros body.
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
@@ -187,6 +206,14 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     }),
   );
 
+  // Surface des jetons d'API : un `rvk_…` n'ouvre que l'API d'intégration `/api/v1`.
+  //
+  // Posé ici, avant tout routeur métier, et non route par route : c'est le seul endroit qui
+  // ne s'oublie pas quand on ajoute un domaine. Sans lui, `middleware/auth` acceptait un
+  // jeton d'API sur n'importe quelle route de l'API interne, et le cantonnement par projet
+  // vendu par l'écran des jetons ne valait que pour `/api/v1`.
+  app.use('/api', apiTokenSurface);
+
   // Sondes de santé et version (vivacité `/health`, disponibilité `/health/ready`).
   //
   // Montées DEUX FOIS à dessein : le nginx frontal de production ne proxifie vers le
@@ -201,7 +228,19 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   // Assistant de première installation : public par nature (il n'existe encore aucun
   // compte), et il crée le premier ADMIN. Le plafond global de 5000/15 min ne le protège
   // pas — on le borne étroitement, par IP. Le verrou de fond reste `studio.count() > 0`.
-  app.use('/api/setup', limiter({ name: 'setup', windowMs: 15 * 60 * 1000, max: 10 }), setupRoutes);
+  // `GET /status` est interrogé au démarrage de l'application, donc à chaque chargement de
+  // page : le compter dans le plafond de l'installation faisait tomber un 429 dès le 11e
+  // rechargement en un quart d'heure. Le front l'attrapait (repli « rien à installer »),
+  // mais sur une instance neuve cela rendait l'assistant injoignable pendant quinze minutes.
+  // Il ne lit rien de sensible — un plafond large lui suffit, et le plafond étroit reste
+  // posé sur tout le reste, c'est-à-dire sur la création du premier ADMIN.
+  const setupWriteLimiter = limiter({ name: 'setup', windowMs: 15 * 60 * 1000, max: 10 });
+  app.use(
+    '/api/setup',
+    limiter({ name: 'setup-status', windowMs: 60 * 1000, max: 120 }),
+    (req, res, next) => (req.path === '/status' ? next() : setupWriteLimiter(req, res, next)),
+    setupRoutes,
+  );
   app.use('/api/auth', authRoutes);
   app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
@@ -244,6 +283,8 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use('/api', assignmentsRoutes);
   // Personnes responsables et fiche markdown d'une entité : quatre préfixes, racine aussi.
   app.use('/api', entityExtrasRoutes);
+  // Images déposées dans une fiche : dépôt par entité, relecture par lot de clés.
+  app.use('/api', noteImagesRoutes);
   // Masquage d'éléments (admin).
   app.use('/api', visibilityRoutes);
   // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).

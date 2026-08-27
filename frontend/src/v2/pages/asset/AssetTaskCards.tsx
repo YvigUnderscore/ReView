@@ -5,7 +5,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ExternalLink, FileStack } from 'lucide-react';
 import EmptyState from '../../components/ui/empty-state';
+import EntityContextMenu from '../../components/ui/entity-menu';
 import ViewToggle from '../../components/ViewToggle';
+import Avatar from '../../components/Avatar';
+import { initialsFrom } from '../../lib/initials';
+import { assigneeName } from '../../lib/assigneeName';
+import { useProjectRole } from '../../lib/useProjectRole';
+import { useTaskAssignMenu } from '../../lib/useTaskAssignMenu';
+import type { MenuEntry } from '../../lib/menuSpec';
 import { useViewMode } from '../../stores/useViewPref';
 import AssetTaskColumns from './AssetTaskColumns';
 import VersionCard from './VersionCard';
@@ -38,6 +45,10 @@ export default function AssetTaskCards({
 }) {
   const t = useT();
   const navigate = useNavigate();
+  const { canManage } = useProjectRole(projectId);
+  // Mettre quelqu'un sur une étape se faisait en ouvrant la tâche, puis ses réglages.
+  // Devant les cartes, l'étape est déjà sous les yeux : le clic droit suffit.
+  const { assignEntry, departmentEntry } = useTaskAssignMenu(projectId);
   // Les couleurs viennent du site : c'est ainsi que « groom » est vert ici comme
   // là-bas, et qu'un pipe se relit d'un coup d'œil entre les deux outils. La liste est
   // déjà en cache pour ce projet, elle ne coûte pas une requête de plus.
@@ -74,15 +85,31 @@ export default function AssetTaskCards({
    *  brouillons. La vue repliée dans cette page ne savait rien faire de tout cela — un
    *  brouillon vide y devenait un cul-de-sac. */
   const cardsOf = (group: DepartmentGroup<AssetTreeTask>) =>
-    group.items.map((task) => (
-      <TaskCard
-        key={task.id ?? 'loose'}
-        task={task}
-        projectId={projectId}
-        colour={colourOf(task)}
-        onOpen={() => (task.id ? navigate(`/tasks/${task.id}`) : setOpenTaskId('loose'))}
-      />
-    ));
+    group.items.map((task) => {
+      const card = (
+        <TaskCard
+          key={task.id ?? 'loose'}
+          task={task}
+          projectId={projectId}
+          colour={colourOf(task)}
+          onOpen={() => (task.id ? navigate(`/tasks/${task.id}`) : setOpenTaskId('loose'))}
+        />
+      );
+      // Le fourre-tout des versions sans tâche n'a rien à assigner : pas de menu dessus.
+      const entries =
+        task.id === null
+          ? []
+          : [
+              assignEntry({ id: task.id, assigneeId: task.assignee?.id ?? null }, canManage),
+              departmentEntry({ id: task.id, department: task.department }, canManage),
+            ].filter((entry): entry is MenuEntry => entry !== null);
+      if (entries.length === 0) return card;
+      return (
+        <EntityContextMenu key={task.id ?? 'loose'} entries={entries}>
+          {card}
+        </EntityContextMenu>
+      );
+    });
 
   return (
     <div className="space-y-3">
@@ -192,6 +219,18 @@ function TaskCard({
           <span className="text-xs text-muted-foreground">
             {t('asset.tree.versionCount', { count: task.versions.length })}
           </span>
+          {/* La personne en fin de ligne : c'est la question qu'on pose à un pipe avant
+              toutes les autres, et il fallait ouvrir chaque tâche pour y répondre. */}
+          {task.assignee && (
+            <span className="ml-auto flex items-center gap-1" title={assigneeName(task.assignee)}>
+              <Avatar
+                seed={task.assignee.id}
+                initials={initialsFrom(assigneeName(task.assignee))}
+                avatarUrl={task.assignee.avatarUrl}
+                size={18}
+              />
+            </span>
+          )}
         </div>
         <TaskSchedule task={task} />
         {latest && (

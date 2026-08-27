@@ -181,11 +181,12 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
             onChange={(e) => setNameDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void submitName()}
             placeholder={t('playlists.name.placeholder')}
+            aria-label={t('playlists.name.placeholder')}
             autoFocus
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => (setCreating(false), setRenaming(null))}>
-              {t('common.undo')}
+              {t('common.cancel')}
             </Button>
             <Button onClick={() => void submitName()} disabled={!nameDraft.trim()}>
               {renaming ? t('common.rename') : t('common.create')}

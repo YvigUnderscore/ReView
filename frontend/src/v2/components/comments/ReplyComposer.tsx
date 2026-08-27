@@ -73,6 +73,7 @@ export default function ReplyComposer({
           onPaste={onPasteImage}
           rows={2}
           placeholder={t('comments.reply.placeholder')}
+          aria-label={t('comments.reply.placeholder')}
           className="w-full resize-none bg-transparent text-sm"
         />
       </div>
@@ -114,7 +115,7 @@ export default function ReplyComposer({
             onClick={onCancel}
             className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
           >
-            {t('common.undo')}
+            {t('common.cancel')}
           </button>
           <button
             onClick={send}

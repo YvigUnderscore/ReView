@@ -38,7 +38,7 @@ router.get(
     const projectId = await resolveProjectIdForMedia(mediaObjectId);
     if (!projectId) throw notFound('Media not found');
     await assertProjectAccess(req, projectId);
-    res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query)));
+    res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query), req.user!.role));
   },
 );
 

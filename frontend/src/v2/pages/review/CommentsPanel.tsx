@@ -225,6 +225,7 @@ export default function CommentsPanel({
             minRows={2}
             maxRows={10}
             placeholder={t('comments.placeholder')}
+            aria-label={t('comments.placeholder')}
             value={content}
             onChange={(e) => {
               setContent(e.target.value);

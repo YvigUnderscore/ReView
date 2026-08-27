@@ -72,7 +72,7 @@ export default function TranscodeTab() {
           onChange={(e) => set({ sceneDetection: e.target.checked })}
         />
         <span className="font-medium">{t('transcode.sceneDetect')}</span>
-        <span className="text-xs text-muted-foreground">{t('transcode.sceneDetect')}</span>
+        <span className="text-xs text-muted-foreground">{t('transcode.sceneDetectHint')}</span>
       </label>
 
       <Panel title={t('transcode.encoding')}>

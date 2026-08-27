@@ -199,6 +199,7 @@ function PasswordGate({ token, onUnlocked }: { token: string; onUnlocked: () => 
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t('login.password')}
+        aria-label={t('login.password')}
         autoFocus
         required
       />

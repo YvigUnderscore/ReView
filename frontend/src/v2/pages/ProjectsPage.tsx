@@ -138,6 +138,7 @@ export default function ProjectsPage() {
               <Input
                 autoFocus
                 placeholder={t('projects.name.placeholder')}
+                aria-label={t('projects.name.placeholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required

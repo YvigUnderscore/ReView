@@ -128,6 +128,7 @@ export default function ApiTokensSection() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('tokens.namePlaceholder')}
+                aria-label={t('tokens.namePlaceholder')}
                 maxLength={80}
                 className="w-full"
               />
@@ -167,6 +168,7 @@ export default function ApiTokensSection() {
               onChange={(e) => setCurrentPassword(e.target.value)}
               autoComplete="current-password"
               placeholder={t('profile.password.currentPlaceholder')}
+              aria-label={t('profile.password.currentPlaceholder')}
               className="w-full"
             />
             <span className="block text-2xs text-muted-foreground">{t('tokens.passwordHint')}</span>

@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { FolderKanban, KanbanSquare, PenTool, BookText, Clapperboard } from 'lucide-react';
+import { Clapperboard } from 'lucide-react';
 import { qk } from '../lib/query';
 import { useReviewCommands } from '../lib/reviewCommands';
 import { useProjectContext } from '../stores/useProjectContext';
@@ -19,6 +19,7 @@ import {
   CommandItem,
 } from './ui/command';
 import PaletteActions from './palette/PaletteActions';
+import PaletteGoto from './palette/PaletteGoto';
 import PaletteResults from './palette/PaletteResults';
 import { useT } from '../i18n';
 
@@ -155,32 +156,14 @@ export default function CommandPalette({
             </CommandGroup>
           )}
 
-          {!hasQuery && (
-            <CommandGroup heading={t('palette.group.goto')}>
-              {/* `/projects`, pas `/` : l'entrée porte le libellé « Projets » et menait à
-                  l'accueil — le seul endroit où l'on ne trouve pas la liste des projets. */}
-              <CommandItem value="nav-projects" onSelect={() => go('/projects')}>
-                <FolderKanban size={15} className="text-muted-foreground" /> {t('nav.projects')}
-              </CommandItem>
-              {ctxProjectId !== null && (
-                <>
-                  <CommandItem value="nav-kanban" onSelect={() => go(`/projects/${ctxProjectId}/kanban`)}>
-                    <KanbanSquare size={15} className="text-muted-foreground" /> {t('palette.goto.kanban')}
-                  </CommandItem>
-                  <CommandItem value="nav-board" onSelect={() => go(`/projects/${ctxProjectId}/board`)}>
-                    <PenTool size={15} className="text-muted-foreground" /> {t('palette.goto.board')}
-                  </CommandItem>
-                </>
-              )}
-              <CommandItem value="nav-docs" onSelect={() => go('/docs')}>
-                <BookText size={15} className="text-muted-foreground" /> {t('nav.documentation')}
-              </CommandItem>
-            </CommandGroup>
-          )}
+          <PaletteGoto query={typed} projectId={ctxProjectId} onGo={go} />
 
-          {!hasQuery && (
-            <PaletteActions onRun={run} onShortcuts={onShortcuts} onToggleSidebar={onToggleSidebar} />
-          )}
+          <PaletteActions
+            query={typed}
+            onRun={run}
+            onShortcuts={onShortcuts}
+            onToggleSidebar={onToggleSidebar}
+          />
 
           <PaletteResults results={results} onGo={go} />
         </CommandList>

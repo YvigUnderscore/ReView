@@ -5,6 +5,7 @@
 // budget de lignes d'api.ts. Miroir des sorties de `PipelineLatestService` et
 // `TimelineService` côté backend.
 import type { DepartmentSummary, MediaKind, ReviewStatus, UserRef, VersionStatus } from './api';
+import type { AssigneeRef } from './entities';
 
 /** Média tel que l'API le renvoie : URL signée, jamais de clé de stockage. */
 export interface PipelineMedia {
@@ -47,6 +48,8 @@ export interface AssetTreeTask {
   startDate?: string | null;
   dueDate?: string | null;
   department: string | null;
+  /** Qui en répond — affiché sur la carte, et réglé au clic droit. */
+  assignee: AssigneeRef | null;
   versions: AssetTreeVersion[];
 }
 

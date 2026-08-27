@@ -22,7 +22,7 @@ const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; 
   { key: 'showVersion', label: t('burnin.versionName'), hint: t('burnin.pos.topRight') },
   { key: 'showTimecode', label: t('burnin.timecode'), hint: t('burnin.pos.bottomCentre') },
   { key: 'showLogo', label: t('burnin.studioLogo'), hint: t('burnin.bottomRight') },
-  { key: 'slate', label: t('burnin.slateShort'), hint: t('burnin.slate') },
+  { key: 'slate', label: t('burnin.slateShort'), hint: t('burnin.slateHint') },
 ];
 
 /** Template studio des burn-ins/slates (35.A) — appliqué aux prochains transcodages. */
@@ -76,6 +76,7 @@ export default function BurninPanel() {
             value={draft.customText}
             onChange={(e) => set({ customText: e.target.value })}
             placeholder={t('burnin.freeText.placeholder')}
+            aria-label={t('burnin.freeText.placeholder')}
             maxLength={120}
           />
         </label>

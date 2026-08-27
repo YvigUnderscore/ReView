@@ -60,14 +60,14 @@ interface RawAssignee {
  */
 export type AssigneeView = Omit<RawAssignee, 'avatarKey'> & { avatarUrl: string | null };
 
+/** Une personne, telle que l'API la rend — photo signée. */
+export async function toAssigneeView({ avatarKey, ...person }: RawAssignee): Promise<AssigneeView> {
+  return { ...person, avatarUrl: await avatarUrl(avatarKey) };
+}
+
 /** Signe les photos d'un lot, une fois par personne. */
 async function signed(people: RawAssignee[]): Promise<AssigneeView[]> {
-  return Promise.all(
-    people.map(async ({ avatarKey, ...person }) => ({
-      ...person,
-      avatarUrl: await avatarUrl(avatarKey),
-    })),
-  );
+  return Promise.all(people.map(toAssigneeView));
 }
 
 /** Le projet de l'entité porteuse, et son existence. */

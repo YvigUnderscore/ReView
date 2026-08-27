@@ -91,6 +91,7 @@ export default function AnnouncementForm({
         <div className="space-y-2">
           <Input
             placeholder={t('editor.heading')}
+            aria-label={t('editor.heading')}
             value={f.title}
             onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))}
           />
@@ -98,6 +99,7 @@ export default function AnnouncementForm({
             autoGrow
             minRows={3}
             placeholder={t('announcement.body')}
+            aria-label={t('announcement.body')}
             value={f.body}
             onChange={(e) => setF((s) => ({ ...s, body: e.target.value }))}
           />
@@ -169,7 +171,7 @@ export default function AnnouncementForm({
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>
-            {t('common.undo')}
+            {t('common.cancel')}
           </Button>
           <Button size="sm" onClick={save} disabled={busy}>
             {busy ? t('common.saving') : t('common.save')}

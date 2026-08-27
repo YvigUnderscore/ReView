@@ -94,6 +94,7 @@ export function useTimelineCardMenu(
                 autoFocus
                 value={renaming}
                 placeholder={t('timeline.defaultName')}
+                aria-label={t('timeline.defaultName')}
                 onChange={(e) => setRenaming(e.target.value)}
               />
             </div>

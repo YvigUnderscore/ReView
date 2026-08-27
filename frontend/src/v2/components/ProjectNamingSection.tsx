@@ -47,6 +47,7 @@ export default function ProjectNamingSection({
           <input
             className="w-full rounded border border-input bg-background px-2 py-1.5 font-mono text-xs"
             placeholder="^SH\d{3,}_v\d+\..+$"
+            aria-label="^SH\d{3,}_v\d+\..+$"
             value={value.pattern}
             onChange={(e) => onChange({ ...value, pattern: e.target.value })}
           />
@@ -71,6 +72,7 @@ export default function ProjectNamingSection({
           <input
             className="w-64 rounded border border-input bg-background px-2 py-1.5 text-xs"
             placeholder={t('naming.test.placeholder')}
+            aria-label={t('naming.test.placeholder')}
             value={sample}
             onChange={(e) => setSample(e.target.value)}
           />
