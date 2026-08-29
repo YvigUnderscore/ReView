@@ -32,14 +32,7 @@ const SECTION_ORDER = [
  * build le signale.
  */
 export const PAGE_ORDER = {
-  'getting-started': [
-    'feature-tour.md',
-    'installation.md',
-    'first-run.md',
-    'sample-project.md',
-    'docker-stack.md',
-    'updating.md',
-  ],
+  'getting-started': ['feature-tour.md', 'installation.md', 'first-run.md', 'docker-stack.md', 'updating.md'],
   'user-guide': [
     'navigation-and-search.md',
     'projects-and-pipeline.md',
