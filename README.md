@@ -135,6 +135,15 @@ The application answers on **http://localhost:3429** (API on `:3430`, optional G
 
 > ⚠️ Seeded accounts are for local development. Never expose a seeded instance.
 
+### Fill it with a real-looking studio
+
+An empty instance is hard to judge. `npm run sample` in `backend/` builds a demonstration
+studio — the three-episode *Caminandes* series in production, fifteen people, video, images,
+USD scenes and Gaussian splats that really go through the pipeline, and four months of review
+history.
+Everything it uses is free to redistribute (Blender Open Movies, Poly Haven); nothing is
+committed. See [Sample project](DOCUMENTATION/getting-started/sample-project.md).
+
 ### Updating
 
 ```bash

@@ -21,7 +21,8 @@
     "format": "prettier --write \"src/**/*.ts\" \"prisma/**/*.ts\" \"scripts/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\" \"scripts/**/*.ts\"",
     "test": "vitest run",
-    "test:integration": "vitest run -c vitest.integration.config.ts"
+    "test:integration": "vitest run -c vitest.integration.config.ts",
+    "sample": "tsx scripts/sample-project/index.ts"
   },
   "keywords": [],
   "author": "Yvig Bidon",

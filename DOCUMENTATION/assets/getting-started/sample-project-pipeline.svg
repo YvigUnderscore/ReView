@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" role="img" width="800" height="420">
+  <title>The sample project generator: a described state becomes a production history, real files, and a populated instance</title>
+  <desc>Three stages. The data files describe a state; the generator derives a history and builds media from open-source sources; the structure is written with Prisma while media go through the upload API so the workers process them.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="420" rx="10"/>
+
+  <rect class="band" x="20" y="20" width="230" height="380" rx="9"/>
+  <rect class="band" x="285" y="20" width="230" height="380" rx="9"/>
+  <rect class="band" x="550" y="20" width="230" height="380" rx="9"/>
+
+  <text class="t" x="36" y="46">What the production says</text>
+  <text class="m" x="36" y="64">data/</text>
+  <text class="t" x="301" y="46">What the generator derives</text>
+  <text class="m" x="301" y="64">generate.ts · build/</text>
+  <text class="t" x="566" y="46">What the instance receives</text>
+  <text class="m" x="566" y="64">seed/</text>
+
+  <rect class="panel" x="36" y="82" width="198" height="46" rx="9"/>
+  <text class="l" x="50" y="102">Team, projects, shots</text>
+  <text class="d" x="50" y="118">a state, not a history</text>
+
+  <rect class="panel-a" x="36" y="140" width="198" height="46" rx="9"/>
+  <text class="l" x="50" y="160">Hand-written feedback</text>
+  <text class="d" x="50" y="176">the notes worth reading</text>
+
+  <rect class="panel" x="36" y="198" width="198" height="46" rx="9"/>
+  <text class="l" x="50" y="218">Briefs and playlists</text>
+  <text class="d" x="50" y="234">markdown, dailies</text>
+
+  <rect class="panel-o" x="36" y="256" width="198" height="46" rx="9"/>
+  <text class="l" x="50" y="276">Open-source sources</text>
+  <text class="d" x="50" y="292">Blender films, Poly Haven</text>
+
+  <rect class="panel-a" x="301" y="82" width="198" height="46" rx="9"/>
+  <text class="l" x="315" y="102">Production history</text>
+  <text class="d" x="315" y="118">versions, retakes, dates</text>
+
+  <rect class="panel" x="301" y="140" width="198" height="46" rx="9"/>
+  <text class="l" x="315" y="160">One segment per shot</text>
+  <text class="d" x="315" y="176">graded per pipeline step</text>
+
+  <rect class="panel" x="301" y="198" width="198" height="46" rx="9"/>
+  <text class="l" x="315" y="218">USD asset and shot graphs</text>
+  <text class="d" x="315" y="234">layers, variants, purposes</text>
+
+  <rect class="panel" x="301" y="256" width="198" height="46" rx="9"/>
+  <text class="l" x="315" y="276">Gaussian splats</text>
+  <text class="d" x="315" y="292">sampled from CC0 scans</text>
+
+  <rect class="panel-a" x="566" y="82" width="198" height="46" rx="9"/>
+  <text class="l" x="580" y="102">Prisma — structure</text>
+  <text class="d" x="580" y="118">the only way to backdate</text>
+
+  <rect class="panel-a" x="566" y="140" width="198" height="46" rx="9"/>
+  <text class="l" x="580" y="160">Upload API — media</text>
+  <text class="d" x="580" y="176">the only way to process</text>
+
+  <rect class="panel" x="566" y="198" width="198" height="46" rx="9"/>
+  <text class="l" x="580" y="218">Workers</text>
+  <text class="d" x="580" y="234">HLS, thumbnails, GLB</text>
+
+  <rect class="panel" x="566" y="256" width="198" height="46" rx="9"/>
+  <text class="l" x="580" y="276">Review threads</text>
+  <text class="d" x="580" y="292">annotations, decisions</text>
+
+  <path class="conn-a" d="M234 105 L268 105 L268 105 L299 105" marker-end="url(#arrow-a)"/>
+  <path class="conn" d="M234 163 L268 163 L268 221 L299 221" marker-end="url(#arrow)"/>
+  <path class="conn" d="M234 279 L268 279 L268 279 L299 279" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M499 105 L533 105 L533 105 L564 105" marker-end="url(#arrow-a)"/>
+  <path class="conn" d="M499 163 L533 163 L533 163 L564 163" marker-end="url(#arrow)"/>
+  <path class="conn" d="M499 221 L533 221 L533 163 L564 163" marker-end="url(#arrow)"/>
+  <path class="conn" d="M665 186 L665 196" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M665 128 L665 138" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-o" x="36" y="330" width="728" height="46" rx="9"/>
+  <text class="l" x="50" y="350">Everything is fetched into dev_data/, nothing is committed</text>
+  <text class="d" x="50" y="366">CC BY footage, CC0 models — the credit list is written to ATTRIBUTION.md at the end of every run</text>
+</svg>

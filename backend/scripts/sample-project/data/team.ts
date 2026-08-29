@@ -1,0 +1,233 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import type { TeamMember } from './types';
+
+/**
+ * L'équipe du studio de démonstration.
+ *
+ * Des personnes inventées, jamais celles des génériques des films sources : les œuvres sont
+ * libres, les gens qui les ont faites ne sont pas du décor. Chaque compte a un métier, des
+ * départements et un rôle — c'est ce qui rend lisibles l'assignation, les droits et la
+ * messagerie une fois le jeu de données ouvert.
+ */
+
+/** Départements du studio, dans l'ordre du pipe (amont → aval). */
+export const DEPARTMENTS: { key: string; name: string; color: string }[] = [
+  { key: 'EDIT', name: 'Editorial', color: '#8B93A7' },
+  { key: 'LAYOUT', name: 'Layout', color: '#4C8DF6' },
+  { key: 'MODELING', name: 'Modeling', color: '#22C1A6' },
+  { key: 'RIGGING', name: 'Rigging', color: '#8E6BF0' },
+  { key: 'LOOKDEV', name: 'Look Dev', color: '#E0A32E' },
+  { key: 'ANIMATION', name: 'Animation', color: '#F0645A' },
+  { key: 'FX', name: 'FX', color: '#C455D6' },
+  { key: 'LIGHTING', name: 'Lighting', color: '#F5B841' },
+  { key: 'MATTEPAINT', name: 'Matte Painting', color: '#6DBE45' },
+  { key: 'COMPOSITING', name: 'Compositing', color: '#2FA8E0' },
+];
+
+export const TEAM: TeamMember[] = [
+  {
+    key: 'ada',
+    email: 'ada.vermeer@sample.review',
+    firstName: 'Ada',
+    lastName: 'Vermeer',
+    username: 'ada',
+    jobTitle: 'Pipeline TD / Studio Manager',
+    bio: 'Keeps the pipeline honest. Wrote most of the publishing tools nobody notices until they break.',
+    role: 'ADMIN',
+    departments: ['EDIT'],
+    phone: '+31 20 555 0142',
+    avatar: ['#1F6FEB', '#0B2E63'],
+  },
+  {
+    key: 'marisol',
+    email: 'marisol.quintero@sample.review',
+    firstName: 'Marisol',
+    lastName: 'Quintero',
+    username: 'marisol',
+    jobTitle: 'VFX Supervisor',
+    bio: 'Twelve years of shot supervision. Reviews with the sound off and the timeline scrubbed frame by frame.',
+    role: 'SUPERVISOR',
+    departments: ['LIGHTING', 'COMPOSITING', 'FX'],
+    avatar: ['#F0645A', '#5A1410'],
+  },
+  {
+    key: 'tomas',
+    email: 'tomas.lindqvist@sample.review',
+    firstName: 'Tomas',
+    lastName: 'Lindqvist',
+    username: 'tomas',
+    jobTitle: 'Animation Supervisor',
+    bio: 'Believes a shot is finished when the silhouette reads at quarter size.',
+    role: 'SUPERVISOR',
+    departments: ['ANIMATION', 'LAYOUT'],
+    avatar: ['#E0A32E', '#5A3F08'],
+  },
+  {
+    key: 'priya',
+    email: 'priya.raghunathan@sample.review',
+    firstName: 'Priya',
+    lastName: 'Raghunathan',
+    username: 'priya',
+    jobTitle: 'Lead Modeler',
+    bio: 'Topology first, detail later. Maintains the asset library and its naming conventions.',
+    role: 'ARTIST',
+    departments: ['MODELING', 'LOOKDEV'],
+    avatar: ['#22C1A6', '#06463C'],
+  },
+  {
+    key: 'noah',
+    email: 'noah.bergstrom@sample.review',
+    firstName: 'Noah',
+    lastName: 'Bergström',
+    username: 'noah',
+    jobTitle: 'Rigging TD',
+    bio: 'Rigs, deformers, and the occasional tool to stop animators from asking for one.',
+    role: 'ARTIST',
+    departments: ['RIGGING'],
+    avatar: ['#8E6BF0', '#2B1A56'],
+  },
+  {
+    key: 'elodie',
+    email: 'elodie.fournier@sample.review',
+    firstName: 'Élodie',
+    lastName: 'Fournier',
+    username: 'elodie',
+    jobTitle: 'Character Animator',
+    bio: 'Blocking in stepped, always. Keeps a folder of reference footage for every creature she animates.',
+    role: 'ARTIST',
+    departments: ['ANIMATION'],
+    avatar: ['#F5B841', '#5A3F08'],
+  },
+  {
+    key: 'kenji',
+    email: 'kenji.watanabe@sample.review',
+    firstName: 'Kenji',
+    lastName: 'Watanabe',
+    username: 'kenji',
+    jobTitle: 'Animator',
+    bio: 'Creature work and crowd passes. Prefers a long polish pass over a second blocking.',
+    role: 'ARTIST',
+    departments: ['ANIMATION', 'LAYOUT'],
+    avatar: ['#4C8DF6', '#0C2C60'],
+  },
+  {
+    key: 'rui',
+    email: 'rui.almeida@sample.review',
+    firstName: 'Rui',
+    lastName: 'Almeida',
+    username: 'rui',
+    jobTitle: 'FX Artist',
+    bio: 'Snow, dust, smoke. Caches everything twice and still checks the disk usage.',
+    role: 'ARTIST',
+    departments: ['FX'],
+    avatar: ['#C455D6', '#3B1042'],
+  },
+  {
+    key: 'sofia',
+    email: 'sofia.rossi@sample.review',
+    firstName: 'Sofia',
+    lastName: 'Rossi',
+    username: 'sofia',
+    jobTitle: 'Lighting Artist',
+    bio: 'Light the story, then the set. Keeps a reference wall of stills for every sequence.',
+    role: 'ARTIST',
+    departments: ['LIGHTING', 'LOOKDEV'],
+    avatar: ['#F5B841', '#4A3505'],
+  },
+  {
+    key: 'malik',
+    email: 'malik.diallo@sample.review',
+    firstName: 'Malik',
+    lastName: 'Diallo',
+    username: 'malik',
+    jobTitle: 'Compositor',
+    bio: 'Final pixel. Will argue about grain structure for longer than the shot lasts.',
+    role: 'ARTIST',
+    departments: ['COMPOSITING', 'MATTEPAINT'],
+    avatar: ['#2FA8E0', '#07344A'],
+  },
+  {
+    key: 'hannah',
+    email: 'hannah.okafor@sample.review',
+    firstName: 'Hannah',
+    lastName: 'Okafor',
+    username: 'hannah',
+    jobTitle: 'Layout & Previz Artist',
+    bio: 'Blocks cameras and staging. Half of her shots survive to final untouched.',
+    role: 'ARTIST',
+    departments: ['LAYOUT', 'EDIT'],
+    avatar: ['#4C8DF6', '#122E5E'],
+  },
+  {
+    key: 'ines',
+    email: 'ines.moreau@sample.review',
+    firstName: 'Inès',
+    lastName: 'Moreau',
+    username: 'ines',
+    jobTitle: 'Production Coordinator',
+    bio: 'Owns the schedule. Asks the question everyone was avoiding in the daily.',
+    role: 'SUPERVISOR',
+    departments: ['EDIT'],
+    avatar: ['#6DBE45', '#1D3D12'],
+  },
+  {
+    key: 'lucas',
+    email: 'lucas.meyer@client.sample',
+    firstName: 'Lucas',
+    lastName: 'Meyer',
+    username: 'lucas',
+    jobTitle: 'Producer (client)',
+    bio: 'Reviews the cut on Fridays, comments on Mondays.',
+    role: 'CLIENT',
+    departments: [],
+    avatar: ['#8B93A7', '#2A2F3A'],
+  },
+  {
+    key: 'ingrid',
+    email: 'ingrid.sorensen@client.sample',
+    firstName: 'Ingrid',
+    lastName: 'Sørensen',
+    username: 'ingrid',
+    jobTitle: 'Distribution (client)',
+    bio: 'Checks deliverables against the technical specification, and nothing else.',
+    role: 'CLIENT',
+    departments: [],
+    avatar: ['#8B93A7', '#22262E'],
+  },
+  {
+    key: 'victor',
+    email: 'victor.salas@sample.review',
+    firstName: 'Victor',
+    lastName: 'Salas',
+    username: 'victor',
+    jobTitle: 'Animator (left the studio)',
+    bio: 'Worked on the first two sequences. Account disabled after offboarding — his work and notes stay.',
+    role: 'ARTIST',
+    departments: ['ANIMATION'],
+    disabled: true,
+    avatar: ['#8B93A7', '#2A2F3A'],
+  },
+];
+
+/** Compte de service : la ferme de rendu publie sous cette identité, sans jamais se connecter. */
+export const SERVICE_ACCOUNT: TeamMember = {
+  key: 'farm',
+  email: 'render-farm@service.sample.review',
+  firstName: 'Render',
+  lastName: 'Farm',
+  username: 'render-farm',
+  jobTitle: 'Service account',
+  bio: 'Publishes renders through the public API. No interactive login.',
+  role: 'ARTIST',
+  departments: [],
+  service: true,
+  avatar: ['#3A4150', '#171A21'],
+};
+
+export const memberByKey = (key: string): TeamMember => {
+  const found = [...TEAM, SERVICE_ACCOUNT].find((m) => m.key === key);
+  if (!found) throw new Error(`unknown team member: ${key}`);
+  return found;
+};
