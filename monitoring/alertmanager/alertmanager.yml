@@ -18,7 +18,11 @@
 #          restart: always
 #
 #      (plus `alertmanager_data:` dans la section `volumes:`) ;
-#   3. renseigner ci-dessous un vrai SMTP — celui du studio, le même que ReView.
+#   3. renseigner ci-dessous un vrai SMTP — celui du studio, le même que ReView ;
+#   4. écrire le mot de passe du relais dans `monitoring/alertmanager/smtp_password`
+#      (un seul mot, sans retour à la ligne final : `printf %s 'lemotdepasse' > …`).
+#      Le fichier est ignoré par git : il n'est monté que dans le conteneur, via le
+#      volume ci-dessus, et Alertmanager le lit au démarrage.
 #
 # Aucun port hôte : Alertmanager n'a pas à être joignable de l'extérieur, Prometheus
 # l'atteint par le réseau du compose.
@@ -28,7 +32,10 @@ global:
   smtp_smarthost: 'smtp.example.tld:587'
   smtp_from: 'review-alerts@example.tld'
   smtp_auth_username: 'review-alerts@example.tld'
-  smtp_auth_password: 'CHANGE_ME'
+  # Le mot de passe ne s'écrit pas ici : Alertmanager le lit dans un fichier monté à
+  # côté de cette configuration. Un mot de passe en clair vivrait dans le dépôt, et
+  # les scanners de secrets le signalent comme fuite — même quand c'est un exemple.
+  smtp_auth_password_file: '/etc/alertmanager/smtp_password'
 
 route:
   receiver: studio-ops
