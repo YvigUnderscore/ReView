@@ -280,6 +280,12 @@ route them by email, copy `monitoring/alertmanager/alertmanager.yml`, fill in yo
 uncomment the `alerting:` block in `monitoring/prometheus.yml` and add the service to the
 `monitoring` profile; the file's header contains the exact snippet.
 
+The relay password is the one field that does **not** go in that file. Alertmanager reads it from
+`smtp_auth_password_file`, so write it to `monitoring/alertmanager/smtp_password` — a single word,
+no trailing newline — and it travels to the container through the directory already mounted at
+`/etc/alertmanager`. The path is in `.gitignore`: a password written into the YAML instead would
+be committed with it, and secret scanners flag that shape whatever the value.
+
 ## Reading the logs
 
 Logs are pino JSON on stdout, with a request id correlated across the lines of one request.

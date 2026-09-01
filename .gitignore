@@ -41,4 +41,7 @@ frontend/blob-report/
 
 # Certificats TLS de prod (montés dans nginx) — jamais commités
 nginx/certs/
+
+# Mot de passe du relais SMTP d'Alertmanager (monté dans le conteneur) — jamais commité
+monitoring/alertmanager/smtp_password
 backups/
