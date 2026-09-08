@@ -13951,7 +13951,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### qs@6.15.3
+### qs@6.16.0
 
 - License: `BSD-3-Clause`
 - Source: https://github.com/ljharb/qs
