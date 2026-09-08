@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { System } from './adminShared';
+import { Card } from '../../components/ui/card';
 import { useT } from '../../i18n';
 
 /** Petites primitives d'affichage partagées par les sections d'administration. */
@@ -28,24 +29,23 @@ export function Metric({
     </>
   );
   if (to) {
+    // `asChild` : la carte *est* le lien, sinon la zone cliquable se réduirait à son contenu.
     return (
-      <Link
-        to={to}
-        className="block rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-secondary/40"
-      >
-        {body}
-      </Link>
+      <Card asChild interactive className="block hover:bg-secondary/40">
+        <Link to={to}>{body}</Link>
+      </Card>
     );
   }
-  return <div className="rounded-lg border border-border bg-card p-4">{body}</div>;
+  return <Card>{body}</Card>;
 }
 
 export function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <Card>
+      {/* Titre de section d'administration : plus discret que le `CardTitle` par défaut. */}
       <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
       {children}
-    </div>
+    </Card>
   );
 }
 

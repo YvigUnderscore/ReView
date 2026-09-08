@@ -16,6 +16,7 @@ import { lastSeenLabel } from '../stores/usePresence';
 import { ROLE_LABEL_KEY, STATUS_LABEL_KEY } from '../lib/userStatus';
 import type { UserProfile } from '../types/api';
 import { useT } from '../i18n';
+import { Card } from '../components/ui/card';
 
 /** Fiche publique d'un membre du studio : qui il est, ce qu'il fait, comment le joindre. */
 export default function UserProfilePage() {
@@ -59,7 +60,7 @@ export default function UserProfilePage() {
   return (
     <PageShell title={data.displayName}>
       <div className="mx-auto max-w-2xl space-y-4">
-        <section className="flex items-start gap-4 rounded-lg border border-border bg-card p-5">
+        <Card padding="lg" className="flex items-start gap-4">
           <Avatar
             seed={data.id}
             initials={data.initials}
@@ -89,17 +90,17 @@ export default function UserProfilePage() {
               </Button>
             )}
           </div>
-        </section>
+        </Card>
 
         {data.bio && (
-          <section className="space-y-2 rounded-lg border border-border bg-card p-5">
+          <Card padding="lg" className="space-y-2">
             <h2 className="text-sm font-semibold">{t('profile.bio')}</h2>
             <p className="whitespace-pre-wrap text-sm text-foreground/90">{data.bio}</p>
-          </section>
+          </Card>
         )}
 
         {(data.email || data.phone) && (
-          <section className="space-y-2 rounded-lg border border-border bg-card p-5">
+          <Card padding="lg" className="space-y-2">
             <h2 className="text-sm font-semibold">{t('profile.contact')}</h2>
             {data.email && (
               <p className="flex items-center gap-2 text-sm">
@@ -117,11 +118,11 @@ export default function UserProfilePage() {
                 </a>
               </p>
             )}
-          </section>
+          </Card>
         )}
 
         {!data.isSelf && (
-          <section className="space-y-2 rounded-lg border border-border bg-card p-5">
+          <Card padding="lg" className="space-y-2">
             <h2 className="text-sm font-semibold">{t('profile.sharedProjects')}</h2>
             {data.sharedProjects.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('profile.sharedProjects.empty')}</p>
@@ -139,7 +140,7 @@ export default function UserProfilePage() {
                 ))}
               </ul>
             )}
-          </section>
+          </Card>
         )}
       </div>
     </PageShell>

@@ -6,6 +6,7 @@ import type { NamingRule, NamingMode } from '../types/api';
 import { useT } from '../i18n';
 
 import type { MessageKey } from '../i18n';
+import { Card } from './ui/card';
 
 const MODE_KEY: Record<NamingMode, MessageKey> = {
   off: 'naming.policy.off',
@@ -38,7 +39,7 @@ export default function ProjectNamingSection({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="text-sm font-medium">{t('pipeline.naming')}</div>
       <div className="mb-3 text-xs text-muted-foreground">{t('project.namingHint')}</div>
       <div className="flex flex-wrap items-end gap-3">
@@ -85,6 +86,6 @@ export default function ProjectNamingSection({
           ) : null}
         </div>
       )}
-    </section>
+    </Card>
   );
 }

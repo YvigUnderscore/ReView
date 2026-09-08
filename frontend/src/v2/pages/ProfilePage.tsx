@@ -17,6 +17,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useT } from '../i18n';
+import { Card } from '../components/ui/card';
 
 export default function ProfilePage() {
   const t = useT();
@@ -137,7 +138,7 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="text-xl font-semibold">{t('profile.title')}</h1>
 
-        <section className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
+        <Card className="flex items-center gap-4">
           <Avatar
             seed={user.id}
             initials={user.initials ?? user.email.slice(0, 2).toUpperCase()}
@@ -164,9 +165,9 @@ export default function ProfilePage() {
             </div>
             <p className="text-xs text-muted-foreground">{t('profile.avatar.formats')}</p>
           </div>
-        </section>
+        </Card>
 
-        <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <Card className="space-y-3">
           <h2 className="text-sm font-semibold">{t('profile.identity')}</h2>
           <div className="grid grid-cols-2 gap-3">
             <Field
@@ -222,9 +223,9 @@ export default function ProfilePage() {
           <Button onClick={saveProfile} disabled={busy}>
             {t('common.save')}
           </Button>
-        </section>
+        </Card>
 
-        <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <Card className="space-y-3">
           <h2 className="text-sm font-semibold">{t('profile.password.section')}</h2>
           {/* Exigé par le serveur pour changer le mot de passe ET pour changer l'email. */}
           <Field
@@ -246,16 +247,16 @@ export default function ProfilePage() {
           <Button onClick={savePassword} disabled={busy || !pwd || !currentPassword}>
             {t('profile.password.submit')}
           </Button>
-        </section>
+        </Card>
 
         <DisplaySettings />
 
-        <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <Card className="space-y-3">
           <h2 className="text-sm font-semibold">{t('profile.notifications')}</h2>
           <DigestToggle />
           <WeeklyReportToggle />
           <PushToggle />
-        </section>
+        </Card>
 
         {/* Sécurité du compte (36.A/36.B/36.C) : 2FA + sessions actives + tokens d'API. */}
         <TwoFaSection />

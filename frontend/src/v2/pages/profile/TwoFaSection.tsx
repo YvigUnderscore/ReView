@@ -10,6 +10,7 @@ import { useAuth } from '../../stores/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useT } from '../../i18n';
+import { Card } from '../../components/ui/card';
 
 /**
  * 2FA TOTP (36.A) : enrôlement (QR + code), codes de secours affichés une fois,
@@ -77,7 +78,7 @@ export default function TwoFaSection() {
   };
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+    <Card className="space-y-3">
       <h2 className="flex items-center gap-2 text-sm font-semibold">
         {enabled ? (
           <ShieldCheck size={15} className="text-success" />
@@ -150,6 +151,6 @@ export default function TwoFaSection() {
           </Button>
         </form>
       )}
-    </section>
+    </Card>
   );
 }

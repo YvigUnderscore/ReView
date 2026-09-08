@@ -23,6 +23,7 @@ import {
   type ScopeLevel,
 } from '../../components/tokens/tokenScopes';
 import { useT, intlLocale, type MessageKey } from '../../i18n';
+import { Card } from '../../components/ui/card';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -105,7 +106,7 @@ export default function ApiTokensSection() {
   };
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+    <Card className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold">{t('tokens.title')}</h2>
@@ -218,6 +219,6 @@ export default function ApiTokensSection() {
         ))}
         {tokens.length > 0 && <p className="pt-1 text-2xs text-muted-foreground">{t('tokens.revokeHint')}</p>}
       </div>
-    </section>
+    </Card>
   );
 }

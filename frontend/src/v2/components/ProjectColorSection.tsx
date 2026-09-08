@@ -6,6 +6,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { ColorSettings } from '../types/api';
 import { useT } from '../i18n';
+import { Card } from './ui/card';
 
 interface OcioConfig {
   id: string;
@@ -57,7 +58,7 @@ export default function ProjectColorSection({
   };
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="mb-1 text-sm font-medium">{t('color.title')}</div>
       <div className="mb-3 text-xs text-muted-foreground">{t('project.ocioHint')}</div>
       {configs.length === 0 ? (
@@ -110,7 +111,7 @@ export default function ProjectColorSection({
           </Field>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 

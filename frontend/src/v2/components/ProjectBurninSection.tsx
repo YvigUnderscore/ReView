@@ -3,6 +3,7 @@
 
 import type { BurninConfig } from '../types/share';
 import { useT, type MessageKey } from '../i18n';
+import { Card } from './ui/card';
 
 // Recalculé au rendu : en constante de module, les libellés resteraient figés dans la
 // langue chargée au démarrage.
@@ -39,7 +40,7 @@ export default function ProjectBurninSection({
 }) {
   const t = useT();
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="mb-1 text-sm font-medium">{t('burnin.title')}</div>
       {!value ? (
         <div className="flex items-center justify-between gap-3">
@@ -86,6 +87,6 @@ export default function ProjectBurninSection({
         </div>
       )}
       <p className="mt-2 text-xs text-muted-foreground">{t('burnin.hint')}</p>
-    </section>
+    </Card>
   );
 }

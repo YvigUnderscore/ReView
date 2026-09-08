@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
+import { Card } from '../../components/ui/card';
 
 interface SessionRow {
   id: string;
@@ -56,7 +57,7 @@ export default function SessionsSection() {
   };
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+    <Card className="space-y-3">
       <h2 className="text-sm font-semibold">{t('sessions.title')}</h2>
       {sessions.length === 0 && <p className="text-xs text-muted-foreground">{t('sessions.empty')}</p>}
       <div className="space-y-1.5">
@@ -90,6 +91,6 @@ export default function SessionsSection() {
           </div>
         ))}
       </div>
-    </section>
+    </Card>
   );
 }

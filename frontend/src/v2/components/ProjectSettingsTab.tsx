@@ -18,6 +18,7 @@ import type { Nomenclature, ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
 import SgProjectSection from './shotgrid/SgProjectSection';
 import EpisodesToggle from '../pages/project/EpisodesToggle';
+import { Card } from './ui/card';
 
 /**
  * Onglet « Réglages » d'un projet (admin/superviseur) :
@@ -130,7 +131,7 @@ export default function ProjectSettingsTab({
       <ProjectSettingsInheritance projectId={projectId} onReverted={applyReverted} />
 
       {/* Frame de départ */}
-      <section className="rounded-lg border border-border bg-card p-4">
+      <Card>
         <div className="text-sm font-medium">{t('pipeline.startFrame')}</div>
         <div className="mb-3 text-xs text-muted-foreground">{t('project.startFrameHint')}</div>
         <div className="flex items-center gap-2">
@@ -149,10 +150,10 @@ export default function ProjectSettingsTab({
             {savingFrame ? '…' : t('common.save')}
           </button>
         </div>
-      </section>
+      </Card>
 
       {/* Format & cadence (résolution + fps) — défauts du projet, hérités par séquences/shots */}
-      <section className="rounded-lg border border-border bg-card p-4">
+      <Card>
         <div className="text-sm font-medium">{t('pipeline.formatRate')}</div>
         <div className="mb-3 text-xs text-muted-foreground">{t('pipeline.formatHint')}</div>
         {draft ? (
@@ -189,10 +190,10 @@ export default function ProjectSettingsTab({
         ) : (
           <SkeletonRows count={1} />
         )}
-      </section>
+      </Card>
 
       {/* Nomenclature */}
-      <section className="rounded-lg border border-border bg-card p-4">
+      <Card>
         <div className="text-sm font-medium">{t('pipeline.naming')}</div>
         <div className="mb-3 text-xs text-muted-foreground">{t('project.namingOverride')}</div>
         {draft ? (
@@ -234,7 +235,7 @@ export default function ProjectSettingsTab({
         ) : (
           <SkeletonRows count={3} />
         )}
-      </section>
+      </Card>
 
       {/* Niveau Épisode (série) : l'interrupteur vit ici, c'est le seul endroit d'où
           il s'allume — l'onglet Épisodes n'existe pas tant qu'il est éteint. */}
@@ -245,7 +246,7 @@ export default function ProjectSettingsTab({
           code ne les synchronisait : le studio se retrouvait devant un champ mort. Les
           étapes importées du site sont désormais créées à la volée à l'import ; le studio
           reste libre de les nommer, de les ordonner et d'en ajouter. */}
-      <section className="rounded-lg border border-border bg-card p-4">
+      <Card>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">{t('pipeline.departments')}</span>
         </div>
@@ -262,7 +263,7 @@ export default function ProjectSettingsTab({
         <div className="mt-4 border-t border-border pt-3">
           <DepartmentImages projectId={projectId} />
         </div>
-      </section>
+      </Card>
 
       {/* Convention de nommage (38.C) : éditée dans le draft, enregistrée avec les réglages. */}
       {draft && (

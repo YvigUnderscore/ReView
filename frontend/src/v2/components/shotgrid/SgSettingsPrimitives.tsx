@@ -3,6 +3,7 @@
 
 import { createContext, useContext, useId, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Card, CardDescription, CardTitle } from '../ui/card';
 
 /**
  * Les briques des réglages ShotGrid.
@@ -28,17 +29,17 @@ export function SettingsCard({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+    <Card className="space-y-3">
       <header className="flex items-start gap-2">
         <Icon size={15} className="mt-0.5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-medium">{title}</h3>
-          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+          <CardTitle>{title}</CardTitle>
+          {hint && <CardDescription className="mt-0.5">{hint}</CardDescription>}
         </div>
         {busy && <Loader2 className="mt-0.5 shrink-0 animate-spin text-muted-foreground" size={13} />}
       </header>
       <div className="space-y-3">{children}</div>
-    </section>
+    </Card>
   );
 }
 

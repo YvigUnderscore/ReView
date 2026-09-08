@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Switch } from '../../components/ui/switch';
 import { setEpisodesEnabled, useEpisodeInvalidate, useEpisodeSettings } from '../../lib/episodesApi';
 import { useT } from '../../i18n';
+import { Card } from '../../components/ui/card';
 
 /**
  * L'interrupteur du niveau Épisode, dans les réglages du projet.
@@ -39,7 +40,7 @@ export default function EpisodesToggle({ projectId }: { projectId: number }) {
   };
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold">{t('episodes.settings.title')}</h3>
@@ -61,6 +62,6 @@ export default function EpisodesToggle({ projectId }: { projectId: number }) {
       {settings.enabled && settings.episodeCount > 0 && (
         <p className="mt-1 text-sm text-muted-foreground">{t('episodes.settings.keepsData')}</p>
       )}
-    </section>
+    </Card>
   );
 }

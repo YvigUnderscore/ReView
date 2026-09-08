@@ -8,6 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { SkeletonRows } from './ui/skeleton';
 import { useT } from '../i18n';
+import { Card } from './ui/card';
 
 interface Usage {
   usage: number;
@@ -65,7 +66,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
   const over = pct != null && pct >= 100;
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="text-sm font-medium">{t('storage.title')}</div>
       <div className="mb-3 text-xs text-muted-foreground">{t('project.storageHint')}</div>
       {!data ? (
@@ -113,6 +114,6 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
           {msg && <p className="text-xs text-success">{msg}</p>}
         </div>
       )}
-    </section>
+    </Card>
   );
 }

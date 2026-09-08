@@ -9,6 +9,7 @@ import { qk } from '../lib/query';
 import { SkeletonRows } from './ui/skeleton';
 import { useT } from '../i18n';
 import type { ProjectSettings } from '../types/api';
+import { Card } from './ui/card';
 import {
   inheritanceRows,
   overrideKey,
@@ -68,7 +69,7 @@ export default function ProjectSettingsInheritance({
   const rows = inheritanceRows(t, viewQ.data?.studio);
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="text-sm font-medium">{t('inheritance.title')}</div>
       <div className="mb-3 text-xs text-muted-foreground">{t('inheritance.hint')}</div>
       {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
@@ -88,7 +89,7 @@ export default function ProjectSettingsInheritance({
       ) : (
         <SkeletonRows count={4} />
       )}
-    </section>
+    </Card>
   );
 }
 

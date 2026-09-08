@@ -6,6 +6,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { LightingDefault } from '../types/api';
 import { useT } from '../i18n';
+import { Card } from './ui/card';
 
 /** Entrée de la bibliothèque HDRI instance (miroir de `HdriService.listWithUrls`). */
 interface HdriItem {
@@ -40,7 +41,7 @@ export default function ProjectDefaultLightingSection({
   const set = (patch: Partial<LightingDefault>) => value && onChange({ ...value, ...patch });
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
+    <Card>
       <div className="mb-1 text-sm font-medium">{t('lighting.default.title')}</div>
       <div className="mb-3 text-xs text-muted-foreground">{t('lighting.hint')}</div>
       {!value ? (
@@ -121,7 +122,7 @@ export default function ProjectDefaultLightingSection({
           </div>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 

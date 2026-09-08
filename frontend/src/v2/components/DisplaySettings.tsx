@@ -9,6 +9,7 @@ import { useT } from '../i18n';
 import { useUpdatePreferences } from '../lib/usePreferences';
 import LanguagePicker from './LanguagePicker';
 import TranslationNotice from './TranslationNotice';
+import { Card } from './ui/card';
 
 /** Une option d'un contrôle segmenté. */
 type Opt<T extends string> = { value: T; label: string; icon?: LucideIcon };
@@ -103,7 +104,7 @@ export default function DisplaySettings() {
     { value: 'compact', label: t('view.compact'), icon: List },
   ];
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-card p-4">
+    <Card className="space-y-4">
       <h2 className="text-sm font-semibold">{t('display.title')}</h2>
       <Row label={t('display.theme')} hint={t('display.theme.hint')}>
         <Segmented value={mode} options={themeOpts} onChange={setMode} ariaLabel={t('display.theme')} />
@@ -135,6 +136,6 @@ export default function DisplaySettings() {
         />
       </Row>
       <TranslationNotice />
-    </section>
+    </Card>
   );
 }
