@@ -153,8 +153,18 @@ const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; purge: 
  * Revalide l'accès à chaque id d'un domaine à corbeille. Les domaines pipeline
  * (projects/episodes/sequences/shots/assets) exigent ADMIN/SUPERVISOR ; media délègue à
  * `assertMediaManage` (uploader ou manager) ; versions exige auteur ou manager.
+ *
+ * `fromTrash` marque les deux opérations qui, par nature, désignent des éléments déjà à la
+ * corbeille — restauration et purge. Elles seules lèvent l'invariant du RBAC (« un projet
+ * à la corbeille n'existe plus »), sans quoi la corbeille globale ne pourrait plus rendre
+ * ni détruire ce qu'elle affiche. La mise à la corbeille, elle, garde la garde entière.
  */
-async function assertDeleteAccess(user: SessionUser, domain: DeleteDomain, ids: number[]): Promise<void> {
+async function assertDeleteAccess(
+  user: SessionUser,
+  domain: DeleteDomain,
+  ids: number[],
+  fromTrash = false,
+): Promise<void> {
   if (domain === 'media') {
     for (const id of ids) await assertMediaManage(id, user);
     return;
@@ -163,7 +173,7 @@ async function assertDeleteAccess(user: SessionUser, domain: DeleteDomain, ids: 
   for (const id of ids) {
     const projectId = await RESOLVERS[domain](id);
     if (!projectId) throw notFound(`Item ${id} not found`);
-    if (!(await checkProjectAccess(user.id, user.role, projectId)))
+    if (!(await checkProjectAccess(user.id, user.role, projectId, { includeTrashed: fromTrash })))
       throw forbidden(`Access denied (${domain} ${id})`);
     if (
       domain === 'projects' ||
@@ -190,7 +200,7 @@ export async function bulkDelete(user: SessionUser, domain: DeleteDomain, ids: n
 }
 
 export async function bulkRestore(user: SessionUser, domain: DeleteDomain, ids: number[]): Promise<number> {
-  await assertDeleteAccess(user, domain, ids);
+  await assertDeleteAccess(user, domain, ids, true);
   await RESTORE[domain](ids);
   const a = AUDIT_ACTION[domain];
   logAudit({ userId: user.id, action: a.restore, entityType: a.type, entityId: ids[0], metadata: { ids } });
@@ -203,7 +213,7 @@ export async function bulkRestore(user: SessionUser, domain: DeleteDomain, ids: 
  * le nettoyage storage après commit). Irréversible.
  */
 export async function bulkPurge(user: SessionUser, domain: DeleteDomain, ids: number[]): Promise<number> {
-  await assertDeleteAccess(user, domain, ids);
+  await assertDeleteAccess(user, domain, ids, true);
   // La purge d'un projet est réservée aux ADMIN — c'est la règle de la route unitaire
   // (`DELETE /api/projects/:projectId/purge`, requireRole(ADMIN)). `assertDeleteAccess` ne
   // demande qu'un « gestionnaire », qui inclut SUPERVISOR : sans ce contrôle, la voie

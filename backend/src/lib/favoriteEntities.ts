@@ -71,6 +71,11 @@ const idsOf = (rows: readonly FavoriteRow[], type: EntityType): number[] =>
 /**
  * Charge les entités citées par les favoris — une requête par famille non vide.
  * Une entité supprimée (corbeille) n'entre pas dans la table : le favori disparaît.
+ *
+ * Le projet à la corbeille compte comme supprimé pour tout ce qu'il porte : la mise à la
+ * corbeille d'un projet ne descend pas sur ses plans (`lib/trash`), et sans ce filtre la
+ * barre latérale continuait d'afficher — donc de divulguer — le nom d'un plan d'un projet
+ * retiré, dont le lien profond mène désormais à un 404 (`middleware/rbac`).
  */
 async function loadEntities(rows: readonly FavoriteRow[]): Promise<Map<string, ResolvedEntity>> {
   const [projects, sequences, shots, assets] = await Promise.all([
@@ -79,15 +84,30 @@ async function loadEntities(rows: readonly FavoriteRow[]): Promise<Map<string, R
       select: { id: true, name: true },
     }),
     prisma.sequence.findMany({
-      where: { id: { in: idsOf(rows, EntityType.SEQUENCE) }, deletedAt: null, hiddenAt: null },
+      where: {
+        id: { in: idsOf(rows, EntityType.SEQUENCE) },
+        deletedAt: null,
+        hiddenAt: null,
+        project: { deletedAt: null },
+      },
       select: { id: true, code: true, name: true, projectId: true },
     }),
     prisma.shot.findMany({
-      where: { id: { in: idsOf(rows, EntityType.SHOT) }, deletedAt: null, hiddenAt: null },
+      where: {
+        id: { in: idsOf(rows, EntityType.SHOT) },
+        deletedAt: null,
+        hiddenAt: null,
+        project: { deletedAt: null },
+      },
       select: { id: true, code: true, name: true, projectId: true },
     }),
     prisma.asset.findMany({
-      where: { id: { in: idsOf(rows, EntityType.ASSET) }, deletedAt: null, hiddenAt: null },
+      where: {
+        id: { in: idsOf(rows, EntityType.ASSET) },
+        deletedAt: null,
+        hiddenAt: null,
+        project: { deletedAt: null },
+      },
       select: { id: true, name: true, projectId: true },
     }),
   ]);

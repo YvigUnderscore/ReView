@@ -7,7 +7,9 @@ import type { Request, Response, NextFunction } from 'express';
 
 const { db, actor } = vi.hoisted(() => ({
   db: {
-    project: { findFirst: vi.fn() },
+    // `count` : la garde d'accès projet commence par vérifier que le projet n'est pas à la
+    // corbeille (`middleware/rbac`). Il ne l'est jamais dans ce fichier.
+    project: { findFirst: vi.fn(), count: vi.fn(() => Promise.resolve(1)) },
     projectMembership: { findUnique: vi.fn() },
     asset: { findUnique: vi.fn() },
     board: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },

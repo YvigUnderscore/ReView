@@ -13,6 +13,9 @@ const { db, caller } = vi.hoisted(() => {
     db: {
       mediaObject: { findUnique: vi.fn() },
       version: { findUnique: vi.fn() },
+      // `count` : la garde d'accès projet commence par vérifier que le projet n'est pas à
+      // la corbeille (`middleware/rbac`). Il ne l'est jamais dans ce fichier.
+      project: { count: vi.fn(() => Promise.resolve(1)) },
       projectMembership: { findUnique: vi.fn() },
     },
     caller,

@@ -11,7 +11,9 @@ const { db, caller } = vi.hoisted(() => {
   const caller: Caller = { user: { id: 7, email: 'artist@studio.com', role: 'ARTIST' }, apiToken: undefined };
   return {
     db: {
-      project: { findFirst: vi.fn() },
+      // `count` : la garde d'accès projet commence par vérifier que le projet n'est pas à
+      // la corbeille (`middleware/rbac`). Il ne l'est jamais dans ce fichier.
+      project: { findFirst: vi.fn(), count: vi.fn(() => Promise.resolve(1)) },
       sequence: { findFirst: vi.fn() },
       shot: { findFirst: vi.fn() },
       task: { findFirst: vi.fn(), findUnique: vi.fn() },

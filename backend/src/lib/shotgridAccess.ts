@@ -24,7 +24,14 @@ export async function assertProjectManager(
   projectId: number,
   options: { allowMembers?: boolean; adminOnly?: boolean } = {},
 ): Promise<void> {
-  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
+  // Même invariant que `middleware/rbac` : un projet mis à la corbeille n'existe plus. Ici
+  // l'enjeu dépasse la lecture — ces écrans déclenchent des synchronisations, donc des
+  // ÉCRITURES sur le site ShotGrid du studio. Pousser des statuts ou des notes pour un
+  // projet que le studio vient de retirer ne se rattrape pas côté distant.
+  const project = await prisma.project.findUnique({
+    where: { id: projectId, deletedAt: null },
+    select: { id: true },
+  });
   if (!project) throw notFound('Project not found');
 
   if (user.role === Role.ADMIN) return;
