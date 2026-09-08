@@ -962,6 +962,7 @@
     "other": "{count} ouverts"
   },
   "comments.filter.none": "Aucun commentaire dans cet état.",
+  "comments.editField": "Modifier le commentaire",
   "decision.current": "Décision courante :",
   "decision.set": "Poser la décision",
   "project.burninInherit": "Ce projet hérite du template studio (Admin → Diffusion).",
@@ -2816,6 +2817,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Ouvre l'aller-retour : le champ redevient modifiable ici et chaque changement part vers le site. Écrire dans un site de production est un choix explicite, jamais un défaut.",
   "shotgrid.log.playlistNameTaken": "Une autre playlist porte déjà le nom «{name}» dans ce projet — le nom local a été conservé.",
   "shotgrid.log.reviewStatusUnmapped": "Le statut ShotGrid « {code} » ({name}) n'a aucune décision de review correspondante — associez-le dans Réglages › Statuts de review",
+  "shotgrid.steps.kind": "Étapes affichées",
+  "shotgrid.sync.level": "Niveau de journal",
   "upload.pickTask.title": "À quelle task appartient cette version ?",
   "upload.pickTask.hint": "La ranger sous l’étape qui l’a produite garde le pipe lisible — et l’envoie au bon endroit dans ShotGrid.",
   "upload.pickTask.none": "Sans task — rattacher à l’asset",
@@ -3200,5 +3203,9 @@
   "bulk.status.title": { "one": "Statut de {count} shot", "other": "Statut de {count} shots" },
   "bulk.status.done": { "one": "{count} shot mis à jour", "other": "{count} shots mis à jour" },
   "bulk.status.partial": { "one": "{count} shot mis à jour, {failed} refusé(s)", "other": "{count} shots mis à jour, {failed} refusé(s)" },
-  "bulk.status.menu": "Statut"
+  "bulk.status.menu": "Statut",
+  "colorPicker.hue": "Teinte",
+  "queryState.title": "Impossible de charger cette section",
+  "queryState.description": "Le serveur n'a pas répondu. Il redémarre peut-être, ou il est indisponible — réessayez.",
+  "queryState.retry": "Réessayer"
 }

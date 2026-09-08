@@ -147,6 +147,7 @@ export default function CommentItem({
         {editing ? (
           <div role="presentation" onClick={stop} className="mt-1">
             <textarea
+              aria-label={t('comments.editField')}
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
               rows={2}

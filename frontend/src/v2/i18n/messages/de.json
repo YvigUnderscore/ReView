@@ -959,6 +959,7 @@
   },
   "comments.openCount": { "one": "{count} offen", "other": "{count} offen" },
   "comments.filter.none": "Kein Kommentar in diesem Zustand.",
+  "comments.editField": "Kommentar bearbeiten",
   "decision.current": "Aktuelle Entscheidung:",
   "decision.set": "Entscheidung festhalten",
   "project.burninInherit": "Dieses Projekt erbt die Studio-Vorlage (Admin → Auslieferung).",
@@ -2756,6 +2757,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Öffnet den Rückweg: Das Feld wird hier bearbeitbar und jede Änderung geht an die Website. In eine Produktionswebsite zu schreiben ist eine ausdrückliche Entscheidung, nie ein Standard.",
   "shotgrid.log.playlistNameTaken": "Eine andere Playlist heißt in diesem Projekt bereits „{name}\" — der lokale Name wurde beibehalten.",
   "shotgrid.log.reviewStatusUnmapped": "Der ShotGrid-Status « {code} » ({name}) hat keine passende Review-Entscheidung — ordnen Sie ihn unter Einstellungen › Review-Status zu",
+  "shotgrid.steps.kind": "Angezeigte Schritte",
+  "shotgrid.sync.level": "Protokollstufe",
   "upload.pickTask.title": "Zu welcher Task gehört diese Version?",
   "upload.pickTask.hint": "Sie unter dem Schritt abzulegen, der sie erzeugt hat, hält die Pipeline lesbar — und schickt sie in ShotGrid an die richtige Stelle.",
   "upload.pickTask.none": "Ohne Task — direkt am Asset",
@@ -3140,5 +3143,9 @@
   "bulk.status.title": { "one": "Status von {count} Shot", "other": "Status von {count} Shots" },
   "bulk.status.done": { "one": "{count} Shot aktualisiert", "other": "{count} Shots aktualisiert" },
   "bulk.status.partial": { "one": "{count} Shot aktualisiert, {failed} abgelehnt", "other": "{count} Shots aktualisiert, {failed} abgelehnt" },
-  "bulk.status.menu": "Status"
+  "bulk.status.menu": "Status",
+  "colorPicker.hue": "Farbton",
+  "queryState.title": "Dieser Bereich konnte nicht geladen werden",
+  "queryState.description": "Der Server hat nicht geantwortet. Er startet vielleicht neu oder ist nicht erreichbar — versuchen Sie es erneut.",
+  "queryState.retry": "Erneut versuchen"
 }

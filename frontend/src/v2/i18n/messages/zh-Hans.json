@@ -921,6 +921,7 @@
   "comments.delete.messageWithReplies": { "other": "该评论及其 {count} 条回复将被永久删除。" },
   "comments.openCount": { "other": "{count} 条未解决" },
   "comments.filter.none": "该状态下没有评论。",
+  "comments.editField": "编辑评论",
   "decision.current": "当前决定：",
   "decision.set": "作出决定",
   "project.burninInherit": "该项目继承工作室模板（管理 → 分发）。",
@@ -2688,6 +2689,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "开启双向同步：字段在此变为可编辑，每次修改都会写到站点。向生产站点写入是明确的决定，绝不作为默认。",
   "shotgrid.log.playlistNameTaken": "该项目中已有名为 «{name}» 的 playlist — 已保留本地名称。",
   "shotgrid.log.reviewStatusUnmapped": "ShotGrid 状态「{code}」（{name}）没有对应的 review 决定——请在「设置 › Review 状态」中关联",
+  "shotgrid.steps.kind": "显示的步骤",
+  "shotgrid.sync.level": "日志级别",
   "upload.pickTask.title": "这个 version 属于哪个 task？",
   "upload.pickTask.hint": "归入产出它的环节可让流程保持清晰，也会送到 ShotGrid 中正确的位置。",
   "upload.pickTask.none": "不选 task — 直接挂在 asset 上",
@@ -3072,5 +3075,9 @@
   "bulk.status.title": { "other": "{count} 个 shot 的状态" },
   "bulk.status.done": { "other": "已更新 {count} 个 shot" },
   "bulk.status.partial": { "other": "已更新 {count} 个 shot，{failed} 个被拒绝" },
-  "bulk.status.menu": "状态"
+  "bulk.status.menu": "状态",
+  "colorPicker.hue": "色相",
+  "queryState.title": "无法加载此部分",
+  "queryState.description": "服务器没有响应。它可能正在重启或不可用，请重试。",
+  "queryState.retry": "重试"
 }

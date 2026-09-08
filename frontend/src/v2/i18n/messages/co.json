@@ -956,6 +956,7 @@
   },
   "comments.openCount": { "one": "{count} apertu", "other": "{count} aperti" },
   "comments.filter.none": "Nisunu cumentu in stu statu.",
+  "comments.editField": "Mudificà u cummentu",
   "decision.current": "Decisione attuale :",
   "decision.set": "Pone a decisione",
   "project.burninInherit": "Stu prughjettu eredita u mudellu di u studio (Amministrazione → Diffusione).",
@@ -2756,6 +2757,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Apre l'andata è ritornu : u campu diventa mudificevule quì è ogni cambiamentu parte versu u situ. Scrive in un situ di pruduzzione hè una decisione esplicita, mai un difettu.",
   "shotgrid.log.playlistNameTaken": "Un'altra playlist si chjama digià «{name}» in stu prughjettu — u nome lucale hè statu mantenutu.",
   "shotgrid.log.reviewStatusUnmapped": "U statutu ShotGrid « {code} » ({name}) ùn hà nisuna decisione di review currispundente — assucialu in Preferenze › Statuti di review",
+  "shotgrid.steps.kind": "Tappe mustrate",
+  "shotgrid.sync.level": "Livellu di u ghjurnale",
   "upload.pickTask.title": "À chì task appartene sta version ?",
   "upload.pickTask.hint": "Mèttela sottu à a tappa chì l’hà pruduttu tene u pipeline leghjibile — è a manda à u locu ghjustu in ShotGrid.",
   "upload.pickTask.none": "Senza task — attaccà à l’asset",
@@ -3140,5 +3143,9 @@
   "bulk.status.title": { "one": "Statutu di {count} shot", "other": "Statutu di {count} shots" },
   "bulk.status.done": { "one": "{count} shot aghjurnatu", "other": "{count} shots aghjurnati" },
   "bulk.status.partial": { "one": "{count} shot aghjurnatu, {failed} ricusatu", "other": "{count} shots aghjurnati, {failed} ricusati" },
-  "bulk.status.menu": "Statutu"
+  "bulk.status.menu": "Statutu",
+  "colorPicker.hue": "Tinta",
+  "queryState.title": "Sta sezione ùn hè pussutu esse caricata",
+  "queryState.description": "U servitore ùn hà micca rispostu. Forse hè in trainu di ripartesi o ùn hè micca dispunibule — pruvate torna.",
+  "queryState.retry": "Pruvà torna"
 }

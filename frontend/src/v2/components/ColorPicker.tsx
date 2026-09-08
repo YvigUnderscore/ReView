@@ -112,6 +112,7 @@ export default function ColorPicker({
       {/* Teinte */}
       <input
         type="range"
+        aria-label={t('colorPicker.hue')}
         min={0}
         max={359}
         value={Math.round(hue)}
@@ -134,6 +135,7 @@ export default function ColorPicker({
       >
         <input
           type="range"
+          aria-label={t('review.opacity')}
           min={0}
           max={100}
           value={Math.round(alpha * 100)}

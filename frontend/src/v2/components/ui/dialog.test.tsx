@@ -4,7 +4,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Dialog, DialogContent, DialogTitle } from './dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog';
 
 /**
  * La règle de fermeture d'une modale.
@@ -46,5 +46,57 @@ describe('DialogContent', () => {
     await user.keyboard('{Escape}');
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+/**
+ * La description d'une modale.
+ *
+ * Le contenu portait `aria-describedby={undefined}` en dur : la phrase d'explication était
+ * écrite, affichée, et pourtant jamais annoncée — dans toutes les modales du produit à la
+ * fois, puisque le défaut vivait dans la primitive. Ces trois cas tiennent la règle : on
+ * relie quand il y a une description, on ne désigne rien quand il n'y en a pas, et un
+ * appelant qui pose son propre `aria-describedby` reste maître de son dialogue.
+ */
+describe('description accessible de DialogContent', () => {
+  it('annonce la description écrite, même posée au fond d’un DialogHeader', () => {
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la version</DialogTitle>
+            <DialogDescription>Les annotations liées seront perdues.</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription('Les annotations liées seront perdues.');
+  });
+
+  it('ne désigne rien quand la modale n’a pas de description', () => {
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Réglages</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    // Un identifiant pointant dans le vide n'est pas une description : l'attribut disparaît.
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('laisse l’appelant désigner lui-même son texte', () => {
+    render(
+      <Dialog open>
+        <DialogContent aria-describedby="quota-hint">
+          <DialogTitle>Quota</DialogTitle>
+          <p id="quota-hint">Il reste 2 Go.</p>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription('Il reste 2 Go.');
   });
 });

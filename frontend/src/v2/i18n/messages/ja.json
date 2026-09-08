@@ -927,6 +927,7 @@
   "comments.delete.messageWithReplies": { "other": "コメントとその返信 {count} 件は完全に削除されます。" },
   "comments.openCount": { "other": "未解決 {count} 件" },
   "comments.filter.none": "この状態のコメントはありません。",
+  "comments.editField": "コメントを編集",
   "decision.current": "現在の判定：",
   "decision.set": "判定を付ける",
   "project.burninInherit": "このプロジェクトはスタジオのテンプレートを継承します（管理 → 配信）。",
@@ -2698,6 +2699,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "往復を開きます。ここで編集できるようになり、変更はサイトへ送られます。本番サイトへの書き込みは明示的な判断であり、既定にはしません。",
   "shotgrid.log.playlistNameTaken": "このプロジェクトには «{name}» という playlist が既にあります — ローカルの名前を保持しました。",
   "shotgrid.log.reviewStatusUnmapped": "ShotGrid のステータス「{code}」（{name}）に対応する review の判定がありません — 設定 › Review ステータスで紐付けてください",
+  "shotgrid.steps.kind": "表示するステップ",
+  "shotgrid.sync.level": "ログレベル",
   "upload.pickTask.title": "この version はどの task のものですか？",
   "upload.pickTask.hint": "それを作った工程の下に置くとパイプラインが読みやすくなり、ShotGrid でも正しい場所に届きます。",
   "upload.pickTask.none": "task なし — asset に直接付ける",
@@ -3082,5 +3085,9 @@
   "bulk.status.title": { "other": "{count} 件の shot のステータス" },
   "bulk.status.done": { "other": "{count} 件の shot を更新しました" },
   "bulk.status.partial": { "other": "{count} 件の shot を更新、{failed} 件は拒否されました" },
-  "bulk.status.menu": "ステータス"
+  "bulk.status.menu": "ステータス",
+  "colorPicker.hue": "色相",
+  "queryState.title": "このセクションを読み込めませんでした",
+  "queryState.description": "サーバーから応答がありませんでした。再起動中か、利用できない可能性があります。もう一度お試しください。",
+  "queryState.retry": "再試行"
 }

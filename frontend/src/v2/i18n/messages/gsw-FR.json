@@ -959,6 +959,7 @@
   },
   "comments.openCount": { "one": "{count} offe", "other": "{count} offe" },
   "comments.filter.none": "Kei Kommentar in dem Zuestand.",
+  "comments.editField": "Kommentar bearbeite",
   "decision.current": "Aktuelli Entscheidung:",
   "decision.set": "D'Entscheidung fescktghalte",
   "project.burninInherit": "Des Projekt erbt d'Studio-Vorlag (Verwaltung → Ussliefrung).",
@@ -2756,6 +2757,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Macht dr Rückwäg uf: s Fäld wird do bearbeitbar un jedi Änderig goht an d Syte. In e Produktionssyte z schriibe isch e uusdricklichi Entscheidig, nie e Standard.",
   "shotgrid.log.playlistNameTaken": "E anderi Playlist heisst in däm Projekt scho „{name}\" — dr lokal Name isch bhalte worde.",
   "shotgrid.log.reviewStatusUnmapped": "Der ShotGrid-Status « {code} » ({name}) het kei passendi Review-Entscheidig — ordne-n-e in Istellige › Review-Status zue",
+  "shotgrid.steps.kind": "Aazeigti Schritt",
+  "shotgrid.sync.level": "Protokollstufe",
   "upload.pickTask.title": "Zue welere Task ghert die Version?",
   "upload.pickTask.hint": "Si unter em Schritt abzlege, wo si gmacht het, haltet d Pipeline läsbar — un schickt si in ShotGrid an di richtig Stell.",
   "upload.pickTask.none": "Ohni Task — direkt ans Asset",
@@ -3140,5 +3143,9 @@
   "bulk.status.title": { "one": "Status vu {count} Shot", "other": "Status vu {count} Shots" },
   "bulk.status.done": { "one": "{count} Shot aktualisiert", "other": "{count} Shots aktualisiert" },
   "bulk.status.partial": { "one": "{count} Shot aktualisiert, {failed} abglehnt", "other": "{count} Shots aktualisiert, {failed} abglehnt" },
-  "bulk.status.menu": "Status"
+  "bulk.status.menu": "Status",
+  "colorPicker.hue": "Farbton",
+  "queryState.title": "Der Beritt het nit chenne glade werre",
+  "queryState.description": "Der Server het nit gantwort. Villicht startet er grad neu, oder er isch nit erreichbar — nochemol probiere.",
+  "queryState.retry": "Nochemol probiere"
 }

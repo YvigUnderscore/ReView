@@ -956,6 +956,7 @@
   },
   "comments.openCount": { "one": "{count} dobèrt", "other": "{count} dobèrts" },
   "comments.filter.none": "Cap de comentari dins aqueste estat.",
+  "comments.editField": "Modificar lo comentari",
   "decision.current": "Decision actuala :",
   "decision.set": "Pausar la decision",
   "project.burninInherit": "Aqueste projècte eireta lo modèl estudi (Admin → Difusion).",
@@ -2756,6 +2757,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Dobrís l'anada e tornada : lo camp torna modificable aicí e cada cambiament part cap al site. Escriure dins un site de produccion es una causida explicita, jamai un defaut.",
   "shotgrid.log.playlistNameTaken": "Una autra playlist pòrta ja lo nom «{name}» dins aqueste projècte — lo nom local es estat servat.",
   "shotgrid.log.reviewStatusUnmapped": "L'estatut ShotGrid « {code} » ({name}) a pas cap de decision de review correspondenta — associatz-lo dins Reglatges › Estatuts de review",
+  "shotgrid.steps.kind": "Etapas afichadas",
+  "shotgrid.sync.level": "Nivèl del jornal",
   "upload.pickTask.title": "A quina task aparten aquesta version ?",
   "upload.pickTask.hint": "La botar jos l’etapa que l’a producha garda lo pipe legible — e la manda al bon endrech dins ShotGrid.",
   "upload.pickTask.none": "Sens task — restacar a l’asset",
@@ -3140,5 +3143,9 @@
   "bulk.status.title": { "one": "Estatut de {count} shot", "other": "Estatut de {count} shots" },
   "bulk.status.done": { "one": "{count} shot mes a jorn", "other": "{count} shots meses a jorn" },
   "bulk.status.partial": { "one": "{count} shot mes a jorn, {failed} refusat(s)", "other": "{count} shots meses a jorn, {failed} refusat(s)" },
-  "bulk.status.menu": "Estatut"
+  "bulk.status.menu": "Estatut",
+  "colorPicker.hue": "Tencha",
+  "queryState.title": "Aquesta seccion a pas pogut se cargar",
+  "queryState.description": "Lo servidor a pas respondut. Benlèu que tòrna aviar, o qu'es pas disponible — tornatz ensajar.",
+  "queryState.retry": "Tornar ensajar"
 }

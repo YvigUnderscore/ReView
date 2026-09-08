@@ -78,6 +78,7 @@ export default function SgStepsPanel({
 
       <div className="flex flex-wrap items-center gap-2">
         <select
+          aria-label={t('shotgrid.steps.kind')}
           value={kind}
           onChange={(e) => setKind(e.target.value as 'asset' | 'shot')}
           className="rounded-md border border-input bg-background px-2 py-1 text-sm"

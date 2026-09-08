@@ -192,6 +192,7 @@ export default function ProjectActivity({ projectId, canManage }: { projectId: n
                         onChange={(next) => setStatus(t.id, next)}
                       />
                       <select
+                        aria-label={tr('task.new.assignee')}
                         value={t.assignee?.id ?? ''}
                         onChange={(e) => assign(t.id, e.target.value)}
                         className="rounded border border-input bg-background px-1 py-0.5 text-xs"

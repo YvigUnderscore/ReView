@@ -109,6 +109,7 @@ export default function ShotAssets({
       {canManage && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <select
+            aria-label={tr('asset.attach')}
             className="rounded border border-input bg-background px-2 py-1 text-xs"
             value={pick}
             onChange={(e) => setPick(e.target.value)}
@@ -143,6 +144,7 @@ export default function ShotAssets({
                 onChange={(e) => setCreating((c) => ({ ...c, name: e.target.value }))}
               />
               <select
+                aria-label={tr('assets.type')}
                 className="rounded border border-input bg-background px-1 py-1 text-xs"
                 value={creating.type}
                 onChange={(e) => setCreating((c) => ({ ...c, type: e.target.value }))}

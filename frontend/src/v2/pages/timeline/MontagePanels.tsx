@@ -54,6 +54,7 @@ export default function MontagePanels({
         <Group title={t('timeline.stage')}>
           <Row label={t('timeline.departmentShown')} hint={t('timeline.departmentHint')} stack>
             <select
+              aria-label={t('timeline.departmentShown')}
               value={timeline.department ?? ''}
               onChange={(e) => onDepartment(e.target.value || null)}
               disabled={!canManage}

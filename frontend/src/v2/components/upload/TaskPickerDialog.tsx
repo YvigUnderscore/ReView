@@ -208,6 +208,7 @@ export default function TaskPickerDialog({
                   )}
                 </datalist>
                 <select
+                  aria-label={t('task.new.assignee')}
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
                   disabled={members.length === 0}

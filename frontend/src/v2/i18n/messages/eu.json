@@ -959,6 +959,7 @@
   },
   "comments.openCount": { "one": "{count} irekita", "other": "{count} irekita" },
   "comments.filter.none": "Ez dago iruzkinik egoera honetan.",
+  "comments.editField": "Editatu iruzkina",
   "decision.current": "Uneko erabakia:",
   "decision.set": "Erabakia jarri",
   "project.burninInherit": "Proiektu honek estudioaren txantiloia heredatzen du (Admin → Banaketa).",
@@ -2759,6 +2760,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Joan-etorria irekitzen du: eremua hemen editagarri bihurtzen da eta aldaketa bakoitza gunera bidaltzen da. Ekoizpen-gune batean idaztea erabaki esplizitua da, inoiz ez lehenetsia.",
   "shotgrid.log.playlistNameTaken": "Beste playlist bat «{name}» izenekoa da dagoeneko proiektu honetan — tokiko izena mantendu da.",
   "shotgrid.log.reviewStatusUnmapped": "ShotGrid-eko « {code} » ({name}) egoerak ez du review erabaki parekorik — lotu ezazu Ezarpenak › Review egoerak atalean",
+  "shotgrid.steps.kind": "Erakutsitako urratsak",
+  "shotgrid.sync.level": "Egunkariaren maila",
   "upload.pickTask.title": "Zein task-i dagokio version hau?",
   "upload.pickTask.hint": "Sortu duen urratsaren azpian jartzeak pipeline-a irakurgarri mantentzen du — eta ShotGrid-en leku egokira bidaltzen du.",
   "upload.pickTask.none": "Task-ik gabe — asset-ari erantsi",
@@ -3143,5 +3146,9 @@
   "bulk.status.title": { "one": "{count} shot-en egoera", "other": "{count} shot-en egoera" },
   "bulk.status.done": { "one": "{count} shot eguneratuta", "other": "{count} shot eguneratuta" },
   "bulk.status.partial": { "one": "{count} shot eguneratuta, {failed} baztertuta", "other": "{count} shot eguneratuta, {failed} baztertuta" },
-  "bulk.status.menu": "Egoera"
+  "bulk.status.menu": "Egoera",
+  "colorPicker.hue": "Tonua",
+  "queryState.title": "Atal hau ezin izan da kargatu",
+  "queryState.description": "Zerbitzariak ez du erantzun. Baliteke berrabiarazten egotea edo eskuragarri ez egotea: saiatu berriro.",
+  "queryState.retry": "Saiatu berriro"
 }

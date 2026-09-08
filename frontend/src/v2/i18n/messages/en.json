@@ -950,6 +950,7 @@
   },
   "comments.openCount": { "one": "{count} open", "other": "{count} open" },
   "comments.filter.none": "No comment in this state.",
+  "comments.editField": "Edit the comment",
   "decision.current": "Current decision:",
   "decision.set": "Set the decision",
   "project.burninInherit": "This project inherits the studio template (Admin → Distribution).",
@@ -2744,6 +2745,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Opens the round trip: the field becomes editable here and every change is written to the site. Writing into a production site is an explicit decision, never a default.",
   "shotgrid.log.playlistNameTaken": "Another playlist is already named «{name}» in this project — the local name was kept.",
   "shotgrid.log.reviewStatusUnmapped": "ShotGrid status « {code} » ({name}) has no matching review decision — pair it in Settings › Review statuses",
+  "shotgrid.steps.kind": "Steps shown",
+  "shotgrid.sync.level": "Log level",
   "upload.pickTask.title": "Which task is this version for?",
   "upload.pickTask.hint": "Filing it under the step that produced it keeps the pipeline readable — and sends it to the right place in ShotGrid.",
   "upload.pickTask.none": "No task — attach to the asset itself",
@@ -3128,5 +3131,9 @@
   "bulk.status.title": { "one": "Status of {count} shot", "other": "Status of {count} shots" },
   "bulk.status.done": { "one": "{count} shot updated", "other": "{count} shots updated" },
   "bulk.status.partial": { "one": "{count} shot updated, {failed} refused", "other": "{count} shots updated, {failed} refused" },
-  "bulk.status.menu": "Status"
+  "bulk.status.menu": "Status",
+  "colorPicker.hue": "Hue",
+  "queryState.title": "Could not load this section",
+  "queryState.description": "The server did not answer. It may be restarting or unavailable — try again.",
+  "queryState.retry": "Try again"
 }

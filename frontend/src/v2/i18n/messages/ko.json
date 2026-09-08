@@ -927,6 +927,7 @@
   "comments.delete.messageWithReplies": { "other": "댓글과 답글 {count}개가 영구적으로 삭제됩니다." },
   "comments.openCount": { "other": "미해결 {count}건" },
   "comments.filter.none": "이 상태의 댓글이 없습니다.",
+  "comments.editField": "댓글 편집",
   "decision.current": "현재 결정:",
   "decision.set": "결정 내리기",
   "project.burninInherit": "이 프로젝트는 스튜디오 템플릿을 상속합니다(관리 → 배포).",
@@ -2698,6 +2699,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "왕복을 엽니다. 여기서 편집할 수 있게 되고 변경 사항은 사이트로 전송됩니다. 운영 사이트에 쓰는 것은 명시적 결정이며 기본값이 아닙니다.",
   "shotgrid.log.playlistNameTaken": "이 프로젝트에 «{name}» 이름의 playlist가 이미 있습니다 — 로컬 이름을 유지했습니다.",
   "shotgrid.log.reviewStatusUnmapped": "ShotGrid 상태 « {code} »({name})에 대응하는 review 결정이 없습니다 — 설정 › Review 상태에서 연결하세요",
+  "shotgrid.steps.kind": "표시할 단계",
+  "shotgrid.sync.level": "로그 수준",
   "upload.pickTask.title": "이 version은 어떤 task의 것인가요?",
   "upload.pickTask.hint": "만든 단계 아래 두면 파이프라인이 읽기 쉬워지고, ShotGrid에서도 올바른 위치로 갑니다.",
   "upload.pickTask.none": "task 없이 — asset에 직접 첨부",
@@ -3082,5 +3085,9 @@
   "bulk.status.title": { "other": "shot {count}개의 상태" },
   "bulk.status.done": { "other": "shot {count}개를 갱신했습니다" },
   "bulk.status.partial": { "other": "shot {count}개 갱신, {failed}개 거부됨" },
-  "bulk.status.menu": "상태"
+  "bulk.status.menu": "상태",
+  "colorPicker.hue": "색조",
+  "queryState.title": "이 구역을 불러오지 못했습니다",
+  "queryState.description": "서버가 응답하지 않았습니다. 다시 시작 중이거나 사용할 수 없는 상태일 수 있습니다. 다시 시도해 주세요.",
+  "queryState.retry": "다시 시도"
 }

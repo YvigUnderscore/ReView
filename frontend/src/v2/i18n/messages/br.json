@@ -939,6 +939,7 @@
   },
   "comments.openCount": { "one": "{count} digor", "other": "{count} digor" },
   "comments.filter.none": "Evezhiadenn ebet er stad-mañ.",
+  "comments.editField": "Kemmañ an evezhiadenn",
   "decision.current": "Diviz red :",
   "decision.set": "Lakaat an diviz",
   "project.burninInherit": "Ar raktres-mañ a herez patrom ar studio (Merañ → Skignañ).",
@@ -2745,6 +2746,8 @@
   "shotgrid.settings.descriptionWriteBackHint": "Digeriñ a ra an dont-ha-mont : ar vaezienn a zeu da vezañ kemmus amañ hag e ya pep cheñchamant d'al lec'hienn. Skrivañ en ul lec'hienn produiñ zo un dibab sklaer, biken un diouer.",
   "shotgrid.log.playlistNameTaken": "Un playlist all a zoug dija an anv «{name}» er raktres-mañ — miret eo bet an anv lec'hel.",
   "shotgrid.log.reviewStatusUnmapped": "N'en deus ar statud ShotGrid « {code} » ({name}) diviz review ebet o klotañ — liammit anezhañ e Arventennoù › Statudoù review",
+  "shotgrid.steps.kind": "Lankadoù diskouezet",
+  "shotgrid.sync.level": "Live ar marilh",
   "upload.pickTask.title": "Da beseurt task eo ar version-mañ ?",
   "upload.pickTask.hint": "He renkañ dindan al lankad he deus he savet a viro lennus ar chadenn — hag he c’has el lec’h mat e ShotGrid.",
   "upload.pickTask.none": "Task ebet — stagañ ouzh an asset",
@@ -3129,5 +3132,9 @@
   "bulk.status.title": { "one": "Statud {count} shot", "other": "Statud {count} shot" },
   "bulk.status.done": { "one": "{count} shot hizivaet", "other": "{count} shot hizivaet" },
   "bulk.status.partial": { "one": "{count} shot hizivaet, {failed} nac'het", "other": "{count} shot hizivaet, {failed} nac'het" },
-  "bulk.status.menu": "Statud"
+  "bulk.status.menu": "Statud",
+  "colorPicker.hue": "Arliv",
+  "queryState.title": "N'eus ket bet gallet kargañ ar rann-mañ",
+  "queryState.description": "N'en deus ket respontet an dafariad. Marteze emañ oc'h adloc'hañ pe n'eo ket hegerz — klaskit en-dro.",
+  "queryState.retry": "Klask en-dro"
 }

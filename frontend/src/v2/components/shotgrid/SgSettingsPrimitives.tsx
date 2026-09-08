@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ReactNode } from 'react';
+import { createContext, useContext, useId, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -42,16 +42,32 @@ export function SettingsCard({
   );
 }
 
+/**
+ * Le libellé d'une ligne nomme le contrôle qu'elle porte.
+ *
+ * Il était rendu dans un `<div>` : la ligne se lit à l'écran, mais rien ne rattachait le
+ * texte au contrôle — le lecteur d'écran annonçait « liste déroulante » et rien d'autre,
+ * dix fois de suite, sur une page où c'est justement le libellé qui distingue un réglage
+ * du suivant. La ligne fabrique donc l'identifiant, le transmet au contrôle qu'elle
+ * englobe et le désigne par un vrai `<label htmlFor>`.
+ */
+const RowFieldId = createContext<string | undefined>(undefined);
+
 /** Une ligne « libellé + contrôle », le contrôle aligné à droite. */
 export function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  const id = useId();
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <div className="text-sm">{label}</div>
-        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+    <RowFieldId.Provider value={id}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <label htmlFor={id} className="block text-sm">
+            {label}
+          </label>
+          {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+        </div>
+        <div className="shrink-0">{children}</div>
       </div>
-      <div className="shrink-0">{children}</div>
-    </div>
+    </RowFieldId.Provider>
   );
 }
 
@@ -97,8 +113,10 @@ export function SettingSelect({
   onChange: (value: string) => void;
   children: ReactNode;
 }) {
+  const id = useContext(RowFieldId);
   return (
     <select
+      id={id}
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
@@ -127,15 +145,22 @@ export function SettingNumber({
   width?: string;
   onChange: (value: string) => void;
 }) {
+  const id = useContext(RowFieldId);
   return (
     <input
       type="number"
+      id={id}
       min={min}
       max={max}
       value={value ?? ''}
       disabled={disabled}
       placeholder={placeholder}
-      aria-label={placeholder}
+      /*
+       * Dans une `Row`, c'est le libellé de la ligne qui nomme le champ — « Taille
+       * maximale » plutôt que « Sans limite », le placeholder n'étant qu'un exemple de
+       * valeur. Hors d'une ligne, il reste le seul nom disponible.
+       */
+      aria-label={id ? undefined : placeholder}
       onChange={(e) => onChange(e.target.value)}
       className={`${width} rounded-md border border-border bg-background px-2 py-1 text-sm`}
     />

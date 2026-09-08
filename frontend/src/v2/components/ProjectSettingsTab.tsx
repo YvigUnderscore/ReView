@@ -136,6 +136,7 @@ export default function ProjectSettingsTab({
         <div className="flex items-center gap-2">
           <input
             type="number"
+            aria-label={t('pipeline.startFrame')}
             className="w-28 rounded border border-input bg-background px-2 py-1.5 text-sm"
             value={frameVal}
             onChange={(e) => setFrameVal(e.target.value)}

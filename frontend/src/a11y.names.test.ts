@@ -23,10 +23,14 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Reliquat de champs anonymes toléré — dette chiffrée, à faire descendre jusqu'à 0 et
- * jamais à relever. Vingt-quatre au 2026-08-22, tous dans des panneaux d'administration
- * ou ShotGrid ; le sélecteur de statut du kanban, lui, est nommé (test suivant).
+ * jamais à relever. Vingt-quatre au 2026-08-22, dix-sept réellement atteints ; trois au
+ * 2026-09-08, une fois nommés les sélecteurs de la review, du montage et de ShotGrid —
+ * par `aria-label` quand le contrôle est seul, par le libellé de la ligne relié en
+ * `htmlFor` là où il en existait déjà un à l'écran (réglages ShotGrid). Les trois qui
+ * restent sont des champs de panneaux d'administration ; le sélecteur de statut du
+ * kanban, lui, est nommé (test suivant).
  */
-const CEILING = 24;
+const CEILING = 3;
 
 const FIELDS = new Set(['input', 'select', 'textarea']);
 

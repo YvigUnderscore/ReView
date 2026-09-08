@@ -123,6 +123,7 @@ export default function SgDiffPanel({
           </button>
         )}
         <select
+          aria-label={t('shotgrid.diff.kind')}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="rounded-md border border-border bg-background px-2 py-1 text-sm"
