@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import AnnouncementForm from './AnnouncementForm';
 import type { Announcement, AnnouncementAdmin, AnnouncementType } from '../../types/api';
 import { useT } from '../../i18n';
@@ -23,11 +24,12 @@ const TYPE_BADGE: Record<AnnouncementType, string> = {
 export default function AnnouncementsTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const listQ = useQuery({
     queryKey: qk.admin('announcements'),
     queryFn: () =>
       api.get<{ announcements: AnnouncementAdmin[] }>('/api/announcements').then((d) => d.announcements),
   });
+  const data = listQ.data;
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Announcement | null>(null);
@@ -45,8 +47,8 @@ export default function AnnouncementsTab() {
     }
   };
 
-  if (isLoading) return <SkeletonRows count={4} />;
-  const items = data ?? [];
+  if (!data) return <QueryState query={listQ} skeleton={<SkeletonRows count={4} />} />;
+  const items = data;
 
   return (
     <div>

@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import WebhooksPanel from './WebhooksPanel';
 import { useT } from '../../i18n';
@@ -58,6 +59,7 @@ function ApiTokensAdminPanel() {
   return (
     <Panel title={t('tokens.studio')}>
       <p className="mb-3 text-xs text-muted-foreground">{t('admin.tokens.hint')}</p>
+      <QueryState query={tokensQ} hasData={tokensQ.data !== undefined} compact className="mb-3" />
       <div className="space-y-1.5">
         {tokens.map((tok) => (
           <div

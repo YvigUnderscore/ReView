@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import WebhookDeliveries from './WebhookDeliveries';
 import { isSilencedByFailures, scopeName } from './webhookLog';
@@ -118,6 +119,7 @@ export default function WebhooksPanel() {
         {t('webhooks.hmacOf')} <code>timestamp.body</code>
         {t('webhooks.hintEnd')}
       </p>
+      <QueryState query={hooksQ} hasData={hooksQ.data !== undefined} compact className="mb-3" />
       <form onSubmit={create} className="mb-3 space-y-2">
         <Input
           value={url}

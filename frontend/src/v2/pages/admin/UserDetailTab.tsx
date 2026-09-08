@@ -14,6 +14,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import UserModal from './UserModal';
 import { Metric } from './AdminPrimitives';
 import { fmtBytes, fmtDateTime } from './adminShared';
@@ -68,7 +69,7 @@ export default function UserDetailTab() {
     }
   };
 
-  if (!detailQ.data) return <SkeletonRows count={6} />;
+  if (!detailQ.data) return <QueryState query={detailQ} skeleton={<SkeletonRows count={6} />} />;
   const { user, memberships, sessions, apiTokens, activity, counts } = detailQ.data;
 
   return (

@@ -9,6 +9,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import TranslationNotice from '../../components/TranslationNotice';
 import TaskPolicyField from './TaskPolicyField';
 import { BASE_LOCALE, LOCALES, isLocale, type Locale } from '../../i18n';
@@ -19,11 +20,12 @@ import SettingsGroup from './SettingsGroup';
 export default function SettingsTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const settingsQ = useQuery({
     queryKey: qk.admin('settings'),
     queryFn: () =>
       api.get<{ settings: Record<string, string> }>('/api/studio/settings').then((d) => d.settings),
   });
+  const data = settingsQ.data;
 
   const persist = async (key: string, value: string) => {
     try {
@@ -46,7 +48,7 @@ export default function SettingsTab() {
     }
   };
 
-  if (isLoading || !data) return <SkeletonRows count={5} />;
+  if (!data) return <QueryState query={settingsQ} skeleton={<SkeletonRows count={5} />} />;
   return (
     <div className="space-y-4">
       {SETTING_GROUPS.map((group) => {

@@ -9,6 +9,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import type { BurninConfig } from '../../types/share';
 import { useT, type MessageKey } from '../../i18n';
@@ -29,14 +30,20 @@ const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; 
 export default function BurninPanel() {
   const t = useT();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const burninQ = useQuery({
     queryKey: qk.admin('burnin'),
     queryFn: () => api.get<{ config: BurninConfig }>('/api/admin/burnin').then((d) => d.config),
   });
+  const data = burninQ.data;
   const [draft, setDraft] = useState<BurninConfig | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft(data);
-  if (!draft) return <Panel title={t('burnin.title')}>…</Panel>;
+  if (!draft)
+    return (
+      <Panel title={t('burnin.title')}>
+        <QueryState query={burninQ} compact />
+      </Panel>
+    );
 
   const set = (patch: Partial<BurninConfig>) => setDraft((d) => d && { ...d, ...patch });
 

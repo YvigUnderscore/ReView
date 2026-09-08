@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { t, useT, type MessageKey } from '../../i18n';
 
@@ -45,7 +46,7 @@ export default function JobsTab() {
     queryFn: () => api.get<{ queues: QueueView[] }>('/api/admin/jobs').then((d) => d.queues),
     refetchInterval: 5000,
   });
-  if (!jobsQ.data) return <SkeletonRows count={5} />;
+  if (!jobsQ.data) return <QueryState query={jobsQ} skeleton={<SkeletonRows count={5} />} />;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: qk.admin('jobs') });
 

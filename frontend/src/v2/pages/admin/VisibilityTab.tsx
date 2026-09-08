@@ -8,6 +8,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import VisibilityRuleForm from './VisibilityRuleForm';
 import VisibilityHelp from './VisibilityHelp';
 import {
@@ -31,7 +32,8 @@ import { useT } from '../../i18n';
  */
 export default function VisibilityTab() {
   const t = useT();
-  const { data: rules = [], isLoading } = useVisibilityRules();
+  const rulesQ = useVisibilityRules();
+  const rules = rulesQ.data ?? [];
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<VisibilityRule | null>(null);
   const remove = useDeleteRule();
@@ -77,8 +79,8 @@ export default function VisibilityTab() {
 
       <VisibilityHelp />
 
-      {isLoading ? (
-        <SkeletonRows count={3} />
+      {!rulesQ.data ? (
+        <QueryState query={rulesQ} skeleton={<SkeletonRows count={3} />} compact />
       ) : rules.length === 0 ? (
         <EmptyState
           compact

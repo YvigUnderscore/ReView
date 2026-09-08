@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { QueryState } from '../../components/ui/query-state';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -71,8 +72,14 @@ export default function WebhookDeliveries({ webhookId, active }: { webhookId: nu
     }
   };
 
-  if (deliveriesQ.isPending)
-    return <p className="px-3 py-2 text-xs text-muted-foreground">{t('common.loading')}</p>;
+  if (!deliveriesQ.data)
+    return (
+      <QueryState
+        query={deliveriesQ}
+        compact
+        skeleton={<p className="px-3 py-2 text-xs text-muted-foreground">{t('common.loading')}</p>}
+      />
+    );
 
   if (rows.length === 0)
     return <p className="px-3 py-2 text-xs text-muted-foreground">{t('webhooks.delivery.empty')}</p>;

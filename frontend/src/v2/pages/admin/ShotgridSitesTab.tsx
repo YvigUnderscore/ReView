@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { ExternalLink, Loader2, Pencil, ShieldCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { QueryState } from '../../components/ui/query-state';
 import { useT } from '../../i18n';
 import {
   useDeleteSgSite,
@@ -24,12 +25,19 @@ import type { SgSite } from '../../types/shotgrid';
  */
 export default function ShotgridSitesTab() {
   const t = useT();
-  const { data: sites = [], isLoading } = useSgSites();
+  const sitesQ = useSgSites();
+  const sites = sitesQ.data ?? [];
   const testSite = useTestSgSite();
   const deleteSite = useDeleteSgSite();
   const [editing, setEditing] = useState<number | null>(null);
 
-  if (isLoading) return <Loader2 className="animate-spin text-muted-foreground" size={18} />;
+  if (!sitesQ.data)
+    return (
+      <QueryState
+        query={sitesQ}
+        skeleton={<Loader2 className="animate-spin text-muted-foreground" size={18} />}
+      />
+    );
 
   return (
     <div className="space-y-4">

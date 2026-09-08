@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { intlLocale, useT, type MessageKey, type Tr } from '../../i18n';
 import {
@@ -78,15 +79,16 @@ function DaysRow({
 export default function RetentionTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const retentionQ = useQuery({
     queryKey: qk.admin('retention'),
     queryFn: () => api.get<Loaded>('/api/admin/retention'),
   });
+  const data = retentionQ.data;
   const [draft, setDraft] = useState<RetentionPolicy | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft(data.policy);
 
-  if (isLoading || !data || !draft) return <SkeletonRows count={6} />;
+  if (!data || !draft) return <QueryState query={retentionQ} skeleton={<SkeletonRows count={6} />} />;
   const defaults = data.defaults;
 
   const save = async () => {

@@ -16,6 +16,7 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { initialsFrom } from '../../lib/initials';
 import UserModal from './UserModal';
 import { fmtBytes, ROLES } from './adminShared';
@@ -28,10 +29,11 @@ export default function UsersTab() {
   const t = useT();
   const qc = useQueryClient();
   const meId = useAuth((s) => s.user?.id) ?? 0;
-  const { data: users, isLoading } = useQuery({
+  const usersQ = useQuery({
     queryKey: qk.users,
     queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users),
   });
+  const users = usersQ.data;
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role | 'ALL'>('ALL');
   const [sort, setSort] = useState<UserSort>('name');
@@ -65,8 +67,8 @@ export default function UsersTab() {
     }
   };
 
-  if (isLoading) return <SkeletonRows count={5} />;
-  const shown = sortUsers(filterUsers(users ?? [], q, role), sort);
+  if (!users) return <QueryState query={usersQ} skeleton={<SkeletonRows count={5} />} />;
+  const shown = sortUsers(filterUsers(users, q, role), sort);
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">

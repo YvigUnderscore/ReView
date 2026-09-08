@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import BurninPanel from './BurninPanel';
 import { useT } from '../../i18n';
@@ -120,14 +121,20 @@ function LogoPanel() {
 function WatermarkPanel() {
   const t = useT();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const watermarkQ = useQuery({
     queryKey: qk.admin('watermark'),
     queryFn: () => api.get<{ watermark: WatermarkConfig }>('/api/studio/watermark').then((d) => d.watermark),
   });
+  const data = watermarkQ.data;
   const [draft, setDraft] = useState<WatermarkConfig | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft(data);
-  if (!draft) return <Panel title={t('dist.watermarkTitle')}>…</Panel>;
+  if (!draft)
+    return (
+      <Panel title={t('dist.watermarkTitle')}>
+        <QueryState query={watermarkQ} compact />
+      </Panel>
+    );
 
   const set = (patch: Partial<WatermarkConfig>) => setDraft((d) => d && { ...d, ...patch });
 

@@ -9,6 +9,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import Avatar from '../../components/Avatar';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { timeAgo } from '../../lib/time';
 import { auditActionLabel, auditEntityLink, type AuditRow } from './adminShared';
 import { useT } from '../../i18n';
@@ -25,13 +26,14 @@ interface Page {
 export default function ActivityTab() {
   const t = useT();
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useQuery({
+  const feedQ = useQuery({
     queryKey: qk.admin(`activity-feed-${page}`),
     queryFn: () => api.get<Page>(`/api/studio/audit?page=${page}&pageSize=30`),
     placeholderData: keepPreviousData,
   });
+  const data = feedQ.data;
 
-  if (isLoading && !data) return <SkeletonRows count={8} />;
+  if (!data) return <QueryState query={feedQ} skeleton={<SkeletonRows count={8} />} />;
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const pageSize = data?.pageSize ?? 30;

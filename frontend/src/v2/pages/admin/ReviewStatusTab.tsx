@@ -12,6 +12,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import ReviewDecisionBadge from '../../components/ReviewDecisionBadge';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import type { ReviewStatus } from '../../types/api';
 import ReviewStatusForm from './ReviewStatusForm';
 import { useT } from '../../i18n';
@@ -23,7 +24,8 @@ import { useT } from '../../i18n';
 export default function ReviewStatusTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data, isLoading } = useReviewStatusesQuery();
+  const statusesQ = useReviewStatusesQuery();
+  const data = statusesQ.data;
   const [editing, setEditing] = useState<ReviewStatus | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<ReviewStatus | null>(null);
@@ -58,8 +60,8 @@ export default function ReviewStatusTab() {
     }
   };
 
-  if (isLoading) return <SkeletonRows count={4} />;
-  const items = data ?? [];
+  if (!data) return <QueryState query={statusesQ} skeleton={<SkeletonRows count={4} />} />;
+  const items = data;
 
   return (
     <div>

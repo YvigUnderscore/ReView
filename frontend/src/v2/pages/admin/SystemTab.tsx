@@ -8,6 +8,7 @@ import { qk } from '../../lib/query';
 import { useBranding } from '../../lib/branding';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Gauge, Panel, Row, ServiceHealth } from './AdminPrimitives';
 import { fmtBytes, fmtDuration, type System } from './adminShared';
 import { useT } from '../../i18n';
@@ -15,11 +16,12 @@ import { useT } from '../../i18n';
 export default function SystemTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data: system } = useQuery({
+  const systemQ = useQuery({
     queryKey: qk.admin('system'),
     queryFn: () => api.get<System>('/api/admin/system'),
   });
-  if (!system) return <SkeletonRows count={3} />;
+  const system = systemQ.data;
+  if (!system) return <QueryState query={systemQ} skeleton={<SkeletonRows count={3} />} />;
   const memPct = Math.round((system.memory.used / system.memory.total) * 100);
   const diskPct = system.disk
     ? Math.round(((system.disk.total - system.disk.free) / system.disk.total) * 100)

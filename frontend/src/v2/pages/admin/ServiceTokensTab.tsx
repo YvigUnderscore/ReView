@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import EmptyState from '../../components/ui/empty-state';
 import EntityContextMenu from '../../components/ui/entity-menu';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import ServiceTokenDialog from './ServiceTokenDialog';
 import { serviceTokensKey, type ServiceTokenRow } from '../../components/tokens/tokenApi';
@@ -80,7 +81,8 @@ export default function ServiceTokensTab() {
             <Plus size={14} className="mr-1" /> {t('tokens.service.new')}
           </Button>
         </div>
-        {tokens.length === 0 && !tokensQ.isPending && (
+        <QueryState query={tokensQ} hasData={tokensQ.data !== undefined} compact className="mb-3" />
+        {tokens.length === 0 && !tokensQ.isPending && !tokensQ.isError && (
           <EmptyState
             compact
             icon={Bot}

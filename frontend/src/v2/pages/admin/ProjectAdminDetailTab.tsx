@@ -9,6 +9,7 @@ import { qk } from '../../lib/query';
 import Avatar from '../../components/Avatar';
 import { Badge } from '../../components/ui/badge';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Metric, Panel, Row } from './AdminPrimitives';
 import { fmtBytes, fmtDateTime } from './adminShared';
 import { pipelineLabel, projectStatusLabels, quotaPct } from './adminProjects';
@@ -27,7 +28,7 @@ export default function ProjectAdminDetailTab() {
     enabled: Number.isInteger(projectId) && projectId > 0,
   });
 
-  if (!detailQ.data) return <SkeletonRows count={6} />;
+  if (!detailQ.data) return <QueryState query={detailQ} skeleton={<SkeletonRows count={6} />} />;
   const { project, members, settings, hierarchy, stats } = detailQ.data;
   const pct = quotaPct(project.usage, project.quota);
 

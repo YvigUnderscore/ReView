@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import DepartmentsEditor from '../../components/DepartmentsEditor';
 import { Panel } from './AdminPrimitives';
 import type { Nomenclature, ProjectSettings } from '../../types/api';
@@ -28,16 +29,17 @@ function DefField({ label, children }: { label: string; children: ReactNode }) {
 export default function ProjectDefaultsTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const defaultsQ = useQuery({
     queryKey: qk.admin('project-defaults'),
     queryFn: () =>
       api.get<{ settings: ProjectSettings }>('/api/admin/project-defaults').then((d) => d.settings),
   });
+  const data = defaultsQ.data;
   const [draft, setDraft] = useState<ProjectSettings | null>(null);
   const [busy, setBusy] = useState(false);
   // Amorce l'édition depuis les valeurs serveur (ajustement d'état pendant le render).
   if (data && !draft) setDraft(data);
-  if (!draft) return <SkeletonRows count={3} />;
+  if (!draft) return <QueryState query={defaultsQ} skeleton={<SkeletonRows count={3} />} />;
 
   const setNom = (k: keyof Nomenclature, v: string) =>
     setDraft(

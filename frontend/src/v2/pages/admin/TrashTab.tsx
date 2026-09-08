@@ -14,16 +14,18 @@ import { Button } from '../../components/ui/button';
 import { Checkbox } from '../../components/ui/checkbox';
 import SelectionBar from '../../components/ui/selection-bar';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import type { TrashProject } from './adminShared';
 import { intlLocale, useT } from '../../i18n';
 
 export default function TrashTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data: trash, isLoading } = useQuery({
+  const trashQ = useQuery({
     queryKey: qk.admin('trash'),
     queryFn: () => api.get<{ projects: TrashProject[] }>('/api/admin/trash').then((d) => d.projects),
   });
+  const trash = trashQ.data;
   const [purge, setPurge] = useState<TrashProject | null>(null);
   const [bulkPurging, setBulkPurging] = useState(false);
   const sel = useMultiSelect(trash?.map((p) => p.id) ?? []);
@@ -75,9 +77,8 @@ export default function TrashTab() {
     }
   };
 
-  if (isLoading) return <SkeletonRows count={3} />;
-  if (!trash || trash.length === 0)
-    return <p className="text-sm text-muted-foreground">{t('adminTrash.empty')}</p>;
+  if (!trash) return <QueryState query={trashQ} skeleton={<SkeletonRows count={3} />} />;
+  if (trash.length === 0) return <p className="text-sm text-muted-foreground">{t('adminTrash.empty')}</p>;
   return (
     <div className="space-y-1.5">
       <label className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">

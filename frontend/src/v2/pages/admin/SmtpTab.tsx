@@ -10,6 +10,7 @@ import { useAuth } from '../../stores/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import type { SmtpConfig } from '../../types/api';
 import { useT } from '../../i18n';
 
@@ -18,15 +19,16 @@ export default function SmtpTab() {
   const t = useT();
   const qc = useQueryClient();
   const myEmail = useAuth((s) => s.user?.email) ?? '';
-  const { data, isLoading } = useQuery({
+  const smtpQ = useQuery({
     queryKey: qk.admin('smtp'),
     queryFn: () => api.get<{ smtp: SmtpConfig }>('/api/studio/smtp').then((d) => d.smtp),
   });
+  const data = smtpQ.data;
 
   const [f, setF] = useState<Partial<SmtpConfig> & { password?: string }>({});
   const [testTo, setTestTo] = useState('');
   const [busy, setBusy] = useState(false);
-  if (isLoading || !data) return <SkeletonRows count={5} />;
+  if (!data) return <QueryState query={smtpQ} skeleton={<SkeletonRows count={5} />} />;
   const v = { ...data, ...f };
 
   const save = async () => {

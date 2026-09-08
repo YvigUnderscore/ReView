@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { fmtBytes } from './adminShared';
 import { filterProjects, PROJECT_STATUSES, projectStatusLabels, quotaPct } from './adminProjects';
 import type { AdminProjectRow, ProjectStatus } from '../../types/api';
@@ -19,14 +20,15 @@ import { useT } from '../../i18n';
 /** Liste d'administration des projets : compteurs pipeline, stockage/quota, fiches. */
 export default function ProjectsAdminTab() {
   const t = useT();
-  const { data, isLoading } = useQuery({
+  const projectsQ = useQuery({
     queryKey: qk.adminProjects,
     queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
   });
+  const data = projectsQ.data;
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<ProjectStatus | 'ALL'>('ALL');
 
-  if (isLoading || !data) return <SkeletonRows count={5} />;
+  if (!data) return <QueryState query={projectsQ} skeleton={<SkeletonRows count={5} />} />;
   const shown = filterProjects(data.projects, q, status);
   return (
     <div>

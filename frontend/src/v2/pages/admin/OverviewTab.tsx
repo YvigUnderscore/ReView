@@ -9,6 +9,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { DistList, Metric, Panel, ServiceHealth } from './AdminPrimitives';
 import { fmtBytes, type Stats, type System } from './adminShared';
 import { useT } from '../../i18n';
@@ -32,7 +33,7 @@ export default function OverviewTab() {
     }
   };
 
-  if (!stats) return <SkeletonRows count={4} />;
+  if (!stats) return <QueryState query={statsQ} skeleton={<SkeletonRows count={4} />} />;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
@@ -95,7 +96,11 @@ export default function OverviewTab() {
           </div>
         </Panel>
         <Panel title={t('overview.serviceHealth')}>
-          {system ? <ServiceHealth services={system.services} /> : <SkeletonRows count={2} />}
+          {system ? (
+            <ServiceHealth services={system.services} />
+          ) : (
+            <QueryState query={systemQ} skeleton={<SkeletonRows count={2} />} compact />
+          )}
         </Panel>
       </div>
     </div>

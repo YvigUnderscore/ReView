@@ -9,6 +9,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import HdriPreview from './HdriPreview';
 import { useT } from '../../i18n';
@@ -30,10 +31,11 @@ export default function HdriTab() {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const { data } = useQuery({
+  const hdrisQ = useQuery({
     queryKey: qk.admin('hdris'),
     queryFn: () => api.get<{ hdris: HdriItem[] }>('/api/studio/hdris').then((d) => d.hdris),
   });
+  const data = hdrisQ.data;
   const refresh = () => qc.invalidateQueries({ queryKey: qk.admin('hdris') });
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,7 +92,7 @@ export default function HdriTab() {
 
       <Panel title={t('hdri.library')}>
         {data === undefined ? (
-          <SkeletonRows count={3} />
+          <QueryState query={hdrisQ} skeleton={<SkeletonRows count={3} />} compact />
         ) : data.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('hdri.empty')}</p>
         ) : (

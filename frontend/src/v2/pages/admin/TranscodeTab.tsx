@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import type { TranscodeConfig } from '../../types/api';
 import { useT } from '../../i18n';
@@ -21,14 +22,15 @@ const PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium
 export default function TranscodeTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const transcodeQ = useQuery({
     queryKey: qk.admin('transcode'),
     queryFn: () => api.get<{ config: TranscodeConfig }>('/api/admin/transcode').then((d) => d.config),
   });
+  const data = transcodeQ.data;
   const [draft, setDraft] = useState<TranscodeConfig | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft(data);
-  if (!draft) return <SkeletonRows count={4} />;
+  if (!draft) return <QueryState query={transcodeQ} skeleton={<SkeletonRows count={4} />} />;
 
   const set = (patch: Partial<TranscodeConfig>) => setDraft((d) => d && { ...d, ...patch });
   const setRung = (i: number, k: 'height' | 'videoBitrateK', v: string) =>

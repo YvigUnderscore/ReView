@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
 import type { LoginAppearance } from '../../lib/branding';
@@ -29,12 +30,13 @@ export default function LoginAppearanceTab() {
   const [draft, setDraft] = useState<LoginAppearance | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const { data } = useQuery({
+  const loginQ = useQuery({
     queryKey: qk.admin('login-appearance'),
     queryFn: () => api.get<{ login: LoginAppearance }>('/api/studio/login-appearance').then((d) => d.login),
   });
+  const data = loginQ.data;
   if (data && !draft) setDraft(data);
-  if (!draft) return <SkeletonRows count={5} />;
+  if (!draft) return <QueryState query={loginQ} skeleton={<SkeletonRows count={5} />} />;
 
   const set = (patch: Partial<LoginAppearance>) => setDraft((d) => d && { ...d, ...patch });
 

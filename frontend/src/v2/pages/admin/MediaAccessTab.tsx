@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
 
@@ -45,7 +46,7 @@ export default function MediaAccessTab() {
     queryKey: [...qk.admin('media-access'), page],
     queryFn: () => api.get<AccessPage>(`/api/admin/media-access?page=${page}&pageSize=${pageSize}`),
   });
-  if (!logQ.data) return <SkeletonRows count={6} />;
+  if (!logQ.data) return <QueryState query={logQ} skeleton={<SkeletonRows count={6} />} />;
   const { items, total } = logQ.data;
   const pages = Math.max(1, Math.ceil(total / pageSize));
 

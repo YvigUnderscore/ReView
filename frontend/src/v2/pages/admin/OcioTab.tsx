@@ -9,6 +9,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
 
@@ -109,7 +110,7 @@ export default function OcioTab() {
 
       <Panel title={t('ocio.installed')}>
         {configsQ.data === undefined ? (
-          <SkeletonRows count={2} />
+          <QueryState query={configsQ} skeleton={<SkeletonRows count={2} />} compact />
         ) : configsQ.data.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('ocio.none')}</p>
         ) : (
@@ -158,7 +159,7 @@ export default function OcioTab() {
         ) : releasesQ.isLoading ? (
           <SkeletonRows count={3} />
         ) : releasesQ.isError ? (
-          <p className="text-sm text-destructive">{t('ocio.githubUnreachable')}</p>
+          <QueryState query={releasesQ} description={t('ocio.githubUnreachable')} compact />
         ) : (
           <div className="space-y-4">
             {(releasesQ.data ?? []).map((r) => (

@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { fmtDateTime } from './adminShared';
 import type { AdminProjectRow, AdminVersionRow, MediaKind, Paginated, VersionStatus } from '../../types/api';
 import { useT } from '../../i18n';
@@ -50,7 +51,7 @@ export default function VersionsTab() {
   const projectName = (id: number | null) => projects.find((p) => p.id === id)?.name ?? '—';
   const resetPage = () => setPage(1);
 
-  if (!listQ.data) return <SkeletonRows count={6} />;
+  if (!listQ.data) return <QueryState query={listQ} skeleton={<SkeletonRows count={6} />} />;
   const { items, total } = listQ.data;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

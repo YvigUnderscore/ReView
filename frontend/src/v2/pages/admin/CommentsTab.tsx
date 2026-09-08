@@ -15,6 +15,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { fmtDateTime } from './adminShared';
 import type { AdminCommentRow, AdminProjectRow, Paginated, User } from '../../types/api';
 import { useT } from '../../i18n';
@@ -73,7 +74,7 @@ export default function CommentsTab() {
     }
   };
 
-  if (!listQ.data) return <SkeletonRows count={6} />;
+  if (!listQ.data) return <QueryState query={listQ} skeleton={<SkeletonRows count={6} />} />;
   const { items, total } = listQ.data;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
 
@@ -36,14 +37,15 @@ const ssoReady = (d: Draft) =>
 export default function IdentityTab() {
   const t = useT();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const oidcQ = useQuery({
     queryKey: qk.admin('oidc'),
     queryFn: () => api.get<{ oidc: OidcView }>('/api/admin/oidc').then((d) => d.oidc),
   });
+  const data = oidcQ.data;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft({ ...data, clientSecret: '' });
-  if (!draft) return <SkeletonRows count={4} />;
+  if (!draft) return <QueryState query={oidcQ} skeleton={<SkeletonRows count={4} />} />;
 
   const set = (patch: Partial<Draft>) => setDraft((d) => d && { ...d, ...patch });
 

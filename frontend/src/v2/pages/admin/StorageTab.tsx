@@ -8,6 +8,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
 import { Metric, Panel } from './AdminPrimitives';
 import { fmtBytes, fmtDateTime } from './adminShared';
 import { CATEGORY_LABELS, DERIVED_LABELS, STUDIO_LABELS, sortedEntries } from './adminStorage';
@@ -56,7 +57,7 @@ export default function StorageTab() {
     staleTime: 5 * 60_000,
   });
 
-  if (!reportQ.data) return <SkeletonRows count={6} />;
+  if (!reportQ.data) return <QueryState query={reportQ} skeleton={<SkeletonRows count={6} />} />;
   const r = reportQ.data;
 
   return (
