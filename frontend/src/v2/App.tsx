@@ -67,6 +67,11 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       {/* reducedMotion="user" : framer respecte prefers-reduced-motion globalement (10.B6). */}
       <MotionConfig reducedMotion="user">
+        {/* Pas de provider d'infobulles ici : le monter à la racine imposerait d'avoir Radix
+            dès le premier rendu — or c'est précisément ce que la façade `ui/tooltip` évite,
+            en gardant 10 ko hors du premier chargement. L'insérer plus tard, une fois le
+            module chargé, remonterait toute l'application. Chaque infobulle se fournit donc
+            son provider, au prix de la seule fenêtre de grâce partagée. */}
         <AppRoutes />
       </MotionConfig>
       <ReactQueryDevtools initialIsOpen={false} />
