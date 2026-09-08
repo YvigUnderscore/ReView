@@ -4,8 +4,9 @@
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
-import { asDate, asEntityRefs, asString } from './shotgridMapper';
-import { findByLocal, mapSgToLocal, upsertLink } from './shotgridLinks';
+import { writeAllowedOn } from './shotgridTemplateGuard';
+import { asDate, asEntityRefs, asString, type SgEntityRef, type SgRecord } from './shotgridMapper';
+import { findByLocal, mapLocalToSg, mapSgToLocal, upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
 import { touch, type PullContext } from './ShotgridPullService';
 
@@ -124,9 +125,18 @@ export async function pullPlaylists(ctx: PullContext, options: PlaylistPullOptio
   }
 }
 
+/** Champs relus sur la playlist distante avant d'y écrire. */
+const PLAYLIST_PUSH_FIELDS = ['id', 'code', 'project', 'versions'];
+
 export interface PlaylistPushContext {
   connectionId: number;
   sgProjectId: number;
+  /**
+   * Nom du projet lié, quand l'appelant l'a sous la main. Il n'entre pas dans la
+   * décision d'appartenance — `belongsToProject` ne tranche que sur l'identifiant — et
+   * ne sert qu'à compléter la portée partagée avec le reste du dossier.
+   */
+  sgProjectName?: string | null;
   client: {
     create: (entity: string, data: Record<string, unknown>) => Promise<{ id: number }>;
     update: (
@@ -135,8 +145,67 @@ export interface PlaylistPushContext {
       data: Record<string, unknown>,
       options?: { asUserLogin?: string | null },
     ) => Promise<unknown>;
+    findById: (entity: string, id: number, fields: string[]) => Promise<SgRecord | null>;
   };
   asUserLogin: string | null;
+}
+
+type SgRef = { type: string; id: number };
+
+/**
+ * Fusion du contenu d'une playlist : ce que ReView a le droit de dire, et rien de plus.
+ *
+ * Le champ `versions` d'une playlist ShotGrid ne se modifie pas par ajout ou retrait :
+ * notre client l'écrit d'un bloc (PUT), il faut donc le relire, le fusionner, puis le
+ * réécrire entier. Écrire la seule vue de ReView effaçait tout ce que le studio avait
+ * posé directement sur le site — une perte qui ne se rattrape pas. L'invariant :
+ *
+ * - une version distante que ReView **ne connaît pas** (aucune correspondance pour cette
+ *   connexion, donc aucune version de ce projet) est **préservée telle quelle**, à sa
+ *   place dans l'ordre — c'est aussi ce qui protège une entité d'un autre projet, jamais
+ *   déplacée ni retirée par une décision prise ici ;
+ * - une version **ajoutée** côté ReView est ajoutée ;
+ * - une version **retirée** côté ReView n'est retirée à distance que si ReView la
+ *   connaissait ; sinon on n'y touche pas.
+ *
+ * L'ordre : les emplacements occupés par des versions connues sont recomposés dans
+ * l'ordre de la séance ReView (une playlist est un déroulé, le réordonnancement doit
+ * partir), les versions inconnues gardent leur position, et le surplus local s'ajoute à
+ * la fin. Une version inconnue ne peut donc pas être doublée par le local : ReView ne
+ * cite que des versions qu'il connaît.
+ *
+ * La lecture puis l'écriture ne forment pas une opération atomique — l'API n'offre rien
+ * de tel. Une modification distante glissée entre les deux serait perdue ; c'est
+ * précisément pourquoi on ne retire que ce que ReView possède légitimement.
+ */
+export function mergePlaylistVersions(params: {
+  remote: readonly SgEntityRef[];
+  local: readonly number[];
+  known: ReadonlySet<number>;
+}): SgRef[] {
+  const { remote, local, known } = params;
+  const pending = [...local];
+  const merged: SgRef[] = [];
+
+  for (const entry of remote) {
+    // Inconnue de ReView (ou d'un autre type que Version) : intouchable, à sa place.
+    if (entry.type !== 'Version' || !known.has(entry.id)) {
+      merged.push({ type: entry.type, id: entry.id });
+      continue;
+    }
+    // Emplacement que ReView gouverne : il reçoit la version suivante de la séance,
+    // ou disparaît si la séance n'en a plus (retrait effectué dans ReView).
+    const next = pending.shift();
+    if (next !== undefined) merged.push({ type: 'Version', id: next });
+  }
+
+  for (const id of pending) merged.push({ type: 'Version', id });
+  return merged;
+}
+
+/** Deux listes de références décrivent-elles le même contenu, dans le même ordre ? */
+function sameRefs(a: readonly SgRef[], b: readonly SgRef[]): boolean {
+  return a.length === b.length && a.every((ref, i) => ref.type === b[i]!.type && ref.id === b[i]!.id);
 }
 
 /**
@@ -153,28 +222,40 @@ export async function pushPlaylist(ctx: PlaylistPushContext, playlistId: number)
   });
   if (!playlist) return null;
 
-  const versionRefs: Array<{ type: string; id: number }> = [];
+  /*
+   * Une seule lecture de la table de correspondance sert deux besoins : traduire les
+   * versions de la séance, et savoir lesquelles ReView connaît. Les liens sont portés
+   * par la connexion, elle-même attachée à un unique projet : cet ensemble ne contient
+   * donc que des versions du projet lié, ce qui fait de lui la bonne frontière pour
+   * décider ce que ReView a le droit de retirer là-bas.
+   */
+  const versionLinks = await mapLocalToSg(ctx.connectionId, 'version');
+  const known = new Set<number>();
+  for (const link of versionLinks.values()) {
+    if (link.sgType === 'Version') known.add(link.sgId);
+  }
+
+  const localSgIds: number[] = [];
   for (const item of playlist.items) {
-    const link = await findByLocal(ctx.connectionId, 'version', item.versionId);
-    if (link) versionRefs.push({ type: 'Version', id: link.sgId });
+    const link = versionLinks.get(item.versionId);
+    if (link?.sgType === 'Version' && !localSgIds.includes(link.sgId)) localSgIds.push(link.sgId);
   }
 
   const existing = await findByLocal(ctx.connectionId, 'playlist', playlist.id);
   if (existing) {
-    await ctx.client.update(
-      'Playlist',
+    return updateRemotePlaylist(
+      ctx,
+      { id: playlist.id, name: playlist.name },
       existing.sgId,
-      { code: playlist.name, versions: versionRefs },
-      { asUserLogin: ctx.asUserLogin },
+      localSgIds,
+      known,
     );
-    logger.info({ playlistId, sgId: existing.sgId }, 'Playlist mise à jour dans ShotGrid');
-    return existing.sgId;
   }
 
   const created = await ctx.client.create('Playlist', {
     project: { type: 'Project', id: ctx.sgProjectId },
     code: playlist.name,
-    versions: versionRefs,
+    versions: localSgIds.map((id) => ({ type: 'Version', id })),
   });
   await upsertLink({
     connectionId: ctx.connectionId,
@@ -186,4 +267,71 @@ export async function pushPlaylist(ctx: PlaylistPushContext, playlistId: number)
   });
   logger.info({ playlistId, sgId: created.id }, 'Playlist créée dans ShotGrid');
   return created.id;
+}
+
+/**
+ * Mise à jour d'une playlist existante : relire, fusionner, n'écrire que si nécessaire.
+ *
+ * Les trois vérifications d'avant-écriture du dossier sont refaites ici, car l'envoi de
+ * playlist ne passe pas par `resolveTarget` : la cible existe-t-elle encore, appartient-
+ * elle bien au projet lié (un identifiant peut avoir été réattribué), et n'est-elle pas
+ * dans un projet modèle. Chacune abandonne au lieu de lever — une écriture refusée se
+ * journalise, elle n'interrompt pas la file.
+ */
+async function updateRemotePlaylist(
+  ctx: PlaylistPushContext,
+  playlist: { id: number; name: string },
+  sgId: number,
+  localSgIds: readonly number[],
+  known: ReadonlySet<number>,
+): Promise<number | null> {
+  const remote = await ctx.client.findById('Playlist', sgId, PLAYLIST_PUSH_FIELDS);
+  if (!remote) {
+    // Le lien survit à la playlist qu'il désigne. La recréer remettrait dans le studio
+    // une séance que quelqu'un a supprimée : on s'arrête et on le dit.
+    logger.warn({ playlistId: playlist.id, sgId }, 'Playlist ShotGrid introuvable — écriture abandonnée');
+    return null;
+  }
+
+  const verdict = belongsToProject(remote, {
+    sgProjectId: ctx.sgProjectId,
+    sgProjectName: ctx.sgProjectName ?? '',
+  });
+  if (!verdict.ok) {
+    logger.error(
+      { playlistId: playlist.id, sgId, expected: ctx.sgProjectId, found: verdict.foundProjectId },
+      'Écriture de playlist annulée : la cible appartient à un autre projet',
+    );
+    return null;
+  }
+  if (!writeAllowedOn(remote)) {
+    logger.error(
+      { playlistId: playlist.id, sgId },
+      'Écriture de playlist annulée : cible dans un projet modèle',
+    );
+    return null;
+  }
+
+  const remoteRefs = asEntityRefs(remote.versions);
+  const merged = mergePlaylistVersions({ remote: remoteRefs, local: localSgIds, known });
+  const preserved = merged.filter((ref) => ref.type !== 'Version' || !known.has(ref.id)).length;
+
+  // Rien à dire de neuf : ne pas écrire évite un aller-retour d'événements avec le site,
+  // et une trace de modification dans l'historique du studio pour une passe à vide.
+  if (asString(remote.code) === playlist.name && sameRefs(remoteRefs, merged)) {
+    logger.info({ playlistId: playlist.id, sgId }, 'Playlist ShotGrid déjà à jour — aucune écriture');
+    return sgId;
+  }
+
+  await ctx.client.update(
+    'Playlist',
+    sgId,
+    { code: playlist.name, versions: merged },
+    { asUserLogin: ctx.asUserLogin },
+  );
+  logger.info(
+    { playlistId: playlist.id, sgId, versions: merged.length, preserved },
+    'Playlist mise à jour dans ShotGrid',
+  );
+  return sgId;
 }

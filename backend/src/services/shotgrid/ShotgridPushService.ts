@@ -584,6 +584,11 @@ async function pushPlaylistJob(ctx: PushContext, job: Extract<PushJob, { type: '
     {
       connectionId: ctx.connectionId,
       sgProjectId: ctx.sgProjectId,
+      // La portée attend un nom de projet ; l'appelant l'a sous la main. Le passer plutôt
+      // que de laisser le repli `?? ''` s'installer : `belongsToProject` ne tranche
+      // aujourd'hui que sur l'identifiant, mais une portée dont la moitié est une chaîne
+      // vide est un piège pour qui l'étendra au nom.
+      sgProjectName: ctx.sgProjectName,
       client: ctx.client,
       asUserLogin: await actorLogin(ctx, job.actorId),
     },
