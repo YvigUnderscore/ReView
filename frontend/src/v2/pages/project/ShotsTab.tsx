@@ -107,6 +107,21 @@ export default function ShotsTab({
     }
   };
 
+  /**
+   * Même composition que sur les sequences : le code fait le titre, le nom passe en dessous.
+   * Les deux écrans montrent la même chose et se lisaient différemment — le plan alignait
+   * « SH010 · Wide establishing » sur une ligne, la sequence empilait. Et comme sur les
+   * sequences, le nom disparaît quand il répète le code : la plupart des imports le font.
+   */
+  const subtitleFor = (shot: Shot): string | undefined =>
+    [
+      shot.name === shot.code ? null : shot.name,
+      t('task.count', { count: shot._count?.tasks ?? 0 }),
+      shot.assets?.length ? t('assets.count', { count: shot.assets.length }) : null,
+    ]
+      .filter(Boolean)
+      .join(' · ') || undefined;
+
   const visible = applyFilters(filters, shots, (shot) => ({
     text: `${shot.code} ${shot.name}`,
     statusId: shot.pipelineStatusId,
@@ -243,11 +258,8 @@ export default function ShotsTab({
                   key={shot.id}
                   view={view}
                   to={`/shots/${shot.id}`}
-                  title={`${shot.code} · ${shot.name}`}
-                  subtitle={
-                    t('task.count', { count: shot._count?.tasks ?? 0 }) +
-                    (shot.assets?.length ? ` · ${t('assets.count', { count: shot.assets.length })}` : '')
-                  }
+                  title={shot.code}
+                  subtitle={subtitleFor(shot)}
                   thumbnailUrl={shot.thumbnailUrl}
                   meta={{
                     description: shot.description,

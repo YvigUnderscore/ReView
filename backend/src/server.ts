@@ -13,6 +13,7 @@ import { scheduleMaintenanceJobs } from './lib/maintenanceSchedule';
 import { reconcileStuckMedia, RECONCILE_BOOT_DELAY_MS } from './lib/mediaReconcile';
 import { installShutdownHandlers, registerShutdownTask, SHUTDOWN_PHASE } from './lib/gracefulShutdown';
 import { logger } from './lib/logger';
+import { isLoopbackEndpoint } from './lib/publicEndpoint';
 
 /**
  * Process API.
@@ -53,6 +54,17 @@ async function main(): Promise<void> {
     logger.warn(
       { hosts: env.SHOTGRID_INSECURE_HOSTS },
       '⚠️  SHOTGRID_INSECURE_HOSTS actif : ces hôtes ShotGrid échappent au contrôle HTTPS/réseau privé. À réserver au simulateur de développement.',
+    );
+
+  // Les URL présignées sont fabriquées pour le NAVIGATEUR, pas pour le serveur : laissée sur
+  // une adresse de bouclage, chacune désigne le poste du visiteur, et tout upload part dans
+  // le vide dès qu'on ouvre ReView depuis une autre machine. L'échec est silencieux et
+  // n'arrive qu'au premier fichier — d'où cet avertissement au démarrage. `install.sh` pose
+  // la bonne valeur ; une stack montée à la main ne le fait pas.
+  if (isLoopbackEndpoint(env.S3_PUBLIC_ENDPOINT ?? env.S3_ENDPOINT))
+    logger.warn(
+      { S3_PUBLIC_ENDPOINT: env.S3_PUBLIC_ENDPOINT ?? env.S3_ENDPOINT },
+      "⚠️  S3_PUBLIC_ENDPOINT désigne une adresse de bouclage : les envois de médias ne marcheront que depuis cette machine. Pour un accès réseau, y mettre l'adresse de l'hôte (et exposer MinIO avec MINIO_BIND=0.0.0.0), comme le fait scripts/install.sh.",
     );
 
   // Arrêt propre : socket.io ferme le serveur HTTP qu'il enveloppe (clients prévenus),
