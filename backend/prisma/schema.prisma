@@ -1207,7 +1207,6 @@ model Comment {
   duration          Float? // durée de la plage commentée (s)
   annotation        Json? // dessin/annotation 2D
   cameraState       Json? // viewpoint 3D/splat (position, target, fov…)
-  screenshotKey     String? // capture annotée (MinIO)
   attachments       Json? // pièces jointes (clés MinIO)
   // État du commentaire (D1). `isResolved` reste écrit en parallèle — l'API v1, les
   // compteurs de notes ouvertes et les filtres existants s'y appuient, exactement comme
@@ -1737,11 +1736,18 @@ model ShotgridConnection {
 
 // Correspondance locale ↔ ShotGrid. Porte aussi les champs SG sans équivalent
 // natif (durée en minutes, assignés non-membres, chemins de publish…).
+/// Correspondance locale ↔ ShotGrid. Table **polymorphe** : `localType` + `localId`
+/// désignent une ligne dans l'un des douze modèles listés ci-dessous, sans clé étrangère
+/// possible — donc sans `ON DELETE CASCADE`. La purge des liens dont l'entité disparaît
+/// est assurée par des déclencheurs PostgreSQL posés par la migration
+/// `20260908090000_shotgrid_liens_fiables` : un lien ne peut pas survivre à son entité,
+/// y compris quand celle-ci part par cascade SQL (plan → tâches → versions → médias →
+/// commentaires), cas qu'aucun service TypeScript ne voit passer.
 model ShotgridLink {
   id           Int                @id @default(autoincrement())
   connection   ShotgridConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   connectionId Int
-  // sequence | shot | asset | task | version | media | pipelineStatus | reviewStatus | user | playlist | comment
+  // episode | sequence | shot | asset | task | version | media | pipelineStatus | reviewStatus | user | playlist | comment
   localType    String
   localId      Int
   sgType       String
@@ -1753,6 +1759,11 @@ model ShotgridLink {
   @@unique([connectionId, sgType, sgId])
   @@unique([connectionId, localType, localId])
   @@index([connectionId, localType])
+  // Le déclencheur de purge cherche par (localType, localId) SANS connexion : l'unicité
+  // ci-dessus, préfixée par `connectionId`, ne peut pas le servir. Sans cet index, chaque
+  // suppression d'entité imposait un parcours complet de la table — et une purge de
+  // corbeille en impose deux mille.
+  @@index([localType, localId])
 }
 
 model ShotgridSyncRun {

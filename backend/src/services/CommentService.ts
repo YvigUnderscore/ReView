@@ -532,6 +532,13 @@ export async function remove(user: SessionUser, projectId: number, id: number): 
     throw forbidden("Suppression réservée à l'auteur ou un superviseur");
   // Purge MinIO des images de référence jointes (les lignes DB partent en cascade).
   await ReviewReferenceService.purgeForComment(id);
+  // La correspondance ShotGrid du commentaire (`ShotgridLink`) part avec lui, dans cette
+  // transaction : un déclencheur `AFTER DELETE` s'en charge côté PostgreSQL. Le lien
+  // survivait au commentaire, et la synchronisation suivante travaillait sur un fantôme.
+  // Rien à ajouter ici — la table étant polymorphe, la garantie doit vivre dans la base
+  // pour couvrir aussi les commentaires effacés par cascade (média, version, plan).
+  // Voir `services/shotgrid/shotgridLinks.ts` et la migration
+  // `20260908090000_shotgrid_liens_fiables`.
   await prisma.comment.delete({ where: { id } });
   emitToProject(projectId, 'comment:delete', { id });
   return true;

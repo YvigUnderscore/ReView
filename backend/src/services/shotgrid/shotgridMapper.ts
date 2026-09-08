@@ -223,6 +223,27 @@ export function attachmentUrl(value: unknown): string | null {
   return nested && typeof nested === 'object' ? asString((nested as Record<string, unknown>).url) : null;
 }
 
+/**
+ * Identifiant de l'`Attachment` porté par un champ fichier.
+ *
+ * ShotGrid décrit un champ fichier par l'entité `Attachment` qui le stocke :
+ * `{ id, type: 'Attachment', name, url, link_type }`. C'est CET identifiant qui désigne
+ * le fichier — pas celui de la Version qui l'expose. Les confondre produisait une
+ * correspondance dont le type et l'identifiant parlaient de deux entités différentes.
+ *
+ * Certains champs imbriquent l'attachment (`{ attachment: { id, type } }`), et certains
+ * sites ne renvoient qu'une URL sans identifiant : dans ce dernier cas on ne rend rien
+ * plutôt que d'inventer un numéro.
+ */
+export function attachmentId(value: unknown): number | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  const direct = asEntityRef(v);
+  if (direct?.type === 'Attachment') return direct.id;
+  const nested = asEntityRef(v.attachment);
+  return nested?.type === 'Attachment' ? nested.id : null;
+}
+
 /** Nom de fichier d'un attachment ShotGrid, ou un repli stable. */
 export function attachmentName(value: unknown, fallback: string): string {
   if (value && typeof value === 'object') {

@@ -340,25 +340,27 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
  * Pièce jointe : la frame avec le dessin incrusté.
  *
  * L'annotation est stockée en géométrie normalisée, pas en image : envoyée telle
- * quelle, elle ne montrerait rien. On l'incruste donc sur la frame concernée. Une
- * capture déjà calculée (`screenshotKey`) est utilisée en priorité ; sinon la frame est
- * extraite du média et composée à la volée.
+ * quelle, elle ne montrerait rien. La frame est donc extraite du média et composée à la
+ * volée, à chaque envoi.
+ *
+ * Ce chemin en avait un second, prioritaire : une capture déjà calculée, lue dans
+ * `Comment.screenshotKey`. Personne dans le dépôt n'écrivait jamais cette colonne —
+ * le repli était donc l'unique chemin réel, et la lecture donnait l'illusion d'une
+ * optimisation. La colonne et sa branche sont parties ensemble
+ * (migration `20260908090000_shotgrid_liens_fiables`).
  */
 async function attachAnnotationImage(
   ctx: PushNoteContext,
   sgNoteId: number,
   comment: {
     id: number;
-    screenshotKey: string | null;
     annotation: unknown;
     timestamp: number | null;
     media: { id: number; storageKey: string; mimeType: string; metadata: unknown };
   },
 ): Promise<void> {
   try {
-    const buffer = comment.screenshotKey
-      ? await storage.getObjectBuffer(comment.screenshotKey)
-      : await renderAnnotatedFrame(comment);
+    const buffer = await renderAnnotatedFrame(comment);
     if (!buffer) return;
     await ctx.client.uploadFile(
       'Note',

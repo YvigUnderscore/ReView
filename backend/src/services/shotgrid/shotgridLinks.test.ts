@@ -4,14 +4,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { db, log } = vi.hoisted(() => ({
-  db: { shotgridLink: { findMany: vi.fn() } },
+  db: { shotgridLink: { findMany: vi.fn(), delete: vi.fn(), upsert: vi.fn() } },
   log: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('../../lib/prisma', () => ({ prisma: db }));
 vi.mock('../../lib/logger', () => ({ logger: log }));
 
-import { listForUi, shouldImportMedia, UI_LINK_TYPES, UI_LINKS_LIMIT } from './shotgridLinks';
+import { listForUi, shouldImportMedia, upsertLink, UI_LINK_TYPES, UI_LINKS_LIMIT } from './shotgridLinks';
+import { AppError } from '../../lib/errors';
 
 const link = (id: number, localType = 'shot') => ({
   localType,
@@ -86,6 +87,65 @@ describe('listForUi', () => {
       sgType: true,
       syncedAt: true,
     });
+  });
+});
+
+describe('upsertLink — conflits', () => {
+  const params = {
+    connectionId: 12,
+    localType: 'media' as const,
+    localId: 4,
+    sgType: 'Attachment',
+    sgId: 412,
+  };
+
+  beforeEach(() => {
+    db.shotgridLink.upsert.mockResolvedValue({ id: 1 });
+  });
+
+  it('refuse d’écraser le lien d’un AUTRE type local', async () => {
+    // Le scénario du lien menteur : `('Attachment', 412)` désignant en réalité la
+    // Version 412 venait effacer la correspondance du véritable Attachment 412. Un
+    // identifiant ShotGrid ne désigne qu'un seul type local — remplacer était une
+    // corruption, pas un rebranchement.
+    db.shotgridLink.findMany.mockResolvedValue([
+      { id: 9, localType: 'comment', localId: 77, sgType: 'Attachment', sgId: 412 },
+    ]);
+    await expect(upsertLink(params)).rejects.toBeInstanceOf(AppError);
+    expect(db.shotgridLink.delete).not.toHaveBeenCalled();
+    expect(db.shotgridLink.upsert).not.toHaveBeenCalled();
+  });
+
+  it('accepte un rebranchement de même type mais le journalise', async () => {
+    // Cas légitime : l'entité distante a été recréée sur le site avec un nouvel
+    // identifiant. Le lien précédent part — l'entité délaissée redevient « jamais
+    // importée » et sera recréée chez le client : ça se trace.
+    db.shotgridLink.findMany.mockResolvedValue([
+      { id: 9, localType: 'media', localId: 4, sgType: 'Attachment', sgId: 99 },
+    ]);
+    await upsertLink(params);
+    expect(db.shotgridLink.delete).toHaveBeenCalledWith({ where: { id: 9 } });
+    expect(log.warn).toHaveBeenCalledWith(expect.anything(), 'shotgrid link rebound');
+    expect(db.shotgridLink.upsert).toHaveBeenCalled();
+  });
+
+  it('retire TOUS les conflits, pas seulement le premier', async () => {
+    // Un lien peut heurter les deux uniques à la fois, sur deux lignes distinctes :
+    // n'en retirer qu'une laissait l'upsert buter sur l'autre contrainte.
+    db.shotgridLink.findMany.mockResolvedValue([
+      { id: 9, localType: 'media', localId: 4, sgType: 'Attachment', sgId: 99 },
+      { id: 10, localType: 'media', localId: 5, sgType: 'Attachment', sgId: 412 },
+    ]);
+    await upsertLink(params);
+    expect(db.shotgridLink.delete).toHaveBeenCalledTimes(2);
+  });
+
+  it('n’écrit et ne supprime rien de plus quand la voie est libre', async () => {
+    db.shotgridLink.findMany.mockResolvedValue([]);
+    await upsertLink(params);
+    expect(db.shotgridLink.delete).not.toHaveBeenCalled();
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(db.shotgridLink.upsert).toHaveBeenCalledTimes(1);
   });
 });
 

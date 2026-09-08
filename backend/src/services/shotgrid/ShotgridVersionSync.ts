@@ -18,6 +18,7 @@ import {
   asNumber,
   asString,
   pickVersionMediaField,
+  attachmentId,
   attachmentName,
   attachmentUrl,
   type SgRecord,
@@ -452,14 +453,35 @@ export async function importVersionMedia(
     data: { storageKey, size: BigInt(bytes || size || 0), status: MediaStatus.PROCESSING },
   });
 
-  await upsertLink({
-    connectionId: ctx.connection.id,
-    localType: 'media',
-    localId: uploaded.id,
-    sgType: 'Attachment',
-    sgId: record.id,
-    data: { field: picked.field, filename },
-  });
+  /**
+   * Correspondance du média — posée seulement si le site nomme son `Attachment`.
+   *
+   * Elle portait `sgType: 'Attachment'` avec l'identifiant de la **Version** : le type
+   * et l'identifiant parlaient de deux entités différentes. Le lien était faux, et
+   * nuisible : `upsertLink` retirant tout conflit, un vrai `Attachment` portant par
+   * hasard le même numéro qu'une Version voyait son lien effacé au profit du menteur.
+   *
+   * Le fichier est décrit par l'`Attachment` que le champ expose ; c'est son
+   * identifiant qui fait foi. Quand le site n'en renvoie pas (certains champs ne
+   * livrent qu'une URL), on n'écrit aucun lien : le média reste traçable par ses
+   * métadonnées (`sgVersionId`, `sgField`), qui sont, elles, ce qu'elles disent.
+   */
+  const sgAttachmentId = attachmentId(picked.value);
+  if (sgAttachmentId !== null) {
+    await upsertLink({
+      connectionId: ctx.connection.id,
+      localType: 'media',
+      localId: uploaded.id,
+      sgType: 'Attachment',
+      sgId: sgAttachmentId,
+      data: { field: picked.field, filename, sgVersionId: record.id },
+    });
+  } else {
+    logger.debug(
+      { mediaId: uploaded.id, sgVersionId: record.id, field: picked.field },
+      'Attachment ShotGrid sans identifiant — média importé sans correspondance',
+    );
+  }
 
   const jobKind = uploaded.kind === MediaKind.VIDEO ? 'transcode' : 'thumbnail';
   await enqueueMediaJob({ mediaObjectId: uploaded.id, kind: jobKind });

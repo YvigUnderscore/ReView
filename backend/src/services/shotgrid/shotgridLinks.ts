@@ -4,6 +4,7 @@
 import type { Prisma, ShotgridLink } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
+import { conflict } from '../../lib/errors';
 
 /**
  * Table de correspondance locale ↔ ShotGrid.
@@ -12,21 +13,48 @@ import { logger } from '../../lib/logger';
  * idempotents (re-synchroniser ne duplique rien), qui permet de retrouver l'entité
  * distante d'un objet ReView pour l'écriture, et qui porte les champs ShotGrid sans
  * équivalent local (durée en minutes, assignés non-membres, chemins de publish).
+ *
+ * **Durée de vie d'un lien.** La table est polymorphe (`localType` + `localId`) : aucune
+ * clé étrangère ne peut la rattacher aux douze modèles qu'elle désigne, donc aucun
+ * `ON DELETE CASCADE`. La purge est confiée à des **déclencheurs PostgreSQL**
+ * (`AFTER DELETE`, migration `20260908090000_shotgrid_liens_fiables`), pour deux raisons
+ * qu'aucun code applicatif ne pouvait couvrir :
+ *
+ * 1. la plupart des suppressions n'existent pas en TypeScript — supprimer un plan
+ *    efface ses tâches, versions, médias et commentaires **par cascade SQL**, sans
+ *    qu'aucun service ne les voie passer ;
+ * 2. un déclencheur s'exécute dans la transaction de la suppression : le lien ne peut
+ *    pas survivre une milliseconde à ce qu'il désigne, ni à un rollback.
+ *
+ * Rien à appeler depuis un service, donc : supprimer l'entité suffit. Ce qui suit ne
+ * s'occupe que de poser et de lire les correspondances.
  */
 
-export type LocalType =
-  | 'episode'
-  | 'sequence'
-  | 'shot'
-  | 'asset'
-  | 'task'
-  | 'version'
-  | 'media'
-  | 'pipelineStatus'
-  | 'reviewStatus'
-  | 'user'
-  | 'playlist'
-  | 'comment';
+/**
+ * Types locaux qu'une correspondance sait porter, **énumérés à l'exécution**.
+ *
+ * La liste n'est pas qu'un type : c'est elle que confronte
+ * `shotgridLinkPurge.test.ts` aux déclencheurs SQL qui purgent les liens
+ * d'une entité supprimée. Ajouter un type ici sans ajouter son déclencheur fait échouer
+ * la suite — c'est le seul garde-fou contre le retour des liens orphelins, la table
+ * étant polymorphe (`localType` + `localId`) et donc hors de portée d'une clé étrangère.
+ */
+export const LOCAL_TYPES = [
+  'episode',
+  'sequence',
+  'shot',
+  'asset',
+  'task',
+  'version',
+  'media',
+  'pipelineStatus',
+  'reviewStatus',
+  'user',
+  'playlist',
+  'comment',
+] as const;
+
+export type LocalType = (typeof LOCAL_TYPES)[number];
 
 export interface LinkData {
   [key: string]: unknown;
@@ -82,7 +110,23 @@ export async function mapSgToLocal(
  *
  * Le couple (connexion, entité distante) et le couple (connexion, entité locale) sont
  * tous deux uniques : une entité ne peut pas être liée deux fois, dans un sens comme
- * dans l'autre. Un ancien lien devenu incohérent est remplacé plutôt que dupliqué.
+ * dans l'autre. Un ancien lien devenu incohérent est **remplacé** — mais plus en
+ * silence, et plus à n'importe quel prix :
+ *
+ * - **Rebranchement légitime** (même `localType`) : un plan ReView change d'entité
+ *   distante — le plan a été recréé sur le site avec un nouvel identifiant — ou une
+ *   entité distante change de contrepartie locale. Le lien précédent part, mais un
+ *   `warn` le dit : le plan délaissé redevient « jamais importé », et la passe suivante
+ *   le recréera chez le client. Une trace est le minimum pour comprendre le doublon.
+ * - **Collision entre types** (`localType` différent) : un identifiant ShotGrid ne
+ *   peut pas désigner à la fois un média et une note. Le remplacement était ici une
+ *   corruption pure — c'est ainsi qu'un lien juste se faisait écraser par le lien
+ *   menteur `('Attachment', <id de Version>)`. On refuse au lieu d'obéir : une écriture
+ *   ShotGrid fausse ne se rattrape pas, mieux vaut un job rouge qu'un lien inventé.
+ *
+ * Tous les conflits sont retirés, pas seulement le premier : un lien peut entrer en
+ * collision des DEUX côtés à la fois (deux lignes distinctes), et n'en retirer qu'une
+ * laissait l'`upsert` buter sur l'autre contrainte d'unicité.
  */
 export async function upsertLink(params: {
   connectionId: number;
@@ -95,7 +139,7 @@ export async function upsertLink(params: {
 }): Promise<ShotgridLink> {
   const { connectionId, localType, localId, sgType, sgId, sgUpdatedAt, data } = params;
 
-  const conflicting = await prisma.shotgridLink.findFirst({
+  const conflicting = await prisma.shotgridLink.findMany({
     where: {
       connectionId,
       OR: [
@@ -104,7 +148,27 @@ export async function upsertLink(params: {
       ],
     },
   });
-  if (conflicting) await prisma.shotgridLink.delete({ where: { id: conflicting.id } });
+
+  const crossType = conflicting.find((c) => c.localType !== localType);
+  if (crossType) {
+    // Sans code d'erreur : rien de tout ceci n'atteint un écran — la synchronisation
+    // s'exécute en job, et c'est le journal de passe qui portera le message.
+    throw conflict(
+      `ShotGrid ${sgType}#${sgId} is already linked to ${crossType.localType}#${crossType.localId}, not to ${localType}#${localId}`,
+    );
+  }
+  for (const stale of conflicting) {
+    logger.warn(
+      {
+        connectionId,
+        localType,
+        from: { localId: stale.localId, sgType: stale.sgType, sgId: stale.sgId },
+        to: { localId, sgType, sgId },
+      },
+      'shotgrid link rebound',
+    );
+    await prisma.shotgridLink.delete({ where: { id: stale.id } });
+  }
 
   return prisma.shotgridLink.upsert({
     where: { connectionId_sgType_sgId: { connectionId, sgType, sgId } },

@@ -9,6 +9,7 @@ import {
   disambiguatedName,
   plainName,
   asEntityRefs,
+  attachmentId,
   attachmentName,
   attachmentUrl,
   cutDuration,
@@ -220,6 +221,31 @@ describe('attachmentUrl', () => {
     expect(attachmentUrl({ name: 'v001.mov' })).toBeNull();
     expect(attachmentUrl(null)).toBeNull();
     expect(attachmentUrl('https://direct')).toBeNull();
+  });
+});
+
+describe('attachmentId', () => {
+  it('lit l’identifiant de l’Attachment qui porte le fichier', () => {
+    expect(attachmentId({ id: 412, type: 'Attachment', name: 'v001.mov' })).toBe(412);
+  });
+
+  it('descend dans un attachment imbriqué', () => {
+    expect(attachmentId({ attachment: { id: 77, type: 'Attachment' } })).toBe(77);
+  });
+
+  it('refuse tout ce qui n’est pas un Attachment', () => {
+    // Le défaut corrigé : le champ média d'une Version était enregistré comme
+    // « Attachment n° <id de la Version> ». Le type et l'identifiant doivent désigner
+    // la même entité — une référence de Version n'en fait pas un fichier.
+    expect(attachmentId({ id: 412, type: 'Version' })).toBeNull();
+    expect(attachmentId({ attachment: { id: 77, type: 'Version' } })).toBeNull();
+  });
+
+  it('n’invente pas d’identifiant quand le site n’en donne pas', () => {
+    // Certains champs ne livrent qu'une URL signée : pas de lien, plutôt qu'un faux.
+    expect(attachmentId({ name: 'v001.mov', url: 'https://s3/signed' })).toBeNull();
+    expect(attachmentId(null)).toBeNull();
+    expect(attachmentId('https://direct')).toBeNull();
   });
 });
 
