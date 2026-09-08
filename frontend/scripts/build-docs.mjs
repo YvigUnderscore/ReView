@@ -3,7 +3,7 @@
 
 // Build de la documentation in-app : copie DOCUMENTATION/ (racine du repo) vers
 // public/docs/ et génère public/docs/manifest.json (sections ordonnées, titres,
-// sous-titres, date de mise à jour).
+// sous-titres, date de mise à jour, titres de chapitre).
 // Exécuté automatiquement avant `npm run dev` et `npm run build` (predev/prebuild).
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -174,6 +174,31 @@ export function parsePageMeta(text, fallbackTitle) {
   return { title, summary, updated };
 }
 
+/**
+ * Titres internes d'une page — ce par quoi on la retrouve.
+ *
+ * Le manifest ne portait que le titre et le sous-titre : chercher « watermark » dans la
+ * palette ne rendait aucune page, alors que la documentation lui consacre trois chapitres.
+ * Indexer le corps entier reviendrait à transporter 1,2 Mo de markdown à chaque session ;
+ * les titres de chapitre en sont la table des matières, pour trente kilo-octets — et ils
+ * disent, en plus, *pourquoi* la page correspond.
+ *
+ * Les blocs de code sont retirés d'abord : un `## ` au milieu d'un extrait de shell n'est
+ * pas un chapitre. Le niveau 1 est exclu — c'est le titre de la page, déjà indexé.
+ */
+export function pageHeadings(markdown) {
+  const prose = markdown.replace(/^```[\s\S]*?^```/gm, '');
+  const found = new Set();
+  for (const line of prose.split('\n')) {
+    const heading = /^#{2,4}\s+(.+?)\s*$/.exec(line);
+    if (heading) {
+      const text = plainText(heading[1]);
+      if (text) found.add(text);
+    }
+  }
+  return [...found];
+}
+
 /** Titre d'une page : son premier titre de niveau 1, à défaut le nom du fichier. */
 export async function pageTitle(filePath) {
   const text = await readFile(filePath, 'utf8');
@@ -185,7 +210,7 @@ async function readPage(dir, file) {
   const filePath = path.join(SOURCE, dir, file);
   const text = await readFile(filePath, 'utf8');
   const meta = parsePageMeta(text, path.basename(file, '.md'));
-  return { path: dir ? `${dir}/${file}` : file, ...meta };
+  return { path: dir ? `${dir}/${file}` : file, ...meta, headings: pageHeadings(text) };
 }
 
 async function main() {

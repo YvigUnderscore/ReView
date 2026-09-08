@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   orderPages,
   orderSections,
+  pageHeadings,
   pageTitle,
   parsePageMeta,
   plainText,
@@ -98,6 +99,31 @@ describe('parsePageMeta', () => {
 
   it('retombe sur le nom de fichier quand il n’y a pas de titre', () => {
     expect(parsePageMeta('Texte.\n', 'sans-titre').title).toBe('sans-titre');
+  });
+});
+
+/**
+ * Les titres de chapitre sont le seul index de contenu de la documentation : sans eux, la
+ * palette ne rendait rien sur « watermark », alors que trois chapitres en parlent.
+ */
+describe('pageHeadings', () => {
+  it('retient les chapitres, pas le titre de la page', () => {
+    const page = '# Secure distribution\n\n## Viewer watermark\n\ntexte\n\n### Burn-in\n';
+    expect(pageHeadings(page)).toEqual(['Viewer watermark', 'Burn-in']);
+  });
+
+  it('ignore les dièses d’un bloc de code — un commentaire de shell n’est pas un chapitre', () => {
+    const page = ['## Vrai chapitre', '', '```bash', '## pas un chapitre', '```', ''].join('\n');
+    expect(pageHeadings(page)).toEqual(['Vrai chapitre']);
+  });
+
+  it('rend le titre en texte brut et ne le répète pas', () => {
+    const page = '## Using `ffmpeg`\n\n## Using `ffmpeg`\n\n## The **hard** part\n';
+    expect(pageHeadings(page)).toEqual(['Using ffmpeg', 'The hard part']);
+  });
+
+  it('rend une liste vide pour une page sans chapitre', () => {
+    expect(pageHeadings('# Titre\n\nUn paragraphe.\n')).toEqual([]);
   });
 });
 

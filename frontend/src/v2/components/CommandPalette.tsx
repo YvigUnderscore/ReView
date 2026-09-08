@@ -21,6 +21,8 @@ import {
 import PaletteActions from './palette/PaletteActions';
 import PaletteGoto from './palette/PaletteGoto';
 import PaletteResults from './palette/PaletteResults';
+import PaletteSurfaces from './palette/PaletteSurfaces';
+import { hasSurfaceHits, useSurfaceSearch } from './palette/useSurfaceSearch';
 import { useT } from '../i18n';
 
 /**
@@ -31,7 +33,9 @@ import { useT } from '../i18n';
  * Trois précautions pour qu'elle reste instantanée sous la frappe : la saisie est débouncée,
  * la requête précédente est **annulée** dès que la suivante part (`cancelQueries` coupe
  * l'`AbortSignal` que `fetchSearch` transmet à `fetch`), et le serveur borne chaque famille
- * de résultats. Le rendu des dix familles vit dans `palette/PaletteResults`.
+ * de résultats. Le rendu des familles servies par l'API vit dans `palette/PaletteResults` ;
+ * la documentation et les réglages, qui sont des écrans et non des données, se cherchent en
+ * mémoire (`palette/useSurfaceSearch`).
  */
 
 const DEBOUNCE_MS = 200;
@@ -120,7 +124,12 @@ export default function CommandPalette({
     ? reviewCommands.filter((c) => c.label.toLowerCase().includes(typed.toLowerCase()))
     : reviewCommands;
 
-  const hasResults = hasSearchResults(results) || matchingReview.length > 0;
+  // Documentation et réglages : deux familles d'**écrans**, calculées en mémoire (le corpus
+  // de doc et l'index des réglages vivent côté client). Elles suivent la frappe sans attendre
+  // le débounce, comme les destinations et les actions rapides — rien ne part sur le réseau.
+  const surfaces = useSurfaceSearch(typed, typed.length >= MIN_SEARCH_LENGTH);
+
+  const hasResults = hasSearchResults(results) || matchingReview.length > 0 || hasSurfaceHits(surfaces);
 
   return (
     <CommandDialog
@@ -166,6 +175,8 @@ export default function CommandPalette({
           />
 
           <PaletteResults results={results} onGo={go} />
+
+          <PaletteSurfaces hits={surfaces} onGo={go} />
         </CommandList>
       </Command>
     </CommandDialog>

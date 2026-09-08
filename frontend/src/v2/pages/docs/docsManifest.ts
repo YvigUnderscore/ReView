@@ -13,6 +13,12 @@ export interface DocsPage {
   title: string;
   summary: string; // sous-titre d'une ligne, rendu sous le titre et cherché par le filtre
   updated: string; // date ISO du « Updated: » de la page, '' si la page n'en porte pas
+  /**
+   * Titres de chapitre — la table des matières de la page, seul index de son **contenu**
+   * (cf. `pageHeadings` dans `scripts/build-docs.mjs`). Facultatif : un manifest produit
+   * par un build antérieur reste servable, la page se cherche alors par son titre seul.
+   */
+  headings?: string[];
 }
 
 export interface DocsSection {

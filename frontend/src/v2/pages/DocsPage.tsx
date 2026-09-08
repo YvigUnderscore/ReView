@@ -9,7 +9,8 @@ import PageShell from '../components/PageShell';
 import DocsArticle from './docs/DocsArticle';
 import DocsNav from './docs/DocsNav';
 import { useActiveChapter } from './docs/useActiveChapter';
-import { filterSections, neighbours, sectionLabel, sectionOf, type DocsManifest } from './docs/docsManifest';
+import { filterSections, neighbours, sectionLabel, sectionOf } from './docs/docsManifest';
+import { useDocsManifest } from './docs/useDocsManifest';
 import { extractChapters, renderDocHtml } from './docs/docsRender';
 import { useCalloutLabels } from './docs/useCalloutLabels';
 import { t, useT } from '../i18n';
@@ -35,11 +36,7 @@ export default function DocsPage() {
   const [query, setQuery] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const manifestQ = useQuery({
-    queryKey: qk.docsManifest(),
-    queryFn: async () => JSON.parse(await fetchText('/docs/manifest.json')) as DocsManifest,
-    staleTime: Infinity,
-  });
+  const manifestQ = useDocsManifest();
   const pageQ = useQuery({
     queryKey: qk.docsPage(page),
     queryFn: () => fetchText(`/docs/${page}`),

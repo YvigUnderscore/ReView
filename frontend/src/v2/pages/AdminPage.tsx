@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
   Search,
@@ -63,180 +64,49 @@ import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
 import TrashTab from './admin/TrashTab';
 import RetentionTab from './admin/RetentionTab';
-import { useT, type MessageKey } from '../i18n';
+import { useT } from '../i18n';
 import ShotgridSitesTab from './admin/ShotgridSitesTab';
 import { sectionHaystack, sectionMatches } from './admin/settingsSearch';
-
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
-type Tr = (key: MessageKey) => string;
+import { ADMIN_GROUPS, adminGroupLabel, adminSections, type AdminSectionKey } from './admin/adminSections';
 
 /**
- * Sections d'administration — sous-routées via /admin/:section (10.C6), regroupées par
- * domaine. Refonte admin : le groupe « Contenus » offre des pages détaillées par entité
- * (utilisateurs, projets, versions, commentaires, stockage) ; une section peut définir un
- * composant `Detail` rendu quand l'URL porte un id (/admin/users/12, /admin/projects/3).
+ * Écran de chaque section d'administration : l'icône de la barre latérale, l'onglet, et la
+ * vue de détail quand l'URL porte un id (/admin/users/12, /admin/projects/3).
+ *
+ * Les clés, les groupes et les libellés vivent dans `admin/adminSections` : la palette
+ * Ctrl+K les lit aussi, et une seconde table divergerait au premier renommage. Le type de
+ * clé rend l'oubli impossible — ajouter une section sans lui donner d'écran ne compile pas.
  */
-const sections = (t: Tr) =>
-  [
-    {
-      key: 'overview',
-      group: 'studio',
-      label: t('admin.tab.dashboard'),
-      icon: LayoutDashboard,
-      Component: OverviewTab,
-    },
-    {
-      key: 'activity',
-      group: 'studio',
-      label: t('admin.tab.activity'),
-      icon: Activity,
-      Component: ActivityTab,
-    },
-    {
-      key: 'identity',
-      group: 'studio',
-      label: t('admin.tab.identity'),
-      icon: Fingerprint,
-      Component: IdentityTab,
-    },
-    {
-      key: 'login-appearance',
-      group: 'studio',
-      label: t('admin.tab.loginAppearance'),
-      icon: LogIn,
-      Component: LoginAppearanceTab,
-    },
-    {
-      key: 'system',
-      group: 'studio',
-      label: t('admin.tab.system'),
-      icon: Server,
-      Component: SystemTab,
-    },
-    {
-      key: 'settings',
-      group: 'studio',
-      label: t('admin.tab.settings'),
-      icon: SettingsIcon,
-      Component: SettingsTab,
-    },
-    {
-      key: 'defaults',
-      group: 'studio',
-      label: t('admin.tab.projectDefaults'),
-      icon: FolderCog,
-      Component: ProjectDefaultsTab,
-    },
-    {
-      key: 'users',
-      group: 'content',
-      label: t('admin.tab.users'),
-      icon: UsersIcon,
-      Component: UsersTab,
-      Detail: UserDetailTab,
-    },
-    {
-      key: 'projects',
-      group: 'content',
-      label: t('nav.projects'),
-      icon: FolderKanban,
-      Component: ProjectsAdminTab,
-      Detail: ProjectAdminDetailTab,
-    },
-    { key: 'versions', group: 'content', label: 'Versions', icon: Film, Component: VersionsTab },
-    {
-      key: 'comments',
-      group: 'content',
-      label: t('admin.tab.comments'),
-      icon: MessageSquare,
-      Component: CommentsTab,
-    },
-    { key: 'storage', group: 'content', label: t('storage.title'), icon: Database, Component: StorageTab },
-    { key: 'hdri', group: 'reviewContexts', label: '3D & Splat', icon: Box, Component: HdriTab },
-    { key: 'ocio', group: 'reviewContexts', label: t('admin.tab.color'), icon: Palette, Component: OcioTab },
-    {
-      key: 'video',
-      group: 'reviewContexts',
-      label: t('admin.tab.video'),
-      icon: Video,
-      Component: TranscodeTab,
-    },
-    {
-      key: 'distribution',
-      group: 'reviewContexts',
-      label: t('review.delivery'),
-      icon: Share2,
-      Component: DistributionTab,
-    },
-    {
-      key: 'review-statuses',
-      group: 'reviewContexts',
-      label: t('admin.tab.statuses'),
-      icon: ClipboardCheck,
-      Component: ReviewStatusTab,
-    },
-    {
-      key: 'announcements',
-      group: 'communications',
-      label: t('admin.tab.announcements'),
-      icon: Megaphone,
-      Component: AnnouncementsTab,
-    },
-    { key: 'smtp', group: 'communications', label: 'SMTP', icon: Mail, Component: SmtpTab },
-    {
-      key: 'api',
-      group: 'communications',
-      label: t('admin.tab.api'),
-      icon: KeyRound,
-      Component: ApiWebhooksTab,
-    },
-    {
-      // Identités machine (ferme de rendu, daemon Prism, bot) : à côté de l'API, dont
-      // elles sont le poste d'entrée — mais dans leur propre écran, le formulaire
-      // d'émission portant rôle, projet, expiration et scopes fins.
-      key: 'service-tokens',
-      group: 'communications',
-      label: t('admin.tab.serviceTokens'),
-      icon: Bot,
-      Component: ServiceTokensTab,
-    },
-    {
-      key: 'shotgrid',
-      group: 'communications',
-      label: t('shotgrid.tab.label'),
-      icon: Workflow,
-      Component: ShotgridSitesTab,
-    },
-    { key: 'jobs', group: 'maintenance', label: t('admin.tab.jobs'), icon: ListChecks, Component: JobsTab },
-    {
-      // Le masquage vit avec le contenu, pas avec la maintenance : c'est une décision de
-      // production sur ce qui s'affiche, pas une opération d'exploitation.
-      key: 'visibility',
-      group: 'content',
-      label: t('admin.tab.visibility'),
-      icon: EyeOff,
-      Component: VisibilityTab,
-    },
-    { key: 'trash', group: 'maintenance', label: t('admin.tab.trash'), icon: Trash2, Component: TrashTab },
-    {
-      key: 'retention',
-      group: 'maintenance',
-      label: t('admin.tab.retention'),
-      icon: CalendarClock,
-      Component: RetentionTab,
-    },
-    {
-      key: 'media-access',
-      group: 'maintenance',
-      label: t('admin.tab.mediaAccess'),
-      icon: Eye,
-      Component: MediaAccessTab,
-    },
-  ] as const;
-
-/** Groupes de la barre latérale : clé stable + libellé traduit au rendu. */
-const GROUPS = ['studio', 'content', 'reviewContexts', 'communications', 'maintenance'] as const;
-const groupLabel = (t: Tr, g: (typeof GROUPS)[number]) => t(`admin.group.${g}` as MessageKey);
+const VIEWS: Record<AdminSectionKey, { icon: LucideIcon; Component: ComponentType; Detail?: ComponentType }> =
+  {
+    overview: { icon: LayoutDashboard, Component: OverviewTab },
+    activity: { icon: Activity, Component: ActivityTab },
+    identity: { icon: Fingerprint, Component: IdentityTab },
+    'login-appearance': { icon: LogIn, Component: LoginAppearanceTab },
+    system: { icon: Server, Component: SystemTab },
+    settings: { icon: SettingsIcon, Component: SettingsTab },
+    defaults: { icon: FolderCog, Component: ProjectDefaultsTab },
+    users: { icon: UsersIcon, Component: UsersTab, Detail: UserDetailTab },
+    projects: { icon: FolderKanban, Component: ProjectsAdminTab, Detail: ProjectAdminDetailTab },
+    versions: { icon: Film, Component: VersionsTab },
+    comments: { icon: MessageSquare, Component: CommentsTab },
+    storage: { icon: Database, Component: StorageTab },
+    visibility: { icon: EyeOff, Component: VisibilityTab },
+    hdri: { icon: Box, Component: HdriTab },
+    ocio: { icon: Palette, Component: OcioTab },
+    video: { icon: Video, Component: TranscodeTab },
+    distribution: { icon: Share2, Component: DistributionTab },
+    'review-statuses': { icon: ClipboardCheck, Component: ReviewStatusTab },
+    announcements: { icon: Megaphone, Component: AnnouncementsTab },
+    smtp: { icon: Mail, Component: SmtpTab },
+    api: { icon: KeyRound, Component: ApiWebhooksTab },
+    'service-tokens': { icon: Bot, Component: ServiceTokensTab },
+    shotgrid: { icon: Workflow, Component: ShotgridSitesTab },
+    jobs: { icon: ListChecks, Component: JobsTab },
+    trash: { icon: Trash2, Component: TrashTab },
+    retention: { icon: CalendarClock, Component: RetentionTab },
+    'media-access': { icon: Eye, Component: MediaAccessTab },
+  };
 
 export default function AdminPage() {
   const t = useT();
@@ -257,13 +127,13 @@ export default function AdminPage() {
    * qui cherchait « qui a changé ce réglage » trouvait la mauvaise selon le groupe ouvert.
    * L'adresse continue de fonctionner : les liens et signets existants aboutissent.
    */
-  const all = sections(t);
+  const all = adminSections(t);
   const visibleSections = all.filter((s) => sectionMatches(sectionHaystack(s.key, s.label, t), query));
 
   const resolved = section === 'audit' ? 'activity' : section;
   const active = all.find((s) => s.key === resolved) ?? all[0];
-  const Detail = 'Detail' in active ? active.Detail : undefined;
-  const Active = id && Detail ? Detail : active.Component;
+  const view = VIEWS[active.key];
+  const Active = id && view.Detail ? view.Detail : view.Component;
 
   return (
     <PageShell>
@@ -287,16 +157,16 @@ export default function AdminPage() {
               className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-          {GROUPS.map((group) => {
+          {ADMIN_GROUPS.map((group) => {
             const inGroup = visibleSections.filter((s) => s.group === group);
             if (inGroup.length === 0) return null;
             return (
               <div key={group} className="flex gap-1 md:flex-col">
                 <div className="hidden px-3 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-muted-foreground/70 first:pt-0 md:block">
-                  {groupLabel(t, group)}
+                  {adminGroupLabel(t, group)}
                 </div>
                 {inGroup.map((s) => {
-                  const Icon = s.icon;
+                  const Icon = VIEWS[s.key].icon;
                   const on = s.key === active.key;
                   return (
                     <Link
