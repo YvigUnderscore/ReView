@@ -150,7 +150,7 @@ export default function AssetAssignDialog({
           ) : (
             <div className="space-y-5">
               <div>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="mb-2 text-xs font-semibold section-label text-muted-foreground">
                   {t('batch.wholeSequences')}
                 </div>
                 <PickGrid
@@ -167,7 +167,7 @@ export default function AssetAssignDialog({
               </div>
 
               <div>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="mb-2 text-xs font-semibold section-label text-muted-foreground">
                   {t('shots.title')}
                 </div>
                 {groups.length === 0 ? (
@@ -176,7 +176,7 @@ export default function AssetAssignDialog({
                   <div className="space-y-3">
                     {groups.map((g) => (
                       <div key={g.seq.id}>
-                        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary/80">
+                        <div className="mb-1 text-xs font-semibold section-label text-primary/80">
                           {g.seq.code}
                         </div>
                         <PickGrid

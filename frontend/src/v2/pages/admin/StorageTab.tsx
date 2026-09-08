@@ -94,7 +94,7 @@ export default function StorageTab() {
           <AggBars agg={r.derived} labels={DERIVED_LABELS} total={r.categories.derived?.bytes ?? 0} />
           {Object.keys(r.studio).length > 0 && (
             <div className="mt-4">
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <h4 className="mb-2 text-xs font-semibold section-label text-muted-foreground">
                 {t('hdri.studioLibraries')}
               </h4>
               <AggBars agg={r.studio} labels={STUDIO_LABELS} total={r.categories.studio?.bytes ?? 0} />

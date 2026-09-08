@@ -74,6 +74,40 @@ describe('contraste des tokens (WCAG 1.4.11 et 1.4.3)', () => {
       }
     });
 
+    /**
+     * Même règle que `--input`, pour l'autre famille de contrôles : un bouton `outline`
+     * n'a pas d'aplat, sa bordure *est* le bouton. Le token n'existait pas et la variante
+     * empruntait `--border`, un trait décoratif à 1,37:1 en clair et 1,17:1 en sombre.
+     */
+    it(`thème ${name} : la bordure de contrôle tient 3:1 sur toutes les surfaces`, () => {
+      for (const surface of SURFACES) {
+        expect(
+          contrast(theme['border-strong'], theme[surface]),
+          `--border-strong sur --${surface}`,
+        ).toBeGreaterThanOrEqual(3);
+      }
+    });
+
+    /**
+     * `--border` reste décoratif — aucun seuil WCAG ne s'y applique — mais un séparateur
+     * qu'on ne voit pas ne sépare rien. En sombre il valait exactement `--secondary`, soit
+     * 1,00:1 : le filet disparaissait purement et simplement. Le plancher est bas à
+     * dessein : ce token est posé par défaut sur tout élément, le durcir repeindrait
+     * l'application entière. Ce qui doit se lire comme un contrôle prend `--border-strong`.
+     */
+    it(`thème ${name} : le séparateur reste perceptible sur toutes les surfaces`, () => {
+      for (const surface of SURFACES) {
+        expect(contrast(theme.border, theme[surface]), `--border sur --${surface}`).toBeGreaterThan(1.25);
+      }
+    });
+
+    /** Le trait de contrôle se distingue du trait décoratif, sinon les deux tokens sont un seul. */
+    it(`thème ${name} : la bordure de contrôle domine nettement le séparateur`, () => {
+      expect(contrast(theme['border-strong'], theme.card)).toBeGreaterThan(
+        contrast(theme.border, theme.card) * 2,
+      );
+    });
+
     it(`thème ${name} : le texte tient 4,5:1, y compris atténué`, () => {
       expect(contrast(theme.foreground, theme.background)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme['muted-foreground'], theme.background)).toBeGreaterThanOrEqual(4.5);
@@ -124,6 +158,32 @@ describe('plancher typographique', () => {
     const smallest = Math.min(...ramp.map(([, value]) => Number.parseFloat(value)));
     expect(smallest * rootSize('html')).toBeGreaterThanOrEqual(11);
     expect(smallest * rootSize("html\\[data-density='compact'\\]")).toBeGreaterThanOrEqual(10);
+  });
+});
+
+/**
+ * L'étiquette de section en capitales est une convention assumée, mais elle ne peut pas
+ * *porter* d'information : `text-transform` ne produit rien en zh-Hans, ja et ko — trois
+ * des quatorze langues de ReView. La classe ne déclare donc que la casse et
+ * l'interlettrage ; la hiérarchie tient par la taille, la graisse et la couleur, laissées
+ * au site d'appel, et reste donc lisible dans une langue sans casse.
+ */
+describe('étiquette de section (.section-label)', () => {
+  const block = /\.section-label\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+  it('est déclarée une seule fois, dans la feuille de tokens', () => {
+    expect(block).toContain('text-transform: uppercase');
+    expect(css.match(/\.section-label\s*\{/g)).toHaveLength(1);
+  });
+
+  it('ne fixe ni taille, ni graisse, ni couleur — rien qui porte la hiérarchie', () => {
+    for (const property of ['font-size', 'font-weight', 'color']) {
+      expect(block, property).not.toContain(property);
+    }
+  });
+
+  it('emploie le token d’interlettrage plutôt qu’une valeur en dur', () => {
+    expect(block).toContain('letter-spacing: var(--tracking-wide)');
   });
 });
 

@@ -39,7 +39,7 @@ export default function AssetTaskColumns({
   const header = (group: (typeof groups)[number]) => {
     const department = decorationOf(group.key);
     return (
-      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <h3 className="flex items-center gap-2 text-xs font-semibold section-label text-muted-foreground">
         {department?.imageUrl ? (
           <img
             src={department.imageUrl}

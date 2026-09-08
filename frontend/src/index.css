@@ -43,7 +43,32 @@
     --success: 151 90% 23%;
     --warning: 40 95% 27%;
     --info: 210 90% 38%;
-    --border: 220 16% 87%;
+    /*
+     * `--border` est le trait *décoratif* : séparateurs, filets de carte, grilles. Il est
+     * posé par défaut sur tout élément par la règle `*` de @layer base, donc le remonter
+     * repeint l'application entière — il reste volontairement discret. Il valait
+     * 220 16% 87%, soit 1,37:1 sur une carte et 1,13:1 sur une surface secondaire : la
+     * séparation existait dans le DOM et pas à l'écran. Remonté au strict nécessaire pour
+     * redevenir perceptible (1,61:1 sur --card, 1,50 sur --background, 1,33 sur
+     * --secondary) sans transformer un filet en trait plein. Un séparateur purement
+     * décoratif n'est soumis à aucun seuil WCAG : ce qui doit se *lire comme un contrôle*
+     * prend `--border-strong` ci-dessous, pas ce token.
+     */
+    --border: 220 16% 81%;
+    /*
+     * `--border-strong` est la limite d'un *contrôle actionnable* (bouton `outline`,
+     * bouton à icône bordé) : même exigence que `--input`, WCAG 1.4.11, 3:1 avec la
+     * surface qui l'entoure. Il manquait — le bouton `outline` posait donc son
+     * `bg-transparent` sur `--border` à 1,37:1 et ne se lisait pas comme un bouton.
+     * Mesuré à 3,79:1 sur --card/--popover, 3,53 sur --background, 3,13 sur
+     * --secondary/--muted (cf. src/theme.a11y.test.ts).
+     *
+     * Il vaut aujourd'hui la même chose qu'`--input`, et c'est attendu : les deux
+     * répondent à la même règle sur la même palette. Deux noms distincts parce que ce
+     * sont deux familles de composants — faire évoluer le trait d'un champ sans toucher
+     * celui d'un bouton reste possible, et le test verrouille les deux séparément.
+     */
+    --border-strong: 220 16% 54%;
     /*
      * `--input` est la *limite d'un contrôle*, pas une décoration : WCAG 1.4.11 lui
      * demande 3:1 avec la surface qui l'entoure, là où `--border` (séparateurs, cartes)
@@ -91,7 +116,15 @@
     --success: 151 100% 45%;
     --warning: 45 100% 51%;
     --info: 199 95% 60%;
-    --border: 223 26% 16%;
+    /*
+     * Sombre : `--border` valait 223 26% 16%, exactement `--secondary` — soit 1,00:1, un
+     * séparateur rigoureusement invisible dès qu'il tombait sur une surface secondaire, et
+     * 1,17:1 sur une carte. Remonté au même cran de discrétion qu'en clair : 1,50:1 sur
+     * --card, 1,62 sur --background, 1,29 sur --secondary.
+     */
+    --border: 223 26% 24%;
+    /* Limite d'un contrôle actionnable, 3:1 (cf. :root) : 3,62:1 sur --card, 3,10 sur --secondary. */
+    --border-strong: 223 26% 49%;
     /* Même règle qu'en clair : 3,88:1 sur --background, 3,54 sur --popover (était 1,41:1). */
     --input: 223 26% 49%;
     --ring: 184 100% 50%;
@@ -225,6 +258,60 @@
   :focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring);
     outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /*
+   * État enfoncé (`:active`) des contrôles.
+   *
+   * L'application n'en avait aucun : un clic maintenu ne produisait aucun retour, et sur
+   * une action lente (upload, transcodage) rien ne distinguait « le clic est parti » de
+   * « le clic n'a pas pris ». Le survol ne le dit pas — il est déjà là avant le clic, et
+   * n'existe pas au tactile.
+   *
+   * Posé ici en une fois, et non variante par variante, parce que l'effet est
+   * *géométrique* : il ne dépend ni du thème, ni de la couleur de fond du contrôle, ni
+   * d'un token. Les primitives ajoutent par-dessus l'assombrissement de leur propre aplat
+   * (`active:bg-…` dans leur `cva`), qui, lui, dépend de la variante.
+   *
+   * `:disabled` est exclu : un bouton inerte ne s'enfonce pas. Le mouvement est d'un pixel
+   * — assez pour être perçu, trop peu pour déplacer la mise en page (le `transform` ne
+   * reflue pas) ou gêner en `prefers-reduced-motion`, où il reste instantané faute de
+   * transition déclarée sur `transform`.
+   */
+  .ui-pressable:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  /*
+   * Étiquette de section — « SHOTS », « PIPELINE », « RACCOURCIS ».
+   *
+   * Les capitales étaient recopiées à la main dans 45 endroits (`uppercase tracking-wide`),
+   * avec assez de variantes pour qu'on ne sache plus si c'était une convention ou une
+   * habitude. C'en est une, et on la garde : dans un outil de production, l'étiquette en
+   * capitales sépare le titre d'un regroupement du contenu qu'il regroupe sans consommer
+   * une ligne de titre. Elle est nommée ici pour être décidée en un seul endroit.
+   *
+   * La classe ne porte QUE la décision de style — casse et interlettrage. Taille, graisse
+   * et couleur restent au site d'appel : ce sont elles qui font réellement tenir la
+   * hiérarchie, et elles doivent la faire tenir *seules*. Trois des quatorze langues de
+   * ReView n'ont pas de casse (zh-Hans, ja, ko) : `text-transform` n'y produit rien, et
+   * une étiquette qui ne se distinguerait que par ses capitales y disparaîtrait dans le
+   * texte courant. C'est la raison pour laquelle on ne renforce pas la convention au-delà
+   * de ce trait, et qu'aucune information ne repose sur lui.
+   *
+   * Les langues à casse particulière sont, elles, correctement servies : `text-transform`
+   * suit l'attribut `lang` du document — posé par `v2/i18n` à chaque changement de langue —
+   * de sorte que le turc obtient bien « İ » et non « I » sur un « i » initial.
+   *
+   * Ce qui n'est PAS une étiquette de section ne prend pas cette classe : une donnée
+   * technique déjà écrite en capitales (extension de fichier, « ACES ») garde son
+   * `uppercase` local — elle n'est pas traduite, et sa casse n'est pas un choix de style.
+   */
+  .section-label {
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
   }
 }
 

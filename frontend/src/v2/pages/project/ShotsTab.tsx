@@ -212,7 +212,7 @@ export default function ShotsTab({
 
       {groups.map((g) => (
         <section key={g.seq?.id ?? 'none'} className="mb-6">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className="mb-2 text-xs font-semibold section-label text-muted-foreground">
             {/* Le titre du groupe mène à la séquence : c'est le chemin qu'on cherche en
                 regardant ses plans, et il n'existait nulle part depuis cet onglet. */}
             {g.seq ? (

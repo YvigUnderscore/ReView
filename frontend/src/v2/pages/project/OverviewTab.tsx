@@ -65,7 +65,7 @@ export default function OverviewTab({
 
       {/* Derniers médias publiés : vignettes cliquables vers la review */}
       <section className="mt-6">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className="mb-2 text-xs font-semibold section-label text-muted-foreground">
           {t('playlist.latestPublished')}
         </h3>
         {media === null ? (

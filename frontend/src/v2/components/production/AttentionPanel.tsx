@@ -27,7 +27,7 @@ function TaskList({
   const t = useT();
   return (
     <section className="min-w-0 rounded-lg border border-border bg-card p-3">
-      <h3 className={`mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ${tone}`}>
+      <h3 className={`mb-2 flex items-center gap-1.5 text-xs font-semibold section-label ${tone}`}>
         {icon}
         {t(titleKey)}
         <span className="rounded-full bg-secondary px-1.5 py-0.5 text-2xs tabular-nums normal-case text-muted-foreground">

@@ -30,13 +30,15 @@ const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       aria-label={label}
       aria-pressed={active}
       className={cn(
-        'flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
+        'ui-pressable flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         'disabled:pointer-events-none disabled:opacity-40',
-        bordered && 'border border-border',
+        // `bordered` sert à poser le bouton sur une surface claire : c'est une limite de
+        // contrôle, pas un séparateur — d'où `--border-strong` (3:1) et non `--border`.
+        bordered && 'border border-border-strong',
         active
-          ? 'bg-primary/15 text-primary hover:bg-primary/25'
-          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+          ? 'bg-primary/15 text-primary hover:bg-primary/25 active:bg-primary/30'
+          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground active:bg-secondary',
         className,
       )}
       {...props}

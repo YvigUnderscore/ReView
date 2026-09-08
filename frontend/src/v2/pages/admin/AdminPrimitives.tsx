@@ -43,7 +43,7 @@ export function Panel({ title, children }: { title: string; children: ReactNode 
   return (
     <Card>
       {/* Titre de section d'administration : plus discret que le `CardTitle` par défaut. */}
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="mb-3 text-xs font-semibold section-label text-muted-foreground">{title}</h3>
       {children}
     </Card>
   );

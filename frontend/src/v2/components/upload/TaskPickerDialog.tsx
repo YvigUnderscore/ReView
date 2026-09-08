@@ -162,7 +162,7 @@ export default function TaskPickerDialog({
           ))}
 
           {others.length > 0 && (
-            <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="pt-2 text-xs font-semibold section-label text-muted-foreground">
               {t('upload.pickTask.elsewhere')}
             </p>
           )}
@@ -186,7 +186,7 @@ export default function TaskPickerDialog({
 
           {freeSteps.length > 0 && (
             <>
-              <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="pt-2 text-xs font-semibold section-label text-muted-foreground">
                 {t('upload.pickTask.steps')}
               </p>
               <div className="grid gap-1.5 sm:grid-cols-2">

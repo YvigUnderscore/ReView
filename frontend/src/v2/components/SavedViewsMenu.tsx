@@ -52,7 +52,7 @@ export default function SavedViewsMenu({
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-2">
-        <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="px-1 pb-1 text-xs font-semibold section-label text-muted-foreground">
           {t('savedViews.title')}
         </p>
         {views.length === 0 ? (

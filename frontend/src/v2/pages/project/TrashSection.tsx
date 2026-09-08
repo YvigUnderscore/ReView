@@ -84,7 +84,7 @@ export default function TrashSection({
           label={t('common.selectAll')}
           onPick={() => onToggleDomain(domain, all)}
         />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+        <h3 className="text-xs font-semibold section-label text-muted-foreground">{title}</h3>
         <span className="text-2xs text-muted-foreground">{items.length}</span>
       </div>
       <div className="space-y-1.5">

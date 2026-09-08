@@ -109,13 +109,13 @@ export default function EntityNoteDialog({
         ) : (
           <div className="flex min-h-0 flex-1 gap-5">
             <aside className="w-52 shrink-0 overflow-y-auto border-r border-border pr-3">
-              <h3 className="mb-1.5 text-2xs uppercase tracking-wide text-muted-foreground">
+              <h3 className="mb-1.5 text-2xs section-label text-muted-foreground">
                 {t('entity.header.people')}
               </h3>
               <EntityTeamList people={people} />
             </aside>
             <div className="min-w-0 flex-1 overflow-y-auto pr-1">
-              <h3 className="mb-1.5 text-2xs uppercase tracking-wide text-muted-foreground">
+              <h3 className="mb-1.5 text-2xs section-label text-muted-foreground">
                 {t('entity.header.note')}
               </h3>
               {hasNote ? (

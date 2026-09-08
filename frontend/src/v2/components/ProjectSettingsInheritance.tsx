@@ -109,7 +109,7 @@ function InheritanceLine({
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
       <span className="flex-1 text-sm">{row.label}</span>
       <span
-        className={`rounded-full px-2 py-0.5 text-2xs uppercase tracking-wide ${
+        className={`rounded-full px-2 py-0.5 text-2xs section-label ${
           overridden ? 'bg-warning/15 text-warning' : 'bg-secondary text-muted-foreground'
         }`}
       >

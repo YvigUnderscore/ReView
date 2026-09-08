@@ -121,7 +121,7 @@ export default function SocialPanel() {
 
           <div className="custom-scrollbar max-h-96 space-y-0.5 overflow-y-auto">
             {shownThreads.length > 0 && (
-              <p className="px-2 pt-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="px-2 pt-1 text-2xs font-semibold section-label text-muted-foreground">
                 {t('chat.title')}
               </p>
             )}
@@ -173,7 +173,7 @@ export default function SocialPanel() {
             })}
 
             {shownPeople.length > 0 && (
-              <p className="px-2 pt-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="px-2 pt-2 text-2xs font-semibold section-label text-muted-foreground">
                 {t('social.people')}
               </p>
             )}

@@ -48,9 +48,7 @@ export default function ResumeCard() {
 
   return (
     <div className="mb-6">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('shell.resume')}
-      </p>
+      <p className="mb-2 text-xs font-semibold section-label text-muted-foreground">{t('shell.resume')}</p>
       <div className="flex flex-wrap gap-3">
         {lastMedia && <ResumeLink entry={lastMedia} icon={<Play size={16} />} kind={t('home.lastReview')} />}
         {lastTask && <ResumeLink entry={lastTask} icon={<ListTodo size={16} />} kind={t('home.lastTask')} />}

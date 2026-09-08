@@ -45,7 +45,7 @@ function PagerLink({
         <ChevronLeft size={16} className="shrink-0 text-muted-foreground" aria-hidden="true" />
       )}
       <span className="min-w-0">
-        <span className="block text-2xs uppercase tracking-wide text-muted-foreground">
+        <span className="block text-2xs section-label text-muted-foreground">
           {t(isNext ? 'common.next' : 'common.previous')}
         </span>
         <span className="block truncate text-sm font-medium">{page.title}</span>
@@ -94,7 +94,7 @@ export default function DocsArticle({
       ) : (
         <div className="mx-auto max-w-3xl px-8 py-6">
           <header className="mb-6 border-b border-border pb-5">
-            <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-semibold section-label tracking-wider text-muted-foreground">
               {sectionLabel}
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">

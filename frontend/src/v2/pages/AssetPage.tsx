@@ -183,7 +183,7 @@ export default function AssetPage() {
 
       {asset && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="text-xs font-semibold section-label text-muted-foreground">
             {t('task.assignedTo')}
           </span>
           {asset.sequences.length === 0 && asset.shots.length === 0 && (

@@ -55,9 +55,7 @@ export default function AssetLatestCard({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-2xs font-semibold uppercase tracking-wide text-primary">
-          {t('asset.latest.title')}
-        </div>
+        <div className="text-2xs font-semibold section-label text-primary">{t('asset.latest.title')}</div>
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-medium">{latest.versionName}</span>
           {latest.departmentName && (

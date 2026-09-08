@@ -95,7 +95,7 @@ export default function VisibilityTab() {
               key={rule.id}
               className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card px-3 py-2"
             >
-              <span className="rounded bg-secondary px-1.5 py-0.5 text-2xs uppercase tracking-wide text-muted-foreground">
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-2xs section-label text-muted-foreground">
                 {t(TYPE_LABEL[rule.entityType])}
               </span>
               <span className="text-2xs text-muted-foreground">{t(MATCH_LABEL[rule.matchType])}</span>

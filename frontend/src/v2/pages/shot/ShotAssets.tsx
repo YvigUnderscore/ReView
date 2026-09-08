@@ -77,9 +77,7 @@ export default function ShotAssets({
 
   return (
     <section>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {tr('shot.assets')}
-      </h3>
+      <h3 className="mb-2 text-xs font-semibold section-label text-muted-foreground">{tr('shot.assets')}</h3>
       {assets === null ? (
         <SkeletonRows count={1} />
       ) : (

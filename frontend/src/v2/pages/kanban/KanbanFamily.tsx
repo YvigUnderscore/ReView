@@ -47,7 +47,7 @@ function KanbanFamily({
         type="button"
         onClick={() => onToggle(group.key)}
         aria-expanded={!collapsed}
-        className="mb-2 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+        className="mb-2 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-xs font-semibold section-label text-muted-foreground transition-colors hover:text-foreground"
       >
         {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
         {t(FAMILY_LABEL_KEY[group.key])}

@@ -138,9 +138,7 @@ function NavShortcuts() {
 
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('shortcuts.nav')}
-      </p>
+      <p className="mb-2 text-xs font-semibold section-label text-muted-foreground">{t('shortcuts.nav')}</p>
       <p className="mb-2 text-xs text-muted-foreground">{t('shortcuts.hint')}</p>
       <ul className="space-y-1.5">
         <li className="flex items-center justify-between gap-4 text-sm">
@@ -204,9 +202,7 @@ export default function ShortcutsHelp({
           <NavShortcuts />
           {staticGroups(t).map((g) => (
             <div key={g.title}>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {g.title}
-              </p>
+              <p className="mb-2 text-xs font-semibold section-label text-muted-foreground">{g.title}</p>
               <ul className="space-y-1.5">
                 {g.shortcuts.map((s) => (
                   <li key={s.keys.join('+')} className="flex items-center justify-between gap-4 text-sm">

@@ -21,7 +21,7 @@ const SEGMENTS: ShotStatStatus[] = ['approved', 'inReview', 'retake', 'notStarte
 function Kpi({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
-      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-xs section-label text-muted-foreground">
         {icon}
         {label}
       </div>

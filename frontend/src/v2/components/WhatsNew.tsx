@@ -81,7 +81,7 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
           <div className="space-y-6">
             {entries.map((e) => (
               <div key={e.id}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">{e.id}</p>
+                <p className="mb-2 text-xs font-semibold section-label text-primary">{e.id}</p>
                 <article
                   className="prose-doc max-w-none text-sm text-card-foreground"
                   // Markdown du repo (CHANGELOG.md) ; le HTML brut est échappé par renderDocHtml.
