@@ -3,13 +3,10 @@
 
 import { useMemo, useState } from 'react';
 import { Wand2 } from 'lucide-react';
+import { buildBatchItems, MAX_BATCH_ITEMS, type GeneratedItem } from './batchCodes';
 import { useT } from '../i18n';
 
-export interface GeneratedItem {
-  code: string;
-  name: string;
-  sequenceId?: number | null;
-}
+export type { GeneratedItem };
 
 /**
  * Générateur de codes en lot, semi-automatisé.
@@ -36,18 +33,18 @@ export default function BatchGenerator({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const items = useMemo<GeneratedItem[]>(() => {
-    const n = Math.min(Math.max(count, 0), 200);
-    return Array.from({ length: n }, (_, i) => {
-      const num = start + i * step;
-      const code = `${prefix}${String(num).padStart(padding, '0')}`;
-      return {
-        code,
-        name: code,
+  const items = useMemo<GeneratedItem[]>(
+    () =>
+      buildBatchItems({
+        prefix,
+        start,
+        step,
+        padding,
+        count,
         sequenceId: sequences ? (sequenceId ? Number(sequenceId) : null) : undefined,
-      };
-    });
-  }, [prefix, start, step, padding, count, sequenceId, sequences]);
+      }),
+    [prefix, start, step, padding, count, sequenceId, sequences],
+  );
 
   const submit = async () => {
     if (items.length === 0) {
@@ -110,10 +107,10 @@ export default function BatchGenerator({
           <input
             type="number"
             min={1}
-            max={200}
+            max={MAX_BATCH_ITEMS}
             className="w-16 rounded border border-input bg-background px-2 py-1.5 text-xs"
             value={count}
-            onChange={(e) => setCount(Math.min(200, Math.max(0, Number(e.target.value) || 0)))}
+            onChange={(e) => setCount(Math.min(MAX_BATCH_ITEMS, Math.max(0, Number(e.target.value) || 0)))}
           />
         </Field>
         {sequences && (

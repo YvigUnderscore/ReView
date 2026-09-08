@@ -3351,5 +3351,20 @@
   "colorPicker.hue": "Tencha",
   "queryState.title": "Aquesta seccion a pas pogut se cargar",
   "queryState.description": "Lo servidor a pas respondut. Benlèu que tòrna aviar, o qu'es pas disponible — tornatz ensajar.",
-  "queryState.retry": "Tornar ensajar"
+  "queryState.retry": "Tornar ensajar",
+  "sequenceShots.add": "Apondre de shots",
+  "sequenceShots.mode": "Biais d’apondre de shots",
+  "sequenceShots.create": "Crear de shots",
+  "sequenceShots.attach": "Restacar de shots existents",
+  "sequenceShots.empty.hint": "Creatz de shots aicí, o restacatz de shots que existisson ja endacòm mai dins lo projècte.",
+  "sequenceShots.free": "Shots sens sequence",
+  "sequenceShots.noFree": "Cap de shot espèra pas fòra d’una sequence.",
+  "sequenceShots.elsewhere": "Shots d’una autra sequence",
+  "sequenceShots.noElsewhere": "Cap de shot d’una autra sequence correspond pas.",
+  "sequenceShots.noneToAttach": "Totes los shots del projècte son ja dins aquesta sequence.",
+  "sequenceShots.pickNone": "Seleccionatz los shots de restacar.",
+  "sequenceShots.forbidden": "Sol un gestionari del projècte pòt apondre de shots a una sequence.",
+  "sequenceShots.moveWarning": { "one": "{count} shot quitarà sa sequence actuala.", "many": "{count} shots quitaràn lor sequence actuala.", "other": "{count} shots quitaràn lor sequence actuala." },
+  "sequenceShots.attachCount": { "one": "Restacar {count} shot", "many": "Restacar {count} shots", "other": "Restacar {count} shots" },
+  "sequenceShots.attached": { "one": "{count} shot restacat a la sequence", "many": "{count} shots restacats a la sequence", "other": "{count} shots restacats a la sequence" }
 }

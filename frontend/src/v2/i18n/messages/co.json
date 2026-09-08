@@ -3348,5 +3348,20 @@
   "colorPicker.hue": "Tinta",
   "queryState.title": "Sta sezione ùn hè pussutu esse caricata",
   "queryState.description": "U servitore ùn hà micca rispostu. Forse hè in trainu di ripartesi o ùn hè micca dispunibule — pruvate torna.",
-  "queryState.retry": "Pruvà torna"
+  "queryState.retry": "Pruvà torna",
+  "sequenceShots.add": "Aghjunghje shots",
+  "sequenceShots.mode": "Manera d’aghjunghje shots",
+  "sequenceShots.create": "Creà shots",
+  "sequenceShots.attach": "Ligà shots esistenti",
+  "sequenceShots.empty.hint": "Create shots quì, o ligate shots chì esistenu digià in altrò in u prughjettu.",
+  "sequenceShots.free": "Shots senza sequence",
+  "sequenceShots.noFree": "Nisun shot ùn aspetta fora d’una sequence.",
+  "sequenceShots.elsewhere": "Shots d’un’altra sequence",
+  "sequenceShots.noElsewhere": "Nisun shot d’un’altra sequence ùn currisponde.",
+  "sequenceShots.noneToAttach": "Tutti i shots di u prughjettu sò digià in questa sequence.",
+  "sequenceShots.pickNone": "Selezziunate i shots da ligà.",
+  "sequenceShots.forbidden": "Solu un gestore di u prughjettu pò aghjunghje shots à una sequence.",
+  "sequenceShots.moveWarning": { "one": "{count} shot lascerà a so sequence attuale.", "other": "{count} shots lasceranu a so sequence attuale." },
+  "sequenceShots.attachCount": { "one": "Ligà {count} shot", "other": "Ligà {count} shots" },
+  "sequenceShots.attached": { "one": "{count} shot ligatu à a sequence", "other": "{count} shots ligati à a sequence" }
 }

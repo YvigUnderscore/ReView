@@ -3348,5 +3348,20 @@
   "colorPicker.hue": "Tonua",
   "queryState.title": "Atal hau ezin izan da kargatu",
   "queryState.description": "Zerbitzariak ez du erantzun. Baliteke berrabiarazten egotea edo eskuragarri ez egotea: saiatu berriro.",
-  "queryState.retry": "Saiatu berriro"
+  "queryState.retry": "Saiatu berriro",
+  "sequenceShots.add": "Gehitu shot-ak",
+  "sequenceShots.mode": "Shot-ak gehitzeko modua",
+  "sequenceShots.create": "Sortu shot-ak",
+  "sequenceShots.attach": "Lotu lehendik dauden shot-ak",
+  "sequenceShots.empty.hint": "Sortu shot-ak hemen, edo lotu proiektuko beste toki batean dauden shot-ak.",
+  "sequenceShots.free": "Sequence gabeko shot-ak",
+  "sequenceShots.noFree": "Ez dago sequence batetik kanpo zain dagoen shot-ik.",
+  "sequenceShots.elsewhere": "Beste sequence bateko shot-ak",
+  "sequenceShots.noElsewhere": "Ez dago bat datorren beste sequence bateko shot-ik.",
+  "sequenceShots.noneToAttach": "Proiektuko shot guztiak sequence honetan daude jada.",
+  "sequenceShots.pickNone": "Hautatu lotu beharreko shot-ak.",
+  "sequenceShots.forbidden": "Proiektuaren kudeatzaileak baino ezin ditu shot-ak sequence batera gehitu.",
+  "sequenceShots.moveWarning": { "one": "shot {count} bere uneko sequence-tik aterako da.", "other": "{count} shot beren uneko sequence-tik aterako dira." },
+  "sequenceShots.attachCount": { "one": "Lotu shot {count}", "other": "Lotu {count} shot" },
+  "sequenceShots.attached": { "one": "shot {count} sequence-ra lotuta", "other": "{count} shot sequence-ra lotuta" }
 }

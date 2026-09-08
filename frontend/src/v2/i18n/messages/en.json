@@ -3348,5 +3348,20 @@
   "colorPicker.hue": "Hue",
   "queryState.title": "Could not load this section",
   "queryState.description": "The server did not answer. It may be restarting or unavailable — try again.",
-  "queryState.retry": "Try again"
+  "queryState.retry": "Try again",
+  "sequenceShots.add": "Add shots",
+  "sequenceShots.mode": "How to add shots",
+  "sequenceShots.create": "Create shots",
+  "sequenceShots.attach": "Attach existing shots",
+  "sequenceShots.empty.hint": "Create shots here, or attach shots that already exist elsewhere in the project.",
+  "sequenceShots.free": "Shots without a sequence",
+  "sequenceShots.noFree": "No shot is waiting outside a sequence.",
+  "sequenceShots.elsewhere": "Shots in another sequence",
+  "sequenceShots.noElsewhere": "No shot in another sequence matches.",
+  "sequenceShots.noneToAttach": "Every shot in the project is already in this sequence.",
+  "sequenceShots.pickNone": "Select the shots to attach.",
+  "sequenceShots.forbidden": "Only a project manager can add shots to a sequence.",
+  "sequenceShots.moveWarning": { "one": "{count} shot will leave its current sequence.", "other": "{count} shots will leave their current sequence." },
+  "sequenceShots.attachCount": { "one": "Attach {count} shot", "other": "Attach {count} shots" },
+  "sequenceShots.attached": { "one": "{count} shot attached to the sequence", "other": "{count} shots attached to the sequence" }
 }

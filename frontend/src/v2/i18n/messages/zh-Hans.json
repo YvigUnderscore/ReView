@@ -3241,5 +3241,20 @@
   "colorPicker.hue": "色相",
   "queryState.title": "无法加载此部分",
   "queryState.description": "服务器没有响应。它可能正在重启或不可用，请重试。",
-  "queryState.retry": "重试"
+  "queryState.retry": "重试",
+  "sequenceShots.add": "添加 shot",
+  "sequenceShots.mode": "添加 shot 的方式",
+  "sequenceShots.create": "创建 shot",
+  "sequenceShots.attach": "关联已有的 shot",
+  "sequenceShots.empty.hint": "在此创建 shot，或关联项目中已有的 shot。",
+  "sequenceShots.free": "没有 sequence 的 shot",
+  "sequenceShots.noFree": "没有 shot 停留在 sequence 之外。",
+  "sequenceShots.elsewhere": "位于其他 sequence 的 shot",
+  "sequenceShots.noElsewhere": "其他 sequence 中没有匹配的 shot。",
+  "sequenceShots.noneToAttach": "项目中的所有 shot 都已在此 sequence 中。",
+  "sequenceShots.pickNone": "请选择要关联的 shot。",
+  "sequenceShots.forbidden": "只有项目管理者才能向 sequence 添加 shot。",
+  "sequenceShots.moveWarning": { "other": "{count} 个 shot 将离开当前的 sequence。" },
+  "sequenceShots.attachCount": { "other": "关联 {count} 个 shot" },
+  "sequenceShots.attached": { "other": "已将 {count} 个 shot 关联到该 sequence" }
 }

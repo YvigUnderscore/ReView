@@ -3351,5 +3351,20 @@
   "colorPicker.hue": "Teinte",
   "queryState.title": "Impossible de charger cette section",
   "queryState.description": "Le serveur n'a pas répondu. Il redémarre peut-être, ou il est indisponible — réessayez.",
-  "queryState.retry": "Réessayer"
+  "queryState.retry": "Réessayer",
+  "sequenceShots.add": "Ajouter des shots",
+  "sequenceShots.mode": "Manière d’ajouter des shots",
+  "sequenceShots.create": "Créer des shots",
+  "sequenceShots.attach": "Rattacher des shots existants",
+  "sequenceShots.empty.hint": "Créez des shots ici, ou rattachez des shots qui existent déjà ailleurs dans le projet.",
+  "sequenceShots.free": "Shots sans sequence",
+  "sequenceShots.noFree": "Aucun shot n’attend hors sequence.",
+  "sequenceShots.elsewhere": "Shots d’une autre sequence",
+  "sequenceShots.noElsewhere": "Aucun shot d’une autre sequence ne correspond.",
+  "sequenceShots.noneToAttach": "Tous les shots du projet sont déjà dans cette sequence.",
+  "sequenceShots.pickNone": "Choisissez les shots à rattacher.",
+  "sequenceShots.forbidden": "Seul un gestionnaire du projet peut ajouter des shots à une sequence.",
+  "sequenceShots.moveWarning": { "one": "{count} shot quittera sa sequence actuelle.", "many": "{count} shots quitteront leur sequence actuelle.", "other": "{count} shots quitteront leur sequence actuelle." },
+  "sequenceShots.attachCount": { "one": "Rattacher {count} shot", "many": "Rattacher {count} shots", "other": "Rattacher {count} shots" },
+  "sequenceShots.attached": { "one": "{count} shot rattaché à la sequence", "many": "{count} shots rattachés à la sequence", "other": "{count} shots rattachés à la sequence" }
 }

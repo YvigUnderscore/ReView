@@ -3348,5 +3348,20 @@
   "colorPicker.hue": "Farbton",
   "queryState.title": "Dieser Bereich konnte nicht geladen werden",
   "queryState.description": "Der Server hat nicht geantwortet. Er startet vielleicht neu oder ist nicht erreichbar — versuchen Sie es erneut.",
-  "queryState.retry": "Erneut versuchen"
+  "queryState.retry": "Erneut versuchen",
+  "sequenceShots.add": "Shots hinzufügen",
+  "sequenceShots.mode": "Art des Hinzufügens von Shots",
+  "sequenceShots.create": "Shots erstellen",
+  "sequenceShots.attach": "Vorhandene Shots zuordnen",
+  "sequenceShots.empty.hint": "Hier Shots erstellen oder Shots zuordnen, die es im Projekt schon gibt.",
+  "sequenceShots.free": "Shots ohne Sequence",
+  "sequenceShots.noFree": "Kein Shot wartet außerhalb einer Sequence.",
+  "sequenceShots.elsewhere": "Shots in einer anderen Sequence",
+  "sequenceShots.noElsewhere": "Kein Shot aus einer anderen Sequence passt.",
+  "sequenceShots.noneToAttach": "Alle Shots des Projekts sind bereits in dieser Sequence.",
+  "sequenceShots.pickNone": "Die zuzuordnenden Shots auswählen.",
+  "sequenceShots.forbidden": "Nur eine Projektleitung kann einer Sequence Shots hinzufügen.",
+  "sequenceShots.moveWarning": { "one": "{count} Shot verlässt seine aktuelle Sequence.", "other": "{count} Shots verlassen ihre aktuelle Sequence." },
+  "sequenceShots.attachCount": { "one": "{count} Shot zuordnen", "other": "{count} Shots zuordnen" },
+  "sequenceShots.attached": { "one": "{count} Shot der Sequence zugeordnet", "other": "{count} Shots der Sequence zugeordnet" }
 }

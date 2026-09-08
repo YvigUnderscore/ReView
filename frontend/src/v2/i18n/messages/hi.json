@@ -3348,5 +3348,20 @@
   "colorPicker.hue": "रंगत",
   "queryState.title": "यह अनुभाग लोड नहीं किया जा सका",
   "queryState.description": "सर्वर ने उत्तर नहीं दिया। संभव है कि वह पुनः चालू हो रहा हो या उपलब्ध न हो — पुनः प्रयास करें।",
-  "queryState.retry": "पुनः प्रयास करें"
+  "queryState.retry": "पुनः प्रयास करें",
+  "sequenceShots.add": "shot जोड़ें",
+  "sequenceShots.mode": "shot जोड़ने का तरीका",
+  "sequenceShots.create": "shot बनाएँ",
+  "sequenceShots.attach": "मौजूदा shot जोड़ें",
+  "sequenceShots.empty.hint": "यहाँ shot बनाएँ, या प्रोजेक्ट में पहले से मौजूद shot जोड़ें।",
+  "sequenceShots.free": "बिना sequence वाले shot",
+  "sequenceShots.noFree": "किसी sequence के बाहर कोई shot प्रतीक्षा में नहीं है।",
+  "sequenceShots.elsewhere": "किसी दूसरी sequence के shot",
+  "sequenceShots.noElsewhere": "किसी दूसरी sequence का कोई shot मेल नहीं खाता।",
+  "sequenceShots.noneToAttach": "प्रोजेक्ट के सभी shot पहले से इसी sequence में हैं।",
+  "sequenceShots.pickNone": "जोड़ने के लिए shot चुनें।",
+  "sequenceShots.forbidden": "किसी sequence में shot केवल प्रोजेक्ट प्रबंधक ही जोड़ सकता है।",
+  "sequenceShots.moveWarning": { "one": "{count} shot अपनी मौजूदा sequence से निकल जाएगा।", "other": "{count} shot अपनी मौजूदा sequence से निकल जाएंगे।" },
+  "sequenceShots.attachCount": { "one": "{count} shot जोड़ें", "other": "{count} shot जोड़ें" },
+  "sequenceShots.attached": { "one": "{count} shot sequence से जोड़ा गया", "other": "{count} shot sequence से जोड़े गए" }
 }

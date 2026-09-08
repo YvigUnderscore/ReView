@@ -12,6 +12,7 @@ import { SkeletonRows } from '../components/ui/skeleton';
 import TimelineCard from './timeline/TimelineCard';
 import SequenceShotGrid from './sequence/SequenceShotGrid';
 import SequenceAssets from './sequence/SequenceAssets';
+import { useSequenceShotAdd } from './sequence/useSequenceShotAdd';
 import { useProjectRole } from '../lib/useProjectRole';
 import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
 import { useStatusMenu } from '../lib/useStatusMenu';
@@ -50,7 +51,16 @@ export default function SequencePage() {
     return { versionIds: candidates.map((c) => c.versionId) };
   });
   const { entry: statusEntry } = useStatusMenu(projectId, 'sequence');
+  // Peupler la séquence : au clic droit d'abord (UI simple), et par un unique « + » que la
+  // grille des plans expose — l'action principale de cet écran mérite d'être visible.
+  const addShots = useSequenceShotAdd({
+    projectId,
+    sequenceId,
+    canManage,
+    onChanged: () => void refetch(),
+  });
   const menuExtras = [
+    ...addShots.entries,
     ...entriesOf(data ? statusEntry(data, { canEdit: canManage }) : null),
     ...(playlistEntry ? [playlistEntry] : []),
   ];
@@ -100,11 +110,13 @@ export default function SequencePage() {
               projectId={projectId}
               canManage={canManage}
               onChanged={() => void refetch()}
+              onAdd={addShots.open}
             />
             <SequenceAssets assets={data.assets} />
           </div>
         )
       )}
+      {addShots.dialog}
     </EntityWorkPage>
   );
 }

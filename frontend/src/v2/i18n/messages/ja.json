@@ -3241,5 +3241,20 @@
   "colorPicker.hue": "色相",
   "queryState.title": "このセクションを読み込めませんでした",
   "queryState.description": "サーバーから応答がありませんでした。再起動中か、利用できない可能性があります。もう一度お試しください。",
-  "queryState.retry": "再試行"
+  "queryState.retry": "再試行",
+  "sequenceShots.add": "shot を追加",
+  "sequenceShots.mode": "shot の追加方法",
+  "sequenceShots.create": "shot を作成",
+  "sequenceShots.attach": "既存の shot を紐づける",
+  "sequenceShots.empty.hint": "ここで shot を作成するか、プロジェクト内の既存の shot を紐づけます。",
+  "sequenceShots.free": "sequence のない shot",
+  "sequenceShots.noFree": "sequence の外で待っている shot はありません。",
+  "sequenceShots.elsewhere": "別の sequence にある shot",
+  "sequenceShots.noElsewhere": "別の sequence に該当する shot はありません。",
+  "sequenceShots.noneToAttach": "プロジェクトのすべての shot がすでにこの sequence にあります。",
+  "sequenceShots.pickNone": "紐づける shot を選んでください。",
+  "sequenceShots.forbidden": "sequence に shot を追加できるのはプロジェクト管理者だけです。",
+  "sequenceShots.moveWarning": { "other": "{count} 件の shot が現在の sequence から外れます。" },
+  "sequenceShots.attachCount": { "other": "{count} 件の shot を紐づける" },
+  "sequenceShots.attached": { "other": "{count} 件の shot を sequence に紐づけました" }
 }

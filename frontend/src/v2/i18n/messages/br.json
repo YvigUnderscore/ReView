@@ -3355,5 +3355,20 @@
   "colorPicker.hue": "Arliv",
   "queryState.title": "N'eus ket bet gallet kargañ ar rann-mañ",
   "queryState.description": "N'en deus ket respontet an dafariad. Marteze emañ oc'h adloc'hañ pe n'eo ket hegerz — klaskit en-dro.",
-  "queryState.retry": "Klask en-dro"
+  "queryState.retry": "Klask en-dro",
+  "sequenceShots.add": "Ouzhpennañ shots",
+  "sequenceShots.mode": "Doare da ouzhpennañ shots",
+  "sequenceShots.create": "Krouiñ shots",
+  "sequenceShots.attach": "Stagañ shots a zo dija",
+  "sequenceShots.empty.hint": "Krouit shots amañ, pe stagit shots a zo dija e lec’h all er raktres.",
+  "sequenceShots.free": "Shots hep sequence",
+  "sequenceShots.noFree": "N’eus shot ebet o c’hortoz er-maez eus ur sequence.",
+  "sequenceShots.elsewhere": "Shots eus ur sequence all",
+  "sequenceShots.noElsewhere": "N’eus shot ebet eus ur sequence all a glot.",
+  "sequenceShots.noneToAttach": "Holl shots ar raktres a zo dija er sequence-mañ.",
+  "sequenceShots.pickNone": "Dibabit ar shots da stagañ.",
+  "sequenceShots.forbidden": "N’eus nemet ur merour raktres a c’hall ouzhpennañ shots d’ur sequence.",
+  "sequenceShots.moveWarning": { "one": "{count} shot a guitao e sequence a-vremañ.", "two": "{count} shot a guitaio o sequence a-vremañ.", "few": "{count} shot a guitaio o sequence a-vremañ.", "many": "{count} a shots a guitaio o sequence a-vremañ.", "other": "{count} shot a guitaio o sequence a-vremañ." },
+  "sequenceShots.attachCount": { "one": "Stagañ {count} shot", "two": "Stagañ {count} shot", "few": "Stagañ {count} shot", "many": "Stagañ {count} a shots", "other": "Stagañ {count} shot" },
+  "sequenceShots.attached": { "one": "{count} shot staget ouzh ar sequence", "two": "{count} shot staget ouzh ar sequence", "few": "{count} shot staget ouzh ar sequence", "many": "{count} a shots staget ouzh ar sequence", "other": "{count} shot staget ouzh ar sequence" }
 }

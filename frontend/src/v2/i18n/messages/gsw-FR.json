@@ -3348,5 +3348,20 @@
   "colorPicker.hue": "Farbton",
   "queryState.title": "Der Beritt het nit chenne glade werre",
   "queryState.description": "Der Server het nit gantwort. Villicht startet er grad neu, oder er isch nit erreichbar — nochemol probiere.",
-  "queryState.retry": "Nochemol probiere"
+  "queryState.retry": "Nochemol probiere",
+  "sequenceShots.add": "Shots zuefiege",
+  "sequenceShots.mode": "Art wie mer Shots zuefiegt",
+  "sequenceShots.create": "Shots erstelle",
+  "sequenceShots.attach": "Vorhandeni Shots zuordne",
+  "sequenceShots.empty.hint": "Do Shots erstelle oder Shots zuordne, wo’s im Projekt scho git.",
+  "sequenceShots.free": "Shots ohni Sequence",
+  "sequenceShots.noFree": "Kei Shot wartet usserhalb vunere Sequence.",
+  "sequenceShots.elsewhere": "Shots us ere andere Sequence",
+  "sequenceShots.noElsewhere": "Kei Shot us ere andere Sequence passt.",
+  "sequenceShots.noneToAttach": "Alli Shots vum Projekt sin scho in dere Sequence.",
+  "sequenceShots.pickNone": "Wähl d Shots us, wo zuegordnet werde sollen.",
+  "sequenceShots.forbidden": "Nur e Projektleitung cha ere Sequence Shots zuefiege.",
+  "sequenceShots.moveWarning": { "one": "{count} Shot verlosst si aktuelli Sequence.", "other": "{count} Shots verlosse ihri aktuelli Sequence." },
+  "sequenceShots.attachCount": { "one": "{count} Shot zuordne", "other": "{count} Shots zuordne" },
+  "sequenceShots.attached": { "one": "{count} Shot dr Sequence zuegordnet", "other": "{count} Shots dr Sequence zuegordnet" }
 }

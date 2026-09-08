@@ -3241,5 +3241,20 @@
   "colorPicker.hue": "색조",
   "queryState.title": "이 구역을 불러오지 못했습니다",
   "queryState.description": "서버가 응답하지 않았습니다. 다시 시작 중이거나 사용할 수 없는 상태일 수 있습니다. 다시 시도해 주세요.",
-  "queryState.retry": "다시 시도"
+  "queryState.retry": "다시 시도",
+  "sequenceShots.add": "shot 추가",
+  "sequenceShots.mode": "shot 추가 방식",
+  "sequenceShots.create": "shot 만들기",
+  "sequenceShots.attach": "기존 shot 연결",
+  "sequenceShots.empty.hint": "여기서 shot을 만들거나, 프로젝트의 다른 곳에 이미 있는 shot을 연결하세요.",
+  "sequenceShots.free": "sequence가 없는 shot",
+  "sequenceShots.noFree": "sequence 밖에서 대기 중인 shot이 없습니다.",
+  "sequenceShots.elsewhere": "다른 sequence에 있는 shot",
+  "sequenceShots.noElsewhere": "다른 sequence에 해당하는 shot이 없습니다.",
+  "sequenceShots.noneToAttach": "프로젝트의 모든 shot이 이미 이 sequence에 있습니다.",
+  "sequenceShots.pickNone": "연결할 shot을 선택하세요.",
+  "sequenceShots.forbidden": "sequence에 shot을 추가할 수 있는 사람은 프로젝트 관리자뿐입니다.",
+  "sequenceShots.moveWarning": { "other": "shot {count}개가 현재 sequence에서 빠집니다." },
+  "sequenceShots.attachCount": { "other": "shot {count}개 연결" },
+  "sequenceShots.attached": { "other": "shot {count}개를 sequence에 연결했습니다" }
 }

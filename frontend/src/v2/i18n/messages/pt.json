@@ -3351,5 +3351,20 @@
   "colorPicker.hue": "Matiz",
   "queryState.title": "Não foi possível carregar esta secção",
   "queryState.description": "O servidor não respondeu. Pode estar a reiniciar ou indisponível — tente novamente.",
-  "queryState.retry": "Tentar novamente"
+  "queryState.retry": "Tentar novamente",
+  "sequenceShots.add": "Adicionar shots",
+  "sequenceShots.mode": "Modo de adicionar shots",
+  "sequenceShots.create": "Criar shots",
+  "sequenceShots.attach": "Vincular shots existentes",
+  "sequenceShots.empty.hint": "Crie shots aqui ou vincule shots que já existem noutro ponto do projeto.",
+  "sequenceShots.free": "Shots sem sequence",
+  "sequenceShots.noFree": "Nenhum shot está à espera fora de uma sequence.",
+  "sequenceShots.elsewhere": "Shots de outra sequence",
+  "sequenceShots.noElsewhere": "Nenhum shot de outra sequence corresponde.",
+  "sequenceShots.noneToAttach": "Todos os shots do projeto já estão nesta sequence.",
+  "sequenceShots.pickNone": "Selecione os shots a vincular.",
+  "sequenceShots.forbidden": "Só um gestor do projeto pode adicionar shots a uma sequence.",
+  "sequenceShots.moveWarning": { "one": "{count} shot sairá da sua sequence atual.", "many": "{count} shots sairão da sua sequence atual.", "other": "{count} shots sairão da sua sequence atual." },
+  "sequenceShots.attachCount": { "one": "Vincular {count} shot", "many": "Vincular {count} shots", "other": "Vincular {count} shots" },
+  "sequenceShots.attached": { "one": "{count} shot vinculado à sequence", "many": "{count} shots vinculados à sequence", "other": "{count} shots vinculados à sequence" }
 }

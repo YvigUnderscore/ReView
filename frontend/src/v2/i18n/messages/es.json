@@ -3348,5 +3348,20 @@
   "colorPicker.hue": "Tono",
   "queryState.title": "No se ha podido cargar esta sección",
   "queryState.description": "El servidor no ha respondido. Puede estar reiniciándose o no disponible: inténtelo de nuevo.",
-  "queryState.retry": "Intentar de nuevo"
+  "queryState.retry": "Intentar de nuevo",
+  "sequenceShots.add": "Añadir shots",
+  "sequenceShots.mode": "Modo de añadir shots",
+  "sequenceShots.create": "Crear shots",
+  "sequenceShots.attach": "Vincular shots existentes",
+  "sequenceShots.empty.hint": "Crea shots aquí o vincula shots que ya existen en otra parte del proyecto.",
+  "sequenceShots.free": "Shots sin sequence",
+  "sequenceShots.noFree": "Ningún shot espera fuera de una sequence.",
+  "sequenceShots.elsewhere": "Shots de otra sequence",
+  "sequenceShots.noElsewhere": "Ningún shot de otra sequence coincide.",
+  "sequenceShots.noneToAttach": "Todos los shots del proyecto ya están en esta sequence.",
+  "sequenceShots.pickNone": "Selecciona los shots que vincular.",
+  "sequenceShots.forbidden": "Solo un gestor del proyecto puede añadir shots a una sequence.",
+  "sequenceShots.moveWarning": { "one": "{count} shot saldrá de su sequence actual.", "other": "{count} shots saldrán de su sequence actual." },
+  "sequenceShots.attachCount": { "one": "Vincular {count} shot", "other": "Vincular {count} shots" },
+  "sequenceShots.attached": { "one": "{count} shot vinculado a la sequence", "other": "{count} shots vinculados a la sequence" }
 }
