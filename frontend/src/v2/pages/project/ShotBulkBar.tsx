@@ -62,7 +62,8 @@ export default function ShotBulkBar({
             onClick: () => setAssignOpen(true),
           },
           {
-            label: t('common.delete'),
+            // Le geste met à la corbeille (`softDelete`) — le dire, comme sur la carte.
+            label: t('common.moveToTrash'),
             icon: <Trash2 size={14} />,
             danger: true,
             onClick: onDelete,

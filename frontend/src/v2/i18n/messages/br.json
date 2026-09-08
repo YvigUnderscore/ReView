@@ -1,6 +1,5 @@
 {
   "auth.tagline": "Review a-stroll eus ar mediaoù evit studioioù VFX ha postproduktion.",
-
   "login.title": "Degemer mat en-dro.",
   "login.subtitle": "Kevreit evit kavout en-dro ho reviews, ho trevelloù hag ho boards.",
   "login.heading": "Kevreañ",
@@ -12,7 +11,6 @@
   "login.error.credentials": "Postel pe c'her-tremen direizh.",
   "login.error.network": "N'eus ket tu da dizhout ar servijer. Klaskit en-dro a-benn ur pennadig.",
   "login.error.generic": "C'hwitet eo ar c'hevreañ",
-
   "setup.title": "Degemer mat e ReView.",
   "setup.subtitle": "Kefluniomp ho studio e div bazenn. Gallout a reot cheñch pep tra goude.",
   "setup.step.studio": "Studio",
@@ -30,7 +28,6 @@
   "setup.submit": "Krouiñ ar studio",
   "setup.submitting": "O krouiñ…",
   "setup.error.generic": "C'hwitet eo ar c'hefluniañ",
-
   "display.title": "Diskwel",
   "display.theme": "Neuz",
   "display.theme.hint": "Heuliañ ar reizhiad pe rediañ sklaer/teñval.",
@@ -45,7 +42,6 @@
   "display.language.hint": "Yezh ar c'hetal. Chom a ra ar geriaoueg vicherel e saozneg.",
   "display.view": "Gwel dre ziouer ar rolloù",
   "display.view.hint": "Arloet e pep lec'h. Ur roll a cheñchit a zalc'h e arventenn dezhañ betek ma vez lamet ganeoc'h.",
-
   "language.select": "Dibab ur yezh",
   "language.regional": "Yezh rannvroel",
   "language.notice.title": "Troidigezhioù savet gant an ardivink",
@@ -58,24 +54,20 @@
   "language.coverage.complete": "Troet penn-da-benn",
   "language.fallbackNotice": "Ar frazennoù n'int ket troet a vo diskwelet e saozneg.",
   "language.regionalSuffix": "— yezh rannvroel",
-
   "nav.home": "Degemer",
   "nav.projects": "Raktresoù",
   "nav.reviews": "Reviews",
   "nav.members": "Izili",
   "nav.settings": "Arventennoù",
   "nav.documentation": "Teuliadur",
-
   "common.save": "Enrollañ",
   "common.cancel": "Nullañ",
   "common.delete": "Dilemel",
   "common.edit": "Aozañ",
   "common.close": "Serriñ",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Meziant frank dindan al lañvaz AGPL-3.0, hep gwarant ebet.",
   "license.source": "Kod mammenn",
   "license.title": "Lañvaz",
-
   "common.confirm": "Kadarnaat",
   "common.previous": "A-raok",
   "common.next": "War-lerc'h",
@@ -111,7 +103,6 @@
   "onboarding.help.title": "Ezhomm skoazell ?",
   "onboarding.help.body": "Pouezit war « ? » evit roll ar berradennoù (kemmus holl), hag e kavot ar sturlevr klok e Teuliadur.",
   "onboarding.start": "Kregiñ",
-
   "common.create": "Krouiñ",
   "common.open": "Digeriñ",
   "common.duplicate": "Eiladiñ",
@@ -168,7 +159,9 @@
   "projects.empty.canManage": "Krouit ho raktres kentañ gant an nozelenn « + Krouiñ » evit aozañ ho sequences, shots hag assets.",
   "projects.empty.member": "N'oc'h ezel eus raktres ebet. Goulennit gant un evezhier ho lakaat e-barzh.",
   "projects.empty.action": "Krouiñ ur raktres",
-  "projects.countLabel": { "other": "raktres" },
+  "projects.countLabel": {
+    "other": "raktres"
+  },
   "projects.deleteMany.title": "Dilemel ar raktresoù ?",
   "projects.deleteMany.message": {
     "other": "{count} raktres a vo lakaet er pod-lastez. Assevelus adalek ar melestradurezh."
@@ -186,12 +179,17 @@
   "reviews.empty.title": "Review ebet",
   "reviews.empty.description": "Media ebet a glot gant ar siloù-mañ. Embannit ur media adalek un trevell evit kregiñ gant ur review.",
   "reviews.draft": "Brouilhed",
-  "reviews.count": { "other": "{count} media" },
-  "reviews.countLabel": { "other": "media" },
+  "reviews.count": {
+    "other": "{count} media"
+  },
+  "reviews.countLabel": {
+    "other": "media"
+  },
   "reviews.addToPlaylist": "Ouzhpennañ d'ar playlist…",
   "reviews.deleteMany.title": "Dilemel ar mediaoù ?",
-  "reviews.deleteMany.message": { "other": "{count} media a vo lakaet er pod-lastez." },
-
+  "reviews.deleteMany.message": {
+    "other": "{count} media a vo lakaet er pod-lastez."
+  },
   "common.rename": "Adenvel",
   "common.remove": "Lemel kuit",
   "common.deletePermanently": "Dilemel da vat",
@@ -224,11 +222,20 @@
   "trash.empty.description": "An elfennoù dilamet eus ar raktres a zeu amañ hag a chom assevelus.",
   "trash.delete.title": "Dilemel da vat ?",
   "trash.restored": "Elfenn assevelet",
-  "trash.restoredCount": { "one": "{count} elfenn assevelet", "other": "{count} elfenn assevelet" },
+  "trash.restoredCount": {
+    "one": "{count} elfenn assevelet",
+    "other": "{count} elfenn assevelet"
+  },
   "trash.deleted": "Dilamet da vat",
   "trash.group.media": "Mediaoù",
-  "trash.selectedCount": { "one": "{count} diuzet", "other": "{count} diuzet" },
-  "trash.purged": { "one": "{count} elfenn dilamet da vat", "other": "{count} elfenn dilamet da vat" },
+  "trash.selectedCount": {
+    "one": "{count} diuzet",
+    "other": "{count} diuzet"
+  },
+  "trash.purged": {
+    "one": "{count} elfenn dilamet da vat",
+    "other": "{count} elfenn dilamet da vat"
+  },
   "trash.delete.message": "« {name} » a vo dilamet eus an diaz hag ar stokañ. N'haller ket dizober.",
   "trash.deleteMany.message": {
     "one": "{count} elfenn a vo dilamet eus an diaz hag ar stokañ. Difeuk.",
@@ -254,8 +261,9 @@
   },
   "assets.delete.title": "Dilemel an asset ?",
   "assets.deleteMany.title": "Dilemel an assets ?",
-  "assets.countLabel": { "other": "asset" },
-
+  "assets.countLabel": {
+    "other": "asset"
+  },
   "sequences.title": "Sequences",
   "sequences.empty.title": "Sequence ebet",
   "sequences.empty.description": "Sequences ar raktres a zeuio amañ.",
@@ -293,7 +301,6 @@
   "playlists.delete.title": "Dilemel ar playlist ?",
   "playlists.unreadable": "Media lennus ebet er playlist-mañ",
   "playlists.inaccessible": "Playlist dihegerz",
-
   "viewer.env.title": "Endro",
   "viewer.hdri.title": "Endro HDRI (gouloù dre skeudenn)",
   "viewer.hdri.background": "HDRI en drekleur",
@@ -339,7 +346,6 @@
   "viewer.bookmarks.title": "Gweladennoù enrollet",
   "viewer.bookmarks.empty": "Gweladenn enrollet ebet.",
   "viewer.bookmarks.save": "Enrollañ ar gweladenn red — rannet gant ar skipailh",
-
   "viewer.focal.hint": "Hirder fokal e milimetradoù, sensor 36 mm",
   "viewer.aperture.hint": "Donder ar park — 0 = spis e pep lec’h",
   "viewer.tilt.hint": "Stouadur tro-dro d’ahel ar sell",
@@ -347,7 +353,6 @@
   "viewer.upAxis.hint2": "Kendere Y-down reizhet en ur enporzhiañ",
   "viewer.realScale.hint2": "Hep unvaniñ ar skeulioù dre ar bounding box",
   "viewer.inspectionTint.hint": "Lec’hel d’ho talc’h",
-
   "shortcuts.title": "Berradennoù klavier",
   "shortcuts.nav": "Merdeiñ",
   "shortcuts.hint": "Klikit war ur stokell evit he adkefluniañ.",
@@ -419,10 +424,8 @@
   "lighting.default.title": "Gouloù 3D dre ziouer",
   "lighting.default.none": "Hini ebet (gouleier studio)",
   "lighting.default.empty": "Talvoud dre ziouer ebet : gouloù studio neptu.",
-
   "shortcuts.goProjects": "Mont d'ar raktresoù",
   "shortcuts.showHelp": "Diskwel ar berradennoù",
-
   "whatsNew.title": "Nevezinti",
   "whatsNew.unavailable": "Changelog dihegerz ({status})",
   "tree.noSequence": "Sequence ebet.",
@@ -462,13 +465,15 @@
   "decision.saved": "Diviz enrollet",
   "notifications.title": "Kemennoù",
   "notifications.empty": "Kemenn ebet.",
-  "notifications.unreadAria": { "one": "Kemennoù, {count} anlennet", "other": "Kemennoù, {count} anlennet" },
+  "notifications.unreadAria": {
+    "one": "Kemennoù, {count} anlennet",
+    "other": "Kemennoù, {count} anlennet"
+  },
   "assets.assignSaved": "Deverkadurioù enrollet",
   "presence.aloneHere": "Den all ebet.",
   "dropzone.release": "Laoskit evit kregiñ gant ar pellgas",
   "storage.title": "Kadaviñ",
   "storage.unlimited.placeholder": "hep bevenn",
-
   "common.undo": "Nullañ",
   "common.redo": "Adober",
   "viewer.duration": "Padelezh",
@@ -524,7 +529,6 @@
   "review.firstFrame": "Frame kentañ",
   "review.playbackRate": "Feur lenn — chom a ra an timeline e frame",
   "review.none": "hini ebet",
-
   "viewer.guides.title": "Merkoù",
   "viewer.guides.grid": "Kael leur",
   "viewer.guides.axes": "Tri ahel",
@@ -608,7 +612,6 @@
   "review.pipFrame": "Gwel ar gamera layout — rikladiñ evit dilec'hiañ, dornell evit adventañ",
   "review.wipe.move": "Dilec'hiañ ar wipe (daouglik : adderaouekaat)",
   "review.wipe.rotate": "Treiñ ar varrenn (peget ouzh 0/45/90°)",
-
   "review.guides.thirds": "Trederennoù",
   "review.guides.center": "Kroaz kreiz",
   "review.guides.actionSafe.hint": "Takad oberiant sur",
@@ -619,7 +622,6 @@
   "review.export.captureShort": "Pakañ ar gweladenn (PNG)",
   "review.file": "Restr",
   "review.delivery": "Skignañ",
-
   "common.noData": "Roadenn ebet.",
   "common.reset": "Adderaouekaat",
   "common.host": "Ostiz",
@@ -735,13 +737,19 @@
   "transcode.crf": "Perzhded (CRF)",
   "transcode.renditions": "Skeul perzhdedoù (renditions)",
   "adminTrash.restored": "Raktres assevelet",
-  "adminTrash.restoredCount": { "one": "{count} raktres assevelet", "other": "{count} raktres assevelet" },
+  "adminTrash.restoredCount": {
+    "one": "{count} raktres assevelet",
+    "other": "{count} raktres assevelet"
+  },
   "adminTrash.deleted": "Raktres dilamet da vat",
   "adminTrash.empty": "Raktres ebet er pod-lastez.",
   "adminTrash.deleteMany.title": "Dilemel da vat ar raktresoù ?",
   "adminTrash.delete.title": "Dilemel da vat ar raktres ?",
   "adminTrash.deletedOn": "dilamet d'an {date}",
-  "adminTrash.purged": { "one": "{count} raktres dilamet da vat", "other": "{count} raktres dilamet da vat" },
+  "adminTrash.purged": {
+    "one": "{count} raktres dilamet da vat",
+    "other": "{count} raktres dilamet da vat"
+  },
   "adminTrash.purge.message": "« {name} » hag e holl vediaoù a vo dilamet eus an diaz hag ar stokañ. Difeuk.",
   "adminTrash.purgeMany.message": {
     "one": "{count} raktres hag e holl vediaoù a vo dilamet eus an diaz hag ar stokañ. Difeuk.",
@@ -784,7 +792,6 @@
   "versions.unpublished": "Nann-embannet",
   "versions.allMedia": "An holl vediaoù",
   "versions.decision": "Diviz",
-
   "twofa.enabled": "2FA gweredekaet — mirit ho kodoù eskor",
   "twofa.disabled": "2FA diweredekaet",
   "twofa.code": "Kod 6 sifr",
@@ -815,7 +822,10 @@
   "asset.tree.direct": "Version staget ouzh an asset",
   "asset.tree.empty.title": "Netra embannet c’hoazh",
   "asset.tree.empty.description": "Ar version embannet adalek un DCC a zeu war wel amañ, renket dre zepartamant.",
-  "asset.tree.versionCount": { "one": "{count} version", "other": "{count} version" },
+  "asset.tree.versionCount": {
+    "one": "{count} version",
+    "other": "{count} version"
+  },
   "asset.tree.looseVersions": "Version hep dlead",
   "asset.tree.noVersion": "Version ebet",
   "asset.card.latest": "diwezhañ : {name} · {date}",
@@ -896,10 +906,7 @@
   "review.exitTheatre": "Kuitaat ar mod c'hoariva (Achap)",
   "review.cameraViewSaved": "Gweladenn gamera enrollet",
   "email.placeholder": "c'hwi@studio.bzh",
-
-
   "common.escKey": "Achap",
-
   "common.start": "Deroù",
   "common.end": "Fin",
   "common.name": "Anv",
@@ -930,14 +937,23 @@
   "comments.atTime": "da {time} e",
   "comments.filter.open": "Digor",
   "comments.reopened": "Evezhiadenn addigoret",
-  "comments.replyCount": { "one": "{count} respont", "other": "{count} respont" },
-  "comments.total": { "one": "{count} evezhiadenn en holl.", "other": "{count} evezhiadenn en holl." },
+  "comments.replyCount": {
+    "one": "{count} respont",
+    "other": "{count} respont"
+  },
+  "comments.total": {
+    "one": "{count} evezhiadenn en holl.",
+    "other": "{count} evezhiadenn en holl."
+  },
   "comments.delete.message": "An evezhiadenn a vo dilamet da vat.",
   "comments.delete.messageWithReplies": {
     "one": "An evezhiadenn hag he {count} respont a vo dilamet da vat.",
     "other": "An evezhiadenn hag he {count} respont a vo dilamet da vat."
   },
-  "comments.openCount": { "one": "{count} digor", "other": "{count} digor" },
+  "comments.openCount": {
+    "one": "{count} digor",
+    "other": "{count} digor"
+  },
   "comments.filter.none": "Evezhiadenn ebet er stad-mañ.",
   "comments.editField": "Kemmañ an evezhiadenn",
   "decision.current": "Diviz red :",
@@ -967,10 +983,16 @@
   "versions.lastVersions": "versions diwezhañ",
   "versions.noMatch": "Version ebet a glot gant ar siloù.",
   "versions.location": "Lec'hiadur",
-  "versions.total": { "one": "{count} version en holl.", "other": "{count} version en holl." },
+  "versions.total": {
+    "one": "{count} version en holl.",
+    "other": "{count} version en holl."
+  },
   "mediaAccess.empty": "Haeziñ enrollet ebet evit c'hoazh.",
   "mediaAccess.hint": "Ul linenn dre sell (diziforc'het war 30 munutenn) — reviews diabarzh ha rannañ kliant asambles.",
-  "mediaAccess.total": { "one": "{count} moned en holl.", "other": "{count} moned en holl." },
+  "mediaAccess.total": {
+    "one": "{count} moned en holl.",
+    "other": "{count} moned en holl."
+  },
   "ocio.intro": "Configs merañ livioù OCIO. Adtapit ar configs ACES ofisiel (",
   "ocio.none": "Config staliet ebet. Furchit ar releases ACES amañ dindan.",
   "ocio.browse": "Furchal ar releases ACES",
@@ -1056,7 +1078,6 @@
   "review.publish": "Embann evit ar skipailh",
   "review.cameraAnimGltf": "Fiñvskeudenn gamera (glTF)",
   "review.importAnimation": "Enporzhiañ ur fiñvskeudenn",
-
   "project.status.active": "Oberiant",
   "project.status.onHold": "Ehanet",
   "projects.tab.active": "Oberiant",
@@ -1064,25 +1085,23 @@
   "projects.created": "Raktres « {name} » krouet",
   "projects.duplicated": "Raktres « {name} » krouet diwar « {source} »",
   "projects.unarchived": "Raktres « {name} » divirvellet",
-  "projects.count": { "one": "{count} raktres", "other": "{count} raktres" },
+  "projects.count": {
+    "one": "{count} raktres",
+    "other": "{count} raktres"
+  },
   "admin.group.studio": "Studio",
   "admin.group.content": "Danvezioù",
   "admin.group.reviewContexts": "Kendestennoù review",
   "admin.group.communications": "Kehentiñ",
   "admin.group.maintenance": "Trezalc'h",
-
   "project.status.completed": "Echu",
   "project.status.archived": "Diellaouet",
-
   "task.dueDate": "Termen",
   "marker.delete": "Dilemel ar merker",
   "usd.recomposeFrom": "Adaozañ adalek an USD",
-
   "marker.rename": "Adenvel / adlivañ…",
-
   "sessions.line": "{ip} · kevreet d'an {created} · oberiant d'an {seen}",
   "sessions.unknownIp": "IP dianav",
-
   "admin.tab.users": "Implijerien",
   "admin.tab.comments": "Evezhiadennoù",
   "admin.tab.statuses": "Statudoù",
@@ -1091,12 +1110,10 @@
   "admin.tab.color": "Liv (OCIO)",
   "admin.topStorage": "Kadaviñ uhelañ / implijer",
   "admin.onlineCount": "{count} enlinenn",
-
   "presence.available": "Hegerz",
   "presence.away": "Ezvezant",
   "presence.dnd": "Chom hep trubuilhañ",
   "presence.onlineCount": "Enlinenn · {count}",
-
   "common.enable": "Gweredekaat",
   "common.loading": "O kargañ…",
   "common.nextMonth": "Miz da zont",
@@ -1126,7 +1143,10 @@
   "tokens.copy": "Eilañ",
   "tokens.created": "Token krouet",
   "tokens.expired": "Diamzeret",
-  "tokens.expiry.days": { "one": "{count} devezh", "other": "{count} devezh" },
+  "tokens.expiry.days": {
+    "one": "{count} devezh",
+    "other": "{count} devezh"
+  },
   "tokens.expiry.label": "Termen",
   "tokens.new": "Token nevez",
   "tokens.passwordHint": "Un token a vev pelloc'h eget ho torn-implij : ho ker-tremen a gadarna ar c'hrouiñ.",
@@ -1155,7 +1175,10 @@
   "sessions.title": "Dalc’hoù oberiant",
   "sessions.thisDevice": "An ardivink-mañ",
   "sessions.empty": "Dalc’h enrollet ebet (ne zeu ket ar c’hevreadennoù kent an hizivadenn — adkevreit evit o gwelet amañ).",
-  "sessions.revokedCount": { "one": "{count} dalc'h nullet", "other": "{count} dalc'h nullet" },
+  "sessions.revokedCount": {
+    "one": "{count} dalc'h nullet",
+    "other": "{count} dalc'h nullet"
+  },
   "twofa.qr": "Kod QR enskrivañ 2FA",
   "twofa.scan": "Skannit ar c’hod QR-mañ gant hoc’h arload (Google Authenticator, 1Password…), ha merkit ar c’hod diskwelet.",
   "twofa.wrongCode": "Kod direizh",
@@ -1177,11 +1200,20 @@
   "production.attention.unassigned": "Hep den karget",
   "production.attention.review": "O c'hortoz ur review",
   "production.attention.none": "Netra amañ, gwelloc'h.",
-  "production.attention.more": { "one": "hag {count} all", "other": "hag {count} all" },
+  "production.attention.more": {
+    "one": "hag {count} all",
+    "other": "hag {count} all"
+  },
   "production.workload.empty": "Netra ken da ober.",
-  "production.workload.late": { "one": "{count} war lerc'h", "other": "{count} war lerc'h" },
+  "production.workload.late": {
+    "one": "{count} war lerc'h",
+    "other": "{count} war lerc'h"
+  },
   "production.pace.window": "Prenestr evezhiañ",
-  "production.pace.weeks": { "one": "{count} sizhun", "other": "{count} sizhun" },
+  "production.pace.weeks": {
+    "one": "{count} sizhun",
+    "other": "{count} sizhun"
+  },
   "production.pace.perWeek": "{value} dre sizhun",
   "production.pace.projected": "Dibenn rakwelet",
   "production.pace.noProjection": "Feur re izel evit rakwelet un dibenn",
@@ -1199,7 +1231,10 @@
   "stats.notes": "Notennoù",
   "stats.approvedRatio": "{approved}/{total} aprouvet · {pct} %",
   "stats.retakes": "Retakes",
-  "stats.days": { "one": "{count} d", "other": "{count} d" },
+  "stats.days": {
+    "one": "{count} d",
+    "other": "{count} d"
+  },
   "stats.drawCalls": "Draw calls",
   "stats.fps": "fps",
   "stats.measuring": "O vuzuliañ…",
@@ -1212,13 +1247,19 @@
   "sequences.empty.hint": "Krouit ho sequences gant an afell « + » a-us — strollañ a reont ar shots (SQ010, SQ020…).",
   "playlists.empty.hint": "Diuzit mediaoù war ar bajenn Reviews, neuze « Ouzhpennañ d’ar playlist » (klik dehou), pe krouit ur playlist goullo amañ.",
   "playlists.delete.message": "« {name} » a vo dilamet. Ne vo ket tizhet ar versions daveet ganti.",
-  "playlists.versionCount": { "one": "{count} version", "other": "{count} version" },
+  "playlists.versionCount": {
+    "one": "{count} version",
+    "other": "{count} version"
+  },
   "shares.newShort": "Liamm nevez",
   "shares.empty": "Liamm rannañ ebet. Krouit unan evit reiñ tro da welet mediaoù embannet ar raktres-mañ, hep kont.",
   "shares.createdBy": "Krouet gant {name}",
   "shares.expiresOn": "Echu d'an {date}",
   "shares.viewedOn": "Gwelet d'an {date}",
-  "shares.viewCount": { "one": "gwel", "other": "gwel" },
+  "shares.viewCount": {
+    "one": "gwel",
+    "other": "gwel"
+  },
   "shares.scope": "Ar pezh a zigor al liamm",
   "shares.scope.project": "An holl raktres",
   "shares.scope.playlist": "Ur playlist hepken",
@@ -1229,21 +1270,36 @@
   "shares.scope.pick.media": "Mediaoù da lakaat",
   "shares.scope.pick.none": "Dibab…",
   "shares.scope.empty": "N'eus mediaoù embannet ebet er raktres-mañ c'hoazh.",
-  "shares.scope.selected": { "one": "{count} media dibabet", "other": "{count} media dibabet" },
+  "shares.scope.selected": {
+    "one": "{count} media dibabet",
+    "other": "{count} media dibabet"
+  },
   "shares.scope.needsTarget": "Dibabit ar pezh a zigor al liamm-mañ a-raok e grouiñ.",
   "shares.scope.badge.project": "Raktres a-bezh",
-  "shares.scope.badge.selection": { "one": "{count} media", "other": "{count} media" },
+  "shares.scope.badge.selection": {
+    "one": "{count} media",
+    "other": "{count} media"
+  },
   "shares.scope.badge.restricted": "Strishaet",
   "shares.email": "Kas dre bostel…",
   "shares.email.title": "Kas al liamm dre bostel",
   "shares.email.recipients": "Resevourien",
   "shares.email.recipients.placeholder": "Ur chomlec'h dre linenn",
-  "shares.email.count": { "one": "{count} chomlec'h reizh", "other": "{count} chomlec'h reizh" },
-  "shares.email.tooMany": { "one": "{count} resevour d'ar muiañ dre gas", "other": "{count} resevour d'ar muiañ dre gas" },
+  "shares.email.count": {
+    "one": "{count} chomlec'h reizh",
+    "other": "{count} chomlec'h reizh"
+  },
+  "shares.email.tooMany": {
+    "one": "{count} resevour d'ar muiañ dre gas",
+    "other": "{count} resevour d'ar muiañ dre gas"
+  },
   "shares.email.note": "Notenn (diret)",
   "shares.email.note.placeholder": "Ur ger evit ar resevour",
   "shares.email.submit": "Kas",
-  "shares.email.sent": { "one": "Liamm kaset da {count} resevour", "other": "Liamm kaset da {count} resevour" },
+  "shares.email.sent": {
+    "one": "Liamm kaset da {count} resevour",
+    "other": "Liamm kaset da {count} resevour"
+  },
   "shares.email.invalid": "Skrivit ur chomlec'h reizh da vihanañ.",
   "shares.email.willMentionExpiry": "Ar gemennadenn a lavaro ez echu al liamm d'an {date}.",
   "shares.email.noExpiry": "Ar gemennadenn a lavaro ne echu ket al liamm.",
@@ -1277,7 +1333,6 @@
   "naming.warningFile": "« {name} » ne zoug ket anv-reol ar raktres.",
   "naming.compliant": "Klotus",
   "naming.nonCompliant": "Digenglotus",
-
   "mode.watch": "Sellet",
   "mode.watch.hint": "Lenn, zoumañ, keñveriañ ar versions — benveg embann ebet. Ar mod nemetañ servijet d’ar chalanted.",
   "mode.annotate": "Annotañ",
@@ -1355,7 +1410,6 @@
   "action.resetSpatial": "Gwel orin",
   "action.fitMedia": "Lakaat da vont er skramm",
   "action.resetMedia": "Ment wir 1:1",
-
   "common.add": "Ouzhpennañ",
   "common.show": "Diskouez",
   "common.hide": "Kuzhat",
@@ -1392,7 +1446,10 @@
   "voice.start": "Enrollañ un notenn vouezh",
   "dropzone.drop": "Lakait ho restroù amañ",
   "batch.nothing": "Netra da c’henel.",
-  "batch.createCount": { "one": "Krouiñ {count} elfenn", "other": "Krouiñ {count} elfenn" },
+  "batch.createCount": {
+    "one": "Krouiñ {count} elfenn",
+    "other": "Krouiñ {count} elfenn"
+  },
   "batch.creation": "Krouiñ shots/sequences",
   "notif.markAllRead": "Merkañ pep tra lennet",
   "file.readFailed": "N’eo ket bet gallet lenn ar restr",
@@ -1441,22 +1498,39 @@
   "decision.badge": "Diviz : {status}",
   "decision.dialogTitle": "Diviz review — {version}",
   "project.dupHint": "Adkrouet e vez ar sequences, ar shots hag an arventennoù. Ne vez ket eilet ar mediaoù, ar versions nag an evezhiadennoù.",
-  "shots.created": { "one": "{count} shot krouet", "other": "{count} shot krouet" },
+  "shots.created": {
+    "one": "{count} shot krouet",
+    "other": "{count} shot krouet"
+  },
   "shots.delete.message": "Ar shot « {code} » hag e oberennoù/versions a vo lakaet er pod-lastez.",
   "shots.omitted": "Troc'het er montaj",
   "shots.searchPlaceholder": "Kod pe anv shot…",
-  "shots.count": { "one": "{count} shot", "other": "{count} shot" },
-  "shots.countLabel": { "other": "shot" },
-  "shots.trashedCount": { "one": "{count} shot lakaet er pod-lastez", "other": "{count} shot lakaet er pod-lastez" },
+  "shots.count": {
+    "one": "{count} shot",
+    "other": "{count} shot"
+  },
+  "shots.countLabel": {
+    "other": "shot"
+  },
+  "shots.trashedCount": {
+    "one": "{count} shot lakaet er pod-lastez",
+    "other": "{count} shot lakaet er pod-lastez"
+  },
   "shots.deleteMany.title": "Dilemel ar shots ?",
-  "shots.deleteMany.message": { "one": "{count} shot hag e oberennoù/versions a vo lakaet er pod-lastez.", "other": "{count} shot hag o oberennoù/versions a vo lakaet er pod-lastez." },
+  "shots.deleteMany.message": {
+    "one": "{count} shot hag e oberennoù/versions a vo lakaet er pod-lastez.",
+    "other": "{count} shot hag o oberennoù/versions a vo lakaet er pod-lastez."
+  },
   "shots.new": "Shot nevez",
   "shot.newAsset": "+ Krouiñ un asset",
   "shot.omitted": "Lezet er-maez eus ar c'hempenn",
   "shot.omittedHint": "Lamet eo ar shot diouzh ar c'hempenn met e labour, e version hag e evezhiadennoù a chom.",
   "assets.emptyHint": "Krouit hoc’h assets adimplijadus gant « + Krouiñ » (tudennoù, dekorioù, props…).",
   "assets.attach": "Stagañ",
-  "assets.count": { "one": "{count} asset", "other": "{count} asset" },
+  "assets.count": {
+    "one": "{count} asset",
+    "other": "{count} asset"
+  },
   "assets.created": "Asset « {name} » krouet",
   "assets.createdAttached": "Asset « {name} » krouet ha staget",
   "assets.delete.message": "An asset « {name} » hag e version/mediaoù a vo lakaet er pod-lastez.",
@@ -1554,7 +1628,6 @@
   "email.digestOff": "Diverradenn pemdeziek diweredekaet",
   "email.weeklyOn": "Danevell sizhuniek gweredekaet",
   "email.weeklyOff": "Danevell sizhuniek diweredekaet",
-
   "review.hotspotAttached": "📍 Hotspot stag (kreiz ar viewer)",
   "review.camViewSaved": "📷 Enrollet e vo gwel ar gamera a-vremañ",
   "review.labelsVisible": "Skritelloù gwelus",
@@ -1600,7 +1673,10 @@
   "live.coHostAdded": "{name} zo kenblenier — an hini gentañ a ober a gemer ar penn",
   "live.coHostRemoved": "N'eo ket ken kenblenier {name}",
   "live.handedOver": "Roet eo bet ar penn da {name} (blenier)",
-  "live.participants": { "one": "({count} kemerer-perzh).", "other": "({count} kemererien-perzh)." },
+  "live.participants": {
+    "one": "({count} kemerer-perzh).",
+    "other": "({count} kemererien-perzh)."
+  },
   "live.running": "Review live war ober",
   "live.runningWithPilot": "Review live war ober — bleniet gant {pilot}",
   "live.coHosts": "Kenblenierien",
@@ -1639,8 +1715,14 @@
   "video.qualityOriginal": "Orin",
   "video.qualitySet": "Perzhded lenn : {height}p",
   "video.volume": "Ampled",
-  "video.compareOffsetAhead": { "one": "B a zo {count} frame a-raok A", "other": "B a zo {count} frame a-raok A" },
-  "video.compareOffsetBehind": { "one": "B a zo {count} frame war-lerc'h A", "other": "B a zo {count} frame war-lerc'h A" },
+  "video.compareOffsetAhead": {
+    "one": "B a zo {count} frame a-raok A",
+    "other": "B a zo {count} frame a-raok A"
+  },
+  "video.compareOffsetBehind": {
+    "one": "B a zo {count} frame war-lerc'h A",
+    "other": "B a zo {count} frame war-lerc'h A"
+  },
   "video.compareOffsetNone": "B a zo steudet gant A",
   "video.waveform.show": "Stumm gwagenn aodio",
   "video.waveform.scrub": "Stumm gwagenn aodio — riklañ evit dilec'hiañ",
@@ -1673,7 +1755,10 @@
   "ref.title": "Dave",
   "ref.draft": "Dave (brouilhed)",
   "ref.addPaste": "Dave (Ctrl+V)",
-  "ref.maxImages": { "one": "{count} skeudenn dave d'ar muiañ", "other": "{count} skeudenn dave d'ar muiañ" },
+  "ref.maxImages": {
+    "one": "{count} skeudenn dave d'ar muiañ",
+    "other": "{count} skeudenn dave d'ar muiañ"
+  },
   "nav.firstMedia": "Media kentañ ar version",
   "nav.lastMedia": "Media diwezhañ ar version",
   "marker.edit": "Kemmañ ar merker",
@@ -1690,11 +1775,13 @@
   "media.delete.message": "« {name} » a vo lakaet e pod-lastez ar raktres.",
   "media.draft": "Brouilhed",
   "stage.notSavedPublishCancelled": "Lakaat war al leurenn n’eo ket enrollet — embann nullet",
-
   "task.status.inProgress": "War ober",
   "task.status.retake": "Retake",
   "task.checklist": "Roll gwiriañ",
-  "task.count": { "one": "{count} oberenn", "other": "{count} oberenn" },
+  "task.count": {
+    "one": "{count} oberenn",
+    "other": "{count} oberenn"
+  },
   "task.created": "Oberenn « {name} » krouet",
   "task.createdNamed": "Oberenn krouet : {name}",
   "task.fallbackName": "Oberenn #{id}",
@@ -1718,7 +1805,6 @@
   "panel.liveRender": "Render war-eeun",
   "panel.performance": "Efedusted",
   "panel.techSheet": "Follenn teknikel",
-
   "compare.siblingUnreachable": "Splat keñveriañ dihegerz",
   "compare.grid": "Kael · {count}",
   "compare.gridHint": "2 version pe muioc'h : kael 2×2 kensonet (max {max} war ar skramm).",
@@ -1739,7 +1825,10 @@
   "camera.curves": "Krommennoù",
   "camera.frameSelection": "Lakaat e-barzh",
   "camera.home": "Orin",
-  "camera.maxBookmarks": { "one": "{count} bookmark d'ar muiañ", "other": "{count} bookmark d'ar muiañ" },
+  "camera.maxBookmarks": {
+    "one": "{count} bookmark d'ar muiañ",
+    "other": "{count} bookmark d'ar muiañ"
+  },
   "camera.viewN": "Gwel {n}",
   "camera.clearPresentation": "Diverkañ ar ginnigadenn",
   "camera.clearConfirm": "Dilamet e vo ar gamera, he buhezadur hag an aozadur evit an holl.",
@@ -1791,7 +1880,6 @@
   "scene.lodAuto": "Gweredekaat a ra al LOD dindan 15 fps, e leuskel a ra a-us da 25",
   "scene.progressive": "Kargañ a ra pajennoù ar goumoulenn diouzh ar goulenn",
   "scene.lodOn": "LOD atav oberiant",
-
   "storage.k.original": "Restr pellgaset (orin)",
   "storage.k.original.note": "Mammenn ar wirionez, morse kemmet. Hent lennus dre slugs urzhiet.",
   "storage.k.hls": "Renditions HLS (video)",
@@ -1824,7 +1912,6 @@
   "storage.k.attachment.note": "Skeudennoù, PDF, zip ha notennoù mouezh neudennoù ar review.",
   "storage.k.quarantine": "Restr e kwarantiniezh",
   "storage.k.quarantine.note": "Pellgas kavet kontamminet (ClamAV), distaget diouzh ar skignañ.",
-
   "storage.cat.originals": "Orinoù (projects/)",
   "storage.cat.derived": "Diarveradoù (derived/)",
   "storage.cat.studio": "Levraouegoù ar studio (studio/)",
@@ -1846,7 +1933,6 @@
   "storage.s.hdris": "HDRI (gouloù 3D)",
   "storage.s.ocio": "Kefluniadurioù OCIO (liv)",
   "storage.s.other": "Re all",
-
   "audit.create": "krouet",
   "audit.update": "kemmet",
   "audit.delete": "dilamet",
@@ -1861,7 +1947,6 @@
   "settings.hint.liveImage": "da sk. 4 — zoum/lec’hiadur",
   "settings.hint.slack": "https://hooks.slack.com/services/… — divizoù hag embannadurioù",
   "settings.hint.sourceUrl": "https://… — ret ma tispakit ur version kemmet",
-
   "channel.posX": "Lec’h X",
   "channel.posY": "Lec’h Y",
   "channel.posZ": "Lec’h Z",
@@ -1872,7 +1957,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "Mont d'ar keyframe eus {time} eilenn",
   "channel.keyAt": "Keyframe da {time} e",
-
   "admin.announce.allRoles": "(merk ebet = an holl)",
   "admin.announce.updated": "Kemennad kemmet",
   "admin.announce.created": "Kemennad krouet",
@@ -2002,7 +2086,10 @@
   "storage.map.hint": "Ur bucket S3/MinIO hepken evit an holl instañs ; dilemel ur media a skarzh e teuliad orin hag e rakger",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Traoù",
-  "storage.objectsCount": { "one": "{count} tra", "other": "{count} traoù" },
+  "storage.objectsCount": {
+    "one": "{count} tra",
+    "other": "{count} traoù"
+  },
   "storage.originals": "Orin",
   "storage.totalUsage": "Plas implijet en holl",
   "storage.orphanProject": "(raktres dianav — emzivad ?)",
@@ -2015,7 +2102,10 @@
   "system.agplHint": "Pep den a implij an instañs-mañ a-bell a rank gallout tapout he mammennoù. Ma hoc’h eus he c’hemmet, poentit an arventenn « Kod mammenn » war-du ho tepoz.",
   "system.thirdParty": "Sujedigezhioù trede",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md (gwrizienn an depoz)",
-  "system.cores": { "one": "{count} c'halon", "other": "{count} c'halonoù" },
+  "system.cores": {
+    "one": "{count} c'halon",
+    "other": "{count} c'halonoù"
+  },
   "system.disk": "Kantenn — {used} / {total}",
   "system.memory": "Memor — {used} / {total}",
   "system.licenseTitle": "Lañvaz & kod tarzh",
@@ -2052,7 +2142,10 @@
   "webhooks.delivery.pending": "O c'hortoz",
   "webhooks.delivery.delivered": "Kaset",
   "webhooks.delivery.failed": "C'hwitet",
-  "webhooks.delivery.attempts": { "one": "{count} taol-esae", "other": "{count} taol-esae" },
+  "webhooks.delivery.attempts": {
+    "one": "{count} taol-esae",
+    "other": "{count} taol-esae"
+  },
   "webhooks.delivery.replay": "Adkas ar c'hasadenn-mañ",
   "webhooks.delivery.replayed": "Kasadenn lakaet en steud en-dro",
   "webhooks.delivery.replayOf": "Adkas eus #{value}",
@@ -2091,16 +2184,24 @@
   "splat.isolate": "Distagañ",
   "model3d.transformModel": "Treuzfurmiñ ar patrom",
   "model3d.unnamed": "(hep anv)",
-
   "jobs.storageCleanup": "Naetaat ar gadaviñ",
   "jobs.webhooks": "Webhooks er-maez",
   "jobs.activeCount": "{count} oberiant",
   "jobs.waitingCount": "{count} o c'hortoz",
   "jobs.failedCount": "{count} c'hwitet",
   "jobs.completedCount": "{count} echuet",
-  "jobs.attempts": { "one": "{count} taol-esae", "other": "{count} taol-esae" },
-  "jobs.cleanedFailed": { "one": "{count} job c'hwitet skarzhet", "other": "{count} job c'hwitet skarzhet" },
-  "jobs.retriedCount": { "one": "{count} job adlañset.", "other": "{count} job adlañset." },
+  "jobs.attempts": {
+    "one": "{count} taol-esae",
+    "other": "{count} taol-esae"
+  },
+  "jobs.cleanedFailed": {
+    "one": "{count} job c'hwitet skarzhet",
+    "other": "{count} job c'hwitet skarzhet"
+  },
+  "jobs.retriedCount": {
+    "one": "{count} job adlañset.",
+    "other": "{count} job adlañset."
+  },
   "jobs.purgedDerived": "{count} media skañvaet (HLS + sprite lamet)",
   "jobs.purge": "Skarzhañ",
   "jobs.purgeNow": "Skarzhañ bremañ",
@@ -2108,7 +2209,6 @@
   "jobs.running": "War ober : {list}",
   "jobs.queueUnavailable": "Lostenn dihegerz.",
   "jobs.webhookRef": "webhook {id}",
-
   "model3d.transformPrim": "Treuzfurmiñ ar prim",
   "model3d.compareUnreachable": "Patrom keñveriañ dihegerz",
   "model3d.loadFailed": "N’eo ket bet gallet kargañ ar patromoù",
@@ -2197,7 +2297,6 @@
   "entity.unavailable.failed": "N'eus ket bet gallet kargañ",
   "entity.unavailable.failed.hint": "N'en deus ket respontet ar servijer. Klaskit en-dro a-benn ur pennadig.",
   "entity.unavailable.backToProjects": "Distreiñ d'ar raktresoù",
-
   "version.emptyMedia": "Media ebet er version-mañ.",
   "version.created": "Version « {name} » krouet",
   "version.current": "Red",
@@ -2206,10 +2305,12 @@
   "version.noVisibleMedia": "Media hewel ebet er version {version}",
   "version.unreachable": "Version dihegerz",
   "version.dropNew": "Lakait restroù amañ evit krouiñ ar version da-heul",
-  "version.publishAll": { "one": "Embann ({count})", "other": "Embann ({count})" },
+  "version.publishAll": {
+    "one": "Embann ({count})",
+    "other": "Embann ({count})"
+  },
   "version.dropShot": "Lakait evit krouiñ ur version dindan un dlead",
   "version.inReview": "E review",
-
   "playlist.added": {
     "one": "{count} version ouzhpennet da « {name} »",
     "two": "{count} version ouzhpennet da « {name} »",
@@ -2240,20 +2341,28 @@
   "playlist.rename": "Adanvel ar playlist",
   "playlist.emptyHint": "Ouzhpennit version-où adalek ar c'hatalog a-gleiz.",
   "playlist.addTo": "Ouzhpennañ d'ur playlist",
-  "playlist.addedTo": { "one": "{count} version ouzhpennet da {name}", "other": "{count} version ouzhpennet da {name}" },
-  "playlist.addedCount": { "one": "{count} version ouzhpennet", "other": "{count} version ouzhpennet" },
+  "playlist.addedTo": {
+    "one": "{count} version ouzhpennet da {name}",
+    "other": "{count} version ouzhpennet da {name}"
+  },
+  "playlist.addedCount": {
+    "one": "{count} version ouzhpennet",
+    "other": "{count} version ouzhpennet"
+  },
   "playlist.alreadyThere": "Er playlist dija",
   "playlist.nothingToAdd": "Netra embannet da ouzhpennañ",
   "playlist.catalog.search": "Shot, asset pe version…",
   "playlist.catalog.latestOnly": "An hini ziwezhañ hepken",
   "playlist.catalog.add": "Ouzhpennañ d'ar playlist",
-  "playlist.catalog.addSelected": { "one": "Ouzhpennañ {count}", "other": "Ouzhpennañ {count}" },
+  "playlist.catalog.addSelected": {
+    "one": "Ouzhpennañ {count}",
+    "other": "Ouzhpennañ {count}"
+  },
   "playlist.catalog.present": "Enni dija",
   "playlist.catalog.empty": "N'eus netra a glot gant ar silioù-mañ.",
   "playlist.autoAdvance": "Lenn an hini war-lerc'h ent emgefre",
   "csv.export": "Ezporzhiañ CSV",
   "csv.import": "Enporzhiañ CSV",
-
   "calendar.today": "Hiziv",
   "calendar.dueMoved": "Termen dilec'hiet",
   "nav.breadcrumb": "Hent merdeiñ",
@@ -2318,21 +2427,33 @@
   "draw.textPlaceholder": "Testenn…",
   "info.uvSets": "Strolladoù UV",
   "track.animTrack": "Roudenn vuhezadur",
-
   "sequences.assets": "Assets ar sequence ({count})",
-  "sequences.createdCount": { "one": "{count} sequence krouet", "other": "{count} sequence krouet" },
+  "sequences.createdCount": {
+    "one": "{count} sequence krouet",
+    "other": "{count} sequence krouet"
+  },
   "sequences.delete.message": "Ar sequence « {code} » hag he shots a vo lakaet er pod-lastez.",
-  "sequences.open": "Digeriñ ar sequence",
-  "sequences.countLabel": { "other": "sequence" },
-  "sequences.trashedCount": { "one": "{count} sequence lakaet er pod-lastez", "other": "{count} sequence lakaet er pod-lastez" },
+  "sequences.countLabel": {
+    "other": "sequence"
+  },
+  "sequences.trashedCount": {
+    "one": "{count} sequence lakaet er pod-lastez",
+    "other": "{count} sequence lakaet er pod-lastez"
+  },
   "sequences.deleteMany.title": "Dilemel ar sequences ?",
-  "sequences.deleteMany.message": { "one": "{count} sequence hag he shots a vo lakaet er pod-lastez.", "other": "{count} sequence hag o shots a vo lakaet er pod-lastez." },
+  "sequences.deleteMany.message": {
+    "one": "{count} sequence hag he shots a vo lakaet er pod-lastez.",
+    "other": "{count} sequence hag o shots a vo lakaet er pod-lastez."
+  },
   "sequences.new": "Sequence nevez",
   "view.cards": "Gwel kartennoù",
   "view.compact": "Gwel strizh",
   "view.followAccount": "Heuliañ arventenn ar gont",
   "drafts.title": "Brouilhedoù o c'hortoz",
-  "drafts.count": { "one": "{count} brouilhed o c'hortoz", "other": "{count} brouilhed o c'hortoz" },
+  "drafts.count": {
+    "one": "{count} brouilhed o c'hortoz",
+    "other": "{count} brouilhed o c'hortoz"
+  },
   "uploads.failedFor": "C'hwitet eo pellgas {name}",
   "uploads.sending": "O kas {pct} %",
   "uploads.title": "Treuzkasadennoù ({count})",
@@ -2360,8 +2481,14 @@
   "transform.rotationYaw": "Troidell Y (yaw)",
   "transform.rotationRoll": "Troidell Z (roll)",
   "timeline.defaultName": "Kempenn",
-  "timeline.shotCount": { "one": "{count} shot", "other": "{count} shot" },
-  "timeline.gapCount": { "one": "{count} toull", "other": "{count} toull" },
+  "timeline.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shot"
+  },
+  "timeline.gapCount": {
+    "one": "{count} toull",
+    "other": "{count} toull"
+  },
   "timeline.noMedia": "Media ebet",
   "timeline.durationMismatch": "Padelezh ar media a zisheñvel diouzh ar rummad frame merket war ar shot.",
   "timeline.previousShot": "Shot a-raok",
@@ -2403,7 +2530,9 @@
   "chat.sendMessage": "Kas ur gemennadenn",
   "chat.group.create": "Strollad nevez",
   "chat.group.namePlaceholder": "Anv ar strollad (diret)",
-  "chat.group.members": { "other": "{count} ezel" },
+  "chat.group.members": {
+    "other": "{count} ezel"
+  },
   "chat.rename": "Adenvel ar strollad",
   "chat.addMembers": "Ouzhpennañ tud",
   "chat.leave": "Kuitaat ar gaozeadenn",
@@ -2412,7 +2541,10 @@
   "chat.unmute": "Adlakaat ar c'hemennoù",
   "chat.search": "Klask un den",
   "chat.search.empty": "Den ebet kavet",
-  "chat.system.joined": { "one": "{names} a zo deuet er gaozeadenn", "other": "{names} a zo deuet er gaozeadenn" },
+  "chat.system.joined": {
+    "one": "{names} a zo deuet er gaozeadenn",
+    "other": "{names} a zo deuet er gaozeadenn"
+  },
   "chat.system.left": "{name} en deus kuitaet ar gaozeadenn",
   "chat.system.removed": "Lamet eo bet {name}",
   "chat.system.renamed": "« {title} » eo anv ar strollad bremañ",
@@ -2505,7 +2637,10 @@
   "shotgrid.setup.connect": "Liammañ ar raktres",
   "shotgrid.setup.connected": "Liammet ouzh « {name} »",
   "shotgrid.setup.connectFailed": "N'haller ket liammañ",
-  "shotgrid.setup.testOk": { "one": "Kevreadenn berzhus — {count} raktres gwelus", "other": "Kevreadenn berzhus — {count} raktres gwelus" },
+  "shotgrid.setup.testOk": {
+    "one": "Kevreadenn berzhus — {count} raktres gwelus",
+    "other": "Kevreadenn berzhus — {count} raktres gwelus"
+  },
   "shotgrid.sync.runFull": "Kempredañ",
   "shotgrid.sync.runReconcile": "Adtapout",
   "shotgrid.sync.reconcileHint": "Adlenn a ra prenestr an adtapout — da implijout goude un troc'h.",
@@ -2523,7 +2658,10 @@
   "shotgrid.sync.noLog": "Enmoned ebet",
   "shotgrid.sync.keepSg": "Mirout ShotGrid",
   "shotgrid.sync.keepReview": "Mirout ReView",
-  "shotgrid.sync.conflicts": { "one": "{count} tabut o c'hortoz un divizout", "other": "{count} tabut o c'hortoz un divizout" },
+  "shotgrid.sync.conflicts": {
+    "one": "{count} tabut o c'hortoz un divizout",
+    "other": "{count} tabut o c'hortoz un divizout"
+  },
   "shotgrid.conflict.resolved": "Tabut diskoulmet",
   "shotgrid.conflict.failed": "Diskoulm dibosupl",
   "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »",
@@ -2592,8 +2730,14 @@
   "shotgrid.versions.selectAllPending": "Diuzañ kement a vank",
   "shotgrid.versions.summary": "{total} publishes, {pending} nann-enporzhiet",
   "shotgrid.versions.intro": "Rollañ publishes ShotGrid ar raktres-mañ ha degas ar pezh a vank.",
-  "shotgrid.versions.importSelected": { "one": "Enporzhiañ {count} elfenn", "other": "Enporzhiañ {count} elfenn" },
-  "shotgrid.versions.imported": { "one": "{count} publish enporzhiet", "other": "{count} publishes enporzhiet" },
+  "shotgrid.versions.importSelected": {
+    "one": "Enporzhiañ {count} elfenn",
+    "other": "Enporzhiañ {count} elfenn"
+  },
+  "shotgrid.versions.imported": {
+    "one": "{count} publish enporzhiet",
+    "other": "{count} publishes enporzhiet"
+  },
   "shotgrid.admin.title": "Lec'hiennoù ShotGrid",
   "shotgrid.admin.projects": "Raktresoù liammet",
   "shotgrid.admin.deleted": "Lec'hienn ShotGrid dilamet",
@@ -2603,7 +2747,10 @@
   "shotgrid.admin.deleteConfirm": "Dilemel al lec'hienn « {name} » ? Diverket e vo he zitouroù kevreañ.",
   "shotgrid.admin.empty": "Lec'hienn ShotGrid ebet enrollet. Ouzhpennit unan adalek ivinell ShotGrid ur raktres.",
   "shotgrid.admin.intro": "Amañ e chom an titouroù kevreañ, ur wech evit ar studio a-bezh : pep kevreadenn raktres a ra ganto, ha cheñch un alc'hwez a c'hoarvez en ul lec'h hepken. Kevrin ebet ne vez adkaset d'ar merdeer.",
-  "shotgrid.admin.linkedProjects": { "one": "{count} raktres", "other": "{count} raktres" },
+  "shotgrid.admin.linkedProjects": {
+    "one": "{count} raktres",
+    "other": "{count} raktres"
+  },
   "shotgrid.domain.hierarchy": "Sequences, shots, assets",
   "shotgrid.domain.hierarchy.hint": "Troc'hadur ar produadur, bevennoù ar cut ha statudoù ar shot.",
   "shotgrid.domain.tasks": "Trevelloù",
@@ -2698,7 +2845,10 @@
   "shotgrid.sync.publishOff": "Diweredekaet eo ar c’hasadenn war-du ShotGrid : ar versions embannet amañ a chom amañ. Cheñch e Arventennoù → Embann.",
   "shotgrid.steps.title": "Lankadoù ar chadenn implijet gant ar raktres-mañ",
   "shotgrid.steps.hint": "ShotGrid ne ginnig nemet al lankadoù o gwelusted gweredekaet war ar raktres, met ne embann ket an arventenn-se en e API. Merkit int amañ, ur wech. Ma ne verkit netra e tiskoulm ReView anezho diouzh an tasks a zo dija.",
-  "shotgrid.steps.count": { "one": "{count} dibabet", "other": "{count} dibabet" },
+  "shotgrid.steps.count": {
+    "one": "{count} dibabet",
+    "other": "{count} dibabet"
+  },
   "shotgrid.steps.forAssets": "Evit an assets",
   "shotgrid.steps.forShots": "Evit ar shots",
   "shotgrid.steps.search": "Klask ul lankad…",
@@ -2729,7 +2879,10 @@
   "shotgrid.crew.state.none": "Kont ebet c'hoazh",
   "shotgrid.crew.state.ineligible": "N'hall ket bezañ pedet",
   "shotgrid.crew.done": "{created} kont krouet, {added} den ouzhpennet d'ar raktres",
-  "shotgrid.crew.skipped": { "one": "{count} den a zo bet tremenet", "other": "{count} den a zo bet tremenet" },
+  "shotgrid.crew.skipped": {
+    "one": "{count} den a zo bet tremenet",
+    "other": "{count} den a zo bet tremenet"
+  },
   "shotgrid.crew.plan": "{create} kont da grouiñ, {add} da ouzhpennañ d'ar raktres",
   "shotgrid.sync.queued": "Ur c'hensturiañ a zo war ober : gortoz a ra hemañ e dro.",
   "shotgrid.link.open": "Kont ShotGrid",
@@ -2770,7 +2923,10 @@
   "social.search": "Klask un den pe un neudenn",
   "social.people": "Tud",
   "social.noMatch": "Disoc’h ebet evit ar c’hlask-mañ.",
-  "sequence.shotCount": { "one": "{count} shot", "other": "{count} shot" },
+  "sequence.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shot"
+  },
   "filters.search": "Klask…",
   "filters.allStatuses": "An holl stadoù",
   "filters.allDepartments": "An holl rannoù",
@@ -2793,9 +2949,18 @@
   "assign.unassigned": "Den",
   "assign.done": "Deverkadur hizivaet",
   "assign.failed": "N'eus ket bet gallet cheñch an deverkadur",
-  "assign.bulkTitle": { "one": "Deverkañ {count} elfenn", "other": "Deverkañ {count} elfenn" },
-  "assign.doneCount": { "one": "{count} trevell hizivaet", "other": "{count} trevell hizivaet" },
-  "assign.skippedCount": { "one": "{count} elfenn tremenet: netra da zeverkañ, pe gwirioù re verr", "other": "{count} elfenn tremenet: netra da zeverkañ, pe gwirioù re verr" },
+  "assign.bulkTitle": {
+    "one": "Deverkañ {count} elfenn",
+    "other": "Deverkañ {count} elfenn"
+  },
+  "assign.doneCount": {
+    "one": "{count} trevell hizivaet",
+    "other": "{count} trevell hizivaet"
+  },
+  "assign.skippedCount": {
+    "one": "{count} elfenn tremenet: netra da zeverkañ, pe gwirioù re verr",
+    "other": "{count} elfenn tremenet: netra da zeverkañ, pe gwirioù re verr"
+  },
   "assign.person": "Den",
   "assign.departments": "Rannoù",
   "assign.departmentsHint": "Lezit goullo evit goleiñ an holl drevelloù a zo. Merkit rannoù evit o zargediñ — ha krouiñ an trevell ma vank.",
@@ -2858,11 +3023,17 @@
   "episode.noSequence.title": "Sequence ebet en episode-mañ",
   "episode.noSequence.description": "Stagit sequences ouzh an episode-mañ adalek an ivinell Episodes eus ar raktres.",
   "episode.noShot": "Shot ebet er sequence-mañ.",
-  "episode.sequenceCount": { "one": "{count} sequence", "other": "{count} sequence" },
+  "episode.sequenceCount": {
+    "one": "{count} sequence",
+    "other": "{count} sequence"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "Digeriñ an episode",
   "episodes.reordered": "Urzh enrollet",
-  "episodes.createdCount": { "one": "{count} episode krouet", "other": "{count} episode krouet" },
+  "episodes.createdCount": {
+    "one": "{count} episode krouet",
+    "other": "{count} episode krouet"
+  },
   "episodes.attachTo": "Stagañ ouzh un episode",
   "episodes.attached": "Sequence staget",
   "episodes.detach": "Distagañ diouzh e episode",
@@ -2873,7 +3044,10 @@
   "episodes.empty.title": "Episode ebet",
   "episodes.empty.description": "N'en deus ar raktres-mañ episode ebet c'hoazh.",
   "episodes.empty.hint": "Krouit ar re gentañ gant ar c'hrouer a-us.",
-  "episodes.unassignedCount": { "one": "{count} sequence hep episode", "other": "{count} sequence hep episode" },
+  "episodes.unassignedCount": {
+    "one": "{count} sequence hep episode",
+    "other": "{count} sequence hep episode"
+  },
   "episodes.unassignedHint": "Klik dehou war ur sequence evit he stagañ ouzh un episode.",
   "episodes.disabledHere": "Al live episode a zo lazhet war ar raktres-mañ.",
   "episodes.settings.title": "Live episode",
@@ -2882,8 +3056,14 @@
   "episodes.settings.enabled": "Live episode gweredekaet",
   "episodes.settings.disabled": "Live episode lazhet",
   "episodes.settings.keepsData": "Lazhañ ne ra nemet kuzhat al live : an episodes hag o sequences a zistro dizamant.",
-  "episodes.settings.stored": { "one": "{count} episode miret", "other": "{count} episode miret" },
-  "episodes.settings.linked": { "one": "{count} sequence staget", "other": "{count} sequence staget" },
+  "episodes.settings.stored": {
+    "one": "{count} episode miret",
+    "other": "{count} episode miret"
+  },
+  "episodes.settings.linked": {
+    "one": "{count} sequence staget",
+    "other": "{count} sequence staget"
+  },
   "error.UNAUTHENTICATED": "N'oc'h ket kevreet.",
   "error.FORBIDDEN": "Haeziñ nac'het.",
   "error.NOT_FOUND": "N'eus ken an elfenn-mañ.",
@@ -3005,23 +3185,50 @@
   "imageSequence.hint": "Strollet, pep hini a zeu da vezañ ur media hepken a review evel ur video. Distroll, pep frame a chom ur restr dezhi.",
   "imageSequence.group": "Strollañ en ur media hepken",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "one": "{count} restr", "other": "{count} restr" },
-  "imageSequence.gaps": { "one": "{count} frame a vank", "other": "{count} frame a vank" },
-  "imageSequence.others": { "one": "{count} restr all a vo kaset a-unan", "other": "{count} restr all a vo kaset a-unan" },
+  "imageSequence.files": {
+    "one": "{count} restr",
+    "other": "{count} restr"
+  },
+  "imageSequence.gaps": {
+    "one": "{count} frame a vank",
+    "other": "{count} frame a vank"
+  },
+  "imageSequence.others": {
+    "one": "{count} restr all a vo kaset a-unan",
+    "other": "{count} restr all a vo kaset a-unan"
+  },
   "imageSequence.confirm": "Kas evel sequences skeudennoù",
   "imageSequence.sendSeparately": "Kas restr ha restr",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "O sevel",
-  "assignees.label": { "one": "{count} den deverket", "two": "{count} zen deverket", "few": "{count} den deverket", "many": "{count} a dud deverket", "other": "{count} den deverket" },
+  "assignees.label": {
+    "one": "{count} den deverket",
+    "two": "{count} zen deverket",
+    "few": "{count} den deverket",
+    "many": "{count} a dud deverket",
+    "other": "{count} den deverket"
+  },
   "assignees.dialogTitle": "Tud war {name}",
   "assignees.searchPlaceholder": "Klask unan bennak…",
   "assignees.noMatch": "Den ebet ne glot gant ar c'hlask-mañ.",
-  "assignees.saved": { "one": "{count} den deverket", "two": "{count} zen deverket", "few": "{count} den deverket", "many": "{count} a dud deverket", "other": "{count} den deverket" },
+  "assignees.saved": {
+    "one": "{count} den deverket",
+    "two": "{count} zen deverket",
+    "few": "{count} den deverket",
+    "many": "{count} a dud deverket",
+    "other": "{count} den deverket"
+  },
   "assignees.menu": "Tud…",
   "assignees.origin.direct": "Atebek eus an elfenn-mañ",
   "assignees.origin.child": "Atebek eus un elfenn en diabarzh",
   "assignees.origin.task": "Deverket ouzh un dlead",
-  "cards.awaitingReview": { "one": "{count} kasadenn o c'hortoz ur review", "two": "{count} gasadenn o c'hortoz ur review", "few": "{count} kasadenn o c'hortoz ur review", "many": "{count} a gasadennoù o c'hortoz ur review", "other": "{count} kasadenn o c'hortoz ur review" },
+  "cards.awaitingReview": {
+    "one": "{count} kasadenn o c'hortoz ur review",
+    "two": "{count} gasadenn o c'hortoz ur review",
+    "few": "{count} kasadenn o c'hortoz ur review",
+    "many": "{count} a gasadennoù o c'hortoz ur review",
+    "other": "{count} kasadenn o c'hortoz ur review"
+  },
   "cards.updatedAt": "Kemmet {value}",
   "visibility.hide": "Kuzhat evit an holl",
   "visibility.show": "Diskouez en-dro",
@@ -3107,7 +3314,9 @@
   "note.gallery.carousel": "Karousell",
   "note.gallery.columns": "Bannoù",
   "note.gallery.height": "Uhelder",
-  "note.gallery.count": { "other": "{count} skeudenn" },
+  "note.gallery.count": {
+    "other": "{count} skeudenn"
+  },
   "note.image.align": "Steudadur",
   "note.image.alignFull": "Ledander klok",
   "note.image.alignCenter": "Kreizet",
@@ -3129,9 +3338,18 @@
   "assetType.VEHICLE": "Karr-tan",
   "assetType.FX": "FX",
   "assetType.OTHER": "All",
-  "bulk.status.title": { "one": "Statud {count} shot", "other": "Statud {count} shot" },
-  "bulk.status.done": { "one": "{count} shot hizivaet", "other": "{count} shot hizivaet" },
-  "bulk.status.partial": { "one": "{count} shot hizivaet, {failed} nac'het", "other": "{count} shot hizivaet, {failed} nac'het" },
+  "bulk.status.title": {
+    "one": "Statud {count} shot",
+    "other": "Statud {count} shot"
+  },
+  "bulk.status.done": {
+    "one": "{count} shot hizivaet",
+    "other": "{count} shot hizivaet"
+  },
+  "bulk.status.partial": {
+    "one": "{count} shot hizivaet, {failed} nac'het",
+    "other": "{count} shot hizivaet, {failed} nac'het"
+  },
   "bulk.status.menu": "Statud",
   "colorPicker.hue": "Arliv",
   "queryState.title": "N'eus ket bet gallet kargañ ar rann-mañ",

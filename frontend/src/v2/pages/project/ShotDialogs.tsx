@@ -10,7 +10,7 @@ import { useT } from '../../i18n';
  * Les trois boîtes de dialogue de l'onglet Plans : réglages, mise à la corbeille d'un plan,
  * mise à la corbeille d'une sélection.
  *
- * Extraites pour la même raison que `shotCardActions` avant elles — l'onglet a dépassé son
+ * Extraites pour la même raison que `entityCardMenu` avant elles — l'onglet a dépassé son
  * budget de lignes en accueillant les cartes enrichies, et ces trois dialogues sont ce
  * qu'il contenait de plus mécanique : aucune logique, seulement du branchement.
  */

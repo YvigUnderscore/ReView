@@ -1,6 +1,5 @@
 {
   "auth.tagline": "Piattaforma di review cullaburativa di i media per i studii VFX è di postpruduzzione.",
-
   "login.title": "Bentornatu.",
   "login.subtitle": "Cunnettati per truvà torna i to reviews, i to travagli è i to boards.",
   "login.heading": "Cunnessione",
@@ -12,7 +11,6 @@
   "login.error.credentials": "E-mail o parolla d'accessu sbagliata.",
   "login.error.network": "Impussibule di ghjunghje à u servitore. Prova torna trà pocu.",
   "login.error.generic": "Cunnessione fallita",
-
   "setup.title": "Benvenutu in ReView.",
   "setup.subtitle": "Cunfiguremu u to studio in dui passi. Puderai cambià tuttu dopu.",
   "setup.step.studio": "Studio",
@@ -30,7 +28,6 @@
   "setup.submit": "Creà u studio",
   "setup.submitting": "Creazione…",
   "setup.error.generic": "Cunfigurazione fallita",
-
   "display.title": "Affissatura",
   "display.theme": "Tema",
   "display.theme.hint": "Seguità u sistema o furzà chjaru/scuru.",
@@ -45,7 +42,6 @@
   "display.language.hint": "Lingua di l'interfaccia. U vucabulariu di pruduzzione resta in inglese.",
   "display.view": "Vista predefinita di e liste",
   "display.view.hint": "S'applica in tuttu. Una lista chì cambiate mantene u so propiu regulamentu finu à chì a rimettite.",
-
   "language.select": "Sceglie una lingua",
   "language.regional": "Lingua righjunale",
   "language.notice.title": "E traduzzioni sò fatte da a màchina",
@@ -59,24 +55,20 @@
   "language.coverage.complete": "Tradottu cumplettamente",
   "language.fallbackNotice": "E frasi micca tradutte s'affissanu in inglese.",
   "language.regionalSuffix": "— lingua regiunale",
-
   "nav.home": "Accolta",
   "nav.projects": "Prughjetti",
   "nav.reviews": "Reviews",
   "nav.members": "Membri",
   "nav.settings": "Parametri",
   "nav.documentation": "Ducumentazione",
-
   "common.save": "Arregistrà",
   "common.cancel": "Annullà",
   "common.delete": "Squassà",
   "common.edit": "Mudificà",
   "common.close": "Chjode",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Software liberu sottu licenza AGPL-3.0, senza nisuna guaranzia.",
   "license.source": "Codice surghjente",
   "license.title": "Licenza",
-
   "common.confirm": "Cunfirmà",
   "common.previous": "Precedente",
   "common.next": "Prossimu",
@@ -112,7 +104,6 @@
   "onboarding.help.title": "Bisognu d'aiutu ?",
   "onboarding.help.body": "Premi « ? » per a lista di i accorci (tutti cambiabili), è trova a guida cumpleta in Ducumentazione.",
   "onboarding.start": "Cumincià",
-
   "common.create": "Creà",
   "common.open": "Aprì",
   "common.duplicate": "Duplicà",
@@ -169,7 +160,10 @@
   "projects.empty.canManage": "Crea u to primu prughjettu cù u buttone « + Creà » per urganizà i to sequences, shots è assets.",
   "projects.empty.member": "Ùn sì membru di nisun prughjettu. Dumanda à un supervisore di aghjunghjeti.",
   "projects.empty.action": "Creà un prughjettu",
-  "projects.countLabel": { "one": "prughjettu", "other": "prughjetti" },
+  "projects.countLabel": {
+    "one": "prughjettu",
+    "other": "prughjetti"
+  },
   "projects.deleteMany.title": "Sguassà i prughjetti ?",
   "projects.deleteMany.message": {
     "one": "{count} prughjettu serà messu in a spazzatura. Ricuperabile da l’amministrazione.",
@@ -188,15 +182,20 @@
   "reviews.empty.title": "Nisuna review",
   "reviews.empty.description": "Nisun media currisponde à sti filtri. Pubblica un media da un travagliu per lancià una review.",
   "reviews.draft": "Bozza",
-  "reviews.count": { "one": "{count} media", "other": "{count} media" },
-  "reviews.countLabel": { "one": "media", "other": "media" },
+  "reviews.count": {
+    "one": "{count} media",
+    "other": "{count} media"
+  },
+  "reviews.countLabel": {
+    "one": "media",
+    "other": "media"
+  },
   "reviews.addToPlaylist": "Aghjunghje à a playlist…",
   "reviews.deleteMany.title": "Sguassà i media ?",
   "reviews.deleteMany.message": {
     "one": "{count} media serà messu in a spazzatura.",
     "other": "{count} media seranu messi in a spazzatura."
   },
-
   "common.rename": "Rinuminà",
   "common.remove": "Toglie",
   "common.deletePermanently": "Sguassà definitivamente",
@@ -229,10 +228,16 @@
   "trash.empty.description": "L’elementi sguassati da u prughjettu venenu quì è restanu ricuperabili.",
   "trash.delete.title": "Sguassà definitivamente ?",
   "trash.restored": "Elementu ricuperatu",
-  "trash.restoredCount": { "one": "{count} elementu ristabilitu", "other": "{count} elementi ristabiliti" },
+  "trash.restoredCount": {
+    "one": "{count} elementu ristabilitu",
+    "other": "{count} elementi ristabiliti"
+  },
   "trash.deleted": "Sguassatu definitivamente",
   "trash.group.media": "Media",
-  "trash.selectedCount": { "one": "{count} selezziunatu", "other": "{count} selezziunati" },
+  "trash.selectedCount": {
+    "one": "{count} selezziunatu",
+    "other": "{count} selezziunati"
+  },
   "trash.purged": {
     "one": "{count} elementu squassatu per sempre",
     "other": "{count} elementi squassati per sempre"
@@ -262,8 +267,10 @@
   },
   "assets.delete.title": "Sguassà l’asset ?",
   "assets.deleteMany.title": "Sguassà l’assets ?",
-  "assets.countLabel": { "one": "asset", "other": "assets" },
-
+  "assets.countLabel": {
+    "one": "asset",
+    "other": "assets"
+  },
   "sequences.title": "Sequences",
   "sequences.empty.title": "Nisuna sequence",
   "sequences.empty.description": "E sequences di u prughjettu cumpariscenu quì.",
@@ -301,7 +308,6 @@
   "playlists.delete.title": "Sguassà a playlist ?",
   "playlists.unreadable": "Nisun media leghjibile in sta playlist",
   "playlists.inaccessible": "Playlist indispunibile",
-
   "viewer.env.title": "Ambiente",
   "viewer.hdri.title": "Ambiente HDRI (illuminazione per imagine)",
   "viewer.hdri.background": "HDRI in fondu",
@@ -347,7 +353,6 @@
   "viewer.bookmarks.title": "Viste arregistrate",
   "viewer.bookmarks.empty": "Nisuna vista arregistrata.",
   "viewer.bookmarks.save": "Arregistrà a vista attuale — spartuta cù a squadra",
-
   "viewer.focal.hint": "Focale in millimetri, sensore 36 mm",
   "viewer.aperture.hint": "Prufundità di campu — 0 = nettu in tuttu",
   "viewer.tilt.hint": "Inclinazione intornu à l’asse di vista",
@@ -355,7 +360,6 @@
   "viewer.upAxis.hint2": "Cunvenzione Y-down righjustata à l’impurtazione",
   "viewer.realScale.hint2": "Senza unificà e scale cù u bounding box",
   "viewer.inspectionTint.hint": "Lucale à a to sessione",
-
   "shortcuts.title": "Accorci di tastera",
   "shortcuts.nav": "Navigazione",
   "shortcuts.hint": "Clicca nant’à un tastu per u ricunfigurà.",
@@ -427,10 +431,8 @@
   "lighting.default.title": "Illuminazione 3D predefinita",
   "lighting.default.none": "Nisuna (luci di studio)",
   "lighting.default.empty": "Nisun valore predefinitu : illuminazione di studio neutra.",
-
   "shortcuts.goProjects": "Andà à i prughjetti",
   "shortcuts.showHelp": "Affissà l'accorci",
-
   "whatsNew.title": "Nuvità",
   "whatsNew.unavailable": "Changelog micca dispunibule ({status})",
   "tree.noSequence": "Nisuna sequence.",
@@ -479,7 +481,6 @@
   "dropzone.release": "Lascia per lancià u caricamentu",
   "storage.title": "Stucchera",
   "storage.unlimited.placeholder": "illimitatu",
-
   "common.undo": "Annullà",
   "common.redo": "Rifà",
   "viewer.duration": "Durata",
@@ -535,7 +536,6 @@
   "review.firstFrame": "Primu frame",
   "review.playbackRate": "Cadenza di lettura — a timeline resta in frame",
   "review.none": "nisunu",
-
   "viewer.guides.title": "Riferimenti",
   "viewer.guides.grid": "Griglia di u sole",
   "viewer.guides.axes": "Triade d’assi",
@@ -619,7 +619,6 @@
   "review.pipFrame": "Vista di a camera layout — tirà per spustà, manicu per ridimensiunà",
   "review.wipe.move": "Spustà u wipe (doppiu clic : rimette)",
   "review.wipe.rotate": "Girà a barra (attaccata à 0/45/90°)",
-
   "review.guides.thirds": "Terzi",
   "review.guides.center": "Croce centrale",
   "review.guides.actionSafe.hint": "Zona d’azzione sicura",
@@ -630,7 +629,6 @@
   "review.export.captureShort": "Cattura di a vista (PNG)",
   "review.file": "Schedariu",
   "review.delivery": "Diffusione",
-
   "common.noData": "Nisun datu.",
   "common.reset": "Rimette",
   "common.host": "Ospite",
@@ -801,7 +799,6 @@
   "versions.unpublished": "Micca pubblicate",
   "versions.allMedia": "Tutti i media",
   "versions.decision": "Decisione",
-
   "twofa.enabled": "2FA attivata — cunserva i to codici di ricambiu",
   "twofa.disabled": "2FA disattivata",
   "twofa.code": "Codice à 6 cifre",
@@ -832,7 +829,10 @@
   "asset.tree.direct": "Version attaccate à l’asset",
   "asset.tree.empty.title": "Nunda publicatu ancu",
   "asset.tree.empty.description": "E version publicate da un DCC appariscenu quì, urganizate per dipartimentu.",
-  "asset.tree.versionCount": { "one": "{count} version", "other": "{count} version" },
+  "asset.tree.versionCount": {
+    "one": "{count} version",
+    "other": "{count} version"
+  },
   "asset.tree.looseVersions": "Version senza compitu",
   "asset.tree.noVersion": "Nisuna version",
   "asset.card.latest": "ultima : {name} · {date}",
@@ -913,10 +913,7 @@
   "review.exitTheatre": "Esce da u modu teatru (Esc)",
   "review.cameraViewSaved": "Vista di camera arregistrata",
   "email.placeholder": "tu@studio.corsica",
-
-
   "common.escKey": "Esc",
-
   "common.start": "Iniziu",
   "common.end": "Fine",
   "common.name": "Nome",
@@ -947,14 +944,23 @@
   "comments.atTime": "à {time} s",
   "comments.filter.open": "Aperti",
   "comments.reopened": "Cummentu riapertu",
-  "comments.replyCount": { "one": "{count} risposta", "other": "{count} risposte" },
-  "comments.total": { "one": "{count} cummentu in tuttu.", "other": "{count} cummenti in tuttu." },
+  "comments.replyCount": {
+    "one": "{count} risposta",
+    "other": "{count} risposte"
+  },
+  "comments.total": {
+    "one": "{count} cummentu in tuttu.",
+    "other": "{count} cummenti in tuttu."
+  },
   "comments.delete.message": "U cummentu sarà squassatu per sempre.",
   "comments.delete.messageWithReplies": {
     "one": "U cummentu è a so {count} risposta saranu squassati per sempre.",
     "other": "U cummentu è e so {count} risposte saranu squassati per sempre."
   },
-  "comments.openCount": { "one": "{count} apertu", "other": "{count} aperti" },
+  "comments.openCount": {
+    "one": "{count} apertu",
+    "other": "{count} aperti"
+  },
   "comments.filter.none": "Nisunu cumentu in stu statu.",
   "comments.editField": "Mudificà u cummentu",
   "decision.current": "Decisione attuale :",
@@ -984,10 +990,16 @@
   "versions.lastVersions": "ultime versions",
   "versions.noMatch": "Nisuna version currisponde à i filtri.",
   "versions.location": "Lucalizazione",
-  "versions.total": { "one": "{count} version in tuttu.", "other": "{count} version in tuttu." },
+  "versions.total": {
+    "one": "{count} version in tuttu.",
+    "other": "{count} version in tuttu."
+  },
   "mediaAccess.empty": "Nisun accessu arregistratu per avà.",
   "mediaAccess.hint": "Una linea per cunsultazione (deduplicata nant'à 30 minuti) — review interne è sparte cliente inseme.",
-  "mediaAccess.total": { "one": "{count} accessu in tuttu.", "other": "{count} accessi in tuttu." },
+  "mediaAccess.total": {
+    "one": "{count} accessu in tuttu.",
+    "other": "{count} accessi in tuttu."
+  },
   "ocio.intro": "Configs di gestione di i culori OCIO. Ricuperate e configs ACES ufficiali (",
   "ocio.none": "Nisuna config installata. Fighjate e releases ACES quì sottu.",
   "ocio.browse": "Fighjà e releases ACES",
@@ -1073,7 +1085,6 @@
   "review.publish": "Pubblicà per a squadra",
   "review.cameraAnimGltf": "Animazione di camera (glTF)",
   "review.importAnimation": "Impurtà un'animazione",
-
   "project.status.active": "Attivu",
   "project.status.onHold": "In pausa",
   "projects.tab.active": "Attivi",
@@ -1081,25 +1092,23 @@
   "projects.created": "Prughjettu « {name} » creatu",
   "projects.duplicated": "Prughjettu « {name} » creatu da « {source} »",
   "projects.unarchived": "Prughjettu « {name} » disarchiviatu",
-  "projects.count": { "one": "{count} prughjettu", "other": "{count} prughjetti" },
+  "projects.count": {
+    "one": "{count} prughjettu",
+    "other": "{count} prughjetti"
+  },
   "admin.group.studio": "Studio",
   "admin.group.content": "Cuntenuti",
   "admin.group.reviewContexts": "Cuntesti di review",
   "admin.group.communications": "Cumunicazioni",
   "admin.group.maintenance": "Mantenimentu",
-
   "project.status.completed": "Compiu",
   "project.status.archived": "Archiviatu",
-
   "task.dueDate": "Scadenza",
   "marker.delete": "Sguassà u marcatore",
   "usd.recomposeFrom": "Ricumpone da l'USD",
-
   "marker.rename": "Rinuminà / ricolurà…",
-
   "sessions.line": "{ip} · cunnessu u {created} · attivu u {seen}",
   "sessions.unknownIp": "IP scunnisciuta",
-
   "admin.tab.users": "Utilizatori",
   "admin.tab.comments": "Cummenti",
   "admin.tab.statuses": "Statuti",
@@ -1108,12 +1117,10 @@
   "admin.tab.color": "Culore (OCIO)",
   "admin.topStorage": "Top stucchera / utilizatore",
   "admin.onlineCount": "{count} in linea",
-
   "presence.available": "Dispunibule",
   "presence.away": "Assente",
   "presence.dnd": "Ùn disturbà",
   "presence.onlineCount": "In linea · {count}",
-
   "common.enable": "Attivà",
   "common.loading": "Caricamentu…",
   "common.nextMonth": "Mese seguente",
@@ -1143,7 +1150,10 @@
   "tokens.copy": "Cupià",
   "tokens.created": "Token creatu",
   "tokens.expired": "Scadutu",
-  "tokens.expiry.days": { "one": "{count} ghjornu", "other": "{count} ghjorni" },
+  "tokens.expiry.days": {
+    "one": "{count} ghjornu",
+    "other": "{count} ghjorni"
+  },
   "tokens.expiry.label": "Scadenza",
   "tokens.new": "Token novu",
   "tokens.passwordHint": "Un token campa più longu ch'è a vostra sessione : a vostra parolla d'intrata cunferma a creazione.",
@@ -1172,7 +1182,10 @@
   "sessions.title": "Sessioni attive",
   "sessions.thisDevice": "St’apparechju",
   "sessions.empty": "Nisuna sessione arregistrata (e cunnessioni anteriori à l’aghjurnamentu ùn cumpariscenu micca — ricunnettati per e vede quì).",
-  "sessions.revokedCount": { "one": "{count} sessione revucata", "other": "{count} sessioni revucate" },
+  "sessions.revokedCount": {
+    "one": "{count} sessione revucata",
+    "other": "{count} sessioni revucate"
+  },
   "twofa.qr": "Codice QR d’iscrizzione 2FA",
   "twofa.scan": "Scanneghja stu codice QR cù a to applicazione (Google Authenticator, 1Password…), po scrivi u codice affissatu.",
   "twofa.wrongCode": "Codice sbagliatu",
@@ -1194,11 +1207,20 @@
   "production.attention.unassigned": "Senza assignatu",
   "production.attention.review": "In attesa di review",
   "production.attention.none": "Nunda quì, tantu megliu.",
-  "production.attention.more": { "one": "è {count} altru", "other": "è {count} altri" },
+  "production.attention.more": {
+    "one": "è {count} altru",
+    "other": "è {count} altri"
+  },
   "production.workload.empty": "Più nunda da fà.",
-  "production.workload.late": { "one": "{count} in ritardu", "other": "{count} in ritardu" },
+  "production.workload.late": {
+    "one": "{count} in ritardu",
+    "other": "{count} in ritardu"
+  },
   "production.pace.window": "Finestra d'osservazione",
-  "production.pace.weeks": { "one": "{count} settimana", "other": "{count} settimane" },
+  "production.pace.weeks": {
+    "one": "{count} settimana",
+    "other": "{count} settimane"
+  },
   "production.pace.perWeek": "{value} à settimana",
   "production.pace.projected": "Fine prevista",
   "production.pace.noProjection": "Ritmu troppu debule per prevede una fine",
@@ -1216,7 +1238,10 @@
   "stats.notes": "Note",
   "stats.approvedRatio": "{approved}/{total} appruvati · {pct} %",
   "stats.retakes": "Retakes",
-  "stats.days": { "one": "{count} g", "other": "{count} g" },
+  "stats.days": {
+    "one": "{count} g",
+    "other": "{count} g"
+  },
   "stats.drawCalls": "Draw calls",
   "stats.fps": "fps",
   "stats.measuring": "Misurendu…",
@@ -1229,13 +1254,19 @@
   "sequences.empty.hint": "Create e vostre sequences cù u buttone « + » quì sopra — raggruppanu i shots (SQ010, SQ020…).",
   "playlists.empty.hint": "Selezziona media nant’à a pagina Reviews po « Aghjunghje à a playlist » (clic drittu), o crea una playlist viota quì.",
   "playlists.delete.message": "« {name} » sarà squassata. E versions riferite ùn sò micca tocche.",
-  "playlists.versionCount": { "one": "{count} version", "other": "{count} version" },
+  "playlists.versionCount": {
+    "one": "{count} version",
+    "other": "{count} version"
+  },
   "shares.newShort": "Novu ligame",
   "shares.empty": "Nisun ligame di spartera. Creane unu per dà accessu à i media pubblicati di stu prughjettu, senza contu.",
   "shares.createdBy": "Creatu da {name}",
   "shares.expiresOn": "Scade u {date}",
   "shares.viewedOn": "Vistu u {date}",
-  "shares.viewCount": { "one": "visita", "other": "visite" },
+  "shares.viewCount": {
+    "one": "visita",
+    "other": "visite"
+  },
   "shares.scope": "Ciò chì apre u ligame",
   "shares.scope.project": "U prughjettu sanu",
   "shares.scope.playlist": "Una sola playlist",
@@ -1246,21 +1277,36 @@
   "shares.scope.pick.media": "Media da include",
   "shares.scope.pick.none": "Sceglie…",
   "shares.scope.empty": "Stu prughjettu ùn hà ancu nisun media publicatu.",
-  "shares.scope.selected": { "one": "{count} media selezziunatu", "other": "{count} media selezziunati" },
+  "shares.scope.selected": {
+    "one": "{count} media selezziunatu",
+    "other": "{count} media selezziunati"
+  },
   "shares.scope.needsTarget": "Sceglite ciò chì apre stu ligame nanzu di creallu.",
   "shares.scope.badge.project": "Prughjettu sanu",
-  "shares.scope.badge.selection": { "one": "{count} media", "other": "{count} media" },
+  "shares.scope.badge.selection": {
+    "one": "{count} media",
+    "other": "{count} media"
+  },
   "shares.scope.badge.restricted": "Ristrettu",
   "shares.email": "Mandà per email…",
   "shares.email.title": "Mandà u ligame per email",
   "shares.email.recipients": "Destinatarii",
   "shares.email.recipients.placeholder": "Un indirizzu per linea",
-  "shares.email.count": { "one": "{count} indirizzu validu", "other": "{count} indirizzi validi" },
-  "shares.email.tooMany": { "one": "{count} destinatariu à u massimu per invio", "other": "{count} destinatarii à u massimu per invio" },
+  "shares.email.count": {
+    "one": "{count} indirizzu validu",
+    "other": "{count} indirizzi validi"
+  },
+  "shares.email.tooMany": {
+    "one": "{count} destinatariu à u massimu per invio",
+    "other": "{count} destinatarii à u massimu per invio"
+  },
   "shares.email.note": "Nota (facultativa)",
   "shares.email.note.placeholder": "Duie parolle per u destinatariu",
   "shares.email.submit": "Mandà",
-  "shares.email.sent": { "one": "Ligame mandatu à {count} destinatariu", "other": "Ligame mandatu à {count} destinatarii" },
+  "shares.email.sent": {
+    "one": "Ligame mandatu à {count} destinatariu",
+    "other": "Ligame mandatu à {count} destinatarii"
+  },
   "shares.email.invalid": "Mettite almenu un indirizzu validu.",
   "shares.email.willMentionExpiry": "U messagiu diciarà chì u ligame scade u {date}.",
   "shares.email.noExpiry": "U messagiu diciarà chì u ligame ùn scade micca.",
@@ -1294,7 +1340,6 @@
   "naming.warningFile": "« {name} » ùn rispetta micca a nomenclatura di u prughjettu.",
   "naming.compliant": "Cunforme",
   "naming.nonCompliant": "Micca cunforme",
-
   "mode.watch": "Fighjà",
   "mode.watch.hint": "Leghje, zoomà, cunfruntà e versions — nisunu strumentu d’edizione. Solu modu servitu à i clienti.",
   "mode.annotate": "Annutà",
@@ -1372,7 +1417,6 @@
   "action.resetSpatial": "Vista d’origine",
   "action.fitMedia": "Aghjustà à u screnu",
   "action.resetMedia": "Grandezza reale 1:1",
-
   "common.add": "Aghjunghje",
   "common.show": "Affissà",
   "common.hide": "Piattà",
@@ -1409,7 +1453,10 @@
   "voice.start": "Arregistrà una nota vucale",
   "dropzone.drop": "Lascia i to schedarii quì",
   "batch.nothing": "Nunda da generà.",
-  "batch.createCount": { "one": "Creà {count} elementu", "other": "Creà {count} elementi" },
+  "batch.createCount": {
+    "one": "Creà {count} elementu",
+    "other": "Creà {count} elementi"
+  },
   "batch.creation": "Creazione di shots/sequences",
   "notif.markAllRead": "Marcà tuttu cum’è lettu",
   "file.readFailed": "Lettura di u schedariu impussibile",
@@ -1458,22 +1505,40 @@
   "decision.badge": "Decisione : {status}",
   "decision.dialogTitle": "Decisione di review — {version}",
   "project.dupHint": "Sequences, shots è parametri sò ricreati. I media, versions è cummenti ùn sò micca copiati.",
-  "shots.created": { "one": "{count} shot creatu", "other": "{count} shots creati" },
+  "shots.created": {
+    "one": "{count} shot creatu",
+    "other": "{count} shots creati"
+  },
   "shots.delete.message": "U shot « {code} » è i so travaglii/versions saranu spustati in u cistinu.",
   "shots.omitted": "Tagliatu à u muntaghju",
   "shots.searchPlaceholder": "Codice o nome di shot…",
-  "shots.count": { "one": "{count} shot", "other": "{count} shots" },
-  "shots.countLabel": { "one": "shot", "other": "shots" },
-  "shots.trashedCount": { "one": "{count} shot spustatu in u cistinu", "other": "{count} shots spustati in u cistinu" },
+  "shots.count": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "shots.countLabel": {
+    "one": "shot",
+    "other": "shots"
+  },
+  "shots.trashedCount": {
+    "one": "{count} shot spustatu in u cistinu",
+    "other": "{count} shots spustati in u cistinu"
+  },
   "shots.deleteMany.title": "Sguassà i shots ?",
-  "shots.deleteMany.message": { "one": "{count} shot è i so travaglii/versions saranu spustati in u cistinu.", "other": "{count} shots è i so travaglii/versions saranu spustati in u cistinu." },
+  "shots.deleteMany.message": {
+    "one": "{count} shot è i so travaglii/versions saranu spustati in u cistinu.",
+    "other": "{count} shots è i so travaglii/versions saranu spustati in u cistinu."
+  },
   "shots.new": "Novu shot",
   "shot.newAsset": "+ Creà un asset",
   "shot.omitted": "Omessu da u muntagiu",
   "shot.omittedHint": "U shot esce da u muntagiu ma guarda u so travagliu, e so version è i so cummenti.",
   "assets.emptyHint": "Crea i to assets riutilizabili cù « + Creà » (persunaghji, decori, props…).",
   "assets.attach": "Attaccà",
-  "assets.count": { "one": "{count} asset", "other": "{count} asset" },
+  "assets.count": {
+    "one": "{count} asset",
+    "other": "{count} asset"
+  },
   "assets.created": "Asset « {name} » creatu",
   "assets.createdAttached": "Asset « {name} » creatu è attaccatu",
   "assets.delete.message": "L'asset « {name} » è e so version/media saranu spustati in u cistinu.",
@@ -1571,7 +1636,6 @@
   "email.digestOff": "Riassuntu ghjurnalieru disattivatu",
   "email.weeklyOn": "Rapportu settimanale attivatu",
   "email.weeklyOff": "Rapportu settimanale disattivatu",
-
   "review.hotspotAttached": "📍 Hotspot aghjuntu (centru di u viewer)",
   "review.camViewSaved": "📷 A vista camera attuale serà arregistrata",
   "review.labelsVisible": "Etichette visibili",
@@ -1617,7 +1681,10 @@
   "live.coHostAdded": "{name} hè cupilotu — quellu chì interagisce prima piglia a manu",
   "live.coHostRemoved": "{name} ùn hè più cupilotu",
   "live.handedOver": "Cuntrollu passatu à {name} (pilotu)",
-  "live.participants": { "one": "({count} participante).", "other": "({count} participanti)." },
+  "live.participants": {
+    "one": "({count} participante).",
+    "other": "({count} participanti)."
+  },
   "live.running": "Review live in corsu",
   "live.runningWithPilot": "Review live in corsu — pilutata da {pilot}",
   "live.coHosts": "Cupiloti",
@@ -1656,8 +1723,14 @@
   "video.qualityOriginal": "Uriginale",
   "video.qualitySet": "Qualità di lettura : {height}p",
   "video.volume": "Vulume",
-  "video.compareOffsetAhead": { "one": "B hè {count} frame davanti à A", "other": "B hè {count} frames davanti à A" },
-  "video.compareOffsetBehind": { "one": "B hè {count} frame daretu à A", "other": "B hè {count} frames daretu à A" },
+  "video.compareOffsetAhead": {
+    "one": "B hè {count} frame davanti à A",
+    "other": "B hè {count} frames davanti à A"
+  },
+  "video.compareOffsetBehind": {
+    "one": "B hè {count} frame daretu à A",
+    "other": "B hè {count} frames daretu à A"
+  },
   "video.compareOffsetNone": "B hè allineatu cù A",
   "video.waveform.show": "Forma d'onda audio",
   "video.waveform.scrub": "Forma d'onda audio — trascinà per spustassi",
@@ -1710,11 +1783,13 @@
   "media.delete.message": "« {name} » sarà spustatu in u cistinu di u prughjettu.",
   "media.draft": "Bozza",
   "stage.notSavedPublishCancelled": "Messa in scena micca arregistrata — pubblicazione annullata",
-
   "task.status.inProgress": "In corsu",
   "task.status.retake": "Retake",
   "task.checklist": "Lista di cuntrollu",
-  "task.count": { "one": "{count} travagliu", "other": "{count} travaglii" },
+  "task.count": {
+    "one": "{count} travagliu",
+    "other": "{count} travaglii"
+  },
   "task.created": "Travagliu « {name} » creatu",
   "task.createdNamed": "Travagliu creatu : {name}",
   "task.fallbackName": "Travagliu #{id}",
@@ -1738,7 +1813,6 @@
   "panel.liveRender": "Render in diretta",
   "panel.performance": "Prestazione",
   "panel.techSheet": "Scheda tecnica",
-
   "compare.siblingUnreachable": "Splat di cunfrontu inaccessibile",
   "compare.grid": "Griglia · {count}",
   "compare.gridHint": "Duie version o più : griglia 2×2 sincrunizata (max {max} nant'à u screnu).",
@@ -1759,7 +1833,10 @@
   "camera.curves": "Curve",
   "camera.frameSelection": "Inquadrà",
   "camera.home": "Origine",
-  "camera.maxBookmarks": { "one": "{count} bookmark massimu", "other": "{count} bookmark massimu" },
+  "camera.maxBookmarks": {
+    "one": "{count} bookmark massimu",
+    "other": "{count} bookmark massimu"
+  },
   "camera.viewN": "Vista {n}",
   "camera.clearPresentation": "Squassà a presentazione",
   "camera.clearConfirm": "A camera, a so animazione è a messa in scena sò squassate per tutti.",
@@ -1811,7 +1888,6 @@
   "scene.lodAuto": "Attiveghja u LOD sottu à 15 fps, u lascia sopra à 25",
   "scene.progressive": "Carica e pagine di a nuvula à dumanda",
   "scene.lodOn": "LOD sempre attivu",
-
   "storage.k.original": "Schedariu caricatu (originale)",
   "storage.k.original.note": "Fonte di verità, mai mudificata. Chjassu leghjibile per slugs ghjerarchichi.",
   "storage.k.hls": "Renditions HLS (video)",
@@ -1844,7 +1920,6 @@
   "storage.k.attachment.note": "Imagini, PDF, zip è note vucale di i fili di review.",
   "storage.k.quarantine": "Schedariu in quarantena",
   "storage.k.quarantine.note": "Caricamentu trovu infettu (ClamAV), isulatu da a diffusione.",
-
   "storage.cat.originals": "Uriginali (projects/)",
   "storage.cat.derived": "Derivati (derived/)",
   "storage.cat.studio": "Bibliuteche di u studio (studio/)",
@@ -1866,7 +1941,6 @@
   "storage.s.hdris": "HDRI (illuminazione 3D)",
   "storage.s.ocio": "Cunfigurazioni OCIO (culore)",
   "storage.s.other": "Altri",
-
   "audit.create": "creatu",
   "audit.update": "mudificatu",
   "audit.delete": "squassatu",
@@ -1881,7 +1955,6 @@
   "settings.hint.liveImage": "p. es. 4 — zoom/pusizione",
   "settings.hint.slack": "https://hooks.slack.com/services/… — decisioni è pubblicazioni",
   "settings.hint.sourceUrl": "https://… — ubligatoriu s’è vo spieghite una version mudificata",
-
   "channel.posX": "Pos X",
   "channel.posY": "Pos Y",
   "channel.posZ": "Pos Z",
@@ -1892,7 +1965,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "Andà à u keyframe di {time} seconde",
   "channel.keyAt": "Keyframe à {time} s",
-
   "admin.announce.allRoles": "(nisuna casella = tutti)",
   "admin.announce.updated": "Annunziu mudificatu",
   "admin.announce.created": "Annunziu creatu",
@@ -2022,7 +2094,10 @@
   "storage.map.hint": "Un solu bucket S3/MinIO per tutta l’istanza ; squassà un media purga u so cartulare d’uriginale è u so prefissu",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Ogetti",
-  "storage.objectsCount": { "one": "{count} ogettu", "other": "{count} ogetti" },
+  "storage.objectsCount": {
+    "one": "{count} ogettu",
+    "other": "{count} ogetti"
+  },
   "storage.originals": "Uriginali",
   "storage.totalUsage": "Occupazione tutale",
   "storage.orphanProject": "(prughjettu scunnisciutu — orfanu ?)",
@@ -2035,7 +2110,10 @@
   "system.agplHint": "Ogni persona chì adopra st’istanza à distanza deve pudè ottene e so fonti. S’è vo l’avete mudificata, fate puntà u parametru « Codice surghjente » versu u vostru repositoriu.",
   "system.thirdParty": "Dipendenze terze",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md (radica di u repositoriu)",
-  "system.cores": { "one": "{count} core", "other": "{count} core" },
+  "system.cores": {
+    "one": "{count} core",
+    "other": "{count} core"
+  },
   "system.disk": "Discu — {used} / {total}",
   "system.memory": "Memoria — {used} / {total}",
   "system.licenseTitle": "Licenza è codice surghjente",
@@ -2072,7 +2150,10 @@
   "webhooks.delivery.pending": "In attesa",
   "webhooks.delivery.delivered": "Cunsegnata",
   "webhooks.delivery.failed": "Fallita",
-  "webhooks.delivery.attempts": { "one": "{count} tentativu", "other": "{count} tentativi" },
+  "webhooks.delivery.attempts": {
+    "one": "{count} tentativu",
+    "other": "{count} tentativi"
+  },
   "webhooks.delivery.replay": "Rimandà sta cunsegna",
   "webhooks.delivery.replayed": "Cunsegna rimessa in fila",
   "webhooks.delivery.replayOf": "Rinviu di #{value}",
@@ -2111,19 +2192,24 @@
   "splat.isolate": "Isulà",
   "model3d.transformModel": "Trasfurmà u mudellu",
   "model3d.unnamed": "(senza nome)",
-
   "jobs.storageCleanup": "Nettera di a stucchera",
   "jobs.webhooks": "Webhooks in escita",
   "jobs.activeCount": "{count} attivi",
   "jobs.waitingCount": "{count} in attesa",
   "jobs.failedCount": "{count} falliti",
   "jobs.completedCount": "{count} finiti",
-  "jobs.attempts": { "one": "{count} pruvatura", "other": "{count} pruvature" },
+  "jobs.attempts": {
+    "one": "{count} pruvatura",
+    "other": "{count} pruvature"
+  },
   "jobs.cleanedFailed": {
     "one": "{count} travagliu fallitu purgatu",
     "other": "{count} travaglii falliti purgati"
   },
-  "jobs.retriedCount": { "one": "{count} travagliu rilanciatu.", "other": "{count} travaglii rilanciati." },
+  "jobs.retriedCount": {
+    "one": "{count} travagliu rilanciatu.",
+    "other": "{count} travaglii rilanciati."
+  },
   "jobs.purgedDerived": "{count} media allevati (HLS + sprite tolti)",
   "jobs.purge": "Purgà",
   "jobs.purgeNow": "Purgà avà",
@@ -2131,7 +2217,6 @@
   "jobs.running": "In corsu : {list}",
   "jobs.queueUnavailable": "Fila micca dispunibule.",
   "jobs.webhookRef": "webhook {id}",
-
   "model3d.transformPrim": "Trasfurmà u prim",
   "model3d.compareUnreachable": "Mudellu di cunfrontu inaccessibile",
   "model3d.loadFailed": "Caricamentu di i mudelli impussibile",
@@ -2220,7 +2305,6 @@
   "entity.unavailable.failed": "Ùn hè pussutu esse caricatu",
   "entity.unavailable.failed.hint": "U servitore ùn hà micca rispostu. Pruvate torna trà pocu.",
   "entity.unavailable.backToProjects": "Vultà à i prughjetti",
-
   "version.emptyMedia": "Nisun media in sta version.",
   "version.created": "Version « {name} » creata",
   "version.current": "Currente",
@@ -2229,15 +2313,20 @@
   "version.noVisibleMedia": "Nisun media visibule in a version {version}",
   "version.unreachable": "Version inaccessibile",
   "version.dropNew": "Lascia i schedarii quì per creà a version dopu",
-  "version.publishAll": { "one": "Publicà ({count})", "other": "Publicà ({count})" },
+  "version.publishAll": {
+    "one": "Publicà ({count})",
+    "other": "Publicà ({count})"
+  },
   "version.dropShot": "Lacate per creà una version sottu à un'attività",
   "version.inReview": "In review",
-
   "playlist.added": {
     "one": "{count} version aghjunta à « {name} »",
     "other": "{count} version aghjunte à « {name} »"
   },
-  "playlist.skipped": { "one": "({count} digià prisente)", "other": "({count} digià prisenti)" },
+  "playlist.skipped": {
+    "one": "({count} digià prisente)",
+    "other": "({count} digià prisenti)"
+  },
   "playlist.targetCount": {
     "one": "{count} elementu — ogni version currispundente hè aghjunta à a fine di a playlist.",
     "other": "{count} elementi — ogni version currispundente hè aghjunta à a fine di a playlist."
@@ -2251,20 +2340,28 @@
   "playlist.rename": "Rinuminà a playlist",
   "playlist.emptyHint": "Aghjunghjite version da u catalogu à manca.",
   "playlist.addTo": "Aghjunghje à una playlist",
-  "playlist.addedTo": { "one": "{count} version aghjunta à {name}", "other": "{count} version aghjunte à {name}" },
-  "playlist.addedCount": { "one": "{count} version aghjunta", "other": "{count} version aghjunte" },
+  "playlist.addedTo": {
+    "one": "{count} version aghjunta à {name}",
+    "other": "{count} version aghjunte à {name}"
+  },
+  "playlist.addedCount": {
+    "one": "{count} version aghjunta",
+    "other": "{count} version aghjunte"
+  },
   "playlist.alreadyThere": "Digià in a playlist",
   "playlist.nothingToAdd": "Nunda di pubblicatu da aghjunghje",
   "playlist.catalog.search": "Shot, asset o version…",
   "playlist.catalog.latestOnly": "Solu l'ultima",
   "playlist.catalog.add": "Aghjunghje à a playlist",
-  "playlist.catalog.addSelected": { "one": "Aghjunghje {count}", "other": "Aghjunghje {count}" },
+  "playlist.catalog.addSelected": {
+    "one": "Aghjunghje {count}",
+    "other": "Aghjunghje {count}"
+  },
   "playlist.catalog.present": "Digià dentru",
   "playlist.catalog.empty": "Nunda currisponde à sti filtri.",
   "playlist.autoAdvance": "Leghje u seguente autumaticamente",
   "csv.export": "Espurtà CSV",
   "csv.import": "Impurtà CSV",
-
   "calendar.today": "Oghje",
   "calendar.dueMoved": "Scadenza spustata",
   "nav.breadcrumb": "Filu di navigazione",
@@ -2329,21 +2426,34 @@
   "draw.textPlaceholder": "Testu…",
   "info.uvSets": "Inseme di UV",
   "track.animTrack": "Traccia d’animazione",
-
   "sequences.assets": "Assets di a sequence ({count})",
-  "sequences.createdCount": { "one": "{count} sequence creata", "other": "{count} sequence create" },
+  "sequences.createdCount": {
+    "one": "{count} sequence creata",
+    "other": "{count} sequence create"
+  },
   "sequences.delete.message": "A sequence « {code} » è i so shots saranu spustati in u cistinu.",
-  "sequences.open": "Apre a sequence",
-  "sequences.countLabel": { "one": "sequence", "other": "sequences" },
-  "sequences.trashedCount": { "one": "{count} sequence spustata in u cistinu", "other": "{count} sequence spustate in u cistinu" },
+  "sequences.countLabel": {
+    "one": "sequence",
+    "other": "sequences"
+  },
+  "sequences.trashedCount": {
+    "one": "{count} sequence spustata in u cistinu",
+    "other": "{count} sequence spustate in u cistinu"
+  },
   "sequences.deleteMany.title": "Sguassà e sequence ?",
-  "sequences.deleteMany.message": { "one": "{count} sequence è i so shots saranu spustati in u cistinu.", "other": "{count} sequence è i so shots saranu spustati in u cistinu." },
+  "sequences.deleteMany.message": {
+    "one": "{count} sequence è i so shots saranu spustati in u cistinu.",
+    "other": "{count} sequence è i so shots saranu spustati in u cistinu."
+  },
   "sequences.new": "Nova sequence",
   "view.cards": "Vista carte",
   "view.compact": "Vista cumpatta",
   "view.followAccount": "Seguità u regulamentu di u contu",
   "drafts.title": "Bozze in attesa",
-  "drafts.count": { "one": "{count} bozza in attesa", "other": "{count} bozze in attesa" },
+  "drafts.count": {
+    "one": "{count} bozza in attesa",
+    "other": "{count} bozze in attesa"
+  },
   "uploads.failedFor": "U caricamentu di {name} hà fallitu",
   "uploads.sending": "Mandendu {pct} %",
   "uploads.title": "Trasferimenti ({count})",
@@ -2371,8 +2481,14 @@
   "transform.rotationYaw": "Rotazione Y (yaw)",
   "transform.rotationRoll": "Rotazione Z (roll)",
   "timeline.defaultName": "Muntagiu",
-  "timeline.shotCount": { "one": "{count} shot", "other": "{count} shot" },
-  "timeline.gapCount": { "one": "{count} bucu", "other": "{count} buchi" },
+  "timeline.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shot"
+  },
+  "timeline.gapCount": {
+    "one": "{count} bucu",
+    "other": "{count} buchi"
+  },
   "timeline.noMedia": "Nisun media",
   "timeline.durationMismatch": "A durata di u media hè sfarente da l'intervallu di frame dichjaratu nantu à u shot.",
   "timeline.previousShot": "Shot precedente",
@@ -2414,7 +2530,10 @@
   "chat.sendMessage": "Manda un messaghju",
   "chat.group.create": "Novu gruppu",
   "chat.group.namePlaceholder": "Nome di u gruppu (facultativu)",
-  "chat.group.members": { "one": "{count} membru", "other": "{count} membri" },
+  "chat.group.members": {
+    "one": "{count} membru",
+    "other": "{count} membri"
+  },
   "chat.rename": "Rinuminà u gruppu",
   "chat.addMembers": "Aghjunghje participanti",
   "chat.leave": "Lascià a cunversazione",
@@ -2423,7 +2542,10 @@
   "chat.unmute": "Riattivà l'avvisi",
   "chat.search": "Cercà qualchissia",
   "chat.search.empty": "Nisunu trovu",
-  "chat.system.joined": { "one": "{names} hè entrutu in a cunversazione", "other": "{names} sò entruti in a cunversazione" },
+  "chat.system.joined": {
+    "one": "{names} hè entrutu in a cunversazione",
+    "other": "{names} sò entruti in a cunversazione"
+  },
   "chat.system.left": "{name} hà lasciatu a cunversazione",
   "chat.system.removed": "{name} hè statu ritiratu",
   "chat.system.renamed": "U gruppu si chjama avà « {title} »",
@@ -2516,7 +2638,10 @@
   "shotgrid.setup.connect": "Ligà u prughjettu",
   "shotgrid.setup.connected": "Ligatu à « {name} »",
   "shotgrid.setup.connectFailed": "Ligame impussibule",
-  "shotgrid.setup.testOk": { "one": "Cunnessione riesciuta — {count} prughjettu visibule", "other": "Cunnessione riesciuta — {count} prughjetti visibuli" },
+  "shotgrid.setup.testOk": {
+    "one": "Cunnessione riesciuta — {count} prughjettu visibule",
+    "other": "Cunnessione riesciuta — {count} prughjetti visibuli"
+  },
   "shotgrid.sync.runFull": "Sincronizà",
   "shotgrid.sync.runReconcile": "Ricuperà",
   "shotgrid.sync.reconcileHint": "Rilege a finestra di ricuperu — da aduprà dopu un tagliu.",
@@ -2534,7 +2659,10 @@
   "shotgrid.sync.noLog": "Nisuna entrata",
   "shotgrid.sync.keepSg": "Mantene ShotGrid",
   "shotgrid.sync.keepReview": "Mantene ReView",
-  "shotgrid.sync.conflicts": { "one": "{count} cunflittu in attesa di decisione", "other": "{count} cunflitti in attesa di decisione" },
+  "shotgrid.sync.conflicts": {
+    "one": "{count} cunflittu in attesa di decisione",
+    "other": "{count} cunflitti in attesa di decisione"
+  },
   "shotgrid.conflict.resolved": "Cunflittu risoltu",
   "shotgrid.conflict.failed": "Arbitraghju impussibule",
   "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »",
@@ -2603,8 +2731,14 @@
   "shotgrid.versions.selectAllPending": "Selezziunà tuttu ciò chì manca",
   "shotgrid.versions.summary": "{total} publishes, {pending} micca impurtati",
   "shotgrid.versions.intro": "Listà i publishes ShotGrid di stu prughjettu è purtà ciò chì manca.",
-  "shotgrid.versions.importSelected": { "one": "Impurtà {count} elementu", "other": "Impurtà {count} elementi" },
-  "shotgrid.versions.imported": { "one": "{count} publish impurtatu", "other": "{count} publishes impurtati" },
+  "shotgrid.versions.importSelected": {
+    "one": "Impurtà {count} elementu",
+    "other": "Impurtà {count} elementi"
+  },
+  "shotgrid.versions.imported": {
+    "one": "{count} publish impurtatu",
+    "other": "{count} publishes impurtati"
+  },
   "shotgrid.admin.title": "Siti ShotGrid",
   "shotgrid.admin.projects": "Prughjetti ligati",
   "shotgrid.admin.deleted": "Situ ShotGrid squassatu",
@@ -2614,7 +2748,10 @@
   "shotgrid.admin.deleteConfirm": "Squassà u situ « {name} » ? E so credenziali sò cancellate.",
   "shotgrid.admin.empty": "Nisun situ ShotGrid arregistratu. Aghjunghjetene unu da a scheda ShotGrid di un prughjettu.",
   "shotgrid.admin.intro": "E credenziali stanu quì, una volta per tuttu u studio : ogni cunnessione di prughjettu e riutilizeghja, è cambià una chjave si face in un solu locu. Nisun secretu ùn hè mai rimandatu à u navigatore.",
-  "shotgrid.admin.linkedProjects": { "one": "{count} prughjettu", "other": "{count} prughjetti" },
+  "shotgrid.admin.linkedProjects": {
+    "one": "{count} prughjettu",
+    "other": "{count} prughjetti"
+  },
   "shotgrid.domain.hierarchy": "Sequences, shots, assets",
   "shotgrid.domain.hierarchy.hint": "A spartizione di pruduzzione, i limiti di cut è i stati di shot.",
   "shotgrid.domain.tasks": "Cumpiti",
@@ -2709,7 +2846,10 @@
   "shotgrid.sync.publishOff": "L’inviu versu ShotGrid hè disattivatu : e versions publicate quì ci restanu. Cambià in Riglaghji → Pubblicazione.",
   "shotgrid.steps.title": "Tappe di pipeline aduprate da stu prughjettu",
   "shotgrid.steps.hint": "ShotGrid ùn prupone chè e tappe chì a visibilità hè attivata nant'à u prughjettu, ma ùn pubblica micca stu riglaghju in a so API. Marcatele quì, una volta. Senza marcà nunda, ReView e deduce da i task digià presenti.",
-  "shotgrid.steps.count": { "one": "{count} sceltu", "other": "{count} scelte" },
+  "shotgrid.steps.count": {
+    "one": "{count} sceltu",
+    "other": "{count} scelte"
+  },
   "shotgrid.steps.forAssets": "Per l'assets",
   "shotgrid.steps.forShots": "Per i shots",
   "shotgrid.steps.search": "Cercà una tappa…",
@@ -2740,7 +2880,10 @@
   "shotgrid.crew.state.none": "Ancu senza contu",
   "shotgrid.crew.state.ineligible": "Ùn pò micca esse invitatu",
   "shotgrid.crew.done": "{created} contu creatu, {added} persona aghjunta à u prughjettu",
-  "shotgrid.crew.skipped": { "one": "{count} persona hè stata saltata", "other": "{count} persone sò state saltate" },
+  "shotgrid.crew.skipped": {
+    "one": "{count} persona hè stata saltata",
+    "other": "{count} persone sò state saltate"
+  },
   "shotgrid.crew.plan": "{create} contu da creà, {add} da aghjunghje à u prughjettu",
   "shotgrid.sync.queued": "Una sincronizazione hè digià in corsu : questa aspetta u so turnu.",
   "shotgrid.link.open": "Contu ShotGrid",
@@ -2781,7 +2924,10 @@
   "social.search": "Cercà una persona o un filu",
   "social.people": "Persone",
   "social.noMatch": "Nisun risultatu per sta ricerca.",
-  "sequence.shotCount": { "one": "{count} shot", "other": "{count} shots" },
+  "sequence.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
   "filters.search": "Cercà…",
   "filters.allStatuses": "Tutti i stati",
   "filters.allDepartments": "Tutti i dipartimenti",
@@ -2804,9 +2950,18 @@
   "assign.unassigned": "Nimu",
   "assign.done": "Assignazione aghjurnata",
   "assign.failed": "Impussibile di cambià l'assignazione",
-  "assign.bulkTitle": { "one": "Assignà {count} elementu", "other": "Assignà {count} elementi" },
-  "assign.doneCount": { "one": "{count} travagliu aghjurnatu", "other": "{count} travagli aghjurnati" },
-  "assign.skippedCount": { "one": "{count} elementu saltatu : nunda da assignà, o senza dirittu", "other": "{count} elementi saltati : nunda da assignà, o senza dirittu" },
+  "assign.bulkTitle": {
+    "one": "Assignà {count} elementu",
+    "other": "Assignà {count} elementi"
+  },
+  "assign.doneCount": {
+    "one": "{count} travagliu aghjurnatu",
+    "other": "{count} travagli aghjurnati"
+  },
+  "assign.skippedCount": {
+    "one": "{count} elementu saltatu : nunda da assignà, o senza dirittu",
+    "other": "{count} elementi saltati : nunda da assignà, o senza dirittu"
+  },
   "assign.person": "Persona",
   "assign.departments": "Dipartimenti",
   "assign.departmentsHint": "Lasciate viotu per copre tutti i travagli esistenti. Sceglite i dipartimenti per mirà — è creà u travagliu s'ellu manca.",
@@ -2869,11 +3024,17 @@
   "episode.noSequence.title": "Nisuna sequence in stu episode",
   "episode.noSequence.description": "Attaccà sequences à stu episode da a linguetta Episodes di u prughjettu.",
   "episode.noShot": "Nisun shot in sta sequence.",
-  "episode.sequenceCount": { "one": "{count} sequence", "other": "{count} sequences" },
+  "episode.sequenceCount": {
+    "one": "{count} sequence",
+    "other": "{count} sequences"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "Apre l'episode",
   "episodes.reordered": "Ordine salvatu",
-  "episodes.createdCount": { "one": "{count} episode creatu", "other": "{count} episodes creati" },
+  "episodes.createdCount": {
+    "one": "{count} episode creatu",
+    "other": "{count} episodes creati"
+  },
   "episodes.attachTo": "Attaccà à un episode",
   "episodes.attached": "Sequence attaccata",
   "episodes.detach": "Staccà da u so episode",
@@ -2884,7 +3045,10 @@
   "episodes.empty.title": "Nisun episode",
   "episodes.empty.description": "Stu prughjettu ùn hà ancu nisun episode.",
   "episodes.empty.hint": "Creà i primi cù u generatore quì sopra.",
-  "episodes.unassignedCount": { "one": "{count} sequence senza episode", "other": "{count} sequences senza episode" },
+  "episodes.unassignedCount": {
+    "one": "{count} sequence senza episode",
+    "other": "{count} sequences senza episode"
+  },
   "episodes.unassignedHint": "Cliccu drittu nant'à una sequence per attaccalla à un episode.",
   "episodes.disabledHere": "U livellu episode hè spentu nant'à stu prughjettu.",
   "episodes.settings.title": "Livellu episode",
@@ -2893,8 +3057,14 @@
   "episodes.settings.enabled": "Livellu episode attivatu",
   "episodes.settings.disabled": "Livellu episode spentu",
   "episodes.settings.keepsData": "Spegne ùn face chè piattà u livellu : l'episodes è e so sequences tornanu intatti.",
-  "episodes.settings.stored": { "one": "{count} episode cunservatu", "other": "{count} episodes cunservati" },
-  "episodes.settings.linked": { "one": "{count} sequence attaccata", "other": "{count} sequences attaccate" },
+  "episodes.settings.stored": {
+    "one": "{count} episode cunservatu",
+    "other": "{count} episodes cunservati"
+  },
+  "episodes.settings.linked": {
+    "one": "{count} sequence attaccata",
+    "other": "{count} sequences attaccate"
+  },
   "error.UNAUTHENTICATED": "Ùn site micca cunnessu.",
   "error.FORBIDDEN": "Accessu ricusatu.",
   "error.NOT_FOUND": "Stu elementu ùn esiste più.",
@@ -3016,23 +3186,41 @@
   "imageSequence.hint": "Aggruppata, ognuna diventa un solu media chì si review cum'è un video. Sparte, ogni frame resta un schedariu.",
   "imageSequence.group": "Aggruppà in un solu media",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "one": "{count} schedariu", "other": "{count} schedarii" },
-  "imageSequence.gaps": { "one": "{count} frame chì manca", "other": "{count} frames chì mancanu" },
-  "imageSequence.others": { "one": "{count} altru schedariu serà mandatu solu", "other": "{count} altri schedarii seranu mandati soli" },
+  "imageSequence.files": {
+    "one": "{count} schedariu",
+    "other": "{count} schedarii"
+  },
+  "imageSequence.gaps": {
+    "one": "{count} frame chì manca",
+    "other": "{count} frames chì mancanu"
+  },
+  "imageSequence.others": {
+    "one": "{count} altru schedariu serà mandatu solu",
+    "other": "{count} altri schedarii seranu mandati soli"
+  },
   "imageSequence.confirm": "Mandà cum'è sequences d'imagine",
   "imageSequence.sendSeparately": "Mandà schedariu per schedariu",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "Assemblendu",
-  "assignees.label": { "one": "{count} persona assignata", "other": "{count} persone assignate" },
+  "assignees.label": {
+    "one": "{count} persona assignata",
+    "other": "{count} persone assignate"
+  },
   "assignees.dialogTitle": "Persone nantu à {name}",
   "assignees.searchPlaceholder": "Cercà qualchissia…",
   "assignees.noMatch": "Nimu ùn currisponde à sta ricerca.",
-  "assignees.saved": { "one": "{count} persona assignata", "other": "{count} persone assignate" },
+  "assignees.saved": {
+    "one": "{count} persona assignata",
+    "other": "{count} persone assignate"
+  },
   "assignees.menu": "Persone…",
   "assignees.origin.direct": "Rispunsevule di st'elementu",
   "assignees.origin.child": "Rispunsevule di qualcosa à l'internu",
   "assignees.origin.task": "Assignatu à un travagliu",
-  "cards.awaitingReview": { "one": "{count} cunsegna in attesa di review", "other": "{count} cunsegne in attesa di review" },
+  "cards.awaitingReview": {
+    "one": "{count} cunsegna in attesa di review",
+    "other": "{count} cunsegne in attesa di review"
+  },
   "cards.updatedAt": "Mudificatu {value}",
   "visibility.hide": "Piattà per tutti",
   "visibility.show": "Mustrà torna",
@@ -3118,7 +3306,10 @@
   "note.gallery.carousel": "Carusellu",
   "note.gallery.columns": "Culonne",
   "note.gallery.height": "Altezza",
-  "note.gallery.count": { "one": "{count} imagine", "other": "{count} imagine" },
+  "note.gallery.count": {
+    "one": "{count} imagine",
+    "other": "{count} imagine"
+  },
   "note.image.align": "Allineamentu",
   "note.image.alignFull": "Larghezza sana",
   "note.image.alignCenter": "Centrata",
@@ -3140,9 +3331,18 @@
   "assetType.VEHICLE": "Veiculu",
   "assetType.FX": "FX",
   "assetType.OTHER": "Altru",
-  "bulk.status.title": { "one": "Statutu di {count} shot", "other": "Statutu di {count} shots" },
-  "bulk.status.done": { "one": "{count} shot aghjurnatu", "other": "{count} shots aghjurnati" },
-  "bulk.status.partial": { "one": "{count} shot aghjurnatu, {failed} ricusatu", "other": "{count} shots aghjurnati, {failed} ricusati" },
+  "bulk.status.title": {
+    "one": "Statutu di {count} shot",
+    "other": "Statutu di {count} shots"
+  },
+  "bulk.status.done": {
+    "one": "{count} shot aghjurnatu",
+    "other": "{count} shots aghjurnati"
+  },
+  "bulk.status.partial": {
+    "one": "{count} shot aghjurnatu, {failed} ricusatu",
+    "other": "{count} shots aghjurnati, {failed} ricusati"
+  },
   "bulk.status.menu": "Statutu",
   "colorPicker.hue": "Tinta",
   "queryState.title": "Sta sezione ùn hè pussutu esse caricata",

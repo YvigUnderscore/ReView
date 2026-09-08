@@ -1092,7 +1092,10 @@
   "projects.created": "Projet « {name} » créé",
   "projects.duplicated": "Projet « {name} » créé depuis « {source} »",
   "projects.unarchived": "Projet « {name} » désarchivé",
-  "projects.count": { "one": "{count} projet", "other": "{count} projets" },
+  "projects.count": {
+    "one": "{count} projet",
+    "other": "{count} projets"
+  },
   "admin.group.studio": "Studio",
   "admin.group.content": "Contenus",
   "admin.group.reviewContexts": "Contextes de review",
@@ -1147,7 +1150,10 @@
   "tokens.copy": "Copier",
   "tokens.created": "Token créé",
   "tokens.expired": "Expiré",
-  "tokens.expiry.days": { "one": "{count} jour", "other": "{count} jours" },
+  "tokens.expiry.days": {
+    "one": "{count} jour",
+    "other": "{count} jours"
+  },
   "tokens.expiry.label": "Expiration",
   "tokens.new": "Nouveau token",
   "tokens.passwordHint": "Un token survit à votre session : votre mot de passe confirme la création.",
@@ -1201,11 +1207,20 @@
   "production.attention.unassigned": "Sans assigné",
   "production.attention.review": "En attente de review",
   "production.attention.none": "Rien ici, tant mieux.",
-  "production.attention.more": { "one": "et {count} autre", "other": "et {count} autres" },
+  "production.attention.more": {
+    "one": "et {count} autre",
+    "other": "et {count} autres"
+  },
   "production.workload.empty": "Plus rien à faire.",
-  "production.workload.late": { "one": "{count} en retard", "other": "{count} en retard" },
+  "production.workload.late": {
+    "one": "{count} en retard",
+    "other": "{count} en retard"
+  },
   "production.pace.window": "Fenêtre d'observation",
-  "production.pace.weeks": { "one": "{count} semaine", "other": "{count} semaines" },
+  "production.pace.weeks": {
+    "one": "{count} semaine",
+    "other": "{count} semaines"
+  },
   "production.pace.perWeek": "{value} par semaine",
   "production.pace.projected": "Fin projetée",
   "production.pace.noProjection": "Rythme insuffisant pour projeter une fin",
@@ -1239,7 +1254,10 @@
   "sequences.empty.hint": "Créez vos sequences avec le bouton « + » ci-dessus — elles regroupent les shots (SQ010, SQ020…).",
   "playlists.empty.hint": "Sélectionnez des médias sur la page Reviews puis « Ajouter à la playlist » (clic droit), ou créez une playlist vide ici.",
   "playlists.delete.message": "« {name} » sera supprimée. Les versions qu'elle référence ne sont pas affectées.",
-  "playlists.versionCount": { "one": "{count} version", "other": "{count} versions" },
+  "playlists.versionCount": {
+    "one": "{count} version",
+    "other": "{count} versions"
+  },
   "shares.newShort": "Nouveau lien",
   "shares.empty": "Aucun lien de partage. Créez-en un pour donner accès aux médias publiés de ce projet, sans compte.",
   "shares.createdBy": "Créé par {name}",
@@ -1259,21 +1277,36 @@
   "shares.scope.pick.media": "Médias à inclure",
   "shares.scope.pick.none": "Choisir…",
   "shares.scope.empty": "Ce projet n'a encore aucun média publié.",
-  "shares.scope.selected": { "one": "{count} média sélectionné", "other": "{count} médias sélectionnés" },
+  "shares.scope.selected": {
+    "one": "{count} média sélectionné",
+    "other": "{count} médias sélectionnés"
+  },
   "shares.scope.needsTarget": "Choisissez ce que ce lien ouvre avant de le créer.",
   "shares.scope.badge.project": "Projet entier",
-  "shares.scope.badge.selection": { "one": "{count} média", "other": "{count} médias" },
+  "shares.scope.badge.selection": {
+    "one": "{count} média",
+    "other": "{count} médias"
+  },
   "shares.scope.badge.restricted": "Restreint",
   "shares.email": "Envoyer par courriel…",
   "shares.email.title": "Envoyer le lien par courriel",
   "shares.email.recipients": "Destinataires",
   "shares.email.recipients.placeholder": "Une adresse par ligne",
-  "shares.email.count": { "one": "{count} adresse valide", "other": "{count} adresses valides" },
-  "shares.email.tooMany": { "one": "{count} destinataire au plus par envoi", "other": "{count} destinataires au plus par envoi" },
+  "shares.email.count": {
+    "one": "{count} adresse valide",
+    "other": "{count} adresses valides"
+  },
+  "shares.email.tooMany": {
+    "one": "{count} destinataire au plus par envoi",
+    "other": "{count} destinataires au plus par envoi"
+  },
   "shares.email.note": "Mot d'accompagnement (facultatif)",
   "shares.email.note.placeholder": "Un mot pour le destinataire",
   "shares.email.submit": "Envoyer",
-  "shares.email.sent": { "one": "Lien envoyé à {count} destinataire", "other": "Lien envoyé à {count} destinataires" },
+  "shares.email.sent": {
+    "one": "Lien envoyé à {count} destinataire",
+    "other": "Lien envoyé à {count} destinataires"
+  },
   "shares.email.invalid": "Saisissez au moins une adresse valide.",
   "shares.email.willMentionExpiry": "Le message précisera que le lien expire le {date}.",
   "shares.email.noExpiry": "Le message précisera que le lien n'expire pas.",
@@ -1479,11 +1512,23 @@
   "shots.delete.message": "Le shot « {code} » et ses tâches/versions seront déplacés dans la corbeille.",
   "shots.omitted": "Coupé au montage",
   "shots.searchPlaceholder": "Code ou nom de shot…",
-  "shots.count": { "one": "{count} shot", "other": "{count} shots" },
-  "shots.countLabel": { "one": "shot", "other": "shots" },
-  "shots.trashedCount": { "one": "{count} shot déplacé dans la corbeille", "other": "{count} shots déplacés dans la corbeille" },
+  "shots.count": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "shots.countLabel": {
+    "one": "shot",
+    "other": "shots"
+  },
+  "shots.trashedCount": {
+    "one": "{count} shot déplacé dans la corbeille",
+    "other": "{count} shots déplacés dans la corbeille"
+  },
   "shots.deleteMany.title": "Supprimer les shots ?",
-  "shots.deleteMany.message": { "one": "{count} shot et ses tâches/versions seront déplacés dans la corbeille.", "other": "{count} shots et leurs tâches/versions seront déplacés dans la corbeille." },
+  "shots.deleteMany.message": {
+    "one": "{count} shot et ses tâches/versions seront déplacés dans la corbeille.",
+    "other": "{count} shots et leurs tâches/versions seront déplacés dans la corbeille."
+  },
   "shots.new": "Nouveau shot",
   "shot.newAsset": "+ Créer un asset",
   "shot.omitted": "Omis du montage",
@@ -1678,8 +1723,14 @@
   "video.qualityOriginal": "Originale",
   "video.qualitySet": "Qualité de lecture : {height}p",
   "video.volume": "Volume",
-  "video.compareOffsetAhead": { "one": "B est en avance de {count} frame sur A", "other": "B est en avance de {count} frames sur A" },
-  "video.compareOffsetBehind": { "one": "B est en retard de {count} frame sur A", "other": "B est en retard de {count} frames sur A" },
+  "video.compareOffsetAhead": {
+    "one": "B est en avance de {count} frame sur A",
+    "other": "B est en avance de {count} frames sur A"
+  },
+  "video.compareOffsetBehind": {
+    "one": "B est en retard de {count} frame sur A",
+    "other": "B est en retard de {count} frames sur A"
+  },
   "video.compareOffsetNone": "B est aligné sur A",
   "video.waveform.show": "Forme d'onde audio",
   "video.waveform.scrub": "Forme d'onde audio — glisser pour se déplacer",
@@ -2099,7 +2150,10 @@
   "webhooks.delivery.pending": "En attente",
   "webhooks.delivery.delivered": "Livrée",
   "webhooks.delivery.failed": "Échouée",
-  "webhooks.delivery.attempts": { "one": "{count} tentative", "other": "{count} tentatives" },
+  "webhooks.delivery.attempts": {
+    "one": "{count} tentative",
+    "other": "{count} tentatives"
+  },
   "webhooks.delivery.replay": "Rejouer cette livraison",
   "webhooks.delivery.replayed": "Livraison remise en file",
   "webhooks.delivery.replayOf": "Rejeu de #{value}",
@@ -2286,14 +2340,23 @@
   "playlist.rename": "Renommer la playlist",
   "playlist.emptyHint": "Ajoutez des versions depuis le catalogue de gauche.",
   "playlist.addTo": "Ajouter à une playlist",
-  "playlist.addedTo": { "one": "{count} version ajoutée à {name}", "other": "{count} versions ajoutées à {name}" },
-  "playlist.addedCount": { "one": "{count} version ajoutée", "other": "{count} versions ajoutées" },
+  "playlist.addedTo": {
+    "one": "{count} version ajoutée à {name}",
+    "other": "{count} versions ajoutées à {name}"
+  },
+  "playlist.addedCount": {
+    "one": "{count} version ajoutée",
+    "other": "{count} versions ajoutées"
+  },
   "playlist.alreadyThere": "Déjà dans la playlist",
   "playlist.nothingToAdd": "Rien de publié à ajouter",
   "playlist.catalog.search": "Shot, asset ou version…",
   "playlist.catalog.latestOnly": "Dernière seulement",
   "playlist.catalog.add": "Ajouter à la playlist",
-  "playlist.catalog.addSelected": { "one": "Ajouter {count}", "other": "Ajouter {count}" },
+  "playlist.catalog.addSelected": {
+    "one": "Ajouter {count}",
+    "other": "Ajouter {count}"
+  },
   "playlist.catalog.present": "Déjà dedans",
   "playlist.catalog.empty": "Rien ne correspond à ces filtres.",
   "playlist.autoAdvance": "Enchaîner automatiquement",
@@ -2369,11 +2432,19 @@
     "other": "{count} sequences créées"
   },
   "sequences.delete.message": "La sequence « {code} » et ses shots seront déplacés dans la corbeille.",
-  "sequences.open": "Ouvrir la sequence",
-  "sequences.countLabel": { "one": "sequence", "other": "sequences" },
-  "sequences.trashedCount": { "one": "{count} sequence déplacée dans la corbeille", "other": "{count} sequences déplacées dans la corbeille" },
+  "sequences.countLabel": {
+    "one": "sequence",
+    "other": "sequences"
+  },
+  "sequences.trashedCount": {
+    "one": "{count} sequence déplacée dans la corbeille",
+    "other": "{count} sequences déplacées dans la corbeille"
+  },
   "sequences.deleteMany.title": "Supprimer les sequences ?",
-  "sequences.deleteMany.message": { "one": "{count} sequence et ses shots seront déplacés dans la corbeille.", "other": "{count} sequences et leurs shots seront déplacés dans la corbeille." },
+  "sequences.deleteMany.message": {
+    "one": "{count} sequence et ses shots seront déplacés dans la corbeille.",
+    "other": "{count} sequences et leurs shots seront déplacés dans la corbeille."
+  },
   "sequences.new": "Nouvelle sequence",
   "view.cards": "Vue cartes",
   "view.compact": "Vue compacte",
@@ -2471,7 +2542,10 @@
   "chat.unmute": "Réactiver les notifications",
   "chat.search": "Rechercher une personne",
   "chat.search.empty": "Aucune personne trouvée",
-  "chat.system.joined": { "one": "{names} a rejoint la conversation", "other": "{names} ont rejoint la conversation" },
+  "chat.system.joined": {
+    "one": "{names} a rejoint la conversation",
+    "other": "{names} ont rejoint la conversation"
+  },
   "chat.system.left": "{name} a quitté la conversation",
   "chat.system.removed": "{name} a été retiré",
   "chat.system.renamed": "Le groupe s'appelle désormais « {title} »",
@@ -2741,7 +2815,10 @@
   "shotgrid.admin.intro": "Les identifiants vivent ici, une fois pour tout le studio : chaque connexion de projet les réutilise, et changer une clé se fait en un seul endroit. Aucun secret n'est jamais renvoyé au navigateur.",
   "shotgrid.admin.empty": "Aucun site ShotGrid enregistré. En ajouter un depuis l'onglet ShotGrid d'un projet.",
   "shotgrid.admin.projects": "Projets reliés",
-  "shotgrid.admin.linkedProjects": { "one": "{count} projet", "other": "{count} projets" },
+  "shotgrid.admin.linkedProjects": {
+    "one": "{count} projet",
+    "other": "{count} projets"
+  },
   "shotgrid.admin.deleteConfirm": "Supprimer le site « {name} » ? Ses identifiants sont effacés.",
   "shotgrid.admin.deleted": "Site ShotGrid supprimé",
   "shotgrid.admin.updated": "Site ShotGrid mis à jour",
@@ -2769,7 +2846,10 @@
   "shotgrid.sync.publishOff": "L’envoi vers ShotGrid est désactivé : les versions publiées ici y restent. À changer dans Réglages → Publication.",
   "shotgrid.steps.title": "Étapes de pipeline employées par ce projet",
   "shotgrid.steps.hint": "ShotGrid ne propose que les étapes dont la visibilité est activée sur le projet, mais ne publie ce réglage nulle part dans son API. Cochez-les ici, une fois. Ne rien cocher laisse ReView les déduire des tasks déjà présentes.",
-  "shotgrid.steps.count": { "one": "{count} retenue", "other": "{count} retenues" },
+  "shotgrid.steps.count": {
+    "one": "{count} retenue",
+    "other": "{count} retenues"
+  },
   "shotgrid.steps.forAssets": "Pour les assets",
   "shotgrid.steps.forShots": "Pour les shots",
   "shotgrid.steps.search": "Rechercher une étape…",
@@ -2800,7 +2880,10 @@
   "shotgrid.crew.state.none": "Pas encore de compte",
   "shotgrid.crew.state.ineligible": "Ne peut pas être invité",
   "shotgrid.crew.done": "{created} compte(s) créé(s), {added} personne(s) ajoutée(s) au projet",
-  "shotgrid.crew.skipped": { "one": "{count} personne a été ignorée", "other": "{count} personnes ont été ignorées" },
+  "shotgrid.crew.skipped": {
+    "one": "{count} personne a été ignorée",
+    "other": "{count} personnes ont été ignorées"
+  },
   "shotgrid.crew.plan": "{create} compte(s) à créer, {add} à ajouter au projet",
   "shotgrid.sync.queued": "Une synchronisation est déjà en cours : celle-ci attend son tour.",
   "shotgrid.link.open": "Compte ShotGrid",
@@ -2841,7 +2924,10 @@
   "social.search": "Chercher une personne ou un fil",
   "social.people": "Personnes",
   "social.noMatch": "Aucun résultat pour cette recherche.",
-  "sequence.shotCount": { "one": "{count} shot", "other": "{count} shots" },
+  "sequence.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
   "filters.search": "Rechercher…",
   "filters.allStatuses": "Tous les statuts",
   "filters.allDepartments": "Tous les départements",
@@ -2864,9 +2950,18 @@
   "assign.unassigned": "Personne",
   "assign.done": "Assignation mise à jour",
   "assign.failed": "Impossible de changer l'assignation",
-  "assign.bulkTitle": { "one": "Assigner {count} élément", "other": "Assigner {count} éléments" },
-  "assign.doneCount": { "one": "{count} tâche mise à jour", "other": "{count} tâches mises à jour" },
-  "assign.skippedCount": { "one": "{count} élément ignoré : rien à assigner, ou droits insuffisants", "other": "{count} éléments ignorés : rien à assigner, ou droits insuffisants" },
+  "assign.bulkTitle": {
+    "one": "Assigner {count} élément",
+    "other": "Assigner {count} éléments"
+  },
+  "assign.doneCount": {
+    "one": "{count} tâche mise à jour",
+    "other": "{count} tâches mises à jour"
+  },
+  "assign.skippedCount": {
+    "one": "{count} élément ignoré : rien à assigner, ou droits insuffisants",
+    "other": "{count} éléments ignorés : rien à assigner, ou droits insuffisants"
+  },
   "assign.person": "Personne",
   "assign.departments": "Départements",
   "assign.departmentsHint": "Laissez vide pour couvrir toutes les tâches existantes. Cochez des départements pour les viser — et créer la tâche si elle manque.",
@@ -2929,11 +3024,17 @@
   "episode.noSequence.title": "Aucune sequence dans cet episode",
   "episode.noSequence.description": "Rattachez des sequences à cet episode depuis l'onglet Episodes du projet.",
   "episode.noShot": "Aucun shot dans cette sequence.",
-  "episode.sequenceCount": { "one": "{count} sequence", "other": "{count} sequences" },
+  "episode.sequenceCount": {
+    "one": "{count} sequence",
+    "other": "{count} sequences"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "Ouvrir l'episode",
   "episodes.reordered": "Ordre enregistré",
-  "episodes.createdCount": { "one": "{count} episode créé", "other": "{count} episodes créés" },
+  "episodes.createdCount": {
+    "one": "{count} episode créé",
+    "other": "{count} episodes créés"
+  },
   "episodes.attachTo": "Rattacher à un episode",
   "episodes.attached": "Sequence rattachée",
   "episodes.detach": "Détacher de son episode",
@@ -2944,7 +3045,10 @@
   "episodes.empty.title": "Aucun episode",
   "episodes.empty.description": "Ce projet n'a pas encore d'episode.",
   "episodes.empty.hint": "Créez les premiers avec le générateur ci-dessus.",
-  "episodes.unassignedCount": { "one": "{count} sequence sans episode", "other": "{count} sequences sans episode" },
+  "episodes.unassignedCount": {
+    "one": "{count} sequence sans episode",
+    "other": "{count} sequences sans episode"
+  },
   "episodes.unassignedHint": "Clic droit sur une sequence pour la rattacher à un episode.",
   "episodes.disabledHere": "Le niveau Episode est désactivé sur ce projet.",
   "episodes.settings.title": "Niveau Episode",
@@ -2953,8 +3057,14 @@
   "episodes.settings.enabled": "Niveau Episode activé",
   "episodes.settings.disabled": "Niveau Episode désactivé",
   "episodes.settings.keepsData": "L'éteindre ne fait que masquer le niveau : les episodes et leurs sequences reviennent intacts.",
-  "episodes.settings.stored": { "one": "{count} episode conservé", "other": "{count} episodes conservés" },
-  "episodes.settings.linked": { "one": "{count} sequence rattachée", "other": "{count} sequences rattachées" },
+  "episodes.settings.stored": {
+    "one": "{count} episode conservé",
+    "other": "{count} episodes conservés"
+  },
+  "episodes.settings.linked": {
+    "one": "{count} sequence rattachée",
+    "other": "{count} sequences rattachées"
+  },
   "error.UNAUTHENTICATED": "Vous n'êtes pas connecté.",
   "error.FORBIDDEN": "Accès refusé.",
   "error.NOT_FOUND": "Cet élément n'existe plus.",
@@ -3076,23 +3186,44 @@
   "imageSequence.hint": "Regroupée, chacune devient un seul média qu'on review comme une vidéo. Laissée telle quelle, chaque frame reste un fichier à part.",
   "imageSequence.group": "Regrouper en un seul média",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "one": "{count} fichier", "other": "{count} fichiers" },
-  "imageSequence.gaps": { "one": "{count} frame manquante", "other": "{count} frames manquantes" },
-  "imageSequence.others": { "one": "{count} autre fichier sera envoyé seul", "other": "{count} autres fichiers seront envoyés seuls" },
+  "imageSequence.files": {
+    "one": "{count} fichier",
+    "other": "{count} fichiers"
+  },
+  "imageSequence.gaps": {
+    "one": "{count} frame manquante",
+    "other": "{count} frames manquantes"
+  },
+  "imageSequence.others": {
+    "one": "{count} autre fichier sera envoyé seul",
+    "other": "{count} autres fichiers seront envoyés seuls"
+  },
   "imageSequence.confirm": "Envoyer en sequences d'images",
   "imageSequence.sendSeparately": "Envoyer fichier par fichier",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "Assemblage",
-  "assignees.label": { "one": "{count} personne assignée", "many": "{count} personnes assignées", "other": "{count} personnes assignées" },
+  "assignees.label": {
+    "one": "{count} personne assignée",
+    "many": "{count} personnes assignées",
+    "other": "{count} personnes assignées"
+  },
   "assignees.dialogTitle": "Personnes sur {name}",
   "assignees.searchPlaceholder": "Chercher quelqu'un…",
   "assignees.noMatch": "Personne ne correspond à cette recherche.",
-  "assignees.saved": { "one": "{count} personne assignée", "many": "{count} personnes assignées", "other": "{count} personnes assignées" },
+  "assignees.saved": {
+    "one": "{count} personne assignée",
+    "many": "{count} personnes assignées",
+    "other": "{count} personnes assignées"
+  },
   "assignees.menu": "Personnes…",
   "assignees.origin.direct": "Responsable de cet élément",
   "assignees.origin.child": "Responsable d'un élément à l'intérieur",
   "assignees.origin.task": "Assigné à une tâche",
-  "cards.awaitingReview": { "one": "{count} livraison en attente de review", "many": "{count} livraisons en attente de review", "other": "{count} livraisons en attente de review" },
+  "cards.awaitingReview": {
+    "one": "{count} livraison en attente de review",
+    "many": "{count} livraisons en attente de review",
+    "other": "{count} livraisons en attente de review"
+  },
   "cards.updatedAt": "Modifié {value}",
   "visibility.hide": "Masquer pour tout le monde",
   "visibility.show": "Afficher de nouveau",
@@ -3178,7 +3309,10 @@
   "note.gallery.carousel": "Carrousel",
   "note.gallery.columns": "Colonnes",
   "note.gallery.height": "Hauteur",
-  "note.gallery.count": { "one": "{count} image", "other": "{count} images" },
+  "note.gallery.count": {
+    "one": "{count} image",
+    "other": "{count} images"
+  },
   "note.image.align": "Alignement",
   "note.image.alignFull": "Pleine largeur",
   "note.image.alignCenter": "Centrée",
@@ -3200,9 +3334,18 @@
   "assetType.VEHICLE": "Véhicule",
   "assetType.FX": "FX",
   "assetType.OTHER": "Autre",
-  "bulk.status.title": { "one": "Statut de {count} shot", "other": "Statut de {count} shots" },
-  "bulk.status.done": { "one": "{count} shot mis à jour", "other": "{count} shots mis à jour" },
-  "bulk.status.partial": { "one": "{count} shot mis à jour, {failed} refusé(s)", "other": "{count} shots mis à jour, {failed} refusé(s)" },
+  "bulk.status.title": {
+    "one": "Statut de {count} shot",
+    "other": "Statut de {count} shots"
+  },
+  "bulk.status.done": {
+    "one": "{count} shot mis à jour",
+    "other": "{count} shots mis à jour"
+  },
+  "bulk.status.partial": {
+    "one": "{count} shot mis à jour, {failed} refusé(s)",
+    "other": "{count} shots mis à jour, {failed} refusé(s)"
+  },
   "bulk.status.menu": "Statut",
   "colorPicker.hue": "Teinte",
   "queryState.title": "Impossible de charger cette section",

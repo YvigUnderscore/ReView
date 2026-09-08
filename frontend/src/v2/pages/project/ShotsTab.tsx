@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Clapperboard, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
@@ -13,7 +13,6 @@ import EntityCard, { EntityContainer } from '../../components/EntityCard';
 import ListSentinel, { ListCount } from '../../components/ListSentinel';
 import { useStatusMenu } from '../../lib/useStatusMenu';
 import { useOmitMenu } from '../../lib/useOmitMenu';
-import { entriesOf } from '../../lib/menuSpec';
 import CreateEntityButton from '../../components/entity/CreateEntityButton';
 import EmptyState from '../../components/ui/empty-state';
 import ShotBulkBar from './ShotBulkBar';
@@ -27,7 +26,7 @@ import { useShotsQuery } from '../../lib/queries';
 import { usePipelineStatuses } from '../../lib/shotgridApi';
 import { useDepartments } from '../../lib/departmentsApi';
 import { useEntityMenus } from '../../lib/useEntityMenus';
-import { shotCardActions } from './shotCardActions';
+import { entityCardMenu } from './entityCardMenu';
 import { sortByCode, type Nomenclature, type Sequence, type Shot } from './projectTypes';
 import { useT } from '../../i18n';
 import { useSgLinks } from '../../components/shotgrid/useSgLinks';
@@ -57,6 +56,7 @@ export default function ShotsTab({
   nomenclature: Nomenclature;
 }) {
   const t = useT();
+  const navigate = useNavigate();
   const view = useViewMode(`shots:${projectId}`);
   // Suivi de notifications par shot (32.G, clic droit).
   const watch = useWatch();
@@ -214,16 +214,29 @@ export default function ShotsTab({
           </h3>
           <EntityContainer view={view}>
             {g.list.map((shot) => {
-              // Lien ShotGrid au clic droit seulement, et seulement si le projet est
-              // relié : sur un projet autonome, l'entrée n'existe pas.
-              const { manageActions, contextActions } = shotCardActions({
+              // Menu commun aux trois onglets (`entityCardMenu`) : même ordre, même
+              // vocabulaire. Le lien ShotGrid n'apparaît que si le projet y est relié.
+              const menu = entityCardMenu({
                 t,
+                kind: 'shot',
                 canManage,
                 sgUrl: sgLinks.linkFor('shot', shot.id),
-                watching: watch.isWatching('SHOT', shot.id),
-                onEdit: () => setEditing(shot),
-                onDelete: () => setDeleting(shot),
-                onWatch: () => watch.toggle('SHOT', shot.id),
+                watch: {
+                  watching: watch.isWatching('SHOT', shot.id),
+                  onToggle: () => watch.toggle('SHOT', shot.id),
+                },
+                state: {
+                  status: statusEntry(shot, { canEdit: canManage }),
+                  people: peopleEntry(
+                    { id: shot.id, label: shot.code, assignees: shot.assignees },
+                    canManage,
+                  ),
+                  omit: omitEntry(shot, { canEdit: canManage }),
+                  hide: hideEntry({ id: shot.id, label: shot.code }),
+                },
+                onOpen: () => void navigate(`/shots/${shot.id}`),
+                onSettings: () => setEditing(shot),
+                onTrash: () => setDeleting(shot),
               });
               return (
                 <EntityCard
@@ -262,14 +275,9 @@ export default function ShotsTab({
                       ? { selected: sel.isSelected(shot.id), onSelect: (m) => sel.onSelect(shot.id, m) }
                       : undefined
                   }
-                  actions={manageActions}
-                  contextEntries={entriesOf(
-                    statusEntry(shot, { canEdit: canManage }),
-                    peopleEntry({ id: shot.id, label: shot.code, assignees: shot.assignees }, canManage),
-                    omitEntry(shot, { canEdit: canManage }),
-                    hideEntry({ id: shot.id, label: shot.code }),
-                  )}
-                  contextActions={contextActions}
+                  actions={menu.hoverActions}
+                  contextEntries={menu.contextEntries}
+                  contextActions={menu.contextActions}
                 />
               );
             })}

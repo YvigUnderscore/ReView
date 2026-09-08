@@ -1,6 +1,5 @@
 {
   "auth.tagline": "VFX eta postprodukzio estudioentzako lankidetzazko media review plataforma.",
-
   "login.title": "Ongi etorri berriro.",
   "login.subtitle": "Hasi saioa zure review, zeregin eta boardetara itzultzeko.",
   "login.heading": "Hasi saioa",
@@ -12,7 +11,6 @@
   "login.error.credentials": "Helbide elektronikoa edo pasahitza okerra da.",
   "login.error.network": "Ezin da zerbitzariarekin konektatu. Saiatu berriro une baten buruan.",
   "login.error.generic": "Ezin izan da saioa hasi",
-
   "setup.title": "Ongi etorri ReViewera.",
   "setup.subtitle": "Konfiguratu zure estudioa bi urratsetan. Dena alda dezakezu gero.",
   "setup.step.studio": "Estudioa",
@@ -30,7 +28,6 @@
   "setup.submit": "Sortu estudioa",
   "setup.submitting": "Sortzen…",
   "setup.error.generic": "Ezin izan da konfiguratu",
-
   "display.title": "Bistaratzea",
   "display.theme": "Gaia",
   "display.theme.hint": "Jarraitu sistemari edo behartu argia/iluna.",
@@ -45,7 +42,6 @@
   "display.language.hint": "Interfazearen hizkuntza. Ekoizpeneko terminologia ingelesez mantentzen da.",
   "display.view": "Zerrenden bista lehenetsia",
   "display.view.hint": "Nonahi aplikatzen da. Aldatzen duzun zerrenda batek bere ezarpena gordetzen du berrezarri arte.",
-
   "language.select": "Aukeratu hizkuntza",
   "language.regional": "Eskualdeko hizkuntza",
   "language.notice.title": "Itzulpenak automatikoki sortuak dira",
@@ -59,24 +55,20 @@
   "language.coverage.complete": "Osorik itzulita",
   "language.fallbackNotice": "Itzuli gabeko esaldiak ingelesez agertuko dira.",
   "language.regionalSuffix": "— eskualdeko hizkuntza",
-
   "nav.home": "Hasiera",
   "nav.projects": "Proiektuak",
   "nav.reviews": "Reviews",
   "nav.members": "Kideak",
   "nav.settings": "Ezarpenak",
   "nav.documentation": "Dokumentazioa",
-
   "common.save": "Gorde",
   "common.cancel": "Utzi",
   "common.delete": "Ezabatu",
   "common.edit": "Editatu",
   "common.close": "Itxi",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Software librea AGPL-3.0 lizentziapean, inolako bermerik gabe.",
   "license.source": "Iturburu-kodea",
   "license.title": "Lizentzia",
-
   "common.confirm": "Berretsi",
   "common.previous": "Aurrekoa",
   "common.next": "Hurrengoa",
@@ -112,7 +104,6 @@
   "onboarding.help.title": "Laguntza behar duzu?",
   "onboarding.help.body": "Sakatu «?» lasterbideen zerrenda ikusteko (guztiak alda daitezke), eta gida osoa Dokumentazioan duzu.",
   "onboarding.start": "Hasi",
-
   "common.create": "Sortu",
   "common.open": "Ireki",
   "common.duplicate": "Bikoiztu",
@@ -169,7 +160,10 @@
   "projects.empty.canManage": "Sortu zure lehen proiektua «+ Sortu» botoiarekin, zure sequence, shot eta assetak antolatzeko.",
   "projects.empty.member": "Ez zara inongo proiektuko kide. Eskatu gainbegirale bati zu gehitzeko.",
   "projects.empty.action": "Sortu proiektu bat",
-  "projects.countLabel": { "one": "proiektu", "other": "proiektu" },
+  "projects.countLabel": {
+    "one": "proiektu",
+    "other": "proiektu"
+  },
   "projects.deleteMany.title": "Proiektuak ezabatu?",
   "projects.deleteMany.message": {
     "one": "Proiektu {count} zakarrontzira joango da. Administraziotik berreskura daiteke.",
@@ -188,15 +182,20 @@
   "reviews.empty.title": "Review-rik ez",
   "reviews.empty.description": "Ez dago iragazki hauekin bat datorren mediarik. Argitaratu media bat zeregin batetik review bat hasteko.",
   "reviews.draft": "Zirriborroa",
-  "reviews.count": { "one": "media {count}", "other": "{count} media" },
-  "reviews.countLabel": { "one": "media", "other": "media" },
+  "reviews.count": {
+    "one": "media {count}",
+    "other": "{count} media"
+  },
+  "reviews.countLabel": {
+    "one": "media",
+    "other": "media"
+  },
   "reviews.addToPlaylist": "Gehitu playlist-era…",
   "reviews.deleteMany.title": "Mediak ezabatu?",
   "reviews.deleteMany.message": {
     "one": "Media {count} zakarrontzira joango da.",
     "other": "{count} media zakarrontzira joango dira."
   },
-
   "common.rename": "Berrizendatu",
   "common.remove": "Kendu",
   "common.deletePermanently": "Betiko ezabatu",
@@ -235,7 +234,10 @@
   },
   "trash.deleted": "Betiko ezabatu da",
   "trash.group.media": "Mediak",
-  "trash.selectedCount": { "one": "{count} hautatuta", "other": "{count} hautatuta" },
+  "trash.selectedCount": {
+    "one": "{count} hautatuta",
+    "other": "{count} hautatuta"
+  },
   "trash.purged": {
     "one": "elementu {count} behin betiko ezabatu da",
     "other": "{count} elementu behin betiko ezabatu dira"
@@ -265,8 +267,10 @@
   },
   "assets.delete.title": "Asset-a ezabatu?",
   "assets.deleteMany.title": "Assetak ezabatu?",
-  "assets.countLabel": { "one": "asset", "other": "asset" },
-
+  "assets.countLabel": {
+    "one": "asset",
+    "other": "asset"
+  },
   "sequences.title": "Sequences",
   "sequences.empty.title": "Sequence-rik ez",
   "sequences.empty.description": "Proiektuaren sequence-ak hemen agertuko dira.",
@@ -304,7 +308,6 @@
   "playlists.delete.title": "Playlist-a ezabatu?",
   "playlists.unreadable": "Playlist honetan ez dago erreproduzi daitekeen mediarik",
   "playlists.inaccessible": "Playlist-a ez dago erabilgarri",
-
   "viewer.env.title": "Ingurunea",
   "viewer.hdri.title": "HDRI ingurunea (irudi bidezko argiztapena)",
   "viewer.hdri.background": "HDRI atzeko planoan",
@@ -350,7 +353,6 @@
   "viewer.bookmarks.title": "Gordetako ikuspegiak",
   "viewer.bookmarks.empty": "Ez dago gordetako ikuspegirik.",
   "viewer.bookmarks.save": "Gorde uneko ikuspegia — taldearekin partekatua",
-
   "viewer.focal.hint": "Foku-distantzia milimetrotan, 36 mm-ko sentsorea",
   "viewer.aperture.hint": "Eremu-sakonera — 0 = dena zorrotz",
   "viewer.tilt.hint": "Ikus-ardatzaren inguruko inklinazioa",
@@ -358,7 +360,6 @@
   "viewer.upAxis.hint2": "Y-down konbentzioa inportatzean zuzendua",
   "viewer.realScale.hint2": "Eskalak bounding box bidez bateratu gabe",
   "viewer.inspectionTint.hint": "Zure saiorako soilik",
-
   "shortcuts.title": "Teklatuko lasterbideak",
   "shortcuts.nav": "Nabigazioa",
   "shortcuts.hint": "Egin klik tekla batean berriro esleitzeko.",
@@ -430,10 +431,8 @@
   "lighting.default.title": "3D argiztapen lehenetsia",
   "lighting.default.none": "Bat ere ez (estudioko argiak)",
   "lighting.default.empty": "Lehenetsirik gabe: estudioko argiztapen neutroa.",
-
   "shortcuts.goProjects": "Joan proiektuetara",
   "shortcuts.showHelp": "Erakutsi lasterbideak",
-
   "whatsNew.title": "Berritasunak",
   "whatsNew.unavailable": "Changelog ez dago erabilgarri ({status})",
   "tree.noSequence": "Sequence-rik ez.",
@@ -482,7 +481,6 @@
   "dropzone.release": "Askatu igoera hasteko",
   "storage.title": "Biltegiratzea",
   "storage.unlimited.placeholder": "mugagabea",
-
   "common.undo": "Desegin",
   "common.redo": "Berregin",
   "viewer.duration": "Iraupena",
@@ -538,7 +536,6 @@
   "review.firstFrame": "Lehen frame-a",
   "review.playbackRate": "Erreprodukzio-kadentzia — timeline-a frame-etan jarraitzen du",
   "review.none": "bat ere ez",
-
   "viewer.guides.title": "Gidak",
   "viewer.guides.grid": "Lurreko sareta",
   "viewer.guides.axes": "Ardatz-hirukoa",
@@ -622,7 +619,6 @@
   "review.pipFrame": "Layout kameraren ikuspegia — arrastatu mugitzeko, heldulekua tamaina aldatzeko",
   "review.wipe.move": "Mugitu wipe-a (klik bikoitza: berrezarri)",
   "review.wipe.rotate": "Biratu barra (0/45/90°-tan itsatsita)",
-
   "review.guides.thirds": "Herenak",
   "review.guides.center": "Erdiko gurutzea",
   "review.guides.actionSafe.hint": "Ekintza-eremu segurua",
@@ -633,7 +629,6 @@
   "review.export.captureShort": "Ikuspegia kapturatu (PNG)",
   "review.file": "Fitxategia",
   "review.delivery": "Banaketa",
-
   "common.noData": "Daturik ez.",
   "common.reset": "Berrezarri",
   "common.host": "Ostalaria",
@@ -804,7 +799,6 @@
   "versions.unpublished": "Argitaratu gabeak",
   "versions.allMedia": "Media guztiak",
   "versions.decision": "Erabakia",
-
   "twofa.enabled": "2FA aktibatuta — gorde zure babes-kodeak",
   "twofa.disabled": "2FA desaktibatuta",
   "twofa.code": "6 digituko kodea",
@@ -835,7 +829,10 @@
   "asset.tree.direct": "asset-ari zuzenean lotutako version",
   "asset.tree.empty.title": "Oraindik ez da ezer argitaratu",
   "asset.tree.empty.description": "DCC batetik argitaratutako version-ak hemen agertzen dira, sailka antolatuta.",
-  "asset.tree.versionCount": { "one": "version {count}", "other": "{count} version" },
+  "asset.tree.versionCount": {
+    "one": "version {count}",
+    "other": "{count} version"
+  },
   "asset.tree.looseVersions": "Zereginik gabeko version",
   "asset.tree.noVersion": "version-ik ez",
   "asset.card.latest": "azkena: {name} · {date}",
@@ -916,10 +913,7 @@
   "review.exitTheatre": "Irten antzoki modutik (Ihes)",
   "review.cameraViewSaved": "Kameraren ikuspegia gorde da",
   "email.placeholder": "zu@estudioa.eus",
-
-
   "common.escKey": "Ihes",
-
   "common.start": "Hasiera",
   "common.end": "Amaiera",
   "common.name": "Izena",
@@ -950,14 +944,23 @@
   "comments.atTime": "{time} s-an",
   "comments.filter.open": "Irekiak",
   "comments.reopened": "Iruzkina berriro ireki da",
-  "comments.replyCount": { "one": "erantzun {count}", "other": "{count} erantzun" },
-  "comments.total": { "one": "guztira iruzkin {count}.", "other": "guztira {count} iruzkin." },
+  "comments.replyCount": {
+    "one": "erantzun {count}",
+    "other": "{count} erantzun"
+  },
+  "comments.total": {
+    "one": "guztira iruzkin {count}.",
+    "other": "guztira {count} iruzkin."
+  },
   "comments.delete.message": "Iruzkina behin betiko ezabatuko da.",
   "comments.delete.messageWithReplies": {
     "one": "Iruzkina eta bere erantzun {count} behin betiko ezabatuko dira.",
     "other": "Iruzkina eta bere {count} erantzun behin betiko ezabatuko dira."
   },
-  "comments.openCount": { "one": "{count} irekita", "other": "{count} irekita" },
+  "comments.openCount": {
+    "one": "{count} irekita",
+    "other": "{count} irekita"
+  },
   "comments.filter.none": "Ez dago iruzkinik egoera honetan.",
   "comments.editField": "Editatu iruzkina",
   "decision.current": "Uneko erabakia:",
@@ -987,10 +990,16 @@
   "versions.lastVersions": "version",
   "versions.noMatch": "Ez dago iragazkiekin bat datorren version-ik.",
   "versions.location": "Kokapena",
-  "versions.total": { "one": "guztira version {count}.", "other": "guztira {count} version." },
+  "versions.total": {
+    "one": "guztira version {count}.",
+    "other": "guztira {count} version."
+  },
   "mediaAccess.empty": "Oraindik ez dago sarbiderik erregistratuta.",
   "mediaAccess.hint": "Lerro bat kontsulta bakoitzeko (30 minututan bikoiztuak kenduta) — barne reviewak eta bezeroen partekatzeak batera.",
-  "mediaAccess.total": { "one": "guztira sarbide {count}.", "other": "guztira {count} sarbide." },
+  "mediaAccess.total": {
+    "one": "guztira sarbide {count}.",
+    "other": "guztira {count} sarbide."
+  },
   "ocio.intro": "OCIO kolore-kudeaketako configak. Eskuratu ACES config ofizialak (",
   "ocio.none": "Ez dago config-ik instalatuta. Arakatu beheko ACES bertsioak.",
   "ocio.browse": "Arakatu ACES bertsioak",
@@ -1076,7 +1085,6 @@
   "review.publish": "Argitaratu taldearentzat",
   "review.cameraAnimGltf": "Kamera-animazioa (glTF)",
   "review.importAnimation": "Inportatu animazio bat",
-
   "project.status.active": "Aktibo",
   "project.status.onHold": "Etenda",
   "projects.tab.active": "Aktiboak",
@@ -1084,25 +1092,23 @@
   "projects.created": "«{name}» proiektua sortu da",
   "projects.duplicated": "«{source}» oinarri hartuta «{name}» proiektua sortu da",
   "projects.unarchived": "«{name}» proiektua artxibotik atera da",
-  "projects.count": { "one": "proiektu {count}", "other": "{count} proiektu" },
+  "projects.count": {
+    "one": "proiektu {count}",
+    "other": "{count} proiektu"
+  },
   "admin.group.studio": "Estudioa",
   "admin.group.content": "Edukiak",
   "admin.group.reviewContexts": "Review testuinguruak",
   "admin.group.communications": "Komunikazioak",
   "admin.group.maintenance": "Mantentzea",
-
   "project.status.completed": "Amaituta",
   "project.status.archived": "Artxibatuta",
-
   "task.dueDate": "Epemuga",
   "marker.delete": "Ezabatu markatzailea",
   "usd.recomposeFrom": "Birkonposatu USDtik",
-
   "marker.rename": "Berrizendatu / kolorez aldatu…",
-
   "sessions.line": "{ip} · {created}(e)an konektatua · {seen}(e)an aktibo",
   "sessions.unknownIp": "IP ezezaguna",
-
   "admin.tab.users": "Erabiltzaileak",
   "admin.tab.comments": "Iruzkinak",
   "admin.tab.statuses": "Egoerak",
@@ -1111,12 +1117,10 @@
   "admin.tab.color": "Kolorea (OCIO)",
   "admin.topStorage": "Biltegiratze handiena / erabiltzailea",
   "admin.onlineCount": "{count} linean",
-
   "presence.available": "Eskuragarri",
   "presence.away": "Kanpoan",
   "presence.dnd": "Ez molestatu",
   "presence.onlineCount": "Linean · {count}",
-
   "common.enable": "Gaitu",
   "common.loading": "Kargatzen…",
   "common.nextMonth": "Hurrengo hilabetea",
@@ -1146,7 +1150,10 @@
   "tokens.copy": "Kopiatu",
   "tokens.created": "Tokena sortu da",
   "tokens.expired": "Iraungita",
-  "tokens.expiry.days": { "one": "egun {count}", "other": "{count} egun" },
+  "tokens.expiry.days": {
+    "one": "egun {count}",
+    "other": "{count} egun"
+  },
   "tokens.expiry.label": "Iraungitzea",
   "tokens.new": "Token berria",
   "tokens.passwordHint": "Token batek zure saioa baino gehiago irauten du: zure pasahitzak sorrera baieztatzen du.",
@@ -1175,7 +1182,10 @@
   "sessions.title": "Saio aktiboak",
   "sessions.thisDevice": "Gailu hau",
   "sessions.empty": "Ez dago saiorik erregistratuta (eguneratzea baino lehenagoko konexioak ez dira agertzen — hasi saioa berriro hemen ikusteko).",
-  "sessions.revokedCount": { "one": "saio {count} baliogabetu da", "other": "{count} saio baliogabetu dira" },
+  "sessions.revokedCount": {
+    "one": "saio {count} baliogabetu da",
+    "other": "{count} saio baliogabetu dira"
+  },
   "twofa.qr": "2FA izena emateko QR kodea",
   "twofa.scan": "Eskaneatu QR kode hau zure aplikazioarekin (Google Authenticator, 1Password…) eta gero idatzi erakusten duen kodea.",
   "twofa.wrongCode": "Kodea okerra da",
@@ -1197,11 +1207,20 @@
   "production.attention.unassigned": "Esleitu gabe",
   "production.attention.review": "Review baten zain",
   "production.attention.none": "Ezer ez hemen, hobe.",
-  "production.attention.more": { "one": "eta beste {count}", "other": "eta beste {count}" },
+  "production.attention.more": {
+    "one": "eta beste {count}",
+    "other": "eta beste {count}"
+  },
   "production.workload.empty": "Ez dago ezer egiteko.",
-  "production.workload.late": { "one": "{count} atzeratuta", "other": "{count} atzeratuta" },
+  "production.workload.late": {
+    "one": "{count} atzeratuta",
+    "other": "{count} atzeratuta"
+  },
   "production.pace.window": "Behaketa-leihoa",
-  "production.pace.weeks": { "one": "aste {count}", "other": "{count} aste" },
+  "production.pace.weeks": {
+    "one": "aste {count}",
+    "other": "{count} aste"
+  },
   "production.pace.perWeek": "{value} astean",
   "production.pace.projected": "Aurreikusitako amaiera",
   "production.pace.noProjection": "Erritmo nahikorik ez amaiera aurreikusteko",
@@ -1219,7 +1238,10 @@
   "stats.notes": "Oharrak",
   "stats.approvedRatio": "{approved}/{total} onartuta · % {pct}",
   "stats.retakes": "Retakeak",
-  "stats.days": { "one": "{count} e", "other": "{count} e" },
+  "stats.days": {
+    "one": "{count} e",
+    "other": "{count} e"
+  },
   "stats.drawCalls": "Draw calls",
   "stats.fps": "fps",
   "stats.measuring": "Neurtzen…",
@@ -1232,13 +1254,19 @@
   "sequences.empty.hint": "Sortu zure sequenceak goiko «+» botoiarekin — shotak taldekatzen dituzte (SQ010, SQ020…).",
   "playlists.empty.hint": "Hautatu mediak Reviews orrian eta gero «Gehitu playlist-era» (eskuineko klika), edo sortu hemen playlist huts bat.",
   "playlists.delete.message": "«{name}» ezabatuko da. Erreferentziatzen dituen versionak ez dira aldatuko.",
-  "playlists.versionCount": { "one": "version {count}", "other": "{count} version" },
+  "playlists.versionCount": {
+    "one": "version {count}",
+    "other": "{count} version"
+  },
   "shares.newShort": "Esteka berria",
   "shares.empty": "Ez dago partekatze-estekarik. Sortu bat proiektu honen media argitaratuetara konturik gabe sartzeko.",
   "shares.createdBy": "{name}(e)k sortua",
   "shares.expiresOn": "Iraungitzea {date}",
   "shares.viewedOn": "Ikusia {date}",
-  "shares.viewCount": { "one": "ikustaldi", "other": "ikustaldi" },
+  "shares.viewCount": {
+    "one": "ikustaldi",
+    "other": "ikustaldi"
+  },
   "shares.scope": "Estekak zer irekitzen duen",
   "shares.scope.project": "Proiektu osoa",
   "shares.scope.playlist": "playlist bakarra",
@@ -1249,21 +1277,36 @@
   "shares.scope.pick.media": "Sartu beharreko euskarriak",
   "shares.scope.pick.none": "Aukeratu…",
   "shares.scope.empty": "Proiektu honek ez du oraindik argitaratutako euskarririk.",
-  "shares.scope.selected": { "one": "euskarri {count} hautatuta", "other": "{count} euskarri hautatuta" },
+  "shares.scope.selected": {
+    "one": "euskarri {count} hautatuta",
+    "other": "{count} euskarri hautatuta"
+  },
   "shares.scope.needsTarget": "Aukeratu esteka honek zer irekitzen duen sortu aurretik.",
   "shares.scope.badge.project": "Proiektu osoa",
-  "shares.scope.badge.selection": { "one": "euskarri {count}", "other": "{count} euskarri" },
+  "shares.scope.badge.selection": {
+    "one": "euskarri {count}",
+    "other": "{count} euskarri"
+  },
   "shares.scope.badge.restricted": "Mugatua",
   "shares.email": "Bidali posta elektronikoz…",
   "shares.email.title": "Bidali esteka posta elektronikoz",
   "shares.email.recipients": "Hartzaileak",
   "shares.email.recipients.placeholder": "Helbide bat lerro bakoitzeko",
-  "shares.email.count": { "one": "helbide {count} baliozkoa", "other": "{count} helbide baliozko" },
-  "shares.email.tooMany": { "one": "Gehienez hartzaile {count} bidalketa bakoitzeko", "other": "Gehienez {count} hartzaile bidalketa bakoitzeko" },
+  "shares.email.count": {
+    "one": "helbide {count} baliozkoa",
+    "other": "{count} helbide baliozko"
+  },
+  "shares.email.tooMany": {
+    "one": "Gehienez hartzaile {count} bidalketa bakoitzeko",
+    "other": "Gehienez {count} hartzaile bidalketa bakoitzeko"
+  },
   "shares.email.note": "Oharra (aukerakoa)",
   "shares.email.note.placeholder": "Hitz batzuk hartzailearentzat",
   "shares.email.submit": "Bidali",
-  "shares.email.sent": { "one": "Esteka hartzaile {count}(e)ri bidalita", "other": "Esteka {count} hartzaileri bidalita" },
+  "shares.email.sent": {
+    "one": "Esteka hartzaile {count}(e)ri bidalita",
+    "other": "Esteka {count} hartzaileri bidalita"
+  },
   "shares.email.invalid": "Sartu gutxienez helbide baliozko bat.",
   "shares.email.willMentionExpiry": "Mezuak esango du esteka {date}(e)an iraungitzen dela.",
   "shares.email.noExpiry": "Mezuak esango du esteka ez dela iraungitzen.",
@@ -1297,7 +1340,6 @@
   "naming.warningFile": "«{name}» ez dator bat proiektuaren izendegiarekin.",
   "naming.compliant": "Betetzen du",
   "naming.nonCompliant": "Ez du betetzen",
-
   "mode.watch": "Ikusi",
   "mode.watch.hint": "Erreproduzitu, zooma egin, version-ak alderatu — editatzeko tresnarik ez. Bezeroei ematen zaien modu bakarra.",
   "mode.annotate": "Oharrak",
@@ -1375,7 +1417,6 @@
   "action.resetSpatial": "Jatorrizko ikuspegia",
   "action.fitMedia": "Pantailara egokitu",
   "action.resetMedia": "Benetako tamaina 1:1",
-
   "common.add": "Gehitu",
   "common.show": "Erakutsi",
   "common.hide": "Ezkutatu",
@@ -1412,7 +1453,10 @@
   "voice.start": "Grabatu ahots-ohar bat",
   "dropzone.drop": "Jaregin zure fitxategiak hemen",
   "batch.nothing": "Ez dago sortzeko ezer.",
-  "batch.createCount": { "one": "Sortu elementu {count}", "other": "Sortu {count} elementu" },
+  "batch.createCount": {
+    "one": "Sortu elementu {count}",
+    "other": "Sortu {count} elementu"
+  },
   "batch.creation": "Shots/sequences sorrera",
   "notif.markAllRead": "Markatu dena irakurritzat",
   "file.readFailed": "Ezin izan da fitxategia irakurri",
@@ -1461,22 +1505,40 @@
   "decision.badge": "Erabakia: {status}",
   "decision.dialogTitle": "Review erabakia — {version}",
   "project.dupHint": "Sequence-ak, shot-ak eta ezarpenak berriz sortzen dira. Mediak, version-ak eta iruzkinak ez dira kopiatzen.",
-  "shots.created": { "one": "shot {count} sortu da", "other": "{count} shot sortu dira" },
+  "shots.created": {
+    "one": "shot {count} sortu da",
+    "other": "{count} shot sortu dira"
+  },
   "shots.delete.message": "«{code}» shot-a eta bere zereginak/versionak zakarrontzira eramango dira.",
   "shots.omitted": "Muntaketan kenduta",
   "shots.searchPlaceholder": "Shot kodea edo izena…",
-  "shots.count": { "one": "shot {count}", "other": "{count} shot" },
-  "shots.countLabel": { "one": "shot", "other": "shot" },
-  "shots.trashedCount": { "one": "shot {count} zakarrontzira eraman da", "other": "{count} shot zakarrontzira eraman dira" },
+  "shots.count": {
+    "one": "shot {count}",
+    "other": "{count} shot"
+  },
+  "shots.countLabel": {
+    "one": "shot",
+    "other": "shot"
+  },
+  "shots.trashedCount": {
+    "one": "shot {count} zakarrontzira eraman da",
+    "other": "{count} shot zakarrontzira eraman dira"
+  },
   "shots.deleteMany.title": "Shotak ezabatu?",
-  "shots.deleteMany.message": { "one": "shot {count} eta bere zereginak/versionak zakarrontzira eramango dira.", "other": "{count} shot eta haien zereginak/versionak zakarrontzira eramango dira." },
+  "shots.deleteMany.message": {
+    "one": "shot {count} eta bere zereginak/versionak zakarrontzira eramango dira.",
+    "other": "{count} shot eta haien zereginak/versionak zakarrontzira eramango dira."
+  },
   "shots.new": "Shot berria",
   "shot.newAsset": "+ Sortu asset bat",
   "shot.omitted": "Muntaketatik kanpo",
   "shot.omittedHint": "shot-a muntaketatik kanpo geratzen da, baina bere lana, version-ak eta iruzkinak gordetzen ditu.",
   "assets.emptyHint": "Sortu zure asset berrerabilgarriak «+ Sortu» erabiliz (pertsonaiak, dekoratuak, propak…).",
   "assets.attach": "Lotu",
-  "assets.count": { "one": "asset {count}", "other": "{count} asset" },
+  "assets.count": {
+    "one": "asset {count}",
+    "other": "{count} asset"
+  },
   "assets.created": "«{name}» asset-a sortu da",
   "assets.createdAttached": "«{name}» asset-a sortu eta lotu da",
   "assets.delete.message": "«{name}» asset-a eta bere version/euskarriak zakarrontzira eramango dira.",
@@ -1574,7 +1636,6 @@
   "email.digestOff": "Eguneroko laburpena itzalita",
   "email.weeklyOn": "Asteko txostena piztuta",
   "email.weeklyOff": "Asteko txostena itzalita",
-
   "review.hotspotAttached": "📍 hotspot erantsita (viewer-aren erdia)",
   "review.camViewSaved": "📷 Uneko kamera-ikuspegia gordeko da",
   "review.labelsVisible": "Etiketak ikusgai",
@@ -1620,7 +1681,10 @@
   "live.coHostAdded": "{name} kopilotua da — lehenengo elkarreragiten duenak hartzen du agintea",
   "live.coHostRemoved": "{name} jada ez da kopilotua",
   "live.handedOver": "Agintea {name}(r)i eman zaio (pilotua)",
-  "live.participants": { "one": "(parte-hartzaile {count}).", "other": "({count} parte-hartzaile)." },
+  "live.participants": {
+    "one": "(parte-hartzaile {count}).",
+    "other": "({count} parte-hartzaile)."
+  },
   "live.running": "Zuzeneko review-a abian",
   "live.runningWithPilot": "Zuzeneko review-a abian — {pilot} pilotua",
   "live.coHosts": "Kopilotuak",
@@ -1659,8 +1723,14 @@
   "video.qualityOriginal": "Jatorrizkoa",
   "video.qualitySet": "Erreprodukzio-kalitatea: {height}p",
   "video.volume": "Bolumena",
-  "video.compareOffsetAhead": { "one": "B A baino frame {count} aurrerago dago", "other": "B A baino {count} frame aurrerago dago" },
-  "video.compareOffsetBehind": { "one": "B A baino frame {count} atzerago dago", "other": "B A baino {count} frame atzerago dago" },
+  "video.compareOffsetAhead": {
+    "one": "B A baino frame {count} aurrerago dago",
+    "other": "B A baino {count} frame aurrerago dago"
+  },
+  "video.compareOffsetBehind": {
+    "one": "B A baino frame {count} atzerago dago",
+    "other": "B A baino {count} frame atzerago dago"
+  },
   "video.compareOffsetNone": "B A-rekin lerrokatuta dago",
   "video.waveform.show": "Audioaren uhin-forma",
   "video.waveform.scrub": "Audioaren uhin-forma — arrastatu mugitzeko",
@@ -1713,11 +1783,13 @@
   "media.delete.message": "«{name}» proiektuaren zakarrontzira eramango da.",
   "media.draft": "Zirriborroa",
   "stage.notSavedPublishCancelled": "Eszenaratzea gorde gabe — argitalpena bertan behera",
-
   "task.status.inProgress": "Abian",
   "task.status.retake": "Retake",
   "task.checklist": "Egiaztapen-zerrenda",
-  "task.count": { "one": "zeregin {count}", "other": "{count} zeregin" },
+  "task.count": {
+    "one": "zeregin {count}",
+    "other": "{count} zeregin"
+  },
   "task.created": "«{name}» zeregina sortu da",
   "task.createdNamed": "Zeregina sortu da: {name}",
   "task.fallbackName": "{id}. zeregina",
@@ -1741,7 +1813,6 @@
   "panel.liveRender": "Zuzeneko renderizazioa",
   "panel.performance": "Errendimendua",
   "panel.techSheet": "Fitxa teknikoa",
-
   "compare.siblingUnreachable": "Alderaketarako splat-a eskuraezina",
   "compare.grid": "Sareta · {count}",
   "compare.gridHint": "Bi version edo gehiago: 2×2 sareta sinkronizatua (gehienez {max} pantailan).",
@@ -1762,7 +1833,10 @@
   "camera.curves": "Kurbak",
   "camera.frameSelection": "Doitu",
   "camera.home": "Jatorria",
-  "camera.maxBookmarks": { "one": "gehienez bookmark {count}", "other": "gehienez {count} bookmark" },
+  "camera.maxBookmarks": {
+    "one": "gehienez bookmark {count}",
+    "other": "gehienez {count} bookmark"
+  },
   "camera.viewN": "{n} ikuspegia",
   "camera.clearPresentation": "Aurkezpena ezabatu",
   "camera.clearConfirm": "Kamera, bere animazioa eta eszenaratzea guztientzat ezabatzen dira.",
@@ -1814,7 +1888,6 @@
   "scene.lodAuto": "LOD piztu 15 fps azpitik, askatu 25 gainetik",
   "scene.progressive": "Hodeiaren orriak eskaeran kargatzen ditu",
   "scene.lodOn": "LOD beti aktibo",
-
   "storage.k.original": "Igotako fitxategia (jatorrizkoa)",
   "storage.k.original.note": "Egiaren iturria, inoiz ez da aldatzen. Bide-izena slug hierarkikoen bidez irakurgarria.",
   "storage.k.hls": "HLS renditions (bideoa)",
@@ -1847,7 +1920,6 @@
   "storage.k.attachment.note": "Review harien irudiak, PDFak, zip-ak eta ahots-oharrak.",
   "storage.k.quarantine": "Koarentenako fitxategia",
   "storage.k.quarantine.note": "Igoera kutsatuta aurkitu da (ClamAV), banaketatik bereizita.",
-
   "storage.cat.originals": "Jatorrizkoak (projects/)",
   "storage.cat.derived": "Eratorriak (derived/)",
   "storage.cat.studio": "Estudioaren liburutegiak (studio/)",
@@ -1869,7 +1941,6 @@
   "storage.s.hdris": "HDRI (3D argiztapena)",
   "storage.s.ocio": "OCIO konfigurazioak (kolorea)",
   "storage.s.other": "Besteak",
-
   "audit.create": "sortua",
   "audit.update": "aldatua",
   "audit.delete": "ezabatua",
@@ -1884,7 +1955,6 @@
   "settings.hint.liveImage": "adib. 4 — zooma/kokapena",
   "settings.hint.slack": "https://hooks.slack.com/services/… — erabakiak eta argitalpenak",
   "settings.hint.sourceUrl": "https://… — nahitaezkoa aldatutako version bat hedatzen baduzu",
-
   "channel.posX": "Kok. X",
   "channel.posY": "Kok. Y",
   "channel.posZ": "Kok. Z",
@@ -1895,7 +1965,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "Joan {time} segundoko keyframe-era",
   "channel.keyAt": "{time} s-ko keyframe",
-
   "admin.announce.allRoles": "(markarik ez = guztiak)",
   "admin.announce.updated": "Iragarkia aldatuta",
   "admin.announce.created": "Iragarkia sortuta",
@@ -2025,7 +2094,10 @@
   "storage.map.hint": "S3/MinIO bucket bakarra instantzia osorako; media bat ezabatzeak bere jatorrizko karpeta eta aurrizkia garbitzen ditu",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objektuak",
-  "storage.objectsCount": { "one": "objektu {count}", "other": "{count} objektu" },
+  "storage.objectsCount": {
+    "one": "objektu {count}",
+    "other": "{count} objektu"
+  },
   "storage.originals": "Jatorrizkoak",
   "storage.totalUsage": "Guztizko erabilera",
   "storage.orphanProject": "(proiektu ezezaguna — umezurtza?)",
@@ -2038,7 +2110,10 @@
   "system.agplHint": "Instantzia hau urrutitik erabiltzen duen edonork bere iturburuak eskuratu ahal izan behar ditu. Aldatu baduzu, «Iturburu-kodea» ezarpena zure biltegira zuzendu.",
   "system.thirdParty": "Hirugarrenen mendekotasunak",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md (biltegiaren erroa)",
-  "system.cores": { "one": "nukleo {count}", "other": "{count} nukleo" },
+  "system.cores": {
+    "one": "nukleo {count}",
+    "other": "{count} nukleo"
+  },
   "system.disk": "Diskoa — {used} / {total}",
   "system.memory": "Memoria — {used} / {total}",
   "system.licenseTitle": "Lizentzia eta iturburu-kodea",
@@ -2075,7 +2150,10 @@
   "webhooks.delivery.pending": "Zain",
   "webhooks.delivery.delivered": "Bidalita",
   "webhooks.delivery.failed": "Huts egin du",
-  "webhooks.delivery.attempts": { "one": "saiakera {count}", "other": "{count} saiakera" },
+  "webhooks.delivery.attempts": {
+    "one": "saiakera {count}",
+    "other": "{count} saiakera"
+  },
   "webhooks.delivery.replay": "Bidalketa hau berriro bidali",
   "webhooks.delivery.replayed": "Bidalketa berriro ilaran jarri da",
   "webhooks.delivery.replayOf": "#{value} bidalketaren errepikapena",
@@ -2114,19 +2192,24 @@
   "splat.isolate": "Isolatu",
   "model3d.transformModel": "Eraldatu eredua",
   "model3d.unnamed": "(izenik gabe)",
-
   "jobs.storageCleanup": "Biltegiratzea garbitzea",
   "jobs.webhooks": "Irteerako webhook-ak",
   "jobs.activeCount": "{count} aktibo",
   "jobs.waitingCount": "{count} zain",
   "jobs.failedCount": "{count} huts",
   "jobs.completedCount": "{count} osatuta",
-  "jobs.attempts": { "one": "saiakera {count}", "other": "{count} saiakera" },
+  "jobs.attempts": {
+    "one": "saiakera {count}",
+    "other": "{count} saiakera"
+  },
   "jobs.cleanedFailed": {
     "one": "huts egindako lan {count} garbitu da",
     "other": "huts egindako {count} lan garbitu dira"
   },
-  "jobs.retriedCount": { "one": "lan {count} berrabiarazi da.", "other": "{count} lan berrabiarazi dira." },
+  "jobs.retriedCount": {
+    "one": "lan {count} berrabiarazi da.",
+    "other": "{count} lan berrabiarazi dira."
+  },
   "jobs.purgedDerived": "{count} euskarri arindu dira (HLS + spritea kenduta)",
   "jobs.purge": "Garbitu",
   "jobs.purgeNow": "Garbitu orain",
@@ -2134,7 +2217,6 @@
   "jobs.running": "Abian: {list}",
   "jobs.queueUnavailable": "Ilara ez dago erabilgarri.",
   "jobs.webhookRef": "{id} webhook-a",
-
   "model3d.transformPrim": "Eraldatu prim-a",
   "model3d.compareUnreachable": "Alderaketarako eredua eskuraezina",
   "model3d.loadFailed": "Ezin izan dira ereduak kargatu",
@@ -2223,7 +2305,6 @@
   "entity.unavailable.failed": "Ezin izan da kargatu",
   "entity.unavailable.failed.hint": "Zerbitzariak ez du erantzun. Saiatu berriro une batean.",
   "entity.unavailable.backToProjects": "Itzuli proiektuetara",
-
   "version.emptyMedia": "Ez dago mediarik version honetan.",
   "version.created": "«{name}» version sortu da",
   "version.current": "Unekoa",
@@ -2232,15 +2313,20 @@
   "version.noVisibleMedia": "Ez dago euskarri ikusgairik {version} version-ean",
   "version.unreachable": "Version ez dago eskuragarri",
   "version.dropNew": "Jaregin fitxategiak hemen hurrengo version sortzeko",
-  "version.publishAll": { "one": "Argitaratu ({count})", "other": "Argitaratu ({count})" },
+  "version.publishAll": {
+    "one": "Argitaratu ({count})",
+    "other": "Argitaratu ({count})"
+  },
   "version.dropShot": "Askatu zeregin baten azpian version bat sortzeko",
   "version.inReview": "review-n",
-
   "playlist.added": {
     "one": "{count} version gehitu da «{name}»-ra",
     "other": "{count} version gehitu dira «{name}»-ra"
   },
-  "playlist.skipped": { "one": "({count} lehendik zegoen)", "other": "({count} lehendik zeuden)" },
+  "playlist.skipped": {
+    "one": "({count} lehendik zegoen)",
+    "other": "({count} lehendik zeuden)"
+  },
   "playlist.targetCount": {
     "one": "{count} elementu — bat datorren version bakoitza playlist-aren amaieran gehitzen da.",
     "other": "{count} elementu — bat datorren version bakoitza playlist-aren amaieran gehitzen da."
@@ -2254,20 +2340,28 @@
   "playlist.rename": "Berrizendatu playlist",
   "playlist.emptyHint": "Gehitu version-ak ezkerreko katalogotik.",
   "playlist.addTo": "Gehitu playlist batera",
-  "playlist.addedTo": { "one": "version {count} gehitu da {name}(e)ra", "other": "{count} version gehitu dira {name}(e)ra" },
-  "playlist.addedCount": { "one": "version {count} gehitu da", "other": "{count} version gehitu dira" },
+  "playlist.addedTo": {
+    "one": "version {count} gehitu da {name}(e)ra",
+    "other": "{count} version gehitu dira {name}(e)ra"
+  },
+  "playlist.addedCount": {
+    "one": "version {count} gehitu da",
+    "other": "{count} version gehitu dira"
+  },
   "playlist.alreadyThere": "Playlist-ean dago jada",
   "playlist.nothingToAdd": "Ez dago argitaratutakorik gehitzeko",
   "playlist.catalog.search": "Shot, asset edo version…",
   "playlist.catalog.latestOnly": "Azkena bakarrik",
   "playlist.catalog.add": "Gehitu playlist-era",
-  "playlist.catalog.addSelected": { "one": "Gehitu {count}", "other": "Gehitu {count}" },
+  "playlist.catalog.addSelected": {
+    "one": "Gehitu {count}",
+    "other": "Gehitu {count}"
+  },
   "playlist.catalog.present": "Jada barruan",
   "playlist.catalog.empty": "Ezerk ez dator bat iragazki hauekin.",
   "playlist.autoAdvance": "Erreproduzitu hurrengoa automatikoki",
   "csv.export": "CSV esportatu",
   "csv.import": "CSV inportatu",
-
   "calendar.today": "Gaur",
   "calendar.dueMoved": "Epemuga aldatuta",
   "nav.breadcrumb": "Nabigazio-bidea",
@@ -2332,21 +2426,34 @@
   "draw.textPlaceholder": "Testua…",
   "info.uvSets": "UV multzoak",
   "track.animTrack": "Animazio-pista",
-
   "sequences.assets": "sequence-aren assetak ({count})",
-  "sequences.createdCount": { "one": "sequence {count} sortu da", "other": "{count} sequence sortu dira" },
+  "sequences.createdCount": {
+    "one": "sequence {count} sortu da",
+    "other": "{count} sequence sortu dira"
+  },
   "sequences.delete.message": "«{code}» sequence-a eta bere shotak zakarrontzira eramango dira.",
-  "sequences.open": "Ireki sequence",
-  "sequences.countLabel": { "one": "sequence", "other": "sequence" },
-  "sequences.trashedCount": { "one": "sequence {count} zakarrontzira eraman da", "other": "{count} sequence zakarrontzira eraman dira" },
+  "sequences.countLabel": {
+    "one": "sequence",
+    "other": "sequence"
+  },
+  "sequences.trashedCount": {
+    "one": "sequence {count} zakarrontzira eraman da",
+    "other": "{count} sequence zakarrontzira eraman dira"
+  },
   "sequences.deleteMany.title": "Sequenceak ezabatu?",
-  "sequences.deleteMany.message": { "one": "sequence {count} eta bere shotak zakarrontzira eramango dira.", "other": "{count} sequence eta haien shotak zakarrontzira eramango dira." },
+  "sequences.deleteMany.message": {
+    "one": "sequence {count} eta bere shotak zakarrontzira eramango dira.",
+    "other": "{count} sequence eta haien shotak zakarrontzira eramango dira."
+  },
   "sequences.new": "Sequence berria",
   "view.cards": "Txartel ikuspegia",
   "view.compact": "Ikuspegi trinkoa",
   "view.followAccount": "Kontuaren ezarpena jarraitu",
   "drafts.title": "Zain dauden zirriborroak",
-  "drafts.count": { "one": "zirriborro {count} zain", "other": "{count} zirriborro zain" },
+  "drafts.count": {
+    "one": "zirriborro {count} zain",
+    "other": "{count} zirriborro zain"
+  },
   "uploads.failedFor": "{name} igotzeak huts egin du",
   "uploads.sending": "Bidaltzen % {pct}",
   "uploads.title": "Transferentziak ({count})",
@@ -2374,8 +2481,14 @@
   "transform.rotationYaw": "Y biraketa (yaw)",
   "transform.rotationRoll": "Z biraketa (roll)",
   "timeline.defaultName": "Muntaketa",
-  "timeline.shotCount": { "one": "shot {count}", "other": "{count} shot" },
-  "timeline.gapCount": { "one": "hutsune {count}", "other": "{count} hutsune" },
+  "timeline.shotCount": {
+    "one": "shot {count}",
+    "other": "{count} shot"
+  },
+  "timeline.gapCount": {
+    "one": "hutsune {count}",
+    "other": "{count} hutsune"
+  },
   "timeline.noMedia": "Mediorik ez",
   "timeline.durationMismatch": "Mediaren iraupena shot-ean adierazitako frame tarteaz bestelakoa da.",
   "timeline.previousShot": "Aurreko shot",
@@ -2417,7 +2530,10 @@
   "chat.sendMessage": "Bidali mezua",
   "chat.group.create": "Talde berria",
   "chat.group.namePlaceholder": "Taldearen izena (aukerakoa)",
-  "chat.group.members": { "one": "kide {count}", "other": "{count} kide" },
+  "chat.group.members": {
+    "one": "kide {count}",
+    "other": "{count} kide"
+  },
   "chat.rename": "Berrizendatu taldea",
   "chat.addMembers": "Gehitu parte-hartzaileak",
   "chat.leave": "Utzi elkarrizketa",
@@ -2426,7 +2542,10 @@
   "chat.unmute": "Berraktibatu jakinarazpenak",
   "chat.search": "Bilatu norbait",
   "chat.search.empty": "Ez da inor aurkitu",
-  "chat.system.joined": { "one": "{names} elkarrizketara batu da", "other": "{names} elkarrizketara batu dira" },
+  "chat.system.joined": {
+    "one": "{names} elkarrizketara batu da",
+    "other": "{names} elkarrizketara batu dira"
+  },
   "chat.system.left": "{name} elkarrizketatik atera da",
   "chat.system.removed": "{name} kendu dute",
   "chat.system.renamed": "Taldearen izena « {title} » da orain",
@@ -2519,7 +2638,10 @@
   "shotgrid.setup.connect": "Lotu proiektua",
   "shotgrid.setup.connected": "« {name} »-(e)ra lotuta",
   "shotgrid.setup.connectFailed": "Ezin izan da lotu",
-  "shotgrid.setup.testOk": { "one": "Konexioa ondo — {count} proiektu ikusgai", "other": "Konexioa ondo — {count} proiektu ikusgai" },
+  "shotgrid.setup.testOk": {
+    "one": "Konexioa ondo — {count} proiektu ikusgai",
+    "other": "Konexioa ondo — {count} proiektu ikusgai"
+  },
   "shotgrid.sync.runFull": "Sinkronizatu",
   "shotgrid.sync.runReconcile": "Berreskuratu",
   "shotgrid.sync.reconcileHint": "Berreskuratze-leihoa berrirakurtzen du — etenaldi baten ondoren erabiltzeko.",
@@ -2537,7 +2659,10 @@
   "shotgrid.sync.noLog": "Sarrerarik ez",
   "shotgrid.sync.keepSg": "Mantendu ShotGrid",
   "shotgrid.sync.keepReview": "Mantendu ReView",
-  "shotgrid.sync.conflicts": { "one": "{count} gatazka erabakiaren zain", "other": "{count} gatazka erabakiaren zain" },
+  "shotgrid.sync.conflicts": {
+    "one": "{count} gatazka erabakiaren zain",
+    "other": "{count} gatazka erabakiaren zain"
+  },
   "shotgrid.conflict.resolved": "Gatazka ebatzita",
   "shotgrid.conflict.failed": "Ezin da ebatzi",
   "shotgrid.conflict.detail": "{field}: ReView « {review} » · ShotGrid « {shotgrid} »",
@@ -2606,8 +2731,14 @@
   "shotgrid.versions.selectAllPending": "Hautatu falta den guztia",
   "shotgrid.versions.summary": "{total} publishes, {pending} inportatu gabe",
   "shotgrid.versions.intro": "Zerrendatu proiektu honen ShotGrid publishes eta ekarri falta dena.",
-  "shotgrid.versions.importSelected": { "one": "Inportatu {count} elementu", "other": "Inportatu {count} elementu" },
-  "shotgrid.versions.imported": { "one": "{count} publish inportatuta", "other": "{count} publishes inportatuta" },
+  "shotgrid.versions.importSelected": {
+    "one": "Inportatu {count} elementu",
+    "other": "Inportatu {count} elementu"
+  },
+  "shotgrid.versions.imported": {
+    "one": "{count} publish inportatuta",
+    "other": "{count} publishes inportatuta"
+  },
   "shotgrid.admin.title": "ShotGrid guneak",
   "shotgrid.admin.projects": "Lotutako proiektuak",
   "shotgrid.admin.deleted": "ShotGrid gunea ezabatuta",
@@ -2617,7 +2748,10 @@
   "shotgrid.admin.deleteConfirm": "« {name} » gunea ezabatu? Bere kredentzialak ezabatuko dira.",
   "shotgrid.admin.empty": "Ez dago ShotGrid gunerik erregistratuta. Gehitu bat proiektu baten ShotGrid fitxatik.",
   "shotgrid.admin.intro": "Kredentzialak hemen daude, behin estudio osorako: proiektuen konexio bakoitzak berrerabiltzen ditu, eta gako bat aldatzea leku bakarrean egiten da. Sekreturik ez zaio inoiz nabigatzaileari itzultzen.",
-  "shotgrid.admin.linkedProjects": { "one": "{count} proiektu", "other": "{count} proiektu" },
+  "shotgrid.admin.linkedProjects": {
+    "one": "{count} proiektu",
+    "other": "{count} proiektu"
+  },
   "shotgrid.domain.hierarchy": "Sequences, shots, assets",
   "shotgrid.domain.hierarchy.hint": "Ekoizpenaren banaketa, cut mugak eta shot egoerak.",
   "shotgrid.domain.tasks": "Zereginak",
@@ -2712,7 +2846,10 @@
   "shotgrid.sync.publishOff": "ShotGrid-era bidaltzea desaktibatuta dago: hemen argitaratutako version-ak hemen geratzen dira. Aldatu Ezarpenak → Argitalpena atalean.",
   "shotgrid.steps.title": "Proiektu honek erabiltzen dituen pipeline urratsak",
   "shotgrid.steps.hint": "ShotGrid-ek proiektuan ikusgaitasuna gaituta duten urratsak baino ez ditu eskaintzen, baina ezarpen hori ez du bere APIan argitaratzen. Markatu hemen behin. Ezer markatzen ez baduzu, ReView-k dauden task-etatik ondorioztatuko ditu.",
-  "shotgrid.steps.count": { "one": "{count} hautatuta", "other": "{count} hautatuta" },
+  "shotgrid.steps.count": {
+    "one": "{count} hautatuta",
+    "other": "{count} hautatuta"
+  },
   "shotgrid.steps.forAssets": "Asset-entzat",
   "shotgrid.steps.forShots": "Shot-entzat",
   "shotgrid.steps.search": "Bilatu urrats bat…",
@@ -2743,7 +2880,10 @@
   "shotgrid.crew.state.none": "Konturik ez oraindik",
   "shotgrid.crew.state.ineligible": "Ezin da gonbidatu",
   "shotgrid.crew.done": "{created} kontu sortu dira, {added} pertsona gehitu dira proiektuan",
-  "shotgrid.crew.skipped": { "one": "Pertsona {count} baztertu da", "other": "{count} pertsona baztertu dira" },
+  "shotgrid.crew.skipped": {
+    "one": "Pertsona {count} baztertu da",
+    "other": "{count} pertsona baztertu dira"
+  },
   "shotgrid.crew.plan": "{create} kontu sortzeko, {add} proiektuan gehitzeko",
   "shotgrid.sync.queued": "Sinkronizazio bat abian da: hau zain geratu da.",
   "shotgrid.link.open": "ShotGrid kontua",
@@ -2784,7 +2924,10 @@
   "social.search": "Bilatu pertsona edo haria",
   "social.people": "Pertsonak",
   "social.noMatch": "Ez dago emaitzarik bilaketa honetarako.",
-  "sequence.shotCount": { "one": "shot {count}", "other": "{count} shot" },
+  "sequence.shotCount": {
+    "one": "shot {count}",
+    "other": "{count} shot"
+  },
   "filters.search": "Bilatu…",
   "filters.allStatuses": "Egoera guztiak",
   "filters.allDepartments": "Sail guztiak",
@@ -2807,9 +2950,18 @@
   "assign.unassigned": "Inor ez",
   "assign.done": "Esleipena eguneratu da",
   "assign.failed": "Ezin izan da esleipena aldatu",
-  "assign.bulkTitle": { "one": "Esleitu elementu {count}", "other": "Esleitu {count} elementu" },
-  "assign.doneCount": { "one": "Zeregin {count} eguneratu da", "other": "{count} zeregin eguneratu dira" },
-  "assign.skippedCount": { "one": "Elementu {count} baztertu da: ez dago zer esleiturik, edo baimenik ez", "other": "{count} elementu baztertu dira: ez dago zer esleiturik, edo baimenik ez" },
+  "assign.bulkTitle": {
+    "one": "Esleitu elementu {count}",
+    "other": "Esleitu {count} elementu"
+  },
+  "assign.doneCount": {
+    "one": "Zeregin {count} eguneratu da",
+    "other": "{count} zeregin eguneratu dira"
+  },
+  "assign.skippedCount": {
+    "one": "Elementu {count} baztertu da: ez dago zer esleiturik, edo baimenik ez",
+    "other": "{count} elementu baztertu dira: ez dago zer esleiturik, edo baimenik ez"
+  },
   "assign.person": "Pertsona",
   "assign.departments": "Sailak",
   "assign.departmentsHint": "Utzi hutsik dauden zeregin guztiak hartzeko. Markatu sailak haiei zuzentzeko —eta zeregina sortzeko falta bada.",
@@ -2872,11 +3024,17 @@
   "episode.noSequence.title": "Ez dago sequence-rik episode honetan",
   "episode.noSequence.description": "Erantsi sequences episode honi proiektuaren Episodes fitxatik.",
   "episode.noShot": "Ez dago shot-ik sequence honetan.",
-  "episode.sequenceCount": { "one": "sequence {count}", "other": "{count} sequence" },
+  "episode.sequenceCount": {
+    "one": "sequence {count}",
+    "other": "{count} sequence"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "Ireki episode-a",
   "episodes.reordered": "Ordena gordeta",
-  "episodes.createdCount": { "one": "episode {count} sortuta", "other": "{count} episode sortuta" },
+  "episodes.createdCount": {
+    "one": "episode {count} sortuta",
+    "other": "{count} episode sortuta"
+  },
   "episodes.attachTo": "Erantsi episode bati",
   "episodes.attached": "Sequence erantsita",
   "episodes.detach": "Askatu bere episode-tik",
@@ -2887,7 +3045,10 @@
   "episodes.empty.title": "Episode-rik ez",
   "episodes.empty.description": "Proiektu honek ez du oraindik episode-rik.",
   "episodes.empty.hint": "Sortu lehenak goiko sorgailuarekin.",
-  "episodes.unassignedCount": { "one": "sequence {count} episode gabe", "other": "{count} sequence episode gabe" },
+  "episodes.unassignedCount": {
+    "one": "sequence {count} episode gabe",
+    "other": "{count} sequence episode gabe"
+  },
   "episodes.unassignedHint": "Egin klik eskuinaz sequence batean episode bati eransteko.",
   "episodes.disabledHere": "Episode maila desaktibatuta dago proiektu honetan.",
   "episodes.settings.title": "Episode maila",
@@ -2896,8 +3057,14 @@
   "episodes.settings.enabled": "Episode maila gaituta",
   "episodes.settings.disabled": "Episode maila desaktibatuta",
   "episodes.settings.keepsData": "Itzaltzeak maila ezkutatu baino ez du egiten: episodes eta beren sequences oso-osorik itzultzen dira.",
-  "episodes.settings.stored": { "one": "episode {count} gordeta", "other": "{count} episode gordeta" },
-  "episodes.settings.linked": { "one": "sequence {count} erantsita", "other": "{count} sequence erantsita" },
+  "episodes.settings.stored": {
+    "one": "episode {count} gordeta",
+    "other": "{count} episode gordeta"
+  },
+  "episodes.settings.linked": {
+    "one": "sequence {count} erantsita",
+    "other": "{count} sequence erantsita"
+  },
   "error.UNAUTHENTICATED": "Ez zaude saioa hasita.",
   "error.FORBIDDEN": "Sarbidea ukatuta.",
   "error.NOT_FOUND": "Elementu hau jada ez dago.",
@@ -3019,23 +3186,41 @@
   "imageSequence.hint": "Multzokatuta, bakoitza media bakar bat bihurtzen da, bideo bat bezala review egiteko. Bereizita, frame bakoitza fitxategi bat da.",
   "imageSequence.group": "Media bakar batean multzokatu",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "one": "fitxategi {count}", "other": "{count} fitxategi" },
-  "imageSequence.gaps": { "one": "frame {count} falta da", "other": "{count} frame falta dira" },
-  "imageSequence.others": { "one": "beste fitxategi {count} bakarrik bidaliko da", "other": "beste {count} fitxategi bakarrik bidaliko dira" },
+  "imageSequence.files": {
+    "one": "fitxategi {count}",
+    "other": "{count} fitxategi"
+  },
+  "imageSequence.gaps": {
+    "one": "frame {count} falta da",
+    "other": "{count} frame falta dira"
+  },
+  "imageSequence.others": {
+    "one": "beste fitxategi {count} bakarrik bidaliko da",
+    "other": "beste {count} fitxategi bakarrik bidaliko dira"
+  },
   "imageSequence.confirm": "Irudi sequences gisa bidali",
   "imageSequence.sendSeparately": "Fitxategiz fitxategi bidali",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "Muntatzen",
-  "assignees.label": { "one": "pertsona {count} esleituta", "other": "{count} pertsona esleituta" },
+  "assignees.label": {
+    "one": "pertsona {count} esleituta",
+    "other": "{count} pertsona esleituta"
+  },
   "assignees.dialogTitle": "{name} elementuko pertsonak",
   "assignees.searchPlaceholder": "Bilatu norbait…",
   "assignees.noMatch": "Inork ez du bilaketa hau betetzen.",
-  "assignees.saved": { "one": "pertsona {count} esleituta", "other": "{count} pertsona esleituta" },
+  "assignees.saved": {
+    "one": "pertsona {count} esleituta",
+    "other": "{count} pertsona esleituta"
+  },
   "assignees.menu": "Pertsonak…",
   "assignees.origin.direct": "Elementu honen arduraduna",
   "assignees.origin.child": "Barruko zerbaiten arduraduna",
   "assignees.origin.task": "Zeregin bati esleituta",
-  "cards.awaitingReview": { "one": "entrega {count} review zain", "other": "{count} entrega review zain" },
+  "cards.awaitingReview": {
+    "one": "entrega {count} review zain",
+    "other": "{count} entrega review zain"
+  },
   "cards.updatedAt": "Aldatua {value}",
   "visibility.hide": "Ezkutatu guztientzat",
   "visibility.show": "Erakutsi berriro",
@@ -3121,7 +3306,10 @@
   "note.gallery.carousel": "Karrusela",
   "note.gallery.columns": "Zutabeak",
   "note.gallery.height": "Altuera",
-  "note.gallery.count": { "one": "irudi {count}", "other": "{count} irudi" },
+  "note.gallery.count": {
+    "one": "irudi {count}",
+    "other": "{count} irudi"
+  },
   "note.image.align": "Lerrokatzea",
   "note.image.alignFull": "Zabalera osoa",
   "note.image.alignCenter": "Zentratuta",
@@ -3143,9 +3331,18 @@
   "assetType.VEHICLE": "Ibilgailua",
   "assetType.FX": "FX",
   "assetType.OTHER": "Bestelakoa",
-  "bulk.status.title": { "one": "{count} shot-en egoera", "other": "{count} shot-en egoera" },
-  "bulk.status.done": { "one": "{count} shot eguneratuta", "other": "{count} shot eguneratuta" },
-  "bulk.status.partial": { "one": "{count} shot eguneratuta, {failed} baztertuta", "other": "{count} shot eguneratuta, {failed} baztertuta" },
+  "bulk.status.title": {
+    "one": "{count} shot-en egoera",
+    "other": "{count} shot-en egoera"
+  },
+  "bulk.status.done": {
+    "one": "{count} shot eguneratuta",
+    "other": "{count} shot eguneratuta"
+  },
+  "bulk.status.partial": {
+    "one": "{count} shot eguneratuta, {failed} baztertuta",
+    "other": "{count} shot eguneratuta, {failed} baztertuta"
+  },
   "bulk.status.menu": "Egoera",
   "colorPicker.hue": "Tonua",
   "queryState.title": "Atal hau ezin izan da kargatu",

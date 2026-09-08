@@ -11,8 +11,7 @@ import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
-import { entriesOf } from '../../lib/menuSpec';
-import { assetCardActions } from './assetCardActions';
+import { entityCardMenu } from './entityCardMenu';
 import { useAssignMenu } from '../../lib/useAssignMenu';
 import { useEntityMenus } from '../../lib/useEntityMenus';
 import BulkAssignDialog from '../../components/entity/BulkAssignDialog';
@@ -174,17 +173,26 @@ export default function AssetsTab({
       ) : (
         <EntityContainer view={view}>
           {visible.map((a) => {
-            const { manageActions, contextActions } = assetCardActions({
-              asset: a,
+            // Menu commun aux trois onglets (`entityCardMenu`) : même ordre, même
+            // vocabulaire, quelles que soient les entrées que ce type d'entité offre.
+            const menu = entityCardMenu({
               t,
+              kind: 'asset',
               canManage,
               sgUrl: sgLinks.linkFor('asset', a.id),
-              watching: watch.isWatching('ASSET', a.id),
-              onEdit: () => setEditing(a),
-              onLink: () => setAssigning(a),
-              onDelete: () => setDeleting(a),
+              watch: {
+                watching: watch.isWatching('ASSET', a.id),
+                onToggle: () => watch.toggle('ASSET', a.id),
+              },
+              state: {
+                assign: assignEntry(a, canManage),
+                people: peopleEntry({ id: a.id, label: a.name, assignees: a.assignees }, canManage),
+                hide: hideEntry({ id: a.id, label: a.name }),
+              },
               onOpen: () => void navigate(`/assets/${a.id}`),
-              onWatch: () => watch.toggle('ASSET', a.id),
+              onSettings: () => setEditing(a),
+              onLink: () => setAssigning(a),
+              onTrash: () => setDeleting(a),
             });
             return (
               <EntityCard
@@ -213,13 +221,9 @@ export default function AssetsTab({
                     : undefined
                 }
                 favorite={{ type: 'ASSET', entityId: a.id }}
-                actions={manageActions}
-                contextEntries={entriesOf(
-                  assignEntry(a, canManage),
-                  peopleEntry({ id: a.id, label: a.name, assignees: a.assignees }, canManage),
-                  hideEntry({ id: a.id, label: a.name }),
-                )}
-                contextActions={contextActions}
+                actions={menu.hoverActions}
+                contextEntries={menu.contextEntries}
+                contextActions={menu.contextActions}
               />
             );
           })}
@@ -242,7 +246,8 @@ export default function AssetsTab({
               onClick: () => setBulkAssigning(true),
             },
             {
-              label: t('common.delete'),
+              // Le geste met à la corbeille (`softDelete`) — le dire, comme sur la carte.
+              label: t('common.moveToTrash'),
               icon: <Trash2 size={14} />,
               danger: true,
               onClick: () => setBulkDeleting(true),

@@ -1,6 +1,5 @@
 {
   "auth.tagline": "面向 VFX 与后期制作工作室的协作式媒体 review 平台。",
-
   "login.title": "欢迎回来。",
   "login.subtitle": "登录后即可回到你的 review、任务和 board。",
   "login.heading": "登录",
@@ -12,7 +11,6 @@
   "login.error.credentials": "邮箱或密码不正确。",
   "login.error.network": "无法连接服务器，请稍后重试。",
   "login.error.generic": "登录失败",
-
   "setup.title": "欢迎使用 ReView。",
   "setup.subtitle": "两步完成工作室配置，之后随时可以修改。",
   "setup.step.studio": "工作室",
@@ -30,7 +28,6 @@
   "setup.submit": "创建工作室",
   "setup.submitting": "正在创建…",
   "setup.error.generic": "配置失败",
-
   "display.title": "显示",
   "display.theme": "主题",
   "display.theme.hint": "跟随系统，或强制使用浅色/深色。",
@@ -45,7 +42,6 @@
   "display.language.hint": "界面语言。制作相关术语保持英文。",
   "display.view": "列表默认视图",
   "display.view.hint": "适用于所有列表。单独切换过的列表会保留自己的设置，直到你重置它。",
-
   "language.select": "选择语言",
   "language.regional": "地区语言",
   "language.notice.title": "译文由机器生成",
@@ -58,24 +54,20 @@
   "language.coverage.complete": "已全部翻译",
   "language.fallbackNotice": "未翻译的内容将显示英文。",
   "language.regionalSuffix": "— 地区语言",
-
   "nav.home": "首页",
   "nav.projects": "项目",
   "nav.reviews": "Reviews",
   "nav.members": "成员",
   "nav.settings": "设置",
   "nav.documentation": "帮助文档",
-
   "common.save": "保存",
   "common.cancel": "取消",
   "common.delete": "删除",
   "common.edit": "编辑",
   "common.close": "关闭",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon。基于 AGPL-3.0 许可的自由软件，不提供任何担保。",
   "license.source": "源代码",
   "license.title": "许可证",
-
   "common.confirm": "确认",
   "common.previous": "上一步",
   "common.next": "下一步",
@@ -111,7 +103,6 @@
   "onboarding.help.title": "需要帮助？",
   "onboarding.help.body": "按「?」查看快捷键列表（均可重新配置），完整指南在「帮助文档」中。",
   "onboarding.start": "开始使用",
-
   "common.create": "创建",
   "common.open": "打开",
   "common.duplicate": "复制",
@@ -157,7 +148,9 @@
   "projects.name": "项目名称",
   "projects.name.placeholder": "我的项目",
   "projects.trashed": "项目已移入回收站",
-  "projects.trashedCount": { "other": "已将 {count} 个项目移入回收站" },
+  "projects.trashedCount": {
+    "other": "已将 {count} 个项目移入回收站"
+  },
   "projects.unarchive": "取消归档",
   "projects.empty.archived.title": "没有已归档的项目",
   "projects.empty.archived.description": "你归档的项目（通过「编辑 → 状态『已归档』」）会显示在这里，只读。",
@@ -165,9 +158,13 @@
   "projects.empty.canManage": "点击「+ 创建」新建第一个项目，用来组织你的 sequence、shot 和 asset。",
   "projects.empty.member": "你还不是任何项目的成员。请让监制把你加进来。",
   "projects.empty.action": "创建项目",
-  "projects.countLabel": { "other": "个项目" },
+  "projects.countLabel": {
+    "other": "个项目"
+  },
   "projects.deleteMany.title": "删除这些项目？",
-  "projects.deleteMany.message": { "other": "{count} 个项目将被移入回收站，可在管理后台恢复。" },
+  "projects.deleteMany.message": {
+    "other": "{count} 个项目将被移入回收站，可在管理后台恢复。"
+  },
   "projects.delete.title": "删除该项目？",
   "projects.delete.message": "项目「{name}」将被移入回收站，你可以在管理后台恢复它。",
   "reviews.trashed": "媒体已移入回收站",
@@ -181,12 +178,17 @@
   "reviews.empty.title": "没有 review",
   "reviews.empty.description": "没有媒体符合这些筛选条件。从任务中发布一个媒体即可开始 review。",
   "reviews.draft": "草稿",
-  "reviews.count": { "other": "{count} 个媒体" },
-  "reviews.countLabel": { "other": "个媒体" },
+  "reviews.count": {
+    "other": "{count} 个媒体"
+  },
+  "reviews.countLabel": {
+    "other": "个媒体"
+  },
   "reviews.addToPlaylist": "加入 playlist…",
   "reviews.deleteMany.title": "删除这些媒体？",
-  "reviews.deleteMany.message": { "other": "{count} 个媒体将被移入回收站。" },
-
+  "reviews.deleteMany.message": {
+    "other": "{count} 个媒体将被移入回收站。"
+  },
   "common.rename": "重命名",
   "common.remove": "移除",
   "common.deletePermanently": "永久删除",
@@ -219,13 +221,21 @@
   "trash.empty.description": "从项目中删除的内容会进入这里，并且仍可恢复。",
   "trash.delete.title": "永久删除？",
   "trash.restored": "已恢复",
-  "trash.restoredCount": { "other": "已恢复 {count} 项" },
+  "trash.restoredCount": {
+    "other": "已恢复 {count} 项"
+  },
   "trash.deleted": "已永久删除",
   "trash.group.media": "媒体",
-  "trash.selectedCount": { "other": "已选 {count} 项" },
-  "trash.purged": { "other": "已永久删除 {count} 项" },
+  "trash.selectedCount": {
+    "other": "已选 {count} 项"
+  },
+  "trash.purged": {
+    "other": "已永久删除 {count} 项"
+  },
   "trash.delete.message": "「{name}」将从数据库和存储中删除。此操作不可撤销。",
-  "trash.deleteMany.message": { "other": "{count} 项将从数据库和存储中删除。不可撤销。" },
+  "trash.deleteMany.message": {
+    "other": "{count} 项将从数据库和存储中删除。不可撤销。"
+  },
   "trash.selectEverything": "全选",
   "trash.group.versions": "version",
   "assets.title": "可复用 asset",
@@ -240,11 +250,14 @@
   "assets.unwatch": "取消关注该 asset",
   "assets.assign": "指派到 shot / sequence",
   "assets.trashed": "asset 已移入回收站",
-  "assets.trashedCount": { "other": "已将 {count} 个 asset 移入回收站" },
+  "assets.trashedCount": {
+    "other": "已将 {count} 个 asset 移入回收站"
+  },
   "assets.delete.title": "删除该 asset？",
   "assets.deleteMany.title": "删除这些 asset？",
-  "assets.countLabel": { "other": "个 asset" },
-
+  "assets.countLabel": {
+    "other": "个 asset"
+  },
   "sequences.title": "Sequence",
   "sequences.empty.title": "没有 sequence",
   "sequences.empty.description": "项目的 sequence 会显示在这里。",
@@ -282,7 +295,6 @@
   "playlists.delete.title": "删除该 playlist？",
   "playlists.unreadable": "该 playlist 中没有可播放的媒体",
   "playlists.inaccessible": "playlist 不可用",
-
   "viewer.env.title": "环境",
   "viewer.hdri.title": "HDRI 环境（基于图像的照明）",
   "viewer.hdri.background": "HDRI 作背景",
@@ -328,7 +340,6 @@
   "viewer.bookmarks.title": "已保存视角",
   "viewer.bookmarks.empty": "没有保存的视角。",
   "viewer.bookmarks.save": "保存当前视角 — 与团队共享",
-
   "viewer.focal.hint": "焦距以毫米计，36 mm 传感器",
   "viewer.aperture.hint": "景深 — 0 表示全画面清晰",
   "viewer.tilt.hint": "绕视线轴倾斜",
@@ -336,7 +347,6 @@
   "viewer.upAxis.hint2": "导入时校正 Y-down 约定",
   "viewer.realScale.hint2": "不通过 bounding box 统一尺度",
   "viewer.inspectionTint.hint": "仅对当前会话生效",
-
   "shortcuts.title": "键盘快捷键",
   "shortcuts.nav": "导航",
   "shortcuts.hint": "点击某个按键即可重新设置。",
@@ -408,10 +418,8 @@
   "lighting.default.title": "默认 3D 灯光",
   "lighting.default.none": "无（工作室灯光）",
   "lighting.default.empty": "没有默认值：中性工作室灯光。",
-
   "shortcuts.goProjects": "前往项目",
   "shortcuts.showHelp": "显示快捷键",
-
   "whatsNew.title": "新功能",
   "whatsNew.unavailable": "更新日志不可用（{status}）",
   "tree.noSequence": "没有 sequence。",
@@ -451,13 +459,14 @@
   "decision.saved": "已记录决定",
   "notifications.title": "通知",
   "notifications.empty": "没有通知。",
-  "notifications.unreadAria": { "other": "通知，{count} 条未读" },
+  "notifications.unreadAria": {
+    "other": "通知，{count} 条未读"
+  },
   "assets.assignSaved": "指派已保存",
   "presence.aloneHere": "没有其他人。",
   "dropzone.release": "松开即可开始上传",
   "storage.title": "存储",
   "storage.unlimited.placeholder": "不限",
-
   "common.undo": "撤销",
   "common.redo": "重做",
   "viewer.duration": "时长",
@@ -513,7 +522,6 @@
   "review.firstFrame": "首 frame",
   "review.playbackRate": "播放帧率 — timeline 仍以 frame 计",
   "review.none": "无",
-
   "viewer.guides.title": "参考线",
   "viewer.guides.grid": "地面网格",
   "viewer.guides.axes": "坐标轴指示",
@@ -597,7 +605,6 @@
   "review.pipFrame": "layout 摄像机视图 — 拖动移动，拉手柄缩放",
   "review.wipe.move": "移动 wipe（双击：重置）",
   "review.wipe.rotate": "旋转分隔条（吸附到 0/45/90°）",
-
   "review.guides.thirds": "三分线",
   "review.guides.center": "中心十字",
   "review.guides.actionSafe.hint": "动作安全区",
@@ -608,7 +615,6 @@
   "review.export.captureShort": "捕获视图（PNG）",
   "review.file": "文件",
   "review.delivery": "分发",
-
   "common.noData": "没有数据。",
   "common.reset": "重置",
   "common.host": "主机",
@@ -723,15 +729,21 @@
   "transcode.crf": "质量（CRF）",
   "transcode.renditions": "质量档位（renditions）",
   "adminTrash.restored": "项目已恢复",
-  "adminTrash.restoredCount": { "other": "已恢复 {count} 个项目" },
+  "adminTrash.restoredCount": {
+    "other": "已恢复 {count} 个项目"
+  },
   "adminTrash.deleted": "项目已永久删除",
   "adminTrash.empty": "回收站中没有项目。",
   "adminTrash.deleteMany.title": "永久删除这些项目？",
   "adminTrash.delete.title": "永久删除该项目？",
   "adminTrash.deletedOn": "{date} 删除",
-  "adminTrash.purged": { "other": "已永久删除 {count} 个项目" },
+  "adminTrash.purged": {
+    "other": "已永久删除 {count} 个项目"
+  },
   "adminTrash.purge.message": "「{name}」及其全部媒体将从数据库和存储中删除。不可撤销。",
-  "adminTrash.purgeMany.message": { "other": "{count} 个项目及其全部媒体将从数据库和存储中删除。不可撤销。" },
+  "adminTrash.purgeMany.message": {
+    "other": "{count} 个项目及其全部媒体将从数据库和存储中删除。不可撤销。"
+  },
   "userDetail.noProject": "未加入任何项目。",
   "userDetail.revokeSession": "撤销该会话",
   "userDetail.noSession": "没有活动会话。",
@@ -769,7 +781,6 @@
   "versions.unpublished": "未发布",
   "versions.allMedia": "全部媒体",
   "versions.decision": "决定",
-
   "twofa.enabled": "已开启 2FA — 请保存好备用码",
   "twofa.disabled": "已关闭 2FA",
   "twofa.code": "6 位验证码",
@@ -800,7 +811,9 @@
   "asset.tree.direct": "直接挂在 asset 上的 version",
   "asset.tree.empty.title": "尚未发布任何内容",
   "asset.tree.empty.description": "从 DCC 发布的 version 会按部门归类显示在这里。",
-  "asset.tree.versionCount": { "other": "{count} 个 version" },
+  "asset.tree.versionCount": {
+    "other": "{count} 个 version"
+  },
   "asset.tree.looseVersions": "无任务的 version",
   "asset.tree.noVersion": "没有 version",
   "asset.card.latest": "最新：{name} · {date}",
@@ -881,10 +894,7 @@
   "review.exitTheatre": "退出剧场模式（Esc）",
   "review.cameraViewSaved": "已保存摄像机视角",
   "email.placeholder": "you@studio.com",
-
-
   "common.escKey": "Esc",
-
   "common.start": "开始",
   "common.end": "结束",
   "common.name": "名称",
@@ -915,11 +925,19 @@
   "comments.atTime": "第 {time} 秒",
   "comments.filter.open": "未解决",
   "comments.reopened": "评论已重新打开",
-  "comments.replyCount": { "other": "{count} 条回复" },
-  "comments.total": { "other": "共 {count} 条评论。" },
+  "comments.replyCount": {
+    "other": "{count} 条回复"
+  },
+  "comments.total": {
+    "other": "共 {count} 条评论。"
+  },
   "comments.delete.message": "该评论将被永久删除。",
-  "comments.delete.messageWithReplies": { "other": "该评论及其 {count} 条回复将被永久删除。" },
-  "comments.openCount": { "other": "{count} 条未解决" },
+  "comments.delete.messageWithReplies": {
+    "other": "该评论及其 {count} 条回复将被永久删除。"
+  },
+  "comments.openCount": {
+    "other": "{count} 条未解决"
+  },
   "comments.filter.none": "该状态下没有评论。",
   "comments.editField": "编辑评论",
   "decision.current": "当前决定：",
@@ -949,10 +967,14 @@
   "versions.lastVersions": "个 version",
   "versions.noMatch": "没有 version 符合筛选条件。",
   "versions.location": "位置",
-  "versions.total": { "other": "共 {count} 个 version。" },
+  "versions.total": {
+    "other": "共 {count} 个 version。"
+  },
   "mediaAccess.empty": "暂时没有访问记录。",
   "mediaAccess.hint": "每次查看一行（30 分钟内去重）——内部 review 与客户分享合并统计。",
-  "mediaAccess.total": { "other": "共 {count} 次访问。" },
+  "mediaAccess.total": {
+    "other": "共 {count} 次访问。"
+  },
   "ocio.intro": "OCIO 色彩管理 config。可获取官方 ACES config（",
   "ocio.none": "尚未安装 config。请浏览下方的 ACES 版本。",
   "ocio.browse": "浏览 ACES 版本",
@@ -974,7 +996,9 @@
   "users.noMatch": "没有账号符合筛选条件。",
   "users.new": "新建用户",
   "users.sortStorage": "排序：存储",
-  "users.total": { "other": "{count} 个账号 — 点击名称可打开详情页（项目、会话、活动）。" },
+  "users.total": {
+    "other": "{count} 个账号 — 点击名称可打开详情页（项目、会话、活动）。"
+  },
   "users.invitePending": "已邀请",
   "users.invitePendingHint": "账号已创建但尚未激活：邀请链接还未被使用。",
   "users.resendInvite": "重新发送邀请",
@@ -1035,7 +1059,6 @@
   "review.publish": "发布给团队",
   "review.cameraAnimGltf": "摄像机动画（glTF）",
   "review.importAnimation": "导入动画",
-
   "project.status.active": "进行中",
   "project.status.onHold": "已暂停",
   "projects.tab.active": "进行中",
@@ -1043,25 +1066,22 @@
   "projects.created": "已创建项目「{name}」",
   "projects.duplicated": "已从「{source}」创建项目「{name}」",
   "projects.unarchived": "已取消归档项目「{name}」",
-  "projects.count": { "other": "{count} 个项目" },
+  "projects.count": {
+    "other": "{count} 个项目"
+  },
   "admin.group.studio": "工作室",
   "admin.group.content": "内容",
   "admin.group.reviewContexts": "review 环境",
   "admin.group.communications": "通信",
   "admin.group.maintenance": "维护",
-
   "project.status.completed": "已完成",
   "project.status.archived": "已归档",
-
   "task.dueDate": "截止",
   "marker.delete": "删除标记",
   "usd.recomposeFrom": "从 USD 重组",
-
   "marker.rename": "重命名 / 改颜色…",
-
   "sessions.line": "{ip} · 于 {created} 连接 · {seen} 活跃",
   "sessions.unknownIp": "未知 IP",
-
   "admin.tab.users": "用户",
   "admin.tab.comments": "评论",
   "admin.tab.statuses": "状态",
@@ -1070,12 +1090,10 @@
   "admin.tab.color": "色彩（OCIO）",
   "admin.topStorage": "存储占用排行 / 用户",
   "admin.onlineCount": "{count} 人在线",
-
   "presence.available": "空闲",
   "presence.away": "离开",
   "presence.dnd": "请勿打扰",
   "presence.onlineCount": "在线 · {count}",
-
   "common.enable": "启用",
   "common.loading": "加载中…",
   "common.nextMonth": "下个月",
@@ -1105,7 +1123,9 @@
   "tokens.copy": "复制",
   "tokens.created": "token 已创建",
   "tokens.expired": "已过期",
-  "tokens.expiry.days": { "other": "{count} 天" },
+  "tokens.expiry.days": {
+    "other": "{count} 天"
+  },
   "tokens.expiry.label": "有效期",
   "tokens.new": "新建 token",
   "tokens.passwordHint": "token 的存续时间长于会话，需用密码确认创建。",
@@ -1134,7 +1154,9 @@
   "sessions.title": "活动会话",
   "sessions.thisDevice": "当前设备",
   "sessions.empty": "没有记录的会话（更新之前的登录不会出现 — 重新登录即可在此看到）。",
-  "sessions.revokedCount": { "other": "已注销 {count} 个会话" },
+  "sessions.revokedCount": {
+    "other": "已注销 {count} 个会话"
+  },
   "twofa.qr": "2FA 绑定二维码",
   "twofa.scan": "用你的验证器应用（Google Authenticator、1Password…）扫描此二维码，然后输入显示的验证码。",
   "twofa.wrongCode": "验证码不正确",
@@ -1156,11 +1178,17 @@
   "production.attention.unassigned": "无人负责",
   "production.attention.review": "等待 review",
   "production.attention.none": "这里没有内容，很好。",
-  "production.attention.more": { "other": "另有 {count} 项" },
+  "production.attention.more": {
+    "other": "另有 {count} 项"
+  },
   "production.workload.empty": "没有剩余工作。",
-  "production.workload.late": { "other": "逾期 {count} 项" },
+  "production.workload.late": {
+    "other": "逾期 {count} 项"
+  },
   "production.pace.window": "观察区间",
-  "production.pace.weeks": { "other": "{count} 周" },
+  "production.pace.weeks": {
+    "other": "{count} 周"
+  },
   "production.pace.perWeek": "每周 {value}",
   "production.pace.projected": "预计完成",
   "production.pace.noProjection": "进度数据不足，无法预测完成时间",
@@ -1178,7 +1206,9 @@
   "stats.notes": "意见",
   "stats.approvedRatio": "{approved}/{total} 已批准 · {pct}%",
   "stats.retakes": "retakes",
-  "stats.days": { "other": "{count} 天" },
+  "stats.days": {
+    "other": "{count} 天"
+  },
   "stats.drawCalls": "绘制调用",
   "stats.fps": "fps",
   "stats.measuring": "测量中…",
@@ -1191,13 +1221,17 @@
   "sequences.empty.hint": "用上方的“+”按钮创建 sequence — 它们把 shot 分组（SQ010、SQ020…）。",
   "playlists.empty.hint": "在 Reviews 页面选中媒体，右键「加入 playlist」，或在此新建一个空 playlist。",
   "playlists.delete.message": "「{name}」将被删除。其引用的 version 不受影响。",
-  "playlists.versionCount": { "other": "{count} 个 version" },
+  "playlists.versionCount": {
+    "other": "{count} 个 version"
+  },
   "shares.newShort": "新建链接",
   "shares.empty": "还没有分享链接。创建一个即可让别人无需账号访问本项目已发布的媒体。",
   "shares.createdBy": "由 {name} 创建",
   "shares.expiresOn": "{date} 到期",
   "shares.viewedOn": "{date} 查看",
-  "shares.viewCount": { "other": "次查看" },
+  "shares.viewCount": {
+    "other": "次查看"
+  },
   "shares.scope": "链接打开的范围",
   "shares.scope.project": "整个项目",
   "shares.scope.playlist": "仅一个 playlist",
@@ -1208,21 +1242,31 @@
   "shares.scope.pick.media": "要包含的媒体",
   "shares.scope.pick.none": "请选择…",
   "shares.scope.empty": "该项目还没有已发布的媒体。",
-  "shares.scope.selected": { "other": "已选择 {count} 个媒体" },
+  "shares.scope.selected": {
+    "other": "已选择 {count} 个媒体"
+  },
   "shares.scope.needsTarget": "创建之前请先选择该链接打开的范围。",
   "shares.scope.badge.project": "整个项目",
-  "shares.scope.badge.selection": { "other": "{count} 个媒体" },
+  "shares.scope.badge.selection": {
+    "other": "{count} 个媒体"
+  },
   "shares.scope.badge.restricted": "受限",
   "shares.email": "通过邮件发送…",
   "shares.email.title": "通过邮件发送链接",
   "shares.email.recipients": "收件人",
   "shares.email.recipients.placeholder": "每行一个地址",
-  "shares.email.count": { "other": "{count} 个有效地址" },
-  "shares.email.tooMany": { "other": "每次发送最多 {count} 位收件人" },
+  "shares.email.count": {
+    "other": "{count} 个有效地址"
+  },
+  "shares.email.tooMany": {
+    "other": "每次发送最多 {count} 位收件人"
+  },
   "shares.email.note": "备注（可选）",
   "shares.email.note.placeholder": "给收件人的留言",
   "shares.email.submit": "发送",
-  "shares.email.sent": { "other": "已向 {count} 位收件人发送链接" },
+  "shares.email.sent": {
+    "other": "已向 {count} 位收件人发送链接"
+  },
   "shares.email.invalid": "请至少输入一个有效的邮件地址。",
   "shares.email.willMentionExpiry": "邮件中会说明该链接于 {date} 过期。",
   "shares.email.noExpiry": "邮件中会说明该链接不会过期。",
@@ -1256,7 +1300,6 @@
   "naming.warningFile": "「{name}」不符合项目命名规范。",
   "naming.compliant": "符合规则",
   "naming.nonCompliant": "不符合规则",
-
   "mode.watch": "观看",
   "mode.watch.hint": "播放、缩放、对比 version — 没有编辑工具。只有这个模式提供给客户。",
   "mode.annotate": "标注",
@@ -1334,7 +1377,6 @@
   "action.resetSpatial": "初始视角",
   "action.fitMedia": "适应屏幕",
   "action.resetMedia": "实际大小 1:1",
-
   "common.add": "添加",
   "common.show": "显示",
   "common.hide": "隐藏",
@@ -1371,7 +1413,9 @@
   "voice.start": "录制语音留言",
   "dropzone.drop": "把文件拖到这里",
   "batch.nothing": "没有可生成的内容。",
-  "batch.createCount": { "other": "创建 {count} 项" },
+  "batch.createCount": {
+    "other": "创建 {count} 项"
+  },
   "batch.creation": "Shots/Sequences 创建",
   "notif.markAllRead": "全部标为已读",
   "file.readFailed": "无法读取文件",
@@ -1420,26 +1464,40 @@
   "decision.badge": "决定：{status}",
   "decision.dialogTitle": "review 决定 — {version}",
   "project.dupHint": "sequence、shot 和设置会被重建。媒体、version 和评论不会复制。",
-  "shots.created": { "other": "已创建 {count} 个 shot" },
+  "shots.created": {
+    "other": "已创建 {count} 个 shot"
+  },
   "shots.delete.message": "shot「{code}」及其任务与 version 将移入回收站。",
   "shots.omitted": "已在剪辑中删除",
   "shots.searchPlaceholder": "shot 代码或名称…",
-  "shots.count": { "other": "{count} 个 shot" },
-  "shots.countLabel": { "other": "个 shot" },
-  "shots.trashedCount": { "other": "已将 {count} 个 shot 移入回收站" },
+  "shots.count": {
+    "other": "{count} 个 shot"
+  },
+  "shots.countLabel": {
+    "other": "个 shot"
+  },
+  "shots.trashedCount": {
+    "other": "已将 {count} 个 shot 移入回收站"
+  },
   "shots.deleteMany.title": "删除这些 shot？",
-  "shots.deleteMany.message": { "other": "{count} 个 shot 及其任务与 version 将移入回收站。" },
+  "shots.deleteMany.message": {
+    "other": "{count} 个 shot 及其任务与 version 将移入回收站。"
+  },
   "shots.new": "新建 shot",
   "shot.newAsset": "+ 新建 asset",
   "shot.omitted": "从剪辑中排除",
   "shot.omittedHint": "该 shot 不参与剪辑，但其工作、version 和评论都会保留。",
   "assets.emptyHint": "用「+ 新建」创建可复用的 asset（角色、场景、道具…）。",
   "assets.attach": "关联",
-  "assets.count": { "other": "{count} 个 asset" },
+  "assets.count": {
+    "other": "{count} 个 asset"
+  },
   "assets.created": "已创建 asset「{name}」",
   "assets.createdAttached": "已创建并关联 asset「{name}」",
   "assets.delete.message": "asset「{name}」及其 version 与媒体将移入回收站。",
-  "assets.deleteMany.message": { "other": "{count} 个 asset 及其 version 与媒体将移入回收站。" },
+  "assets.deleteMany.message": {
+    "other": "{count} 个 asset 及其 version 与媒体将移入回收站。"
+  },
   "assets.searchPlaceholder": "asset 名称…",
   "overview.noPublished": "暂无已发布的媒体 — 第一个发布后就会出现在这里。",
   "overview.projectDashboard": "项目「{name}」的仪表板。",
@@ -1530,7 +1588,6 @@
   "email.digestOff": "每日摘要已关闭",
   "email.weeklyOn": "每周报告已开启",
   "email.weeklyOff": "每周报告已关闭",
-
   "review.hotspotAttached": "📍 已附加 hotspot（viewer 中心）",
   "review.camViewSaved": "📷 将保存当前的摄像机视角",
   "review.labelsVisible": "显示名称",
@@ -1576,7 +1633,9 @@
   "live.coHostAdded": "{name} 成为副驾驶 — 谁先操作谁接管",
   "live.coHostRemoved": "{name} 不再是副驾驶",
   "live.handedOver": "已将控制权交给 {name}（主控）",
-  "live.participants": { "other": "（{count} 位参与者）。" },
+  "live.participants": {
+    "other": "（{count} 位参与者）。"
+  },
   "live.running": "正在进行 live review",
   "live.runningWithPilot": "正在进行 live review — 由 {pilot} 主控",
   "live.coHosts": "副驾驶",
@@ -1615,8 +1674,12 @@
   "video.qualityOriginal": "原始画质",
   "video.qualitySet": "播放画质：{height}p",
   "video.volume": "音量",
-  "video.compareOffsetAhead": { "other": "B 比 A 快 {count} frame" },
-  "video.compareOffsetBehind": { "other": "B 比 A 慢 {count} frame" },
+  "video.compareOffsetAhead": {
+    "other": "B 比 A 快 {count} frame"
+  },
+  "video.compareOffsetBehind": {
+    "other": "B 比 A 慢 {count} frame"
+  },
   "video.compareOffsetNone": "B 与 A 对齐",
   "video.waveform.show": "音频波形",
   "video.waveform.scrub": "音频波形 — 拖动以定位",
@@ -1649,7 +1712,9 @@
   "ref.title": "参考",
   "ref.draft": "参考（草稿）",
   "ref.addPaste": "参考图（Ctrl+V）",
-  "ref.maxImages": { "other": "最多 {count} 张参考图" },
+  "ref.maxImages": {
+    "other": "最多 {count} 张参考图"
+  },
   "nav.firstMedia": "该 version 的第一个媒体",
   "nav.lastMedia": "该 version 的最后一个媒体",
   "marker.edit": "编辑标记",
@@ -1666,11 +1731,12 @@
   "media.delete.message": "「{name}」将移入项目回收站。",
   "media.draft": "草稿",
   "stage.notSavedPublishCancelled": "场面调度未保存 — 已取消发布",
-
   "task.status.inProgress": "进行中",
   "task.status.retake": "Retake",
   "task.checklist": "检查清单",
-  "task.count": { "other": "{count} 个任务" },
+  "task.count": {
+    "other": "{count} 个任务"
+  },
   "task.created": "已创建任务「{name}」",
   "task.createdNamed": "已创建任务：{name}",
   "task.fallbackName": "任务 #{id}",
@@ -1694,7 +1760,6 @@
   "panel.liveRender": "实时渲染",
   "panel.performance": "性能",
   "panel.techSheet": "技术参数",
-
   "compare.siblingUnreachable": "无法访问用于对比的 splat",
   "compare.grid": "网格 · {count}",
   "compare.gridHint": "两个及以上 version：同步 2×2 网格（屏幕上最多 {max} 个）。",
@@ -1715,7 +1780,9 @@
   "camera.curves": "曲线",
   "camera.frameSelection": "取景",
   "camera.home": "原点",
-  "camera.maxBookmarks": { "other": "最多 {count} 个 bookmark" },
+  "camera.maxBookmarks": {
+    "other": "最多 {count} 个 bookmark"
+  },
   "camera.viewN": "视图 {n}",
   "camera.clearPresentation": "清除演示",
   "camera.clearConfirm": "将为所有人移除相机、动画和布景。",
@@ -1767,7 +1834,6 @@
   "scene.lodAuto": "低于 15 fps 时启用 LOD，高于 25 时解除",
   "scene.progressive": "按需加载点云分页",
   "scene.lodOn": "LOD 始终启用",
-
   "storage.k.original": "上传的文件（原始）",
   "storage.k.original.note": "可信来源，永不修改。路径由分层 slug 组成，便于阅读。",
   "storage.k.hls": "HLS renditions（视频）",
@@ -1800,7 +1866,6 @@
   "storage.k.attachment.note": "review 讨论串中的图片、PDF、压缩包和语音留言。",
   "storage.k.quarantine": "隔离的文件",
   "storage.k.quarantine.note": "上传时检出感染（ClamAV），已与分发隔离。",
-
   "storage.cat.originals": "原始文件（projects/）",
   "storage.cat.derived": "派生文件（derived/）",
   "storage.cat.studio": "工作室库（studio/）",
@@ -1822,7 +1887,6 @@
   "storage.s.hdris": "HDRI（3D 灯光）",
   "storage.s.ocio": "OCIO 配置（色彩）",
   "storage.s.other": "其他",
-
   "audit.create": "已创建",
   "audit.update": "已修改",
   "audit.delete": "已删除",
@@ -1837,7 +1901,6 @@
   "settings.hint.liveImage": "例如 4 — 缩放／位置",
   "settings.hint.slack": "https://hooks.slack.com/services/… — 结论与发布",
   "settings.hint.sourceUrl": "https://… — 若部署修改过的版本则必填",
-
   "channel.posX": "位置 X",
   "channel.posY": "位置 Y",
   "channel.posZ": "位置 Z",
@@ -1848,7 +1911,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "跳转到 {time} 秒的 keyframe",
   "channel.keyAt": "{time} 秒的 keyframe",
-
   "admin.announce.allRoles": "（不勾选＝所有人）",
   "admin.announce.updated": "公告已修改",
   "admin.announce.created": "公告已创建",
@@ -1978,17 +2040,23 @@
   "storage.map.hint": "整个实例只用一个 S3/MinIO bucket；删除媒体会清除其原始目录及前缀",
   "storage.objShort": "{count} 个对象",
   "storage.objects": "对象",
-  "storage.objectsCount": { "other": "{count} 个对象" },
+  "storage.objectsCount": {
+    "other": "{count} 个对象"
+  },
   "storage.originals": "原始文件",
   "storage.totalUsage": "总占用",
   "storage.orphanProject": "（未知项目——孤立？）",
-  "storage.scannedAt": { "other": "已于 {date} 扫描存储桶 — {count} 个对象。" },
+  "storage.scannedAt": {
+    "other": "已于 {date} 扫描存储桶 — {count} 个对象。"
+  },
   "storage.quotaOf": "配额 {size}",
   "storage.quotaUsage": "配额 {size}（{pct}%）",
   "system.agplHint": "任何远程使用本实例的人都必须能取得其源码。若你做过修改，请把「源代码」设置指向你自己的仓库。",
   "system.thirdParty": "第三方依赖",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md（仓库根目录）",
-  "system.cores": { "other": "{count} 核" },
+  "system.cores": {
+    "other": "{count} 核"
+  },
   "system.disk": "磁盘 — {used} / {total}",
   "system.memory": "内存 — {used} / {total}",
   "system.licenseTitle": "许可证与源代码",
@@ -2025,7 +2093,9 @@
   "webhooks.delivery.pending": "待处理",
   "webhooks.delivery.delivered": "已投递",
   "webhooks.delivery.failed": "失败",
-  "webhooks.delivery.attempts": { "other": "尝试 {count} 次" },
+  "webhooks.delivery.attempts": {
+    "other": "尝试 {count} 次"
+  },
   "webhooks.delivery.replay": "重新发送此投递",
   "webhooks.delivery.replayed": "已重新排队投递",
   "webhooks.delivery.replayOf": "#{value} 的重发",
@@ -2064,16 +2134,21 @@
   "splat.isolate": "隔离",
   "model3d.transformModel": "变换模型",
   "model3d.unnamed": "（无名称）",
-
   "jobs.storageCleanup": "存储清理",
   "jobs.webhooks": "出站 webhook",
   "jobs.activeCount": "{count} 个进行中",
   "jobs.waitingCount": "{count} 个等待中",
   "jobs.failedCount": "{count} 个失败",
   "jobs.completedCount": "{count} 个已完成",
-  "jobs.attempts": { "other": "{count} 次尝试" },
-  "jobs.cleanedFailed": { "other": "已清除 {count} 个失败任务" },
-  "jobs.retriedCount": { "other": "已重试 {count} 个任务。" },
+  "jobs.attempts": {
+    "other": "{count} 次尝试"
+  },
+  "jobs.cleanedFailed": {
+    "other": "已清除 {count} 个失败任务"
+  },
+  "jobs.retriedCount": {
+    "other": "已重试 {count} 个任务。"
+  },
   "jobs.purgedDerived": "已精简 {count} 个媒体（移除 HLS 与 sprite）",
   "jobs.purge": "清除",
   "jobs.purgeNow": "立即清除",
@@ -2081,7 +2156,6 @@
   "jobs.running": "进行中：{list}",
   "jobs.queueUnavailable": "队列不可用。",
   "jobs.webhookRef": "webhook {id}",
-
   "model3d.transformPrim": "变换该 prim",
   "model3d.compareUnreachable": "无法访问用于对比的模型",
   "model3d.loadFailed": "无法加载模型",
@@ -2170,7 +2244,6 @@
   "entity.unavailable.failed": "无法加载",
   "entity.unavailable.failed.hint": "服务器没有响应，请稍后重试。",
   "entity.unavailable.backToProjects": "返回项目列表",
-
   "version.emptyMedia": "该 version 中没有媒体。",
   "version.created": "已创建 version「{name}」",
   "version.current": "当前",
@@ -2179,13 +2252,20 @@
   "version.noVisibleMedia": "version {version} 中没有可见媒体",
   "version.unreachable": "无法访问该 version",
   "version.dropNew": "把文件拖到这里，创建下一个 version",
-  "version.publishAll": { "other": "发布（{count}）" },
+  "version.publishAll": {
+    "other": "发布（{count}）"
+  },
   "version.dropShot": "拖放以在任务下创建 version",
   "version.inReview": "review 中",
-
-  "playlist.added": { "other": "已把 {count} 个 version 加入「{name}」" },
-  "playlist.skipped": { "other": "（{count} 个已在其中）" },
-  "playlist.targetCount": { "other": "{count} 项 — 每个匹配的 version 都会追加到 playlist 末尾。" },
+  "playlist.added": {
+    "other": "已把 {count} 个 version 加入「{name}」"
+  },
+  "playlist.skipped": {
+    "other": "（{count} 个已在其中）"
+  },
+  "playlist.targetCount": {
+    "other": "{count} 项 — 每个匹配的 version 都会追加到 playlist 末尾。"
+  },
   "playlist.empty": "playlist 为空。",
   "playlist.end": "playlist 结束",
   "playlist.named": "playlist「{name}」",
@@ -2195,20 +2275,25 @@
   "playlist.rename": "重命名 playlist",
   "playlist.emptyHint": "从左侧目录添加 version。",
   "playlist.addTo": "添加到 playlist",
-  "playlist.addedTo": { "other": "已向 {name} 添加 {count} 个 version" },
-  "playlist.addedCount": { "other": "已添加 {count} 个 version" },
+  "playlist.addedTo": {
+    "other": "已向 {name} 添加 {count} 个 version"
+  },
+  "playlist.addedCount": {
+    "other": "已添加 {count} 个 version"
+  },
   "playlist.alreadyThere": "已在 playlist 中",
   "playlist.nothingToAdd": "没有可添加的已发布内容",
   "playlist.catalog.search": "shot、asset 或 version…",
   "playlist.catalog.latestOnly": "仅最新",
   "playlist.catalog.add": "添加到 playlist",
-  "playlist.catalog.addSelected": { "other": "添加 {count} 个" },
+  "playlist.catalog.addSelected": {
+    "other": "添加 {count} 个"
+  },
   "playlist.catalog.present": "已包含",
   "playlist.catalog.empty": "没有符合这些筛选条件的内容。",
   "playlist.autoAdvance": "自动播放下一个",
   "csv.export": "导出 CSV",
   "csv.import": "导入 CSV",
-
   "calendar.today": "今天",
   "calendar.dueMoved": "已调整截止日期",
   "nav.breadcrumb": "面包屑导航",
@@ -2219,9 +2304,13 @@
   "comment.reopen": "重新打开",
   "comment.annotationAttached": "已附加 annotation",
   "comment.annotationAttachedHint": "✏️ 已附加 annotation（文字可选）",
-  "comment.maxAttachments": { "other": "每条评论最多 {count} 个附件" },
+  "comment.maxAttachments": {
+    "other": "每条评论最多 {count} 个附件"
+  },
   "comment.rangeAnnotation": "区间 annotation — {name}：{content}",
-  "comment.referencesAttached": { "other": "已附加 {count} 张参考图" },
+  "comment.referencesAttached": {
+    "other": "已附加 {count} 张参考图"
+  },
   "comment.resolvedBy": "由 {name} 于 {date} 解决",
   "comment.state.open": "待处理",
   "comment.state.wip": "处理中",
@@ -2256,26 +2345,38 @@
   "draw.otherInk": "其他墨色",
   "draw.ink": "墨色",
   "draw.inkColor": "墨色 {color}",
-  "draw.pendingStrokes": { "other": "{count} 条笔迹将随评论一起发送。" },
-  "draw.shapesAttached": { "other": "已向评论附加 {count} 个图形。" },
+  "draw.pendingStrokes": {
+    "other": "{count} 条笔迹将随评论一起发送。"
+  },
+  "draw.shapesAttached": {
+    "other": "已向评论附加 {count} 个图形。"
+  },
   "draw.textPlaceholder": "文字…",
   "info.uvSets": "UV 集",
   "track.animTrack": "动画轨道",
-
   "sequences.assets": "sequence 的 asset（{count}）",
-  "sequences.createdCount": { "other": "已创建 {count} 个 sequence" },
+  "sequences.createdCount": {
+    "other": "已创建 {count} 个 sequence"
+  },
   "sequences.delete.message": "sequence「{code}」及其 shot 将移入回收站。",
-  "sequences.open": "打开 sequence",
-  "sequences.countLabel": { "other": "个 sequence" },
-  "sequences.trashedCount": { "other": "已将 {count} 个 sequence 移入回收站" },
+  "sequences.countLabel": {
+    "other": "个 sequence"
+  },
+  "sequences.trashedCount": {
+    "other": "已将 {count} 个 sequence 移入回收站"
+  },
   "sequences.deleteMany.title": "删除这些 sequence？",
-  "sequences.deleteMany.message": { "other": "{count} 个 sequence 及其 shot 将移入回收站。" },
+  "sequences.deleteMany.message": {
+    "other": "{count} 个 sequence 及其 shot 将移入回收站。"
+  },
   "sequences.new": "新建 sequence",
   "view.cards": "卡片视图",
   "view.compact": "紧凑视图",
   "view.followAccount": "跟随账户设置",
   "drafts.title": "待处理草稿",
-  "drafts.count": { "other": "{count} 个草稿待处理" },
+  "drafts.count": {
+    "other": "{count} 个草稿待处理"
+  },
   "uploads.failedFor": "{name} 上传失败",
   "uploads.sending": "上传中 {pct}%",
   "uploads.title": "传输（{count}）",
@@ -2303,8 +2404,12 @@
   "transform.rotationYaw": "Y 轴旋转（yaw）",
   "transform.rotationRoll": "Z 轴旋转（roll）",
   "timeline.defaultName": "剪辑",
-  "timeline.shotCount": { "other": "{count} 个 shot" },
-  "timeline.gapCount": { "other": "{count} 处空缺" },
+  "timeline.shotCount": {
+    "other": "{count} 个 shot"
+  },
+  "timeline.gapCount": {
+    "other": "{count} 处空缺"
+  },
   "timeline.noMedia": "无媒体",
   "timeline.durationMismatch": "媒体时长与该 shot 声明的 frame 范围不一致。",
   "timeline.previousShot": "上一个 shot",
@@ -2346,7 +2451,9 @@
   "chat.sendMessage": "发送消息",
   "chat.group.create": "新建群组",
   "chat.group.namePlaceholder": "群组名称（可选）",
-  "chat.group.members": { "other": "{count} 位成员" },
+  "chat.group.members": {
+    "other": "{count} 位成员"
+  },
   "chat.rename": "重命名群组",
   "chat.addMembers": "添加成员",
   "chat.leave": "退出该会话",
@@ -2355,7 +2462,9 @@
   "chat.unmute": "开启通知",
   "chat.search": "搜索成员",
   "chat.search.empty": "未找到成员",
-  "chat.system.joined": { "other": "{names} 加入了对话" },
+  "chat.system.joined": {
+    "other": "{names} 加入了对话"
+  },
   "chat.system.left": "{name} 离开了对话",
   "chat.system.removed": "{name} 已被移除",
   "chat.system.renamed": "群组现在名为 « {title} »",
@@ -2448,7 +2557,9 @@
   "shotgrid.setup.connect": "连接项目",
   "shotgrid.setup.connected": "已连接到「{name}」",
   "shotgrid.setup.connectFailed": "无法连接",
-  "shotgrid.setup.testOk": { "other": "连接成功 — 可见 {count} 个项目" },
+  "shotgrid.setup.testOk": {
+    "other": "连接成功 — 可见 {count} 个项目"
+  },
   "shotgrid.sync.runFull": "同步",
   "shotgrid.sync.runReconcile": "补齐",
   "shotgrid.sync.reconcileHint": "重读补齐时间窗 — 中断后使用。",
@@ -2466,7 +2577,9 @@
   "shotgrid.sync.noLog": "暂无条目",
   "shotgrid.sync.keepSg": "保留 ShotGrid",
   "shotgrid.sync.keepReview": "保留 ReView",
-  "shotgrid.sync.conflicts": { "other": "{count} 个冲突待决" },
+  "shotgrid.sync.conflicts": {
+    "other": "{count} 个冲突待决"
+  },
   "shotgrid.conflict.resolved": "冲突已裁决",
   "shotgrid.conflict.failed": "无法裁决",
   "shotgrid.conflict.detail": "{field}：ReView「{review}」· ShotGrid「{shotgrid}」",
@@ -2535,8 +2648,12 @@
   "shotgrid.versions.selectAllPending": "选择所有缺失项",
   "shotgrid.versions.summary": "共 {total} 个 publishes，{pending} 个未导入",
   "shotgrid.versions.intro": "列出该项目的 ShotGrid publishes，并取回缺失的部分。",
-  "shotgrid.versions.importSelected": { "other": "导入 {count} 项" },
-  "shotgrid.versions.imported": { "other": "已导入 {count} 个 publishes" },
+  "shotgrid.versions.importSelected": {
+    "other": "导入 {count} 项"
+  },
+  "shotgrid.versions.imported": {
+    "other": "已导入 {count} 个 publishes"
+  },
   "shotgrid.admin.title": "ShotGrid 站点",
   "shotgrid.admin.projects": "已连接项目",
   "shotgrid.admin.deleted": "ShotGrid 站点已删除",
@@ -2546,7 +2663,9 @@
   "shotgrid.admin.deleteConfirm": "要删除站点「{name}」吗？其凭据将被清除。",
   "shotgrid.admin.empty": "尚未注册 ShotGrid 站点。可从某个项目的 ShotGrid 标签页添加。",
   "shotgrid.admin.intro": "凭据集中存放于此，整个工作室共用：每个项目连接都复用它们，更换密钥只需一处。任何机密都不会返回浏览器。",
-  "shotgrid.admin.linkedProjects": { "other": "{count} 个项目" },
+  "shotgrid.admin.linkedProjects": {
+    "other": "{count} 个项目"
+  },
   "shotgrid.domain.hierarchy": "Sequences、shots、assets",
   "shotgrid.domain.hierarchy.hint": "制作拆解、cut 区间和 shot 状态。",
   "shotgrid.domain.tasks": "任务",
@@ -2641,7 +2760,9 @@
   "shotgrid.sync.publishOff": "向 ShotGrid 的发布已关闭：在此发布的 version 不会外传。可在「设置 → 发布」中更改。",
   "shotgrid.steps.title": "本项目使用的流程环节",
   "shotgrid.steps.hint": "ShotGrid 只提供在项目中启用了可见性的环节，但其 API 并不公开该设置。在此勾选一次即可。若不勾选，ReView 会从项目中已有的 task 推断。",
-  "shotgrid.steps.count": { "other": "已选 {count} 个" },
+  "shotgrid.steps.count": {
+    "other": "已选 {count} 个"
+  },
   "shotgrid.steps.forAssets": "用于 asset",
   "shotgrid.steps.forShots": "用于 shot",
   "shotgrid.steps.search": "搜索环节…",
@@ -2672,7 +2793,9 @@
   "shotgrid.crew.state.none": "尚无账号",
   "shotgrid.crew.state.ineligible": "无法邀请",
   "shotgrid.crew.done": "已创建 {created} 个账号，已将 {added} 人加入项目",
-  "shotgrid.crew.skipped": { "other": "已跳过 {count} 人" },
+  "shotgrid.crew.skipped": {
+    "other": "已跳过 {count} 人"
+  },
   "shotgrid.crew.plan": "待创建账号 {create} 个，待加入项目 {add} 人",
   "shotgrid.sync.queued": "已有同步在进行，本次同步已排队等待。",
   "shotgrid.link.open": "ShotGrid 账户",
@@ -2713,7 +2836,9 @@
   "social.search": "搜索成员或会话",
   "social.people": "成员",
   "social.noMatch": "没有匹配的结果。",
-  "sequence.shotCount": { "other": "{count} 个 shot" },
+  "sequence.shotCount": {
+    "other": "{count} 个 shot"
+  },
   "filters.search": "搜索…",
   "filters.allStatuses": "所有状态",
   "filters.allDepartments": "所有部门",
@@ -2736,9 +2861,15 @@
   "assign.unassigned": "无人",
   "assign.done": "已更新指派",
   "assign.failed": "无法更改指派",
-  "assign.bulkTitle": { "other": "指派 {count} 项" },
-  "assign.doneCount": { "other": "已更新 {count} 个任务" },
-  "assign.skippedCount": { "other": "已跳过 {count} 项：无可指派的任务，或权限不足" },
+  "assign.bulkTitle": {
+    "other": "指派 {count} 项"
+  },
+  "assign.doneCount": {
+    "other": "已更新 {count} 个任务"
+  },
+  "assign.skippedCount": {
+    "other": "已跳过 {count} 项：无可指派的任务，或权限不足"
+  },
   "assign.person": "人员",
   "assign.departments": "部门",
   "assign.departmentsHint": "留空则涵盖所有现有任务。勾选部门可限定范围，缺少任务时会自动创建。",
@@ -2801,11 +2932,15 @@
   "episode.noSequence.title": "该 episode 中没有 sequence",
   "episode.noSequence.description": "在项目的 Episodes 标签页中，把 sequence 挂到该 episode 下。",
   "episode.noShot": "该 sequence 中没有 shot。",
-  "episode.sequenceCount": { "other": "{count} 个 sequence" },
+  "episode.sequenceCount": {
+    "other": "{count} 个 sequence"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "打开 episode",
   "episodes.reordered": "已保存排序",
-  "episodes.createdCount": { "other": "已创建 {count} 个 episode" },
+  "episodes.createdCount": {
+    "other": "已创建 {count} 个 episode"
+  },
   "episodes.attachTo": "挂到某个 episode",
   "episodes.attached": "已挂载 sequence",
   "episodes.detach": "解除与 episode 的挂载",
@@ -2816,7 +2951,9 @@
   "episodes.empty.title": "没有 episode",
   "episodes.empty.description": "该项目还没有 episode。",
   "episodes.empty.hint": "用上方的生成器创建第一批。",
-  "episodes.unassignedCount": { "other": "{count} 个没有 episode 的 sequence" },
+  "episodes.unassignedCount": {
+    "other": "{count} 个没有 episode 的 sequence"
+  },
   "episodes.unassignedHint": "右键点击某个 sequence，可将其挂到 episode 下。",
   "episodes.disabledHere": "该项目已关闭 episode 层级。",
   "episodes.settings.title": "episode 层级",
@@ -2825,8 +2962,12 @@
   "episodes.settings.enabled": "已启用 episode 层级",
   "episodes.settings.disabled": "已关闭 episode 层级",
   "episodes.settings.keepsData": "关闭只会隐藏该层级：episode 及其 sequence 会原样回来。",
-  "episodes.settings.stored": { "other": "已保存 {count} 个 episode" },
-  "episodes.settings.linked": { "other": "已挂载 {count} 个 sequence" },
+  "episodes.settings.stored": {
+    "other": "已保存 {count} 个 episode"
+  },
+  "episodes.settings.linked": {
+    "other": "已挂载 {count} 个 sequence"
+  },
   "error.UNAUTHENTICATED": "您尚未登录。",
   "error.FORBIDDEN": "访问被拒绝。",
   "error.NOT_FOUND": "该内容已不存在。",
@@ -2948,23 +3089,35 @@
   "imageSequence.hint": "合并后成为一个可以像 video 一样 review 的媒体。不合并时，每个 frame 仍是独立文件。",
   "imageSequence.group": "合并为一个媒体",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "other": "{count} 个文件" },
-  "imageSequence.gaps": { "other": "缺少 {count} 个 frame" },
-  "imageSequence.others": { "other": "另外 {count} 个文件将单独发送" },
+  "imageSequence.files": {
+    "other": "{count} 个文件"
+  },
+  "imageSequence.gaps": {
+    "other": "缺少 {count} 个 frame"
+  },
+  "imageSequence.others": {
+    "other": "另外 {count} 个文件将单独发送"
+  },
   "imageSequence.confirm": "作为 image sequence 发送",
   "imageSequence.sendSeparately": "逐个文件发送",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "正在合成",
-  "assignees.label": { "other": "已指派 {count} 人" },
+  "assignees.label": {
+    "other": "已指派 {count} 人"
+  },
   "assignees.dialogTitle": "{name} 的负责人",
   "assignees.searchPlaceholder": "搜索成员…",
   "assignees.noMatch": "没有匹配的成员。",
-  "assignees.saved": { "other": "已指派 {count} 人" },
+  "assignees.saved": {
+    "other": "已指派 {count} 人"
+  },
   "assignees.menu": "负责人…",
   "assignees.origin.direct": "该元素的负责人",
   "assignees.origin.child": "内部某个元素的负责人",
   "assignees.origin.task": "被指派到某项任务",
-  "cards.awaitingReview": { "other": "{count} 项交付等待 review" },
+  "cards.awaitingReview": {
+    "other": "{count} 项交付等待 review"
+  },
   "cards.updatedAt": "更新于 {value}",
   "visibility.hide": "对所有人隐藏",
   "visibility.show": "重新显示",
@@ -3050,7 +3203,9 @@
   "note.gallery.carousel": "轮播",
   "note.gallery.columns": "列数",
   "note.gallery.height": "高度",
-  "note.gallery.count": { "other": "{count} 张图片" },
+  "note.gallery.count": {
+    "other": "{count} 张图片"
+  },
   "note.image.align": "对齐",
   "note.image.alignFull": "整幅宽度",
   "note.image.alignCenter": "居中",
@@ -3072,9 +3227,15 @@
   "assetType.VEHICLE": "载具",
   "assetType.FX": "FX",
   "assetType.OTHER": "其他",
-  "bulk.status.title": { "other": "{count} 个 shot 的状态" },
-  "bulk.status.done": { "other": "已更新 {count} 个 shot" },
-  "bulk.status.partial": { "other": "已更新 {count} 个 shot，{failed} 个被拒绝" },
+  "bulk.status.title": {
+    "other": "{count} 个 shot 的状态"
+  },
+  "bulk.status.done": {
+    "other": "已更新 {count} 个 shot"
+  },
+  "bulk.status.partial": {
+    "other": "已更新 {count} 个 shot，{failed} 个被拒绝"
+  },
   "bulk.status.menu": "状态",
   "colorPicker.hue": "色相",
   "queryState.title": "无法加载此部分",

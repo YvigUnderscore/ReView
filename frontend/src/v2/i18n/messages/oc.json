@@ -1,6 +1,5 @@
 {
   "auth.tagline": "Plataforma de review collaborativa de mèdias pels estudis VFX e de postproduccion.",
-
   "login.title": "Benvenguda tornarmai.",
   "login.subtitle": "Connectatz-vos per tornar trobar vòstres reviews, vòstras tascas e vòstres boards.",
   "login.heading": "Connexion",
@@ -12,7 +11,6 @@
   "login.error.credentials": "Adreça electronica o senhal incorrècte.",
   "login.error.network": "Impossible de jónher lo servidor. Tornatz ensajar dins un momenton.",
   "login.error.generic": "Fracàs de connexion",
-
   "setup.title": "Benvenguda sus ReView.",
   "setup.subtitle": "Configuram vòstre estudi en dos passes. Poiretz tot ajustar aprèp.",
   "setup.step.studio": "Estudi",
@@ -30,7 +28,6 @@
   "setup.submit": "Crear l'estudi",
   "setup.submitting": "Creacion…",
   "setup.error.generic": "Fracàs de configuracion",
-
   "display.title": "Afichatge",
   "display.theme": "Tèma",
   "display.theme.hint": "Seguir lo sistèma o forçar clar/escur.",
@@ -45,7 +42,6 @@
   "display.language.hint": "Lenga de l'interfàcia. Lo vocabulari de produccion demòra en anglés.",
   "display.view": "Vista per defaut de las listas",
   "display.view.hint": "S'aplica pertot. Una lista que basculatz garda son reglatge pròpri fins que lo levetz.",
-
   "language.select": "Causir una lenga",
   "language.regional": "Lenga regionala",
   "language.notice.title": "Las traduccions son generadas automaticament",
@@ -59,24 +55,20 @@
   "language.coverage.complete": "Traduch complètament",
   "language.fallbackNotice": "Las frasas pas traduchas s'afichan en anglés.",
   "language.regionalSuffix": "— lenga regionala",
-
   "nav.home": "Acuèlh",
   "nav.projects": "Projèctes",
   "nav.reviews": "Reviews",
   "nav.members": "Membres",
   "nav.settings": "Paramètres",
   "nav.documentation": "Documentacion",
-
   "common.save": "Enregistrar",
   "common.cancel": "Anullar",
   "common.delete": "Suprimir",
   "common.edit": "Modificar",
   "common.close": "Tampar",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Logicial liure jos licéncia AGPL-3.0, sens cap de garantia.",
   "license.source": "Còdi font",
   "license.title": "Licéncia",
-
   "common.confirm": "Confirmar",
   "common.previous": "Precedent",
   "common.next": "Seguent",
@@ -112,7 +104,6 @@
   "onboarding.help.title": "Besonh d'ajuda ?",
   "onboarding.help.body": "Quichatz sus « ? » per la lista dels acorchis (totes reconfigurables), e trobatz lo guida complet dins Documentacion.",
   "onboarding.start": "Començar",
-
   "common.create": "Crear",
   "common.open": "Dobrir",
   "common.duplicate": "Duplicar",
@@ -169,7 +160,10 @@
   "projects.empty.canManage": "Creatz vòstre primièr projècte amb lo boton « + Crear » per organizar vòstras sequences, shots e assets.",
   "projects.empty.member": "Sètz membre de cap de projècte. Demandatz a un supervisor de vos apondre.",
   "projects.empty.action": "Crear un projècte",
-  "projects.countLabel": { "one": "projècte", "other": "projèctes" },
+  "projects.countLabel": {
+    "one": "projècte",
+    "other": "projèctes"
+  },
   "projects.deleteMany.title": "Suprimir los projèctes ?",
   "projects.deleteMany.message": {
     "one": "{count} projècte serà mes a l’escobilhièr. Restaurable dempuèi l’administracion.",
@@ -188,15 +182,20 @@
   "reviews.empty.title": "Cap de review",
   "reviews.empty.description": "Cap de mèdia correspond pas a aquestes filtres. Publicatz un mèdia dempuèi una tasca per lançar una review.",
   "reviews.draft": "Borrolhon",
-  "reviews.count": { "one": "{count} mèdia", "other": "{count} mèdias" },
-  "reviews.countLabel": { "one": "mèdia", "other": "mèdias" },
+  "reviews.count": {
+    "one": "{count} mèdia",
+    "other": "{count} mèdias"
+  },
+  "reviews.countLabel": {
+    "one": "mèdia",
+    "other": "mèdias"
+  },
   "reviews.addToPlaylist": "Apondre a la playlist…",
   "reviews.deleteMany.title": "Suprimir los mèdias ?",
   "reviews.deleteMany.message": {
     "one": "{count} mèdia serà mes a l’escobilhièr.",
     "other": "{count} mèdias seràn meses a l’escobilhièr."
   },
-
   "common.rename": "Tornar nomenar",
   "common.remove": "Levar",
   "common.deletePermanently": "Suprimir definitivament",
@@ -229,10 +228,16 @@
   "trash.empty.description": "Los elements suprimits del projècte arriban aicí e demòran restaurables.",
   "trash.delete.title": "Suprimir definitivament ?",
   "trash.restored": "Element restaurat",
-  "trash.restoredCount": { "one": "{count} element restablit", "other": "{count} elements restablits" },
+  "trash.restoredCount": {
+    "one": "{count} element restablit",
+    "other": "{count} elements restablits"
+  },
   "trash.deleted": "Suprimit definitivament",
   "trash.group.media": "Mèdias",
-  "trash.selectedCount": { "one": "{count} seleccionat", "other": "{count} seleccionats" },
+  "trash.selectedCount": {
+    "one": "{count} seleccionat",
+    "other": "{count} seleccionats"
+  },
   "trash.purged": {
     "one": "{count} element suprimit definitivament",
     "other": "{count} elements suprimits definitivament"
@@ -262,8 +267,10 @@
   },
   "assets.delete.title": "Suprimir l’asset ?",
   "assets.deleteMany.title": "Suprimir los assets ?",
-  "assets.countLabel": { "one": "asset", "other": "assets" },
-
+  "assets.countLabel": {
+    "one": "asset",
+    "other": "assets"
+  },
   "sequences.title": "Sequences",
   "sequences.empty.title": "Cap de sequence",
   "sequences.empty.description": "Las sequences del projècte apareisseràn aicí.",
@@ -301,7 +308,6 @@
   "playlists.delete.title": "Suprimir la playlist ?",
   "playlists.unreadable": "Cap de mèdia legible dins aquesta playlist",
   "playlists.inaccessible": "Playlist pas disponibla",
-
   "viewer.env.title": "Environament",
   "viewer.hdri.title": "Environament HDRI (esclairatge per imatge)",
   "viewer.hdri.background": "HDRI en fons",
@@ -347,7 +353,6 @@
   "viewer.bookmarks.title": "Vistas enregistradas",
   "viewer.bookmarks.empty": "Cap de vista enregistrada.",
   "viewer.bookmarks.save": "Enregistrar la vista actuala — partejada amb l’equipa",
-
   "viewer.focal.hint": "Focala en millimètres, captador 36 mm",
   "viewer.aperture.hint": "Prigondor de camp — 0 = net pertot",
   "viewer.tilt.hint": "Inclinason a l’entorn de l’axe de vista",
@@ -355,7 +360,6 @@
   "viewer.upAxis.hint2": "Convencion Y-down adobada a l’import",
   "viewer.realScale.hint2": "Sens unificar las escalas per bounding box",
   "viewer.inspectionTint.hint": "Locala a vòstra session",
-
   "shortcuts.title": "Acorchis de clavièr",
   "shortcuts.nav": "Navigacion",
   "shortcuts.hint": "Clicatz una tòca per la reconfigurar.",
@@ -427,10 +431,8 @@
   "lighting.default.title": "Esclairatge 3D per defaut",
   "lighting.default.none": "Cap (lums d’estudi)",
   "lighting.default.empty": "Cap de valor per defaut : esclairatge d’estudi neutre.",
-
   "shortcuts.goProjects": "Anar als projèctes",
   "shortcuts.showHelp": "Afichar los acorchis",
-
   "whatsNew.title": "Novetats",
   "whatsNew.unavailable": "Changelog pas disponible ({status})",
   "tree.noSequence": "Cap de sequence.",
@@ -479,7 +481,6 @@
   "dropzone.release": "Daissatz anar per lançar lo mandadís",
   "storage.title": "Emmagazinatge",
   "storage.unlimited.placeholder": "illimitat",
-
   "common.undo": "Anullar",
   "common.redo": "Tornar far",
   "viewer.duration": "Durada",
@@ -535,7 +536,6 @@
   "review.firstFrame": "Primièr frame",
   "review.playbackRate": "Cadéncia de lectura — la timeline demòra en frame",
   "review.none": "cap",
-
   "viewer.guides.title": "Repèris",
   "viewer.guides.grid": "Grasilha de sòl",
   "viewer.guides.axes": "Triada d’axes",
@@ -619,7 +619,6 @@
   "review.pipFrame": "Vista de la camera layout — lisar per desplaçar, punhada per redimensionar",
   "review.wipe.move": "Desplaçar lo wipe (doble clic : reïnicializar)",
   "review.wipe.rotate": "Far virar la barra (aimantat a 0/45/90°)",
-
   "review.guides.thirds": "Tèrces",
   "review.guides.center": "Crotz centrala",
   "review.guides.actionSafe.hint": "Zòna d’accion segura",
@@ -630,7 +629,6 @@
   "review.export.captureShort": "Captura de la vista (PNG)",
   "review.file": "Fichièr",
   "review.delivery": "Difusion",
-
   "common.noData": "Cap de donada.",
   "common.reset": "Reïnicializar",
   "common.host": "Òste",
@@ -801,7 +799,6 @@
   "versions.unpublished": "Pas publicadas",
   "versions.allMedia": "Totes los mèdias",
   "versions.decision": "Decision",
-
   "twofa.enabled": "2FA activada — servatz vòstres còdis de secors",
   "twofa.disabled": "2FA desactivada",
   "twofa.code": "Còdi de 6 chifras",
@@ -832,7 +829,10 @@
   "asset.tree.direct": "Versions restacadas a l’asset",
   "asset.tree.empty.title": "Res de publicat pel moment",
   "asset.tree.empty.description": "Las versions publicadas dempuèi un DCC apareisson aicí, classadas per departament.",
-  "asset.tree.versionCount": { "one": "{count} version", "other": "{count} versions" },
+  "asset.tree.versionCount": {
+    "one": "{count} version",
+    "other": "{count} versions"
+  },
   "asset.tree.looseVersions": "Versions sens prètzfach",
   "asset.tree.noVersion": "Cap de version",
   "asset.card.latest": "darrièra : {name} · {date}",
@@ -913,10 +913,7 @@
   "review.exitTheatre": "Quitar lo mòde teatre (Escap)",
   "review.cameraViewSaved": "Vista de camera enregistrada",
   "email.placeholder": "vos@estudi.oc",
-
-
   "common.escKey": "Escap",
-
   "common.start": "Començament",
   "common.end": "Fin",
   "common.name": "Nom",
@@ -947,14 +944,23 @@
   "comments.atTime": "a {time} s",
   "comments.filter.open": "Dobèrts",
   "comments.reopened": "Comentari tornat dobrir",
-  "comments.replyCount": { "one": "{count} responsa", "other": "{count} responsas" },
-  "comments.total": { "one": "{count} comentari al total.", "other": "{count} comentaris al total." },
+  "comments.replyCount": {
+    "one": "{count} responsa",
+    "other": "{count} responsas"
+  },
+  "comments.total": {
+    "one": "{count} comentari al total.",
+    "other": "{count} comentaris al total."
+  },
   "comments.delete.message": "Lo comentari serà suprimit definitivament.",
   "comments.delete.messageWithReplies": {
     "one": "Lo comentari e sa {count} responsa seràn suprimits definitivament.",
     "other": "Lo comentari e sas {count} responsas seràn suprimits definitivament."
   },
-  "comments.openCount": { "one": "{count} dobèrt", "other": "{count} dobèrts" },
+  "comments.openCount": {
+    "one": "{count} dobèrt",
+    "other": "{count} dobèrts"
+  },
   "comments.filter.none": "Cap de comentari dins aqueste estat.",
   "comments.editField": "Modificar lo comentari",
   "decision.current": "Decision actuala :",
@@ -984,10 +990,16 @@
   "versions.lastVersions": "darrièras versions",
   "versions.noMatch": "Cap de version correspond pas als filtres.",
   "versions.location": "Localizacion",
-  "versions.total": { "one": "{count} version al total.", "other": "{count} versions al total." },
+  "versions.total": {
+    "one": "{count} version al total.",
+    "other": "{count} versions al total."
+  },
   "mediaAccess.empty": "Cap d'accès enregistrat pel moment.",
   "mediaAccess.hint": "Una linha per consultacion (desduplicada sus 30 minutas) — reviews intèrnas e partatges client ensemble.",
-  "mediaAccess.total": { "one": "{count} accès al total.", "other": "{count} accèsses al total." },
+  "mediaAccess.total": {
+    "one": "{count} accès al total.",
+    "other": "{count} accèsses al total."
+  },
   "ocio.intro": "Configs de gestion de la color OCIO. Recuperatz las configs ACES oficialas (",
   "ocio.none": "Cap de config installada. Percorrètz las releases ACES çai jos.",
   "ocio.browse": "Percórrer las releases ACES",
@@ -1073,7 +1085,6 @@
   "review.publish": "Publicar per l'equipa",
   "review.cameraAnimGltf": "Animacion de camera (glTF)",
   "review.importAnimation": "Importar una animacion",
-
   "project.status.active": "Actiu",
   "project.status.onHold": "En pausa",
   "projects.tab.active": "Actius",
@@ -1081,25 +1092,23 @@
   "projects.created": "Projècte « {name} » creat",
   "projects.duplicated": "Projècte « {name} » creat dempuèi « {source} »",
   "projects.unarchived": "Projècte « {name} » desarquivat",
-  "projects.count": { "one": "{count} projècte", "other": "{count} projèctes" },
+  "projects.count": {
+    "one": "{count} projècte",
+    "other": "{count} projèctes"
+  },
   "admin.group.studio": "Estudi",
   "admin.group.content": "Contenguts",
   "admin.group.reviewContexts": "Contèxtes de review",
   "admin.group.communications": "Comunicacions",
   "admin.group.maintenance": "Mantenença",
-
   "project.status.completed": "Acabat",
   "project.status.archived": "Archivat",
-
   "task.dueDate": "Escasença",
   "marker.delete": "Suprimir lo marcador",
   "usd.recomposeFrom": "Recompausar dempuèi l’USD",
-
   "marker.rename": "Tornar nomenar / recolorar…",
-
   "sessions.line": "{ip} · connectat lo {created} · actiu lo {seen}",
   "sessions.unknownIp": "IP desconeguda",
-
   "admin.tab.users": "Utilizaires",
   "admin.tab.comments": "Comentaris",
   "admin.tab.statuses": "Estats",
@@ -1108,12 +1117,10 @@
   "admin.tab.color": "Color (OCIO)",
   "admin.topStorage": "Top emmagazinatge / utilizaire",
   "admin.onlineCount": "{count} en linha",
-
   "presence.available": "Disponible",
   "presence.away": "Absent",
   "presence.dnd": "Destorbar pas",
   "presence.onlineCount": "En linha · {count}",
-
   "common.enable": "Activar",
   "common.loading": "Cargament…",
   "common.nextMonth": "Mes seguent",
@@ -1143,7 +1150,10 @@
   "tokens.copy": "Copiar",
   "tokens.created": "Token creat",
   "tokens.expired": "Expirat",
-  "tokens.expiry.days": { "one": "{count} jorn", "other": "{count} jorns" },
+  "tokens.expiry.days": {
+    "one": "{count} jorn",
+    "other": "{count} jorns"
+  },
   "tokens.expiry.label": "Expiracion",
   "tokens.new": "Token novèl",
   "tokens.passwordHint": "Un token viu mai longtemps que vòstra session : vòstre mot de santa Clara confirma la creacion.",
@@ -1172,7 +1182,10 @@
   "sessions.title": "Sessions activas",
   "sessions.thisDevice": "Aqueste aparelh",
   "sessions.empty": "Cap de session enregistrada (las connexions anterioras a la mesa a jorn apareisson pas — tornatz vos connectar per las veire aicí).",
-  "sessions.revokedCount": { "one": "{count} session revocada", "other": "{count} sessions revocadas" },
+  "sessions.revokedCount": {
+    "one": "{count} session revocada",
+    "other": "{count} sessions revocadas"
+  },
   "twofa.qr": "Còdi QR d’enrolament 2FA",
   "twofa.scan": "Escanejatz aqueste còdi QR amb vòstra aplicacion (Google Authenticator, 1Password…), puèi picatz lo còdi afichat.",
   "twofa.wrongCode": "Còdi incorrècte",
@@ -1194,11 +1207,20 @@
   "production.attention.unassigned": "Sens assignat",
   "production.attention.review": "En espèra de review",
   "production.attention.none": "Res aicí, tant melhor.",
-  "production.attention.more": { "one": "e {count} autre", "other": "e {count} autres" },
+  "production.attention.more": {
+    "one": "e {count} autre",
+    "other": "e {count} autres"
+  },
   "production.workload.empty": "Res mai de far.",
-  "production.workload.late": { "one": "{count} en retard", "other": "{count} en retard" },
+  "production.workload.late": {
+    "one": "{count} en retard",
+    "other": "{count} en retard"
+  },
   "production.pace.window": "Fenèstra d'observacion",
-  "production.pace.weeks": { "one": "{count} setmana", "other": "{count} setmanas" },
+  "production.pace.weeks": {
+    "one": "{count} setmana",
+    "other": "{count} setmanas"
+  },
   "production.pace.perWeek": "{value} per setmana",
   "production.pace.projected": "Fin previsuda",
   "production.pace.noProjection": "Ritme insufisent per prevéser una fin",
@@ -1216,7 +1238,10 @@
   "stats.notes": "Nòtas",
   "stats.approvedRatio": "{approved}/{total} aprovats · {pct} %",
   "stats.retakes": "Retakes",
-  "stats.days": { "one": "{count} j", "other": "{count} j" },
+  "stats.days": {
+    "one": "{count} j",
+    "other": "{count} j"
+  },
   "stats.drawCalls": "Draw calls",
   "stats.fps": "fps",
   "stats.measuring": "Mesura…",
@@ -1229,13 +1254,19 @@
   "sequences.empty.hint": "Creatz vòstras sequences amb lo boton « + » çai-sus — regropan los shots (SQ010, SQ020…).",
   "playlists.empty.hint": "Seleccionatz de mèdias sus la pagina Reviews puèi « Apondre a la playlist » (clic drech), o creatz una playlist voida aicí.",
   "playlists.delete.message": "« {name} » serà suprimida. Las versions qu'aquò referéncia son pas afectadas.",
-  "playlists.versionCount": { "one": "{count} version", "other": "{count} versions" },
+  "playlists.versionCount": {
+    "one": "{count} version",
+    "other": "{count} versions"
+  },
   "shares.newShort": "Ligam novèl",
   "shares.empty": "Cap de ligam de partatge. Creatz-ne un per donar accès als mèdias publicats d’aqueste projècte, sens compte.",
   "shares.createdBy": "Creat per {name}",
   "shares.expiresOn": "Expira lo {date}",
   "shares.viewedOn": "Vist lo {date}",
-  "shares.viewCount": { "one": "vista", "other": "vistas" },
+  "shares.viewCount": {
+    "one": "vista",
+    "other": "vistas"
+  },
   "shares.scope": "Çò que dobrís lo ligam",
   "shares.scope.project": "Lo projècte entièr",
   "shares.scope.playlist": "Una sola playlist",
@@ -1246,21 +1277,36 @@
   "shares.scope.pick.media": "Mèdias d'inclure",
   "shares.scope.pick.none": "Causir…",
   "shares.scope.empty": "Aqueste projècte a pas encara cap de mèdia publicat.",
-  "shares.scope.selected": { "one": "{count} mèdia seleccionat", "other": "{count} mèdias seleccionats" },
+  "shares.scope.selected": {
+    "one": "{count} mèdia seleccionat",
+    "other": "{count} mèdias seleccionats"
+  },
   "shares.scope.needsTarget": "Causissètz çò que dobrís aqueste ligam abans de lo crear.",
   "shares.scope.badge.project": "Projècte entièr",
-  "shares.scope.badge.selection": { "one": "{count} mèdia", "other": "{count} mèdias" },
+  "shares.scope.badge.selection": {
+    "one": "{count} mèdia",
+    "other": "{count} mèdias"
+  },
   "shares.scope.badge.restricted": "Restrenh",
   "shares.email": "Mandar per corrièl…",
   "shares.email.title": "Mandar lo ligam per corrièl",
   "shares.email.recipients": "Destinataris",
   "shares.email.recipients.placeholder": "Una adreça per linha",
-  "shares.email.count": { "one": "{count} adreça valida", "other": "{count} adreças validas" },
-  "shares.email.tooMany": { "one": "{count} destinatari al maximum per mandadís", "other": "{count} destinataris al maximum per mandadís" },
+  "shares.email.count": {
+    "one": "{count} adreça valida",
+    "other": "{count} adreças validas"
+  },
+  "shares.email.tooMany": {
+    "one": "{count} destinatari al maximum per mandadís",
+    "other": "{count} destinataris al maximum per mandadís"
+  },
   "shares.email.note": "Nòta (facultativa)",
   "shares.email.note.placeholder": "Un mot pel destinatari",
   "shares.email.submit": "Mandar",
-  "shares.email.sent": { "one": "Ligam mandat a {count} destinatari", "other": "Ligam mandat a {count} destinataris" },
+  "shares.email.sent": {
+    "one": "Ligam mandat a {count} destinatari",
+    "other": "Ligam mandat a {count} destinataris"
+  },
   "shares.email.invalid": "Picatz almens una adreça valida.",
   "shares.email.willMentionExpiry": "Lo messatge precisarà que lo ligam expira lo {date}.",
   "shares.email.noExpiry": "Lo messatge precisarà que lo ligam expira pas.",
@@ -1294,7 +1340,6 @@
   "naming.warningFile": "« {name} » respècta pas la nomenclatura del projècte.",
   "naming.compliant": "Confòrme",
   "naming.nonCompliant": "Pas confòrme",
-
   "mode.watch": "Agachar",
   "mode.watch.hint": "Legir, zoomar, comparar las versions — cap d’aisina d’edicion. Sol mòde servit als clients.",
   "mode.annotate": "Anotar",
@@ -1372,7 +1417,6 @@
   "action.resetSpatial": "Vista d’origina",
   "action.fitMedia": "Ajustar a l’ecran",
   "action.resetMedia": "Talha reala 1:1",
-
   "common.add": "Apondre",
   "common.show": "Afichar",
   "common.hide": "Amagar",
@@ -1409,7 +1453,10 @@
   "voice.start": "Enregistrar una nòta vocala",
   "dropzone.drop": "Depausatz vòstres fichièrs aicí",
   "batch.nothing": "Res a generar.",
-  "batch.createCount": { "one": "Crear {count} element", "other": "Crear {count} elements" },
+  "batch.createCount": {
+    "one": "Crear {count} element",
+    "other": "Crear {count} elements"
+  },
   "batch.creation": "Creacion de shots/sequences",
   "notif.markAllRead": "Tot marcar legit",
   "file.readFailed": "Lectura del fichièr impossibla",
@@ -1458,22 +1505,40 @@
   "decision.badge": "Decision : {status}",
   "decision.dialogTitle": "Decision de review — {version}",
   "project.dupHint": "Sequences, shots e reglatges son tornats crear. Los mèdias, versions e comentaris son pas copiats.",
-  "shots.created": { "one": "{count} shot creat", "other": "{count} shots creats" },
+  "shots.created": {
+    "one": "{count} shot creat",
+    "other": "{count} shots creats"
+  },
   "shots.delete.message": "Lo shot « {code} » e sas prètzfaches/versions seràn desplaçats dins las escobilhas.",
   "shots.omitted": "Copat al montatge",
   "shots.searchPlaceholder": "Còdi o nom de shot…",
-  "shots.count": { "one": "{count} shot", "other": "{count} shots" },
-  "shots.countLabel": { "one": "shot", "other": "shots" },
-  "shots.trashedCount": { "one": "{count} shot desplaçat dins las escobilhas", "other": "{count} shots desplaçats dins las escobilhas" },
+  "shots.count": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "shots.countLabel": {
+    "one": "shot",
+    "other": "shots"
+  },
+  "shots.trashedCount": {
+    "one": "{count} shot desplaçat dins las escobilhas",
+    "other": "{count} shots desplaçats dins las escobilhas"
+  },
   "shots.deleteMany.title": "Suprimir los shots ?",
-  "shots.deleteMany.message": { "one": "{count} shot e sas prètzfaches/versions seràn desplaçats dins las escobilhas.", "other": "{count} shots e lors prètzfaches/versions seràn desplaçats dins las escobilhas." },
+  "shots.deleteMany.message": {
+    "one": "{count} shot e sas prètzfaches/versions seràn desplaçats dins las escobilhas.",
+    "other": "{count} shots e lors prètzfaches/versions seràn desplaçats dins las escobilhas."
+  },
   "shots.new": "Novèl shot",
   "shot.newAsset": "+ Crear un asset",
   "shot.omitted": "Omés del montatge",
   "shot.omittedHint": "Lo shot es copat al montatge mas garda son trabalh, sas versions e sos comentaris.",
   "assets.emptyHint": "Creatz vòstres assets reütilizables amb « + Crear » (personatges, decòrs, props…).",
   "assets.attach": "Estacar",
-  "assets.count": { "one": "{count} asset", "other": "{count} assets" },
+  "assets.count": {
+    "one": "{count} asset",
+    "other": "{count} assets"
+  },
   "assets.created": "Asset « {name} » creat",
   "assets.createdAttached": "Asset « {name} » creat e estacat",
   "assets.delete.message": "L'asset « {name} » e sas versions/mèdias seràn desplaçats dins las escobilhas.",
@@ -1571,7 +1636,6 @@
   "email.digestOff": "Resumit quotidian desactivat",
   "email.weeklyOn": "Rapòrt setmanièr activat",
   "email.weeklyOff": "Rapòrt setmanièr desactivat",
-
   "review.hotspotAttached": "📍 Hotspot junt (centre del viewer)",
   "review.camViewSaved": "📷 La vista camèra actuala serà enregistrada",
   "review.labelsVisible": "Etiquetas visiblas",
@@ -1617,7 +1681,10 @@
   "live.coHostAdded": "{name} es copilòt — lo primièr qu'interagís pren la man",
   "live.coHostRemoved": "{name} es pas mai copilòt",
   "live.handedOver": "Man passada a {name} (pilòt)",
-  "live.participants": { "one": "({count} participant).", "other": "({count} participants)." },
+  "live.participants": {
+    "one": "({count} participant).",
+    "other": "({count} participants)."
+  },
   "live.running": "Review en dirècte en cors",
   "live.runningWithPilot": "Review en dirècte en cors — pilotada per {pilot}",
   "live.coHosts": "Copilòts",
@@ -1656,8 +1723,14 @@
   "video.qualityOriginal": "Originala",
   "video.qualitySet": "Qualitat de lectura : {height}p",
   "video.volume": "Volum",
-  "video.compareOffsetAhead": { "one": "B es en avança de {count} frame sus A", "other": "B es en avança de {count} frames sus A" },
-  "video.compareOffsetBehind": { "one": "B es en retard de {count} frame sus A", "other": "B es en retard de {count} frames sus A" },
+  "video.compareOffsetAhead": {
+    "one": "B es en avança de {count} frame sus A",
+    "other": "B es en avança de {count} frames sus A"
+  },
+  "video.compareOffsetBehind": {
+    "one": "B es en retard de {count} frame sus A",
+    "other": "B es en retard de {count} frames sus A"
+  },
   "video.compareOffsetNone": "B es alinhat sus A",
   "video.waveform.show": "Forma d'onda àudio",
   "video.waveform.scrub": "Forma d'onda àudio — lisar per se desplaçar",
@@ -1710,11 +1783,13 @@
   "media.delete.message": "« {name} » serà desplaçat dins las escobilhas del projècte.",
   "media.draft": "Borrolhon",
   "stage.notSavedPublishCancelled": "Mesa en scèna pas enregistrada — publicacion anullada",
-
   "task.status.inProgress": "En cors",
   "task.status.retake": "Retake",
   "task.checklist": "Lista de verificacion",
-  "task.count": { "one": "{count} prètzfach", "other": "{count} prètzfaches" },
+  "task.count": {
+    "one": "{count} prètzfach",
+    "other": "{count} prètzfaches"
+  },
   "task.created": "Prètzfach « {name} » creat",
   "task.createdNamed": "Prètzfach creat : {name}",
   "task.fallbackName": "Prètzfach #{id}",
@@ -1738,7 +1813,6 @@
   "panel.liveRender": "Rendut en dirècte",
   "panel.performance": "Performància",
   "panel.techSheet": "Ficha tecnica",
-
   "compare.siblingUnreachable": "Splat de comparason inaccessible",
   "compare.grid": "Grasilha · {count}",
   "compare.gridHint": "2 versions e mai : grasilha 2×2 sincronizada (max {max} a l'ecran).",
@@ -1759,7 +1833,10 @@
   "camera.curves": "Corbas",
   "camera.frameSelection": "Encadrar",
   "camera.home": "Origina",
-  "camera.maxBookmarks": { "one": "{count} bookmark max", "other": "{count} bookmarks max" },
+  "camera.maxBookmarks": {
+    "one": "{count} bookmark max",
+    "other": "{count} bookmarks max"
+  },
   "camera.viewN": "Vista {n}",
   "camera.clearPresentation": "Escafar la presentacion",
   "camera.clearConfirm": "La camèra, son animacion e la mesa en scèna son suprimidas per totes.",
@@ -1811,7 +1888,6 @@
   "scene.lodAuto": "Activa lo LOD jos 15 fps, lo daissa anar en dessús de 25",
   "scene.progressive": "Carga las paginas del nívol a la demanda",
   "scene.lodOn": "LOD totjorn actiu",
-
   "storage.k.original": "Fichièr mandat (original)",
   "storage.k.original.note": "Font de vertat, jamai modificada. Camin legible per slugs ierarquics.",
   "storage.k.hls": "Renditions HLS (vidèo)",
@@ -1844,7 +1920,6 @@
   "storage.k.attachment.note": "Imatges, PDF, zips e nòtas vocalas dels fials de review.",
   "storage.k.quarantine": "Fichièr en quarantena",
   "storage.k.quarantine.note": "Mandadís detectat infectat (ClamAV), isolat de la difusion.",
-
   "storage.cat.originals": "Originals (projects/)",
   "storage.cat.derived": "Derivats (derived/)",
   "storage.cat.studio": "Bibliotècas de l’estudi (studio/)",
@@ -1866,7 +1941,6 @@
   "storage.s.hdris": "HDRI (esclairatge 3D)",
   "storage.s.ocio": "Configs OCIO (color)",
   "storage.s.other": "Autres",
-
   "audit.create": "creat",
   "audit.update": "modificat",
   "audit.delete": "suprimit",
@@ -1881,7 +1955,6 @@
   "settings.hint.liveImage": "p. ex. 4 — zoom/posicion",
   "settings.hint.slack": "https://hooks.slack.com/services/… — decisions e publicacions",
   "settings.hint.sourceUrl": "https://… — obligatòri se desplegatz una version modificada",
-
   "channel.posX": "Pos X",
   "channel.posY": "Pos Y",
   "channel.posZ": "Pos Z",
@@ -1892,7 +1965,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "Anar a la keyframe de {time} segonda",
   "channel.keyAt": "Keyframe a {time} s",
-
   "admin.announce.allRoles": "(cap de marca = totes)",
   "admin.announce.updated": "Anonci modificat",
   "admin.announce.created": "Anonci creat",
@@ -2022,7 +2094,10 @@
   "storage.map.hint": "Un sol bucket S3/MinIO per tota l’instància ; la supression d’un mèdia purga son dorsièr d’original e son prefix",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objèctes",
-  "storage.objectsCount": { "one": "{count} objècte", "other": "{count} objèctes" },
+  "storage.objectsCount": {
+    "one": "{count} objècte",
+    "other": "{count} objèctes"
+  },
   "storage.originals": "Originals",
   "storage.totalUsage": "Ocupacion totala",
   "storage.orphanProject": "(projècte desconegut — orfanèl ?)",
@@ -2035,7 +2110,10 @@
   "system.agplHint": "Tota persona qu’utiliza aquesta instància a distància deu poder ne recuperar las fonts. Se l’avètz modificada, fasètz puntar lo reglatge « Còdi font » cap a vòstre depaus.",
   "system.thirdParty": "Dependéncias tèrças",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md (raiç del depaus)",
-  "system.cores": { "one": "{count} còr", "other": "{count} còrs" },
+  "system.cores": {
+    "one": "{count} còr",
+    "other": "{count} còrs"
+  },
   "system.disk": "Disc — {used} / {total}",
   "system.memory": "Memòria — {used} / {total}",
   "system.licenseTitle": "Licéncia e còdi font",
@@ -2072,7 +2150,10 @@
   "webhooks.delivery.pending": "En espèra",
   "webhooks.delivery.delivered": "Liurada",
   "webhooks.delivery.failed": "Fracassada",
-  "webhooks.delivery.attempts": { "one": "{count} temptativa", "other": "{count} temptativas" },
+  "webhooks.delivery.attempts": {
+    "one": "{count} temptativa",
+    "other": "{count} temptativas"
+  },
   "webhooks.delivery.replay": "Tornar mandar aquesta liurason",
   "webhooks.delivery.replayed": "Liurason tornada metre en fila",
   "webhooks.delivery.replayOf": "Reenviament de #{value}",
@@ -2111,19 +2192,24 @@
   "splat.isolate": "Isolar",
   "model3d.transformModel": "Transformar lo modèl",
   "model3d.unnamed": "(sens nom)",
-
   "jobs.storageCleanup": "Netejatge de l’emmagazinatge",
   "jobs.webhooks": "Webhooks sortents",
   "jobs.activeCount": "{count} actiu(s)",
   "jobs.waitingCount": "{count} en espèra",
   "jobs.failedCount": "{count} fracassat(s)",
   "jobs.completedCount": "{count} acabat(s)",
-  "jobs.attempts": { "one": "{count} temptativa", "other": "{count} temptativas" },
+  "jobs.attempts": {
+    "one": "{count} temptativa",
+    "other": "{count} temptativas"
+  },
   "jobs.cleanedFailed": {
     "one": "{count} trabalh fracassat purgat",
     "other": "{count} trabalhs fracassats purgats"
   },
-  "jobs.retriedCount": { "one": "{count} trabalh relançat.", "other": "{count} trabalhs relançats." },
+  "jobs.retriedCount": {
+    "one": "{count} trabalh relançat.",
+    "other": "{count} trabalhs relançats."
+  },
   "jobs.purgedDerived": "{count} mèdia(s) alleugierat(s) (HLS + sprite levats)",
   "jobs.purge": "Purgar",
   "jobs.purgeNow": "Purgar ara",
@@ -2131,7 +2217,6 @@
   "jobs.running": "En cors : {list}",
   "jobs.queueUnavailable": "Fila pas disponibla.",
   "jobs.webhookRef": "webhook {id}",
-
   "model3d.transformPrim": "Transformar lo prim",
   "model3d.compareUnreachable": "Modèl de comparason inaccessible",
   "model3d.loadFailed": "Cargament dels modèls impossible",
@@ -2220,7 +2305,6 @@
   "entity.unavailable.failed": "Impossible de cargar",
   "entity.unavailable.failed.hint": "Lo servidor a pas respondut. Tornatz ensajar dins un moment.",
   "entity.unavailable.backToProjects": "Tornar als projèctes",
-
   "version.emptyMedia": "Cap de mèdia dins aquesta version.",
   "version.created": "Version « {name} » creada",
   "version.current": "Actuala",
@@ -2229,15 +2313,20 @@
   "version.noVisibleMedia": "Cap de mèdia visible dins la version {version}",
   "version.unreachable": "Version inaccessibla",
   "version.dropNew": "Depausatz de fichièrs aicí per crear la version seguenta",
-  "version.publishAll": { "one": "Publicar ({count})", "other": "Publicar ({count})" },
+  "version.publishAll": {
+    "one": "Publicar ({count})",
+    "other": "Publicar ({count})"
+  },
   "version.dropShot": "Depausatz per crear una version jos un prètzfach",
   "version.inReview": "En review",
-
   "playlist.added": {
     "one": "{count} version aponduda a « {name} »",
     "other": "{count} versions apondudas a « {name} »"
   },
-  "playlist.skipped": { "one": "({count} ja presenta)", "other": "({count} ja presentas)" },
+  "playlist.skipped": {
+    "one": "({count} ja presenta)",
+    "other": "({count} ja presentas)"
+  },
   "playlist.targetCount": {
     "one": "{count} element — cada version correspondenta es aponduda en fin de playlist.",
     "other": "{count} elements — cada version correspondenta es aponduda en fin de playlist."
@@ -2251,20 +2340,28 @@
   "playlist.rename": "Renomenar la playlist",
   "playlist.emptyHint": "Ajustatz de version dempuèi lo catalòg d'esquèrra.",
   "playlist.addTo": "Ajustar a una playlist",
-  "playlist.addedTo": { "one": "{count} version ajustada a {name}", "other": "{count} versions ajustadas a {name}" },
-  "playlist.addedCount": { "one": "{count} version ajustada", "other": "{count} versions ajustadas" },
+  "playlist.addedTo": {
+    "one": "{count} version ajustada a {name}",
+    "other": "{count} versions ajustadas a {name}"
+  },
+  "playlist.addedCount": {
+    "one": "{count} version ajustada",
+    "other": "{count} versions ajustadas"
+  },
   "playlist.alreadyThere": "Ja dins la playlist",
   "playlist.nothingToAdd": "Res de publicat d'ajustar",
   "playlist.catalog.search": "Shot, asset o version…",
   "playlist.catalog.latestOnly": "Sonque la darrièra",
   "playlist.catalog.add": "Ajustar a la playlist",
-  "playlist.catalog.addSelected": { "one": "Ajustar {count}", "other": "Ajustar {count}" },
+  "playlist.catalog.addSelected": {
+    "one": "Ajustar {count}",
+    "other": "Ajustar {count}"
+  },
   "playlist.catalog.present": "Ja dedins",
   "playlist.catalog.empty": "Res correspond pas a aquestes filtres.",
   "playlist.autoAdvance": "Legir lo seguent automaticament",
   "csv.export": "Exportar CSV",
   "csv.import": "Importar CSV",
-
   "calendar.today": "Uèi",
   "calendar.dueMoved": "Escasença desplaçada",
   "nav.breadcrumb": "Fial d’Ariana",
@@ -2329,21 +2426,34 @@
   "draw.textPlaceholder": "Tèxte…",
   "info.uvSets": "Ensembles d’UV",
   "track.animTrack": "Pista d’animacion",
-
   "sequences.assets": "Assets de la sequence ({count})",
-  "sequences.createdCount": { "one": "{count} sequence creada", "other": "{count} sequences creadas" },
+  "sequences.createdCount": {
+    "one": "{count} sequence creada",
+    "other": "{count} sequences creadas"
+  },
   "sequences.delete.message": "La sequence « {code} » e sos shots seràn desplaçats dins las escobilhas.",
-  "sequences.open": "Dobrir la sequence",
-  "sequences.countLabel": { "one": "sequence", "other": "sequences" },
-  "sequences.trashedCount": { "one": "{count} sequence desplaçada dins las escobilhas", "other": "{count} sequences desplaçadas dins las escobilhas" },
+  "sequences.countLabel": {
+    "one": "sequence",
+    "other": "sequences"
+  },
+  "sequences.trashedCount": {
+    "one": "{count} sequence desplaçada dins las escobilhas",
+    "other": "{count} sequences desplaçadas dins las escobilhas"
+  },
   "sequences.deleteMany.title": "Suprimir las sequences ?",
-  "sequences.deleteMany.message": { "one": "{count} sequence e sos shots seràn desplaçats dins las escobilhas.", "other": "{count} sequences e lors shots seràn desplaçats dins las escobilhas." },
+  "sequences.deleteMany.message": {
+    "one": "{count} sequence e sos shots seràn desplaçats dins las escobilhas.",
+    "other": "{count} sequences e lors shots seràn desplaçats dins las escobilhas."
+  },
   "sequences.new": "Novèla sequence",
   "view.cards": "Vista cartas",
   "view.compact": "Vista compacta",
   "view.followAccount": "Seguir lo reglatge del compte",
   "drafts.title": "Borrolhons en espèra",
-  "drafts.count": { "one": "{count} borrolhon en espèra", "other": "{count} borrolhons en espèra" },
+  "drafts.count": {
+    "one": "{count} borrolhon en espèra",
+    "other": "{count} borrolhons en espèra"
+  },
   "uploads.failedFor": "Fracàs del mandadís de {name}",
   "uploads.sending": "Mandadís {pct} %",
   "uploads.title": "Transferiments ({count})",
@@ -2371,8 +2481,14 @@
   "transform.rotationYaw": "Rotacion Y (yaw)",
   "transform.rotationRoll": "Rotacion Z (roll)",
   "timeline.defaultName": "Montatge",
-  "timeline.shotCount": { "one": "{count} shot", "other": "{count} shots" },
-  "timeline.gapCount": { "one": "{count} trauc", "other": "{count} traucs" },
+  "timeline.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "timeline.gapCount": {
+    "one": "{count} trauc",
+    "other": "{count} traucs"
+  },
   "timeline.noMedia": "Cap de mèdia",
   "timeline.durationMismatch": "La durada del mèdia diferís de la plaja de frames declarada sul shot.",
   "timeline.previousShot": "Shot precedent",
@@ -2414,7 +2530,10 @@
   "chat.sendMessage": "Mandar un messatge",
   "chat.group.create": "Grop novèl",
   "chat.group.namePlaceholder": "Nom del grop (opcional)",
-  "chat.group.members": { "one": "{count} membre", "other": "{count} membres" },
+  "chat.group.members": {
+    "one": "{count} membre",
+    "other": "{count} membres"
+  },
   "chat.rename": "Renomenar lo grop",
   "chat.addMembers": "Apondre de participants",
   "chat.leave": "Quitar la conversacion",
@@ -2423,7 +2542,10 @@
   "chat.unmute": "Reactivar las notificacions",
   "chat.search": "Cercar una persona",
   "chat.search.empty": "Cap de persona trobada",
-  "chat.system.joined": { "one": "{names} a rejonch la convèrsa", "other": "{names} an rejonch la convèrsa" },
+  "chat.system.joined": {
+    "one": "{names} a rejonch la convèrsa",
+    "other": "{names} an rejonch la convèrsa"
+  },
   "chat.system.left": "{name} a quitat la convèrsa",
   "chat.system.removed": "{name} es estat retirat",
   "chat.system.renamed": "Lo grop s'apèla ara « {title} »",
@@ -2516,7 +2638,10 @@
   "shotgrid.setup.connect": "Ligar lo projècte",
   "shotgrid.setup.connected": "Ligat a « {name} »",
   "shotgrid.setup.connectFailed": "Ligason impossibla",
-  "shotgrid.setup.testOk": { "one": "Connexion reüssida — {count} projècte visible", "other": "Connexion reüssida — {count} projèctes visibles" },
+  "shotgrid.setup.testOk": {
+    "one": "Connexion reüssida — {count} projècte visible",
+    "other": "Connexion reüssida — {count} projèctes visibles"
+  },
   "shotgrid.sync.runFull": "Sincronizar",
   "shotgrid.sync.runReconcile": "Recuperar",
   "shotgrid.sync.reconcileHint": "Reléger la fenèstra de recuperacion — a utilizar aprèp una copadura.",
@@ -2534,7 +2659,10 @@
   "shotgrid.sync.noLog": "Cap d'entrada",
   "shotgrid.sync.keepSg": "Gardar ShotGrid",
   "shotgrid.sync.keepReview": "Gardar ReView",
-  "shotgrid.sync.conflicts": { "one": "{count} conflicte en espèra de decision", "other": "{count} conflictes en espèra de decision" },
+  "shotgrid.sync.conflicts": {
+    "one": "{count} conflicte en espèra de decision",
+    "other": "{count} conflictes en espèra de decision"
+  },
   "shotgrid.conflict.resolved": "Conflicte resolgut",
   "shotgrid.conflict.failed": "Arbitratge impossible",
   "shotgrid.conflict.detail": "{field} : ReView « {review} » · ShotGrid « {shotgrid} »",
@@ -2603,8 +2731,14 @@
   "shotgrid.versions.selectAllPending": "Seleccionar tot çò que manca",
   "shotgrid.versions.summary": "{total} publishes, {pending} pas importats",
   "shotgrid.versions.intro": "Listar los publishes ShotGrid d'aqueste projècte e menar çò que manca.",
-  "shotgrid.versions.importSelected": { "one": "Importar {count} element", "other": "Importar {count} elements" },
-  "shotgrid.versions.imported": { "one": "{count} publish importat", "other": "{count} publishes importats" },
+  "shotgrid.versions.importSelected": {
+    "one": "Importar {count} element",
+    "other": "Importar {count} elements"
+  },
+  "shotgrid.versions.imported": {
+    "one": "{count} publish importat",
+    "other": "{count} publishes importats"
+  },
   "shotgrid.admin.title": "Sites ShotGrid",
   "shotgrid.admin.projects": "Projèctes ligats",
   "shotgrid.admin.deleted": "Site ShotGrid suprimit",
@@ -2614,7 +2748,10 @@
   "shotgrid.admin.deleteConfirm": "Suprimir lo site « {name} » ? Sas identificacions son escafadas.",
   "shotgrid.admin.empty": "Cap de site ShotGrid enregistrat. Ajustatz-ne un dempuèi l'onglet ShotGrid d'un projècte.",
   "shotgrid.admin.intro": "Las identificacions demòran aquí, un còp per tot l'estudi : cada connexion de projècte las reütiliza, e cambiar una clau se fa dins un sol endrech. Cap de secret es pas jamai tornat al navegador.",
-  "shotgrid.admin.linkedProjects": { "one": "{count} projècte", "other": "{count} projèctes" },
+  "shotgrid.admin.linkedProjects": {
+    "one": "{count} projècte",
+    "other": "{count} projèctes"
+  },
   "shotgrid.domain.hierarchy": "Sequences, shots, assets",
   "shotgrid.domain.hierarchy.hint": "La descompausa de produccion, las bòrnas de cut e los estats de shot.",
   "shotgrid.domain.tasks": "Prètzfaches",
@@ -2709,7 +2846,10 @@
   "shotgrid.sync.publishOff": "L’mandadís cap a ShotGrid es desactivat : las versions publicadas aicí i demòran. A cambiar dins Reglatges → Publicacion.",
   "shotgrid.steps.title": "Etapas de pipeline emplegadas per aqueste projècte",
   "shotgrid.steps.hint": "ShotGrid prepausa pas que las etapas que la visibilitat es activada sul projècte, mas publica pas aqueste reglatge dins son API. Marcatz-las aicí, un còp. Se marcatz res, ReView las dedusís de las tasks ja presentas.",
-  "shotgrid.steps.count": { "one": "{count} causida", "other": "{count} causidas" },
+  "shotgrid.steps.count": {
+    "one": "{count} causida",
+    "other": "{count} causidas"
+  },
   "shotgrid.steps.forAssets": "Pels assets",
   "shotgrid.steps.forShots": "Pels shots",
   "shotgrid.steps.search": "Cercar una etapa…",
@@ -2740,7 +2880,10 @@
   "shotgrid.crew.state.none": "Pas encara de compte",
   "shotgrid.crew.state.ineligible": "Pòt pas èsser convidat",
   "shotgrid.crew.done": "{created} compte(s) creat(s), {added} persona(s) aponduda(s) al projècte",
-  "shotgrid.crew.skipped": { "one": "{count} persona es estada ignorada", "other": "{count} personas son estadas ignoradas" },
+  "shotgrid.crew.skipped": {
+    "one": "{count} persona es estada ignorada",
+    "other": "{count} personas son estadas ignoradas"
+  },
   "shotgrid.crew.plan": "{create} compte(s) de crear, {add} d'apondre al projècte",
   "shotgrid.sync.queued": "Una sincronizacion es ja en cors : aquesta espèra son torn.",
   "shotgrid.link.open": "Compte ShotGrid",
@@ -2781,7 +2924,10 @@
   "social.search": "Cercar una persona o un fil",
   "social.people": "Personas",
   "social.noMatch": "Cap de resultat per aquesta recèrca.",
-  "sequence.shotCount": { "one": "{count} shot", "other": "{count} shots" },
+  "sequence.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
   "filters.search": "Cercar…",
   "filters.allStatuses": "Totes los estatuts",
   "filters.allDepartments": "Totes los departaments",
@@ -2804,9 +2950,18 @@
   "assign.unassigned": "Degun",
   "assign.done": "Assignacion mesa a jorn",
   "assign.failed": "Impossible de cambiar l'assignacion",
-  "assign.bulkTitle": { "one": "Assignar {count} element", "other": "Assignar {count} elements" },
-  "assign.doneCount": { "one": "{count} prètzfach mes a jorn", "other": "{count} prètzfaches meses a jorn" },
-  "assign.skippedCount": { "one": "{count} element ignorat : res d'assignar, o dreches insufisents", "other": "{count} elements ignorats : res d'assignar, o dreches insufisents" },
+  "assign.bulkTitle": {
+    "one": "Assignar {count} element",
+    "other": "Assignar {count} elements"
+  },
+  "assign.doneCount": {
+    "one": "{count} prètzfach mes a jorn",
+    "other": "{count} prètzfaches meses a jorn"
+  },
+  "assign.skippedCount": {
+    "one": "{count} element ignorat : res d'assignar, o dreches insufisents",
+    "other": "{count} elements ignorats : res d'assignar, o dreches insufisents"
+  },
   "assign.person": "Persona",
   "assign.departments": "Departaments",
   "assign.departmentsHint": "Daissatz void per cobrir totas las prètzfachas existentas. Marcatz de departaments per los ciblar — e crear la prètzfacha se manca.",
@@ -2869,11 +3024,17 @@
   "episode.noSequence.title": "Cap de sequence dins aqueste episode",
   "episode.noSequence.description": "Estacatz de sequences a aqueste episode dempuèi l'onglet Episodes del projècte.",
   "episode.noShot": "Cap de shot dins aquesta sequence.",
-  "episode.sequenceCount": { "one": "{count} sequence", "other": "{count} sequences" },
+  "episode.sequenceCount": {
+    "one": "{count} sequence",
+    "other": "{count} sequences"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "Dobrir l'episode",
   "episodes.reordered": "Òrdre enregistrat",
-  "episodes.createdCount": { "one": "{count} episode creat", "other": "{count} episodes creats" },
+  "episodes.createdCount": {
+    "one": "{count} episode creat",
+    "other": "{count} episodes creats"
+  },
   "episodes.attachTo": "Estacar a un episode",
   "episodes.attached": "Sequence estacada",
   "episodes.detach": "Destacar de son episode",
@@ -2884,7 +3045,10 @@
   "episodes.empty.title": "Cap d'episode",
   "episodes.empty.description": "Aqueste projècte a pas encara d'episode.",
   "episodes.empty.hint": "Creatz los primièrs amb lo generador çai-sus.",
-  "episodes.unassignedCount": { "one": "{count} sequence sens episode", "other": "{count} sequences sens episode" },
+  "episodes.unassignedCount": {
+    "one": "{count} sequence sens episode",
+    "other": "{count} sequences sens episode"
+  },
   "episodes.unassignedHint": "Clic drech sus una sequence per l'estacar a un episode.",
   "episodes.disabledHere": "Lo nivèl episode es desactivat sus aqueste projècte.",
   "episodes.settings.title": "Nivèl episode",
@@ -2893,8 +3057,14 @@
   "episodes.settings.enabled": "Nivèl episode activat",
   "episodes.settings.disabled": "Nivèl episode desactivat",
   "episodes.settings.keepsData": "L'amortar amaga solament lo nivèl : los episodes e lors sequences tòrnan intactes.",
-  "episodes.settings.stored": { "one": "{count} episode servat", "other": "{count} episodes servats" },
-  "episodes.settings.linked": { "one": "{count} sequence estacada", "other": "{count} sequences estacadas" },
+  "episodes.settings.stored": {
+    "one": "{count} episode servat",
+    "other": "{count} episodes servats"
+  },
+  "episodes.settings.linked": {
+    "one": "{count} sequence estacada",
+    "other": "{count} sequences estacadas"
+  },
   "error.UNAUTHENTICATED": "Sètz pas connectat.",
   "error.FORBIDDEN": "Accès refusat.",
   "error.NOT_FOUND": "Aqueste element existís pas mai.",
@@ -3016,23 +3186,44 @@
   "imageSequence.hint": "Agropada, caduna ven un sol mèdia que se review coma una vidèo. Separadas, cada frame demòra un fichièr.",
   "imageSequence.group": "Agropar en un sol mèdia",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "one": "{count} fichièr", "other": "{count} fichièrs" },
-  "imageSequence.gaps": { "one": "{count} frame manca", "other": "{count} frames mancan" },
-  "imageSequence.others": { "one": "{count} autre fichièr serà mandat sol", "other": "{count} autres fichièrs seràn mandats sols" },
+  "imageSequence.files": {
+    "one": "{count} fichièr",
+    "other": "{count} fichièrs"
+  },
+  "imageSequence.gaps": {
+    "one": "{count} frame manca",
+    "other": "{count} frames mancan"
+  },
+  "imageSequence.others": {
+    "one": "{count} autre fichièr serà mandat sol",
+    "other": "{count} autres fichièrs seràn mandats sols"
+  },
   "imageSequence.confirm": "Mandar coma sequences d'imatges",
   "imageSequence.sendSeparately": "Mandar fichièr per fichièr",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "Assemblatge",
-  "assignees.label": { "one": "{count} persona assignada", "many": "{count} personas assignadas", "other": "{count} personas assignadas" },
+  "assignees.label": {
+    "one": "{count} persona assignada",
+    "many": "{count} personas assignadas",
+    "other": "{count} personas assignadas"
+  },
   "assignees.dialogTitle": "Personas sus {name}",
   "assignees.searchPlaceholder": "Cercar qualqu'un…",
   "assignees.noMatch": "Degun correspond pas a aquesta recèrca.",
-  "assignees.saved": { "one": "{count} persona assignada", "many": "{count} personas assignadas", "other": "{count} personas assignadas" },
+  "assignees.saved": {
+    "one": "{count} persona assignada",
+    "many": "{count} personas assignadas",
+    "other": "{count} personas assignadas"
+  },
   "assignees.menu": "Personas…",
   "assignees.origin.direct": "Responsable d'aqueste element",
   "assignees.origin.child": "Responsable d'un element dedins",
   "assignees.origin.task": "Assignat a una prètzfacha",
-  "cards.awaitingReview": { "one": "{count} liurason en espèra de review", "many": "{count} liurasons en espèra de review", "other": "{count} liurasons en espèra de review" },
+  "cards.awaitingReview": {
+    "one": "{count} liurason en espèra de review",
+    "many": "{count} liurasons en espèra de review",
+    "other": "{count} liurasons en espèra de review"
+  },
   "cards.updatedAt": "Modificat {value}",
   "visibility.hide": "Amagar per tot lo monde",
   "visibility.show": "Tornar afichar",
@@ -3118,7 +3309,10 @@
   "note.gallery.carousel": "Carrossèl",
   "note.gallery.columns": "Colomnas",
   "note.gallery.height": "Nautor",
-  "note.gallery.count": { "one": "{count} imatge", "other": "{count} imatges" },
+  "note.gallery.count": {
+    "one": "{count} imatge",
+    "other": "{count} imatges"
+  },
   "note.image.align": "Alinhament",
   "note.image.alignFull": "Plena largor",
   "note.image.alignCenter": "Centrada",
@@ -3140,9 +3334,18 @@
   "assetType.VEHICLE": "Veïcul",
   "assetType.FX": "FX",
   "assetType.OTHER": "Autre",
-  "bulk.status.title": { "one": "Estatut de {count} shot", "other": "Estatut de {count} shots" },
-  "bulk.status.done": { "one": "{count} shot mes a jorn", "other": "{count} shots meses a jorn" },
-  "bulk.status.partial": { "one": "{count} shot mes a jorn, {failed} refusat(s)", "other": "{count} shots meses a jorn, {failed} refusat(s)" },
+  "bulk.status.title": {
+    "one": "Estatut de {count} shot",
+    "other": "Estatut de {count} shots"
+  },
+  "bulk.status.done": {
+    "one": "{count} shot mes a jorn",
+    "other": "{count} shots meses a jorn"
+  },
+  "bulk.status.partial": {
+    "one": "{count} shot mes a jorn, {failed} refusat(s)",
+    "other": "{count} shots meses a jorn, {failed} refusat(s)"
+  },
   "bulk.status.menu": "Estatut",
   "colorPicker.hue": "Tencha",
   "queryState.title": "Aquesta seccion a pas pogut se cargar",

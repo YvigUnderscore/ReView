@@ -1,6 +1,5 @@
 {
   "auth.tagline": "VFX·포스트프로덕션 스튜디오를 위한 협업 미디어 review 플랫폼.",
-
   "login.title": "다시 오신 것을 환영합니다.",
   "login.subtitle": "로그인하고 review, 작업, board로 돌아가세요.",
   "login.heading": "로그인",
@@ -12,7 +11,6 @@
   "login.error.credentials": "이메일 또는 비밀번호가 올바르지 않습니다.",
   "login.error.network": "서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
   "login.error.generic": "로그인 실패",
-
   "setup.title": "ReView에 오신 것을 환영합니다.",
   "setup.subtitle": "두 단계로 스튜디오를 설정합니다. 나중에 모두 변경할 수 있습니다.",
   "setup.step.studio": "스튜디오",
@@ -30,7 +28,6 @@
   "setup.submit": "스튜디오 만들기",
   "setup.submitting": "만드는 중…",
   "setup.error.generic": "설정 실패",
-
   "display.title": "화면",
   "display.theme": "테마",
   "display.theme.hint": "시스템 설정을 따르거나 밝게/어둡게 고정합니다.",
@@ -45,7 +42,6 @@
   "display.language.hint": "인터페이스 언어입니다. 제작 용어는 영어로 유지됩니다.",
   "display.view": "목록 기본 보기",
   "display.view.hint": "모든 곳에 적용됩니다. 개별로 전환한 목록은 해제할 때까지 자체 설정을 유지합니다.",
-
   "language.select": "언어 선택",
   "language.regional": "지역 언어",
   "language.notice.title": "번역은 기계로 생성되었습니다",
@@ -58,24 +54,20 @@
   "language.coverage.complete": "번역 완료",
   "language.fallbackNotice": "번역되지 않은 문구는 영어로 표시됩니다.",
   "language.regionalSuffix": "— 지역어",
-
   "nav.home": "홈",
   "nav.projects": "프로젝트",
   "nav.reviews": "Reviews",
   "nav.members": "멤버",
   "nav.settings": "설정",
   "nav.documentation": "사용 설명서",
-
   "common.save": "저장",
   "common.cancel": "취소",
   "common.delete": "삭제",
   "common.edit": "편집",
   "common.close": "닫기",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. AGPL-3.0 라이선스의 자유 소프트웨어이며, 어떠한 보증도 제공하지 않습니다.",
   "license.source": "소스 코드",
   "license.title": "라이선스",
-
   "common.confirm": "확인",
   "common.previous": "이전",
   "common.next": "다음",
@@ -111,7 +103,6 @@
   "onboarding.help.title": "도움이 필요하신가요?",
   "onboarding.help.body": "「?」를 누르면 단축키 목록(모두 변경 가능)이 열립니다. 전체 안내서는 「사용 설명서」에 있습니다.",
   "onboarding.start": "시작하기",
-
   "common.create": "만들기",
   "common.open": "열기",
   "common.duplicate": "복제",
@@ -157,7 +148,9 @@
   "projects.name": "프로젝트 이름",
   "projects.name.placeholder": "내 프로젝트",
   "projects.trashed": "프로젝트를 휴지통으로 옮겼습니다",
-  "projects.trashedCount": { "other": "프로젝트 {count}개를 휴지통으로 옮겼습니다" },
+  "projects.trashedCount": {
+    "other": "프로젝트 {count}개를 휴지통으로 옮겼습니다"
+  },
   "projects.unarchive": "보관 해제",
   "projects.empty.archived.title": "보관된 프로젝트가 없습니다",
   "projects.empty.archived.description": "보관한 프로젝트(편집 → 상태 「보관됨」)가 여기에 읽기 전용으로 표시됩니다.",
@@ -165,7 +158,9 @@
   "projects.empty.canManage": "「+ 만들기」 버튼으로 첫 프로젝트를 만들어 sequence, shot, asset을 정리하세요.",
   "projects.empty.member": "어떤 프로젝트에도 속해 있지 않습니다. 슈퍼바이저에게 추가를 요청하세요.",
   "projects.empty.action": "프로젝트 만들기",
-  "projects.countLabel": { "other": "개 프로젝트" },
+  "projects.countLabel": {
+    "other": "개 프로젝트"
+  },
   "projects.deleteMany.title": "프로젝트를 삭제할까요?",
   "projects.deleteMany.message": {
     "other": "프로젝트 {count}개가 휴지통으로 이동합니다. 관리자 화면에서 복원할 수 있습니다."
@@ -183,12 +178,17 @@
   "reviews.empty.title": "review 없음",
   "reviews.empty.description": "이 필터에 맞는 미디어가 없습니다. 작업에서 미디어를 게시하면 review를 시작할 수 있습니다.",
   "reviews.draft": "초안",
-  "reviews.count": { "other": "미디어 {count}개" },
-  "reviews.countLabel": { "other": "개 미디어" },
+  "reviews.count": {
+    "other": "미디어 {count}개"
+  },
+  "reviews.countLabel": {
+    "other": "개 미디어"
+  },
   "reviews.addToPlaylist": "playlist에 추가…",
   "reviews.deleteMany.title": "미디어를 삭제할까요?",
-  "reviews.deleteMany.message": { "other": "미디어 {count}개가 휴지통으로 이동합니다." },
-
+  "reviews.deleteMany.message": {
+    "other": "미디어 {count}개가 휴지통으로 이동합니다."
+  },
   "common.rename": "이름 변경",
   "common.remove": "제거",
   "common.deletePermanently": "완전히 삭제",
@@ -221,11 +221,17 @@
   "trash.empty.description": "프로젝트에서 삭제한 항목이 여기로 오며, 계속 복원할 수 있습니다.",
   "trash.delete.title": "완전히 삭제할까요?",
   "trash.restored": "항목을 복원했습니다",
-  "trash.restoredCount": { "other": "항목 {count}개를 복원했습니다" },
+  "trash.restoredCount": {
+    "other": "항목 {count}개를 복원했습니다"
+  },
   "trash.deleted": "완전히 삭제했습니다",
   "trash.group.media": "미디어",
-  "trash.selectedCount": { "other": "{count}개 선택됨" },
-  "trash.purged": { "other": "항목 {count}개를 영구 삭제했습니다" },
+  "trash.selectedCount": {
+    "other": "{count}개 선택됨"
+  },
+  "trash.purged": {
+    "other": "항목 {count}개를 영구 삭제했습니다"
+  },
   "trash.delete.message": "“{name}”이(가) 데이터베이스와 스토리지에서 삭제됩니다. 되돌릴 수 없습니다.",
   "trash.deleteMany.message": {
     "other": "항목 {count}개가 데이터베이스와 스토리지에서 삭제됩니다. 되돌릴 수 없습니다."
@@ -244,11 +250,14 @@
   "assets.unwatch": "이 asset 팔로우 해제",
   "assets.assign": "shot/sequence에 배정",
   "assets.trashed": "asset을 휴지통으로 옮겼습니다",
-  "assets.trashedCount": { "other": "asset {count}개를 휴지통으로 옮겼습니다" },
+  "assets.trashedCount": {
+    "other": "asset {count}개를 휴지통으로 옮겼습니다"
+  },
   "assets.delete.title": "asset을 삭제할까요?",
   "assets.deleteMany.title": "asset을 삭제할까요?",
-  "assets.countLabel": { "other": "개 asset" },
-
+  "assets.countLabel": {
+    "other": "개 asset"
+  },
   "sequences.title": "Sequence",
   "sequences.empty.title": "sequence 없음",
   "sequences.empty.description": "프로젝트의 sequence가 여기에 표시됩니다.",
@@ -286,7 +295,6 @@
   "playlists.delete.title": "playlist를 삭제할까요?",
   "playlists.unreadable": "이 playlist에 재생할 수 있는 미디어가 없습니다",
   "playlists.inaccessible": "playlist를 사용할 수 없습니다",
-
   "viewer.env.title": "환경",
   "viewer.hdri.title": "HDRI 환경(이미지 기반 조명)",
   "viewer.hdri.background": "HDRI 배경",
@@ -332,7 +340,6 @@
   "viewer.bookmarks.title": "저장된 뷰",
   "viewer.bookmarks.empty": "저장된 뷰가 없습니다.",
   "viewer.bookmarks.save": "현재 뷰 저장 — 팀과 공유됩니다",
-
   "viewer.focal.hint": "초점 거리(mm), 36 mm 센서 기준",
   "viewer.aperture.hint": "피사계 심도 — 0이면 전체가 선명",
   "viewer.tilt.hint": "시선 축을 중심으로 한 기울기",
@@ -340,7 +347,6 @@
   "viewer.upAxis.hint2": "가져올 때 Y-down 규약 보정",
   "viewer.realScale.hint2": "bounding box로 스케일을 통일하지 않음",
   "viewer.inspectionTint.hint": "현재 세션에만 적용",
-
   "shortcuts.title": "키보드 단축키",
   "shortcuts.nav": "탐색",
   "shortcuts.hint": "키를 클릭하면 다시 지정할 수 있습니다.",
@@ -412,10 +418,8 @@
   "lighting.default.title": "기본 3D 조명",
   "lighting.default.none": "없음(스튜디오 조명)",
   "lighting.default.empty": "기본값 없음: 중립적인 스튜디오 조명.",
-
   "shortcuts.goProjects": "프로젝트로 이동",
   "shortcuts.showHelp": "단축키 보기",
-
   "whatsNew.title": "새로운 기능",
   "whatsNew.unavailable": "변경 기록을 사용할 수 없습니다 ({status})",
   "tree.noSequence": "sequence가 없습니다.",
@@ -455,13 +459,14 @@
   "decision.saved": "결정을 기록했습니다",
   "notifications.title": "알림",
   "notifications.empty": "알림이 없습니다.",
-  "notifications.unreadAria": { "other": "알림, 읽지 않음 {count}개" },
+  "notifications.unreadAria": {
+    "other": "알림, 읽지 않음 {count}개"
+  },
   "assets.assignSaved": "배정을 저장했습니다",
   "presence.aloneHere": "다른 사람은 없습니다.",
   "dropzone.release": "놓으면 업로드가 시작됩니다",
   "storage.title": "저장 공간",
   "storage.unlimited.placeholder": "무제한",
-
   "common.undo": "실행 취소",
   "common.redo": "다시 실행",
   "viewer.duration": "길이",
@@ -517,7 +522,6 @@
   "review.firstFrame": "첫 frame",
   "review.playbackRate": "재생 프레임 레이트 — timeline은 frame 단위 그대로입니다",
   "review.none": "없음",
-
   "viewer.guides.title": "가이드",
   "viewer.guides.grid": "바닥 그리드",
   "viewer.guides.axes": "축 표시",
@@ -601,7 +605,6 @@
   "review.pipFrame": "layout 카메라 뷰 — 끌어서 이동, 핸들로 크기 조절",
   "review.wipe.move": "wipe 이동(더블클릭: 초기화)",
   "review.wipe.rotate": "바 회전(0/45/90°에 스냅)",
-
   "review.guides.thirds": "삼분할",
   "review.guides.center": "중앙 십자",
   "review.guides.actionSafe.hint": "액션 세이프 영역",
@@ -612,7 +615,6 @@
   "review.export.captureShort": "뷰 캡처(PNG)",
   "review.file": "파일",
   "review.delivery": "배포",
-
   "common.noData": "데이터가 없습니다.",
   "common.reset": "초기화",
   "common.host": "호스트",
@@ -727,13 +729,17 @@
   "transcode.crf": "품질(CRF)",
   "transcode.renditions": "품질 단계(renditions)",
   "adminTrash.restored": "프로젝트를 복원했습니다",
-  "adminTrash.restoredCount": { "other": "프로젝트 {count}개를 복원했습니다" },
+  "adminTrash.restoredCount": {
+    "other": "프로젝트 {count}개를 복원했습니다"
+  },
   "adminTrash.deleted": "프로젝트를 완전히 삭제했습니다",
   "adminTrash.empty": "휴지통에 프로젝트가 없습니다.",
   "adminTrash.deleteMany.title": "프로젝트를 완전히 삭제할까요?",
   "adminTrash.delete.title": "이 프로젝트를 완전히 삭제할까요?",
   "adminTrash.deletedOn": "{date} 삭제",
-  "adminTrash.purged": { "other": "프로젝트 {count}개를 영구 삭제했습니다" },
+  "adminTrash.purged": {
+    "other": "프로젝트 {count}개를 영구 삭제했습니다"
+  },
   "adminTrash.purge.message": "“{name}”과(와) 모든 미디어가 데이터베이스와 스토리지에서 삭제됩니다. 되돌릴 수 없습니다.",
   "adminTrash.purgeMany.message": {
     "other": "프로젝트 {count}개와 모든 미디어가 데이터베이스와 스토리지에서 삭제됩니다. 되돌릴 수 없습니다."
@@ -775,7 +781,6 @@
   "versions.unpublished": "게시 안 됨",
   "versions.allMedia": "모든 미디어",
   "versions.decision": "결정",
-
   "twofa.enabled": "2FA를 켰습니다 — 백업 코드를 보관하세요",
   "twofa.disabled": "2FA를 껐습니다",
   "twofa.code": "6자리 코드",
@@ -806,7 +811,9 @@
   "asset.tree.direct": "asset에 직접 연결된 version",
   "asset.tree.empty.title": "아직 게시된 것이 없습니다",
   "asset.tree.empty.description": "DCC에서 게시한 version이 부서별로 정리되어 여기에 표시됩니다.",
-  "asset.tree.versionCount": { "other": "version {count}개" },
+  "asset.tree.versionCount": {
+    "other": "version {count}개"
+  },
   "asset.tree.looseVersions": "작업이 없는 version",
   "asset.tree.noVersion": "version 없음",
   "asset.card.latest": "최신: {name} · {date}",
@@ -887,10 +894,7 @@
   "review.exitTheatre": "극장 모드 나가기(Esc)",
   "review.cameraViewSaved": "카메라 뷰를 저장했습니다",
   "email.placeholder": "you@studio.com",
-
-
   "common.escKey": "Esc",
-
   "common.start": "시작",
   "common.end": "끝",
   "common.name": "이름",
@@ -921,11 +925,19 @@
   "comments.atTime": "{time}초",
   "comments.filter.open": "미해결",
   "comments.reopened": "댓글을 다시 열었습니다",
-  "comments.replyCount": { "other": "답글 {count}개" },
-  "comments.total": { "other": "총 댓글 {count}개." },
+  "comments.replyCount": {
+    "other": "답글 {count}개"
+  },
+  "comments.total": {
+    "other": "총 댓글 {count}개."
+  },
   "comments.delete.message": "댓글이 영구적으로 삭제됩니다.",
-  "comments.delete.messageWithReplies": { "other": "댓글과 답글 {count}개가 영구적으로 삭제됩니다." },
-  "comments.openCount": { "other": "미해결 {count}건" },
+  "comments.delete.messageWithReplies": {
+    "other": "댓글과 답글 {count}개가 영구적으로 삭제됩니다."
+  },
+  "comments.openCount": {
+    "other": "미해결 {count}건"
+  },
   "comments.filter.none": "이 상태의 댓글이 없습니다.",
   "comments.editField": "댓글 편집",
   "decision.current": "현재 결정:",
@@ -955,10 +967,14 @@
   "versions.lastVersions": "개 version 보관",
   "versions.noMatch": "필터에 맞는 version이 없습니다.",
   "versions.location": "위치",
-  "versions.total": { "other": "총 version {count}개." },
+  "versions.total": {
+    "other": "총 version {count}개."
+  },
   "mediaAccess.empty": "아직 기록된 접근이 없습니다.",
   "mediaAccess.hint": "조회 1건당 한 행(30분 단위로 중복 제거) — 내부 review와 클라이언트 공유를 함께 표시합니다.",
-  "mediaAccess.total": { "other": "총 {count}회 조회." },
+  "mediaAccess.total": {
+    "other": "총 {count}회 조회."
+  },
   "ocio.intro": "OCIO 색 관리 config입니다. 공식 ACES config를 받으세요(",
   "ocio.none": "설치된 config가 없습니다. 아래 ACES 릴리스를 살펴보세요.",
   "ocio.browse": "ACES 릴리스 보기",
@@ -1043,7 +1059,6 @@
   "review.publish": "팀에 게시",
   "review.cameraAnimGltf": "카메라 애니메이션(glTF)",
   "review.importAnimation": "애니메이션 가져오기",
-
   "project.status.active": "진행 중",
   "project.status.onHold": "보류",
   "projects.tab.active": "진행 중",
@@ -1051,25 +1066,22 @@
   "projects.created": "프로젝트 “{name}”을(를) 만들었습니다",
   "projects.duplicated": "“{source}”에서 프로젝트 “{name}”을(를) 만들었습니다",
   "projects.unarchived": "프로젝트 “{name}”의 보관을 해제했습니다",
-  "projects.count": { "other": "프로젝트 {count}개" },
+  "projects.count": {
+    "other": "프로젝트 {count}개"
+  },
   "admin.group.studio": "스튜디오",
   "admin.group.content": "콘텐츠",
   "admin.group.reviewContexts": "review 환경",
   "admin.group.communications": "커뮤니케이션",
   "admin.group.maintenance": "유지 보수",
-
   "project.status.completed": "완료",
   "project.status.archived": "보관됨",
-
   "task.dueDate": "마감",
   "marker.delete": "마커 삭제",
   "usd.recomposeFrom": "USD에서 재구성",
-
   "marker.rename": "이름 변경 / 색 변경…",
-
   "sessions.line": "{ip} · {created} 접속 · {seen} 활동",
   "sessions.unknownIp": "알 수 없는 IP",
-
   "admin.tab.users": "사용자",
   "admin.tab.comments": "댓글",
   "admin.tab.statuses": "상태",
@@ -1078,12 +1090,10 @@
   "admin.tab.color": "색상(OCIO)",
   "admin.topStorage": "저장 공간 상위 / 사용자",
   "admin.onlineCount": "{count}명 접속 중",
-
   "presence.available": "대화 가능",
   "presence.away": "자리 비움",
   "presence.dnd": "방해 금지",
   "presence.onlineCount": "접속 중 · {count}",
-
   "common.enable": "켜기",
   "common.loading": "불러오는 중…",
   "common.nextMonth": "다음 달",
@@ -1113,7 +1123,9 @@
   "tokens.copy": "복사",
   "tokens.created": "token을 만들었습니다",
   "tokens.expired": "만료됨",
-  "tokens.expiry.days": { "other": "{count}일" },
+  "tokens.expiry.days": {
+    "other": "{count}일"
+  },
   "tokens.expiry.label": "만료",
   "tokens.new": "새 token",
   "tokens.passwordHint": "token은 세션보다 오래 남습니다. 비밀번호로 생성을 확인합니다.",
@@ -1142,7 +1154,9 @@
   "sessions.title": "활성 세션",
   "sessions.thisDevice": "현재 기기",
   "sessions.empty": "기록된 세션이 없습니다(업데이트 이전 접속은 표시되지 않습니다 — 다시 로그인하면 여기에 나타납니다).",
-  "sessions.revokedCount": { "other": "세션 {count}개를 해지했습니다" },
+  "sessions.revokedCount": {
+    "other": "세션 {count}개를 해지했습니다"
+  },
   "twofa.qr": "2FA 등록 QR 코드",
   "twofa.scan": "인증 앱(Google Authenticator, 1Password…)으로 이 QR 코드를 스캔한 뒤, 표시된 코드를 입력하세요.",
   "twofa.wrongCode": "코드가 올바르지 않습니다",
@@ -1164,11 +1178,17 @@
   "production.attention.unassigned": "담당자 없음",
   "production.attention.review": "review 대기",
   "production.attention.none": "해당 없음 — 순조롭습니다.",
-  "production.attention.more": { "other": "외 {count}건" },
+  "production.attention.more": {
+    "other": "외 {count}건"
+  },
   "production.workload.empty": "남은 작업이 없습니다.",
-  "production.workload.late": { "other": "지연 {count}건" },
+  "production.workload.late": {
+    "other": "지연 {count}건"
+  },
   "production.pace.window": "관측 기간",
-  "production.pace.weeks": { "other": "{count}주" },
+  "production.pace.weeks": {
+    "other": "{count}주"
+  },
   "production.pace.perWeek": "주당 {value}",
   "production.pace.projected": "예상 완료",
   "production.pace.noProjection": "완료 시점을 예측할 만한 실적이 없습니다",
@@ -1186,7 +1206,9 @@
   "stats.notes": "노트",
   "stats.approvedRatio": "{approved}/{total} 승인됨 · {pct}%",
   "stats.retakes": "retake",
-  "stats.days": { "other": "{count}일" },
+  "stats.days": {
+    "other": "{count}일"
+  },
   "stats.drawCalls": "드로우 콜",
   "stats.fps": "fps",
   "stats.measuring": "측정 중…",
@@ -1199,13 +1221,17 @@
   "sequences.empty.hint": "위의 «+» 버튼으로 sequence를 만드세요 — shot을 묶습니다(SQ010, SQ020…).",
   "playlists.empty.hint": "Reviews 페이지에서 미디어를 고른 뒤 우클릭 「playlist에 추가」를 쓰거나, 여기서 빈 playlist를 만드세요.",
   "playlists.delete.message": "“{name}”이(가) 삭제됩니다. 참조된 version은 영향을 받지 않습니다.",
-  "playlists.versionCount": { "other": "version {count}개" },
+  "playlists.versionCount": {
+    "other": "version {count}개"
+  },
   "shares.newShort": "새 링크",
   "shares.empty": "공유 링크가 없습니다. 하나 만들면 계정 없이도 이 프로젝트의 게시된 미디어를 볼 수 있습니다.",
   "shares.createdBy": "{name} 생성",
   "shares.expiresOn": "{date} 만료",
   "shares.viewedOn": "{date} 조회",
-  "shares.viewCount": { "other": "회 조회" },
+  "shares.viewCount": {
+    "other": "회 조회"
+  },
   "shares.scope": "링크가 여는 범위",
   "shares.scope.project": "프로젝트 전체",
   "shares.scope.playlist": "playlist 하나만",
@@ -1216,21 +1242,31 @@
   "shares.scope.pick.media": "포함할 미디어",
   "shares.scope.pick.none": "선택…",
   "shares.scope.empty": "이 프로젝트에는 아직 공개된 미디어가 없습니다.",
-  "shares.scope.selected": { "other": "미디어 {count}개 선택됨" },
+  "shares.scope.selected": {
+    "other": "미디어 {count}개 선택됨"
+  },
   "shares.scope.needsTarget": "링크를 만들기 전에 열 범위를 선택하세요.",
   "shares.scope.badge.project": "프로젝트 전체",
-  "shares.scope.badge.selection": { "other": "미디어 {count}개" },
+  "shares.scope.badge.selection": {
+    "other": "미디어 {count}개"
+  },
   "shares.scope.badge.restricted": "제한됨",
   "shares.email": "이메일로 보내기…",
   "shares.email.title": "링크를 이메일로 보내기",
   "shares.email.recipients": "받는 사람",
   "shares.email.recipients.placeholder": "한 줄에 주소 하나",
-  "shares.email.count": { "other": "유효한 주소 {count}개" },
-  "shares.email.tooMany": { "other": "한 번에 최대 {count}명까지 보낼 수 있습니다" },
+  "shares.email.count": {
+    "other": "유효한 주소 {count}개"
+  },
+  "shares.email.tooMany": {
+    "other": "한 번에 최대 {count}명까지 보낼 수 있습니다"
+  },
   "shares.email.note": "메모(선택)",
   "shares.email.note.placeholder": "받는 사람에게 남길 말",
   "shares.email.submit": "보내기",
-  "shares.email.sent": { "other": "{count}명에게 링크를 보냈습니다" },
+  "shares.email.sent": {
+    "other": "{count}명에게 링크를 보냈습니다"
+  },
   "shares.email.invalid": "유효한 이메일 주소를 하나 이상 입력하세요.",
   "shares.email.willMentionExpiry": "메일에 링크가 {date}에 만료된다고 안내합니다.",
   "shares.email.noExpiry": "메일에 링크가 만료되지 않는다고 안내합니다.",
@@ -1264,7 +1300,6 @@
   "naming.warningFile": "“{name}”이(가) 프로젝트 명명 규칙을 따르지 않습니다.",
   "naming.compliant": "규칙에 맞음",
   "naming.nonCompliant": "규칙에 맞지 않음",
-
   "mode.watch": "보기",
   "mode.watch.hint": "재생, 확대, version 비교 — 편집 도구 없음. 클라이언트에게 제공되는 유일한 모드입니다.",
   "mode.annotate": "주석",
@@ -1342,7 +1377,6 @@
   "action.resetSpatial": "기본 시점",
   "action.fitMedia": "화면에 맞추기",
   "action.resetMedia": "실제 크기 1:1",
-
   "common.add": "추가",
   "common.show": "표시",
   "common.hide": "숨기기",
@@ -1379,7 +1413,9 @@
   "voice.start": "음성 메모 녹음",
   "dropzone.drop": "여기에 파일을 놓으세요",
   "batch.nothing": "생성할 항목이 없습니다.",
-  "batch.createCount": { "other": "{count}개 만들기" },
+  "batch.createCount": {
+    "other": "{count}개 만들기"
+  },
   "batch.creation": "Shots/Sequences 생성",
   "notif.markAllRead": "모두 읽음으로 표시",
   "file.readFailed": "파일을 읽을 수 없습니다",
@@ -1428,22 +1464,34 @@
   "decision.badge": "결정: {status}",
   "decision.dialogTitle": "review 결정 — {version}",
   "project.dupHint": "sequence, shot, 설정은 다시 만들어집니다. 미디어, version, 코멘트는 복사되지 않습니다.",
-  "shots.created": { "other": "shot {count}개를 만들었습니다" },
+  "shots.created": {
+    "other": "shot {count}개를 만들었습니다"
+  },
   "shots.delete.message": "shot “{code}”과(와) 해당 작업 및 version이 휴지통으로 이동합니다.",
   "shots.omitted": "편집에서 제외됨",
   "shots.searchPlaceholder": "shot 코드 또는 이름…",
-  "shots.count": { "other": "shot {count}개" },
-  "shots.countLabel": { "other": "개 shot" },
-  "shots.trashedCount": { "other": "shot {count}개를 휴지통으로 옮겼습니다" },
+  "shots.count": {
+    "other": "shot {count}개"
+  },
+  "shots.countLabel": {
+    "other": "개 shot"
+  },
+  "shots.trashedCount": {
+    "other": "shot {count}개를 휴지통으로 옮겼습니다"
+  },
   "shots.deleteMany.title": "shot을 삭제할까요?",
-  "shots.deleteMany.message": { "other": "shot {count}개와 해당 작업 및 version이 휴지통으로 이동합니다." },
+  "shots.deleteMany.message": {
+    "other": "shot {count}개와 해당 작업 및 version이 휴지통으로 이동합니다."
+  },
   "shots.new": "새 shot",
   "shot.newAsset": "+ Asset 만들기",
   "shot.omitted": "편집본에서 제외",
   "shot.omittedHint": "이 shot은 편집본에서 빠지지만 작업과 version, 댓글은 그대로 남습니다.",
   "assets.emptyHint": "「+ 만들기」로 재사용 asset을 만드세요(캐릭터, 세트, 소품…).",
   "assets.attach": "연결",
-  "assets.count": { "other": "asset {count}개" },
+  "assets.count": {
+    "other": "asset {count}개"
+  },
   "assets.created": "asset “{name}”을(를) 만들었습니다",
   "assets.createdAttached": "asset “{name}”을(를) 만들고 연결했습니다",
   "assets.delete.message": "asset “{name}”과(와) 해당 version 및 미디어가 휴지통으로 이동합니다.",
@@ -1540,7 +1588,6 @@
   "email.digestOff": "일간 요약 꺼짐",
   "email.weeklyOn": "주간 리포트 켜짐",
   "email.weeklyOff": "주간 리포트 꺼짐",
-
   "review.hotspotAttached": "📍 hotspot 첨부됨(viewer 중앙)",
   "review.camViewSaved": "📷 현재 카메라 시점이 저장됩니다",
   "review.labelsVisible": "이름 표시",
@@ -1586,7 +1633,9 @@
   "live.coHostAdded": "{name}이(가) 공동 진행자입니다 — 먼저 조작하는 사람이 제어권을 가집니다",
   "live.coHostRemoved": "{name}이(가) 더 이상 공동 진행자가 아닙니다",
   "live.handedOver": "{name}에게 제어권을 넘겼습니다(파일럿)",
-  "live.participants": { "other": "(참가자 {count}명)." },
+  "live.participants": {
+    "other": "(참가자 {count}명)."
+  },
   "live.running": "라이브 review 진행 중",
   "live.runningWithPilot": "라이브 review 진행 중 — {pilot}이(가) 진행",
   "live.coHosts": "공동 진행자",
@@ -1625,8 +1674,12 @@
   "video.qualityOriginal": "원본",
   "video.qualitySet": "재생 품질: {height}p",
   "video.volume": "볼륨",
-  "video.compareOffsetAhead": { "other": "B가 A보다 {count} frame 앞섭니다" },
-  "video.compareOffsetBehind": { "other": "B가 A보다 {count} frame 뒤집니다" },
+  "video.compareOffsetAhead": {
+    "other": "B가 A보다 {count} frame 앞섭니다"
+  },
+  "video.compareOffsetBehind": {
+    "other": "B가 A보다 {count} frame 뒤집니다"
+  },
   "video.compareOffsetNone": "B가 A에 정렬되었습니다",
   "video.waveform.show": "오디오 파형",
   "video.waveform.scrub": "오디오 파형 — 드래그하여 이동",
@@ -1659,7 +1712,9 @@
   "ref.title": "참조",
   "ref.draft": "참조(초안)",
   "ref.addPaste": "참조 (Ctrl+V)",
-  "ref.maxImages": { "other": "참조 이미지 최대 {count}장" },
+  "ref.maxImages": {
+    "other": "참조 이미지 최대 {count}장"
+  },
   "nav.firstMedia": "이 version의 첫 미디어",
   "nav.lastMedia": "이 version의 마지막 미디어",
   "marker.edit": "표식 편집",
@@ -1676,11 +1731,12 @@
   "media.delete.message": "“{name}”이(가) 프로젝트 휴지통으로 이동합니다.",
   "media.draft": "초안",
   "stage.notSavedPublishCancelled": "연출이 저장되지 않았습니다 — 게시를 취소했습니다",
-
   "task.status.inProgress": "진행 중",
   "task.status.retake": "Retake",
   "task.checklist": "체크리스트",
-  "task.count": { "other": "작업 {count}개" },
+  "task.count": {
+    "other": "작업 {count}개"
+  },
   "task.created": "작업 “{name}”을(를) 만들었습니다",
   "task.createdNamed": "작업을 만들었습니다: {name}",
   "task.fallbackName": "작업 #{id}",
@@ -1704,7 +1760,6 @@
   "panel.liveRender": "실시간 렌더",
   "panel.performance": "성능",
   "panel.techSheet": "기술 정보",
-
   "compare.siblingUnreachable": "비교용 splat에 접근할 수 없습니다",
   "compare.grid": "그리드 · {count}",
   "compare.gridHint": "version 2개 이상: 동기화된 2×2 그리드(화면에 최대 {max}개).",
@@ -1725,7 +1780,9 @@
   "camera.curves": "커브",
   "camera.frameSelection": "화면에 맞추기",
   "camera.home": "기본 위치",
-  "camera.maxBookmarks": { "other": "bookmark 최대 {count}개" },
+  "camera.maxBookmarks": {
+    "other": "bookmark 최대 {count}개"
+  },
   "camera.viewN": "뷰 {n}",
   "camera.clearPresentation": "연출 지우기",
   "camera.clearConfirm": "카메라, 애니메이션, 배치가 모두에게서 제거됩니다.",
@@ -1777,7 +1834,6 @@
   "scene.lodAuto": "15 fps 아래에서 LOD를 켜고 25 위에서 해제",
   "scene.progressive": "점군 페이지를 필요할 때 불러옵니다",
   "scene.lodOn": "LOD 항상 켬",
-
   "storage.k.original": "업로드된 파일(원본)",
   "storage.k.original.note": "진실의 출처, 절대 수정하지 않습니다. 계층적 slug로 읽을 수 있는 경로입니다.",
   "storage.k.hls": "HLS renditions(비디오)",
@@ -1810,7 +1866,6 @@
   "storage.k.attachment.note": "review 스레드의 이미지, PDF, 압축 파일, 음성 메모.",
   "storage.k.quarantine": "격리된 파일",
   "storage.k.quarantine.note": "업로드에서 감염이 확인되어(ClamAV) 배포에서 분리했습니다.",
-
   "storage.cat.originals": "원본(projects/)",
   "storage.cat.derived": "파생 파일(derived/)",
   "storage.cat.studio": "스튜디오 라이브러리(studio/)",
@@ -1832,7 +1887,6 @@
   "storage.s.hdris": "HDRI(3D 조명)",
   "storage.s.ocio": "OCIO 설정(색)",
   "storage.s.other": "기타",
-
   "audit.create": "생성됨",
   "audit.update": "수정됨",
   "audit.delete": "삭제됨",
@@ -1847,7 +1901,6 @@
   "settings.hint.liveImage": "예: 4 — 확대/위치",
   "settings.hint.slack": "https://hooks.slack.com/services/… — 결정 및 게시",
   "settings.hint.sourceUrl": "https://… — 수정한 판을 배포한다면 필수입니다",
-
   "channel.posX": "위치 X",
   "channel.posY": "위치 Y",
   "channel.posZ": "위치 Z",
@@ -1858,7 +1911,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "{time}초의 keyframe으로 이동",
   "channel.keyAt": "{time}초의 keyframe",
-
   "admin.announce.allRoles": "(선택 없음 = 전체)",
   "admin.announce.updated": "공지를 수정했습니다",
   "admin.announce.created": "공지를 만들었습니다",
@@ -1988,17 +2040,23 @@
   "storage.map.hint": "인스턴스 전체가 S3/MinIO 버킷 하나를 씁니다. 미디어를 지우면 원본 폴더와 접두사가 함께 정리됩니다",
   "storage.objShort": "{count}개 객체",
   "storage.objects": "객체",
-  "storage.objectsCount": { "other": "객체 {count}개" },
+  "storage.objectsCount": {
+    "other": "객체 {count}개"
+  },
   "storage.originals": "원본",
   "storage.totalUsage": "전체 사용량",
   "storage.orphanProject": "(알 수 없는 프로젝트 — 고아?)",
-  "storage.scannedAt": { "other": "{date}에 버킷을 검사했습니다 — 객체 {count}개." },
+  "storage.scannedAt": {
+    "other": "{date}에 버킷을 검사했습니다 — 객체 {count}개."
+  },
   "storage.quotaOf": "할당량 {size}",
   "storage.quotaUsage": "할당량 {size} ({pct}%)",
   "system.agplHint": "이 인스턴스를 원격으로 쓰는 사람은 누구나 소스를 받을 수 있어야 합니다. 고친 판을 쓴다면 「소스 코드」 설정을 당신의 저장소로 향하게 하세요.",
   "system.thirdParty": "서드파티 의존성",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md(저장소 최상단)",
-  "system.cores": { "other": "{count}코어" },
+  "system.cores": {
+    "other": "{count}코어"
+  },
   "system.disk": "디스크 — {used} / {total}",
   "system.memory": "메모리 — {used} / {total}",
   "system.licenseTitle": "라이선스 및 소스 코드",
@@ -2035,7 +2093,9 @@
   "webhooks.delivery.pending": "대기 중",
   "webhooks.delivery.delivered": "전송됨",
   "webhooks.delivery.failed": "실패",
-  "webhooks.delivery.attempts": { "other": "시도 {count}회" },
+  "webhooks.delivery.attempts": {
+    "other": "시도 {count}회"
+  },
   "webhooks.delivery.replay": "이 전송을 다시 보내기",
   "webhooks.delivery.replayed": "전송을 대기열에 다시 넣었습니다",
   "webhooks.delivery.replayOf": "#{value} 재전송",
@@ -2074,16 +2134,21 @@
   "splat.isolate": "분리",
   "model3d.transformModel": "모델 변형",
   "model3d.unnamed": "(이름 없음)",
-
   "jobs.storageCleanup": "저장소 정리",
   "jobs.webhooks": "발신 webhook",
   "jobs.activeCount": "{count}개 실행 중",
   "jobs.waitingCount": "{count}개 대기 중",
   "jobs.failedCount": "{count}개 실패",
   "jobs.completedCount": "{count}개 완료",
-  "jobs.attempts": { "other": "{count}회 시도" },
-  "jobs.cleanedFailed": { "other": "실패한 작업 {count}개를 정리했습니다" },
-  "jobs.retriedCount": { "other": "작업 {count}개를 다시 시작했습니다." },
+  "jobs.attempts": {
+    "other": "{count}회 시도"
+  },
+  "jobs.cleanedFailed": {
+    "other": "실패한 작업 {count}개를 정리했습니다"
+  },
+  "jobs.retriedCount": {
+    "other": "작업 {count}개를 다시 시작했습니다."
+  },
   "jobs.purgedDerived": "미디어 {count}개를 정리했습니다(HLS + 스프라이트 제거)",
   "jobs.purge": "정리",
   "jobs.purgeNow": "지금 정리",
@@ -2091,7 +2156,6 @@
   "jobs.running": "진행 중: {list}",
   "jobs.queueUnavailable": "대기열을 사용할 수 없습니다.",
   "jobs.webhookRef": "웹훅 {id}",
-
   "model3d.transformPrim": "prim 변형",
   "model3d.compareUnreachable": "비교용 모델에 접근할 수 없습니다",
   "model3d.loadFailed": "모델을 불러올 수 없습니다",
@@ -2180,7 +2244,6 @@
   "entity.unavailable.failed": "불러올 수 없습니다",
   "entity.unavailable.failed.hint": "서버가 응답하지 않았습니다. 잠시 후 다시 시도하세요.",
   "entity.unavailable.backToProjects": "프로젝트로 돌아가기",
-
   "version.emptyMedia": "이 version에는 미디어가 없습니다.",
   "version.created": "version “{name}”을(를) 만들었습니다",
   "version.current": "현재",
@@ -2189,13 +2252,20 @@
   "version.noVisibleMedia": "version {version}에 표시할 미디어가 없습니다",
   "version.unreachable": "version에 접근할 수 없습니다",
   "version.dropNew": "여기에 파일을 놓으면 다음 version을 만듭니다",
-  "version.publishAll": { "other": "게시 ({count})" },
+  "version.publishAll": {
+    "other": "게시 ({count})"
+  },
   "version.dropShot": "놓으면 작업 아래에 version을 만듭니다",
   "version.inReview": "review 중",
-
-  "playlist.added": { "other": "「{name}」에 version {count}개를 추가했습니다" },
-  "playlist.skipped": { "other": "({count}개는 이미 있었습니다)" },
-  "playlist.targetCount": { "other": "{count}개 항목 — 해당하는 version이 playlist 끝에 추가됩니다." },
+  "playlist.added": {
+    "other": "「{name}」에 version {count}개를 추가했습니다"
+  },
+  "playlist.skipped": {
+    "other": "({count}개는 이미 있었습니다)"
+  },
+  "playlist.targetCount": {
+    "other": "{count}개 항목 — 해당하는 version이 playlist 끝에 추가됩니다."
+  },
   "playlist.empty": "playlist가 비어 있습니다.",
   "playlist.end": "playlist 끝",
   "playlist.named": "playlist “{name}”",
@@ -2205,20 +2275,25 @@
   "playlist.rename": "playlist 이름 바꾸기",
   "playlist.emptyHint": "왼쪽 목록에서 version을 추가하세요.",
   "playlist.addTo": "playlist에 추가",
-  "playlist.addedTo": { "other": "{name}에 version {count}개를 추가했습니다" },
-  "playlist.addedCount": { "other": "version {count}개를 추가했습니다" },
+  "playlist.addedTo": {
+    "other": "{name}에 version {count}개를 추가했습니다"
+  },
+  "playlist.addedCount": {
+    "other": "version {count}개를 추가했습니다"
+  },
   "playlist.alreadyThere": "이미 playlist에 있습니다",
   "playlist.nothingToAdd": "추가할 공개 항목이 없습니다",
   "playlist.catalog.search": "shot, asset 또는 version…",
   "playlist.catalog.latestOnly": "최신만",
   "playlist.catalog.add": "playlist에 추가",
-  "playlist.catalog.addSelected": { "other": "{count}개 추가" },
+  "playlist.catalog.addSelected": {
+    "other": "{count}개 추가"
+  },
   "playlist.catalog.present": "이미 포함됨",
   "playlist.catalog.empty": "조건에 맞는 항목이 없습니다.",
   "playlist.autoAdvance": "다음 항목 자동 재생",
   "csv.export": "CSV 내보내기",
   "csv.import": "CSV 가져오기",
-
   "calendar.today": "오늘",
   "calendar.dueMoved": "기한을 옮겼습니다",
   "nav.breadcrumb": "이동 경로",
@@ -2229,9 +2304,13 @@
   "comment.reopen": "다시 열기",
   "comment.annotationAttached": "annotation 첨부됨",
   "comment.annotationAttachedHint": "✏️ annotation 첨부됨(내용은 선택)",
-  "comment.maxAttachments": { "other": "댓글당 첨부 파일 최대 {count}개" },
+  "comment.maxAttachments": {
+    "other": "댓글당 첨부 파일 최대 {count}개"
+  },
   "comment.rangeAnnotation": "구간 annotation — {name}: {content}",
-  "comment.referencesAttached": { "other": "참고 이미지 {count}장 첨부됨" },
+  "comment.referencesAttached": {
+    "other": "참고 이미지 {count}장 첨부됨"
+  },
   "comment.resolvedBy": "{name}이(가) {date}에 해결",
   "comment.state.open": "열림",
   "comment.state.wip": "작업 중",
@@ -2266,26 +2345,38 @@
   "draw.otherInk": "다른 잉크 색",
   "draw.ink": "잉크",
   "draw.inkColor": "잉크 {color}",
-  "draw.pendingStrokes": { "other": "선 {count}개가 댓글과 함께 전송됩니다." },
-  "draw.shapesAttached": { "other": "댓글에 도형 {count}개가 첨부되었습니다." },
+  "draw.pendingStrokes": {
+    "other": "선 {count}개가 댓글과 함께 전송됩니다."
+  },
+  "draw.shapesAttached": {
+    "other": "댓글에 도형 {count}개가 첨부되었습니다."
+  },
   "draw.textPlaceholder": "텍스트…",
   "info.uvSets": "UV 세트",
   "track.animTrack": "애니메이션 트랙",
-
   "sequences.assets": "sequence의 asset ({count})",
-  "sequences.createdCount": { "other": "sequence {count}개를 만들었습니다" },
+  "sequences.createdCount": {
+    "other": "sequence {count}개를 만들었습니다"
+  },
   "sequences.delete.message": "sequence “{code}”과(와) 해당 shot이 휴지통으로 이동합니다.",
-  "sequences.open": "sequence 열기",
-  "sequences.countLabel": { "other": "개 sequence" },
-  "sequences.trashedCount": { "other": "sequence {count}개를 휴지통으로 옮겼습니다" },
+  "sequences.countLabel": {
+    "other": "개 sequence"
+  },
+  "sequences.trashedCount": {
+    "other": "sequence {count}개를 휴지통으로 옮겼습니다"
+  },
   "sequences.deleteMany.title": "sequence를 삭제할까요?",
-  "sequences.deleteMany.message": { "other": "sequence {count}개와 해당 shot이 휴지통으로 이동합니다." },
+  "sequences.deleteMany.message": {
+    "other": "sequence {count}개와 해당 shot이 휴지통으로 이동합니다."
+  },
   "sequences.new": "새 sequence",
   "view.cards": "카드 보기",
   "view.compact": "간단히 보기",
   "view.followAccount": "계정 설정 따르기",
   "drafts.title": "대기 중인 초안",
-  "drafts.count": { "other": "초안 {count}개 대기 중" },
+  "drafts.count": {
+    "other": "초안 {count}개 대기 중"
+  },
   "uploads.failedFor": "{name} 업로드에 실패했습니다",
   "uploads.sending": "전송 중 {pct}%",
   "uploads.title": "전송 ({count})",
@@ -2313,8 +2404,12 @@
   "transform.rotationYaw": "Y 회전 (yaw)",
   "transform.rotationRoll": "Z 회전 (roll)",
   "timeline.defaultName": "편집본",
-  "timeline.shotCount": { "other": "shot {count}개" },
-  "timeline.gapCount": { "other": "빈 자리 {count}개" },
+  "timeline.shotCount": {
+    "other": "shot {count}개"
+  },
+  "timeline.gapCount": {
+    "other": "빈 자리 {count}개"
+  },
   "timeline.noMedia": "미디어 없음",
   "timeline.durationMismatch": "미디어 길이가 shot에 선언된 frame 범위와 다릅니다.",
   "timeline.previousShot": "이전 shot",
@@ -2356,7 +2451,9 @@
   "chat.sendMessage": "메시지 보내기",
   "chat.group.create": "새 그룹",
   "chat.group.namePlaceholder": "그룹 이름(선택)",
-  "chat.group.members": { "other": "멤버 {count}명" },
+  "chat.group.members": {
+    "other": "멤버 {count}명"
+  },
   "chat.rename": "그룹 이름 변경",
   "chat.addMembers": "참여자 추가",
   "chat.leave": "대화 나가기",
@@ -2365,7 +2462,9 @@
   "chat.unmute": "알림 켜기",
   "chat.search": "사람 검색",
   "chat.search.empty": "찾은 사람이 없습니다",
-  "chat.system.joined": { "other": "{names}님이 대화에 참여했습니다" },
+  "chat.system.joined": {
+    "other": "{names}님이 대화에 참여했습니다"
+  },
   "chat.system.left": "{name}님이 대화를 나갔습니다",
   "chat.system.removed": "{name}님이 제외되었습니다",
   "chat.system.renamed": "그룹 이름이 « {title} »(으)로 바뀌었습니다",
@@ -2458,7 +2557,9 @@
   "shotgrid.setup.connect": "프로젝트 연결",
   "shotgrid.setup.connected": "« {name} »에 연결됨",
   "shotgrid.setup.connectFailed": "연결할 수 없습니다",
-  "shotgrid.setup.testOk": { "other": "연결 성공 — 프로젝트 {count}개 표시" },
+  "shotgrid.setup.testOk": {
+    "other": "연결 성공 — 프로젝트 {count}개 표시"
+  },
   "shotgrid.sync.runFull": "동기화",
   "shotgrid.sync.runReconcile": "복구",
   "shotgrid.sync.reconcileHint": "복구 구간을 다시 읽습니다 — 중단 후 사용하세요.",
@@ -2476,7 +2577,9 @@
   "shotgrid.sync.noLog": "항목 없음",
   "shotgrid.sync.keepSg": "ShotGrid 유지",
   "shotgrid.sync.keepReview": "ReView 유지",
-  "shotgrid.sync.conflicts": { "other": "충돌 {count}건이 결정 대기 중" },
+  "shotgrid.sync.conflicts": {
+    "other": "충돌 {count}건이 결정 대기 중"
+  },
   "shotgrid.conflict.resolved": "충돌 해결됨",
   "shotgrid.conflict.failed": "해결할 수 없습니다",
   "shotgrid.conflict.detail": "{field}: ReView « {review} » · ShotGrid « {shotgrid} »",
@@ -2545,8 +2648,12 @@
   "shotgrid.versions.selectAllPending": "누락된 항목 모두 선택",
   "shotgrid.versions.summary": "publishes {total}개, 미가져오기 {pending}개",
   "shotgrid.versions.intro": "이 프로젝트의 ShotGrid publishes를 나열하고 빠진 것을 가져옵니다.",
-  "shotgrid.versions.importSelected": { "other": "{count}개 가져오기" },
-  "shotgrid.versions.imported": { "other": "publishes {count}개 가져옴" },
+  "shotgrid.versions.importSelected": {
+    "other": "{count}개 가져오기"
+  },
+  "shotgrid.versions.imported": {
+    "other": "publishes {count}개 가져옴"
+  },
   "shotgrid.admin.title": "ShotGrid 사이트",
   "shotgrid.admin.projects": "연결된 프로젝트",
   "shotgrid.admin.deleted": "ShotGrid 사이트 삭제됨",
@@ -2556,7 +2663,9 @@
   "shotgrid.admin.deleteConfirm": "사이트 « {name} »를 삭제할까요? 자격 증명이 지워집니다.",
   "shotgrid.admin.empty": "등록된 ShotGrid 사이트가 없습니다. 프로젝트의 ShotGrid 탭에서 추가하세요.",
   "shotgrid.admin.intro": "자격 증명은 스튜디오 전체를 위해 여기에 한 번만 둡니다. 모든 프로젝트 연결이 이를 재사용하며 키 교체는 한 곳에서 끝납니다. 어떤 비밀도 브라우저로 반환되지 않습니다.",
-  "shotgrid.admin.linkedProjects": { "other": "프로젝트 {count}개" },
+  "shotgrid.admin.linkedProjects": {
+    "other": "프로젝트 {count}개"
+  },
   "shotgrid.domain.hierarchy": "Sequences, shots, assets",
   "shotgrid.domain.hierarchy.hint": "제작 분해, cut 구간, shot 상태.",
   "shotgrid.domain.tasks": "작업",
@@ -2651,7 +2760,9 @@
   "shotgrid.sync.publishOff": "ShotGrid로의 발행이 꺼져 있습니다. 여기서 발행한 version은 여기에만 남습니다. 설정 → 발행에서 변경하세요.",
   "shotgrid.steps.title": "이 프로젝트가 사용하는 파이프라인 단계",
   "shotgrid.steps.hint": "ShotGrid는 프로젝트에서 표시가 활성화된 단계만 제안하지만, 그 설정을 API로 공개하지 않습니다. 여기서 한 번 선택하세요. 선택하지 않으면 ReView가 기존 task에서 추론합니다.",
-  "shotgrid.steps.count": { "other": "{count}개 선택됨" },
+  "shotgrid.steps.count": {
+    "other": "{count}개 선택됨"
+  },
   "shotgrid.steps.forAssets": "asset용",
   "shotgrid.steps.forShots": "shot용",
   "shotgrid.steps.search": "단계 검색…",
@@ -2682,7 +2793,9 @@
   "shotgrid.crew.state.none": "계정 없음",
   "shotgrid.crew.state.ineligible": "초대할 수 없음",
   "shotgrid.crew.done": "계정 {created}개를 만들고 {added}명을 프로젝트에 추가했습니다",
-  "shotgrid.crew.skipped": { "other": "{count}명을 건너뛰었습니다" },
+  "shotgrid.crew.skipped": {
+    "other": "{count}명을 건너뛰었습니다"
+  },
   "shotgrid.crew.plan": "만들 계정 {create}개, 프로젝트에 추가할 인원 {add}명",
   "shotgrid.sync.queued": "동기화가 이미 실행 중입니다. 이번 동기화는 대기열에 들어갔습니다.",
   "shotgrid.link.open": "ShotGrid 계정",
@@ -2723,7 +2836,9 @@
   "social.search": "사람 또는 대화 검색",
   "social.people": "사람",
   "social.noMatch": "검색 결과가 없습니다.",
-  "sequence.shotCount": { "other": "shot {count}개" },
+  "sequence.shotCount": {
+    "other": "shot {count}개"
+  },
   "filters.search": "검색…",
   "filters.allStatuses": "모든 상태",
   "filters.allDepartments": "모든 부서",
@@ -2746,9 +2861,15 @@
   "assign.unassigned": "담당자 없음",
   "assign.done": "담당자를 변경했습니다",
   "assign.failed": "담당자를 변경할 수 없습니다",
-  "assign.bulkTitle": { "other": "{count}개 담당 지정" },
-  "assign.doneCount": { "other": "작업 {count}건을 변경했습니다" },
-  "assign.skippedCount": { "other": "{count}건을 건너뛰었습니다(지정할 작업이 없거나 권한 부족)" },
+  "assign.bulkTitle": {
+    "other": "{count}개 담당 지정"
+  },
+  "assign.doneCount": {
+    "other": "작업 {count}건을 변경했습니다"
+  },
+  "assign.skippedCount": {
+    "other": "{count}건을 건너뛰었습니다(지정할 작업이 없거나 권한 부족)"
+  },
   "assign.person": "담당자",
   "assign.departments": "부서",
   "assign.departmentsHint": "비워 두면 기존 작업 전체가 대상입니다. 부서를 선택하면 해당 부서만 대상이 되며, 작업이 없으면 생성합니다.",
@@ -2811,11 +2932,15 @@
   "episode.noSequence.title": "이 episode에 sequence가 없습니다",
   "episode.noSequence.description": "프로젝트의 Episodes 탭에서 이 episode에 sequence를 연결하세요.",
   "episode.noShot": "이 sequence에 shot이 없습니다.",
-  "episode.sequenceCount": { "other": "sequence {count}개" },
+  "episode.sequenceCount": {
+    "other": "sequence {count}개"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "episode 열기",
   "episodes.reordered": "순서를 저장했습니다",
-  "episodes.createdCount": { "other": "episode {count}개를 만들었습니다" },
+  "episodes.createdCount": {
+    "other": "episode {count}개를 만들었습니다"
+  },
   "episodes.attachTo": "episode에 연결",
   "episodes.attached": "sequence를 연결했습니다",
   "episodes.detach": "episode 연결 해제",
@@ -2826,7 +2951,9 @@
   "episodes.empty.title": "episode 없음",
   "episodes.empty.description": "이 프로젝트에는 아직 episode가 없습니다.",
   "episodes.empty.hint": "위의 생성기로 첫 항목을 만드세요.",
-  "episodes.unassignedCount": { "other": "episode 없는 sequence {count}개" },
+  "episodes.unassignedCount": {
+    "other": "episode 없는 sequence {count}개"
+  },
   "episodes.unassignedHint": "sequence를 마우스 오른쪽 버튼으로 클릭하면 episode에 연결할 수 있습니다.",
   "episodes.disabledHere": "이 프로젝트에서는 episode 계층이 꺼져 있습니다.",
   "episodes.settings.title": "episode 계층",
@@ -2835,8 +2962,12 @@
   "episodes.settings.enabled": "episode 계층을 켰습니다",
   "episodes.settings.disabled": "episode 계층을 껐습니다",
   "episodes.settings.keepsData": "끄더라도 계층이 숨겨질 뿐입니다. episode와 sequence는 그대로 돌아옵니다.",
-  "episodes.settings.stored": { "other": "episode {count}개 저장됨" },
-  "episodes.settings.linked": { "other": "sequence {count}개 연결됨" },
+  "episodes.settings.stored": {
+    "other": "episode {count}개 저장됨"
+  },
+  "episodes.settings.linked": {
+    "other": "sequence {count}개 연결됨"
+  },
   "error.UNAUTHENTICATED": "로그인되어 있지 않습니다.",
   "error.FORBIDDEN": "접근이 거부되었습니다.",
   "error.NOT_FOUND": "이 항목은 더 이상 존재하지 않습니다.",
@@ -2958,23 +3089,35 @@
   "imageSequence.hint": "묶으면 video처럼 review할 수 있는 하나의 미디어가 됩니다. 묶지 않으면 각 frame은 개별 파일로 남습니다.",
   "imageSequence.group": "하나의 미디어로 묶기",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "other": "파일 {count}개" },
-  "imageSequence.gaps": { "other": "frame {count}개 누락" },
-  "imageSequence.others": { "other": "다른 파일 {count}개는 개별로 전송됩니다" },
+  "imageSequence.files": {
+    "other": "파일 {count}개"
+  },
+  "imageSequence.gaps": {
+    "other": "frame {count}개 누락"
+  },
+  "imageSequence.others": {
+    "other": "다른 파일 {count}개는 개별로 전송됩니다"
+  },
   "imageSequence.confirm": "image sequence로 전송",
   "imageSequence.sendSeparately": "파일 단위로 전송",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "조립 중",
-  "assignees.label": { "other": "{count}명 배정됨" },
+  "assignees.label": {
+    "other": "{count}명 배정됨"
+  },
   "assignees.dialogTitle": "{name} 담당자",
   "assignees.searchPlaceholder": "사람 검색…",
   "assignees.noMatch": "검색 결과가 없습니다.",
-  "assignees.saved": { "other": "{count}명 배정됨" },
+  "assignees.saved": {
+    "other": "{count}명 배정됨"
+  },
   "assignees.menu": "담당자…",
   "assignees.origin.direct": "이 요소의 책임자",
   "assignees.origin.child": "내부 요소의 책임자",
   "assignees.origin.task": "작업에 배정됨",
-  "cards.awaitingReview": { "other": "review 대기 중인 납품 {count}건" },
+  "cards.awaitingReview": {
+    "other": "review 대기 중인 납품 {count}건"
+  },
   "cards.updatedAt": "수정 {value}",
   "visibility.hide": "모두에게 숨기기",
   "visibility.show": "다시 표시",
@@ -3060,7 +3203,9 @@
   "note.gallery.carousel": "캐러셀",
   "note.gallery.columns": "열",
   "note.gallery.height": "높이",
-  "note.gallery.count": { "other": "이미지 {count}장" },
+  "note.gallery.count": {
+    "other": "이미지 {count}장"
+  },
   "note.image.align": "정렬",
   "note.image.alignFull": "전체 너비",
   "note.image.alignCenter": "가운데",
@@ -3082,9 +3227,15 @@
   "assetType.VEHICLE": "차량",
   "assetType.FX": "FX",
   "assetType.OTHER": "기타",
-  "bulk.status.title": { "other": "shot {count}개의 상태" },
-  "bulk.status.done": { "other": "shot {count}개를 갱신했습니다" },
-  "bulk.status.partial": { "other": "shot {count}개 갱신, {failed}개 거부됨" },
+  "bulk.status.title": {
+    "other": "shot {count}개의 상태"
+  },
+  "bulk.status.done": {
+    "other": "shot {count}개를 갱신했습니다"
+  },
+  "bulk.status.partial": {
+    "other": "shot {count}개 갱신, {failed}개 거부됨"
+  },
   "bulk.status.menu": "상태",
   "colorPicker.hue": "색조",
   "queryState.title": "이 구역을 불러오지 못했습니다",

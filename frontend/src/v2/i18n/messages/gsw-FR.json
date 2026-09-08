@@ -1,6 +1,5 @@
 {
   "auth.tagline": "Gmeinsami Media-Review fer VFX- un Postproduktions-Studios.",
-
   "login.title": "Willkomme zeruck.",
   "login.subtitle": "Logg di ih, um züe dine Reviews, Ufgabe un Boards zeruckzekumme.",
   "login.heading": "Ihlogge",
@@ -12,7 +11,6 @@
   "login.error.credentials": "E-Mail oder Passwort isch falsch.",
   "login.error.network": "D'r Server isch nit z'erreiche. Bitte probier's glich nomol.",
   "login.error.generic": "Ihlogge fehlgschlaa",
-
   "setup.title": "Willkomme bi ReView.",
   "setup.subtitle": "Mir richte dis Studio in zwei Schritt ih. Alles kasch spöter noch ändere.",
   "setup.step.studio": "Studio",
@@ -30,7 +28,6 @@
   "setup.submit": "Studio ahlege",
   "setup.submitting": "Wird ahgleit…",
   "setup.error.generic": "Ihrichtung fehlgschlaa",
-
   "display.title": "Ahzeig",
   "display.theme": "Ussehe",
   "display.theme.hint": "Em Système folge oder hall/dunkel festlege.",
@@ -45,7 +42,6 @@
   "display.language.hint": "Sproch vu d'r Oberflächi. D'Produktionsbegriff bliewe uf Änglisch.",
   "display.view": "Standardaasicht vu de Lischte",
   "display.view.hint": "Gilt iberall. E Lischt wo du umschaltisch, behaltet ihri eigeni Iistellig bis du si zrucksetzsch.",
-
   "language.select": "E Sproch usswähle",
   "language.regional": "Regionalsproch",
   "language.notice.title": "D'Iwersetzunge sin maschinell gmacht",
@@ -59,24 +55,20 @@
   "language.coverage.complete": "Kumplett iwersetzt",
   "language.fallbackNotice": "Nit iwersetzti Sätz erschine uf Änglisch.",
   "language.regionalSuffix": "— Regionalsproch",
-
   "nav.home": "Startsitt",
   "nav.projects": "Projekte",
   "nav.reviews": "Reviews",
   "nav.members": "Mitglieder",
   "nav.settings": "Ihstellunge",
   "nav.documentation": "Dokumäntation",
-
   "common.save": "Spichere",
   "common.cancel": "Abbräche",
   "common.delete": "Lesche",
   "common.edit": "Bearweite",
   "common.close": "Zuemache",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Freji Software unter d'r Lizänz AGPL-3.0, ohne jedi Garantie.",
   "license.source": "Quellcode",
   "license.title": "Lizänz",
-
   "common.confirm": "Bestätige",
   "common.previous": "Zeruck",
   "common.next": "Witter",
@@ -112,7 +104,6 @@
   "onboarding.help.title": "Bruchsch Hilf?",
   "onboarding.help.body": "Druck „?“ fer d'Lischt vu de Tastekirzel (alli ändersch), un d'ganz Ahleitung findsch unter Dokumäntation.",
   "onboarding.start": "Loslege",
-
   "common.create": "Ahlege",
   "common.open": "Uffmache",
   "common.duplicate": "Duplaziere",
@@ -169,7 +160,10 @@
   "projects.empty.canManage": "Leg di erschte Projekt mit em Knopf „+ Ahlege“ ah, fer dini sequences, shots un assets z'organisiere.",
   "projects.empty.member": "Du bisch in keim Projekt Mitglied. Frog e Supervisor, dass er di dezuenimmt.",
   "projects.empty.action": "E Projekt ahlege",
-  "projects.countLabel": { "one": "Projekt", "other": "Projekt" },
+  "projects.countLabel": {
+    "one": "Projekt",
+    "other": "Projekt"
+  },
   "projects.deleteMany.title": "D'Projekt lesche?",
   "projects.deleteMany.message": {
     "one": "{count} Projekt kummt in d'Mülltonn. Uss d'r Verwaltung widderherstellbar.",
@@ -188,15 +182,20 @@
   "reviews.empty.title": "Kei review",
   "reviews.empty.description": "Kei Medium passt zue dene Filter. Veröffentlich e Medium uss ere Ufgab, fer e review z'starte.",
   "reviews.draft": "Entwurf",
-  "reviews.count": { "one": "{count} Medium", "other": "{count} Medie" },
-  "reviews.countLabel": { "one": "Medium", "other": "Medie" },
+  "reviews.count": {
+    "one": "{count} Medium",
+    "other": "{count} Medie"
+  },
+  "reviews.countLabel": {
+    "one": "Medium",
+    "other": "Medie"
+  },
   "reviews.addToPlaylist": "Zue d'r playlist dezuenäh…",
   "reviews.deleteMany.title": "D'Medie lesche?",
   "reviews.deleteMany.message": {
     "one": "{count} Medium kummt in d'Mülltonn.",
     "other": "{count} Medie kumme in d'Mülltonn."
   },
-
   "common.rename": "Umbenenne",
   "common.remove": "Wegnämme",
   "common.deletePermanently": "Entgiltig lesche",
@@ -235,7 +234,10 @@
   },
   "trash.deleted": "Entgiltig glescht",
   "trash.group.media": "Medie",
-  "trash.selectedCount": { "one": "{count} usgwählt", "other": "{count} usgwählt" },
+  "trash.selectedCount": {
+    "one": "{count} usgwählt",
+    "other": "{count} usgwählt"
+  },
   "trash.purged": {
     "one": "{count} Element ändgültig glescht",
     "other": "{count} Elemänt ändgültig glescht"
@@ -265,8 +267,10 @@
   },
   "assets.delete.title": "S'asset lesche?",
   "assets.deleteMany.title": "D'assets lesche?",
-  "assets.countLabel": { "one": "asset", "other": "assets" },
-
+  "assets.countLabel": {
+    "one": "asset",
+    "other": "assets"
+  },
   "sequences.title": "Sequences",
   "sequences.empty.title": "Kei sequence",
   "sequences.empty.description": "D'sequences vum Projekt stehn do.",
@@ -304,7 +308,6 @@
   "playlists.delete.title": "D'playlist lesche?",
   "playlists.unreadable": "Kei abspielbars Medium in dere playlist",
   "playlists.inaccessible": "Playlist nit verfiegbar",
-
   "viewer.env.title": "Umgebung",
   "viewer.hdri.title": "HDRI-Umgebung (Liecht iwer's Bild)",
   "viewer.hdri.background": "HDRI im Hintergrund",
@@ -350,7 +353,6 @@
   "viewer.bookmarks.title": "Gspicherti Ahsichte",
   "viewer.bookmarks.empty": "Kei gspicherti Ahsicht.",
   "viewer.bookmarks.save": "Aktuelli Ahsicht spichere — mit d'r Equipe gteilt",
-
   "viewer.focal.hint": "Brennwitti in Millimeter, 36-mm-Sensor",
   "viewer.aperture.hint": "Scharfetiefi — 0 = iwerall scharf",
   "viewer.tilt.hint": "Neigung um d'Blickachs",
@@ -358,7 +360,6 @@
   "viewer.upAxis.hint2": "Y-down-Konvention bim Import korrigiert",
   "viewer.realScale.hint2": "Ohni d'Maßstäb iwer d'bounding box z'vereinheitliche",
   "viewer.inspectionTint.hint": "Nur fer dini Sitzung",
-
   "shortcuts.title": "Tastekirzel",
   "shortcuts.nav": "Navigation",
   "shortcuts.hint": "Klick uf e Tast, fer sie nej z'belege.",
@@ -430,10 +431,8 @@
   "lighting.default.title": "Standard-3D-Beliechtung",
   "lighting.default.none": "Keini (Studioliechter)",
   "lighting.default.empty": "Kei Standard: neutrali Studiobeliechtung.",
-
   "shortcuts.goProjects": "Zue de Projekt",
   "shortcuts.showHelp": "D'Tastekirzel ahzeige",
-
   "whatsNew.title": "Nejigkeite",
   "whatsNew.unavailable": "Changelog nit verfüegbar ({status})",
   "tree.noSequence": "Kei sequence.",
@@ -482,7 +481,6 @@
   "dropzone.release": "Losslo, fer d'r Upload z'starte",
   "storage.title": "Spicher",
   "storage.unlimited.placeholder": "unbegränzt",
-
   "common.undo": "Ruckgängig",
   "common.redo": "Widderherstelle",
   "viewer.duration": "Duur",
@@ -538,7 +536,6 @@
   "review.firstFrame": "Erschter frame",
   "review.playbackRate": "Abspielrat — d'timeline bliebt in frame",
   "review.none": "keins",
-
   "viewer.guides.title": "Hilfslinie",
   "viewer.guides.grid": "Boddegitter",
   "viewer.guides.axes": "Achsetriade",
@@ -622,7 +619,6 @@
   "review.pipFrame": "Ahsicht vu d'r Layout-Kamera — ziehe zum Verschiebe, Griff zum Skaliere",
   "review.wipe.move": "D'r wipe verschiebe (Doppelklick: zerucksetze)",
   "review.wipe.rotate": "D'r Balke drehe (raschtet bi 0/45/90° ih)",
-
   "review.guides.thirds": "Drittel",
   "review.guides.center": "Mittelkritz",
   "review.guides.actionSafe.hint": "Sicherer Aktionsbereich",
@@ -633,7 +629,6 @@
   "review.export.captureShort": "Ahsicht uffnäh (PNG)",
   "review.file": "Datei",
   "review.delivery": "Ussliefrung",
-
   "common.noData": "Kei Date.",
   "common.reset": "Zerucksetze",
   "common.host": "Host",
@@ -804,7 +799,6 @@
   "versions.unpublished": "Nit veröffentlicht",
   "versions.allMedia": "Alli Medie",
   "versions.decision": "Entscheidung",
-
   "twofa.enabled": "2FA ihgschalte — bewahr dini Backup-Code uf",
   "twofa.disabled": "2FA ussgschalte",
   "twofa.code": "6-stelliger Code",
@@ -835,7 +829,10 @@
   "asset.tree.direct": "Version wo direkt am asset hänge",
   "asset.tree.empty.title": "Nonig veröffentligt",
   "asset.tree.empty.description": "Version wo us eme DCC veröffentligt sin, kumme do noch Abteilig sortiert.",
-  "asset.tree.versionCount": { "one": "{count} version", "other": "{count} version" },
+  "asset.tree.versionCount": {
+    "one": "{count} version",
+    "other": "{count} version"
+  },
   "asset.tree.looseVersions": "Version ohni Uffgab",
   "asset.tree.noVersion": "Kei version",
   "asset.card.latest": "letschti: {name} · {date}",
@@ -916,10 +913,7 @@
   "review.exitTheatre": "D'r Theatermodus verlo (Esc)",
   "review.cameraViewSaved": "Kamera-Ahsicht gspichert",
   "email.placeholder": "du@studio.els",
-
-
   "common.escKey": "Esc",
-
   "common.start": "Ahfang",
   "common.end": "Änd",
   "common.name": "Namme",
@@ -950,14 +944,23 @@
   "comments.atTime": "bi {time} s",
   "comments.filter.open": "Offe",
   "comments.reopened": "Kommentar wider ufgmacht",
-  "comments.replyCount": { "one": "{count} Antwort", "other": "{count} Antworte" },
-  "comments.total": { "one": "{count} Kommentar insgsamt.", "other": "{count} Kommentär insgsamt." },
+  "comments.replyCount": {
+    "one": "{count} Antwort",
+    "other": "{count} Antworte"
+  },
+  "comments.total": {
+    "one": "{count} Kommentar insgsamt.",
+    "other": "{count} Kommentär insgsamt."
+  },
   "comments.delete.message": "De Kommentar wird ändgültig glescht.",
   "comments.delete.messageWithReplies": {
     "one": "De Kommentar un sini {count} Antwort werde ändgültig glescht.",
     "other": "De Kommentar un sini {count} Antworte werde ändgültig glescht."
   },
-  "comments.openCount": { "one": "{count} offe", "other": "{count} offe" },
+  "comments.openCount": {
+    "one": "{count} offe",
+    "other": "{count} offe"
+  },
   "comments.filter.none": "Kei Kommentar in dem Zuestand.",
   "comments.editField": "Kommentar bearbeite",
   "decision.current": "Aktuelli Entscheidung:",
@@ -987,10 +990,16 @@
   "versions.lastVersions": "versions behalte",
   "versions.noMatch": "Kei version passt zue de Filter.",
   "versions.location": "Ort",
-  "versions.total": { "one": "{count} version insgsamt.", "other": "{count} versions insgsamt." },
+  "versions.total": {
+    "one": "{count} version insgsamt.",
+    "other": "{count} versions insgsamt."
+  },
   "mediaAccess.empty": "Noch kei Zuegriff erfasst.",
   "mediaAccess.hint": "Ei Zeile pro Aaluege (über 30 Minute zämmegfasst) — interni reviews un Client-Freigabe zämme.",
-  "mediaAccess.total": { "one": "{count} Zuegriff insgsamt.", "other": "{count} Zuegriff insgsamt." },
+  "mediaAccess.total": {
+    "one": "{count} Zuegriff insgsamt.",
+    "other": "{count} Zuegriff insgsamt."
+  },
   "ocio.intro": "OCIO-Farbverwaltungs-Config. Hol d'offizielle ACES-Config (",
   "ocio.none": "Kei Config installiert. Lueg dir unte d'ACES-Releases ah.",
   "ocio.browse": "D'ACES-Releases durchluege",
@@ -1076,7 +1085,6 @@
   "review.publish": "Fer d'Equipe veröffentliche",
   "review.cameraAnimGltf": "Kameraanimation (glTF)",
   "review.importAnimation": "E Animation importiere",
-
   "project.status.active": "Aktiv",
   "project.status.onHold": "Pausiert",
   "projects.tab.active": "Aktivi",
@@ -1084,25 +1092,23 @@
   "projects.created": "Projekt „{name}“ erstellt",
   "projects.duplicated": "Projekt „{name}“ us „{source}“ erstellt",
   "projects.unarchived": "Projekt „{name}“ usem Archiv gholt",
-  "projects.count": { "one": "{count} Projekt", "other": "{count} Projekt" },
+  "projects.count": {
+    "one": "{count} Projekt",
+    "other": "{count} Projekt"
+  },
   "admin.group.studio": "Studio",
   "admin.group.content": "Ihalte",
   "admin.group.reviewContexts": "Review-Kontext",
   "admin.group.communications": "Kommunikation",
   "admin.group.maintenance": "Wartung",
-
   "project.status.completed": "Fertig",
   "project.status.archived": "Archiviert",
-
   "task.dueDate": "Fällig",
   "marker.delete": "D'Markierung lesche",
   "usd.recomposeFrom": "Uss em USD nej komponiere",
-
   "marker.rename": "Umbenenne / nej ihfärbe…",
-
   "sessions.line": "{ip} · verbunde am {created} · aktiv am {seen}",
   "sessions.unknownIp": "Unbekannti IP",
-
   "admin.tab.users": "Benutzer",
   "admin.tab.comments": "Kommentar",
   "admin.tab.statuses": "Status",
@@ -1111,12 +1117,10 @@
   "admin.tab.color": "Farb (OCIO)",
   "admin.topStorage": "Top Spicher / Benutzer",
   "admin.onlineCount": "{count} online",
-
   "presence.available": "Verfiegbar",
   "presence.away": "Abwäsend",
   "presence.dnd": "Nit störe",
   "presence.onlineCount": "Online · {count}",
-
   "common.enable": "Ihschalte",
   "common.loading": "Wird glade…",
   "common.nextMonth": "Nächschter Monet",
@@ -1146,7 +1150,10 @@
   "tokens.copy": "Kopiere",
   "tokens.created": "Token erstellt",
   "tokens.expired": "Abgloffe",
-  "tokens.expiry.days": { "one": "{count} Dag", "other": "{count} Dag" },
+  "tokens.expiry.days": {
+    "one": "{count} Dag",
+    "other": "{count} Dag"
+  },
   "tokens.expiry.label": "Ablauf",
   "tokens.new": "Neis Token",
   "tokens.passwordHint": "E Token läbt länger wie Ihri Sitzig: Ihr Passwort bestätigt d Erstellig.",
@@ -1175,7 +1182,10 @@
   "sessions.title": "Aktivi Sitzunge",
   "sessions.thisDevice": "Des Grät",
   "sessions.empty": "Kei Sitzung erfasst (Ahmeldunge vor em Update erschine nit — meld di nomol ah, fer sie do z'gseh).",
-  "sessions.revokedCount": { "one": "{count} Sitzig widerrüefe", "other": "{count} Sitzige widerrüefe" },
+  "sessions.revokedCount": {
+    "one": "{count} Sitzig widerrüefe",
+    "other": "{count} Sitzige widerrüefe"
+  },
   "twofa.qr": "QR-Code fer d'2FA-Ihrichtung",
   "twofa.scan": "Scann dä QR-Code mit dinere App (Google Authenticator, 1Password…) un gib dann d'r ahzeigt Code ih.",
   "twofa.wrongCode": "Falscher Code",
@@ -1197,11 +1207,20 @@
   "production.attention.unassigned": "Ohni Zueweisig",
   "production.attention.review": "Wartet uf review",
   "production.attention.none": "Nüt do — guet so.",
-  "production.attention.more": { "one": "un {count} wyteri", "other": "un {count} wyteri" },
+  "production.attention.more": {
+    "one": "un {count} wyteri",
+    "other": "un {count} wyteri"
+  },
   "production.workload.empty": "Nüt meh z mache.",
-  "production.workload.late": { "one": "{count} überfällig", "other": "{count} überfällig" },
+  "production.workload.late": {
+    "one": "{count} überfällig",
+    "other": "{count} überfällig"
+  },
   "production.pace.window": "Beobachtigszytruum",
-  "production.pace.weeks": { "one": "{count} Wuche", "other": "{count} Wuche" },
+  "production.pace.weeks": {
+    "one": "{count} Wuche",
+    "other": "{count} Wuche"
+  },
   "production.pace.perWeek": "{value} pro Wuche",
   "production.pace.projected": "Vorussichtlichs Änd",
   "production.pace.noProjection": "Z wenig Tempo für e Prognose",
@@ -1219,7 +1238,10 @@
   "stats.notes": "Notize",
   "stats.approvedRatio": "{approved}/{total} freigee · {pct} %",
   "stats.retakes": "Retakes",
-  "stats.days": { "one": "{count} T", "other": "{count} T" },
+  "stats.days": {
+    "one": "{count} T",
+    "other": "{count} T"
+  },
   "stats.drawCalls": "Draw Calls",
   "stats.fps": "fps",
   "stats.measuring": "Am mässe…",
@@ -1232,13 +1254,19 @@
   "sequences.empty.hint": "Mach dini sequences mit em „+“-Knopf obe — si gruppiere d shots (SQ010, SQ020…).",
   "playlists.empty.hint": "Wähl Medie uf d'r Sitt Reviews un dann „Zue d'r playlist dezuenäh“ (Rechtsklick), oder leg do e leeri playlist ah.",
   "playlists.delete.message": "„{name}“ wird glescht. D referänzierte versions blibe unberüehrt.",
-  "playlists.versionCount": { "one": "{count} version", "other": "{count} versions" },
+  "playlists.versionCount": {
+    "one": "{count} version",
+    "other": "{count} versions"
+  },
   "shares.newShort": "Nejer Link",
   "shares.empty": "Kei Freigablink. Leg eini ah, fer Zuegang zue de veröffentlichte Medie vu dem Projekt z'gäh, ohni Konto.",
   "shares.createdBy": "Vu {name} erstellt",
   "shares.expiresOn": "Lauft ab am {date}",
   "shares.viewedOn": "Gsee am {date}",
-  "shares.viewCount": { "one": "Ufruef", "other": "Ufrüef" },
+  "shares.viewCount": {
+    "one": "Ufruef",
+    "other": "Ufrüef"
+  },
   "shares.scope": "Was de Link uufmacht",
   "shares.scope.project": "S ganze Projekt",
   "shares.scope.playlist": "Nur ei playlist",
@@ -1249,21 +1277,36 @@
   "shares.scope.pick.media": "Medie zum Mitnäh",
   "shares.scope.pick.none": "Uussuche…",
   "shares.scope.empty": "Des Projekt het no kei veröffentligti Medie.",
-  "shares.scope.selected": { "one": "{count} Medium uusgwählt", "other": "{count} Medie uusgwählt" },
+  "shares.scope.selected": {
+    "one": "{count} Medium uusgwählt",
+    "other": "{count} Medie uusgwählt"
+  },
   "shares.scope.needsTarget": "Wähle uus, was der Link uufmacht, bevor Sie ne aalege.",
   "shares.scope.badge.project": "Ganzes Projekt",
-  "shares.scope.badge.selection": { "one": "{count} Medium", "other": "{count} Medie" },
+  "shares.scope.badge.selection": {
+    "one": "{count} Medium",
+    "other": "{count} Medie"
+  },
   "shares.scope.badge.restricted": "Iigschränkt",
   "shares.email": "Per E-Mail schicke…",
   "shares.email.title": "De Link per E-Mail schicke",
   "shares.email.recipients": "Empfänger",
   "shares.email.recipients.placeholder": "Ei Adress pro Zyle",
-  "shares.email.count": { "one": "{count} gültigi Adress", "other": "{count} gültigi Adresse" },
-  "shares.email.tooMany": { "one": "Höchschtens {count} Empfänger pro Versand", "other": "Höchschtens {count} Empfänger pro Versand" },
+  "shares.email.count": {
+    "one": "{count} gültigi Adress",
+    "other": "{count} gültigi Adresse"
+  },
+  "shares.email.tooMany": {
+    "one": "Höchschtens {count} Empfänger pro Versand",
+    "other": "Höchschtens {count} Empfänger pro Versand"
+  },
   "shares.email.note": "Notiz (fakultativ)",
   "shares.email.note.placeholder": "E Wort fer de Empfänger",
   "shares.email.submit": "Schicke",
-  "shares.email.sent": { "one": "Link an {count} Empfänger gschickt", "other": "Link an {count} Empfänger gschickt" },
+  "shares.email.sent": {
+    "one": "Link an {count} Empfänger gschickt",
+    "other": "Link an {count} Empfänger gschickt"
+  },
   "shares.email.invalid": "Gib mindeschtens ei gültigi Adress ii.",
   "shares.email.willMentionExpiry": "S Nochricht sait, dass der Link am {date} abloift.",
   "shares.email.noExpiry": "S Nochricht sait, dass der Link nit abloift.",
@@ -1297,7 +1340,6 @@
   "naming.warningFile": "„{name}“ entspricht nit dr Namenskonvention vum Projekt.",
   "naming.compliant": "Konform",
   "naming.nonCompliant": "Nit konform",
-
   "mode.watch": "Aluege",
   "mode.watch.hint": "Abspiele, zoome, versions verglyche — kei Bearbeitungswerkzyg. D'r einzig Modus fer d'Kunde.",
   "mode.annotate": "Annotiere",
@@ -1375,7 +1417,6 @@
   "action.resetSpatial": "Ussgangsahsicht",
   "action.fitMedia": "Ah d'r Bildschirm ahpasse",
   "action.resetMedia": "Originalgreeßi 1:1",
-
   "common.add": "Zuefiege",
   "common.show": "Ahzeige",
   "common.hide": "Ussblende",
@@ -1412,7 +1453,10 @@
   "voice.start": "Sprochnotiz uffnäh",
   "dropzone.drop": "Dini Dateie do ablege",
   "batch.nothing": "Nyt z'erzyge.",
-  "batch.createCount": { "one": "{count} Element erstelle", "other": "{count} Elemänt erstelle" },
+  "batch.createCount": {
+    "one": "{count} Element erstelle",
+    "other": "{count} Elemänt erstelle"
+  },
   "batch.creation": "Shots/Sequences erschaffe",
   "notif.markAllRead": "Alles as gläse markiere",
   "file.readFailed": "D'Datei het nit könne gläse wärde",
@@ -1461,22 +1505,40 @@
   "decision.badge": "Entscheidig : {status}",
   "decision.dialogTitle": "Review-Entscheidig — {version}",
   "project.dupHint": "Sequences, shots un Ihstellunge wärde nej ahglegt. Medie, versions un Kommentar wärde nit kopiert.",
-  "shots.created": { "one": "{count} shot erstellt", "other": "{count} shots erstellt" },
+  "shots.created": {
+    "one": "{count} shot erstellt",
+    "other": "{count} shots erstellt"
+  },
   "shots.delete.message": "De shot „{code}“ un sini Ufgabe/versions werde in Papierkorb gschobe.",
   "shots.omitted": "Im Schnitt usegnoh",
   "shots.searchPlaceholder": "Shot-Kürzel oder -Name…",
-  "shots.count": { "one": "{count} shot", "other": "{count} shots" },
-  "shots.countLabel": { "one": "shot", "other": "shots" },
-  "shots.trashedCount": { "one": "{count} shot in Papierkorb gschobe", "other": "{count} shots in Papierkorb gschobe" },
+  "shots.count": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "shots.countLabel": {
+    "one": "shot",
+    "other": "shots"
+  },
+  "shots.trashedCount": {
+    "one": "{count} shot in Papierkorb gschobe",
+    "other": "{count} shots in Papierkorb gschobe"
+  },
   "shots.deleteMany.title": "D'shots lesche?",
-  "shots.deleteMany.message": { "one": "{count} shot un sini Ufgabe/versions werde in Papierkorb gschobe.", "other": "{count} shots un ihri Ufgabe/versions werde in Papierkorb gschobe." },
+  "shots.deleteMany.message": {
+    "one": "{count} shot un sini Ufgabe/versions werde in Papierkorb gschobe.",
+    "other": "{count} shots un ihri Ufgabe/versions werde in Papierkorb gschobe."
+  },
   "shots.new": "Neje shot",
   "shot.newAsset": "+ E asset ahlege",
   "shot.omitted": "Us em Schnitt gnumme",
   "shot.omittedHint": "De shot fallt us em Schnitt, aber sini Arbet, version un Kommentär bliewe.",
   "assets.emptyHint": "Leg dini widderverwändbare assets mit „+ Ahlege“ ah (Figure, Sets, Requisite…).",
   "assets.attach": "Verknüpfe",
-  "assets.count": { "one": "{count} asset", "other": "{count} assets" },
+  "assets.count": {
+    "one": "{count} asset",
+    "other": "{count} assets"
+  },
   "assets.created": "Asset „{name}“ erstellt",
   "assets.createdAttached": "Asset „{name}“ erstellt un verknüpft",
   "assets.delete.message": "S asset „{name}“ un sini versions/Medie werde in Papierkorb gschobe.",
@@ -1574,7 +1636,6 @@
   "email.digestOff": "Dageszämmefassung uss",
   "email.weeklyOn": "Wuchebericht ah",
   "email.weeklyOff": "Wuchebericht uss",
-
   "review.hotspotAttached": "📍 Hotspot ahghänkt (Mitti vum viewer)",
   "review.camViewSaved": "📷 D'aktuelli Kameraahsicht wird gspichert",
   "review.labelsVisible": "Beschriftunge sichtbar",
@@ -1620,7 +1681,10 @@
   "live.coHostAdded": "{name} isch Co-Pilot — wer zerscht interagiert, übernimmt",
   "live.coHostRemoved": "{name} isch nümme Co-Pilot",
   "live.handedOver": "Steuerig an {name} übergee (Pilot)",
-  "live.participants": { "one": "({count} Teilnehmer).", "other": "({count} Teilnehmer)." },
+  "live.participants": {
+    "one": "({count} Teilnehmer).",
+    "other": "({count} Teilnehmer)."
+  },
   "live.running": "Live-review lauft",
   "live.runningWithPilot": "Live-review lauft — gsteuert vu {pilot}",
   "live.coHosts": "Co-Pilote",
@@ -1659,8 +1723,14 @@
   "video.qualityOriginal": "Original",
   "video.qualitySet": "Wiedergabequalität : {height}p",
   "video.volume": "Lutstärki",
-  "video.compareOffsetAhead": { "one": "B isch {count} frame vor A", "other": "B isch {count} frames vor A" },
-  "video.compareOffsetBehind": { "one": "B isch {count} frame hinter A", "other": "B isch {count} frames hinter A" },
+  "video.compareOffsetAhead": {
+    "one": "B isch {count} frame vor A",
+    "other": "B isch {count} frames vor A"
+  },
+  "video.compareOffsetBehind": {
+    "one": "B isch {count} frame hinter A",
+    "other": "B isch {count} frames hinter A"
+  },
   "video.compareOffsetNone": "B isch uf A üsgrichtet",
   "video.waveform.show": "Audio-Wällefòrm",
   "video.waveform.scrub": "Audio-Wällefòrm — zieh zum Navigiere",
@@ -1693,7 +1763,10 @@
   "ref.title": "Referänz",
   "ref.draft": "Referänz (Entwurf)",
   "ref.addPaste": "Referänz (Strg+V)",
-  "ref.maxImages": { "one": "max. {count} Referänzbild", "other": "max. {count} Referänzbilder" },
+  "ref.maxImages": {
+    "one": "max. {count} Referänzbild",
+    "other": "max. {count} Referänzbilder"
+  },
   "nav.firstMedia": "Erschtes Medium vu d'r version",
   "nav.lastMedia": "Letschtes Medium vu d'r version",
   "marker.edit": "D'Markierung bearbeite",
@@ -1710,11 +1783,13 @@
   "media.delete.message": "„{name}“ wird in Papierkorb vum Projekt gschobe.",
   "media.draft": "Entwurf",
   "stage.notSavedPublishCancelled": "Ihszenierung nit gspichert — Veröffentlichung abbroche",
-
   "task.status.inProgress": "In Arbet",
   "task.status.retake": "Retake",
   "task.checklist": "Checkliste",
-  "task.count": { "one": "{count} Ufgab", "other": "{count} Ufgabe" },
+  "task.count": {
+    "one": "{count} Ufgab",
+    "other": "{count} Ufgabe"
+  },
   "task.created": "Ufgab „{name}“ erstellt",
   "task.createdNamed": "Ufgab erstellt : {name}",
   "task.fallbackName": "Ufgab #{id}",
@@ -1738,7 +1813,6 @@
   "panel.liveRender": "Live-Rendering",
   "panel.performance": "Leischtig",
   "panel.techSheet": "Technischi Date",
-
   "compare.siblingUnreachable": "Verglychs-splat nit erreichbar",
   "compare.grid": "Raschter · {count}",
   "compare.gridHint": "Zwei versions oder meh : synchronisierts 2×2-Raschter (max {max} uf em Bildschirm).",
@@ -1759,7 +1833,10 @@
   "camera.curves": "Kurve",
   "camera.frameSelection": "Ipasse",
   "camera.home": "Ursprung",
-  "camera.maxBookmarks": { "one": "max. {count} Bookmark", "other": "max. {count} Bookmarks" },
+  "camera.maxBookmarks": {
+    "one": "max. {count} Bookmark",
+    "other": "max. {count} Bookmarks"
+  },
   "camera.viewN": "Awicht {n}",
   "camera.clearPresentation": "D'Präsentation lesche",
   "camera.clearConfirm": "D'Kamera, d'Animation un d'Inszenierung wäre fer alli entfernt.",
@@ -1811,7 +1888,6 @@
   "scene.lodAuto": "Schaltet LOD unter 15 fps ah un iber 25 widder uss",
   "scene.progressive": "Ladet d'Syte vu d'r Punktwolke bi Bedarf",
   "scene.lodOn": "LOD immer aa",
-
   "storage.k.original": "Ufeglade Datei (Original)",
   "storage.k.original.note": "Quelle vu d’r Wohret, nie gänderet. Pfad iber hierarchischi Slugs läsbar.",
   "storage.k.hls": "HLS-Renditions (Video)",
@@ -1844,7 +1920,6 @@
   "storage.k.attachment.note": "Bilder, PDF, Zips un Sprochnotize vu de review-Threads.",
   "storage.k.quarantine": "Datei in Quarantän",
   "storage.k.quarantine.note": "Upload as infiziert erkannt (ClamAV), vu d’r Uslieferung trennt.",
-
   "storage.cat.originals": "Originale (projects/)",
   "storage.cat.derived": "Ableitunge (derived/)",
   "storage.cat.studio": "Studio-Bibliotheke (studio/)",
@@ -1866,7 +1941,6 @@
   "storage.s.hdris": "HDRI (3D-Beliechtung)",
   "storage.s.ocio": "OCIO-Konfiguratione (Farb)",
   "storage.s.other": "Anderi",
-
   "audit.create": "ahglegt",
   "audit.update": "gänderet",
   "audit.delete": "glöscht",
@@ -1881,7 +1955,6 @@
   "settings.hint.liveImage": "z. B. 4 — Zoom/Position",
   "settings.hint.slack": "https://hooks.slack.com/services/… — Entscheidunge & Veröffentlichunge",
   "settings.hint.sourceUrl": "https://… — Pflicht, wenn du e gänderti version betrybsch",
-
   "channel.posX": "Pos X",
   "channel.posY": "Pos Y",
   "channel.posZ": "Pos Z",
@@ -1892,7 +1965,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "Zum keyframe bi {time} Sekunde springe",
   "channel.keyAt": "Keyframe bi {time} s",
-
   "admin.announce.allRoles": "(kei Hoke = alli)",
   "admin.announce.updated": "Ahkindigung gänderet",
   "admin.announce.created": "Ahkindigung ahglegt",
@@ -2022,7 +2094,10 @@
   "storage.map.hint": "E einzige S3/MinIO-Bucket fer di ganz Instanz; s Lösche vumene Medium ruumt si Originalordner un si Präfix ab",
   "storage.objShort": "{count} Obj.",
   "storage.objects": "Objekt",
-  "storage.objectsCount": { "one": "{count} Objekt", "other": "{count} Objekt" },
+  "storage.objectsCount": {
+    "one": "{count} Objekt",
+    "other": "{count} Objekt"
+  },
   "storage.originals": "Originale",
   "storage.totalUsage": "Gsamtbelegig",
   "storage.orphanProject": "(unbekanntes Projekt — verwaist ?)",
@@ -2035,7 +2110,10 @@
   "system.agplHint": "Wer die Instanz uss d'r Färni bruucht, muess ihri Quelle könne iberkumme. Wenn du sie gänderet hesch, lo d'Ihstellung „Quellcode“ uf dyn eigenes Repository zeige.",
   "system.thirdParty": "Abhängigkeite vu Dritte",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md (Wurzle vum Repository)",
-  "system.cores": { "one": "{count} Kern", "other": "{count} Kern" },
+  "system.cores": {
+    "one": "{count} Kern",
+    "other": "{count} Kern"
+  },
   "system.disk": "Fäschtplatte — {used} / {total}",
   "system.memory": "Speicher — {used} / {total}",
   "system.licenseTitle": "Lizänz & Quellcode",
@@ -2072,7 +2150,10 @@
   "webhooks.delivery.pending": "Uusstehend",
   "webhooks.delivery.delivered": "Zuagstellt",
   "webhooks.delivery.failed": "Fählgschlaa",
-  "webhooks.delivery.attempts": { "one": "{count} Versuech", "other": "{count} Versuech" },
+  "webhooks.delivery.attempts": {
+    "one": "{count} Versuech",
+    "other": "{count} Versuech"
+  },
   "webhooks.delivery.replay": "Die Zuastellung nomol schicke",
   "webhooks.delivery.replayed": "Zuastellung wieder yygreiht",
   "webhooks.delivery.replayOf": "Wiiderholung vu #{value}",
@@ -2111,19 +2192,24 @@
   "splat.isolate": "Isoliere",
   "model3d.transformModel": "S Modell transformiere",
   "model3d.unnamed": "(ohni Name)",
-
   "jobs.storageCleanup": "Spicherbereinigung",
   "jobs.webhooks": "Ussgehendi Webhooks",
   "jobs.activeCount": "{count} aktiv",
   "jobs.waitingCount": "{count} am warte",
   "jobs.failedCount": "{count} fehlgschlaa",
   "jobs.completedCount": "{count} fertig",
-  "jobs.attempts": { "one": "{count} Versuech", "other": "{count} Versüech" },
+  "jobs.attempts": {
+    "one": "{count} Versuech",
+    "other": "{count} Versüech"
+  },
   "jobs.cleanedFailed": {
     "one": "{count} fehlgschlagene Job glescht",
     "other": "{count} fehlgschlageni Jobs glescht"
   },
-  "jobs.retriedCount": { "one": "{count} Job nej gstartet.", "other": "{count} Jobs nej gstartet." },
+  "jobs.retriedCount": {
+    "one": "{count} Job nej gstartet.",
+    "other": "{count} Jobs nej gstartet."
+  },
   "jobs.purgedDerived": "{count} Medie verschlankt (HLS + Sprite ewäg)",
   "jobs.purge": "Lösche",
   "jobs.purgeNow": "Jetz lösche",
@@ -2131,7 +2217,6 @@
   "jobs.running": "Am laufe : {list}",
   "jobs.queueUnavailable": "Warteschlange nit verfüegbar.",
   "jobs.webhookRef": "Webhook {id}",
-
   "model3d.transformPrim": "Prim transformiere",
   "model3d.compareUnreachable": "Verglychsmodell nit erreichbar",
   "model3d.loadFailed": "D’Modell hän nit könne glade wärde",
@@ -2220,7 +2305,6 @@
   "entity.unavailable.failed": "Het nit chenne glade werre",
   "entity.unavailable.failed.hint": "Der Server het nit gantwortet. Probiere Sie's glich nochemol.",
   "entity.unavailable.backToProjects": "Zruck zue de Projekt",
-
   "version.emptyMedia": "Kei Medium in därre version.",
   "version.created": "Version „{name}“ erstellt",
   "version.current": "Aktuell",
@@ -2229,15 +2313,20 @@
   "version.noVisibleMedia": "Kei sichtbars Medium in dr version {version}",
   "version.unreachable": "Version nit erreichbar",
   "version.dropNew": "Leg Dateie do ab, fer die nächscht version azlege",
-  "version.publishAll": { "one": "Veröffentliche ({count})", "other": "Veröffentliche ({count})" },
+  "version.publishAll": {
+    "one": "Veröffentliche ({count})",
+    "other": "Veröffentliche ({count})"
+  },
   "version.dropShot": "Ableege, für e version unter ere Ufgab az lege",
   "version.inReview": "In review",
-
   "playlist.added": {
     "one": "{count} version zue „{name}“ dezuegfiegt",
     "other": "{count} versions zue „{name}“ dezuegfiegt"
   },
-  "playlist.skipped": { "one": "({count} scho do)", "other": "({count} scho do)" },
+  "playlist.skipped": {
+    "one": "({count} scho do)",
+    "other": "({count} scho do)"
+  },
   "playlist.targetCount": {
     "one": "{count} Element — jedi passendi version wird ah s Änd vu d’r playlist ahghänkt.",
     "other": "{count} Element — jedi passendi version wird ah s Änd vu d’r playlist ahghänkt."
@@ -2251,20 +2340,28 @@
   "playlist.rename": "D playlist umbenenne",
   "playlist.emptyHint": "Version us em Katalog links dezuetue.",
   "playlist.addTo": "Zuere playlist dezuetue",
-  "playlist.addedTo": { "one": "{count} version zue {name} dezuegfüegt", "other": "{count} versions zue {name} dezuegfüegt" },
-  "playlist.addedCount": { "one": "{count} version dezuegfüegt", "other": "{count} versions dezuegfüegt" },
+  "playlist.addedTo": {
+    "one": "{count} version zue {name} dezuegfüegt",
+    "other": "{count} versions zue {name} dezuegfüegt"
+  },
+  "playlist.addedCount": {
+    "one": "{count} version dezuegfüegt",
+    "other": "{count} versions dezuegfüegt"
+  },
   "playlist.alreadyThere": "Scho i dr playlist",
   "playlist.nothingToAdd": "Nüt Veröffentlichts zum Dezuetue",
   "playlist.catalog.search": "Shot, asset oder version…",
   "playlist.catalog.latestOnly": "Nume di letschti",
   "playlist.catalog.add": "Zue dr playlist dezuetue",
-  "playlist.catalog.addSelected": { "one": "{count} dezuetue", "other": "{count} dezuetue" },
+  "playlist.catalog.addSelected": {
+    "one": "{count} dezuetue",
+    "other": "{count} dezuetue"
+  },
   "playlist.catalog.present": "Scho drin",
   "playlist.catalog.empty": "Nüt passt zue dene Filter.",
   "playlist.autoAdvance": "Automatisch witerspiile",
   "csv.export": "CSV exportiere",
   "csv.import": "CSV importiere",
-
   "calendar.today": "Hit",
   "calendar.dueMoved": "Fälligkeit verschobe",
   "nav.breadcrumb": "Brotkrimelpfad",
@@ -2329,21 +2426,34 @@
   "draw.textPlaceholder": "Text…",
   "info.uvSets": "UV-Sätz",
   "track.animTrack": "Animationsspur",
-
   "sequences.assets": "Assets vu dr sequence ({count})",
-  "sequences.createdCount": { "one": "{count} sequence erstellt", "other": "{count} sequences erstellt" },
+  "sequences.createdCount": {
+    "one": "{count} sequence erstellt",
+    "other": "{count} sequences erstellt"
+  },
   "sequences.delete.message": "D sequence „{code}“ un ihri shots werde in Papierkorb gschobe.",
-  "sequences.open": "S sequence uftue",
-  "sequences.countLabel": { "one": "sequence", "other": "sequences" },
-  "sequences.trashedCount": { "one": "{count} sequence in Papierkorb gschobe", "other": "{count} sequences in Papierkorb gschobe" },
+  "sequences.countLabel": {
+    "one": "sequence",
+    "other": "sequences"
+  },
+  "sequences.trashedCount": {
+    "one": "{count} sequence in Papierkorb gschobe",
+    "other": "{count} sequences in Papierkorb gschobe"
+  },
   "sequences.deleteMany.title": "D'sequences lesche?",
-  "sequences.deleteMany.message": { "one": "{count} sequence un ihri shots werde in Papierkorb gschobe.", "other": "{count} sequences un ihri shots werde in Papierkorb gschobe." },
+  "sequences.deleteMany.message": {
+    "one": "{count} sequence un ihri shots werde in Papierkorb gschobe.",
+    "other": "{count} sequences un ihri shots werde in Papierkorb gschobe."
+  },
   "sequences.new": "Neji sequence",
   "view.cards": "Kartaawicht",
   "view.compact": "Kompakti Awicht",
   "view.followAccount": "Dr Kontoiistellig folge",
   "drafts.title": "Offeni Entwürf",
-  "drafts.count": { "one": "{count} Entwurf offe", "other": "{count} Entwürf offe" },
+  "drafts.count": {
+    "one": "{count} Entwurf offe",
+    "other": "{count} Entwürf offe"
+  },
   "uploads.failedFor": "S Uffelade vu {name} isch fehlgschlaa",
   "uploads.sending": "Am schicke {pct} %",
   "uploads.title": "Übertragige ({count})",
@@ -2371,8 +2481,14 @@
   "transform.rotationYaw": "Rotation Y (Yaw)",
   "transform.rotationRoll": "Rotation Z (Roll)",
   "timeline.defaultName": "Schnitt",
-  "timeline.shotCount": { "one": "{count} shot", "other": "{count} shots" },
-  "timeline.gapCount": { "one": "{count} Lucke", "other": "{count} Lucke" },
+  "timeline.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "timeline.gapCount": {
+    "one": "{count} Lucke",
+    "other": "{count} Lucke"
+  },
   "timeline.noMedia": "Kei Medium",
   "timeline.durationMismatch": "D'Lengi vum Medium stimmt nit mit em frame-Beriich vum shot iberii.",
   "timeline.previousShot": "Vorherige shot",
@@ -2414,7 +2530,10 @@
   "chat.sendMessage": "E Nochricht schicke",
   "chat.group.create": "Neji Gruppe",
   "chat.group.namePlaceholder": "Gruppename (optional)",
-  "chat.group.members": { "one": "{count} Mitgliid", "other": "{count} Mitglieder" },
+  "chat.group.members": {
+    "one": "{count} Mitgliid",
+    "other": "{count} Mitglieder"
+  },
   "chat.rename": "Gruppe umbenenne",
   "chat.addMembers": "Persone dezuefiege",
   "chat.leave": "D’Unterhaltig verlo",
@@ -2423,7 +2542,10 @@
   "chat.unmute": "Meldunge widder ischalte",
   "chat.search": "E Person sueche",
   "chat.search.empty": "Niemert gfunde",
-  "chat.system.joined": { "one": "{names} isch in d'Underhaltung kumme", "other": "{names} sìnn in d'Underhaltung kumme" },
+  "chat.system.joined": {
+    "one": "{names} isch in d'Underhaltung kumme",
+    "other": "{names} sìnn in d'Underhaltung kumme"
+  },
   "chat.system.left": "{name} het d'Underhaltung verlonn",
   "chat.system.removed": "{name} isch üsegnumme wore",
   "chat.system.renamed": "D'Grupp heisst jetz « {title} »",
@@ -2516,7 +2638,10 @@
   "shotgrid.setup.connect": "Projäkt verbinde",
   "shotgrid.setup.connected": "Mit « {name} » verbunde",
   "shotgrid.setup.connectFailed": "Verbinde nit méglich",
-  "shotgrid.setup.testOk": { "one": "Verbindig erfolgrich — {count} Projäkt sichtbar", "other": "Verbindig erfolgrich — {count} Projäkt sichtbar" },
+  "shotgrid.setup.testOk": {
+    "one": "Verbindig erfolgrich — {count} Projäkt sichtbar",
+    "other": "Verbindig erfolgrich — {count} Projäkt sichtbar"
+  },
   "shotgrid.sync.runFull": "Synchronisiere",
   "shotgrid.sync.runReconcile": "Nochhole",
   "shotgrid.sync.reconcileHint": "Liest s Nochhol-Fenschter nomol — nooch eme Uusfall bruuche.",
@@ -2534,7 +2659,10 @@
   "shotgrid.sync.noLog": "Kei Iitrag",
   "shotgrid.sync.keepSg": "ShotGrid bhalte",
   "shotgrid.sync.keepReview": "ReView bhalte",
-  "shotgrid.sync.conflicts": { "one": "{count} Konflikt wartet uf e Entscheidung", "other": "{count} Konflikt warte uf e Entscheidung" },
+  "shotgrid.sync.conflicts": {
+    "one": "{count} Konflikt wartet uf e Entscheidung",
+    "other": "{count} Konflikt warte uf e Entscheidung"
+  },
   "shotgrid.conflict.resolved": "Konflikt entschiide",
   "shotgrid.conflict.failed": "Entscheidung nit méglich",
   "shotgrid.conflict.detail": "{field}: ReView « {review} » · ShotGrid « {shotgrid} »",
@@ -2603,8 +2731,14 @@
   "shotgrid.versions.selectAllPending": "Alles Fählendi uuswähle",
   "shotgrid.versions.summary": "{total} Publishes, {pending} nit importiert",
   "shotgrid.versions.intro": "D ShotGrid-Publishes vu dem Projäkt uuflischte un s Fählendi hole.",
-  "shotgrid.versions.importSelected": { "one": "{count} Element importiere", "other": "{count} Elemänt importiere" },
-  "shotgrid.versions.imported": { "one": "{count} Publish importiert", "other": "{count} Publishes importiert" },
+  "shotgrid.versions.importSelected": {
+    "one": "{count} Element importiere",
+    "other": "{count} Elemänt importiere"
+  },
+  "shotgrid.versions.imported": {
+    "one": "{count} Publish importiert",
+    "other": "{count} Publishes importiert"
+  },
   "shotgrid.admin.title": "ShotGrid-Sites",
   "shotgrid.admin.projects": "Verbundeni Projäkt",
   "shotgrid.admin.deleted": "ShotGrid-Site glescht",
@@ -2614,7 +2748,10 @@
   "shotgrid.admin.deleteConfirm": "Site « {name} » lesche? Ihri Zuegangsdate werde glescht.",
   "shotgrid.admin.empty": "Kei ShotGrid-Site registriert. Fieg eini iber de ShotGrid-Reiter vum ere Projäkt zue.",
   "shotgrid.admin.intro": "D Zuegangsdate ligge do, eimol fir s ganz Studio: jedi Projäktverbindig bruucht si, un e Schlisselwächsel passiert an eim Ort. Kei Gheimnis wird je an de Browser zruckgee.",
-  "shotgrid.admin.linkedProjects": { "one": "{count} Projäkt", "other": "{count} Projäkt" },
+  "shotgrid.admin.linkedProjects": {
+    "one": "{count} Projäkt",
+    "other": "{count} Projäkt"
+  },
   "shotgrid.domain.hierarchy": "Sequences, Shots, Assets",
   "shotgrid.domain.hierarchy.hint": "D Produktionsuufteilig, d Cut-Beriich un d Shot-Status.",
   "shotgrid.domain.tasks": "Ufgabe",
@@ -2709,7 +2846,10 @@
   "shotgrid.sync.publishOff": "S Schicke an ShotGrid isch uus: Versions, wo do veröffentlicht werde, bliibe do. Under Iistellunge → Veröffentlichung ändere.",
   "shotgrid.steps.title": "Pipeline-Schritt vu däm Projäkt",
   "shotgrid.steps.hint": "ShotGrid bietet nume di Schritt aa, wo im Projäkt sichtbar gmacht sin, publiziert die Iistellig aber nirgends in siire API. Do eimol aachrizle. Nüt aachrizle: ReView leitet si vu de vorhandene Tasks ab.",
-  "shotgrid.steps.count": { "one": "{count} uusgwählt", "other": "{count} uusgwählt" },
+  "shotgrid.steps.count": {
+    "one": "{count} uusgwählt",
+    "other": "{count} uusgwählt"
+  },
   "shotgrid.steps.forAssets": "Fir Assets",
   "shotgrid.steps.forShots": "Fir Shots",
   "shotgrid.steps.search": "E Schritt sueche…",
@@ -2740,7 +2880,10 @@
   "shotgrid.crew.state.none": "No kei Konto",
   "shotgrid.crew.state.ineligible": "Cha nit iiglade werre",
   "shotgrid.crew.done": "{created} Konto aagleit, {added} Person zum Projekt dezue",
-  "shotgrid.crew.skipped": { "one": "{count} Person üebergange", "other": "{count} Persone üebergange" },
+  "shotgrid.crew.skipped": {
+    "one": "{count} Person üebergange",
+    "other": "{count} Persone üebergange"
+  },
   "shotgrid.crew.plan": "{create} Konto aazlege, {add} zum Projekt dezuedue",
   "shotgrid.sync.queued": "E Synchronisierig lauft scho — die do wartet.",
   "shotgrid.link.open": "ShotGrid-Konto",
@@ -2781,7 +2924,10 @@
   "social.search": "Person oder Verlauf sueche",
   "social.people": "Lit",
   "social.noMatch": "Kei Treffer für die Suech.",
-  "sequence.shotCount": { "one": "{count} shot", "other": "{count} shots" },
+  "sequence.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
   "filters.search": "Suech…",
   "filters.allStatuses": "Alli Status",
   "filters.allDepartments": "Alli Abteilunge",
@@ -2804,9 +2950,18 @@
   "assign.unassigned": "Niemer",
   "assign.done": "Zuewiisig aktualisiert",
   "assign.failed": "D Zuewiisig het sich nit ändere lo",
-  "assign.bulkTitle": { "one": "{count} Element zuewiise", "other": "{count} Elemänt zuewiise" },
-  "assign.doneCount": { "one": "{count} Ufgab aktualisiert", "other": "{count} Ufgabe aktualisiert" },
-  "assign.skippedCount": { "one": "{count} Element üebergange: nix zuezwiise, oder kei Rächt", "other": "{count} Elemänt üebergange: nix zuezwiise, oder kei Rächt" },
+  "assign.bulkTitle": {
+    "one": "{count} Element zuewiise",
+    "other": "{count} Elemänt zuewiise"
+  },
+  "assign.doneCount": {
+    "one": "{count} Ufgab aktualisiert",
+    "other": "{count} Ufgabe aktualisiert"
+  },
+  "assign.skippedCount": {
+    "one": "{count} Element üebergange: nix zuezwiise, oder kei Rächt",
+    "other": "{count} Elemänt üebergange: nix zuezwiise, oder kei Rächt"
+  },
   "assign.person": "Person",
   "assign.departments": "Abteilige",
   "assign.departmentsHint": "Läär lo, fer alli bstehende Ufgabe. Abteilige wähle, fer die z träffe — un d fählend Ufgab aazlege.",
@@ -2869,11 +3024,17 @@
   "episode.noSequence.title": "Kei sequence in dem episode",
   "episode.noSequence.description": "Häng sequences im Reiter Episodes vum Projekt an des episode aa.",
   "episode.noShot": "Kei shot in dere sequence.",
-  "episode.sequenceCount": { "one": "{count} sequence", "other": "{count} sequences" },
+  "episode.sequenceCount": {
+    "one": "{count} sequence",
+    "other": "{count} sequences"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "S episode uufmache",
   "episodes.reordered": "Reiefolg gspeicheret",
-  "episodes.createdCount": { "one": "{count} episode aagleit", "other": "{count} episodes aagleit" },
+  "episodes.createdCount": {
+    "one": "{count} episode aagleit",
+    "other": "{count} episodes aagleit"
+  },
   "episodes.attachTo": "An e episode aahänge",
   "episodes.attached": "Sequence aaghänkt",
   "episodes.detach": "Vum episode löse",
@@ -2884,7 +3045,10 @@
   "episodes.empty.title": "Kei episode",
   "episodes.empty.description": "Des Projekt het no kei episode.",
   "episodes.empty.hint": "Leg d erschte mit em Generator do obe aa.",
-  "episodes.unassignedCount": { "one": "{count} sequence ohni episode", "other": "{count} sequences ohni episode" },
+  "episodes.unassignedCount": {
+    "one": "{count} sequence ohni episode",
+    "other": "{count} sequences ohni episode"
+  },
   "episodes.unassignedHint": "Rechtsklick uf e sequence, zum si an e episode aazhänke.",
   "episodes.disabledHere": "S episode-Niveau isch uf dem Projekt uusgschalte.",
   "episodes.settings.title": "Episode-Niveau",
@@ -2893,8 +3057,14 @@
   "episodes.settings.enabled": "Episode-Niveau iigschalte",
   "episodes.settings.disabled": "Episode-Niveau uusgschalte",
   "episodes.settings.keepsData": "S Uusschalte verstecktet bloß s Niveau: d episodes un ihri sequences kumme unveränderet zruck.",
-  "episodes.settings.stored": { "one": "{count} episode gspeicheret", "other": "{count} episodes gspeicheret" },
-  "episodes.settings.linked": { "one": "{count} sequence zuegordnet", "other": "{count} sequences zuegordnet" },
+  "episodes.settings.stored": {
+    "one": "{count} episode gspeicheret",
+    "other": "{count} episodes gspeicheret"
+  },
+  "episodes.settings.linked": {
+    "one": "{count} sequence zuegordnet",
+    "other": "{count} sequences zuegordnet"
+  },
   "error.UNAUTHENTICATED": "Sie sin nit aagmäldet.",
   "error.FORBIDDEN": "Zuegang verweigert.",
   "error.NOT_FOUND": "Des Element git's nimm.",
@@ -3016,23 +3186,41 @@
   "imageSequence.hint": "Gruppiert wird jedi zuen eizige Media, wo mer wie e Video reviewt. Uisenander bliebt jedi frame e eigeni Datei.",
   "imageSequence.group": "In ei Media gruppiere",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "one": "{count} Datei", "other": "{count} Dateie" },
-  "imageSequence.gaps": { "one": "{count} frame fählt", "other": "{count} frames fähle" },
-  "imageSequence.others": { "one": "{count} anderi Datei wird einzeln gschickt", "other": "{count} anderi Dateie werde einzeln gschickt" },
+  "imageSequence.files": {
+    "one": "{count} Datei",
+    "other": "{count} Dateie"
+  },
+  "imageSequence.gaps": {
+    "one": "{count} frame fählt",
+    "other": "{count} frames fähle"
+  },
+  "imageSequence.others": {
+    "one": "{count} anderi Datei wird einzeln gschickt",
+    "other": "{count} anderi Dateie werde einzeln gschickt"
+  },
   "imageSequence.confirm": "Als image sequences schicke",
   "imageSequence.sendSeparately": "Datei fir Datei schicke",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "Wird zämmegsetzt",
-  "assignees.label": { "one": "{count} Person zuegwiese", "other": "{count} Persone zuegwiese" },
+  "assignees.label": {
+    "one": "{count} Person zuegwiese",
+    "other": "{count} Persone zuegwiese"
+  },
   "assignees.dialogTitle": "Persone uf {name}",
   "assignees.searchPlaceholder": "Öpper sueche …",
   "assignees.noMatch": "Niemert passt zue derer Suechi.",
-  "assignees.saved": { "one": "{count} Person zuegwiese", "other": "{count} Persone zuegwiese" },
+  "assignees.saved": {
+    "one": "{count} Person zuegwiese",
+    "other": "{count} Persone zuegwiese"
+  },
   "assignees.menu": "Persone …",
   "assignees.origin.direct": "Verantwortlig fir des Element",
   "assignees.origin.child": "Verantwortlig fir öbis dinne",
   "assignees.origin.task": "Ere Uufgab zuegwiese",
-  "cards.awaitingReview": { "one": "{count} Liiferig wartet uf e review", "other": "{count} Liiferige warte uf e review" },
+  "cards.awaitingReview": {
+    "one": "{count} Liiferig wartet uf e review",
+    "other": "{count} Liiferige warte uf e review"
+  },
   "cards.updatedAt": "Gänderet {value}",
   "visibility.hide": "Fir alli uusblände",
   "visibility.show": "Wider aazeige",
@@ -3118,7 +3306,10 @@
   "note.gallery.carousel": "Karussell",
   "note.gallery.columns": "Spalte",
   "note.gallery.height": "Höchi",
-  "note.gallery.count": { "one": "{count} Bild", "other": "{count} Bilder" },
+  "note.gallery.count": {
+    "one": "{count} Bild",
+    "other": "{count} Bilder"
+  },
   "note.image.align": "Uusrichtig",
   "note.image.alignFull": "Ganzi Breiti",
   "note.image.alignCenter": "Zentriert",
@@ -3140,9 +3331,18 @@
   "assetType.VEHICLE": "Fahrzig",
   "assetType.FX": "FX",
   "assetType.OTHER": "Anders",
-  "bulk.status.title": { "one": "Status vu {count} Shot", "other": "Status vu {count} Shots" },
-  "bulk.status.done": { "one": "{count} Shot aktualisiert", "other": "{count} Shots aktualisiert" },
-  "bulk.status.partial": { "one": "{count} Shot aktualisiert, {failed} abglehnt", "other": "{count} Shots aktualisiert, {failed} abglehnt" },
+  "bulk.status.title": {
+    "one": "Status vu {count} Shot",
+    "other": "Status vu {count} Shots"
+  },
+  "bulk.status.done": {
+    "one": "{count} Shot aktualisiert",
+    "other": "{count} Shots aktualisiert"
+  },
+  "bulk.status.partial": {
+    "one": "{count} Shot aktualisiert, {failed} abglehnt",
+    "other": "{count} Shots aktualisiert, {failed} abglehnt"
+  },
   "bulk.status.menu": "Status",
   "colorPicker.hue": "Farbton",
   "queryState.title": "Der Beritt het nit chenne glade werre",

@@ -1,6 +1,5 @@
 {
   "auth.tagline": "VFX・ポストプロダクションスタジオのための共同 review プラットフォーム。",
-
   "login.title": "おかえりなさい。",
   "login.subtitle": "ログインして review、タスク、board に戻りましょう。",
   "login.heading": "ログイン",
@@ -12,7 +11,6 @@
   "login.error.credentials": "メールアドレスまたはパスワードが正しくありません。",
   "login.error.network": "サーバーに接続できません。しばらくしてからもう一度お試しください。",
   "login.error.generic": "ログインに失敗しました",
-
   "setup.title": "ReView へようこそ。",
   "setup.subtitle": "2 ステップでスタジオを設定します。あとからすべて変更できます。",
   "setup.step.studio": "スタジオ",
@@ -30,7 +28,6 @@
   "setup.submit": "スタジオを作成",
   "setup.submitting": "作成中…",
   "setup.error.generic": "設定に失敗しました",
-
   "display.title": "表示",
   "display.theme": "テーマ",
   "display.theme.hint": "システムに合わせるか、ライト／ダークを固定します。",
@@ -45,7 +42,6 @@
   "display.language.hint": "インターフェースの言語です。制作用語は英語のままにしています。",
   "display.view": "リストの既定表示",
   "display.view.hint": "すべてに適用されます。個別に切り替えたリストは、解除するまでその設定を保持します。",
-
   "language.select": "言語を選択",
   "language.regional": "地域言語",
   "language.notice.title": "翻訳は機械が生成しています",
@@ -58,24 +54,20 @@
   "language.coverage.complete": "翻訳完了",
   "language.fallbackNotice": "未翻訳の文言は英語で表示されます。",
   "language.regionalSuffix": "— 地域言語",
-
   "nav.home": "ホーム",
   "nav.projects": "プロジェクト",
   "nav.reviews": "Reviews",
   "nav.members": "メンバー",
   "nav.settings": "設定",
   "nav.documentation": "使い方ガイド",
-
   "common.save": "保存",
   "common.cancel": "キャンセル",
   "common.delete": "削除",
   "common.edit": "編集",
   "common.close": "閉じる",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. AGPL-3.0 ライセンスのフリーソフトウェアであり、いかなる保証もありません。",
   "license.source": "ソースコード",
   "license.title": "ライセンス",
-
   "common.confirm": "確認",
   "common.previous": "戻る",
   "common.next": "次へ",
@@ -111,7 +103,6 @@
   "onboarding.help.title": "助けが必要ですか？",
   "onboarding.help.body": "「?」でショートカット一覧（すべて変更可能）を表示できます。詳しい手引きは「使い方ガイド」にあります。",
   "onboarding.start": "はじめる",
-
   "common.create": "作成",
   "common.open": "開く",
   "common.duplicate": "複製",
@@ -157,7 +148,9 @@
   "projects.name": "プロジェクト名",
   "projects.name.placeholder": "マイプロジェクト",
   "projects.trashed": "プロジェクトをゴミ箱へ移動しました",
-  "projects.trashedCount": { "other": "プロジェクト {count} 件をごみ箱に移動しました" },
+  "projects.trashedCount": {
+    "other": "プロジェクト {count} 件をごみ箱に移動しました"
+  },
   "projects.unarchive": "アーカイブを解除",
   "projects.empty.archived.title": "アーカイブされたプロジェクトはありません",
   "projects.empty.archived.description": "アーカイブしたプロジェクト（編集 →ステータス「アーカイブ済み」）が読み取り専用でここに並びます。",
@@ -165,7 +158,9 @@
   "projects.empty.canManage": "「+ 作成」から最初のプロジェクトを作り、sequence、shot、asset を整理しましょう。",
   "projects.empty.member": "どのプロジェクトにも参加していません。スーパーバイザーに追加を依頼してください。",
   "projects.empty.action": "プロジェクトを作成",
-  "projects.countLabel": { "other": "件のプロジェクト" },
+  "projects.countLabel": {
+    "other": "件のプロジェクト"
+  },
   "projects.deleteMany.title": "プロジェクトを削除しますか？",
   "projects.deleteMany.message": {
     "other": "{count} 件のプロジェクトをゴミ箱へ移動します。管理画面から復元できます。"
@@ -183,12 +178,17 @@
   "reviews.empty.title": "review はありません",
   "reviews.empty.description": "この条件に合うメディアはありません。タスクからメディアを公開すると review を始められます。",
   "reviews.draft": "下書き",
-  "reviews.count": { "other": "{count} 件のメディア" },
-  "reviews.countLabel": { "other": "件のメディア" },
+  "reviews.count": {
+    "other": "{count} 件のメディア"
+  },
+  "reviews.countLabel": {
+    "other": "件のメディア"
+  },
   "reviews.addToPlaylist": "playlist に追加…",
   "reviews.deleteMany.title": "メディアを削除しますか？",
-  "reviews.deleteMany.message": { "other": "{count} 件のメディアをゴミ箱へ移動します。" },
-
+  "reviews.deleteMany.message": {
+    "other": "{count} 件のメディアをゴミ箱へ移動します。"
+  },
   "common.rename": "名前を変更",
   "common.remove": "削除",
   "common.deletePermanently": "完全に削除",
@@ -221,11 +221,17 @@
   "trash.empty.description": "プロジェクトから削除した項目はここに入り、復元できる状態のまま残ります。",
   "trash.delete.title": "完全に削除しますか？",
   "trash.restored": "項目を復元しました",
-  "trash.restoredCount": { "other": "{count} 件を復元しました" },
+  "trash.restoredCount": {
+    "other": "{count} 件を復元しました"
+  },
   "trash.deleted": "完全に削除しました",
   "trash.group.media": "メディア",
-  "trash.selectedCount": { "other": "{count} 件選択中" },
-  "trash.purged": { "other": "{count} 件を完全に削除しました" },
+  "trash.selectedCount": {
+    "other": "{count} 件選択中"
+  },
+  "trash.purged": {
+    "other": "{count} 件を完全に削除しました"
+  },
   "trash.delete.message": "「{name}」をデータベースとストレージから削除します。この操作は取り消せません。",
   "trash.deleteMany.message": {
     "other": "{count} 件をデータベースとストレージから削除します。取り消せません。"
@@ -244,11 +250,14 @@
   "assets.unwatch": "この asset のフォローを解除",
   "assets.assign": "shot／sequence に割り当て",
   "assets.trashed": "asset をゴミ箱へ移動しました",
-  "assets.trashedCount": { "other": "{count} 件の asset をごみ箱に移動しました" },
+  "assets.trashedCount": {
+    "other": "{count} 件の asset をごみ箱に移動しました"
+  },
   "assets.delete.title": "asset を削除しますか？",
   "assets.deleteMany.title": "asset を削除しますか？",
-  "assets.countLabel": { "other": "件の asset" },
-
+  "assets.countLabel": {
+    "other": "件の asset"
+  },
   "sequences.title": "Sequence",
   "sequences.empty.title": "sequence はありません",
   "sequences.empty.description": "プロジェクトの sequence がここに並びます。",
@@ -286,7 +295,6 @@
   "playlists.delete.title": "playlist を削除しますか？",
   "playlists.unreadable": "この playlist に再生できるメディアがありません",
   "playlists.inaccessible": "playlist を利用できません",
-
   "viewer.env.title": "環境",
   "viewer.hdri.title": "HDRI 環境（イメージベースライティング）",
   "viewer.hdri.background": "HDRI を背景に",
@@ -332,7 +340,6 @@
   "viewer.bookmarks.title": "保存したビュー",
   "viewer.bookmarks.empty": "保存されたビューはありません。",
   "viewer.bookmarks.save": "現在のビューを保存 — チームで共有されます",
-
   "viewer.focal.hint": "焦点距離（mm）、36 mm センサー基準",
   "viewer.aperture.hint": "被写界深度 — 0 で全面にピント",
   "viewer.tilt.hint": "視線軸まわりの傾き",
@@ -340,7 +347,6 @@
   "viewer.upAxis.hint2": "読み込み時に Y-down 規約を補正",
   "viewer.realScale.hint2": "bounding box によるスケール統一を行いません",
   "viewer.inspectionTint.hint": "このセッションのみ",
-
   "shortcuts.title": "キーボードショートカット",
   "shortcuts.nav": "ナビゲーション",
   "shortcuts.hint": "キーをクリックすると割り当てを変更できます。",
@@ -412,10 +418,8 @@
   "lighting.default.title": "既定の 3D ライティング",
   "lighting.default.none": "なし（スタジオライト）",
   "lighting.default.empty": "既定なし：ニュートラルなスタジオライティング。",
-
   "shortcuts.goProjects": "プロジェクトへ移動",
   "shortcuts.showHelp": "ショートカットを表示",
-
   "whatsNew.title": "新着情報",
   "whatsNew.unavailable": "変更履歴を利用できません（{status}）",
   "tree.noSequence": "sequence はありません。",
@@ -455,13 +459,14 @@
   "decision.saved": "判定を記録しました",
   "notifications.title": "通知",
   "notifications.empty": "通知はありません。",
-  "notifications.unreadAria": { "other": "通知、未読 {count} 件" },
+  "notifications.unreadAria": {
+    "other": "通知、未読 {count} 件"
+  },
   "assets.assignSaved": "割り当てを保存しました",
   "presence.aloneHere": "ほかに誰もいません。",
   "dropzone.release": "離すとアップロードが始まります",
   "storage.title": "ストレージ",
   "storage.unlimited.placeholder": "無制限",
-
   "common.undo": "取り消し",
   "common.redo": "やり直し",
   "viewer.duration": "長さ",
@@ -517,7 +522,6 @@
   "review.firstFrame": "最初の frame",
   "review.playbackRate": "再生フレームレート — timeline は frame 単位のままです",
   "review.none": "なし",
-
   "viewer.guides.title": "ガイド",
   "viewer.guides.grid": "床グリッド",
   "viewer.guides.axes": "軸表示",
@@ -601,7 +605,6 @@
   "review.pipFrame": "layout カメラのビュー — ドラッグで移動、ハンドルでサイズ変更",
   "review.wipe.move": "wipe を動かす（ダブルクリックでリセット）",
   "review.wipe.rotate": "バーを回す（0/45/90° にスナップ）",
-
   "review.guides.thirds": "三分割",
   "review.guides.center": "センタークロス",
   "review.guides.actionSafe.hint": "アクションセーフ領域",
@@ -612,7 +615,6 @@
   "review.export.captureShort": "ビューを取得（PNG）",
   "review.file": "ファイル",
   "review.delivery": "配信",
-
   "common.noData": "データがありません。",
   "common.reset": "リセット",
   "common.host": "ホスト",
@@ -727,13 +729,17 @@
   "transcode.crf": "画質（CRF）",
   "transcode.renditions": "画質の段階（renditions）",
   "adminTrash.restored": "プロジェクトを復元しました",
-  "adminTrash.restoredCount": { "other": "プロジェクト {count} 件を復元しました" },
+  "adminTrash.restoredCount": {
+    "other": "プロジェクト {count} 件を復元しました"
+  },
   "adminTrash.deleted": "プロジェクトを完全に削除しました",
   "adminTrash.empty": "ゴミ箱にプロジェクトはありません。",
   "adminTrash.deleteMany.title": "プロジェクトを完全に削除しますか？",
   "adminTrash.delete.title": "このプロジェクトを完全に削除しますか？",
   "adminTrash.deletedOn": "{date} に削除",
-  "adminTrash.purged": { "other": "プロジェクト {count} 件を完全に削除しました" },
+  "adminTrash.purged": {
+    "other": "プロジェクト {count} 件を完全に削除しました"
+  },
   "adminTrash.purge.message": "「{name}」とそのすべてのメディアがデータベースとストレージから削除されます。取り消せません。",
   "adminTrash.purgeMany.message": {
     "other": "{count} 件のプロジェクトとそのすべてのメディアがデータベースとストレージから削除されます。取り消せません。"
@@ -775,7 +781,6 @@
   "versions.unpublished": "未公開",
   "versions.allMedia": "すべてのメディア",
   "versions.decision": "判定",
-
   "twofa.enabled": "2FA を有効にしました — バックアップコードを保管してください",
   "twofa.disabled": "2FA を無効にしました",
   "twofa.code": "6 桁のコード",
@@ -806,7 +811,9 @@
   "asset.tree.direct": "asset に直接ひもづく version",
   "asset.tree.empty.title": "まだ何も公開されていません",
   "asset.tree.empty.description": "DCC から公開された version は、部門ごとに整理されてここに表示されます。",
-  "asset.tree.versionCount": { "other": "version {count} 件" },
+  "asset.tree.versionCount": {
+    "other": "version {count} 件"
+  },
   "asset.tree.looseVersions": "タスクのない version",
   "asset.tree.noVersion": "version なし",
   "asset.card.latest": "最新：{name} · {date}",
@@ -887,10 +894,7 @@
   "review.exitTheatre": "シアターモードを終了（Esc）",
   "review.cameraViewSaved": "カメラビューを保存しました",
   "email.placeholder": "you@studio.com",
-
-
   "common.escKey": "Esc",
-
   "common.start": "開始",
   "common.end": "終了",
   "common.name": "名前",
@@ -921,11 +925,19 @@
   "comments.atTime": "{time} 秒",
   "comments.filter.open": "未解決",
   "comments.reopened": "コメントを再度開きました",
-  "comments.replyCount": { "other": "{count} 件の返信" },
-  "comments.total": { "other": "コメント合計 {count} 件。" },
+  "comments.replyCount": {
+    "other": "{count} 件の返信"
+  },
+  "comments.total": {
+    "other": "コメント合計 {count} 件。"
+  },
   "comments.delete.message": "コメントは完全に削除されます。",
-  "comments.delete.messageWithReplies": { "other": "コメントとその返信 {count} 件は完全に削除されます。" },
-  "comments.openCount": { "other": "未解決 {count} 件" },
+  "comments.delete.messageWithReplies": {
+    "other": "コメントとその返信 {count} 件は完全に削除されます。"
+  },
+  "comments.openCount": {
+    "other": "未解決 {count} 件"
+  },
   "comments.filter.none": "この状態のコメントはありません。",
   "comments.editField": "コメントを編集",
   "decision.current": "現在の判定：",
@@ -955,10 +967,14 @@
   "versions.lastVersions": "件の version を保持",
   "versions.noMatch": "条件に合う version はありません。",
   "versions.location": "場所",
-  "versions.total": { "other": "version 合計 {count} 件。" },
+  "versions.total": {
+    "other": "version 合計 {count} 件。"
+  },
   "mediaAccess.empty": "まだアクセス記録はありません。",
   "mediaAccess.hint": "閲覧 1 件につき 1 行（30 分単位で重複排除）— 内部 review と клиアント共有をまとめて表示します。",
-  "mediaAccess.total": { "other": "合計 {count} 件のアクセス。" },
+  "mediaAccess.total": {
+    "other": "合計 {count} 件のアクセス。"
+  },
   "ocio.intro": "OCIO カラーマネジメントの config です。公式 ACES config を取得できます（",
   "ocio.none": "config が未インストールです。下の ACES リリースを見てください。",
   "ocio.browse": "ACES のリリースを見る",
@@ -1043,7 +1059,6 @@
   "review.publish": "チームに公開",
   "review.cameraAnimGltf": "カメラアニメーション（glTF）",
   "review.importAnimation": "アニメーションを読み込む",
-
   "project.status.active": "進行中",
   "project.status.onHold": "保留",
   "projects.tab.active": "進行中",
@@ -1051,25 +1066,22 @@
   "projects.created": "プロジェクト「{name}」を作成しました",
   "projects.duplicated": "「{source}」からプロジェクト「{name}」を作成しました",
   "projects.unarchived": "プロジェクト「{name}」のアーカイブを解除しました",
-  "projects.count": { "other": "{count} 件のプロジェクト" },
+  "projects.count": {
+    "other": "{count} 件のプロジェクト"
+  },
   "admin.group.studio": "スタジオ",
   "admin.group.content": "コンテンツ",
   "admin.group.reviewContexts": "review のコンテキスト",
   "admin.group.communications": "コミュニケーション",
   "admin.group.maintenance": "メンテナンス",
-
   "project.status.completed": "完了",
   "project.status.archived": "アーカイブ済み",
-
   "task.dueDate": "期限",
   "marker.delete": "マーカーを削除",
   "usd.recomposeFrom": "USD から再構成",
-
   "marker.rename": "名前・色を変更…",
-
   "sessions.line": "{ip} · {created} に接続 · {seen} に活動",
   "sessions.unknownIp": "不明な IP",
-
   "admin.tab.users": "ユーザー",
   "admin.tab.comments": "コメント",
   "admin.tab.statuses": "ステータス",
@@ -1078,12 +1090,10 @@
   "admin.tab.color": "カラー（OCIO）",
   "admin.topStorage": "ストレージ上位／ユーザー",
   "admin.onlineCount": "{count} 人オンライン",
-
   "presence.available": "対応可",
   "presence.away": "離席中",
   "presence.dnd": "取り込み中",
   "presence.onlineCount": "オンライン · {count}",
-
   "common.enable": "有効にする",
   "common.loading": "読み込み中…",
   "common.nextMonth": "翌月",
@@ -1113,7 +1123,9 @@
   "tokens.copy": "コピー",
   "tokens.created": "token を作成しました",
   "tokens.expired": "期限切れ",
-  "tokens.expiry.days": { "other": "{count} 日" },
+  "tokens.expiry.days": {
+    "other": "{count} 日"
+  },
   "tokens.expiry.label": "有効期限",
   "tokens.new": "新しい token",
   "tokens.passwordHint": "token はセッションより長く残ります。パスワードで作成を確認します。",
@@ -1142,7 +1154,9 @@
   "sessions.title": "有効なセッション",
   "sessions.thisDevice": "この端末",
   "sessions.empty": "記録されたセッションはありません（アップデート前のログインは表示されません — もう一度サインインするとここに出ます）。",
-  "sessions.revokedCount": { "other": "セッション {count} 件を失効させました" },
+  "sessions.revokedCount": {
+    "other": "セッション {count} 件を失効させました"
+  },
   "twofa.qr": "2FA 登録用 QR コード",
   "twofa.scan": "認証アプリ（Google Authenticator、1Password…）でこの QR コードを読み取り、表示されたコードを入力してください。",
   "twofa.wrongCode": "コードが正しくありません",
@@ -1164,11 +1178,17 @@
   "production.attention.unassigned": "担当者なし",
   "production.attention.review": "review 待ち",
   "production.attention.none": "該当なし。順調です。",
-  "production.attention.more": { "other": "ほか {count} 件" },
+  "production.attention.more": {
+    "other": "ほか {count} 件"
+  },
   "production.workload.empty": "残りの作業はありません。",
-  "production.workload.late": { "other": "遅延 {count} 件" },
+  "production.workload.late": {
+    "other": "遅延 {count} 件"
+  },
   "production.pace.window": "観測期間",
-  "production.pace.weeks": { "other": "{count} 週間" },
+  "production.pace.weeks": {
+    "other": "{count} 週間"
+  },
   "production.pace.perWeek": "週あたり {value}",
   "production.pace.projected": "完了見込み",
   "production.pace.noProjection": "完了見込みを出せるだけの実績がありません",
@@ -1186,7 +1206,9 @@
   "stats.notes": "指摘",
   "stats.approvedRatio": "{approved}/{total} 承認済み · {pct}%",
   "stats.retakes": "retake",
-  "stats.days": { "other": "{count} 日" },
+  "stats.days": {
+    "other": "{count} 日"
+  },
   "stats.drawCalls": "ドローコール",
   "stats.fps": "fps",
   "stats.measuring": "計測中…",
@@ -1199,13 +1221,17 @@
   "sequences.empty.hint": "上の「+」ボタンで sequence を作成します — shot をまとめます（SQ010、SQ020…）。",
   "playlists.empty.hint": "Reviews のページでメディアを選び、右クリックで「playlist に追加」するか、ここで空の playlist を作成します。",
   "playlists.delete.message": "「{name}」を削除します。参照されている version には影響しません。",
-  "playlists.versionCount": { "other": "version {count} 件" },
+  "playlists.versionCount": {
+    "other": "version {count} 件"
+  },
   "shares.newShort": "新しいリンク",
   "shares.empty": "共有リンクがありません。作成すると、アカウントなしでこのプロジェクトの公開メディアを見てもらえます。",
   "shares.createdBy": "{name} が作成",
   "shares.expiresOn": "{date} に失効",
   "shares.viewedOn": "{date} に閲覧",
-  "shares.viewCount": { "other": "回閲覧" },
+  "shares.viewCount": {
+    "other": "回閲覧"
+  },
   "shares.scope": "リンクで開く範囲",
   "shares.scope.project": "プロジェクト全体",
   "shares.scope.playlist": "playlist 1 つだけ",
@@ -1216,21 +1242,31 @@
   "shares.scope.pick.media": "含めるメディア",
   "shares.scope.pick.none": "選択…",
   "shares.scope.empty": "このプロジェクトには公開済みのメディアがまだありません。",
-  "shares.scope.selected": { "other": "メディア {count} 件を選択" },
+  "shares.scope.selected": {
+    "other": "メディア {count} 件を選択"
+  },
   "shares.scope.needsTarget": "作成する前に、このリンクで開く範囲を選択してください。",
   "shares.scope.badge.project": "プロジェクト全体",
-  "shares.scope.badge.selection": { "other": "メディア {count} 件" },
+  "shares.scope.badge.selection": {
+    "other": "メディア {count} 件"
+  },
   "shares.scope.badge.restricted": "限定",
   "shares.email": "メールで送信…",
   "shares.email.title": "リンクをメールで送信",
   "shares.email.recipients": "宛先",
   "shares.email.recipients.placeholder": "1 行に 1 件のアドレス",
-  "shares.email.count": { "other": "有効なアドレス {count} 件" },
-  "shares.email.tooMany": { "other": "1 回の送信につき宛先は最大 {count} 件です" },
+  "shares.email.count": {
+    "other": "有効なアドレス {count} 件"
+  },
+  "shares.email.tooMany": {
+    "other": "1 回の送信につき宛先は最大 {count} 件です"
+  },
   "shares.email.note": "メモ（任意）",
   "shares.email.note.placeholder": "宛先へのひとこと",
   "shares.email.submit": "送信",
-  "shares.email.sent": { "other": "{count} 件の宛先にリンクを送信しました" },
+  "shares.email.sent": {
+    "other": "{count} 件の宛先にリンクを送信しました"
+  },
   "shares.email.invalid": "有効なメールアドレスを 1 件以上入力してください。",
   "shares.email.willMentionExpiry": "メールには、リンクの有効期限が {date} であることを記載します。",
   "shares.email.noExpiry": "メールには、リンクに有効期限がないことを記載します。",
@@ -1264,7 +1300,6 @@
   "naming.warningFile": "「{name}」はプロジェクトの命名規則に従っていません。",
   "naming.compliant": "規則に合致",
   "naming.nonCompliant": "規則に不一致",
-
   "mode.watch": "見る",
   "mode.watch.hint": "再生・ズーム・version の比較 — 編集ツールなし。クライアントに出せる唯一のモードです。",
   "mode.annotate": "注釈",
@@ -1342,7 +1377,6 @@
   "action.resetSpatial": "初期ビュー",
   "action.fitMedia": "画面に合わせる",
   "action.resetMedia": "実寸 1:1",
-
   "common.add": "追加",
   "common.show": "表示",
   "common.hide": "非表示",
@@ -1379,7 +1413,9 @@
   "voice.start": "音声メモを録音",
   "dropzone.drop": "ここにファイルをドロップ",
   "batch.nothing": "生成するものがありません。",
-  "batch.createCount": { "other": "{count} 件を作成" },
+  "batch.createCount": {
+    "other": "{count} 件を作成"
+  },
   "batch.creation": "Shots/Sequences の作成",
   "notif.markAllRead": "すべて既読にする",
   "file.readFailed": "ファイルを読めません",
@@ -1428,22 +1464,34 @@
   "decision.badge": "判断：{status}",
   "decision.dialogTitle": "review の判断 — {version}",
   "project.dupHint": "sequence・shot・設定は作り直されます。メディア・version・コメントはコピーされません。",
-  "shots.created": { "other": "{count} 件の shot を作成しました" },
+  "shots.created": {
+    "other": "{count} 件の shot を作成しました"
+  },
   "shots.delete.message": "shot「{code}」とそのタスク・version をごみ箱に移動します。",
   "shots.omitted": "編集でカット済み",
   "shots.searchPlaceholder": "shot のコードまたは名前…",
-  "shots.count": { "other": "shot {count} 件" },
-  "shots.countLabel": { "other": "件の shot" },
-  "shots.trashedCount": { "other": "{count} 件の shot をごみ箱に移動しました" },
+  "shots.count": {
+    "other": "shot {count} 件"
+  },
+  "shots.countLabel": {
+    "other": "件の shot"
+  },
+  "shots.trashedCount": {
+    "other": "{count} 件の shot をごみ箱に移動しました"
+  },
   "shots.deleteMany.title": "shot を削除しますか？",
-  "shots.deleteMany.message": { "other": "{count} 件の shot とそのタスク・version をごみ箱に移動します。" },
+  "shots.deleteMany.message": {
+    "other": "{count} 件の shot とそのタスク・version をごみ箱に移動します。"
+  },
   "shots.new": "新しい shot",
   "shot.newAsset": "+ Asset を作成",
   "shot.omitted": "編集から除外",
   "shot.omittedHint": "この shot は編集から外れますが、作業・version・コメントはそのまま残ります。",
   "assets.emptyHint": "「+ 作成」で再利用できる asset を作りましょう（キャラクター、セット、小道具…）。",
   "assets.attach": "紐付け",
-  "assets.count": { "other": "{count} 件の asset" },
+  "assets.count": {
+    "other": "{count} 件の asset"
+  },
   "assets.created": "asset「{name}」を作成しました",
   "assets.createdAttached": "asset「{name}」を作成して紐付けました",
   "assets.delete.message": "asset「{name}」とその version・メディアをごみ箱に移動します。",
@@ -1540,7 +1588,6 @@
   "email.digestOff": "日次ダイジェストを無効化",
   "email.weeklyOn": "週次レポートを有効化",
   "email.weeklyOff": "週次レポートを無効化",
-
   "review.hotspotAttached": "📍 hotspot を添付（viewer の中心）",
   "review.camViewSaved": "📷 現在のカメラビューが保存されます",
   "review.labelsVisible": "ラベル表示",
@@ -1586,7 +1633,9 @@
   "live.coHostAdded": "{name} が副操縦者になりました — 先に操作した人が主導権を取ります",
   "live.coHostRemoved": "{name} は副操縦者ではなくなりました",
   "live.handedOver": "{name} に操作権を渡しました（パイロット）",
-  "live.participants": { "other": "（参加者 {count} 名）。" },
+  "live.participants": {
+    "other": "（参加者 {count} 名）。"
+  },
   "live.running": "ライブ review 進行中",
   "live.runningWithPilot": "ライブ review 進行中 — 操作は {pilot}",
   "live.coHosts": "副操縦者",
@@ -1625,8 +1674,12 @@
   "video.qualityOriginal": "オリジナル",
   "video.qualitySet": "再生品質：{height}p",
   "video.volume": "音量",
-  "video.compareOffsetAhead": { "other": "B は A より {count} frame 先行しています" },
-  "video.compareOffsetBehind": { "other": "B は A より {count} frame 遅れています" },
+  "video.compareOffsetAhead": {
+    "other": "B は A より {count} frame 先行しています"
+  },
+  "video.compareOffsetBehind": {
+    "other": "B は A より {count} frame 遅れています"
+  },
   "video.compareOffsetNone": "B は A に揃っています",
   "video.waveform.show": "音声波形",
   "video.waveform.scrub": "音声波形 — ドラッグで移動",
@@ -1659,7 +1712,9 @@
   "ref.title": "参考",
   "ref.draft": "参考（下書き）",
   "ref.addPaste": "リファレンス（Ctrl+V）",
-  "ref.maxImages": { "other": "参考画像は最大 {count} 枚" },
+  "ref.maxImages": {
+    "other": "参考画像は最大 {count} 枚"
+  },
   "nav.firstMedia": "この version の最初のメディア",
   "nav.lastMedia": "この version の最後のメディア",
   "marker.edit": "マーカーを編集",
@@ -1676,11 +1731,12 @@
   "media.delete.message": "「{name}」をプロジェクトのごみ箱に移動します。",
   "media.draft": "下書き",
   "stage.notSavedPublishCancelled": "演出が保存されていません — 公開を取り消しました",
-
   "task.status.inProgress": "作業中",
   "task.status.retake": "Retake",
   "task.checklist": "チェックリスト",
-  "task.count": { "other": "{count} 件のタスク" },
+  "task.count": {
+    "other": "{count} 件のタスク"
+  },
   "task.created": "タスク「{name}」を作成しました",
   "task.createdNamed": "タスクを作成しました：{name}",
   "task.fallbackName": "タスク #{id}",
@@ -1704,7 +1760,6 @@
   "panel.liveRender": "リアルタイムレンダー",
   "panel.performance": "パフォーマンス",
   "panel.techSheet": "技術情報",
-
   "compare.siblingUnreachable": "比較用の splat にアクセスできません",
   "compare.grid": "グリッド · {count}",
   "compare.gridHint": "version が 2 つ以上：同期した 2×2 グリッド（画面には最大 {max} 件）。",
@@ -1725,7 +1780,9 @@
   "camera.curves": "カーブ",
   "camera.frameSelection": "フィット",
   "camera.home": "原点",
-  "camera.maxBookmarks": { "other": "bookmark は最大 {count} 件" },
+  "camera.maxBookmarks": {
+    "other": "bookmark は最大 {count} 件"
+  },
   "camera.viewN": "ビュー {n}",
   "camera.clearPresentation": "演出を消去",
   "camera.clearConfirm": "カメラ、アニメーション、配置が全員分削除されます。",
@@ -1777,7 +1834,6 @@
   "scene.lodAuto": "15 fps を下回ると LOD を有効化、25 を超えると解除",
   "scene.progressive": "点群のページを必要に応じて読み込みます",
   "scene.lodOn": "LOD 常時オン",
-
   "storage.k.original": "アップロードされたファイル（原本）",
   "storage.k.original.note": "真実の源。決して変更されません。階層的な slug で読めるパスです。",
   "storage.k.hls": "HLS renditions（動画）",
@@ -1810,7 +1866,6 @@
   "storage.k.attachment.note": "review スレッドの画像・PDF・zip・音声メモ。",
   "storage.k.quarantine": "隔離されたファイル",
   "storage.k.quarantine.note": "アップロードで感染を検出（ClamAV）。配信から隔離しました。",
-
   "storage.cat.originals": "原本（projects/）",
   "storage.cat.derived": "派生物（derived/）",
   "storage.cat.studio": "スタジオのライブラリ（studio/）",
@@ -1832,7 +1887,6 @@
   "storage.s.hdris": "HDRI（3D ライティング）",
   "storage.s.ocio": "OCIO 設定（カラー）",
   "storage.s.other": "その他",
-
   "audit.create": "作成",
   "audit.update": "変更",
   "audit.delete": "削除",
@@ -1847,7 +1901,6 @@
   "settings.hint.liveImage": "例：4 — ズーム／位置",
   "settings.hint.slack": "https://hooks.slack.com/services/… — 判断と公開",
   "settings.hint.sourceUrl": "https://… — 改変した版を公開するなら必須です",
-
   "channel.posX": "位置 X",
   "channel.posY": "位置 Y",
   "channel.posZ": "位置 Z",
@@ -1858,7 +1911,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "{time} 秒の keyframe へ移動",
   "channel.keyAt": "{time} 秒の keyframe",
-
   "admin.announce.allRoles": "（チェックなし＝全員）",
   "admin.announce.updated": "お知らせを変更しました",
   "admin.announce.created": "お知らせを作成しました",
@@ -1988,17 +2040,23 @@
   "storage.map.hint": "インスタンス全体で S3/MinIO バケットは 1 つです。メディアを削除すると、その原本フォルダーと接頭辞も消えます",
   "storage.objShort": "{count} オブジェクト",
   "storage.objects": "オブジェクト",
-  "storage.objectsCount": { "other": "{count} オブジェクト" },
+  "storage.objectsCount": {
+    "other": "{count} オブジェクト"
+  },
   "storage.originals": "オリジナル",
   "storage.totalUsage": "合計使用量",
   "storage.orphanProject": "（不明なプロジェクト — 孤立？）",
-  "storage.scannedAt": { "other": "{date} にバケットをスキャンしました — {count} オブジェクト。" },
+  "storage.scannedAt": {
+    "other": "{date} にバケットをスキャンしました — {count} オブジェクト。"
+  },
   "storage.quotaOf": "上限 {size}",
   "storage.quotaUsage": "上限 {size}（{pct}%）",
   "system.agplHint": "このインスタンスを遠隔で使う人は誰でもソースを入手できなければなりません。改変した場合は「ソースコード」設定を自分のリポジトリに向けてください。",
   "system.thirdParty": "サードパーティの依存",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md（リポジトリのルート）",
-  "system.cores": { "other": "{count} コア" },
+  "system.cores": {
+    "other": "{count} コア"
+  },
   "system.disk": "ディスク — {used} / {total}",
   "system.memory": "メモリ — {used} / {total}",
   "system.licenseTitle": "ライセンスとソースコード",
@@ -2035,7 +2093,9 @@
   "webhooks.delivery.pending": "保留中",
   "webhooks.delivery.delivered": "配信済み",
   "webhooks.delivery.failed": "失敗",
-  "webhooks.delivery.attempts": { "other": "{count} 回試行" },
+  "webhooks.delivery.attempts": {
+    "other": "{count} 回試行"
+  },
   "webhooks.delivery.replay": "この配信を再送する",
   "webhooks.delivery.replayed": "配信をキューに再登録しました",
   "webhooks.delivery.replayOf": "#{value} の再送",
@@ -2074,16 +2134,21 @@
   "splat.isolate": "分離",
   "model3d.transformModel": "モデルをトランスフォーム",
   "model3d.unnamed": "（名前なし）",
-
   "jobs.storageCleanup": "ストレージの整理",
   "jobs.webhooks": "送信 webhook",
   "jobs.activeCount": "{count} 件実行中",
   "jobs.waitingCount": "{count} 件待機中",
   "jobs.failedCount": "{count} 件失敗",
   "jobs.completedCount": "{count} 件完了",
-  "jobs.attempts": { "other": "{count} 回試行" },
-  "jobs.cleanedFailed": { "other": "失敗したジョブ {count} 件を削除しました" },
-  "jobs.retriedCount": { "other": "ジョブ {count} 件を再実行しました。" },
+  "jobs.attempts": {
+    "other": "{count} 回試行"
+  },
+  "jobs.cleanedFailed": {
+    "other": "失敗したジョブ {count} 件を削除しました"
+  },
+  "jobs.retriedCount": {
+    "other": "ジョブ {count} 件を再実行しました。"
+  },
   "jobs.purgedDerived": "メディア {count} 件を軽量化しました（HLS とスプライトを削除）",
   "jobs.purge": "削除",
   "jobs.purgeNow": "今すぐ削除",
@@ -2091,7 +2156,6 @@
   "jobs.running": "実行中：{list}",
   "jobs.queueUnavailable": "キューを利用できません。",
   "jobs.webhookRef": "webhook {id}",
-
   "model3d.transformPrim": "prim をトランスフォーム",
   "model3d.compareUnreachable": "比較用のモデルにアクセスできません",
   "model3d.loadFailed": "モデルを読み込めません",
@@ -2180,7 +2244,6 @@
   "entity.unavailable.failed": "読み込めませんでした",
   "entity.unavailable.failed.hint": "サーバーが応答しませんでした。しばらくしてからもう一度お試しください。",
   "entity.unavailable.backToProjects": "プロジェクト一覧に戻る",
-
   "version.emptyMedia": "この version にメディアはありません。",
   "version.created": "version「{name}」を作成しました",
   "version.current": "現在",
@@ -2189,13 +2252,20 @@
   "version.noVisibleMedia": "version {version} に表示できるメディアがありません",
   "version.unreachable": "version にアクセスできません",
   "version.dropNew": "ここにファイルをドロップすると、次の version を作成します",
-  "version.publishAll": { "other": "公開（{count}）" },
+  "version.publishAll": {
+    "other": "公開（{count}）"
+  },
   "version.dropShot": "ドロップしてタスクの下に version を作成",
   "version.inReview": "review 中",
-
-  "playlist.added": { "other": "「{name}」に version を {count} 件追加しました" },
-  "playlist.skipped": { "other": "（{count} 件はすでにありました）" },
-  "playlist.targetCount": { "other": "{count} 件 — 該当する version が playlist の末尾に追加されます。" },
+  "playlist.added": {
+    "other": "「{name}」に version を {count} 件追加しました"
+  },
+  "playlist.skipped": {
+    "other": "（{count} 件はすでにありました）"
+  },
+  "playlist.targetCount": {
+    "other": "{count} 件 — 該当する version が playlist の末尾に追加されます。"
+  },
   "playlist.empty": "playlist は空です。",
   "playlist.end": "playlist の最後",
   "playlist.named": "playlist「{name}」",
@@ -2205,20 +2275,25 @@
   "playlist.rename": "playlist の名前を変更",
   "playlist.emptyHint": "左のカタログから version を追加します。",
   "playlist.addTo": "playlist に追加",
-  "playlist.addedTo": { "other": "{name} に version を {count} 件追加しました" },
-  "playlist.addedCount": { "other": "version を {count} 件追加しました" },
+  "playlist.addedTo": {
+    "other": "{name} に version を {count} 件追加しました"
+  },
+  "playlist.addedCount": {
+    "other": "version を {count} 件追加しました"
+  },
   "playlist.alreadyThere": "すでに playlist にあります",
   "playlist.nothingToAdd": "追加できる公開物がありません",
   "playlist.catalog.search": "shot・asset・version…",
   "playlist.catalog.latestOnly": "最新のみ",
   "playlist.catalog.add": "playlist に追加",
-  "playlist.catalog.addSelected": { "other": "{count} 件を追加" },
+  "playlist.catalog.addSelected": {
+    "other": "{count} 件を追加"
+  },
   "playlist.catalog.present": "追加済み",
   "playlist.catalog.empty": "この条件に一致するものはありません。",
   "playlist.autoAdvance": "自動で次を再生",
   "csv.export": "CSV を書き出し",
   "csv.import": "CSV を読み込み",
-
   "calendar.today": "今日",
   "calendar.dueMoved": "期限を移動しました",
   "nav.breadcrumb": "パンくずリスト",
@@ -2229,9 +2304,13 @@
   "comment.reopen": "再度開く",
   "comment.annotationAttached": "annotation を添付",
   "comment.annotationAttachedHint": "✏️ annotation を添付（テキストは任意）",
-  "comment.maxAttachments": { "other": "コメントごとの添付は最大 {count} 件" },
+  "comment.maxAttachments": {
+    "other": "コメントごとの添付は最大 {count} 件"
+  },
   "comment.rangeAnnotation": "区間 annotation — {name}：{content}",
-  "comment.referencesAttached": { "other": "参考画像 {count} 枚を添付" },
+  "comment.referencesAttached": {
+    "other": "参考画像 {count} 枚を添付"
+  },
   "comment.resolvedBy": "{name} が {date} に解決",
   "comment.state.open": "未対応",
   "comment.state.wip": "対応中",
@@ -2266,26 +2345,38 @@
   "draw.otherInk": "別のインク色",
   "draw.ink": "インク",
   "draw.inkColor": "インク {color}",
-  "draw.pendingStrokes": { "other": "{count} 本のストロークがコメントと一緒に送信されます。" },
-  "draw.shapesAttached": { "other": "コメントに図形 {count} 個を添付しました。" },
+  "draw.pendingStrokes": {
+    "other": "{count} 本のストロークがコメントと一緒に送信されます。"
+  },
+  "draw.shapesAttached": {
+    "other": "コメントに図形 {count} 個を添付しました。"
+  },
   "draw.textPlaceholder": "テキスト…",
   "info.uvSets": "UV セット",
   "track.animTrack": "アニメーショントラック",
-
   "sequences.assets": "sequence の asset（{count}）",
-  "sequences.createdCount": { "other": "{count} 件の sequence を作成しました" },
+  "sequences.createdCount": {
+    "other": "{count} 件の sequence を作成しました"
+  },
   "sequences.delete.message": "sequence「{code}」とその shot をごみ箱に移動します。",
-  "sequences.open": "sequence を開く",
-  "sequences.countLabel": { "other": "件の sequence" },
-  "sequences.trashedCount": { "other": "{count} 件の sequence をごみ箱に移動しました" },
+  "sequences.countLabel": {
+    "other": "件の sequence"
+  },
+  "sequences.trashedCount": {
+    "other": "{count} 件の sequence をごみ箱に移動しました"
+  },
   "sequences.deleteMany.title": "sequence を削除しますか？",
-  "sequences.deleteMany.message": { "other": "{count} 件の sequence とその shot をごみ箱に移動します。" },
+  "sequences.deleteMany.message": {
+    "other": "{count} 件の sequence とその shot をごみ箱に移動します。"
+  },
   "sequences.new": "新しい sequence",
   "view.cards": "カード表示",
   "view.compact": "コンパクト表示",
   "view.followAccount": "アカウントの設定に従う",
   "drafts.title": "保留中の下書き",
-  "drafts.count": { "other": "下書き {count} 件が保留中" },
+  "drafts.count": {
+    "other": "下書き {count} 件が保留中"
+  },
   "uploads.failedFor": "{name} のアップロードに失敗しました",
   "uploads.sending": "送信中 {pct}%",
   "uploads.title": "転送（{count}）",
@@ -2313,8 +2404,12 @@
   "transform.rotationYaw": "Y 回転（yaw）",
   "transform.rotationRoll": "Z 回転（roll）",
   "timeline.defaultName": "編集",
-  "timeline.shotCount": { "other": "shot {count} 件" },
-  "timeline.gapCount": { "other": "空き {count} 件" },
+  "timeline.shotCount": {
+    "other": "shot {count} 件"
+  },
+  "timeline.gapCount": {
+    "other": "空き {count} 件"
+  },
   "timeline.noMedia": "メディアなし",
   "timeline.durationMismatch": "メディアの長さが、shot に宣言された frame 範囲と一致しません。",
   "timeline.previousShot": "前の shot",
@@ -2356,7 +2451,9 @@
   "chat.sendMessage": "メッセージを送る",
   "chat.group.create": "新しいグループ",
   "chat.group.namePlaceholder": "グループ名（任意）",
-  "chat.group.members": { "other": "メンバー {count} 人" },
+  "chat.group.members": {
+    "other": "メンバー {count} 人"
+  },
   "chat.rename": "グループ名を変更",
   "chat.addMembers": "参加者を追加",
   "chat.leave": "この会話から退出",
@@ -2365,7 +2462,9 @@
   "chat.unmute": "通知をオンにする",
   "chat.search": "メンバーを検索",
   "chat.search.empty": "該当する人がいません",
-  "chat.system.joined": { "other": "{names} が会話に参加しました" },
+  "chat.system.joined": {
+    "other": "{names} が会話に参加しました"
+  },
   "chat.system.left": "{name} が会話から退出しました",
   "chat.system.removed": "{name} がメンバーから外されました",
   "chat.system.renamed": "グループ名が « {title} » に変更されました",
@@ -2458,7 +2557,9 @@
   "shotgrid.setup.connect": "プロジェクトを接続",
   "shotgrid.setup.connected": "「{name}」に接続しました",
   "shotgrid.setup.connectFailed": "接続できません",
-  "shotgrid.setup.testOk": { "other": "接続成功 — {count} 件のプロジェクトが表示されます" },
+  "shotgrid.setup.testOk": {
+    "other": "接続成功 — {count} 件のプロジェクトが表示されます"
+  },
   "shotgrid.sync.runFull": "同期する",
   "shotgrid.sync.runReconcile": "追い付く",
   "shotgrid.sync.reconcileHint": "追い付き期間を читать再読します — 停止後に使います。",
@@ -2476,7 +2577,9 @@
   "shotgrid.sync.noLog": "エントリーなし",
   "shotgrid.sync.keepSg": "ShotGrid を採用",
   "shotgrid.sync.keepReview": "ReView を採用",
-  "shotgrid.sync.conflicts": { "other": "{count} 件の競合が判断待ちです" },
+  "shotgrid.sync.conflicts": {
+    "other": "{count} 件の競合が判断待ちです"
+  },
   "shotgrid.conflict.resolved": "競合を解決しました",
   "shotgrid.conflict.failed": "解決できません",
   "shotgrid.conflict.detail": "{field}：ReView「{review}」· ShotGrid「{shotgrid}」",
@@ -2545,8 +2648,12 @@
   "shotgrid.versions.selectAllPending": "不足しているものをすべて選択",
   "shotgrid.versions.summary": "publishes {total} 件、未取り込み {pending} 件",
   "shotgrid.versions.intro": "このプロジェクトの ShotGrid publishes を一覧し、足りないものを取り込みます。",
-  "shotgrid.versions.importSelected": { "other": "{count} 件を取り込む" },
-  "shotgrid.versions.imported": { "other": "publishes {count} 件を取り込みました" },
+  "shotgrid.versions.importSelected": {
+    "other": "{count} 件を取り込む"
+  },
+  "shotgrid.versions.imported": {
+    "other": "publishes {count} 件を取り込みました"
+  },
   "shotgrid.admin.title": "ShotGrid サイト",
   "shotgrid.admin.projects": "接続中のプロジェクト",
   "shotgrid.admin.deleted": "ShotGrid サイトを削除しました",
@@ -2556,7 +2663,9 @@
   "shotgrid.admin.deleteConfirm": "サイト「{name}」を削除しますか？ 資格情報も消去されます。",
   "shotgrid.admin.empty": "ShotGrid サイトが登録されていません。プロジェクトの ShotGrid タブから追加してください。",
   "shotgrid.admin.intro": "資格情報はスタジオ全体で一度だけここに置きます。各プロジェクトの接続が再利用し、キーの交換も一箇所で済みます。秘密がブラウザーに返されることはありません。",
-  "shotgrid.admin.linkedProjects": { "other": "{count} 件のプロジェクト" },
+  "shotgrid.admin.linkedProjects": {
+    "other": "{count} 件のプロジェクト"
+  },
   "shotgrid.domain.hierarchy": "Sequences・shots・assets",
   "shotgrid.domain.hierarchy.hint": "制作の分解、cut の範囲、shot のステータス。",
   "shotgrid.domain.tasks": "タスク",
@@ -2651,7 +2760,9 @@
   "shotgrid.sync.publishOff": "ShotGrid への送信が無効です。ここで公開した version はここに留まります。設定 → 公開 で変更できます。",
   "shotgrid.steps.title": "このプロジェクトが使う工程",
   "shotgrid.steps.hint": "ShotGrid はプロジェクトで表示が有効な工程だけを提示しますが、その設定を API では公開しません。ここで一度選んでください。選ばなければ、ReView は既存の task から推測します。",
-  "shotgrid.steps.count": { "other": "{count} 件を選択" },
+  "shotgrid.steps.count": {
+    "other": "{count} 件を選択"
+  },
   "shotgrid.steps.forAssets": "asset 用",
   "shotgrid.steps.forShots": "shot 用",
   "shotgrid.steps.search": "工程を検索…",
@@ -2682,7 +2793,9 @@
   "shotgrid.crew.state.none": "アカウントなし",
   "shotgrid.crew.state.ineligible": "招待できません",
   "shotgrid.crew.done": "アカウントを {created} 件作成し、{added} 人をプロジェクトに追加しました",
-  "shotgrid.crew.skipped": { "other": "{count} 人をスキップしました" },
+  "shotgrid.crew.skipped": {
+    "other": "{count} 人をスキップしました"
+  },
   "shotgrid.crew.plan": "作成するアカウント {create} 件、プロジェクトに追加 {add} 人",
   "shotgrid.sync.queued": "同期の実行中です。今回の同期は順番待ちになりました。",
   "shotgrid.link.open": "ShotGrid アカウント",
@@ -2723,7 +2836,9 @@
   "social.search": "メンバーやスレッドを検索",
   "social.people": "メンバー",
   "social.noMatch": "この検索に一致するものはありません。",
-  "sequence.shotCount": { "other": "shot {count} 件" },
+  "sequence.shotCount": {
+    "other": "shot {count} 件"
+  },
   "filters.search": "検索…",
   "filters.allStatuses": "すべてのステータス",
   "filters.allDepartments": "すべての部門",
@@ -2746,9 +2861,15 @@
   "assign.unassigned": "担当なし",
   "assign.done": "担当を更新しました",
   "assign.failed": "担当を変更できませんでした",
-  "assign.bulkTitle": { "other": "{count} 件を割り当て" },
-  "assign.doneCount": { "other": "{count} 件のタスクを更新しました" },
-  "assign.skippedCount": { "other": "{count} 件をスキップしました（割り当てる作業がないか、権限がありません）" },
+  "assign.bulkTitle": {
+    "other": "{count} 件を割り当て"
+  },
+  "assign.doneCount": {
+    "other": "{count} 件のタスクを更新しました"
+  },
+  "assign.skippedCount": {
+    "other": "{count} 件をスキップしました（割り当てる作業がないか、権限がありません）"
+  },
   "assign.person": "担当者",
   "assign.departments": "部門",
   "assign.departmentsHint": "空のままにすると既存のすべてのタスクが対象になります。部門を選ぶとその部門に限定し、タスクがなければ作成します。",
@@ -2811,11 +2932,15 @@
   "episode.noSequence.title": "この episode に sequence はありません",
   "episode.noSequence.description": "プロジェクトの Episodes タブから、この episode に sequence を紐づけてください。",
   "episode.noShot": "この sequence に shot はありません。",
-  "episode.sequenceCount": { "other": "sequence {count} 件" },
+  "episode.sequenceCount": {
+    "other": "sequence {count} 件"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "episode を開く",
   "episodes.reordered": "並び順を保存しました",
-  "episodes.createdCount": { "other": "episode を {count} 件作成しました" },
+  "episodes.createdCount": {
+    "other": "episode を {count} 件作成しました"
+  },
   "episodes.attachTo": "episode に紐づける",
   "episodes.attached": "sequence を紐づけました",
   "episodes.detach": "episode との紐づけを外す",
@@ -2826,7 +2951,9 @@
   "episodes.empty.title": "episode なし",
   "episodes.empty.description": "このプロジェクトにはまだ episode がありません。",
   "episodes.empty.hint": "上のジェネレーターで最初のものを作成してください。",
-  "episodes.unassignedCount": { "other": "episode のない sequence {count} 件" },
+  "episodes.unassignedCount": {
+    "other": "episode のない sequence {count} 件"
+  },
   "episodes.unassignedHint": "sequence を右クリックすると episode に紐づけられます。",
   "episodes.disabledHere": "このプロジェクトでは episode の階層が無効です。",
   "episodes.settings.title": "episode の階層",
@@ -2835,8 +2962,12 @@
   "episodes.settings.enabled": "episode の階層を有効にしました",
   "episodes.settings.disabled": "episode の階層を無効にしました",
   "episodes.settings.keepsData": "無効にしても階層が隠れるだけです。episode と sequence はそのまま戻ります。",
-  "episodes.settings.stored": { "other": "episode {count} 件を保存済み" },
-  "episodes.settings.linked": { "other": "sequence {count} 件を紐づけ済み" },
+  "episodes.settings.stored": {
+    "other": "episode {count} 件を保存済み"
+  },
+  "episodes.settings.linked": {
+    "other": "sequence {count} 件を紐づけ済み"
+  },
   "error.UNAUTHENTICATED": "サインインしていません。",
   "error.FORBIDDEN": "アクセスが拒否されました。",
   "error.NOT_FOUND": "この項目は存在しません。",
@@ -2958,23 +3089,35 @@
   "imageSequence.hint": "まとめると、video と同じように review できる 1 つのメディアになります。まとめない場合、各 frame は個別のファイルのままです。",
   "imageSequence.group": "1 つのメディアにまとめる",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "other": "{count} 件のファイル" },
-  "imageSequence.gaps": { "other": "frame {count} 件が欠落" },
-  "imageSequence.others": { "other": "他の {count} 件のファイルは個別に送信されます" },
+  "imageSequence.files": {
+    "other": "{count} 件のファイル"
+  },
+  "imageSequence.gaps": {
+    "other": "frame {count} 件が欠落"
+  },
+  "imageSequence.others": {
+    "other": "他の {count} 件のファイルは個別に送信されます"
+  },
   "imageSequence.confirm": "image sequence として送信",
   "imageSequence.sendSeparately": "ファイルごとに送信",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "組み立て中",
-  "assignees.label": { "other": "{count} 人が担当" },
+  "assignees.label": {
+    "other": "{count} 人が担当"
+  },
   "assignees.dialogTitle": "{name} の担当者",
   "assignees.searchPlaceholder": "担当者を検索…",
   "assignees.noMatch": "該当する担当者はいません。",
-  "assignees.saved": { "other": "{count} 人を担当に設定しました" },
+  "assignees.saved": {
+    "other": "{count} 人を担当に設定しました"
+  },
   "assignees.menu": "担当者…",
   "assignees.origin.direct": "この要素の責任者",
   "assignees.origin.child": "内側の要素の責任者",
   "assignees.origin.task": "タスクの担当",
-  "cards.awaitingReview": { "other": "review 待ちの納品 {count} 件" },
+  "cards.awaitingReview": {
+    "other": "review 待ちの納品 {count} 件"
+  },
   "cards.updatedAt": "更新 {value}",
   "visibility.hide": "全員から非表示にする",
   "visibility.show": "再び表示する",
@@ -3060,7 +3203,9 @@
   "note.gallery.carousel": "カルーセル",
   "note.gallery.columns": "列数",
   "note.gallery.height": "高さ",
-  "note.gallery.count": { "other": "画像 {count} 枚" },
+  "note.gallery.count": {
+    "other": "画像 {count} 枚"
+  },
   "note.image.align": "配置",
   "note.image.alignFull": "全幅",
   "note.image.alignCenter": "中央",
@@ -3082,9 +3227,15 @@
   "assetType.VEHICLE": "乗り物",
   "assetType.FX": "FX",
   "assetType.OTHER": "その他",
-  "bulk.status.title": { "other": "{count} 件の shot のステータス" },
-  "bulk.status.done": { "other": "{count} 件の shot を更新しました" },
-  "bulk.status.partial": { "other": "{count} 件の shot を更新、{failed} 件は拒否されました" },
+  "bulk.status.title": {
+    "other": "{count} 件の shot のステータス"
+  },
+  "bulk.status.done": {
+    "other": "{count} 件の shot を更新しました"
+  },
+  "bulk.status.partial": {
+    "other": "{count} 件の shot を更新、{failed} 件は拒否されました"
+  },
   "bulk.status.menu": "ステータス",
   "colorPicker.hue": "色相",
   "queryState.title": "このセクションを読み込めませんでした",

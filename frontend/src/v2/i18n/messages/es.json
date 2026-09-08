@@ -1,6 +1,5 @@
 {
   "auth.tagline": "Review colaborativa de medios para estudios de VFX y postproducción.",
-
   "login.title": "Hola de nuevo.",
   "login.subtitle": "Inicia sesión para volver a tus reviews, tareas y boards.",
   "login.heading": "Iniciar sesión",
@@ -12,7 +11,6 @@
   "login.error.credentials": "Correo o contraseña incorrectos.",
   "login.error.network": "No se puede conectar con el servidor. Inténtalo de nuevo en un momento.",
   "login.error.generic": "Error al iniciar sesión",
-
   "setup.title": "Te damos la bienvenida a ReView.",
   "setup.subtitle": "Vamos a configurar tu estudio en dos pasos. Podrás ajustarlo todo después.",
   "setup.step.studio": "Estudio",
@@ -30,7 +28,6 @@
   "setup.submit": "Crear estudio",
   "setup.submitting": "Creando…",
   "setup.error.generic": "Error de configuración",
-
   "display.title": "Visualización",
   "display.theme": "Tema",
   "display.theme.hint": "Seguir el sistema o forzar claro/oscuro.",
@@ -45,7 +42,6 @@
   "display.language.hint": "Idioma de la interfaz. La terminología de producción se mantiene en inglés.",
   "display.view": "Vista predeterminada de las listas",
   "display.view.hint": "Se aplica en todas partes. Una lista que cambie conserva su propio ajuste hasta que lo restablezca.",
-
   "language.select": "Elegir idioma",
   "language.regional": "Lengua regional",
   "language.notice.title": "Las traducciones son automáticas",
@@ -59,24 +55,20 @@
   "language.coverage.complete": "Traducido por completo",
   "language.fallbackNotice": "Las frases sin traducir se muestran en inglés.",
   "language.regionalSuffix": "— lengua regional",
-
   "nav.home": "Inicio",
   "nav.projects": "Proyectos",
   "nav.reviews": "Reviews",
   "nav.members": "Miembros",
   "nav.settings": "Ajustes",
   "nav.documentation": "Documentación",
-
   "common.save": "Guardar",
   "common.cancel": "Cancelar",
   "common.delete": "Eliminar",
   "common.edit": "Editar",
   "common.close": "Cerrar",
-
   "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Software libre bajo licencia AGPL-3.0, sin ninguna garantía.",
   "license.source": "Código fuente",
   "license.title": "Licencia",
-
   "common.confirm": "Confirmar",
   "common.previous": "Anterior",
   "common.next": "Siguiente",
@@ -112,7 +104,6 @@
   "onboarding.help.title": "¿Necesitas ayuda?",
   "onboarding.help.body": "Pulsa «?» para ver la lista de atajos (todos reconfigurables), y encuentra la guía completa en Documentación.",
   "onboarding.start": "Empezar",
-
   "common.create": "Crear",
   "common.open": "Abrir",
   "common.duplicate": "Duplicar",
@@ -169,7 +160,10 @@
   "projects.empty.canManage": "Crea tu primer proyecto con el botón «+ Crear» para organizar tus sequences, shots y assets.",
   "projects.empty.member": "No eres miembro de ningún proyecto. Pide a un supervisor que te añada.",
   "projects.empty.action": "Crear un proyecto",
-  "projects.countLabel": { "one": "proyecto", "other": "proyectos" },
+  "projects.countLabel": {
+    "one": "proyecto",
+    "other": "proyectos"
+  },
   "projects.deleteMany.title": "¿Eliminar los proyectos?",
   "projects.deleteMany.message": {
     "one": "{count} proyecto se moverá a la papelera. Se puede restaurar desde la administración.",
@@ -188,15 +182,20 @@
   "reviews.empty.title": "Ninguna review",
   "reviews.empty.description": "Ningún medio coincide con estos filtros. Publica un medio desde una tarea para iniciar una review.",
   "reviews.draft": "Borrador",
-  "reviews.count": { "one": "{count} medio", "other": "{count} medios" },
-  "reviews.countLabel": { "one": "medio", "other": "medios" },
+  "reviews.count": {
+    "one": "{count} medio",
+    "other": "{count} medios"
+  },
+  "reviews.countLabel": {
+    "one": "medio",
+    "other": "medios"
+  },
   "reviews.addToPlaylist": "Añadir a la playlist…",
   "reviews.deleteMany.title": "¿Eliminar los medios?",
   "reviews.deleteMany.message": {
     "one": "{count} medio se moverá a la papelera.",
     "other": "{count} medios se moverán a la papelera."
   },
-
   "common.rename": "Renombrar",
   "common.remove": "Quitar",
   "common.deletePermanently": "Eliminar definitivamente",
@@ -229,10 +228,16 @@
   "trash.empty.description": "Los elementos eliminados del proyecto llegan aquí y siguen siendo restaurables.",
   "trash.delete.title": "¿Eliminar definitivamente?",
   "trash.restored": "Elemento restaurado",
-  "trash.restoredCount": { "one": "{count} elemento restaurado", "other": "{count} elementos restaurados" },
+  "trash.restoredCount": {
+    "one": "{count} elemento restaurado",
+    "other": "{count} elementos restaurados"
+  },
   "trash.deleted": "Eliminado definitivamente",
   "trash.group.media": "Medios",
-  "trash.selectedCount": { "one": "{count} seleccionado", "other": "{count} seleccionados" },
+  "trash.selectedCount": {
+    "one": "{count} seleccionado",
+    "other": "{count} seleccionados"
+  },
   "trash.purged": {
     "one": "{count} elemento eliminado definitivamente",
     "other": "{count} elementos eliminados definitivamente"
@@ -262,8 +267,10 @@
   },
   "assets.delete.title": "¿Eliminar el asset?",
   "assets.deleteMany.title": "¿Eliminar los assets?",
-  "assets.countLabel": { "one": "asset", "other": "assets" },
-
+  "assets.countLabel": {
+    "one": "asset",
+    "other": "assets"
+  },
   "sequences.title": "Sequences",
   "sequences.empty.title": "Ninguna sequence",
   "sequences.empty.description": "Las sequences del proyecto aparecerán aquí.",
@@ -301,7 +308,6 @@
   "playlists.delete.title": "¿Eliminar la playlist?",
   "playlists.unreadable": "Ningún medio reproducible en esta playlist",
   "playlists.inaccessible": "Playlist no disponible",
-
   "viewer.env.title": "Entorno",
   "viewer.hdri.title": "Entorno HDRI (iluminación por imagen)",
   "viewer.hdri.background": "HDRI de fondo",
@@ -347,7 +353,6 @@
   "viewer.bookmarks.title": "Vistas guardadas",
   "viewer.bookmarks.empty": "Ninguna vista guardada.",
   "viewer.bookmarks.save": "Guardar la vista actual — compartida con el equipo",
-
   "viewer.focal.hint": "Focal en milímetros, sensor de 36 mm",
   "viewer.aperture.hint": "Profundidad de campo — 0 = todo nítido",
   "viewer.tilt.hint": "Inclinación alrededor del eje de vista",
@@ -355,7 +360,6 @@
   "viewer.upAxis.hint2": "Convención Y-down corregida al importar",
   "viewer.realScale.hint2": "Sin unificar las escalas mediante bounding box",
   "viewer.inspectionTint.hint": "Local a tu sesión",
-
   "shortcuts.title": "Atajos de teclado",
   "shortcuts.nav": "Navegación",
   "shortcuts.hint": "Haz clic en una tecla para reconfigurarla.",
@@ -427,10 +431,8 @@
   "lighting.default.title": "Iluminación 3D por defecto",
   "lighting.default.none": "Ninguna (luces de estudio)",
   "lighting.default.empty": "Sin valor por defecto: iluminación de estudio neutra.",
-
   "shortcuts.goProjects": "Ir a los proyectos",
   "shortcuts.showHelp": "Mostrar los atajos",
-
   "whatsNew.title": "Novedades",
   "whatsNew.unavailable": "Changelog no disponible ({status})",
   "tree.noSequence": "Ninguna sequence.",
@@ -479,7 +481,6 @@
   "dropzone.release": "Suelta para iniciar la subida",
   "storage.title": "Almacenamiento",
   "storage.unlimited.placeholder": "ilimitado",
-
   "common.undo": "Deshacer",
   "common.redo": "Rehacer",
   "viewer.duration": "Duración",
@@ -535,7 +536,6 @@
   "review.firstFrame": "Primer frame",
   "review.playbackRate": "Cadencia de reproducción — la timeline sigue en frames",
   "review.none": "ninguno",
-
   "viewer.guides.title": "Guías",
   "viewer.guides.grid": "Rejilla del suelo",
   "viewer.guides.axes": "Tríada de ejes",
@@ -619,7 +619,6 @@
   "review.pipFrame": "Vista de la cámara layout — arrastra para mover, tirador para redimensionar",
   "review.wipe.move": "Mover el wipe (doble clic: restablecer)",
   "review.wipe.rotate": "Girar la barra (imantada a 0/45/90°)",
-
   "review.guides.thirds": "Tercios",
   "review.guides.center": "Cruz central",
   "review.guides.actionSafe.hint": "Zona de acción segura",
@@ -630,7 +629,6 @@
   "review.export.captureShort": "Captura de la vista (PNG)",
   "review.file": "Archivo",
   "review.delivery": "Difusión",
-
   "common.noData": "Sin datos.",
   "common.reset": "Restablecer",
   "common.host": "Host",
@@ -801,7 +799,6 @@
   "versions.unpublished": "No publicadas",
   "versions.allMedia": "Todos los medios",
   "versions.decision": "Decisión",
-
   "twofa.enabled": "2FA activada — guarda tus códigos de respaldo",
   "twofa.disabled": "2FA desactivada",
   "twofa.code": "Código de 6 dígitos",
@@ -832,7 +829,10 @@
   "asset.tree.direct": "Versions adjuntas al asset",
   "asset.tree.empty.title": "Nada publicado todavía",
   "asset.tree.empty.description": "Las versions publicadas desde un DCC aparecen aquí, ordenadas por departamento.",
-  "asset.tree.versionCount": { "one": "{count} version", "other": "{count} versions" },
+  "asset.tree.versionCount": {
+    "one": "{count} version",
+    "other": "{count} versions"
+  },
   "asset.tree.looseVersions": "Versions sin tarea",
   "asset.tree.noVersion": "Ninguna version",
   "asset.card.latest": "última: {name} · {date}",
@@ -913,10 +913,7 @@
   "review.exitTheatre": "Salir del modo teatro (Esc)",
   "review.cameraViewSaved": "Vista de cámara guardada",
   "email.placeholder": "tu@estudio.com",
-
-
   "common.escKey": "Esc",
-
   "common.start": "Inicio",
   "common.end": "Fin",
   "common.name": "Nombre",
@@ -947,14 +944,23 @@
   "comments.atTime": "a {time} s",
   "comments.filter.open": "Abiertos",
   "comments.reopened": "Comentario reabierto",
-  "comments.replyCount": { "one": "{count} respuesta", "other": "{count} respuestas" },
-  "comments.total": { "one": "{count} comentario en total.", "other": "{count} comentarios en total." },
+  "comments.replyCount": {
+    "one": "{count} respuesta",
+    "other": "{count} respuestas"
+  },
+  "comments.total": {
+    "one": "{count} comentario en total.",
+    "other": "{count} comentarios en total."
+  },
   "comments.delete.message": "El comentario se eliminará definitivamente.",
   "comments.delete.messageWithReplies": {
     "one": "El comentario y su {count} respuesta se eliminarán definitivamente.",
     "other": "El comentario y sus {count} respuestas se eliminarán definitivamente."
   },
-  "comments.openCount": { "one": "{count} abierto", "other": "{count} abiertos" },
+  "comments.openCount": {
+    "one": "{count} abierto",
+    "other": "{count} abiertos"
+  },
   "comments.filter.none": "Ningún comentario en este estado.",
   "comments.editField": "Editar el comentario",
   "decision.current": "Decisión actual:",
@@ -984,10 +990,16 @@
   "versions.lastVersions": "últimas versions",
   "versions.noMatch": "Ninguna version coincide con los filtros.",
   "versions.location": "Ubicación",
-  "versions.total": { "one": "{count} version en total.", "other": "{count} versions en total." },
+  "versions.total": {
+    "one": "{count} version en total.",
+    "other": "{count} versions en total."
+  },
   "mediaAccess.empty": "Ningún acceso registrado por ahora.",
   "mediaAccess.hint": "Una fila por consulta (deduplicada en 30 minutos): reviews internas y enlaces de cliente juntos.",
-  "mediaAccess.total": { "one": "{count} acceso en total.", "other": "{count} accesos en total." },
+  "mediaAccess.total": {
+    "one": "{count} acceso en total.",
+    "other": "{count} accesos en total."
+  },
   "ocio.intro": "Configs de gestión de color OCIO. Descarga las configs ACES oficiales (",
   "ocio.none": "Ninguna config instalada. Explora las releases ACES abajo.",
   "ocio.browse": "Explorar las releases ACES",
@@ -1073,7 +1085,6 @@
   "review.publish": "Publicar para el equipo",
   "review.cameraAnimGltf": "Animación de cámara (glTF)",
   "review.importAnimation": "Importar una animación",
-
   "project.status.active": "Activo",
   "project.status.onHold": "En pausa",
   "projects.tab.active": "Activos",
@@ -1081,25 +1092,23 @@
   "projects.created": "Proyecto «{name}» creado",
   "projects.duplicated": "Proyecto «{name}» creado a partir de «{source}»",
   "projects.unarchived": "Proyecto «{name}» desarchivado",
-  "projects.count": { "one": "{count} proyecto", "other": "{count} proyectos" },
+  "projects.count": {
+    "one": "{count} proyecto",
+    "other": "{count} proyectos"
+  },
   "admin.group.studio": "Estudio",
   "admin.group.content": "Contenidos",
   "admin.group.reviewContexts": "Contextos de review",
   "admin.group.communications": "Comunicaciones",
   "admin.group.maintenance": "Mantenimiento",
-
   "project.status.completed": "Terminado",
   "project.status.archived": "Archivado",
-
   "task.dueDate": "Fecha límite",
   "marker.delete": "Eliminar el marcador",
   "usd.recomposeFrom": "Recomponer desde el USD",
-
   "marker.rename": "Renombrar / recolorear…",
-
   "sessions.line": "{ip} · conectado el {created} · activo el {seen}",
   "sessions.unknownIp": "IP desconocida",
-
   "admin.tab.users": "Usuarios",
   "admin.tab.comments": "Comentarios",
   "admin.tab.statuses": "Estados",
@@ -1108,12 +1117,10 @@
   "admin.tab.color": "Color (OCIO)",
   "admin.topStorage": "Top almacenamiento / usuario",
   "admin.onlineCount": "{count} en línea",
-
   "presence.available": "Disponible",
   "presence.away": "Ausente",
   "presence.dnd": "No molestar",
   "presence.onlineCount": "En línea · {count}",
-
   "common.enable": "Activar",
   "common.loading": "Cargando…",
   "common.nextMonth": "Mes siguiente",
@@ -1143,7 +1150,10 @@
   "tokens.copy": "Copiar",
   "tokens.created": "Token creado",
   "tokens.expired": "Caducado",
-  "tokens.expiry.days": { "one": "{count} día", "other": "{count} días" },
+  "tokens.expiry.days": {
+    "one": "{count} día",
+    "other": "{count} días"
+  },
   "tokens.expiry.label": "Caducidad",
   "tokens.new": "Nuevo token",
   "tokens.passwordHint": "Un token sobrevive a tu sesión: tu contraseña confirma la creación.",
@@ -1172,7 +1182,10 @@
   "sessions.title": "Sesiones activas",
   "sessions.thisDevice": "Este dispositivo",
   "sessions.empty": "Ninguna sesión registrada (las conexiones anteriores a la actualización no aparecen — vuelve a iniciar sesión para verlas aquí).",
-  "sessions.revokedCount": { "one": "{count} sesión revocada", "other": "{count} sesiones revocadas" },
+  "sessions.revokedCount": {
+    "one": "{count} sesión revocada",
+    "other": "{count} sesiones revocadas"
+  },
   "twofa.qr": "Código QR de alta 2FA",
   "twofa.scan": "Escanea este código QR con tu aplicación (Google Authenticator, 1Password…) y luego introduce el código que muestra.",
   "twofa.wrongCode": "Código incorrecto",
@@ -1194,11 +1207,20 @@
   "production.attention.unassigned": "Sin asignar",
   "production.attention.review": "Esperando review",
   "production.attention.none": "Nada por aquí, mejor así.",
-  "production.attention.more": { "one": "y {count} más", "other": "y {count} más" },
+  "production.attention.more": {
+    "one": "y {count} más",
+    "other": "y {count} más"
+  },
   "production.workload.empty": "Nada pendiente.",
-  "production.workload.late": { "one": "{count} vencida", "other": "{count} vencidas" },
+  "production.workload.late": {
+    "one": "{count} vencida",
+    "other": "{count} vencidas"
+  },
   "production.pace.window": "Ventana de observación",
-  "production.pace.weeks": { "one": "{count} semana", "other": "{count} semanas" },
+  "production.pace.weeks": {
+    "one": "{count} semana",
+    "other": "{count} semanas"
+  },
   "production.pace.perWeek": "{value} por semana",
   "production.pace.projected": "Fin previsto",
   "production.pace.noProjection": "Ritmo insuficiente para proyectar un fin",
@@ -1216,7 +1238,10 @@
   "stats.notes": "Notas",
   "stats.approvedRatio": "{approved}/{total} aprobados · {pct} %",
   "stats.retakes": "Retakes",
-  "stats.days": { "one": "{count} d", "other": "{count} d" },
+  "stats.days": {
+    "one": "{count} d",
+    "other": "{count} d"
+  },
   "stats.drawCalls": "Draw calls",
   "stats.fps": "fps",
   "stats.measuring": "Midiendo…",
@@ -1229,13 +1254,19 @@
   "sequences.empty.hint": "Cree sus sequences con el botón «+» de arriba: agrupan los shots (SQ010, SQ020…).",
   "playlists.empty.hint": "Selecciona medios en la página Reviews y luego «Añadir a la playlist» (clic derecho), o crea una playlist vacía aquí.",
   "playlists.delete.message": "«{name}» se eliminará. Las versions a las que hace referencia no se ven afectadas.",
-  "playlists.versionCount": { "one": "{count} version", "other": "{count} versions" },
+  "playlists.versionCount": {
+    "one": "{count} version",
+    "other": "{count} versions"
+  },
   "shares.newShort": "Nuevo enlace",
   "shares.empty": "Ningún enlace de compartir. Crea uno para dar acceso a los medios publicados de este proyecto, sin cuenta.",
   "shares.createdBy": "Creado por {name}",
   "shares.expiresOn": "Caduca el {date}",
   "shares.viewedOn": "Visto el {date}",
-  "shares.viewCount": { "one": "vista", "other": "vistas" },
+  "shares.viewCount": {
+    "one": "vista",
+    "other": "vistas"
+  },
   "shares.scope": "Qué abre el enlace",
   "shares.scope.project": "Todo el proyecto",
   "shares.scope.playlist": "Una sola playlist",
@@ -1246,21 +1277,36 @@
   "shares.scope.pick.media": "Medios a incluir",
   "shares.scope.pick.none": "Elegir…",
   "shares.scope.empty": "Este proyecto aún no tiene medios publicados.",
-  "shares.scope.selected": { "one": "{count} medio seleccionado", "other": "{count} medios seleccionados" },
+  "shares.scope.selected": {
+    "one": "{count} medio seleccionado",
+    "other": "{count} medios seleccionados"
+  },
   "shares.scope.needsTarget": "Elija qué abre este enlace antes de crearlo.",
   "shares.scope.badge.project": "Proyecto completo",
-  "shares.scope.badge.selection": { "one": "{count} medio", "other": "{count} medios" },
+  "shares.scope.badge.selection": {
+    "one": "{count} medio",
+    "other": "{count} medios"
+  },
   "shares.scope.badge.restricted": "Restringido",
   "shares.email": "Enviar por correo…",
   "shares.email.title": "Enviar el enlace por correo",
   "shares.email.recipients": "Destinatarios",
   "shares.email.recipients.placeholder": "Una dirección por línea",
-  "shares.email.count": { "one": "{count} dirección válida", "other": "{count} direcciones válidas" },
-  "shares.email.tooMany": { "one": "{count} destinatario como máximo por envío", "other": "{count} destinatarios como máximo por envío" },
+  "shares.email.count": {
+    "one": "{count} dirección válida",
+    "other": "{count} direcciones válidas"
+  },
+  "shares.email.tooMany": {
+    "one": "{count} destinatario como máximo por envío",
+    "other": "{count} destinatarios como máximo por envío"
+  },
   "shares.email.note": "Nota (opcional)",
   "shares.email.note.placeholder": "Unas palabras para el destinatario",
   "shares.email.submit": "Enviar",
-  "shares.email.sent": { "one": "Enlace enviado a {count} destinatario", "other": "Enlace enviado a {count} destinatarios" },
+  "shares.email.sent": {
+    "one": "Enlace enviado a {count} destinatario",
+    "other": "Enlace enviado a {count} destinatarios"
+  },
   "shares.email.invalid": "Introduzca al menos una dirección válida.",
   "shares.email.willMentionExpiry": "El mensaje indicará que el enlace caduca el {date}.",
   "shares.email.noExpiry": "El mensaje indicará que el enlace no caduca.",
@@ -1294,7 +1340,6 @@
   "naming.warningFile": "«{name}» no respeta la nomenclatura del proyecto.",
   "naming.compliant": "Conforme",
   "naming.nonCompliant": "No conforme",
-
   "mode.watch": "Ver",
   "mode.watch.hint": "Reproducir, hacer zoom, comparar versions — ninguna herramienta de edición. Único modo servido a los clientes.",
   "mode.annotate": "Anotar",
@@ -1372,7 +1417,6 @@
   "action.resetSpatial": "Vista de origen",
   "action.fitMedia": "Ajustar a la pantalla",
   "action.resetMedia": "Tamaño real 1:1",
-
   "common.add": "Añadir",
   "common.show": "Mostrar",
   "common.hide": "Ocultar",
@@ -1409,7 +1453,10 @@
   "voice.start": "Grabar una nota de voz",
   "dropzone.drop": "Suelta aquí tus archivos",
   "batch.nothing": "No hay nada que generar.",
-  "batch.createCount": { "one": "Crear {count} elemento", "other": "Crear {count} elementos" },
+  "batch.createCount": {
+    "one": "Crear {count} elemento",
+    "other": "Crear {count} elementos"
+  },
   "batch.creation": "Creación de shots/sequences",
   "notif.markAllRead": "Marcar todo como leído",
   "file.readFailed": "No se pudo leer el archivo",
@@ -1458,22 +1505,40 @@
   "decision.badge": "Decisión: {status}",
   "decision.dialogTitle": "Decisión de review — {version}",
   "project.dupHint": "Se recrean sequences, shots y ajustes. Los medios, versions y comentarios no se copian.",
-  "shots.created": { "one": "{count} shot creado", "other": "{count} shots creados" },
+  "shots.created": {
+    "one": "{count} shot creado",
+    "other": "{count} shots creados"
+  },
   "shots.delete.message": "El shot «{code}» y sus tareas/versions se moverán a la papelera.",
   "shots.omitted": "Cortado en el montaje",
   "shots.searchPlaceholder": "Código o nombre de shot…",
-  "shots.count": { "one": "{count} shot", "other": "{count} shots" },
-  "shots.countLabel": { "one": "shot", "other": "shots" },
-  "shots.trashedCount": { "one": "{count} shot movido a la papelera", "other": "{count} shots movidos a la papelera" },
+  "shots.count": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "shots.countLabel": {
+    "one": "shot",
+    "other": "shots"
+  },
+  "shots.trashedCount": {
+    "one": "{count} shot movido a la papelera",
+    "other": "{count} shots movidos a la papelera"
+  },
   "shots.deleteMany.title": "¿Eliminar los shots?",
-  "shots.deleteMany.message": { "one": "{count} shot y sus tareas/versions se moverán a la papelera.", "other": "{count} shots y sus tareas/versions se moverán a la papelera." },
+  "shots.deleteMany.message": {
+    "one": "{count} shot y sus tareas/versions se moverán a la papelera.",
+    "other": "{count} shots y sus tareas/versions se moverán a la papelera."
+  },
   "shots.new": "Nuevo shot",
   "shot.newAsset": "+ Crear un asset",
   "shot.omitted": "Omitido del montaje",
   "shot.omittedHint": "El shot queda fuera del montaje pero conserva su trabajo, sus versions y sus comentarios.",
   "assets.emptyHint": "Crea tus assets reutilizables con «+ Crear» (personajes, decorados, props…).",
   "assets.attach": "Vincular",
-  "assets.count": { "one": "{count} asset", "other": "{count} assets" },
+  "assets.count": {
+    "one": "{count} asset",
+    "other": "{count} assets"
+  },
   "assets.created": "Asset «{name}» creado",
   "assets.createdAttached": "Asset «{name}» creado y vinculado",
   "assets.delete.message": "El asset «{name}» y sus versions/medios se moverán a la papelera.",
@@ -1571,7 +1636,6 @@
   "email.digestOff": "Resumen diario desactivado",
   "email.weeklyOn": "Informe semanal activado",
   "email.weeklyOff": "Informe semanal desactivado",
-
   "review.hotspotAttached": "📍 Hotspot adjunto (centro del viewer)",
   "review.camViewSaved": "📷 Se guardará la vista de cámara actual",
   "review.labelsVisible": "Etiquetas visibles",
@@ -1617,7 +1681,10 @@
   "live.coHostAdded": "{name} es copiloto: quien interactúe primero toma el control",
   "live.coHostRemoved": "{name} ya no es copiloto",
   "live.handedOver": "Control cedido a {name} (piloto)",
-  "live.participants": { "one": "({count} participante).", "other": "({count} participantes)." },
+  "live.participants": {
+    "one": "({count} participante).",
+    "other": "({count} participantes)."
+  },
   "live.running": "Review en directo en curso",
   "live.runningWithPilot": "Review en directo en curso, pilotada por {pilot}",
   "live.coHosts": "Copilotos",
@@ -1656,8 +1723,14 @@
   "video.qualityOriginal": "Original",
   "video.qualitySet": "Calidad de reproducción: {height}p",
   "video.volume": "Volumen",
-  "video.compareOffsetAhead": { "one": "B va {count} frame por delante de A", "other": "B va {count} frames por delante de A" },
-  "video.compareOffsetBehind": { "one": "B va {count} frame por detrás de A", "other": "B va {count} frames por detrás de A" },
+  "video.compareOffsetAhead": {
+    "one": "B va {count} frame por delante de A",
+    "other": "B va {count} frames por delante de A"
+  },
+  "video.compareOffsetBehind": {
+    "one": "B va {count} frame por detrás de A",
+    "other": "B va {count} frames por detrás de A"
+  },
   "video.compareOffsetNone": "B está alineado con A",
   "video.waveform.show": "Forma de onda de audio",
   "video.waveform.scrub": "Forma de onda de audio — arrastra para desplazarte",
@@ -1710,11 +1783,13 @@
   "media.delete.message": "«{name}» se moverá a la papelera del proyecto.",
   "media.draft": "Borrador",
   "stage.notSavedPublishCancelled": "Puesta en escena no guardada — publicación cancelada",
-
   "task.status.inProgress": "En curso",
   "task.status.retake": "Retake",
   "task.checklist": "Lista de comprobación",
-  "task.count": { "one": "{count} tarea", "other": "{count} tareas" },
+  "task.count": {
+    "one": "{count} tarea",
+    "other": "{count} tareas"
+  },
   "task.created": "Tarea «{name}» creada",
   "task.createdNamed": "Tarea creada: {name}",
   "task.fallbackName": "Tarea n.º {id}",
@@ -1738,7 +1813,6 @@
   "panel.liveRender": "Render en directo",
   "panel.performance": "Rendimiento",
   "panel.techSheet": "Ficha técnica",
-
   "compare.siblingUnreachable": "Splat de comparación inaccesible",
   "compare.grid": "Cuadrícula · {count}",
   "compare.gridHint": "Dos versions o más: cuadrícula 2×2 sincronizada (máx. {max} en pantalla).",
@@ -1759,7 +1833,10 @@
   "camera.curves": "Curvas",
   "camera.frameSelection": "Encuadrar",
   "camera.home": "Origen",
-  "camera.maxBookmarks": { "one": "{count} bookmark máx.", "other": "{count} bookmarks máx." },
+  "camera.maxBookmarks": {
+    "one": "{count} bookmark máx.",
+    "other": "{count} bookmarks máx."
+  },
   "camera.viewN": "Vista {n}",
   "camera.clearPresentation": "Borrar la presentación",
   "camera.clearConfirm": "La cámara, su animación y la puesta en escena se eliminan para todos.",
@@ -1811,7 +1888,6 @@
   "scene.lodAuto": "Activa el LOD por debajo de 15 fps y lo suelta por encima de 25",
   "scene.progressive": "Carga las páginas de la nube bajo demanda",
   "scene.lodOn": "LOD siempre activo",
-
   "storage.k.original": "Archivo subido (original)",
   "storage.k.original.note": "Fuente de verdad, nunca modificada. Ruta legible por slugs jerárquicos.",
   "storage.k.hls": "Renditions HLS (vídeo)",
@@ -1844,7 +1920,6 @@
   "storage.k.attachment.note": "Imágenes, PDF, zips y notas de voz de los hilos de review.",
   "storage.k.quarantine": "Archivo en cuarentena",
   "storage.k.quarantine.note": "Subida detectada como infectada (ClamAV), aislada de la difusión.",
-
   "storage.cat.originals": "Originales (projects/)",
   "storage.cat.derived": "Derivados (derived/)",
   "storage.cat.studio": "Bibliotecas del estudio (studio/)",
@@ -1866,7 +1941,6 @@
   "storage.s.hdris": "HDRI (iluminación 3D)",
   "storage.s.ocio": "Configs OCIO (color)",
   "storage.s.other": "Otros",
-
   "audit.create": "creado",
   "audit.update": "modificado",
   "audit.delete": "eliminado",
@@ -1881,7 +1955,6 @@
   "settings.hint.liveImage": "p. ej. 4 — zoom/posición",
   "settings.hint.slack": "https://hooks.slack.com/services/… — decisiones y publicaciones",
   "settings.hint.sourceUrl": "https://… — obligatorio si despliegas una version modificada",
-
   "channel.posX": "Pos X",
   "channel.posY": "Pos Y",
   "channel.posZ": "Pos Z",
@@ -1892,7 +1965,6 @@
   "channel.tilt": "Tilt",
   "channel.goToKey": "Ir al keyframe de {time} segundos",
   "channel.keyAt": "Keyframe a {time} s",
-
   "admin.announce.allRoles": "(sin marcar = todos)",
   "admin.announce.updated": "Anuncio modificado",
   "admin.announce.created": "Anuncio creado",
@@ -2022,7 +2094,10 @@
   "storage.map.hint": "Un solo bucket S3/MinIO para toda la instancia; eliminar un medio purga su carpeta de original y su prefijo",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objetos",
-  "storage.objectsCount": { "one": "{count} objeto", "other": "{count} objetos" },
+  "storage.objectsCount": {
+    "one": "{count} objeto",
+    "other": "{count} objetos"
+  },
   "storage.originals": "Originales",
   "storage.totalUsage": "Ocupación total",
   "storage.orphanProject": "(proyecto desconocido, ¿huérfano?)",
@@ -2035,7 +2110,10 @@
   "system.agplHint": "Cualquiera que use esta instancia a distancia debe poder obtener sus fuentes. Si la has modificado, apunta el ajuste «Código fuente» a tu propio repositorio.",
   "system.thirdParty": "Dependencias de terceros",
   "system.noticesFile": "THIRD-PARTY-NOTICES.md (raíz del repositorio)",
-  "system.cores": { "one": "{count} núcleo", "other": "{count} núcleos" },
+  "system.cores": {
+    "one": "{count} núcleo",
+    "other": "{count} núcleos"
+  },
   "system.disk": "Disco: {used} / {total}",
   "system.memory": "Memoria: {used} / {total}",
   "system.licenseTitle": "Licencia y código fuente",
@@ -2072,7 +2150,10 @@
   "webhooks.delivery.pending": "Pendiente",
   "webhooks.delivery.delivered": "Entregada",
   "webhooks.delivery.failed": "Fallida",
-  "webhooks.delivery.attempts": { "one": "{count} intento", "other": "{count} intentos" },
+  "webhooks.delivery.attempts": {
+    "one": "{count} intento",
+    "other": "{count} intentos"
+  },
   "webhooks.delivery.replay": "Reenviar esta entrega",
   "webhooks.delivery.replayed": "Entrega puesta de nuevo en cola",
   "webhooks.delivery.replayOf": "Reenvío de #{value}",
@@ -2111,19 +2192,24 @@
   "splat.isolate": "Aislar",
   "model3d.transformModel": "Transformar el modelo",
   "model3d.unnamed": "(sin nombre)",
-
   "jobs.storageCleanup": "Limpieza del almacenamiento",
   "jobs.webhooks": "Webhooks salientes",
   "jobs.activeCount": "{count} activo(s)",
   "jobs.waitingCount": "{count} en espera",
   "jobs.failedCount": "{count} fallido(s)",
   "jobs.completedCount": "{count} completado(s)",
-  "jobs.attempts": { "one": "{count} intento", "other": "{count} intentos" },
+  "jobs.attempts": {
+    "one": "{count} intento",
+    "other": "{count} intentos"
+  },
   "jobs.cleanedFailed": {
     "one": "{count} trabajo fallido purgado",
     "other": "{count} trabajos fallidos purgados"
   },
-  "jobs.retriedCount": { "one": "{count} trabajo reiniciado.", "other": "{count} trabajos reiniciados." },
+  "jobs.retriedCount": {
+    "one": "{count} trabajo reiniciado.",
+    "other": "{count} trabajos reiniciados."
+  },
   "jobs.purgedDerived": "{count} medio(s) aligerado(s) (HLS + sprite eliminados)",
   "jobs.purge": "Purgar",
   "jobs.purgeNow": "Purgar ahora",
@@ -2131,7 +2217,6 @@
   "jobs.running": "En curso: {list}",
   "jobs.queueUnavailable": "Cola no disponible.",
   "jobs.webhookRef": "webhook {id}",
-
   "model3d.transformPrim": "Transformar el prim",
   "model3d.compareUnreachable": "Modelo de comparación inaccesible",
   "model3d.loadFailed": "No se pudieron cargar los modelos",
@@ -2220,7 +2305,6 @@
   "entity.unavailable.failed": "No se ha podido cargar",
   "entity.unavailable.failed.hint": "El servidor no ha respondido. Inténtalo de nuevo en un momento.",
   "entity.unavailable.backToProjects": "Volver a los proyectos",
-
   "version.emptyMedia": "Ningún medio en esta version.",
   "version.created": "Version «{name}» creada",
   "version.current": "Actual",
@@ -2229,15 +2313,20 @@
   "version.noVisibleMedia": "No hay medios visibles en la version {version}",
   "version.unreachable": "Version inaccesible",
   "version.dropNew": "Suelta archivos aquí para crear la version siguiente",
-  "version.publishAll": { "one": "Publicar ({count})", "other": "Publicar ({count})" },
+  "version.publishAll": {
+    "one": "Publicar ({count})",
+    "other": "Publicar ({count})"
+  },
   "version.dropShot": "Suelta para crear una version bajo una tarea",
   "version.inReview": "En review",
-
   "playlist.added": {
     "one": "{count} version añadida a «{name}»",
     "other": "{count} versions añadidas a «{name}»"
   },
-  "playlist.skipped": { "one": "({count} ya estaba)", "other": "({count} ya estaban)" },
+  "playlist.skipped": {
+    "one": "({count} ya estaba)",
+    "other": "({count} ya estaban)"
+  },
   "playlist.targetCount": {
     "one": "{count} elemento — cada version correspondiente se añade al final de la playlist.",
     "other": "{count} elementos — cada version correspondiente se añade al final de la playlist."
@@ -2251,20 +2340,28 @@
   "playlist.rename": "Renombrar la playlist",
   "playlist.emptyHint": "Añade versions desde el catálogo de la izquierda.",
   "playlist.addTo": "Añadir a una playlist",
-  "playlist.addedTo": { "one": "{count} version añadida a {name}", "other": "{count} versions añadidas a {name}" },
-  "playlist.addedCount": { "one": "{count} version añadida", "other": "{count} versions añadidas" },
+  "playlist.addedTo": {
+    "one": "{count} version añadida a {name}",
+    "other": "{count} versions añadidas a {name}"
+  },
+  "playlist.addedCount": {
+    "one": "{count} version añadida",
+    "other": "{count} versions añadidas"
+  },
   "playlist.alreadyThere": "Ya está en la playlist",
   "playlist.nothingToAdd": "No hay nada publicado que añadir",
   "playlist.catalog.search": "Shot, asset o version…",
   "playlist.catalog.latestOnly": "Solo la última",
   "playlist.catalog.add": "Añadir a la playlist",
-  "playlist.catalog.addSelected": { "one": "Añadir {count}", "other": "Añadir {count}" },
+  "playlist.catalog.addSelected": {
+    "one": "Añadir {count}",
+    "other": "Añadir {count}"
+  },
   "playlist.catalog.present": "Ya incluida",
   "playlist.catalog.empty": "Nada coincide con estos filtros.",
   "playlist.autoAdvance": "Reproducir el siguiente automáticamente",
   "csv.export": "Exportar CSV",
   "csv.import": "Importar CSV",
-
   "calendar.today": "Hoy",
   "calendar.dueMoved": "Fecha límite movida",
   "nav.breadcrumb": "Ruta de navegación",
@@ -2329,21 +2426,34 @@
   "draw.textPlaceholder": "Texto…",
   "info.uvSets": "Conjuntos de UV",
   "track.animTrack": "Pista de animación",
-
   "sequences.assets": "Assets de la sequence ({count})",
-  "sequences.createdCount": { "one": "{count} sequence creada", "other": "{count} sequences creadas" },
+  "sequences.createdCount": {
+    "one": "{count} sequence creada",
+    "other": "{count} sequences creadas"
+  },
   "sequences.delete.message": "La sequence «{code}» y sus shots se moverán a la papelera.",
-  "sequences.open": "Abrir la sequence",
-  "sequences.countLabel": { "one": "sequence", "other": "sequences" },
-  "sequences.trashedCount": { "one": "{count} sequence movida a la papelera", "other": "{count} sequences movidas a la papelera" },
+  "sequences.countLabel": {
+    "one": "sequence",
+    "other": "sequences"
+  },
+  "sequences.trashedCount": {
+    "one": "{count} sequence movida a la papelera",
+    "other": "{count} sequences movidas a la papelera"
+  },
   "sequences.deleteMany.title": "¿Eliminar las sequences?",
-  "sequences.deleteMany.message": { "one": "{count} sequence y sus shots se moverán a la papelera.", "other": "{count} sequences y sus shots se moverán a la papelera." },
+  "sequences.deleteMany.message": {
+    "one": "{count} sequence y sus shots se moverán a la papelera.",
+    "other": "{count} sequences y sus shots se moverán a la papelera."
+  },
   "sequences.new": "Nueva sequence",
   "view.cards": "Vista de tarjetas",
   "view.compact": "Vista compacta",
   "view.followAccount": "Seguir el ajuste de la cuenta",
   "drafts.title": "Borradores pendientes",
-  "drafts.count": { "one": "{count} borrador pendiente", "other": "{count} borradores pendientes" },
+  "drafts.count": {
+    "one": "{count} borrador pendiente",
+    "other": "{count} borradores pendientes"
+  },
   "uploads.failedFor": "Ha fallado la subida de {name}",
   "uploads.sending": "Enviando {pct} %",
   "uploads.title": "Transferencias ({count})",
@@ -2371,8 +2481,14 @@
   "transform.rotationYaw": "Rotación Y (yaw)",
   "transform.rotationRoll": "Rotación Z (roll)",
   "timeline.defaultName": "Montaje",
-  "timeline.shotCount": { "one": "{count} shot", "other": "{count} shots" },
-  "timeline.gapCount": { "one": "{count} hueco", "other": "{count} huecos" },
+  "timeline.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
+  "timeline.gapCount": {
+    "one": "{count} hueco",
+    "other": "{count} huecos"
+  },
   "timeline.noMedia": "Sin medio",
   "timeline.durationMismatch": "La duración del medio difiere del rango de frames declarado en el shot.",
   "timeline.previousShot": "Shot anterior",
@@ -2414,7 +2530,10 @@
   "chat.sendMessage": "Enviar un mensaje",
   "chat.group.create": "Nuevo grupo",
   "chat.group.namePlaceholder": "Nombre del grupo (opcional)",
-  "chat.group.members": { "one": "{count} miembro", "other": "{count} miembros" },
+  "chat.group.members": {
+    "one": "{count} miembro",
+    "other": "{count} miembros"
+  },
   "chat.rename": "Renombrar el grupo",
   "chat.addMembers": "Añadir participantes",
   "chat.leave": "Salir de la conversación",
@@ -2423,7 +2542,10 @@
   "chat.unmute": "Reactivar notificaciones",
   "chat.search": "Buscar a alguien",
   "chat.search.empty": "No se encontró a nadie",
-  "chat.system.joined": { "one": "{names} se ha unido a la conversación", "other": "{names} se han unido a la conversación" },
+  "chat.system.joined": {
+    "one": "{names} se ha unido a la conversación",
+    "other": "{names} se han unido a la conversación"
+  },
   "chat.system.left": "{name} ha salido de la conversación",
   "chat.system.removed": "Se ha retirado a {name}",
   "chat.system.renamed": "El grupo ahora se llama « {title} »",
@@ -2516,7 +2638,10 @@
   "shotgrid.setup.connect": "Enlazar el proyecto",
   "shotgrid.setup.connected": "Enlazado con « {name} »",
   "shotgrid.setup.connectFailed": "Enlace imposible",
-  "shotgrid.setup.testOk": { "one": "Conexión correcta — {count} proyecto visible", "other": "Conexión correcta — {count} proyectos visibles" },
+  "shotgrid.setup.testOk": {
+    "one": "Conexión correcta — {count} proyecto visible",
+    "other": "Conexión correcta — {count} proyectos visibles"
+  },
   "shotgrid.sync.runFull": "Sincronizar",
   "shotgrid.sync.runReconcile": "Recuperar",
   "shotgrid.sync.reconcileHint": "Relee la ventana de recuperación — útil tras un corte.",
@@ -2534,7 +2659,10 @@
   "shotgrid.sync.noLog": "Ninguna entrada",
   "shotgrid.sync.keepSg": "Conservar ShotGrid",
   "shotgrid.sync.keepReview": "Conservar ReView",
-  "shotgrid.sync.conflicts": { "one": "{count} conflicto pendiente de decisión", "other": "{count} conflictos pendientes de decisión" },
+  "shotgrid.sync.conflicts": {
+    "one": "{count} conflicto pendiente de decisión",
+    "other": "{count} conflictos pendientes de decisión"
+  },
   "shotgrid.conflict.resolved": "Conflicto resuelto",
   "shotgrid.conflict.failed": "Arbitraje imposible",
   "shotgrid.conflict.detail": "{field}: ReView « {review} » · ShotGrid « {shotgrid} »",
@@ -2603,8 +2731,14 @@
   "shotgrid.versions.selectAllPending": "Seleccionar todo lo que falta",
   "shotgrid.versions.summary": "{total} publishes, {pending} sin importar",
   "shotgrid.versions.intro": "Listar los publishes ShotGrid de este proyecto y traer lo que falte.",
-  "shotgrid.versions.importSelected": { "one": "Importar {count} elemento", "other": "Importar {count} elementos" },
-  "shotgrid.versions.imported": { "one": "{count} publish importado", "other": "{count} publishes importados" },
+  "shotgrid.versions.importSelected": {
+    "one": "Importar {count} elemento",
+    "other": "Importar {count} elementos"
+  },
+  "shotgrid.versions.imported": {
+    "one": "{count} publish importado",
+    "other": "{count} publishes importados"
+  },
   "shotgrid.admin.title": "Sitios ShotGrid",
   "shotgrid.admin.projects": "Proyectos enlazados",
   "shotgrid.admin.deleted": "Sitio ShotGrid eliminado",
@@ -2614,7 +2748,10 @@
   "shotgrid.admin.deleteConfirm": "¿Eliminar el sitio « {name} »? Sus credenciales se borran.",
   "shotgrid.admin.empty": "Ningún sitio ShotGrid registrado. Añada uno desde la pestaña ShotGrid de un proyecto.",
   "shotgrid.admin.intro": "Las credenciales viven aquí, una vez para todo el estudio: cada conexión de proyecto las reutiliza y cambiar una clave se hace en un solo sitio. Ningún secreto se devuelve nunca al navegador.",
-  "shotgrid.admin.linkedProjects": { "one": "{count} proyecto", "other": "{count} proyectos" },
+  "shotgrid.admin.linkedProjects": {
+    "one": "{count} proyecto",
+    "other": "{count} proyectos"
+  },
   "shotgrid.domain.hierarchy": "Sequences, shots, assets",
   "shotgrid.domain.hierarchy.hint": "El desglose de producción, los rangos de cut y los estados de shot.",
   "shotgrid.domain.tasks": "Tareas",
@@ -2709,7 +2846,10 @@
   "shotgrid.sync.publishOff": "El envío a ShotGrid está desactivado: las versions publicadas aquí se quedan aquí. Cámbialo en Ajustes → Publicación.",
   "shotgrid.steps.title": "Etapas de pipeline usadas por este proyecto",
   "shotgrid.steps.hint": "ShotGrid solo ofrece las etapas cuya visibilidad está activada en el proyecto, pero no publica ese ajuste en su API. Márcalas aquí una vez. Sin marcar nada, ReView las deduce de las tasks ya existentes.",
-  "shotgrid.steps.count": { "one": "{count} seleccionada", "other": "{count} seleccionadas" },
+  "shotgrid.steps.count": {
+    "one": "{count} seleccionada",
+    "other": "{count} seleccionadas"
+  },
   "shotgrid.steps.forAssets": "Para los assets",
   "shotgrid.steps.forShots": "Para los shots",
   "shotgrid.steps.search": "Buscar una etapa…",
@@ -2740,7 +2880,10 @@
   "shotgrid.crew.state.none": "Todavía sin cuenta",
   "shotgrid.crew.state.ineligible": "No se puede invitar",
   "shotgrid.crew.done": "{created} cuenta(s) creada(s), {added} persona(s) añadida(s) al proyecto",
-  "shotgrid.crew.skipped": { "one": "Se omitió {count} persona", "other": "Se omitieron {count} personas" },
+  "shotgrid.crew.skipped": {
+    "one": "Se omitió {count} persona",
+    "other": "Se omitieron {count} personas"
+  },
   "shotgrid.crew.plan": "{create} cuenta(s) por crear, {add} por añadir al proyecto",
   "shotgrid.sync.queued": "Ya hay una sincronización en curso: esta queda en espera.",
   "shotgrid.link.open": "Cuenta ShotGrid",
@@ -2781,7 +2924,10 @@
   "social.search": "Buscar una persona o un hilo",
   "social.people": "Personas",
   "social.noMatch": "Ningún resultado para esta búsqueda.",
-  "sequence.shotCount": { "one": "{count} shot", "other": "{count} shots" },
+  "sequence.shotCount": {
+    "one": "{count} shot",
+    "other": "{count} shots"
+  },
   "filters.search": "Buscar…",
   "filters.allStatuses": "Todos los estados",
   "filters.allDepartments": "Todos los departamentos",
@@ -2804,9 +2950,18 @@
   "assign.unassigned": "Nadie",
   "assign.done": "Asignación actualizada",
   "assign.failed": "No se pudo cambiar la asignación",
-  "assign.bulkTitle": { "one": "Asignar {count} elemento", "other": "Asignar {count} elementos" },
-  "assign.doneCount": { "one": "{count} tarea actualizada", "other": "{count} tareas actualizadas" },
-  "assign.skippedCount": { "one": "{count} elemento omitido: nada que asignar o sin permisos", "other": "{count} elementos omitidos: nada que asignar o sin permisos" },
+  "assign.bulkTitle": {
+    "one": "Asignar {count} elemento",
+    "other": "Asignar {count} elementos"
+  },
+  "assign.doneCount": {
+    "one": "{count} tarea actualizada",
+    "other": "{count} tareas actualizadas"
+  },
+  "assign.skippedCount": {
+    "one": "{count} elemento omitido: nada que asignar o sin permisos",
+    "other": "{count} elementos omitidos: nada que asignar o sin permisos"
+  },
   "assign.person": "Persona",
   "assign.departments": "Departamentos",
   "assign.departmentsHint": "Déjalo vacío para cubrir todas las tareas existentes. Marca departamentos para dirigirte a ellos, y crear la tarea si falta.",
@@ -2869,11 +3024,17 @@
   "episode.noSequence.title": "Ninguna sequence en este episode",
   "episode.noSequence.description": "Adjunta sequences a este episode desde la pestaña Episodes del proyecto.",
   "episode.noShot": "Ningún shot en esta sequence.",
-  "episode.sequenceCount": { "one": "{count} sequence", "other": "{count} sequences" },
+  "episode.sequenceCount": {
+    "one": "{count} sequence",
+    "other": "{count} sequences"
+  },
   "episodes.title": "Episodes",
   "episodes.open": "Abrir el episode",
   "episodes.reordered": "Orden guardado",
-  "episodes.createdCount": { "one": "{count} episode creado", "other": "{count} episodes creados" },
+  "episodes.createdCount": {
+    "one": "{count} episode creado",
+    "other": "{count} episodes creados"
+  },
   "episodes.attachTo": "Adjuntar a un episode",
   "episodes.attached": "Sequence adjuntada",
   "episodes.detach": "Desvincular de su episode",
@@ -2884,7 +3045,10 @@
   "episodes.empty.title": "Ningún episode",
   "episodes.empty.description": "Este proyecto aún no tiene ningún episode.",
   "episodes.empty.hint": "Crea los primeros con el generador de arriba.",
-  "episodes.unassignedCount": { "one": "{count} sequence sin episode", "other": "{count} sequences sin episode" },
+  "episodes.unassignedCount": {
+    "one": "{count} sequence sin episode",
+    "other": "{count} sequences sin episode"
+  },
   "episodes.unassignedHint": "Haz clic derecho en una sequence para adjuntarla a un episode.",
   "episodes.disabledHere": "El nivel episode está desactivado en este proyecto.",
   "episodes.settings.title": "Nivel episode",
@@ -2893,8 +3057,14 @@
   "episodes.settings.enabled": "Nivel episode activado",
   "episodes.settings.disabled": "Nivel episode desactivado",
   "episodes.settings.keepsData": "Desactivarlo solo oculta el nivel: los episodes y sus sequences vuelven intactos.",
-  "episodes.settings.stored": { "one": "{count} episode guardado", "other": "{count} episodes guardados" },
-  "episodes.settings.linked": { "one": "{count} sequence adjuntada", "other": "{count} sequences adjuntadas" },
+  "episodes.settings.stored": {
+    "one": "{count} episode guardado",
+    "other": "{count} episodes guardados"
+  },
+  "episodes.settings.linked": {
+    "one": "{count} sequence adjuntada",
+    "other": "{count} sequences adjuntadas"
+  },
   "error.UNAUTHENTICATED": "No has iniciado sesión.",
   "error.FORBIDDEN": "Acceso denegado.",
   "error.NOT_FOUND": "Este elemento ya no existe.",
@@ -3016,23 +3186,41 @@
   "imageSequence.hint": "Agrupada, cada una se convierte en un único medio que se review como un vídeo. Por separado, cada frame sigue siendo un archivo.",
   "imageSequence.group": "Agrupar en un solo medio",
   "imageSequence.frameRange": "frame {from} → {to}",
-  "imageSequence.files": { "one": "{count} archivo", "other": "{count} archivos" },
-  "imageSequence.gaps": { "one": "falta {count} frame", "other": "faltan {count} frames" },
-  "imageSequence.others": { "one": "{count} archivo más se enviará por separado", "other": "{count} archivos más se enviarán por separado" },
+  "imageSequence.files": {
+    "one": "{count} archivo",
+    "other": "{count} archivos"
+  },
+  "imageSequence.gaps": {
+    "one": "falta {count} frame",
+    "other": "faltan {count} frames"
+  },
+  "imageSequence.others": {
+    "one": "{count} archivo más se enviará por separado",
+    "other": "{count} archivos más se enviarán por separado"
+  },
   "imageSequence.confirm": "Enviar como sequences de imágenes",
   "imageSequence.sendSeparately": "Enviar archivo por archivo",
   "imageSequence.sending": "{done} / {total} frames",
   "imageSequence.assembling": "Ensamblando",
-  "assignees.label": { "one": "{count} persona asignada", "other": "{count} personas asignadas" },
+  "assignees.label": {
+    "one": "{count} persona asignada",
+    "other": "{count} personas asignadas"
+  },
   "assignees.dialogTitle": "Personas en {name}",
   "assignees.searchPlaceholder": "Buscar a alguien…",
   "assignees.noMatch": "Nadie coincide con esta búsqueda.",
-  "assignees.saved": { "one": "{count} persona asignada", "other": "{count} personas asignadas" },
+  "assignees.saved": {
+    "one": "{count} persona asignada",
+    "other": "{count} personas asignadas"
+  },
   "assignees.menu": "Personas…",
   "assignees.origin.direct": "Responsable de este elemento",
   "assignees.origin.child": "Responsable de algo dentro",
   "assignees.origin.task": "Asignado a una tarea",
-  "cards.awaitingReview": { "one": "{count} entrega a la espera de review", "other": "{count} entregas a la espera de review" },
+  "cards.awaitingReview": {
+    "one": "{count} entrega a la espera de review",
+    "other": "{count} entregas a la espera de review"
+  },
   "cards.updatedAt": "Modificado {value}",
   "visibility.hide": "Ocultar para todos",
   "visibility.show": "Volver a mostrar",
@@ -3118,7 +3306,10 @@
   "note.gallery.carousel": "Carrusel",
   "note.gallery.columns": "Columnas",
   "note.gallery.height": "Altura",
-  "note.gallery.count": { "one": "{count} imagen", "other": "{count} imágenes" },
+  "note.gallery.count": {
+    "one": "{count} imagen",
+    "other": "{count} imágenes"
+  },
   "note.image.align": "Alineación",
   "note.image.alignFull": "Ancho completo",
   "note.image.alignCenter": "Centrada",
@@ -3140,9 +3331,18 @@
   "assetType.VEHICLE": "Vehículo",
   "assetType.FX": "FX",
   "assetType.OTHER": "Otro",
-  "bulk.status.title": { "one": "Estado de {count} shot", "other": "Estado de {count} shots" },
-  "bulk.status.done": { "one": "{count} shot actualizado", "other": "{count} shots actualizados" },
-  "bulk.status.partial": { "one": "{count} shot actualizado, {failed} rechazado(s)", "other": "{count} shots actualizados, {failed} rechazado(s)" },
+  "bulk.status.title": {
+    "one": "Estado de {count} shot",
+    "other": "Estado de {count} shots"
+  },
+  "bulk.status.done": {
+    "one": "{count} shot actualizado",
+    "other": "{count} shots actualizados"
+  },
+  "bulk.status.partial": {
+    "one": "{count} shot actualizado, {failed} rechazado(s)",
+    "other": "{count} shots actualizados, {failed} rechazado(s)"
+  },
   "bulk.status.menu": "Estado",
   "colorPicker.hue": "Tono",
   "queryState.title": "No se ha podido cargar esta sección",

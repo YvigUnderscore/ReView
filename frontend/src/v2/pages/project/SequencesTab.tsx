@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, Film, Settings2, Trash2 } from 'lucide-react';
+import { Film, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -12,14 +12,14 @@ import EmptyState from '../../components/ui/empty-state';
 import SelectionBar from '../../components/ui/selection-bar';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';
-import EntityCard, { EntityContainer, EditIcon, DeleteIcon } from '../../components/EntityCard';
+import EntityCard, { EntityContainer } from '../../components/EntityCard';
 import EntitySettingsDialog from '../../components/entity/EntitySettingsDialog';
 import PipelineStatusBadge from '../../components/shotgrid/PipelineStatusBadge';
-import { entriesOf, separator, type EntityItemAction, type MenuEntry } from '../../lib/menuSpec';
 import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import { useStatusMenu } from '../../lib/useStatusMenu';
 import { useEntityMenus } from '../../lib/useEntityMenus';
+import { entityCardMenu } from './entityCardMenu';
 import TimelineCard from '../timeline/TimelineCard';
 import { sortByCode, type Nomenclature, type Sequence } from './projectTypes';
 import { useT } from '../../i18n';
@@ -97,55 +97,26 @@ export default function SequencesTab({
     }
   };
 
-  /** Boutons au survol de la carte — les mêmes que sur un plan. */
-  const actionsFor = (s: Sequence): EntityItemAction[] =>
-    canManage
-      ? [
-          { icon: EditIcon, label: t('entity.settings.open'), onClick: () => setEditing(s) },
-          { icon: DeleteIcon, label: t('common.delete'), danger: true, onClick: () => setDeleting(s) },
-        ]
-      : [];
-
-  const menuFor = (s: Sequence): MenuEntry[] => {
-    // Fiche ShotGrid : au clic droit comme sur les plans et les assets, et seulement si
-    // la séquence y est reliée.
-    const sgUrl = sgLinks.linkFor('sequence', s.id);
-    return [
-      { id: 'open', label: t('sequences.open'), onSelect: () => void navigate(`/sequences/${s.id}`) },
-      ...entriesOf(
-        statusEntry(s, { canEdit: canManage }),
-        peopleEntry({ id: s.id, label: s.code, assignees: s.assignees }, canManage),
-        hideEntry({ id: s.id, label: s.code }),
-      ),
-      ...(sgUrl
-        ? [
-            {
-              id: 'shotgrid',
-              label: t('shotgrid.openIn.sequence'),
-              icon: <ExternalLink size={14} />,
-              onSelect: () => window.open(sgUrl, '_blank', 'noreferrer'),
-            },
-          ]
-        : []),
-      ...(canManage
-        ? [
-            separator('manage'),
-            {
-              id: 'settings',
-              label: t('entity.settings.open'),
-              icon: <Settings2 size={14} />,
-              onSelect: () => setEditing(s),
-            },
-            {
-              id: 'delete',
-              label: t('common.moveToTrash'),
-              icon: <Trash2 size={14} />,
-              onSelect: () => setDeleting(s),
-            },
-          ]
-        : []),
-    ];
-  };
+  /**
+   * Menu commun aux trois onglets (`entityCardMenu`) : même ordre, même vocabulaire. Une
+   * séquence n'a ni suivi de notifications ni omission — les entrées manquantes ne
+   * décalent pas les autres.
+   */
+  const menuFor = (s: Sequence) =>
+    entityCardMenu({
+      t,
+      kind: 'sequence',
+      canManage,
+      sgUrl: sgLinks.linkFor('sequence', s.id),
+      state: {
+        status: statusEntry(s, { canEdit: canManage }),
+        people: peopleEntry({ id: s.id, label: s.code, assignees: s.assignees }, canManage),
+        hide: hideEntry({ id: s.id, label: s.code }),
+      },
+      onOpen: () => void navigate(`/sequences/${s.id}`),
+      onSettings: () => setEditing(s),
+      onTrash: () => setDeleting(s),
+    });
 
   /** Le nom n'apporte rien quand il répète le code — la plupart des imports le font. */
   const subtitleFor = (s: Sequence): string | undefined =>
@@ -189,36 +160,40 @@ export default function SequencesTab({
         />
       ) : (
         <EntityContainer view={view}>
-          {sorted.map((s) => (
-            <EntityCard
-              key={s.id}
-              view={view}
-              to={`/sequences/${s.id}`}
-              title={s.code}
-              subtitle={subtitleFor(s)}
-              thumbnailUrl={s.thumbnailUrl}
-              meta={{
-                description: s.description,
-                assignees: s.assignees,
-                awaitingReview: s.awaitingReview,
-                updatedAt: s.updatedAt,
-              }}
-              badge={
-                <span className="flex items-center gap-1">
-                  <PipelineStatusBadge statusId={s.pipelineStatusId} scope="sequence" size="xs" />
-                  <SgSyncDot projectId={projectId} type="sequence" localId={s.id} canRealign={canManage} />
-                </span>
-              }
-              favorite={{ type: 'SEQUENCE', entityId: s.id }}
-              selection={
-                canManage
-                  ? { selected: sel.isSelected(s.id), onSelect: (m) => sel.onSelect(s.id, m) }
-                  : undefined
-              }
-              actions={actionsFor(s)}
-              contextEntries={menuFor(s)}
-            />
-          ))}
+          {sorted.map((s) => {
+            const menu = menuFor(s);
+            return (
+              <EntityCard
+                key={s.id}
+                view={view}
+                to={`/sequences/${s.id}`}
+                title={s.code}
+                subtitle={subtitleFor(s)}
+                thumbnailUrl={s.thumbnailUrl}
+                meta={{
+                  description: s.description,
+                  assignees: s.assignees,
+                  awaitingReview: s.awaitingReview,
+                  updatedAt: s.updatedAt,
+                }}
+                badge={
+                  <span className="flex items-center gap-1">
+                    <PipelineStatusBadge statusId={s.pipelineStatusId} scope="sequence" size="xs" />
+                    <SgSyncDot projectId={projectId} type="sequence" localId={s.id} canRealign={canManage} />
+                  </span>
+                }
+                favorite={{ type: 'SEQUENCE', entityId: s.id }}
+                selection={
+                  canManage
+                    ? { selected: sel.isSelected(s.id), onSelect: (m) => sel.onSelect(s.id, m) }
+                    : undefined
+                }
+                actions={menu.hoverActions}
+                contextEntries={menu.contextEntries}
+                contextActions={menu.contextActions}
+              />
+            );
+          })}
         </EntityContainer>
       )}
 
@@ -229,7 +204,8 @@ export default function SequencesTab({
           onClear={sel.clear}
           actions={[
             {
-              label: t('common.delete'),
+              // Le geste met à la corbeille (`softDelete`) — le dire, comme sur la carte.
+              label: t('common.moveToTrash'),
               icon: <Trash2 size={14} />,
               danger: true,
               onClick: () => setBulkDeleting(true),
