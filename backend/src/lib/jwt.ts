@@ -5,13 +5,31 @@ import jwt, { type SignOptions, type VerifyOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
 import type { Role } from '@prisma/client';
 
+/**
+ * Charge utile SIGNÉE dans un jeton de session (accès et rafraîchissement).
+ *
+ * ⚠ `sid` est obligatoire, et c'est un invariant de sécurité, pas une commodité : la
+ * session est le SEUL point d'accroche d'une révocation. Un jeton sans `sid` ne peut être
+ * invalidé par aucune déconnexion, aucun changement de mot de passe, aucun offboarding
+ * admin — il resterait valable jusqu'à son expiration naturelle. Tout émetteur crée donc
+ * la session (`lib/sessions.createSession`) AVANT de signer.
+ */
 export interface JwtPayload {
   id: number;
   email: string;
   role: Role;
-  /** Session de connexion (36.B) — les tokens legacy n'en ont pas (grâce transitoire). */
-  sid?: string;
+  /** Session de connexion (36.B) : ce qui rend le jeton révocable. */
+  sid: string;
 }
+
+/**
+ * Charge utile telle qu'elle sort d'un jeton PRÉSENTÉ par un client.
+ *
+ * Rien ne garantit qu'elle porte un `sid` : les jetons émis avant la phase 36 n'en ont
+ * pas, et un client présente ce qu'il veut. Le type le dit au lieu de le taire — c'est
+ * `middleware/auth` qui referme le cas (401).
+ */
+export type VerifiedJwtPayload = Omit<JwtPayload, 'sid'> & { sid?: string; kind?: string };
 
 /**
  * ⚠ L'algorithme est fixé des DEUX côtés, et notamment à la vérification.
@@ -37,9 +55,9 @@ export const signRefreshToken = (payload: JwtPayload): string =>
     expiresIn: env.JWT_REFRESH_EXPIRES_IN,
   } as SignOptions);
 
-export const verifyToken = (token: string): (JwtPayload & { kind?: string }) | null => {
+export const verifyToken = (token: string): VerifiedJwtPayload | null => {
   try {
-    return jwt.verify(token, env.JWT_SECRET, VERIFY_OPTIONS) as JwtPayload & { kind?: string };
+    return jwt.verify(token, env.JWT_SECRET, VERIFY_OPTIONS) as VerifiedJwtPayload;
   } catch {
     return null;
   }

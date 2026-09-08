@@ -1,16 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Server as SocketServer, type Socket } from 'socket.io';
+import { Server as SocketServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import type { Server as HttpServer } from 'node:http';
 import { createRedisClient, enableRedisTransport } from '../lib/redis';
 import { registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
 import { logger } from '../lib/logger';
-import { verifyToken } from '../lib/jwt';
-import { isSessionActive } from '../lib/sessions';
-import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { prisma } from '../lib/prisma';
+import { authenticateSocket, type AuthedSocket } from './socketAuth';
 import { checkProjectAccess } from '../middleware/rbac';
 import { env } from '../config/env';
 import {
@@ -48,10 +46,9 @@ import { subscribeWorkerEvents } from '../lib/workerEvents';
 
 let io: SocketServer | undefined;
 
-interface AuthedSocket extends Socket {
-  user?: { id: number; email: string; role: import('@prisma/client').Role };
-  shareProjectId?: number;
-}
+// La vérification du handshake vit dans `socketAuth` : c'est une frontière de sécurité,
+// elle a ses propres tests plutôt que d'être une closure inaccessible.
+export type { AuthedSocket };
 
 /**
  * Initialise Socket.io avec auth JWT (utilisateur) ou token de partage (ShareLink → invité).
@@ -120,55 +117,6 @@ export const initSocket = (server: HttpServer): SocketServer => {
         versionId: e.versionId,
       });
   });
-
-  const authenticateSocket = async (socket: AuthedSocket, next: (err?: Error) => void): Promise<void> => {
-    // Le client pose le jeton dans `auth` (hors query string, donc hors journaux du
-    // frontal). La query reste acceptée le temps qu'un onglet ouvert avant la bascule se
-    // reconnecte ; elle pourra disparaître ensuite.
-    const authToken = (socket.handshake.auth as { token?: unknown } | undefined)?.token;
-    const token = typeof authToken === 'string' && authToken ? authToken : socket.handshake.query?.token;
-    if (typeof token !== 'string' || !token) return next(new Error('Authentication error'));
-
-    // Mêmes garanties que `middleware/auth` côté HTTP — un socket ne doit pas être une
-    // porte dérobée. Tous les jetons de l'app sont signés avec le même JWT_SECRET : seul
-    // un jeton d'accès (sans `kind`) est recevable. Accepter un `kind: '2fa'` reviendrait
-    // à contourner le second facteur, un `refresh`/`share`/`oidc` à confondre les usages.
-    const payload = verifyToken(token);
-    if (payload) {
-      if (payload.kind !== undefined || typeof payload.id !== 'number') {
-        return next(new Error('Authentication error'));
-      }
-      // Session revoked (36.B) : la déconnexion doit aussi fermer le canal temps réel.
-      if (payload.sid && !(await isSessionActive(payload.sid))) {
-        return next(new Error('Authentication error'));
-      }
-      // Zombie-token check + rôle courant relu en base (un rôle rétrogradé prend effet).
-      const dbUser = await prisma.user.findUnique({
-        where: { id: payload.id },
-        select: { id: true, email: true, role: true },
-      });
-      if (!dbUser) return next(new Error('Authentication error'));
-      socket.user = dbUser;
-      return next();
-    }
-
-    // Sinon : token de partage client (ShareLink) — mêmes règles que les routes /api/client
-    // (révocation, expiration ET limite de vues atteinte). Un lien protégé par mot de passe
-    // exige en plus la session de partage émise après déverrouillage : le token seul est
-    // dans l'URL, l'accepter ferait du mot de passe une formalité.
-    const share = await prisma.shareLink.findUnique({ where: { token } });
-    if (share && shareState(share) === 'ok') {
-      if (share.passwordHash) {
-        const shareAuth = socket.handshake.query?.shareAuth;
-        if (typeof shareAuth !== 'string' || !verifyShareSession(shareAuth, share.id)) {
-          return next(new Error('Authentication error'));
-        }
-      }
-      socket.shareProjectId = share.projectId;
-      return next();
-    }
-    return next(new Error('Authentication error'));
-  };
 
   // socket.io attend un middleware synchrone : on détache la vérification asynchrone,
   // `next` étant appelé dans tous les chemins. Le `catch` ferme la porte si la

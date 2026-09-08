@@ -195,7 +195,7 @@ describe('identityRateKey', () => {
   const bearer = (token: string) => ({ headers: { authorization: `Bearer ${token}` }, ip: '5.5.5.5' });
 
   it('indexe sur le compte quand le jeton d’accès est valide', () => {
-    const token = signAccessToken({ id: 42, email: 'a@b.c', role: Role.ARTIST });
+    const token = signAccessToken({ id: 42, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     expect(identityRateKey(bearer(token) as unknown as Request)).toBe('u:42');
   });
 
@@ -207,14 +207,14 @@ describe('identityRateKey', () => {
   // Un jeton de rafraîchissement ou de 2FA n'authentifie pas une requête : lui accorder un
   // compteur propre offrirait une deuxième réserve de quota à qui possède déjà un compte.
   it('n’accepte que le jeton d’accès, pas les autres types signés du même secret', () => {
-    const refresh = signRefreshToken({ id: 7, email: 'a@b.c', role: Role.ARTIST });
+    const refresh = signRefreshToken({ id: 7, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     const twofa = signTwoFaToken(7);
     expect(identityRateKey(bearer(refresh) as unknown as Request)).toBe('ip:5.5.5.5');
     expect(identityRateKey(bearer(twofa) as unknown as Request)).toBe('ip:5.5.5.5');
   });
 
   it('mémoïse la clé sur la requête : une seule vérification de signature', () => {
-    const token = signAccessToken({ id: 8, email: 'a@b.c', role: Role.ARTIST });
+    const token = signAccessToken({ id: 8, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     const req = bearer(token) as unknown as Request;
     expect(identityRateKey(req)).toBe('u:8');
     // La signature est effacée : sans mémoïsation, la clé retomberait sur l'IP.
@@ -224,15 +224,15 @@ describe('identityRateKey', () => {
 
   it('identityMax distingue le plafond du compte de celui de la sortie NAT', () => {
     const max = identityMax(6_000, 5_000);
-    const token = signAccessToken({ id: 3, email: 'a@b.c', role: Role.ARTIST });
+    const token = signAccessToken({ id: 3, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     expect(max(bearer(token) as unknown as Request)).toBe(6_000);
     expect(max({ headers: {}, ip: '5.5.5.5' } as unknown as Request)).toBe(5_000);
   });
 
   it('deux comptes derrière la même IP ne partagent plus de compteur', async () => {
     const mw = rateLimit({ name: 'nat', max: 1, windowMs: 60_000, keyGenerator: identityRateKey });
-    const un = signAccessToken({ id: 1, email: 'a@b.c', role: Role.ARTIST });
-    const deux = signAccessToken({ id: 2, email: 'd@b.c', role: Role.ARTIST });
+    const un = signAccessToken({ id: 1, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
+    const deux = signAccessToken({ id: 2, email: 'd@b.c', role: Role.ARTIST, sid: 'sid-test' });
     expect((await call(mw, bearer(un))).passed).toBe(true);
     expect((await call(mw, bearer(deux))).passed).toBe(true);
     expect((await call(mw, bearer(un))).passed).toBe(false);

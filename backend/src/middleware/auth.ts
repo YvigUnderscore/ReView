@@ -23,7 +23,7 @@ const BEARER = /^Bearer[ ]+(.+)$/i;
  *
  * Conserve le « zombie-token check » du v1 : on revérifie l'existence du user en DB
  * et on recharge son rôle courant (un token reste invalide si le compte est supprimé).
- * 36.B : un JWT portant un `sid` n'est valide que si sa session ne l'est pas moins
+ * 36.B : tout JWT d'accès porte un `sid` et n'est valide que si sa session l'est
  * (révocation effective ≤ 30 s via le cache de lib/sessions).
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -50,7 +50,12 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     return;
   }
 
-  if (payload.sid && !(await isSessionActive(payload.sid))) {
+  // Invariant 36.B : un jeton d'accès porte TOUJOURS la session qui le rend révocable.
+  // Sans `sid`, rien ne peut l'invalider — ni une déconnexion, ni un changement de mot de
+  // passe, ni l'offboarding d'un admin : il vivrait jusqu'à son expiration naturelle. Un
+  // tel jeton (émis avant la phase 36, ou fabriqué en retirant la claim) est donc refusé
+  // exactement comme un jeton dont la session est morte. La grâce transitoire est close.
+  if (!payload.sid || !(await isSessionActive(payload.sid))) {
     res.status(401).json({ error: 'Session revoked or expired', code: 'SESSION_REVOKED' });
     return;
   }

@@ -117,21 +117,22 @@ router.post('/login', authLimiter, validate({ body: credentialsSchema }), async 
   });
 });
 
-// POST /api/auth/refresh — exige une session active ; les refresh legacy (sans sid)
-// se voient attribuer une session au passage (migration transparente).
+// POST /api/auth/refresh — exige une session active.
+//
+// ⚠ Un refresh sans `sid` est REFUSÉ, il n'obtient pas de session neuve. La « migration
+// transparente » qui en fabriquait une était la porte de derrière du correctif 36.B :
+// refermer `middleware/auth` ne sert à rien si le jeton legacy que l'on vient d'écarter
+// suffit à repartir avec un jeton d'accès parfaitement valide. Le porteur se reconnecte.
 router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) }), async (req, res) => {
   const { refreshToken } = req.body as { refreshToken: string };
   const payload = verifyToken(refreshToken);
   if (!payload || payload.kind !== 'refresh') throw unauthorized('Invalid refresh token');
+  const { sid } = payload;
+  if (!sid) throw unauthorized('Session revoked', 'SESSION_REVOKED');
   const user = await prisma.user.findUnique({ where: { id: payload.id } });
   if (!user) throw unauthorized('User not found');
-  let sid = payload.sid;
-  if (sid) {
-    if (!(await isSessionActive(sid))) throw unauthorized('Session revoked', 'SESSION_REVOKED');
-    await touchSession(sid);
-  } else {
-    sid = await createSession(user.id, req);
-  }
+  if (!(await isSessionActive(sid))) throw unauthorized('Session revoked', 'SESSION_REVOKED');
+  await touchSession(sid);
   const next = { id: user.id, email: user.email, role: user.role, sid };
   res.json({ token: signAccessToken(next), refreshToken: signRefreshToken(next) });
 });

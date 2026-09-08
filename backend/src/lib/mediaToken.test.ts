@@ -60,7 +60,7 @@ describe('mediaToken — portée', () => {
   });
 
   it("n'accepte aucun autre jeton de l'application, même bien signé", () => {
-    const access = signAccessToken({ id: 7, email: 'artist@studio.com', role: Role.ARTIST });
+    const access = signAccessToken({ id: 7, email: 'artist@studio.com', role: Role.ARTIST, sid: 'sid-test' });
     expect(verifyMediaPlaybackToken(access, 42, 7)).toBe(false);
     expect(verifyMediaPlaybackToken(signShareSession(42), 42, 7)).toBe(false);
   });

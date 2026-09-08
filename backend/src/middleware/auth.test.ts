@@ -158,6 +158,29 @@ describe('authenticate — session et existence du compte', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  // Fin de la grâce transitoire de 36.B. Un jeton sans `sid` — émis avant la phase 36, ou
+  // fabriqué en retirant la claim — n'a aucune session à révoquer : il survivrait à une
+  // déconnexion, à un changement de mot de passe et à un offboarding. Il est donc refusé
+  // au même titre qu'un jeton dont la session est morte.
+  it('refuse un jeton hérité sans sid, même parfaitement signé', async () => {
+    const legacy = jwt.sign({ id: dbUser.id, email: dbUser.email, role: dbUser.role }, env.JWT_SECRET);
+    const { res, next } = await run(legacy);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toMatchObject({ code: 'SESSION_REVOKED' });
+  });
+
+  // La session n'a pas à être consultée pour un jeton qui n'en désigne aucune : le refus
+  // est immédiat, sans aller-retour Redis.
+  it('ne consulte pas la session pour un jeton sans sid', async () => {
+    const legacy = jwt.sign({ id: dbUser.id, email: dbUser.email, role: dbUser.role }, env.JWT_SECRET);
+    // Le `beforeEach` du fichier ne purge pas l'historique d'appels : on le fait ici,
+    // sinon on compterait ceux des tests précédents.
+    vi.mocked(isSessionActive).mockClear();
+    await run(legacy);
+    expect(isSessionActive).not.toHaveBeenCalled();
+  });
+
   // Le rôle est relu en base : un jeton émis avant une rétrogradation ne doit pas
   // continuer à porter l'ancien rôle.
   it('recharge le rôle courant plutôt que celui du jeton', async () => {
