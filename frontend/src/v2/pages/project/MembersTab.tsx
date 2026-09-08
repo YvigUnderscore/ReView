@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,7 +9,11 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { DeleteIcon } from '../../components/EntityCard';
 import Avatar from '../../components/Avatar';
+import { Button } from '../../components/ui/button';
+import AddMemberDialog from './AddMemberDialog';
 import { initialsFrom } from '../../lib/initials';
+import { personLabel } from '../../lib/peopleSearch';
+import { ROLE_LABEL_KEY } from '../../lib/userStatus';
 import type { Member } from './projectTypes';
 import type { Role } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
@@ -33,33 +37,13 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     queryKey: qk.project(projectId),
     queryFn: () => api.get<{ project: { memberships: Member[] } }>(`/api/projects/${projectId}`),
   });
-  const usersQ = useQuery({
-    queryKey: qk.users,
-    queryFn: () =>
-      api
-        .get<{ users: { id: number; name: string | null; email: string }[] }>('/api/users')
-        .then((d) => d.users),
-  });
   const members = projQ.data?.project.memberships ?? [];
-  const allUsers = usersQ.data ?? [];
-  const loadError = (projQ.error ?? usersQ.error)?.message ?? null;
-  const [addUserId, setAddUserId] = useState('');
+  const loadError = projQ.error?.message ?? null;
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const invalidate = () => void qc.invalidateQueries({ queryKey: qk.project(projectId) });
   const { data: connection } = useSgConnection(projectId);
 
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!addUserId) return;
-    try {
-      await api.post(`/api/projects/${projectId}/members`, { userId: Number(addUserId) });
-      toast.success(t('members.added'));
-      setAddUserId('');
-      invalidate();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error.generic'));
-    }
-  };
   const setRole = async (userId: number, role: string) => {
     try {
       await api.post(`/api/projects/${projectId}/members`, {
@@ -82,8 +66,11 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     }
   };
 
-  const memberIds = new Set(members.map((m) => m.user.id));
-  const available = allUsers.filter((u) => !memberIds.has(u.id));
+  // Identité stable : la liste part en dépendance du filtrage de l'annuaire.
+  const memberIds = useMemo(
+    () => (projQ.data?.project.memberships ?? []).map((m) => m.user.id),
+    [projQ.data],
+  );
 
   return (
     <div>
@@ -95,23 +82,14 @@ export default function MembersTab({ projectId }: { projectId: number }) {
           <SgCrewPanel projectId={projectId} />
         </div>
       )}
-      <form onSubmit={add} className="mb-5 flex gap-2 rounded-md border border-border bg-card p-2">
-        <select
-          className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-sm"
-          value={addUserId}
-          onChange={(e) => setAddUserId(e.target.value)}
-        >
-          <option value="">{t('members.add')}</option>
-          {available.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name ?? u.email} ({u.email})
-            </option>
-          ))}
-        </select>
-        <button className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground">
-          <Plus size={14} /> {t('common.add')}
-        </button>
-      </form>
+      {/* Le choix se fait dans l'annuaire (recherche, visage, poste), pas dans une liste
+          déroulante où vingt-sept comptes homonymes se suivent. */}
+      <Button size="sm" className="mb-5" onClick={() => setAdding(true)}>
+        <Plus size={14} /> {t('members.add')}
+      </Button>
+      {adding && (
+        <AddMemberDialog projectId={projectId} memberIds={memberIds} onClose={() => setAdding(false)} />
+      )}
       <div className="space-y-1.5">
         {members.map((m) => (
           <div
@@ -121,14 +99,15 @@ export default function MembersTab({ projectId }: { projectId: number }) {
             <div className="flex items-center gap-2">
               <Avatar
                 seed={m.user.id}
-                initials={initialsFrom(m.user.name)}
+                initials={initialsFrom(personLabel(m.user))}
                 avatarUrl={m.user.avatarUrl}
                 size={28}
               />
               <div>
-                <span className="text-sm font-medium">{m.user.name ?? m.user.email}</span>
+                {/* Même identité que dans l'annuaire d'ajout : pseudo honoré, rôle lisible. */}
+                <span className="text-sm font-medium">{personLabel(m.user)}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {m.user.email} · {m.user.role}
+                  {m.user.email} · {t(ROLE_LABEL_KEY[m.user.role])}
                 </span>
               </div>
             </div>

@@ -10,6 +10,7 @@ import { useT } from '../../i18n';
 import { useDepartments } from '../../lib/departmentsApi';
 import { useProjectMembers } from '../../lib/useProjectRole';
 import { UNASSIGNED } from '../../lib/assignMenu';
+import PeopleList from '../people/PeopleList';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 
@@ -79,21 +80,29 @@ export default function BulkAssignDialog({
       <DialogContent className="max-w-md">
         <DialogTitle className="text-sm">{t('assign.bulkTitle', { count: ids.length })}</DialogTitle>
         <div className="space-y-4">
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">{t('assign.person')}</span>
-            <select
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+          <fieldset className="space-y-1.5">
+            <legend className="text-xs font-medium text-muted-foreground">{t('assign.person')}</legend>
+            {/* Même annuaire que partout ailleurs : sur une équipe de cinquante, une liste
+              déroulante de noms ne dit pas lequel des deux homonymes on désigne. */}
+            <PeopleList
+              people={members}
+              selectedIds={userId === UNASSIGNED ? [] : [Number(userId)]}
+              onPick={(person) => setUserId(String(person.id))}
+            />
+            {/* « Personne » n'est pas quelqu'un : le choix reste hors de la liste. */}
+            <button
+              type="button"
+              onClick={() => setUserId(UNASSIGNED)}
+              aria-pressed={userId === UNASSIGNED}
+              className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                userId === UNASSIGNED
+                  ? 'bg-primary/10 text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/60'
+              }`}
             >
-              {members.map((member) => (
-                <option key={member.id} value={String(member.id)}>
-                  {member.name}
-                </option>
-              ))}
-              <option value={UNASSIGNED}>{t('assign.unassigned')}</option>
-            </select>
-          </label>
+              {t('assign.unassigned')}
+            </button>
+          </fieldset>
 
           <fieldset className="space-y-1.5">
             <legend className="text-xs font-medium text-muted-foreground">{t('assign.departments')}</legend>

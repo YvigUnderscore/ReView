@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from './query';
 import { useAuth } from '../stores/useAuth';
+import { personLabel } from './peopleSearch';
 import type { Role } from '../types/api';
 
 /**
@@ -53,6 +54,8 @@ export interface AssignableMember {
   id: number;
   name: string;
   role: Role;
+  /** Adresse : sur une équipe où deux comptes portent le même nom, c'est ce qui départage. */
+  email: string;
   /** Photo déjà signée par le serveur — cf. `ProjectService.getProject`. */
   avatarUrl: string | null;
 }
@@ -62,6 +65,7 @@ interface MembershipRow {
   user: {
     id: number;
     name: string | null;
+    username?: string | null;
     email: string;
     role: Role;
     isService?: boolean;
@@ -89,8 +93,9 @@ export function useProjectMembers(projectId: number): AssignableMember[] {
     .filter((m) => !m.user.isService && (m.role ?? m.user.role) !== 'CLIENT')
     .map((m) => ({
       id: m.user.id,
-      name: m.user.name ?? m.user.email,
+      name: personLabel(m.user),
       role: m.role ?? m.user.role,
+      email: m.user.email,
       avatarUrl: m.user.avatarUrl ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
