@@ -9,7 +9,7 @@ import { Input } from '../ui/input';
 import { cn } from '../../lib/utils';
 import { initialsFrom } from '../../lib/initials';
 import { ROLE_LABEL_KEY } from '../../lib/userStatus';
-import { filterPeople, personSubtitle, type PersonOption } from '../../lib/peopleSearch';
+import { emptyPeopleReason, filterPeople, personSubtitle, type PersonOption } from '../../lib/peopleSearch';
 import { useT } from '../../i18n';
 
 /**
@@ -77,7 +77,9 @@ export default function PeopleList({
       <div className="custom-scrollbar max-h-72 space-y-0.5 overflow-y-auto">
         {visible.length === 0 && (
           <p className="px-1 py-4 text-center text-sm text-muted-foreground">
-            {emptyLabel ?? t('assignees.noMatch')}
+            {emptyPeopleReason(query) === 'no-candidates'
+              ? (emptyLabel ?? t('assignees.noMatch'))
+              : t('assignees.noMatch')}
           </p>
         )}
         {visible.map((person) => {

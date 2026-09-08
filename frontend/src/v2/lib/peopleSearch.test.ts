@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { filterPeople, personLabel, personMatches, personSubtitle, type PersonOption } from './peopleSearch';
+import {
+  emptyPeopleReason,
+  filterPeople,
+  personLabel,
+  personMatches,
+  personSubtitle,
+  type PersonOption,
+} from './peopleSearch';
 
 const person = (over: Partial<PersonOption> & { id: number }): PersonOption => ({
   name: 'Anonyme',
@@ -101,5 +108,26 @@ describe('personSubtitle', () => {
     expect(personSubtitle(heloise)).toBe('heloise@studio.io');
     expect(personSubtitle(person({ id: 9, email: null, jobTitle: 'Compositing' }))).toBe('Compositing');
     expect(personSubtitle(person({ id: 9, email: null }))).toBe('');
+  });
+});
+
+/**
+ * Le défaut constaté à l'écran : sur un studio dont tout le monde est déjà membre, le
+ * dialogue d'ajout affichait « Personne ne correspond à cette recherche » alors que le
+ * champ était vide — il accusait une recherche que personne n'avait faite.
+ */
+describe('emptyPeopleReason', () => {
+  it('sans recherche, la liste vide veut dire qu’il n’y a personne à proposer', () => {
+    expect(emptyPeopleReason('')).toBe('no-candidates');
+  });
+
+  it('des espaces ne sont pas une recherche', () => {
+    expect(emptyPeopleReason('   ')).toBe('no-candidates');
+    expect(emptyPeopleReason('\t\n')).toBe('no-candidates');
+  });
+
+  it('dès qu’un mot est tapé, la liste vide parle bien de correspondance', () => {
+    expect(emptyPeopleReason('a')).toBe('no-match');
+    expect(emptyPeopleReason('  héloïse  ')).toBe('no-match');
   });
 });

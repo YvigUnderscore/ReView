@@ -2,7 +2,7 @@
 
 *The shape of a show in ReView — episodes down to media, the two status vocabularies, and who may change what, where.*
 
-> Updated: 2026-08-28
+> Updated: 2026-09-08
 
 One ReView instance is one studio, and inside it a **project** is one show. Everything a
 production needs to say about that show — how it is broken down, who is on which step, what
@@ -79,6 +79,13 @@ entity is visible.
 **Right-click → Status → pick a value.** The submenu is a radio group: the current value is
 ticked, each entry carries the colour dot of the studio's status, and a final **No status**
 entry clears it.
+
+![The context menu of a shot card, with the Status submenu open on the studio's values](../assets/user-guide/shot-context-menu-status.png)
+
+The rest of the menu is the same on a sequence, a shot and an asset, in the same order: what
+opens it, what it is, who follows it, and — last, because it is destructive — how to manage
+it. Only entries that mean something for that entity appear, and their absence never shifts
+the others.
 
 | Where | What it sets | Who can |
 |-------|--------------|---------|

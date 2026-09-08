@@ -298,6 +298,7 @@
   "members.added": "Member added to the project",
   "members.removed": "Member removed from the project",
   "members.roleUpdated": "Member role updated",
+  "members.everyoneAdded": "Everyone in the studio is already on this project.",
   "playlists.new": "New playlist",
   "playlists.name.placeholder": "Playlist name (e.g. Monday dailies)",
   "playlists.empty.title": "No playlist",

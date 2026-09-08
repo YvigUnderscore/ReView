@@ -298,6 +298,7 @@
   "members.added": "सदस्य प्रोजेक्ट में जोड़ा गया",
   "members.removed": "सदस्य प्रोजेक्ट से हटाया गया",
   "members.roleUpdated": "सदस्य की भूमिका बदली गई",
+  "members.everyoneAdded": "स्टूडियो के सभी लोग पहले से ही इस प्रोजेक्ट में हैं।",
   "playlists.new": "नई playlist",
   "playlists.name.placeholder": "playlist का नाम (जैसे सोमवार dailies)",
   "playlists.empty.title": "कोई playlist नहीं",

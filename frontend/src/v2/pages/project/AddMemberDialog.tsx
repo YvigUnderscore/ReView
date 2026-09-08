@@ -83,6 +83,9 @@ export default function AddMemberDialog({
           excludeIds={excludeIds}
           onPick={(person) => add.mutate(person.id)}
           pendingId={add.isPending ? (add.variables ?? null) : null}
+          // Un studio dont tout le monde est déjà sur le projet est un cas ordinaire, pas
+          // une recherche infructueuse : le dire évite de faire douter d'un champ vide.
+          emptyLabel={t('members.everyoneAdded')}
         />
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>

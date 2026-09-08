@@ -109,3 +109,16 @@ export function filterPeople(
         a.id - b.id,
     );
 }
+
+/**
+ * Lequel des deux vides annoncer ?
+ *
+ * Une liste vide ne dit pas la même chose selon qu'on a cherché ou non. « Personne ne
+ * correspond à cette recherche » sur un champ vide accuse une recherche qui n'a pas eu
+ * lieu : ce qu'il faut dire, c'est qu'il n'y a personne à proposer — et cela, seul
+ * l'appelant le sait (tout le studio est déjà membre, l'entité n'a aucun département…).
+ * Dès qu'un mot est tapé, en revanche, c'est bien de correspondance qu'il s'agit.
+ */
+export function emptyPeopleReason(query: string): 'no-candidates' | 'no-match' {
+  return query.trim() === '' ? 'no-candidates' : 'no-match';
+}

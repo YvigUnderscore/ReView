@@ -285,6 +285,7 @@
   "members.added": "멤버를 프로젝트에 추가했습니다",
   "members.removed": "멤버를 프로젝트에서 제외했습니다",
   "members.roleUpdated": "멤버 역할을 변경했습니다",
+  "members.everyoneAdded": "스튜디오의 모든 사람이 이미 이 프로젝트에 참여하고 있습니다.",
   "playlists.new": "새 playlist",
   "playlists.name.placeholder": "playlist 이름(예: 월요일 dailies)",
   "playlists.empty.title": "playlist 없음",

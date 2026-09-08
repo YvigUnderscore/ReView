@@ -298,6 +298,7 @@
   "members.added": "Miembro añadido al proyecto",
   "members.removed": "Miembro retirado del proyecto",
   "members.roleUpdated": "Rol del miembro actualizado",
+  "members.everyoneAdded": "Todo el estudio ya está en este proyecto.",
   "playlists.new": "Nueva playlist",
   "playlists.name.placeholder": "Nombre de la playlist (p. ej. Dailies del lunes)",
   "playlists.empty.title": "Ninguna playlist",

@@ -285,6 +285,7 @@
   "members.added": "已将成员加入项目",
   "members.removed": "已将成员移出项目",
   "members.roleUpdated": "成员角色已更新",
+  "members.everyoneAdded": "工作室的所有人都已在此项目中。",
   "playlists.new": "新建 playlist",
   "playlists.name.placeholder": "playlist 名称（如：周一 dailies）",
   "playlists.empty.title": "没有 playlist",
