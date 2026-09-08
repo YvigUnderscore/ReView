@@ -11,6 +11,7 @@ import { ImageDiffOverlay } from './DiffOverlay';
 import MediaChrome from './MediaChrome';
 import DisplayTransformOverlay from './color/DisplayTransformOverlay';
 import { useDisplayTransform } from './color/useDisplayTransform';
+import { imageCompareOverlay } from './header/headerComposition';
 import { VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import type { useImageCompareSync } from './useImageCompareSync';
 import type { Annotations } from './useAnnotations';
@@ -68,8 +69,11 @@ export default function ImageReviewSection({
   // l'image brute : comparer deux versions suppose de les regarder dans le même état.
   const display = useDisplayTransform(data.url, data.projectColor);
 
-  // Le wipe et la différence remplacent la visionneuse : le zoom y est suspendu.
-  if (compareId != null && compareMode === 'wipe')
+  // Le wipe et la différence remplacent la visionneuse : le zoom y est suspendu — et le
+  // chrome avec, en-tête compris. C'est `imageCompareOverlay` qui en décide, pour que la page
+  // sache reprendre l'en-tête à son compte plutôt que de le laisser disparaître.
+  const overlay = imageCompareOverlay(compareId, compareMode);
+  if (compareId != null && overlay === 'wipe')
     return (
       <ImageWipeOverlay
         aUrl={data.url}
@@ -81,7 +85,7 @@ export default function ImageReviewSection({
         sharedWipe={sharedWipe}
       />
     );
-  if (compareId != null && compareMode === 'diff')
+  if (compareId != null && overlay === 'diff')
     return (
       <ImageDiffOverlay
         aUrl={data.url}

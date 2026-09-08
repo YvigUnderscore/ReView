@@ -4,10 +4,12 @@
 import type { ReactNode } from 'react';
 import type { MediaKind, Role } from '../../../types/api';
 import { Badge } from '../../../components/ui/badge';
+import { ErrorBoundary } from '../../../components/ui/error-boundary';
 import { SegmentedControl } from '../../../components/ui/segmented-control';
 import ToolRail from './ToolRail';
 import InspectorDock from './InspectorDock';
-import { modesFor, switcherModesFor, type ModeId, type ReviewMode } from './modes';
+import { useReviewHeaderSlots } from '../header/reviewHeaderSlots';
+import { canSwitchMode, modesFor, switcherModesFor, type ModeId, type ReviewMode } from './modes';
 import { panelsFor, type PanelId } from './panels';
 import { toolsFor, viewActionsFor, type ReviewTool, type ToolId, type ViewAction } from './tools';
 import type { ChromeState } from './chromeState';
@@ -58,11 +60,14 @@ export default function ReviewChrome({
    */
   tools?: ReviewTool[];
   /**
-   * Média, version, navigation — à gauche de l'en-tête. Absent tant que la page de review
-   * porte encore son propre en-tête : la barre du haut ne montre alors que la bascule de mode.
+   * Média, version, navigation — à gauche de l'en-tête. La review les fournit par contexte
+   * (`ReviewHeaderSlots`) ; cette prop sert au lecteur de montage, qui n'a pas ce contexte.
    */
   headerLeft?: ReactNode;
-  /** A/B, présence, actions — à droite de l'en-tête. */
+  /**
+   * A/B du viewer — à droite de l'en-tête, devant les actions de la page. C'est là que la 3D
+   * et le splat posent leur sélecteur de versions, alimenté par leur propre hook.
+   */
   headerRight?: ReactNode;
   /** `<OptionsBar>` de l'outil actif. */
   options: ReactNode;
@@ -71,6 +76,7 @@ export default function ReviewChrome({
   transport?: ReactNode;
   /** Tiroir ancré sous le transport (courbes ou pellicule). */
   drawer?: ReactNode;
+  /** Dernière colonne. La review la fournit par contexte ; cette prop la force. */
   comments?: ReactNode;
   /**
    * Cadrer / vue d'origine. Absent quand le viewer ne les implémente pas : le rail n'affiche
@@ -85,6 +91,15 @@ export default function ReviewChrome({
   children: ReactNode;
 }) {
   const t = useT();
+  // En-tête unique : la page de review pose identité, actions et commentaires ici plutôt que
+  // dans une barre à elle. Hors review (lecteur de montage), le contexte est absent et seules
+  // les props comptent.
+  const slots = useReviewHeaderSlots();
+  const left = headerLeft ?? slots?.identity;
+  // Les deux cohabitent sans se chasser : l'A/B du viewer d'abord, les actions de la page
+  // ensuite — c'est le seul endroit où les deux moitiés de l'ancien en-tête se rejoignent.
+  const hasRight = Boolean(headerRight) || Boolean(slots?.actions);
+  const commentsColumn = comments ?? slots?.comments;
   // La bascule ne liste pas « Annoter » : l'annotation s'arme depuis l'espace commentaire.
   // Le mode reste valide — pendant l'annotation, aucun segment n'est actif et c'est le bouton
   // du composer qui joue l'indicateur ; le pied de page garde le bon rappel.
@@ -95,7 +110,7 @@ export default function ReviewChrome({
   const panels = panelsFor(kind);
   const activeMode = modesFor(kind).find((m) => m.value === state.mode) ?? modes[0];
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
-  const canSwitchMode = role !== 'CLIENT' && modes.length > 1;
+  const switchable = canSwitchMode(role, modes.length);
 
   return (
     <div
@@ -104,10 +119,13 @@ export default function ReviewChrome({
       // dock se replient désormais d'eux-mêmes, la barre d'en-tête passe à la ligne.
       className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
     >
-      <header className="flex flex-shrink-0 flex-nowrap items-center gap-3 border-b border-border bg-card px-3 py-2">
-        {headerLeft && <span className="flex min-w-0 flex-shrink-0 items-center gap-2">{headerLeft}</span>}
-        {canSwitchMode && (
-          <span className="mx-auto flex items-center gap-2">
+      {/* En-tête unique : identité à gauche, bascule de mode au centre, A/B du viewer puis
+          actions de la page à droite. Il passe à la ligne plutôt que de déborder — la barre
+          fusionnée est bien plus chargée que la seule bascule qu'elle portait. */}
+      <header className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
+        {left && <div className="flex min-w-0 flex-shrink items-center gap-2">{left}</div>}
+        {switchable && (
+          <div className="mx-auto flex items-center gap-2">
             <SegmentedControl
               size="lg"
               label={t('review.mode')}
@@ -120,12 +138,13 @@ export default function ReviewChrome({
               value={state.mode}
               onChange={(mode: ModeId) => onState({ mode })}
             />
-          </span>
+          </div>
         )}
-        {headerRight && (
-          <span className={`flex flex-shrink-0 items-center gap-2${canSwitchMode ? '' : ' ml-auto'}`}>
+        {hasRight && (
+          <div className={`flex flex-shrink-0 items-center gap-2 text-sm${switchable ? '' : ' ml-auto'}`}>
             {headerRight}
-          </span>
+            {slots?.actions}
+          </div>
         )}
       </header>
 
@@ -142,7 +161,11 @@ export default function ReviewChrome({
 
         <div className="flex min-w-0 flex-1 flex-col">
           {options}
-          {children}
+          {/* Le viewport monte Three.js, Spark ou hls.js. Depuis que les commentaires sont
+              une colonne du chrome, un plantage WebGL les emporterait : la frontière descend
+              donc au ras du viewer, et l'en-tête, le dock et le fil de commentaires
+              survivent à la vue qui tombe. */}
+          <ErrorBoundary scope="viewer">{children}</ErrorBoundary>
           {transport}
           {drawer}
         </div>
@@ -155,7 +178,7 @@ export default function ReviewChrome({
           {panel}
         </InspectorDock>
 
-        {comments}
+        {commentsColumn}
       </div>
 
       <footer className="flex flex-shrink-0 items-center gap-2.5 border-t border-border bg-card/60 px-2.5 py-[0.3125rem] text-[0.625rem] text-muted-foreground">

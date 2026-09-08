@@ -15,7 +15,6 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import type { ImageViewApi } from '../components/ImageReviewViewer';
-import { Skeleton } from '../components/ui/skeleton';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
 import { usePublishSceneOverride } from './review/usePublishSceneOverride';
 import { useAnnotations } from './review/useAnnotations';
@@ -31,13 +30,14 @@ import { useTimelineMarkers } from './review/useTimelineMarkers';
 import { useSplatThumbnail } from './review/useSplatThumbnail';
 import { useAutoThumbnail } from './review/useAutoThumbnail';
 import { useModel3DThree } from './review/three/useModel3DThree';
-import ReviewHeader from './review/ReviewHeader';
+import { ReviewHeaderSlotsContext } from './review/header/reviewHeaderSlots';
 import ReviewViewer from './review/ReviewViewer';
 import { exactFrameRate } from './review/frameRate';
 import { ErrorBoundary } from '../components/ui/error-boundary';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
 import { useSplat } from './review/splat/useSplat';
-import CommentsPanel from './review/CommentsPanel';
+import { useReviewHeaderSlots } from './review/header/useReviewHeaderSlots';
+import ReviewPageHeader from './review/header/ReviewPageHeader';
 import TheaterExitButton from './review/TheaterExitButton';
 
 /** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
@@ -276,6 +276,42 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const rootClass = theater ? 'fixed inset-0 z-40 bg-background p-4'
     : isFullscreen ? 'h-screen bg-background p-4' : 'min-h-0 flex-1 p-4';
 
+  // Emplacements de l'en-tête unique : identité, actions, commentaires — et le drapeau
+  // qui dit si le chrome du viewer les héberge ou si la page doit les rendre elle-même.
+  const {
+    hosted,
+    identity,
+    actions,
+    comments: commentsColumn,
+  } = useReviewHeaderSlots({
+    id,
+    data,
+    kind,
+    theater,
+    compare,
+    live,
+    commentsOpen,
+    setCommentsOpen,
+    setTheater,
+    onPublish: publishMedia,
+    onPictureInPicture: togglePictureInPicture,
+    comments,
+    userId,
+    role,
+    loadComments,
+    fps,
+    startFrame,
+    selectedCommentId,
+    selectComment,
+    markersApi,
+    seek,
+    composerRef,
+    ann,
+    loop,
+    submitComment,
+    toggleAnnotating,
+  });
+
   return (
     <PageShell
       title={data?.media.originalName ?? 'Review'}
@@ -285,101 +321,69 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
       {/* Le menu natif est bloqué globalement par ContextMenuGuard (A3) : la review n'a plus
           à marquer l'événement comme traité, ce qui rendait muette toute zone dépourvue de
           menu métier — en-tête, barre d'options, dock, transport, panneau de commentaires. */}
-      <div ref={reviewRootRef} className={`flex flex-col ${rootClass}`}>
-        {theater && <TheaterExitButton onExit={() => setTheater(false)} />}
-        {data && !theater ? (
-          <ReviewHeader
-            data={data}
-            onPublish={publishMedia}
-            commentsOpen={commentsOpen}
-            onToggleComments={() => setCommentsOpen((o) => !o)}
-            compareIds={compare.compareIds}
-            onAddCompare={compare.addCompareId}
-            onRemoveCompare={compare.removeCompareId}
-            onCompareChange={compare.setCompareId}
-            onToggleTheater={() => setTheater(true)}
-            onPictureInPicture={togglePictureInPicture}
-            live={live}
+      <ReviewHeaderSlotsContext.Provider
+        value={hosted ? { identity, actions, comments: commentsColumn } : null}
+      >
+        <div ref={reviewRootRef} className={`flex flex-col ${rootClass}`}>
+          {theater && <TheaterExitButton onExit={() => setTheater(false)} />}
+          <ReviewPageHeader
+            hosted={hosted}
+            theater={theater}
+            hasData={!!data}
+            hasError={!!error}
+            identity={identity}
+            actions={actions}
           />
-        ) : !error && !theater ? (
-          <div className="mb-3 flex shrink-0 items-center gap-3">
-            <Skeleton className="h-7 w-72" />
-            <Skeleton className="h-7 w-44" />
+          {error && <p className="mb-2 shrink-0 text-sm text-destructive">{error}</p>}
+
+          {/* Corps : viewer (large) + commentaires quand le chrome ne les héberge pas */}
+          <div className="flex min-h-0 flex-1 gap-4">
+            {/* Frontière de dernier recours : le chrome en pose une au ras du viewport, qui
+                laisse l'en-tête et les commentaires debout quand la vue tombe. Celle-ci ne
+                sert plus qu'au cas où la branche elle-même jette. */}
+            <ErrorBoundary scope="viewer">
+              <ReviewViewer
+                data={data}
+                error={error}
+                ann={ann}
+                model3d={model3d}
+                splat={splat}
+                paint={paint}
+                videoRef={videoRef}
+                programmaticSeekRef={programmaticSeekRef}
+                comments={comments}
+                selectedCommentId={selectedCommentId}
+                fps={fps}
+                setFpsOverride={setFpsOverride}
+                reprocessing={reprocessing}
+                role={role}
+                canEditTransform={canEditTransform}
+                canEdit={canEditMedia}
+                canManage={canManageMedia}
+                onSplatEditsSaved={onSplatEditsSaved}
+                onClearSelection={clearSelection}
+                onSelectComment={selectComment}
+                onManualSeek={clearSelection}
+                onMarker={openComposer}
+                onReprocess={reprocessMedia}
+                onToggleAnnotate={toggleAnnotating}
+                onFullscreen={toggleFullscreen}
+                compareIds={compare.compareIds}
+                onCloseCompare={() => compare.setCompareId(null)}
+                onRemoveCompare={compare.removeCompareId}
+                compareMode={compare.compareMode}
+                onCompareModeChange={compare.setCompareMode}
+                sharedWipe={sharedWipe}
+                imageViewApiRef={imageViewApiRef}
+                onImageUserView={live.claimInteraction}
+                onLoopChange={setLoop}
+              />
+            </ErrorBoundary>
+
+            {!hosted && commentsColumn}
           </div>
-        ) : null}
-        {error && <p className="mb-2 shrink-0 text-sm text-destructive">{error}</p>}
-
-        {/* Corps : viewer (large) + commentaires (panneau) */}
-        <div className="flex min-h-0 flex-1 gap-4">
-          {/* Le viewer monte Three.js, Spark ou hls.js : un plantage WebGL ne doit pas
-              emporter le panneau de commentaires ni le transport. */}
-          <ErrorBoundary scope="viewer">
-            <ReviewViewer
-              data={data}
-              error={error}
-              ann={ann}
-              model3d={model3d}
-              splat={splat}
-              paint={paint}
-              videoRef={videoRef}
-              programmaticSeekRef={programmaticSeekRef}
-              comments={comments}
-              selectedCommentId={selectedCommentId}
-              fps={fps}
-              setFpsOverride={setFpsOverride}
-              reprocessing={reprocessing}
-              role={role}
-              canEditTransform={canEditTransform}
-              canEdit={canEditMedia}
-              canManage={canManageMedia}
-              onSplatEditsSaved={onSplatEditsSaved}
-              onClearSelection={clearSelection}
-              onSelectComment={selectComment}
-              onManualSeek={clearSelection}
-              onMarker={openComposer}
-              onReprocess={reprocessMedia}
-              onToggleAnnotate={toggleAnnotating}
-              onFullscreen={toggleFullscreen}
-              compareIds={compare.compareIds}
-              onCloseCompare={() => compare.setCompareId(null)}
-              onRemoveCompare={compare.removeCompareId}
-              compareMode={compare.compareMode}
-              onCompareModeChange={compare.setCompareMode}
-              sharedWipe={sharedWipe}
-              imageViewApiRef={imageViewApiRef}
-              onImageUserView={live.claimInteraction}
-              onLoopChange={setLoop}
-            />
-          </ErrorBoundary>
-
-          {commentsOpen && !theater && (
-            <CommentsPanel
-              comments={comments}
-              mediaObjectId={id}
-              currentUserId={userId}
-              currentUserRole={role}
-              reload={loadComments}
-              fps={fps}
-              startFrame={startFrame}
-              selectedId={selectedCommentId}
-              onSelect={selectComment}
-              markers={kind === 'VIDEO' ? markersApi.markers : undefined}
-              onMarkerSeek={(m) => seek(m.frame / fps)}
-              composerRef={composerRef}
-              hints={{
-                annotation: ann.annot.length > 0,
-                hotspot: !!ann.hotspot3d,
-                camera: kind === 'MODEL_3D' && ann.annotating,
-                references: ann.stagedRefs.length,
-                range: kind === 'VIDEO' && loop.in != null && loop.out != null && loop.out > loop.in,
-              }}
-              onSubmit={submitComment}
-              annotating={ann.annotating}
-              onToggleAnnotate={toggleAnnotating}
-            />
-          )}
         </div>
-      </div>
+      </ReviewHeaderSlotsContext.Provider>
     </PageShell>
   );
 }

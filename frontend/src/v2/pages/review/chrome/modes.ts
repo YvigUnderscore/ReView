@@ -11,7 +11,7 @@ import {
   Scissors,
   type LucideIcon,
 } from 'lucide-react';
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind, Role } from '../../../types/api';
 import type { MessageKey } from '../../../i18n';
 
 /**
@@ -120,3 +120,11 @@ export function switcherModesFor(kind: MediaKind): ReviewMode[] {
 
 /** Mode par défaut — celui servi aux clients. */
 export const DEFAULT_MODE: ModeId = 'explore';
+
+/**
+ * La bascule de mode est-elle offerte ? Le client reste en exploration, en lecture seule ;
+ * et un segment unique ne bascule vers rien — le montage, qui n'a qu'un mode, s'en passe.
+ */
+export function canSwitchMode(role: Role, modeCount: number): boolean {
+  return role !== 'CLIENT' && modeCount > 1;
+}
