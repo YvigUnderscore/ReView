@@ -5,13 +5,16 @@ import { Role, MediaKind, MediaStatus, Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { bestScore, rankBy } from './searchRank';
 import { searchComments, type CommentHit } from './searchComments';
+import { EXTRA_LIMITS, searchExtras, type Contains, type ExtraResults } from './searchExtras';
 
 /**
  * Recherche globale multi-entités (palette Ctrl+K).
  *
- * Dix types, pas cinq : ce qu'un superviseur tape le plus souvent est un nom de version ou
- * de média (`SH0120_comp_v012`), et ce qu'il cherche vraiment est parfois une phrase dite en
- * review (« enlever le reflet ») — cf. `searchComments`, plein texte Postgres.
+ * Quinze types, pas cinq : ce qu'un superviseur tape le plus souvent est un nom de version
+ * ou de média (`SH0120_comp_v012`), et ce qu'il cherche vraiment est parfois une phrase dite
+ * en review (« enlever le reflet ») — cf. `searchComments`, plein texte Postgres. Les cinq
+ * familles que la recherche ignorait — épisodes, départements, montages, boards, fiches —
+ * vivent dans `searchExtras` : elles ne se filtrent pas comme des lignes de pipe.
  *
  * **Cloisonnement.** Chaque type porte son propre filtre d'accès, écrit dans la clause
  * `where` et jamais après coup :
@@ -39,14 +42,23 @@ export const SEARCH_LIMITS = {
   playlists: 5,
   comments: 8,
   people: 5,
+  ...EXTRA_LIMITS,
 } as const;
 
-export interface SearchResults {
+export interface SearchResults extends ExtraResults {
   projects: { id: number; name: string }[];
   sequences: { id: number; code: string; name: string; projectId: number }[];
   shots: { id: number; code: string; name: string; projectId: number }[];
   assets: { id: number; name: string; type: string; projectId: number }[];
-  tasks: { id: number; name: string; type: string; shotId: number | null; assetId: number | null }[];
+  tasks: {
+    id: number;
+    name: string;
+    type: string;
+    /** Département de l'étape — c'est par lui qu'on retrouve « toutes mes tâches de Modeling ». */
+    departmentName: string | null;
+    shotId: number | null;
+    assetId: number | null;
+  }[];
   versions: {
     id: number;
     name: string;
@@ -139,7 +151,7 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
   const project = projectScope(userId, role);
   const version = versionScope(project);
   const media = mediaScope(project, userId, role);
-  const contains = { contains: q, mode: 'insensitive' as const };
+  const contains: Contains = { contains: q, mode: 'insensitive' };
 
   const [projects, sequences, shots, assets, tasks] = await Promise.all([
     prisma.project.findMany({
@@ -184,26 +196,49 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
       take: SEARCH_LIMITS.assets,
     }),
     prisma.task.findMany({
+      // Une tâche se cherche aussi par son **département** : taper « Modeling » ne rendait
+      // rien, alors que c'est le mot qu'un artiste emploie pour désigner son travail. Le
+      // filtre d'accès reste dans `OR` (Prisma joint les champs de tête par ET), la
+      // correspondance textuelle passe par `AND` — les deux ne se mélangent pas.
       where: {
-        name: contains,
         OR: [
           { shot: { deletedAt: null, hiddenAt: null, project } },
           { asset: { deletedAt: null, hiddenAt: null, project } },
         ],
+        AND: [
+          {
+            OR: [
+              { name: contains },
+              // `departmentRef` porte le libellé, `department` la clé dénormalisée : un
+              // studio nomme son étape « Look Dev » et la clé reste `lookdev`, les deux se
+              // tapent.
+              { departmentRef: { deletedAt: null, name: contains } },
+              { department: contains },
+            ],
+          },
+        ],
       },
-      select: { id: true, name: true, type: true, shotId: true, assetId: true },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        shotId: true,
+        assetId: true,
+        department: true,
+        departmentRef: { select: { name: true } },
+      },
       orderBy: { updatedAt: 'desc' },
       take: SEARCH_LIMITS.tasks,
     }),
   ]);
 
   // Les identifiants de projets ne servent qu'à la requête plein texte (SQL brut) : la
-  // chaîne est montée d'avance pour que les dix recherches partent en parallèle.
+  // chaîne est montée d'avance pour que toutes les recherches partent en parallèle.
   const commentsPromise = (isGlobalRole(role) ? Promise.resolve(null) : memberProjectIds(userId)).then(
     (projectIds) => searchComments(q, { userId, role, projectIds, limit: SEARCH_LIMITS.comments }),
   );
 
-  const [versions, mediaRows, playlists, comments, people] = await Promise.all([
+  const [versions, mediaRows, playlists, comments, people, extras] = await Promise.all([
     prisma.version.findMany({
       where: { AND: [version, { name: contains }] },
       select: {
@@ -242,6 +277,7 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
     }),
     commentsPromise,
     searchPeople(userId, role, contains),
+    searchExtras(contains, { project, role }),
   ]);
 
   // Classement : chaque liste sortait dans l'ordre de la base — le plus récent d'abord —
@@ -269,7 +305,22 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
         { value: row.description, field: 'description' },
       ]),
     ),
-    tasks: rankBy(tasks, (row) => bestScore(q, [{ value: row.name, field: 'name' }])),
+    // Le nom de la tâche prime sur son département : « comp » tapé doit rendre la tâche
+    // nommée comp avant les douze tâches de l'étape Compositing (le poids de champ
+    // départage, la qualité de correspondance passe devant — cf. `searchRank`).
+    tasks: rankBy(tasks, (row) =>
+      bestScore(q, [
+        { value: row.name, field: 'name' },
+        { value: row.departmentRef?.name ?? row.department, field: 'description' },
+      ]),
+    ).map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      departmentName: row.departmentRef?.name ?? row.department,
+      shotId: row.shotId,
+      assetId: row.assetId,
+    })),
     versions: rankBy(versions, (v) => bestScore(q, [{ value: v.name, field: 'code' }])).map((v) => ({
       id: v.id,
       name: v.name,
@@ -287,6 +338,7 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
     playlists: playlists.map((p) => ({ id: p.id, name: p.name, projectName: p.project.name })),
     comments,
     people,
+    ...extras,
   };
 }
 

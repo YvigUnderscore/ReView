@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 /**
  * Cloisonnement de la recherche globale : ce que chaque rôle a le droit de trouver.
  *
- * C'est le seul point du produit où dix tables sont interrogées d'un coup, sans qu'aucune
+ * C'est le seul point du produit où quinze tables sont interrogées d'un coup, sans qu'aucune
  * route ne repasse derrière : un filtre manquant sur UN type suffit à publier le pipe entier
  * à un intervenant extérieur. Chaque type est donc vérifié séparément, sur la clause `where`
  * réellement transmise à Prisma — pas sur le résultat, qu'un mock rendrait toujours vide.
@@ -26,10 +26,21 @@ vi.mock('./prisma', () => {
       playlist: delegate(),
       user: delegate(),
       projectMembership: delegate(),
+      episode: delegate(),
+      department: delegate(),
+      timeline: delegate(),
+      board: delegate(),
+      entityNote: delegate(),
     },
   };
 });
-vi.mock('./searchComments', () => ({ searchComments: vi.fn().mockResolvedValue([]) }));
+// Mock partiel : seule la requête plein texte est simulée. Le découpage en tokens et le
+// fenêtrage d'extrait servent aussi aux fiches d'entité (`searchExtras`) — les remplacer par
+// des mocks ferait passer un test sur un extrait que personne ne produit.
+vi.mock('./searchComments', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./searchComments')>()),
+  searchComments: vi.fn().mockResolvedValue([]),
+}));
 
 import { Role } from '@prisma/client';
 import { searchEntities, projectScope, SEARCH_LIMITS } from './search';
@@ -170,8 +181,8 @@ describe('searchEntities — rôles globaux', () => {
 });
 
 describe('searchEntities — résultats bornés', () => {
-  it('impose une limite à chacun des dix types', async () => {
-    await searchEntities('v012', ARTIST_ID, Role.ARTIST);
+  it('impose une limite à chacun des types', async () => {
+    await searchEntities('v012', 1, Role.ADMIN);
     const takes = {
       projects: argsOf<{ take: number }>(prisma.project.findMany).take,
       sequences: argsOf<{ take: number }>(prisma.sequence.findMany).take,
@@ -182,10 +193,194 @@ describe('searchEntities — résultats bornés', () => {
       media: argsOf<{ take: number }>(prisma.mediaObject.findMany).take,
       playlists: argsOf<{ take: number }>(prisma.playlist.findMany).take,
       people: argsOf<{ take: number }>(prisma.user.findMany).take,
+      episodes: argsOf<{ take: number }>(prisma.episode.findMany).take,
+      departments: argsOf<{ take: number }>(prisma.department.findMany).take,
+      timelines: argsOf<{ take: number }>(prisma.timeline.findMany).take,
+      boards: argsOf<{ take: number }>(prisma.board.findMany).take,
+      briefs: argsOf<{ take: number }>(prisma.entityNote.findMany).take,
     };
     for (const [type, take] of Object.entries(takes)) {
       expect(take, type).toBe(SEARCH_LIMITS[type as keyof typeof SEARCH_LIMITS]);
     }
+  });
+
+  it('borne chaque famille, sans exception', async () => {
+    await searchEntities('v012', 1, Role.ADMIN);
+    for (const limit of Object.values(SEARCH_LIMITS)) expect(limit).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Ce que le produit contient et que la recherche ignorait.
+ *
+ * Cinq familles ne rendaient rien, quoi qu'on tape : « Modeling » (un département), le code
+ * d'un épisode, un montage, un board, et le texte d'une fiche d'entité — c'est-à-dire le
+ * brief, le seul endroit où est écrit ce qu'un plan doit devenir. Le cloisonnement de
+ * chacune est vérifié ici comme celui des dix premières : sur la clause `where`.
+ */
+describe('searchEntities — les familles ajoutées', () => {
+  beforeEach(async () => {
+    await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
+  });
+
+  it('cherche les épisodes du projet, ni retirés ni masqués', () => {
+    const where = whereOf(prisma.episode.findMany) as { OR: Record<string, unknown>[] };
+    expect(where).toMatchObject({ deletedAt: null, hiddenAt: null, project: MEMBER_SCOPE });
+    expect(where.OR.map((clause) => Object.keys(clause)[0])).toEqual(['code', 'name', 'description']);
+  });
+
+  it('écarte le montage d’une séquence masquée ou retirée', () => {
+    const where = whereOf(prisma.timeline.findMany) as { OR: Record<string, unknown>[] };
+    expect(where).toMatchObject({ project: MEMBER_SCOPE });
+    expect(where.OR).toEqual([{ sequenceId: null }, { sequence: { deletedAt: null, hiddenAt: null } }]);
+  });
+
+  it('ne propose le board que d’un projet accessible ou d’un asset visible', () => {
+    const where = whereOf(prisma.board.findMany) as { OR: Record<string, unknown>[] };
+    expect(where.OR[0]).toMatchObject({ project: MEMBER_SCOPE });
+    expect(where.OR[1]).toMatchObject({
+      asset: { deletedAt: null, hiddenAt: null, project: MEMBER_SCOPE },
+    });
+  });
+
+  it('ne cherche une fiche que sous une entité visible d’un projet accessible', () => {
+    const where = whereOf(prisma.entityNote.findMany) as { OR: Record<string, unknown>[] };
+    expect(where).toMatchObject({ project: MEMBER_SCOPE });
+    const visible = { deletedAt: null, hiddenAt: null };
+    expect(where.OR).toEqual([
+      { episode: visible },
+      { sequence: visible },
+      { shot: visible },
+      { asset: visible },
+    ]);
+  });
+
+  it('trouve une tâche par son département : « Modeling » ne rendait rien', () => {
+    const where = whereOf(prisma.task.findMany) as { AND: { OR: Record<string, unknown>[] }[] };
+    const fields = where.AND[0]!.OR.map((clause) => Object.keys(clause)[0]);
+    expect(fields).toEqual(['name', 'departmentRef', 'department']);
+  });
+});
+
+describe('searchEntities — les départements ne s’offrent qu’à qui peut les ouvrir', () => {
+  it('les ignore pour un ARTIST et pour un CLIENT — l’écran leur serait refusé', async () => {
+    await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
+    expect(prisma.department.findMany).not.toHaveBeenCalled();
+    await searchEntities('modeling', ARTIST_ID, Role.CLIENT);
+    expect(prisma.department.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rend le référentiel du studio et les étapes des projets accessibles à un ADMIN', async () => {
+    await searchEntities('modeling', 1, Role.ADMIN);
+    const where = whereOf(prisma.department.findMany) as {
+      OR: Record<string, unknown>[];
+      AND: { OR: Record<string, unknown>[] }[];
+    };
+    expect(where).toMatchObject({ deletedAt: null });
+    expect(where.OR).toEqual([{ projectId: null }, { project: { deletedAt: null } }]);
+    expect(where.AND[0]!.OR.map((clause) => Object.keys(clause)[0])).toEqual(['name', 'key']);
+  });
+});
+
+describe('searchEntities — mise en forme des familles ajoutées', () => {
+  it('rend un montage sans nom tel quel : son libellé se traduit à l’écran', async () => {
+    vi.mocked(prisma.timeline.findMany).mockResolvedValue([
+      { id: 4, name: null, project: { name: 'Alpha' }, sequence: { code: 'SQ010' } },
+      { id: 5, name: 'Montage client', project: { name: 'Alpha' }, sequence: null },
+    ] as never);
+    const res = await searchEntities('SQ010', 1, Role.ADMIN);
+    expect(res.timelines).toEqual([
+      { id: 4, name: null, projectName: 'Alpha', sequenceCode: 'SQ010' },
+      { id: 5, name: 'Montage client', projectName: 'Alpha', sequenceCode: null },
+    ]);
+  });
+
+  it('rend un board avec le nom de ce qu’il illustre, projet ou asset', async () => {
+    vi.mocked(prisma.board.findMany).mockResolvedValue([
+      { id: 1, projectId: 3, assetId: null, project: { name: 'Alpha' }, asset: null },
+      { id: 2, projectId: null, assetId: 9, project: null, asset: { name: 'Robot' } },
+    ] as never);
+    const res = await searchEntities('alpha', 1, Role.ADMIN);
+    expect(res.boards).toEqual([
+      { id: 1, projectId: 3, assetId: null, name: 'Alpha' },
+      { id: 2, projectId: null, assetId: 9, name: 'Robot' },
+    ]);
+  });
+
+  it('rend la fiche avec son porteur et un extrait autour du terme cherché', async () => {
+    vi.mocked(prisma.entityNote.findMany).mockResolvedValue([
+      {
+        id: 7,
+        body: `${'x'.repeat(300)} le watermark reste visible ${'y'.repeat(300)}`,
+        episode: null,
+        sequence: null,
+        shot: { id: 12, code: 'SH0120' },
+        asset: null,
+      },
+    ] as never);
+    const res = await searchEntities('watermark', 1, Role.ADMIN);
+    expect(res.briefs[0]).toMatchObject({ id: 7, holder: 'shot', holderId: 12, label: 'SH0120' });
+    expect(res.briefs[0]!.excerpt).toContain('watermark');
+    expect(res.briefs[0]!.excerpt.length).toBeLessThan(200);
+  });
+
+  it('ne rend pas une fiche sans entité porteuse — elle n’ouvrirait aucune page', async () => {
+    vi.mocked(prisma.entityNote.findMany).mockResolvedValue([
+      { id: 8, body: 'fiche de projet', episode: null, sequence: null, shot: null, asset: null },
+    ] as never);
+    const res = await searchEntities('fiche', 1, Role.ADMIN);
+    expect(res.briefs).toEqual([]);
+  });
+
+  it('rend le département d’une tâche, sa clé à défaut de la relation', async () => {
+    vi.mocked(prisma.task.findMany).mockResolvedValue([
+      {
+        id: 1,
+        name: 'main',
+        type: 'MODELING',
+        shotId: 3,
+        assetId: null,
+        department: 'modeling',
+        departmentRef: { name: 'Modeling' },
+      },
+      {
+        id: 2,
+        name: 'main',
+        type: 'OTHER',
+        shotId: 4,
+        assetId: null,
+        department: 'setdress',
+        departmentRef: null,
+      },
+      { id: 3, name: 'main', type: 'OTHER', shotId: 5, assetId: null, department: null, departmentRef: null },
+    ] as never);
+    const res = await searchEntities('modeling', 1, Role.ADMIN);
+    expect(res.tasks.map((task) => task.departmentName)).toEqual(['Modeling', 'setdress', null]);
+  });
+
+  it('place la tâche NOMMÉE comp avant les tâches de l’étape Compositing', async () => {
+    vi.mocked(prisma.task.findMany).mockResolvedValue([
+      {
+        id: 1,
+        name: 'cleanup',
+        type: 'OTHER',
+        shotId: 3,
+        assetId: null,
+        department: 'comp',
+        departmentRef: { name: 'comp' },
+      },
+      {
+        id: 2,
+        name: 'comp',
+        type: 'COMP',
+        shotId: 4,
+        assetId: null,
+        department: 'comp',
+        departmentRef: { name: 'comp' },
+      },
+    ] as never);
+    const res = await searchEntities('comp', 1, Role.ADMIN);
+    expect(res.tasks.map((task) => task.id)).toEqual([2, 1]);
   });
 });
 
