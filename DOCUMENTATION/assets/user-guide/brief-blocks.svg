@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 372" role="img" aria-labelledby="title desc">
-  <title id="title">Each block of the brief editor corresponds to one piece of the markdown that is stored</title>
-  <desc id="desc">Four editor blocks on the left — a section, a text block, a references board and a gauge — each mapped by an arrow to the markdown it writes on the right: a heading, a paragraph, a refs directive with image keys, and a progress directive.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 372" width="800" height="372" role="img" aria-labelledby="brief-blocks-title brief-blocks-desc">
+  <title id="brief-blocks-title">Each block of the brief editor corresponds to one piece of the markdown that is stored</title>
+  <desc id="brief-blocks-desc">Four editor blocks on the left — a section, a text block, a references board and a gauge — each mapped by an arrow to the markdown it writes on the right: a heading, a paragraph, a refs directive with image keys, and a progress directive.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }

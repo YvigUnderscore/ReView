@@ -15,6 +15,59 @@ panel. Keep entries short and user-facing (features and notable fixes, not inter
   — their cards stayed empty however much work had been delivered — and the home page kept
   showing a project without its image. Both now follow the same rule as shots and assets.
 
+## 2026-08-28 — Change fifty shots at once, and find the setting you are looking for
+
+- **A status you can set on a whole selection.** Picking fifty shots and setting them to
+  *Ready for review* one by one was a morning's work; it is now one menu. The permission it
+  asks for is the one you actually hold **on that project** — a supervisor promoted on a
+  single show used to be refused because only the studio-wide role was read.
+- **A task created straight from the shot.** No more going round by the kanban to add the
+  one task that was missing: the shot and the asset both offer it where you are already
+  looking.
+- **Filters that survive the back button.** What you filtered a list by now lives in the
+  address, so a view can be shared, bookmarked and returned to.
+- **Settings you can search.** The admin pages are grouped, save group by group, and have a
+  search field — twenty-eight sections were becoming a memory exercise.
+- **A backup you can actually restore.** The archive now carries the `.env` it was encrypted
+  with; without it, a restore on a fresh machine had nothing to decrypt with. The frontal
+  also stops serving errors when a container comes back with a new address.
+
+## 2026-08-27 — Briefs you compose, and a crash that no longer takes the page with it
+
+- **The brief of a shot, written in blocks.** A section, a paragraph, a board of reference
+  images, a progress gauge: you assemble them, drag them into order, and what is stored stays
+  ordinary markdown that anything else can read. Images are uploaded into the brief itself,
+  and a studio template gives every new entity the same skeleton.
+- **An error stays where it happened.** A viewer that fails no longer blanks the whole
+  application: the workspace around it keeps working, and the page says what broke. An entity
+  that does not exist, or that you may not see, now gets a real screen instead of a dead end.
+- **Who is on a task, visible on the card.** Assignees show on the card, and the right-click
+  menu assigns without leaving the list.
+- **Dates in your language, labels for screen readers.** A pass over the interface: dates and
+  numbers follow the reader's locale, and controls that were only an icon now have a name.
+
+## 2026-08-26 — Production you can read at a glance
+
+- **Assign a person to a shot, not only to a task.** A task carries the work, an entity
+  carries the responsibility — the two are now separate, and the picker shows faces rather
+  than a list of look-alike names.
+- **Hide what the studio should not see.** An administration screen collects the elements
+  withdrawn from the product, by hand or by rule, and it is the only place they are managed.
+  A hidden element is hidden from everyone, administrators included.
+- **A card that says what you came to look for.** Cards carry their pipeline steps, lists
+  switch between cards and compact rows, and the choice is remembered per list and per
+  account.
+- **A brief that belongs to ReView.** The entity page carries its own markdown sheet next to
+  the description imported from ShotGrid: one can be made readable without losing the other.
+  The team working on that scope appears in the same header.
+- **Search that ranks by how well it matches.** Descriptions are searched too, and the
+  quality of the match decides the order — the field it was found in only breaks ties.
+- **A global trash, assets in columns, departments with a face.** Emptying is one gesture,
+  asset steps are compared side by side, departments carry an image, and a ShotGrid account
+  can be tied to a ReView one.
+- **Task visibility set per department.** A studio-level setting narrows the pipe to what a
+  person actually touches, without hiding the rest from those who need it.
+
 ## 2026-08-23 — The manual, rewritten and illustrated
 
 - **Documentation you can read by chapter.** The `/docs` page no longer lists seventy pages

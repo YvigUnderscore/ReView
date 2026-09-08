@@ -2,7 +2,7 @@
 
 *The note that carries the instructions for a sequence, a shot or an asset — written in blocks, with images uploaded into it.*
 
-> Updated: 2026-08-26
+> Updated: 2026-08-27
 
 Every sequence, shot and asset carries a **brief**: the note that says what is expected, what
 has been decided, and what the references look like. It belongs to ReView and to nothing else

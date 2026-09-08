@@ -15,9 +15,10 @@
  *      ancre `#chapitre` un titre réellement présent dans la page visée.
  *   3. **Images** — tout `![x](../assets/…)` désigne un fichier existant, et porte un texte
  *      alternatif (il devient la légende dans l'application).
- *   4. **Figures SVG** — bien formées, dimensionnées par `viewBox`, titrées (lecteur
- *      d'écran), et adaptées au thème sombre. Une figure lisible en clair seulement est
- *      illisible pour la moitié des lecteurs, le mode sombre étant le défaut de ReView.
+ *   4. **Figures SVG** — bien formées, dimensionnées (`viewBox` ET taille intrinsèque),
+ *      titrées sans identifiant générique (lecteur d'écran), et adaptées au thème sombre.
+ *      Une figure lisible en clair seulement est illisible pour la moitié des lecteurs,
+ *      le mode sombre étant le défaut de ReView.
  *   5. **Orphelines** — une figure que plus aucune page ne cite est du poids mort.
  *
  * Usage : node scripts/check-docs.mjs [--list]
@@ -91,15 +92,40 @@ export function references(markdown) {
 
 /**
  * Conventions d'une figure SVG. Contrôle textuel : un analyseur XML complet serait une
- * dépendance de plus pour une garantie que ces quatre motifs donnent déjà.
+ * dépendance de plus pour une garantie que ces quelques motifs donnent déjà.
+ *
+ * Ce qui se mesure au navigateur (chevauchement d'étiquettes, débordement du cadre) reste
+ * hors de portée d'ici et vit dans le contrôle géométrique — mais tout ce qui se lit dans
+ * le fichier doit être attrapé ici, seule barrière branchée sur `validate.sh`.
  */
 export function figureProblems(svg) {
   const problems = [];
   if (!/<svg[\s>]/.test(svg) || !/<\/svg>\s*$/.test(svg))
     problems.push('ne commence pas par <svg> ou ne finit pas par </svg>');
   if (!/viewBox="[\d\s.-]+"/.test(svg)) problems.push('sans viewBox (la figure ne se redimensionne pas)');
+
+  // `viewBox` seul donne un rapport d'aspect, pas une taille : posée dans un conteneur sans
+  // largeur, la figure retombe sur les 300×150 par défaut du navigateur et son contenu sort
+  // du cadre. Le cas s'est produit (brief-blocks.svg, 2026-08-27) et n'a été vu qu'au
+  // contrôle géométrique, faute d'être attrapé ici.
+  const racine = /<svg\b[^>]*>/.exec(svg)?.[0] ?? '';
+  if (!/\swidth="[\d.]+"/.test(racine) || !/\sheight="[\d.]+"/.test(racine))
+    problems.push(
+      'sans width/height sur la racine (taille intrinsèque absente : cadre de 300×150 par défaut)',
+    );
+
   if (!/<title[\s>]/.test(svg)) problems.push('sans <title> (illisible au lecteur d’écran)');
   if (!/role="img"/.test(svg)) problems.push('sans role="img"');
+
+  // Les figures d'une même page cohabitent dans un seul document : un `id="title"` générique
+  // fait pointer l'`aria-labelledby` de la seconde figure sur le titre de la première.
+  for (const generique of ['title', 'desc']) {
+    if (new RegExp(`id="${generique}"`).test(svg))
+      problems.push(
+        `id="${generique}" générique — préfixer par le nom de la figure (collision entre figures d’une page)`,
+      );
+  }
+
   if (!/prefers-color-scheme:\s*dark/.test(svg))
     problems.push('sans variante sombre (@media prefers-color-scheme)');
 

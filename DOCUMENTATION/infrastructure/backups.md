@@ -2,7 +2,7 @@
 
 *Take, verify and restore an incremental backup of the only two things that hold state — PostgreSQL and MinIO.*
 
-> Updated: 2026-08-23
+> Updated: 2026-08-28
 
 Two services hold all persistent state: **PostgreSQL** (metadata) and **MinIO** (media objects).
 They must be backed up **together** — the database stores MinIO object keys, and a restore that

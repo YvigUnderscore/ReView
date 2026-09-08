@@ -84,7 +84,7 @@ describe('references', () => {
 
 describe('figureProblems', () => {
   const svg = [
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" role="img" aria-labelledby="t">',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="100" height="50" role="img" aria-labelledby="t">',
     '<title id="t">Titre</title>',
     '<style>.a{fill:#111}@media (prefers-color-scheme: dark){.a{fill:#eee}}</style>',
     '<g><rect class="a" x="0" y="0" width="10" height="10"/></g>',
@@ -95,8 +95,35 @@ describe('figureProblems', () => {
     expect(figureProblems(svg)).toEqual([]);
   });
 
-  it('relève l’absence de viewBox, de titre, de rôle et de variante sombre', () => {
-    expect(figureProblems('<svg xmlns="x"><rect/></svg>')).toHaveLength(4);
+  it('relève l’absence de viewBox, de taille, de titre, de rôle et de variante sombre', () => {
+    expect(figureProblems('<svg xmlns="x"><rect/></svg>')).toHaveLength(5);
+  });
+
+  /**
+   * `viewBox` seul ne donne qu'un rapport d'aspect. Sans taille intrinsèque, la figure
+   * retombe sur les 300×150 par défaut du navigateur et son contenu sort du cadre — c'est
+   * ce qui est arrivé à `brief-blocks.svg`, seule des 146 à ne pas la déclarer.
+   */
+  it('exige une taille intrinsèque sur la racine, pas seulement un viewBox', () => {
+    const sansTaille = svg.replace(' width="100" height="50"', '');
+    expect(figureProblems(sansTaille).join(' ')).toMatch(/width\/height/);
+
+    // La taille d'un `<rect>` interne ne compte pas : seule celle de la racine dimensionne.
+    const rectSeul = svg.replace('viewBox="0 0 100 50" width="100" height="50"', 'viewBox="0 0 100 50"');
+    expect(figureProblems(rectSeul).join(' ')).toMatch(/width\/height/);
+  });
+
+  it('refuse les id génériques title et desc, qui se marchent dessus entre figures', () => {
+    const generique = svg
+      .replace('aria-labelledby="t"', 'aria-labelledby="title"')
+      .replace('id="t"', 'id="title"');
+    expect(figureProblems(generique).join(' ')).toMatch(/id="title" générique/);
+
+    const desc = svg.replace(
+      '<title id="t">Titre</title>',
+      '<title id="t">Titre</title><desc id="desc">D</desc>',
+    );
+    expect(figureProblems(desc).join(' ')).toMatch(/id="desc" générique/);
   });
 
   it('relève une balise laissée ouverte', () => {

@@ -2,7 +2,7 @@
 
 *Probes, metrics, alerts and logs — what to scrape, what to alert on, and what each signal actually means.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-01
 
 An instance of ReView is two Node processes (`backend` and `worker`) sitting on three stateful
 services (PostgreSQL, MinIO, Redis). Everything below exists to answer three questions in that
