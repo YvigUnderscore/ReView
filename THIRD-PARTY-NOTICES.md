@@ -12974,7 +12974,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### nodemailer@9.0.3
+### nodemailer@9.1.1
 
 - License: `MIT-0`
 - Source: https://github.com/nodemailer/nodemailer
