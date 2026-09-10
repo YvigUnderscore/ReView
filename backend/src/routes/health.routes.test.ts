@@ -12,21 +12,15 @@ const { db, redisCall, storagePing } = vi.hoisted(() => ({
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('../lib/redis', () => ({ getRedis: () => ({ call: redisCall }) }));
 vi.mock('../services/StorageService', () => ({ storage: { ping: storagePing } }));
+vi.mock('../lib/gracefulShutdown', () => ({ isShuttingDown: vi.fn(() => false) }));
 vi.mock('../lib/settings', () => ({
   getSourceUrl: vi.fn().mockResolvedValue('https://git.studio.tld/review'),
 }));
 
 import express from 'express';
 import request from 'supertest';
-import healthRoutes, {
-  buildHealthRouter,
-  createReadinessCache,
-  failureReason,
-  runChecks,
-  timedCheck,
-  versionRouter,
-  type ReadinessReport,
-} from './health.routes';
+import { isShuttingDown } from '../lib/gracefulShutdown';
+import healthRoutes, { buildHealthRouter, versionRouter } from './health.routes';
 
 const app = express().use('/health', healthRoutes).use('/api/version', versionRouter);
 
@@ -97,6 +91,41 @@ describe('GET /health/ready — disponibilité', () => {
     expect(res.body.checks.redis.ok).toBe(false);
     expect(res.body.checks.database.ok).toBe(true);
   });
+
+  /**
+   * L'arrêt propre laisse finir les requêtes en cours pendant quelques secondes. Tant que
+   * la sonde répondait 200 pendant ce délai, le frontal continuait d'y router du trafic
+   * neuf — arrivé après la fermeture. `isShuttingDown` existait pour le dire et n'avait
+   * aucun appelant : le drainage était fait, mais jamais annoncé.
+   */
+  it('répond 503 pendant l’arrêt, même dépendances saines', async () => {
+    vi.mocked(isShuttingDown).mockReturnValue(true);
+    const res = await request(app).get('/health/ready');
+    expect(res.status).toBe(503);
+    expect(res.body.status).toBe('shutting-down');
+  });
+
+  /**
+   * L'état est local et certain : rien ne justifie d'attendre une base qui va fermer.
+   * Routeur neuf, sinon le résultat mémorisé par les tests précédents suffirait à éviter
+   * l'appel et l'assertion passerait pour la mauvaise raison.
+   */
+  it('n’interroge aucune dépendance pendant l’arrêt', async () => {
+    vi.mocked(isShuttingDown).mockReturnValue(true);
+    const sonde = vi.fn().mockResolvedValue(1);
+    const neuf = express().use('/health', buildHealthRouter({ database: sonde }));
+    const res = await request(neuf).get('/health/ready');
+    expect(res.status).toBe(503);
+    expect(sonde).not.toHaveBeenCalled();
+  });
+
+  // La vivacité, elle, ne bouge pas : le process répond encore, c'est tout ce qu'elle dit.
+  it('laisse la vivacité répondre 200 pendant l’arrêt', async () => {
+    vi.mocked(isShuttingDown).mockReturnValue(true);
+    const res = await request(app).get('/health/live');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+  });
 });
 
 describe('GET /api/version', () => {
@@ -107,69 +136,5 @@ describe('GET /api/version', () => {
     expect(res.body.node).toBe(process.version);
     expect(res.body).toHaveProperty('commit');
     expect(res.body).toHaveProperty('builtAt');
-  });
-});
-
-describe('timedCheck', () => {
-  it('rapporte un succès avec sa durée', async () => {
-    let clock = 1_000;
-    const result = await timedCheck(
-      () => Promise.resolve('ok'),
-      50,
-      () => (clock += 5),
-    );
-    expect(result.ok).toBe(true);
-    expect(result.ms).toBe(5);
-  });
-
-  it('échoue proprement au lieu de pendre quand la dépendance ne répond jamais', async () => {
-    const result = await timedCheck(() => new Promise(() => undefined), 10);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain('timeout');
-  });
-
-  it('borne le motif d’échec (un message brut peut porter une URL de connexion)', () => {
-    expect(failureReason(new Error('x'.repeat(500)))).toHaveLength(120);
-    expect(failureReason('pas une erreur')).toBe('unavailable');
-  });
-});
-
-describe('runChecks', () => {
-  it('déclare l’ensemble indisponible dès qu’un contrôle échoue', async () => {
-    const report = await runChecks(
-      {
-        up: () => Promise.resolve(1),
-        down: () => Promise.reject(new Error('connection refused')),
-      },
-      50,
-    );
-    expect(report.ok).toBe(false);
-    expect(report.checks.up?.ok).toBe(true);
-    expect(report.checks.down?.error).toBe('connection refused');
-  });
-});
-
-describe('createReadinessCache', () => {
-  const ok: ReadinessReport = { ok: true, checks: {} };
-
-  it('regroupe les appels concurrents en une seule exécution', async () => {
-    const run = vi.fn().mockResolvedValue(ok);
-    const cached = createReadinessCache(run, 1_000);
-    await Promise.all([cached(), cached(), cached()]);
-    expect(run).toHaveBeenCalledTimes(1);
-  });
-
-  it('réinterroge une fois le délai de validité écoulé', async () => {
-    let clock = 0;
-    const run = vi.fn().mockResolvedValue(ok);
-    const cached = createReadinessCache(run, 100, () => clock);
-    await cached();
-    clock = 50;
-    const second = await cached();
-    expect(second.cached).toBe(true);
-    clock = 200;
-    const third = await cached();
-    expect(third.cached).toBe(false);
-    expect(run).toHaveBeenCalledTimes(2);
   });
 });

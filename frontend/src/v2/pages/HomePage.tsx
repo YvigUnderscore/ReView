@@ -52,7 +52,6 @@ export default function HomePage() {
   const pref: HomeWidgetsPref | undefined = prefsQ.data?.homeWidgets ?? undefined;
 
   const firstName = user?.firstName ?? user?.username ?? user?.displayName ?? '';
-  // « Reprendre » compact dans l'en-tête (remplace la ResumeCard pleine largeur).
   const lastMedia = useRecents((s) => s.recents.find((r) => r.type === 'media'));
   const hidden = hiddenWidgets(pref);
 
