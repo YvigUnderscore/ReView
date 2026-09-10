@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  compareSemver,
   normalizeVersion,
   readPackageVersion,
   resolveVersion,
@@ -84,5 +85,34 @@ describe('readPackageVersion', () => {
     const root = mkdtempSync(join(tmpdir(), 'review-version-bad-'));
     writeFileSync(join(root, 'package.json'), '{ pas du json');
     expect(readPackageVersion(root, 0)).toBeNull();
+  });
+});
+
+describe('compareSemver', () => {
+  it('ordonne numériquement, jamais lexicographiquement', () => {
+    // Le piège qui fait qu'une instance se croit à jour : « 2.10.0 » < « 2.9.0 » en texte.
+    expect(compareSemver('v2.10.0', 'v2.9.0')).toBeGreaterThan(0);
+    expect(compareSemver('2.9.0', '2.10.0')).toBeLessThan(0);
+    expect(compareSemver('v2.3.0', '2.3.0')).toBe(0);
+  });
+
+  it('place une pré-version avant la version stable de même noyau', () => {
+    expect(compareSemver('2.4.0-rc.1', '2.4.0')).toBeLessThan(0);
+    expect(compareSemver('2.4.0-rc.1', '2.4.0-rc.2')).toBeLessThan(0);
+    expect(compareSemver('2.4.0-rc.2', '2.4.0-rc.10')).toBeLessThan(0);
+    expect(compareSemver('2.4.0-alpha', '2.4.0-beta')).toBeLessThan(0);
+    // Étiquette numérique avant étiquette alphanumérique, et préfixe avant prolongement.
+    expect(compareSemver('2.4.0-1', '2.4.0-alpha')).toBeLessThan(0);
+    expect(compareSemver('2.4.0-rc.1', '2.4.0-rc.1.2')).toBeLessThan(0);
+  });
+
+  it('ignore les métadonnées de construction', () => {
+    expect(compareSemver('2.3.0+abc123', '2.3.0')).toBe(0);
+  });
+
+  it('ne jette rien sur une version qui n’en est pas une', () => {
+    // `install.sh` écrit « source » quand `git describe` échoue ; l'écran doit rester debout.
+    expect(compareSemver('source', '2.3.0')).toBeLessThan(0);
+    expect(compareSemver('0.0.0-unknown', '0.0.1')).toBeLessThan(0);
   });
 });

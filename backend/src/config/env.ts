@@ -109,6 +109,21 @@ const baseEnvSchema = z.object({
   // lève, pour ces hôtes précis, le refus des adresses non publiques. Vide par défaut,
   // et signalé bruyamment au démarrage — un site ShotGrid réel n'en a jamais besoin.
   SHOTGRID_INSECURE_HOSTS: z.string().optional(),
+  // Phase 49 — écran « Mises à jour & sauvegardes ». Dépôt dont les releases publiées
+  // sont proposées : un studio qui exploite son propre fork suit son propre dépôt.
+  RELEASE_REPO: z.string().default('YvigUnderscore/ReView'),
+  // Interrupteur pour une instance sans accès sortant. L'écran reste utile — il cesse
+  // seulement de demander à GitHub, et le dit, au lieu d'échouer sans expliquer pourquoi.
+  RELEASE_CHECK_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Jeton GitHub facultatif : quota d'API relevé (60 appels/h par IP sans jeton), et
+  // lecture d'un dépôt privé pour un studio qui n'a pas publié son fork.
+  RELEASE_GITHUB_TOKEN: z.string().optional(),
+  // Chemin, DANS le conteneur, du dossier que `scripts/backup.sh` remplit sur l'hôte.
+  // Absent : l'écran dit qu'il ne voit aucune sauvegarde, au lieu d'en inventer.
+  BACKUPS_DIR: z.string().optional(),
 });
 
 /** Un secret est « faible » s'il est trop court ou ressemble à un placeholder. */
