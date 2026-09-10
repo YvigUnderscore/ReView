@@ -85,6 +85,8 @@ export const qk = {
   adminVersions: (filter: string) => ['admin', 'versions', filter] as const,
   adminComments: (filter: string) => ['admin', 'comments', filter] as const,
   adminStorage: ['admin', 'storage'] as const,
+  adminOps: ['admin', 'ops'] as const,
+  adminOpsRun: (id: string) => ['admin', 'ops', 'run', id] as const,
   board: (scope: string, id: number) => ['board', scope, id] as const,
   hdris: ['hdris'] as const,
   ocioConfigs: ['ocio', 'configs'] as const,

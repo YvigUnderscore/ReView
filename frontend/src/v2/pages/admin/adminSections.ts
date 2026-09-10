@@ -76,6 +76,9 @@ export const adminSections = (t: Tr) =>
     // Slack et Discord : le même geste (« préviens l'équipe »), dont une moitié n'avait
     // aucun écran alors que l'API l'expose.
     { key: 'chat', group: 'communications', label: t('admin.tab.chat') },
+    // En tête de la maintenance : c'est le geste qu'on vient chercher quand une version
+    // paraît, et celui qu'on veut trouver sans le chercher le jour d'une panne.
+    { key: 'updates', group: 'maintenance', label: t('admin.tab.updates') },
     { key: 'jobs', group: 'maintenance', label: t('admin.tab.jobs') },
     { key: 'trash', group: 'maintenance', label: t('admin.tab.trash') },
     { key: 'retention', group: 'maintenance', label: t('admin.tab.retention') },

@@ -12,6 +12,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   Database,
+  DownloadCloud,
   Eye,
   Film,
   Fingerprint,
@@ -61,6 +62,7 @@ import MediaAccessTab from './admin/MediaAccessTab';
 import IdentityTab from './admin/IdentityTab';
 import LoginAppearanceTab from './admin/LoginAppearanceTab';
 import JobsTab from './admin/JobsTab';
+import UpdatesTab from './admin/UpdatesTab';
 import ReviewStatusTab from './admin/ReviewStatusTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
 import SmtpTab from './admin/SmtpTab';
@@ -108,6 +110,7 @@ const VIEWS: Record<AdminSectionKey, { icon: LucideIcon; Component: ComponentTyp
     'service-tokens': { icon: Bot, Component: ServiceTokensTab },
     shotgrid: { icon: Workflow, Component: ShotgridSitesTab },
     chat: { icon: MessagesSquare, Component: ChatTab },
+    updates: { icon: DownloadCloud, Component: UpdatesTab },
     jobs: { icon: ListChecks, Component: JobsTab },
     trash: { icon: Trash2, Component: TrashTab },
     retention: { icon: CalendarClock, Component: RetentionTab },

@@ -133,3 +133,51 @@ describe('mergeCatalog', () => {
     expect(content.replaceAll('\r\n', '')).not.toContain('\n');
   });
 });
+
+describe('un préfixe qui n’existe pas encore', () => {
+  /** Catalogue dont la DERNIÈRE entrée est plurielle : sa fermeture est `  }`, sans virgule. */
+  const ENDS_WITH_PLURAL = [
+    '{',
+    '  "admin.title": "Administration",',
+    '  "upload.count": {',
+    '    "one": "{count} file",',
+    '    "other": "{count} files"',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+
+  it('pose la clé APRÈS la dernière valeur, jamais dedans', () => {
+    // Le défaut que ce contrôle ferme : la recherche visait « la dernière ligne qui
+    // commence par une clé », qui est ici l'accolade OUVRANTE de la valeur plurielle
+    // finale. La clé nouvelle atterrissait au milieu d'elle et rendait les quatorze
+    // catalogues illisibles — donc l'application entière, dans toutes les langues.
+    const { content, written } = mergeCatalog(ENDS_WITH_PLURAL, { 'ops.title': { en: 'Updates' } }, 'en');
+    expect(written).toBe(1);
+    expect(JSON.parse(content)).toEqual({
+      'admin.title': 'Administration',
+      'upload.count': { one: '{count} file', other: '{count} files' },
+      'ops.title': 'Updates',
+    });
+  });
+
+  it('pose un lot entier de préfixe neuf, valeurs plurielles comprises', () => {
+    const batch = {
+      'ops.title': { en: 'Updates' },
+      'ops.count': { en: { one: '{count} run', other: '{count} runs' } },
+      'ops.done': { en: 'Done' },
+    };
+    const { content } = mergeCatalog(ENDS_WITH_PLURAL, batch, 'en');
+    expect(JSON.parse(content)).toMatchObject({
+      'ops.title': 'Updates',
+      'ops.count': { one: '{count} run', other: '{count} runs' },
+      'ops.done': 'Done',
+    });
+  });
+
+  it('pose la clé après une dernière entrée simple, comme avant', () => {
+    const simple = '{\n  "admin.title": "Administration"\n}\n';
+    const { content } = mergeCatalog(simple, { 'ops.title': { en: 'Updates' } }, 'en');
+    expect(JSON.parse(content)).toEqual({ 'admin.title': 'Administration', 'ops.title': 'Updates' });
+  });
+});

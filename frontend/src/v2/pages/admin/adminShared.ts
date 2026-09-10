@@ -59,6 +59,7 @@ export function auditActionLabel(action: string, t: Tr): string {
     PURGE: t('audit.purge'),
     RESTORE: t('audit.restore'),
     PUBLISH: t('audit.publish'),
+    VERIFY: t('audit.verify'),
     LOGIN: t('audit.login'),
   };
   const subj = subject ? subject.charAt(0) + subject.slice(1).toLowerCase().replace(/_/g, ' ') : action;

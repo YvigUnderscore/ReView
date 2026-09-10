@@ -84,7 +84,18 @@ export function mergeCatalog(raw, batch, locale) {
     }
     if (at < 0) {
       // En fin de fichier : l'ancienne dernière entrée prend sa virgule, la nouvelle non.
-      at = lines.reduce((acc, l, i) => (l.startsWith('  "') || l.trim() === '},' ? i : acc), -1);
+      //
+      // ⚠ On vise l'accolade finale du DOCUMENT, puis on remonte — et non « la dernière
+      // ligne qui commence par une clé ». La dernière entrée d'un catalogue peut être
+      // plurielle, donc s'étaler sur plusieurs lignes et se refermer sur `  }`, une forme
+      // que ni « commence par deux espaces et un guillemet » ni « vaut `},` » ne décrit :
+      // la recherche retombait alors sur l'accolade OUVRANTE de cette dernière valeur, et
+      // la clé nouvelle s'insérait au milieu d'elle. Les quatorze catalogues devenaient
+      // illisibles d'un coup, et l'application avec eux.
+      let close = lines.length - 1;
+      while (close > 0 && lines[close].trim() !== '}') close -= 1;
+      at = close - 1;
+      while (at > 0 && lines[at].trim() === '') at -= 1;
       lines[at] = `${lines[at].trimEnd().replace(/,$/, '')},`;
       lines.splice(at + 1, 0, line.slice(0, -1));
     } else {

@@ -34,6 +34,12 @@ export interface BackupEntry {
   dbBytes: number | null;
   /** Les secrets suivent-ils ? Sans eux, une restauration ailleurs rend des lignes illisibles. */
   envIncluded: boolean;
+  /**
+   * La commande exacte pour restaurer CETTE sauvegarde. Composée ici, jamais à l'écran :
+   * une ligne de shell appartient au module qui connaît les scripts, et un texte fabriqué
+   * dans un composant échapperait au contrôle des chaînes en dur.
+   */
+  restoreCommand: string;
 }
 
 export interface BackupCatalog {
@@ -91,6 +97,7 @@ async function readEntry(dir: string, id: string): Promise<BackupEntry | null> {
     fromRelease: manifest.app_version || null,
     dbBytes,
     envIncluded: manifest.env_included === 'yes',
+    restoreCommand: `bash scripts/restore.sh all backups/${id}`,
   };
 }
 

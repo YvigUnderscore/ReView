@@ -91,6 +91,7 @@ describe('list', () => {
       fromRelease: 'v2.3.0',
       dbBytes: 48_210_993,
       envIncluded: true,
+      restoreCommand: 'bash scripts/restore.sh all backups/20260910-030000',
     });
   });
 

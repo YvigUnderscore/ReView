@@ -45,6 +45,13 @@ export interface RunSummary {
   exitCode: number | null;
   backupId: string | null;
   agentVersion: string | null;
+  /**
+   * La commande de restauration correspondant à la sauvegarde de ce run, quand il y en a
+   * une. Composée ici et non à l'écran : une ligne de shell appartient au module qui
+   * connaît les scripts, et un texte fabriqué dans un composant échapperait au contrôle
+   * des chaînes en dur du frontend.
+   */
+  restoreCommand: string | null;
   /** Annuler a-t-il encore un sens ? Faux dès que la bascule est engagée. */
   cancellable: boolean;
 }
@@ -134,6 +141,7 @@ function summarize(status: NonNullable<Awaited<ReturnType<typeof readStatus>>>):
     exitCode: status.exitCode ?? null,
     backupId: status.backupId ?? null,
     agentVersion: status.agentVersion ?? null,
+    restoreCommand: status.backupId ? `bash scripts/restore.sh db backups/${status.backupId}` : null,
     cancellable: state === 'running' && CANCELLABLE_PHASES.has(status.phase ?? 'queued'),
   };
 }
@@ -223,6 +231,7 @@ async function queuedRuns(paths: { queue: string; state: string }): Promise<RunS
       exitCode: null,
       backupId: null,
       agentVersion: null,
+      restoreCommand: null,
       cancellable: true,
     };
   });
