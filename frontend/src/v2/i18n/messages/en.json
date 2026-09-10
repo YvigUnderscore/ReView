@@ -3429,5 +3429,6 @@
   "ops.backups.secrets": "Secrets included",
   "ops.backups.noSecrets": "No secrets — encrypted rows would stay unreadable elsewhere",
   "ops.backups.restoreHint": "Restoring is deliberately a terminal command:",
-  "ops.history.title": "Recent operations"
+  "ops.history.title": "Recent operations",
+  "ops.backups.createHint": "Dumps the database and mirrors the bucket into a new dated directory. The instance keeps running throughout."
 }

@@ -101,9 +101,11 @@ export default function OpsRunPanel({ runId, onDismiss }: { runId: string; onDis
             <Loader2 size={12} className="animate-spin" /> {t('ops.run.phase.queued')}
           </span>
         )}
+        {/* Chaque texte dans son propre élément : l'espacement d'une boîte flex ne sépare
+            que des ENFANTS, et deux nœuds de texte frères se rendaient collés l'un à l'autre. */}
         <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-          {run?.startedAt && t('ops.run.startedAt', { date: moment(run.startedAt) })}
-          {run?.requestedBy && t('ops.run.requestedBy', { name: run.requestedBy.displayName })}
+          {run?.startedAt && <span>{t('ops.run.startedAt', { date: moment(run.startedAt) })}</span>}
+          {run?.requestedBy && <span>{t('ops.run.requestedBy', { name: run.requestedBy.displayName })}</span>}
         </span>
       </div>
 

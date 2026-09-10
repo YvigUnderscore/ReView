@@ -3435,5 +3435,6 @@
   "ops.backups.secrets": "Secrets inclus",
   "ops.backups.noSecrets": "Sans secrets — les lignes chiffrées resteraient illisibles ailleurs",
   "ops.backups.restoreHint": "Restaurer reste volontairement une commande de terminal :",
-  "ops.history.title": "Opérations récentes"
+  "ops.history.title": "Opérations récentes",
+  "ops.backups.createHint": "Écrit un dump de la base et met à jour le miroir du bucket dans un nouveau dossier daté. L'instance continue de fonctionner pendant ce temps."
 }

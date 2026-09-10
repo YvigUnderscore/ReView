@@ -10,6 +10,7 @@ import {
   CANCELLABLE_PHASES,
   OPS_PROTOCOL,
   RUN_ID,
+  queuedOrderSchema,
   statusSchema,
   type OpsOrder,
   type RunState,
@@ -216,17 +217,23 @@ async function queuedRuns(paths: { queue: string; state: string }): Promise<RunS
   } catch {
     return [];
   }
-  return names.map((name) => {
-    const id = name.slice(0, -5);
+  // L'ordre est relu pour dire de QUOI il s'agit. Sans cela, l'écran annoncerait une
+  // opération « inconnue » entre le clic et le ramassage par l'agent — quelques secondes
+  // pendant lesquelles la personne qui vient de lancer une sauvegarde lit qu'on ne sait pas
+  // ce qui tourne. La file est la seule surface d'écriture du backend : il s'y relit.
+  const orders = await Promise.all(names.map((name) => readJson(join(paths.queue, name), queuedOrderSchema)));
+
+  return names.map((name, index) => {
+    const order = orders[index];
     return {
-      id,
-      kind: 'unknown',
-      target: null,
+      id: order?.id ?? name.slice(0, -5),
+      kind: order?.kind ?? 'unknown',
+      target: order?.params?.version ?? order?.params?.backupId ?? null,
       state: 'queued',
       phase: 'queued',
       reason: null,
-      requestedBy: null,
-      startedAt: null,
+      requestedBy: order?.actor ?? null,
+      startedAt: order?.createdAt ?? null,
       endedAt: null,
       exitCode: null,
       backupId: null,

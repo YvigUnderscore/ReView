@@ -3320,5 +3320,6 @@
   "ops.backups.secrets": "비밀 값 포함",
   "ops.backups.noSecrets": "비밀 값 없음 — 암호화된 행은 다른 곳에서 읽을 수 없습니다",
   "ops.backups.restoreHint": "복원은 의도적으로 터미널 명령으로 남겨 두었습니다:",
-  "ops.history.title": "최근 작업"
+  "ops.history.title": "최근 작업",
+  "ops.backups.createHint": "데이터베이스 덤프를 쓰고 버킷 미러를 날짜가 붙은 새 디렉터리에 갱신합니다. 그동안에도 인스턴스는 계속 동작합니다."
 }

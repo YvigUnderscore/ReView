@@ -52,6 +52,7 @@ and two of them add an id segment for their per-entity page, `/admin/users/<id>`
 | Communications | API & Webhooks | `/admin/api` | Personal API tokens of the studio and outgoing webhooks — see [Identity, API & audit](identity-and-api.md#api-tokens-studio-view--admin--communications--api--webhooks) |
 | Communications | Service tokens | `/admin/service-tokens` | Machine identities — render farm, pipeline daemon, bot — with their own role, project scope, expiry and fine-grained scopes — see [Identity, API & audit](identity-and-api.md#service-tokens--machine-identities) |
 | Communications | ShotGrid | `/admin/shotgrid` | Studio-wide ShotGrid sites and credentials — see [ShotGrid integration](shotgrid-integration.md) |
+| Maintenance | Updates | `/admin/updates` | Which release runs, what a newer one changes, and — with the operations agent — backing up and switching from here — see [Updates & backups](updates-and-backups.md) |
 | Maintenance | Jobs | `/admin/jobs` | BullMQ queues (retry, clean) and the derived-files purge — see [System & maintenance](system-and-maintenance.md#jobs--admin--maintenance--jobs) |
 | Maintenance | Trash | `/admin/trash` | Soft-deleted projects, restore and purge — see [System & maintenance](system-and-maintenance.md#trash-and-automatic-retention) |
 | Maintenance | Retention | `/admin/retention` | How long the nine journals are kept, and the on-demand sweep — see [Data retention](data-retention.md) |

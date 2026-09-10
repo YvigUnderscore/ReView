@@ -16,6 +16,16 @@ Nothing about that command assumes host ports, a TLS front, or a particular depl
 the readiness probe runs *inside* the backend container, and the compose files it acts on are
 the ones your `.env` already names.
 
+## From the admin area
+
+An instance that runs published images and has the operations agent installed does not need this
+command at all: **Admin → Maintenance → Updates** shows which release runs, the notes of every
+release published since, and a button that runs exactly what is described below — backup, switch,
+health gate, automatic rollback. See [Updates & backups](../admin-guide/updates-and-backups.md).
+
+That screen is also worth opening on an instance that has no agent: it still names the running
+release and prints the command to copy. What follows is what the command does, whoever pressed it.
+
 ## What it does, in order
 
 ![One run reads the current version, confirms, backs up, switches images or checkout, lets the backend migrate, then polls readiness inside the container; a ready instance keeps its backup, an unready one is rolled back automatically.](../assets/getting-started/update-run-sequence.svg)
@@ -48,6 +58,9 @@ pulls published images; otherwise it moves the git checkout and rebuilds.
 ![Seven rows compare the two modes: how each is chosen, the keys it needs, what switching means, whether a version is mandatory, its precondition, what a rollback restores, and its cost on the server.](../assets/getting-started/registry-vs-build.svg)
 
 ### Published images (recommended)
+
+`scripts/install.sh` proposes this mode by default and writes the three keys for you; answering
+`-` to the registry question falls back to building locally.
 
 No compilation on the studio's server: the release workflow publishes `review-backend`,
 `review-worker` and `review-frontend` for every tag. Point the instance at them once, in

@@ -12,7 +12,7 @@ import { Button } from '../../components/ui/button';
 import { Checkbox } from '../../components/ui/checkbox';
 import { QueryState } from '../../components/ui/query-state';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import { useT } from '../../i18n';
+import { useT, type Tr } from '../../i18n';
 import { Panel } from './AdminPrimitives';
 import BackupsPanel from './BackupsPanel';
 import CommandBlock from './CommandBlock';
@@ -63,6 +63,13 @@ const rememberedRun = (): string | null => {
     return null;
   }
 };
+
+/** Titre du dialogue de confirmation — un geste se nomme, il ne s'annonce pas « en cours ». */
+function confirmTitle(t: Tr, kind: OpsKind | undefined): string {
+  if (kind === 'update') return t('ops.update.confirmTitle');
+  if (kind === 'verify') return t('ops.backups.check');
+  return t('ops.backups.create');
+}
 
 interface Pending {
   kind: OpsKind;
@@ -191,15 +198,15 @@ export default function UpdatesTab() {
 
       <OpsConfirmDialog
         open={pending !== null}
-        title={pending?.kind === 'update' ? t('ops.update.confirmTitle') : t('ops.run.title')}
+        title={confirmTitle(t, pending?.kind)}
         body={
           pending?.kind === 'update'
             ? t('ops.update.confirmBody', { tag: pending.version ?? '' })
             : pending?.kind === 'verify'
               ? t('ops.backups.checkHint')
-              : t('ops.backups.create')
+              : t('ops.backups.createHint')
         }
-        confirmLabel={pending?.kind === 'update' ? t('common.confirm') : t('common.confirm')}
+        confirmLabel={t('common.confirm')}
         busy={start.isPending}
         extra={
           pending?.kind === 'update' ? (

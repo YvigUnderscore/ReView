@@ -3435,5 +3435,6 @@
   "ops.backups.secrets": "Secrets inclusits",
   "ops.backups.noSecrets": "Sens secrets — las linhas chifradas demorarián illegiblas endacòm mai",
   "ops.backups.restoreHint": "Restablir demòra a bèl esprèssi una comanda de terminal :",
-  "ops.history.title": "Operacions recentas"
+  "ops.history.title": "Operacions recentas",
+  "ops.backups.createHint": "Escriu un dump de la basa e met a jorn lo miralh del bucket dins un dorsièr novèl datat. L'instància contunha de foncionar pendent aqueste temps."
 }

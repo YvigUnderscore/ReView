@@ -81,6 +81,7 @@ export const PAGE_ORDER = {
     '3d-usd.md',
     '3d-alembic.md',
     'system-and-maintenance.md',
+    'updates-and-backups.md',
   ],
   api: ['overview.md', 'authentication.md', 'domains.md', 'v1-integration.md', 'python-client.md'],
   infrastructure: [

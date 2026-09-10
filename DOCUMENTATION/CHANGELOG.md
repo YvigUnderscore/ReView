@@ -3,6 +3,22 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-09-10 — See what a new release changes, and take it from the administration
+
+- **A screen that says which release you run, and what a newer one would change.** Admin →
+  Maintenance → Updates lists the notes of *every* release published since yours, not just the
+  last one — skipping three at once is the normal case, and what changes comes from all three.
+- **Back up in one click, and check that the backup is real.** The list shows when each one was
+  taken, how large the dump is, which release it came from, and whether the secrets travel with
+  it. *Check* restores it into a throwaway database and counts what comes out: a backup that has
+  never been restored is not a backup.
+- **Update without opening a terminal.** The instance backs up, switches, waits until it reports
+  itself healthy, and puts the previous release back by itself if it does not come up. The screen
+  keeps following the operation *through the cut* — the API it was talking to is the one being
+  replaced — and picks the output back up where it stopped.
+- **Nothing here is ever a greyed-out button.** An instance that cannot act on itself prints the
+  exact command to run instead, with a copy button. That half of the screen works everywhere.
+
 ## 2026-08-28 — Cards carry their name until they carry an image
 
 - **A card with no image now shows its name.** Projects, episodes, sequences, shots and

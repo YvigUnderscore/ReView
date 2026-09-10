@@ -51,6 +51,27 @@ alerting that fires instead of being suggested.
   (`./monitoring/rules:/etc/prometheus/rules:ro`); without the mount, Prometheus still
   starts and the rules are simply absent.
 
+- **Updates and backups from the administration.** `bash scripts/ops-agent.sh install`
+  starts a small operations agent, mounts the backup directory and the order spool into the
+  backend, and lets **Admin → Maintenance → Updates** back up and switch releases. The agent
+  holds `/var/run/docker.sock` — equivalent to root on that machine — so it is optional and
+  installed deliberately; its permissions live in `deploy/agent.conf`, which no container of
+  the application mounts. Without it the screen still names the running release, lists the
+  published ones with their notes, and prints the exact commands.
+- **`scripts/install.sh` now proposes published images by default** (`--images`,
+  `--image-tag`), and writes `REVIEW_ROOT` and `COMPOSE_PROJECT_NAME` into `.env`. On an
+  instance installed earlier, add those two keys before installing the agent — it mounts the
+  repository at that exact host path, and `scripts/backup.sh` passes its own `pwd` to
+  `docker run`, which the daemon resolves host-side.
+- **Fixed: the automatic rollback was unreachable** in the most common failure. `worker` and
+  `frontend` both depend on `backend: service_healthy`; a failed Prisma migration made
+  `docker compose up -d` exit non-zero, and `set -e` killed `update.sh` before its rollback
+  section. Nothing to do — just re-read the script if you had copied it.
+- **Fixed: published images could never be built.** The release workflow used the repository
+  owner verbatim, and an OCI reference does not accept an uppercase path. Registry mode is
+  usable for the first time; images also carry their version, commit and build date, which
+  `GET /api/version` had been reporting as `null`.
+
 ### Migrations
 
 None.

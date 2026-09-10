@@ -145,6 +145,22 @@ export const statusSchema = z.object({
   agentVersion: z.string().nullish(),
 });
 
+/**
+ * Un ordre relu depuis la file. Le backend l'y a écrit lui-même, mais il le relit pour dire
+ * de QUOI il s'agit tant que l'agent ne l'a pas ramassé — sans quoi l'écran annoncerait une
+ * opération « inconnue » pendant les secondes qui suivent le clic, ce qui est faux et
+ * inquiétant. Schéma tolérant, comme le statut : un ordre déposé par une version antérieure
+ * doit rester lisible.
+ */
+export const queuedOrderSchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  createdAt: z.string().nullish(),
+  expiresAt: z.string().nullish(),
+  actor: z.object({ id: z.number(), displayName: z.string() }).nullish(),
+  params: z.object({ version: z.string().nullish(), backupId: z.string().nullish() }).partial().nullish(),
+});
+
 /** L'état de l'agent (`ops/state/agent.json`), écrit à chaque battement. */
 export const agentSchema = z.object({
   protocol: z.number().int(),

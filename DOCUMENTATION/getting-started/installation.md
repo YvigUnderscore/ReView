@@ -88,6 +88,13 @@ cp deploy/letsencrypt/live/<domain>/{fullchain,privkey}.pem nginx/certs/
 docker compose restart nginx
 ```
 
+### Two questions worth knowing in advance
+
+| Question | Default | What it decides |
+|----------|---------|-----------------|
+| Registry prefix (`--images`, `--image-tag`) | `ghcr.io/yvigunderscore` | Published images are pulled instead of built on your server. Building compiles gigabytes locally and makes in-app updates unreasonable on a NAS; answer `-` to build anyway. |
+| Operations agent (`--ops-agent`) | yes | Whether the administration can back up and switch releases by itself. The agent holds the docker socket, which is equivalent to root on that machine — see [Updates & backups](../admin-guide/updates-and-backups.md#turning-the-agent-on). |
+
 ## What the installer writes, and what it never touches
 
 **No versioned file is modified.** Everything specific to your site goes to `.env` (mode

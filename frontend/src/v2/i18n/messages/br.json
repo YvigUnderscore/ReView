@@ -3445,5 +3445,6 @@
   "ops.backups.secrets": "Kevrinoù enni",
   "ops.backups.noSecrets": "Hep kevrinoù — dilenn e chomfe al linennoù sifret e lec'h all",
   "ops.backups.restoreHint": "A-ratozh e chom an assevel un urzhiad termenell :",
-  "ops.history.title": "Oberiadennoù nevez"
+  "ops.history.title": "Oberiadennoù nevez",
+  "ops.backups.createHint": "Skrivañ a ra un dump eus an diaz ha hizivaat melezour ar bucket en un teuliad nevez deiziataet. An instañs a gendalc'h da vont e-pad an amzer-se."
 }

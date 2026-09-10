@@ -141,6 +141,20 @@ bash scripts/backup.sh
 docker compose start backend worker
 ```
 
+## The catalogue the administration reads
+
+**Admin → Maintenance → Updates** lists these directories when `BACKUPS_DIR` points at them —
+`scripts/ops-agent.sh install` mounts them read-only and sets the variable. With the operations
+agent present, the same screen can take a backup and verify one.
+
+The application opens **`manifest.txt` and nothing else**, and that is a deliberate limit rather
+than an economy: the directory also holds `env.backup`, a copy of the instance secrets, and
+`db.dump`, which is the whole database. The size of the dump is read with `stat`, never by
+opening it, and a test asserts that no other file is ever opened.
+
+Without `BACKUPS_DIR`, the screen says it cannot see the directory — which is not the same
+answer as "there is no backup", and confusing the two would let an operator believe they have none.
+
 ## Restoring
 
 ```bash
@@ -225,6 +239,11 @@ is the signal to investigate.
 A full drill goes one step further: restore both halves into a throwaway stack (a separate
 `COMPOSE_PROJECT`), open the application, and play one video and one 3D media. That is the only
 check that proves the object keys stored in the database still resolve to objects.
+
+> [!CAUTION]
+> `verify` is a full `pg_restore`, and it runs on the PostgreSQL server that serves the studio.
+> On a large database, prefer quiet hours — whether you launch it from a terminal or from the
+> administration.
 
 ## Disaster recovery, in order
 

@@ -178,7 +178,14 @@ describe('listRuns et activeRun', () => {
     statusFile(state, '20260909-100000-000001', { state: 'succeeded', phase: 'done', endedAt: 'x' });
     const runs = await listRuns();
     expect(runs.map((r) => r.id)).toEqual([ID, '20260909-100000-000001']);
-    expect(runs[0]?.state).toBe('queued');
+    // L'ordre est relu : entre le clic et le ramassage par l'agent, l'écran doit dire de
+    // QUOI il s'agit — pas « opération inconnue » à la personne qui vient de la lancer.
+    expect(runs[0]).toMatchObject({
+      state: 'queued',
+      kind: 'update',
+      target: 'v2.4.0',
+      requestedBy: { id: 3, displayName: 'ops@studio.tld' },
+    });
   });
 
   it('tient pour « sans nouvelles » une exécution dont l’agent ne bat plus', async () => {

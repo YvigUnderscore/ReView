@@ -3429,5 +3429,6 @@
   "ops.backups.secrets": "Geheimnisse enthalten",
   "ops.backups.noSecrets": "Ohne Geheimnisse — verschlüsselte Zeilen blieben anderswo unlesbar",
   "ops.backups.restoreHint": "Das Einspielen bleibt bewusst ein Terminalbefehl:",
-  "ops.history.title": "Letzte Vorgänge"
+  "ops.history.title": "Letzte Vorgänge",
+  "ops.backups.createHint": "Schreibt einen Dump der Datenbank und spiegelt den Bucket in ein neues datiertes Verzeichnis. Die Instanz läuft dabei weiter."
 }

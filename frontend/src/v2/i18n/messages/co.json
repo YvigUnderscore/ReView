@@ -3429,5 +3429,6 @@
   "ops.backups.secrets": "Sicreti inclusi",
   "ops.backups.noSecrets": "Senza sicreti — e linee cifrate resterianu illeghjibule altrò",
   "ops.backups.restoreHint": "U ristabilimentu resta apposta un cumandu di terminale :",
-  "ops.history.title": "Operazione recente"
+  "ops.history.title": "Operazione recente",
+  "ops.backups.createHint": "Scrive un dump di a basa è mette à ghjornu u spechju di u bucket in un cartulare novu datatu. L'istanza cuntinueghja à funziunà durante stu tempu."
 }
