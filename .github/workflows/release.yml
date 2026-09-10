@@ -149,6 +149,13 @@ jobs:
             context: .
             dockerfile: ./frontend/Dockerfile
             usd: '0'
+          # Agent d'exploitation : ~40 Mo, aucune dépendance du produit. C'est lui qui
+          # détient le socket docker chez le studio — il est donc construit à part, et
+          # reste auditable d'un coup d'œil (ops/Dockerfile, ops/agent.sh).
+          - image: review-ops
+            context: ./ops
+            dockerfile: ./ops/Dockerfile
+            usd: '0'
     steps:
       - uses: actions/checkout@v5
 

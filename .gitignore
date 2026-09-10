@@ -55,4 +55,8 @@ deploy/
 
 # File d'ordres et journaux d'exécution de l'agent (Admin → Mises à jour). Contient le nom
 # des personnes qui ont commandé une opération : rien qui doive partir dans un dépôt.
-ops/
+#
+# ⚠ Ces deux lignes seulement, jamais `ops/` : le dossier porte AUSSI la source de l'agent
+# (ops/Dockerfile, ops/agent.sh), que `.github/workflows/release.yml` construit.
+ops/queue/
+ops/state/

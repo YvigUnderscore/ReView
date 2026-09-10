@@ -29,7 +29,14 @@
 #
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Le dépôt : celui qui contient ce script, sauf si `REVIEW_ROOT` en désigne un autre.
+#
+# Cette dérogation existe pour une raison précise. En mode construction, ce script fait
+# `git checkout`, ce qui RÉÉCRIT le fichier que bash est en train de lire au fil de l'eau :
+# l'interpréteur reprend alors sa lecture à un décalage devenu faux, dans un fichier
+# différent. L'agent d'exploitation copie donc ce script hors du dépôt avant de le lancer,
+# et lui dit par cette variable où le dépôt se trouve vraiment.
+ROOT="${REVIEW_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$ROOT"
 
 TARGET=""

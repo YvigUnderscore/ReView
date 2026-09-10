@@ -76,6 +76,7 @@ import liveRoutes from './routes/live.routes';
 import productionRoutes from './routes/production.routes';
 import serviceTokensRoutes from './routes/service-tokens.routes';
 import adminOpsRoutes from './routes/admin-ops.routes';
+import adminOpsRunsRoutes from './routes/admin-ops-runs.routes';
 import v1Routes from './routes/v1';
 import shotgridConfigRoutes from './routes/shotgrid-config.routes';
 import shotgridSyncRoutes from './routes/shotgrid-sync.routes';
@@ -310,6 +311,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
   app.use('/api/admin/service-tokens', serviceTokensRoutes); // identités machine (API v1)
   app.use('/api/admin/jobs', jobsRoutes); // dashboard BullMQ (37.C)
+  app.use('/api/admin/ops', adminOpsRunsRoutes); // commande et suivi d'une opération (49)
   app.use('/api/admin/ops', adminOpsRoutes); // version en service, releases, sauvegardes (49)
   app.use('/api/admin', adminExplorerRoutes); // fiches détaillées par entité (refonte admin)
   app.use('/api/admin', adminRoutes);

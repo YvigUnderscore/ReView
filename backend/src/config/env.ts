@@ -124,6 +124,19 @@ const baseEnvSchema = z.object({
   // Chemin, DANS le conteneur, du dossier que `scripts/backup.sh` remplit sur l'hôte.
   // Absent : l'écran dit qu'il ne voit aucune sauvegarde, au lieu d'en inventer.
   BACKUPS_DIR: z.string().optional(),
+  // File d'ordres de l'agent d'exploitation. Deux chemins DISTINCTS et non un seul : le
+  // backend écrit dans la file et ne lit l'état qu'en lecture seule (le montage l'impose).
+  // Sans cette asymétrie, un backend compromis — il tourne en root et traite des fichiers
+  // d'utilisateurs — pourrait pré-poser un lien dans l'état et faire écrire le démon
+  // docker n'importe où sur l'hôte. Absents : l'exécution est éteinte, l'écran le dit.
+  OPS_QUEUE_DIR: z.string().optional(),
+  OPS_STATE_DIR: z.string().optional(),
+  // Au-delà de ce silence, l'agent est réputé mort — et une opération « en cours » depuis
+  // plus longtemps devient « issue inconnue » plutôt que de tourner à l'écran pour toujours.
+  OPS_AGENT_STALE_SEC: z.coerce.number().int().positive().default(90),
+  // Péremption d'un ordre non ramassé : une mise à jour qui se déclenche une heure après
+  // le clic est une surprise, pas un service.
+  OPS_ORDER_TTL_SEC: z.coerce.number().int().positive().default(900),
 });
 
 /** Un secret est « faible » s'il est trop court ou ressemble à un placeholder. */

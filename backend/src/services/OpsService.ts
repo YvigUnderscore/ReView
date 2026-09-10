@@ -5,6 +5,8 @@ import { getSourceUrl } from '../lib/settings';
 import { appVersion, compareSemver } from '../lib/version';
 import * as BackupCatalogService from './BackupCatalogService';
 import type { BackupCatalog } from './BackupCatalogService';
+import * as OpsSpoolService from './OpsSpoolService';
+import type { Mechanism, RunSummary } from './OpsSpoolService';
 import * as ReleaseService from './ReleaseService';
 import type { ReleaseError, ReleaseInfo } from './ReleaseService';
 
@@ -41,8 +43,13 @@ export interface OpsOverview {
   release: { checkedAt: string | null; error: ReleaseError | null };
   updateAvailable: boolean;
   backups: BackupCatalog;
+  /** L'instance sait-elle agir sur elle-même, et jusqu'où ? */
+  mechanism: Mechanism;
+  /** L'opération en cours, s'il y en a une : c'est elle qui tient l'écran. */
+  activeRun: RunSummary | null;
+  recentRuns: RunSummary[];
   /** Les commandes exactes, pour l'exploitant qui préfère — ou doit — passer par un terminal. */
-  commands: { update: string | null; backup: string };
+  commands: { update: string | null; backup: string; enableAgent: string };
 }
 
 /** Le mode se lit dans l'environnement, comme `scripts/update.sh` le lit dans `.env`. */
@@ -51,10 +58,12 @@ export function updateMode(environment: NodeJS.ProcessEnv = process.env): Update
 }
 
 export async function overview(): Promise<OpsOverview> {
-  const [{ releases, checkedAt, error }, backups, source] = await Promise.all([
+  const [{ releases, checkedAt, error }, backups, source, mechanism, recentRuns] = await Promise.all([
     ReleaseService.catalog(),
     BackupCatalogService.list(),
     getSourceUrl(),
+    OpsSpoolService.mechanism(),
+    OpsSpoolService.listRuns(10),
   ]);
 
   const latest = ReleaseService.latestOf(releases);
@@ -74,9 +83,13 @@ export async function overview(): Promise<OpsOverview> {
     release: { checkedAt, error },
     updateAvailable: latest !== null && compareSemver(latest.tag, appVersion.version) > 0,
     backups,
+    mechanism,
+    activeRun: recentRuns.find((r) => r.state === 'queued' || r.state === 'running') ?? null,
+    recentRuns,
     commands: {
       update: latest ? `bash scripts/update.sh --version ${latest.tag}` : null,
       backup: 'bash scripts/backup.sh',
+      enableAgent: 'bash scripts/ops-agent.sh install',
     },
   };
 }

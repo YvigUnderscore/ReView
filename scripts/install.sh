@@ -36,6 +36,9 @@ TLS_MODE=""
 LE_EMAIL=""
 TIMEZONE=""
 DATA_ROOT=""
+IMAGE_PREFIX=""
+IMAGE_TAG=""
+OPS_AGENT=""
 INTERACTIVE=1
 FORCE=0
 
@@ -51,6 +54,12 @@ while [ $# -gt 0 ]; do
     --timezone=*) TIMEZONE="${1#*=}"; shift ;;
     --data-root) DATA_ROOT="${2:?--data-root attend une valeur}"; shift 2 ;;
     --data-root=*) DATA_ROOT="${1#*=}"; shift ;;
+    --images) IMAGE_PREFIX="${2:?--images attend un préfixe de registre}"; shift 2 ;;
+    --images=*) IMAGE_PREFIX="${1#*=}"; shift ;;
+    --image-tag) IMAGE_TAG="${2:?--image-tag attend une étiquette}"; shift 2 ;;
+    --image-tag=*) IMAGE_TAG="${1#*=}"; shift ;;
+    --ops-agent) OPS_AGENT=yes; shift ;;
+    --no-ops-agent) OPS_AGENT=no; shift ;;
     --non-interactive) INTERACTIVE=0; shift ;;
     --force) FORCE=1; shift ;;
     -h|--help) sed -n '5,30p' "$0"; exit 0 ;;
@@ -114,6 +123,28 @@ HOST_TZ="$(cat /etc/timezone 2>/dev/null || true)"
 TIMEZONE="$(ask "Fuseau horaire (horodatage des digests et des burn-ins)" "${HOST_TZ:-UTC}" "$TIMEZONE")"
 DATA_ROOT="$(ask "Racine des données persistantes (base + médias)" "$ROOT/data" "$DATA_ROOT")"
 
+# ── Images publiées ou construction locale ───────────────────────────────────
+#
+# Le défaut a changé : les images publiées. Construire sur le serveur du studio demande de
+# compiler 3,6 Go (l'image worker embarque Blender), donne un résultat qui dépend de la
+# date de construction, et rend toute mise à jour depuis l'interface déraisonnable sur un
+# NAS. Répondre « - » retombe sur la construction locale.
+IMAGE_PREFIX="$(ask "Images publiées : préfixe de registre (« - » pour construire sur place)" "ghcr.io/yvigunderscore" "$IMAGE_PREFIX")"
+case "$IMAGE_PREFIX" in -|none|no) IMAGE_PREFIX="" ;; esac
+if [ -n "$IMAGE_PREFIX" ]; then
+  IMAGE_TAG="$(ask "Étiquette de version à installer (ex. v2.3.0)" "$IMAGE_TAG" "$IMAGE_TAG")"
+  [ -n "$IMAGE_TAG" ] || die "en mode registre, l'étiquette est obligatoire : pas de « latest » implicite en production (voir CHANGELOG.md)."
+fi
+
+# ── Agent d'exploitation ─────────────────────────────────────────────────────
+#
+# La question est posée en clair parce que la réponse a une conséquence réelle : l'agent
+# monte le socket docker, ce qui vaut root sur cette machine. En échange, l'administration
+# sait sauvegarder et basculer de version sans qu'on ouvre un terminal. Sans lui, l'écran
+# reste lisible et affiche les commandes.
+OPS_AGENT="$(ask "Agent d'exploitation (sauvegardes et mises à jour depuis l'interface) : oui/non" "oui" "$OPS_AGENT")"
+case "$OPS_AGENT" in o|O|oui|y|Y|yes|true) OPS_AGENT=yes ;; *) OPS_AGENT=no ;; esac
+
 # En mode « none », la pile n'a pas de frontal : le frontend est publié sur son port hôte
 # et MinIO doit rester joignable des navigateurs (aucun nginx ne le sert). C'est le mode
 # d'une instance placée derrière un proxy TLS déjà en place (TrueNAS, Traefik, un nginx
@@ -155,6 +186,14 @@ if [ "$TLS_MODE" = "none" ]; then
 else
   COMPOSE_FILES="docker-compose.yml:docker-compose.prod.yml:deploy/compose.site.yml"
 fi
+# En mode registre, la surcouche qui remplace `build:` par `image:`. Elle se place APRÈS la
+# surcouche de production et AVANT celle du site : l'ordre décide de qui l'emporte.
+if [ -n "$IMAGE_PREFIX" ]; then
+  COMPOSE_FILES="${COMPOSE_FILES%:deploy/compose.site.yml}:docker-compose.release.yml:deploy/compose.site.yml"
+fi
+# Les montages du backend (sauvegardes, file d'ordres) : posés par ops-agent.sh, qui
+# complète COMPOSE_FILE lui-même. Rien à ajouter ici — et surtout jamais
+# docker-compose.ops.yml, qui appartient à un projet séparé.
 
 cat > .env <<ENV
 # ReView — configuration de cette instance, écrite par scripts/install.sh le $(date -Iseconds).
@@ -176,9 +215,17 @@ $([ "$TLS_MODE" = "none" ] && echo "MINIO_BIND=0.0.0.0" || echo "# MinIO n'est j
 TZ=$TIMEZONE
 DATA_ROOT=$DATA_ROOT
 
+# Chemin du dépôt sur CETTE machine, et nom du projet compose. Les deux servent à l'agent
+# d'exploitation : il monte le dépôt à ce chemin exact — scripts/backup.sh passe son pwd
+# tel quel à « docker run -v », que le démon résout côté hôte — et retrouve les conteneurs
+# par ce préfixe quand « docker compose ps » ne les lui donne pas.
+REVIEW_ROOT=$ROOT
+COMPOSE_PROJECT_NAME=$(basename "$ROOT" | tr '[:upper:]' '[:lower:]')
+
 # Version en service : lue par l'API (/api/version), l'écran « À propos » et la
 # supervision. scripts/update.sh la réécrit à chaque bascule.
-APP_VERSION=$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null || echo "source")
+APP_VERSION=${IMAGE_TAG:-$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null || echo "source")}
+$([ -n "$IMAGE_PREFIX" ] && printf 'REVIEW_IMAGE_PREFIX=%s\nREVIEW_IMAGE_TAG=%s\nREVIEW_OPS_IMAGE=%s/review-ops:%s' "$IMAGE_PREFIX" "$IMAGE_TAG" "$IMAGE_PREFIX" "$IMAGE_TAG" || echo "# Construction locale : pas d'images publiées (voir DOCUMENTATION/getting-started/updating.md).")
 
 JWT_SECRET=$JWT_SECRET
 APP_ENCRYPTION_KEY=$APP_ENCRYPTION_KEY
@@ -199,6 +246,13 @@ ok ".env écrit (droits 600)"
 say "Configuration du site"
 mkdir -p deploy "$DATA_ROOT/postgres" "$DATA_ROOT/minio" "$DATA_ROOT/redis"
 ok "données persistantes : $DATA_ROOT"
+
+# Sauvegardes et file d'ordres. `backups/` contient une copie de .env — donc les secrets de
+# l'instance — et `ops/` porte le nom des personnes qui commandent une opération : ni l'un
+# ni l'autre n'est lisible par le tout-venant de la machine.
+mkdir -p backups ops/queue ops/state
+chmod 700 backups ops ops/queue ops/state 2>/dev/null || true
+ok "sauvegardes et file d'ordres : $ROOT/backups, $ROOT/ops"
 
 # nginx/nginx.conf est un fichier VERSIONNÉ : on ne le modifie pas (une mise à jour par
 # git s'y casserait les dents). On en rend une copie dans deploy/, que la surcouche
@@ -283,6 +337,23 @@ if [ "$READY" -ne 1 ]; then
   die "l'API n'est pas devenue disponible en 5 minutes. Diagnostic : docker compose logs --tail=100 backend"
 fi
 ok "base, Redis et stockage joignables depuis l'API"
+
+# ── 7. Agent d'exploitation ──────────────────────────────────────────────────
+#
+# Posé en dernier, et jamais bloquant : une instance dont l'agent ne démarre pas reste une
+# instance qui fonctionne. Ce qu'on perdrait, ce sont les boutons — pas le service.
+if [ "$OPS_AGENT" = "yes" ]; then
+  say "Agent d'exploitation"
+  if [ -z "$IMAGE_PREFIX" ]; then
+    warn "mode construction : l'agent n'est pas installé (son image n'est pas publiée ici)."
+    warn "Sauvegardes et mises à jour restent des commandes : scripts/backup.sh, scripts/update.sh."
+  elif bash scripts/ops-agent.sh install; then
+    ok "l'administration peut sauvegarder et basculer de version"
+  else
+    warn "l'agent n'a pas démarré — l'instance fonctionne, l'écran affichera les commandes."
+    warn "Diagnostic : bash scripts/ops-agent.sh status"
+  fi
+fi
 
 say "Installation terminée"
 cat <<SUMMARY

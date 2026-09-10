@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Agent d'exploitation — un projet compose À PART (`review-ops`), jamais dans `COMPOSE_FILE`.
+#
+# ⚠ C'est l'invariant central de tout le dispositif. `scripts/update.sh` lance
+# `docker compose up -d` SANS liste de services : tout ce qui appartient au projet principal
+# est recréé. Un agent déclaré dans cette pile se détruirait donc au milieu de sa propre
+# exécution — l'instance resterait à moitié basculée, et personne ne jouerait le retour
+# arrière. Deux garde-fous le rappellent : `scripts/ops-agent.sh install` refuse de
+# s'installer si `.env` mentionne ce fichier, et `scripts/ops-agent.test.mjs` le vérifie.
+#
+# Ce fichier ne se lance donc jamais seul :
+#   bash scripts/ops-agent.sh install     # démarre l'agent
+#   bash scripts/ops-agent.sh status      # ce qu'il voit
+#   bash scripts/ops-agent.sh logs
+#
+# Le `:?` est ici sans danger, précisément parce que ce fichier n'entre dans aucune autre
+# commande compose.
+services:
+  ops:
+    image: ${REVIEW_OPS_IMAGE:?REVIEW_OPS_IMAGE requis (ex. ghcr.io/yvigunderscore/review-ops:v2.4.0)}
+    container_name: review-ops-agent
+    volumes:
+      # Le socket du démon : c'est tout le privilège de ce conteneur, et la raison pour
+      # laquelle il est seul à l'avoir. Le backend, joignable depuis internet, ne l'a jamais.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Source relative (résolue par le client compose contre le répertoire de projet, donc
+      # le dépôt sur l'hôte) → cible ABSOLUE, identique au chemin hôte.
+      #
+      # Ce n'est pas une coquetterie : `scripts/backup.sh` calcule son `pwd` et le passe tel
+      # quel à `docker run -v "$HOST_DIR:/backup"`, que le DÉMON résout côté hôte. Monté
+      # ailleurs, le miroir MinIO écrirait dans un répertoire vide, sans une seule erreur —
+      # et on ne s'en apercevrait que le jour de la restauration. L'agent vérifie d'ailleurs
+      # ce point par fichier témoin avant d'accepter le moindre ordre.
+      - .:${REVIEW_ROOT:?REVIEW_ROOT requis (chemin absolu du dépôt sur la machine hôte)}
+    working_dir: ${REVIEW_ROOT}
+    environment:
+      REVIEW_ROOT: ${REVIEW_ROOT}
+      REVIEW_OPS_IMAGE: ${REVIEW_OPS_IMAGE}
+      OPS_POLL_SEC: ${OPS_POLL_SEC:-2}
+      OPS_MAX_RUNTIME: ${OPS_MAX_RUNTIME:-3600}
+      TZ: ${TZ:-Europe/Paris}
+    # Aucun réseau : `pull`, `run` et `exec` sont exécutés par le DÉMON, pas par ce
+    # conteneur. Un agent qui détient le socket n'a aucune raison de pouvoir, en plus,
+    # émettre des requêtes — c'est la moitié d'une exfiltration en moins.
+    network_mode: "none"
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    restart: unless-stopped
