@@ -73,6 +73,33 @@ describe('workflow de release', () => {
     expect(RELEASE).toMatch(/org\.opencontainers\.image\.licenses=AGPL-3\.0-or-later/);
   });
 
+  it('publie sous une référence d’image valide : aucune majuscule dans le chemin', () => {
+    // Une référence OCI n'accepte pas de majuscule : « ghcr.io/YvigUnderscore/review-backend »
+    // est invalide. Le workflow interpolait `github.repository_owner`, qui rend le login tel
+    // qu'il est écrit — le mode registre n'avait donc jamais pu publier une seule image.
+    const tagLines = RELEASE.split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('${{ env.REGISTRY }}/'));
+    expect(tagLines.length).toBeGreaterThan(0);
+    for (const line of tagLines) {
+      expect(line, line).toContain('needs.guard.outputs.owner');
+    }
+    expect(RELEASE).toMatch(/owner=\$\{GITHUB_REPOSITORY_OWNER,,\}/);
+  });
+
+  it('déclare dans l’image les build-args de version qu’il lui passe', () => {
+    // Un build-arg non déclaré est ignoré SANS un mot. Sans ces trois `ARG`, toute image
+    // publiée répondait « commit: null, builtAt: null » sur /api/version : une instance
+    // incapable de se nommer, alors que l'AGPL §13 suppose de savoir à quel commit elle
+    // correspond.
+    const backendDockerfile = read('backend/Dockerfile');
+    for (const arg of ['APP_VERSION', 'GIT_SHA', 'BUILD_DATE']) {
+      expect(backendDockerfile, arg).toMatch(new RegExp(`^ARG ${arg}=`, 'm'));
+      expect(RELEASE, arg).toContain(`${arg}=`);
+    }
+    expect(backendDockerfile).toMatch(/^ENV APP_VERSION=\$APP_VERSION/m);
+  });
+
   it('ne demande les droits d’écriture que là où ils servent', () => {
     expect(RELEASE).toMatch(/^permissions:\n {2}contents: read$/m);
     expect(RELEASE).toMatch(/packages: write/);

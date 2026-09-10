@@ -21,9 +21,19 @@ RUN npm run build
 # `location`/`add_header` sur lequel repose frontend/nginx.conf.
 FROM nginx:1.27-alpine
 
+# Mêmes build-args que l'image backend : `release.yml` les passe aux trois images, et un
+# build-arg non déclaré est ignoré sans un mot. Ici ils ne servent qu'à étiqueter l'image —
+# c'est ce qui permet de dire, devant un conteneur qui tourne, de quelle version il sort.
+ARG APP_VERSION=
+ARG GIT_SHA=
+ARG BUILD_DATE=
+
 LABEL org.opencontainers.image.title="ReView (frontend)" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \
-      org.opencontainers.image.source="https://github.com/YvigUnderscore/ReView"
+      org.opencontainers.image.source="https://github.com/YvigUnderscore/ReView" \
+      org.opencontainers.image.version="$APP_VERSION" \
+      org.opencontainers.image.revision="$GIT_SHA" \
+      org.opencontainers.image.created="$BUILD_DATE"
 
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf

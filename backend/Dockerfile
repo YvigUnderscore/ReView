@@ -81,5 +81,23 @@ RUN npm run build
 
 RUN dos2unix start.sh && chmod +x start.sh
 
+# Identité de la construction.
+#
+# `.github/workflows/release.yml` passe ces trois valeurs en build-args depuis toujours,
+# mais aucun `ARG` ne les recevait : Docker ignore silencieusement un build-arg non déclaré.
+# Toute image publiée répondait donc « commit: null, builtAt: null » sur /api/version — et
+# l'écran d'administration aurait affiché deux champs vides dès le premier jour. Déclarés
+# ici, tout en bas, pour ne pas invalider le cache des couches de dépendances à chaque
+# version : elles changent à chaque construction, pas le reste.
+#
+# Le `.env` du studio, chargé par compose, l'emporte sur ces valeurs — c'est voulu :
+# `scripts/update.sh` y réécrit APP_VERSION à chaque bascule, y compris en mode registre.
+ARG APP_VERSION=
+ARG GIT_SHA=
+ARG BUILD_DATE=
+ENV APP_VERSION=$APP_VERSION \
+    GIT_SHA=$GIT_SHA \
+    BUILD_DATE=$BUILD_DATE
+
 EXPOSE 3000
 CMD ["./start.sh"]

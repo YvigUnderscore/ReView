@@ -163,6 +163,50 @@ describe('scripts/update.sh', () => {
     expect(setAt).toBeGreaterThan(-1);
     expect(setAt).toBeLessThan(upAt);
   });
+
+  // ── Quatre pannes constatées, et refermées ────────────────────────────────
+  //
+  // Elles étaient toutes invisibles tant que la mise à jour se lançait à la main, devant un
+  // terminal, sur une instance qui remontait bien. Elles cessent de l'être le jour où c'est
+  // l'administration qui commande, sans terminal et sans personne pour relire le journal.
+
+  it('n’obéit jamais à un « up -d » nu : sinon le retour arrière est inatteignable', () => {
+    // `worker` ET `frontend` dépendent de `backend: condition: service_healthy`. Un backend
+    // qui ne devient pas sain — une migration Prisma en échec, la panne la plus courante
+    // d'une mise à jour — fait sortir `up -d` en erreur ; sous `set -e`, un appel nu tue le
+    // script AVANT la section 4, c'est-à-dire précisément dans le cas où elle sert.
+    const bare = commands
+      .split('\n')
+      .filter((line) => line.includes('docker compose up -d'))
+      .filter((line) => !/^\s*if ! /.test(line) && !/\|\|\s*true\s*$/.test(line));
+    expect(bare).toEqual([]);
+  });
+
+  it('valide « --timeout » comme un nombre avant de le faire entrer dans une arithmétique', () => {
+    // `$(( SECONDS + READY_TIMEOUT ))` ré-évalue le CONTENU de la variable : « x[$(cmd)] »
+    // s'y exécute. Ce champ vient désormais d'un ordre déposé par l'application.
+    expect(UPDATE).toMatch(/case "\$READY_TIMEOUT" in\s*\n\s*''\|\*\[!0-9\]\*\)/);
+  });
+
+  it('n’écrit jamais son journal par « tee /dev/stderr » (rouvert en troncature)', () => {
+    expect(commands).not.toMatch(/tee \/dev\/stderr/);
+    expect(commands).toMatch(/tee -a/);
+  });
+
+  it('repose l’étiquette qui tourne quand la récupération des images échoue', () => {
+    // Sinon `.env` reste sur une étiquette inexistante et TOUTE commande docker compose
+    // ultérieure échoue — y compris celle par laquelle l'exploitant essaierait de s'en tirer.
+    expect(commands).toMatch(
+      /if ! docker compose pull; then[\s\S]{0,300}?env_set REVIEW_IMAGE_TAG "\$PREVIOUS_TAG"/,
+    );
+  });
+
+  it('jalonne son exécution : le code de sortie ne dit pas OÙ l’on s’est arrêté', () => {
+    for (const milestone of ['precheck', 'backup', 'switch', 'health', 'rollback', 'done']) {
+      expect(UPDATE, milestone).toMatch(new RegExp(`^\\s*phase ${milestone}$`, 'm'));
+    }
+    expect(UPDATE).toMatch(/OPS_PHASE=%s/);
+  });
 });
 
 describe('scripts/backup.sh', () => {

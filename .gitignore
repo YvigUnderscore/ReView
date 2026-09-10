@@ -45,3 +45,14 @@ nginx/certs/
 # Mot de passe du relais SMTP d'Alertmanager (monté dans le conteneur) — jamais commité
 monitoring/alertmanager/smtp_password
 backups/
+
+# Ce que `scripts/install.sh` rend pour CETTE instance : configuration nginx du site,
+# surcouches compose, certificats Let's Encrypt, réglages de l'agent d'exploitation.
+# Le script annonce en tête qu'il n'écrit aucun fichier versionné ; sans cette ligne, il
+# mentait : après une installation, `git status` était sale et `scripts/update.sh` refusait
+# de basculer (« des fichiers suivis sont modifiés localement »).
+deploy/
+
+# File d'ordres et journaux d'exécution de l'agent (Admin → Mises à jour). Contient le nom
+# des personnes qui ont commandé une opération : rien qui doive partir dans un dépôt.
+ops/

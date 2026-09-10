@@ -46,6 +46,7 @@ jobs:
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       publish: ${{ steps.resolve.outputs.publish }}
+      owner: ${{ steps.resolve.outputs.owner }}
     steps:
       - uses: actions/checkout@v5
 
@@ -59,9 +60,16 @@ jobs:
             version="${{ inputs.ref || 'v0.0.0-dry-run' }}"
             publish=false
           fi
+          # Le propriétaire, en MINUSCULES. Une référence d'image OCI n'accepte pas de
+          # majuscule dans son chemin : « ghcr.io/YvigUnderscore/review-backend » est
+          # invalide, et c'est exactement ce que produisait `github.repository_owner`. Le
+          # mode registre — le seul depuis lequel une instance se met à jour sans compiler,
+          # et le seul où l'administration propose un bouton — n'avait donc jamais pu
+          # publier une seule image.
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
-          echo "Version : $version (publication : $publish)"
+          echo "Version : $version (publication : $publish, propriétaire : ${GITHUB_REPOSITORY_OWNER,,})"
 
       - name: Exiger une entrée de CHANGELOG
         if: steps.resolve.outputs.publish == 'true'
@@ -169,8 +177,8 @@ jobs:
             GIT_SHA=${{ github.sha }}
             BUILD_DATE=${{ github.event.repository.updated_at }}
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:${{ needs.guard.outputs.version }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
+            ${{ env.REGISTRY }}/${{ needs.guard.outputs.owner }}/${{ matrix.image }}:${{ needs.guard.outputs.version }}
+            ${{ env.REGISTRY }}/${{ needs.guard.outputs.owner }}/${{ matrix.image }}:latest
           labels: |
             org.opencontainers.image.title=${{ matrix.image }}
             org.opencontainers.image.version=${{ needs.guard.outputs.version }}
@@ -208,7 +216,7 @@ jobs:
             echo "### Images"
             echo ""
             echo '```'
-            echo "REVIEW_IMAGE_PREFIX=${{ env.REGISTRY }}/${{ github.repository_owner }}"
+            echo "REVIEW_IMAGE_PREFIX=${{ env.REGISTRY }}/${{ needs.guard.outputs.owner }}"
             echo "REVIEW_IMAGE_TAG=$version"
             echo '```'
             echo ""

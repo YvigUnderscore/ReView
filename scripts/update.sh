@@ -55,6 +55,34 @@ ok() { printf '\033[0;32m  ✓ %s\033[0m\n' "$1"; }
 warn() { printf '\033[0;33m  ! %s\033[0m\n' "$1"; }
 die() { printf '\033[0;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
 
+# ── Gardes d'arguments ───────────────────────────────────────────────────────
+#
+# Ces deux valeurs viennent de la ligne de commande — donc, depuis que l'administration
+# peut commander une mise à jour, d'un ordre déposé par l'application.
+#
+# `READY_TIMEOUT` finit dans « $(( SECONDS + READY_TIMEOUT )) », et bash ré-évalue le
+# CONTENU d'une variable rencontrée dans une expression arithmétique : « x[$(commande)] »
+# s'y exécute. Le filtre numérique n'est pas une politesse, c'est la fermeture d'une
+# exécution arbitraire — et il est doublé côté agent, qui ne fait confiance à personne.
+case "$READY_TIMEOUT" in
+  ''|*[!0-9]*) die "--timeout attend un nombre de secondes (reçu : $READY_TIMEOUT)" ;;
+esac
+# `TARGET` finit en argument de `git checkout` et de `docker compose` : un tiret initial en
+# ferait une option, un espace une seconde valeur.
+case "${TARGET:-none}" in
+  -*|*[!A-Za-z0-9._/-]*) die "version invalide : $TARGET" ;;
+esac
+
+# ── Jalons ───────────────────────────────────────────────────────────────────
+#
+# Le code de sortie ne dit pas OÙ l'on s'est arrêté : « la sauvegarde a échoué, rien n'a
+# bougé » et « la bascule a eu lieu, on est revenu en arrière » valent tous deux 1. Ces
+# jalons, lisibles par une machine, sont ce que l'écran d'administration affiche en clair.
+phase() {
+  printf 'OPS_PHASE=%s\n' "$1"
+  if [ -n "${OPS_PHASE_FILE:-}" ]; then printf 'OPS_PHASE=%s\n' "$1" >> "$OPS_PHASE_FILE"; fi
+}
+
 [ -f .env ] || die ".env introuvable — cette instance n'est pas installée (bash scripts/install.sh)."
 docker compose version >/dev/null 2>&1 || die "plugin « docker compose » v2 introuvable."
 
@@ -96,6 +124,7 @@ MODE="construction"
 # script — ici, le mode construction, c'est-à-dire le cas courant.
 if [ -n "$IMAGE_PREFIX" ]; then MODE="registre"; fi
 
+phase precheck
 say "Mise à jour de ReView (mode $MODE)"
 echo "  version en service : ${PREVIOUS_VERSION:-inconnue}"
 echo "  version visée      : ${TARGET:-dernière disponible}"
@@ -108,8 +137,20 @@ fi
 # ── 1. Sauvegarde ────────────────────────────────────────────────────────────
 BACKUP_ID=""
 if [ "$DO_BACKUP" -eq 1 ]; then
+  phase backup
   say "Sauvegarde préalable"
-  BACKUP_ID="$(bash scripts/backup.sh | tee /dev/stderr | sed -n 's/^BACKUP_ID=//p' | tail -n 1)"
+  # `tee -a "$fichier"` et non « tee /dev/stderr » : /dev/stderr est un lien vers le
+  # descripteur 2, que `tee` rouvre en ÉCRITURE — donc en troncature. Tant que la sortie
+  # d'erreur était un terminal, cela ne se voyait pas ; dès qu'elle est un fichier — ce
+  # qu'elle devient dès qu'une mise à jour est commandée autrement qu'au clavier — le
+  # journal de l'exécution repartait à zéro au moment précis de la sauvegarde.
+  BACKUP_LOG="$(mktemp)"
+  if ! bash scripts/backup.sh 2>&1 | tee -a "$BACKUP_LOG"; then
+    rm -f "$BACKUP_LOG"
+    die "la sauvegarde n'a pas abouti — mise à jour interrompue."
+  fi
+  BACKUP_ID="$(sed -n 's/^BACKUP_ID=//p' "$BACKUP_LOG" | tail -n 1)"
+  rm -f "$BACKUP_LOG"
   [ -n "$BACKUP_ID" ] || die "la sauvegarde n'a pas abouti — mise à jour interrompue."
   ok "sauvegarde $BACKUP_ID"
 else
@@ -117,6 +158,16 @@ else
 fi
 
 # ── 2. Bascule ───────────────────────────────────────────────────────────────
+#
+# ⚠ `docker compose up -d` n'est JAMAIS lancé nu ici, et c'est le point le plus important
+# de ce script. `worker` et `frontend` dépendent tous deux de `backend: service_healthy`
+# (docker-compose.yml) : un backend qui ne devient pas sain — une migration Prisma en
+# échec, le cas de panne le plus courant d'une mise à jour — fait sortir `up -d` en erreur.
+# Sous `set -e`, le script mourait alors ICI, c'est-à-dire AVANT la section 4 : le retour
+# arrière automatique, seule promesse de sécurité de cette commande, ne s'exécutait pas
+# dans la situation même pour laquelle il existe. On retient l'échec, on ne l'obéit pas.
+phase switch
+SWITCH_FAILED=0
 say "Bascule vers la nouvelle version"
 if [ "$MODE" = "registre" ]; then
   # Pas de « latest » implicite en production : une instance doit pouvoir dire quelle
@@ -125,8 +176,15 @@ if [ "$MODE" = "registre" ]; then
   NEW_VERSION="$TARGET"
   env_set REVIEW_IMAGE_TAG "$NEW_VERSION"
   env_set APP_VERSION "$NEW_VERSION"
-  docker compose pull || die "récupération des images impossible (registre injoignable ? version inexistante ?)"
-  docker compose up -d
+  # Échec de récupération : `.env` désigne déjà l'étiquette visée. La laisser telle quelle
+  # rendrait TOUTE commande `docker compose` ultérieure impossible — y compris celle par
+  # laquelle l'exploitant essaierait de s'en sortir. On repose l'étiquette qui tourne.
+  if ! docker compose pull; then
+    if [ -n "$PREVIOUS_TAG" ]; then env_set REVIEW_IMAGE_TAG "$PREVIOUS_TAG"; fi
+    env_set APP_VERSION "$PREVIOUS_VERSION"
+    die "récupération des images impossible (registre injoignable ? version inexistante ?)"
+  fi
+  if ! docker compose up -d; then SWITCH_FAILED=1; fi
 else
   git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
     || die "mode construction hors dépôt git : impossible de changer de version."
@@ -141,34 +199,43 @@ else
   fi
   NEW_VERSION="$(git describe --tags --always 2>/dev/null || git rev-parse --short HEAD)"
   env_set APP_VERSION "$NEW_VERSION"
-  docker compose up -d --build
+  if ! docker compose up -d --build; then SWITCH_FAILED=1; fi
 fi
-ok "conteneurs recréés"
+if [ "$SWITCH_FAILED" -eq 0 ]; then ok "conteneurs recréés"; else warn "la recréation des conteneurs a signalé une erreur"; fi
 
 # ── 3. Vérification ──────────────────────────────────────────────────────────
+phase health
 say "Contrôle de santé (base, Redis, stockage)"
-if wait_ready; then
+if [ "$SWITCH_FAILED" -eq 0 ] && wait_ready; then
   ok "instance disponible en version $NEW_VERSION"
   docker compose exec -T backend node -e \
     "fetch('http://127.0.0.1:3000/api/version').then(r=>r.text()).then(t=>console.log('  '+t))" 2>/dev/null || true
   say "Mise à jour terminée"
   echo "  Nouveautés : DOCUMENTATION/CHANGELOG.md — journal de version : CHANGELOG.md"
   if [ -n "$BACKUP_ID" ]; then echo "  Sauvegarde conservée : $BACKUP_ID"; fi
+  phase done
   exit 0
 fi
 
 # ── 4. Retour arrière ────────────────────────────────────────────────────────
-warn "l'instance n'est pas disponible après $READY_TIMEOUT s — retour arrière."
+phase rollback
+if [ "$SWITCH_FAILED" -eq 1 ]; then
+  warn "la bascule elle-même a échoué — retour arrière."
+else
+  warn "l'instance n'est pas disponible après $READY_TIMEOUT s — retour arrière."
+fi
 docker compose logs --tail=50 backend || true
 
+# Mêmes précautions qu'à la bascule : si la version précédente ne remonte pas non plus,
+# le script doit atteindre le message d'exploitation ci-dessous, qui est tout ce qui reste.
 if [ "$MODE" = "registre" ]; then
   if [ -n "$PREVIOUS_TAG" ]; then env_set REVIEW_IMAGE_TAG "$PREVIOUS_TAG"; fi
   env_set APP_VERSION "$PREVIOUS_VERSION"
-  docker compose up -d
+  docker compose up -d || true
 else
-  git checkout --quiet "$PREVIOUS_REF"
+  git checkout --quiet "$PREVIOUS_REF" || true
   env_set APP_VERSION "$PREVIOUS_VERSION"
-  docker compose up -d --build
+  docker compose up -d --build || true
 fi
 
 if wait_ready; then
