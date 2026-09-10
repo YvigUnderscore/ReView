@@ -94,7 +94,11 @@ describe('ops/agent.sh — ce que l’agent accepte d’exécuter', () => {
     // Sans ce témoin, `backup.sh` écrirait son miroir MinIO dans un répertoire vide — sans
     // une seule erreur, découvert le jour de la restauration.
     expect(agentCommands).toMatch(/check_root_path/);
-    expect(agentCommands).toMatch(/docker run --rm -v "\$ROOT\/ops\/state:\/w"/);
+    // `--entrypoint` EST le contrôle : l'image utilisée est celle de l'agent, dont
+    // l'entrypoint est l'agent lui-même. Sans cette option, « test -f … » deviennent ses
+    // arguments, le témoin échoue toujours, et plus aucun ordre n'est exécutable.
+    expect(agentCommands).toMatch(/docker run --rm --entrypoint test -v "\$ROOT\/ops\/state:\/w"/);
+    expect(agentCommands).toMatch(/timeout \d+ docker run --rm --entrypoint test/);
     expect(agentCommands).toMatch(/reject "\$id" ROOT_MISMATCH/);
   });
 

@@ -70,7 +70,14 @@ check_root_path() {
   witness=".witness-$$-$(date +%s)"
   : > "$STATE_DIR/$witness"
   image="${REVIEW_OPS_IMAGE:-alpine}"
-  if docker run --rm -v "$ROOT/ops/state:/w" "$image" test -f "/w/$witness" >/dev/null 2>&1; then
+  # ⚠ `--entrypoint test` n'est pas une précaution, c'est ce qui fait marcher le contrôle.
+  # L'image utilisée ici est celle de l'agent (compose pose toujours REVIEW_OPS_IMAGE, le
+  # repli `alpine` ne sert jamais), et son entrypoint EST l'agent : sans cette option,
+  # « test -f … » deviennent de simples ARGUMENTS, le conteneur relance l'agent, qui meurt
+  # aussitôt faute de REVIEW_ROOT. Le témoin échouait donc toujours, `rootOk` restait faux,
+  # et plus aucun ordre n'était jamais exécutable — la moitié utile de l'écran, morte.
+  # `timeout` par-dessus : le jour où l'entrypoint reprendrait la main, il bouclerait sans fin.
+  if timeout 60 docker run --rm --entrypoint test -v "$ROOT/ops/state:/w" "$image" -f "/w/$witness" >/dev/null 2>&1; then
     ROOT_OK=1
   else
     ROOT_OK=0
