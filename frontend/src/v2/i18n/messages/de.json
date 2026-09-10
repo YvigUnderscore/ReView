@@ -3430,5 +3430,6 @@
   "ops.backups.noSecrets": "Ohne Geheimnisse — verschlüsselte Zeilen blieben anderswo unlesbar",
   "ops.backups.restoreHint": "Das Einspielen bleibt bewusst ein Terminalbefehl:",
   "ops.history.title": "Letzte Vorgänge",
-  "ops.backups.createHint": "Schreibt einen Dump der Datenbank und spiegelt den Bucket in ein neues datiertes Verzeichnis. Die Instanz läuft dabei weiter."
+  "ops.backups.createHint": "Schreibt einen Dump der Datenbank und spiegelt den Bucket in ein neues datiertes Verzeichnis. Die Instanz läuft dabei weiter.",
+  "ops.run.gone": "Diese Instanz kennt den Vorgang nicht mehr — er wurde aus dem Verlauf entfernt, oder der Betriebsagent wurde seither abgebaut."
 }

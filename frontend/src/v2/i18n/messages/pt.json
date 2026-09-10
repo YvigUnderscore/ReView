@@ -3436,5 +3436,6 @@
   "ops.backups.noSecrets": "Sem segredos — as linhas cifradas ficariam ilegíveis noutro lado",
   "ops.backups.restoreHint": "Restaurar continua a ser deliberadamente um comando de terminal:",
   "ops.history.title": "Operações recentes",
-  "ops.backups.createHint": "Escreve um dump da base de dados e atualiza o espelho do bucket numa nova pasta datada. A instância continua a funcionar entretanto."
+  "ops.backups.createHint": "Escreve um dump da base de dados e atualiza o espelho do bucket numa nova pasta datada. A instância continua a funcionar entretanto.",
+  "ops.run.gone": "A instância já não conhece esta operação: foi purgada do histórico, ou o agente de operações foi removido entretanto."
 }

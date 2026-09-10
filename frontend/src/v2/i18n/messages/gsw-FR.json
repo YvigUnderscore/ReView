@@ -3430,5 +3430,6 @@
   "ops.backups.noSecrets": "Ohni Gheimnis — verschlüsselti Zile blibed anderswo unläsbar",
   "ops.backups.restoreHint": "S Iispiele bliibt bewusst e Terminal-Befähl:",
   "ops.history.title": "Letschti Vorgäng",
-  "ops.backups.createHint": "Schriibt en Dump vo de Datebank und bringt de Spiegel vom Bucket in en neue datierte Ordner. D Instanz lauft derwiil witer."
+  "ops.backups.createHint": "Schriibt en Dump vo de Datebank und bringt de Spiegel vom Bucket in en neue datierte Ordner. D Instanz lauft derwiil witer.",
+  "ops.run.gone": "Die Instanz kennt dä Vorgang nümme — er isch us de Chronik grumt worde, oder de Betriibsagent isch sithär abgebaut worde."
 }

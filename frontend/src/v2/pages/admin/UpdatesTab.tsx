@@ -131,6 +131,7 @@ export default function UpdatesTab() {
         <OpsRunPanel
           key={runId}
           runId={runId}
+          onGone={() => rememberRun(null)}
           onDismiss={() => {
             setDismissed(runId);
             rememberRun(null);

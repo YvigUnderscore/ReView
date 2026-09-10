@@ -4,7 +4,7 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, RotateCw, XCircle } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { ApiError, api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -19,6 +19,18 @@ import {
   runStateVariant,
   type RunDetail,
 } from './ops';
+
+/**
+ * Une réponse 4xx est DÉFINITIVE : ce run n'existe pas, ou plus — purgé de l'historique,
+ * ou commandé avant qu'on ne retire l'agent. Tout le reste — coupure réseau, 502 du frontal
+ * qui reste debout, 503 — est la bascule en cours.
+ *
+ * Confondre les deux, c'était afficher « l'instance redémarre » pour toujours devant un run
+ * qui n'existait plus, sans aucun moyen d'en sortir : le panneau ne proposait « écarter »
+ * qu'une fois l'opération TERMINÉE, et elle ne le serait jamais.
+ */
+const isGone = (error: unknown): boolean =>
+  error instanceof ApiError && error.status >= 400 && error.status < 500;
 
 /**
  * Une opération, du dépôt de l'ordre au verdict.
@@ -38,7 +50,16 @@ import {
  * sonder, et on reprend le journal au curseur d'octets où on l'avait laissé — ce qui n'est
  * possible que parce que le fichier est écrit en ajout seul.
  */
-export default function OpsRunPanel({ runId, onDismiss }: { runId: string; onDismiss: () => void }) {
+export default function OpsRunPanel({
+  runId,
+  onGone,
+  onDismiss,
+}: {
+  runId: string;
+  /** Le run n'existe plus : à oublier tout de suite, pour qu'un rechargement reparte propre. */
+  onGone: () => void;
+  onDismiss: () => void;
+}) {
   const t = useT();
   const qc = useQueryClient();
   // Curseur d'octets et journal accumulé. Dans une réf, pas dans un état : la requête doit
@@ -53,8 +74,11 @@ export default function OpsRunPanel({ runId, onDismiss }: { runId: string; onDis
       stream.current = { cursor: detail.log.next, text: stream.current.text + detail.log.text };
       return { ...detail, log: { ...detail.log, text: stream.current.text } };
     },
-    refetchInterval: (query) =>
-      query.state.data && isTerminalState(query.state.data.run.state) ? false : 2000,
+    refetchInterval: (query) => {
+      // Sonder un run qui n'existe plus n'apprendra jamais rien : on arrête.
+      if (isGone(query.state.error)) return false;
+      return query.state.data && isTerminalState(query.state.data.run.state) ? false : 2000;
+    },
     // Aucune tentative de reprise automatique : c'est le sondage qui fait ce travail, et
     // une pile de reprises pendant une coupure de trois minutes n'apporterait rien.
     retry: false,
@@ -80,7 +104,24 @@ export default function OpsRunPanel({ runId, onDismiss }: { runId: string; onDis
     onSettled: () => qc.invalidateQueries({ queryKey: qk.adminOpsRun(runId) }),
   });
 
-  const lost = q.isError && !finished;
+  const gone = q.isError && isGone(q.error);
+  const lost = q.isError && !gone && !finished;
+
+  // Oublié dès qu'on le sait, une seule fois : sans cela, un rechargement ferait revenir le
+  // fantôme, et l'écran repartirait pour un tour de « l'instance redémarre » sans fin.
+  const forgotten = useRef(false);
+  useEffect(() => {
+    if (gone && !forgotten.current) {
+      forgotten.current = true;
+      onGone();
+    }
+  }, [gone, onGone]);
+
+  // Toujours une sortie. « Écarter » n'apparaissait qu'une fois l'opération terminée : devant
+  // un run qui ne se terminerait jamais, l'écran devenait un cul-de-sac. Écarter ne fait que
+  // masquer localement — une opération réellement en cours revient au prochain rafraîchissement
+  // de l'écran qui l'entoure, il n'y a donc rien à protéger ici.
+  const canDismiss = finished || gone || (lost && run === null);
 
   return (
     <Panel title={t('ops.run.title')}>
@@ -97,9 +138,11 @@ export default function OpsRunPanel({ runId, onDismiss }: { runId: string; onDis
             )}
           </>
         ) : (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Loader2 size={12} className="animate-spin" /> {t('ops.run.phase.queued')}
-          </span>
+          !gone && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 size={12} className="animate-spin" /> {t('ops.run.phase.queued')}
+            </span>
+          )
         )}
         {/* Chaque texte dans son propre élément : l'espacement d'une boîte flex ne sépare
             que des ENFANTS, et deux nœuds de texte frères se rendaient collés l'un à l'autre. */}
@@ -110,6 +153,8 @@ export default function OpsRunPanel({ runId, onDismiss }: { runId: string; onDis
       </div>
 
       {lost && <p className="mb-3 text-sm text-muted-foreground">{t('ops.run.reconnecting')}</p>}
+
+      {gone && <p className="mb-3 text-sm text-muted-foreground">{t('ops.run.gone')}</p>}
 
       {run && finished && <Verdict run={run} />}
 
@@ -134,7 +179,7 @@ export default function OpsRunPanel({ runId, onDismiss }: { runId: string; onDis
             <XCircle size={13} /> {t('common.cancel')}
           </Button>
         )}
-        {finished && (
+        {canDismiss && (
           <>
             <Button variant="ghost" size="sm" onClick={onDismiss}>
               {t('ops.run.dismiss')}

@@ -3436,5 +3436,6 @@
   "ops.backups.noSecrets": "Sans secrets — les lignes chiffrées resteraient illisibles ailleurs",
   "ops.backups.restoreHint": "Restaurer reste volontairement une commande de terminal :",
   "ops.history.title": "Opérations récentes",
-  "ops.backups.createHint": "Écrit un dump de la base et met à jour le miroir du bucket dans un nouveau dossier daté. L'instance continue de fonctionner pendant ce temps."
+  "ops.backups.createHint": "Écrit un dump de la base et met à jour le miroir du bucket dans un nouveau dossier daté. L'instance continue de fonctionner pendant ce temps.",
+  "ops.run.gone": "L'instance ne connaît plus cette opération : elle a été purgée de l'historique, ou l'agent d'exploitation a été retiré depuis."
 }

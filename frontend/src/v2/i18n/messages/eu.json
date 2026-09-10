@@ -3430,5 +3430,6 @@
   "ops.backups.noSecrets": "Sekreturik gabe — zifratutako lerroak irakurtezin geratuko lirateke beste inon",
   "ops.backups.restoreHint": "Leheneratzea nahita terminal-agindu bat da oraindik:",
   "ops.history.title": "Azken eragiketak",
-  "ops.backups.createHint": "Datu-basearen iraulketa idazten du eta bucket-aren ispilua data duen karpeta berri batean eguneratzen. Instantziak funtzionatzen jarraitzen du bitartean."
+  "ops.backups.createHint": "Datu-basearen iraulketa idazten du eta bucket-aren ispilua data duen karpeta berri batean eguneratzen. Instantziak funtzionatzen jarraitzen du bitartean.",
+  "ops.run.gone": "Instantziak ez du jada eragiketa hau ezagutzen: historiatik garbitu da, edo ustiapen-agentea kendu da geroztik."
 }

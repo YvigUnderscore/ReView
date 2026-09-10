@@ -3321,5 +3321,6 @@
   "ops.backups.noSecrets": "不含密钥——加密的数据行在别处将无法读取",
   "ops.backups.restoreHint": "还原被有意保留为终端命令：",
   "ops.history.title": "最近的操作",
-  "ops.backups.createHint": "写出数据库转储，并把存储桶的镜像更新到一个带日期的新目录。其间实例照常运行。"
+  "ops.backups.createHint": "写出数据库转储，并把存储桶的镜像更新到一个带日期的新目录。其间实例照常运行。",
+  "ops.run.gone": "实例已不再知晓此操作——它已从历史中清除，或运维代理此后被移除。"
 }

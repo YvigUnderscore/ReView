@@ -9,10 +9,17 @@ const { api, toast } = vi.hoisted(() => ({
   api: { get: vi.fn(), post: vi.fn(), del: vi.fn(), patch: vi.fn() },
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
-vi.mock('../../../lib/apiClient', () => ({ api }));
+// Le VRAI module, dont on ne remplace que `api` : le panneau importe aussi `ApiError`
+// pour distinguer un 404 définitif d'une coupure passagère, et un mock qui ne l'exporte pas
+// le rend `undefined` — `instanceof` jette alors, et l'écran ne rend plus rien du tout.
+vi.mock('../../../lib/apiClient', async () => {
+  const actual = await vi.importActual<typeof import('../../../lib/apiClient')>('../../../lib/apiClient');
+  return { ...actual, api };
+});
 vi.mock('sonner', () => ({ toast }));
 
 import UpdatesTab from './UpdatesTab';
+import { ApiError } from '../../../lib/apiClient';
 import { t } from '../../i18n';
 import type { OpsOverview } from './ops';
 
@@ -182,6 +189,25 @@ describe('UpdatesTab', () => {
     expect(await screen.findByText('▶ Dump…')).toBeTruthy();
     // Une opération en cours verrouille les autres gestes.
     expect(screen.queryByText(t('ops.update.action', { tag: 'v2.4.0' }))).toBeNull();
+  });
+
+  it('ne reste pas bloqué sur un run mémorisé qui n’existe plus', async () => {
+    // Le cul-de-sac constaté en usage : un identifiant resté dans localStorage, une API qui
+    // répond 404 — donc une réponse DÉFINITIVE — et un écran qui annonçait « l'instance
+    // redémarre » sans fin, sans bouton pour en sortir puisque « écarter » n'apparaissait
+    // qu'une fois l'opération terminée.
+    localStorage.setItem('review:ops-run', '20260910-142233-a1b2c3');
+    api.get.mockImplementation((path: string) =>
+      path.startsWith('/api/admin/ops/runs/')
+        ? Promise.reject(new ApiError('Resource not found', 404, 'NOT_FOUND'))
+        : Promise.resolve(OVERVIEW),
+    );
+    mount();
+    expect(await screen.findByText(t('ops.run.gone'))).toBeTruthy();
+    expect(screen.queryByText(t('ops.run.reconnecting'))).toBeNull();
+    // Une sortie, et un oubli immédiat : un rechargement ne doit pas ramener le fantôme.
+    expect(screen.getByText(t('ops.run.dismiss'))).toBeTruthy();
+    expect(localStorage.getItem('review:ops-run')).toBeNull();
   });
 
   it('ne crie pas à l’erreur quand l’API disparaît pendant une bascule', async () => {
